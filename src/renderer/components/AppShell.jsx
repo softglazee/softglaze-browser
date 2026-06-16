@@ -1,57 +1,75 @@
-import { NavLink } from 'react-router-dom';
-import { Database, FileSpreadsheet, Globe2, Layers3, Settings, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils.js';
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Globe, Settings, Users, Monitor, FileSpreadsheet, Puzzle, FolderHeart, Trash2 } from 'lucide-react';
 
-const navItems = [
-  { label: 'Profiles', to: '/profiles', icon: Layers3 },
-  { label: 'Proxy Pool', to: '/proxies', icon: Globe2 },
-  { label: 'Batch Import', to: '/batch-import', icon: FileSpreadsheet },
-  { label: 'Settings', to: '/settings', icon: Settings }
+const NAV_ITEMS = [
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/profiles', label: 'Profiles', icon: Monitor },
+  { path: '/groups', label: 'Groups', icon: FolderHeart },
+  { path: '/proxies', label: 'Proxy Pool', icon: Globe },
+  { path: '/extensions', label: 'Extensions', icon: Puzzle },
+  { path: '/batch-import', label: 'Batch Import', icon: FileSpreadsheet },
+  { path: '/trash', label: 'Trash', icon: Trash2 },
+  { path: '/settings', label: 'Global Settings', icon: Settings },
 ];
 
 export default function AppShell({ children }) {
+  const location = useLocation();
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
-      <aside className="flex h-full w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950/90">
-        <div className="flex h-20 items-center gap-3 border-b border-slate-800 px-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-900">
-            <ShieldCheck className="h-5 w-5 text-slate-100" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-wide text-white">SoftGlaze Browser</div>
-            <div className="text-xs text-slate-500">Local profile manager</div>
+    <div className="flex h-screen w-full bg-[#131519] text-[#d1d5db] font-sans overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#181a1f] border-r border-[#2d3039] flex flex-col shrink-0">
+        <div className="h-16 flex items-center px-6 border-b border-[#2d3039]">
+          <div className="flex items-center gap-2 text-white font-bold text-lg tracking-wide">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Monitor className="w-5 h-5 text-white" />
+            </div>
+            SoftGlaze
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => {
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+          {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
+            // Highlight logic
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            
             return (
               <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-slate-100 text-slate-950 shadow-sm' : 'text-slate-400 hover:bg-slate-900 hover:text-white')}
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-[14px] font-medium ${
+                  isActive 
+                    ? 'bg-blue-600/10 text-blue-500' 
+                    : 'text-[#9ca3af] hover:bg-[#24272e] hover:text-white'
+                }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-[#9ca3af]'}`} />
                 {item.label}
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="border-t border-slate-800 p-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
-              <Database className="h-4 w-4" />
-              Local-first storage
+        <div className="p-4 border-t border-[#2d3039]">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#24272e] border border-[#3b3e48]">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+              AD
             </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Profiles, proxies, notes, and imports are stored locally through SQLite.</p>
+            <div className="flex flex-col">
+              <span className="text-white text-[13px] font-medium leading-none">Admin</span>
+              <span className="text-[#9ca3af] text-[11px] mt-1">Free Plan</span>
+            </div>
           </div>
         </div>
       </aside>
 
-      <main className="h-full min-w-0 flex-1 overflow-y-auto">
-        <div className="w-full p-6">{children}</div>
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#131519]">
+        <div className="flex-1 overflow-y-auto p-6">
+          {children}
+        </div>
       </main>
     </div>
   );

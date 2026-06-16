@@ -6,3 +6,4 @@ softglaze.sqlite
 softglaze.sqlite-journal
 softglaze_profiles/
 .DS_Store
+chrome/

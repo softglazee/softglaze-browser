@@ -12,7 +12,8 @@ export const softglazeApi = {
     create: (payload) => getSoftglazeApi().proxies.create(payload),
     update: (payload) => getSoftglazeApi().proxies.update(payload),
     delete: (id) => getSoftglazeApi().proxies.delete(id),
-    batchAdd: (payload) => getSoftglazeApi().proxies.batchAdd(payload)
+    batchAdd: (payload) => getSoftglazeApi().proxies.batchAdd(payload),
+    check: (payload) => getSoftglazeApi().proxies.check(payload)
   },
   profiles: {
     list: (params) => getSoftglazeApi().profiles.list(params),

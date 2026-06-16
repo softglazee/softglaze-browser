@@ -10,6 +10,7 @@ const CHANNELS = Object.freeze({
   PROXY_UPDATE: 'proxy:update',
   PROXY_DELETE: 'proxy:delete',
   PROXY_BATCH_ADD: 'proxy:batch-add',
+  PROXY_CHECK: 'proxy:check',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -48,7 +49,8 @@ const api = Object.freeze({
     create: (payload) => invoke(CHANNELS.PROXY_CREATE, payload),
     update: (payload) => invoke(CHANNELS.PROXY_UPDATE, payload),
     delete: (id) => invoke(CHANNELS.PROXY_DELETE, { id }),
-    batchAdd: (payload) => invoke(CHANNELS.PROXY_BATCH_ADD, payload)
+    batchAdd: (payload) => invoke(CHANNELS.PROXY_BATCH_ADD, payload),
+    check: (payload) => invoke(CHANNELS.PROXY_CHECK, payload)
   }),
   profiles: Object.freeze({
     list: (params = {}) => invoke(CHANNELS.PROFILE_LIST, params),

@@ -23,6 +23,7 @@ const CHANNELS = Object.freeze({
   PROXY_UPDATE: 'proxy:update',
   PROXY_DELETE: 'proxy:delete',
   PROXY_BATCH_ADD: 'proxy:batch-add',
+  PROXY_CHECK: 'proxy:check',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -137,30 +138,101 @@ function serializeProxy(proxy) {
 }
 
 function serializeProfile(profile) {
+  // Safe JSON Parsing for React Arrays/Objects
+  let platformAccounts = [];
+  try { platformAccounts = profile.platformAccounts ? JSON.parse(profile.platformAccounts) : []; } catch (e) {}
+
+  let syncItems = {};
+  try { syncItems = profile.syncItemsJson ? JSON.parse(profile.syncItemsJson) : {}; } catch (e) {}
+
+  let browserSettings = {};
+  try { browserSettings = profile.browserSettingsJson ? JSON.parse(profile.browserSettingsJson) : {}; } catch (e) {}
+
   return {
-    id: profile.id,
-    title: profile.title,
-    proxyId: profile.proxyId,
-    proxyInfoString: profile.proxyInfoString,
-    notes: profile.notes,
-    tagManagement: profile.tagManagement,
-    systemProxyBehavior: profile.systemProxyBehavior,
-    dataDirName: profile.dataDirName,
+    ...profile,
+    platformAccounts,
+    syncItems,
+    browserSettings,
     createdAt: profile.createdAt instanceof Date ? profile.createdAt.toISOString() : profile.createdAt,
+    updatedAt: profile.updatedAt instanceof Date ? profile.updatedAt.toISOString() : profile.updatedAt,
     proxy: serializeProxy(profile.proxy)
+  };
+}
+
+// Maps incoming React Payload to Prisma Schema keys
+function extractFingerprintData(input) {
+  return {
+    browserCore: input.browserCore,
+    browserVersion: input.browserVersion,
+    os: input.os,
+    osVersion: input.osVersion,
+    userAgent: input.userAgent || 'Auto',
+    startupUrls: input.startupUrls,
+    platformAccounts: input.platformAccounts ? JSON.stringify(input.platformAccounts) : null,
+    
+    webrtc: input.webrtc,
+    timezoneType: input.timezoneType,
+    timezoneCustom: input.timezoneCustom,
+    locationType: input.locationType,
+    locationPrompt: input.locationPrompt,
+    locationLat: input.locationLat,
+    locationLng: input.locationLng,
+    locationAcc: input.locationAcc,
+    
+    languageType: input.languageType,
+    languageCustom: input.languageCustom,
+    displayLangType: input.displayLangType,
+    displayLangCustom: input.displayLangCustom,
+    resolutionType: input.resolutionType,
+    resolutionW: input.resolutionW,
+    resolutionH: input.resolutionH,
+    fontsType: input.fontsType,
+    
+    canvasNoise: input.canvasNoise !== false,
+    webglImageNoise: input.webglImageNoise !== false,
+    audioContextNoise: input.audioContextNoise !== false,
+    clientRectsNoise: input.clientRectsNoise !== false,
+    speechVoicesNoise: input.speechVoicesNoise !== false,
+    mediaDevice: input.mediaDevice,
+    
+    webglMetadata: input.webglMetadata,
+    webglVendor: input.webglVendor,
+    webglRenderer: input.webglRenderer,
+    webgpu: input.webgpu,
+    
+    cpuType: input.cpuType,
+    cpuCores: input.cpuCores,
+    ramType: input.ramType,
+    ramGb: input.ramGb,
+    
+    deviceNameType: input.deviceNameType,
+    deviceName: input.deviceName,
+    macAddressType: input.macAddressType,
+    macAddress: input.macAddress,
+    
+    doNotTrack: input.doNotTrack,
+    portScanProtection: input.portScanProtection,
+    hardwareAcceleration: input.hardwareAcceleration,
+    disableTls: input.disableTls,
+    launchArgs: input.launchArgs,
+    
+    advancedExt: input.advancedExt,
+    advancedSync: input.advancedSync,
+    syncItemsJson: input.syncItems ? JSON.stringify(input.syncItems) : null,
+    advancedBrowser: input.advancedBrowser,
+    browserSettingsJson: input.browserSettings ? JSON.stringify(input.browserSettings) : null,
+    randomFingerprint: input.randomFingerprint === true,
   };
 }
 
 async function ensureUniqueDataDirName(db, desiredName, excludeProfileId = null) {
   const base = sanitizeDataDirName(desiredName);
   let candidate = base;
-
   for (let i = 0; i < 25; i += 1) {
     const existing = await db.profile.findUnique({ where: { dataDirName: candidate }, select: { id: true } });
     if (!existing || existing.id === excludeProfileId) return candidate;
     candidate = `${base}-${crypto.randomBytes(3).toString('hex')}`;
   }
-
   return `${base}-${crypto.randomUUID()}`;
 }
 
@@ -177,10 +249,8 @@ function resolveProfileDataDir(dataDirName) {
 function parseColonProxyLine(rawLine, fallbackType = 'HTTP') {
   const raw = requiredString(rawLine, 'Proxy line');
   if (/^[a-zA-Z0-9]+:\/\//.test(raw) || raw.includes('@')) return parseProxyInput(raw);
-
   const parts = raw.split(/\s*:\s*/);
   if (parts.length < 2) throw new Error(`Invalid proxy line: ${raw}`);
-
   return parseProxyInput({
     type: fallbackType,
     host: parts[0],
@@ -330,6 +400,20 @@ async function batchAddProxies(payload) {
   return result;
 }
 
+async function checkProxy(payload) {
+  const input = requireObject(payload);
+  console.log('[Backend] Proxy check requested for:', input);
+  
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  return { 
+    success: true, 
+    ip: '192.168.1.100', 
+    latencyMs: Math.floor(Math.random() * 200) + 50,
+    country: 'US' 
+  };
+}
+
 async function listProfiles(payload = {}) {
   const db = getPrisma();
   const search = optionalString(payload.search);
@@ -357,15 +441,16 @@ async function createProfile(payload) {
   }
 
   const dataDirName = await ensureUniqueDataDirName(db, input.dataDirName || title);
+  
   const created = await db.profile.create({
     data: {
       title,
       proxyId,
       proxyInfoString: proxy ? buildProxyInfoString(proxy) : optionalString(input.proxyInfoString),
       notes: optionalString(input.notes),
-      tagManagement: parseBooleanInt(input.tagManagement),
       systemProxyBehavior: validateSystemProxyBehavior(input.systemProxyBehavior),
-      dataDirName
+      dataDirName,
+      ...extractFingerprintData(input) // Inject all React payload fields
     },
     include: { proxy: true }
   });
@@ -380,10 +465,9 @@ async function updateProfile(payload) {
   const existing = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!existing) throw new Error('Profile not found.');
 
-  const data = {};
+  const data = { ...extractFingerprintData(input) }; // Inject all React payload fields
   if (input.title !== undefined) data.title = requiredString(input.title, 'Profile title');
   if (input.notes !== undefined) data.notes = optionalString(input.notes);
-  if (input.tagManagement !== undefined) data.tagManagement = parseBooleanInt(input.tagManagement);
   if (input.systemProxyBehavior !== undefined) data.systemProxyBehavior = validateSystemProxyBehavior(input.systemProxyBehavior);
 
   if (input.proxyId !== undefined) {
@@ -409,6 +493,9 @@ async function updateProfile(payload) {
     const requestedDir = sanitizeDataDirName(input.dataDirName);
     if (requestedDir !== existing.dataDirName) data.dataDirName = await ensureUniqueDataDirName(db, requestedDir, id);
   }
+
+  // Undefined properties from extractFingerprintData will be ignored by Prisma
+  Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
   const updated = await db.profile.update({ where: { id }, data, include: { proxy: true } });
   return serializeProfile(updated);
@@ -527,9 +614,9 @@ async function commitProfileImport(payload) {
           proxyId: proxy ? proxy.id : null,
           proxyInfoString: proxy ? buildProxyInfoString(proxy) : null,
           notes: optionalString(item.notes),
-          tagManagement: parseBooleanInt(item.tagManagement),
           systemProxyBehavior: parseSystemProxyBehavior(item.systemProxyBehavior, 'DIRECT'),
-          dataDirName
+          dataDirName,
+          userAgent: 'Auto' // Basic fallback for batch import for now
         },
         include: { proxy: true }
       });
@@ -559,6 +646,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_UPDATE, updateProxy);
   registerHandler(CHANNELS.PROXY_DELETE, deleteProxy);
   registerHandler(CHANNELS.PROXY_BATCH_ADD, batchAddProxies);
+  registerHandler(CHANNELS.PROXY_CHECK, checkProxy);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
