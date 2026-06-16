@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ProxyType {
+  HTTP
+  SOCKS5
+}
+
+enum SystemProxyBehavior {
+  DIRECT
+  PROFILE_PROXY
+  SYSTEM_PROXY
+}
+
+model Proxy {
+  id        Int       @id @default(autoincrement())
+  name      String
+  type      ProxyType @default(HTTP)
+  host      String
+  port      Int
+  username  String?
+  password  String?
+  createdAt DateTime  @default(now())
+
+  profiles Profile[]
+
+  @@index([host, port])
+  @@index([createdAt])
+  @@unique([type, host, port, username])
+}
+
+model Profile {
+  id                  Int                 @id @default(autoincrement())
+  title               String
+  proxyId             Int?
+  proxyInfoString     String?
+  notes               String?
+  tagManagement       Int                 @default(0)
+  systemProxyBehavior SystemProxyBehavior @default(PROFILE_PROXY)
+  dataDirName         String              @unique
+  createdAt           DateTime            @default(now())
+
+  proxy Proxy? @relation(fields: [proxyId], references: [id], onDelete: SetNull)
+
+  @@index([proxyId])
+  @@index([createdAt])
+}

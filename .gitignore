@@ -1,0 +1,8 @@
+﻿node_modules/
+dist/
+dist_installer/
+.env
+softglaze.sqlite
+softglaze.sqlite-journal
+softglaze_profiles/
+.DS_Store

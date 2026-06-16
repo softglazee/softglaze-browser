@@ -1,0 +1,70 @@
+'use strict';
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+const CHANNELS = Object.freeze({
+  SYSTEM_GET_INFO: 'system:get-info',
+
+  PROXY_LIST: 'proxy:list',
+  PROXY_CREATE: 'proxy:create',
+  PROXY_UPDATE: 'proxy:update',
+  PROXY_DELETE: 'proxy:delete',
+  PROXY_BATCH_ADD: 'proxy:batch-add',
+
+  PROFILE_LIST: 'profile:list',
+  PROFILE_CREATE: 'profile:create',
+  PROFILE_UPDATE: 'profile:update',
+  PROFILE_DELETE: 'profile:delete',
+  PROFILE_LAUNCH: 'profile:launch',
+
+  SESSION_LIST: 'session:list',
+  SESSION_CLOSE: 'session:close',
+
+  BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
+  BATCH_COMMIT_PROFILE_IMPORT: 'batch:commit-profile-import'
+});
+
+const ALLOWED_CHANNELS = new Set(Object.values(CHANNELS));
+
+async function invoke(channel, payload = undefined) {
+  if (!ALLOWED_CHANNELS.has(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
+
+  const response = await ipcRenderer.invoke(channel, payload);
+  if (!response || response.ok !== true) {
+    const message = response?.error?.message || 'IPC request failed.';
+    const error = new Error(message);
+    error.code = response?.error?.code || 'IPC_ERROR';
+    throw error;
+  }
+  return response.data;
+}
+
+const api = Object.freeze({
+  system: Object.freeze({
+    getInfo: () => invoke(CHANNELS.SYSTEM_GET_INFO)
+  }),
+  proxies: Object.freeze({
+    list: (params = {}) => invoke(CHANNELS.PROXY_LIST, params),
+    create: (payload) => invoke(CHANNELS.PROXY_CREATE, payload),
+    update: (payload) => invoke(CHANNELS.PROXY_UPDATE, payload),
+    delete: (id) => invoke(CHANNELS.PROXY_DELETE, { id }),
+    batchAdd: (payload) => invoke(CHANNELS.PROXY_BATCH_ADD, payload)
+  }),
+  profiles: Object.freeze({
+    list: (params = {}) => invoke(CHANNELS.PROFILE_LIST, params),
+    create: (payload) => invoke(CHANNELS.PROFILE_CREATE, payload),
+    update: (payload) => invoke(CHANNELS.PROFILE_UPDATE, payload),
+    delete: (id, options = {}) => invoke(CHANNELS.PROFILE_DELETE, { id, removeLocalData: Boolean(options.removeLocalData) }),
+    launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' })
+  }),
+  sessions: Object.freeze({
+    list: () => invoke(CHANNELS.SESSION_LIST),
+    close: (sessionId) => invoke(CHANNELS.SESSION_CLOSE, { sessionId })
+  }),
+  batch: Object.freeze({
+    previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),
+    commitProfileImport: (token) => invoke(CHANNELS.BATCH_COMMIT_PROFILE_IMPORT, { token })
+  })
+});
+
+contextBridge.exposeInMainWorld('softglaze', api);
