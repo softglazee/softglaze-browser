@@ -30,6 +30,15 @@ const CHANNELS = Object.freeze({
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
+  PROFILE_CLONE: 'profile:clone',
+  TEMPLATE_LIST: 'template:list',
+  TEMPLATE_SAVE: 'template:save',
+  TEMPLATE_DELETE: 'template:delete',
+  TEMPLATE_CREATE_PROFILE: 'template:create-profile',
+  PROFILE_LIVE_LEAK: 'profile:live-leak',
+  PROFILE_ACTIVITY: 'profile:activity',
+  SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
+  SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -91,7 +100,20 @@ const api = Object.freeze({
     bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids }),
     analyzeLeaks: (id) => invoke(CHANNELS.PROFILE_ANALYZE_LEAKS, { id }),
     exportCookies: (id, format) => invoke(CHANNELS.PROFILE_EXPORT_COOKIES, { id, format }),
-    importCookies: (id, data, format) => invoke(CHANNELS.PROFILE_IMPORT_COOKIES, { id, data, format })
+    importCookies: (id, data, format) => invoke(CHANNELS.PROFILE_IMPORT_COOKIES, { id, data, format }),
+    clone: (id) => invoke(CHANNELS.PROFILE_CLONE, { id }),
+    liveLeak: (id) => invoke(CHANNELS.PROFILE_LIVE_LEAK, { id }),
+    activity: (id) => invoke(CHANNELS.PROFILE_ACTIVITY, { id })
+  }),
+  templates: Object.freeze({
+    list: () => invoke(CHANNELS.TEMPLATE_LIST),
+    save: (id, name) => invoke(CHANNELS.TEMPLATE_SAVE, { id, name }),
+    delete: (id) => invoke(CHANNELS.TEMPLATE_DELETE, { id }),
+    createProfile: (templateId, title) => invoke(CHANNELS.TEMPLATE_CREATE_PROFILE, { templateId, title })
+  }),
+  settings: Object.freeze({
+    getProxyScheduler: () => invoke(CHANNELS.SETTINGS_GET_SCHEDULER),
+    setProxyScheduler: (config) => invoke(CHANNELS.SETTINGS_SET_SCHEDULER, config)
   }),
   groups: Object.freeze({
     list: () => invoke(CHANNELS.GROUP_LIST),

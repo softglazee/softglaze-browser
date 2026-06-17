@@ -32,7 +32,20 @@ export const softglazeApi = {
     bulkClose: (ids) => getSoftglazeApi().profiles.bulkClose(ids),
     analyzeLeaks: (id) => getSoftglazeApi().profiles.analyzeLeaks(id),
     exportCookies: (id, format) => getSoftglazeApi().profiles.exportCookies(id, format),
-    importCookies: (id, data, format) => getSoftglazeApi().profiles.importCookies(id, data, format)
+    importCookies: (id, data, format) => getSoftglazeApi().profiles.importCookies(id, data, format),
+    clone: (id) => getSoftglazeApi().profiles.clone(id),
+    liveLeak: (id) => getSoftglazeApi().profiles.liveLeak(id),
+    activity: (id) => getSoftglazeApi().profiles.activity(id)
+  },
+  templates: {
+    list: () => getSoftglazeApi().templates.list(),
+    save: (id, name) => getSoftglazeApi().templates.save(id, name),
+    delete: (id) => getSoftglazeApi().templates.delete(id),
+    createProfile: (templateId, title) => getSoftglazeApi().templates.createProfile(templateId, title)
+  },
+  settings: {
+    getProxyScheduler: () => getSoftglazeApi().settings.getProxyScheduler(),
+    setProxyScheduler: (config) => getSoftglazeApi().settings.setProxyScheduler(config)
   },
   groups: {
     list: () => getSoftglazeApi().groups.list(),

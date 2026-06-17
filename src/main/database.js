@@ -106,12 +106,40 @@ const PROFILE_COLUMNS = [
   ['groupId', 'INTEGER'],
   ['tags', 'TEXT'],
 
+  // Usage tracking
+  ['lastUsedAt', 'DATETIME'],
+  ['launchCount', 'INTEGER NOT NULL DEFAULT 0'],
+
   // Timestamps / soft delete
   // (CURRENT_TIMESTAMP is NOT allowed as a default in ALTER ADD COLUMN, so
   //  updatedAt is added nullable here and backfilled from createdAt below.)
   ['updatedAt', 'DATETIME'],
   ['deletedAt', 'DATETIME']
 ];
+
+const PROXY_COLUMNS = [
+  ['lastStatus', 'TEXT'],
+  ['lastLatencyMs', 'INTEGER'],
+  ['lastCountry', 'TEXT'],
+  ['lastCheckedAt', 'DATETIME']
+];
+
+async function ensureProxyColumns(db) {
+  const rows = await db.$queryRawUnsafe('PRAGMA table_info("Proxy");');
+  const existing = new Set(rows.map((r) => r.name));
+  const added = [];
+  for (const [name, ddl] of PROXY_COLUMNS) {
+    if (existing.has(name)) continue;
+    await db.$executeRawUnsafe(`ALTER TABLE "Proxy" ADD COLUMN "${name}" ${ddl};`);
+    added.push(name);
+  }
+  console.log(
+    added.length > 0
+      ? `[DB] ensureProxyColumns added ${added.length} column(s): ${added.join(', ')}`
+      : '[DB] ensureProxyColumns: schema already up to date.'
+  );
+  return added;
+}
 
 async function ensureProfileColumns(db) {
   const rows = await db.$queryRawUnsafe('PRAGMA table_info("Profile");');
@@ -184,6 +212,34 @@ async function bootstrapDatabase() {
   `);
 
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Group_createdAt_idx" ON "Group"("createdAt");');
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Template" (
+      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      "name" TEXT NOT NULL,
+      "dataJson" TEXT NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Template_createdAt_idx" ON "Template"("createdAt");');
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "ActivityLog" (
+      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      "profileId" INTEGER NOT NULL,
+      "action" TEXT NOT NULL,
+      "detail" TEXT,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "ActivityLog_profileId_createdAt_idx" ON "ActivityLog"("profileId", "createdAt");');
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Setting" (
+      "key" TEXT NOT NULL PRIMARY KEY,
+      "value" TEXT NOT NULL
+    );
+  `);
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_host_port_idx" ON "Proxy"("host", "port");');
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_createdAt_idx" ON "Proxy"("createdAt");');
   await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_key" ON "Proxy"("type", "host", "port", "username");');
@@ -191,8 +247,9 @@ async function bootstrapDatabase() {
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_proxyId_idx" ON "Profile"("proxyId");');
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_createdAt_idx" ON "Profile"("createdAt");');
 
-  // Bring the live Profile table up to date with schema.prisma (additive, safe).
+  // Bring the live Profile/Proxy tables up to date with schema.prisma (additive, safe).
   await ensureProfileColumns(db);
+  await ensureProxyColumns(db);
 
   return true;
 }

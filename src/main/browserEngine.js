@@ -525,6 +525,55 @@ function formatUptime(createdAt) {
 
 // --- Cookie I/O over CDP (decrypted, browser-wide) for the live session ---
 // Returns an array of cookie objects, or null when the profile isn't running.
+// Reads REAL environment values from the running session's page: navigator,
+// timezone, screen, a WebRTC ICE-candidate IP probe, and the page-visible exit
+// IP (fetched in-page so it routes through the profile's proxy).
+// Returns { env, webrtcIps, exit } or null when the profile isn't running.
+async function liveLeakTest(sessionId) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.page) return null;
+  const page = session.page;
+
+  const env = await page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    languages: navigator.languages,
+    platform: navigator.platform,
+    vendor: navigator.vendor,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    deviceMemory: navigator.deviceMemory || null,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    screen: { width: screen.width, height: screen.height },
+    doNotTrack: navigator.doNotTrack
+  })).catch(() => ({}));
+
+  const webrtcIps = await page.evaluate(() => new Promise((resolve) => {
+    const ips = new Set();
+    let pc;
+    try {
+      pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    } catch (e) { resolve([]); return; }
+    pc.createDataChannel('probe');
+    pc.onicecandidate = (e) => {
+      if (!e || !e.candidate || !e.candidate.candidate) return;
+      const m = /([0-9]{1,3}(?:\.[0-9]{1,3}){3})|([a-fA-F0-9]{1,4}(?::[a-fA-F0-9]{1,4}){7})/.exec(e.candidate.candidate);
+      if (m && m[0]) ips.add(m[0]);
+    };
+    pc.createOffer().then((o) => pc.setLocalDescription(o)).catch(() => {});
+    setTimeout(() => { try { pc.close(); } catch (e) {} resolve([...ips]); }, 2500);
+  })).catch(() => []);
+
+  let exit = null;
+  try {
+    exit = await page.evaluate(async () => {
+      const r = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+      return r.json();
+    });
+  } catch (e) { exit = null; }
+
+  return { env, webrtcIps, exit };
+}
+
 async function exportSessionCookies(sessionId) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
@@ -574,5 +623,6 @@ module.exports = {
   closeAllProfileSessions,
   listActiveSessions,
   exportSessionCookies,
-  importSessionCookies
+  importSessionCookies,
+  liveLeakTest
 };

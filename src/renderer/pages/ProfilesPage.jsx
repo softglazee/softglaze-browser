@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie } from 'lucide-react';
+import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, LayoutTemplate, History } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import LeakCheckModal from '@/components/LeakCheckModal.jsx';
 import CookieManagerModal from '@/components/CookieManagerModal.jsx';
+import TemplatesModal from '@/components/TemplatesModal.jsx';
+import ActivityModal from '@/components/ActivityModal.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
@@ -306,8 +308,29 @@ export default function ProfilesPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [activityProfile, setActivityProfile] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [allTags, setAllTags] = useState([]);
+  const [allProxies, setAllProxies] = useState([]);
+  const [runningIds, setRunningIds] = useState(() => new Set());
+  const [filterGroup, setFilterGroup] = useState('all');
+  const [filterTag, setFilterTag] = useState('');
+  const [filterProxy, setFilterProxy] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
-  const filteredProfiles = useMemo(() => profiles, [profiles]);
+  const filteredProfiles = useMemo(() => {
+    let list = profiles;
+    if (filterGroup === 'ungrouped') list = list.filter((p) => p.groupId == null);
+    else if (filterGroup !== 'all') list = list.filter((p) => p.groupId === Number(filterGroup));
+    if (filterTag) list = list.filter((p) => (p.tags || []).includes(filterTag));
+    if (filterProxy === 'none') list = list.filter((p) => !p.proxyId);
+    else if (filterProxy) list = list.filter((p) => p.proxyId === Number(filterProxy));
+    if (filterStatus === 'running') list = list.filter((p) => runningIds.has(p.id));
+    else if (filterStatus === 'proxied') list = list.filter((p) => !!p.proxyId);
+    else if (filterStatus === 'direct') list = list.filter((p) => !p.proxyId);
+    return list;
+  }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
   const isEditing = Boolean(pd.id);
   
   const tabs = ['General', 'Proxy', 'Platform', 'Fingerprint', 'Advanced']; 
@@ -318,8 +341,20 @@ export default function ProfilesPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    try { setProfiles(await softglazeApi.profiles.list({ search })); } 
-    catch (err) { setError(err.message); } 
+    try {
+      const [profs, grps, tgs, pxs, sess] = await Promise.all([
+        softglazeApi.profiles.list({ search }),
+        softglazeApi.groups.list(),
+        softglazeApi.tags.list(),
+        softglazeApi.proxies.list({}),
+        softglazeApi.sessions.list()
+      ]);
+      setProfiles(profs);
+      setGroups(grps);
+      setAllTags(tgs);
+      setAllProxies(pxs);
+      setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
+    } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   }, [search]);
 
@@ -441,6 +476,11 @@ export default function ProfilesPage() {
   async function handleLaunch(profileId) {
     try { await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' }); } 
     catch (err) { setError(err.message); } 
+  }
+
+  async function handleClone(profileId) {
+    try { await softglazeApi.profiles.clone(profileId); await loadData(); }
+    catch (err) { setError(err.message); }
   }
 
   async function handleDelete(profileId, title) {
@@ -1055,6 +1095,10 @@ export default function ProfilesPage() {
         title="Profiles" 
         actions={
           <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowTemplates(true)} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Templates
+            </Button>
             <Button variant="outline" className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]">
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Batch Create
@@ -1078,6 +1122,36 @@ export default function ProfilesPage() {
           </div>
         </div>
       )}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="bg-[#181a1f] border border-[#3b3e48] rounded-md px-2 py-1.5 text-[12px] text-white outline-none focus:border-blue-500">
+          <option value="all">All groups</option>
+          <option value="ungrouped">Ungrouped</option>
+          {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+        </select>
+        <select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="bg-[#181a1f] border border-[#3b3e48] rounded-md px-2 py-1.5 text-[12px] text-white outline-none focus:border-blue-500">
+          <option value="">All tags</option>
+          {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filterProxy} onChange={(e) => setFilterProxy(e.target.value)} className="bg-[#181a1f] border border-[#3b3e48] rounded-md px-2 py-1.5 text-[12px] text-white outline-none focus:border-blue-500">
+          <option value="">All proxies</option>
+          <option value="none">Direct (no proxy)</option>
+          {allProxies.map((px) => <option key={px.id} value={px.id}>{px.name}</option>)}
+        </select>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-[#181a1f] border border-[#3b3e48] rounded-md px-2 py-1.5 text-[12px] text-white outline-none focus:border-blue-500">
+          <option value="all">Any status</option>
+          <option value="running">Running</option>
+          <option value="proxied">Has proxy</option>
+          <option value="direct">No proxy</option>
+        </select>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name…" className="bg-[#181a1f] border border-[#3b3e48] rounded-md pl-9 pr-3 py-1.5 text-[12px] text-white outline-none focus:border-blue-500 w-44" />
+        </div>
+        {(filterGroup !== 'all' || filterTag || filterProxy || filterStatus !== 'all' || search) && (
+          <button onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setSearch(''); }} className="text-[12px] text-slate-400 hover:text-white px-2 py-1.5">Clear</button>
+        )}
+        <span className="ml-auto text-[12px] text-[#9ca3af]">{filteredProfiles.length} shown</span>
+      </div>
       <Card>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
@@ -1089,13 +1163,13 @@ export default function ProfilesPage() {
                       {filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length && <span className="w-2 h-2 bg-white rounded-sm" />}
                     </button>
                   </th>
-                  <th className="px-5 py-3">Name</th><th className="px-5 py-3">Proxy</th><th className="px-5 py-3">Created</th><th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-5 py-3">Name</th><th className="px-5 py-3">Proxy</th><th className="px-5 py-3">Created</th><th className="px-5 py-3">Last used</th><th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProfiles.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="p-8">
+                    <td colSpan="6" className="p-8">
                        <EmptyState title="No Profiles Found" description="Create your first isolated browser profile to get started." />
                     </td>
                   </tr>
@@ -1107,10 +1181,10 @@ export default function ProfilesPage() {
                         {selectedIds.has(p.id) && <span className="w-2 h-2 bg-white rounded-sm" />}
                       </button>
                     </td>
-                    <td className="px-5 py-3 font-medium text-white">{p.title}</td>
+                    <td className="px-5 py-3 font-medium text-white"><span className="inline-flex items-center gap-2">{runningIds.has(p.id) && <span className="w-2 h-2 rounded-full bg-emerald-400" title="Running" />}{p.title}</span></td>
                     <td className="px-5 py-3 text-[#9ca3af]">{p.proxyInfoString ? p.proxyInfoString.split(':')[0] : 'Direct'}</td>
-                    <td className="px-5 py-3 text-[#9ca3af]">{formatDateTime(p.createdAt)}</td>
-                    <td className="px-5 py-3"><div className="flex justify-end gap-2"><Button size="sm" onClick={() => handleLaunch(p.id)} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button><Button size="sm" variant="secondary" onClick={() => openEdit(p)}>Edit</Button><Button size="sm" variant="outline" onClick={() => setLeakProfile({ id: p.id, title: p.title })} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]" title="Leak check"><ShieldCheck className="h-3.5 w-3.5" /></Button><Button size="sm" variant="outline" onClick={() => setCookieProfile({ id: p.id, title: p.title })} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]" title="Cookies"><Cookie className="h-3.5 w-3.5" /></Button><Button size="sm" onClick={() => handleDelete(p.id, p.title)} className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-[#3b3e48] hover:border-red-900/50">Delete</Button></div></td>
+                    <td className="px-5 py-3 text-[#9ca3af]">{formatDateTime(p.createdAt)}</td><td className="px-5 py-3 text-[#9ca3af]"><button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-1.5 hover:text-white transition" title="View activity"><History className="h-3.5 w-3.5" />{p.lastUsedAt ? formatDateTime(p.lastUsedAt) : "Never"}{p.launchCount ? <span className="text-[10px] bg-[#2a2d35] px-1.5 py-0.5 rounded">{p.launchCount}×</span> : null}</button></td>
+                    <td className="px-5 py-3"><div className="flex justify-end gap-2"><Button size="sm" onClick={() => handleLaunch(p.id)} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button><Button size="sm" variant="secondary" onClick={() => openEdit(p)}>Edit</Button><Button size="sm" variant="outline" onClick={() => setLeakProfile({ id: p.id, title: p.title })} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]" title="Leak check"><ShieldCheck className="h-3.5 w-3.5" /></Button><Button size="sm" variant="outline" onClick={() => setCookieProfile({ id: p.id, title: p.title })} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]" title="Cookies"><Cookie className="h-3.5 w-3.5" /></Button><Button size="sm" variant="outline" onClick={() => handleClone(p.id)} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]" title="Clone profile"><Copy className="h-3.5 w-3.5" /></Button><Button size="sm" onClick={() => handleDelete(p.id, p.title)} className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-[#3b3e48] hover:border-red-900/50">Delete</Button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -1131,6 +1205,12 @@ export default function ProfilesPage() {
           profileName={cookieProfile.title}
           onClose={() => setCookieProfile(null)}
         />
+      )}
+      {showTemplates && (
+        <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
+      )}
+      {activityProfile && (
+        <ActivityModal profileId={activityProfile.id} profileName={activityProfile.title} onClose={() => setActivityProfile(null)} />
       )}
     </>
   );

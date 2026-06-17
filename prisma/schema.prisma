@@ -28,6 +28,12 @@ model Proxy {
   password  String?
   createdAt DateTime  @default(now())
 
+  // Health (populated by the proxy checker)
+  lastStatus    String? // 'ok' | 'fail'
+  lastLatencyMs Int?
+  lastCountry   String?
+  lastCheckedAt DateTime?
+
   profiles Profile[]
 
   @@index([host, port])
@@ -46,6 +52,30 @@ model Group {
   @@index([createdAt])
 }
 
+model Template {
+  id        Int      @id @default(autoincrement())
+  name      String
+  dataJson  String // JSON snapshot of profile config fields
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  profileId Int
+  action    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([profileId, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
 model Profile {
   id                  Int                 @id @default(autoincrement())
   title               String
@@ -55,6 +85,8 @@ model Profile {
   tagManagement       Int                 @default(0)
   groupId             Int?
   tags                String? // JSON array of tag strings
+  lastUsedAt          DateTime?
+  launchCount         Int                 @default(0)
   systemProxyBehavior SystemProxyBehavior @default(PROFILE_PROXY)
   dataDirName         String              @unique
 

@@ -13,7 +13,8 @@ const {
   closeAllProfileSessions,
   listActiveSessions,
   exportSessionCookies,
-  importSessionCookies
+  importSessionCookies,
+  liveLeakTest
 } = require('./browserEngine');
 const { parseWorkbookFile, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
 const { generateFingerprint } = require('./fingerprintGenerator');
@@ -46,6 +47,15 @@ const CHANNELS = Object.freeze({
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
+  PROFILE_CLONE: 'profile:clone',
+  TEMPLATE_LIST: 'template:list',
+  TEMPLATE_SAVE: 'template:save',
+  TEMPLATE_DELETE: 'template:delete',
+  TEMPLATE_CREATE_PROFILE: 'template:create-profile',
+  PROFILE_LIVE_LEAK: 'profile:live-leak',
+  PROFILE_ACTIVITY: 'profile:activity',
+  SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
+  SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -65,6 +75,7 @@ const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5']);
 const VALID_SYSTEM_PROXY_BEHAVIORS = new Set(['DIRECT', 'PROFILE_PROXY', 'SYSTEM_PROXY']);
 
 let registered = false;
+let proxySchedulerTimer = null;
 const importPreviewCache = new Map();
 
 function toIpcError(error) {
@@ -116,6 +127,10 @@ function parseIdArray(value) {
   return value.map((v) => parseId(v));
 }
 
+async function logActivity(db, profileId, action, detail = null) {
+  try { await db.activityLog.create({ data: { profileId, action, detail } }); } catch (e) { /* non-fatal */ }
+}
+
 function parsePort(value) {
   const port = Number.parseInt(String(value), 10);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -161,7 +176,11 @@ function serializeProxy(proxy) {
     password: proxy.password ? '••••••••' : '',
     hasPassword: Boolean(proxy.password),
     createdAt: proxy.createdAt instanceof Date ? proxy.createdAt.toISOString() : proxy.createdAt,
-    profileCount: proxy._count?.profiles ?? undefined
+    profileCount: proxy._count?.profiles ?? undefined,
+    lastStatus: proxy.lastStatus || null,
+    lastLatencyMs: proxy.lastLatencyMs ?? null,
+    lastCountry: proxy.lastCountry || null,
+    lastCheckedAt: proxy.lastCheckedAt instanceof Date ? proxy.lastCheckedAt.toISOString() : (proxy.lastCheckedAt || null)
   };
 }
 
@@ -185,6 +204,8 @@ function serializeProfile(profile) {
     syncItems,
     browserSettings,
     tags,
+    lastUsedAt: profile.lastUsedAt instanceof Date ? profile.lastUsedAt.toISOString() : (profile.lastUsedAt || null),
+    launchCount: profile.launchCount ?? 0,
     group: profile.group
       ? {
           id: profile.group.id,
@@ -556,10 +577,12 @@ async function testProxyConnectivity(proxy) {
 async function checkProxy(payload) {
   const input = requireObject(payload);
   let proxy = null;
+  let savedId = null;
 
   if (input.id !== undefined && input.id !== null) {
     const db = getPrisma();
-    const found = await db.proxy.findUnique({ where: { id: parseId(input.id) } });
+    savedId = parseId(input.id);
+    const found = await db.proxy.findUnique({ where: { id: savedId } });
     if (!found) throw new Error('Proxy not found.');
     proxy = { type: found.type, host: found.host, port: found.port, username: found.username, password: found.password };
   } else if (input.raw) {
@@ -576,7 +599,15 @@ async function checkProxy(payload) {
   }
 
   if (!proxy || !proxy.host || !proxy.port) throw new Error('No valid proxy provided to check.');
-  return testProxyConnectivity(proxy);
+
+  const result = await testProxyConnectivity(proxy);
+
+  // Persist health for saved proxies so the pool shows durable status badges.
+  if (savedId !== null) {
+    await persistProxyHealth(getPrisma(), savedId, result);
+  }
+
+  return result;
 }
 
 // Cross-checks a profile's fingerprint configuration against its proxy's real
@@ -788,6 +819,132 @@ async function importProfileCookies(payload) {
   const result = await importSessionCookies(String(id), params);
   if (result === null) throw new Error('Profile is not running. Launch it first to import cookies into its session.');
   return { imported: result.imported, parsed: parsed.length };
+}
+
+// ---------- Clone & Templates ----------
+
+// Columns that are identity/bookkeeping and must NOT be carried into a copy.
+const CLONE_EXCLUDE = new Set(['id', 'dataDirName', 'title', 'createdAt', 'updatedAt', 'deletedAt']);
+
+function pickCloneableFields(row) {
+  const out = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (CLONE_EXCLUDE.has(k)) continue;
+    if (k === 'proxy' || k === 'group') continue; // relation objects, never present on a scalar row
+    out[k] = v;
+  }
+  return out;
+}
+
+function randomMac() {
+  const h = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
+  return [h(), h(), h(), h(), h(), h()].join(':');
+}
+
+function randomDeviceName() {
+  const prefixes = ['DESKTOP', 'LAPTOP', 'PC', 'WORKSTATION'];
+  const suffix = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `${prefixes[Math.floor(Math.random() * prefixes.length)]}-${suffix}`;
+}
+
+function serializeTemplate(t) {
+  let summary = {};
+  try {
+    const d = JSON.parse(t.dataJson || '{}');
+    summary = {
+      os: d.os || null,
+      browserCore: d.browserCore || null,
+      resolution: d.resolutionW && d.resolutionH ? `${d.resolutionW}x${d.resolutionH}` : null,
+      hasProxy: Boolean(d.proxyId)
+    };
+  } catch (e) { /* ignore */ }
+  return {
+    id: t.id,
+    name: t.name,
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+    summary
+  };
+}
+
+// Resolve proxy/group references in a field set, nulling any that no longer exist.
+async function reconcileReferences(db, fields) {
+  if (fields.proxyId) {
+    const proxy = await db.proxy.findUnique({ where: { id: fields.proxyId } });
+    if (!proxy) { fields.proxyId = null; fields.proxyInfoString = null; }
+  }
+  if (fields.groupId) {
+    const group = await db.group.findUnique({ where: { id: fields.groupId } });
+    if (!group) fields.groupId = null;
+  }
+  return fields;
+}
+
+async function cloneProfile(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const src = await db.profile.findUnique({ where: { id } });
+  if (!src) throw new Error('Profile not found.');
+
+  const fields = await reconcileReferences(db, pickCloneableFields(src));
+  const title = `${src.title} (copy)`;
+  const dataDirName = await ensureUniqueDataDirName(db, title);
+
+  // Regenerate hardware identity so the copy is not a byte-identical twin.
+  const created = await db.profile.create({
+    data: { ...fields, title, dataDirName, macAddress: randomMac(), deviceName: randomDeviceName() },
+    include: { proxy: true, group: true }
+  });
+  return serializeProfile(created);
+}
+
+async function saveProfileAsTemplate(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const name = requiredString(input.name, 'Template name');
+  const src = await db.profile.findUnique({ where: { id } });
+  if (!src) throw new Error('Profile not found.');
+  const fields = pickCloneableFields(src);
+  const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields) } });
+  return serializeTemplate(created);
+}
+
+async function listTemplates() {
+  const db = getPrisma();
+  const rows = await db.template.findMany({ orderBy: { createdAt: 'desc' } });
+  return rows.map(serializeTemplate);
+}
+
+async function deleteTemplate(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  await db.template.delete({ where: { id } });
+  return { deleted: true, id };
+}
+
+async function createProfileFromTemplate(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const templateId = parseId(input.templateId, 'templateId');
+  const tpl = await db.template.findUnique({ where: { id: templateId } });
+  if (!tpl) throw new Error('Template not found.');
+
+  let fields;
+  try { fields = JSON.parse(tpl.dataJson || '{}'); }
+  catch (e) { throw new Error('Template data is corrupted.'); }
+  if (!fields || typeof fields !== 'object') throw new Error('Template data is invalid.');
+
+  const title = requiredString(input.title || tpl.name, 'Profile title');
+  await reconcileReferences(db, fields);
+  const dataDirName = await ensureUniqueDataDirName(db, title);
+
+  const created = await db.profile.create({
+    data: { ...fields, title, dataDirName, macAddress: randomMac(), deviceName: randomDeviceName() },
+    include: { proxy: true, group: true }
+  });
+  return serializeProfile(created);
 }
 
 async function listProfiles(payload = {}) {
@@ -1123,7 +1280,7 @@ async function launchProfile(payload) {
   const { profileRoot } = getRuntimeConfig();
   const useProfileProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
 
-  return launchProfileSession({
+  const session = await launchProfileSession({
     profileId: profile.id,
     title: profile.title,
     dataDirName: profile.dataDirName,
@@ -1134,6 +1291,10 @@ async function launchProfile(payload) {
     headless: false,
     profile // full fingerprint config applied at launch
   });
+
+  await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
+  await logActivity(db, id, 'launch', `session ${session.sessionId}`);
+  return session;
 }
 
 async function closeSession(payload) {
@@ -1225,6 +1386,145 @@ async function commitProfileImport(payload) {
   return result;
 }
 
+// ---------- Activity / usage history ----------
+
+async function listActivity(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const profile = await db.profile.findUnique({ where: { id }, select: { title: true, lastUsedAt: true, launchCount: true } });
+  if (!profile) throw new Error('Profile not found.');
+  const logs = await db.activityLog.findMany({ where: { profileId: id }, orderBy: { createdAt: 'desc' }, take: 50 });
+  return {
+    profileId: id,
+    title: profile.title,
+    lastUsedAt: profile.lastUsedAt instanceof Date ? profile.lastUsedAt.toISOString() : (profile.lastUsedAt || null),
+    launchCount: profile.launchCount || 0,
+    logs: logs.map((l) => ({
+      id: l.id,
+      action: l.action,
+      detail: l.detail || null,
+      createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt
+    }))
+  };
+}
+
+// ---------- Live leak test (reads real values from the running browser) ----------
+
+function isPrivateIp(ip) {
+  return /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|fe80)/i.test(ip) || /\.local$/i.test(ip);
+}
+
+async function liveProfileLeak(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const data = await liveLeakTest(String(id));
+  if (data === null) throw new Error('Profile is not running. Launch it first to run a live leak test.');
+
+  const env = data.env || {};
+  const webrtcIps = Array.isArray(data.webrtcIps) ? data.webrtcIps : [];
+  const exit = data.exit || null;
+  const exitIp = exit && exit.ip ? exit.ip : null;
+
+  const checks = [];
+
+  checks.push({
+    key: 'ip', label: 'Exit IP', status: exitIp ? 'pass' : 'warn',
+    detail: exitIp ? `${exitIp}${exit.country ? ` · ${exit.country}` : ''}` : 'Could not read the exit IP from the page.'
+  });
+
+  const publicIps = webrtcIps.filter((ip) => !isPrivateIp(ip));
+  const leaking = publicIps.filter((ip) => exitIp && ip !== exitIp);
+  if (webrtcIps.length === 0) {
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'No WebRTC candidates were exposed.' });
+  } else if (leaking.length > 0) {
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: `Public IP exposed via WebRTC differs from exit IP: ${leaking.join(', ')}` });
+  } else {
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Candidates: ${webrtcIps.join(', ')} — no public IP leak vs exit.` });
+  }
+
+  if (exit && exit.timezone && env.timezone) {
+    const match = exit.timezone === env.timezone;
+    checks.push({ key: 'timezone', label: 'Timezone', status: match ? 'pass' : 'fail', detail: match ? `Browser ${env.timezone} matches exit.` : `Browser ${env.timezone} \u2260 exit ${exit.timezone}.` });
+  } else if (env.timezone) {
+    checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: `Browser timezone ${env.timezone}; exit timezone unknown.` });
+  }
+
+  const summary = {
+    pass: checks.filter((c) => c.status === 'pass').length,
+    warn: checks.filter((c) => c.status === 'warn').length,
+    fail: checks.filter((c) => c.status === 'fail').length
+  };
+
+  return { profileId: id, running: true, env, webrtcIps, exit, checks, summary };
+}
+
+// ---------- Proxy health: persistence + background scheduler ----------
+
+async function persistProxyHealth(db, id, result) {
+  await db.proxy.update({
+    where: { id },
+    data: {
+      lastStatus: result.success ? 'ok' : 'fail',
+      lastLatencyMs: typeof result.latencyMs === 'number' ? result.latencyMs : null,
+      lastCountry: result.country || null,
+      lastCheckedAt: new Date()
+    }
+  }).catch(() => {});
+}
+
+async function readSetting(key, fallback) {
+  try {
+    const row = await getPrisma().setting.findUnique({ where: { key } });
+    if (!row) return fallback;
+    return JSON.parse(row.value);
+  } catch (e) {
+    return fallback;
+  }
+}
+
+async function writeSetting(key, value) {
+  const serialized = JSON.stringify(value);
+  await getPrisma().setting.upsert({ where: { key }, update: { value: serialized }, create: { key, value: serialized } });
+}
+
+async function runProxyHealthSweep() {
+  const db = getPrisma();
+  const proxies = await db.proxy.findMany();
+  for (const proxy of proxies) {
+    try {
+      const result = await testProxyConnectivity({ type: proxy.type, host: proxy.host, port: proxy.port, username: proxy.username, password: proxy.password });
+      await persistProxyHealth(db, proxy.id, result);
+    } catch (e) { /* keep sweeping */ }
+  }
+}
+
+function stopProxyScheduler() {
+  if (proxySchedulerTimer) { clearInterval(proxySchedulerTimer); proxySchedulerTimer = null; }
+}
+
+function startProxyScheduler(minutes) {
+  stopProxyScheduler();
+  const ms = Math.max(1, Number(minutes) || 30) * 60000;
+  proxySchedulerTimer = setInterval(() => { runProxyHealthSweep().catch(() => {}); }, ms);
+  if (proxySchedulerTimer.unref) proxySchedulerTimer.unref();
+}
+
+async function getProxyScheduler() {
+  const cfg = await readSetting('proxyScheduler', { enabled: false, minutes: 30 });
+  return { enabled: Boolean(cfg.enabled), minutes: Number(cfg.minutes) || 30, running: Boolean(proxySchedulerTimer) };
+}
+
+async function setProxyScheduler(payload) {
+  const input = requireObject(payload);
+  const enabled = Boolean(input.enabled);
+  const minutes = Math.max(1, Number.parseInt(input.minutes, 10) || 30);
+  await writeSetting('proxyScheduler', { enabled, minutes });
+  if (enabled) startProxyScheduler(minutes); else stopProxyScheduler();
+  return { enabled, minutes, running: Boolean(proxySchedulerTimer) };
+}
+
 async function getSystemInfo() {
   const { dbPath, profileRoot } = getRuntimeConfig();
   return { dbPath, profileRoot, databaseUrlConfigured: Boolean(process.env.DATABASE_URL) };
@@ -1276,6 +1576,23 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_ANALYZE_LEAKS, analyzeProfileLeaks);
   registerHandler(CHANNELS.PROFILE_EXPORT_COOKIES, exportProfileCookies);
   registerHandler(CHANNELS.PROFILE_IMPORT_COOKIES, importProfileCookies);
+  registerHandler(CHANNELS.PROFILE_CLONE, cloneProfile);
+  registerHandler(CHANNELS.TEMPLATE_LIST, listTemplates);
+  registerHandler(CHANNELS.TEMPLATE_SAVE, saveProfileAsTemplate);
+  registerHandler(CHANNELS.TEMPLATE_DELETE, deleteTemplate);
+  registerHandler(CHANNELS.TEMPLATE_CREATE_PROFILE, createProfileFromTemplate);
+  registerHandler(CHANNELS.PROFILE_LIVE_LEAK, liveProfileLeak);
+  registerHandler(CHANNELS.PROFILE_ACTIVITY, listActivity);
+  registerHandler(CHANNELS.SETTINGS_GET_SCHEDULER, getProxyScheduler);
+  registerHandler(CHANNELS.SETTINGS_SET_SCHEDULER, setProxyScheduler);
+
+  // Resume the background proxy scheduler if it was enabled previously.
+  (async () => {
+    try {
+      const cfg = await readSetting('proxyScheduler', null);
+      if (cfg && cfg.enabled) startProxyScheduler(cfg.minutes);
+    } catch (e) { /* ignore */ }
+  })();
 
   registerHandler(CHANNELS.GROUP_LIST, listGroups);
   registerHandler(CHANNELS.GROUP_CREATE, createGroup);
@@ -1294,6 +1611,7 @@ function registerIpcHandlers() {
 }
 
 async function shutdownIpcHandlers() {
+  stopProxyScheduler();
   await closeAllProfileSessions();
   await disconnectPrisma();
 }
