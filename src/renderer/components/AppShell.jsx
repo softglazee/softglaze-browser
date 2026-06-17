@@ -37,12 +37,12 @@ function NavItem({ path, label, icon: Icon }) {
     <NavLink to={path} className="block">
       {({ isActive }) => (
         <div
-          className={`relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
-            isActive ? 'bg-panel-2 text-fg' : 'text-mute hover:bg-panel-2 hover:text-fg'
+          className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+            isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-white/5 hover:text-zinc-100'
           }`}
         >
-          {isActive && <span className="absolute left-0 top-2 bottom-2 w-[2.5px] rounded-r bg-accent" />}
-          <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-accent' : ''}`} strokeWidth={1.75} />
+          {isActive && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-primary" />}
+          <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
           {label}
         </div>
       )}
@@ -74,7 +74,7 @@ export default function AppShell({ children }) {
         setMe(cur);
         setMembers(Array.isArray(list) ? list : []);
         setVault(vs || { enabled: false });
-      } catch (e) { /* members API may be unavailable on older builds */ }
+      } catch (e) { /* members API unavailable on older builds */ }
     })();
     return () => { live = false; };
   }, []);
@@ -105,17 +105,17 @@ export default function AppShell({ children }) {
   const role = me ? (ROLE_LABEL[me.role] || me.role) : 'No member';
 
   return (
-    <div className="flex h-screen w-full bg-bg text-fg font-sans overflow-hidden">
-      <aside className="w-[212px] bg-panel border-r border-line flex flex-col shrink-0">
+    <div className="flex h-screen w-full bg-background text-zinc-100 font-sans overflow-hidden">
+      <aside className="w-[232px] bg-surface border-r border-border flex flex-col shrink-0">
         <div className="flex items-center gap-2.5 px-4 py-4">
-          <div className="w-7 h-7 rounded-[7px] bg-accent text-accent-ink grid place-items-center font-display font-bold text-[15px]">S</div>
+          <div className="w-8 h-8 rounded-xl bg-primary text-white grid place-items-center font-display font-bold text-[15px] shadow-glow">S</div>
           <span className="font-display font-semibold text-[15px] tracking-tight">SoftGlaze</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-3">
           {SECTIONS.map((section) => (
             <div key={section.label} className="mt-3">
-              <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-faint">{section.label}</div>
+              <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted-dark">{section.label}</div>
               <div className="space-y-0.5">
                 {section.items.map((item) => <NavItem key={item.path} {...item} />)}
               </div>
@@ -124,45 +124,45 @@ export default function AppShell({ children }) {
         </nav>
 
         <div className="px-3 pb-3 mt-auto">
-          <div className="border-t border-line pt-2.5 space-y-0.5 relative" ref={ref}>
+          <div className="border-t border-border pt-2.5 space-y-0.5 relative" ref={ref}>
             <NavItem path="/settings" label="Settings" icon={Settings} />
-            <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-panel-2 transition-colors text-left">
-              <span className="w-7 h-7 rounded-full grid place-items-center font-semibold text-[11px]" style={{ background: me?.color ? me.color + '22' : 'var(--color-panel-3)', color: me?.color || 'var(--color-mute)' }}>{initials}</span>
+            <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors text-left">
+              <span className="w-8 h-8 rounded-full grid place-items-center font-semibold text-[11px]" style={{ background: me?.color ? me.color + '22' : 'var(--color-card)', color: me?.color || 'var(--color-muted)' }}>{initials}</span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] font-medium text-fg leading-tight truncate">{name}</span>
-                <span className="block text-[10.5px] text-faint">{role}</span>
+                <span className="block text-[12.5px] font-medium text-zinc-100 leading-tight truncate">{name}</span>
+                <span className="block text-[10.5px] text-muted-dark">{role}</span>
               </span>
-              <ChevronsUpDown className="w-[15px] h-[15px] text-faint" strokeWidth={1.75} />
+              <ChevronsUpDown className="w-[15px] h-[15px] text-muted-dark" strokeWidth={1.75} />
             </button>
 
             {open && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-panel-2 border border-line-2 rounded-lg overflow-hidden shadow-2xl shadow-black/50">
-                <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-faint">Switch member</div>
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-xl overflow-hidden shadow-2xl shadow-black/60">
+                <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-muted-dark">Switch member</div>
                 <div className="max-h-60 overflow-y-auto">
-                  {members.length === 0 && <div className="px-3 py-2 text-[12px] text-faint">No members yet.</div>}
+                  {members.length === 0 && <div className="px-3 py-2 text-[12px] text-muted-dark">No members yet.</div>}
                   {members.map((m) => (
                     <div key={m.id}>
-                      <button onClick={() => doSwitch(m)} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-panel-3 text-left">
-                        <span className="w-6 h-6 rounded-full grid place-items-center text-[10px] font-semibold" style={{ background: (m.color || '#3DC6DA') + '22', color: m.color || '#3DC6DA' }}>{m.initials}</span>
+                      <button onClick={() => doSwitch(m)} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/5 text-left">
+                        <span className="w-6 h-6 rounded-full grid place-items-center text-[10px] font-semibold" style={{ background: (m.color || '#6366f1') + '22', color: m.color || '#6366f1' }}>{m.initials}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-[12.5px] truncate">{m.name}</span>
-                          <span className="block text-[10.5px] text-faint">{ROLE_LABEL[m.role] || m.role}</span>
+                          <span className="block text-[10.5px] text-muted-dark">{ROLE_LABEL[m.role] || m.role}</span>
                         </span>
-                        {m.isCurrent && <Check className="w-4 h-4 text-accent" />}
+                        {m.isCurrent && <Check className="w-4 h-4 text-primary" />}
                       </button>
                       {pinFor === m.id && (
                         <div className="px-3 pb-2 flex items-center gap-2">
-                          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder="PIN" className="flex-1 h-8 bg-bg border border-line rounded-md px-2 text-[12px] text-fg outline-none focus:border-accent-dim" />
-                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-md bg-accent text-accent-ink text-[12px] font-semibold">Go</button>
+                          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder="PIN" className="flex-1 h-8 bg-background border border-border rounded-lg px-2 text-[12px] text-zinc-100 outline-none focus:border-primary" />
+                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white text-[12px] font-semibold">Go</button>
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
-                {err && <div className="px-3 py-1.5 text-[11px] text-down">{err}</div>}
-                <div className="border-t border-line">
-                  <button onClick={() => { setOpen(false); navigate('/members'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-panel-3 text-left text-[12.5px] text-mute"><Users className="w-4 h-4" />Manage members</button>
-                  {vault.enabled && <button onClick={doLock} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-panel-3 text-left text-[12.5px] text-mute"><Lock className="w-4 h-4" />Lock workspace</button>}
+                {err && <div className="px-3 py-1.5 text-[11px] text-red-400">{err}</div>}
+                <div className="border-t border-border">
+                  <button onClick={() => { setOpen(false); navigate('/members'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/5 text-left text-[12.5px] text-muted"><Users className="w-4 h-4" />Manage members</button>
+                  {vault.enabled && <button onClick={doLock} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/5 text-left text-[12.5px] text-muted"><Lock className="w-4 h-4" />Lock workspace</button>}
                 </div>
               </div>
             )}
@@ -170,7 +170,7 @@ export default function AppShell({ children }) {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
         <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
       </main>
     </div>
