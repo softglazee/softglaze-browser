@@ -495,6 +495,8 @@ async function batchAddProxies(payload) {
 
 // Performs a real HTTP(S) GET through the supplied http.Agent and resolves the
 // parsed JSON body. Enforces a hard timeout and a small response-size cap.
+// Performs a real HTTP(S) GET through the supplied http.Agent and resolves the
+// parsed JSON body. Enforces a hard timeout, response-size cap, and safe cleanup.
 function httpGetJson(url, agent, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     let lib;
@@ -502,9 +504,16 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
       const parsed = new URL(url);
       lib = parsed.protocol === 'https:' ? require('node:https') : require('node:http');
     } catch (e) {
-      reject(new Error('Invalid IP-service URL.'));
-      return;
+      return reject(new Error('Invalid IP-service URL.'));
     }
+
+    let isDone = false;
+    let timeoutId;
+
+    const cleanup = () => {
+      isDone = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
 
     const req = lib.get(
       url,
@@ -512,25 +521,45 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
       (res) => {
         const status = res.statusCode || 0;
         if (status < 200 || status >= 300) {
-          res.resume();
-          reject(new Error(`IP service returned HTTP ${status}.`));
-          return;
+          res.resume(); // Consume response data to free memory
+          cleanup();
+          return reject(new Error(`IP service returned HTTP ${status}.`));
         }
+
         let body = '';
         res.setEncoding('utf8');
+        
         res.on('data', (chunk) => {
+          if (isDone) return;
           body += chunk;
-          if (body.length > 1_000_000) req.destroy(new Error('IP service response too large.'));
+          if (body.length > 1_000_000) {
+            cleanup();
+            req.destroy();
+            reject(new Error('IP service response too large.'));
+          }
         });
+        
         res.on('end', () => {
+          if (isDone) return;
+          cleanup();
           try { resolve(JSON.parse(body)); }
           catch (e) { reject(new Error('Could not parse IP service response.')); }
         });
       }
     );
 
-    req.setTimeout(timeoutMs, () => req.destroy(new Error('Proxy connection timed out.')));
-    req.on('error', (err) => reject(err));
+    timeoutId = setTimeout(() => {
+      if (isDone) return;
+      cleanup();
+      req.destroy();
+      reject(new Error('Proxy connection timed out.'));
+    }, timeoutMs);
+
+    req.on('error', (err) => {
+      if (isDone) return;
+      cleanup();
+      reject(err);
+    });
   });
 }
 
@@ -1859,10 +1888,41 @@ async function accountSave(payload) {
 // OTP delivery seam. A local-first app has no mail transport, so until a real
 // provider (SMTP / Resend / a backend endpoint) is wired in here, we run in
 // dev mode and return the code to the caller so the flow stays testable.
+const nodemailer = require('nodemailer');
+
 async function deliverOtp(email, code) {
-  // TODO: replace with real email delivery before production.
-  console.log(`[OTP] (dev mode) verification code for ${email}: ${code}`);
-  return { devMode: true };
+  // Configure your SMTP transporter here.
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: true, 
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  try {
+    await transporter.sendMail({
+      // Hostinger requires the 'from' email to match the authenticated user!
+      from: `"SoftGlaze Security" <${process.env.SMTP_USER}>`, 
+      to: email,
+      subject: 'Your SoftGlaze Verification Code',
+      text: `Your verification code is: ${code}. It will expire in 10 minutes.`,
+      html: `
+        <div style="font-family: sans-serif; max-w-md; margin: 0 auto;">
+          <h2>SoftGlaze Verification</h2>
+          <p>Your verification code is:</p>
+          <h1 style="background: #f4f4f5; padding: 10px; text-align: center; letter-spacing: 5px;">${code}</h1>
+          <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
+        </div>
+      `
+    });
+    return { devMode: false };
+  } catch (error) {
+    console.error('[OTP Delivery Error]', error);
+    throw new Error('Failed to send verification email. Please check your SMTP settings.');
+  }
 }
 
 async function accountSendOtp(payload) {

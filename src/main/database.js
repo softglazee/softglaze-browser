@@ -36,7 +36,6 @@ function getRuntimeConfig() {
   if (!runtime) {
     return configureDatabaseEnv();
   }
-
   return runtime;
 }
 
@@ -55,231 +54,90 @@ function getPrisma() {
 }
 
 // ---------------------------------------------------------------------------
-// Additive, idempotent column migration for the live (userData) database.
-//
-// The runtime DB is created by the raw SQL in bootstrapDatabase() and lives in
-// Electron's userData dir, NOT in the project folder. There is no Prisma CLI on
-// an end-user's machine, so `prisma migrate` cannot run there. Instead we evolve
-// the schema in code: SQLite's ALTER TABLE ... ADD COLUMN is non-destructive
-// (existing rows/data are preserved), and PROFILE_COLUMNS is the single source
-// of truth for every column we add to Profile over time.
+// Automated SQLite Migration Runner
 // ---------------------------------------------------------------------------
-const PROFILE_COLUMNS = [
-  // Team / ownership
-  ['ownerMemberId', 'INTEGER'], ['assignedMemberId', 'INTEGER'],
+async function applyMigrations(db) {
+  console.log('[DB] Starting automated migration runner...');
+  
+  // 1. Ensure the migration tracking table exists
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "_AppMigrations" (
+      "id" TEXT PRIMARY KEY,
+      "appliedAt" DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
-  // Identity / environment
-  ['browserCore', 'TEXT'], ['browserVersion', 'TEXT'], ['os', 'TEXT'], ['osVersion', 'TEXT'],
-  ['userAgent', "TEXT DEFAULT 'Auto'"], ['startupUrls', 'TEXT'], ['platformAccounts', 'TEXT'],
+  // 2. BASELINING LOGIC: Check if this is an older database that already has tables 
+  // but no migration history. This prevents the "table Proxy already exists" crash.
+  const existingTables = await db.$queryRawUnsafe(`SELECT name FROM sqlite_master WHERE type='table' AND name='Proxy';`);
+  const appliedRecords = await db.$queryRawUnsafe(`SELECT "id" FROM "_AppMigrations";`);
+  const appliedSet = new Set(appliedRecords.map(r => r.id));
 
-  // WebRTC / timezone / geolocation
-  ['webrtc', 'TEXT'], ['timezoneType', 'TEXT'], ['timezoneCustom', 'TEXT'],
-  ['locationType', 'TEXT'], ['locationPrompt', 'TEXT'], ['locationLat', 'TEXT'],
-  ['locationLng', 'TEXT'], ['locationAcc', 'TEXT'],
-
-  // Language / display / resolution / fonts
-  ['languageType', 'TEXT'], ['languageCustom', 'TEXT'], ['displayLangType', 'TEXT'],
-  ['displayLangCustom', 'TEXT'], ['resolutionType', 'TEXT'], ['resolutionW', 'TEXT'],
-  ['resolutionH', 'TEXT'], ['fontsType', 'TEXT'],
-
-  // Fingerprint noise toggles (stored as 0/1)
-  ['canvasNoise', 'INTEGER NOT NULL DEFAULT 1'], ['webglImageNoise', 'INTEGER NOT NULL DEFAULT 1'],
-  ['audioContextNoise', 'INTEGER NOT NULL DEFAULT 1'], ['clientRectsNoise', 'INTEGER NOT NULL DEFAULT 1'],
-  ['speechVoicesNoise', 'INTEGER NOT NULL DEFAULT 1'], ['mediaDevice', 'TEXT'],
-
-  // WebGL / WebGPU
-  ['webglMetadata', 'TEXT'], ['webglVendor', 'TEXT'], ['webglRenderer', 'TEXT'], ['webgpu', 'TEXT'],
-
-  // Hardware (sent as strings from the UI)
-  ['cpuType', 'TEXT'], ['cpuCores', 'TEXT'], ['ramType', 'TEXT'], ['ramGb', 'TEXT'],
-
-  // Device identity
-  ['deviceNameType', 'TEXT'], ['deviceName', 'TEXT'], ['macAddressType', 'TEXT'], ['macAddress', 'TEXT'],
-
-  // Privacy / network / launch
-  ['doNotTrack', 'TEXT'], ['portScanProtection', 'TEXT'], ['hardwareAcceleration', 'TEXT'],
-  ['disableTls', 'TEXT'], ['launchArgs', 'TEXT'],
-
-  // Advanced (extensions / sync / browser settings)
-  ['advancedExt', 'TEXT'], ['advancedSync', 'TEXT'], ['syncItemsJson', 'TEXT'],
-  ['advancedBrowser', 'TEXT'], ['browserSettingsJson', 'TEXT'],
-  ['randomFingerprint', 'INTEGER NOT NULL DEFAULT 0'],
-
-  // Organization (groups + tags)
-  ['groupId', 'INTEGER'],
-  ['tags', 'TEXT'],
-
-  // Usage tracking
-  ['lastUsedAt', 'DATETIME'],
-  ['launchCount', 'INTEGER NOT NULL DEFAULT 0'],
-
-  // Timestamps / soft delete
-  // (CURRENT_TIMESTAMP is NOT allowed as a default in ALTER ADD COLUMN, so
-  //  updatedAt is added nullable here and backfilled from createdAt below.)
-  ['updatedAt', 'DATETIME'],
-  ['deletedAt', 'DATETIME']
-];
-
-const PROXY_COLUMNS = [
-  ['lastStatus', 'TEXT'],
-  ['lastLatencyMs', 'INTEGER'],
-  ['lastCountry', 'TEXT'],
-  ['lastCheckedAt', 'DATETIME']
-];
-
-async function ensureProxyColumns(db) {
-  const rows = await db.$queryRawUnsafe('PRAGMA table_info("Proxy");');
-  const existing = new Set(rows.map((r) => r.name));
-  const added = [];
-  for (const [name, ddl] of PROXY_COLUMNS) {
-    if (existing.has(name)) continue;
-    await db.$executeRawUnsafe(`ALTER TABLE "Proxy" ADD COLUMN "${name}" ${ddl};`);
-    added.push(name);
-  }
-  console.log(
-    added.length > 0
-      ? `[DB] ensureProxyColumns added ${added.length} column(s): ${added.join(', ')}`
-      : '[DB] ensureProxyColumns: schema already up to date.'
-  );
-  return added;
-}
-
-async function ensureProfileColumns(db) {
-  const rows = await db.$queryRawUnsafe('PRAGMA table_info("Profile");');
-  const existing = new Set(rows.map((r) => r.name));
-
-  const added = [];
-  for (const [name, ddl] of PROFILE_COLUMNS) {
-    if (existing.has(name)) continue;
-    await db.$executeRawUnsafe(`ALTER TABLE "Profile" ADD COLUMN "${name}" ${ddl};`);
-    added.push(name);
+  if (existingTables.length > 0 && appliedSet.size === 0) {
+    console.log('[DB] Legacy database detected. Baselining initial migrations...');
+    // Mark the two existing migrations as already applied so they don't run again
+    const baselineMigrations = ['20260616224355_init', '20260616224734_fix_missing_models'];
+    for (const m of baselineMigrations) {
+      await db.$executeRawUnsafe(`INSERT OR IGNORE INTO "_AppMigrations" ("id") VALUES ('${m}');`);
+      appliedSet.add(m);
+    }
   }
 
-  // Give pre-existing rows a real updatedAt so Prisma never reads NULL into the
-  // non-nullable updatedAt field (which would throw on profile:list).
-  if (added.includes('updatedAt')) {
-    await db.$executeRawUnsafe('UPDATE "Profile" SET "updatedAt" = "createdAt" WHERE "updatedAt" IS NULL;');
+  // 3. Locate the migrations directory
+  // In production (app.asar), the prisma folder is unpacked.
+  const isPackaged = app.isPackaged;
+  const basePath = isPackaged 
+    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'prisma', 'migrations')
+    : path.join(__dirname, '../../prisma/migrations');
+
+  if (!fs.existsSync(basePath)) {
+    console.warn('[DB] Migrations directory not found at:', basePath);
+    return;
   }
 
-  // Helps Trash / soft-delete queries in Step 2.
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_deletedAt_idx" ON "Profile"("deletedAt");');
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_groupId_idx" ON "Profile"("groupId");');
+  // 4. Read migration folders (they start with a 14-digit timestamp)
+  const entries = fs.readdirSync(basePath, { withFileTypes: true });
+  const migrationFolders = entries
+    .filter(entry => entry.isDirectory() && /^\d{14}_/.test(entry.name))
+    .map(entry => entry.name)
+    .sort(); 
 
-  console.log(
-    added.length > 0
-      ? `[DB] ensureProfileColumns added ${added.length} column(s): ${added.join(', ')}`
-      : '[DB] ensureProfileColumns: schema already up to date.'
-  );
-
-  return added;
-}
-
-async function ensureActivityLogColumns(db) {
-  const rows = await db.$queryRawUnsafe('PRAGMA table_info("ActivityLog");');
-  const existing = new Set(rows.map((r) => r.name));
-  if (!existing.has('memberId')) {
-    await db.$executeRawUnsafe('ALTER TABLE "ActivityLog" ADD COLUMN "memberId" INTEGER;');
-    console.log('[DB] ensureActivityLogColumns added column: memberId');
+  // 5. Apply new migrations sequentially
+  for (const folder of migrationFolders) {
+    if (!appliedSet.has(folder)) {
+      console.log(`[DB] Applying new migration: ${folder}`);
+      const sqlPath = path.join(basePath, folder, 'migration.sql');
+      
+      if (fs.existsSync(sqlPath)) {
+        const sqlContent = fs.readFileSync(sqlPath, 'utf8');
+        
+        // Split by statement to execute sequentially
+        const statements = sqlContent.split(';').map(s => s.trim()).filter(s => s.length > 0);
+        
+        // Execute inside a transaction
+        await db.$transaction(async (tx) => {
+          for (const statement of statements) {
+            await tx.$executeRawUnsafe(statement + ';');
+          }
+          // Record successful application
+          await tx.$executeRawUnsafe(`INSERT INTO "_AppMigrations" ("id") VALUES ('${folder}');`);
+        });
+        
+        console.log(`[DB] Successfully applied: ${folder}`);
+      } else {
+        console.warn(`[DB] No migration.sql found in ${folder}`);
+      }
+    }
   }
+  
+  console.log('[DB] All migrations are up to date.');
 }
 
 async function bootstrapDatabase() {
   const db = getPrisma();
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Proxy" (
-      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      "name" TEXT NOT NULL,
-      "type" TEXT NOT NULL DEFAULT 'HTTP',
-      "host" TEXT NOT NULL,
-      "port" INTEGER NOT NULL,
-      "username" TEXT,
-      "password" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Profile" (
-      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      "title" TEXT NOT NULL,
-      "proxyId" INTEGER,
-      "proxyInfoString" TEXT,
-      "notes" TEXT,
-      "tagManagement" INTEGER NOT NULL DEFAULT 0,
-      "systemProxyBehavior" TEXT NOT NULL DEFAULT 'PROFILE_PROXY',
-      "dataDirName" TEXT NOT NULL,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "Profile_proxyId_fkey" FOREIGN KEY ("proxyId") REFERENCES "Proxy" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-    );
-  `);
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Group" (
-      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      "name" TEXT NOT NULL,
-      "color" TEXT DEFAULT '#3b82f6',
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Group_createdAt_idx" ON "Group"("createdAt");');
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Template" (
-      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      "name" TEXT NOT NULL,
-      "dataJson" TEXT NOT NULL,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Template_createdAt_idx" ON "Template"("createdAt");');
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "ActivityLog" (
-      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      "profileId" INTEGER NOT NULL,
-      "action" TEXT NOT NULL,
-      "detail" TEXT,
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "ActivityLog_profileId_createdAt_idx" ON "ActivityLog"("profileId", "createdAt");');
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Setting" (
-      "key" TEXT NOT NULL PRIMARY KEY,
-      "value" TEXT NOT NULL
-    );
-  `);
-
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "Member" (
-      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-      "name" TEXT NOT NULL,
-      "email" TEXT,
-      "role" TEXT NOT NULL DEFAULT 'OPERATOR',
-      "color" TEXT DEFAULT '#3DC6DA',
-      "initials" TEXT,
-      "pinHash" TEXT,
-      "pinSalt" TEXT,
-      "status" TEXT NOT NULL DEFAULT 'active',
-      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "lastActiveAt" DATETIME
-    );
-  `);
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Member_createdAt_idx" ON "Member"("createdAt");');
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_host_port_idx" ON "Proxy"("host", "port");');
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_createdAt_idx" ON "Proxy"("createdAt");');
-  await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_key" ON "Proxy"("type", "host", "port", "username");');
-  await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Profile_dataDirName_key" ON "Profile"("dataDirName");');
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_proxyId_idx" ON "Profile"("proxyId");');
-  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_createdAt_idx" ON "Profile"("createdAt");');
-
-  // Bring the live Profile/Proxy tables up to date with schema.prisma (additive, safe).
-  await ensureProfileColumns(db);
-  await ensureProxyColumns(db);
-  await ensureActivityLogColumns(db);
+  
+  // Run the safe SQL migration reader
+  await applyMigrations(db);
 
   return true;
 }

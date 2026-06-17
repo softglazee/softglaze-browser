@@ -1,13 +1,43 @@
 'use strict';
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs'); // Added for synchronous PID tracking
+const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+// Enable the stealth plugin for anti-detect capabilities
+puppeteer.use(StealthPlugin());
 
 const DEFAULT_PROFILE_ROOT = path.resolve(process.cwd(), 'softglaze_profiles');
 const DEFAULT_WINDOW_SIZE = { width: 1280, height: 720 };
 const GEO_LOOKUP_TIMEOUT_MS = 8000;
 const activeSessions = new Map();
+
+// --- PID TRACKING FOR ORPHAN CLEANUP ---
+const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
+
+function trackPid(pid) {
+  try {
+    let pids = [];
+    if (fsSync.existsSync(PID_FILE)) {
+      pids = JSON.parse(fsSync.readFileSync(PID_FILE, 'utf8'));
+    }
+    if (!pids.includes(pid)) pids.push(pid);
+    fsSync.writeFileSync(PID_FILE, JSON.stringify(pids));
+  } catch (e) { console.error('[PID Tracker] Failed to track PID', e); }
+}
+
+function untrackPid(pid) {
+  try {
+    if (!fsSync.existsSync(PID_FILE)) return;
+    let pids = JSON.parse(fsSync.readFileSync(PID_FILE, 'utf8'));
+    pids = pids.filter(p => p !== pid);
+    fsSync.writeFileSync(PID_FILE, JSON.stringify(pids));
+  } catch (e) { console.error('[PID Tracker] Failed to untrack PID', e); }
+}
+// ----------------------------------------
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -399,6 +429,17 @@ async function launchProfileSession(options = {}) {
   }
 
   const browser = await puppeteer.launch({ headless, userDataDir, defaultViewport: null, args });
+  
+  // Track PID to prevent orphaned processes
+  const browserProcess = browser.process();
+  if (browserProcess) {
+    const pid = browserProcess.pid;
+    trackPid(pid);
+    browser.on('disconnected', () => {
+      untrackPid(pid);
+    });
+  }
+
   const versionMatch = (await browser.version()).match(/\/(\d+)\./);
   const realMajor = Number.parseInt(versionMatch ? versionMatch[1] : '125', 10);
 

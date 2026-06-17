@@ -1,11 +1,36 @@
 'use strict';
-
+require('dotenv').config(); // <--- ADD THIS LINE to load your .env file
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 const { app, BrowserWindow, shell, session } = require('electron');
 const { configureDatabaseEnv, bootstrapDatabase } = require('./database');
 
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
+
+// --- ORPHANED PROCESS CLEANUP ---
+function killOrphanedBrowsers() {
+  const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
+  if (fs.existsSync(PID_FILE)) {
+    try {
+      const pids = JSON.parse(fs.readFileSync(PID_FILE, 'utf8'));
+      console.log(`[Startup] Found ${pids.length} potentially orphaned browser processes. Cleaning up...`);
+      
+      pids.forEach(pid => {
+        try {
+          process.kill(pid, 9); // Force kill
+        } catch (e) {
+          // If process doesn't exist, process.kill throws. We can safely ignore it.
+        }
+      });
+      fs.unlinkSync(PID_FILE); // Clear the file after cleanup
+    } catch (e) {
+      console.error('[Startup] Failed to cleanup orphaned processes', e);
+    }
+  }
+}
+// --------------------------------
 
 function getPreloadPath() {
   return path.join(__dirname, '../preload/preload.js');
@@ -84,6 +109,9 @@ function configureSessionSecurity() {
 }
 
 app.whenReady().then(async () => {
+  // Always clean up orphaned processes before starting
+  killOrphanedBrowsers();
+
   configureDatabaseEnv();
   await bootstrapDatabase();
   configureSessionSecurity();
