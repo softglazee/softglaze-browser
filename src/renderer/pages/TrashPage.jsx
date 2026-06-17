@@ -1,63 +1,117 @@
-import React, { useState, useMemo } from 'react';
-import { Trash2, Undo2, AlertTriangle, Search, ArchiveX } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Trash2, Undo2, AlertTriangle, Search, ArchiveX, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import { formatDateTime } from '@/lib/utils.js';
+import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// --- MOCK DATA FOR IMMEDIATE UI TESTING ---
-// In a real scenario, this would be fetched via softglazeApi.profiles.listTrash()
-const INITIAL_TRASH = [
-  { id: 't-1', title: 'FB Old Acc 04', originalGroup: 'Lead Gen', deletedAt: new Date(Date.now() - 86400000 * 2).toISOString(), browserCore: 'SunBrowser' },
-  { id: 't-2', title: 'Twitter Backup', originalGroup: 'Ungrouped', deletedAt: new Date(Date.now() - 86400000 * 5).toISOString(), browserCore: 'FlowerBrowser' },
-  { id: 't-3', title: 'Amz Buyer 09', originalGroup: 'E-commerce', deletedAt: new Date(Date.now() - 3600000).toISOString(), browserCore: 'SunBrowser' },
-];
+// --- HELPER COMPONENT FOR CUSTOM CHECKBOX ---
+const Checkbox = ({ checked, onChange }) => (
+  <button
+    type="button"
+    onClick={onChange}
+    className={`w-4 h-4 rounded border flex items-center justify-center transition ${checked ? 'bg-blue-600 border-blue-600' : 'bg-[#181a1f] border-[#3b3e48] hover:border-slate-400'}`}
+  >
+    {checked && <span className="w-2 h-2 bg-white rounded-sm" />}
+  </button>
+);
 
 export default function TrashPage() {
-  const [trashItems, setTrashItems] = useState(INITIAL_TRASH);
+  const [trashItems, setTrashItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [busy, setBusy] = useState(false);
+  const [removeLocalData, setRemoveLocalData] = useState(false);
+
+  const loadTrash = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setTrashItems(await softglazeApi.profiles.listTrash());
+    } catch (err) {
+      setError(err.message || 'Failed to load trash.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadTrash(); }, [loadTrash]);
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) return trashItems;
-    return trashItems.filter(item => item.title.toLowerCase().includes(search.toLowerCase()));
+    const q = search.toLowerCase();
+    return trashItems.filter((item) => (item.title || '').toLowerCase().includes(q));
   }, [trashItems, search]);
 
-  // --- ACTIONS ---
-  const handleRestore = (id, title) => {
-    // In production: await softglazeApi.profiles.restore(id)
-    setTrashItems(prev => prev.filter(item => item.id !== id));
-    // Optional: show a toast notification here
-    console.log(`Restored profile: ${title}`);
+  const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => (prev.size === filteredItems.length ? new Set() : new Set(filteredItems.map((i) => i.id))));
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleRestore = async (id) => {
+    setBusy(true); setError('');
+    try { await softglazeApi.profiles.restore(id); await loadTrash(); clearSelection(); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
   };
 
-  const handlePermanentDelete = (id, title) => {
-    if (!window.confirm(`WARNING: Are you sure you want to PERMANENTLY delete "${title}"? This action cannot be undone and all associated fingerprint/cookie data will be destroyed.`)) {
-      return;
-    }
-    // In production: await softglazeApi.profiles.hardDelete(id)
-    setTrashItems(prev => prev.filter(item => item.id !== id));
+  const handlePurge = async (id, title) => {
+    if (!window.confirm(`Permanently delete "${title}"? This cannot be undone${removeLocalData ? ' and its local browser data will be erased' : ''}.`)) return;
+    setBusy(true); setError('');
+    try { await softglazeApi.profiles.purge(id, { removeLocalData }); await loadTrash(); clearSelection(); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
   };
 
-  const handleEmptyTrash = () => {
+  const handleBulkRestore = async () => {
+    if (selectedIds.size === 0) return;
+    setBusy(true); setError('');
+    try { await softglazeApi.profiles.bulkRestore([...selectedIds]); await loadTrash(); clearSelection(); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  const handleBulkPurge = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selectedIds.size} profile(s)? This cannot be undone${removeLocalData ? ' and local browser data will be erased' : ''}.`)) return;
+    setBusy(true); setError('');
+    try { await softglazeApi.profiles.bulkPurge([...selectedIds], { removeLocalData }); await loadTrash(); clearSelection(); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  };
+
+  const handleEmptyTrash = async () => {
     if (trashItems.length === 0) return;
-    if (!window.confirm('WARNING: Are you sure you want to permanently delete ALL profiles in the trash? This action cannot be undone.')) {
-      return;
-    }
-    // In production: await softglazeApi.profiles.emptyTrash()
-    setTrashItems([]);
+    if (!window.confirm(`Permanently delete ALL ${trashItems.length} profile(s) in the trash? This cannot be undone${removeLocalData ? ' and local browser data will be erased' : ''}.`)) return;
+    setBusy(true); setError('');
+    try { await softglazeApi.profiles.bulkPurge(trashItems.map((i) => i.id), { removeLocalData }); await loadTrash(); clearSelection(); }
+    catch (err) { setError(err.message); }
+    finally { setBusy(false); }
   };
 
   return (
     <>
-      <PageHeader 
-        eyebrow="Workspace" 
-        title="Trash & Recovery" 
+      <PageHeader
+        eyebrow="Workspace"
+        title="Trash & Recovery"
         description="Recover deleted profiles or permanently erase them from your storage."
         actions={
-          <Button 
-            onClick={handleEmptyTrash} 
-            disabled={trashItems.length === 0}
+          <Button
+            onClick={handleEmptyTrash}
+            disabled={trashItems.length === 0 || busy}
             className="bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300 border border-red-900/50 transition-colors disabled:opacity-50"
           >
             <ArchiveX className="w-4 h-4 mr-2" />
@@ -66,102 +120,126 @@ export default function TrashPage() {
         }
       />
 
+      {error && <div className="mb-4 rounded-lg border border-red-900/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
+
       {/* Warning Banner */}
       <div className="mb-6 flex items-start gap-3 bg-[#42341b] border border-[#5a4623] text-[#eab308] p-4 rounded-lg">
         <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
         <div className="text-[13px] leading-relaxed">
-          <p className="font-semibold mb-1">Data Retention Policy</p>
+          <p className="font-semibold mb-1">Permanent deletion</p>
           <p className="text-[#eab308]/80">
-            Profiles moved to the trash will be retained for <strong>30 days</strong> to allow for secure rollback tracking. 
-            After 30 days, they will be automatically and permanently deleted from the local database.
+            Restoring returns a profile to your list unchanged. Permanent delete removes it from the database; enable the option below to also erase its local browser data (cookies, cache, logins) from disk.
           </p>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
-          <input 
-            type="text" 
-            placeholder="Search deleted profiles..." 
+          <input
+            type="text"
+            placeholder="Search deleted profiles..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-[#181a1f] border border-[#3b3e48] rounded-md pl-9 pr-3 py-2 text-[13px] text-white outline-none focus:border-blue-500 transition"
           />
         </div>
-        <div className="text-[12px] text-[#9ca3af] hidden sm:block">
-          {trashItems.length} profile(s) in trash
-        </div>
+        <label className="flex items-center gap-2 text-[12px] text-[#9ca3af] cursor-pointer select-none">
+          <Checkbox checked={removeLocalData} onChange={() => setRemoveLocalData((v) => !v)} />
+          Also erase local browser data on permanent delete
+        </label>
       </div>
+
+      {/* Bulk toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#2d3039] bg-[#1e2025] px-4 py-3">
+          <span className="text-[13px] text-white font-medium">{selectedIds.size} selected</span>
+          <div className="flex gap-2 ml-auto">
+            <Button size="sm" disabled={busy} onClick={handleBulkRestore} className="bg-[#2a2d35] hover:bg-[#3b3e48] text-white border border-[#3b3e48]">
+              <Undo2 className="w-3.5 h-3.5 mr-1.5" /> Restore
+            </Button>
+            <Button size="sm" disabled={busy} onClick={handleBulkPurge} className="bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-900/50">
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete Forever
+            </Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={clearSelection} className="bg-[#181a1f] border-[#3b3e48] text-white">Clear</Button>
+          </div>
+        </div>
+      )}
 
       {/* Data Table */}
       <Card>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[800px] border-collapse text-left text-[13px]">
-              <thead className="border-b border-[#2d3039] bg-[#181a1f] text-[#9ca3af]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Profile Name</th>
-                  <th className="px-5 py-3 font-medium">Original Group</th>
-                  <th className="px-5 py-3 font-medium">Deleted Date</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center p-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+            ) : (
+              <table className="w-full min-w-[800px] border-collapse text-left text-[13px]">
+                <thead className="border-b border-[#2d3039] bg-[#181a1f] text-[#9ca3af]">
                   <tr>
-                    <td colSpan="4" className="p-12">
-                      <EmptyState 
-                        title="Trash is empty" 
-                        description={search ? "No deleted profiles match your search." : "You have no deleted profiles. Safe and clean!"} 
-                        icon={<Trash2 className="w-12 h-12 text-[#3b3e48]" />}
-                      />
-                    </td>
+                    <th className="px-5 py-3 w-10"><Checkbox checked={allSelected} onChange={toggleSelectAll} /></th>
+                    <th className="px-5 py-3 font-medium">Profile Name</th>
+                    <th className="px-5 py-3 font-medium">Proxy</th>
+                    <th className="px-5 py-3 font-medium">Deleted Date</th>
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
                   </tr>
-                ) : (
-                  filteredItems.map((item) => (
-                    <tr key={item.id} className="border-b border-[#2d3039] hover:bg-[#181a1f] transition bg-[#1e2025]">
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-white">{item.title}</span>
-                          <span className="text-[11px] text-[#9ca3af] mt-0.5">{item.browserCore}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-[#9ca3af]">
-                        <span className="bg-[#2a2d35] px-2 py-1 rounded text-[11px]">
-                          {item.originalGroup}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-[#9ca3af]">
-                        {formatDateTime(item.deletedAt)}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleRestore(item.id, item.title)}
-                            className="bg-[#2a2d35] hover:bg-[#3b3e48] text-white border border-[#3b3e48]"
-                            title="Restore Profile"
-                          >
-                            <Undo2 className="w-3.5 h-3.5 mr-1.5" />
-                            Restore
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handlePermanentDelete(item.id, item.title)}
-                            className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-transparent hover:border-red-900/50 transition"
-                            title="Permanently Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                </thead>
+                <tbody>
+                  {filteredItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-12">
+                        <EmptyState
+                          title="Trash is empty"
+                          description={search ? 'No deleted profiles match your search.' : 'You have no deleted profiles. Safe and clean!'}
+                          icon={<Trash2 className="w-12 h-12 text-[#3b3e48]" />}
+                        />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <tr key={item.id} className="border-b border-[#2d3039] hover:bg-[#181a1f] transition bg-[#1e2025]">
+                        <td className="px-5 py-4"><Checkbox checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} /></td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-white">{item.title}</span>
+                            <span className="text-[11px] text-[#9ca3af] mt-0.5">{item.os || item.browserCore || 'Chrome'}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-[#9ca3af]">
+                          <span className="bg-[#2a2d35] px-2 py-1 rounded text-[11px] font-mono">
+                            {item.proxyInfoString ? item.proxyInfoString.split(':')[0] : 'Direct'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-[#9ca3af]">{formatDateTime(item.deletedAt)}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => handleRestore(item.id)}
+                              className="bg-[#2a2d35] hover:bg-[#3b3e48] text-white border border-[#3b3e48]"
+                              title="Restore Profile"
+                            >
+                              <Undo2 className="w-3.5 h-3.5 mr-1.5" />
+                              Restore
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => handlePurge(item.id, item.title)}
+                              className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-transparent hover:border-red-900/50 transition"
+                              title="Permanently Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -300,6 +300,9 @@ export default function ProfilesPage() {
   const [checkingProxy, setCheckingProxy] = useState(false);
   const [proxyResult, setProxyResult] = useState(null);
 
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const filteredProfiles = useMemo(() => profiles, [profiles]);
   const isEditing = Boolean(pd.id);
   
@@ -434,6 +437,47 @@ export default function ProfilesPage() {
   async function handleLaunch(profileId) {
     try { await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' }); } 
     catch (err) { setError(err.message); } 
+  }
+
+  async function handleDelete(profileId, title) {
+    if (!window.confirm(`Move "${title}" to Trash?`)) return;
+    try { await softglazeApi.profiles.delete(profileId); await loadData(); }
+    catch (err) { setError(err.message); }
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleSelectAll() {
+    setSelectedIds((prev) => (prev.size === filteredProfiles.length ? new Set() : new Set(filteredProfiles.map((p) => p.id))));
+  }
+  function clearSelection() { setSelectedIds(new Set()); }
+
+  async function handleBulkLaunch() {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true); setError('');
+    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); }
+    catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  }
+  async function handleBulkClose() {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true); setError('');
+    try { await softglazeApi.profiles.bulkClose([...selectedIds]); }
+    catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  }
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Move ${selectedIds.size} profile(s) to Trash?`)) return;
+    setBulkBusy(true); setError('');
+    try { await softglazeApi.profiles.bulkDelete([...selectedIds]); clearSelection(); await loadData(); }
+    catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
   }
 
   async function handleCheckProxy(e) {
@@ -1019,27 +1063,50 @@ export default function ProfilesPage() {
         } 
       />
       {error && <div className="mb-4 rounded-lg border border-red-900/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[#2d3039] bg-[#1e2025] px-4 py-3">
+          <span className="text-[13px] text-white font-medium">{selectedIds.size} selected</span>
+          <div className="flex gap-2 ml-auto">
+            <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button>
+            <Button size="sm" disabled={bulkBusy} onClick={handleBulkClose} className="bg-[#2a2d35] text-white hover:bg-[#3b3e48] border border-[#3b3e48]">Close</Button>
+            <Button size="sm" disabled={bulkBusy} onClick={handleBulkDelete} className="bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-900/50">Delete</Button>
+            <Button size="sm" variant="outline" disabled={bulkBusy} onClick={clearSelection} className="bg-[#181a1f] border-[#3b3e48] text-white">Clear</Button>
+          </div>
+        </div>
+      )}
       <Card>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[1120px] border-collapse text-left text-[13px]">
               <thead className="border-b border-[#2d3039] bg-[#181a1f] text-[#9ca3af]">
-                <tr><th className="px-5 py-3">Name</th><th className="px-5 py-3">Proxy</th><th className="px-5 py-3">Created</th><th className="px-5 py-3 text-right">Actions</th></tr>
+                <tr>
+                  <th className="px-5 py-3 w-10">
+                    <button type="button" onClick={toggleSelectAll} className={`w-4 h-4 rounded border flex items-center justify-center transition ${filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length ? 'bg-blue-600 border-blue-600' : 'bg-[#181a1f] border-[#3b3e48] hover:border-slate-400'}`}>
+                      {filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length && <span className="w-2 h-2 bg-white rounded-sm" />}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3">Name</th><th className="px-5 py-3">Proxy</th><th className="px-5 py-3">Created</th><th className="px-5 py-3 text-right">Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {filteredProfiles.length === 0 && (
                   <tr>
-                    <td colSpan="4" className="p-8">
+                    <td colSpan="5" className="p-8">
                        <EmptyState title="No Profiles Found" description="Create your first isolated browser profile to get started." />
                     </td>
                   </tr>
                 )}
                 {filteredProfiles.map((p) => (
                   <tr key={p.id} className="border-b border-[#2d3039] hover:bg-[#181a1f]">
+                    <td className="px-5 py-3">
+                      <button type="button" onClick={() => toggleSelect(p.id)} className={`w-4 h-4 rounded border flex items-center justify-center transition ${selectedIds.has(p.id) ? 'bg-blue-600 border-blue-600' : 'bg-[#181a1f] border-[#3b3e48] hover:border-slate-400'}`}>
+                        {selectedIds.has(p.id) && <span className="w-2 h-2 bg-white rounded-sm" />}
+                      </button>
+                    </td>
                     <td className="px-5 py-3 font-medium text-white">{p.title}</td>
                     <td className="px-5 py-3 text-[#9ca3af]">{p.proxyInfoString ? p.proxyInfoString.split(':')[0] : 'Direct'}</td>
                     <td className="px-5 py-3 text-[#9ca3af]">{formatDateTime(p.createdAt)}</td>
-                    <td className="px-5 py-3"><div className="flex justify-end gap-2"><Button size="sm" onClick={() => handleLaunch(p.id)} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button><Button size="sm" variant="secondary" onClick={() => openEdit(p)}>Edit</Button></div></td>
+                    <td className="px-5 py-3"><div className="flex justify-end gap-2"><Button size="sm" onClick={() => handleLaunch(p.id)} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button><Button size="sm" variant="secondary" onClick={() => openEdit(p)}>Edit</Button><Button size="sm" onClick={() => handleDelete(p.id, p.title)} className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-[#3b3e48] hover:border-red-900/50">Delete</Button></div></td>
                   </tr>
                 ))}
               </tbody>
