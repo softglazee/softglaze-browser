@@ -30,7 +30,9 @@ export const softglazeApi = {
     bulkPurge: (ids, options) => getSoftglazeApi().profiles.bulkPurge(ids, options),
     bulkLaunch: (ids) => getSoftglazeApi().profiles.bulkLaunch(ids),
     bulkClose: (ids) => getSoftglazeApi().profiles.bulkClose(ids),
-    analyzeLeaks: (id) => getSoftglazeApi().profiles.analyzeLeaks(id)
+    analyzeLeaks: (id) => getSoftglazeApi().profiles.analyzeLeaks(id),
+    exportCookies: (id, format) => getSoftglazeApi().profiles.exportCookies(id, format),
+    importCookies: (id, data, format) => getSoftglazeApi().profiles.importCookies(id, data, format)
   },
   groups: {
     list: () => getSoftglazeApi().groups.list(),

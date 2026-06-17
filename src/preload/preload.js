@@ -28,6 +28,8 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
+  PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
+  PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -87,7 +89,9 @@ const api = Object.freeze({
     bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
     bulkLaunch: (ids) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids }),
     bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids }),
-    analyzeLeaks: (id) => invoke(CHANNELS.PROFILE_ANALYZE_LEAKS, { id })
+    analyzeLeaks: (id) => invoke(CHANNELS.PROFILE_ANALYZE_LEAKS, { id }),
+    exportCookies: (id, format) => invoke(CHANNELS.PROFILE_EXPORT_COOKIES, { id, format }),
+    importCookies: (id, data, format) => invoke(CHANNELS.PROFILE_IMPORT_COOKIES, { id, data, format })
   }),
   groups: Object.freeze({
     list: () => invoke(CHANNELS.GROUP_LIST),

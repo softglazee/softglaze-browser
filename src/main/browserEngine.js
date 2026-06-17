@@ -523,6 +523,37 @@ function formatUptime(createdAt) {
   return `${sec}s`;
 }
 
+// --- Cookie I/O over CDP (decrypted, browser-wide) for the live session ---
+// Returns an array of cookie objects, or null when the profile isn't running.
+async function exportSessionCookies(sessionId) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.page) return null;
+  const client = await session.page.target().createCDPSession();
+  try {
+    const { cookies } = await client.send('Network.getAllCookies');
+    return Array.isArray(cookies) ? cookies : [];
+  } finally {
+    await client.detach().catch(() => {});
+  }
+}
+
+// Injects cookie params (CDP CookieParam shape) into the running session's
+// browser-wide store. Returns { imported } or null when the profile isn't running.
+async function importSessionCookies(sessionId, cookies) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.page) return null;
+  if (!Array.isArray(cookies) || cookies.length === 0) return { imported: 0 };
+  const client = await session.page.target().createCDPSession();
+  try {
+    await client.send('Network.setCookies', { cookies });
+    return { imported: cookies.length };
+  } finally {
+    await client.detach().catch(() => {});
+  }
+}
+
 function listActiveSessions() {
   return Array.from(activeSessions.entries()).map(([sessionId, session]) => ({
     id: sessionId,
@@ -541,5 +572,7 @@ module.exports = {
   launchProfileSession,
   closeProfileSession,
   closeAllProfileSessions,
-  listActiveSessions
+  listActiveSessions,
+  exportSessionCookies,
+  importSessionCookies
 };
