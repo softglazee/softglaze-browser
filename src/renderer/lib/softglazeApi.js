@@ -61,6 +61,23 @@ export const softglazeApi = {
     list: () => getSoftglazeApi().sessions.list(),
     close: (sessionId) => getSoftglazeApi().sessions.close(sessionId)
   },
+  members: {
+    list: () => getSoftglazeApi().members.list(),
+    create: (payload) => getSoftglazeApi().members.create(payload),
+    update: (payload) => getSoftglazeApi().members.update(payload),
+    delete: (id) => getSoftglazeApi().members.delete(id),
+    setPin: (id, pin) => getSoftglazeApi().members.setPin(id, pin),
+    current: () => getSoftglazeApi().members.current(),
+    switch: (id, pin) => getSoftglazeApi().members.switch(id, pin)
+  },
+  vault: {
+    status: () => getSoftglazeApi().vault.status(),
+    setPassword: (payload) => getSoftglazeApi().vault.setPassword(payload),
+    unlock: (password) => getSoftglazeApi().vault.unlock(password),
+    lock: () => getSoftglazeApi().vault.lock(),
+    disable: (password) => getSoftglazeApi().vault.disable(password),
+    setAutoLock: (minutes) => getSoftglazeApi().vault.setAutoLock(minutes)
+  },
   batch: {
     previewProfilesFromSpreadsheet: () => getSoftglazeApi().batch.previewProfilesFromSpreadsheet(),
     commitProfileImport: (token) => getSoftglazeApi().batch.commitProfileImport(token)

@@ -1,82 +1,177 @@
-import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Globe, Settings, Monitor, FileSpreadsheet, Puzzle, FolderHeart, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet,
+  Trash2, Settings, Users, Lock, Check, ChevronsUpDown
+} from 'lucide-react';
+import { softglazeApi } from '@/lib/softglazeApi.js';
 
-const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/profiles', label: 'Profiles', icon: Monitor },
-  { path: '/groups', label: 'Groups', icon: FolderHeart },
-  { path: '/proxies', label: 'Proxy Pool', icon: Globe },
-  { path: '/extensions', label: 'Extensions', icon: Puzzle },
-  { path: '/batch-import', label: 'Batch Import', icon: FileSpreadsheet },
-  { path: '/trash', label: 'Trash', icon: Trash2 },
-  { path: '/settings', label: 'Global Settings', icon: Settings },
+const SECTIONS = [
+  {
+    label: 'Workspace',
+    items: [
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/profiles', label: 'Profiles', icon: Fingerprint },
+      { path: '/groups', label: 'Groups', icon: Layers },
+      { path: '/proxies', label: 'Proxy pool', icon: Globe },
+      { path: '/extensions', label: 'Extensions', icon: Puzzle }
+    ]
+  },
+  {
+    label: 'Data',
+    items: [
+      { path: '/batch-import', label: 'Batch import', icon: FileSpreadsheet },
+      { path: '/trash', label: 'Trash', icon: Trash2 }
+    ]
+  },
+  {
+    label: 'Team',
+    items: [{ path: '/members', label: 'Members', icon: Users }]
+  }
 ];
 
+const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATOR: 'Operator' };
+
+function NavItem({ path, label, icon: Icon }) {
+  return (
+    <NavLink to={path} className="block">
+      {({ isActive }) => (
+        <div
+          className={`relative flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
+            isActive ? 'bg-panel-2 text-fg' : 'text-mute hover:bg-panel-2 hover:text-fg'
+          }`}
+        >
+          {isActive && <span className="absolute left-0 top-2 bottom-2 w-[2.5px] rounded-r bg-accent" />}
+          <Icon className={`w-[18px] h-[18px] ${isActive ? 'text-accent' : ''}`} strokeWidth={1.75} />
+          {label}
+        </div>
+      )}
+    </NavLink>
+  );
+}
+
 export default function AppShell({ children }) {
-  const location = useLocation();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [me, setMe] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [vault, setVault] = useState({ enabled: false });
+  const [pinFor, setPinFor] = useState(null);
+  const [pin, setPin] = useState('');
+  const [err, setErr] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const [cur, list, vs] = await Promise.all([
+          softglazeApi.members.current().catch(() => null),
+          softglazeApi.members.list().catch(() => []),
+          softglazeApi.vault.status().catch(() => ({ enabled: false }))
+        ]);
+        if (!live) return;
+        setMe(cur);
+        setMembers(Array.isArray(list) ? list : []);
+        setVault(vs || { enabled: false });
+      } catch (e) { /* members API may be unavailable on older builds */ }
+    })();
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    function onDoc(e) {
+      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setPinFor(null); setErr(''); }
+    }
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  async function doSwitch(m) {
+    setErr('');
+    if (m.hasPin && pinFor !== m.id) { setPinFor(m.id); setPin(''); return; }
+    try {
+      await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined);
+      window.location.reload();
+    } catch (e) { setErr(e.message || 'Could not switch member.'); }
+  }
+
+  async function doLock() {
+    try { await softglazeApi.vault.lock(); window.location.reload(); } catch (e) { /* ignore */ }
+  }
+
+  const initials = me?.initials || 'SG';
+  const name = me?.name || 'Local workspace';
+  const role = me ? (ROLE_LABEL[me.role] || me.role) : 'No member';
 
   return (
-    <div className="flex h-screen w-full bg-background text-zinc-100 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-surface border-r border-border flex flex-col shrink-0 relative z-20 shadow-2xl shadow-black/50">
-        
-        {/* Brand / Logo Area */}
-        <div className="h-16 flex items-center px-6 border-b border-border">
-          <div className="flex items-center gap-3 text-zinc-100 font-bold text-lg tracking-wide">
-            <div className="w-8 h-8 bg-primary/20 border border-primary/30 rounded-lg flex items-center justify-center shadow-glow">
-              <Monitor className="w-4 h-4 text-primary" />
-            </div>
-            SoftGlaze
-          </div>
+    <div className="flex h-screen w-full bg-bg text-fg font-sans overflow-hidden">
+      <aside className="w-[212px] bg-panel border-r border-line flex flex-col shrink-0">
+        <div className="flex items-center gap-2.5 px-4 py-4">
+          <div className="w-7 h-7 rounded-[7px] bg-accent text-accent-ink grid place-items-center font-display font-bold text-[15px]">S</div>
+          <span className="font-display font-semibold text-[15px] tracking-tight">SoftGlaze</span>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            // Highlight logic
-            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-            
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm font-medium ${
-                  isActive 
-                    ? 'bg-primary/10 text-primary shadow-[inset_2px_0_0_var(--color-primary)]' 
-                    : 'text-muted hover:bg-card hover:text-zinc-200'
-                }`}
-              >
-                <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : 'text-muted group-hover:text-zinc-300'}`} />
-                {item.label}
-              </NavLink>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-3 pb-3">
+          {SECTIONS.map((section) => (
+            <div key={section.label} className="mt-3">
+              <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-faint">{section.label}</div>
+              <div className="space-y-0.5">
+                {section.items.map((item) => <NavItem key={item.path} {...item} />)}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Bottom User Area */}
-        <div className="p-4 border-t border-border bg-surface">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-card border border-border/50 shadow-sm transition-colors hover:border-border cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-glow">
-              AD
-            </div>
-            <div className="flex flex-col">
-              <span className="text-zinc-200 text-sm font-medium leading-none">Admin</span>
-              <span className="text-muted text-xs mt-1">Free Plan</span>
-            </div>
+        <div className="px-3 pb-3 mt-auto">
+          <div className="border-t border-line pt-2.5 space-y-0.5 relative" ref={ref}>
+            <NavItem path="/settings" label="Settings" icon={Settings} />
+            <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-panel-2 transition-colors text-left">
+              <span className="w-7 h-7 rounded-full grid place-items-center font-semibold text-[11px]" style={{ background: me?.color ? me.color + '22' : 'var(--color-panel-3)', color: me?.color || 'var(--color-mute)' }}>{initials}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-medium text-fg leading-tight truncate">{name}</span>
+                <span className="block text-[10.5px] text-faint">{role}</span>
+              </span>
+              <ChevronsUpDown className="w-[15px] h-[15px] text-faint" strokeWidth={1.75} />
+            </button>
+
+            {open && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-panel-2 border border-line-2 rounded-lg overflow-hidden shadow-2xl shadow-black/50">
+                <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-faint">Switch member</div>
+                <div className="max-h-60 overflow-y-auto">
+                  {members.length === 0 && <div className="px-3 py-2 text-[12px] text-faint">No members yet.</div>}
+                  {members.map((m) => (
+                    <div key={m.id}>
+                      <button onClick={() => doSwitch(m)} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-panel-3 text-left">
+                        <span className="w-6 h-6 rounded-full grid place-items-center text-[10px] font-semibold" style={{ background: (m.color || '#3DC6DA') + '22', color: m.color || '#3DC6DA' }}>{m.initials}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[12.5px] truncate">{m.name}</span>
+                          <span className="block text-[10.5px] text-faint">{ROLE_LABEL[m.role] || m.role}</span>
+                        </span>
+                        {m.isCurrent && <Check className="w-4 h-4 text-accent" />}
+                      </button>
+                      {pinFor === m.id && (
+                        <div className="px-3 pb-2 flex items-center gap-2">
+                          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder="PIN" className="flex-1 h-8 bg-bg border border-line rounded-md px-2 text-[12px] text-fg outline-none focus:border-accent-dim" />
+                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-md bg-accent text-accent-ink text-[12px] font-semibold">Go</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {err && <div className="px-3 py-1.5 text-[11px] text-down">{err}</div>}
+                <div className="border-t border-line">
+                  <button onClick={() => { setOpen(false); navigate('/members'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-panel-3 text-left text-[12.5px] text-mute"><Users className="w-4 h-4" />Manage members</button>
+                  {vault.enabled && <button onClick={doLock} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-panel-3 text-left text-[12.5px] text-mute"><Lock className="w-4 h-4" />Lock workspace</button>}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background relative z-10">
-        {/* Subtle top glare effect for depth */}
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent pointer-events-none" />
-        
-        <div className="flex-1 overflow-y-auto p-8">
-          {children}
-        </div>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg">
+        <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
       </main>
     </div>
   );

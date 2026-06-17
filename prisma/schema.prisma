@@ -64,6 +64,7 @@ model Template {
 model ActivityLog {
   id        Int      @id @default(autoincrement())
   profileId Int
+  memberId  Int?
   action    String
   detail    String?
   createdAt DateTime @default(now())
@@ -76,6 +77,22 @@ model Setting {
   value String
 }
 
+model Member {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String?
+  role         String    @default("OPERATOR") // OWNER | ADMIN | MANAGER | OPERATOR
+  color        String?   @default("#3DC6DA")
+  initials     String?
+  pinHash      String?
+  pinSalt      String?
+  status       String    @default("active") // active | suspended
+  createdAt    DateTime  @default(now())
+  lastActiveAt DateTime?
+
+  @@index([createdAt])
+}
+
 model Profile {
   id                  Int                 @id @default(autoincrement())
   title               String
@@ -85,6 +102,8 @@ model Profile {
   tagManagement       Int                 @default(0)
   groupId             Int?
   tags                String? // JSON array of tag strings
+  ownerMemberId       Int?
+  assignedMemberId    Int?
   lastUsedAt          DateTime?
   launchCount         Int                 @default(0)
   systemProxyBehavior SystemProxyBehavior @default(PROFILE_PROXY)
@@ -170,6 +189,7 @@ model Profile {
 
   @@index([proxyId])
   @@index([groupId])
+  @@index([assignedMemberId])
   @@index([createdAt])
   @@index([deletedAt])
 }

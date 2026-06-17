@@ -56,6 +56,19 @@ const CHANNELS = Object.freeze({
   PROFILE_ACTIVITY: 'profile:activity',
   SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
+  MEMBER_LIST: 'member:list',
+  MEMBER_CREATE: 'member:create',
+  MEMBER_UPDATE: 'member:update',
+  MEMBER_DELETE: 'member:delete',
+  MEMBER_SET_PIN: 'member:set-pin',
+  MEMBER_CURRENT: 'member:current',
+  MEMBER_SWITCH: 'member:switch',
+  VAULT_STATUS: 'vault:status',
+  VAULT_SET_PASSWORD: 'vault:set-password',
+  VAULT_UNLOCK: 'vault:unlock',
+  VAULT_LOCK: 'vault:lock',
+  VAULT_DISABLE: 'vault:disable',
+  VAULT_SET_AUTOLOCK: 'vault:set-autolock',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -76,6 +89,8 @@ const VALID_SYSTEM_PROXY_BEHAVIORS = new Set(['DIRECT', 'PROFILE_PROXY', 'SYSTEM
 
 let registered = false;
 let proxySchedulerTimer = null;
+let currentMemberId = null;
+let vaultLocked = false;
 const importPreviewCache = new Map();
 
 function toIpcError(error) {
@@ -128,7 +143,7 @@ function parseIdArray(value) {
 }
 
 async function logActivity(db, profileId, action, detail = null) {
-  try { await db.activityLog.create({ data: { profileId, action, detail } }); } catch (e) { /* non-fatal */ }
+  try { await db.activityLog.create({ data: { profileId, action, detail, memberId: currentMemberId } }); } catch (e) { /* non-fatal */ }
 }
 
 function parsePort(value) {
@@ -1402,6 +1417,7 @@ async function listActivity(payload) {
     launchCount: profile.launchCount || 0,
     logs: logs.map((l) => ({
       id: l.id,
+      memberId: l.memberId ?? null,
       action: l.action,
       detail: l.detail || null,
       createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt
@@ -1547,6 +1563,266 @@ async function getDashboardStats() {
   };
 }
 
+// ===================== Members, roles & vault (app lock) =====================
+const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4 };
+const VALID_ROLES = Object.keys(ROLE_RANK);
+
+// Minimum role rank required for each gated action.
+const PERMISSIONS = {
+  'members.manage': 3, // ADMIN+
+  'members.delete': 4, // OWNER
+  'profiles.delete': 3,
+  'profiles.purge': 4,
+  'vault.manage': 4
+};
+
+function rankOf(role) { return ROLE_RANK[String(role || '').toUpperCase()] || 0; }
+
+function initialsFrom(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function hashSecret(secret) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(secret), salt, 64).toString('hex');
+  return { salt, hash };
+}
+
+function verifySecret(secret, salt, hash) {
+  if (!salt || !hash) return false;
+  let candidate;
+  try { candidate = crypto.scryptSync(String(secret), salt, 64).toString('hex'); }
+  catch (e) { return false; }
+  const a = Buffer.from(candidate, 'hex');
+  const b = Buffer.from(hash, 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function serializeMember(m, extra = {}) {
+  if (!m) return null;
+  return {
+    id: m.id,
+    name: m.name,
+    email: m.email || null,
+    role: m.role,
+    color: m.color || '#3DC6DA',
+    initials: m.initials || initialsFrom(m.name),
+    hasPin: Boolean(m.pinHash),
+    status: m.status || 'active',
+    createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
+    lastActiveAt: m.lastActiveAt instanceof Date ? m.lastActiveAt.toISOString() : (m.lastActiveAt || null),
+    ...extra
+  };
+}
+
+async function getActiveMember() {
+  if (currentMemberId == null) return null;
+  try { return await getPrisma().member.findUnique({ where: { id: currentMemberId } }); }
+  catch (e) { return null; }
+}
+
+// In single-user mode (no active member) everything is allowed so the app keeps working
+// until a team is configured. Once a member is active, gated actions require a sufficient role.
+async function requirePermission(action) {
+  const need = PERMISSIONS[action];
+  if (!need) return;
+  const member = await getActiveMember();
+  if (!member) return;
+  if (member.status === 'suspended') throw new Error('This member is suspended.');
+  if (rankOf(member.role) < need) {
+    const err = new Error('Your role does not permit this action.');
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+}
+
+async function listMembers() {
+  const db = getPrisma();
+  const members = await db.member.findMany({ orderBy: [{ createdAt: 'asc' }] });
+  const counts = {};
+  try {
+    const grouped = await db.profile.groupBy({
+      by: ['assignedMemberId'],
+      where: { deletedAt: null, assignedMemberId: { not: null } },
+      _count: { _all: true }
+    });
+    for (const g of grouped) counts[g.assignedMemberId] = g._count._all;
+  } catch (e) { /* ignore grouping edge cases */ }
+  return members.map((m) => serializeMember(m, { assignedProfiles: counts[m.id] || 0, isCurrent: m.id === currentMemberId }));
+}
+
+async function createMember(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const name = requiredString(input.name, 'Member name');
+  const db = getPrisma();
+  const existing = await db.member.count();
+  let role = String(input.role || 'OPERATOR').toUpperCase();
+  if (!VALID_ROLES.includes(role)) role = 'OPERATOR';
+  if (existing === 0) role = 'OWNER'; // the first member is always the owner
+  const data = {
+    name,
+    email: optionalString(input.email),
+    role,
+    color: optionalString(input.color) || '#3DC6DA',
+    initials: optionalString(input.initials) || initialsFrom(name),
+    status: 'active'
+  };
+  if (input.pin) { const { salt, hash } = hashSecret(String(input.pin)); data.pinSalt = salt; data.pinHash = hash; }
+  const m = await db.member.create({ data });
+  return serializeMember(m, { assignedProfiles: 0 });
+}
+
+async function updateMember(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const db = getPrisma();
+  const target = await db.member.findUnique({ where: { id } });
+  if (!target) throw new Error('Member not found.');
+  const data = {};
+  if (input.name !== undefined) data.name = requiredString(input.name, 'Member name');
+  if (input.email !== undefined) data.email = optionalString(input.email);
+  if (input.color !== undefined) data.color = optionalString(input.color) || '#3DC6DA';
+  if (input.initials !== undefined) data.initials = optionalString(input.initials) || initialsFrom(input.name || target.name);
+  if (input.status !== undefined) data.status = String(input.status).toLowerCase() === 'suspended' ? 'suspended' : 'active';
+  if (input.role !== undefined) {
+    const role = String(input.role).toUpperCase();
+    if (!VALID_ROLES.includes(role)) throw new Error('Invalid role.');
+    await requirePermission('members.delete'); // role changes require OWNER
+    if (target.role === 'OWNER' && role !== 'OWNER') {
+      const owners = await db.member.count({ where: { role: 'OWNER' } });
+      if (owners <= 1) throw new Error('There must be at least one owner.');
+    }
+    data.role = role;
+  }
+  const m = await db.member.update({ where: { id }, data });
+  return serializeMember(m);
+}
+
+async function setMemberPin(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const db = getPrisma();
+  if (input.pin) {
+    const { salt, hash } = hashSecret(requiredString(input.pin, 'PIN'));
+    await db.member.update({ where: { id }, data: { pinSalt: salt, pinHash: hash } });
+  } else {
+    await db.member.update({ where: { id }, data: { pinSalt: null, pinHash: null } });
+  }
+  return { ok: true };
+}
+
+async function deleteMember(payload) {
+  await requirePermission('members.delete');
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const db = getPrisma();
+  const target = await db.member.findUnique({ where: { id } });
+  if (!target) throw new Error('Member not found.');
+  if (target.role === 'OWNER') {
+    const owners = await db.member.count({ where: { role: 'OWNER' } });
+    if (owners <= 1) throw new Error('You cannot remove the last owner.');
+  }
+  await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
+  await db.profile.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: null } }).catch(() => {});
+  await db.member.delete({ where: { id } });
+  if (currentMemberId === id) { currentMemberId = null; await writeSetting('currentMemberId', null).catch(() => {}); }
+  return { deleted: true };
+}
+
+async function getCurrentMember() {
+  const m = await getActiveMember();
+  return m ? serializeMember(m, { isCurrent: true }) : null;
+}
+
+async function switchMember(payload) {
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const db = getPrisma();
+  const m = await db.member.findUnique({ where: { id } });
+  if (!m) throw new Error('Member not found.');
+  if (m.status === 'suspended') throw new Error('This member is suspended.');
+  if (m.pinHash && !verifySecret(String(input.pin || ''), m.pinSalt, m.pinHash)) {
+    const err = new Error('Incorrect PIN.'); err.code = 'BAD_PIN'; throw err;
+  }
+  currentMemberId = id;
+  await writeSetting('currentMemberId', id).catch(() => {});
+  await db.member.update({ where: { id }, data: { lastActiveAt: new Date() } }).catch(() => {});
+  return serializeMember(m, { isCurrent: true });
+}
+
+async function readVault() {
+  return readSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
+}
+
+async function vaultStatus() {
+  const v = await readVault();
+  return {
+    enabled: Boolean(v.enabled),
+    hasPassword: Boolean(v.hash),
+    locked: Boolean(v.enabled) && vaultLocked,
+    autoLockMinutes: Number(v.autoLockMinutes) || 0
+  };
+}
+
+async function vaultSetPassword(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  const v = await readVault();
+  if (v.enabled && v.hash && !verifySecret(String(input.current || ''), v.salt, v.hash)) {
+    throw new Error('Current password is incorrect.');
+  }
+  const next = requiredString(input.password, 'Password');
+  if (next.length < 4) throw new Error('Password must be at least 4 characters.');
+  const { salt, hash } = hashSecret(next);
+  await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes ?? v.autoLockMinutes) || 0 });
+  vaultLocked = false;
+  return vaultStatus();
+}
+
+async function vaultUnlock(payload) {
+  const input = requireObject(payload);
+  const v = await readVault();
+  if (!v.enabled || !v.hash) { vaultLocked = false; return vaultStatus(); }
+  if (!verifySecret(String(input.password || ''), v.salt, v.hash)) {
+    const err = new Error('Incorrect password.'); err.code = 'BAD_PASSWORD'; throw err;
+  }
+  vaultLocked = false;
+  return vaultStatus();
+}
+
+async function vaultLock() {
+  const v = await readVault();
+  if (v.enabled) vaultLocked = true;
+  return vaultStatus();
+}
+
+async function vaultDisable(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  const v = await readVault();
+  if (v.enabled && v.hash && !verifySecret(String(input.password || ''), v.salt, v.hash)) {
+    throw new Error('Incorrect password.');
+  }
+  await writeSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
+  vaultLocked = false;
+  return vaultStatus();
+}
+
+async function vaultSetAutoLock(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  const v = await readVault();
+  const minutes = Math.max(0, Number.parseInt(input.minutes, 10) || 0);
+  await writeSetting('vault', { ...v, autoLockMinutes: minutes });
+  return vaultStatus();
+}
+
 function registerIpcHandlers() {
   if (registered) return;
 
@@ -1606,6 +1882,30 @@ function registerIpcHandlers() {
 
   registerHandler(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG, previewProfilesViaDialog);
   registerHandler(CHANNELS.BATCH_COMMIT_PROFILE_IMPORT, commitProfileImport);
+
+  registerHandler(CHANNELS.MEMBER_LIST, listMembers);
+  registerHandler(CHANNELS.MEMBER_CREATE, createMember);
+  registerHandler(CHANNELS.MEMBER_UPDATE, updateMember);
+  registerHandler(CHANNELS.MEMBER_DELETE, deleteMember);
+  registerHandler(CHANNELS.MEMBER_SET_PIN, setMemberPin);
+  registerHandler(CHANNELS.MEMBER_CURRENT, getCurrentMember);
+  registerHandler(CHANNELS.MEMBER_SWITCH, switchMember);
+  registerHandler(CHANNELS.VAULT_STATUS, vaultStatus);
+  registerHandler(CHANNELS.VAULT_SET_PASSWORD, vaultSetPassword);
+  registerHandler(CHANNELS.VAULT_UNLOCK, vaultUnlock);
+  registerHandler(CHANNELS.VAULT_LOCK, vaultLock);
+  registerHandler(CHANNELS.VAULT_DISABLE, vaultDisable);
+  registerHandler(CHANNELS.VAULT_SET_AUTOLOCK, vaultSetAutoLock);
+
+  // Restore member session + vault lock state on boot.
+  (async () => {
+    try {
+      const savedMember = await readSetting('currentMemberId', null);
+      if (savedMember != null) currentMemberId = Number(savedMember) || null;
+      const v = await readSetting('vault', null);
+      if (v && v.enabled) vaultLocked = true; // require unlock at startup
+    } catch (e) { /* ignore */ }
+  })();
 
   registered = true;
 }

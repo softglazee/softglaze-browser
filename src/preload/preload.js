@@ -39,6 +39,19 @@ const CHANNELS = Object.freeze({
   PROFILE_ACTIVITY: 'profile:activity',
   SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
+  MEMBER_LIST: 'member:list',
+  MEMBER_CREATE: 'member:create',
+  MEMBER_UPDATE: 'member:update',
+  MEMBER_DELETE: 'member:delete',
+  MEMBER_SET_PIN: 'member:set-pin',
+  MEMBER_CURRENT: 'member:current',
+  MEMBER_SWITCH: 'member:switch',
+  VAULT_STATUS: 'vault:status',
+  VAULT_SET_PASSWORD: 'vault:set-password',
+  VAULT_UNLOCK: 'vault:unlock',
+  VAULT_LOCK: 'vault:lock',
+  VAULT_DISABLE: 'vault:disable',
+  VAULT_SET_AUTOLOCK: 'vault:set-autolock',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -128,6 +141,23 @@ const api = Object.freeze({
   sessions: Object.freeze({
     list: () => invoke(CHANNELS.SESSION_LIST),
     close: (sessionId) => invoke(CHANNELS.SESSION_CLOSE, { sessionId })
+  }),
+  members: Object.freeze({
+    list: () => invoke(CHANNELS.MEMBER_LIST),
+    create: (payload) => invoke(CHANNELS.MEMBER_CREATE, payload),
+    update: (payload) => invoke(CHANNELS.MEMBER_UPDATE, payload),
+    delete: (id) => invoke(CHANNELS.MEMBER_DELETE, { id }),
+    setPin: (id, pin) => invoke(CHANNELS.MEMBER_SET_PIN, { id, pin }),
+    current: () => invoke(CHANNELS.MEMBER_CURRENT),
+    switch: (id, pin) => invoke(CHANNELS.MEMBER_SWITCH, { id, pin })
+  }),
+  vault: Object.freeze({
+    status: () => invoke(CHANNELS.VAULT_STATUS),
+    setPassword: (payload) => invoke(CHANNELS.VAULT_SET_PASSWORD, payload),
+    unlock: (password) => invoke(CHANNELS.VAULT_UNLOCK, { password }),
+    lock: () => invoke(CHANNELS.VAULT_LOCK),
+    disable: (password) => invoke(CHANNELS.VAULT_DISABLE, { password }),
+    setAutoLock: (minutes) => invoke(CHANNELS.VAULT_SET_AUTOLOCK, { minutes })
   }),
   batch: Object.freeze({
     previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),

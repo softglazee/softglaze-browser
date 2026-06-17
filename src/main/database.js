@@ -65,6 +65,9 @@ function getPrisma() {
 // of truth for every column we add to Profile over time.
 // ---------------------------------------------------------------------------
 const PROFILE_COLUMNS = [
+  // Team / ownership
+  ['ownerMemberId', 'INTEGER'], ['assignedMemberId', 'INTEGER'],
+
   // Identity / environment
   ['browserCore', 'TEXT'], ['browserVersion', 'TEXT'], ['os', 'TEXT'], ['osVersion', 'TEXT'],
   ['userAgent', "TEXT DEFAULT 'Auto'"], ['startupUrls', 'TEXT'], ['platformAccounts', 'TEXT'],
@@ -171,6 +174,15 @@ async function ensureProfileColumns(db) {
   return added;
 }
 
+async function ensureActivityLogColumns(db) {
+  const rows = await db.$queryRawUnsafe('PRAGMA table_info("ActivityLog");');
+  const existing = new Set(rows.map((r) => r.name));
+  if (!existing.has('memberId')) {
+    await db.$executeRawUnsafe('ALTER TABLE "ActivityLog" ADD COLUMN "memberId" INTEGER;');
+    console.log('[DB] ensureActivityLogColumns added column: memberId');
+  }
+}
+
 async function bootstrapDatabase() {
   const db = getPrisma();
 
@@ -240,6 +252,23 @@ async function bootstrapDatabase() {
       "value" TEXT NOT NULL
     );
   `);
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Member" (
+      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      "name" TEXT NOT NULL,
+      "email" TEXT,
+      "role" TEXT NOT NULL DEFAULT 'OPERATOR',
+      "color" TEXT DEFAULT '#3DC6DA',
+      "initials" TEXT,
+      "pinHash" TEXT,
+      "pinSalt" TEXT,
+      "status" TEXT NOT NULL DEFAULT 'active',
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "lastActiveAt" DATETIME
+    );
+  `);
+  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Member_createdAt_idx" ON "Member"("createdAt");');
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_host_port_idx" ON "Proxy"("host", "port");');
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_createdAt_idx" ON "Proxy"("createdAt");');
   await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_key" ON "Proxy"("type", "host", "port", "username");');
@@ -250,6 +279,7 @@ async function bootstrapDatabase() {
   // Bring the live Profile/Proxy tables up to date with schema.prisma (additive, safe).
   await ensureProfileColumns(db);
   await ensureProxyColumns(db);
+  await ensureActivityLogColumns(db);
 
   return true;
 }
