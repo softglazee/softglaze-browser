@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Folder, FolderOpen, Plus, Edit2, Trash2,
-  Search, Monitor, Check, X, Tag as TagIcon, Loader2
+  Search, Monitor, Check, X, Tag as TagIcon, Loader2, ChevronDown
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -11,14 +11,31 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#ec4899', '#14b8a6', '#f97316'];
 
+// --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
+const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
+  <div className={`relative flex items-center ${className}`}>
+    <select
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-8 py-1.5 text-zinc-100 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark shadow-sm"
+    >
+      {children}
+    </select>
+    <div className="absolute right-2.5 pointer-events-none text-muted">
+      <ChevronDown className="w-3.5 h-3.5" />
+    </div>
+  </div>
+);
+
 // Small reusable checkbox styled like the rest of the app
 const Checkbox = ({ checked, onChange }) => (
   <button
     type="button"
     onClick={onChange}
-    className={`w-4 h-4 rounded border flex items-center justify-center transition ${checked ? 'bg-blue-600 border-blue-600' : 'bg-[#181a1f] border-[#3b3e48] hover:border-slate-400'}`}
+    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${checked ? 'bg-primary border-primary shadow-glow' : 'bg-background border-border hover:border-muted-dark'}`}
   >
-    {checked && <span className="w-2 h-2 bg-white rounded-sm" />}
+    {checked && <span className="w-2 h-2 bg-white rounded-[2px]" />}
   </button>
 );
 
@@ -188,24 +205,24 @@ export default function GroupsPage() {
       : (activeGroup?.name || 'Group');
 
   return (
-    <>
+    <div className="flex flex-col h-full space-y-4 pb-10">
       <PageHeader
         eyebrow="Organization"
         title="Groups & Tags"
-        description="Organize profiles into groups and label them with tags."
+        description="Organize profiles into groups and label them with tags for rapid filtering."
       />
 
-      {error && <div className="mb-4 rounded-lg border border-red-900/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
+      {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-160px)]">
+      <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
 
-        {/* LEFT SIDEBAR */}
-        <Card className="w-full md:w-72 shrink-0 flex flex-col bg-[#1e2025] border-[#2d3039]">
-          <div className="p-4 border-b border-[#2d3039] flex justify-between items-center">
-            <h2 className="text-white font-medium text-[14px]">Directories</h2>
+        {/* LEFT SIDEBAR (Groups) */}
+        <Card className="w-full md:w-72 shrink-0 flex flex-col bg-surface border-border shadow-sm rounded">
+          <div className="p-4 border-b border-border bg-card/50 flex justify-between items-center rounded-t">
+            <h2 className="text-zinc-100 font-semibold text-sm uppercase tracking-wider">Directories</h2>
             <button
               onClick={() => { setIsAddingGroup(true); setEditingGroupId(null); }}
-              className="p-1 hover:bg-[#2a2d35] rounded text-blue-400 hover:text-blue-300 transition"
+              className="p-1 hover:bg-muted-dark rounded text-primary hover:text-primary-hover transition"
               title="Create new group"
             >
               <Plus className="w-4 h-4" />
@@ -215,51 +232,53 @@ export default function GroupsPage() {
           <div className="flex-1 overflow-y-auto p-3 space-y-1">
             <button
               onClick={() => setActiveGroupId('all')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition ${activeGroupId === 'all' ? 'bg-blue-600/10 text-blue-400 font-medium' : 'text-[#d1d5db] hover:bg-[#24272e]'}`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-all ${activeGroupId === 'all' ? 'bg-primary/10 text-primary font-medium' : 'text-zinc-300 hover:bg-card hover:text-zinc-100'}`}
             >
               <div className="flex items-center gap-3">
-                <Monitor className="w-4 h-4" />
-                <span className="text-[13px]">All Profiles</span>
+                <Monitor className={`w-4 h-4 ${activeGroupId === 'all' ? 'text-primary' : 'text-muted'}`} />
+                <span className="text-sm">All Profiles</span>
               </div>
-              <span className="text-[11px] bg-[#2a2d35] px-2 py-0.5 rounded text-[#9ca3af]">{profiles.length}</span>
+              <span className={`text-xs px-2 py-0.5 rounded font-mono ${activeGroupId === 'all' ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{profiles.length}</span>
             </button>
 
             <button
               onClick={() => setActiveGroupId('ungrouped')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md transition ${activeGroupId === 'ungrouped' ? 'bg-blue-600/10 text-blue-400 font-medium' : 'text-[#d1d5db] hover:bg-[#24272e]'}`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-all ${activeGroupId === 'ungrouped' ? 'bg-primary/10 text-primary font-medium' : 'text-zinc-300 hover:bg-card hover:text-zinc-100'}`}
             >
               <div className="flex items-center gap-3">
-                <Folder className="w-4 h-4 text-slate-500" />
-                <span className="text-[13px]">Ungrouped</span>
+                <Folder className={`w-4 h-4 ${activeGroupId === 'ungrouped' ? 'text-primary' : 'text-muted'}`} />
+                <span className="text-sm">Ungrouped</span>
               </div>
-              <span className="text-[11px] bg-[#2a2d35] px-2 py-0.5 rounded text-[#9ca3af]">{ungroupedCount}</span>
+              <span className={`text-xs px-2 py-0.5 rounded font-mono ${activeGroupId === 'ungrouped' ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{ungroupedCount}</span>
             </button>
 
-            <div className="my-2 border-t border-[#2d3039]"></div>
+            <div className="my-3 border-t border-border"></div>
 
+            {/* Inline Add Group Form */}
             {isAddingGroup && (
-              <form onSubmit={handleAddGroup} className="mb-2 px-2 py-2 bg-[#24272e] rounded-md border border-blue-500/50 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: newGroupColor }} />
+              <form onSubmit={handleAddGroup} className="mb-2 px-3 py-3 bg-background rounded border border-primary/50 space-y-3 shadow-inner">
+                <div className="flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: newGroupColor }} />
                   <input
                     autoFocus
                     type="text"
                     placeholder="Group name..."
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
-                    className="bg-transparent border-none outline-none text-white text-[13px] w-full"
+                    className="bg-transparent border-none outline-none text-zinc-100 text-sm w-full placeholder:text-muted"
                   />
                   <button type="submit" className="text-emerald-400 hover:text-emerald-300"><Check className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => setIsAddingGroup(false)} className="text-slate-400 hover:text-red-400"><X className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setIsAddingGroup(false)} className="text-muted hover:text-red-400"><X className="w-4 h-4" /></button>
                 </div>
-                <div className="flex items-center gap-1.5 pl-5">
+                <div className="flex items-center gap-2 pl-6">
                   {GROUP_COLORS.map((c) => (
-                    <button key={c} type="button" onClick={() => setNewGroupColor(c)} className={`w-4 h-4 rounded-full transition ${newGroupColor === c ? 'ring-2 ring-offset-1 ring-offset-[#24272e] ring-white' : ''}`} style={{ backgroundColor: c }} />
+                    <button key={c} type="button" onClick={() => setNewGroupColor(c)} className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${newGroupColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''}`} style={{ backgroundColor: c }} />
                   ))}
                 </div>
               </form>
             )}
 
+            {/* Render Groups */}
             {groups.map((group) => {
               const isEditing = editingGroupId === group.id;
               const isActive = activeGroupId === group.id;
@@ -268,22 +287,22 @@ export default function GroupsPage() {
 
               if (isEditing) {
                 return (
-                  <form key={group.id} onSubmit={(e) => handleUpdateGroup(e, group.id)} className="px-2 py-2 bg-[#24272e] rounded-md border border-blue-500/50 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: editGroupColor }} />
+                  <form key={group.id} onSubmit={(e) => handleUpdateGroup(e, group.id)} className="mb-2 px-3 py-3 bg-background rounded border border-primary/50 space-y-3 shadow-inner">
+                    <div className="flex items-center gap-3">
+                      <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: editGroupColor }} />
                       <input
                         autoFocus
                         type="text"
                         value={editGroupName}
                         onChange={(e) => setEditGroupName(e.target.value)}
-                        className="bg-transparent border-none outline-none text-white text-[13px] w-full"
+                        className="bg-transparent border-none outline-none text-zinc-100 text-sm w-full"
                       />
                       <button type="submit" className="text-emerald-400"><Check className="w-4 h-4" /></button>
-                      <button type="button" onClick={() => setEditingGroupId(null)} className="text-slate-400"><X className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => setEditingGroupId(null)} className="text-muted"><X className="w-4 h-4" /></button>
                     </div>
-                    <div className="flex items-center gap-1.5 pl-5">
+                    <div className="flex items-center gap-2 pl-6">
                       {GROUP_COLORS.map((c) => (
-                        <button key={c} type="button" onClick={() => setEditGroupColor(c)} className={`w-4 h-4 rounded-full transition ${editGroupColor === c ? 'ring-2 ring-offset-1 ring-offset-[#24272e] ring-white' : ''}`} style={{ backgroundColor: c }} />
+                        <button key={c} type="button" onClick={() => setEditGroupColor(c)} className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${editGroupColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''}`} style={{ backgroundColor: c }} />
                       ))}
                     </div>
                   </form>
@@ -291,36 +310,36 @@ export default function GroupsPage() {
               }
 
               return (
-                <div key={group.id} className={`group rounded-md transition cursor-pointer ${isActive ? 'bg-blue-600/10' : 'hover:bg-[#24272e]'}`}>
+                <div key={group.id} className={`group rounded transition-colors cursor-pointer ${isActive ? 'bg-primary/10' : 'hover:bg-card'}`}>
                   <div className="flex items-center justify-between px-3 py-2.5">
                     <div className="flex items-center gap-3 flex-1 overflow-hidden" onClick={() => setActiveGroupId(group.id)}>
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color || '#3b82f6' }} />
-                      <span className={`text-[13px] truncate ${isActive ? 'text-blue-400 font-medium' : 'text-[#d1d5db]'}`}>{group.name}</span>
+                      <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: group.color || '#3b82f6' }} />
+                      <span className={`text-sm truncate ${isActive ? 'text-primary font-medium' : 'text-zinc-300'}`}>{group.name}</span>
                     </div>
                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingGroupId(group.id); setEditGroupName(group.name); setEditGroupColor(group.color || GROUP_COLORS[0]); setIsAddingGroup(false); }}
-                        className="p-1 hover:bg-[#3b3e48] rounded text-slate-400 hover:text-white transition"
+                        className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-zinc-100 transition"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id, group.name); }}
-                        className="p-1 hover:bg-red-900/30 rounded text-slate-400 hover:text-red-400 transition"
+                        className="p-1.5 hover:bg-red-500/20 rounded text-muted hover:text-red-400 transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span className={`text-[11px] bg-[#2a2d35] px-2 py-0.5 rounded text-[#9ca3af] group-hover:hidden ${isActive ? 'bg-blue-900/40 text-blue-300' : ''}`}>{count}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded font-mono group-hover:hidden ${isActive ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{count}</span>
                   </div>
                   {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 px-3 pb-2 pl-8">
+                    <div className="flex flex-wrap gap-1.5 px-3 pb-3 pl-9">
                       {tags.slice(0, 4).map((t) => (
-                        <span key={t} className="inline-flex items-center gap-1 text-[10px] bg-[#2a2d35] text-[#9ca3af] px-1.5 py-0.5 rounded">
+                        <span key={t} className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider bg-background border border-border text-muted px-1.5 py-0.5 rounded">
                           <TagIcon className="w-2.5 h-2.5" />{t}
                         </span>
                       ))}
-                      {tags.length > 4 && <span className="text-[10px] text-[#9ca3af]">+{tags.length - 4}</span>}
+                      {tags.length > 4 && <span className="text-[10px] text-muted font-medium bg-background border border-border px-1.5 py-0.5 rounded">+{tags.length - 4}</span>}
                     </div>
                   )}
                 </div>
@@ -329,41 +348,41 @@ export default function GroupsPage() {
           </div>
         </Card>
 
-        {/* RIGHT AREA */}
-        <Card className="flex-1 flex flex-col bg-[#1e2025] border-[#2d3039] overflow-hidden">
-          <div className="p-4 border-b border-[#2d3039] flex flex-col gap-3 bg-[#24272e]">
+        {/* RIGHT AREA (Profiles Data Table) */}
+        <Card className="flex-1 flex flex-col bg-surface border-border overflow-hidden shadow-sm rounded">
+          <div className="p-5 border-b border-border flex flex-col gap-4 bg-card/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-white font-medium flex items-center gap-2">
+              <h2 className="text-zinc-100 font-bold tracking-tight text-lg flex items-center gap-3">
                 {headerTitle}
-                <span className="text-xs bg-[#3b3e48] text-[#d1d5db] px-2 py-0.5 rounded-full">{filteredProfiles.length}</span>
+                <span className="text-xs bg-background border border-border text-muted px-2.5 py-0.5 rounded-full font-mono">{filteredProfiles.length}</span>
               </h2>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   placeholder="Search profiles..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-[#181a1f] border border-[#3b3e48] rounded-md pl-9 pr-3 py-2 text-[13px] text-white outline-none focus:border-blue-500 w-full sm:w-64 transition"
+                  className="bg-background border border-border rounded pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:border-primary w-full sm:w-64 transition shadow-sm"
                 />
               </div>
             </div>
 
             {/* Tag filter bar */}
             {allTags.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-[#9ca3af] flex items-center gap-1"><TagIcon className="w-3 h-3" /> Tags:</span>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs text-muted font-medium uppercase tracking-wider flex items-center gap-1.5 mr-1"><TagIcon className="w-3 h-3" /> Filters</span>
                 {allTags.map((t) => (
                   <button
                     key={t}
                     onClick={() => setActiveTag(activeTag === t ? null : t)}
-                    className={`text-[11px] px-2 py-0.5 rounded-full border transition ${activeTag === t ? 'bg-blue-600 border-blue-600 text-white' : 'bg-[#181a1f] border-[#3b3e48] text-[#9ca3af] hover:border-slate-400'}`}
+                    className={`text-xs px-2.5 py-1 rounded border transition ${activeTag === t ? 'bg-primary border-primary text-white shadow-glow' : 'bg-background border-border text-muted hover:border-muted-dark hover:text-zinc-200'}`}
                   >
                     {t}
                   </button>
                 ))}
                 {activeTag && (
-                  <button onClick={() => setActiveTag(null)} className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1"><X className="w-3 h-3" /> clear</button>
+                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-zinc-100 flex items-center gap-1 ml-1"><X className="w-3 h-3" /> clear</button>
                 )}
               </div>
             )}
@@ -371,39 +390,42 @@ export default function GroupsPage() {
 
           {/* Bulk move toolbar */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2d3039] bg-[#1e2025]">
-              <span className="text-[13px] text-white font-medium">{selectedIds.size} selected</span>
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-[12px] text-[#9ca3af]">Move to:</span>
-                <select
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-primary/5 shadow-inner transition-all animate-in fade-in slide-in-from-top-2">
+              <span className="text-sm text-primary font-bold">{selectedIds.size} selected</span>
+              <div className="flex items-center gap-3 ml-auto">
+                <span className="text-xs text-muted font-medium uppercase tracking-wider">Move to:</span>
+                <CustomSelect
                   disabled={busy}
-                  defaultValue=""
-                  onChange={(e) => { handleBulkMove(e.target.value); e.target.value = ''; }}
-                  className="bg-[#181a1f] border border-[#3b3e48] rounded-md px-2 py-1.5 text-[12px] text-white outline-none focus:border-blue-500"
+                  value=""
+                  onChange={(e) => { handleBulkMove(e.target.value); }}
+                  className="w-40"
                 >
                   <option value="" disabled>Choose group…</option>
                   <option value="__ungroup">Ungrouped</option>
                   {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-                <Button size="sm" variant="outline" disabled={busy} onClick={clearSelection} className="bg-[#181a1f] border-[#3b3e48] text-white">Clear</Button>
+                </CustomSelect>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={clearSelection}>Clear</Button>
               </div>
             </div>
           )}
 
           <div className="flex-1 overflow-x-auto">
             {loading ? (
-              <div className="flex items-center justify-center p-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+              <div className="flex flex-col items-center justify-center p-16 gap-3 text-muted">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="text-sm font-medium">Loading groups...</span>
+              </div>
             ) : (
-              <table className="w-full min-w-[760px] border-collapse text-left text-[13px]">
-                <thead className="bg-[#181a1f] text-[#9ca3af] sticky top-0 z-10 shadow-sm border-b border-[#2d3039]">
+              <table className="w-full min-w-[760px] border-collapse text-left text-sm whitespace-nowrap">
+                <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-sm border-b border-border">
                   <tr>
-                    <th className="px-5 py-3 font-medium w-10"><Checkbox checked={allSelected} onChange={toggleSelectAll} /></th>
-                    <th className="px-5 py-3 font-medium">Profile Name</th>
-                    <th className="px-5 py-3 font-medium">Group</th>
-                    <th className="px-5 py-3 font-medium">Tags</th>
+                    <th className="px-5 py-3.5 w-10 text-center"><Checkbox checked={allSelected} onChange={toggleSelectAll} /></th>
+                    <th className="px-5 py-3.5">Profile Name</th>
+                    <th className="px-5 py-3.5">Group Assignment</th>
+                    <th className="px-5 py-3.5">Tags</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border">
                   {filteredProfiles.length === 0 ? (
                     <tr>
                       <td colSpan="4" className="p-12">
@@ -415,26 +437,28 @@ export default function GroupsPage() {
                     </tr>
                   ) : (
                     filteredProfiles.map((p) => (
-                      <tr key={p.id} className="border-b border-[#2d3039] hover:bg-[#24272e] transition bg-[#1e2025] align-top">
-                        <td className="px-5 py-3"><Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} /></td>
-                        <td className="px-5 py-3 font-medium text-white">{p.title}</td>
-                        <td className="px-5 py-3">
-                          <select
+                      <tr key={p.id} className="hover:bg-card/50 transition-colors bg-background align-top group">
+                        <td className="px-5 py-4 text-center">
+                          <Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} />
+                        </td>
+                        <td className="px-5 py-4 font-medium text-zinc-100">{p.title}</td>
+                        <td className="px-5 py-4">
+                          <CustomSelect
                             disabled={busy}
                             value={p.groupId ?? ''}
                             onChange={(e) => handleAssign([p.id], e.target.value === '' ? null : Number(e.target.value))}
-                            className="bg-[#181a1f] border border-[#3b3e48] rounded-md px-2 py-1.5 text-[12px] text-white outline-none focus:border-blue-500 max-w-[160px]"
+                            className="w-[160px]"
                           >
                             <option value="">Ungrouped</option>
                             {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                          </select>
+                          </CustomSelect>
                         </td>
-                        <td className="px-5 py-3">
-                          <div className="flex flex-wrap items-center gap-1.5">
+                        <td className="px-5 py-4">
+                          <div className="flex flex-wrap items-center gap-2">
                             {(p.tags || []).map((t) => (
-                              <span key={t} className="inline-flex items-center gap-1 text-[11px] bg-[#2a2d35] text-[#d1d5db] px-2 py-0.5 rounded">
+                              <span key={t} className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-surface border border-border text-zinc-300 px-2 py-1 rounded shadow-sm">
                                 {t}
-                                <button onClick={() => handleRemoveTag(p, t)} className="text-slate-500 hover:text-red-400" title="Remove tag"><X className="w-3 h-3" /></button>
+                                <button onClick={() => handleRemoveTag(p, t)} className="text-muted hover:text-red-400 transition-colors" title="Remove tag"><X className="w-3 h-3" /></button>
                               </span>
                             ))}
                             {tagEditFor === p.id ? (
@@ -446,14 +470,14 @@ export default function GroupsPage() {
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(p); if (e.key === 'Escape') { setTagEditFor(null); setTagInput(''); } }}
                                 onBlur={() => handleAddTag(p)}
                                 placeholder="tag + Enter"
-                                className="bg-[#181a1f] border border-blue-500/60 rounded px-2 py-0.5 text-[11px] text-white outline-none w-24"
+                                className="bg-surface border border-primary rounded px-2 py-1 text-xs text-zinc-100 outline-none w-28 shadow-glow transition-all"
                               />
                             ) : (
                               <button
                                 onClick={() => { setTagEditFor(p.id); setTagInput(''); }}
-                                className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-blue-400 border border-dashed border-[#3b3e48] hover:border-blue-500/60 rounded px-2 py-0.5 transition"
+                                className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-primary border border-dashed border-border hover:border-primary/50 rounded px-2 py-1 transition bg-surface"
                               >
-                                <Plus className="w-3 h-3" /> tag
+                                <Plus className="w-3 h-3" /> Add Tag
                               </button>
                             )}
                           </div>
@@ -467,6 +491,6 @@ export default function GroupsPage() {
           </div>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

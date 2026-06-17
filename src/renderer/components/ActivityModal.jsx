@@ -4,7 +4,7 @@ import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
-const ACTION_LABEL = { launch: 'Launched' };
+const ACTION_LABEL = { launch: 'Launched Session' };
 
 export default function ActivityModal({ profileId, profileName, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -21,59 +21,70 @@ export default function ActivityModal({ profileId, profileName, onClose }) {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded-xl border border-[#2d3039] bg-[#1e2025] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2d3039]">
-          <div className="flex items-center gap-2.5">
-            <History className="w-5 h-5 text-blue-400" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 p-1.5 rounded border border-primary/20">
+              <History className="w-5 h-5 text-primary" />
+            </div>
             <div>
-              <h2 className="text-white font-medium text-[15px] leading-tight">Activity</h2>
-              <p className="text-[12px] text-[#9ca3af] leading-tight">{profileName}</p>
+              <h2 className="text-zinc-100 font-bold text-sm leading-tight tracking-wide uppercase">Activity Log</h2>
+              <p className="text-xs text-muted leading-tight mt-0.5">{profileName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded hover:bg-[#2a2d35] transition"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-1.5 text-muted hover:text-zinc-100 rounded hover:bg-muted-dark transition"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <span className="text-xs font-medium">Fetching history...</span>
+            </div>
           ) : error ? (
-            <div className="rounded-lg border border-red-900/70 bg-red-950/40 px-3 py-2 text-[13px] text-red-200">{error}</div>
+            <div className="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
           ) : data ? (
-            <>
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="rounded-lg border border-[#2d3039] bg-[#181a1f] p-3">
-                  <div className="text-[11px] uppercase tracking-wide text-[#9ca3af]">Last used</div>
-                  <div className="text-[13px] text-white mt-1">{data.lastUsedAt ? formatDateTime(data.lastUsedAt) : 'Never'}</div>
+            <div className="animate-in fade-in slide-in-from-bottom-2">
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="rounded border border-border bg-background p-4 shadow-sm">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">Last Used</div>
+                  <div className="text-sm font-semibold text-zinc-100">{data.lastUsedAt ? formatDateTime(data.lastUsedAt) : 'Never'}</div>
                 </div>
-                <div className="rounded-lg border border-[#2d3039] bg-[#181a1f] p-3">
-                  <div className="text-[11px] uppercase tracking-wide text-[#9ca3af]">Launches</div>
-                  <div className="text-[13px] text-white mt-1">{data.launchCount}</div>
+                <div className="rounded border border-border bg-background p-4 shadow-sm">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">Total Launches</div>
+                  <div className="text-sm font-semibold text-zinc-100">{data.launchCount} times</div>
                 </div>
               </div>
-              <h3 className="text-[12px] uppercase tracking-wide text-[#9ca3af] mb-2">History</h3>
+              
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted mb-3">Recent Events</h3>
+              
               {data.logs.length === 0 ? (
-                <p className="text-[13px] text-[#9ca3af] py-4">No recorded activity yet. Launch this profile to start tracking.</p>
+                <div className="text-xs text-muted py-6 px-4 bg-background border border-border border-dashed rounded text-center">
+                  No recorded activity yet. Launch this profile to start tracking.
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {data.logs.map((l) => (
-                    <div key={l.id} className="flex items-center gap-3 rounded-lg border border-[#2d3039] bg-[#181a1f] px-3 py-2">
-                      <Rocket className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <div key={l.id} className="flex items-center gap-4 rounded border border-border bg-background px-4 py-3 shadow-sm hover:border-muted-dark transition-colors">
+                      <Rocket className="w-4 h-4 text-emerald-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[13px] text-white">{ACTION_LABEL[l.action] || l.action}</div>
-                        {l.detail && <div className="text-[11px] text-[#9ca3af] truncate">{l.detail}</div>}
+                        <div className="text-sm font-semibold text-zinc-100">{ACTION_LABEL[l.action] || l.action}</div>
+                        {l.detail && <div className="text-xs text-muted truncate mt-0.5">{l.detail}</div>}
                       </div>
-                      <div className="text-[11px] text-[#9ca3af] shrink-0">{formatDateTime(l.createdAt)}</div>
+                      <div className="text-[10px] font-mono font-medium text-muted bg-surface px-2 py-1 rounded border border-border shrink-0">
+                        {formatDateTime(l.createdAt)}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
-            </>
+            </div>
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end px-5 py-4 border-t border-[#2d3039]">
-          <Button size="sm" onClick={onClose} className="bg-[#2a2d35] hover:bg-[#3b3e48] text-white border border-[#3b3e48]">Close</Button>
+        <div className="flex items-center justify-end px-5 py-4 border-t border-border bg-surface">
+          <Button size="sm" variant="secondary" onClick={onClose}>Close</Button>
         </div>
       </div>
     </div>

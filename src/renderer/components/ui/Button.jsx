@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function Button({ children, variant = 'primary', size = 'md', isLoading, className = '', ...props }) {
-  const baseStyle = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg outline-none disabled:opacity-50 disabled:pointer-events-none";
+  const baseStyle = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded outline-none disabled:opacity-50 disabled:pointer-events-none";
   
   const variants = {
     primary: "bg-primary hover:bg-primary-hover text-white shadow-glow",
