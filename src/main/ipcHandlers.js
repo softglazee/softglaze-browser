@@ -14,9 +14,12 @@ const {
   listActiveSessions
 } = require('./browserEngine');
 const { parseWorkbookFile, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
+const { generateFingerprint } = require('./fingerprintGenerator');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
+
+  DASHBOARD_GET_STATS: 'dashboard:get-stats',
 
   PROXY_LIST: 'proxy:list',
   PROXY_CREATE: 'proxy:create',
@@ -30,6 +33,14 @@ const CHANNELS = Object.freeze({
   PROFILE_UPDATE: 'profile:update',
   PROFILE_DELETE: 'profile:delete',
   PROFILE_LAUNCH: 'profile:launch',
+  PROFILE_RESTORE: 'profile:restore',
+  PROFILE_PURGE: 'profile:purge',
+  PROFILE_LIST_TRASH: 'profile:list-trash',
+  PROFILE_BULK_DELETE: 'profile:bulk-delete',
+  PROFILE_BULK_RESTORE: 'profile:bulk-restore',
+  PROFILE_BULK_PURGE: 'profile:bulk-purge',
+  PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
+  PROFILE_BULK_CLOSE: 'profile:bulk-close',
 
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
@@ -86,6 +97,11 @@ function parseId(value, label = 'id') {
   const id = Number.parseInt(String(value), 10);
   if (!Number.isInteger(id) || id < 1) throw new Error(`${label} must be a positive integer.`);
   return id;
+}
+
+function parseIdArray(value) {
+  if (!Array.isArray(value) || value.length === 0) throw new TypeError('ids must be a non-empty array.');
+  return value.map((v) => parseId(v));
 }
 
 function parsePort(value) {
@@ -223,6 +239,19 @@ function extractFingerprintData(input) {
     browserSettingsJson: input.browserSettings ? JSON.stringify(input.browserSettings) : null,
     randomFingerprint: input.randomFingerprint === true,
   };
+}
+
+// When randomFingerprint is set, a freshly generated fingerprint is the base and
+// any explicit fields the caller sends still override it. Otherwise we just map
+// the caller's payload as before.
+function buildFingerprintFields(input) {
+  const manual = extractFingerprintData(input);
+  if (input.randomFingerprint !== true) return manual;
+  const merged = { ...generateFingerprint() };
+  for (const [key, value] of Object.entries(manual)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged;
 }
 
 async function ensureUniqueDataDirName(db, desiredName, excludeProfileId = null) {
@@ -417,11 +446,22 @@ async function checkProxy(payload) {
 async function listProfiles(payload = {}) {
   const db = getPrisma();
   const search = optionalString(payload.search);
-  const where = search
-    ? { OR: [{ title: { contains: search } }, { notes: { contains: search } }, { dataDirName: { contains: search } }, { proxyInfoString: { contains: search } }] }
-    : undefined;
+  const where = { deletedAt: null };
+  if (search) {
+    where.OR = [{ title: { contains: search } }, { notes: { contains: search } }, { dataDirName: { contains: search } }, { proxyInfoString: { contains: search } }];
+  }
 
   const profiles = await db.profile.findMany({ where, orderBy: { createdAt: 'desc' }, include: { proxy: true } });
+  return profiles.map(serializeProfile);
+}
+
+async function listTrash() {
+  const db = getPrisma();
+  const profiles = await db.profile.findMany({
+    where: { deletedAt: { not: null } },
+    orderBy: { deletedAt: 'desc' },
+    include: { proxy: true }
+  });
   return profiles.map(serializeProfile);
 }
 
@@ -450,7 +490,7 @@ async function createProfile(payload) {
       notes: optionalString(input.notes),
       systemProxyBehavior: validateSystemProxyBehavior(input.systemProxyBehavior),
       dataDirName,
-      ...extractFingerprintData(input) // Inject all React payload fields
+      ...buildFingerprintFields(input) // generator-aware fingerprint injection
     },
     include: { proxy: true }
   });
@@ -505,10 +545,36 @@ async function deleteProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  const existing = await db.profile.findUnique({ where: { id } });
+  if (!existing) throw new Error('Profile not found.');
+
+  // Move to Trash (soft delete). Close any running session first. Local data is
+  // KEPT so the profile can be restored; it is only wiped on permanent purge.
+  await closeProfileSession(String(id)).catch(() => {});
+  await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
+
+  return { trashed: true, id };
+}
+
+async function restoreProfile(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const existing = await db.profile.findUnique({ where: { id } });
+  if (!existing) throw new Error('Profile not found.');
+  await db.profile.update({ where: { id }, data: { deletedAt: null } });
+  return { restored: true, id };
+}
+
+async function purgeProfile(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
   const removeLocalData = Boolean(input.removeLocalData);
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
+  await closeProfileSession(String(id)).catch(() => {});
   await db.profile.delete({ where: { id } });
 
   if (removeLocalData) {
@@ -516,7 +582,93 @@ async function deleteProfile(payload) {
     await fs.rm(dataDir, { recursive: true, force: true });
   }
 
-  return { deleted: true, id, removedLocalData: removeLocalData };
+  return { purged: true, id, removedLocalData: removeLocalData };
+}
+
+async function bulkDeleteProfiles(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const result = { trashed: [], errors: [] };
+  for (const id of ids) {
+    try {
+      await closeProfileSession(String(id)).catch(() => {});
+      await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
+      result.trashed.push(id);
+    } catch (error) {
+      result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+  return result;
+}
+
+async function bulkRestoreProfiles(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const result = { restored: [], errors: [] };
+  for (const id of ids) {
+    try {
+      await db.profile.update({ where: { id }, data: { deletedAt: null } });
+      result.restored.push(id);
+    } catch (error) {
+      result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+  return result;
+}
+
+async function bulkPurgeProfiles(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const removeLocalData = Boolean(input.removeLocalData);
+  const result = { purged: [], errors: [] };
+  for (const id of ids) {
+    try {
+      const existing = await db.profile.findUnique({ where: { id } });
+      if (!existing) { result.errors.push({ id, message: 'Profile not found.' }); continue; }
+      await closeProfileSession(String(id)).catch(() => {});
+      await db.profile.delete({ where: { id } });
+      if (removeLocalData) {
+        await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true });
+      }
+      result.purged.push(id);
+    } catch (error) {
+      result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+  return result;
+}
+
+async function bulkLaunchProfiles(payload) {
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids);
+  const result = { launched: [], errors: [] };
+  for (const id of ids) {
+    try {
+      const session = await launchProfile({ id });
+      result.launched.push({ id, sessionId: session.sessionId });
+    } catch (error) {
+      result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+  return result;
+}
+
+async function bulkCloseSessions(payload) {
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids);
+  const result = { closed: [], errors: [] };
+  for (const id of ids) {
+    try {
+      const r = await closeProfileSession(String(id));
+      if (r.closed) result.closed.push(id);
+    } catch (error) {
+      result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+  return result;
 }
 
 async function launchProfile(payload) {
@@ -538,7 +690,7 @@ async function launchProfile(payload) {
     startUrl: input.startUrl || 'about:blank',
     profileRoot,
     headless: false,
-    windowSize: { width: 1280, height: 720 }
+    profile // full fingerprint config applied at launch
   });
 }
 
@@ -616,7 +768,7 @@ async function commitProfileImport(payload) {
           notes: optionalString(item.notes),
           systemProxyBehavior: parseSystemProxyBehavior(item.systemProxyBehavior, 'DIRECT'),
           dataDirName,
-          userAgent: 'Auto' // Basic fallback for batch import for now
+          ...generateFingerprint() // distinct, complete fingerprint per imported profile
         },
         include: { proxy: true }
       });
@@ -636,10 +788,27 @@ async function getSystemInfo() {
   return { dbPath, profileRoot, databaseUrlConfigured: Boolean(process.env.DATABASE_URL) };
 }
 
+async function getDashboardStats() {
+  const db = getPrisma();
+
+  const [totalProfiles, totalProxies] = await Promise.all([
+    db.profile.count({ where: { deletedAt: null } }),
+    db.proxy.count()
+  ]);
+
+  return {
+    totalProfiles,
+    activeSessions: listActiveSessions().length,
+    totalProxies,
+    totalGroups: 0 // No Group model in the DB yet; wired in a later step.
+  };
+}
+
 function registerIpcHandlers() {
   if (registered) return;
 
   registerHandler(CHANNELS.SYSTEM_GET_INFO, getSystemInfo);
+  registerHandler(CHANNELS.DASHBOARD_GET_STATS, getDashboardStats);
 
   registerHandler(CHANNELS.PROXY_LIST, listProxies);
   registerHandler(CHANNELS.PROXY_CREATE, createProxy);
@@ -653,6 +822,14 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_UPDATE, updateProfile);
   registerHandler(CHANNELS.PROFILE_DELETE, deleteProfile);
   registerHandler(CHANNELS.PROFILE_LAUNCH, launchProfile);
+  registerHandler(CHANNELS.PROFILE_RESTORE, restoreProfile);
+  registerHandler(CHANNELS.PROFILE_PURGE, purgeProfile);
+  registerHandler(CHANNELS.PROFILE_LIST_TRASH, listTrash);
+  registerHandler(CHANNELS.PROFILE_BULK_DELETE, bulkDeleteProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_RESTORE, bulkRestoreProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
 
   registerHandler(CHANNELS.SESSION_LIST, () => listActiveSessions());
   registerHandler(CHANNELS.SESSION_CLOSE, closeSession);

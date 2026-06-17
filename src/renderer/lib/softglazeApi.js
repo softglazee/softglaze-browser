@@ -7,6 +7,7 @@ function getSoftglazeApi() {
 
 export const softglazeApi = {
   system: { getInfo: () => getSoftglazeApi().system.getInfo() },
+  dashboard: { getStats: () => getSoftglazeApi().dashboard.getStats() },
   proxies: {
     list: (params) => getSoftglazeApi().proxies.list(params),
     create: (payload) => getSoftglazeApi().proxies.create(payload),
@@ -20,7 +21,15 @@ export const softglazeApi = {
     create: (payload) => getSoftglazeApi().profiles.create(payload),
     update: (payload) => getSoftglazeApi().profiles.update(payload),
     delete: (id, options) => getSoftglazeApi().profiles.delete(id, options),
-    launch: (id, options) => getSoftglazeApi().profiles.launch(id, options)
+    launch: (id, options) => getSoftglazeApi().profiles.launch(id, options),
+    restore: (id) => getSoftglazeApi().profiles.restore(id),
+    purge: (id, options) => getSoftglazeApi().profiles.purge(id, options),
+    listTrash: () => getSoftglazeApi().profiles.listTrash(),
+    bulkDelete: (ids) => getSoftglazeApi().profiles.bulkDelete(ids),
+    bulkRestore: (ids) => getSoftglazeApi().profiles.bulkRestore(ids),
+    bulkPurge: (ids, options) => getSoftglazeApi().profiles.bulkPurge(ids, options),
+    bulkLaunch: (ids) => getSoftglazeApi().profiles.bulkLaunch(ids),
+    bulkClose: (ids) => getSoftglazeApi().profiles.bulkClose(ids)
   },
   sessions: {
     list: () => getSoftglazeApi().sessions.list(),

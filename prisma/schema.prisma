@@ -44,10 +44,85 @@ model Profile {
   tagManagement       Int                 @default(0)
   systemProxyBehavior SystemProxyBehavior @default(PROFILE_PROXY)
   dataDirName         String              @unique
-  createdAt           DateTime            @default(now())
+
+  // Identity / environment
+  browserCore      String?
+  browserVersion   String?
+  os               String?
+  osVersion        String?
+  userAgent        String? @default("Auto")
+  startupUrls      String?
+  platformAccounts String? // JSON string
+
+  // WebRTC / timezone / geolocation
+  webrtc         String?
+  timezoneType   String?
+  timezoneCustom String?
+  locationType   String?
+  locationPrompt String?
+  locationLat    String?
+  locationLng    String?
+  locationAcc    String?
+
+  // Language / display / resolution / fonts
+  languageType      String?
+  languageCustom    String?
+  displayLangType   String?
+  displayLangCustom String?
+  resolutionType    String?
+  resolutionW       String?
+  resolutionH       String?
+  fontsType         String?
+
+  // Fingerprint noise toggles (real booleans)
+  canvasNoise       Boolean @default(true)
+  webglImageNoise   Boolean @default(true)
+  audioContextNoise Boolean @default(true)
+  clientRectsNoise  Boolean @default(true)
+  speechVoicesNoise Boolean @default(true)
+  mediaDevice       String?
+
+  // WebGL / WebGPU
+  webglMetadata String?
+  webglVendor   String?
+  webglRenderer String?
+  webgpu        String?
+
+  // Hardware (sent as strings from the UI)
+  cpuType  String?
+  cpuCores String?
+  ramType  String?
+  ramGb    String?
+
+  // Device identity
+  deviceNameType String?
+  deviceName     String?
+  macAddressType String?
+  macAddress     String?
+
+  // Privacy / network / launch
+  doNotTrack           String?
+  portScanProtection   String?
+  hardwareAcceleration String?
+  disableTls           String?
+  launchArgs           String?
+
+  // Advanced (extensions / sync / browser settings)
+  advancedExt         String?
+  advancedSync        String?
+  syncItemsJson       String? // JSON string
+  advancedBrowser     String?
+  browserSettingsJson String? // JSON string
+  randomFingerprint   Boolean @default(false)
+
+  // Timestamps / soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt @default(now())
+  deletedAt DateTime?
 
   proxy Proxy? @relation(fields: [proxyId], references: [id], onDelete: SetNull)
 
   @@index([proxyId])
   @@index([createdAt])
+  @@index([deletedAt])
 }

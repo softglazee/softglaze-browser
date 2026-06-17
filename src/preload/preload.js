@@ -5,6 +5,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
 
+  DASHBOARD_GET_STATS: 'dashboard:get-stats',
+
   PROXY_LIST: 'proxy:list',
   PROXY_CREATE: 'proxy:create',
   PROXY_UPDATE: 'proxy:update',
@@ -17,6 +19,14 @@ const CHANNELS = Object.freeze({
   PROFILE_UPDATE: 'profile:update',
   PROFILE_DELETE: 'profile:delete',
   PROFILE_LAUNCH: 'profile:launch',
+  PROFILE_RESTORE: 'profile:restore',
+  PROFILE_PURGE: 'profile:purge',
+  PROFILE_LIST_TRASH: 'profile:list-trash',
+  PROFILE_BULK_DELETE: 'profile:bulk-delete',
+  PROFILE_BULK_RESTORE: 'profile:bulk-restore',
+  PROFILE_BULK_PURGE: 'profile:bulk-purge',
+  PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
+  PROFILE_BULK_CLOSE: 'profile:bulk-close',
 
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
@@ -44,6 +54,9 @@ const api = Object.freeze({
   system: Object.freeze({
     getInfo: () => invoke(CHANNELS.SYSTEM_GET_INFO)
   }),
+  dashboard: Object.freeze({
+    getStats: () => invoke(CHANNELS.DASHBOARD_GET_STATS)
+  }),
   proxies: Object.freeze({
     list: (params = {}) => invoke(CHANNELS.PROXY_LIST, params),
     create: (payload) => invoke(CHANNELS.PROXY_CREATE, payload),
@@ -57,7 +70,15 @@ const api = Object.freeze({
     create: (payload) => invoke(CHANNELS.PROFILE_CREATE, payload),
     update: (payload) => invoke(CHANNELS.PROFILE_UPDATE, payload),
     delete: (id, options = {}) => invoke(CHANNELS.PROFILE_DELETE, { id, removeLocalData: Boolean(options.removeLocalData) }),
-    launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' })
+    launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' }),
+    restore: (id) => invoke(CHANNELS.PROFILE_RESTORE, { id }),
+    purge: (id, options = {}) => invoke(CHANNELS.PROFILE_PURGE, { id, removeLocalData: Boolean(options.removeLocalData) }),
+    listTrash: () => invoke(CHANNELS.PROFILE_LIST_TRASH),
+    bulkDelete: (ids) => invoke(CHANNELS.PROFILE_BULK_DELETE, { ids }),
+    bulkRestore: (ids) => invoke(CHANNELS.PROFILE_BULK_RESTORE, { ids }),
+    bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
+    bulkLaunch: (ids) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids }),
+    bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids })
   }),
   sessions: Object.freeze({
     list: () => invoke(CHANNELS.SESSION_LIST),
