@@ -69,6 +69,10 @@ const CHANNELS = Object.freeze({
   VAULT_LOCK: 'vault:lock',
   VAULT_DISABLE: 'vault:disable',
   VAULT_SET_AUTOLOCK: 'vault:set-autolock',
+  ACCOUNT_GET: 'account:get',
+  ACCOUNT_SAVE: 'account:save',
+  ACCOUNT_SEND_OTP: 'account:send-otp',
+  ACCOUNT_VERIFY_OTP: 'account:verify-otp',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -1823,6 +1827,71 @@ async function vaultSetAutoLock(payload) {
   return vaultStatus();
 }
 
+// ---- Master account (local, settings-backed; no DB migration) ----
+async function accountGet() {
+  const a = await readSetting('account', null);
+  if (!a) return null;
+  return {
+    firstName: a.firstName || '',
+    lastName: a.lastName || '',
+    email: a.email || '',
+    phone: a.phone || '',
+    verified: Boolean(a.verified),
+    createdAt: a.createdAt || null
+  };
+}
+
+async function accountSave(payload) {
+  const input = requireObject(payload);
+  const prev = (await readSetting('account', {})) || {};
+  const next = {
+    firstName: requiredString(input.firstName, 'First name'),
+    lastName: requiredString(input.lastName, 'Last name'),
+    email: requiredString(input.email, 'Email').toLowerCase(),
+    phone: String(input.phone || '').trim(),
+    verified: Boolean(input.verified ?? prev.verified),
+    createdAt: prev.createdAt || new Date().toISOString()
+  };
+  await writeSetting('account', next);
+  return accountGet();
+}
+
+// OTP delivery seam. A local-first app has no mail transport, so until a real
+// provider (SMTP / Resend / a backend endpoint) is wired in here, we run in
+// dev mode and return the code to the caller so the flow stays testable.
+async function deliverOtp(email, code) {
+  // TODO: replace with real email delivery before production.
+  console.log(`[OTP] (dev mode) verification code for ${email}: ${code}`);
+  return { devMode: true };
+}
+
+async function accountSendOtp(payload) {
+  const input = requireObject(payload);
+  const email = requiredString(input.email, 'Email').toLowerCase();
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const { salt, hash } = hashSecret(code);
+  await writeSetting('otp', { email, salt, hash, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
+  const res = await deliverOtp(email, code);
+  return { sent: true, devMode: Boolean(res.devMode), devCode: res.devMode ? code : undefined };
+}
+
+async function accountVerifyOtp(payload) {
+  const input = requireObject(payload);
+  const email = String(input.email || '').toLowerCase();
+  const code = String(input.code || '').trim();
+  const rec = await readSetting('otp', null);
+  if (!rec || !rec.hash) throw new Error('No verification code was requested.');
+  if (rec.email !== email) throw new Error('Email does not match the requested code.');
+  if (Date.now() > Number(rec.expiresAt || 0)) { await writeSetting('otp', null); throw new Error('Verification code expired. Request a new one.'); }
+  if (Number(rec.attempts || 0) >= 6) { await writeSetting('otp', null); throw new Error('Too many attempts. Request a new code.'); }
+  if (!verifySecret(code, rec.salt, rec.hash)) {
+    await writeSetting('otp', { ...rec, attempts: Number(rec.attempts || 0) + 1 });
+    throw new Error('Incorrect code.');
+  }
+  await writeSetting('otp', null);
+  return { verified: true };
+}
+
 function registerIpcHandlers() {
   if (registered) return;
 
@@ -1896,6 +1965,10 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.VAULT_LOCK, vaultLock);
   registerHandler(CHANNELS.VAULT_DISABLE, vaultDisable);
   registerHandler(CHANNELS.VAULT_SET_AUTOLOCK, vaultSetAutoLock);
+  registerHandler(CHANNELS.ACCOUNT_GET, accountGet);
+  registerHandler(CHANNELS.ACCOUNT_SAVE, accountSave);
+  registerHandler(CHANNELS.ACCOUNT_SEND_OTP, accountSendOtp);
+  registerHandler(CHANNELS.ACCOUNT_VERIFY_OTP, accountVerifyOtp);
 
   // Restore member session + vault lock state on boot.
   (async () => {

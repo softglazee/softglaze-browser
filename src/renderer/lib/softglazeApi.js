@@ -78,6 +78,12 @@ export const softglazeApi = {
     disable: (password) => getSoftglazeApi().vault.disable(password),
     setAutoLock: (minutes) => getSoftglazeApi().vault.setAutoLock(minutes)
   },
+  account: {
+    get: () => getSoftglazeApi().account.get(),
+    save: (payload) => getSoftglazeApi().account.save(payload),
+    sendOtp: (email) => getSoftglazeApi().account.sendOtp(email),
+    verifyOtp: (email, code) => getSoftglazeApi().account.verifyOtp(email, code)
+  },
   batch: {
     previewProfilesFromSpreadsheet: () => getSoftglazeApi().batch.previewProfilesFromSpreadsheet(),
     commitProfileImport: (token) => getSoftglazeApi().batch.commitProfileImport(token)

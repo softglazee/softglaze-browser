@@ -52,6 +52,10 @@ const CHANNELS = Object.freeze({
   VAULT_LOCK: 'vault:lock',
   VAULT_DISABLE: 'vault:disable',
   VAULT_SET_AUTOLOCK: 'vault:set-autolock',
+  ACCOUNT_GET: 'account:get',
+  ACCOUNT_SAVE: 'account:save',
+  ACCOUNT_SEND_OTP: 'account:send-otp',
+  ACCOUNT_VERIFY_OTP: 'account:verify-otp',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -158,6 +162,12 @@ const api = Object.freeze({
     lock: () => invoke(CHANNELS.VAULT_LOCK),
     disable: (password) => invoke(CHANNELS.VAULT_DISABLE, { password }),
     setAutoLock: (minutes) => invoke(CHANNELS.VAULT_SET_AUTOLOCK, { minutes })
+  }),
+  account: Object.freeze({
+    get: () => invoke(CHANNELS.ACCOUNT_GET),
+    save: (payload) => invoke(CHANNELS.ACCOUNT_SAVE, payload),
+    sendOtp: (email) => invoke(CHANNELS.ACCOUNT_SEND_OTP, { email }),
+    verifyOtp: (email, code) => invoke(CHANNELS.ACCOUNT_VERIFY_OTP, { email, code })
   }),
   batch: Object.freeze({
     previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),
