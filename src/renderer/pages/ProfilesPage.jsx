@@ -4,6 +4,7 @@ import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
+import LeakCheckModal from '@/components/LeakCheckModal.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
@@ -302,6 +303,7 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [leakProfile, setLeakProfile] = useState(null);
 
   const filteredProfiles = useMemo(() => profiles, [profiles]);
   const isEditing = Boolean(pd.id);
@@ -1106,7 +1108,7 @@ export default function ProfilesPage() {
                     <td className="px-5 py-3 font-medium text-white">{p.title}</td>
                     <td className="px-5 py-3 text-[#9ca3af]">{p.proxyInfoString ? p.proxyInfoString.split(':')[0] : 'Direct'}</td>
                     <td className="px-5 py-3 text-[#9ca3af]">{formatDateTime(p.createdAt)}</td>
-                    <td className="px-5 py-3"><div className="flex justify-end gap-2"><Button size="sm" onClick={() => handleLaunch(p.id)} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button><Button size="sm" variant="secondary" onClick={() => openEdit(p)}>Edit</Button><Button size="sm" onClick={() => handleDelete(p.id, p.title)} className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-[#3b3e48] hover:border-red-900/50">Delete</Button></div></td>
+                    <td className="px-5 py-3"><div className="flex justify-end gap-2"><Button size="sm" onClick={() => handleLaunch(p.id)} className="bg-emerald-600 text-white hover:bg-emerald-500">Launch</Button><Button size="sm" variant="secondary" onClick={() => openEdit(p)}>Edit</Button><Button size="sm" variant="outline" onClick={() => setLeakProfile({ id: p.id, title: p.title })} className="bg-[#181a1f] border-[#3b3e48] text-white hover:bg-[#24272e]" title="Leak check"><ShieldCheck className="h-3.5 w-3.5" /></Button><Button size="sm" onClick={() => handleDelete(p.id, p.title)} className="bg-transparent hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-[#3b3e48] hover:border-red-900/50">Delete</Button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -1114,6 +1116,13 @@ export default function ProfilesPage() {
           </div>
         </CardContent>
       </Card>
+      {leakProfile && (
+        <LeakCheckModal
+          profileId={leakProfile.id}
+          profileName={leakProfile.title}
+          onClose={() => setLeakProfile(null)}
+        />
+      )}
     </>
   );
 }

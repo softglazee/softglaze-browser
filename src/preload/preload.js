@@ -27,6 +27,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -85,7 +86,8 @@ const api = Object.freeze({
     bulkRestore: (ids) => invoke(CHANNELS.PROFILE_BULK_RESTORE, { ids }),
     bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
     bulkLaunch: (ids) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids }),
-    bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids })
+    bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids }),
+    analyzeLeaks: (id) => invoke(CHANNELS.PROFILE_ANALYZE_LEAKS, { id })
   }),
   groups: Object.freeze({
     list: () => invoke(CHANNELS.GROUP_LIST),

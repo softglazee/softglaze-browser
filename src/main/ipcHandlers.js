@@ -41,6 +41,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -517,13 +518,14 @@ async function testProxyConnectivity(proxy) {
       country: data.country || null,
       city: data.city || null,
       isp: data.org || null,
+      timezone: data.timezone || null,
       latencyMs: Date.now() - started
     };
   } catch (primaryError) {
     // Fallback: ip-api over plain HTTP (some proxies block 443 or SNI).
     try {
       const data = await httpGetJson(
-        'http://ip-api.com/json/?fields=status,message,query,country,countryCode,city,isp',
+        'http://ip-api.com/json/?fields=status,message,query,country,countryCode,city,isp,timezone',
         agent,
         15000
       );
@@ -536,6 +538,7 @@ async function testProxyConnectivity(proxy) {
         country: data.countryCode || data.country || null,
         city: data.city || null,
         isp: data.isp || null,
+        timezone: data.timezone || null,
         latencyMs: Date.now() - started
       };
     } catch (fallbackError) {
@@ -570,6 +573,125 @@ async function checkProxy(payload) {
 
   if (!proxy || !proxy.host || !proxy.port) throw new Error('No valid proxy provided to check.');
   return testProxyConnectivity(proxy);
+}
+
+// Cross-checks a profile's fingerprint configuration against its proxy's real
+// exit geo and reports per-vector pass/warn/fail. Static analysis (no browser
+// launch): WebRTC/timezone/language are evaluated from configuration + the live
+// proxy lookup, which catches the common, high-signal leaks.
+async function analyzeProfileLeaks(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
+  if (!profile) throw new Error('Profile not found.');
+
+  const usesProxy = profile.systemProxyBehavior === 'PROFILE_PROXY' && Boolean(profile.proxy);
+  const checks = [];
+  let geo = null;
+
+  // 1) IP / proxy connectivity
+  if (usesProxy) {
+    geo = await testProxyConnectivity({
+      type: profile.proxy.type,
+      host: profile.proxy.host,
+      port: profile.proxy.port,
+      username: profile.proxy.username,
+      password: profile.proxy.password
+    });
+    if (geo.success) {
+      checks.push({
+        key: 'ip', label: 'IP / Proxy', status: 'pass',
+        detail: `Exit ${geo.ip || '?'}${geo.country ? ` · ${geo.country}` : ''}${geo.isp ? ` · ${geo.isp}` : ''} (${geo.latencyMs}ms)`
+      });
+    } else {
+      checks.push({ key: 'ip', label: 'IP / Proxy', status: 'fail', detail: `Proxy failed: ${geo.error || 'no connection'}` });
+    }
+  } else {
+    checks.push({ key: 'ip', label: 'IP / Proxy', status: 'warn', detail: 'No profile proxy in use — the machine\'s real IP is exposed.' });
+  }
+
+  // 2) WebRTC
+  const webrtc = profile.webrtc || 'Forward';
+  if (webrtc === 'Real') {
+    checks.push({
+      key: 'webrtc', label: 'WebRTC', status: usesProxy ? 'fail' : 'warn',
+      detail: usesProxy
+        ? 'Set to "Real" — WebRTC can expose the real IP behind the proxy.'
+        : 'Set to "Real" (no proxy) — real IP visible via WebRTC.'
+    });
+  } else {
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Mode "${webrtc}" — real IP not leaked via WebRTC.` });
+  }
+
+  // 3) Timezone
+  const tzType = profile.timezoneType || 'Based on IP';
+  if (tzType === 'Based on IP') {
+    checks.push({
+      key: 'timezone', label: 'Timezone', status: usesProxy ? 'pass' : 'warn',
+      detail: usesProxy ? `Auto from proxy${geo && geo.timezone ? ` (${geo.timezone})` : ''}.` : 'Based on IP, but no proxy is set.'
+    });
+  } else if (tzType === 'Real') {
+    checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: 'Using the host timezone — may not match the proxy location.' });
+  } else {
+    const want = optionalString(profile.timezoneCustom);
+    if (usesProxy && geo && geo.success && geo.timezone && want) {
+      const match = geo.timezone === want;
+      checks.push({
+        key: 'timezone', label: 'Timezone', status: match ? 'pass' : 'fail',
+        detail: match ? `Custom ${want} matches proxy.` : `Custom ${want} \u2260 proxy ${geo.timezone}.`
+      });
+    } else {
+      checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: `Custom ${want || '(unset)'} — could not compare to proxy.` });
+    }
+  }
+
+  // 4) Language
+  const langType = profile.languageType || 'Based on IP';
+  if (langType === 'Based on IP') {
+    checks.push({ key: 'language', label: 'Language', status: 'pass', detail: usesProxy ? 'Auto from proxy country.' : 'Based on IP.' });
+  } else {
+    const lc = optionalString(profile.languageCustom) || '';
+    const m = lc.match(/[a-z]{2}-([A-Z]{2})/);
+    const region = m ? m[1] : null;
+    if (usesProxy && geo && geo.success && geo.country && region) {
+      const match = region === geo.country;
+      checks.push({
+        key: 'language', label: 'Language', status: match ? 'pass' : 'warn',
+        detail: match ? `Locale region ${region} matches proxy.` : `Locale ${region} \u2260 proxy country ${geo.country}.`
+      });
+    } else {
+      checks.push({ key: 'language', label: 'Language', status: 'warn', detail: `Custom (${lc || 'unset'}) — could not compare to proxy.` });
+    }
+  }
+
+  // 5) Geolocation
+  const locType = profile.locationType || 'Based on IP';
+  if (locType === 'Based on IP') {
+    checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Auto from IP.' });
+  } else if (locType === 'Block') {
+    checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Blocked — no location shared.' });
+  } else {
+    checks.push({
+      key: 'geo', label: 'Geolocation', status: 'warn',
+      detail: `Custom (${optionalString(profile.locationLat) || '?'}, ${optionalString(profile.locationLng) || '?'}) — verify it matches the proxy region.`
+    });
+  }
+
+  // 6) Fingerprint noise protection
+  const noiseOn = profile.canvasNoise && profile.webglImageNoise && profile.audioContextNoise;
+  checks.push({
+    key: 'fp', label: 'Fingerprint noise', status: noiseOn ? 'pass' : 'warn',
+    detail: noiseOn ? 'Canvas / WebGL / Audio noise enabled.' : 'One or more fingerprint-noise toggles are off.'
+  });
+
+  const summary = {
+    pass: checks.filter((c) => c.status === 'pass').length,
+    warn: checks.filter((c) => c.status === 'warn').length,
+    fail: checks.filter((c) => c.status === 'fail').length
+  };
+
+  return { profileId: id, title: profile.title, usesProxy, geo, checks, summary };
 }
 
 async function listProfiles(payload = {}) {
@@ -1055,6 +1177,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
+  registerHandler(CHANNELS.PROFILE_ANALYZE_LEAKS, analyzeProfileLeaks);
 
   registerHandler(CHANNELS.GROUP_LIST, listGroups);
   registerHandler(CHANNELS.GROUP_CREATE, createGroup);
