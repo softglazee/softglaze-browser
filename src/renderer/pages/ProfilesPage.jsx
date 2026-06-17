@@ -8,6 +8,7 @@ import LeakCheckModal from '@/components/LeakCheckModal.jsx';
 import CookieManagerModal from '@/components/CookieManagerModal.jsx';
 import TemplatesModal from '@/components/TemplatesModal.jsx';
 import ActivityModal from '@/components/ActivityModal.jsx';
+import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
@@ -309,6 +310,7 @@ export default function ProfilesPage() {
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showQuickGen, setShowQuickGen] = useState(false);
   const [activityProfile, setActivityProfile] = useState(null);
   const [groups, setGroups] = useState([]);
   const [allTags, setAllTags] = useState([]);
@@ -359,6 +361,61 @@ export default function ProfilesPage() {
   }, [search]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  async function handleQuickGenerate(config, onProgress) {
+    const { count, baseName, startIndex, groupId, os, randomize, proxyMode, distribution, pasted } = config;
+    const pad = (x) => String(x).padStart(3, '0');
+    const osObj = OS_PLATFORMS.find((o) => o.id === os) || OS_PLATFORMS[0];
+    const osVersion = osObj.versions[0];
+    const proxyIds = proxyMode === 'pool' ? (allProxies || []).map((p) => p.id) : [];
+    const rawList = proxyMode === 'paste' ? pasted.split(/\r?\n/).map((x) => x.trim()).filter(Boolean) : [];
+    const pickIdx = (i, len) => (distribution === 'random' ? Math.floor(Math.random() * len) : i % len);
+
+    for (let i = 0; i < count; i++) {
+      const name = `${baseName} ${pad(startIndex + i)}`;
+      let webglVendor = initialProfileData.webglVendor;
+      let webglRenderer = initialProfileData.webglRenderer;
+      if (randomize) {
+        const v = WEBGL_VENDORS[Math.floor(Math.random() * WEBGL_VENDORS.length)];
+        const rs = WEBGL_RENDERERS[v] || [];
+        webglVendor = v;
+        webglRenderer = rs[Math.floor(Math.random() * rs.length)] || webglRenderer;
+      }
+      const uaIndex = randomize ? Math.floor(Math.random() * 100000) : i;
+      const payload = {
+        ...initialProfileData,
+        id: null,
+        name,
+        title: name,
+        dataDirName: name,
+        notes: '',
+        os,
+        osVersion,
+        uaCategory: 'All',
+        userAgent: generateAutoUserAgent(os, 'All', uaIndex),
+        macAddress: generateMac(),
+        deviceName: generateDeviceName(),
+        webglVendor,
+        webglRenderer,
+        tagManagement: 0,
+        tags: [],
+        groupId: groupId && groupId !== 'ungrouped' ? Number(groupId) : null
+      };
+      if (proxyMode === 'pool' && proxyIds.length) {
+        payload.proxyId = proxyIds[pickIdx(i, proxyIds.length)];
+        payload.systemProxyBehavior = 'PROFILE_PROXY';
+      } else if (proxyMode === 'paste' && rawList.length) {
+        payload.proxyRaw = rawList[pickIdx(i, rawList.length)];
+        payload.systemProxyBehavior = 'PROFILE_PROXY';
+      } else {
+        payload.proxyRaw = null;
+        payload.systemProxyBehavior = 'DIRECT';
+      }
+      await softglazeApi.profiles.create(payload);
+      if (onProgress) onProgress(i + 1, count);
+    }
+    await loadData();
+  }
 
   function openCreate() { 
     setPd({ ...initialProfileData, userAgent: 'Auto', macAddress: generateMac(), deviceName: generateDeviceName() }); 
@@ -1112,7 +1169,7 @@ export default function ProfilesPage() {
               <LayoutTemplate className="h-4 w-4" />
               Templates
             </Button>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => setShowQuickGen(true)}>
               <FileSpreadsheet className="h-4 w-4" />
               Batch Create
             </Button>
@@ -1289,6 +1346,9 @@ export default function ProfilesPage() {
       )}
       {showTemplates && (
         <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
+      )}
+      {showQuickGen && (
+        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} />
       )}
       {activityProfile && (
         <ActivityModal profileId={activityProfile.id} profileName={activityProfile.title} onClose={() => setActivityProfile(null)} />
