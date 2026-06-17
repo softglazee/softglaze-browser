@@ -448,18 +448,128 @@ async function batchAddProxies(payload) {
   return result;
 }
 
+// Performs a real HTTP(S) GET through the supplied http.Agent and resolves the
+// parsed JSON body. Enforces a hard timeout and a small response-size cap.
+function httpGetJson(url, agent, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    let lib;
+    try {
+      const parsed = new URL(url);
+      lib = parsed.protocol === 'https:' ? require('node:https') : require('node:http');
+    } catch (e) {
+      reject(new Error('Invalid IP-service URL.'));
+      return;
+    }
+
+    const req = lib.get(
+      url,
+      { agent, headers: { 'User-Agent': 'SoftGlaze-ProxyCheck/1.0', Accept: 'application/json' } },
+      (res) => {
+        const status = res.statusCode || 0;
+        if (status < 200 || status >= 300) {
+          res.resume();
+          reject(new Error(`IP service returned HTTP ${status}.`));
+          return;
+        }
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          body += chunk;
+          if (body.length > 1_000_000) req.destroy(new Error('IP service response too large.'));
+        });
+        res.on('end', () => {
+          try { resolve(JSON.parse(body)); }
+          catch (e) { reject(new Error('Could not parse IP service response.')); }
+        });
+      }
+    );
+
+    req.setTimeout(timeoutMs, () => req.destroy(new Error('Proxy connection timed out.')));
+    req.on('error', (err) => reject(err));
+  });
+}
+
+// Routes a request to an IP/geo service THROUGH the given proxy and returns
+// { success, ip, country, city, isp, latencyMs } (or { success:false, error }).
+async function testProxyConnectivity(proxy) {
+  let ProxyAgent;
+  try {
+    ({ ProxyAgent } = require('proxy-agent'));
+  } catch (e) {
+    return { success: false, error: 'Proxy agent module unavailable. Run "npm install" with the app closed.' };
+  }
+
+  const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  const auth = proxy.username
+    ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password || '')}@`
+    : '';
+  const proxyUrl = `${scheme}://${auth}${proxy.host}:${proxy.port}`;
+  const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
+
+  const started = Date.now();
+
+  // Primary: HTTPS endpoint — works through both HTTP CONNECT tunnels and SOCKS5.
+  try {
+    const data = await httpGetJson('https://ipinfo.io/json', agent, 15000);
+    return {
+      success: true,
+      ip: data.ip || null,
+      country: data.country || null,
+      city: data.city || null,
+      isp: data.org || null,
+      latencyMs: Date.now() - started
+    };
+  } catch (primaryError) {
+    // Fallback: ip-api over plain HTTP (some proxies block 443 or SNI).
+    try {
+      const data = await httpGetJson(
+        'http://ip-api.com/json/?fields=status,message,query,country,countryCode,city,isp',
+        agent,
+        15000
+      );
+      if (data.status && data.status !== 'success') {
+        return { success: false, error: data.message || 'Proxy check failed.', latencyMs: Date.now() - started };
+      }
+      return {
+        success: true,
+        ip: data.query || null,
+        country: data.countryCode || data.country || null,
+        city: data.city || null,
+        isp: data.isp || null,
+        latencyMs: Date.now() - started
+      };
+    } catch (fallbackError) {
+      const message = (fallbackError && fallbackError.message) || (primaryError && primaryError.message) || 'Proxy connection failed.';
+      return { success: false, error: message, latencyMs: Date.now() - started };
+    }
+  }
+}
+
+// Accepts { id } (a saved proxy), { raw, type }, or { host, port, username, password, type }.
 async function checkProxy(payload) {
   const input = requireObject(payload);
-  console.log('[Backend] Proxy check requested for:', input);
-  
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  return { 
-    success: true, 
-    ip: '192.168.1.100', 
-    latencyMs: Math.floor(Math.random() * 200) + 50,
-    country: 'US' 
-  };
+  let proxy = null;
+
+  if (input.id !== undefined && input.id !== null) {
+    const db = getPrisma();
+    const found = await db.proxy.findUnique({ where: { id: parseId(input.id) } });
+    if (!found) throw new Error('Proxy not found.');
+    proxy = { type: found.type, host: found.host, port: found.port, username: found.username, password: found.password };
+  } else if (input.raw) {
+    proxy = parseProxyInput(input.raw);
+    if (proxy && input.type) proxy.type = parseProxyType(input.type);
+  } else if (input.host) {
+    proxy = parseProxyInput({
+      type: input.type,
+      host: input.host,
+      port: input.port,
+      username: optionalString(input.username),
+      password: optionalString(input.password)
+    });
+  }
+
+  if (!proxy || !proxy.host || !proxy.port) throw new Error('No valid proxy provided to check.');
+  return testProxyConnectivity(proxy);
 }
 
 async function listProfiles(payload = {}) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Edit, Plus, RefreshCcw, Search, Trash2, Upload } from 'lucide-react';
+import { Activity, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload } from 'lucide-react';
 
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -33,6 +33,9 @@ export default function ProxyPoolPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [checkResults, setCheckResults] = useState({});
+  const [checkingId, setCheckingId] = useState(null);
+  const [checkingAll, setCheckingAll] = useState(false);
 
   const isEditing = Boolean(proxyForm.id);
   const filteredProxies = useMemo(() => proxies, [proxies]);
@@ -99,6 +102,50 @@ export default function ProxyPoolPage() {
     }
   }
 
+  async function handleCheck(proxy) {
+    setCheckingId(proxy.id);
+    try {
+      const result = await softglazeApi.proxies.check({ id: proxy.id });
+      setCheckResults((prev) => ({ ...prev, [proxy.id]: result }));
+    } catch (err) {
+      setCheckResults((prev) => ({ ...prev, [proxy.id]: { success: false, error: err.message } }));
+    } finally {
+      setCheckingId(null);
+    }
+  }
+
+  async function handleCheckAll() {
+    setCheckingAll(true);
+    try {
+      for (const proxy of proxies) {
+        setCheckingId(proxy.id);
+        try {
+          const result = await softglazeApi.proxies.check({ id: proxy.id });
+          setCheckResults((prev) => ({ ...prev, [proxy.id]: result }));
+        } catch (err) {
+          setCheckResults((prev) => ({ ...prev, [proxy.id]: { success: false, error: err.message } }));
+        }
+      }
+    } finally {
+      setCheckingId(null);
+      setCheckingAll(false);
+    }
+  }
+
+  function renderStatus(id) {
+    if (checkingId === id) return <span className="text-xs text-slate-400">Checking…</span>;
+    const r = checkResults[id];
+    if (!r) return <span className="text-xs text-slate-600">—</span>;
+    if (r.success) {
+      return (
+        <span className="text-xs text-emerald-400">
+          {r.ip || '?'}{r.country ? ` · ${r.country}` : ''}{typeof r.latencyMs === 'number' ? ` · ${r.latencyMs}ms` : ''}
+        </span>
+      );
+    }
+    return <span className="text-xs text-red-400" title={r.error || 'Failed'}>Failed{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
+  }
+
   async function handleDelete(proxy) {
     if (!window.confirm(`Delete proxy "${proxy.name}"?`)) return;
     setError('');
@@ -116,7 +163,7 @@ export default function ProxyPoolPage() {
         eyebrow="Network"
         title="Proxy Pool"
         description="Store reusable HTTP and SOCKS5 proxies locally. Batch input supports host:port:username:password lines."
-        actions={<><Button variant="outline" onClick={loadProxies}><RefreshCcw className="h-4 w-4" />Refresh</Button><Button variant="secondary" onClick={() => setBatchOpen(true)}><Upload className="h-4 w-4" />Batch Add</Button><Button onClick={openCreate}><Plus className="h-4 w-4" />New Proxy</Button></>}
+        actions={<><Button variant="outline" onClick={handleCheckAll} disabled={checkingAll || proxies.length === 0}>{checkingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}Check All</Button><Button variant="outline" onClick={loadProxies}><RefreshCcw className="h-4 w-4" />Refresh</Button><Button variant="secondary" onClick={() => setBatchOpen(true)}><Upload className="h-4 w-4" />Batch Add</Button><Button onClick={openCreate}><Plus className="h-4 w-4" />New Proxy</Button></>}
       />
 
       {error ? <div className="mb-4 rounded-lg border border-red-900/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div> : null}
@@ -126,8 +173,8 @@ export default function ProxyPoolPage() {
       <Card><CardContent className="p-0">
         {loading ? <div className="p-8 text-sm text-slate-400">Loading proxies...</div> : filteredProxies.length === 0 ? <div className="p-5"><EmptyState title="No proxies found" description="Add a proxy manually or paste a batch of proxy strings." /></div> : (
           <div className="w-full overflow-x-auto"><table className="w-full min-w-[1000px] border-collapse text-left text-sm">
-            <thead className="border-b border-slate-800 bg-slate-900/60 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3 font-medium">Name</th><th className="px-5 py-3 font-medium">Type</th><th className="px-5 py-3 font-medium">Endpoint</th><th className="px-5 py-3 font-medium">Username</th><th className="px-5 py-3 font-medium">Profiles</th><th className="px-5 py-3 font-medium">Created</th><th className="px-5 py-3 text-right font-medium">Actions</th></tr></thead>
-            <tbody>{filteredProxies.map((proxy) => <tr key={proxy.id} className="border-b border-slate-900 transition hover:bg-slate-900/45"><td className="px-5 py-4 font-medium text-slate-100">{proxy.name}</td><td className="px-5 py-4"><Badge variant={proxy.type === 'SOCKS5' ? 'amber' : 'blue'}>{proxy.type}</Badge></td><td className="px-5 py-4"><code className="rounded bg-slate-900 px-2 py-1 text-xs text-slate-300">{proxy.host}:{proxy.port}</code></td><td className="px-5 py-4 text-slate-400">{proxy.username || '—'}</td><td className="px-5 py-4 text-slate-400">{proxy.profileCount ?? 0}</td><td className="px-5 py-4 text-slate-400">{formatDateTime(proxy.createdAt)}</td><td className="px-5 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => openEdit(proxy)}><Edit className="h-3.5 w-3.5" /></Button><Button size="sm" variant="destructive" onClick={() => handleDelete(proxy)}><Trash2 className="h-3.5 w-3.5" /></Button></div></td></tr>)}</tbody>
+            <thead className="border-b border-slate-800 bg-slate-900/60 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3 font-medium">Name</th><th className="px-5 py-3 font-medium">Type</th><th className="px-5 py-3 font-medium">Endpoint</th><th className="px-5 py-3 font-medium">Username</th><th className="px-5 py-3 font-medium">Profiles</th><th className="px-5 py-3 font-medium">Created</th><th className="px-5 py-3 font-medium">Status</th><th className="px-5 py-3 text-right font-medium">Actions</th></tr></thead>
+            <tbody>{filteredProxies.map((proxy) => <tr key={proxy.id} className="border-b border-slate-900 transition hover:bg-slate-900/45"><td className="px-5 py-4 font-medium text-slate-100">{proxy.name}</td><td className="px-5 py-4"><Badge variant={proxy.type === 'SOCKS5' ? 'amber' : 'blue'}>{proxy.type}</Badge></td><td className="px-5 py-4"><code className="rounded bg-slate-900 px-2 py-1 text-xs text-slate-300">{proxy.host}:{proxy.port}</code></td><td className="px-5 py-4 text-slate-400">{proxy.username || '—'}</td><td className="px-5 py-4 text-slate-400">{proxy.profileCount ?? 0}</td><td className="px-5 py-4 text-slate-400">{formatDateTime(proxy.createdAt)}</td><td className="px-5 py-4">{renderStatus(proxy.id)}</td><td className="px-5 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title="Test proxy">{checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}</Button><Button size="sm" variant="outline" onClick={() => openEdit(proxy)}><Edit className="h-3.5 w-3.5" /></Button><Button size="sm" variant="destructive" onClick={() => handleDelete(proxy)}><Trash2 className="h-3.5 w-3.5" /></Button></div></td></tr>)}</tbody>
           </table></div>
         )}
       </CardContent></Card>
