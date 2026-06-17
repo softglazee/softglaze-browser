@@ -39,6 +39,9 @@ const CHANNELS = Object.freeze({
   PROFILE_ACTIVITY: 'profile:activity',
   SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
+  EMAIL_GET_CONFIG: 'email:get-config',
+  EMAIL_SET_CONFIG: 'email:set-config',
+  EMAIL_TEST: 'email:test',
   MEMBER_LIST: 'member:list',
   MEMBER_CREATE: 'member:create',
   MEMBER_UPDATE: 'member:update',
@@ -46,6 +49,8 @@ const CHANNELS = Object.freeze({
   MEMBER_SET_PIN: 'member:set-pin',
   MEMBER_CURRENT: 'member:current',
   MEMBER_SWITCH: 'member:switch',
+  MEMBER_SET_INSTRUCTIONS: 'member:set-instructions',
+  TEAM_ACTIVITY: 'team:activity',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -56,6 +61,7 @@ const CHANNELS = Object.freeze({
   ACCOUNT_SAVE: 'account:save',
   ACCOUNT_SEND_OTP: 'account:send-otp',
   ACCOUNT_VERIFY_OTP: 'account:verify-otp',
+  ACCOUNT_REGISTER: 'account:register',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -130,7 +136,10 @@ const api = Object.freeze({
   }),
   settings: Object.freeze({
     getProxyScheduler: () => invoke(CHANNELS.SETTINGS_GET_SCHEDULER),
-    setProxyScheduler: (config) => invoke(CHANNELS.SETTINGS_SET_SCHEDULER, config)
+    setProxyScheduler: (config) => invoke(CHANNELS.SETTINGS_SET_SCHEDULER, config),
+    getEmail: () => invoke(CHANNELS.EMAIL_GET_CONFIG),
+    setEmail: (config) => invoke(CHANNELS.EMAIL_SET_CONFIG, config),
+    testEmail: (email) => invoke(CHANNELS.EMAIL_TEST, { email })
   }),
   groups: Object.freeze({
     list: () => invoke(CHANNELS.GROUP_LIST),
@@ -153,7 +162,11 @@ const api = Object.freeze({
     delete: (id) => invoke(CHANNELS.MEMBER_DELETE, { id }),
     setPin: (id, pin) => invoke(CHANNELS.MEMBER_SET_PIN, { id, pin }),
     current: () => invoke(CHANNELS.MEMBER_CURRENT),
-    switch: (id, pin) => invoke(CHANNELS.MEMBER_SWITCH, { id, pin })
+    switch: (id, pin) => invoke(CHANNELS.MEMBER_SWITCH, { id, pin }),
+    setInstructions: (id, instructions) => invoke(CHANNELS.MEMBER_SET_INSTRUCTIONS, { id, instructions })
+  }),
+  team: Object.freeze({
+    activity: (limit) => invoke(CHANNELS.TEAM_ACTIVITY, { limit })
   }),
   vault: Object.freeze({
     status: () => invoke(CHANNELS.VAULT_STATUS),
@@ -167,7 +180,8 @@ const api = Object.freeze({
     get: () => invoke(CHANNELS.ACCOUNT_GET),
     save: (payload) => invoke(CHANNELS.ACCOUNT_SAVE, payload),
     sendOtp: (email) => invoke(CHANNELS.ACCOUNT_SEND_OTP, { email }),
-    verifyOtp: (email, code) => invoke(CHANNELS.ACCOUNT_VERIFY_OTP, { email, code })
+    verifyOtp: (email, code) => invoke(CHANNELS.ACCOUNT_VERIFY_OTP, { email, code }),
+    register: (payload) => invoke(CHANNELS.ACCOUNT_REGISTER, payload)
   }),
   batch: Object.freeze({
     previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),

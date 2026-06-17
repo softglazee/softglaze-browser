@@ -19,6 +19,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
+    "electron-updater": "^6.3.4",
     "lucide-react": "^1.18.0",
     "nodemailer": "^6.9.14",
     "puppeteer": "^22.15.0",
@@ -44,7 +45,7 @@
   "build": {
     "appId": "com.softglaze.browser",
     "productName": "SoftGlaze Browser",
-    "copyright": "Copyright © 2026 SoftGlaze",
+    "copyright": "Copyright \u00a9 2026 SoftGlaze",
     "directories": {
       "output": "dist_installer"
     },
@@ -71,7 +72,7 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "icon": "public/logos/windows.png"
+      "icon": "public/logos/windows.ico"
     },
     "mac": {
       "target": [
@@ -89,6 +90,13 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "SoftGlaze Browser"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "softglazee",
+        "repo": "softglaze-browser"
+      }
+    ]
   }
 }

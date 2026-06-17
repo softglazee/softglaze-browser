@@ -160,12 +160,17 @@ export default function Gate({ children }) {
     if (c.length !== 6) return setErr('Enter the 6-digit code.');
     setErr(''); setBusy(true);
     try {
-      await softglazeApi.account.verifyOtp(email.trim().toLowerCase(), c);
-      const name = `${firstName.trim()} ${lastName.trim()}`.trim();
-      const m = await softglazeApi.members.create({ name, email: email.trim().toLowerCase() });
-      await softglazeApi.members.switch(m.id);
-      await softglazeApi.vault.setPassword({ password });
-      await softglazeApi.account.save({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), verified: true });
+      // Single atomic step: verifies OTP, creates the OWNER, sets the vault
+      // password and saves the account server-side. The OTP is only consumed
+      // once everything succeeds, so a failure here is safely retryable.
+      await softglazeApi.account.register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        password,
+        code: c
+      });
       setPhase('ready');
     } catch (e) { setErr(e.message || 'Verification failed.'); setBusy(false); }
   }

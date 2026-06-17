@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown } from 'lucide-react';
+import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2 } from 'lucide-react';
 
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -244,7 +244,110 @@ export default function SettingsPage() {
           </p>
         </CardContent>
       </Card>
+
+      <EmailSettingsCard />
     </div>
+  );
+}
+
+// Email (SMTP) configuration for sending OTP verification codes. Optional:
+// when left blank the app runs in offline mode and shows the code in-app.
+function EmailSettingsCard() {
+  const [cfg, setCfg] = useState({ host: '', port: 465, secure: true, user: '', fromName: 'SoftGlaze Security', configured: false, hasPassword: false });
+  const [pass, setPass] = useState('');
+  const [testTo, setTestTo] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    softglazeApi.settings.getEmail().then((c) => { if (c) { setCfg(c); setTestTo(c.user || ''); } }).catch(() => {});
+  }, []);
+
+  const inputCls = 'w-full bg-background border border-border rounded px-3 py-2 text-sm text-zinc-100 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
+
+  async function save() {
+    setBusy(true); setErr(''); setMsg('');
+    try {
+      const saved = await softglazeApi.settings.setEmail({
+        host: cfg.host, port: Number(cfg.port) || 465, secure: cfg.secure,
+        user: cfg.user, fromName: cfg.fromName,
+        pass: pass || undefined // blank keeps the stored password
+      });
+      setCfg(saved); setPass(''); setMsg('Email settings saved.');
+    } catch (e) { setErr(e.message || 'Could not save email settings.'); }
+    finally { setBusy(false); }
+  }
+
+  async function sendTest() {
+    setTesting(true); setErr(''); setMsg('');
+    try {
+      const r = await softglazeApi.settings.testEmail(testTo.trim().toLowerCase());
+      if (r.devMode) setErr('No SMTP configured yet — save your settings first.');
+      else setMsg(`Test email sent to ${testTo.trim()}.`);
+    } catch (e) { setErr(e.message || 'Test failed — check your settings.'); }
+    finally { setTesting(false); }
+  }
+
+  return (
+    <Card className="bg-surface border-border shadow-sm rounded mt-6">
+      <CardHeader className="border-b border-border bg-card/50 rounded-t">
+        <CardTitle className="flex items-center gap-2 text-zinc-100">
+          <Mail className="w-4 h-4 text-primary" /> Email (verification codes)
+          {cfg.configured
+            ? <Badge className="bg-green-500/15 text-green-400 border-0">Configured</Badge>
+            : <Badge className="bg-white/5 text-muted border-0">Offline mode</Badge>}
+        </CardTitle>
+        <CardDescription className="text-muted mt-1.5">
+          SMTP for sending OTP codes at registration. Leave blank to run offline — the code is then shown in-app instead of emailed.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-5 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 sm:col-span-1">
+            <label className="block text-xs font-medium text-muted mb-1.5">SMTP host</label>
+            <input className={inputCls} value={cfg.host} onChange={(e) => setCfg({ ...cfg, host: e.target.value })} placeholder="smtp.hostinger.com" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Port</label>
+            <input className={inputCls} value={cfg.port} onChange={(e) => setCfg({ ...cfg, port: e.target.value })} placeholder="465" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Encryption</label>
+            <CustomSelect value={cfg.secure ? 'ssl' : 'starttls'} onChange={(e) => setCfg({ ...cfg, secure: e.target.value === 'ssl' })}>
+              <option value="ssl">SSL/TLS (465)</option>
+              <option value="starttls">STARTTLS (587)</option>
+            </CustomSelect>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Username</label>
+            <input className={inputCls} value={cfg.user} onChange={(e) => setCfg({ ...cfg, user: e.target.value })} placeholder="security@yourdomain.com" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Password {cfg.hasPassword && <span className="text-muted-dark">(saved — leave blank to keep)</span>}</label>
+            <input type="password" className={inputCls} value={pass} onChange={(e) => setPass(e.target.value)} placeholder={cfg.hasPassword ? '••••••••' : 'App password'} />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-muted mb-1.5">From name</label>
+            <input className={inputCls} value={cfg.fromName} onChange={(e) => setCfg({ ...cfg, fromName: e.target.value })} placeholder="SoftGlaze Security" />
+          </div>
+        </div>
+
+        {err && <p className="text-xs text-red-400">{err}</p>}
+        {msg && <p className="text-xs text-green-400 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />{msg}</p>}
+
+        <div className="flex items-center gap-2 pt-1">
+          <Button onClick={save} disabled={busy}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save email settings'}</Button>
+          <div className="ml-auto flex items-center gap-2">
+            <input className={inputCls + ' w-56'} value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="test@recipient.com" />
+            <Button variant="secondary" onClick={sendTest} disabled={testing || !testTo.trim()}>
+              {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Test</>}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

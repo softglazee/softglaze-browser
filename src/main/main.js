@@ -1,9 +1,25 @@
 'use strict';
-require('dotenv').config(); // <--- ADD THIS LINE to load your .env file
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const { app, BrowserWindow, shell, session } = require('electron');
+
+// Load .env from the locations that actually exist in a packaged build.
+// dotenv's default (cwd/.env) does NOT exist next to a packaged executable,
+// so SMTP and other env vars would silently be undefined in production.
+// We try, in order: an .env beside the executable, and one in userData.
+(() => {
+  const candidates = [
+    path.join(path.dirname(app.getPath('exe')), '.env'),
+    path.join(app.getPath('userData'), '.env'),
+    path.join(__dirname, '../../.env') // dev (project root)
+  ];
+  for (const p of candidates) {
+    try { if (fs.existsSync(p)) { require('dotenv').config({ path: p }); break; } }
+    catch { /* ignore and continue */ }
+  }
+})();
+
 const { configureDatabaseEnv, bootstrapDatabase } = require('./database');
 
 const isDev = process.env.NODE_ENV === 'development';

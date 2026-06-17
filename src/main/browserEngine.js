@@ -67,6 +67,9 @@ function parseProxyString(rawProxyString) {
   if (parts.length >= 4) {
     return { type, host: parts[0].trim(), port: Number.parseInt(parts[1].trim(), 10), username: parts[2].trim(), password: parts.slice(3).join(':').trim() };
   }
+  if (parts.length === 3) {
+    return { type, host: parts[0].trim(), port: Number.parseInt(parts[1].trim(), 10), username: parts[2].trim() || null, password: null };
+  }
   if (parts.length === 2) {
     return { type, host: parts[0].trim(), port: Number.parseInt(parts[1].trim(), 10), username: null, password: null };
   }

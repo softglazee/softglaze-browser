@@ -63,6 +63,8 @@ const CHANNELS = Object.freeze({
   MEMBER_SET_PIN: 'member:set-pin',
   MEMBER_CURRENT: 'member:current',
   MEMBER_SWITCH: 'member:switch',
+  MEMBER_SET_INSTRUCTIONS: 'member:set-instructions',
+  TEAM_ACTIVITY: 'team:activity',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -73,6 +75,10 @@ const CHANNELS = Object.freeze({
   ACCOUNT_SAVE: 'account:save',
   ACCOUNT_SEND_OTP: 'account:send-otp',
   ACCOUNT_VERIFY_OTP: 'account:verify-otp',
+  ACCOUNT_REGISTER: 'account:register',
+  EMAIL_GET_CONFIG: 'email:get-config',
+  EMAIL_SET_CONFIG: 'email:set-config',
+  EMAIL_TEST: 'email:test',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -1049,6 +1055,7 @@ async function createProfile(payload) {
     include: { proxy: true, group: true }
   });
 
+  await logActivity(db, created.id, 'create', `created "${created.title}"`);
   return serializeProfile(created);
 }
 
@@ -1099,6 +1106,7 @@ async function updateProfile(payload) {
   Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
   const updated = await db.profile.update({ where: { id }, data, include: { proxy: true, group: true } });
+  await logActivity(db, updated.id, 'update', `edited "${updated.title}"`);
   return serializeProfile(updated);
 }
 
@@ -1114,6 +1122,7 @@ async function deleteProfile(payload) {
   await closeProfileSession(String(id)).catch(() => {});
   await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
 
+  await logActivity(db, id, 'delete', `moved "${existing.title}" to Trash`);
   return { trashed: true, id };
 }
 
@@ -1124,6 +1133,7 @@ async function restoreProfile(payload) {
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
   await db.profile.update({ where: { id }, data: { deletedAt: null } });
+  await logActivity(db, id, 'restore', `restored "${existing.title}"`);
   return { restored: true, id };
 }
 
@@ -1155,6 +1165,7 @@ async function bulkDeleteProfiles(payload) {
     try {
       await closeProfileSession(String(id)).catch(() => {});
       await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
+      await logActivity(db, id, 'delete', 'moved to Trash (bulk)');
       result.trashed.push(id);
     } catch (error) {
       result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
@@ -1309,6 +1320,8 @@ async function assignProfilesToGroup(payload) {
     if (!group) throw new Error('Selected group does not exist.');
   }
   const res = await db.profile.updateMany({ where: { id: { in: ids } }, data: { groupId } });
+  const label = groupId === null ? 'removed from group' : 'assigned to a group';
+  for (const id of ids) { await logActivity(db, id, 'assign', label); }
   return { assigned: res.count, groupId };
 }
 
@@ -1425,6 +1438,7 @@ async function commitProfileImport(payload) {
       });
 
       result.createdProfiles.push(serializeProfile(profile));
+      await logActivity(db, profile.id, 'import', `imported "${profile.title}"`);
     } catch (error) {
       result.errors.push({ row: item.row, message: error instanceof Error ? error.message : 'Unknown import error' });
     }
@@ -1684,7 +1698,8 @@ async function listMembers() {
     });
     for (const g of grouped) counts[g.assignedMemberId] = g._count._all;
   } catch (e) { /* ignore grouping edge cases */ }
-  return members.map((m) => serializeMember(m, { assignedProfiles: counts[m.id] || 0, isCurrent: m.id === currentMemberId }));
+  const instr = (await readSetting('memberInstructions', {})) || {};
+  return members.map((m) => serializeMember(m, { assignedProfiles: counts[m.id] || 0, isCurrent: m.id === currentMemberId, instructions: instr[m.id] || '' }));
 }
 
 async function createMember(payload) {
@@ -1692,10 +1707,10 @@ async function createMember(payload) {
   const input = requireObject(payload);
   const name = requiredString(input.name, 'Member name');
   const db = getPrisma();
-  const existing = await db.member.count();
+  const existingOwners = await db.member.count({ where: { role: 'OWNER' } });
   let role = String(input.role || 'OPERATOR').toUpperCase();
   if (!VALID_ROLES.includes(role)) role = 'OPERATOR';
-  if (existing === 0) role = 'OWNER'; // the first member is always the owner
+  if (existingOwners === 0) role = 'OWNER'; // first owner bootstrap (robust to leftover non-owner members)
   const data = {
     name,
     email: optionalString(input.email),
@@ -1890,39 +1905,108 @@ async function accountSave(payload) {
 // dev mode and return the code to the caller so the flow stays testable.
 const nodemailer = require('nodemailer');
 
-async function deliverOtp(email, code) {
-  // Configure your SMTP transporter here.
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-    port: Number(process.env.SMTP_PORT) || 465,
-    secure: true, 
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+// Resolve SMTP settings from the DB first (configurable in Settings → Email),
+// falling back to environment variables. Email is OPTIONAL: if nothing is
+// configured we run in offline mode and surface the code in-app so that
+// registration is never blocked on a fresh install.
+async function resolveSmtpConfig() {
+  const s = (await readSetting('smtp', null)) || {};
+  const host = s.host || process.env.SMTP_HOST || '';
+  const user = s.user || process.env.SMTP_USER || '';
+  const pass = s.pass || process.env.SMTP_PASS || '';
+  const port = Number(s.port || process.env.SMTP_PORT || 465);
+  const secure = (s.secure !== undefined && s.secure !== null) ? Boolean(s.secure) : (port === 465);
+  const fromName = s.fromName || process.env.SMTP_FROM_NAME || 'SoftGlaze Security';
+  const configured = Boolean(host && user && pass);
+  return { configured, host, user, pass, port, secure, fromName };
+}
 
+function buildOtpEmail(cfg, email, code) {
+  return {
+    from: `"${cfg.fromName}" <${cfg.user}>`,
+    to: email,
+    subject: 'Your SoftGlaze Verification Code',
+    text: `Your verification code is: ${code}. It will expire in 10 minutes.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 28rem; margin: 0 auto;">
+        <h2>SoftGlaze Verification</h2>
+        <p>Your verification code is:</p>
+        <h1 style="background: #f4f4f5; padding: 10px; text-align: center; letter-spacing: 5px;">${code}</h1>
+        <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
+      </div>`
+  };
+}
+
+async function deliverOtp(email, code) {
+  const cfg = await resolveSmtpConfig();
+  if (!cfg.configured) {
+    // Offline mode: no transport configured. Registration still works — the
+    // renderer surfaces the code to the operator who is at this machine.
+    console.warn('[OTP] No SMTP configured — offline mode, code returned in-app.');
+    return { devMode: true };
+  }
+  const transporter = nodemailer.createTransport({
+    host: cfg.host, port: cfg.port, secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass }
+  });
   try {
-    await transporter.sendMail({
-      // Hostinger requires the 'from' email to match the authenticated user!
-      from: `"SoftGlaze Security" <${process.env.SMTP_USER}>`, 
-      to: email,
-      subject: 'Your SoftGlaze Verification Code',
-      text: `Your verification code is: ${code}. It will expire in 10 minutes.`,
-      html: `
-        <div style="font-family: sans-serif; max-w-md; margin: 0 auto;">
-          <h2>SoftGlaze Verification</h2>
-          <p>Your verification code is:</p>
-          <h1 style="background: #f4f4f5; padding: 10px; text-align: center; letter-spacing: 5px;">${code}</h1>
-          <p style="font-size: 12px; color: #666;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
-        </div>
-      `
-    });
+    await transporter.sendMail(buildOtpEmail(cfg, email, code));
     return { devMode: false };
   } catch (error) {
     console.error('[OTP Delivery Error]', error);
-    throw new Error('Failed to send verification email. Please check your SMTP settings.');
+    throw new Error('Failed to send verification email. Check Settings → Email.');
   }
+}
+
+// Returns config WITHOUT the password (never sent to the renderer).
+async function getEmailConfig() {
+  const cfg = await resolveSmtpConfig();
+  return {
+    configured: cfg.configured,
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    user: cfg.user,
+    fromName: cfg.fromName,
+    hasPassword: Boolean(cfg.pass)
+  };
+}
+
+async function setEmailConfig(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const prev = (await readSetting('smtp', {})) || {};
+  const next = {
+    host: String(input.host ?? prev.host ?? '').trim(),
+    port: Number(input.port ?? prev.port ?? 465),
+    secure: input.secure !== undefined ? Boolean(input.secure) : (prev.secure ?? true),
+    user: String(input.user ?? prev.user ?? '').trim(),
+    // Keep the existing password if the renderer sends a blank (it never receives it back).
+    pass: (input.pass !== undefined && input.pass !== '') ? String(input.pass) : (prev.pass || ''),
+    fromName: String(input.fromName ?? prev.fromName ?? 'SoftGlaze Security').trim()
+  };
+  await writeSetting('smtp', next);
+  return getEmailConfig();
+}
+
+// Sends a real test email to the given address using the saved/env config.
+async function testEmail(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const to = requiredString(input.email, 'Email').toLowerCase();
+  const cfg = await resolveSmtpConfig();
+  if (!cfg.configured) return { sent: false, devMode: true };
+  const transporter = nodemailer.createTransport({
+    host: cfg.host, port: cfg.port, secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass }
+  });
+  await transporter.sendMail({
+    from: `"${cfg.fromName}" <${cfg.user}>`,
+    to,
+    subject: 'SoftGlaze test email',
+    text: 'This is a test email from SoftGlaze. Your email settings are working.'
+  });
+  return { sent: true, devMode: false };
 }
 
 async function accountSendOtp(payload) {
@@ -1950,6 +2034,109 @@ async function accountVerifyOtp(payload) {
   }
   await writeSetting('otp', null);
   return { verified: true };
+}
+
+// Atomic master-account registration. Verifies the OTP, creates the OWNER member,
+// sets the vault password and saves the account profile in one privileged step,
+// and only consumes the OTP once everything has succeeded. This removes the
+// fragile multi-call sequence in the renderer that could leave the flow
+// half-finished (OTP already spent, vault not set, member created as OPERATOR).
+async function accountRegister(payload) {
+  const input = requireObject(payload);
+  const firstName = requiredString(input.firstName, 'First name');
+  const lastName = requiredString(input.lastName, 'Last name');
+  const email = requiredString(input.email, 'Email').toLowerCase();
+  const phone = String(input.phone || '').trim();
+  const password = requiredString(input.password, 'Password');
+  const code = String(input.code || '').trim();
+  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+
+  // 1) Verify the OTP WITHOUT clearing it yet.
+  const rec = await readSetting('otp', null);
+  if (!rec || !rec.hash) throw new Error('No verification code was requested.');
+  if (rec.email !== email) throw new Error('Email does not match the requested code.');
+  if (Date.now() > Number(rec.expiresAt || 0)) { await writeSetting('otp', null); throw new Error('Verification code expired. Request a new one.'); }
+  if (Number(rec.attempts || 0) >= 6) { await writeSetting('otp', null); throw new Error('Too many attempts. Request a new code.'); }
+  if (!verifySecret(code, rec.salt, rec.hash)) {
+    await writeSetting('otp', { ...rec, attempts: Number(rec.attempts || 0) + 1 });
+    throw new Error('Incorrect code.');
+  }
+
+  // 2) Create the master account as OWNER (always — this is the workspace owner).
+  const db = getPrisma();
+  const name = `${firstName} ${lastName}`.trim();
+  const owner = await db.member.create({
+    data: {
+      name,
+      email,
+      role: 'OWNER',
+      color: '#3DC6DA',
+      initials: initialsFrom(name),
+      status: 'active'
+    }
+  });
+
+  // 3) Activate the owner so the vault write below passes the permission gate.
+  currentMemberId = owner.id;
+  await writeSetting('currentMemberId', owner.id).catch(() => {});
+
+  // 4) Set the vault password (we are now OWNER, so vault.manage is allowed).
+  const { salt, hash } = hashSecret(password);
+  await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes) || 0 });
+  vaultLocked = false;
+
+  // 5) Save the account profile.
+  await writeSetting('account', {
+    firstName, lastName, email, phone, verified: true, createdAt: new Date().toISOString()
+  });
+
+  // 6) Everything succeeded — now it is safe to consume the OTP.
+  await writeSetting('otp', null);
+
+  return { ok: true, member: serializeMember(owner, { isCurrent: true }) };
+}
+
+// ---- Team oversight (local-first admin dashboard) ----
+// Per-member instructions are stored in Setting (no schema migration needed).
+async function setMemberInstructions(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const text = String(input.instructions || '').slice(0, 4000);
+  const map = (await readSetting('memberInstructions', {})) || {};
+  if (text) map[id] = text; else delete map[id];
+  await writeSetting('memberInstructions', map);
+  return { id, instructions: text };
+}
+
+// Workspace-wide activity feed: the honest local answer to "what is happening /
+// who is doing what". Joins ActivityLog with member names and profile titles.
+// Note: this is per-install only. Cross-machine metrics (e.g. total downloads
+// across all users) are impossible without a central backend.
+async function getTeamActivity(payload) {
+  await requirePermission('members.manage');
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const take = Math.min(Math.max(parseInt(input.limit, 10) || 50, 1), 200);
+  const db = getPrisma();
+  const logs = await db.activityLog.findMany({ orderBy: { createdAt: 'desc' }, take });
+  const memberIds = [...new Set(logs.map((l) => l.memberId).filter(Boolean))];
+  const profileIds = [...new Set(logs.map((l) => l.profileId).filter(Boolean))];
+  const [members, profiles] = await Promise.all([
+    memberIds.length ? db.member.findMany({ where: { id: { in: memberIds } } }) : [],
+    profileIds.length ? db.profile.findMany({ where: { id: { in: profileIds } }, select: { id: true, title: true } }) : []
+  ]);
+  const mMap = Object.fromEntries(members.map((m) => [m.id, m.name]));
+  const pMap = Object.fromEntries(profiles.map((p) => [p.id, p.title]));
+  return logs.map((l) => ({
+    id: l.id,
+    action: l.action,
+    detail: l.detail || null,
+    memberId: l.memberId || null,
+    memberName: l.memberId ? (mMap[l.memberId] || 'Unknown member') : 'System',
+    profileId: l.profileId || null,
+    profileTitle: l.profileId ? (pMap[l.profileId] || `#${l.profileId}`) : null,
+    createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt
+  }));
 }
 
 function registerIpcHandlers() {
@@ -2019,6 +2206,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.MEMBER_SET_PIN, setMemberPin);
   registerHandler(CHANNELS.MEMBER_CURRENT, getCurrentMember);
   registerHandler(CHANNELS.MEMBER_SWITCH, switchMember);
+  registerHandler(CHANNELS.MEMBER_SET_INSTRUCTIONS, setMemberInstructions);
+  registerHandler(CHANNELS.TEAM_ACTIVITY, getTeamActivity);
   registerHandler(CHANNELS.VAULT_STATUS, vaultStatus);
   registerHandler(CHANNELS.VAULT_SET_PASSWORD, vaultSetPassword);
   registerHandler(CHANNELS.VAULT_UNLOCK, vaultUnlock);
@@ -2029,6 +2218,10 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.ACCOUNT_SAVE, accountSave);
   registerHandler(CHANNELS.ACCOUNT_SEND_OTP, accountSendOtp);
   registerHandler(CHANNELS.ACCOUNT_VERIFY_OTP, accountVerifyOtp);
+  registerHandler(CHANNELS.ACCOUNT_REGISTER, accountRegister);
+  registerHandler(CHANNELS.EMAIL_GET_CONFIG, getEmailConfig);
+  registerHandler(CHANNELS.EMAIL_SET_CONFIG, setEmailConfig);
+  registerHandler(CHANNELS.EMAIL_TEST, testEmail);
 
   // Restore member session + vault lock state on boot.
   (async () => {
