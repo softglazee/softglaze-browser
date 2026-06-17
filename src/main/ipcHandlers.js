@@ -42,6 +42,13 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
 
+  GROUP_LIST: 'group:list',
+  GROUP_CREATE: 'group:create',
+  GROUP_UPDATE: 'group:update',
+  GROUP_DELETE: 'group:delete',
+  GROUP_ASSIGN: 'group:assign',
+  TAG_LIST: 'tag:list',
+
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
 
@@ -164,11 +171,23 @@ function serializeProfile(profile) {
   let browserSettings = {};
   try { browserSettings = profile.browserSettingsJson ? JSON.parse(profile.browserSettingsJson) : {}; } catch (e) {}
 
+  let tags = [];
+  try { tags = profile.tags ? JSON.parse(profile.tags) : []; if (!Array.isArray(tags)) tags = []; } catch (e) { tags = []; }
+
   return {
     ...profile,
     platformAccounts,
     syncItems,
     browserSettings,
+    tags,
+    group: profile.group
+      ? {
+          id: profile.group.id,
+          name: profile.group.name,
+          color: profile.group.color,
+          createdAt: profile.group.createdAt instanceof Date ? profile.group.createdAt.toISOString() : profile.group.createdAt
+        }
+      : null,
     createdAt: profile.createdAt instanceof Date ? profile.createdAt.toISOString() : profile.createdAt,
     updatedAt: profile.updatedAt instanceof Date ? profile.updatedAt.toISOString() : profile.updatedAt,
     proxy: serializeProxy(profile.proxy)
@@ -451,7 +470,7 @@ async function listProfiles(payload = {}) {
     where.OR = [{ title: { contains: search } }, { notes: { contains: search } }, { dataDirName: { contains: search } }, { proxyInfoString: { contains: search } }];
   }
 
-  const profiles = await db.profile.findMany({ where, orderBy: { createdAt: 'desc' }, include: { proxy: true } });
+  const profiles = await db.profile.findMany({ where, orderBy: { createdAt: 'desc' }, include: { proxy: true, group: true } });
   return profiles.map(serializeProfile);
 }
 
@@ -460,7 +479,7 @@ async function listTrash() {
   const profiles = await db.profile.findMany({
     where: { deletedAt: { not: null } },
     orderBy: { deletedAt: 'desc' },
-    include: { proxy: true }
+    include: { proxy: true, group: true }
   });
   return profiles.map(serializeProfile);
 }
@@ -490,9 +509,11 @@ async function createProfile(payload) {
       notes: optionalString(input.notes),
       systemProxyBehavior: validateSystemProxyBehavior(input.systemProxyBehavior),
       dataDirName,
+      groupId: input.groupId ? parseId(input.groupId, 'groupId') : null,
+      tags: Array.isArray(input.tags) ? JSON.stringify(input.tags) : null,
       ...buildFingerprintFields(input) // generator-aware fingerprint injection
     },
-    include: { proxy: true }
+    include: { proxy: true, group: true }
   });
 
   return serializeProfile(created);
@@ -509,6 +530,13 @@ async function updateProfile(payload) {
   if (input.title !== undefined) data.title = requiredString(input.title, 'Profile title');
   if (input.notes !== undefined) data.notes = optionalString(input.notes);
   if (input.systemProxyBehavior !== undefined) data.systemProxyBehavior = validateSystemProxyBehavior(input.systemProxyBehavior);
+
+  if (input.groupId !== undefined) {
+    data.groupId = (input.groupId === null || input.groupId === '') ? null : parseId(input.groupId, 'groupId');
+  }
+  if (Array.isArray(input.tags)) {
+    data.tags = JSON.stringify(input.tags);
+  }
 
   if (input.proxyId !== undefined) {
     if (input.proxyId === null || input.proxyId === '') {
@@ -537,7 +565,7 @@ async function updateProfile(payload) {
   // Undefined properties from extractFingerprintData will be ignored by Prisma
   Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
-  const updated = await db.profile.update({ where: { id }, data, include: { proxy: true } });
+  const updated = await db.profile.update({ where: { id }, data, include: { proxy: true, group: true } });
   return serializeProfile(updated);
 }
 
@@ -671,6 +699,92 @@ async function bulkCloseSessions(payload) {
   return result;
 }
 
+function collectTags(rows) {
+  const tagSet = new Set();
+  for (const r of rows) {
+    try {
+      const arr = r.tags ? JSON.parse(r.tags) : [];
+      if (Array.isArray(arr)) arr.forEach((t) => { if (t) tagSet.add(String(t)); });
+    } catch (e) { /* ignore malformed tag JSON */ }
+  }
+  return [...tagSet];
+}
+
+async function listGroups() {
+  const db = getPrisma();
+  const groups = await db.group.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { profiles: { where: { deletedAt: null }, select: { tags: true } } }
+  });
+  return groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    color: g.color,
+    createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt,
+    profileCount: g.profiles.length,
+    tags: collectTags(g.profiles)
+  }));
+}
+
+async function createGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const name = requiredString(input.name, 'Group name');
+  const color = optionalString(input.color) || '#3b82f6';
+  const created = await db.group.create({ data: { name, color } });
+  return {
+    id: created.id,
+    name: created.name,
+    color: created.color,
+    createdAt: created.createdAt instanceof Date ? created.createdAt.toISOString() : created.createdAt,
+    profileCount: 0,
+    tags: []
+  };
+}
+
+async function updateGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const data = {};
+  if (input.name !== undefined) data.name = requiredString(input.name, 'Group name');
+  if (input.color !== undefined) data.color = optionalString(input.color) || '#3b82f6';
+  const updated = await db.group.update({ where: { id }, data });
+  return { id: updated.id, name: updated.name, color: updated.color };
+}
+
+async function deleteGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  // The runtime SQLite Profile table has no DB-level FK for groupId, so detach
+  // member profiles explicitly before removing the group (no dangling refs).
+  await db.profile.updateMany({ where: { groupId: id }, data: { groupId: null } });
+  await db.group.delete({ where: { id } });
+  return { deleted: true, id };
+}
+
+async function assignProfilesToGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const groupId = (input.groupId === null || input.groupId === undefined || input.groupId === '')
+    ? null
+    : parseId(input.groupId, 'groupId');
+  if (groupId !== null) {
+    const group = await db.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new Error('Selected group does not exist.');
+  }
+  const res = await db.profile.updateMany({ where: { id: { in: ids } }, data: { groupId } });
+  return { assigned: res.count, groupId };
+}
+
+async function listTags() {
+  const db = getPrisma();
+  const rows = await db.profile.findMany({ where: { deletedAt: null }, select: { tags: true } });
+  return collectTags(rows).sort((a, b) => a.localeCompare(b));
+}
+
 async function launchProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
@@ -791,16 +905,17 @@ async function getSystemInfo() {
 async function getDashboardStats() {
   const db = getPrisma();
 
-  const [totalProfiles, totalProxies] = await Promise.all([
+  const [totalProfiles, totalProxies, totalGroups] = await Promise.all([
     db.profile.count({ where: { deletedAt: null } }),
-    db.proxy.count()
+    db.proxy.count(),
+    db.group.count()
   ]);
 
   return {
     totalProfiles,
     activeSessions: listActiveSessions().length,
     totalProxies,
-    totalGroups: 0 // No Group model in the DB yet; wired in a later step.
+    totalGroups
   };
 }
 
@@ -830,6 +945,13 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
+
+  registerHandler(CHANNELS.GROUP_LIST, listGroups);
+  registerHandler(CHANNELS.GROUP_CREATE, createGroup);
+  registerHandler(CHANNELS.GROUP_UPDATE, updateGroup);
+  registerHandler(CHANNELS.GROUP_DELETE, deleteGroup);
+  registerHandler(CHANNELS.GROUP_ASSIGN, assignProfilesToGroup);
+  registerHandler(CHANNELS.TAG_LIST, listTags);
 
   registerHandler(CHANNELS.SESSION_LIST, () => listActiveSessions());
   registerHandler(CHANNELS.SESSION_CLOSE, closeSession);

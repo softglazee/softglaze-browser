@@ -28,6 +28,13 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
 
+  GROUP_LIST: 'group:list',
+  GROUP_CREATE: 'group:create',
+  GROUP_UPDATE: 'group:update',
+  GROUP_DELETE: 'group:delete',
+  GROUP_ASSIGN: 'group:assign',
+  TAG_LIST: 'tag:list',
+
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
 
@@ -79,6 +86,16 @@ const api = Object.freeze({
     bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
     bulkLaunch: (ids) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids }),
     bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids })
+  }),
+  groups: Object.freeze({
+    list: () => invoke(CHANNELS.GROUP_LIST),
+    create: (payload) => invoke(CHANNELS.GROUP_CREATE, payload),
+    update: (payload) => invoke(CHANNELS.GROUP_UPDATE, payload),
+    delete: (id) => invoke(CHANNELS.GROUP_DELETE, { id }),
+    assign: (ids, groupId) => invoke(CHANNELS.GROUP_ASSIGN, { ids, groupId })
+  }),
+  tags: Object.freeze({
+    list: () => invoke(CHANNELS.TAG_LIST)
   }),
   sessions: Object.freeze({
     list: () => invoke(CHANNELS.SESSION_LIST),

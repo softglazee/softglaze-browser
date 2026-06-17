@@ -102,6 +102,10 @@ const PROFILE_COLUMNS = [
   ['advancedBrowser', 'TEXT'], ['browserSettingsJson', 'TEXT'],
   ['randomFingerprint', 'INTEGER NOT NULL DEFAULT 0'],
 
+  // Organization (groups + tags)
+  ['groupId', 'INTEGER'],
+  ['tags', 'TEXT'],
+
   // Timestamps / soft delete
   // (CURRENT_TIMESTAMP is NOT allowed as a default in ALTER ADD COLUMN, so
   //  updatedAt is added nullable here and backfilled from createdAt below.)
@@ -128,6 +132,7 @@ async function ensureProfileColumns(db) {
 
   // Helps Trash / soft-delete queries in Step 2.
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_deletedAt_idx" ON "Profile"("deletedAt");');
+  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Profile_groupId_idx" ON "Profile"("groupId");');
 
   console.log(
     added.length > 0
@@ -169,6 +174,16 @@ async function bootstrapDatabase() {
     );
   `);
 
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Group" (
+      "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      "name" TEXT NOT NULL,
+      "color" TEXT DEFAULT '#3b82f6',
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Group_createdAt_idx" ON "Group"("createdAt");');
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_host_port_idx" ON "Proxy"("host", "port");');
   await db.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Proxy_createdAt_idx" ON "Proxy"("createdAt");');
   await db.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_key" ON "Proxy"("type", "host", "port", "username");');

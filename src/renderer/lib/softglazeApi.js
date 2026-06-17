@@ -31,6 +31,16 @@ export const softglazeApi = {
     bulkLaunch: (ids) => getSoftglazeApi().profiles.bulkLaunch(ids),
     bulkClose: (ids) => getSoftglazeApi().profiles.bulkClose(ids)
   },
+  groups: {
+    list: () => getSoftglazeApi().groups.list(),
+    create: (payload) => getSoftglazeApi().groups.create(payload),
+    update: (payload) => getSoftglazeApi().groups.update(payload),
+    delete: (id) => getSoftglazeApi().groups.delete(id),
+    assign: (ids, groupId) => getSoftglazeApi().groups.assign(ids, groupId)
+  },
+  tags: {
+    list: () => getSoftglazeApi().tags.list()
+  },
   sessions: {
     list: () => getSoftglazeApi().sessions.list(),
     close: (sessionId) => getSoftglazeApi().sessions.close(sessionId)
