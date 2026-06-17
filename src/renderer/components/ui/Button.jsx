@@ -1,31 +1,26 @@
 import React from 'react';
-import { cn } from '@/lib/utils.js';
+import { Loader2 } from 'lucide-react';
 
-const variants = {
-  default: 'bg-slate-100 text-slate-950 hover:bg-white border border-slate-200 shadow-sm',
-  secondary: 'bg-slate-900 text-slate-100 hover:bg-slate-800 border border-slate-700',
-  ghost: 'bg-transparent text-slate-300 hover:bg-slate-900 hover:text-white border border-transparent',
-  outline: 'bg-transparent text-slate-100 hover:bg-slate-900 border border-slate-700',
-  destructive: 'bg-red-600 text-white hover:bg-red-500 border border-red-500'
-};
+export default function Button({ children, variant = 'primary', size = 'md', isLoading, className = '', ...props }) {
+  const baseStyle = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg outline-none disabled:opacity-50 disabled:pointer-events-none";
+  
+  const variants = {
+    primary: "bg-primary hover:bg-primary-hover text-white shadow-glow",
+    secondary: "bg-surface border border-border hover:border-muted-dark text-zinc-200",
+    ghost: "bg-transparent hover:bg-surface text-muted hover:text-zinc-200",
+    danger: "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
+  };
 
-const sizes = { sm: 'h-8 px-3 text-xs', default: 'h-10 px-4 text-sm', lg: 'h-11 px-5 text-sm' };
+  const sizes = {
+    sm: "text-xs px-3 py-1.5 gap-1.5",
+    md: "text-sm px-4 py-2 gap-2",
+    lg: "text-base px-5 py-2.5 gap-2"
+  };
 
-const Button = React.forwardRef(({ className, variant = 'default', size = 'default', type = 'button', ...props }, ref) => (
-  <button
-    ref={ref}
-    type={type}
-    className={cn(
-      'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
-      'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
-      variants[variant],
-      sizes[size],
-      className
-    )}
-    {...props}
-  />
-));
-
-Button.displayName = 'Button';
-export default Button;
+  return (
+    <button className={`${baseStyle} ${variants[variant]} ${sizes[size]} ${className}`} disabled={isLoading || props.disabled} {...props}>
+      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+      {!isLoading && children}
+    </button>
+  );
+}
