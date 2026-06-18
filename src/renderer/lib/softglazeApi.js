@@ -45,7 +45,10 @@ export const softglazeApi = {
   },
   settings: {
     getProxyScheduler: () => getSoftglazeApi().settings.getProxyScheduler(),
-    setProxyScheduler: (config) => getSoftglazeApi().settings.setProxyScheduler(config)
+    setProxyScheduler: (config) => getSoftglazeApi().settings.setProxyScheduler(config),
+    getEmail: () => getSoftglazeApi().settings.getEmail(),
+    setEmail: (config) => getSoftglazeApi().settings.setEmail(config),
+    testEmail: (email) => getSoftglazeApi().settings.testEmail(email)
   },
   groups: {
     list: () => getSoftglazeApi().groups.list(),
@@ -68,12 +71,17 @@ export const softglazeApi = {
     delete: (id) => getSoftglazeApi().members.delete(id),
     setPin: (id, pin) => getSoftglazeApi().members.setPin(id, pin),
     current: () => getSoftglazeApi().members.current(),
-    switch: (id, pin) => getSoftglazeApi().members.switch(id, pin)
+    switch: (id, pin) => getSoftglazeApi().members.switch(id, pin),
+    setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions)
+  },
+  team: {
+    activity: (limit) => getSoftglazeApi().team.activity(limit)
   },
   vault: {
     status: () => getSoftglazeApi().vault.status(),
     setPassword: (payload) => getSoftglazeApi().vault.setPassword(payload),
     unlock: (password) => getSoftglazeApi().vault.unlock(password),
+    recover: (recoveryCode, password) => getSoftglazeApi().vault.recover(recoveryCode, password),
     lock: () => getSoftglazeApi().vault.lock(),
     disable: (password) => getSoftglazeApi().vault.disable(password),
     setAutoLock: (minutes) => getSoftglazeApi().vault.setAutoLock(minutes)
@@ -82,7 +90,8 @@ export const softglazeApi = {
     get: () => getSoftglazeApi().account.get(),
     save: (payload) => getSoftglazeApi().account.save(payload),
     sendOtp: (email) => getSoftglazeApi().account.sendOtp(email),
-    verifyOtp: (email, code) => getSoftglazeApi().account.verifyOtp(email, code)
+    verifyOtp: (email, code) => getSoftglazeApi().account.verifyOtp(email, code),
+    register: (payload) => getSoftglazeApi().account.register(payload)
   },
   batch: {
     previewProfilesFromSpreadsheet: () => getSoftglazeApi().batch.previewProfilesFromSpreadsheet(),
