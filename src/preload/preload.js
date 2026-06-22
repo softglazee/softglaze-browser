@@ -94,9 +94,14 @@ const CHANNELS = Object.freeze({
   MEMBER_COMMIT_CHANGE: 'member:commit-change',
   MEMBER_UPDATE_PERMISSIONS: 'member:update-permissions',
   MEMBER_SET_INSTRUCTIONS: 'member:set-instructions',
+  MEMBER_SET_STATUS: 'member:set-status',
 
   LICENSE_GET: 'license:get',
   LICENSE_REDEEM: 'license:redeem',
+  LICENSE_GRANT: 'license:grant',
+  LICENSE_EXTEND: 'license:extend',
+  LICENSE_RESET: 'license:reset',
+  LICENSE_LIST_OWNERS: 'license:list-owners',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
@@ -297,7 +302,8 @@ const api = Object.freeze({
     requestChange: (payload) => invoke(CHANNELS.MEMBER_REQUEST_CHANGE, payload),
     commitChange: (payload) => invoke(CHANNELS.MEMBER_COMMIT_CHANGE, payload),
     updatePermissions: (id, permissions) => invoke(CHANNELS.MEMBER_UPDATE_PERMISSIONS, { id, permissions }),
-    setInstructions: (id, instructions) => invoke(CHANNELS.MEMBER_SET_INSTRUCTIONS, { id, instructions })
+    setInstructions: (id, instructions) => invoke(CHANNELS.MEMBER_SET_INSTRUCTIONS, { id, instructions }),
+    setStatus: (payload) => invoke(CHANNELS.MEMBER_SET_STATUS, payload)
   }),
   team: Object.freeze({
     activity: (limit) => invoke(CHANNELS.TEAM_ACTIVITY, { limit }),
@@ -322,7 +328,11 @@ const api = Object.freeze({
   }),
   license: Object.freeze({
     get: () => invoke(CHANNELS.LICENSE_GET),
-    redeem: (code) => invoke(CHANNELS.LICENSE_REDEEM, { code })
+    redeem: (code) => invoke(CHANNELS.LICENSE_REDEEM, { code }),
+    grant: (payload) => invoke(CHANNELS.LICENSE_GRANT, payload),
+    extend: (payload) => invoke(CHANNELS.LICENSE_EXTEND, payload),
+    reset: (payload) => invoke(CHANNELS.LICENSE_RESET, payload),
+    listOwners: () => invoke(CHANNELS.LICENSE_LIST_OWNERS)
   }),
   payments: Object.freeze({
     getConfig: () => invoke(CHANNELS.PAYMENT_CONFIG_GET),

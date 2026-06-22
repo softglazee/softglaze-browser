@@ -91,7 +91,8 @@ model Member {
   avatarUrl    String? // base64 data URI or local file path for the profile picture
   pinHash      String?
   pinSalt      String?
-  status       String    @default("active") // active | suspended
+  status       String    @default("active") // active | suspended | banned
+  banReason    String? // why the owner tree was banned (trial/grace lapsed, or admin action)
 
   // Hierarchy + per-member auth + permissions (RBAC)
   parentMemberId  Int? // who invited/created this member (null = top of a tree)
@@ -113,6 +114,7 @@ model License {
   id            Int       @id @default(autoincrement())
   ownerMemberId Int?
   type          String    @default("trial") // trial | paid
+  tier          String?   @default("pro") // pro | enterprise (recorded plan/version)
   purchaseCode  String?
   status        String    @default("active") // active | expired
   trialEndsAt   DateTime?

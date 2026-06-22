@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
-  Fingerprint, Globe, Mail
+  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, Crown, AlertTriangle, Check
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -83,12 +83,82 @@ function BrandPanel() {
   );
 }
 
+// Non-blocking overlay shown over the app: a persistent grace banner (with a
+// renew CTA + countdown) or an unobtrusive trial-days chip. Module-scope so it
+// isn't remounted on every Gate render.
+function LicenseBanner({ license, busy, onPay }) {
+  if (!license || license.isExempt) return null;
+  if (license.isGrace) {
+    return (
+      <div className="fixed top-0 inset-x-0 z-[90] bg-amber-500/95 text-black px-4 py-2 flex items-center justify-center gap-3 text-[12.5px] font-medium shadow">
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span>Your subscription has ended — {license.daysLeftGrace} day{license.daysLeftGrace === 1 ? '' : 's'} of grace left. Renew to keep access.</span>
+        <button onClick={onPay} disabled={busy} className="ml-2 shrink-0 inline-flex items-center gap-1.5 rounded-md bg-black/85 text-white px-3 py-1 font-semibold disabled:opacity-60">
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />} Renew
+        </button>
+      </div>
+    );
+  }
+  if (license.isTrial && license.daysLeftTrial != null) {
+    return (
+      <div className="fixed bottom-4 left-4 z-[90] inline-flex items-center gap-2 rounded-full bg-card border border-border px-3 py-1.5 text-[11.5px] text-muted-foreground shadow">
+        <Clock className="w-3.5 h-3.5 text-primary" />
+        Trial · {license.daysLeftTrial} day{license.daysLeftTrial === 1 ? '' : 's'} left
+      </div>
+    );
+  }
+  return null;
+}
+
+// Full-screen blocking gate when the owner tree is banned (trial + grace lapsed).
+// No workspace access — only renew / redeem / contact / sign out.
+function BannedScreen({ account, license, planCode, setPlanCode, busy, err, onRedeem, onPay, onSignOut }) {
+  const adminBlocked = Boolean(license?.adminBlocked);
+  return (
+    <div className="h-screen w-full bg-background text-foreground font-sans grid place-items-center p-6">
+      <div className="w-full max-w-[440px]">
+        <div className="w-12 h-12 rounded-xl grid place-items-center mb-4" style={{ background: 'color-mix(in srgb, #ef4444 14%, transparent)', border: '1px solid color-mix(in srgb, #ef4444 28%, transparent)' }}><Lock className="w-6 h-6 text-red-400" /></div>
+        <h1 className="font-display text-[22px] font-semibold tracking-tight">{adminBlocked ? 'Your account is blocked' : 'Your subscription has ended'}</h1>
+        <p className="text-[13px] text-muted mt-1.5 mb-6">
+          {adminBlocked
+            ? `${account?.firstName ? `${account.firstName}, your` : 'Your'} account has been blocked by an administrator. Please contact them to restore access — your data is safe.`
+            : `${account?.firstName ? `${account.firstName}, your` : 'Your'} free trial and grace period are over. Renew to unlock your workspace — your profiles and data are safe and waiting.`}
+        </p>
+
+        {!adminBlocked && (
+          <>
+            <button onClick={onPay} disabled={busy} className="w-full h-11 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13.5px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} Pay now {license?.plan?.label ? `(${license.plan.label})` : ''}
+            </button>
+            <div className="mt-5">
+              <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />Have a purchase code?</label>
+              <div className="flex items-center gap-2">
+                <input value={planCode} onChange={(e) => setPlanCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" className="flex-1 h-10 bg-background border border-border rounded-lg px-3 text-[13px] font-mono tracking-widest text-foreground outline-none focus:border-primary" onKeyDown={(e) => { if (e.key === 'Enter') onRedeem(); }} />
+                <button onClick={onRedeem} disabled={busy || !planCode.trim()} className="h-10 px-4 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">Redeem</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+
+        <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-[12px] text-muted-dark">
+          <span>Need help? Contact your administrator.</span>
+          <button onClick={onSignOut} className="inline-flex items-center gap-1.5 hover:text-foreground"><LogOut className="w-3.5 h-3.5" /> Sign out</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Gate({ children }) {
-  const [phase, setPhase] = useState('loading'); // loading | register | login | pick | ready
+  const [phase, setPhase] = useState('loading'); // loading | register | login | pick | plan | licensing | banned | ready
   const [members, setMembers] = useState([]);
   const [account, setAccount] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [license, setLicense] = useState(null); // resolved after auth (drives banned/grace/trial)
+  const [planCode, setPlanCode] = useState(''); // register plan step: purchase-code entry
 
   // register
   const [step, setStep] = useState('details'); // details | verify
@@ -133,8 +203,8 @@ export default function Gate({ children }) {
       if (vs && vs.locked) { setPhase('login'); return; }
       if (ms.length === 0) { setPhase('register'); setStep('details'); return; }
       if (!cur) { setPhase('pick'); return; }
-      setPhase('ready');
-    } catch (e) { setPhase('ready'); }
+      setPhase('licensing');
+    } catch (e) { setPhase('licensing'); }
   }
   useEffect(() => { evaluate(); }, []);
   useEffect(() => {
@@ -182,7 +252,9 @@ export default function Gate({ children }) {
         password,
         code: c
       });
-      setPhase('ready');
+      // Account + 7-day trial now exist. Offer the plan step (trial / redeem / buy)
+      // before entering the workspace.
+      setBusy(false); setErr(''); setPlanCode(''); setPhase('plan');
     } catch (e) { setErr(e.message || 'Verification failed.'); setBusy(false); }
   }
 
@@ -198,7 +270,7 @@ export default function Gate({ children }) {
       const cur = await softglazeApi.members.current().catch(() => null);
       setLoginPass('');
       if (!cur && list.length) { setPhase('pick'); setBusy(false); return; }
-      setPhase('ready');
+      setPhase('licensing');
     } catch (e) { setErr(e.message || 'Incorrect password.'); setBusy(false); }
   }
 
@@ -206,7 +278,7 @@ export default function Gate({ children }) {
     setErr('');
     if (m.hasPin && pinFor !== m.id) { setPinFor(m.id); setPin(''); return; }
     setBusy(true);
-    try { await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined); setPhase('ready'); }
+    try { await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined); setPhase('licensing'); }
     catch (e) { setErr(e.message || 'Could not sign in.'); setBusy(false); }
   }
 
@@ -215,7 +287,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.superLogin(superId.trim(), superPass);
       setSuperPass('');
-      setPhase('ready');
+      setPhase('licensing');
     } catch (e) { setErr(e.message || 'Invalid Super Admin credentials.'); setBusy(false); }
   }
 
@@ -227,7 +299,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.acceptInvite({ code: inviteCode.trim(), name: inviteName.trim() || undefined, password: invitePass });
       setInvitePass('');
-      setPhase('ready');
+      setPhase('licensing');
     } catch (e) { setErr(e.message || 'Could not redeem that invite code.'); setBusy(false); }
   }
 
@@ -238,8 +310,61 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.login(memberIdf.trim(), memberPass);
       setMemberPass('');
-      setPhase('ready');
+      setPhase('licensing');
     } catch (e) { setErr(e.message || 'Could not sign in.'); setBusy(false); }
+  }
+
+  // After any successful auth we pass through 'licensing': resolve the license and
+  // either enter the app, or show the blocking 'banned' screen. A read error never
+  // hard-blocks (fail open to the app, consistent with local-first).
+  useEffect(() => {
+    if (phase !== 'licensing') return undefined;
+    let live = true;
+    (async () => {
+      try {
+        const lic = await softglazeApi.license.get();
+        if (!live) return;
+        setLicense(lic);
+        setPhase(lic && lic.isBanned ? 'banned' : 'ready');
+      } catch (e) { if (live) setPhase('ready'); }
+    })();
+    return () => { live = false; };
+  }, [phase]);
+
+  function startTrial() { setErr(''); setPhase('licensing'); } // trial already created at registration
+
+  async function redeemPlan() {
+    setErr('');
+    if (!planCode.trim()) return setErr('Enter your purchase code.');
+    setBusy(true);
+    try { await softglazeApi.license.redeem(planCode.trim()); setPlanCode(''); setBusy(false); setPhase('licensing'); }
+    catch (e) { setErr(e.message || 'That purchase code is not valid.'); setBusy(false); }
+  }
+
+  function pollPurchase(inv) {
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
+      try {
+        const r = await softglazeApi.payments.pollCheckout({ uuid: inv.uuid, orderId: inv.orderId });
+        if (r && r.paid) { clearInterval(timer); setBusy(false); setPhase('licensing'); return; }
+      } catch (e) { /* keep polling */ }
+      if (tries > 120) { clearInterval(timer); setBusy(false); } // ~10-minute cap
+    }, 5000);
+  }
+
+  async function buyPlan() {
+    setErr(''); setBusy(true);
+    try {
+      const inv = await softglazeApi.payments.startCheckout();
+      if (inv && inv.url) window.open(inv.url, '_blank');
+      pollPurchase(inv);
+    } catch (e) { setErr(e.message || 'Crypto payments are not available yet.'); setBusy(false); }
+  }
+
+  async function signOut() {
+    try { await softglazeApi.members.logout(); } catch (e) { /* ignore */ }
+    setLicense(null); setPhase('loading'); evaluate();
   }
 
   const SuperLink = () => (
@@ -250,9 +375,24 @@ export default function Gate({ children }) {
     </p>
   );
 
-  if (phase === 'ready') return children;
-  if (phase === 'loading') {
+  if (phase === 'ready') return <>{children}<LicenseBanner license={license} busy={busy} onPay={buyPlan} /></>;
+  if (phase === 'loading' || phase === 'licensing') {
     return <div className="h-screen w-full bg-background grid place-items-center"><Loader2 className="w-6 h-6 text-muted animate-spin" /></div>;
+  }
+  if (phase === 'banned') {
+    return (
+      <BannedScreen
+        account={account}
+        license={license}
+        planCode={planCode}
+        setPlanCode={setPlanCode}
+        busy={busy}
+        err={err}
+        onRedeem={redeemPlan}
+        onPay={buyPlan}
+        onSignOut={signOut}
+      />
+    );
   }
 
   return (
@@ -312,6 +452,35 @@ export default function Gate({ children }) {
               <button onClick={resend} disabled={resendIn > 0 || busy} className="mt-3 w-full text-[12px] text-muted-dark hover:text-muted disabled:hover:text-muted-dark">
                 {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
               </button>
+            </>
+          )}
+
+          {/* PLAN — choose how to start (after account creation) */}
+          {phase === 'plan' && (
+            <>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Sparkles className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">You're all set</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">Your account is ready with a <span className="text-foreground">7-day free trial</span>. Start now, or activate a paid plan.</p>
+              <div className="space-y-2.5">
+                <button onClick={startTrial} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-left">
+                  <Clock className="w-5 h-5 text-primary shrink-0" />
+                  <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">Start 7-day free trial</span><span className="block text-[11.5px] text-muted-dark">No payment now — explore everything.</span></span>
+                  <ArrowRight className="w-4 h-4 text-muted-dark" />
+                </button>
+                <button onClick={buyPlan} disabled={busy} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-border hover:border-muted-dark hover:bg-secondary transition-colors text-left disabled:opacity-60">
+                  {busy ? <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" /> : <CreditCard className="w-5 h-5 text-primary shrink-0" />}
+                  <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">Buy now</span><span className="block text-[11.5px] text-muted-dark">Pay with crypto{license?.plan?.label ? ` · ${license.plan.label}` : ''} (opens in your browser).</span></span>
+                </button>
+              </div>
+              <div className="mt-4">
+                <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />Have a purchase code?</label>
+                <div className="flex items-center gap-2">
+                  <input value={planCode} onChange={(e) => setPlanCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" className={inputCls + ' font-mono tracking-widest'} onKeyDown={(e) => { if (e.key === 'Enter') redeemPlan(); }} />
+                  <button onClick={redeemPlan} disabled={busy || !planCode.trim()} className="h-10 px-4 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">Redeem</button>
+                </div>
+              </div>
+              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <button onClick={startTrial} className="mt-5 w-full text-[12px] text-muted-dark hover:text-muted">Skip — start the trial</button>
             </>
           )}
 
