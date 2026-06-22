@@ -79,6 +79,15 @@ export default function ProxyPoolPage() {
   const [copiedId, setCopiedId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [view, setView] = useState('custom'); // 'custom' | 'providers'
+  const [testingAll, setTestingAll] = useState(false);
+  const [testSummary, setTestSummary] = useState(null);
+  const [proxyPolicy, setProxyPolicy] = useState('each-launch');
+
+  useEffect(() => {
+    softglazeApi.settings.getProxyPolicy()
+      .then((p) => { if (p && p.default) setProxyPolicy(p.default); })
+      .catch(() => {});
+  }, []);
 
   const isEditing = Boolean(proxyForm.id);
   const filteredProxies = useMemo(() => proxies, [proxies]);
@@ -252,6 +261,35 @@ export default function ProxyPoolPage() {
     }
   }
 
+  // Concurrent bulk health test (worker-capped in main). Reflects the persisted
+  // health back into the inline status after it finishes.
+  async function handleTestAllFast() {
+    setTestingAll(true);
+    setError('');
+    try {
+      const summary = await softglazeApi.proxies.testAll();
+      setTestSummary(summary);
+      const list = await softglazeApi.proxies.list({ search });
+      const rows = Array.isArray(list) ? list : [];
+      setProxies(rows);
+      const next = {};
+      for (const p of rows) {
+        if (p.lastStatus) next[p.id] = { success: p.lastStatus === 'ok', country: p.lastCountry, latencyMs: p.lastLatencyMs };
+      }
+      setCheckResults(next);
+    } catch (err) {
+      setError(err.message || 'Bulk test failed.');
+    } finally {
+      setTestingAll(false);
+    }
+  }
+
+  async function applyProxyPolicy(mode) {
+    setProxyPolicy(mode);
+    try { await softglazeApi.settings.setProxyPolicy({ default: mode }); }
+    catch (err) { setError(err.message || 'Could not save the proxy policy.'); }
+  }
+
   function renderStatus(id) {
     if (checkingId === id) return <span className="text-xs text-muted">Checking…</span>;
     const r = checkResults[id];
@@ -299,6 +337,23 @@ export default function ProxyPoolPage() {
         actions={
           view === 'custom' ? (
             <>
+              <div className="flex items-center gap-2 mr-1">
+                <span className="text-[11px] font-medium text-muted-foreground">Rotation:</span>
+                <select
+                  value={proxyPolicy}
+                  onChange={(e) => applyProxyPolicy(e.target.value)}
+                  className="h-9 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground"
+                  title="How a profile's rotation pool is applied at launch"
+                >
+                  <option value="each-launch">Rotate each launch</option>
+                  <option value="sticky">Sticky (fixed proxy)</option>
+                  <option value="failover">Failover to healthy</option>
+                </select>
+              </div>
+              <Button variant="secondary" onClick={handleTestAllFast} disabled={testingAll || proxies.length === 0} title="Concurrent health test of every proxy">
+                {testingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                Test All{testSummary ? ` · ${testSummary.ok}/${testSummary.total} ok` : ''}
+              </Button>
               <Button variant="secondary" onClick={handleCheckAll} disabled={checkingAll || proxies.length === 0}>
                 {checkingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
                 Check All

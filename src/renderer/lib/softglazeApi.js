@@ -36,7 +36,8 @@ export const softglazeApi = {
     getRotation: (profileId) => getSoftglazeApi().proxies.getRotation(profileId),
     setRotation: (payload) => getSoftglazeApi().proxies.setRotation(payload),
     syncVendorPool: (payload) => getSoftglazeApi().proxies.syncVendorPool(payload),
-    rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload)
+    rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
+    testAll: () => getSoftglazeApi().proxies.testAll()
   },
   profiles: {
     list: (params) => getSoftglazeApi().profiles.list(params),
@@ -63,7 +64,8 @@ export const softglazeApi = {
     get2faToken: (id) => getSoftglazeApi().profiles.get2faToken(id),
     bulkSynchronize: (ids) => getSoftglazeApi().profiles.bulkSynchronize(ids),
     exportArchive: (payload) => getSoftglazeApi().profiles.exportArchive(payload),
-    cookieRobot: (payload) => getSoftglazeApi().profiles.cookieRobot(payload)
+    cookieRobot: (payload) => getSoftglazeApi().profiles.cookieRobot(payload),
+    getLocks: () => getSoftglazeApi().profiles.getLocks()
   },
   templates: {
     list: () => getSoftglazeApi().templates.list(),
@@ -76,6 +78,8 @@ export const softglazeApi = {
     setProxyScheduler: (config) => getSoftglazeApi().settings.setProxyScheduler(config),
     getGlobal: () => getSoftglazeApi().settings.getGlobal(),
     setGlobal: (patch) => getSoftglazeApi().settings.setGlobal(patch),
+    getProxyPolicy: () => getSoftglazeApi().settings.getProxyPolicy(),
+    setProxyPolicy: (payload) => getSoftglazeApi().settings.setProxyPolicy(payload),
     getEmail: () => getSoftglazeApi().settings.getEmail(),
     setEmail: (config) => getSoftglazeApi().settings.setEmail(config),
     testEmail: (email) => getSoftglazeApi().settings.testEmail(email)
@@ -113,7 +117,10 @@ export const softglazeApi = {
     setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions)
   },
   team: {
-    activity: (limit) => getSoftglazeApi().team.activity(limit)
+    activity: (limit) => getSoftglazeApi().team.activity(limit),
+    reassignProfiles: (payload) => getSoftglazeApi().team.reassignProfiles(payload),
+    seatUsage: () => getSoftglazeApi().team.seatUsage(),
+    exportActivity: (payload) => getSoftglazeApi().team.exportActivity(payload)
   },
   license: {
     get: () => getSoftglazeApi().license.get(),
@@ -174,7 +181,15 @@ export const softglazeApi = {
     deleteMacro: (id) => getSoftglazeApi().automation.deleteMacro(id),
     startWarmer: (payload) => getSoftglazeApi().automation.startWarmer(payload),
     getHistory: () => getSoftglazeApi().automation.getHistory(),
-    onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback)
+    runMacro: (payload) => getSoftglazeApi().automation.runMacro(payload),
+    startRecording: (payload) => getSoftglazeApi().automation.startRecording(payload),
+    stopRecording: (payload) => getSoftglazeApi().automation.stopRecording(payload),
+    getSchedule: () => getSoftglazeApi().automation.getSchedule(),
+    setSchedule: (payload) => getSoftglazeApi().automation.setSchedule(payload),
+    runParallel: (payload) => getSoftglazeApi().automation.runParallel(payload),
+    pickDataFile: () => getSoftglazeApi().automation.pickDataFile(),
+    onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback),
+    onRunProgress: (callback) => getSoftglazeApi().automation.onRunProgress(callback)
   },
   developerApi: {
     listTokens: () => getSoftglazeApi().developerApi.listTokens(),

@@ -16,7 +16,9 @@
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
-const archiver = require('archiver');
+// archiver is required lazily inside exportProfileArchive() so a missing optional
+// package degrades .sgz export instead of bricking app startup (profileArchive is
+// required at boot by ipcHandlers). decryptArchive needs no third-party deps.
 
 const MAGIC = Buffer.from('SGZ1');
 const SALT_LEN = 16;
@@ -28,6 +30,13 @@ async function exportProfileArchive({ userDataDir, config = {}, password, outPat
   if (!password || String(password).length < 6) throw new Error('Provide an encryption password (6+ characters).');
   if (!outPath) throw new Error('No output path was provided.');
   if (userDataDir && !fs.existsSync(userDataDir)) throw new Error('The profile data directory does not exist on disk.');
+
+  let archiver;
+  try {
+    archiver = require('archiver');
+  } catch (e) {
+    throw new Error('Archive export is unavailable: the "archiver" package is not installed.');
+  }
 
   const salt = crypto.randomBytes(SALT_LEN);
   const iv = crypto.randomBytes(IV_LEN);

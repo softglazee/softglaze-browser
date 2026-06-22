@@ -444,8 +444,46 @@ function parseWorkbookFile(filePath) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Generic spreadsheet -> rows-as-objects parser, used by data-driven parallel
+// macro runs. Unlike parseWorkbookFile (which maps known profile-import columns),
+// this keeps the sheet verbatim: row 1 = headers, each later row -> an object
+// keyed by header text. Macro steps reference these via {{Header}} placeholders.
+// ---------------------------------------------------------------------------
+const MAX_DATA_ROWS = 1000;
+
+function parseDataRows(filePath) {
+  const workbook = XLSX.readFile(filePath, { cellDates: false, raw: false });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error('The spreadsheet contains no sheets.');
+
+  const sheet = workbook.Sheets[sheetName];
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+  if (!matrix.length) return { fileName: path.basename(filePath), sheetName, headers: [], rows: [] };
+
+  // Preserve column order/positions; a blank header cell means "ignore this column".
+  const rawHeaders = (matrix[0] || []).map((h) => cellText(h));
+
+  const rows = [];
+  for (let i = 1; i < matrix.length && rows.length < MAX_DATA_ROWS; i += 1) {
+    const row = matrix[i] || [];
+    if (rowLooksEmpty(row)) continue;
+    const obj = {};
+    rawHeaders.forEach((header, idx) => { if (header) obj[header] = cellText(row[idx]); });
+    rows.push(obj);
+  }
+
+  return {
+    fileName: path.basename(filePath),
+    sheetName,
+    headers: rawHeaders.filter(Boolean),
+    rows
+  };
+}
+
 module.exports = {
   parseWorkbookFile,
+  parseDataRows,
   parseBooleanInt,
   parseSystemProxyBehavior
 };
