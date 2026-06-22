@@ -112,6 +112,168 @@ function cryptomusVerifyWebhook(cfg, payload) {
 }
 
 // ---------------------------------------------------------------------------
+// Generic HTTPS request used by the Stripe + PayPal adapters. Resolves with
+// { status, json, text } and never needs a public callback URL (desktop apps
+// poll for completion). A string body is sent verbatim (form-encoded); an object
+// body is JSON-encoded.
+// ---------------------------------------------------------------------------
+function httpsRequest(method, url, { headers = {}, body = null } = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const payload = body == null ? null : (typeof body === 'string' ? body : JSON.stringify(body));
+    const h = { ...headers };
+    if (payload != null && h['Content-Length'] == null) h['Content-Length'] = Buffer.byteLength(payload);
+    const req = https.request({ method, hostname: u.hostname, path: u.pathname + u.search, headers: h }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        let json = null;
+        try { json = data ? JSON.parse(data) : null; } catch (e) { /* non-JSON response */ }
+        resolve({ status: res.statusCode, json, text: data });
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(30000, () => req.destroy(new Error('Payment gateway request timed out.')));
+    if (payload != null) req.write(payload);
+    req.end();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Stripe — hosted Checkout Sessions. The secret key (sk_…) lives on the source
+// owner's machine; we create a one-time payment session and poll its
+// payment_status. Stripe uses bracketed form-encoding, not JSON.
+// ---------------------------------------------------------------------------
+const STRIPE_BASE = 'https://api.stripe.com/v1';
+
+// Recursively encode an object/array into Stripe's `a[b][0][c]=v` form syntax.
+function stripeForm(obj, prefix) {
+  const parts = [];
+  const add = (k, val) => {
+    const key = prefix ? `${prefix}[${k}]` : k;
+    if (val === null || val === undefined) return;
+    if (Array.isArray(val)) {
+      val.forEach((item, i) => {
+        if (item && typeof item === 'object') parts.push(stripeForm(item, `${key}[${i}]`));
+        else parts.push(`${encodeURIComponent(`${key}[${i}]`)}=${encodeURIComponent(item)}`);
+      });
+    } else if (val && typeof val === 'object') {
+      parts.push(stripeForm(val, key));
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
+    }
+  };
+  for (const [k, v] of Object.entries(obj)) add(k, v);
+  return parts.filter(Boolean).join('&');
+}
+
+async function stripeCreateInvoice(cfg, opts) {
+  if (!cfg || !cfg.secretKey) throw new Error('Stripe is not configured. Add your Stripe secret key.');
+  const unitAmount = Math.round(parseFloat(opts.amount) * 100); // smallest currency unit
+  const body = stripeForm({
+    mode: 'payment',
+    line_items: [{
+      price_data: {
+        currency: String(opts.currency || 'USD').toLowerCase(),
+        product_data: { name: opts.productName || `SoftGlaze Browser (${opts.orderId})` },
+        unit_amount: unitAmount
+      },
+      quantity: 1
+    }],
+    success_url: opts.urlSuccess || 'https://softglaze.app/paid?session_id={CHECKOUT_SESSION_ID}',
+    cancel_url: opts.urlCancel || 'https://softglaze.app/cancelled',
+    client_reference_id: String(opts.orderId),
+    metadata: { orderId: String(opts.orderId) }
+  });
+  const { status, json } = await httpsRequest('POST', `${STRIPE_BASE}/checkout/sessions`, {
+    headers: { Authorization: `Bearer ${cfg.secretKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  if (!json || json.error) throw new Error(`Stripe: ${json && json.error ? json.error.message : `HTTP ${status}`}`);
+  return { uuid: json.id, orderId: opts.orderId, url: json.url, amount: opts.amount, currency: opts.currency, status: json.payment_status };
+}
+
+async function stripeGetStatus(cfg, ref) {
+  const id = ref.uuid || ref.orderId;
+  const { json } = await httpsRequest('GET', `${STRIPE_BASE}/checkout/sessions/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${cfg.secretKey}` }
+  });
+  if (!json || json.error) return { status: 'unknown', isFinal: false, paid: false };
+  const paid = json.payment_status === 'paid';
+  return { status: json.payment_status || json.status, isFinal: paid || json.status === 'expired', paid, raw: json };
+}
+
+async function stripeValidate(cfg) {
+  if (!cfg || !cfg.secretKey) return { ok: false, error: 'Missing Stripe secret key.' };
+  try {
+    const { status, json } = await httpsRequest('GET', `${STRIPE_BASE}/balance`, { headers: { Authorization: `Bearer ${cfg.secretKey}` } });
+    if (json && !json.error && status === 200) return { ok: true };
+    return { ok: false, error: (json && json.error && json.error.message) || `HTTP ${status}` };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// ---------------------------------------------------------------------------
+// PayPal — Orders v2. OAuth client-credentials → create order → buyer approves
+// in the browser → we capture on poll. `env` selects live vs sandbox hosts.
+// ---------------------------------------------------------------------------
+function paypalBase(cfg) {
+  return (cfg && String(cfg.env).toLowerCase() === 'sandbox') ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
+}
+
+async function paypalToken(cfg) {
+  if (!cfg || !cfg.clientId || !cfg.clientSecret) throw new Error('PayPal is not configured. Add your client ID and secret.');
+  const auth = Buffer.from(`${cfg.clientId}:${cfg.clientSecret}`).toString('base64');
+  const { status, json } = await httpsRequest('POST', `${paypalBase(cfg)}/v1/oauth2/token`, {
+    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=client_credentials'
+  });
+  if (!json || !json.access_token) throw new Error(`PayPal authentication failed (HTTP ${status}).`);
+  return json.access_token;
+}
+
+async function paypalCreateInvoice(cfg, opts) {
+  const token = await paypalToken(cfg);
+  const { status, json } = await httpsRequest('POST', `${paypalBase(cfg)}/v2/checkout/orders`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: {
+      intent: 'CAPTURE',
+      purchase_units: [{ reference_id: String(opts.orderId), amount: { currency_code: String(opts.currency || 'USD'), value: String(opts.amount) } }],
+      application_context: {
+        brand_name: 'SoftGlaze Browser',
+        user_action: 'PAY_NOW',
+        return_url: opts.urlSuccess || 'https://softglaze.app/paid',
+        cancel_url: opts.urlCancel || 'https://softglaze.app/cancelled'
+      }
+    }
+  });
+  if (!json || !json.id) throw new Error(`PayPal: could not create the order (HTTP ${status}).`);
+  const approve = (json.links || []).find((l) => l.rel === 'approve' || l.rel === 'payer-action');
+  return { uuid: json.id, orderId: opts.orderId, url: approve ? approve.href : null, amount: opts.amount, currency: opts.currency, status: json.status };
+}
+
+async function paypalGetStatus(cfg, ref) {
+  const token = await paypalToken(cfg);
+  const id = ref.uuid || ref.orderId;
+  const get = await httpsRequest('GET', `${paypalBase(cfg)}/v2/checkout/orders/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}` } });
+  let order = get.json;
+  if (!order || !order.status) return { status: 'unknown', isFinal: false, paid: false };
+  // The buyer approved in their browser → capture the funds now.
+  if (order.status === 'APPROVED') {
+    const cap = await httpsRequest('POST', `${paypalBase(cfg)}/v2/checkout/orders/${encodeURIComponent(id)}/capture`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: {}
+    });
+    if (cap.json && cap.json.status) order = cap.json;
+  }
+  const paid = order.status === 'COMPLETED';
+  return { status: order.status, isFinal: paid || order.status === 'VOIDED', paid, raw: order };
+}
+
+async function paypalValidate(cfg) {
+  try { await paypalToken(cfg); return { ok: true }; }
+  catch (e) { return { ok: false, error: e.message }; }
+}
+
+// ---------------------------------------------------------------------------
 // Self-verifying purchase codes. A code carries its own signature, so it can be
 // validated OFFLINE on any machine (no backend / no shared DB) — which is what
 // "register with a purchase code" needs. The source owner (super admin) holds
@@ -137,23 +299,69 @@ function verifyPurchaseCode(code) {
   return { valid: true, months: parseInt(m[1], 10) || 1 };
 }
 
+// Runtime adapters. `automated` providers implement createInvoice/getStatus/
+// validate (hosted checkout + poll). `manual` providers have no API — the buyer
+// pays out-of-band and a Super Admin approves the payment in-app.
 const PROVIDERS = {
-  cryptomus: {
-    id: 'cryptomus',
-    label: 'Cryptomus (crypto)',
-    createInvoice: cryptomusCreateInvoice,
-    getStatus: cryptomusGetStatus,
-    validate: cryptomusValidate,
-    verifyWebhook: cryptomusVerifyWebhook
-  }
-  // Future seams — same shape:
-  // stripe:  { id:'stripe',  label:'Stripe',  createInvoice, getStatus, validate },
-  // paypal:  { id:'paypal',  label:'PayPal',  ... },
-  // wise:    { id:'wise',    label:'Wise',    ... },
+  cryptomus: { id: 'cryptomus', kind: 'automated', createInvoice: cryptomusCreateInvoice, getStatus: cryptomusGetStatus, validate: cryptomusValidate, verifyWebhook: cryptomusVerifyWebhook },
+  stripe: { id: 'stripe', kind: 'automated', createInvoice: stripeCreateInvoice, getStatus: stripeGetStatus, validate: stripeValidate },
+  paypal: { id: 'paypal', kind: 'automated', createInvoice: paypalCreateInvoice, getStatus: paypalGetStatus, validate: paypalValidate },
+  wise: { id: 'wise', kind: 'manual' },
+  manual: { id: 'manual', kind: 'manual' }
 };
 
-const PLANNED_PROVIDERS = ['stripe', 'paypal', 'wise'];
+// Provider metadata — the single source of truth for the Settings config UI and
+// for which fields are secret (sealed at rest). `kind: 'manual'` means there is
+// no automated checkout API; Wise has no merchant-checkout API for this use case,
+// so it is offered as a guided bank-transfer with Super-Admin approval.
+const PROVIDER_DEFS = [
+  {
+    id: 'cryptomus', label: 'Cryptomus (crypto)', kind: 'automated', docsUrl: 'https://doc.cryptomus.com/',
+    fields: [
+      { key: 'merchantId', label: 'Merchant ID (UUID)', secret: false, placeholder: '8b03432e-385b-…' },
+      { key: 'apiKey', label: 'Payment API key', secret: true }
+    ]
+  },
+  {
+    id: 'stripe', label: 'Stripe (cards)', kind: 'automated', docsUrl: 'https://stripe.com/docs/api',
+    fields: [
+      { key: 'secretKey', label: 'Secret key (sk_live_… / sk_test_…)', secret: true }
+    ]
+  },
+  {
+    id: 'paypal', label: 'PayPal', kind: 'automated', docsUrl: 'https://developer.paypal.com/api/rest/',
+    fields: [
+      { key: 'clientId', label: 'Client ID', secret: false },
+      { key: 'clientSecret', label: 'Client secret', secret: true },
+      { key: 'env', label: 'Environment', secret: false, type: 'select', options: ['live', 'sandbox'], default: 'live' }
+    ]
+  },
+  {
+    id: 'wise', label: 'Wise (bank transfer)', kind: 'manual', docsUrl: 'https://wise.com/',
+    fields: [
+      { key: 'payLink', label: 'Wise payment link / WiseTag', secret: false, placeholder: 'https://wise.com/pay/me/…' },
+      { key: 'instructions', label: 'Instructions shown to the buyer', secret: false, type: 'textarea' }
+    ]
+  },
+  {
+    id: 'manual', label: 'Manual payment', kind: 'manual', docsUrl: null,
+    fields: [
+      { key: 'instructions', label: 'Instructions shown to the buyer (bank details, crypto address, etc.)', secret: false, type: 'textarea' }
+    ]
+  }
+];
 
-function getProvider(id) { return PROVIDERS[String(id || 'cryptomus')] || null; }
+function getProvider(id) { return PROVIDERS[String(id || '')] || null; }
+function getProviderDef(id) { return PROVIDER_DEFS.find((p) => p.id === String(id || '')) || null; }
 
-module.exports = { PROVIDERS, PLANNED_PROVIDERS, getProvider, cryptomusSign, generatePurchaseCode, verifyPurchaseCode };
+module.exports = {
+  PROVIDERS,
+  PROVIDER_DEFS,
+  getProvider,
+  getProviderDef,
+  stripeForm,
+  paypalBase,
+  cryptomusSign,
+  generatePurchaseCode,
+  verifyPurchaseCode
+};

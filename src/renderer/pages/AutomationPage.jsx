@@ -14,6 +14,21 @@ const TABS = [
   { key: 'history', label: 'Task History', icon: History }
 ];
 
+// Suggested sites for the Cookie Warmer dropdown (users can also add custom URLs).
+const PRESET_SITES = [
+  { url: 'https://www.google.com/', label: 'google.com' },
+  { url: 'https://www.youtube.com/', label: 'youtube.com' },
+  { url: 'https://www.amazon.com/', label: 'amazon.com' },
+  { url: 'https://www.wikipedia.org/', label: 'wikipedia.org' },
+  { url: 'https://www.reddit.com/', label: 'reddit.com' },
+  { url: 'https://www.bing.com/', label: 'bing.com' },
+  { url: 'https://www.cnn.com/', label: 'cnn.com' },
+  { url: 'https://www.ebay.com/', label: 'ebay.com' },
+  { url: 'https://www.linkedin.com/', label: 'linkedin.com' },
+  { url: 'https://weather.com/', label: 'weather.com' }
+];
+const CLICK_LABELS = { none: 'Just browse', random: 'Random clicks', links: 'Browse links' };
+
 const LEVEL_COLOR = {
   INFO: 'text-sky-400',
   SUCCESS: 'text-emerald-400',
@@ -686,12 +701,20 @@ function ParallelPanel() {
 function WarmerPanel() {
   const [profiles, setProfiles] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
-  const [minutes, setMinutes] = useState(5);
   const [search, setSearch] = useState('');
   const [running, setRunning] = useState(false);
+  const [runId, setRunId] = useState(null);
   const [logs, setLogs] = useState([]);
   const [err, setErr] = useState('');
   const logRef = useRef(null);
+
+  // Per-site plan: each row visited for `seconds`, doing `clickMode` behaviour.
+  // Seeded with a few suggestions so the panel works out-of-the-box and is editable.
+  const [sites, setSites] = useState(() => PRESET_SITES.slice(0, 4).map((s) => ({ ...s, seconds: 30, clickMode: 'none' })));
+  const [presetPick, setPresetPick] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
+  const [loop, setLoop] = useState(false);
+  const [keepOpen, setKeepOpen] = useState(false);
 
   useEffect(() => {
     softglazeApi.profiles.list({}).then((rows) => setProfiles(Array.isArray(rows) ? rows : [])).catch(() => setProfiles([]));
@@ -719,18 +742,51 @@ function WarmerPanel() {
     });
   }
 
+  function addPreset() {
+    const p = PRESET_SITES.find((s) => s.url === presetPick);
+    if (!p) return;
+    setSites((prev) => [...prev, { url: p.url, label: p.label, seconds: 30, clickMode: 'none' }]);
+    setPresetPick('');
+  }
+
+  function addCustom() {
+    const raw = customUrl.trim();
+    if (!raw) return;
+    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    let label = url;
+    try { label = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { /* keep url */ }
+    setSites((prev) => [...prev, { url, label, seconds: 30, clickMode: 'none' }]);
+    setCustomUrl('');
+  }
+
+  function updateSite(i, patch) { setSites((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s))); }
+  function removeSite(i) { setSites((prev) => prev.filter((_, idx) => idx !== i)); }
+
   async function start() {
     setErr('');
     const ids = [...selected];
     if (ids.length === 0) { setErr('Select at least one profile to warm up.'); return; }
+    if (sites.length === 0) { setErr('Add at least one site to visit.'); return; }
     setRunning(true);
     setLogs([]);
     try {
-      await softglazeApi.automation.startWarmer({ profileIds: ids, minutes: Number(minutes) || 5 });
+      const payload = {
+        profileIds: ids,
+        loop,
+        keepOpen,
+        sites: sites.map((s) => ({ url: s.url, label: s.label, seconds: Number(s.seconds) || 30, clickMode: s.clickMode || 'none' }))
+      };
+      const res = await softglazeApi.automation.startWarmer(payload);
+      setRunId(res && res.runId ? res.runId : null);
     } catch (e) {
       setErr(e.message || 'Could not start the warm-up.');
       setRunning(false);
     }
+  }
+
+  async function stop(force) {
+    try { await softglazeApi.automation.stopWarmer({ runId, force: Boolean(force) }); }
+    catch (e) { setErr(e.message || 'Could not stop the warm-up.'); }
   }
 
   const profileName = (id) => {
@@ -750,21 +806,71 @@ function WarmerPanel() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Warm-up duration (minutes)</label>
-            <input type="number" min={1} max={120} value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+        {/* Sites to visit */}
+        <div className="space-y-2">
+          <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Sites to visit ({sites.length})</label>
+
+          {/* Add a suggested site */}
+          <div className="flex items-center gap-2">
+            <select value={presetPick} onChange={(e) => setPresetPick(e.target.value)} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary">
+              <option value="">Add a suggested site…</option>
+              {PRESET_SITES.map((p) => <option key={p.url} value={p.url}>{p.label}</option>)}
+            </select>
+            <button onClick={addPreset} disabled={!presetPick} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add</button>
           </div>
-          <div className="shrink-0 self-end">
-            <button
-              onClick={start}
-              disabled={running}
-              className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 shadow shadow-orange-500/25 disabled:opacity-60 inline-flex items-center gap-2"
-            >
-              {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {running ? 'Warming…' : 'Start AI Warm-up'}
+          {/* Add a custom URL */}
+          <div className="flex items-center gap-2">
+            <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder="Or paste a custom URL (e.g. example.com)" className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
+            <button onClick={addCustom} disabled={!customUrl.trim()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add</button>
+          </div>
+
+          {/* Configured sites — per-site dwell time + behaviour */}
+          <div className="rounded-lg border border-border bg-elevated/40 divide-y divide-border/60 max-h-[240px] overflow-y-auto">
+            {sites.length === 0 ? (
+              <div className="px-3 py-5 text-center text-[12px] text-muted-foreground">No sites yet — add one above.</div>
+            ) : sites.map((s, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] text-foreground truncate">{s.label}</span>
+                  <span className="block text-[10px] text-muted-foreground truncate">{s.url}</span>
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <input type="number" min={3} max={600} value={s.seconds} onChange={(e) => updateSite(i, { seconds: e.target.value })} title="Seconds to spend on this site" className="w-14 h-7 bg-input-background border border-border rounded px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
+                  <span className="text-[10px] text-muted-foreground">s</span>
+                </div>
+                <select value={s.clickMode} onChange={(e) => updateSite(i, { clickMode: e.target.value })} title="What to do on this site" className="h-7 shrink-0 bg-input-background border border-border rounded px-1.5 text-[11.5px] text-foreground outline-none focus:border-primary">
+                  {Object.entries(CLICK_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <button onClick={() => removeSite(i)} title="Remove" className="shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            ))}
+          </div>
+
+          {/* Options */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
+            <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} className="accent-orange-500" /> Loop until stopped
+            </label>
+            <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={keepOpen} onChange={(e) => setKeepOpen(e.target.checked)} className="accent-orange-500" /> Keep sessions open after
+            </label>
+          </div>
+          <p className="text-[10.5px] text-muted-foreground/80">Cookies &amp; cache are saved to each profile automatically — the console reports how many cookies were stored.</p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {!running ? (
+            <button onClick={start} className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 shadow shadow-orange-500/25 inline-flex items-center gap-2">
+              <Play className="w-4 h-4" /> Start warm-up
             </button>
-          </div>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-2 h-9 px-2 text-[12.5px] text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin text-orange-400" /> Warming…</span>
+              <button onClick={() => stop(false)} className="h-9 px-4 rounded-lg text-[13px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-2"><Square className="w-4 h-4" /> Stop</button>
+              <button onClick={() => stop(true)} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-red-600 hover:bg-red-500 inline-flex items-center gap-2"><X className="w-4 h-4" /> Force stop</button>
+            </>
+          )}
         </div>
 
         <div>
@@ -922,7 +1028,7 @@ function describeHistoryEntry(h) {
     icon: Flame, iconCls: 'text-orange-400',
     label: 'AI Cookie Warm-up',
     profiles: Array.isArray(h.profileIds) ? h.profileIds.length : 0,
-    detail: h.minutes ? `${h.minutes} min` : '', status: key, when: h.finishedAt || h.startedAt,
+    detail: h.minutes ? `${h.minutes} min` : (h.sites ? `${h.sites} site${h.sites === 1 ? '' : 's'}` : ''), status: key, when: h.finishedAt || h.startedAt,
     ...statusStyle(key)
   };
 }
