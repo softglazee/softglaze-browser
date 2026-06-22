@@ -1,9 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Users, X, Loader2, Trash2, KeyRound, Activity, ClipboardList,
-  Crown, UserCog, UserCheck, User, Clock, Copy, Check, Mail, Link2, ShieldCheck
+  Crown, UserCog, UserCheck, User, Clock, Copy, Check, Mail, Link2, ShieldCheck,
+  Download, FolderInput, Search
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+
+// Roles that may reassign profiles / manage the team (mirrors the main-side
+// `members.manage` gate; the backend re-checks regardless).
+function canManageTeam(me) {
+  if (!me) return true; // single-user mode == owner
+  return ['OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(me.role);
+}
 
 const ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'OPERATOR'];
 const ROLE_LABEL = { SUPER_ADMIN: 'Super Admin', OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATOR: 'Operator' };
@@ -258,6 +266,7 @@ function MemberModal({ member, me, onClose, onSaved }) {
   const [err, setErr] = useState('');
   const [invite, setInvite] = useState(null); // { code, link, emailed }
   const [copied, setCopied] = useState('');
+  const [showAssign, setShowAssign] = useState(false);
 
   const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2';
   const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary';
@@ -402,12 +411,108 @@ function MemberModal({ member, me, onClose, onSaved }) {
       </div>
       <div className="flex items-center gap-2 px-6 py-4 border-t border-border">
         {!isNew && !member.isCurrent && <button onClick={remove} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"><Trash2 className="w-4 h-4" />Remove</button>}
+        {!isNew && member.inviteStatus !== 'pending' && canManageTeam(me) && (
+          <button onClick={() => setShowAssign(true)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary flex items-center gap-1.5"><FolderInput className="w-4 h-4" />Assign profiles</button>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>
           <button onClick={save} disabled={busy} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (isNew ? 'Create invite' : 'Save')}
           </button>
         </div>
+      </div>
+      {showAssign && <AssignProfilesModal member={member} onClose={() => setShowAssign(false)} />}
+    </Shell>
+  );
+}
+
+// Handoff: pick which profiles are assigned to a member. Pre-checks profiles
+// already assigned to them; on save, newly checked are assigned and previously-
+// assigned-but-unchecked are unassigned (each writes an audit row in main).
+function AssignProfilesModal({ member, onClose }) {
+  const [profiles, setProfiles] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [selected, setSelected] = useState(() => new Set());
+  const [initial, setInitial] = useState(() => new Set());
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [list, mem] = await Promise.all([
+          softglazeApi.profiles.list({}),
+          softglazeApi.members.list().catch(() => [])
+        ]);
+        const rows = Array.isArray(list) ? list : (list && (list.profiles || list.rows)) || [];
+        if (!alive) return;
+        setProfiles(rows);
+        setMembers(Array.isArray(mem) ? mem : []);
+        const mine = new Set(rows.filter((p) => Number(p.assignedMemberId) === Number(member.id)).map((p) => p.id));
+        setSelected(new Set(mine));
+        setInitial(new Set(mine));
+      } catch (e) { if (alive) setErr(e.message || 'Could not load profiles.'); }
+      finally { if (alive) setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [member.id]);
+
+  const nameById = useMemo(() => new Map(members.map((m) => [Number(m.id), m.name])), [members]);
+  const filtered = profiles.filter((p) => !search || String(p.title || '').toLowerCase().includes(search.toLowerCase()));
+
+  function toggle(id) {
+    setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+
+  async function save() {
+    setErr(''); setDone(''); setBusy(true);
+    try {
+      const toAssign = [...selected];
+      const toUnassign = [...initial].filter((id) => !selected.has(id));
+      if (toAssign.length) await softglazeApi.team.reassignProfiles({ profileIds: toAssign, memberId: member.id });
+      if (toUnassign.length) await softglazeApi.team.reassignProfiles({ profileIds: toUnassign, memberId: null });
+      setInitial(new Set(selected));
+      setDone(`Updated — ${toAssign.length} assigned, ${toUnassign.length} unassigned.`);
+    } catch (e) { setErr(e.message || 'Could not reassign profiles.'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Shell onClose={onClose} title={`Assign profiles · ${member.name}`} icon={FolderInput}>
+      <div className="p-6 space-y-3">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search profiles" className="w-full h-9 bg-input-background border border-border rounded-lg pl-8 pr-3 text-[12.5px] text-foreground outline-none focus:border-primary" />
+        </div>
+        <div className="rounded-lg border border-border bg-elevated/40 max-h-[44vh] overflow-y-auto divide-y divide-border/60">
+          {loading ? (
+            <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="py-8 text-center text-[12px] text-muted-foreground">No profiles found.</div>
+          ) : filtered.map((p) => {
+            const other = p.assignedMemberId != null && Number(p.assignedMemberId) !== Number(member.id);
+            return (
+              <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-secondary/50">
+                <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="accent-blue-500" />
+                <span className="text-[12.5px] text-foreground truncate flex-1">{p.title}</span>
+                {other && <span className="text-[10.5px] text-muted-foreground shrink-0">{nameById.get(Number(p.assignedMemberId)) || `member #${p.assignedMemberId}`}</span>}
+                <span className="text-[10.5px] text-muted-foreground/70 shrink-0">#{p.id}</span>
+              </label>
+            );
+          })}
+        </div>
+        {err && <p className="text-[12px] text-red-400">{err}</p>}
+        {done && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{done}</p>}
+      </div>
+      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+        <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Close</button>
+        <button onClick={save} disabled={busy || loading} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save assignment'}
+        </button>
       </div>
     </Shell>
   );
@@ -507,10 +612,10 @@ function PermissionEditor({ role, value, onChange, granter }) {
 }
 
 function actionLabel(a) {
-  const map = { launch: 'launched', stop: 'stopped', create: 'created', update: 'edited', delete: 'deleted', restore: 'restored', import: 'imported', assign: 'assigned' };
+  const map = { launch: 'launched', stop: 'stopped', create: 'created', update: 'edited', delete: 'deleted', restore: 'restored', import: 'imported', assign: 'assigned', reassign: 'reassigned', 'parallel-run': 'parallel run', 'macro-run': 'macro run' };
   return map[String(a || '').toLowerCase()] || a;
 }
-const ACTION_COLORS = { launched: '#10b981', stopped: '#ef4444', created: '#3b82f6', edited: '#8b5cf6', deleted: '#ef4444', restored: '#10b981', imported: '#f59e0b', assigned: '#06b6d4' };
+const ACTION_COLORS = { launched: '#10b981', stopped: '#ef4444', created: '#3b82f6', edited: '#8b5cf6', deleted: '#ef4444', restored: '#10b981', imported: '#f59e0b', assigned: '#06b6d4', reassigned: '#06b6d4' };
 function feedTime(iso) {
   if (!iso) return '';
   const d = new Date(iso); const s = (Date.now() - d.getTime()) / 1000;
@@ -522,30 +627,109 @@ function feedTime(iso) {
 
 function TeamActivityFeed() {
   const [rows, setRows] = useState([]);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [fMember, setFMember] = useState('');
+  const [fAction, setFAction] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [exporting, setExporting] = useState('');
+  const [notice, setNotice] = useState('');
+
   useEffect(() => {
     let alive = true;
     (async () => {
-      try { const r = await softglazeApi.team.activity(60); if (alive) setRows(Array.isArray(r) ? r : []); }
-      catch (e) { if (alive) setErr(e.message || ''); }
+      try {
+        const [r, mem] = await Promise.all([
+          softglazeApi.team.activity(200),
+          softglazeApi.members.list().catch(() => [])
+        ]);
+        if (!alive) return;
+        setRows(Array.isArray(r) ? r : []);
+        setMembers(Array.isArray(mem) ? mem : []);
+      } catch (e) { if (alive) setErr(e.message || ''); }
       finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
   }, []);
-  if (err) return null;
+
+  // Distinct actions present, plus the common set, for the dropdown.
+  const actionOptions = useMemo(() => {
+    const base = ['launch', 'stop', 'create', 'update', 'delete', 'restore', 'import', 'assign', 'reassign'];
+    return [...new Set([...base, ...rows.map((r) => r.action)])].filter(Boolean);
+  }, [rows]);
+
+  const inRange = (iso) => {
+    if (!iso) return true;
+    const t = new Date(iso).getTime();
+    if (from) { const g = new Date(from).getTime(); if (Number.isFinite(g) && t < g) return false; }
+    if (to) { const l = new Date(to).getTime() + 86400000 - 1; if (Number.isFinite(l) && t > l) return false; }
+    return true;
+  };
+  const visible = rows.filter((r) =>
+    (!fMember || String(r.memberId) === String(fMember)) &&
+    (!fAction || r.action === fAction) &&
+    inRange(r.createdAt)
+  );
+
+  async function doExport(format) {
+    setErr(''); setNotice(''); setExporting(format);
+    try {
+      const res = await softglazeApi.team.exportActivity({
+        format,
+        memberId: fMember || undefined,
+        action: fAction || undefined,
+        from: from || undefined,
+        to: to || undefined
+      });
+      if (res && res.cancelled) return;
+      if (res && res.ok) setNotice(`Exported ${res.count} row(s) → ${res.path}`);
+    } catch (e) { setErr(e.message || 'Could not export the activity log.'); }
+    finally { setExporting(''); }
+  }
+
+  const selCls = 'h-8 rounded-lg border border-border bg-input-background px-2 text-[12px] text-foreground outline-none focus:border-primary';
+
   return (
     <div className="bg-card border border-border rounded-xl p-5 animate-fade-up">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <span className="w-7 h-7 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 16%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 28%, transparent)' }}><Activity className="w-3.5 h-3.5 text-blue-400" /></span>
-        <div><h2 className="text-sm font-semibold text-foreground">Team activity</h2><p className="text-xs text-muted-foreground">who did what, on this workspace</p></div>
+        <div className="mr-auto"><h2 className="text-sm font-semibold text-foreground">Team activity</h2><p className="text-xs text-muted-foreground">who did what, on this workspace</p></div>
+        <button onClick={() => doExport('csv')} disabled={!!exporting} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
+          {exporting === 'csv' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} CSV
+        </button>
+        <button onClick={() => doExport('json')} disabled={!!exporting} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
+          {exporting === 'json' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} JSON
+        </button>
       </div>
+
+      {/* Filters (apply to the view below and to the export) */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <select value={fMember} onChange={(e) => setFMember(e.target.value)} className={selCls} title="Filter by member">
+          <option value="">All members</option>
+          {members.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+        </select>
+        <select value={fAction} onChange={(e) => setFAction(e.target.value)} className={selCls} title="Filter by action">
+          <option value="">All actions</option>
+          {actionOptions.map((a) => <option key={a} value={a}>{actionLabel(a)}</option>)}
+        </select>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={selCls} title="From date" />
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={selCls} title="To date" />
+        {(fMember || fAction || from || to) && (
+          <button onClick={() => { setFMember(''); setFAction(''); setFrom(''); setTo(''); }} className="text-[11.5px] text-muted-foreground hover:text-foreground">Clear</button>
+        )}
+      </div>
+
+      {notice && <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[12px] text-emerald-400 break-all">{notice}</div>}
+      {err && <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+
       <div className="-mx-5 -mb-5 border-t border-border">
         {loading ? (
           <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>
-        ) : rows.length === 0 ? (
-          <div className="py-10 text-center text-[12.5px] text-muted-foreground">No activity recorded yet.</div>
-        ) : rows.map((r) => {
+        ) : visible.length === 0 ? (
+          <div className="py-10 text-center text-[12.5px] text-muted-foreground">{rows.length === 0 ? 'No activity recorded yet.' : 'No activity matches these filters.'}</div>
+        ) : visible.map((r) => {
           const action = actionLabel(r.action);
           const ac = ACTION_COLORS[String(action).toLowerCase()] || '#8b94a7';
           return (

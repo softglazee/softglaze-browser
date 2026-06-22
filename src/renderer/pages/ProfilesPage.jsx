@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine } from 'lucide-react';
+import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -366,6 +366,7 @@ export default function ProfilesPage() {
   const [allTags, setAllTags] = useState([]);
   const [allProxies, setAllProxies] = useState([]);
   const [runningIds, setRunningIds] = useState(() => new Set());
+  const [locks, setLocks] = useState({}); // profileId -> { memberName, mine } (in-use-by-another-member)
   const [installedBrowsers, setInstalledBrowsers] = useState([]);
   const [filterGroup, setFilterGroup] = useState('all');
   const [filterTag, setFilterTag] = useState('');
@@ -414,18 +415,20 @@ export default function ProfilesPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profs, grps, tgs, pxs, sess] = await Promise.all([
+      const [profs, grps, tgs, pxs, sess, lockMap] = await Promise.all([
         softglazeApi.profiles.list({ search }),
         softglazeApi.groups.list(),
         softglazeApi.tags.list(),
         softglazeApi.proxies.list({}),
-        softglazeApi.sessions.list()
+        softglazeApi.sessions.list(),
+        softglazeApi.profiles.getLocks().catch(() => ({}))
       ]);
       setProfiles(profs);
       setGroups(grps);
       setAllTags(tgs);
       setAllProxies(pxs);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
+      setLocks(lockMap || {});
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   }, [search]);
@@ -443,8 +446,12 @@ export default function ProfilesPage() {
   // launch/close handlers.
   const refreshSessions = useCallback(async () => {
     try {
-      const sess = await softglazeApi.sessions.list();
+      const [sess, lockMap] = await Promise.all([
+        softglazeApi.sessions.list(),
+        softglazeApi.profiles.getLocks().catch(() => ({}))
+      ]);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
+      setLocks(lockMap || {});
     } catch (e) { /* transient */ }
   }, []);
 
@@ -1700,6 +1707,14 @@ export default function ProfilesPage() {
                           </span>
                         )}
                         <span className="truncate max-w-[200px]">{p.title}</span>
+                        {locks[p.id] && !locks[p.id].mine && (
+                          <span
+                            title={`In use by ${locks[p.id].memberName || 'another member'}`}
+                            className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/12 text-amber-400 border border-amber-500/25"
+                          >
+                            <Lock className="w-3 h-3" /> {locks[p.id].memberName || 'In use'}
+                          </span>
+                        )}
                         {p.twoFactorSeed && (
                           <button
                             type="button"
@@ -1737,6 +1752,10 @@ export default function ProfilesPage() {
                         {runningIds.has(p.id) ? (
                           <Button size="sm" variant="danger" onClick={() => handleBulkClose([p.id])} className="px-3" title="Stop">
                             <Square className="w-3.5 h-3.5 mr-1" /> Stop
+                          </Button>
+                        ) : (locks[p.id] && !locks[p.id].mine) ? (
+                          <Button size="sm" variant="ghost" disabled className="px-3 opacity-60 cursor-not-allowed" title={`In use by ${locks[p.id].memberName || 'another member'} — ask them to close it first`}>
+                            <Lock className="w-3.5 h-3.5 mr-1" /> In use
                           </Button>
                         ) : (
                           <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title="Launch">

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CreditCard, ShieldCheck, Loader2, Check, ExternalLink, KeyRound, Wallet,
-  AlertTriangle, Sparkles, Copy
+  AlertTriangle, Sparkles, Copy, Users
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -17,15 +17,17 @@ function statusTone(license) {
 export default function BillingSettings() {
   const [me, setMe] = useState(null);
   const [license, setLicense] = useState(null);
+  const [seats, setSeats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [cur, lic] = await Promise.all([
+      const [cur, lic, seatUsage] = await Promise.all([
         softglazeApi.members.current().catch(() => null),
-        softglazeApi.license.get().catch(() => null)
+        softglazeApi.license.get().catch(() => null),
+        softglazeApi.team.seatUsage().catch(() => null)
       ]);
-      setMe(cur); setLicense(lic);
+      setMe(cur); setLicense(lic); setSeats(seatUsage);
     } catch (e) { /* ignore */ }
     finally { setLoading(false); }
   }, []);
@@ -41,13 +43,13 @@ export default function BillingSettings() {
 
   return (
     <div className="space-y-4">
-      {showSubscription && <SubscriptionCard license={license} reload={load} />}
+      {showSubscription && <SubscriptionCard license={license} seats={seats} reload={load} />}
       {showGateway && <PaymentGatewayCard />}
     </div>
   );
 }
 
-function SubscriptionCard({ license, reload }) {
+function SubscriptionCard({ license, seats, reload }) {
   const tone = statusTone(license);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState('');
@@ -120,6 +122,21 @@ function SubscriptionCard({ license, reload }) {
       )}
       {license?.isTrial && !license?.isExpired && (
         <p className="mt-4 text-[12px] text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-400" /> Free trial — {license.daysLeft} day{license.daysLeft === 1 ? '' : 's'} remaining.</p>
+      )}
+
+      {seats && seats.total >= 0 && (
+        <div className="mt-4 flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-elevated/50 border border-border">
+          <div className="flex items-center gap-2 text-[12.5px] text-foreground">
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <span>Team seats</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-[12.5px] font-semibold ${seats.full ? 'text-amber-400' : 'text-foreground'}`}>
+              {seats.used} / {seats.total} used
+            </span>
+            {seats.full && <span className="text-[11px] text-amber-400">· upgrade to add more</span>}
+          </div>
+        </div>
       )}
 
       {checkout ? (

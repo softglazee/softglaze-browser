@@ -536,6 +536,12 @@ function GlobalPreferences() {
       {/* Browser Settings — full width */}
       <SettingsSection icon={SlidersHorizontal} accent="#f97316" title="Browser Settings" description="Behavior of the launched browser. Items marked “Applied at launch” take effect on the next profile launch.">
         <ToggleRow
+          title="Geo auto-match (timezone · locale · WebRTC)"
+          description="Derive each profile's timezone, language, and WebRTC exit IP from its proxy's location at launch. Turn off to use only each profile's manual values. Applied at launch."
+          checked={!(s.geoMatch && s.geoMatch.enabled === false)}
+          onChange={(v) => apply({ geoMatch: { enabled: v } })}
+        />
+        <ToggleRow
           title="Real-time timezone match on dynamic IP change"
           description="Match the corresponding timezone and location when the dynamic IP changes."
           checked={s.browser.matchTimezoneOnIpChange}

@@ -1623,7 +1623,11 @@ async function launchProfileSession(options = {}) {
     profile = {},
     browserSettings = {},
     captcha = null,
-    globalExtensionDirs = []
+    globalExtensionDirs = [],
+    // Geo auto-match (timezone/locale/WebRTC derived from the proxy exit) is ON by
+    // default. A global Settings toggle can disable it; when off we skip the geo
+    // lookup entirely so only the profile's manual values apply.
+    geoMatchEnabled = true
   } = options;
 
   const resolvedProxy = parseProxyInput(options.proxy || options.proxyInfoString);
@@ -1658,7 +1662,7 @@ async function launchProfileSession(options = {}) {
   // workers, no injection race) and bake the proxy IP + locale into the extension.
   const manualTz = profile.timezoneType === 'Custom' && profile.timezoneCustom
     ? String(profile.timezoneCustom).trim() : null;
-  let geo = resolvedProxy && profile.timezoneType !== 'Real' ? await lookupProxyGeoNode(resolvedProxy) : null;
+  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real' ? await lookupProxyGeoNode(resolvedProxy) : null;
   let timezoneId = manualTz || (geo && geo.timezone) || null;
 
   // Build the fingerprint config (geo-aware) and bake it into a MAIN-world
@@ -1932,7 +1936,7 @@ async function launchProfileSession(options = {}) {
   // proxy, which the http module can't speak — resolve it in-page now so timezone
   // and geolocation can still be applied via CDP. Authenticate first so an
   // authenticated proxy doesn't answer 407 (which would null the lookup).
-  if (!geo && resolvedProxy && profile.timezoneType !== 'Real') {
+  if (geoMatchEnabled && !geo && resolvedProxy && profile.timezoneType !== 'Real') {
     if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
     geo = await lookupProxyGeo(page);
     if (!timezoneId && geo && geo.timezone) timezoneId = geo.timezone;
@@ -2533,6 +2537,178 @@ async function importStoredCookies(opts, cookies) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Softglaze Pro — Macro engine (runner + visual recorder).
+//
+// Canonical step shape (serialized into Macro.stepsJson):
+//   { type: 'goto',    url }
+//   { type: 'click',   selector }
+//   { type: 'type',    selector, value }
+//   { type: 'keypress', key }            // e.g. 'Enter'
+//   { type: 'scroll',  steps? }
+//   { type: 'wait',    ms }
+//
+// The runner replays steps against an already-open session's primary page (so the
+// profile's proxy + fingerprint are reused exactly). The recorder attaches DOM
+// listeners to the live page and serializes interactions into the SAME shape, so
+// recorded macros round-trip straight back through the runner. Best-effort:
+// selectors are derived heuristically and SPA in-app navigations may not capture
+// as discrete 'goto' steps — documented, never silently wrong.
+// ---------------------------------------------------------------------------
+const VALID_MACRO_STEPS = new Set(['goto', 'click', 'type', 'keypress', 'scroll', 'wait']);
+
+async function runMacro(sessionId, steps, opts = {}) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.page) throw new Error('No active session for that profile — launch it first.');
+  const page = session.page;
+  const list = Array.isArray(steps) ? steps : [];
+  const log = [];
+
+  for (let i = 0; i < list.length; i += 1) {
+    const step = list[i] || {};
+    const type = String(step.type || '').toLowerCase();
+    try {
+      switch (type) {
+        case 'goto':
+          await page.goto(String(step.url || step.value || 'about:blank'), {
+            waitUntil: 'domcontentloaded',
+            timeout: Number(step.timeout) || 30000
+          });
+          break;
+        case 'click':
+          if (!step.selector) throw new Error('click step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          await page.click(step.selector, { delay: 30 });
+          break;
+        case 'type':
+          if (!step.selector) throw new Error('type step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          await page.type(step.selector, String(step.value == null ? '' : step.value), { delay: 40 });
+          break;
+        case 'keypress':
+          await page.keyboard.press(String(step.key || 'Enter'));
+          break;
+        case 'scroll':
+          await humanScroll(page, { steps: Number(step.steps) || 4 });
+          break;
+        case 'wait':
+          await sleep(Math.max(0, Math.min(60000, Number(step.ms) || 1000)));
+          break;
+        default:
+          throw new Error(`Unknown step type: ${type || '(empty)'}`);
+      }
+      log.push({ index: i, type, ok: true });
+    } catch (e) {
+      log.push({ index: i, type, ok: false, error: (e && e.message) || String(e) });
+      if (!opts.continueOnError) break;
+    }
+  }
+
+  return { ok: log.length > 0 && log.every((l) => l.ok), total: list.length, ran: log.length, log };
+}
+
+// Per-session recorder state. The exposed page->node bridge looks up the current
+// recorder by sessionId at call time, so re-recording cleanly re-routes.
+const macroRecorders = new Map(); // sessionId -> { steps, stopped, page, navHandler }
+
+// Injected into the page: derive a stable-ish CSS selector and forward click /
+// input / Enter events to the node bridge. Self-contained (no closure refs) so it
+// survives .toString() serialization.
+function macroRecorderClientScript() {
+  if (window.__sgzRecording) return;
+  window.__sgzRecording = true;
+  function cssPath(el) {
+    if (!(el instanceof Element)) return null;
+    if (el.id) return '#' + CSS.escape(el.id);
+    const parts = [];
+    let node = el;
+    while (node && node.nodeType === 1 && parts.length < 5) {
+      if (node.id) { parts.unshift('#' + CSS.escape(node.id)); break; }
+      let sel = node.nodeName.toLowerCase();
+      const parent = node.parentNode;
+      if (parent && parent.children) {
+        const sibs = Array.prototype.filter.call(parent.children, (c) => c.nodeName === node.nodeName);
+        if (sibs.length > 1) sel += ':nth-of-type(' + (sibs.indexOf(node) + 1) + ')';
+      }
+      parts.unshift(sel);
+      node = parent;
+    }
+    return parts.join(' > ');
+  }
+  document.addEventListener('click', (e) => {
+    try {
+      const sel = cssPath(e.target);
+      if (sel && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'click', selector: sel });
+    } catch (err) { /* ignore */ }
+  }, true);
+  document.addEventListener('change', (e) => {
+    try {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) {
+        const sel = cssPath(t);
+        if (sel && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'type', selector: sel, value: String(t.value || '') });
+      }
+    } catch (err) { /* ignore */ }
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    try {
+      if (e.key === 'Enter' && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'keypress', key: 'Enter' });
+    } catch (err) { /* ignore */ }
+  }, true);
+}
+
+async function startMacroRecording(sessionId) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.page) throw new Error('No active session for that profile — launch it first.');
+  const existing = macroRecorders.get(id);
+  if (existing && !existing.stopped) return { recording: true, already: true };
+
+  const page = session.page;
+  const rec = { steps: [], stopped: false, page };
+  macroRecorders.set(id, rec);
+
+  // Bridge page -> node. exposeFunction persists on the page; if it's already
+  // installed (a prior recording on this page), the throw is benign — the bound
+  // callback always resolves the CURRENT recorder via macroRecorders.get(id).
+  try {
+    await page.exposeFunction('__sgzRecordStep', (step) => {
+      const cur = macroRecorders.get(id);
+      if (cur && !cur.stopped && step && step.type) cur.steps.push(step);
+    });
+  } catch (e) { /* already exposed on this page */ }
+
+  const client = `(${macroRecorderClientScript.toString()})()`;
+  await page.evaluateOnNewDocument(client).catch(() => {});
+  await page.evaluate(client).catch(() => {});
+
+  // Capture top-frame navigations as 'goto' steps (deduped, skipping about:blank).
+  const navHandler = (frame) => {
+    try {
+      if (frame !== page.mainFrame()) return;
+      const url = frame.url();
+      if (!url || url === 'about:blank') return;
+      const last = rec.steps[rec.steps.length - 1];
+      if (last && last.type === 'goto' && last.url === url) return;
+      if (!rec.stopped) rec.steps.push({ type: 'goto', url });
+    } catch (err) { /* ignore */ }
+  };
+  page.on('framenavigated', navHandler);
+  rec.navHandler = navHandler;
+  return { recording: true };
+}
+
+async function stopMacroRecording(sessionId) {
+  const id = String(sessionId || '').trim();
+  const rec = macroRecorders.get(id);
+  if (!rec) return { recording: false, steps: [] };
+  rec.stopped = true;
+  try { if (rec.navHandler && rec.page) rec.page.off('framenavigated', rec.navHandler); } catch (e) { /* ignore */ }
+  try { await rec.page.evaluate(() => { window.__sgzRecording = false; }); } catch (e) { /* page may be gone */ }
+  return { recording: false, steps: rec.steps };
+}
+
 function listActiveSessions() {
   return Array.from(activeSessions.entries()).map(([sessionId, session]) => ({
     id: sessionId,
@@ -2554,6 +2730,9 @@ module.exports = {
   listActiveSessions,
   navigateSession,
   runCookieRobot,
+  runMacro,
+  startMacroRecording,
+  stopMacroRecording,
   humanType,
   launchSynchronizedSessions,
   stopSyncGroup,

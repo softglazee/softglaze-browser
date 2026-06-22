@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  test:
+    name: Lint, build & unit tests
+    runs-on: ubuntu-latest
+    env:
+      # Tests/build never launch a browser or Electron — skip those large
+      # binary downloads to keep CI fast.
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for undeclared dependencies
+        run: npm run check:deps
+
+      - name: Build renderer
+        run: npx vite build
+
+      - name: Syntax-check main + preload
+        run: |
+          set -e
+          find src/main src/preload -name '*.js' -print0 | while IFS= read -r -d '' f; do
+            node --check "$f"
+          done
+
+      - name: Unit tests
+        run: npm test
+
+  package:
+    name: Package Windows build (no publish)
+    runs-on: windows-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build renderer
+        run: npx vite build
+
+      - name: Package unpacked app (build-only)
+        run: npx electron-builder --dir --publish never
