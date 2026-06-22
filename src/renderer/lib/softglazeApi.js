@@ -114,7 +114,8 @@ export const softglazeApi = {
     requestChange: (payload) => getSoftglazeApi().members.requestChange(payload),
     commitChange: (payload) => getSoftglazeApi().members.commitChange(payload),
     updatePermissions: (id, permissions) => getSoftglazeApi().members.updatePermissions(id, permissions),
-    setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions)
+    setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions),
+    setStatus: (payload) => getSoftglazeApi().members.setStatus(payload)
   },
   team: {
     activity: (limit) => getSoftglazeApi().team.activity(limit),
@@ -139,7 +140,11 @@ export const softglazeApi = {
   },
   license: {
     get: () => getSoftglazeApi().license.get(),
-    redeem: (code) => getSoftglazeApi().license.redeem(code)
+    redeem: (code) => getSoftglazeApi().license.redeem(code),
+    grant: (payload) => getSoftglazeApi().license.grant(payload),
+    extend: (payload) => getSoftglazeApi().license.extend(payload),
+    reset: (payload) => getSoftglazeApi().license.reset(payload),
+    listOwners: () => getSoftglazeApi().license.listOwners()
   },
   payments: {
     getConfig: () => getSoftglazeApi().payments.getConfig(),
