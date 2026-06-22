@@ -34,13 +34,19 @@ const totp = require('./totp');
 const permissions = require('./permissions');
 const payments = require('./payments');
 const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
-const { generateFingerprint, normalizeBrand } = require('./fingerprintGenerator');
+const { generateFingerprint, normalizeBrand, deviceGpuCoherence } = require('./fingerprintGenerator');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
+const dbCrypto = require('./dbCrypto');
+const database = require('./database');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
+const { CloudSyncEngine } = require('./cloudSync');
+const syncTransport = require('./syncTransport');
+const syncPolicy = require('./syncPolicy');
+const secretStore = require('./secretStore');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -147,6 +153,9 @@ const CHANNELS = Object.freeze({
   TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
   TEAM_SEAT_USAGE: 'team:seat-usage',
   TEAM_EXPORT_ACTIVITY: 'team:export-activity',
+  SYNC_STATUS: 'sync:status',
+  SYNC_CONFIGURE: 'sync:configure',
+  SYNC_RUN: 'sync:run',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -203,7 +212,15 @@ const CHANNELS = Object.freeze({
   API_TOKEN_CREATE: 'api:token-create',
   API_TOKEN_REVOKE: 'api:token-revoke',
   API_SERVER_STATUS: 'api:server-status',
-  API_SERVER_SET_ENABLED: 'api:server-set-enabled'
+  API_SERVER_SET_ENABLED: 'api:server-set-enabled',
+
+  // Softglaze Enterprise — at-rest DB encryption + workspace backup/restore (Phase 6)
+  DB_ENCRYPTION_STATUS: 'db:encryption-status',
+  DB_UNLOCK: 'db:unlock',
+  DB_ENABLE_ENCRYPTION: 'db:enable-encryption',
+  DB_DISABLE_ENCRYPTION: 'db:disable-encryption',
+  WORKSPACE_BACKUP: 'workspace:backup',
+  WORKSPACE_RESTORE: 'workspace:restore'
 });
 
 const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5']);
@@ -479,6 +496,7 @@ function extractFingerprintData(input) {
     browserVersion: input.browserVersion,
     os: input.os,
     osVersion: input.osVersion,
+    deviceClass: input.deviceClass === 'mobile' ? 'mobile' : (input.deviceClass === 'desktop' ? 'desktop' : undefined),
     userAgent: input.userAgent || 'Auto',
     startupUrls: input.startupUrls,
     platformAccounts: input.platformAccounts ? JSON.stringify(input.platformAccounts) : null,
@@ -550,7 +568,9 @@ function extractFingerprintData(input) {
 function buildFingerprintFields(input) {
   const manual = extractFingerprintData(input);
   if (input.randomFingerprint !== true) return manual;
-  const merged = { ...generateFingerprint() };
+  // Generate the right device class so a "mobile" request produces a coherent
+  // Android base (not a desktop one with a couple of fields overwritten).
+  const merged = { ...generateFingerprint({ deviceClass: input.deviceClass }) };
   for (const [key, value] of Object.entries(manual)) {
     if (value !== undefined) merged[key] = value;
   }
@@ -1393,6 +1413,11 @@ async function analyzeProfileLeaks(payload) {
     detail: noiseOn ? 'Canvas / WebGL / Audio noise enabled.' : 'One or more fingerprint-noise toggles are off.'
   });
 
+  // 7) Device ↔ GPU coherence — a mobile UA with a desktop GPU (or vice versa) is
+  // an easily-scored mismatch.
+  const coh = deviceGpuCoherence({ deviceClass: profile.deviceClass, os: profile.os, webglRenderer: profile.webglRenderer });
+  checks.push({ key: 'device', label: 'Device coherence', status: coh.status, detail: coh.detail });
+
   const score = computeTrustScore(checks);
   return { profileId: id, title: profile.title, usesProxy, geo, checks, summary: score.summary, score };
 }
@@ -1630,11 +1655,14 @@ async function cloneProfile(payload) {
   // internally-consistent one (OS↔GPU↔screen stay paired) — for safe account
   // farms where copies must NOT share a fingerprint. Otherwise just regenerate
   // the hardware identity so the copy is not a byte-identical twin.
-  const fingerprint = reroll ? generateFingerprint() : {};
-  const created = await db.profile.create({
-    data: { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac(), deviceName: randomDeviceName() },
-    include: { proxy: true, group: true }
-  });
+  // Preserve the source's device class on reroll so a mobile profile stays mobile.
+  const isMobile = src.deviceClass === 'mobile';
+  const fingerprint = reroll ? generateFingerprint({ deviceClass: src.deviceClass }) : {};
+  const data = { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac() };
+  // Desktop machine names are randomized per copy; a mobile profile keeps its device
+  // model (e.g. Pixel 7) so the UA / Client-Hints model stays coherent.
+  if (!isMobile) data.deviceName = randomDeviceName();
+  const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return serializeProfile(created);
 }
 
@@ -3745,6 +3773,165 @@ async function superLogin(payload) {
   return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
 }
 
+// ---------------------------------------------------------------------------
+// Softglaze Enterprise — at-rest database encryption + workspace backup/restore
+// (Phase 6). Encrypts the whole SQLite file when the app is closed/locked (Option
+// A envelope-at-rest), keyed by the vault password. Backup-first, reversible, OFF
+// by default. Honest scope: a plaintext working file exists while the app is
+// running + unlocked (Prisma's requirement) — see DbEncryptionSettings.jsx.
+// ---------------------------------------------------------------------------
+
+// Run once the DB is readable (normal boot when unencrypted, or after a successful
+// db:unlock / workspace restore): restore the saved member session + vault lock
+// state and start the local API if the user enabled it. This is the logic that
+// used to run inline at the end of registerIpcHandlers — extracted so the unlock
+// path can reuse it.
+async function afterDbReady() {
+  try {
+    const savedMember = await readSetting('currentMemberId', null);
+    if (savedMember != null) currentMemberId = Number(savedMember) || null;
+    const v = await readSetting('vault', null);
+    if (v && v.enabled) vaultLocked = true; // require unlock at startup
+  } catch (e) { /* ignore — fall back to a fresh session */ }
+  try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
+}
+
+async function dbEncryptionStatus() {
+  const info = database.getDbEncryptionInfo();
+  let lastBackupAt = null;
+  if (info.unlocked) {
+    try { lastBackupAt = await readSetting('workspaceLastBackupAt', null); } catch (e) { /* unavailable */ }
+  }
+  return { ...info, lastBackupAt };
+}
+
+// Pre-Gate unlock. No permission gate (the workspace is not open yet); the .enc's
+// GCM tag is the authenticator. On success the DB is opened + migrated and the
+// saved session restored.
+async function dbUnlock(payload) {
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (!password) throw new Error('Enter your password to unlock the database.');
+  if (!database.isDbEncryptionEnabled()) return dbEncryptionStatus();
+  await database.unlockEncryptedDb(password); // throws DB_UNLOCK_FAILED / DB_MISSING
+  await database.bootstrapDatabase();
+  await afterDbReady();
+  // The DB key IS the vault password, and it just decrypted the database, so it is
+  // by definition correct — unlock the workspace vault too, so the user isn't asked
+  // for the same password again at the Gate.
+  try {
+    const v = await readVault();
+    if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
+  } catch (e) { /* leave vault locked — the Gate will ask */ }
+  return dbEncryptionStatus();
+}
+
+async function dbEnableEncryption(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  if (!input.confirm) throw new Error('Please confirm you understand that a lost password makes the data unrecoverable.');
+  const password = String(input.password || '');
+  // The DB key IS the vault password — require an enabled vault and verify it, so
+  // the same password that unlocks the workspace also unlocks the database.
+  const v = await readVault();
+  if (!v.enabled || !v.hash) {
+    const e = new Error('Set a workspace password (vault) first — database encryption uses it as the key.');
+    e.code = 'NO_VAULT';
+    throw e;
+  }
+  if (!verifySecret(password, v.salt, v.hash)) {
+    const e = new Error('Incorrect workspace password.'); e.code = 'BAD_PASSWORD'; throw e;
+  }
+  const info = await database.enableDbEncryption(password);
+  let lastBackupAt = null;
+  try { lastBackupAt = await readSetting('workspaceLastBackupAt', null); } catch (e) { /* noop */ }
+  return { ...info, lastBackupAt };
+}
+
+async function dbDisableEncryption(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (!password) throw new Error('Enter your workspace password to disable encryption.');
+  const info = await database.disableDbEncryption(password); // verifies password internally
+  let lastBackupAt = null;
+  try { lastBackupAt = await readSetting('workspaceLastBackupAt', null); } catch (e) { /* noop */ }
+  return { ...info, lastBackupAt };
+}
+
+async function workspaceBackup(payload) {
+  await requireOwnerOrSuper('back up the workspace');
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (password.length < 6) throw new Error('Choose a backup password of at least 6 characters.');
+  const { dbPath } = getRuntimeConfig();
+  // Fold the WAL into the main file so the snapshot is internally consistent.
+  try { await getPrisma().$executeRawUnsafe('PRAGMA wal_checkpoint(FULL);'); } catch (e) { /* not WAL */ }
+  let settings = [];
+  try {
+    const rows = await getPrisma().setting.findMany();
+    settings = rows.map((r) => ({ key: r.key, value: r.value }));
+  } catch (e) { settings = []; }
+  const stamp = new Date().toISOString().slice(0, 10);
+  const save = await dialog.showSaveDialog({
+    title: 'Back up workspace',
+    defaultPath: `softglaze-workspace-${stamp}.sgzw`,
+    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+  });
+  if (save.canceled || !save.filePath) return { cancelled: true };
+  const res = await profileArchive.exportWorkspaceArchive({ dbPath, settings, password, outPath: save.filePath });
+  await writeSetting('workspaceLastBackupAt', new Date().toISOString()).catch(() => {});
+  return { ok: true, path: save.filePath, dbBytes: res.dbBytes, settingsCount: res.settingsCount };
+}
+
+async function workspaceRestore(payload) {
+  await requireOwnerOrSuper('restore the workspace');
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (!password) throw new Error('Enter the password for this backup.');
+  const selection = await dialog.showOpenDialog({
+    title: 'Restore workspace backup',
+    properties: ['openFile'],
+    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+  });
+  if (selection.canceled || !selection.filePaths || !selection.filePaths.length) return { cancelled: true };
+  const filePath = selection.filePaths[0];
+
+  // GCM-verified decrypt happens BEFORE we touch any live file — a wrong password
+  // or tampered backup throws here and the working DB is never changed.
+  const restored = await profileArchive.restoreWorkspaceArchive(filePath, password);
+
+  const { dbPath } = getRuntimeConfig();
+  const tmp = `${dbPath}.restore-tmp`;
+  await fs.writeFile(tmp, restored.db);
+  if (!dbCrypto.looksLikeSqlite(tmp)) {
+    await fs.unlink(tmp).catch(() => {});
+    throw new Error('This backup does not contain a valid database.');
+  }
+
+  // Swap with rollback: copy the current DB aside, then on any error put it back.
+  await database.disconnectPrisma();
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safety = `${dbPath}.pre-restore-${stamp}`;
+  let hadCurrent = false;
+  try { await fs.copyFile(dbPath, safety); hadCurrent = true; } catch (e) { /* no current DB */ }
+  try {
+    await fs.rename(tmp, dbPath);
+    for (const suffix of ['-wal', '-shm']) { await fs.unlink(dbPath + suffix).catch(() => {}); }
+    await database.bootstrapDatabase();
+  } catch (e) {
+    try { if (hadCurrent) await fs.copyFile(safety, dbPath); } catch (_) { /* noop */ }
+    await database.bootstrapDatabase().catch(() => {});
+    await dbCrypto.secureUnlink(safety);
+    await fs.unlink(tmp).catch(() => {});
+    throw new Error('Restore failed — the previous database has been put back.');
+  }
+  // Success — remove the (plaintext) safety copy so it can't linger on disk.
+  await dbCrypto.secureUnlink(safety);
+  await afterDbReady();
+  return { ok: true, exportedAt: restored.exportedAt };
+}
+
 async function readVault() {
   return readSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
 }
@@ -3771,6 +3958,11 @@ async function vaultSetPassword(payload) {
   const { salt, hash } = hashSecret(next);
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes ?? v.autoLockMinutes) || 0 });
   vaultLocked = false;
+  // If the DB is encrypted with the (old) vault password, re-key the at-rest copy
+  // to the new one so "the workspace password unlocks the database" stays true.
+  if (database.isDbEncryptionEnabled()) {
+    try { await database.rekeyEncryptedDb(next); } catch (e) { console.error('[vault] DB re-key after password change failed', e); }
+  }
   return vaultStatus();
 }
 
@@ -3793,6 +3985,14 @@ async function vaultLock() {
 
 async function vaultDisable(payload) {
   await requirePermission('vault.manage');
+  // Database encryption is keyed by the vault password — removing the vault would
+  // strand the encrypted DB with no key. Force the user to turn off DB encryption
+  // first (which decrypts back to plaintext).
+  if (database.isDbEncryptionEnabled()) {
+    const e = new Error('Turn off database encryption first — it uses your workspace password as its key.');
+    e.code = 'DB_ENCRYPTION_ON';
+    throw e;
+  }
   const input = requireObject(payload);
   const v = await readVault();
   if (v.enabled && v.hash && !verifySecret(String(input.password || ''), v.salt, v.hash)) {
@@ -4206,6 +4406,307 @@ async function exportTeamActivity(payload) {
   const content = isJson ? JSON.stringify(rows, null, 2) : teamPolicy.activityToCsv(rows);
   await fs.writeFile(save.filePath, content, 'utf8');
   return { ok: true, path: save.filePath, count: rows.length, format: isJson ? 'json' : 'csv' };
+}
+
+// ---------------------------------------------------------------------------
+// Softglaze Enterprise — End-to-End encrypted cloud sync  [needs backend]
+//
+// Wires the existing CloudSyncEngine (tested crypto envelope) to a concrete REST
+// object-store transport (src/main/syncTransport.js — an EXTERNAL service you
+// host). Everything is encrypted LOCALLY before upload (zero-knowledge): the
+// bucket only ever stores opaque envelopes. The sync passphrase is held in memory
+// for the session only and never persisted in plaintext (the vault keeps only a
+// hash, so we can't reuse it). With no endpoint configured, status reports
+// disabled and nothing pretends to sync.
+// ---------------------------------------------------------------------------
+
+// Profile fields that define identity/fingerprint and are safe to sync. NOT
+// synced: id/dataDirName/ownership/assignment/proxy bindings (all install-local).
+const SYNC_SCALAR_FIELDS = [
+  'browserCore', 'browserBrand', 'browserVersion', 'os', 'osVersion', 'userAgent', 'startupUrls',
+  'webrtc', 'timezoneType', 'timezoneCustom', 'locationType', 'locationLat', 'locationLng', 'locationAcc',
+  'languageType', 'languageCustom', 'displayLangType', 'displayLangCustom',
+  'resolutionType', 'resolutionW', 'resolutionH', 'fontsType',
+  'canvasNoise', 'webglImageNoise', 'audioContextNoise', 'clientRectsNoise', 'speechVoicesNoise', 'mediaDevice',
+  'webglMetadata', 'webglVendor', 'webglRenderer', 'webgpu',
+  'cpuType', 'cpuCores', 'ramType', 'ramGb', 'twoFactorSeed', 'notes'
+];
+
+// Session-scoped sync state. The passphrase-derived key lives ONLY here.
+let cloudSyncEngine = null;     // CloudSyncEngine (transport + derived key) when unlocked
+let cloudSyncUnlocked = false;
+let cloudSyncLastError = null;
+
+async function readCloudSyncConfig() {
+  const c = (await readSetting('cloudSync', null)) || {};
+  return {
+    enabled: Boolean(c.enabled),
+    baseUrl: c.baseUrl || '',
+    namespace: c.namespace || 'softglaze',
+    sealedToken: c.sealedToken || '',
+    passphraseSalt: c.passphraseSalt || null,
+    passphraseVerifier: c.passphraseVerifier || null
+  };
+}
+
+function cloudSyncConfigured(c) { return Boolean(c.baseUrl && c.passphraseVerifier); }
+
+function syncHostOf(url) { try { return new URL(url).host; } catch (e) { return String(url || ''); } }
+
+// Verify the passphrase against the stored verifier, then build the engine with a
+// concrete transport and derive the session key. Throws on a wrong passphrase.
+async function unlockCloudSync(passphrase) {
+  const c = await readCloudSyncConfig();
+  if (!cloudSyncConfigured(c)) { const e = new Error('Cloud sync is not configured.'); e.code = 'SYNC_NOT_CONFIGURED'; throw e; }
+  if (!verifySecret(String(passphrase || ''), c.passphraseSalt, c.passphraseVerifier)) {
+    const e = new Error('Incorrect sync passphrase.'); e.code = 'BAD_PASSPHRASE'; throw e;
+  }
+  const token = secretStore.open(c.sealedToken);
+  const transport = syncTransport.createTransport({ baseUrl: c.baseUrl, token });
+  const engine = new CloudSyncEngine({ transport, namespace: c.namespace });
+  // The key-derivation salt is the shared namespace, so two installs that agree on
+  // (passphrase, namespace) derive the SAME key and converge.
+  await engine.deriveMasterKey(String(passphrase), c.namespace);
+  cloudSyncEngine = engine;
+  cloudSyncUnlocked = true;
+  cloudSyncLastError = null;
+  return engine;
+}
+
+async function syncConfigure(payload) {
+  await requireOwnerOrSuper('configure cloud sync');
+  const input = requireObject(payload);
+  const prev = await readCloudSyncConfig();
+
+  const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
+  const namespace = (input.namespace !== undefined ? String(input.namespace || '').trim() : prev.namespace) || 'softglaze';
+  let sealedToken = prev.sealedToken;
+  if (input.token !== undefined && input.token !== '') sealedToken = secretStore.seal(String(input.token).trim());
+
+  let passphraseSalt = prev.passphraseSalt;
+  let passphraseVerifier = prev.passphraseVerifier;
+  const passphrase = (input.passphrase !== undefined && input.passphrase !== '') ? String(input.passphrase) : null;
+  if (passphrase) {
+    // First-time set or an intentional re-key only when it differs from the stored
+    // one; entering the SAME passphrase just unlocks (verifier preserved).
+    if (!passphraseVerifier || !verifySecret(passphrase, passphraseSalt, passphraseVerifier)) {
+      const h = hashSecret(passphrase); passphraseSalt = h.salt; passphraseVerifier = h.hash;
+    }
+  }
+
+  const enabled = input.enabled !== undefined ? Boolean(input.enabled) : prev.enabled;
+  if (enabled && !baseUrl) throw new Error('Enter the sync endpoint URL before enabling sync.');
+  if (enabled && !passphraseVerifier) throw new Error('Set a sync passphrase before enabling sync.');
+
+  await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier });
+
+  // Re-key invalidates a previously-derived session key.
+  cloudSyncEngine = null;
+  cloudSyncUnlocked = false;
+  if (passphrase && baseUrl) { try { await unlockCloudSync(passphrase); } catch (e) { /* surfaced via status */ } }
+  return syncStatus();
+}
+
+async function syncStatus() {
+  const c = await readCloudSyncConfig();
+  const configured = cloudSyncConfigured(c);
+  let pendingCount = 0;
+  try {
+    if (configured) {
+      const ids = (await readSetting('cloudSyncIds', {})) || {};
+      const state = (await readSetting('cloudSyncState', {})) || {};
+      const profiles = await getPrisma().profile.findMany({ where: { deletedAt: null }, select: { id: true, updatedAt: true } });
+      for (const p of profiles) {
+        const sid = ids[p.id];
+        const ls = sid ? state[sid] : null;
+        if (!ls || syncPolicy.toMs(p.updatedAt) > syncPolicy.toMs(ls.syncedAt)) pendingCount += 1;
+      }
+    }
+  } catch (e) { /* best-effort */ }
+  return {
+    enabled: c.enabled,
+    configured,
+    unlocked: cloudSyncUnlocked && Boolean(cloudSyncEngine),
+    endpointHost: configured ? syncHostOf(c.baseUrl) : '',
+    namespace: c.namespace,
+    hasToken: Boolean(c.sealedToken),
+    lastSyncedAt: (await readSetting('cloudSyncLastRun', null)) || null,
+    pendingCount,
+    lastError: cloudSyncLastError
+  };
+}
+
+// --- transport envelope helpers (encrypt locally, store opaque) -------------
+async function syncPut(engine, key, obj) {
+  const env = engine.encryptPayload(obj);
+  await engine.transport.put(`${engine.namespace}/${key}`, Buffer.from(JSON.stringify(env)));
+}
+async function syncGet(engine, key) {
+  const raw = await engine.transport.get(`${engine.namespace}/${key}`);
+  if (!raw) return null;
+  let env;
+  try { env = JSON.parse(Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw)); }
+  catch (e) { throw new Error('A remote sync object is corrupt.'); }
+  return engine.decryptPayload(env); // throws on wrong key — caller surfaces it
+}
+
+async function pullSyncIndex(engine) {
+  const raw = await engine.transport.get(`${engine.namespace}/index.sgz-env`);
+  if (!raw) return {};
+  let env;
+  try { env = JSON.parse(Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw)); }
+  catch (e) { throw new Error('The remote sync index is corrupt.'); }
+  let payload;
+  try { payload = engine.decryptPayload(env); }
+  catch (e) {
+    const err = new Error('Remote sync data was encrypted with a different passphrase. Use the original passphrase, or reset sync.');
+    err.code = 'SYNC_KEY_MISMATCH'; throw err;
+  }
+  return (payload && payload.profiles && typeof payload.profiles === 'object') ? payload.profiles : {};
+}
+
+// --- profile <-> sync state mapping -----------------------------------------
+function pickSyncFingerprint(profile) {
+  const fp = { title: profile.title };
+  for (const k of SYNC_SCALAR_FIELDS) fp[k] = profile[k];
+  try { fp.platformAccounts = profile.platformAccounts ? JSON.parse(profile.platformAccounts) : []; } catch (e) { fp.platformAccounts = []; }
+  try { fp.tags = profile.tags ? JSON.parse(profile.tags) : []; } catch (e) { fp.tags = []; }
+  if (!Array.isArray(fp.tags)) fp.tags = [];
+  return fp;
+}
+
+async function gatherProfileSyncState(profile) {
+  let cookies = [];
+  try { cookies = (await exportStoredCookies(await offlineProfileOpts(profile.id))) || []; } catch (e) { cookies = []; }
+  return { cookies, localStorage: {}, fingerprint: pickSyncFingerprint(profile) };
+}
+
+// Apply a pulled remote state onto an EXISTING local profile (build the update
+// data explicitly so we never clobber install-local fields with defaults).
+async function applyRemoteToProfile(db, profile, remoteState) {
+  const fp = (remoteState && remoteState.fingerprint) || {};
+  const data = {};
+  for (const k of SYNC_SCALAR_FIELDS) if (fp[k] !== undefined) data[k] = fp[k];
+  if (typeof fp.title === 'string' && fp.title) data.title = fp.title;
+  if (Array.isArray(fp.platformAccounts)) data.platformAccounts = JSON.stringify(fp.platformAccounts);
+  if (Array.isArray(fp.tags)) data.tags = JSON.stringify(fp.tags);
+  await db.profile.update({ where: { id: profile.id }, data });
+  const cookies = Array.isArray(remoteState.cookies) ? remoteState.cookies : [];
+  if (cookies.length) {
+    const params = cookies.map(toSetCookieParam).filter(Boolean);
+    if (params.length) await importStoredCookies(await offlineProfileOpts(profile.id), params).catch(() => {});
+  }
+  await logActivity(db, profile.id, 'sync', 'pulled from cloud').catch(() => {});
+}
+
+// Create a brand-new local profile from a pulled remote state (convergence: the
+// second install gains profiles the first one had).
+async function createProfileFromRemote(remoteState) {
+  const fp = (remoteState && remoteState.fingerprint) || {};
+  const payload = {};
+  for (const k of SYNC_SCALAR_FIELDS) if (fp[k] !== undefined) payload[k] = fp[k];
+  payload.title = (typeof fp.title === 'string' && fp.title) ? fp.title : 'Synced profile';
+  if (Array.isArray(fp.platformAccounts)) payload.platformAccounts = fp.platformAccounts;
+  if (Array.isArray(fp.tags)) payload.tags = fp.tags;
+  const created = await createProfile(payload); // serialized, includes id
+  const cookies = Array.isArray(remoteState.cookies) ? remoteState.cookies : [];
+  if (cookies.length) {
+    const params = cookies.map(toSetCookieParam).filter(Boolean);
+    if (params.length) await importStoredCookies(await offlineProfileOpts(created.id), params).catch(() => {});
+  }
+  await logActivity(getPrisma(), created.id, 'sync', 'created from cloud').catch(() => {});
+  return created.id;
+}
+
+async function syncRun(payload) {
+  await requireOwnerOrSuper('run cloud sync');
+  const c = await readCloudSyncConfig();
+  if (!cloudSyncConfigured(c)) return { ok: false, skipped: true, reason: 'Cloud sync is not configured.' };
+  if (!c.enabled) return { ok: false, skipped: true, reason: 'Cloud sync is disabled.' };
+  if (!cloudSyncEngine || !cloudSyncUnlocked) return { ok: false, locked: true, reason: 'Enter your sync passphrase to unlock sync this session.' };
+
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const onlyIds = Array.isArray(input.profileIds) && input.profileIds.length ? new Set(input.profileIds.map(Number)) : null;
+  const db = getPrisma();
+  const engine = cloudSyncEngine;
+  const ids = (await readSetting('cloudSyncIds', {})) || {};
+  const state = (await readSetting('cloudSyncState', {})) || {};
+  const results = [];
+  let pushed = 0, pulled = 0, created = 0, conflicts = 0, failed = 0;
+
+  try {
+    const index = await pullSyncIndex(engine); // throws SYNC_KEY_MISMATCH on a wrong-key remote
+
+    const profiles = await db.profile.findMany({ where: { deletedAt: null } });
+    const localSyncIds = new Map();
+    for (const p of profiles) {
+      if (onlyIds && !onlyIds.has(p.id)) continue;
+      let sid = ids[p.id];
+      if (!sid) { sid = crypto.randomUUID(); ids[p.id] = sid; }
+      localSyncIds.set(sid, p);
+    }
+
+    // Reconcile each local profile against the remote index.
+    for (const [sid, p] of localSyncIds) {
+      try {
+        const remoteMeta = index[sid] || null;
+        const lastSync = state[sid] || null;
+        const decision = syncPolicy.decideProfileSync({ localUpdatedAt: p.updatedAt, remoteMeta, lastSync });
+        if (decision.action === 'noop') { results.push({ profileId: p.id, action: 'noop' }); continue; }
+        const isConflict = decision.action === 'conflict';
+        if (isConflict) conflicts += 1;
+
+        if (decision.resolution === 'push') {
+          const nowIso = new Date().toISOString();
+          const rev = ((remoteMeta && remoteMeta.rev) || (lastSync && lastSync.rev) || 0) + 1;
+          await syncPut(engine, `${sid}.sgz-env`, { v: 1, meta: { updatedAt: nowIso, rev }, state: await gatherProfileSyncState(p) });
+          index[sid] = { updatedAt: nowIso, rev };
+          state[sid] = { syncedAt: nowIso, rev };
+          pushed += 1;
+          results.push({ profileId: p.id, action: 'push', conflict: isConflict });
+        } else {
+          const payloadObj = await syncGet(engine, `${sid}.sgz-env`);
+          if (payloadObj && payloadObj.state) {
+            await applyRemoteToProfile(db, p, payloadObj.state);
+            state[sid] = { syncedAt: new Date().toISOString(), rev: (remoteMeta && remoteMeta.rev) || 0 };
+            pulled += 1;
+            results.push({ profileId: p.id, action: 'pull', conflict: isConflict });
+          }
+        }
+      } catch (e) { failed += 1; results.push({ profileId: p.id, action: 'error', error: (e && e.message) || 'failed' }); }
+    }
+
+    // Remote profiles not present locally -> create them (full-run only).
+    if (!onlyIds) {
+      const known = new Set(Object.values(ids));
+      for (const sid of Object.keys(index)) {
+        if (known.has(sid)) continue;
+        try {
+          const payloadObj = await syncGet(engine, `${sid}.sgz-env`);
+          if (!payloadObj || !payloadObj.state) continue;
+          const newId = await createProfileFromRemote(payloadObj.state);
+          ids[newId] = sid;
+          state[sid] = { syncedAt: new Date().toISOString(), rev: (index[sid] && index[sid].rev) || 0 };
+          created += 1;
+          results.push({ profileId: newId, action: 'create' });
+        } catch (e) { failed += 1; results.push({ syncId: sid, action: 'error', error: (e && e.message) || 'failed' }); }
+      }
+    }
+
+    await pushSyncIndex(engine, index);
+    await writeSetting('cloudSyncIds', ids);
+    await writeSetting('cloudSyncState', state);
+    await writeSetting('cloudSyncLastRun', new Date().toISOString());
+    cloudSyncLastError = null;
+    return { ok: true, pushed, pulled, created, conflicts, failed, results };
+  } catch (e) {
+    cloudSyncLastError = (e && e.message) || 'Sync failed.';
+    return { ok: false, error: cloudSyncLastError, code: e && e.code, results };
+  }
+}
+
+async function pushSyncIndex(engine, profiles) {
+  await syncPut(engine, 'index.sgz-env', { v: 1, profiles });
 }
 
 // ---------------------------------------------------------------------------
@@ -5163,6 +5664,15 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.TEAM_REASSIGN_PROFILES, reassignProfiles);
   registerHandler(CHANNELS.TEAM_SEAT_USAGE, getSeatUsage);
   registerHandler(CHANNELS.TEAM_EXPORT_ACTIVITY, exportTeamActivity);
+  registerHandler(CHANNELS.SYNC_STATUS, syncStatus);
+  registerHandler(CHANNELS.SYNC_CONFIGURE, syncConfigure);
+  registerHandler(CHANNELS.SYNC_RUN, syncRun);
+  registerHandler(CHANNELS.DB_ENCRYPTION_STATUS, dbEncryptionStatus);
+  registerHandler(CHANNELS.DB_UNLOCK, dbUnlock);
+  registerHandler(CHANNELS.DB_ENABLE_ENCRYPTION, dbEnableEncryption);
+  registerHandler(CHANNELS.DB_DISABLE_ENCRYPTION, dbDisableEncryption);
+  registerHandler(CHANNELS.WORKSPACE_BACKUP, workspaceBackup);
+  registerHandler(CHANNELS.WORKSPACE_RESTORE, workspaceRestore);
   registerHandler(CHANNELS.VAULT_STATUS, vaultStatus);
   registerHandler(CHANNELS.VAULT_SET_PASSWORD, vaultSetPassword);
   registerHandler(CHANNELS.VAULT_UNLOCK, vaultUnlock);
@@ -5199,17 +5709,12 @@ function registerIpcHandlers() {
     readConfig: () => readSetting('localApi', { enabled: false, port: localApi.DEFAULT_PORT }),
     writeConfig: (cfg) => writeSetting('localApi', cfg)
   });
-  localApi.startIfEnabled().catch(() => {});
-
-  // Restore member session + vault lock state on boot.
-  (async () => {
-    try {
-      const savedMember = await readSetting('currentMemberId', null);
-      if (savedMember != null) currentMemberId = Number(savedMember) || null;
-      const v = await readSetting('vault', null);
-      if (v && v.enabled) vaultLocked = true; // require unlock at startup
-    } catch (e) { /* ignore */ }
-  })();
+  // Bring the session online (member + vault state + local API) only when the DB
+  // is actually readable. When at-rest encryption is on, the DB starts locked and
+  // this is deferred until the db:unlock handler runs afterDbReady() itself.
+  if (database.isDbUnlocked()) {
+    afterDbReady();
+  }
 
   registered = true;
 }

@@ -240,7 +240,8 @@ const initialProfileData = {
   browserVersion: 'Auto',
   os: 'Windows',
   osVersion: 'All Windows',
-  uaCategory: 'All', 
+  deviceClass: 'desktop', // 'desktop' | 'mobile' (Android) — drives touch + viewport at launch
+  uaCategory: 'All',
   userAgent: 'Auto',
   group: 'Ungrouped',
   tags: '',
@@ -582,8 +583,33 @@ export default function ProfilesPage() {
       const nextState = { ...prev, [k]: v };
       if (k === 'os') {
         const newOsObj = OS_PLATFORMS.find(o => o.id === v);
-        nextState.osVersion = newOsObj.versions[0]; 
-        nextState.uaCategory = 'All'; nextState.userAgent = 'Auto'; 
+        nextState.osVersion = newOsObj.versions[0];
+        nextState.uaCategory = 'All'; nextState.userAgent = 'Auto';
+        // Device class + a coherent GPU/screen follow the platform. Android is a
+        // mobile device (touchscreen + small high-DPR screen + a mobile GPU); the
+        // launch engine emulates the metrics, and here we keep the saved
+        // fingerprint coherent so the leak check doesn't (rightly) flag a mobile
+        // UA paired with a desktop GPU.
+        if (v === 'Android') {
+          nextState.deviceClass = 'mobile';
+          nextState.resolutionType = 'Custom';
+          nextState.resolutionW = '412';
+          nextState.resolutionH = '915';
+          nextState.webglMetadata = 'Custom';
+          nextState.webglVendor = 'Google Inc. (ARM)';
+          nextState.webglRenderer = 'ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)';
+        } else {
+          nextState.deviceClass = 'desktop';
+          // Coming back from a mobile selection — restore a desktop GPU/screen.
+          if (prev.deviceClass === 'mobile') {
+            nextState.resolutionType = 'Random';
+            nextState.resolutionW = '1920';
+            nextState.resolutionH = '1080';
+            nextState.webglMetadata = 'Real';
+            nextState.webglVendor = 'Google Inc. (NVIDIA)';
+            nextState.webglRenderer = 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+          }
+        }
       }
       if (k === 'browserCore') nextState.browserVersion = 'Auto'; 
       if (k === 'uaCategory') nextState.userAgent = 'Auto'; 
@@ -1707,6 +1733,14 @@ export default function ProfilesPage() {
                           </span>
                         )}
                         <span className="truncate max-w-[200px]">{p.title}</span>
+                        {(p.deviceClass === 'mobile' || /android/i.test(p.os || '')) && (
+                          <span
+                            title="Android (emulated mobile device)"
+                            className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-teal-500/12 text-teal-400 border border-teal-500/25"
+                          >
+                            <Smartphone className="w-3 h-3" /> Mobile
+                          </span>
+                        )}
                         {locks[p.id] && !locks[p.id].mine && (
                           <span
                             title={`In use by ${locks[p.id].memberName || 'another member'}`}

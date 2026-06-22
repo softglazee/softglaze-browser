@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
+import CommandPalette from '@/components/CommandPalette.jsx';
+import OnboardingWizard from '@/components/OnboardingWizard.jsx';
 
 function ThemeToggle({ collapsed }) {
   const [theme, setThemeState] = useState(getStoredTheme());
@@ -314,6 +316,8 @@ export default function AppShell({ children }) {
         )}
         <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
       </main>
+      <CommandPalette />
+      <OnboardingWizard />
     </div>
   );
 }
