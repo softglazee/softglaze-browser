@@ -1953,6 +1953,22 @@ async function launchProfileSession(options = {}) {
 
   const ua = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
 
+  // Mobile (Android) profiles: the UA + Client-Hints are already Android (via
+  // buildUserAgentBundle / osTokens), but a real mobile device also has a small
+  // high-DPR viewport and a touchscreen. We apply those at the CDP layer per page
+  // (DevTools device-mode emulation) so navigator.maxTouchPoints, ontouchstart,
+  // window.devicePixelRatio and the viewport all line up with the Android UA. The
+  // in-page script already sets screen.width/height from resolutionW/H (which the
+  // generator pins to the Pixel 7's 412x915), so the two layers agree.
+  const isMobile = String(profile.deviceClass || '').toLowerCase() === 'mobile'
+    || /android/i.test(String(profile.os || ''));
+  const mobileMetrics = isMobile ? {
+    width: toInt(profile.resolutionW, 412),
+    height: toInt(profile.resolutionH, 915),
+    deviceScaleFactor: 2.625, // Pixel 7 DPR
+    maxTouchPoints: 5
+  } : null;
+
   // Apply the full fingerprint to a single page. Used for the first tab AND for
   // every tab/popup opened later, so new windows are never left un-spoofed
   // (leaking the real UA / timezone / devices). Idempotent per page.
@@ -1993,6 +2009,21 @@ async function launchProfileSession(options = {}) {
         userAgentMetadata: ua.userAgentMetadata
       }).catch(() => {});
       if (timezoneId) await cdp.send('Emulation.setTimezoneOverride', { timezoneId }).catch(() => {});
+      // Mobile device metrics + touch — makes the Android UA coherent with a real
+      // phone: high-DPR viewport, screen size, and a working touchscreen
+      // (navigator.maxTouchPoints > 0 + ontouchstart). Desktop profiles skip this.
+      if (mobileMetrics) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width: mobileMetrics.width,
+          height: mobileMetrics.height,
+          deviceScaleFactor: mobileMetrics.deviceScaleFactor,
+          mobile: true,
+          screenWidth: mobileMetrics.width,
+          screenHeight: mobileMetrics.height
+        }).catch(() => {});
+        await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: mobileMetrics.maxTouchPoints }).catch(() => {});
+        await cdp.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' }).catch(() => {});
+      }
       // Native cores override — applies to the page AND the dedicated/shared
       // workers it spawns, even before their script runs (no JS-injection race).
       // Belt-and-suspenders with the in-page navigator override + worker prelude.
