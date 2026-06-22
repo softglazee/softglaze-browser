@@ -114,6 +114,7 @@ export const softglazeApi = {
     requestChange: (payload) => getSoftglazeApi().members.requestChange(payload),
     commitChange: (payload) => getSoftglazeApi().members.commitChange(payload),
     updatePermissions: (id, permissions) => getSoftglazeApi().members.updatePermissions(id, permissions),
+    resetPermissions: (id) => getSoftglazeApi().members.resetPermissions(id),
     setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions),
     setStatus: (payload) => getSoftglazeApi().members.setStatus(payload)
   },
@@ -159,6 +160,12 @@ export const softglazeApi = {
   },
   billing: {
     getPlans: () => getSoftglazeApi().billing.getPlans()
+  },
+  invoices: {
+    list: (payload) => getSoftglazeApi().invoices.list(payload),
+    create: (payload) => getSoftglazeApi().invoices.create(payload),
+    update: (payload) => getSoftglazeApi().invoices.update(payload),
+    remove: (payload) => getSoftglazeApi().invoices.remove(payload)
   },
   ipProviders: {
     getAll: () => getSoftglazeApi().ipProviders.getAll(),
@@ -210,6 +217,7 @@ export const softglazeApi = {
     stopWarmer: (payload) => getSoftglazeApi().automation.stopWarmer(payload),
     getHistory: () => getSoftglazeApi().automation.getHistory(),
     runMacro: (payload) => getSoftglazeApi().automation.runMacro(payload),
+    controlMacro: (payload) => getSoftglazeApi().automation.controlMacro(payload),
     startRecording: (payload) => getSoftglazeApi().automation.startRecording(payload),
     stopRecording: (payload) => getSoftglazeApi().automation.stopRecording(payload),
     getSchedule: () => getSoftglazeApi().automation.getSchedule(),
@@ -217,6 +225,7 @@ export const softglazeApi = {
     runParallel: (payload) => getSoftglazeApi().automation.runParallel(payload),
     pickDataFile: () => getSoftglazeApi().automation.pickDataFile(),
     onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback),
+    onMacroProgress: (callback) => getSoftglazeApi().automation.onMacroProgress(callback),
     onRunProgress: (callback) => getSoftglazeApi().automation.onRunProgress(callback)
   },
   developerApi: {
