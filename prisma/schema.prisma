@@ -192,6 +192,7 @@ model Profile {
   browserVersion   String?
   os               String?
   osVersion        String?
+  deviceClass      String? @default("desktop") // "desktop" | "mobile" (Android, CDP-emulated)
   userAgent        String? @default("Auto")
   startupUrls      String?
   platformAccounts String? // JSON string
