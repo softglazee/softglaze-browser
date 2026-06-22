@@ -9,9 +9,14 @@ const PLANNED = { stripe: 'Stripe', paypal: 'PayPal', wise: 'Wise' };
 
 function statusTone(license) {
   if (!license) return { color: '#9ca3af', label: 'Loading…' };
-  if (license.isPaid) return { color: '#10b981', label: `Active · ${license.daysLeft}d left` };
-  if (license.isExpired) return { color: '#ef4444', label: 'Expired' };
-  return { color: '#f59e0b', label: `Trial · ${license.daysLeft}d left` };
+  if (license.isExempt) return { color: '#10b981', label: 'Source owner' };
+  switch (license.state) {
+    case 'paid': return { color: '#10b981', label: license.endsAt ? `Active · until ${new Date(license.endsAt).toLocaleDateString()}` : 'Active' };
+    case 'trialing': return { color: '#3b82f6', label: `Trial · ${license.daysLeftTrial}d left` };
+    case 'grace': return { color: '#f59e0b', label: `Grace · ${license.daysLeftGrace}d left` };
+    case 'banned': return { color: '#ef4444', label: 'Subscription ended' };
+    default: return { color: license.isPaid ? '#10b981' : '#f59e0b', label: license.isPaid ? 'Active' : `Trial · ${license.daysLeft}d left` };
+  }
 }
 
 export default function BillingSettings() {
@@ -114,14 +119,20 @@ function SubscriptionCard({ license, seats, reload }) {
         </span>
       </div>
 
-      {license?.isExpired && (
+      {license?.isGrace && (
         <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[12px] text-amber-400">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>Your {license.isTrial ? 'free trial' : 'subscription'} has ended. The app keeps working, but please subscribe for ${'5'}/month to keep supporting it.</span>
+          <span>Your {license.type === 'trial' ? 'free trial' : 'subscription'} has ended — {license.daysLeftGrace} grace day{license.daysLeftGrace === 1 ? '' : 's'} left. Subscribe for ${'5'}/month to avoid losing access.</span>
         </div>
       )}
-      {license?.isTrial && !license?.isExpired && (
-        <p className="mt-4 text-[12px] text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-400" /> Free trial — {license.daysLeft} day{license.daysLeft === 1 ? '' : 's'} remaining.</p>
+      {license?.isBanned && (
+        <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>Your subscription has ended and profile launching is locked. Subscribe or enter a purchase code to restore access.</span>
+        </div>
+      )}
+      {license?.isTrial && (
+        <p className="mt-4 text-[12px] text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-400" /> Free trial — {license.daysLeftTrial} day{license.daysLeftTrial === 1 ? '' : 's'} remaining.</p>
       )}
 
       {seats && seats.total >= 0 && (
