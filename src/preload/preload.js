@@ -30,6 +30,7 @@ const CHANNELS = Object.freeze({
   PROXY_ROTATION_SET: 'proxy:rotation-set',
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
+  PROXY_TEST_ALL: 'proxy:test-all',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -65,6 +66,8 @@ const CHANNELS = Object.freeze({
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
   SETTINGS_GET_GLOBAL: 'settings:get-global',
   SETTINGS_SET_GLOBAL: 'settings:set-global',
+  SETTINGS_GET_PROXY_POLICY: 'settings:get-proxy-policy',
+  SETTINGS_SET_PROXY_POLICY: 'settings:set-proxy-policy',
   MONETIZATION_GET_LINKS: 'monetization:get-links',
   MONETIZATION_SET_LINKS: 'monetization:set-links',
   EXTENSIONS_LIST: 'extensions:list',
@@ -139,6 +142,14 @@ const CHANNELS = Object.freeze({
   AUTOMATION_START_WARMER: 'automation:start-warmer',
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress',
+  AUTOMATION_RUN_MACRO: 'automation:run-macro',
+  AUTOMATION_START_RECORDING: 'automation:start-recording',
+  AUTOMATION_STOP_RECORDING: 'automation:stop-recording',
+  AUTOMATION_GET_SCHEDULE: 'automation:get-schedule',
+  AUTOMATION_SET_SCHEDULE: 'automation:set-schedule',
+  AUTOMATION_RUN_PARALLEL: 'automation:run-parallel',
+  AUTOMATION_RUN_PROGRESS: 'automation:run-progress',
+  AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
 
   API_TOKEN_LIST: 'api:token-list',
   API_TOKEN_CREATE: 'api:token-create',
@@ -195,7 +206,8 @@ const api = Object.freeze({
     getRotation: (profileId) => invoke(CHANNELS.PROXY_ROTATION_GET, { id: profileId }),
     setRotation: (payload) => invoke(CHANNELS.PROXY_ROTATION_SET, payload),
     syncVendorPool: (payload) => invoke(CHANNELS.PROXY_SYNC_VENDOR_POOL, payload),
-    rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload)
+    rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
+    testAll: () => invoke(CHANNELS.PROXY_TEST_ALL)
   }),
   profiles: Object.freeze({
     list: (params = {}) => invoke(CHANNELS.PROFILE_LIST, params),
@@ -235,6 +247,8 @@ const api = Object.freeze({
     setProxyScheduler: (config) => invoke(CHANNELS.SETTINGS_SET_SCHEDULER, config),
     getGlobal: () => invoke(CHANNELS.SETTINGS_GET_GLOBAL),
     setGlobal: (patch) => invoke(CHANNELS.SETTINGS_SET_GLOBAL, patch),
+    getProxyPolicy: () => invoke(CHANNELS.SETTINGS_GET_PROXY_POLICY),
+    setProxyPolicy: (payload) => invoke(CHANNELS.SETTINGS_SET_PROXY_POLICY, payload),
     getEmail: () => invoke(CHANNELS.EMAIL_GET_CONFIG),
     setEmail: (config) => invoke(CHANNELS.EMAIL_SET_CONFIG, config),
     testEmail: (email) => invoke(CHANNELS.EMAIL_TEST, { email })
@@ -342,11 +356,24 @@ const api = Object.freeze({
     deleteMacro: (id) => invoke(CHANNELS.AUTOMATION_DELETE_MACRO, { id }),
     startWarmer: (payload) => invoke(CHANNELS.AUTOMATION_START_WARMER, payload),
     getHistory: () => invoke(CHANNELS.AUTOMATION_GET_HISTORY),
+    runMacro: (payload) => invoke(CHANNELS.AUTOMATION_RUN_MACRO, payload),
+    startRecording: (payload) => invoke(CHANNELS.AUTOMATION_START_RECORDING, payload),
+    stopRecording: (payload) => invoke(CHANNELS.AUTOMATION_STOP_RECORDING, payload),
+    getSchedule: () => invoke(CHANNELS.AUTOMATION_GET_SCHEDULE),
+    setSchedule: (payload) => invoke(CHANNELS.AUTOMATION_SET_SCHEDULE, payload),
+    runParallel: (payload) => invoke(CHANNELS.AUTOMATION_RUN_PARALLEL, payload),
+    pickDataFile: () => invoke(CHANNELS.AUTOMATION_PICK_DATA_FILE),
     // Subscribe to live warm-up progress; returns an unsubscribe function.
     onWarmerProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);
       return () => ipcRenderer.removeListener(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);
+    },
+    // Subscribe to live parallel-run progress frames; returns an unsubscribe function.
+    onRunProgress: (callback) => {
+      const listener = (_event, frame) => { try { callback(frame); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.AUTOMATION_RUN_PROGRESS, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.AUTOMATION_RUN_PROGRESS, listener);
     }
   }),
   developerApi: Object.freeze({

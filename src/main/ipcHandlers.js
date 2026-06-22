@@ -21,6 +21,9 @@ const {
   resolveBrowserExecutable,
   navigateSession,
   runCookieRobot,
+  runMacro,
+  startMacroRecording,
+  stopMacroRecording,
   humanType,
   launchSynchronizedSessions
 } = require('./browserEngine');
@@ -30,11 +33,13 @@ const localApi = require('./localApi');
 const totp = require('./totp');
 const permissions = require('./permissions');
 const payments = require('./payments');
-const { parseWorkbookFile, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
+const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
 const { generateFingerprint, normalizeBrand } = require('./fingerprintGenerator');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
+const { relay } = require('./remoteRelay');
+const { runParallelMacro } = require('./parallelRunner');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -64,6 +69,7 @@ const CHANNELS = Object.freeze({
   PROXY_ROTATION_SET: 'proxy:rotation-set',
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
+  PROXY_TEST_ALL: 'proxy:test-all',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -100,6 +106,8 @@ const CHANNELS = Object.freeze({
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
   SETTINGS_GET_GLOBAL: 'settings:get-global',
   SETTINGS_SET_GLOBAL: 'settings:set-global',
+  SETTINGS_GET_PROXY_POLICY: 'settings:get-proxy-policy',
+  SETTINGS_SET_PROXY_POLICY: 'settings:set-proxy-policy',
   MONETIZATION_GET_LINKS: 'monetization:get-links',
   MONETIZATION_SET_LINKS: 'monetization:set-links',
   EXTENSIONS_LIST: 'extensions:list',
@@ -176,6 +184,14 @@ const CHANNELS = Object.freeze({
   AUTOMATION_START_WARMER: 'automation:start-warmer',
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress', // main -> renderer stream
+  AUTOMATION_RUN_MACRO: 'automation:run-macro',
+  AUTOMATION_START_RECORDING: 'automation:start-recording',
+  AUTOMATION_STOP_RECORDING: 'automation:stop-recording',
+  AUTOMATION_GET_SCHEDULE: 'automation:get-schedule',
+  AUTOMATION_SET_SCHEDULE: 'automation:set-schedule',
+  AUTOMATION_RUN_PARALLEL: 'automation:run-parallel',
+  AUTOMATION_RUN_PROGRESS: 'automation:run-progress', // main -> renderer stream
+  AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
 
   // Softglaze Pro — local developer API
   API_TOKEN_LIST: 'api:token-list',
@@ -758,15 +774,75 @@ async function setProxyRotation(payload) {
 
 // Returns the next pool proxy for a launching profile, or null when rotation is
 // off / empty. Round-robin advances a persisted per-profile cursor.
+// ---------------------------------------------------------------------------
+// Proxy policy — HOW the rotation pool is applied to a launch (per profile, with
+// a global default). Stored under the `proxyPolicy` Setting as
+//   { default: 'each-launch' | 'sticky' | 'failover', byProfile: { [id]: mode } }
+//   • each-launch → rotate to the next pool proxy on every launch (legacy default)
+//   • sticky      → ignore the pool; keep the profile's own fixed proxy
+//   • failover    → rotate, but skip proxies whose last health check failed
+// This LAYERS on top of the existing rotation primitive (proxyRotation config);
+// it does not replace it.
+// ---------------------------------------------------------------------------
+const PROXY_POLICY_MODES = new Set(['each-launch', 'sticky', 'failover']);
+
+async function getProxyPolicy() {
+  const cfg = (await readSetting('proxyPolicy', {})) || {};
+  const def = PROXY_POLICY_MODES.has(cfg.default) ? cfg.default : 'each-launch';
+  const byProfile = (cfg.byProfile && typeof cfg.byProfile === 'object' && !Array.isArray(cfg.byProfile)) ? cfg.byProfile : {};
+  return { default: def, byProfile, modes: Array.from(PROXY_POLICY_MODES) };
+}
+
+async function setProxyPolicy(payload) {
+  const input = requireObject(payload);
+  const cur = await getProxyPolicy();
+  const next = { default: cur.default, byProfile: { ...cur.byProfile } };
+  if (input.default !== undefined) {
+    if (!PROXY_POLICY_MODES.has(input.default)) throw new Error('Invalid proxy policy mode.');
+    next.default = input.default;
+  }
+  // Optional per-profile override. mode === null/'' clears the override.
+  if (input.profileId !== undefined && input.profileId !== null) {
+    const pid = String(parseId(input.profileId));
+    if (input.mode === null || input.mode === '' || input.mode === undefined) {
+      delete next.byProfile[pid];
+    } else {
+      if (!PROXY_POLICY_MODES.has(input.mode)) throw new Error('Invalid proxy policy mode.');
+      next.byProfile[pid] = input.mode;
+    }
+  }
+  await writeSetting('proxyPolicy', next);
+  return next;
+}
+
+// Resolve the effective policy mode for a profile (per-profile override wins).
+async function resolveProxyPolicyMode(profileId) {
+  const cfg = await getProxyPolicy();
+  const byId = cfg.byProfile[profileId] ?? cfg.byProfile[String(profileId)];
+  return PROXY_POLICY_MODES.has(byId) ? byId : cfg.default;
+}
+
 async function pickRotationProxy(db, profileId) {
+  const policy = await resolveProxyPolicyMode(profileId);
+  // Sticky: never rotate — the profile keeps its own fixed proxy.
+  if (policy === 'sticky') return null;
+
   const all = (await readSetting('proxyRotation', {})) || {};
   const cfg = all[profileId];
   if (!cfg || !cfg.enabled || !Array.isArray(cfg.proxyIds) || cfg.proxyIds.length === 0) return null;
 
   const rows = await db.proxy.findMany({ where: { id: { in: cfg.proxyIds } } });
   // Preserve the configured order for stable round-robin; drop deleted ids.
-  const ordered = cfg.proxyIds.map((pid) => rows.find((p) => p.id === pid)).filter(Boolean);
+  let ordered = cfg.proxyIds.map((pid) => rows.find((p) => p.id === pid)).filter(Boolean);
   if (ordered.length === 0) return null;
+
+  // Failover: prefer proxies that passed their last health check. If every one is
+  // failing (or none has been checked yet), fall back to the full list so a launch
+  // is never blocked by a stale/empty health table.
+  if (policy === 'failover') {
+    const healthy = ordered.filter((p) => p.lastStatus !== 'fail');
+    if (healthy.length > 0) ordered = healthy;
+  }
 
   if (cfg.mode === 'random') return ordered[crypto.randomInt(ordered.length)];
 
@@ -2021,7 +2097,8 @@ async function launchProfile(payload) {
     profile, // full fingerprint config applied at launch
     browserSettings,
     captcha: globalSettings.captcha,
-    globalExtensionDirs
+    globalExtensionDirs,
+    geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
   });
 
   await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
@@ -2546,14 +2623,40 @@ async function writeSetting(key, value) {
 }
 
 async function runProxyHealthSweep() {
+  // Delegate to the concurrent sweeper (worker-capped) so the scheduled sweep and
+  // the manual "Test all" share one code path.
+  await runProxyHealthSweepConcurrent(8);
+}
+
+// Concurrent health sweep — runs up to `limit` checks at a time instead of one
+// after another. Reuses the existing single-proxy checker + health persistence,
+// so it does not reimplement connectivity logic. Returns { total, ok, fail }.
+async function runProxyHealthSweepConcurrent(limit = 8) {
   const db = getPrisma();
   const proxies = await db.proxy.findMany();
-  for (const proxy of proxies) {
-    try {
-      const result = await testProxyConnectivity({ type: proxy.type, host: proxy.host, port: proxy.port, username: proxy.username, password: proxy.password });
-      await persistProxyHealth(db, proxy.id, result);
-    } catch (e) { /* keep sweeping */ }
+  const summary = { total: proxies.length, ok: 0, fail: 0 };
+  if (proxies.length === 0) return summary;
+
+  const cap = Math.max(1, Math.min(16, Number(limit) || 8));
+  let cursor = 0;
+  async function worker() {
+    while (cursor < proxies.length) {
+      const proxy = proxies[cursor++];
+      try {
+        const result = await testProxyConnectivity({ type: proxy.type, host: proxy.host, port: proxy.port, username: proxy.username, password: proxy.password });
+        await persistProxyHealth(db, proxy.id, result);
+        if (result && result.success) summary.ok += 1; else summary.fail += 1;
+      } catch (e) { summary.fail += 1; }
+    }
   }
+  await Promise.all(Array.from({ length: Math.min(cap, proxies.length) }, () => worker()));
+  return summary;
+}
+
+// "Test all" action — concurrent health check of every proxy. No secrets are
+// returned (only a count summary), so it is safe for any role.
+async function testAllProxies() {
+  return runProxyHealthSweepConcurrent(8);
 }
 
 function stopProxyScheduler() {
@@ -2640,6 +2743,13 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     apiKey: '',
     solveRecaptchaV2: true,
     solveHcaptcha: true
+  },
+  // Geo auto-match: derive each profile's timezone / locale / WebRTC exit IP from
+  // its proxy's geo at launch. ON by default; turning this off makes profiles use
+  // only their manually-configured values (the per-field Real/Custom types still
+  // apply). See browserEngine launchProfileSession({ geoMatchEnabled }).
+  geoMatch: {
+    enabled: true
   }
 });
 
@@ -4285,6 +4395,261 @@ async function launchProfileById(id, startUrl) {
   return launchProfile({ id: parseId(id), startUrl: startUrl || 'about:blank' });
 }
 
+// ---------------------------------------------------------------------------
+// Softglaze Pro — Macro runner, visual recorder & scheduler.
+//
+// The execution + capture primitives live in browserEngine (runMacro /
+// startMacroRecording / stopMacroRecording) because they need the live session
+// page. These handlers add session management, persistence (reusing the Macro
+// model + automationHistory) and a setInterval scheduler mirroring the proxy
+// health-sweep timer pattern.
+// ---------------------------------------------------------------------------
+
+// Return the sessionId for a profile, launching it first if it isn't open.
+async function ensureProfileSession(profileId) {
+  const pid = String(profileId);
+  const open = listActiveSessions().find((s) => String(s.sessionId) === pid);
+  if (open) return String(open.sessionId);
+  const res = await launchProfileById(profileId, 'about:blank');
+  return res && res.sessionId ? String(res.sessionId) : pid;
+}
+
+async function runMacroOnProfile(payload) {
+  const input = requireObject(payload);
+  const macroId = parseId(input.macroId);
+  const profileId = parseId(input.profileId);
+  const db = getPrisma();
+  const macro = await db.macro.findUnique({ where: { id: macroId } });
+  if (!macro) throw new Error('Macro not found.');
+  let steps = [];
+  try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
+  if (!Array.isArray(steps) || steps.length === 0) throw new Error('This macro has no steps to run yet.');
+
+  const sessionId = await ensureProfileSession(profileId);
+  const result = await runMacro(sessionId, steps, { continueOnError: Boolean(input.continueOnError) });
+  await appendWarmerHistory({
+    type: 'macro',
+    label: macro.name,
+    profileId,
+    at: new Date().toISOString(),
+    level: result.ok ? 'SUCCESS' : 'WARN',
+    detail: `${macro.name}: ran ${result.ran}/${result.total} steps${result.ok ? '' : ' · stopped on error'}`
+  }).catch(() => {});
+  await logActivity(db, profileId, 'macro-run', `${macro.name} (${result.ran}/${result.total})`).catch(() => {});
+  return { ...result, sessionId };
+}
+
+async function startMacroRecordingOnProfile(payload) {
+  const input = requireObject(payload);
+  const profileId = parseId(input.profileId);
+  const sessionId = await ensureProfileSession(profileId);
+  const res = await startMacroRecording(sessionId);
+  return { ...res, sessionId, profileId };
+}
+
+async function stopMacroRecordingOnProfile(payload) {
+  const input = requireObject(payload);
+  const profileId = parseId(input.profileId);
+  const sessionId = String(input.sessionId || profileId);
+  const res = await stopMacroRecording(sessionId);
+  const steps = Array.isArray(res.steps) ? res.steps : [];
+  // Optionally persist the captured steps straight into a new macro.
+  const name = optionalString(input.saveAs);
+  let saved = null;
+  if (name) {
+    const created = await getPrisma().macro.create({
+      data: { name, description: optionalString(input.description) || 'Recorded macro', stepsJson: JSON.stringify(steps) }
+    });
+    saved = serializeMacro(created);
+  }
+  return { steps, count: steps.length, saved };
+}
+
+// --- Macro scheduler (mirrors the proxy health-sweep timer) ----------------
+let macroSchedulerTimer = null;
+
+async function runDueMacroSchedule() {
+  const cfg = await readSetting('macroSchedule', null);
+  if (!cfg || !cfg.enabled || !cfg.macroId || !Array.isArray(cfg.profileIds) || cfg.profileIds.length === 0) return;
+  for (const pid of cfg.profileIds) {
+    try {
+      await runMacroOnProfile({ macroId: cfg.macroId, profileId: pid, continueOnError: true });
+    } catch (e) {
+      await appendWarmerHistory({
+        type: 'macro', profileId: pid, at: new Date().toISOString(),
+        level: 'ERROR', detail: `Scheduled macro failed: ${(e && e.message) || 'error'}`
+      }).catch(() => {});
+    }
+  }
+}
+
+function stopMacroScheduler() {
+  if (macroSchedulerTimer) { clearInterval(macroSchedulerTimer); macroSchedulerTimer = null; }
+}
+
+function startMacroScheduler(minutes) {
+  stopMacroScheduler();
+  const ms = Math.max(1, Number(minutes) || 60) * 60000;
+  macroSchedulerTimer = setInterval(() => { runDueMacroSchedule().catch(() => {}); }, ms);
+  if (macroSchedulerTimer.unref) macroSchedulerTimer.unref();
+}
+
+async function getMacroSchedule() {
+  const cfg = (await readSetting('macroSchedule', null)) || {};
+  return {
+    enabled: Boolean(cfg.enabled),
+    macroId: cfg.macroId || null,
+    everyMinutes: Number(cfg.everyMinutes) || 60,
+    profileIds: Array.isArray(cfg.profileIds) ? cfg.profileIds : [],
+    running: Boolean(macroSchedulerTimer)
+  };
+}
+
+async function setMacroSchedule(payload) {
+  const input = requireObject(payload);
+  const enabled = Boolean(input.enabled);
+  const everyMinutes = Math.max(1, Number.parseInt(input.everyMinutes, 10) || 60);
+  const macroId = input.macroId != null && input.macroId !== '' ? parseId(input.macroId) : null;
+  const profileIds = Array.isArray(input.profileIds)
+    ? input.profileIds.map((x) => parseId(x)).filter((n) => Number.isInteger(n))
+    : [];
+  if (enabled && (!macroId || profileIds.length === 0)) {
+    throw new Error('Choose a macro and at least one profile before enabling the schedule.');
+  }
+  const cfg = { enabled, macroId, everyMinutes, profileIds };
+  await writeSetting('macroSchedule', cfg);
+  if (enabled) startMacroScheduler(everyMinutes); else stopMacroScheduler();
+  return { ...cfg, running: Boolean(macroSchedulerTimer) };
+}
+
+// ---------------------------------------------------------------------------
+// Softglaze Enterprise — Parallel macro runner + live (redacted) run console.
+//
+// Runs one macro across many profiles with a concurrency cap and streams a live,
+// per-profile status to the renderer. The orchestration + redaction live in the
+// pure `parallelRunner` module; here we inject the real launch / run / close
+// primitives and bridge the relay's sanitized frames to a progress channel
+// (mirroring the AI-warmer's warmer-progress stream). Optionally each profile is
+// bound to one spreadsheet row (data-driven) via {{Header}} placeholders.
+// ---------------------------------------------------------------------------
+
+// Parsed data-binding sheets, keyed by an opaque token (mirrors importPreviewCache).
+const dataRowsCache = new Map();
+
+async function pickDataFile() {
+  const selection = await dialog.showOpenDialog({
+    title: 'Select a spreadsheet to bind to this parallel run',
+    properties: ['openFile'],
+    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+  });
+  if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
+
+  const filePath = selection.filePaths[0];
+  const extension = path.extname(filePath).toLowerCase();
+  if (!['.xlsx', '.xls', '.csv'].includes(extension)) throw new Error('Unsupported data file type.');
+
+  const parsed = parseDataRows(filePath);
+  const token = crypto.randomUUID();
+  dataRowsCache.set(token, { createdAt: Date.now(), rows: parsed.rows });
+  // Keep the cache small — drop the oldest entry once we exceed a handful.
+  if (dataRowsCache.size > 20) {
+    let oldestKey = null; let oldestAt = Infinity;
+    for (const [k, v] of dataRowsCache) { if (v.createdAt < oldestAt) { oldestAt = v.createdAt; oldestKey = k; } }
+    if (oldestKey) dataRowsCache.delete(oldestKey);
+  }
+
+  // Return only structure (headers + count) to the renderer — never the cell
+  // values, so a bound sheet of credentials isn't surfaced unnecessarily.
+  return { cancelled: false, token, fileName: parsed.fileName, headers: parsed.headers, rowCount: parsed.rows.length };
+}
+
+async function runParallelMacroHandler(payload, event) {
+  const input = requireObject(payload);
+  const macroId = parseId(input.macroId);
+  const profileIds = parseIdArray(input.profileIds);
+  if (profileIds.length === 0) throw new Error('Select at least one profile for the parallel run.');
+  const concurrency = Math.max(1, Math.min(10, Number.parseInt(input.concurrency, 10) || 3));
+  const continueOnError = input.continueOnError !== false;
+  const closeWhenDone = input.closeWhenDone !== false;
+
+  const db = getPrisma();
+  const macro = await db.macro.findUnique({ where: { id: macroId } });
+  if (!macro) throw new Error('Macro not found.');
+  let steps = [];
+  try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
+  if (!Array.isArray(steps) || steps.length === 0) throw new Error('This macro has no steps to run yet.');
+
+  // Optional data binding: row i -> the i-th selected profile (order-based).
+  let rows = [];
+  if (input.dataToken) {
+    const cached = dataRowsCache.get(String(input.dataToken));
+    if (cached && Array.isArray(cached.rows)) rows = cached.rows;
+  }
+
+  const profiles = await db.profile.findMany({ where: { id: { in: profileIds } }, select: { id: true, title: true } });
+  const nameById = new Map(profiles.map((p) => [p.id, p.title || `Profile ${p.id}`]));
+  const items = profileIds.map((pid, i) => ({
+    profileId: pid,
+    profileName: nameById.get(pid) || `Profile ${pid}`,
+    vars: rows[i] || null
+  }));
+
+  const runId = `par-${Date.now()}`;
+
+  // Bridge sanitized relay frames for THIS run to the renderer. One global
+  // listener, filtered by runId, that removes itself on the run-level 'done'
+  // frame (with a finally backstop below). relay.emitFrame already routes every
+  // payload through sanitizeFrame before it reaches us.
+  relay.setMaxListeners(0);
+  const onFrame = (frame) => {
+    if (!frame || !frame.payload || frame.payload.runId !== runId) return;
+    try { event.sender.send(CHANNELS.AUTOMATION_RUN_PROGRESS, frame); } catch (e) { /* renderer gone */ }
+    if (frame.payload.state === 'done') { try { relay.off('frame', onFrame); } catch (e) { /* ignore */ } }
+  };
+  relay.on('frame', onFrame);
+
+  const deps = {
+    isOpen: (pid) => listActiveSessions().some((s) => String(s.sessionId) === String(pid)),
+    launch: (pid) => launchProfileById(pid, 'about:blank'),
+    runMacro: (sid, s, opts) => runMacro(sid, s, opts),
+    close: (sid) => closeProfileSession(String(sid)),
+    emit: (key, type, p) => relay.emitFrame(key, type, p)
+  };
+
+  // Fire-and-forget — the handler returns immediately; progress arrives via the
+  // stream above (the warmer pattern).
+  (async () => {
+    let summary = null;
+    try {
+      summary = await runParallelMacro({ runId, items, steps, concurrency, continueOnError, closeWhenDone }, deps);
+    } catch (e) {
+      // Guarantee a terminator so the renderer never hangs on "running".
+      try {
+        relay.emitFrame(runId, 'status', {
+          runId, state: 'done', total: items.length, passed: 0, failed: items.length,
+          error: (e && e.message) ? e.message : 'Parallel run failed.'
+        });
+      } catch (_) { /* ignore */ }
+    } finally {
+      try { relay.off('frame', onFrame); } catch (_) { /* ignore */ }
+    }
+    const s = summary || { total: items.length, passed: 0, failed: items.length };
+    const level = s.failed === 0 ? 'SUCCESS' : (s.passed === 0 ? 'ERROR' : 'WARN');
+    await appendWarmerHistory({
+      type: 'parallel',
+      label: macro.name,
+      runId,
+      profileIds,
+      at: new Date().toISOString(),
+      level,
+      detail: `${macro.name}: ${s.passed}/${s.total} profile(s) passed${rows.length ? ` · data-bound (${rows.length} row${rows.length === 1 ? '' : 's'})` : ''}`
+    }).catch(() => {});
+    await logActivity(db, profileIds[0], 'parallel-run', `${macro.name} (${s.passed}/${s.total})`).catch(() => {});
+  })();
+
+  return { started: true, runId, profileIds, concurrency, dataRows: rows.length };
+}
+
 async function warmOneProfile(profileId, durationMs, emit) {
   // Reuse an already-open session if the profile is running; otherwise launch.
   let sessionId = String(profileId);
@@ -4470,6 +4835,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_ROTATION_SET, setProxyRotation);
   registerHandler(CHANNELS.PROXY_SYNC_VENDOR_POOL, syncVendorPool);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
+  registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
@@ -4505,6 +4871,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.SETTINGS_SET_SCHEDULER, setProxyScheduler);
   registerHandler(CHANNELS.SETTINGS_GET_GLOBAL, getGlobalSettings);
   registerHandler(CHANNELS.SETTINGS_SET_GLOBAL, setGlobalSettings);
+  registerHandler(CHANNELS.SETTINGS_GET_PROXY_POLICY, getProxyPolicy);
+  registerHandler(CHANNELS.SETTINGS_SET_PROXY_POLICY, setProxyPolicy);
 
   // Monetization — affiliate links for the Proxy Provider marketplace
   registerHandler(CHANNELS.MONETIZATION_GET_LINKS, getAffiliateLinks);
@@ -4521,6 +4889,10 @@ function registerIpcHandlers() {
     try {
       const cfg = await readSetting('proxyScheduler', null);
       if (cfg && cfg.enabled) startProxyScheduler(cfg.minutes);
+    } catch (e) { /* ignore */ }
+    try {
+      const mcfg = await readSetting('macroSchedule', null);
+      if (mcfg && mcfg.enabled) startMacroScheduler(mcfg.everyMinutes);
     } catch (e) { /* ignore */ }
   })();
 
@@ -4548,6 +4920,13 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_DELETE_MACRO, deleteMacro);
   registerHandler(CHANNELS.AUTOMATION_START_WARMER, startWarmer);
   registerHandler(CHANNELS.AUTOMATION_GET_HISTORY, getAutomationHistory);
+  registerHandler(CHANNELS.AUTOMATION_RUN_MACRO, runMacroOnProfile);
+  registerHandler(CHANNELS.AUTOMATION_START_RECORDING, startMacroRecordingOnProfile);
+  registerHandler(CHANNELS.AUTOMATION_STOP_RECORDING, stopMacroRecordingOnProfile);
+  registerHandler(CHANNELS.AUTOMATION_GET_SCHEDULE, getMacroSchedule);
+  registerHandler(CHANNELS.AUTOMATION_SET_SCHEDULE, setMacroSchedule);
+  registerHandler(CHANNELS.AUTOMATION_RUN_PARALLEL, runParallelMacroHandler);
+  registerHandler(CHANNELS.AUTOMATION_PICK_DATA_FILE, pickDataFile);
 
   // Softglaze Pro — local developer API
   registerHandler(CHANNELS.API_TOKEN_LIST, listApiTokens);
@@ -4637,6 +5016,7 @@ function registerIpcHandlers() {
 
 async function shutdownIpcHandlers() {
   stopProxyScheduler();
+  stopMacroScheduler();
   await localApi.stop().catch(() => {});
   await closeAllProfileSessions();
   await firefoxEngine.closeAllFirefoxSessions().catch(() => {});
