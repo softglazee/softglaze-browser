@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CreditCard, ShieldCheck, Loader2, Check, ExternalLink, KeyRound, Wallet,
-  AlertTriangle, Sparkles, Users, Crown, ArrowUpRight, Settings2, X, Landmark
+  AlertTriangle, Sparkles, Users, Crown, ArrowUpRight, Settings2, X, Landmark,
+  FileText, Plus, Pencil, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -291,6 +292,9 @@ export default function BillingPage() {
       {msg && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{msg}</p>}
       {err && <p className="text-[12px] text-red-400">{err}</p>}
 
+      {/* Invoices */}
+      <InvoicesSection />
+
       {/* Payment-method picker */}
       {payFor && (() => {
         const sel = methods.find((m) => m.id === selMethod) || null;
@@ -377,6 +381,162 @@ export default function BillingPage() {
           <Settings2 className="w-3.5 h-3.5" /> Configure payment methods in Settings
         </button>
       )}
+    </div>
+  );
+}
+
+// Invoices — auto-captured payment receipts + manual entries. Owners see their own
+// tree's invoices read-only; the Super Admin sees all and can add/edit/delete.
+function InvoicesSection() {
+  const [data, setData] = useState(null); // { invoices, canEdit }
+  const [editing, setEditing] = useState(null); // null | 'new' | invoice
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    try { setData(await softglazeApi.invoices.list()); }
+    catch (e) { setErr(e.message || 'Could not load invoices.'); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function remove(id) {
+    if (!window.confirm('Delete this invoice?')) return;
+    setBusy(`del:${id}`); setErr('');
+    try { await softglazeApi.invoices.remove({ id }); await load(); }
+    catch (e) { setErr(e.message || 'Could not delete.'); }
+    finally { setBusy(''); }
+  }
+
+  if (!data) return null;
+  const { invoices, canEdit } = data;
+  const statusCls = (s) => s === 'paid' ? 'text-emerald-400' : s === 'refunded' ? 'text-red-400' : 'text-amber-400';
+
+  return (
+    <div className="rounded-xl bg-card border border-border p-5">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 24%, transparent)' }}><FileText className="w-5 h-5 text-blue-400" /></span>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Invoices</h3>
+            <p className="text-xs text-muted-foreground">{canEdit ? 'All payments across owners — auto-captured + manual.' : 'Your payment receipts.'}</p>
+          </div>
+        </div>
+        {canEdit && <button onClick={() => setEditing('new')} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 inline-flex items-center gap-1.5"><Plus className="w-4 h-4" /> Add</button>}
+      </div>
+
+      {err && <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+
+      {invoices.length === 0 ? (
+        <div className="py-8 grid place-items-center text-center text-[12.5px] text-muted-foreground">No invoices yet.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[12px]">
+            <thead className="text-muted-foreground text-left">
+              <tr className="border-b border-border/60">
+                <th className="py-2 pr-3 font-semibold">Date</th>
+                {canEdit && <th className="py-2 pr-3 font-semibold">Owner</th>}
+                <th className="py-2 pr-3 font-semibold">Amount</th>
+                <th className="py-2 pr-3 font-semibold">Method</th>
+                <th className="py-2 pr-3 font-semibold">Status</th>
+                <th className="py-2 pr-3 font-semibold">Reference</th>
+                {canEdit && <th className="py-2" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="text-foreground/90">
+                  <td className="py-2 pr-3 whitespace-nowrap">{inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString() : '—'}</td>
+                  {canEdit && <td className="py-2 pr-3">{inv.ownerName || (inv.ownerMemberId != null ? `#${inv.ownerMemberId}` : '—')}</td>}
+                  <td className="py-2 pr-3 whitespace-nowrap">{money(inv.amount, inv.currency)}</td>
+                  <td className="py-2 pr-3 capitalize">{inv.provider || '—'}{inv.source === 'manual' ? ' · manual' : ''}</td>
+                  <td className="py-2 pr-3"><span className={`capitalize ${statusCls(inv.status)}`}>{inv.status}</span></td>
+                  <td className="py-2 pr-3 font-mono text-[11px] text-muted-foreground truncate max-w-[140px]">{inv.reference || '—'}</td>
+                  {canEdit && (
+                    <td className="py-2 text-right whitespace-nowrap">
+                      <button onClick={() => setEditing(inv)} title="Edit" className="text-muted-foreground hover:text-foreground p-1"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => remove(inv.id)} disabled={busy === `del:${inv.id}`} title="Delete" className="text-muted-foreground hover:text-red-400 p-1">{busy === `del:${inv.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}</button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editing && <InvoiceForm invoice={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+    </div>
+  );
+}
+
+function InvoiceForm({ invoice, onClose, onSaved }) {
+  const [ownerId, setOwnerId] = useState(invoice?.ownerMemberId ?? '');
+  const [amount, setAmount] = useState(invoice?.amount ?? '');
+  const [currency, setCurrency] = useState(invoice?.currency ?? 'USD');
+  const [provider, setProvider] = useState(invoice?.provider ?? 'manual');
+  const [status, setStatus] = useState(invoice?.status ?? 'paid');
+  const [reference, setReference] = useState(invoice?.reference ?? '');
+  const [tier, setTier] = useState(invoice?.tier ?? '');
+  const [months, setMonths] = useState(invoice?.months ?? '');
+  const [note, setNote] = useState(invoice?.note ?? '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function save() {
+    setErr('');
+    if (amount === '' || Number(amount) < 0) { setErr('Enter a valid amount.'); return; }
+    setBusy(true);
+    try {
+      const payload = {
+        ownerId: ownerId === '' ? null : Number(ownerId),
+        amount: String(amount), currency, provider, status, reference,
+        tier: tier || null, months: months === '' ? null : Number(months), note
+      };
+      if (invoice) await softglazeApi.invoices.update({ id: invoice.id, ...payload });
+      else await softglazeApi.invoices.create(payload);
+      onSaved();
+    } catch (e) { setErr(e.message || 'Could not save invoice.'); setBusy(false); }
+  }
+
+  const inputCls = 'w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[12.5px] text-foreground outline-none focus:border-primary';
+  const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1';
+
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
+      <div className="w-full max-w-md rounded-xl bg-card border border-border shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">{invoice ? 'Edit invoice' : 'Add invoice'}</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 grid grid-cols-2 gap-3">
+          <div><label className={labelCls}>Owner member ID</label><input className={inputCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)} placeholder="(optional)" /></div>
+          <div><label className={labelCls}>Amount</label><input className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5" /></div>
+          <div><label className={labelCls}>Currency</label><input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value)} /></div>
+          <div><label className={labelCls}>Method</label>
+            <select className={inputCls} value={provider} onChange={(e) => setProvider(e.target.value)}>
+              {['manual', 'cryptomus', 'stripe', 'paypal', 'wise'].map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div><label className={labelCls}>Status</label>
+            <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value)}>
+              {['paid', 'pending', 'refunded'].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><label className={labelCls}>Tier</label>
+            <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value)}>
+              <option value="">—</option><option value="pro">pro</option><option value="enterprise">enterprise</option>
+            </select>
+          </div>
+          <div><label className={labelCls}>Months</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} placeholder="1" /></div>
+          <div><label className={labelCls}>Reference</label><input className={inputCls} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="txn / code" /></div>
+          <div className="col-span-2"><label className={labelCls}>Note</label><input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} /></div>
+          {err && <p className="col-span-2 text-[12px] text-red-400">{err}</p>}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
+          <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>
+          <button onClick={save} disabled={busy} className="h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 disabled:opacity-60 inline-flex items-center gap-2">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Users, X, Loader2, Trash2, KeyRound, Activity, ClipboardList,
   Crown, UserCog, UserCheck, User, Clock, Copy, Check, Mail, Link2, ShieldCheck,
-  Download, FolderInput, Search, Lock, CreditCard, RotateCcw
+  Download, FolderInput, Search, Lock, CreditCard, RotateCcw, Layers
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -388,6 +388,15 @@ function MemberModal({ member, me, onClose, onSaved }) {
     catch (e) { setErr(e.message || 'Could not remove member.'); setBusy(false); }
   }
 
+  // Reset this member's limits + features to their role's built-in defaults.
+  async function revertPerms() {
+    if (!window.confirm(`Reset ${member.name}'s limits and features to the defaults for their role?`)) return;
+    setBusy(true); setErr('');
+    try { const updated = await softglazeApi.members.resetPermissions(member.id); setPerms(updated.permissions); }
+    catch (e) { setErr(e.message || 'Could not reset permissions.'); }
+    finally { setBusy(false); }
+  }
+
   // Invite-code result screen.
   if (invite) {
     return (
@@ -474,9 +483,25 @@ function MemberModal({ member, me, onClose, onSaved }) {
           </div>
         )}
 
-        {/* Permissions + limits */}
-        {(isNew ? allowed.length > 0 : member.role !== 'OWNER') && (
-          <PermissionEditor role={isNew ? role : member.role} value={perms} onChange={setPerms} granter={granter} />
+        {/* Allocation rollup — how much of this member's quota is handed to their team */}
+        {!isNew && member.allocation && member.allocation.childCount > 0 && (
+          <div className="rounded-xl border border-border bg-elevated/40 p-3 space-y-1.5">
+            <div className="flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-primary" /><span className="text-[12px] font-semibold text-foreground">Allocated to {member.allocation.childCount} sub-member{member.allocation.childCount === 1 ? '' : 's'}</span></div>
+            <AllocRow label="Profiles" roll={member.allocation.profiles} />
+            <AllocRow label="Proxies" roll={member.allocation.proxies} />
+          </div>
+        )}
+
+        {/* Permissions + limits — editable for sub-members, and for OWNERs when a Super Admin is editing */}
+        {(isNew ? allowed.length > 0 : (member.role !== 'OWNER' || me?.role === 'SUPER_ADMIN')) && (
+          <div className="space-y-2">
+            <PermissionEditor role={isNew ? role : member.role} value={perms} onChange={setPerms} granter={granter} />
+            {!isNew && (
+              <button onClick={revertPerms} disabled={busy} className="text-[11.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 disabled:opacity-50">
+                <RotateCcw className="w-3.5 h-3.5" /> Revert to role defaults
+              </button>
+            )}
+          </div>
         )}
 
         <div>
@@ -615,6 +640,22 @@ function Shell({ children, onClose, title, icon: Icon }) {
         </div>
         {children}
       </div>
+    </div>
+  );
+}
+
+// One line of the allocation rollup: how much of a cap is handed to sub-members.
+function AllocRow({ label, roll }) {
+  const cap = roll.cap;
+  const capLabel = cap === -1 ? '∞' : cap;
+  const remaining = cap === -1 ? '∞' : Math.max(0, cap - roll.allocated);
+  return (
+    <div className="flex items-center justify-between text-[11.5px]">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-foreground">
+        {roll.allocated}{roll.unlimitedKids ? ` +${roll.unlimitedKids}×∞` : ''} of {capLabel} allocated
+        <span className="text-muted-foreground"> · {remaining} left</span>
+      </span>
     </div>
   );
 }
