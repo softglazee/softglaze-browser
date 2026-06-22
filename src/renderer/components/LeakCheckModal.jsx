@@ -9,6 +9,50 @@ const STATUS = {
   fail: { color: 'text-red-400', bg: 'bg-red-500/5 border-red-500/20', Icon: XCircle }
 };
 
+const GRADE_STYLE = {
+  A: { ring: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30', text: 'text-emerald-400' },
+  B: { ring: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30', text: 'text-emerald-400' },
+  C: { ring: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30', text: 'text-amber-400' },
+  D: { ring: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30', text: 'text-orange-400' },
+  F: { ring: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30', text: 'text-red-400' }
+};
+
+// Circular 0-100 trust score with letter grade. The ring fills proportionally
+// to the score and is coloured by grade band.
+function ScoreBadge({ score }) {
+  if (!score) return null;
+  const style = GRADE_STYLE[score.grade] || GRADE_STYLE.F;
+  const R = 26;
+  const C = 2 * Math.PI * R;
+  const dash = (Math.max(0, Math.min(100, score.score)) / 100) * C;
+  return (
+    <div className={`flex items-center gap-4 rounded border px-4 py-3 ${style.bg}`}>
+      <div className="relative w-[68px] h-[68px] shrink-0">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 68 68">
+          <circle cx="34" cy="34" r={R} fill="none" stroke="currentColor" strokeWidth="6" className="text-border" />
+          <circle
+            cx="34" cy="34" r={R} fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"
+            strokeDasharray={`${dash} ${C}`} className={style.ring}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-lg font-bold leading-none ${style.text}`}>{score.score}</span>
+          <span className="text-[9px] text-muted uppercase tracking-wider">/ 100</span>
+        </div>
+      </div>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-xl font-bold ${style.text}`}>{score.grade}</span>
+          <span className={`text-sm font-semibold ${style.text}`}>{score.label}</span>
+        </div>
+        <p className="text-xs text-muted mt-1">
+          Trust score from {score.summary.pass} pass · {score.summary.warn} warn · {score.summary.fail} fail.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function CheckRow({ c }) {
   const cfg = STATUS[c.status] || STATUS.warn;
   const Icon = cfg.Icon;
@@ -17,7 +61,7 @@ function CheckRow({ c }) {
       <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${cfg.color}`} />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-zinc-100">{c.label}</span>
+          <span className="text-sm font-semibold text-foreground">{c.label}</span>
           <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border border-current ${cfg.color}`}>{c.status}</span>
         </div>
         <p className="text-xs text-muted mt-1 break-words leading-relaxed">{c.detail}</p>
@@ -60,17 +104,17 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
               <ShieldCheck className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-zinc-100 font-bold text-sm leading-tight tracking-wide uppercase">Leak Check Analysis</h2>
+              <h2 className="text-foreground font-bold text-sm leading-tight tracking-wide uppercase">Leak Check Analysis</h2>
               <p className="text-xs text-muted leading-tight mt-0.5">{profileName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-muted hover:text-zinc-100 rounded hover:bg-muted-dark transition"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 text-muted hover:text-foreground rounded hover:bg-muted-dark transition"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Static analysis */}
           <div>
-            <h3 className="text-xs font-bold text-zinc-200 uppercase tracking-wider mb-3">Configuration Analysis</h3>
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">Configuration Analysis</h3>
             {loading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 bg-background border border-border rounded shadow-inner">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -79,8 +123,9 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
             ) : error ? (
               <div className="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
             ) : report ? (
-              <div className="animate-in fade-in slide-in-from-bottom-2">
-                <div className="flex items-center gap-2 mb-4 text-xs font-semibold tracking-wide bg-surface p-2 rounded border border-border w-fit">
+              <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4">
+                <ScoreBadge score={report.score} />
+                <div className="flex items-center gap-2 text-xs font-semibold tracking-wide bg-surface p-2 rounded border border-border w-fit">
                   <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">{report.summary.pass} Pass</span>
                   <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">{report.summary.warn} Warn</span>
                   <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded">{report.summary.fail} Fail</span>
@@ -93,7 +138,7 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
           {/* Live test */}
           <div className="border-t border-border pt-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                 <Radio className="w-4 h-4 text-primary animate-pulse" /> Live Test (Running Browser)
               </h3>
               <Button size="sm" variant="primary" disabled={liveLoading} onClick={runLive}>
@@ -106,17 +151,18 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
             {liveError && <div className="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 mb-4">{liveError}</div>}
             {live && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                <ScoreBadge score={live.score} />
                 <div className="space-y-3">{live.checks.map((c) => <CheckRow key={c.key} c={c} />)}</div>
                 
-                <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider mt-6 mb-2">Raw Extracted Data</h4>
-                <div className="rounded border border-border bg-background p-4 text-xs font-mono text-zinc-300 space-y-2 shadow-inner">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mt-6 mb-2">Raw Extracted Data</h4>
+                <div className="rounded border border-border bg-background p-4 text-xs font-mono text-muted-foreground space-y-2 shadow-inner">
                   <div className="flex gap-2"><span className="text-muted w-20 shrink-0">exit ip:</span> <span className="text-primary">{live.exit?.ip || '—'}{live.exit?.country ? ` (${live.exit.country})` : ''}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">webrtc:</span> <span className="text-zinc-100">{live.webrtcIps.length ? live.webrtcIps.join(', ') : 'none'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">timezone:</span> <span className="text-zinc-100">{live.env?.timezone || '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">languages:</span> <span className="text-zinc-100">{(live.env?.languages || []).join(', ') || '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">ua:</span> <span className="text-zinc-100 break-all">{live.env?.userAgent || '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">cores/mem:</span> <span className="text-zinc-100">{live.env?.hardwareConcurrency ?? '—'} / {live.env?.deviceMemory ?? '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">screen:</span> <span className="text-zinc-100">{live.env?.screen ? `${live.env.screen.width}x${live.env.screen.height}` : '—'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">webrtc:</span> <span className="text-foreground">{live.webrtcIps.length ? live.webrtcIps.join(', ') : 'none'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">timezone:</span> <span className="text-foreground">{live.env?.timezone || '—'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">languages:</span> <span className="text-foreground">{(live.env?.languages || []).join(', ') || '—'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">ua:</span> <span className="text-foreground break-all">{live.env?.userAgent || '—'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">cores/mem:</span> <span className="text-foreground">{live.env?.hardwareConcurrency ?? '—'} / {live.env?.deviceMemory ?? '—'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">screen:</span> <span className="text-foreground">{live.env?.screen ? `${live.env.screen.width}x${live.env.screen.height}` : '—'}</span></div>
                 </div>
               </div>
             )}

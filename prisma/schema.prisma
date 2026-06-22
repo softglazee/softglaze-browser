@@ -26,6 +26,7 @@ model Proxy {
   port      Int
   username  String?
   password  String?
+  rotationUrl String? // optional vendor IP-rotation trigger link (mobile/residential proxies)
   createdAt DateTime  @default(now())
 
   // Health (populated by the proxy checker)
@@ -34,10 +35,13 @@ model Proxy {
   lastCountry   String?
   lastCheckedAt DateTime?
 
+  ownerMemberId Int? // member who added this proxy (for per-member quotas)
+
   profiles Profile[]
 
   @@index([host, port])
   @@index([createdAt])
+  @@index([ownerMemberId])
   @@unique([type, host, port, username])
 }
 
@@ -84,13 +88,86 @@ model Member {
   role         String    @default("OPERATOR") // OWNER | ADMIN | MANAGER | OPERATOR
   color        String?   @default("#3DC6DA")
   initials     String?
+  avatarUrl    String? // base64 data URI or local file path for the profile picture
   pinHash      String?
   pinSalt      String?
   status       String    @default("active") // active | suspended
+
+  // Hierarchy + per-member auth + permissions (RBAC)
+  parentMemberId  Int? // who invited/created this member (null = top of a tree)
+  passwordHash    String? // per-member login (sub-members sign in independently)
+  passwordSalt    String?
+  permissionsJson String? // JSON: limits (maxProfiles/…) + feature flags granted by parent
+  inviteCode      String? // pending-invite code, consumed on register
+  inviteStatus    String?   @default("active") // pending | active
+
   createdAt    DateTime  @default(now())
   lastActiveAt DateTime?
 
   @@index([createdAt])
+  @@index([parentMemberId])
+  @@index([inviteCode])
+}
+
+model License {
+  id            Int       @id @default(autoincrement())
+  ownerMemberId Int?
+  type          String    @default("trial") // trial | paid
+  purchaseCode  String?
+  status        String    @default("active") // active | expired
+  trialEndsAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([ownerMemberId])
+}
+
+model IpProvider {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  apiKey       String?
+  secretKey    String?
+  status       String   @default("DISABLED") // ENABLED | DISABLED
+  referralLink String?
+  updatedAt    DateTime @updatedAt @default(now())
+}
+
+// --- Softglaze Pro: No-Code Macro Automation ---
+model Macro {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  stepsJson   String   @default("[]") // JSON array of the visual workflow steps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
+
+  @@index([updatedAt])
+}
+
+// --- Softglaze Pro: Local Developer API tokens ---
+// Only the SHA-256 hash of a token is stored; the plaintext `sg_…` value is
+// shown to the user exactly once at generation time and never persisted.
+model ApiToken {
+  id         Int       @id @default(autoincrement())
+  name       String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([tokenHash])
+}
+
+// --- Team Extensions: Chrome Web Store extensions downloaded as raw .crx,
+// unzipped locally, and mounted into launched profiles via --load-extension. ---
+model Extension {
+  id        String   @id @default(uuid())
+  name      String
+  chromeId  String   @unique // 32-char Chrome Web Store ID
+  version   String?
+  localPath String // absolute path to the unzipped extension folder
+  isGlobal  Boolean  @default(true) // inject into every launched profile
+  createdAt DateTime @default(now())
+
+  @@index([isGlobal])
 }
 
 model Profile {
@@ -111,12 +188,17 @@ model Profile {
 
   // Identity / environment
   browserCore      String?
+  browserBrand     String? // Chromium-family identity: Chrome|Edge|Brave|Opera|Vivaldi|Yandex
   browserVersion   String?
   os               String?
   osVersion        String?
   userAgent        String? @default("Auto")
   startupUrls      String?
   platformAccounts String? // JSON string
+
+  // Softglaze Premium — native 2FA vault. Base32 TOTP secret seed for the
+  // account this profile signs into; used to generate live 6-digit codes.
+  twoFactorSeed String?
 
   // WebRTC / timezone / geolocation
   webrtc         String?
@@ -170,6 +252,10 @@ model Profile {
   hardwareAcceleration String?
   disableTls           String?
   launchArgs           String?
+
+  // HTTP/3 (QUIC) opt-in. Default false = QUIC disabled when proxied (max stealth,
+  // no unproxied-UDP leak). Enable only on trusted UDP-isolating proxies (SOCKS5).
+  enableQuic Boolean @default(false)
 
   // Advanced (extensions / sync / browser settings)
   advancedExt         String?

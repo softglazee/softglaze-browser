@@ -110,14 +110,36 @@ async function applyMigrations(db) {
       
       if (fs.existsSync(sqlPath)) {
         const sqlContent = fs.readFileSync(sqlPath, 'utf8');
-        
-        // Split by statement to execute sequentially
-        const statements = sqlContent.split(';').map(s => s.trim()).filter(s => s.length > 0);
+
+        // Strip full-line SQL comments first — a comment-bearing statement makes
+        // the SQLite driver throw SQLITE_MISUSE (code 21). Then split into single
+        // statements (the driver executes one statement per call).
+        const cleaned = sqlContent
+          .split(/\r?\n/)
+          .filter((line) => !line.trim().startsWith('--'))
+          .join('\n');
+        const statements = cleaned.split(';').map(s => s.trim()).filter(s => s.length > 0);
         
         // Execute inside a transaction
         await db.$transaction(async (tx) => {
           for (const statement of statements) {
-            await tx.$executeRawUnsafe(statement + ';');
+            try {
+              await tx.$executeRawUnsafe(statement + ';');
+            } catch (e) {
+              // Idempotent DDL tolerance: a column/table/index that already exists
+              // is the desired end state, not an error. This happens because the
+              // schema was grown with `prisma db push` during development — the live
+              // table already has columns a backfill migration also adds. SQLite
+              // can't express "ADD COLUMN IF NOT EXISTS", so we swallow exactly these
+              // and re-throw everything else (real errors still stop the run). The
+              // "duplicate column"/"already exists" errors don't abort the SQLite
+              // transaction, so the remaining statements still apply.
+              const msg = String((e && e.message) || e).toLowerCase();
+              if (msg.includes('duplicate column name') || msg.includes('already exists')) {
+                continue;
+              }
+              throw e;
+            }
           }
           // Record successful application
           await tx.$executeRawUnsafe(`INSERT INTO "_AppMigrations" ("id") VALUES ('${folder}');`);

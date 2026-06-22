@@ -24,26 +24,71 @@ const { configureDatabaseEnv, bootstrapDatabase } = require('./database');
 
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
+// Guards the graceful-shutdown handshake in `before-quit` (see below) so the
+// async cleanup runs exactly once and the real quit is allowed through after.
+let isCleaningUp = false;
+
+// CRITICAL safety net: without these, ANY unhandled promise rejection or stray
+// exception in the main process tears down Electron — and because the launched
+// profile browsers are puppeteer child processes, they die with it ("the browser
+// closes by itself" when opening a new tab). Log and keep running instead.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
 
 // --- ORPHANED PROCESS CLEANUP ---
+// Stale profile windows are a real trap: when the app is killed (e.g. Ctrl+C in
+// dev) the launched Chrome windows survive, but puppeteer's 'disconnected' handler
+// removes their PIDs from the tracking file during teardown — so they become
+// UNTRACKED orphans that the PID-file cleanup can never find. They keep running the
+// OLD fingerprint injection, and re-testing one looks like "the fix didn't work".
+// We therefore clean up in TWO ways on startup: the PID file (fast path) AND a
+// command-line scan that finds any Chrome whose --user-data-dir is under our profile
+// root, regardless of whether it was ever tracked. The scan only matches Softglaze
+// profile processes, so the user's personal Chrome is never touched, and it runs
+// before any profile of THIS instance launches, so it can't kill a live session.
 function killOrphanedBrowsers() {
   const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
   if (fs.existsSync(PID_FILE)) {
     try {
       const pids = JSON.parse(fs.readFileSync(PID_FILE, 'utf8'));
-      console.log(`[Startup] Found ${pids.length} potentially orphaned browser processes. Cleaning up...`);
-      
-      pids.forEach(pid => {
-        try {
-          process.kill(pid, 9); // Force kill
-        } catch (e) {
-          // If process doesn't exist, process.kill throws. We can safely ignore it.
-        }
-      });
+      if (pids.length) {
+        console.log(`[Startup] Found ${pids.length} tracked browser process(es). Cleaning up...`);
+        pids.forEach(pid => { try { process.kill(pid, 9); } catch (e) { /* already gone */ } });
+      }
       fs.unlinkSync(PID_FILE); // Clear the file after cleanup
     } catch (e) {
-      console.error('[Startup] Failed to cleanup orphaned processes', e);
+      console.error('[Startup] Failed to cleanup tracked processes', e);
     }
+  }
+  killOrphanedBrowsersByCommandLine();
+}
+
+// Force-kill any Chrome whose command line references our per-profile data dir
+// (the path always contains "softglaze_profiles"). Catches the untracked orphans
+// the PID file misses. Windows-only; a no-op (and harmless) elsewhere.
+function killOrphanedBrowsersByCommandLine() {
+  if (process.platform !== 'win32') return;
+  try {
+    const { execFileSync } = require('node:child_process');
+    const ps = "Get-CimInstance Win32_Process -Filter \"name='chrome.exe'\" | "
+      + "Where-Object { $_.CommandLine -match 'softglaze_profiles' } | "
+      + "Select-Object -ExpandProperty ProcessId";
+    const out = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps],
+      { encoding: 'utf8', timeout: 12000, windowsHide: true });
+    const pids = [...new Set(out.split(/\r?\n/).map((s) => parseInt(s.trim(), 10))
+      .filter((n) => Number.isInteger(n) && n > 0))];
+    if (!pids.length) return;
+    console.log(`[Startup] Found ${pids.length} stale Softglaze profile process(es) by command line. Cleaning up...`);
+    const args = [];
+    pids.forEach((pid) => { args.push('/PID', String(pid)); });
+    args.push('/T', '/F');
+    try { execFileSync('taskkill', args, { timeout: 15000, windowsHide: true, stdio: 'ignore' }); } catch (e) { /* some PIDs may already be gone */ }
+  } catch (e) {
+    console.error('[Startup] Command-line orphan scan failed', e);
   }
 }
 // --------------------------------
@@ -85,24 +130,37 @@ function createMainWindow() {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     try {
       const parsedUrl = new URL(url);
-      if (['https:', 'http:', 'mailto:'].includes(parsedUrl.protocol)) shell.openExternal(url);
+      if (['https:', 'http:', 'mailto:'].includes(parsedUrl.protocol)) {
+        // openExternal returns a promise; an un-awaited rejection (bad handler,
+        // missing app) would surface as an unhandledRejection. Swallow it here.
+        shell.openExternal(url).catch((err) => console.error('[window-open] openExternal failed', err));
+      }
     } catch {
       // Ignore malformed external URLs.
     }
     return { action: 'deny' };
   });
 
+  // Keep the SPA penned inside its own origin: same-origin navigations (in-app
+  // routing + Vite HMR) pass through; anything else is blocked and handed to the
+  // system browser. Validation + preventDefault are fully synchronous, and the
+  // only async call (openExternal) is caught so newer Electron can't raise an
+  // unhandled promise rejection here.
   mainWindow.webContents.on('will-navigate', (event, targetUrl) => {
-    const currentUrl = mainWindow.webContents.getURL();
+    let target;
     try {
-      const current = new URL(currentUrl);
-      const target = new URL(targetUrl);
-      if (current.origin !== target.origin) {
-        event.preventDefault();
-        shell.openExternal(targetUrl);
-      }
+      target = new URL(targetUrl);
     } catch {
-      event.preventDefault();
+      event.preventDefault(); // malformed target — never navigate the shell to it
+      return;
+    }
+    let current = null;
+    try { current = new URL(mainWindow.webContents.getURL()); } catch { current = null; }
+    if (current && current.origin === target.origin) return; // allow in-app nav
+
+    event.preventDefault();
+    if (['http:', 'https:', 'mailto:'].includes(target.protocol)) {
+      shell.openExternal(targetUrl).catch((err) => console.error('[will-navigate] openExternal failed', err));
     }
   });
 
@@ -137,6 +195,12 @@ app.whenReady().then(async () => {
 
   createMainWindow();
 
+  // One-time, best-effort: auto-install the recommended team extensions
+  // (download + unzip) in the background so the window opens immediately.
+  require('./extensionManager').seedRecommendedExtensions().catch((e) => {
+    console.warn('[ext-seed] recommended extension seeding failed:', e && e.message);
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
@@ -146,11 +210,31 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', async () => {
+// Graceful shutdown handshake. Electron does NOT await async `before-quit`
+// listeners — the app would exit mid-flush, risking a corrupt SQLite file. So on
+// the first pass we cancel the quit, run cleanup to completion, then re-issue the
+// quit (the `isCleaningUp` guard lets the second pass straight through).
+app.on('before-quit', async (event) => {
+  if (isCleaningUp) return; // second pass — allow the real quit
+  event.preventDefault();
+  isCleaningUp = true;
+
   try {
     const { shutdownIpcHandlers } = require('./ipcHandlers');
-    await shutdownIpcHandlers();
-  } catch {
-    // App shutdown should not be blocked by cleanup failures.
+    await shutdownIpcHandlers(); // stops schedulers/API/sessions and disconnects Prisma
+  } catch (err) {
+    console.error('[before-quit] IPC shutdown failed', err);
   }
+
+  try {
+    // Belt-and-suspenders: guarantee the DB handle is closed even if the step
+    // above bailed before reaching its own disconnect. disconnectPrisma is
+    // idempotent (no-ops once the client is null), so a double call is safe.
+    const { disconnectPrisma } = require('./database');
+    await disconnectPrisma();
+  } catch (err) {
+    console.error('[before-quit] Prisma disconnect failed', err);
+  }
+
+  app.quit();
 });

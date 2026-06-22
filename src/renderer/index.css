@@ -1,48 +1,208 @@
 @import "tailwindcss";
 
-@theme {
-  /* Ultra-Modern Dark Theme Colors */
-  --color-background: #09090b; /* Deepest black/gray */
-  --color-surface: #121214;    /* Slightly lighter for sidebars/panels */
-  --color-card: #18181b;       /* For profile cards and modals */
-  --color-border: #27272a;     /* Clean, subtle borders */
-  
-  --color-primary: #6366f1;    /* Vibrant Indigo */
-  --color-primary-hover: #4f46e5;
-  
-  --color-muted: #a1a1aa;      /* Secondary text */
-  --color-muted-dark: #3f3f46; /* Disabled states / scrollbars */
+/* ------------------------------------------------------------------ */
+/*  SOFTGLAZE DESIGN SYSTEM — shadcn token model, matched 1:1 to the    */
+/*  Figma export (figmadesign-softglaze-browser/src/styles/theme.css).  */
+/*  Components use the standard shadcn utility classes (bg-card,         */
+/*  text-foreground, text-muted-foreground, border-border, bg-sidebar,  */
+/*  text-primary, bg-secondary, chart-1…5). Flipping the .light class    */
+/*  on <html> re-themes the whole app at runtime — text stays legible    */
+/*  in BOTH modes because every surface/foreground pair is defined here. */
+/* ------------------------------------------------------------------ */
 
-  /* Custom Glow Shadow */
-  --shadow-glow: 0 0 20px -5px var(--color-primary);
+/* DARK — the SoftGlaze near-black palette from the Figma */
+:root,
+.dark {
+  --background: #07090f;
+  --foreground: #e8eaf0;
+  --card: #0d1018;
+  --card-foreground: #e8eaf0;
+  --popover: #0d1018;
+  --popover-foreground: #e8eaf0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1a1f2e;
+  --secondary-foreground: #e8eaf0;
+  --muted: #1a1f2e;
+  --muted-foreground: #8b94a7;
+  --accent: #7c3aed;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --input: #141720;
+  --input-background: #141720;
+  --switch-background: #2d3348;
+  --ring: #3b82f6;
+  --elevated: #141823;
+  --surface: #0a0c14;        /* compat: panels/tables (= old bg-surface) */
+  --muted-dim: #5a6275;      /* compat: dimmest text (= old text-muted-dark) */
+  --chart-1: #3b82f6;
+  --chart-2: #8b5cf6;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --sidebar: #0a0c14;
+  --sidebar-foreground: #e8eaf0;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #141720;
+  --sidebar-accent-foreground: #e8eaf0;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --sidebar-ring: #3b82f6;
+  --glow: 0 0 24px -6px rgba(59, 130, 246, 0.55);
+}
 
-  /* Fonts (Matching what you just installed) */
+/* LIGHT — a clean, high-contrast complement (Figma ships dark only) */
+.light {
+  --background: #f4f6fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f7;
+  --secondary-foreground: #1e293b;
+  --muted: #eef1f7;
+  --muted-foreground: #64748b;
+  --accent: #7c3aed;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #059669;
+  --warning: #d97706;
+  --border: rgba(15, 23, 42, 0.10);
+  --border-strong: rgba(15, 23, 42, 0.16);
+  --input: #ffffff;
+  --input-background: #ffffff;
+  --switch-background: #cbd5e1;
+  --ring: #2563eb;
+  --elevated: #f1f4f9;
+  --surface: #ffffff;        /* compat: panels/tables (= old bg-surface) */
+  --muted-dim: #94a3b8;      /* compat: dimmest text (= old text-muted-dark) */
+  --chart-1: #2563eb;
+  --chart-2: #7c3aed;
+  --chart-3: #059669;
+  --chart-4: #d97706;
+  --chart-5: #dc2626;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef1f7;
+  --sidebar-accent-foreground: #1e293b;
+  --sidebar-border: rgba(15, 23, 42, 0.08);
+  --sidebar-ring: #2563eb;
+  --glow: 0 6px 20px -8px rgba(37, 99, 235, 0.45);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  /* NOTE: the app uses `text-muted` for secondary TEXT (not a surface — bg-muted
+     is unused), so `muted` is aliased to the readable foreground-gray. Surfaces
+     use bg-secondary / bg-card / bg-surface. */
+  --color-muted: var(--muted-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-elevated: var(--elevated);
+
+  /* ---- Backwards-compat aliases for the existing class vocabulary ----      */
+  /* These let the whole app theme correctly in BOTH light and dark without    */
+  /* touching every call site. text-muted/text-muted-dark = secondary/dim text;*/
+  /* bg-surface = panel; primary-hover = darker primary. (Prefer the shadcn     */
+  /* names — text-muted-foreground, bg-card — in new/Figma-matched code.)       */
+  --color-surface: var(--surface);
+  --color-muted-dark: var(--muted-dim);
+  --color-primary-hover: color-mix(in srgb, var(--primary) 82%, #000);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --shadow-glow: var(--glow);
+
+  /* Tighter radii ("less border size") — crisp, modern corners */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+
+  /* Fonts (bundled locally via @fontsource — no network needed) */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Reusable animations */
+  --animate-fade-up: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-in: fadeIn 0.3s ease both;
+  --animate-scale-in: scaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
 @layer base {
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; border-color: var(--border); }
   html, body, #root { width: 100%; height: 100%; margin: 0; }
-  
+  html { font-size: 15px; } /* larger base font per the brief */
+
   body {
-    background-color: var(--color-background);
-    color: #f4f4f5; /* Zinc 100 */
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overflow: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   button, input, textarea, select { font: inherit; }
 
-  /* Premium Custom Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  /* Theme-aware custom scrollbar */
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { 
-    background: var(--color-muted-dark); 
-    border-radius: 999px; 
-  }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+  ::-webkit-scrollbar-thumb { background: var(--switch-background); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); background-clip: padding-box; }
 }
+
+/* Small reusable utilities used across pages */
+.animate-fade-up { animation: var(--animate-fade-up); }
+.animate-fade-in { animation: var(--animate-fade-in); }
+.animate-scale-in { animation: var(--animate-scale-in); }

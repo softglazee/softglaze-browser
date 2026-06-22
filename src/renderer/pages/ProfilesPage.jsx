@@ -1,11 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, LayoutTemplate, History, Play, Square } from 'lucide-react';
+import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import LeakCheckModal from '@/components/LeakCheckModal.jsx';
 import CookieManagerModal from '@/components/CookieManagerModal.jsx';
+import BrowserManagerModal from '@/components/BrowserManagerModal.jsx';
+import BrowserVersionSelect from '@/components/BrowserVersionSelect.jsx';
+import BrowserBrandSelect, { BrandMark, BROWSER_BRANDS, normalizeBrandId } from '@/components/BrowserBrandSelect.jsx';
+import ProxyRotationModal from '@/components/ProxyRotationModal.jsx';
+import EnvironmentOverviewModal from '@/components/EnvironmentOverviewModal.jsx';
+import DeleteProfileModal from '@/components/DeleteProfileModal.jsx';
 import TemplatesModal from '@/components/TemplatesModal.jsx';
 import ActivityModal from '@/components/ActivityModal.jsx';
 import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
@@ -19,7 +25,7 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-9 py-2 text-zinc-100 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
+      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
     >
       {children}
     </select>
@@ -37,7 +43,7 @@ const ButtonTabs = ({ value, onChange, options, className = '' }) => (
         key={opt}
         type="button"
         onClick={() => onChange(opt)}
-        className={`px-3 py-1.5 text-xs transition border-r border-border last:border-0 ${value === opt ? 'bg-muted-dark text-white font-medium' : 'text-muted hover:text-zinc-200 hover:bg-surface'}`}
+        className={`px-3 py-1.5 text-xs transition border-r border-border last:border-0 ${value === opt ? 'bg-muted-dark text-foreground font-medium' : 'text-muted hover:text-foreground hover:bg-surface'}`}
       >
         {opt}
       </button>
@@ -64,7 +70,7 @@ const CustomCheckbox = ({ checked, onChange, label }) => (
     <div className={`w-4 h-4 rounded border flex items-center justify-center transition ${checked ? 'bg-primary border-primary' : 'bg-background border-border group-hover:border-muted'}`}>
       {checked && <Check className="w-3 h-3 text-white" />}
     </div>
-    <span className="text-zinc-300 text-sm">{label}</span>
+    <span className="text-muted-foreground text-sm">{label}</span>
   </label>
 );
 
@@ -72,7 +78,7 @@ const CustomCheckbox = ({ checked, onChange, label }) => (
 const FpRow = ({ label, description, children }) => (
   <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] items-start gap-2 lg:gap-6 border-b border-border pb-5 mb-5 last:border-0 last:pb-0 last:mb-0">
     <div className="mt-1">
-      <label className="text-zinc-200 font-medium text-sm block">{label}</label>
+      <label className="text-foreground font-medium text-sm block">{label}</label>
       {description && <p className="text-muted text-xs mt-1.5 leading-relaxed pr-4">{description}</p>}
     </div>
     <div className="w-full space-y-3">
@@ -84,6 +90,22 @@ const FpRow = ({ label, description, children }) => (
 // --- GENERATORS ---
 const generateMac = () => "XX-XX-XX-XX-XX-XX".replace(/X/g, () => "0123456789ABCDEF".charAt(Math.floor(Math.random() * 16)));
 const generateDeviceName = () => "DESKTOP-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+// Plausible desktop core/RAM pairings (RAM scales with cores). Randomized per
+// profile so the spoofed hardware is unique rather than a static 8/8.
+//
+// HOST_CORES is the real machine's core count (filled once from system info). We
+// EXCLUDE it from the pool so a profile never spoofs to the exact value of the
+// machine it was created on — otherwise the "spoofed" hardwareConcurrency is
+// indistinguishable from real and looks like a leak (e.g. a 16-core PC getting a
+// 16-core profile). Cross-machine the value is still plausible; locally it's
+// always visibly different.
+let HOST_CORES = null;
+const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const generateCpuCores = () => {
+  const pool = ['4', '6', '8', '8', '12', '16'].filter((c) => String(c) !== String(HOST_CORES));
+  return pickOne(pool.length ? pool : ['4', '6', '8']);
+};
+const generateRamGb = (cores) => (Number(cores) >= 12 ? pickOne(['16', '32']) : pickOne(['8', '16']));
 
 // --- DYNAMIC DATA GENERATORS & CONSTANTS ---
 const CHROME_VERSIONS = ['Auto', ...Array.from({ length: 30 }, (_, i) => String(149 - i))];
@@ -103,7 +125,6 @@ const USER_AGENT_GROUPS = [
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0",
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
@@ -146,14 +167,31 @@ const USER_AGENT_GROUPS = [
   ]}
 ];
 
-function generateAutoUserAgent(os, uaCategory, index = 0) {
+function osUaToken(os) {
+  const v = String(os || 'Windows').toLowerCase();
+  if (v.includes('mac')) return 'Macintosh; Intel Mac OS X 10_15_7';
+  if (v.includes('linux')) return 'X11; Linux x86_64';
+  if (v.includes('android')) return 'Linux; Android 13; Pixel 7';
+  return 'Windows NT 10.0; Win64; x64';
+}
+
+// Build a Chrome User-Agent whose VERSION matches the selected browser, so the UA
+// never disagrees with the real engine / Client-Hints. When chromeMajor is known
+// (a concrete selected version, or the newest installed for "Auto") we synthesize
+// the UA from it; otherwise we fall back to the legacy curated pool.
+function generateAutoUserAgent(os, uaCategory, index = 0, chromeMajor = null) {
+  if (chromeMajor) {
+    const token = osUaToken(os);
+    const mobile = String(os || '').toLowerCase().includes('android');
+    return `Mozilla/5.0 (${token}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeMajor}.0.0.0 ${mobile ? 'Mobile ' : ''}Safari/537.36`;
+  }
   let relevantGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(os));
   if (uaCategory !== 'All') {
     const specificGroup = relevantGroups.find(g => g.label === uaCategory);
     if (specificGroup) relevantGroups = [specificGroup];
   }
   const pool = relevantGroups.flatMap(g => g.options);
-  if (!pool || pool.length === 0) return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"; 
+  if (!pool || pool.length === 0) return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";
   return pool[index % pool.length];
 }
 
@@ -198,6 +236,7 @@ const initialProfileData = {
   id: null,
   name: '',
   browserCore: 'SunBrowser',
+  browserBrand: 'Chrome',
   browserVersion: 'Auto',
   os: 'Windows',
   osVersion: 'All Windows',
@@ -210,9 +249,11 @@ const initialProfileData = {
   
   startupUrls: '',
   platformAccounts: [],
+  twoFactorSeed: '',
 
-  proxySetting: 'Custom', 
-  proxyType: 'HTTP', 
+  proxySetting: 'Custom',
+  proxyType: 'HTTP',
+  enableQuic: false,
   ipChecker: 'IP2Location',
   proxyHost: '',
   proxyPort: '',
@@ -258,13 +299,15 @@ const initialProfileData = {
   webglRenderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)',
   webgpu: 'Based on WebGL',
   
-  cpuType: 'Real',
+  // Spoofed by DEFAULT — never expose the real machine unless the user flips a
+  // field to "Real". Concrete values are randomized per profile in openCreate().
+  cpuType: 'Custom',
   cpuCores: '8',
-  ramType: 'Real',
-  ramGb: '8',
-  deviceNameType: 'Real',
+  ramType: 'Custom',
+  ramGb: '16',
+  deviceNameType: 'Custom',
   deviceName: generateDeviceName(),
-  macAddressType: 'Real',
+  macAddressType: 'Custom',
   macAddress: generateMac(),
   
   doNotTrack: 'Default',
@@ -307,8 +350,15 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
+  const [loadingCookies, setLoadingCookies] = useState(false);
+  const [showBrowserManager, setShowBrowserManager] = useState(false);
+  const [rotationProfile, setRotationProfile] = useState(null);
+  const [envProfile, setEnvProfile] = useState(null);
+  const [previewDraft, setPreviewDraft] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showQuickGen, setShowQuickGen] = useState(false);
   const [activityProfile, setActivityProfile] = useState(null);
@@ -316,6 +366,7 @@ export default function ProfilesPage() {
   const [allTags, setAllTags] = useState([]);
   const [allProxies, setAllProxies] = useState([]);
   const [runningIds, setRunningIds] = useState(() => new Set());
+  const [installedBrowsers, setInstalledBrowsers] = useState([]);
   const [filterGroup, setFilterGroup] = useState('all');
   const [filterTag, setFilterTag] = useState('');
   const [filterProxy, setFilterProxy] = useState('');
@@ -333,12 +384,31 @@ export default function ProfilesPage() {
     else if (filterStatus === 'direct') list = list.filter((p) => !p.proxyId);
     return list;
   }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
+
+  // Real, derived counts for the header subtitle + stat cards (no mock data).
+  const totalCount = profiles.length;
+  const runningCount = useMemo(
+    () => profiles.filter((p) => runningIds.has(p.id)).length,
+    [profiles, runningIds]
+  );
+  const proxiedCount = useMemo(
+    () => profiles.filter((p) => !!p.proxyId || !!p.proxyInfoString).length,
+    [profiles]
+  );
   
   const isEditing = Boolean(pd.id);
   const tabs = ['General', 'Proxy', 'Platform', 'Fingerprint', 'Advanced']; 
 
   const currentOsObj = OS_PLATFORMS.find(o => o.id === pd.os) || OS_PLATFORMS[0];
-  const browserVersionsList = pd.browserCore === 'SunBrowser' ? CHROME_VERSIONS : FIREFOX_VERSIONS;
+  // Prefer the real installed Chrome majors (newest first) for SunBrowser; fall
+  // back to the static list when none are detected on disk.
+  const installedMajors = useMemo(() => {
+    const set = new Set(installedBrowsers.map((b) => String(b.major)));
+    return ['Auto', ...Array.from(set).sort((a, b) => Number(b) - Number(a))];
+  }, [installedBrowsers]);
+  const browserVersionsList = pd.browserCore === 'SunBrowser'
+    ? (installedMajors.length > 1 ? installedMajors : CHROME_VERSIONS)
+    : FIREFOX_VERSIONS;
   const filteredUAGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(pd.os));
 
   const loadData = useCallback(async () => {
@@ -362,6 +432,36 @@ export default function ProfilesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Learn the real machine's core count once so generated profiles never spoof to
+  // the exact host value (which would look like a hardware leak — see HOST_CORES).
+  useEffect(() => {
+    softglazeApi.system.getInfo().then((i) => { if (i && i.cpuCount) HOST_CORES = i.cpuCount; }).catch(() => {});
+  }, []);
+
+  // Keep the running indicator / Stop button in sync. Sessions also end when the
+  // user closes the browser window directly, so poll instead of relying only on
+  // launch/close handlers.
+  const refreshSessions = useCallback(async () => {
+    try {
+      const sess = await softglazeApi.sessions.list();
+      setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
+    } catch (e) { /* transient */ }
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(refreshSessions, 4000);
+    return () => clearInterval(t);
+  }, [refreshSessions]);
+
+  // Load the real Chrome builds installed on disk so the version picker only
+  // offers versions that will actually launch a matching real binary.
+  const refreshInstalledBrowsers = useCallback(() => {
+    softglazeApi.system.listBrowsers()
+      .then((r) => setInstalledBrowsers(r && Array.isArray(r.browsers) ? r.browsers : []))
+      .catch(() => setInstalledBrowsers([]));
+  }, []);
+  useEffect(() => { refreshInstalledBrowsers(); }, [refreshInstalledBrowsers]);
+
   async function handleQuickGenerate(config, onProgress) {
     const { count, baseName, startIndex, groupId, os, randomize, proxyMode, distribution, pasted } = config;
     const pad = (x) => String(x).padStart(3, '0');
@@ -382,6 +482,7 @@ export default function ProfilesPage() {
         webglRenderer = rs[Math.floor(Math.random() * rs.length)] || webglRenderer;
       }
       const uaIndex = randomize ? Math.floor(Math.random() * 100000) : i;
+      const batchCores = generateCpuCores();
       const payload = {
         ...initialProfileData,
         id: null,
@@ -393,8 +494,10 @@ export default function ProfilesPage() {
         osVersion,
         uaCategory: 'All',
         userAgent: generateAutoUserAgent(os, 'All', uaIndex),
-        macAddress: generateMac(),
-        deviceName: generateDeviceName(),
+        cpuType: 'Custom', cpuCores: batchCores,
+        ramType: 'Custom', ramGb: generateRamGb(batchCores),
+        deviceNameType: 'Custom', macAddress: generateMac(),
+        macAddressType: 'Custom', deviceName: generateDeviceName(),
         webglVendor,
         webglRenderer,
         tagManagement: 0,
@@ -417,10 +520,18 @@ export default function ProfilesPage() {
     await loadData();
   }
 
-  function openCreate() { 
-    setPd({ ...initialProfileData, userAgent: 'Auto', macAddress: generateMac(), deviceName: generateDeviceName() }); 
-    setActiveTab('General'); 
-    setView('editor'); 
+  function openCreate() {
+    const cores = generateCpuCores();
+    setPd({
+      ...initialProfileData,
+      userAgent: 'Auto',
+      cpuType: 'Custom', cpuCores: cores,
+      ramType: 'Custom', ramGb: generateRamGb(cores),
+      deviceNameType: 'Custom', deviceName: generateDeviceName(),
+      macAddressType: 'Custom', macAddress: generateMac()
+    });
+    setActiveTab('General');
+    setView('editor');
     setError('');
   }
 
@@ -444,7 +555,11 @@ export default function ProfilesPage() {
       startupUrls: profile.startupUrls || '',
       platformAccounts: profile.platformAccounts || [],
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
-      proxyType: profile.proxyType || 'HTTP'
+      proxyType: profile.proxyType || 'HTTP',
+      // Pre-select the linked saved proxy so editing shows it (and re-saving keeps
+      // PROFILE_PROXY instead of silently reverting to DIRECT).
+      proxySetting: profile.proxyId ? 'Saved Proxies' : 'Custom',
+      selectedSavedProxy: profile.proxyId ? String(profile.proxyId) : ''
     });
     setActiveTab('General'); 
     setView('editor');
@@ -474,7 +589,7 @@ export default function ProfilesPage() {
   };
 
   const handleRollAgent = () => {
-    const newAgent = generateAutoUserAgent(pd.os, pd.uaCategory, Math.floor(Math.random() * 10000));
+    const newAgent = generateAutoUserAgent(pd.os, pd.uaCategory, Math.floor(Math.random() * 10000), effectiveChromeMajor);
     updatePd('userAgent', newAgent);
   };
 
@@ -504,21 +619,46 @@ export default function ProfilesPage() {
     return str;
   };
 
+  // Pull the profile's persisted cookies into the editor field. Works whether or
+  // not the profile is running (the backend reads them headlessly when offline).
+  async function handleLoadCookies() {
+    if (!pd.id) return;
+    setLoadingCookies(true);
+    setError('');
+    try {
+      const res = await softglazeApi.profiles.exportCookies(pd.id, 'json');
+      updatePd('cookie', res.content || '');
+      if (!res.count) setError('No saved cookies found for this profile yet.');
+    } catch (err) {
+      setError(err.message || 'Could not load saved cookies.');
+    } finally {
+      setLoadingCookies(false);
+    }
+  }
+
   async function handleSaveProfile() {
     if (!pd.name) return setError('Profile Name is required.');
     setSaving(true);
     try {
-      const finalUA = pd.userAgent === 'Auto' ? generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length) : pd.userAgent;
-      const proxyRaw = constructProxyString();
-      
-      const payload = { 
+      const finalUA = pd.userAgent === 'Auto' ? generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length, effectiveChromeMajor) : pd.userAgent;
+      // Resolve the proxy from whichever mode the user picked. The old code only
+      // honored a manually-typed proxy, so selecting a SAVED proxy silently fell
+      // back to DIRECT (no proxy) and leaked the real IP. Now both modes set a
+      // proxy AND flip systemProxyBehavior to PROFILE_PROXY so launch applies it.
+      const proxyRaw = pd.proxySetting === 'Custom' ? constructProxyString() : '';
+      const savedProxyId = pd.proxySetting === 'Saved Proxies' && pd.selectedSavedProxy
+        ? Number(pd.selectedSavedProxy) : null;
+      const usingProxy = Boolean(proxyRaw) || Boolean(savedProxyId);
+
+      const payload = {
         ...pd,
-        title: pd.name, 
-        notes: pd.remark, 
-        proxyRaw: proxyRaw || null, 
-        systemProxyBehavior: proxyRaw ? 'PROFILE_PROXY' : 'DIRECT', 
-        tagManagement: 0, 
-        dataDirName: pd.name, 
+        title: pd.name,
+        notes: pd.remark,
+        proxyRaw: proxyRaw || null,
+        proxyId: savedProxyId,                 // explicit: links the saved proxy (null clears it)
+        systemProxyBehavior: usingProxy ? 'PROFILE_PROXY' : 'DIRECT',
+        tagManagement: 0,
+        dataDirName: pd.name,
         userAgent: finalUA
       };
       
@@ -531,19 +671,20 @@ export default function ProfilesPage() {
   }
 
   async function handleLaunch(profileId) {
-    try { await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' }); } 
-    catch (err) { setError(err.message); } 
+    try {
+      await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' });
+      // Refresh running state so the row flips to a Stop button immediately.
+      await refreshSessions();
+    } catch (err) { setError(err.message); }
   }
 
-  async function handleClone(profileId) {
-    try { await softglazeApi.profiles.clone(profileId); await loadData(); }
+  async function handleClone(profileId, reroll = false) {
+    try { await softglazeApi.profiles.clone(profileId, { reroll }); await loadData(); }
     catch (err) { setError(err.message); }
   }
 
-  async function handleDelete(profileId, title) {
-    if (!window.confirm(`Move "${title}" to Trash?`)) return;
-    try { await softglazeApi.profiles.delete(profileId); await loadData(); }
-    catch (err) { setError(err.message); }
+  function handleDelete(profileId, title) {
+    setDeleteTarget({ id: profileId, title });
   }
 
   function toggleSelect(id) {
@@ -565,11 +706,16 @@ export default function ProfilesPage() {
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
-  async function handleBulkClose() {
-    if (selectedIds.size === 0) return;
+  async function handleBulkClose(ids) {
+    // Called two ways: from the bulk bar (no arg → use selection) and from a
+    // single row's Stop button (handleBulkClose([id])). Honor an explicit list.
+    const targets = Array.isArray(ids) && ids.length ? ids : [...selectedIds];
+    if (targets.length === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkClose([...selectedIds]); }
-    catch (err) { setError(err.message); }
+    try {
+      await softglazeApi.profiles.bulkClose(targets);
+      await refreshSessions();
+    } catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
   async function handleBulkDelete() {
@@ -578,6 +724,29 @@ export default function ProfilesPage() {
     setBulkBusy(true); setError('');
     try { await softglazeApi.profiles.bulkDelete([...selectedIds]); clearSelection(); await loadData(); }
     catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  }
+
+  // Softglaze Premium — fetch the live TOTP for a profile and copy it to the
+  // clipboard, flashing a "Copied!" tooltip on its badge.
+  async function handleCopy2fa(profileId) {
+    setError('');
+    try {
+      const { token } = await softglazeApi.profiles.get2faToken(profileId);
+      await navigator.clipboard.writeText(token);
+      setCopied2fa(profileId);
+      setTimeout(() => setCopied2fa((cur) => (cur === profileId ? null : cur)), 1500);
+    } catch (err) { setError(err.message || 'Could not generate the 2FA code.'); }
+  }
+
+  // Softglaze Premium — launch selected profiles as one Master + Slave windows.
+  async function handleSynchronize() {
+    if (selectedIds.size < 2) { setError('Select at least two profiles to synchronize.'); return; }
+    setBulkBusy(true); setError('');
+    try {
+      await softglazeApi.profiles.bulkSynchronize([...selectedIds]);
+      await refreshSessions();
+    } catch (err) { setError(err.message || 'Could not start the synchronizer.'); }
     finally { setBulkBusy(false); }
   }
 
@@ -595,16 +764,32 @@ export default function ProfilesPage() {
     }
   }
 
-  const displayUA = pd.userAgent === 'Auto' ? generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length) : pd.userAgent;
+  // Resolve the Chrome major that will actually launch: a concrete selected
+  // version, else the newest installed build ("Auto"). Used so every generated /
+  // previewed UA matches the engine and never trips the pre-launch UA check.
+  const effectiveChromeMajor = (() => {
+    const v = String(pd.browserVersion || '').trim();
+    const m = v.match(/^(\d+)/);
+    if (m) return Number(m[1]);
+    const majors = installedBrowsers.map((b) => Number(b.major)).filter(Boolean);
+    return majors.length ? Math.max(...majors) : null;
+  })();
+
+  // The engine launches the REAL Chrome binary for the selected version, so the
+  // preview UA must follow it (not a stale random UA). 'Auto' → newest installed.
+  const displayUA = (() => {
+    if (pd.userAgent && pd.userAgent !== 'Auto') return pd.userAgent;
+    return generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length, effectiveChromeMajor);
+  })();
 
   // --- EDITOR VIEW ---
   if (view === 'editor') {
     return (
-      <div className="w-full h-full bg-card text-zinc-100 font-sans flex flex-col rounded border border-border overflow-hidden shadow-2xl">
+      <div className="w-full h-full bg-card text-foreground font-sans flex flex-col rounded border border-border overflow-hidden shadow-2xl">
         <div className="bg-surface border-b border-border px-5 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={closeEditor} className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-white transition"><ArrowLeft className="h-5 w-5" /></button>
-            <h1 className="text-lg font-bold text-white tracking-tight">{isEditing ? 'Edit Browser Profile' : 'New Browser Profile'}</h1>
+            <button onClick={closeEditor} className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-foreground transition"><ArrowLeft className="h-5 w-5" /></button>
+            <h1 className="text-lg font-bold text-foreground tracking-tight">{isEditing ? 'Edit Browser Profile' : 'New Browser Profile'}</h1>
           </div>
           <div className="flex items-center gap-3 text-xs text-amber-400 bg-amber-500/10 px-4 py-2 rounded border border-amber-500/20">
             <ShieldCheck className="h-4 w-4" /> Recommended: bind an authenticator in Settings to keep your account secure.
@@ -617,7 +802,7 @@ export default function ProfilesPage() {
           <div className="flex-1 bg-surface rounded border border-border overflow-hidden flex flex-col min-w-0 shadow-sm">
             <div className="flex border-b border-border bg-surface overflow-x-auto shrink-0 sticky top-0 z-10 px-2 pt-2">
               {tabs.map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap px-6 py-3 text-sm font-medium transition-all border-b-2 rounded-t ${activeTab === tab ? 'border-primary text-primary bg-primary/10' : 'border-transparent text-muted hover:text-zinc-200 hover:bg-card'}`}>{tab}</button>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap px-6 py-3 text-sm font-medium transition-all border-b-2 rounded-t ${activeTab === tab ? 'border-primary text-primary bg-primary/10' : 'border-transparent text-muted hover:text-foreground hover:bg-card'}`}>{tab}</button>
               ))}
             </div>
 
@@ -628,7 +813,7 @@ export default function ProfilesPage() {
                 <div className="space-y-6 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium">Name</label>
-                    <input type="text" value={pd.name} onChange={e => updatePd('name', e.target.value)} placeholder="e.g. FB Mailsi 01" className="w-full bg-background border border-border rounded px-4 py-2.5 text-zinc-100 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
+                    <input type="text" value={pd.name} onChange={e => updatePd('name', e.target.value)} placeholder="e.g. FB Mailsi 01" className="w-full bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
                   </div>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
@@ -636,25 +821,46 @@ export default function ProfilesPage() {
                     <div className="flex flex-wrap gap-4">
                       {['SunBrowser', 'FlowerBrowser'].map(core => (
                         <div key={core} className={`flex items-center rounded border transition shadow-sm ${pd.browserCore === core ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-muted'}`}>
-                          <button onClick={() => updatePd('browserCore', core)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-100">
+                          <button onClick={() => updatePd('browserCore', core)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground">
                             <div className={`w-4 h-4 rounded-full ${core === 'SunBrowser' ? 'bg-blue-500' : 'bg-orange-500'}`}></div>
                             {core}
                           </button>
                           <div className="w-px h-6 bg-border"></div>
-                          <div className="relative">
-                            <select 
-                              value={pd.browserCore === core ? pd.browserVersion : (core === 'SunBrowser' ? 'Auto' : 'Auto')}
-                              onChange={e => { updatePd('browserCore', core); updatePd('browserVersion', e.target.value); }}
-                              className="appearance-none bg-transparent outline-none text-muted hover:text-zinc-200 px-3 pr-8 py-2 text-sm cursor-pointer"
-                            >
-                              {(core === 'SunBrowser' ? CHROME_VERSIONS : FIREFOX_VERSIONS).map(v => <option key={v} value={v} className="bg-surface text-zinc-100">{v}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
-                          </div>
+                          <BrowserVersionSelect
+                            core={core}
+                            value={pd.browserCore === core ? pd.browserVersion : 'Auto'}
+                            onChange={(v) => { updatePd('browserCore', core); updatePd('browserVersion', v); }}
+                          />
                         </div>
                       ))}
                     </div>
                   </div>
+                  {pd.browserCore === 'SunBrowser' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
+                      <span />
+                      <div>
+                        <p className="text-xs text-muted">
+                          {installedBrowsers.length > 0
+                            ? `${installedBrowsers.length} real Chrome builds installed — the selected version launches the matching binary, so UA, Client-Hints and TLS all genuinely match. "Auto" uses the newest installed.`
+                            : 'No on-disk Chrome builds detected — using the bundled engine. Download a version below to install it.'}
+                        </p>
+                        <button type="button" onClick={() => setShowBrowserManager(true)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-hover transition">
+                          <Download className="w-3.5 h-3.5" /> Download more versions
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {pd.browserCore === 'SunBrowser' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
+                      <label className="text-left lg:text-right text-muted font-medium pt-2">Identity</label>
+                      <div>
+                        <BrowserBrandSelect value={pd.browserBrand || 'Chrome'} onChange={(v) => updatePd('browserBrand', v)} />
+                        <p className="mt-2 text-xs text-muted">
+                          Runs the same real Chrome build above, but presents as the chosen Chromium browser — UA token, Sec-CH-UA brands and navigator identity all match, while TLS/JA4 stay genuine (it <span className="text-foreground">is</span> Chromium under the hood).
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium">OS</label>
@@ -668,12 +874,12 @@ export default function ProfilesPage() {
                               <div className={`flex items-center justify-center w-4 h-4 rounded border ${isSelected ? 'bg-primary border-primary' : 'border-muted'}`}>
                                 {isSelected && <Check className="w-3 h-3 text-white" />}
                               </div>
-                              <Icon className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-zinc-300'}`} />
+                              <Icon className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                             </button>
                             <div className="w-px h-6 bg-border"></div>
                             <div className="relative">
-                              <select value={isSelected ? pd.osVersion : os.versions[0]} onChange={e => { updatePd('os', os.id); updatePd('osVersion', e.target.value); }} className="appearance-none bg-transparent outline-none text-muted hover:text-zinc-200 px-3 pr-8 py-2 text-sm cursor-pointer">
-                                {os.versions.map(v => <option key={v} value={v} className="bg-surface text-zinc-100">{v}</option>)}
+                              <select value={isSelected ? pd.osVersion : os.versions[0]} onChange={e => { updatePd('os', os.id); updatePd('osVersion', e.target.value); }} className="appearance-none bg-transparent outline-none text-muted hover:text-foreground px-3 pr-8 py-2 text-sm cursor-pointer">
+                                {os.versions.map(v => <option key={v} value={v} className="bg-surface text-foreground">{v}</option>)}
                               </select>
                               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
                             </div>
@@ -698,12 +904,12 @@ export default function ProfilesPage() {
                           {filteredUAGroups.filter(g => pd.uaCategory === 'All' || g.label === pd.uaCategory).map((group, idx) => (
                             <optgroup key={idx} label={group.label} className="bg-surface text-primary font-semibold italic">
                               {group.options.map((ua, optIdx) => (
-                                <option key={optIdx} value={ua} className="text-zinc-100 font-mono not-italic text-xs">{ua.length > 60 ? ua.slice(0, 60) + '...' : ua}</option>
+                                <option key={optIdx} value={ua} className="text-foreground font-mono not-italic text-xs">{ua.length > 60 ? ua.slice(0, 60) + '...' : ua}</option>
                               ))}
                             </optgroup>
                           ))}
                         </CustomSelect>
-                        <button type="button" onClick={handleRollAgent} title="Swap to a random User-Agent" className="shrink-0 h-10 w-10 flex items-center justify-center bg-surface hover:bg-muted-dark border border-border text-zinc-200 rounded transition"><RefreshCcw className="w-4 h-4" /></button>
+                        <button type="button" onClick={handleRollAgent} title="Swap to a random User-Agent" className="shrink-0 h-10 w-10 flex items-center justify-center bg-surface hover:bg-muted-dark border border-border text-foreground rounded transition"><RefreshCcw className="w-4 h-4" /></button>
                       </div>
                     </div>
                   </div>
@@ -716,7 +922,7 @@ export default function ProfilesPage() {
                       </CustomSelect>
                       <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded px-3 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition">
                         <Tag className="w-4 h-4 text-muted" />
-                        <input type="text" value={pd.tags} onChange={e => updatePd('tags', e.target.value)} placeholder="Tags" className="w-full bg-transparent outline-none text-zinc-100 py-2.5 text-sm" />
+                        <input type="text" value={pd.tags} onChange={e => updatePd('tags', e.target.value)} placeholder="Tags" className="w-full bg-transparent outline-none text-foreground py-2.5 text-sm" />
                       </div>
                     </div>
                   </div>
@@ -724,14 +930,21 @@ export default function ProfilesPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium mt-2">Cookie</label>
                     <div className="w-full">
-                      <textarea value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder="Formats: JSON, Netscape, Name=Value" className="w-full bg-background border border-border rounded px-4 py-3 text-zinc-100 outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
-                      {isEditing && <p className="text-xs text-muted mt-2 text-right italic">+ Fetched from browser memory</p>}
+                      <textarea value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder="Formats: JSON, Netscape, Name=Value" className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
+                      {isEditing && (
+                        <div className="flex items-center justify-end gap-3 mt-2">
+                          <button type="button" onClick={handleLoadCookies} disabled={loadingCookies} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-hover disabled:opacity-50 transition">
+                            {loadingCookies ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Cookie className="w-3.5 h-3.5" />}
+                            Load this profile's saved cookies
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium mt-2">Remarks / Notes</label>
-                    <textarea value={pd.remark} onChange={e => updatePd('remark', e.target.value)} rows="2" placeholder="Optional notes for this profile..." className="w-full bg-background border border-border rounded px-4 py-3 text-zinc-100 outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y transition"></textarea>
+                    <textarea value={pd.remark} onChange={e => updatePd('remark', e.target.value)} rows="2" placeholder="Optional notes for this profile..." className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y transition"></textarea>
                   </div>
                 </div>
               )}
@@ -774,12 +987,12 @@ export default function ProfilesPage() {
                         <div className="space-y-4 w-full">
                           <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded w-max mb-4">💡 Tip: Paste your proxy "host:port:user:pass" into the Host field to auto-fill.</p>
                           <div className="flex gap-4">
-                            <input type="text" placeholder="Host (e.g. proxy.smartproxy.net)" value={pd.proxyHost} onChange={e => updatePd('proxyHost', e.target.value)} onPaste={handleProxyPaste} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-zinc-100 outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
-                            <input type="text" placeholder="Port" value={pd.proxyPort} onChange={e => updatePd('proxyPort', e.target.value)} className="w-[140px] bg-background border border-border rounded px-4 py-2.5 text-zinc-100 outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder="Host (e.g. proxy.smartproxy.net)" value={pd.proxyHost} onChange={e => updatePd('proxyHost', e.target.value)} onPaste={handleProxyPaste} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder="Port" value={pd.proxyPort} onChange={e => updatePd('proxyPort', e.target.value)} className="w-[140px] bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
                           </div>
                           <div className="flex gap-4">
-                            <input type="text" placeholder="Proxy Username (Optional)" value={pd.proxyUser} onChange={e => updatePd('proxyUser', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-zinc-100 outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
-                            <input type="text" placeholder="Proxy Password (Optional)" value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-zinc-100 outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder="Proxy Username (Optional)" value={pd.proxyUser} onChange={e => updatePd('proxyUser', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder="Proxy Password (Optional)" value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
                           </div>
                         </div>
                       </div>
@@ -790,10 +1003,41 @@ export default function ProfilesPage() {
                       <label className="text-left lg:text-right text-muted font-medium mt-2">Select Proxy</label>
                       <CustomSelect value={pd.selectedSavedProxy} onChange={e => updatePd('selectedSavedProxy', e.target.value)} className="w-full max-w-md">
                         <option value="">-- Choose a saved proxy --</option>
-                        {MOCK_SAVED_PROXIES.map(p => <option key={p.id} value={p.id}>{p.name} ({p.host}:{p.port})</option>)}
+                        {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
                       </CustomSelect>
+                      {allProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">No saved proxies yet — add them on the Proxy Pool page.</p>}
                     </div>
                   )}
+
+                  {/* Network — per-profile HTTP/3 (QUIC) toggle */}
+                  <div className="w-full h-px bg-border"></div>
+                  <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
+                    <label className="text-left lg:text-right text-muted font-medium mt-2">Network</label>
+                    <div className="w-full">
+                      <div className="flex items-start gap-3 bg-background border border-border rounded px-4 py-3.5">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={pd.enableQuic === true}
+                          onClick={() => updatePd('enableQuic', !pd.enableQuic)}
+                          className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 mt-0.5"
+                          style={{ background: pd.enableQuic ? '#22c55e' : 'var(--switch-background, #3f3f46)' }}
+                          title={pd.enableQuic ? 'Disable HTTP/3 (QUIC)' : 'Enable HTTP/3 (QUIC)'}
+                        >
+                          <span
+                            className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.enableQuic ? 'translate-x-5' : 'translate-x-1'}`}
+                            style={{ height: 18, width: 18 }}
+                          />
+                        </button>
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium text-foreground">Enable HTTP/3 (QUIC Support)</span>
+                          <p className="text-xs text-amber-400/90 mt-1 leading-relaxed">
+                            ⚠️ Warning: Only enable this on premium, high-quality proxies that fully support UDP tracking isolation. Enabling QUIC unlocks HTTP/3 speeds but can cause network leaks on poor setups. Default is Disabled (Maximum Stealth).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -803,7 +1047,7 @@ export default function ProfilesPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium mt-2">Startup Tabs</label>
                     <div className="w-full">
-                      <textarea value={pd.startupUrls} onChange={e => updatePd('startupUrls', e.target.value)} rows="3" placeholder="https://facebook.com&#10;https://google.com&#10;(Enter one URL per line)" className="w-full bg-background border border-border rounded px-4 py-3 text-zinc-100 outline-none focus:border-primary focus:ring-1 resize-y font-mono text-sm"></textarea>
+                      <textarea value={pd.startupUrls} onChange={e => updatePd('startupUrls', e.target.value)} rows="3" placeholder="https://facebook.com&#10;https://google.com&#10;(Enter one URL per line)" className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 resize-y font-mono text-sm"></textarea>
                       <p className="text-xs text-muted mt-2 italic">URLs to open automatically when the profile launches.</p>
                     </div>
                   </div>
@@ -822,11 +1066,33 @@ export default function ProfilesPage() {
                           <CustomSelect value={acc.platform} onChange={e => { const a = [...pd.platformAccounts]; a[idx].platform = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:w-[160px] shrink-0">
                             {['Facebook', 'Instagram', 'Twitter / X', 'Amazon', 'Google', 'TikTok', 'LinkedIn', 'Other'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
                           </CustomSelect>
-                          <input type="text" placeholder="Username / Email" value={acc.username} onChange={e => { const a = [...pd.platformAccounts]; a[idx].username = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-sm" />
-                          <input type="password" placeholder="Password" value={acc.password} onChange={e => { const a = [...pd.platformAccounts]; a[idx].password = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-sm" />
+                          <input type="text" placeholder="Username / Email" value={acc.username} onChange={e => { const a = [...pd.platformAccounts]; a[idx].username = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                          <input type="password" placeholder="Password" value={acc.password} onChange={e => { const a = [...pd.platformAccounts]; a[idx].password = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
                           <button type="button" onClick={() => { const a = [...pd.platformAccounts]; a.splice(idx, 1); updatePd('platformAccounts', a); }} className="p-2 text-muted hover:text-red-400 bg-surface rounded border border-transparent hover:border-red-500/30 transition"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="w-full h-px bg-border"></div>
+
+                  {/* Softglaze Premium — native 2FA vault */}
+                  <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
+                    <div className="text-left lg:text-right mt-2">
+                      <label className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> 2FA Secret</label>
+                      <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider text-violet-400/80">Premium</span>
+                    </div>
+                    <div className="w-full">
+                      <input
+                        type="text"
+                        value={pd.twoFactorSeed || ''}
+                        onChange={e => updatePd('twoFactorSeed', e.target.value)}
+                        placeholder="Base32 authenticator seed, e.g. JBSWY3DPEHPK3PXP"
+                        autoComplete="off"
+                        spellCheck={false}
+                        className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm tracking-wide"
+                      />
+                      <p className="text-xs text-muted mt-2 italic">Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes — copy them with one click from the Profiles list (🔑 2FA badge).</p>
                     </div>
                   </div>
                 </div>
@@ -835,9 +1101,15 @@ export default function ProfilesPage() {
               {/* COMPREHENSIVE FINGERPRINT TAB */}
               {activeTab === 'Fingerprint' && (
                 <div className="max-w-4xl pr-4 pb-10">
-                  <h2 className="text-zinc-100 font-semibold text-base mb-6 flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-primary"/> Core Identity
-                  </h2>
+                  <div className="flex items-center gap-2.5 mb-6">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)' }}>
+                      <ShieldCheck className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">Core Identity</h2>
+                      <p className="text-xs text-muted-foreground">Timezone, language, screen &amp; locale signals</p>
+                    </div>
+                  </div>
                   
                   <FpRow label="WebRTC" description="Controls WebRTC behavior to prevent real IP leaks while keeping compatibility.">
                     <ButtonTabs value={pd.webrtc} onChange={v => updatePd('webrtc', v)} options={['Forward', 'Replace', 'Real', 'Disabled', 'Proxy UDP']} />
@@ -846,7 +1118,7 @@ export default function ProfilesPage() {
                   <FpRow label="Timezone" description="Browser timezone matches proxy location or your system.">
                     <ButtonTabs value={pd.timezoneType} onChange={v => updatePd('timezoneType', v)} options={['Based on IP', 'Real', 'Custom']} />
                     {pd.timezoneType === 'Custom' && (
-                      <input type="text" placeholder="e.g. America/New_York" value={pd.timezoneCustom} onChange={e => updatePd('timezoneCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary mt-3 text-sm" />
+                      <input type="text" placeholder="e.g. America/New_York" value={pd.timezoneCustom} onChange={e => updatePd('timezoneCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
                     )}
                   </FpRow>
 
@@ -861,9 +1133,9 @@ export default function ProfilesPage() {
                     </div>
                     {pd.locationType === 'Custom' && (
                       <div className="flex gap-3 mt-3">
-                        <input type="text" placeholder="Latitude (e.g. 52.3676)" value={pd.locationLat} onChange={e => updatePd('locationLat', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-sm" />
-                        <input type="text" placeholder="Longitude (e.g. 4.9041)" value={pd.locationLng} onChange={e => updatePd('locationLng', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-sm" />
-                        <input type="text" placeholder="Accuracy (m)" value={pd.locationAcc} onChange={e => updatePd('locationAcc', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-sm" />
+                        <input type="text" placeholder="Latitude (e.g. 52.3676)" value={pd.locationLat} onChange={e => updatePd('locationLat', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                        <input type="text" placeholder="Longitude (e.g. 4.9041)" value={pd.locationLng} onChange={e => updatePd('locationLng', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                        <input type="text" placeholder="Accuracy (m)" value={pd.locationAcc} onChange={e => updatePd('locationAcc', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
                       </div>
                     )}
                   </FpRow>
@@ -871,14 +1143,14 @@ export default function ProfilesPage() {
                   <FpRow label="Language" description="Navigator language code for website requests.">
                     <ButtonTabs value={pd.languageType} onChange={v => updatePd('languageType', v)} options={['Based on IP', 'Custom']} />
                     {pd.languageType === 'Custom' && (
-                      <input type="text" placeholder="e.g. en-US,en;q=0.9" value={pd.languageCustom} onChange={e => updatePd('languageCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary mt-3 text-sm" />
+                      <input type="text" placeholder="e.g. en-US,en;q=0.9" value={pd.languageCustom} onChange={e => updatePd('languageCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
                     )}
                   </FpRow>
 
                   <FpRow label="Display Language" description="Browser internal UI language. Websites can sometimes read this.">
                     <ButtonTabs value={pd.displayLangType} onChange={v => updatePd('displayLangType', v)} options={['Based on Language', 'Real', 'Custom']} />
                     {pd.displayLangType === 'Custom' && (
-                      <input type="text" placeholder="e.g. en-US" value={pd.displayLangCustom} onChange={e => updatePd('displayLangCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary mt-3 text-sm" />
+                      <input type="text" placeholder="e.g. en-US" value={pd.displayLangCustom} onChange={e => updatePd('displayLangCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
                     )}
                   </FpRow>
 
@@ -892,9 +1164,9 @@ export default function ProfilesPage() {
                       )}
                       {pd.resolutionType === 'Custom' && (
                         <div className="flex items-center gap-3">
-                          <input type="text" placeholder="Width" value={pd.resolutionW} onChange={e => updatePd('resolutionW', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-center text-sm" />
+                          <input type="text" placeholder="Width" value={pd.resolutionW} onChange={e => updatePd('resolutionW', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-center text-sm" />
                           <span className="text-muted font-medium">x</span>
-                          <input type="text" placeholder="Height" value={pd.resolutionH} onChange={e => updatePd('resolutionH', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-zinc-100 outline-none focus:border-primary text-center text-sm" />
+                          <input type="text" placeholder="Height" value={pd.resolutionH} onChange={e => updatePd('resolutionH', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-center text-sm" />
                         </div>
                       )}
                     </div>
@@ -904,38 +1176,44 @@ export default function ProfilesPage() {
                     <ButtonTabs value={pd.fontsType} onChange={v => updatePd('fontsType', v)} options={['Default', 'Custom']} />
                   </FpRow>
 
-                  <h2 className="text-zinc-100 font-semibold text-base mt-10 mb-6 flex items-center gap-2">
-                    <Settings2 className="w-5 h-5 text-orange-400"/> Hardware Noise & Graphics
-                  </h2>
+                  <div className="flex items-center gap-2.5 mt-10 mb-6">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)' }}>
+                      <Settings2 className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">Hardware Noise &amp; Graphics</h2>
+                      <p className="text-xs text-muted-foreground">Canvas, WebGL, audio noise &amp; GPU metadata</p>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8">
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-zinc-200 text-sm font-medium">Canvas Noise</span>
+                      <span className="text-foreground text-sm font-medium">Canvas Noise</span>
                       <ToggleSwitch checked={pd.canvasNoise} onChange={v => updatePd('canvasNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-zinc-200 text-sm font-medium">WebGL Image Noise</span>
+                      <span className="text-foreground text-sm font-medium">WebGL Image Noise</span>
                       <ToggleSwitch checked={pd.webglImageNoise} onChange={v => updatePd('webglImageNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-zinc-200 text-sm font-medium">AudioContext Noise</span>
+                      <span className="text-foreground text-sm font-medium">AudioContext Noise</span>
                       <ToggleSwitch checked={pd.audioContextNoise} onChange={v => updatePd('audioContextNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-zinc-200 text-sm font-medium">ClientRects Noise</span>
+                      <span className="text-foreground text-sm font-medium">ClientRects Noise</span>
                       <ToggleSwitch checked={pd.clientRectsNoise} onChange={v => updatePd('clientRectsNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-zinc-200 text-sm font-medium">SpeechVoices Noise</span>
+                      <span className="text-foreground text-sm font-medium">SpeechVoices Noise</span>
                       <ToggleSwitch checked={pd.speechVoicesNoise} onChange={v => updatePd('speechVoicesNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-zinc-200 text-sm font-medium">Media Device</span>
+                      <span className="text-foreground text-sm font-medium">Media Device</span>
                       <ButtonTabs value={pd.mediaDevice} onChange={v => updatePd('mediaDevice', v)} options={['Auto', 'Edit']} />
                     </div>
                   </div>
 
-                  <FpRow label="WebGL Metadata" description="Extremely important. Mismatched GPU and OS will flag you.">
+                  <FpRow label="WebGL Metadata" description="Real (recommended) reports your true GPU consistently across the page, workers AND service worker — no mismatch. Custom spoofs the GPU string but a service worker still shows the real one, which detectors flag.">
                     <div className="flex flex-col gap-4">
                       <ButtonTabs value={pd.webglMetadata} onChange={v => updatePd('webglMetadata', v)} options={['Real', 'Custom']} />
                       {pd.webglMetadata === 'Custom' && (
@@ -967,9 +1245,15 @@ export default function ProfilesPage() {
                     <ButtonTabs value={pd.webgpu} onChange={v => updatePd('webgpu', v)} options={['Based on WebGL', 'Real', 'Disabled']} />
                   </FpRow>
 
-                  <h2 className="text-zinc-100 font-semibold text-base mt-10 mb-6 flex items-center gap-2">
-                    <Monitor className="w-5 h-5 text-emerald-400"/> Hardware Configuration
-                  </h2>
+                  <div className="flex items-center gap-2.5 mt-10 mb-6">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #10b981 14%, transparent)' }}>
+                      <Monitor className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">Hardware Configuration</h2>
+                      <p className="text-xs text-muted-foreground">CPU, RAM, device name &amp; MAC address</p>
+                    </div>
+                  </div>
 
                   <FpRow label="CPU Cores">
                     <div className="flex items-center gap-4">
@@ -998,7 +1282,7 @@ export default function ProfilesPage() {
                       <ButtonTabs value={pd.deviceNameType} onChange={v => updatePd('deviceNameType', v)} options={['Real', 'Custom']} />
                       {pd.deviceNameType === 'Custom' && (
                         <div className="flex items-center gap-3">
-                          <input type="text" value={pd.deviceName} onChange={e => updatePd('deviceName', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-zinc-100 outline-none focus:border-primary font-mono text-sm shadow-sm" />
+                          <input type="text" value={pd.deviceName} onChange={e => updatePd('deviceName', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
                           <Button size="sm" variant="secondary" onClick={() => updatePd('deviceName', generateDeviceName())} title="Generate random device name" className="px-3 py-2">
                             <RefreshCcw className="w-4 h-4" />
                           </Button>
@@ -1012,7 +1296,7 @@ export default function ProfilesPage() {
                       <ButtonTabs value={pd.macAddressType} onChange={v => updatePd('macAddressType', v)} options={['Real', 'Custom']} />
                       {pd.macAddressType === 'Custom' && (
                         <div className="flex items-center gap-3">
-                          <input type="text" value={pd.macAddress} onChange={e => updatePd('macAddress', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-zinc-100 outline-none focus:border-primary font-mono text-sm shadow-sm" />
+                          <input type="text" value={pd.macAddress} onChange={e => updatePd('macAddress', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
                           <Button size="sm" variant="secondary" onClick={() => updatePd('macAddress', generateMac())} title="Generate random MAC address" className="px-3 py-2">
                             <RefreshCcw className="w-4 h-4" />
                           </Button>
@@ -1021,9 +1305,15 @@ export default function ProfilesPage() {
                     </div>
                   </FpRow>
 
-                  <h2 className="text-zinc-100 font-semibold text-base mt-10 mb-6 flex items-center gap-2">
-                    <Terminal className="w-5 h-5 text-purple-400"/> Advanced Fingerprint Settings
-                  </h2>
+                  <div className="flex items-center gap-2.5 mt-10 mb-6">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}>
+                      <Terminal className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">Advanced Fingerprint Settings</h2>
+                      <p className="text-xs text-muted-foreground">DNT, port-scan, TLS &amp; launch arguments</p>
+                    </div>
+                  </div>
 
                   <FpRow label="Do Not Track">
                     <ButtonTabs value={pd.doNotTrack} onChange={v => updatePd('doNotTrack', v)} options={['Default', 'Open', 'Close']} />
@@ -1042,7 +1332,7 @@ export default function ProfilesPage() {
                   </FpRow>
 
                   <FpRow label="Launch Args" description="Additional raw Chromium startup arguments (e.g. --disable-notifications)">
-                    <textarea value={pd.launchArgs} onChange={e => updatePd('launchArgs', e.target.value)} rows="3" placeholder="--disable-notifications&#10;--disable-gpu" className="w-full bg-background border border-border rounded px-4 py-3 text-zinc-100 outline-none focus:border-primary resize-y font-mono text-xs shadow-sm"></textarea>
+                    <textarea value={pd.launchArgs} onChange={e => updatePd('launchArgs', e.target.value)} rows="3" placeholder="--disable-notifications&#10;--disable-gpu" className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary resize-y font-mono text-xs shadow-sm"></textarea>
                   </FpRow>
 
                 </div>
@@ -1051,9 +1341,15 @@ export default function ProfilesPage() {
               {/* NEW ADVANCED TAB */}
               {activeTab === 'Advanced' && (
                 <div className="max-w-4xl pr-4 pb-10">
-                  <h2 className="text-zinc-100 font-semibold text-base mb-6 flex items-center gap-2">
-                    <Settings2 className="w-5 h-5 text-primary"/> Core Settings
-                  </h2>
+                  <div className="flex items-center gap-2.5 mb-6">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)' }}>
+                      <Settings2 className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-foreground">Core Settings</h2>
+                      <p className="text-xs text-muted-foreground">Extensions, data sync &amp; browser behavior</p>
+                    </div>
+                  </div>
                   
                   <FpRow label="Extension" description="The enabled extensions from [Extensions - Team's Extensions] will be installed in the profile.">
                     <CustomSelect value={pd.advancedExt} onChange={e => updatePd('advancedExt', e.target.value)} className="w-[220px]">
@@ -1107,9 +1403,9 @@ export default function ProfilesPage() {
                             </div>
                             
                             <div className="flex items-center gap-3 mt-6 p-4 bg-surface rounded border border-border">
-                              <span className="text-sm text-zinc-200">Disable loading images over</span>
-                              <input type="text" value={pd.browserSettings.disableImagesLimit} onChange={e => updateNestedPd('browserSettings', 'disableImagesLimit', e.target.value)} className="w-[80px] bg-background border border-border rounded px-3 py-1.5 text-center text-zinc-100 outline-none focus:border-primary text-sm shadow-sm" />
-                              <span className="text-sm text-zinc-200">KB (0 KB means no images loaded)</span>
+                              <span className="text-sm text-foreground">Disable loading images over</span>
+                              <input type="text" value={pd.browserSettings.disableImagesLimit} onChange={e => updateNestedPd('browserSettings', 'disableImagesLimit', e.target.value)} className="w-[80px] bg-background border border-border rounded px-3 py-1.5 text-center text-foreground outline-none focus:border-primary text-sm shadow-sm" />
+                              <span className="text-sm text-foreground">KB (0 KB means no images loaded)</span>
                             </div>
                           </div>
                         </div>
@@ -1126,6 +1422,8 @@ export default function ProfilesPage() {
 
             {/* Bottom Actions */}
             <div className="bg-surface border-t border-border p-5 flex justify-end gap-3 shrink-0 rounded-b">
+              <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 mr-1.5" /> Preview Environment</Button>
+              <div className="flex-1" />
               <Button variant="secondary" onClick={closeEditor}>Cancel</Button>
               <Button variant="primary" onClick={handleSaveProfile} isLoading={saving}>Save Profile</Button>
             </div>
@@ -1134,22 +1432,76 @@ export default function ProfilesPage() {
           {/* Right Sidebar Matrix */}
           <div className="hidden lg:flex w-80 shrink-0 bg-surface rounded border border-border p-5 flex-col shadow-sm h-fit sticky top-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-sm font-semibold text-zinc-100 uppercase tracking-wider">Environment Overview</h2>
+              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Environment Overview</h2>
               <button className="text-primary hover:text-primary-hover transition-colors text-xs flex items-center gap-1 font-medium"><Settings2 className="h-3.5 w-3.5"/> Settings</button>
             </div>
             
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between items-center"><span className="text-muted">OS</span><span className="text-zinc-100 font-medium bg-background px-2 py-1 rounded border border-border">{pd.os} {pd.osVersion}</span></div>
-              <div className="flex justify-between items-center"><span className="text-muted">Browser</span><span className="text-zinc-100 font-medium bg-background px-2 py-1 rounded border border-border">{pd.browserCore} {pd.browserVersion}</span></div>
-              
-              <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <span className="text-muted text-xs uppercase tracking-wider font-semibold">Generated User-Agent</span>
-                <span className="text-primary font-mono text-xs bg-primary/5 border border-primary/20 p-3 rounded break-all leading-relaxed shadow-inner max-h-40 overflow-y-auto">{displayUA}</span>
-              </div>
-              
-              <div className="flex justify-between items-center pt-4 border-t border-border"><span className="text-muted">Timezone</span><span className="text-zinc-100 font-medium">{pd.timezoneType}</span></div>
-              <div className="flex justify-between items-center"><span className="text-muted">WebRTC</span><span className="text-zinc-100 font-medium">{pd.webrtc}</span></div>
-              <div className="flex justify-between items-center"><span className="text-muted">MAC</span><span className="text-zinc-200 font-mono text-xs bg-background px-2 py-1 rounded border border-border">{pd.macAddress}</span></div>
+            <div className="space-y-1 text-sm max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+              {(() => {
+                const EnvRow = ({ k, v, mono }) => (
+                  <div className="flex justify-between items-start gap-3 py-1.5">
+                    <span className="text-muted text-xs shrink-0">{k}</span>
+                    <span className={`text-foreground font-medium text-right text-xs ${mono ? 'font-mono break-all' : ''}`}>{v}</span>
+                  </div>
+                );
+                const EnvHead = ({ children }) => (
+                  <div className="text-[10px] uppercase tracking-wider font-bold text-primary/80 pt-3 pb-1 border-t border-border mt-2 first:mt-0 first:border-t-0 first:pt-0">{children}</div>
+                );
+                const deviceMem = Math.min(8, Number(pd.ramGb) || 8); // Chrome caps deviceMemory at 8
+                const proxyText = pd.proxySetting === 'Custom' && pd.proxyHost
+                  ? `${pd.proxyType} ${pd.proxyHost}:${pd.proxyPort || ''}`
+                  : (pd.selectedSavedProxy ? 'Saved proxy' : 'Direct (no proxy)');
+                const noiseTag = (on) => on === false ? 'Real' : 'Noise';
+                return (
+                  <>
+                    <EnvHead>Browser / OS</EnvHead>
+                    <EnvRow k="Browser" v={`${pd.browserCore} ${pd.browserVersion}`} />
+                    <EnvRow k="OS" v={`${pd.os} ${pd.osVersion}`} />
+                    <div className="flex flex-col gap-1.5 py-1.5">
+                      <span className="text-muted text-xs">User-Agent</span>
+                      <span className="text-primary font-mono text-[11px] bg-primary/5 border border-primary/20 p-2.5 rounded break-all leading-relaxed max-h-28 overflow-y-auto">{displayUA}</span>
+                    </div>
+
+                    <EnvHead>Locale</EnvHead>
+                    <EnvRow k="Timezone" v={pd.timezoneType === 'Custom' ? pd.timezoneCustom : pd.timezoneType} />
+                    <EnvRow k="Language" v={pd.languageType === 'Custom' ? pd.languageCustom : pd.languageType} />
+                    <EnvRow k="Location" v={pd.locationType === 'Custom' ? `${pd.locationLat || '?'}, ${pd.locationLng || '?'}` : pd.locationType} />
+                    <EnvRow k="Display lang" v={pd.displayLangType} />
+
+                    <EnvHead>Screen &amp; Fonts</EnvHead>
+                    <EnvRow k="Resolution" v={pd.resolutionType === 'Real' ? 'Real' : `${pd.resolutionW}×${pd.resolutionH}`} />
+                    <EnvRow k="Fonts" v={pd.fontsType} />
+
+                    <EnvHead>Graphics</EnvHead>
+                    <EnvRow k="WebGL vendor" v={pd.webglVendor} />
+                    <EnvRow k="WebGL renderer" v={pd.webglRenderer} mono />
+                    <EnvRow k="WebGPU" v={pd.webgpu} />
+
+                    <EnvHead>Hardware</EnvHead>
+                    <EnvRow k="CPU cores" v={`${pd.cpuCores} cores`} />
+                    <EnvRow k="RAM" v={`${pd.ramGb} GB`} />
+                    <EnvRow k="Device memory" v={`${deviceMem} GB (Chrome caps at 8)`} />
+
+                    <EnvHead>Noise / Privacy</EnvHead>
+                    <EnvRow k="Canvas" v={noiseTag(pd.canvasNoise)} />
+                    <EnvRow k="WebGL image" v={noiseTag(pd.webglImageNoise)} />
+                    <EnvRow k="AudioContext" v={noiseTag(pd.audioContextNoise)} />
+                    <EnvRow k="ClientRects" v={noiseTag(pd.clientRectsNoise)} />
+                    <EnvRow k="Media device" v={pd.mediaDevice} />
+                    <EnvRow k="Do Not Track" v={pd.doNotTrack} />
+                    <EnvRow k="Port scan" v={pd.portScanProtection} />
+
+                    <EnvHead>Network / Device</EnvHead>
+                    <EnvRow k="Proxy" v={proxyText} mono />
+                    <EnvRow k="WebRTC" v={pd.webrtc} />
+                    <EnvRow k="Device name" v={pd.deviceName} mono />
+                    <EnvRow k="MAC" v={pd.macAddress} mono />
+                  </>
+                );
+              })()}
+              <button onClick={() => setPreviewDraft(pd)} className="w-full mt-3 text-xs text-primary hover:text-primary-hover border border-primary/20 hover:border-primary/40 rounded py-2 transition flex items-center justify-center gap-1.5">
+                <Fingerprint className="w-3.5 h-3.5" /> Open full live preview
+              </button>
             </div>
           </div>
         </div>
@@ -1160,9 +1512,10 @@ export default function ProfilesPage() {
   // --- LIST VIEW ---
   return (
     <>
-      <PageHeader 
-        eyebrow="Workspace" 
-        title="Profiles" 
+      <PageHeader
+        eyebrow="Workspace"
+        title="Profiles"
+        description={`${totalCount} total · ${runningCount} running right now`}
         actions={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setShowTemplates(true)}>
@@ -1173,20 +1526,85 @@ export default function ProfilesPage() {
               <FileSpreadsheet className="h-4 w-4" />
               Batch Create
             </Button>
-            <Button variant="primary" onClick={openCreate}>
+            <Button
+              variant="primary"
+              onClick={openCreate}
+              className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-blue-600"
+            >
               <Plus className="h-4 w-4" />
               New Profile
             </Button>
           </div>
-        } 
+        }
       />
+
+      {/* Tinted glow stat cards — REAL derived counts only */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div
+          className="rounded-xl p-4 flex items-center gap-3 animate-fade-up"
+          style={{
+            background: 'color-mix(in srgb, #3b82f6 8%, var(--card))',
+            border: '1px solid color-mix(in srgb, #3b82f6 22%, transparent)',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)' }}
+          >
+            <Monitor className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground font-display leading-none">{totalCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total profiles</p>
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-4 flex items-center gap-3 animate-fade-up"
+          style={{
+            background: 'color-mix(in srgb, #10b981 8%, var(--card))',
+            border: '1px solid color-mix(in srgb, #10b981 22%, transparent)',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'color-mix(in srgb, #10b981 14%, transparent)' }}
+          >
+            <Activity className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground font-display leading-none">{runningCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">Running now</p>
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-4 flex items-center gap-3 animate-fade-up"
+          style={{
+            background: 'color-mix(in srgb, #8b5cf6 8%, var(--card))',
+            border: '1px solid color-mix(in srgb, #8b5cf6 22%, transparent)',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}
+          >
+            <ShieldCheck className="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground font-display leading-none">{proxiedCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">With proxy</p>
+          </div>
+        </div>
+      </div>
       {error && <div className="mb-5 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
       
       {selectedIds.size > 0 && (
-        <div className="mb-5 flex items-center gap-4 rounded border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
+        <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
           <span className="text-sm text-primary font-bold">{selectedIds.size} selected</span>
           <div className="flex gap-2 ml-auto">
             <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">Launch</Button>
+            <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title="Launch as Master + Slave mirrored windows (Premium)"><Combine className="w-3.5 h-3.5 mr-1" /> Synchronize</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>Close</Button>
             <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>Delete</Button>
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>Clear</Button>
@@ -1194,7 +1612,7 @@ export default function ProfilesPage() {
         </div>
       )}
       
-      <div className="mb-6 flex flex-wrap items-center gap-3 bg-surface p-3 rounded border border-border shadow-sm">
+      <div className="mb-6 flex flex-wrap items-center gap-3 bg-card p-3 rounded-xl border border-border hover:border-border-strong transition-colors">
         <CustomSelect value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="w-auto">
           <option value="all">All groups</option>
           <option value="ungrouped">Ungrouped</option>
@@ -1220,23 +1638,23 @@ export default function ProfilesPage() {
         </CustomSelect>
 
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name…" className="w-full bg-background border border-border rounded pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:border-primary transition shadow-sm" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name…" className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
         </div>
         {(filterGroup !== 'all' || filterTag || filterProxy || filterStatus !== 'all' || search) && (
           <Button variant="ghost" size="sm" onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setSearch(''); }}>Clear Filters</Button>
         )}
-        <span className="ml-auto text-sm text-muted font-medium bg-background px-3 py-1.5 rounded border border-border shadow-inner">{filteredProfiles.length} profiles</span>
+        <span className="ml-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{filteredProfiles.length} profiles</span>
       </div>
       
-      <Card className="bg-surface border-border flex flex-col shadow-xl flex-1 rounded">
-        <CardContent className="p-0 overflow-auto flex-1 rounded">
+      <Card className="bg-card border border-border hover:border-border-strong transition-colors flex flex-col flex-1 rounded-xl">
+        <CardContent className="p-0 overflow-auto flex-1 rounded-xl">
           <div className="w-full overflow-x-auto">
             <table className="w-full min-w-[1120px] border-collapse text-left text-sm whitespace-nowrap">
-              <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
+              <thead className="bg-elevated text-muted-foreground text-[10px] uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10">
                 <tr>
                   <th className="px-5 py-4 w-12 text-center">
-                    <button type="button" onClick={toggleSelectAll} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length ? 'bg-primary border-primary' : 'bg-background border-border hover:border-muted'}`}>
+                    <button type="button" onClick={toggleSelectAll} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length ? 'bg-primary border-primary' : 'bg-input-background border-border hover:border-border-strong'}`}>
                       {filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length && <span className="w-2 h-2 bg-white rounded-sm" />}
                     </button>
                   </th>
@@ -1256,13 +1674,13 @@ export default function ProfilesPage() {
                   </tr>
                 )}
                 {filteredProfiles.map((p) => (
-                  <tr key={p.id} className="hover:bg-card/50 transition-colors group">
+                  <tr key={p.id} className="border-b border-border hover:bg-secondary/50 transition-colors group">
                     <td className="px-5 py-3.5 text-center">
-                      <button type="button" onClick={() => toggleSelect(p.id)} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${selectedIds.has(p.id) ? 'bg-primary border-primary' : 'bg-background border-border hover:border-muted'}`}>
+                      <button type="button" onClick={() => toggleSelect(p.id)} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${selectedIds.has(p.id) ? 'bg-primary border-primary' : 'bg-input-background border-border hover:border-border-strong'}`}>
                         {selectedIds.has(p.id) && <span className="w-2 h-2 bg-white rounded-sm" />}
                       </button>
                     </td>
-                    <td className="px-5 py-3.5 font-medium text-zinc-100">
+                    <td className="px-5 py-3.5 font-medium text-foreground">
                       <div className="flex items-center gap-3">
                         {runningIds.has(p.id) ? (
                           <div className="relative flex h-2.5 w-2.5 shrink-0">
@@ -1270,22 +1688,48 @@ export default function ProfilesPage() {
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                           </div>
                         ) : (
-                          <span className="w-2.5 h-2.5 rounded-full bg-muted-dark shrink-0" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
+                        )}
+                        {p.browserBrand && normalizeBrandId(p.browserBrand) !== 'Chrome' && (
+                          <span
+                            className="shrink-0"
+                            style={{ color: (BROWSER_BRANDS.find((b) => b.id === normalizeBrandId(p.browserBrand)) || {}).accent }}
+                            title={`Presents as ${normalizeBrandId(p.browserBrand)}`}
+                          >
+                            <BrandMark id={p.browserBrand} className="w-3.5 h-3.5" />
+                          </span>
                         )}
                         <span className="truncate max-w-[200px]">{p.title}</span>
+                        {p.twoFactorSeed && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopy2fa(p.id)}
+                            title="Copy current 2FA code"
+                            className="relative shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-violet-500/12 text-violet-300 border border-violet-500/25 hover:bg-violet-500/20 transition"
+                          >
+                            {copied2fa === p.id ? <><Check className="w-3 h-3" /> Copied!</> : <><KeyRound className="w-3 h-3" /> 2FA</>}
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="bg-card border border-border px-2.5 py-1 rounded text-xs font-mono text-zinc-300 shadow-sm">
-                        {p.proxyInfoString ? p.proxyInfoString.split(':')[0] : 'Direct'}
-                      </span>
+                      {p.proxyInfoString ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          <Link2 className="w-3 h-3" />
+                          {p.proxyInfoString.split(':')[0]}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
+                          Direct
+                        </span>
+                      )}
                     </td>
-                    <td className="px-5 py-3.5 text-muted text-xs">{formatDateTime(p.createdAt)}</td>
-                    <td className="px-5 py-3.5 text-muted">
-                      <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-zinc-200 transition text-xs" title="View activity">
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">
+                      <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title="View activity">
                         <History className="h-3.5 w-3.5" />
                         {p.lastUsedAt ? formatDateTime(p.lastUsedAt) : "Never"}
-                        {p.launchCount ? <span className="text-[10px] bg-card border border-border px-1.5 py-0.5 rounded font-semibold ml-1">{p.launchCount}×</span> : null}
+                        {p.launchCount ? <span className="text-[10px] bg-elevated border border-border px-1.5 py-0.5 rounded font-semibold ml-1">{p.launchCount}×</span> : null}
                       </button>
                     </td>
                     <td className="px-5 py-3.5">
@@ -1295,13 +1739,16 @@ export default function ProfilesPage() {
                             <Square className="w-3.5 h-3.5 mr-1" /> Stop
                           </Button>
                         ) : (
-                          <Button size="sm" className="bg-red-600 hover:bg-red-500 text-white shadow-glow shadow-red-500/20 px-3" onClick={() => handleLaunch(p.id)} title="Launch">
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title="Launch">
                             <Play className="w-3.5 h-3.5 mr-1" /> Launch
                           </Button>
                         )}
                         
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
                         
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setEnvProfile(p)} title="Environment Overview">
+                          <Fingerprint className="w-4 h-4" />
+                        </Button>
                         <Button size="sm" variant="ghost" className="px-2.5" onClick={() => openEdit(p)} title="Edit Configuration">
                           <Settings2 className="w-4 h-4" />
                         </Button>
@@ -1311,8 +1758,14 @@ export default function ProfilesPage() {
                         <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title="Manage Cookies">
                           <Cookie className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id)} title="Clone Profile">
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title="Proxy Rotation">
+                          <Shuffle className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id)} title="Clone Profile (same fingerprint)">
                           <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id, true)} title="Clone with new fingerprint">
+                          <Dices className="w-4 h-4" />
                         </Button>
                         
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
@@ -1344,11 +1797,34 @@ export default function ProfilesPage() {
           onClose={() => setCookieProfile(null)}
         />
       )}
+      {rotationProfile && (
+        <ProxyRotationModal
+          profileId={rotationProfile.id}
+          profileName={rotationProfile.title}
+          onClose={() => setRotationProfile(null)}
+        />
+      )}
+      {envProfile && (
+        <EnvironmentOverviewModal profile={envProfile} onClose={() => setEnvProfile(null)} />
+      )}
+      {previewDraft && (
+        <EnvironmentOverviewModal profile={previewDraft} onClose={() => setPreviewDraft(null)} />
+      )}
+      {deleteTarget && (
+        <DeleteProfileModal
+          profile={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => { setDeleteTarget(null); loadData(); }}
+        />
+      )}
       {showTemplates && (
         <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
       )}
       {showQuickGen && (
         <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} />
+      )}
+      {showBrowserManager && (
+        <BrowserManagerModal onClose={() => setShowBrowserManager(false)} onInstalled={refreshInstalledBrowsers} />
       )}
       {activityProfile && (
         <ActivityModal profileId={activityProfile.id} profileName={activityProfile.title} onClose={() => setActivityProfile(null)} />

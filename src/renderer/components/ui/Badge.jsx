@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils.js';
 
 const variants = {
-  default: 'border-slate-700 bg-slate-900 text-slate-200',
+  default: 'border-border bg-secondary text-secondary-foreground',
   green: 'border-emerald-700/60 bg-emerald-950/60 text-emerald-300',
   amber: 'border-amber-700/60 bg-amber-950/60 text-amber-300',
   red: 'border-red-700/60 bg-red-950/60 text-red-300',

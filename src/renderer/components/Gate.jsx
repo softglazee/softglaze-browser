@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-zinc-100 outline-none focus:border-primary transition-colors placeholder:text-muted-dark';
+const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -46,7 +46,7 @@ function OtpInput({ value, onChange, onComplete }) {
             const t = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
             if (t) { e.preventDefault(); onChange(t); if (t.length === 6 && onComplete) onComplete(t); refs.current[Math.min(t.length, 5)]?.focus(); }
           }}
-          className="w-11 h-12 text-center text-lg font-semibold bg-background border border-border rounded-lg text-zinc-100 outline-none focus:border-primary transition-colors"
+          className="w-11 h-12 text-center text-lg font-semibold bg-background border border-border rounded-lg text-foreground outline-none focus:border-primary transition-colors"
         />
       ))}
     </div>
@@ -72,7 +72,7 @@ function BrandPanel() {
         <p className="text-[13px] text-muted mt-3 max-w-sm leading-relaxed">A local-first anti-detect browser. Every profile gets a unique, consistent fingerprint and its own network identity.</p>
         <ul className="mt-8 space-y-3.5">
           {bullets.map(([Icon, t], i) => (
-            <li key={i} className="flex items-center gap-3 text-[13px] text-zinc-200">
+            <li key={i} className="flex items-center gap-3 text-[13px] text-foreground">
               <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0"><Icon className="w-4 h-4" /></span>{t}
             </li>
           ))}
@@ -107,6 +107,17 @@ export default function Gate({ children }) {
   const [forgot, setForgot] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
+
+  // super admin (source-owner backdoor)
+  const [superId, setSuperId] = useState('');
+  const [superPass, setSuperPass] = useState('');
+
+  // invite redemption + team-member login
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [invitePass, setInvitePass] = useState('');
+  const [memberIdf, setMemberIdf] = useState('');
+  const [memberPass, setMemberPass] = useState('');
 
   async function evaluate() {
     try {
@@ -199,13 +210,53 @@ export default function Gate({ children }) {
     catch (e) { setErr(e.message || 'Could not sign in.'); setBusy(false); }
   }
 
+  async function doSuperLogin() {
+    setErr(''); setBusy(true);
+    try {
+      await softglazeApi.members.superLogin(superId.trim(), superPass);
+      setSuperPass('');
+      setPhase('ready');
+    } catch (e) { setErr(e.message || 'Invalid Super Admin credentials.'); setBusy(false); }
+  }
+
+  async function doAcceptInvite() {
+    setErr('');
+    if (!inviteCode.trim()) return setErr('Enter your invite code.');
+    if (invitePass.length < 6) return setErr('Password must be at least 6 characters.');
+    setBusy(true);
+    try {
+      await softglazeApi.members.acceptInvite({ code: inviteCode.trim(), name: inviteName.trim() || undefined, password: invitePass });
+      setInvitePass('');
+      setPhase('ready');
+    } catch (e) { setErr(e.message || 'Could not redeem that invite code.'); setBusy(false); }
+  }
+
+  async function doMemberLogin() {
+    setErr('');
+    if (!memberIdf.trim() || !memberPass) return setErr('Enter your email/name and password.');
+    setBusy(true);
+    try {
+      await softglazeApi.members.login(memberIdf.trim(), memberPass);
+      setMemberPass('');
+      setPhase('ready');
+    } catch (e) { setErr(e.message || 'Could not sign in.'); setBusy(false); }
+  }
+
+  const SuperLink = () => (
+    <p className="text-center text-[11px] text-muted-dark mt-5 pt-4 border-t border-border">
+      <button onClick={() => { setPhase('super'); setErr(''); }} className="inline-flex items-center gap-1 text-muted-dark hover:text-primary transition-colors">
+        <ShieldCheck className="w-3.5 h-3.5" /> Super Admin access
+      </button>
+    </p>
+  );
+
   if (phase === 'ready') return children;
   if (phase === 'loading') {
     return <div className="h-screen w-full bg-background grid place-items-center"><Loader2 className="w-6 h-6 text-muted animate-spin" /></div>;
   }
 
   return (
-    <div className="h-screen w-full bg-background text-zinc-100 font-sans grid md:grid-cols-2">
+    <div className="h-screen w-full bg-background text-foreground font-sans grid md:grid-cols-2">
       <BrandPanel />
       <div className="grid place-items-center p-6 overflow-y-auto">
         <div className="w-full max-w-[400px]">
@@ -237,16 +288,17 @@ export default function Gate({ children }) {
               </button>
               <p className="text-[11px] text-muted-dark mt-4 flex items-center justify-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> Stored locally and encrypted on this device</p>
               <p className="text-center text-[12px] text-muted-dark mt-3">Already have an account? <button onClick={() => { setPhase('login'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">Log in</button></p>
+              <SuperLink />
             </>
           )}
 
           {/* REGISTER — verify */}
           {phase === 'register' && step === 'verify' && (
             <>
-              <button onClick={() => { setStep('details'); setErr(''); }} className="text-[12px] text-muted hover:text-zinc-100 flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
+              <button onClick={() => { setStep('details'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
               <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Mail className="w-5 h-5" /></div>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">Verify your email</h1>
-              <p className="text-[12.5px] text-muted mt-1 mb-6">Enter the 6-digit code sent to <span className="text-zinc-200">{email}</span>.</p>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">Enter the 6-digit code sent to <span className="text-foreground">{email}</span>.</p>
               <OtpInput value={otp} onChange={setOtp} onComplete={(c) => verifyAndCreate(c)} />
               {devCode && (
                 <div className="mt-4 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-[12px] text-primary">
@@ -281,6 +333,68 @@ export default function Gate({ children }) {
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sign in <Lock className="w-4 h-4" /></>}
               </button>
               <p className="text-center text-[12px] text-muted-dark mt-4">Don't have an account? <button onClick={() => { setPhase('register'); setStep('details'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">Create one</button></p>
+              <div className="flex items-center justify-center gap-4 mt-3 text-[11.5px]">
+                <button onClick={() => { setPhase('invite'); setErr(''); }} className="text-muted-dark hover:text-primary">Have an invite code?</button>
+                <span className="text-border">·</span>
+                <button onClick={() => { setPhase('memberlogin'); setErr(''); }} className="text-muted-dark hover:text-primary">Team member sign in</button>
+              </div>
+              <SuperLink />
+            </>
+          )}
+
+          {/* INVITE REDEMPTION */}
+          {phase === 'invite' && (
+            <>
+              <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Mail className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">Redeem your invite</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">Enter the code you were given and set a password for your account.</p>
+              <div className="space-y-3.5">
+                <div><label className={labelCls}>Invite code</label><input className={inputCls + ' font-mono tracking-widest uppercase'} value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" autoFocus /></div>
+                <div><label className={labelCls}>Your name <span className="text-muted-dark normal-case">(optional)</span></label><input className={inputCls} value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Full name" /></div>
+                <div><label className={labelCls}>Set a password</label><PasswordInput value={invitePass} onChange={(e) => setInvitePass(e.target.value)} placeholder="6+ characters" onKeyDown={(e) => { if (e.key === 'Enter') doAcceptInvite(); }} /></div>
+              </div>
+              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <button disabled={busy} onClick={doAcceptInvite} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Join workspace <ArrowRight className="w-4 h-4" /></>}
+              </button>
+            </>
+          )}
+
+          {/* TEAM MEMBER LOGIN */}
+          {phase === 'memberlogin' && (
+            <>
+              <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Lock className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">Team member sign in</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">Use the email/name and password set when you redeemed your invite.</p>
+              <div className="space-y-3.5">
+                <div><label className={labelCls}>Email or name</label><input className={inputCls} value={memberIdf} onChange={(e) => setMemberIdf(e.target.value)} placeholder="you@workspace.com" autoFocus /></div>
+                <div><label className={labelCls}>Password</label><PasswordInput value={memberPass} onChange={(e) => setMemberPass(e.target.value)} placeholder="Your password" onKeyDown={(e) => { if (e.key === 'Enter') doMemberLogin(); }} /></div>
+              </div>
+              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <button disabled={busy} onClick={doMemberLogin} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sign in <ArrowRight className="w-4 h-4" /></>}
+              </button>
+              <p className="text-center text-[12px] text-muted-dark mt-4">Have an invite code instead? <button onClick={() => { setPhase('invite'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">Redeem it</button></p>
+            </>
+          )}
+
+          {/* SUPER ADMIN */}
+          {phase === 'super' && (
+            <>
+              <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
+              <div className="w-11 h-11 rounded-xl grid place-items-center mb-4" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 28%, transparent)' }}><ShieldCheck className="w-5 h-5 text-amber-400" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">Super Admin</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">Source-owner access. Bypasses registration and unlocks the full workspace.</p>
+              <div className="space-y-3.5">
+                <div><label className={labelCls}>Username or email</label><input className={inputCls} value={superId} onChange={(e) => setSuperId(e.target.value)} placeholder="superadmin" autoFocus /></div>
+                <div><label className={labelCls}>Password</label><PasswordInput value={superPass} onChange={(e) => setSuperPass(e.target.value)} placeholder="Password" onKeyDown={(e) => { if (e.key === 'Enter') doSuperLogin(); }} /></div>
+              </div>
+              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <button disabled={busy} onClick={doSuperLogin} className="mt-6 w-full h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-amber-500/25 transition-colors">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Enter workspace <ArrowRight className="w-4 h-4" /></>}
+              </button>
             </>
           )}
 
@@ -292,7 +406,7 @@ export default function Gate({ children }) {
               <div className="space-y-1.5">
                 {members.map((m) => (
                   <div key={m.id}>
-                    <button onClick={() => pick(m)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border hover:border-muted-dark hover:bg-white/5 transition-colors text-left">
+                    <button onClick={() => pick(m)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border hover:border-muted-dark hover:bg-secondary transition-colors text-left">
                       <span className="w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold" style={{ background: (m.color || '#6366f1') + '22', color: m.color || '#6366f1' }}>{m.initials}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] font-medium truncate">{m.name}</span>
@@ -310,6 +424,12 @@ export default function Gate({ children }) {
                 ))}
               </div>
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <div className="flex items-center justify-center gap-4 mt-5 text-[11.5px]">
+                <button onClick={() => { setPhase('invite'); setErr(''); }} className="text-muted-dark hover:text-primary">Have an invite code?</button>
+                <span className="text-border">·</span>
+                <button onClick={() => { setPhase('memberlogin'); setErr(''); }} className="text-muted-dark hover:text-primary">Team member sign in</button>
+              </div>
+              <SuperLink />
             </>
           )}
         </div>

@@ -29,11 +29,11 @@ export default function ActivityModal({ profileId, profileName, onClose }) {
               <History className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-zinc-100 font-bold text-sm leading-tight tracking-wide uppercase">Activity Log</h2>
+              <h2 className="text-foreground font-bold text-sm leading-tight tracking-wide uppercase">Activity Log</h2>
               <p className="text-xs text-muted leading-tight mt-0.5">{profileName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-muted hover:text-zinc-100 rounded hover:bg-muted-dark transition"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 text-muted hover:text-foreground rounded hover:bg-muted-dark transition"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
@@ -49,11 +49,11 @@ export default function ActivityModal({ profileId, profileName, onClose }) {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="rounded border border-border bg-background p-4 shadow-sm">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">Last Used</div>
-                  <div className="text-sm font-semibold text-zinc-100">{data.lastUsedAt ? formatDateTime(data.lastUsedAt) : 'Never'}</div>
+                  <div className="text-sm font-semibold text-foreground">{data.lastUsedAt ? formatDateTime(data.lastUsedAt) : 'Never'}</div>
                 </div>
                 <div className="rounded border border-border bg-background p-4 shadow-sm">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1">Total Launches</div>
-                  <div className="text-sm font-semibold text-zinc-100">{data.launchCount} times</div>
+                  <div className="text-sm font-semibold text-foreground">{data.launchCount} times</div>
                 </div>
               </div>
               
@@ -69,7 +69,7 @@ export default function ActivityModal({ profileId, profileName, onClose }) {
                     <div key={l.id} className="flex items-center gap-4 rounded border border-border bg-background px-4 py-3 shadow-sm hover:border-muted-dark transition-colors">
                       <Rocket className="w-4 h-4 text-emerald-400 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-zinc-100">{ACTION_LABEL[l.action] || l.action}</div>
+                        <div className="text-sm font-semibold text-foreground">{ACTION_LABEL[l.action] || l.action}</div>
                         {l.detail && <div className="text-xs text-muted truncate mt-0.5">{l.detail}</div>}
                       </div>
                       <div className="text-[10px] font-mono font-medium text-muted bg-surface px-2 py-1 rounded border border-border shrink-0">

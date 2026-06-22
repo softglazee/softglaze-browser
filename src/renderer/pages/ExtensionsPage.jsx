@@ -1,272 +1,326 @@
-import React, { useState, useMemo } from 'react';
-import { Puzzle, ShieldCheck, Download, Search, Check, ExternalLink, Sliders, ToggleLeft, ToggleRight, Layers } from 'lucide-react';
-import PageHeader from '@/components/PageHeader.jsx';
-import Button from '@/components/ui/Button.jsx';
-import { Card, CardContent } from '@/components/ui/Card.jsx';
-import Input from '@/components/ui/Input.jsx';
-import EmptyState from '@/components/EmptyState.jsx';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Puzzle, ShieldCheck, Download, Search, Check, ExternalLink, Package,
+  ToggleRight, Plus, Loader2, Trash2, Power, AlertTriangle, Info
+} from 'lucide-react';
+import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// --- CURATED HIGH-VALUE EXTENSIONS pool ---
-const SYSTEM_EXTENSIONS_POOL = [
-  {
-    id: 'cjpalhdlnbpafiamejdnhcphjbkeiagm',
-    name: 'uBlock Origin',
-    version: '1.57.2',
-    category: 'Privacy & Security',
-    developer: 'Raymond Hill',
-    description: 'An efficient wide-spectrum content blocker. Easy on CPU and memory footprints. Crucial for reducing script tracking overhead.',
-    iconUrl: 'https://lh3.googleusercontent.com/2_gS97v7Yda4W9w2McU7Z65sX9mNnO0mBNoE3-7Yk6pBwB9Z6ZpZg=s128-w128-h128',
-    storeUrl: 'https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm'
-  },
-  {
-    id: 'nkbihfbeogaeaoehlefnkodbefgpgknn',
-    name: 'MetaMask',
-    version: '11.16.2',
-    category: 'Web3 & Crypto',
-    developer: 'MetaMask Team',
-    description: 'An Ethereum Wallet in your browser. Seamlessly manage multi-account multi-profile deployments without crossing wallet hardware IDs.',
-    iconUrl: 'https://lh3.googleusercontent.com/8hz7Z9v8X9pYk6pBwB9Z6ZpZg=s128-w128-h128',
-    storeUrl: 'https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn'
-  },
-  {
-    id: 'hlnoidbnhihffbfehkicmmebcoepbefe',
-    name: 'Canvas Defender',
-    version: '1.2.4',
-    category: 'Privacy & Security',
-    developer: 'Multilogin',
-    description: 'Intercepts canvas fingerprinting configurations. Adds unique structural noise offsets to alter individual drawing vectors.',
-    iconUrl: 'https://lh3.googleusercontent.com/6X9mNnO0mBNoE3-7Yk6pBwB9Z6ZpZg=s128-w128-h128',
-    storeUrl: 'https://chromewebstore.google.com/detail/canvas-defender/hlnoidbnhihffbfehkicmmebcoepbefe'
-  },
-  {
-    id: 'gighmmpiobklfepjocnamgkkbiglidom',
-    name: 'AdBlock',
-    version: '5.16.0',
-    category: 'Utilities',
-    developer: 'AdBlock Team',
-    description: 'Block pop-ups and annoying ads on YouTube, Facebook, and favorite websites natively across dynamic isolation profiles.',
-    iconUrl: 'https://lh3.googleusercontent.com/9pYk6pBwB9Z6ZpZg=s128-w128-h128',
-    storeUrl: 'https://chromewebstore.google.com/detail/adblock-%E2%80%94-best-ad-blocker/gighmmpiobklfepjocnamgkkbiglidom'
-  },
-  {
-    id: 'fhecolocacknhbeapidgflhhbhaencca',
-    name: 'Cookie-Editor',
-    version: '1.13.0',
-    category: 'Developer Tools',
-    developer: 'Cookie-Editor Team',
-    description: 'Inspect, drop, or inject profile cookies natively using standard JSON or Netscape export matrices inside your runtime parameters.',
-    iconUrl: 'https://lh3.googleusercontent.com/bB9Z6ZpZg=s128-w128-h128',
-    storeUrl: 'https://chromewebstore.google.com/detail/cookie-editor/fhecolocacknhbeapidgflhhbhaencca'
-  },
-  {
-    id: 'jhncoengmabidmkiihonmiebdaidmmin',
-    name: 'Proxy SwitchyOmega',
-    version: '2.5.21',
-    category: 'Utilities',
-    developer: 'FelisCatus',
-    description: 'Manage and switch between complex proxy environments quickly and easily. Fully supports fallback logic overrides.',
-    iconUrl: 'https://lh3.googleusercontent.com/Yda4W9w2McU7Z=s128-w128-h128',
-    storeUrl: 'https://chromewebstore.google.com/detail/proxy-switchyomega/jhncoengmabidmkiihonmiebdaidmmin'
-  }
-];
+// Members at ADMIN and above may install / toggle / remove team extensions.
+const MANAGE_ROLES = new Set(['ADMIN', 'OWNER', 'SUPER_ADMIN']);
+
+// Deterministic accent per extension so the grid stays colorful without any
+// category metadata (we only know what the manifest tells us).
+const ACCENTS = ['#3b82f6', '#8b5cf6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#14b8a6', '#6366f1'];
+function accentFor(id) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return ACCENTS[h % ACCENTS.length];
+}
+
+// The download → unzip → register pipeline runs as one backend call; we surface
+// its phases as a staged label so the user sees real, honest progress.
+const INSTALL_PHASES = ['Downloading package…', 'Extracting archive…', 'Registering…'];
 
 export default function ExtensionsPage() {
-  const [extensions, setExtensions] = useState(SYSTEM_EXTENSIONS_POOL);
-  const [enabledIds, setEnabledIds] = useState(new Set(['cjpalhdlnbpafiamejdnhcphjbkeiagm', 'fhecolocacknhbeapidgflhhbhaencca']));
-  
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  
-  // Custom Manual ID Input Field State
+  const [extensions, setExtensions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [me, setMe] = useState(undefined); // undefined = loading
+
   const [manualId, setManualId] = useState('');
   const [installing, setInstalling] = useState(false);
+  const [installPhase, setInstallPhase] = useState(0);
+  const [installError, setInstallError] = useState('');
+  const [busyId, setBusyId] = useState(null); // id mid toggle/delete
+  const [search, setSearch] = useState('');
+  const phaseTimer = useRef(null);
 
-  const categories = ['All', 'Privacy & Security', 'Web3 & Crypto', 'Utilities', 'Developer Tools'];
+  const canManage = me === undefined || me === null || MANAGE_ROLES.has(me.role);
 
-  // Filtered extensions calculation
-  const filteredExtensions = useMemo(() => {
-    return extensions.filter(ext => {
-      const matchesSearch = ext.name.toLowerCase().includes(search.toLowerCase()) || ext.id.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = selectedCategory === 'All' || ext.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [extensions, search, selectedCategory]);
-
-  // Toggle Global Extension Installation Status
-  const handleToggleExtension = (id) => {
-    setEnabledIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  // Mock function to simulate installing an extension from an explicit ID string
-  const handleManualInstall = async (e) => {
-    e.preventDefault();
-    if (!manualId.trim() || manualId.length < 32) return alert('Please enter a valid 32-character Chrome Extension ID');
-    
-    setInstalling(true);
-    // Simulating secure package fetch delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const targetId = manualId.trim();
-    if (extensions.some(e => e.id === targetId)) {
-      setInstalling(false);
-      return alert('This extension is already present in your Team Repository.');
+  const load = useCallback(async () => {
+    setLoadError('');
+    try {
+      const res = await softglazeApi.extensions.list();
+      setExtensions(Array.isArray(res?.extensions) ? res.extensions : []);
+    } catch (e) {
+      setLoadError(e.message || 'Could not load extensions.');
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    const customExt = {
-      id: targetId,
-      name: `Custom Extension (${targetId.slice(0,6)})`,
-      version: '1.0.0',
-      category: 'Utilities',
-      developer: 'External Web Store',
-      description: 'Manually imported direct enterprise archive deployment configuration matching your precise infrastructure pipeline requirements.',
-      iconUrl: '',
-      storeUrl: `https://chromewebstore.google.com/detail/${targetId}`
-    };
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    softglazeApi.members.current().then((m) => setMe(m || null)).catch(() => setMe(null));
+  }, []);
+  useEffect(() => () => { if (phaseTimer.current) clearInterval(phaseTimer.current); }, []);
 
-    setExtensions([customExt, ...extensions]);
-    setEnabledIds(prev => new Set([...prev, targetId]));
-    setManualId('');
-    setInstalling(false);
-  };
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return extensions;
+    return extensions.filter((e) =>
+      (e.name || '').toLowerCase().includes(q) || (e.chromeId || '').toLowerCase().includes(q));
+  }, [extensions, search]);
+
+  const totalCount = extensions.length;
+  const enabledCount = extensions.filter((e) => e.isGlobal).length;
+  const disabledCount = totalCount - enabledCount;
+
+  async function handleInstall(e) {
+    e.preventDefault();
+    if (installing || !manualId.trim()) return;
+    setInstallError('');
+    setInstalling(true);
+    setInstallPhase(0);
+    // Advance the staged label while the single backend call runs.
+    phaseTimer.current = setInterval(() => {
+      setInstallPhase((p) => Math.min(p + 1, INSTALL_PHASES.length - 1));
+    }, 1100);
+    try {
+      const created = await softglazeApi.extensions.installFromId(manualId.trim());
+      setExtensions((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
+      setManualId('');
+    } catch (err) {
+      setInstallError(err.message || 'Installation failed.');
+    } finally {
+      if (phaseTimer.current) { clearInterval(phaseTimer.current); phaseTimer.current = null; }
+      setInstalling(false);
+    }
+  }
+
+  async function handleToggle(ext) {
+    if (busyId) return;
+    setInstallError('');
+    setBusyId(ext.id);
+    try {
+      const updated = await softglazeApi.extensions.toggleGlobal(ext.id, !ext.isGlobal);
+      setExtensions((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+    } catch (err) {
+      setInstallError(err.message || 'Could not update the extension.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(ext) {
+    if (busyId) return;
+    if (!window.confirm(`Remove "${ext.name}" from the team repository? Its local files will be deleted.`)) return;
+    setInstallError('');
+    setBusyId(ext.id);
+    try {
+      await softglazeApi.extensions.delete(ext.id);
+      setExtensions((prev) => prev.filter((x) => x.id !== ext.id));
+    } catch (err) {
+      setInstallError(err.message || 'Could not remove the extension.');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
-    <>
-      <PageHeader 
-        eyebrow="Enterprise Repositories" 
-        title="Team Extensions" 
-        description="Globally distribute extensions across container profiles with uniform state sync flags."
-      />
-
-      {/* DYNAMIC TOP ACTIONS BAR */}
-      <div className="flex flex-col xl:flex-row gap-4 mb-6 items-start xl:items-center justify-between">
-        
-        {/* Filter Selection Grid */}
-        <div className="flex flex-wrap gap-2">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${selectedCategory === cat ? 'bg-blue-600/10 border-blue-500 text-blue-400' : 'bg-[#181a1f] border-[#3b3e48] text-[#9ca3af] hover:text-white'}`}
-            >
-              {cat}
-            </button>
-          ))}
+    <div className="space-y-6">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">Enterprise Repository</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">Extensions</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            {totalCount} extension{totalCount === 1 ? '' : 's'} installed · {enabledCount} injected into every profile at launch
+          </p>
         </div>
-
-        {/* Manual Web Store Importer Form */}
-        <form onSubmit={handleManualInstall} className="w-full xl:w-auto flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-[#1e2025] border border-[#2d3039] p-2.5 rounded-lg">
-          <div className="relative flex-1 sm:w-72">
-            <input
-              type="text"
-              placeholder="Paste Google Web Store Extension ID..."
-              value={manualId}
-              onChange={e => setManualId(e.target.value)}
-              disabled={installing}
-              className="w-full bg-[#131519] border border-[#3b3e48] rounded px-3 py-1.5 text-xs font-mono text-white outline-none focus:border-blue-500"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={installing || !manualId.trim()}
-            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 px-4 py-1.5 rounded text-xs font-medium text-white transition flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            {installing ? 'Fetching...' : 'Import to Team'}
-          </button>
-        </form>
       </div>
 
-      {/* SEARCH AND REPO TOTAL HINT */}
-      <div className="flex items-center gap-4 bg-[#181a1f] border border-[#2d3039] px-4 py-3 rounded-xl mb-6">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+      {/* STAT ROW — real derived counts */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Total Extensions', value: totalCount, icon: Package, color: '#3b82f6' },
+          { label: 'Injected Globally', value: enabledCount, icon: ToggleRight, color: '#10b981' },
+          { label: 'Disabled', value: disabledCount, icon: Power, color: '#8b5cf6' }
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className="rounded-xl p-4 flex items-center gap-3 animate-fade-up"
+              style={{
+                background: `color-mix(in srgb, ${stat.color} 8%, var(--card))`,
+                border: `1px solid color-mix(in srgb, ${stat.color} 22%, transparent)`
+              }}
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${stat.color} 15%, transparent)` }}>
+                <Icon className="w-5 h-5" style={{ color: stat.color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-2xl font-bold text-foreground leading-none">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">{stat.label}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ENGINE CAVEAT */}
+      <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3">
+        <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-[12px] text-muted-foreground leading-relaxed">
+          Installed extensions are unpacked locally and mounted into each profile via Chromium&apos;s <code className="text-foreground/80 font-mono text-[11px]">--load-extension</code> at launch.
+          They apply on the <span className="text-foreground font-medium">next launch</span> of every profile where the extension is enabled. Some hardened stable-Chrome builds restrict unpacked extensions — Softglaze&apos;s bundled engine loads them reliably.
+        </p>
+      </div>
+
+      {/* MANUAL WEB STORE IMPORTER */}
+      <div className="bg-card border border-border rounded-xl p-5 animate-fade-up">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 15%, transparent)' }}>
+            <Plus className="w-4 h-4" style={{ color: '#3b82f6' }} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-foreground">Import to Team</h2>
+            <p className="text-xs text-muted-foreground">Paste a Chrome Web Store URL or its 32-character ID — Softglaze downloads and unpacks the real package.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleInstall} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <input
             type="text"
-            placeholder="Search extensions by name or hash signature reference..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-[#131519] border border-[#3b3e48] rounded-md pl-9 pr-3 py-2 text-[13px] text-white outline-none focus:border-blue-500 transition"
+            placeholder="https://chromewebstore.google.com/detail/…  or  cjpalhdlnbpafiamejdnhcphjbkeiagm"
+            value={manualId}
+            onChange={(e) => setManualId(e.target.value)}
+            disabled={installing || !canManage}
+            className="flex-1 bg-input-background border border-border rounded px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors disabled:opacity-50"
           />
-        </div>
-        <div className="text-[12px] text-[#9ca3af] hidden sm:block whitespace-nowrap">
-          Total Repositories: <span className="text-white font-semibold">{extensions.length}</span> | Enabled: <span className="text-blue-400 font-semibold">{enabledIds.size}</span>
-        </div>
+          <button
+            type="submit"
+            disabled={installing || !manualId.trim() || !canManage}
+            className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 px-4 py-2 text-xs font-semibold transition-opacity disabled:opacity-40 min-w-[150px]"
+          >
+            {installing
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {INSTALL_PHASES[installPhase]}</>
+              : <><Download className="w-3.5 h-3.5" /> Import to Team</>}
+          </button>
+        </form>
+
+        {installError && (
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] text-red-400">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {installError}
+          </div>
+        )}
+        {!canManage && me && (
+          <p className="mt-3 text-[11px] text-muted-foreground inline-flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" /> Only Admins and above can manage team extensions. You can view the repository.
+          </p>
+        )}
       </div>
 
-      {/* CURATED GRID RENDERING PANEL */}
-      {filteredExtensions.length === 0 ? (
-        <EmptyState title="No Extensions Match Criteria" description="Modify your query parameters or import a direct Extension identifier archive string from the Chrome Web Store above." />
+      {/* SEARCH */}
+      <div className="relative flex-1 max-w-md">
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search by name or ID…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors"
+        />
+      </div>
+
+      {/* GRID */}
+      {loadError ? (
+        <EmptyStateInline title="Could not load extensions" description={loadError} />
+      ) : loading ? (
+        <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 text-muted-foreground animate-spin" /></div>
+      ) : filtered.length === 0 ? (
+        <EmptyStateInline
+          title={extensions.length === 0 ? 'No extensions yet' : 'No extensions match your search'}
+          description={extensions.length === 0
+            ? 'Import a Chrome Web Store extension above to add it to your team repository and inject it into every profile.'
+            : 'Try a different name or ID.'}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filteredExtensions.map(ext => {
-            const isGloballyEnabled = enabledIds.has(ext.id);
+          {filtered.map((ext) => {
+            const accent = accentFor(ext.chromeId || ext.id);
+            const enabled = ext.isGlobal;
+            const busy = busyId === ext.id;
             return (
-              <Card key={ext.id} className={`bg-[#1e2025] border transition-all flex flex-col justify-between overflow-hidden group ${isGloballyEnabled ? 'border-blue-500/40 shadow-blue-950/10 shadow-lg' : 'border-[#2d3039] hover:border-slate-500'}`}>
-                <CardContent className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    {/* Header: Icon + Identification metadata */}
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-12 h-12 rounded-xl bg-[#131519] border border-[#3b3e48] shrink-0 overflow-hidden flex items-center justify-center p-2.5 group-hover:border-slate-400 transition">
-                        {ext.iconUrl ? (
-                          <img src={ext.iconUrl} alt={ext.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
-                        ) : null}
-                        <Puzzle className="w-5 h-5 text-blue-400 hidden" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-white font-semibold text-[14px] truncate" title={ext.name}>{ext.name}</h3>
-                          <span className="text-[10px] bg-[#2a2d35] px-2 py-0.5 rounded text-[#9ca3af] font-medium shrink-0">{ext.category}</span>
-                        </div>
-                        <p className="text-[11px] text-[#9ca3af] mt-0.5">v{ext.version} • By <span className="text-slate-300">{ext.developer}</span></p>
-                      </div>
-                    </div>
-
-                    {/* Mid-level description copy parameters */}
-                    <p className="text-[12px] text-[#d1d5db] mt-4 line-clamp-3 leading-relaxed min-h-[54px]">
-                      {ext.description}
+              <div
+                key={ext.id}
+                className="bg-card border border-border rounded-xl p-5 transition-colors animate-fade-up flex flex-col"
+                style={enabled ? {
+                  borderColor: `color-mix(in srgb, ${accent} 35%, transparent)`,
+                  boxShadow: `0 0 20px color-mix(in srgb, ${accent} 10%, transparent)`
+                } : undefined}
+              >
+                {/* Header */}
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className="w-11 h-11 rounded-lg shrink-0 flex items-center justify-center"
+                    style={{ background: `color-mix(in srgb, ${accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${accent} 25%, transparent)` }}
+                  >
+                    <Puzzle className="w-5 h-5" style={{ color: accent }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-foreground truncate" title={ext.name}>{ext.name}</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                      {ext.version ? `v${ext.version}` : 'Unpacked extension'}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(ext)}
+                    disabled={!canManage || busy}
+                    title="Remove from team"
+                    className="shrink-0 w-8 h-8 grid place-items-center rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/40 transition disabled:opacity-40"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
-                  {/* Operational Footer Context Block */}
-                  <div className="mt-5 pt-4 border-t border-[#2d3039] flex items-center justify-between gap-4 text-[12px]">
-                    <a 
-                      href={ext.storeUrl} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="text-slate-400 hover:text-blue-400 transition flex items-center gap-1 font-mono text-[11px]"
-                    >
-                      ID: {ext.id.slice(0,6)}...{ext.id.slice(-4)}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                {/* Footer */}
+                <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-4">
+                  <a
+                    href={ext.storeUrl || `https://chromewebstore.google.com/detail/${ext.chromeId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-mono text-[11px]"
+                    title={ext.chromeId}
+                  >
+                    {ext.chromeId.slice(0, 6)}…{ext.chromeId.slice(-4)}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleExtension(ext.id)}
-                        className={`px-3 py-1.5 rounded font-medium transition flex items-center gap-1.5 text-xs ${isGloballyEnabled ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md' : 'bg-[#3b3e48] hover:bg-[#4b4e58] text-slate-200'}`}
-                      >
-                        {isGloballyEnabled ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" />
-                            Auto-Install Enabled
-                          </>
-                        ) : (
-                          'Disabled Globally'
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(ext)}
+                    disabled={!canManage || busy}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50 border"
+                    style={enabled
+                      ? { background: `color-mix(in srgb, ${accent} 15%, transparent)`, color: accent, borderColor: `color-mix(in srgb, ${accent} 30%, transparent)` }
+                      : { borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
+                  >
+                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : enabled ? <Check className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+                    {enabled ? 'Injected' : 'Disabled'}
+                  </button>
+                </div>
+              </div>
             );
           })}
         </div>
       )}
-    </>
+    </div>
+  );
+}
+
+// Inline themed empty state matching the design language.
+function EmptyStateInline({ title, description }) {
+  return (
+    <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/60 p-10 text-center animate-fade-up">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-elevated">
+        <Puzzle className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {description ? <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{description}</p> : null}
+    </div>
   );
 }

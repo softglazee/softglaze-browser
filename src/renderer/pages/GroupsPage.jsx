@@ -18,7 +18,7 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-8 py-1.5 text-zinc-100 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark shadow-sm"
+      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-8 py-1.5 text-foreground text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark shadow-sm"
     >
       {children}
     </select>
@@ -219,7 +219,7 @@ export default function GroupsPage() {
         {/* LEFT SIDEBAR (Groups) */}
         <Card className="w-full md:w-72 shrink-0 flex flex-col bg-surface border-border shadow-sm rounded">
           <div className="p-4 border-b border-border bg-card/50 flex justify-between items-center rounded-t">
-            <h2 className="text-zinc-100 font-semibold text-sm uppercase tracking-wider">Directories</h2>
+            <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider">Directories</h2>
             <button
               onClick={() => { setIsAddingGroup(true); setEditingGroupId(null); }}
               className="p-1 hover:bg-muted-dark rounded text-primary hover:text-primary-hover transition"
@@ -232,7 +232,7 @@ export default function GroupsPage() {
           <div className="flex-1 overflow-y-auto p-3 space-y-1">
             <button
               onClick={() => setActiveGroupId('all')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-all ${activeGroupId === 'all' ? 'bg-primary/10 text-primary font-medium' : 'text-zinc-300 hover:bg-card hover:text-zinc-100'}`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-all ${activeGroupId === 'all' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-card hover:text-foreground'}`}
             >
               <div className="flex items-center gap-3">
                 <Monitor className={`w-4 h-4 ${activeGroupId === 'all' ? 'text-primary' : 'text-muted'}`} />
@@ -243,7 +243,7 @@ export default function GroupsPage() {
 
             <button
               onClick={() => setActiveGroupId('ungrouped')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-all ${activeGroupId === 'ungrouped' ? 'bg-primary/10 text-primary font-medium' : 'text-zinc-300 hover:bg-card hover:text-zinc-100'}`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-all ${activeGroupId === 'ungrouped' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-card hover:text-foreground'}`}
             >
               <div className="flex items-center gap-3">
                 <Folder className={`w-4 h-4 ${activeGroupId === 'ungrouped' ? 'text-primary' : 'text-muted'}`} />
@@ -265,7 +265,7 @@ export default function GroupsPage() {
                     placeholder="Group name..."
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
-                    className="bg-transparent border-none outline-none text-zinc-100 text-sm w-full placeholder:text-muted"
+                    className="bg-transparent border-none outline-none text-foreground text-sm w-full placeholder:text-muted"
                   />
                   <button type="submit" className="text-emerald-400 hover:text-emerald-300"><Check className="w-4 h-4" /></button>
                   <button type="button" onClick={() => setIsAddingGroup(false)} className="text-muted hover:text-red-400"><X className="w-4 h-4" /></button>
@@ -295,7 +295,7 @@ export default function GroupsPage() {
                         type="text"
                         value={editGroupName}
                         onChange={(e) => setEditGroupName(e.target.value)}
-                        className="bg-transparent border-none outline-none text-zinc-100 text-sm w-full"
+                        className="bg-transparent border-none outline-none text-foreground text-sm w-full"
                       />
                       <button type="submit" className="text-emerald-400"><Check className="w-4 h-4" /></button>
                       <button type="button" onClick={() => setEditingGroupId(null)} className="text-muted"><X className="w-4 h-4" /></button>
@@ -314,12 +314,12 @@ export default function GroupsPage() {
                   <div className="flex items-center justify-between px-3 py-2.5">
                     <div className="flex items-center gap-3 flex-1 overflow-hidden" onClick={() => setActiveGroupId(group.id)}>
                       <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: group.color || '#3b82f6' }} />
-                      <span className={`text-sm truncate ${isActive ? 'text-primary font-medium' : 'text-zinc-300'}`}>{group.name}</span>
+                      <span className={`text-sm truncate ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{group.name}</span>
                     </div>
                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingGroupId(group.id); setEditGroupName(group.name); setEditGroupColor(group.color || GROUP_COLORS[0]); setIsAddingGroup(false); }}
-                        className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-zinc-100 transition"
+                        className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-foreground transition"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
@@ -352,7 +352,7 @@ export default function GroupsPage() {
         <Card className="flex-1 flex flex-col bg-surface border-border overflow-hidden shadow-sm rounded">
           <div className="p-5 border-b border-border flex flex-col gap-4 bg-card/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-zinc-100 font-bold tracking-tight text-lg flex items-center gap-3">
+              <h2 className="text-foreground font-bold tracking-tight text-lg flex items-center gap-3">
                 {headerTitle}
                 <span className="text-xs bg-background border border-border text-muted px-2.5 py-0.5 rounded-full font-mono">{filteredProfiles.length}</span>
               </h2>
@@ -363,7 +363,7 @@ export default function GroupsPage() {
                   placeholder="Search profiles..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-background border border-border rounded pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:border-primary w-full sm:w-64 transition shadow-sm"
+                  className="bg-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground outline-none focus:border-primary w-full sm:w-64 transition shadow-sm"
                 />
               </div>
             </div>
@@ -376,13 +376,13 @@ export default function GroupsPage() {
                   <button
                     key={t}
                     onClick={() => setActiveTag(activeTag === t ? null : t)}
-                    className={`text-xs px-2.5 py-1 rounded border transition ${activeTag === t ? 'bg-primary border-primary text-white shadow-glow' : 'bg-background border-border text-muted hover:border-muted-dark hover:text-zinc-200'}`}
+                    className={`text-xs px-2.5 py-1 rounded border transition ${activeTag === t ? 'bg-primary border-primary text-white shadow-glow' : 'bg-background border-border text-muted hover:border-muted-dark hover:text-foreground'}`}
                   >
                     {t}
                   </button>
                 ))}
                 {activeTag && (
-                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-zinc-100 flex items-center gap-1 ml-1"><X className="w-3 h-3" /> clear</button>
+                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-foreground flex items-center gap-1 ml-1"><X className="w-3 h-3" /> clear</button>
                 )}
               </div>
             )}
@@ -441,7 +441,7 @@ export default function GroupsPage() {
                         <td className="px-5 py-4 text-center">
                           <Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} />
                         </td>
-                        <td className="px-5 py-4 font-medium text-zinc-100">{p.title}</td>
+                        <td className="px-5 py-4 font-medium text-foreground">{p.title}</td>
                         <td className="px-5 py-4">
                           <CustomSelect
                             disabled={busy}
@@ -456,7 +456,7 @@ export default function GroupsPage() {
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap items-center gap-2">
                             {(p.tags || []).map((t) => (
-                              <span key={t} className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-surface border border-border text-zinc-300 px-2 py-1 rounded shadow-sm">
+                              <span key={t} className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-surface border border-border text-muted-foreground px-2 py-1 rounded shadow-sm">
                                 {t}
                                 <button onClick={() => handleRemoveTag(p, t)} className="text-muted hover:text-red-400 transition-colors" title="Remove tag"><X className="w-3 h-3" /></button>
                               </span>
@@ -470,7 +470,7 @@ export default function GroupsPage() {
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(p); if (e.key === 'Escape') { setTagEditFor(null); setTagInput(''); } }}
                                 onBlur={() => handleAddTag(p)}
                                 placeholder="tag + Enter"
-                                className="bg-surface border border-primary rounded px-2 py-1 text-xs text-zinc-100 outline-none w-28 shadow-glow transition-all"
+                                className="bg-surface border border-primary rounded px-2 py-1 text-xs text-foreground outline-none w-28 shadow-glow transition-all"
                               />
                             ) : (
                               <button

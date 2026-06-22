@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS "Member" ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "name" TEXT NOT NULL, "email" TEXT, "role" TEXT NOT NULL DEFAULT 'OPERATOR', "color" TEXT DEFAULT '#3DC6DA', "initials" TEXT, "pinHash" TEXT, "pinSalt" TEXT, "status" TEXT NOT NULL DEFAULT 'active', "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "lastActiveAt" DATETIME);
+ALTER TABLE "Member" ADD COLUMN "parentMemberId" INTEGER;
+ALTER TABLE "Member" ADD COLUMN "passwordHash" TEXT;
+ALTER TABLE "Member" ADD COLUMN "passwordSalt" TEXT;
+ALTER TABLE "Member" ADD COLUMN "permissionsJson" TEXT;
+ALTER TABLE "Member" ADD COLUMN "inviteCode" TEXT;
+ALTER TABLE "Member" ADD COLUMN "inviteStatus" TEXT DEFAULT 'active';
+CREATE TABLE IF NOT EXISTS "License" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "ownerMemberId" INTEGER, "type" TEXT DEFAULT 'trial', "purchaseCode" TEXT, "status" TEXT DEFAULT 'active', "trialEndsAt" DATETIME, "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS "Member_parentMemberId_idx" ON "Member"("parentMemberId");
+CREATE INDEX IF NOT EXISTS "Member_inviteCode_idx" ON "Member"("inviteCode");
+CREATE INDEX IF NOT EXISTS "Member_createdAt_idx" ON "Member"("createdAt");
+CREATE INDEX IF NOT EXISTS "License_ownerMemberId_idx" ON "License"("ownerMemberId");

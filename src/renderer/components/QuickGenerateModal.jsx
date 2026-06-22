@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Wand2, X, Loader2, Server, ListPlus, Ban } from 'lucide-react';
 
-const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-zinc-100 outline-none focus:border-primary transition-colors';
+const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
 
 export default function QuickGenerateModal({ osPlatforms = [], groups = [], proxies = [], onClose, onGenerate }) {
@@ -50,7 +50,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
       <div className="w-[500px] bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold">Quick generate</h2></div>
-          <button onClick={() => !busy && onClose()} className="w-8 h-8 grid place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-zinc-100"><X className="w-4 h-4" /></button>
+          <button onClick={() => !busy && onClose()} className="w-8 h-8 grid place-items-center rounded-lg text-muted hover:bg-secondary hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -76,7 +76,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
             </div>
           </div>
 
-          <label className="flex items-center gap-2.5 text-[12.5px] text-zinc-200 cursor-pointer">
+          <label className="flex items-center gap-2.5 text-[12.5px] text-foreground cursor-pointer">
             <input type="checkbox" checked={randomize} onChange={(e) => setRandomize(e.target.checked)} className="accent-[#6366f1]" />
             Randomize fingerprints <span className="text-muted-dark">— unique UA, GPU, MAC &amp; device each</span>
           </label>
@@ -120,7 +120,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
-          <button onClick={() => !busy && onClose()} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-white/5 disabled:opacity-50">Cancel</button>
+          <button onClick={() => !busy && onClose()} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-secondary disabled:opacity-50">Cancel</button>
           <button onClick={submit} disabled={busy} className="h-9 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}{busy ? 'Generating…' : `Generate ${Number(count) || 0}`}
           </button>

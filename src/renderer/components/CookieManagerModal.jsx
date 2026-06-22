@@ -1,10 +1,35 @@
 import React, { useState, useRef } from 'react';
-import { Cookie, X, Loader2, Download, Copy, Upload, Check } from 'lucide-react';
+import { Cookie, X, Loader2, Download, Copy, Upload, Check, Layers, AlertTriangle } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 function safeName(name) {
   return String(name || 'profile').replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').slice(0, 60) || 'profile';
+}
+
+// Compact cookie-health summary with expiry warnings.
+function CookieHealth({ health }) {
+  if (!health) return null;
+  const chip = (label, value, cls) => (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${cls}`}>{value} {label}</span>
+  );
+  return (
+    <div className="rounded border border-border bg-surface p-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {chip('total', health.total, 'bg-background text-foreground border border-border')}
+        {chip('domains', health.domains, 'bg-background text-foreground border border-border')}
+        {chip('session', health.session, 'bg-background text-muted border border-border')}
+        {chip('secure', health.secure, 'bg-background text-muted border border-border')}
+      </div>
+      {(health.expired > 0 || health.expiringSoon > 0) && (
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+          {health.expired > 0 && chip('expired', health.expired, 'bg-red-500/10 text-red-400 border border-red-500/30')}
+          {health.expiringSoon > 0 && chip('expiring < 7d', health.expiringSoon, 'bg-amber-500/10 text-amber-400 border border-amber-500/30')}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function CookieManagerModal({ profileId, profileName, onClose }) {
@@ -15,6 +40,10 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
   const [info, setInfo] = useState('');
   const [exportContent, setExportContent] = useState('');
   const [exportCount, setExportCount] = useState(null);
+  const [exportHealth, setExportHealth] = useState(null);
+  const [importHealth, setImportHealth] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResults, setBulkResults] = useState(null);
   const [importText, setImportText] = useState('');
   const [copied, setCopied] = useState(false);
   const fileRef = useRef(null);
@@ -22,11 +51,12 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
   const reset = () => { setError(''); setInfo(''); };
 
   const handleExport = async () => {
-    reset(); setBusy(true); setExportContent(''); setExportCount(null);
+    reset(); setBusy(true); setExportContent(''); setExportCount(null); setExportHealth(null);
     try {
       const res = await softglazeApi.profiles.exportCookies(profileId, format);
       setExportContent(res.content);
       setExportCount(res.count);
+      setExportHealth(res.health || null);
       setInfo(`Exported ${res.count} cookie(s).`);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -62,20 +92,35 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
   };
 
   const handleImport = async () => {
-    reset();
+    reset(); setBulkResults(null);
     if (!importText.trim()) { setError('Paste or load cookies first.'); return; }
     setBusy(true);
     try {
       const res = await softglazeApi.profiles.importCookies(profileId, importText, format);
+      setImportHealth(res.health || null);
       setInfo(`Imported ${res.imported} of ${res.parsed} parsed cookie(s) into the live session.`);
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
 
+  const handleBulkImport = async () => {
+    reset(); setBulkResults(null);
+    if (!importText.trim()) { setError('Paste or load cookies first.'); return; }
+    setBulkBusy(true);
+    try {
+      const res = await softglazeApi.profiles.importCookiesToRunning(importText, format);
+      setImportHealth(res.health || null);
+      setBulkResults(res.results || []);
+      const ok = (res.results || []).filter((r) => r.ok).length;
+      setInfo(`Imported into ${ok} of ${res.targets} running profile(s).`);
+    } catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  };
+
   const tabBtn = (key, label) => (
     <button
       onClick={() => { setTab(key); reset(); }}
-      className={`px-4 py-1.5 text-sm font-medium rounded transition-all ${tab === key ? 'bg-primary text-white shadow-glow' : 'text-muted hover:text-zinc-100 hover:bg-surface'}`}
+      className={`px-4 py-1.5 text-sm font-medium rounded transition-all ${tab === key ? 'bg-primary text-white shadow-glow' : 'text-muted hover:text-foreground hover:bg-surface'}`}
     >
       {label}
     </button>
@@ -90,11 +135,11 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
               <Cookie className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-zinc-100 font-bold text-sm leading-tight tracking-wide uppercase">Manage Cookies</h2>
+              <h2 className="text-foreground font-bold text-sm leading-tight tracking-wide uppercase">Manage Cookies</h2>
               <p className="text-xs text-muted leading-tight mt-0.5">{profileName}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-muted hover:text-zinc-100 rounded hover:bg-muted-dark transition">
+          <button onClick={onClose} className="p-1.5 text-muted hover:text-foreground rounded hover:bg-muted-dark transition">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -102,8 +147,8 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
         <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-background/50">
           <div className="flex gap-1">{tabBtn('export', 'Export')}{tabBtn('import', 'Import')}</div>
           <div className="flex items-center gap-1 bg-background border border-border rounded p-1 shadow-inner">
-            <button onClick={() => setFormat('json')} className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded transition ${format === 'json' ? 'bg-surface text-zinc-100 shadow-sm border border-border' : 'text-muted hover:text-zinc-200'}`}>JSON</button>
-            <button onClick={() => setFormat('netscape')} className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded transition ${format === 'netscape' ? 'bg-surface text-zinc-100 shadow-sm border border-border' : 'text-muted hover:text-zinc-200'}`}>Netscape</button>
+            <button onClick={() => setFormat('json')} className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded transition ${format === 'json' ? 'bg-surface text-foreground shadow-sm border border-border' : 'text-muted hover:text-foreground'}`}>JSON</button>
+            <button onClick={() => setFormat('netscape')} className={`px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded transition ${format === 'netscape' ? 'bg-surface text-foreground shadow-sm border border-border' : 'text-muted hover:text-foreground'}`}>Netscape</button>
           </div>
         </div>
 
@@ -123,10 +168,11 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
               </Button>
               {exportContent && (
                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                  <CookieHealth health={exportHealth} />
                   <textarea
                     readOnly
                     value={exportContent}
-                    className="w-full h-48 bg-background border border-border rounded p-4 text-xs font-mono text-zinc-300 outline-none resize-none shadow-inner focus:border-primary focus:ring-1 focus:ring-primary transition"
+                    className="w-full h-48 bg-background border border-border rounded p-4 text-xs font-mono text-muted-foreground outline-none resize-none shadow-inner focus:border-primary focus:ring-1 focus:ring-primary transition"
                   />
                   <div className="flex gap-3">
                     <Button size="sm" variant="secondary" onClick={handleCopy} className="flex-1">
@@ -146,18 +192,37 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder={format === 'netscape' ? '# Netscape HTTP Cookie File\n.example.com\tTRUE\t/\tTRUE\t1767225600\tsid\tabc123' : '[{ "name": "sid", "value": "abc123", "domain": ".example.com", "path": "/", "secure": true }]'}
-                className="w-full h-48 bg-background border border-border rounded p-4 text-xs font-mono text-zinc-300 outline-none resize-none shadow-inner focus:border-primary focus:ring-1 focus:ring-primary transition"
+                className="w-full h-48 bg-background border border-border rounded p-4 text-xs font-mono text-muted-foreground outline-none resize-none shadow-inner focus:border-primary focus:ring-1 focus:ring-primary transition"
               />
               <div className="flex gap-3">
                 <input ref={fileRef} type="file" accept=".json,.txt" onChange={handleFile} className="hidden" />
                 <Button size="sm" variant="secondary" onClick={() => fileRef.current && fileRef.current.click()} className="flex-1">
                   <Upload className="w-4 h-4 mr-2" /> Load file
                 </Button>
-                <Button size="sm" variant="primary" disabled={busy} onClick={handleImport} className="flex-1">
+                <Button size="sm" variant="primary" disabled={busy || bulkBusy} onClick={handleImport} className="flex-1">
                   {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Import to session
+                  Import to this profile
                 </Button>
               </div>
+              <Button size="sm" variant="secondary" disabled={busy || bulkBusy} onClick={handleBulkImport} className="w-full">
+                {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Layers className="w-4 h-4 mr-2" />}
+                Import to all running profiles
+              </Button>
+
+              {importHealth && <CookieHealth health={importHealth} />}
+
+              {bulkResults && (
+                <div className="rounded border border-border bg-background p-3 space-y-1.5 max-h-40 overflow-y-auto">
+                  {bulkResults.map((r) => (
+                    <div key={r.sessionId} className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground truncate">{r.profileName}</span>
+                      <span className={r.ok ? 'text-emerald-400' : 'text-red-400'}>
+                        {r.ok ? `${r.imported} imported` : 'failed'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

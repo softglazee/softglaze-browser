@@ -9,8 +9,11 @@ import BatchImportPage from '@/pages/BatchImportPage.jsx';
 import SettingsPage from '@/pages/SettingsPage.jsx';
 import GroupsPage from '@/pages/GroupsPage.jsx';
 import ExtensionsPage from '@/pages/ExtensionsPage.jsx';
+import BrowsersPage from '@/pages/BrowsersPage.jsx';
 import TrashPage from '@/pages/TrashPage.jsx';
 import MembersPage from '@/pages/MembersPage.jsx';
+import AutomationPage from '@/pages/AutomationPage.jsx';
+import AccountSettingsPage from '@/pages/AccountSettingsPage.jsx';
 
 export default function App() {
   return (
@@ -23,9 +26,12 @@ export default function App() {
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="/proxies" element={<ProxyPoolPage />} />
           <Route path="/extensions" element={<ExtensionsPage />} />
+          <Route path="/browsers" element={<BrowsersPage />} />
           <Route path="/trash" element={<TrashPage />} />
           <Route path="/batch-import" element={<BatchImportPage />} />
+          <Route path="/automation" element={<AutomationPage />} />
           <Route path="/members" element={<MembersPage />} />
+          <Route path="/account" element={<AccountSettingsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </AppShell>

@@ -6,7 +6,24 @@ function getSoftglazeApi() {
 }
 
 export const softglazeApi = {
-  system: { getInfo: () => getSoftglazeApi().system.getInfo() },
+  system: {
+    getInfo: () => getSoftglazeApi().system.getInfo(),
+    listBrowsers: () => getSoftglazeApi().system.listBrowsers(),
+    humanType: (payload) => getSoftglazeApi().system.humanType(payload)
+  },
+  browsers: {
+    listAvailable: () => getSoftglazeApi().browsers.listAvailable(),
+    download: (version) => getSoftglazeApi().browsers.download(version),
+    downloadStatus: () => getSoftglazeApi().browsers.downloadStatus(),
+    pauseDownload: (version) => getSoftglazeApi().browsers.pauseDownload(version),
+    resumeDownload: (version) => getSoftglazeApi().browsers.resumeDownload(version),
+    firefoxStatus: () => getSoftglazeApi().browsers.firefoxStatus(),
+    firefoxList: () => getSoftglazeApi().browsers.firefoxList(),
+    firefoxDownload: (version) => getSoftglazeApi().browsers.firefoxDownload(version),
+    firefoxDownloadStatus: () => getSoftglazeApi().browsers.firefoxDownloadStatus(),
+    firefoxPauseDownload: (version) => getSoftglazeApi().browsers.firefoxPauseDownload(version),
+    firefoxResumeDownload: (version) => getSoftglazeApi().browsers.firefoxResumeDownload(version)
+  },
   dashboard: { getStats: () => getSoftglazeApi().dashboard.getStats() },
   proxies: {
     list: (params) => getSoftglazeApi().proxies.list(params),
@@ -14,7 +31,12 @@ export const softglazeApi = {
     update: (payload) => getSoftglazeApi().proxies.update(payload),
     delete: (id) => getSoftglazeApi().proxies.delete(id),
     batchAdd: (payload) => getSoftglazeApi().proxies.batchAdd(payload),
-    check: (payload) => getSoftglazeApi().proxies.check(payload)
+    check: (payload) => getSoftglazeApi().proxies.check(payload),
+    bulkDelete: (ids) => getSoftglazeApi().proxies.bulkDelete(ids),
+    getRotation: (profileId) => getSoftglazeApi().proxies.getRotation(profileId),
+    setRotation: (payload) => getSoftglazeApi().proxies.setRotation(payload),
+    syncVendorPool: (payload) => getSoftglazeApi().proxies.syncVendorPool(payload),
+    rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload)
   },
   profiles: {
     list: (params) => getSoftglazeApi().profiles.list(params),
@@ -33,9 +55,15 @@ export const softglazeApi = {
     analyzeLeaks: (id) => getSoftglazeApi().profiles.analyzeLeaks(id),
     exportCookies: (id, format) => getSoftglazeApi().profiles.exportCookies(id, format),
     importCookies: (id, data, format) => getSoftglazeApi().profiles.importCookies(id, data, format),
-    clone: (id) => getSoftglazeApi().profiles.clone(id),
+    importCookiesToRunning: (data, format) => getSoftglazeApi().profiles.importCookiesToRunning(data, format),
+    storageInfo: (id) => getSoftglazeApi().profiles.storageInfo(id),
+    clone: (id, options) => getSoftglazeApi().profiles.clone(id, options),
     liveLeak: (id) => getSoftglazeApi().profiles.liveLeak(id),
-    activity: (id) => getSoftglazeApi().profiles.activity(id)
+    activity: (id) => getSoftglazeApi().profiles.activity(id),
+    get2faToken: (id) => getSoftglazeApi().profiles.get2faToken(id),
+    bulkSynchronize: (ids) => getSoftglazeApi().profiles.bulkSynchronize(ids),
+    exportArchive: (payload) => getSoftglazeApi().profiles.exportArchive(payload),
+    cookieRobot: (payload) => getSoftglazeApi().profiles.cookieRobot(payload)
   },
   templates: {
     list: () => getSoftglazeApi().templates.list(),
@@ -46,6 +74,8 @@ export const softglazeApi = {
   settings: {
     getProxyScheduler: () => getSoftglazeApi().settings.getProxyScheduler(),
     setProxyScheduler: (config) => getSoftglazeApi().settings.setProxyScheduler(config),
+    getGlobal: () => getSoftglazeApi().settings.getGlobal(),
+    setGlobal: (patch) => getSoftglazeApi().settings.setGlobal(patch),
     getEmail: () => getSoftglazeApi().settings.getEmail(),
     setEmail: (config) => getSoftglazeApi().settings.setEmail(config),
     testEmail: (email) => getSoftglazeApi().settings.testEmail(email)
@@ -72,10 +102,44 @@ export const softglazeApi = {
     setPin: (id, pin) => getSoftglazeApi().members.setPin(id, pin),
     current: () => getSoftglazeApi().members.current(),
     switch: (id, pin) => getSoftglazeApi().members.switch(id, pin),
+    superLogin: (identifier, password) => getSoftglazeApi().members.superLogin(identifier, password),
+    acceptInvite: (payload) => getSoftglazeApi().members.acceptInvite(payload),
+    login: (identifier, password) => getSoftglazeApi().members.login(identifier, password),
+    logout: () => getSoftglazeApi().members.logout(),
+    updateSelf: (payload) => getSoftglazeApi().members.updateSelf(payload),
+    requestChange: (payload) => getSoftglazeApi().members.requestChange(payload),
+    commitChange: (payload) => getSoftglazeApi().members.commitChange(payload),
+    updatePermissions: (id, permissions) => getSoftglazeApi().members.updatePermissions(id, permissions),
     setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions)
   },
   team: {
     activity: (limit) => getSoftglazeApi().team.activity(limit)
+  },
+  license: {
+    get: () => getSoftglazeApi().license.get(),
+    redeem: (code) => getSoftglazeApi().license.redeem(code)
+  },
+  payments: {
+    getConfig: () => getSoftglazeApi().payments.getConfig(),
+    setConfig: (payload) => getSoftglazeApi().payments.setConfig(payload),
+    validate: () => getSoftglazeApi().payments.validate(),
+    startCheckout: () => getSoftglazeApi().payments.startCheckout(),
+    pollCheckout: (payload) => getSoftglazeApi().payments.pollCheckout(payload)
+  },
+  ipProviders: {
+    getAll: () => getSoftglazeApi().ipProviders.getAll(),
+    updateCredentials: (payload) => getSoftglazeApi().ipProviders.updateCredentials(payload),
+    toggleStatus: (payload) => getSoftglazeApi().ipProviders.toggleStatus(payload)
+  },
+  monetization: {
+    getLinks: () => getSoftglazeApi().monetization.getLinks(),
+    setLinks: (payload) => getSoftglazeApi().monetization.setLinks(payload)
+  },
+  extensions: {
+    list: () => getSoftglazeApi().extensions.list(),
+    installFromId: (idOrUrl) => getSoftglazeApi().extensions.installFromId(idOrUrl),
+    delete: (id) => getSoftglazeApi().extensions.delete(id),
+    toggleGlobal: (id, isGlobal) => getSoftglazeApi().extensions.toggleGlobal(id, isGlobal)
   },
   vault: {
     status: () => getSoftglazeApi().vault.status(),
@@ -95,6 +159,28 @@ export const softglazeApi = {
   },
   batch: {
     previewProfilesFromSpreadsheet: () => getSoftglazeApi().batch.previewProfilesFromSpreadsheet(),
-    commitProfileImport: (token) => getSoftglazeApi().batch.commitProfileImport(token)
+    commitProfileImport: (token, options) => getSoftglazeApi().batch.commitProfileImport(token, options),
+    exportProfiles: () => getSoftglazeApi().batch.exportProfiles(),
+    exportProfilesToFile: (options) => getSoftglazeApi().batch.exportProfilesToFile(options),
+    onImportProgress: (callback) => getSoftglazeApi().batch.onImportProgress(callback)
+  },
+  migration: {
+    startTransfer: (payload) => getSoftglazeApi().migration.startTransfer(payload),
+    onProgress: (callback) => getSoftglazeApi().migration.onProgress(callback)
+  },
+  automation: {
+    getMacros: () => getSoftglazeApi().automation.getMacros(),
+    saveMacro: (payload) => getSoftglazeApi().automation.saveMacro(payload),
+    deleteMacro: (id) => getSoftglazeApi().automation.deleteMacro(id),
+    startWarmer: (payload) => getSoftglazeApi().automation.startWarmer(payload),
+    getHistory: () => getSoftglazeApi().automation.getHistory(),
+    onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback)
+  },
+  developerApi: {
+    listTokens: () => getSoftglazeApi().developerApi.listTokens(),
+    createToken: (payload) => getSoftglazeApi().developerApi.createToken(payload),
+    revokeToken: (id) => getSoftglazeApi().developerApi.revokeToken(id),
+    serverStatus: () => getSoftglazeApi().developerApi.serverStatus(),
+    setServerEnabled: (enabled) => getSoftglazeApi().developerApi.setServerEnabled(enabled)
   }
 };

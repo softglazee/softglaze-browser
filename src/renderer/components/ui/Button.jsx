@@ -5,9 +5,9 @@ export default function Button({ children, variant = 'primary', size = 'md', isL
   const baseStyle = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded outline-none disabled:opacity-50 disabled:pointer-events-none";
   
   const variants = {
-    primary: "bg-primary hover:bg-primary-hover text-white shadow-glow",
-    secondary: "bg-surface border border-border hover:border-muted-dark text-zinc-200",
-    ghost: "bg-transparent hover:bg-surface text-muted hover:text-zinc-200",
+    primary: "bg-primary hover:bg-primary-hover text-primary-foreground shadow-glow",
+    secondary: "bg-secondary border border-border hover:border-border-strong text-secondary-foreground hover:bg-elevated",
+    ghost: "bg-transparent hover:bg-secondary text-muted-foreground hover:text-foreground",
     danger: "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
   };
 

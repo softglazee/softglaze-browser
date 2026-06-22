@@ -12,6 +12,10 @@ import { HashRouter } from 'react-router-dom';
 
 import App from './App.jsx';
 import './index.css';
+import { initTheme } from './lib/theme.js';
+
+// Apply the saved theme before first paint to avoid a flash of the wrong theme.
+initTheme();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

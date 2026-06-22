@@ -9,11 +9,11 @@ export default function PageHeader({ eyebrow, title, description, actions, class
             {eyebrow}
           </p>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 tracking-tight truncate">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight truncate font-display">
           {title}
         </h1>
         {description && (
-          <p className="text-sm text-muted mt-1.5 max-w-2xl leading-relaxed">
+          <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
             {description}
           </p>
         )}

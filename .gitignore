@@ -7,3 +7,18 @@ softglaze.sqlite-journal
 softglaze_profiles/
 .DS_Store
 chrome/
+firefox/
+# local dev test artifacts
+dev-test.log
+dev-test.err.log
+dev-test.pid
+
+# Ignore custom extensions and store packages
+*.crx
+*.xpi
+*.zip
+*.tar.gz
+extensions/
+src/renderer/public/extensions/
+build/
+out/

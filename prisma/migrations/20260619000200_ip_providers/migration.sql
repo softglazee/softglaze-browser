@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS "IpProvider" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT NOT NULL, "apiKey" TEXT, "secretKey" TEXT, "status" TEXT DEFAULT 'DISABLED', "referralLink" TEXT, "updatedAt" DATETIME DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX IF NOT EXISTS "IpProvider_name_key" ON "IpProvider"("name");

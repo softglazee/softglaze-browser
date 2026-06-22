@@ -1,0 +1,1 @@
+ALTER TABLE "Profile" ADD COLUMN "enableQuic" BOOLEAN NOT NULL DEFAULT false;
