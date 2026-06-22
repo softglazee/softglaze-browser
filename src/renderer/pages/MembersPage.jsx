@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Users, X, Loader2, Trash2, KeyRound, Activity, ClipboardList,
   Crown, UserCog, UserCheck, User, Clock, Copy, Check, Mail, Link2, ShieldCheck,
-  Download, FolderInput, Search
+  Download, FolderInput, Search, Lock, CreditCard, RotateCcw
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -163,7 +163,8 @@ export default function MembersPage() {
 
       {!loading && members.length > 0 && (
         <div className="bg-elevated p-1 rounded-lg inline-flex gap-1 mb-5">
-          {[{ id: 'members', label: 'Members', icon: Users }, { id: 'activity', label: 'Activity', icon: Activity }].map((t) => {
+          {[{ id: 'members', label: 'Members', icon: Users }, { id: 'activity', label: 'Activity', icon: Activity },
+            ...(me && me.role === 'SUPER_ADMIN' ? [{ id: 'licenses', label: 'Licenses', icon: CreditCard }] : [])].map((t) => {
             const Icon = t.icon; const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)} className={`px-4 py-2 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${active ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -219,6 +220,7 @@ export default function MembersPage() {
                   {pending && <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"><Mail className="w-3 h-3" />Invite pending</span>}
                   {m.hasPassword && !pending && <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border"><KeyRound className="w-3 h-3" />Login set</span>}
                   {m.status === 'suspended' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">Suspended</span>}
+                  {m.status === 'banned' && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30"><Lock className="w-3 h-3" />Banned</span>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-4 text-[11px]">
@@ -241,11 +243,93 @@ export default function MembersPage() {
             </button>
           )}
         </div>
+      ) : tab === 'licenses' ? (
+        <SuperAdminLicensePanel />
       ) : (
         <TeamActivityFeed />
       )}
 
       {editing && <MemberModal member={editing} me={me} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+    </div>
+  );
+}
+
+// Super-Admin only: per-owner-tree license console. Grant / extend / reset a
+// license and block / unblock the owner. Every action is re-enforced in main.
+const LIC_TONE = {
+  paid: { c: '#10b981', label: 'Paid' },
+  trialing: { c: '#3b82f6', label: 'Trial' },
+  grace: { c: '#f59e0b', label: 'Grace' },
+  banned: { c: '#ef4444', label: 'Banned' }
+};
+
+function SuperAdminLicensePanel() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+  const [err, setErr] = useState('');
+
+  async function load() {
+    setLoading(true); setErr('');
+    try { setRows(await softglazeApi.license.listOwners()); }
+    catch (e) { setErr(e.message || 'Could not load licenses.'); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function act(ownerId, fn) {
+    setBusyId(ownerId); setErr('');
+    try { await fn(); await load(); }
+    catch (e) { setErr(e.message || 'Action failed.'); }
+    finally { setBusyId(null); }
+  }
+
+  if (loading) return <div className="grid place-items-center py-16"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>;
+
+  return (
+    <div className="space-y-3">
+      {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12.5px] text-red-400">{err}</div>}
+      <p className="text-[12px] text-muted-foreground">Subscription state per owner workspace. Local-first and best-effort — a determined user can still edit the local DB or clock; durable enforcement needs the licensing backend.</p>
+      {rows.length === 0 && <div className="bg-card border border-border rounded-xl py-12 text-center text-[13px] text-muted-foreground">No owner workspaces yet.</div>}
+      {rows.map((r) => {
+        const lic = r.license || {};
+        const tone = LIC_TONE[lic.state] || LIC_TONE.trialing;
+        const busy = busyId === r.ownerId;
+        const banned = r.ownerStatus === 'banned' || lic.isBanned;
+        return (
+          <div key={r.ownerId} className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="text-sm font-semibold text-foreground truncate">{r.ownerName}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${tone.c} 14%, transparent)`, color: tone.c, border: `1px solid color-mix(in srgb, ${tone.c} 28%, transparent)` }}>{tone.label}</span>
+                  {lic.tier && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{lic.tier}</span>}
+                </div>
+                <div className="text-[11.5px] text-muted-foreground mt-0.5">{r.ownerEmail || 'No email'}</div>
+                <div className="text-[11.5px] text-muted-foreground mt-1">
+                  {lic.isTrial && `${lic.daysLeftTrial} trial day(s) left`}
+                  {lic.isGrace && `Grace: ${lic.daysLeftGrace} day(s) left`}
+                  {lic.isPaid && `Paid until ${lic.endsAt ? new Date(lic.endsAt).toLocaleDateString() : '—'}`}
+                  {lic.isBanned && (r.banReason || 'Banned')}
+                  {lic.clockTamper && <span className="ml-2 text-amber-400">⚠ clock anomaly</span>}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.grant({ ownerId: r.ownerId, months: 1, tier: 'pro' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><CreditCard className="w-3.5 h-3.5" />Grant 1 mo</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.extend({ ownerId: r.ownerId, days: 7 }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Clock className="w-3.5 h-3.5" />+7 days</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.reset({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" />Reset trial</button>
+              {banned ? (
+                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'active' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><ShieldCheck className="w-3.5 h-3.5" />Unblock</button>
+              ) : (
+                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'banned', reason: 'Blocked by Super Admin.' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60"><Lock className="w-3.5 h-3.5" />Block</button>
+              )}
+              {busy && <Loader2 className="w-4 h-4 animate-spin text-muted" />}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
