@@ -20,7 +20,7 @@ const { app, BrowserWindow, shell, session } = require('electron');
   }
 })();
 
-const { configureDatabaseEnv, bootstrapDatabase } = require('./database');
+const { configureDatabaseEnv, bootstrapDatabase, isDbEncryptionEnabled, relockEncryptedDb } = require('./database');
 
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow = null;
@@ -187,7 +187,15 @@ app.whenReady().then(async () => {
   killOrphanedBrowsers();
 
   configureDatabaseEnv();
-  await bootstrapDatabase();
+  // When at-rest encryption is on, the DB file is ciphertext and cannot be opened
+  // until the user unlocks it. Defer bootstrap to the `db:unlock` handler (driven
+  // by the pre-Gate "Unlock Database" screen). With encryption off this is the
+  // unchanged boot path.
+  if (!isDbEncryptionEnabled()) {
+    await bootstrapDatabase();
+  } else {
+    console.log('[Startup] Database is encrypted — deferring open until unlocked.');
+  }
   configureSessionSecurity();
 
   const { registerIpcHandlers } = require('./ipcHandlers');
@@ -234,6 +242,16 @@ app.on('before-quit', async (event) => {
     await disconnectPrisma();
   } catch (err) {
     console.error('[before-quit] Prisma disconnect failed', err);
+  }
+
+  try {
+    // If at-rest encryption is on and the DB was unlocked this session, fold the
+    // working file back into ciphertext and shred the plaintext, so nothing
+    // readable is left on disk once the app exits. No-op when encryption is off or
+    // the DB was never unlocked.
+    await relockEncryptedDb();
+  } catch (err) {
+    console.error('[before-quit] DB re-encryption failed', err);
   }
 
   app.quit();
