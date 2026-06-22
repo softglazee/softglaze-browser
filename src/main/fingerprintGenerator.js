@@ -56,6 +56,16 @@ const LINUX_GPU = [
   ['Google Inc. (Intel)', 'ANGLE (Intel, Mesa Intel(R) UHD Graphics 620 (KBL GT2), OpenGL 4.6)']
 ];
 
+// Mobile (Android, CDP-emulated). The UA + Client-Hints layer in browserEngine.js
+// reports a Pixel 7 / Android 13, so the generated GPU + screen MUST match that
+// exact device or the WebGL renderer would contradict the UA (an easy mismatch to
+// score). Everything here is therefore a real Pixel 7 (Tensor G2 / Mali-G710,
+// 8 cores, 8 GB, 412x915 CSS @ DPR 2.625). The launch engine derives the DPR and
+// touch points from deviceClass='mobile'. Add more devices later by parametrizing
+// osTokens()/userAgentMetadata.model alongside a matching pool entry here.
+const ANDROID_GPU = ['Google Inc. (ARM)', 'ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)'];
+const ANDROID_RES = '412x915'; // CSS logical viewport of a Pixel 7 (physical 1080x2400)
+
 // ---------------------------------------------------------------------------
 // Media-device label pools, per OS. enumerateDevices() consistency is a real
 // detection surface: a profile that reports 0 devices — or labels that don't fit
@@ -218,7 +228,65 @@ function generateMediaDevices(os, seed) {
   };
 }
 
-function generateFingerprint() {
+// Pixel 7 / Android 13 fingerprint, coherent with the Android UA + Client-Hints
+// produced in browserEngine.js. screen.width/height are reported in CSS pixels
+// (the engine applies deviceScaleFactor 2.625 + touch at launch from deviceClass).
+function generateMobileFingerprint() {
+  const [resW, resH] = ANDROID_RES.split('x');
+  return {
+    browserCore: 'Chrome',
+    browserBrand: 'Chrome',
+    browserVersion: '',
+    os: 'Android',
+    osVersion: '13',
+    deviceClass: 'mobile',
+    userAgent: 'Auto',
+
+    resolutionType: 'Custom',
+    resolutionW: resW,
+    resolutionH: resH,
+
+    webglMetadata: 'Custom',
+    webglVendor: ANDROID_GPU[0],
+    webglRenderer: ANDROID_GPU[1],
+    webgpu: 'Based on WebGL',
+
+    cpuType: 'Custom',
+    cpuCores: '8', // Tensor G2 is octa-core
+    ramType: 'Custom',
+    ramGb: '8',
+
+    deviceNameType: 'Custom',
+    deviceName: 'Pixel 7',
+    macAddressType: 'Custom',
+    macAddress: randMac(),
+
+    // Bound to the proxy at launch — intentionally not hardcoded here.
+    timezoneType: 'Based on IP',
+    locationType: 'Based on IP',
+    languageType: 'Based on IP',
+    displayLangType: 'Based on Language',
+
+    webrtc: 'Forward',
+    fontsType: 'Default',
+    mediaDevice: 'Auto',
+    canvasNoise: true,
+    webglImageNoise: true,
+    audioContextNoise: true,
+    clientRectsNoise: true,
+    speechVoicesNoise: true,
+    doNotTrack: 'Default',
+    portScanProtection: 'Enable',
+    hardwareAcceleration: 'Default',
+    disableTls: 'Close'
+  };
+}
+
+function generateFingerprint(opts = {}) {
+  // Mobile is a distinct device class (Android), not just another OS — route it to
+  // its own coherent generator so desktop GPU/screen pools never leak into it.
+  if (opts && opts.deviceClass === 'mobile') return generateMobileFingerprint();
+
   const os = weighted([['Windows', 65], ['macOS', 25], ['Linux', 10]]);
 
   let osVersion;
@@ -253,6 +321,7 @@ function generateFingerprint() {
     browserVersion: '',
     os,
     osVersion,
+    deviceClass: 'desktop',
     userAgent: 'Auto',
 
     resolutionType: 'Custom',
@@ -295,9 +364,34 @@ function generateFingerprint() {
   };
 }
 
+// Device ↔ GPU coherence rule used by the leak/trust check. A mobile (Android)
+// profile MUST report a mobile GPU (Mali / Adreno / PowerVR / Apple GPU); a
+// desktop profile must NOT. A mobile UA paired with a desktop GPU (or vice versa)
+// is one of the easiest mismatches for a detector to score, so we flag it as a
+// hard fail. Pure + dependency-free so it can be unit-tested directly.
+// Returns { status: 'pass'|'warn'|'fail', detail }.
+function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
+  const renderer = String(webglRenderer || '');
+  const isMobile = String(deviceClass || '').toLowerCase() === 'mobile'
+    || /android/i.test(String(os || ''));
+  if (!renderer) return { status: 'warn', detail: 'No WebGL renderer set — GPU coherence not verified.' };
+  const mobileGpu = /mali|adreno|powervr|apple gpu/i.test(renderer);
+  const desktopGpu = /direct3d|d3d11|geforce|nvidia|radeon|\bamd\b|intel|metal renderer|apple m\d|opengl 4/i.test(renderer);
+  if (isMobile) {
+    return mobileGpu
+      ? { status: 'pass', detail: 'Mobile profile reports a mobile GPU.' }
+      : { status: 'fail', detail: 'Mobile (Android) profile reports a desktop GPU — an obvious mismatch.' };
+  }
+  return (mobileGpu && !desktopGpu)
+    ? { status: 'fail', detail: 'Desktop profile reports a mobile GPU — an obvious mismatch.' }
+    : { status: 'pass', detail: 'Desktop profile reports a desktop GPU.' };
+}
+
 module.exports = {
   generateFingerprint,
+  generateMobileFingerprint,
   generateMediaDevices,
+  deviceGpuCoherence,
   CHROMIUM_BRANDS,
   CHROMIUM_BRAND_IDS,
   normalizeBrand,
