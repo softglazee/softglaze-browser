@@ -122,6 +122,11 @@ export const softglazeApi = {
     seatUsage: () => getSoftglazeApi().team.seatUsage(),
     exportActivity: (payload) => getSoftglazeApi().team.exportActivity(payload)
   },
+  sync: {
+    status: () => getSoftglazeApi().sync.status(),
+    configure: (payload) => getSoftglazeApi().sync.configure(payload),
+    run: (payload) => getSoftglazeApi().sync.run(payload)
+  },
   license: {
     get: () => getSoftglazeApi().license.get(),
     redeem: (code) => getSoftglazeApi().license.redeem(code)
