@@ -112,6 +112,12 @@ const CHANNELS = Object.freeze({
   SYNC_STATUS: 'sync:status',
   SYNC_CONFIGURE: 'sync:configure',
   SYNC_RUN: 'sync:run',
+  DB_ENCRYPTION_STATUS: 'db:encryption-status',
+  DB_UNLOCK: 'db:unlock',
+  DB_ENABLE_ENCRYPTION: 'db:enable-encryption',
+  DB_DISABLE_ENCRYPTION: 'db:disable-encryption',
+  WORKSPACE_BACKUP: 'workspace:backup',
+  WORKSPACE_RESTORE: 'workspace:restore',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -303,6 +309,16 @@ const api = Object.freeze({
     status: () => invoke(CHANNELS.SYNC_STATUS),
     configure: (payload) => invoke(CHANNELS.SYNC_CONFIGURE, payload),
     run: (payload) => invoke(CHANNELS.SYNC_RUN, payload)
+  }),
+  db: Object.freeze({
+    encryptionStatus: () => invoke(CHANNELS.DB_ENCRYPTION_STATUS),
+    unlock: (password) => invoke(CHANNELS.DB_UNLOCK, { password }),
+    enableEncryption: (payload) => invoke(CHANNELS.DB_ENABLE_ENCRYPTION, payload),
+    disableEncryption: (payload) => invoke(CHANNELS.DB_DISABLE_ENCRYPTION, payload)
+  }),
+  workspace: Object.freeze({
+    backup: (payload) => invoke(CHANNELS.WORKSPACE_BACKUP, payload),
+    restore: (payload) => invoke(CHANNELS.WORKSPACE_RESTORE, payload)
   }),
   license: Object.freeze({
     get: () => invoke(CHANNELS.LICENSE_GET),
