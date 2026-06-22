@@ -40,6 +40,7 @@ const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
+const licensePolicy = require('./licensePolicy');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
@@ -138,9 +139,14 @@ const CHANNELS = Object.freeze({
   MEMBER_COMMIT_CHANGE: 'member:commit-change',
   MEMBER_UPDATE_PERMISSIONS: 'member:update-permissions',
   MEMBER_SET_INSTRUCTIONS: 'member:set-instructions',
+  MEMBER_SET_STATUS: 'member:set-status',
 
   LICENSE_GET: 'license:get',
   LICENSE_REDEEM: 'license:redeem',
+  LICENSE_GRANT: 'license:grant',
+  LICENSE_EXTEND: 'license:extend',
+  LICENSE_RESET: 'license:reset',
+  LICENSE_LIST_OWNERS: 'license:list-owners',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
@@ -2120,6 +2126,10 @@ async function launchProfile(payload) {
   const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!profile) throw new Error('Profile not found.');
 
+  // License gate — a banned owner tree cannot launch (enforced in main, not just
+  // the renderer).
+  await assertNotBanned();
+
   // Block a concurrent launch by a different member (lock-when-in-use).
   const launcher = await getActiveMember();
   assertProfileLaunchable(id, launcher);
@@ -3259,7 +3269,9 @@ async function requirePermission(action) {
   if (!need) return;
   const member = await getActiveMember();
   if (!member) return;
-  if (member.status === 'suspended') throw new Error('This member is suspended.');
+  if (member.status === 'suspended' || member.status === 'banned') {
+    throw new Error(member.status === 'banned' ? 'This account is banned.' : 'This member is suspended.');
+  }
   if (rankOf(member.role) < need) {
     const err = new Error('Your role does not permit this action.');
     err.code = 'FORBIDDEN';
@@ -3273,8 +3285,8 @@ async function requirePermission(action) {
 async function requireOwnerOrSuper(action = 'perform this action') {
   const member = await getActiveMember();
   if (!member) return; // single-user mode == owner
-  if (member.status === 'suspended') {
-    const err = new Error('This member is suspended.'); err.code = 'FORBIDDEN'; throw err;
+  if (member.status === 'suspended' || member.status === 'banned') {
+    const err = new Error(member.status === 'banned' ? 'This account is banned.' : 'This member is suspended.'); err.code = 'FORBIDDEN'; throw err;
   }
   if (member.role !== 'OWNER' && member.role !== 'SUPER_ADMIN') {
     const err = new Error(`Only the Owner or Super Admin can ${action}.`);
@@ -4716,6 +4728,7 @@ async function pushSyncIndex(engine, profiles) {
 // invoice extends the licence 30 days and issues a self-verifying purchase code.
 // ---------------------------------------------------------------------------
 const TRIAL_DAYS = 7;
+const GRACE_DAYS = 3; // after the trial/paid term lapses: app still works but nags, then bans
 const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months: 1, days: 30, label: '$5 / month' });
 
 async function primaryOwnerId() {
@@ -4749,31 +4762,91 @@ async function ensureLicense(ownerId) {
   return lic;
 }
 
-function serializeLicense(lic) {
-  const now = Date.now();
-  const ends = lic.trialEndsAt ? new Date(lic.trialEndsAt).getTime() : null;
-  const expired = ends != null && now > ends;
-  const daysLeft = ends ? Math.max(0, Math.ceil((ends - now) / 86400000)) : null;
+// Best-effort clock-tamper clamp persisted in Setting. A rolled-back system clock
+// must not silently buy back an expired trial — see licensePolicy.clampNow.
+async function clampLicenseNow() {
+  const stored = await readSetting('licenseClock', null);
+  const r = licensePolicy.clampNow({ now: Date.now(), lastSeenAt: stored && stored.lastSeenAt });
+  if (!stored || stored.lastSeenAt !== r.lastSeenAt) {
+    await writeSetting('licenseClock', { lastSeenAt: r.lastSeenAt }).catch(() => {});
+  }
+  return { effectiveNow: r.effectiveNow, tampered: r.tampered };
+}
+
+// Marker that distinguishes an automatic license-lapse ban from a deliberate
+// Super-Admin block. Only license-caused bans are auto-cleared when the licence
+// becomes valid again — an admin block stays until the admin lifts it.
+const LICENSE_BAN_REASON = 'Trial and grace period ended.';
+
+// Reconcile the owner's Member.status with the license state, and report the
+// owner's resulting status. License-lapse bans are applied/cleared automatically;
+// an admin block (different banReason) is never touched here. Returns the status
+// string (so callers can fold an admin block into the effective ban).
+async function syncOwnerBanState(ownerId, licenseBanned) {
+  if (ownerId == null) return null;
+  try {
+    const db = getPrisma();
+    const owner = await db.member.findUnique({ where: { id: ownerId } });
+    if (!owner) return null;
+    if (licenseBanned && owner.status !== 'banned') {
+      const u = await db.member.update({ where: { id: ownerId }, data: { status: 'banned', banReason: LICENSE_BAN_REASON } });
+      return u.status;
+    }
+    if (!licenseBanned && owner.status === 'banned' && owner.banReason === LICENSE_BAN_REASON) {
+      const u = await db.member.update({ where: { id: ownerId }, data: { status: 'active', banReason: null } });
+      return u.status;
+    }
+    return owner.status;
+  } catch (e) { return null; }
+}
+
+// Evaluate + format a licence: runs the state machine (with the tamper-clamped
+// clock), reconciles the owner ban flag, and returns the renderer-facing view. The
+// effective ban is license-lapse OR a Super-Admin block on the owner.
+async function licenseView(lic) {
+  const { effectiveNow, tampered } = await clampLicenseNow();
+  const st = licensePolicy.computeLicenseState({ type: lic.type, trialEndsAt: lic.trialEndsAt, now: effectiveNow, graceDays: GRACE_DAYS });
+  const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, st.isBanned);
+  const banned = st.isBanned || ownerStatus === 'banned';
   return {
     type: lic.type,
-    status: expired ? 'expired' : 'active',
-    endsAt: lic.trialEndsAt ? new Date(lic.trialEndsAt).toISOString() : null,
-    daysLeft,
-    isExpired: expired,
-    isTrial: lic.type === 'trial',
-    isPaid: lic.type === 'paid' && !expired,
+    tier: lic.tier || 'pro',
+    state: banned ? 'banned' : st.state,
+    status: banned ? 'banned' : (st.isGrace ? 'grace' : 'active'),
+    endsAt: st.endsAt,
+    graceEndsAt: st.graceEndsAt,
+    daysLeft: st.isTrial && !banned ? st.daysLeftTrial : (st.isGrace && !banned ? st.daysLeftGrace : null),
+    daysLeftTrial: st.daysLeftTrial,
+    daysLeftGrace: st.daysLeftGrace,
+    isExpired: st.isGrace || banned,
+    isTrial: st.isTrial && !banned,
+    isPaid: st.isPaid && !banned,
+    isGrace: st.isGrace && !banned,
+    isBanned: banned,
+    adminBlocked: banned && !st.isBanned, // banned by an admin, not by license lapse
+    clockTamper: tampered,
     purchaseCode: lic.purchaseCode || null,
     plan: PLAN
   };
 }
 
-async function applyPaidMonths(lic, months, code) {
+// Shared "grant paid" used by redeem AND checkout-poll: advances the paid term,
+// optionally records the tier, AND clears any ban (restoring the owner to active).
+async function applyPaidMonths(lic, months, code, tier) {
   const base = Math.max(Date.now(), lic.trialEndsAt ? new Date(lic.trialEndsAt).getTime() : Date.now());
   const until = new Date(base + months * PLAN.days * 86400000);
-  return getPrisma().license.update({
+  const updated = await getPrisma().license.update({
     where: { id: lic.id },
-    data: { type: 'paid', status: 'active', purchaseCode: code || lic.purchaseCode || null, trialEndsAt: until }
+    data: {
+      type: 'paid',
+      status: 'active',
+      tier: tier || lic.tier || 'pro',
+      purchaseCode: code || lic.purchaseCode || null,
+      trialEndsAt: until
+    }
   });
+  await syncOwnerBanState(lic.ownerMemberId ?? null, false);
+  return updated;
 }
 
 async function getLicense() {
@@ -4783,20 +4856,42 @@ async function getLicense() {
   if (m && m.role === 'SUPER_ADMIN') {
     return {
       type: 'source-owner',
+      tier: 'enterprise',
+      state: 'paid',
       status: 'active',
       endsAt: null,
       daysLeft: null,
+      daysLeftTrial: null,
+      daysLeftGrace: null,
       isExpired: false,
       isTrial: false,
       isPaid: true,
+      isGrace: false,
+      isBanned: false,
       isExempt: true,
+      clockTamper: false,
       purchaseCode: null,
       plan: PLAN
     };
   }
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
-  return serializeLicense(lic);
+  return licenseView(lic);
+}
+
+// Main-side license gate. Refuse a profile launch when the owner tree is banned —
+// never trust the renderer's gate alone. Super Admin is exempt.
+async function assertNotBanned() {
+  const m = await getActiveMember();
+  if (m && m.role === 'SUPER_ADMIN') return;
+  const ownerId = await resolveLicenseOwnerId();
+  const lic = await ensureLicense(ownerId);
+  const view = await licenseView(lic);
+  if (view.isBanned) {
+    const e = new Error('Your subscription has ended — renew it to launch profiles.');
+    e.code = 'LICENSE_BANNED';
+    throw e;
+  }
 }
 
 async function redeemPurchaseCode(payload) {
@@ -4807,7 +4902,88 @@ async function redeemPurchaseCode(payload) {
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
   const updated = await applyPaidMonths(lic, v.months, code.trim().toUpperCase());
-  return serializeLicense(updated);
+  return licenseView(updated);
+}
+
+// ---- Super-Admin lifecycle controls (enforced in main, never UI-trusted) ----
+
+// Block / unblock / suspend a member. Owners manage only their own tree; the Super
+// Admin manages anyone (and is the only one who can block an OWNER).
+async function setMemberStatus(payload) {
+  await requireOwnerOrSuper('change a member\'s status');
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const status = String(input.status || '').toLowerCase();
+  if (!['active', 'suspended', 'banned'].includes(status)) throw new Error('Status must be active, suspended or banned.');
+  const db = getPrisma();
+  const actor = await getActiveMember();
+  const target = await db.member.findUnique({ where: { id } });
+  if (!target) throw new Error('Member not found.');
+  if (actor && actor.role !== 'SUPER_ADMIN') {
+    const all = await db.member.findMany();
+    if (!permissions.visibleMemberIds(all, actor).has(id)) throw new Error('You can only manage members you created.');
+  }
+  if (target.role === 'OWNER' && status !== 'active' && (!actor || actor.role !== 'SUPER_ADMIN')) {
+    throw new Error('Only the Super Admin can block or suspend an owner.');
+  }
+  const data = { status };
+  data.banReason = status === 'banned' ? (optionalString(input.reason) || 'Blocked by administrator.') : null;
+  const updated = await db.member.update({ where: { id }, data });
+  await logActivity(db, null, status === 'active' ? 'unban' : status, `${target.name} → ${status}`);
+  return serializeMember(updated);
+}
+
+// Grant a paid term to an owner tree (also clears any ban via applyPaidMonths).
+async function grantLicense(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const ownerId = input.ownerId != null ? parseId(input.ownerId) : await resolveLicenseOwnerId();
+  const months = Math.max(1, Number.parseInt(input.months, 10) || 1);
+  const tier = input.tier === 'enterprise' ? 'enterprise' : 'pro';
+  const lic = await ensureLicense(ownerId);
+  const updated = await applyPaidMonths(lic, months, lic.purchaseCode || null, tier);
+  return licenseView(updated);
+}
+
+// Extend the current term by N days (keeps trial/paid type); clears a ban.
+async function extendLicense(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const ownerId = input.ownerId != null ? parseId(input.ownerId) : await resolveLicenseOwnerId();
+  const days = Math.max(1, Number.parseInt(input.days, 10) || 7);
+  const lic = await ensureLicense(ownerId);
+  const base = Math.max(Date.now(), lic.trialEndsAt ? new Date(lic.trialEndsAt).getTime() : Date.now());
+  const updated = await getPrisma().license.update({ where: { id: lic.id }, data: { trialEndsAt: new Date(base + days * 86400000) } });
+  await syncOwnerBanState(ownerId, false);
+  return licenseView(updated);
+}
+
+// Reset an owner tree to a fresh 7-day trial; clears a ban.
+async function resetLicense(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const ownerId = input.ownerId != null ? parseId(input.ownerId) : await resolveLicenseOwnerId();
+  const lic = await ensureLicense(ownerId);
+  const updated = await getPrisma().license.update({
+    where: { id: lic.id },
+    data: { type: 'trial', status: 'active', purchaseCode: null, trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86400000) }
+  });
+  await syncOwnerBanState(ownerId, false);
+  return licenseView(updated);
+}
+
+// Per-owner-tree license overview for the Super Admin console.
+async function listOwnerLicenses() {
+  await requireSuperAdmin();
+  const db = getPrisma();
+  const owners = await db.member.findMany({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } });
+  const out = [];
+  for (const o of owners) {
+    const lic = await ensureLicense(o.id);
+    const view = await licenseView(lic);
+    out.push({ ownerId: o.id, ownerName: o.name, ownerEmail: o.email || null, ownerStatus: o.status, banReason: o.banReason || null, license: view });
+  }
+  return out;
 }
 
 // ---- Payment gateway (Cryptomus) — config is SUPER ADMIN only ----
@@ -4893,7 +5069,7 @@ async function pollCheckout(payload) {
     const owner = ownerId ? await db.member.findUnique({ where: { id: ownerId } }) : null;
     if (owner && owner.email) await deliverPurchaseCode(owner.email, owner.name, code);
   } catch (e) { /* email is best-effort */ }
-  return { status: st.status, paid: true, license: serializeLicense(updated), purchaseCode: code };
+  return { status: st.status, paid: true, license: await licenseView(updated), purchaseCode: code };
 }
 
 async function deliverPurchaseCode(email, name, code) {
@@ -5649,9 +5825,14 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.MEMBER_COMMIT_CHANGE, commitMemberChange);
   registerHandler(CHANNELS.MEMBER_UPDATE_PERMISSIONS, updateMemberPermissions);
   registerHandler(CHANNELS.MEMBER_SET_INSTRUCTIONS, setMemberInstructions);
+  registerHandler(CHANNELS.MEMBER_SET_STATUS, setMemberStatus);
 
   registerHandler(CHANNELS.LICENSE_GET, getLicense);
   registerHandler(CHANNELS.LICENSE_REDEEM, redeemPurchaseCode);
+  registerHandler(CHANNELS.LICENSE_GRANT, grantLicense);
+  registerHandler(CHANNELS.LICENSE_EXTEND, extendLicense);
+  registerHandler(CHANNELS.LICENSE_RESET, resetLicense);
+  registerHandler(CHANNELS.LICENSE_LIST_OWNERS, listOwnerLicenses);
   registerHandler(CHANNELS.PAYMENT_CONFIG_GET, getPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_SET, setPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_VALIDATE, validatePaymentConfig);
