@@ -109,4 +109,95 @@ async function decryptArchive(filePath, password) {
   }
 }
 
-module.exports = { exportProfileArchive, decryptArchive };
+// ---------------------------------------------------------------------------
+// Softglaze Pro — Workspace backup/restore (Phase 6)
+//
+// A workspace backup bundles the whole SQLite database file plus a snapshot of
+// the Setting rows into one passphrase-encrypted file — so an operator can move
+// or recover their entire workspace, not just a single profile's cache. It is a
+// sibling of the .sgz profile archive and reuses the same crypto (scrypt +
+// AES-256-GCM), with its own magic so the two can't be confused.
+//
+// Unlike the profile archive (which streams a multi-GB cache directory), a
+// workspace payload is small (a DB + settings), so it is built as a single
+// self-contained, in-memory envelope — no ZIP, no archiver/extract-zip
+// dependency, fully unit-testable:
+//
+//   plaintext = JSON.stringify({ format:'sgzw1', kind:'workspace', exportedAt,
+//                                db:<base64 of the sqlite file>, settings:[…] })
+//   on disk:  [ "SGZW1" (5) ][ salt (16) ][ iv (12) ][ ciphertext … ][ authTag (16) ]
+//
+// restoreWorkspaceArchive() verifies the GCM tag (decipher.final throws on a
+// wrong password / tampered file) and returns the decoded payload BEFORE the
+// caller touches any live file — so a bad backup can never overwrite a good DB.
+// ---------------------------------------------------------------------------
+const WS_MAGIC = Buffer.from('SGZW1');
+
+async function exportWorkspaceArchive({ dbPath, settings = null, password, outPath }) {
+  if (!password || String(password).length < 6) throw new Error('Provide an encryption password (6+ characters).');
+  if (!outPath) throw new Error('No output path was provided.');
+  if (!dbPath || !fs.existsSync(dbPath)) throw new Error('The workspace database file does not exist on disk.');
+
+  const dbBytes = await fs.promises.readFile(dbPath);
+  const payload = {
+    format: 'sgzw1',
+    kind: 'workspace',
+    exportedAt: new Date().toISOString(),
+    dbBytes: dbBytes.length,
+    db: dbBytes.toString('base64'),
+    settings: Array.isArray(settings) ? settings : null
+  };
+  const plaintext = Buffer.from(JSON.stringify(payload), 'utf8');
+
+  const salt = crypto.randomBytes(SALT_LEN);
+  const iv = crypto.randomBytes(IV_LEN);
+  const key = await scrypt(String(password), salt, 32);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const tag = cipher.getAuthTag();
+
+  await fs.promises.writeFile(outPath, Buffer.concat([WS_MAGIC, salt, iv, ciphertext, tag]));
+  return { ok: true, outPath, dbBytes: dbBytes.length, settingsCount: payload.settings ? payload.settings.length : 0 };
+}
+
+// Decrypts a workspace backup and returns its payload. Throws on a wrong password
+// or tampered file (GCM tag mismatch). Returns the DB as a Buffer plus the decoded
+// settings array; the caller is responsible for writing it out only after this
+// resolves successfully.
+async function restoreWorkspaceArchive(filePath, password) {
+  const buf = await fs.promises.readFile(filePath);
+  const minLen = WS_MAGIC.length + SALT_LEN + IV_LEN + TAG_LEN;
+  if (buf.length < minLen || !buf.subarray(0, WS_MAGIC.length).equals(WS_MAGIC)) {
+    throw new Error('Not a valid Softglaze workspace backup.');
+  }
+  let off = WS_MAGIC.length;
+  const salt = buf.subarray(off, off += SALT_LEN);
+  const iv = buf.subarray(off, off += IV_LEN);
+  const tag = buf.subarray(buf.length - TAG_LEN);
+  const ciphertext = buf.subarray(off, buf.length - TAG_LEN);
+  const key = await scrypt(String(password), salt, 32);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  let plaintext;
+  try {
+    plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  } catch (e) {
+    throw new Error('Could not decrypt — wrong password or the backup is corrupted.');
+  }
+  let payload;
+  try {
+    payload = JSON.parse(plaintext.toString('utf8'));
+  } catch (e) {
+    throw new Error('The workspace backup is unreadable (bad payload).');
+  }
+  if (!payload || payload.kind !== 'workspace' || typeof payload.db !== 'string') {
+    throw new Error('This file is not a Softglaze workspace backup.');
+  }
+  return {
+    db: Buffer.from(payload.db, 'base64'),
+    settings: Array.isArray(payload.settings) ? payload.settings : null,
+    exportedAt: payload.exportedAt || null
+  };
+}
+
+module.exports = { exportProfileArchive, decryptArchive, exportWorkspaceArchive, restoreWorkspaceArchive };

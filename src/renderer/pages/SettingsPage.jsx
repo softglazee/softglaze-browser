@@ -5,6 +5,9 @@ import BillingSettings from '@/components/BillingSettings.jsx';
 import MonetizationSettings from '@/components/MonetizationSettings.jsx';
 import DeveloperApiSettings from '@/components/DeveloperApiSettings.jsx';
 import MigrationSettings from '@/components/MigrationSettings.jsx';
+import SyncSettings from '@/components/SyncSettings.jsx';
+import DbEncryptionSettings from '@/components/DbEncryptionSettings.jsx';
+import WorkspaceBackupSettings from '@/components/WorkspaceBackupSettings.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
@@ -105,6 +108,12 @@ export default function SettingsPage() {
       <MonetizationSettings />
 
       <MigrationSettings />
+
+      <SyncSettings />
+
+      <DbEncryptionSettings />
+
+      <WorkspaceBackupSettings />
 
       <DeveloperApiSettings />
 
