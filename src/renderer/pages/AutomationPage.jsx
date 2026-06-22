@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Wand2, Bot, Flame, History, Plus, Loader2, Play, Square, X, Search,
-  Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical
+  Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical,
+  Layers, FileSpreadsheet, XCircle, AlertTriangle
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const TABS = [
   { key: 'macros', label: 'My Macros', icon: Workflow },
+  { key: 'parallel', label: 'Parallel Runs', icon: Layers },
   { key: 'warmer', label: 'Cookie Warmer', icon: Flame },
   { key: 'history', label: 'Task History', icon: History }
 ];
@@ -46,6 +48,7 @@ export default function AutomationPage() {
       </div>
 
       {tab === 'macros' && <MacrosPanel />}
+      {tab === 'parallel' && <ParallelPanel />}
       {tab === 'warmer' && <WarmerPanel />}
       {tab === 'history' && <HistoryPanel />}
     </div>
@@ -57,9 +60,16 @@ export default function AutomationPage() {
 // ---------------------------------------------------------------------------
 function MacrosPanel() {
   const [macros, setMacros] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [targetProfile, setTargetProfile] = useState('');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [notice, setNotice] = useState('');
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [runningId, setRunningId] = useState(null);
+  const [recording, setRecording] = useState(null); // { profileId, sessionId }
+  const [busyRec, setBusyRec] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -69,7 +79,16 @@ function MacrosPanel() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const loadProfiles = useCallback(async () => {
+    try {
+      const data = await softglazeApi.profiles.list({});
+      const rows = Array.isArray(data) ? data : (data && (data.profiles || data.rows)) || [];
+      setProfiles(rows);
+      setTargetProfile((cur) => (cur || (rows.length ? String(rows[0].id) : '')));
+    } catch (e) { /* non-fatal — the selector just stays empty */ }
+  }, []);
+
+  useEffect(() => { load(); loadProfiles(); }, [load, loadProfiles]);
 
   async function remove(id) {
     setErr('');
@@ -77,21 +96,80 @@ function MacrosPanel() {
     catch (e) { setErr(e.message || 'Could not delete macro.'); }
   }
 
+  async function run(macro) {
+    if (!targetProfile) { setErr('Choose a target profile first.'); return; }
+    setErr(''); setNotice(''); setRunningId(macro.id);
+    try {
+      const res = await softglazeApi.automation.runMacro({ macroId: macro.id, profileId: Number(targetProfile), continueOnError: true });
+      setNotice(`"${macro.name}" ran ${res.ran}/${res.total} step(s)${res.ok ? '.' : ' — stopped on an error.'}`);
+    } catch (e) { setErr(e.message || 'Could not run macro.'); }
+    finally { setRunningId(null); }
+  }
+
+  async function toggleRecording() {
+    setErr(''); setNotice(''); setBusyRec(true);
+    try {
+      if (recording) {
+        const name = window.prompt('Save the recorded macro as (leave blank to discard):', 'Recorded macro');
+        const res = await softglazeApi.automation.stopRecording({
+          profileId: recording.profileId,
+          sessionId: recording.sessionId,
+          saveAs: name && name.trim() ? name.trim() : undefined
+        });
+        setRecording(null);
+        if (res.saved) { setNotice(`Saved "${res.saved.name}" with ${res.count} step(s).`); load(); }
+        else setNotice(`Recording stopped — captured ${res.count} step(s) (not saved).`);
+      } else {
+        if (!targetProfile) { setErr('Choose a target profile to record in.'); return; }
+        const res = await softglazeApi.automation.startRecording({ profileId: Number(targetProfile) });
+        setRecording({ profileId: Number(targetProfile), sessionId: res.sessionId });
+        setNotice('Recording… interact with the launched browser, then press Stop to save.');
+      }
+    } catch (e) { setErr(e.message || 'Recording action failed.'); }
+    finally { setBusyRec(false); }
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] text-muted-foreground">
-          Build reusable, no-code workflows that run inside a profile (navigate, click, type, wait).
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-muted-foreground max-w-md">
+          Record or build reusable, no-code workflows, then run them inside a profile (navigate, click, type, wait) — manually or on a schedule.
         </p>
-        <button
-          onClick={() => setShowBuilder(true)}
-          className="shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 shadow shadow-indigo-500/25"
-        >
-          <Plus className="w-4 h-4" /> Create Macro
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={targetProfile}
+            onChange={(e) => setTargetProfile(e.target.value)}
+            className="h-9 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground max-w-[180px]"
+            title="Profile that Run / Record act on"
+          >
+            {profiles.length === 0 && <option value="">No profiles</option>}
+            {profiles.map((p) => <option key={p.id} value={String(p.id)}>{p.title || `Profile ${p.id}`}</option>)}
+          </select>
+          <button
+            onClick={toggleRecording}
+            disabled={busyRec || (!recording && !targetProfile)}
+            className={`shrink-0 inline-flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-semibold border transition-colors ${recording ? 'bg-red-500/15 border-red-500/40 text-red-400' : 'bg-card border-border text-foreground hover:border-primary'}`}
+          >
+            {busyRec ? <Loader2 className="w-4 h-4 animate-spin" /> : (recording ? <Square className="w-4 h-4" /> : <span className="w-2.5 h-2.5 rounded-full bg-red-500" />)}
+            {recording ? 'Stop & Save' : 'Record'}
+          </button>
+          <button
+            onClick={() => setShowSchedule(true)}
+            className="shrink-0 inline-flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-semibold bg-card border border-border text-foreground hover:border-primary"
+          >
+            <Clock className="w-4 h-4" /> Schedule
+          </button>
+          <button
+            onClick={() => setShowBuilder(true)}
+            className="shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 shadow shadow-indigo-500/25"
+          >
+            <Plus className="w-4 h-4" /> Create Macro
+          </button>
+        </div>
       </div>
 
       {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+      {notice && <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[12px] text-emerald-400">{notice}</div>}
 
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /></div>
@@ -99,7 +177,7 @@ function MacrosPanel() {
         <div className="rounded-xl border border-dashed border-border bg-card/40 py-14 grid place-items-center text-center">
           <Workflow className="w-8 h-8 text-muted-foreground mb-3" />
           <p className="text-sm font-medium text-foreground">No macros yet</p>
-          <p className="text-[12.5px] text-muted-foreground mt-1">Create your first no-code workflow to get started.</p>
+          <p className="text-[12.5px] text-muted-foreground mt-1">Record a workflow or create one to get started.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -116,15 +194,127 @@ function MacrosPanel() {
                 {m.description && <p className="text-[12px] text-muted-foreground mt-0.5 line-clamp-2">{m.description}</p>}
                 <p className="text-[10.5px] text-muted-foreground/70 mt-1.5">Updated {fmt(m.updatedAt)}</p>
               </div>
-              <button onClick={() => remove(m.id)} title="Delete" className="shrink-0 text-muted-foreground hover:text-red-400 transition-colors">
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => run(m)}
+                  disabled={runningId === m.id || !targetProfile || (m.stepCount || 0) === 0}
+                  title={(m.stepCount || 0) === 0 ? 'This macro has no steps yet' : 'Run on the selected profile'}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {runningId === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Run
+                </button>
+                <button onClick={() => remove(m.id)} title="Delete" className="text-muted-foreground hover:text-red-400 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {showBuilder && <MacroBuilderModal onClose={() => setShowBuilder(false)} onSaved={() => { setShowBuilder(false); load(); }} />}
+      {showSchedule && <ScheduleModal macros={macros} profiles={profiles} onClose={() => setShowSchedule(false)} />}
+    </div>
+  );
+}
+
+// Macro scheduler — pick a macro + target profiles + interval and persist the
+// timed run (Setting.macroSchedule). The main process fires it on its own timer.
+function ScheduleModal({ macros, profiles, onClose }) {
+  const [enabled, setEnabled] = useState(false);
+  const [macroId, setMacroId] = useState('');
+  const [everyMinutes, setEveryMinutes] = useState(60);
+  const [profileIds, setProfileIds] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    softglazeApi.automation.getSchedule()
+      .then((s) => {
+        if (!s) return;
+        setEnabled(Boolean(s.enabled));
+        setMacroId(s.macroId ? String(s.macroId) : '');
+        setEveryMinutes(Number(s.everyMinutes) || 60);
+        setProfileIds(Array.isArray(s.profileIds) ? s.profileIds.map(Number) : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  function toggleProfile(id) {
+    setProfileIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
+
+  async function save() {
+    setErr(''); setBusy(true);
+    try {
+      await softglazeApi.automation.setSchedule({
+        enabled,
+        macroId: macroId ? Number(macroId) : null,
+        everyMinutes: Number(everyMinutes) || 60,
+        profileIds
+      });
+      onClose();
+    } catch (e) { setErr(e.message || 'Could not save the schedule.'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={onClose}>
+      <div className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Clock className="w-4 h-4 text-indigo-400" /></span>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Macro Schedule</h3>
+              <p className="text-[11px] text-muted-foreground">Run a macro automatically on a timer · Softglaze Pro</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+
+          <label className="flex items-center gap-2 text-[13px] text-foreground">
+            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="accent-indigo-500" />
+            Enable scheduled runs
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Macro</label>
+              <select value={macroId} onChange={(e) => setMacroId(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-2 text-[13px] text-foreground">
+                <option value="">Select a macro…</option>
+                {macros.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Every (minutes)</label>
+              <input type="number" min="1" value={everyMinutes} onChange={(e) => setEveryMinutes(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Target profiles</label>
+            <div className="max-h-40 overflow-auto rounded-lg border border-border divide-y divide-border">
+              {profiles.length === 0 && <p className="px-3 py-2 text-[12px] text-muted-foreground">No profiles available.</p>}
+              {profiles.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-foreground cursor-pointer hover:bg-elevated/50">
+                  <input type="checkbox" checked={profileIds.includes(Number(p.id))} onChange={() => toggleProfile(Number(p.id))} className="accent-indigo-500" />
+                  {p.title || `Profile ${p.id}`}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-card border border-border text-foreground hover:border-primary">Cancel</button>
+            <button onClick={save} disabled={busy} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2">
+              {busy && <Loader2 className="w-4 h-4 animate-spin" />} Save schedule
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -206,6 +396,284 @@ function MacroBuilderModal({ onClose, onSaved }) {
           <button onClick={save} disabled={busy} className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Save macro
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Parallel Runs — run one macro across many profiles with a live, redacted
+// per-profile status stream (frames arrive via the relay → run-progress channel).
+// ---------------------------------------------------------------------------
+const PAR_STATE = {
+  queued: { label: 'Queued', cls: 'text-muted-foreground bg-secondary', Icon: Clock },
+  launching: { label: 'Launching', cls: 'text-sky-400 bg-sky-500/12', Icon: Loader2, spin: true },
+  running: { label: 'Running', cls: 'text-amber-400 bg-amber-500/12', Icon: Loader2, spin: true },
+  passed: { label: 'Passed', cls: 'text-emerald-400 bg-emerald-500/12', Icon: CheckCircle2 },
+  failed: { label: 'Failed', cls: 'text-red-400 bg-red-500/12', Icon: XCircle }
+};
+const PAR_LEVEL_COLOR = {
+  queued: 'text-muted-foreground', launching: 'text-sky-400', running: 'text-amber-400',
+  passed: 'text-emerald-400', failed: 'text-red-400', done: 'text-violet-300'
+};
+
+function ParallelPanel() {
+  const [macros, setMacros] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [macroId, setMacroId] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
+  const [concurrency, setConcurrency] = useState(3);
+  const [search, setSearch] = useState('');
+  const [running, setRunning] = useState(false);
+  const [statuses, setStatuses] = useState({}); // profileId -> last payload
+  const [logs, setLogs] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [dataBinding, setDataBinding] = useState(null); // { token, fileName, headers, rowCount }
+  const [err, setErr] = useState('');
+  const logRef = useRef(null);
+
+  useEffect(() => {
+    softglazeApi.automation.getMacros().then((rows) => setMacros(Array.isArray(rows) ? rows : [])).catch(() => setMacros([]));
+    softglazeApi.profiles.list({}).then((rows) => {
+      const list = Array.isArray(rows) ? rows : (rows && (rows.profiles || rows.rows)) || [];
+      setProfiles(list);
+    }).catch(() => setProfiles([]));
+  }, []);
+
+  // Default the macro selector to the first macro once loaded.
+  useEffect(() => { setMacroId((cur) => cur || (macros.length ? String(macros[0].id) : '')); }, [macros]);
+
+  // Live per-profile progress for the panel's lifetime.
+  useEffect(() => {
+    const off = softglazeApi.automation.onRunProgress((frame) => {
+      if (!frame || !frame.payload) return;
+      const p = frame.payload;
+      setLogs((prev) => [...prev.slice(-400), { ...p, ts: frame.ts }]);
+      if (p.state === 'done' && p.profileId == null) {
+        setRunning(false);
+        setSummary({ total: p.total, passed: p.passed, failed: p.failed, error: p.error });
+        return;
+      }
+      if (p.profileId != null) setStatuses((prev) => ({ ...prev, [p.profileId]: p }));
+    });
+    return () => { try { off && off(); } catch (e) { /* ignore */ } };
+  }, []);
+
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
+
+  const filtered = profiles.filter((p) => !search || String(p.title || '').toLowerCase().includes(search.toLowerCase()));
+  const selectedProfiles = profiles.filter((p) => selected.has(p.id));
+
+  function toggle(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function selectAll() { setSelected(new Set(filtered.map((p) => p.id))); }
+  function clearAll() { setSelected(new Set()); }
+
+  async function bindData() {
+    setErr('');
+    try {
+      const res = await softglazeApi.automation.pickDataFile();
+      if (!res || res.cancelled) return;
+      setDataBinding({ token: res.token, fileName: res.fileName, headers: res.headers || [], rowCount: res.rowCount || 0 });
+    } catch (e) { setErr(e.message || 'Could not read the spreadsheet.'); }
+  }
+
+  async function start() {
+    setErr('');
+    const ids = [...selected];
+    if (!macroId) { setErr('Choose a macro to run.'); return; }
+    if (ids.length === 0) { setErr('Select at least one profile.'); return; }
+    setRunning(true); setLogs([]); setStatuses({}); setSummary(null);
+    try {
+      await softglazeApi.automation.runParallel({
+        macroId: Number(macroId),
+        profileIds: ids,
+        concurrency: Number(concurrency) || 3,
+        continueOnError: true,
+        closeWhenDone: true,
+        dataToken: dataBinding ? dataBinding.token : undefined
+      });
+    } catch (e) {
+      setErr(e.message || 'Could not start the parallel run.');
+      setRunning(false);
+    }
+  }
+
+  const profileName = (id) => {
+    const p = profiles.find((x) => Number(x.id) === Number(id));
+    return p ? p.title : `Profile ${id}`;
+  };
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-4">
+      {/* Controls */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Layers className="w-5 h-5 text-indigo-400" /></span>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Parallel Macro Runner</h3>
+            <p className="text-[11.5px] text-muted-foreground">Run one macro across many profiles at once, with a live status stream.</p>
+          </div>
+        </div>
+
+        <div className="flex items-end gap-3">
+          <div className="flex-1 min-w-0">
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Macro</label>
+            <select
+              value={macroId}
+              onChange={(e) => setMacroId(e.target.value)}
+              className="w-full h-9 rounded-lg border border-border bg-card px-2 text-[12.5px] text-foreground"
+            >
+              {macros.length === 0 && <option value="">No macros yet</option>}
+              {macros.map((m) => <option key={m.id} value={String(m.id)}>{m.name} · {m.stepCount} steps</option>)}
+            </select>
+          </div>
+          <div className="w-24 shrink-0">
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Concurrency</label>
+            <input type="number" min={1} max={10} value={concurrency} onChange={(e) => setConcurrency(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+          </div>
+        </div>
+
+        {/* Optional data binding */}
+        <div className="rounded-lg border border-border bg-elevated/40 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileSpreadsheet className="w-4 h-4 text-muted-foreground shrink-0" />
+              {dataBinding ? (
+                <span className="text-[12px] text-foreground truncate">
+                  {dataBinding.fileName} · {dataBinding.rowCount} row{dataBinding.rowCount === 1 ? '' : 's'}
+                </span>
+              ) : (
+                <span className="text-[12px] text-muted-foreground">Optional: bind a spreadsheet (row → profile, in order)</span>
+              )}
+            </div>
+            {dataBinding ? (
+              <button onClick={() => setDataBinding(null)} className="text-muted-foreground hover:text-red-400 transition-colors" title="Clear data binding"><X className="w-4 h-4" /></button>
+            ) : (
+              <button onClick={bindData} className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11.5px] font-semibold bg-card border border-border text-foreground hover:border-primary">Bind data</button>
+            )}
+          </div>
+          {dataBinding && dataBinding.headers.length > 0 && (
+            <p className="text-[10.5px] text-muted-foreground mt-1.5 truncate">Columns: {dataBinding.headers.join(', ')} — use <span className="font-mono text-foreground/80">{'{{Column}}'}</span> in macro steps.</p>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Profiles ({selected.size} selected)</label>
+            <div className="flex items-center gap-2">
+              <button onClick={selectAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">Select all</button>
+              <span className="text-muted-foreground/40">·</span>
+              <button onClick={clearAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">Clear</button>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="h-7 w-36 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-elevated/40 max-h-[280px] overflow-y-auto divide-y divide-border/60">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">No profiles found.</div>
+            ) : filtered.map((p) => (
+              <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-secondary/50">
+                <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="accent-indigo-500" />
+                <span className="text-[12.5px] text-foreground truncate flex-1">{p.title}</span>
+                <span className="text-[10.5px] text-muted-foreground">#{p.id}</span>
+              </label>
+            ))}
+          </div>
+          {dataBinding && dataBinding.rowCount !== selected.size && selected.size > 0 && (
+            <p className="text-[10.5px] text-amber-400 mt-1.5 inline-flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> {dataBinding.rowCount} data row(s) vs {selected.size} profile(s) — extras run without/with no variables.
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={start}
+          disabled={running || !macroId || selected.size === 0}
+          className="w-full h-10 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 shadow shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+        >
+          {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          {running ? 'Running…' : `Run on ${selected.size || 0} profile${selected.size === 1 ? '' : 's'}`}
+        </button>
+
+        {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+      </div>
+
+      {/* Live status + console */}
+      <div className="space-y-3">
+        {/* Per-profile status grid */}
+        <div className="rounded-xl border border-border bg-card p-3">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-[11.5px] font-semibold text-muted-foreground">Run status</span>
+            {summary && (
+              <span className="text-[11px] text-muted-foreground">
+                <span className="text-emerald-400 font-semibold">{summary.passed}</span> passed · <span className="text-red-400 font-semibold">{summary.failed}</span> failed · {summary.total} total
+              </span>
+            )}
+          </div>
+          {selectedProfiles.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground/60 px-1 py-3">Select profiles and a macro, then start the run to watch live progress.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[260px] overflow-y-auto">
+              {selectedProfiles.map((p) => {
+                const st = statuses[p.id];
+                const meta = PAR_STATE[(st && st.state) || 'queued'] || PAR_STATE.queued;
+                const Icon = meta.Icon;
+                return (
+                  <div key={p.id} className="flex items-center gap-2 rounded-lg border border-border bg-elevated/40 px-3 py-2">
+                    <span className={`w-6 h-6 rounded grid place-items-center shrink-0 ${meta.cls}`}>
+                      <Icon className={`w-3.5 h-3.5 ${meta.spin ? 'animate-spin' : ''}`} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] text-foreground truncate">{p.title}</p>
+                      <p className="text-[10.5px] text-muted-foreground truncate">
+                        {meta.label}
+                        {st && (st.ran != null && st.total != null) ? ` · ${st.ran}/${st.total} steps` : ''}
+                        {st && st.error ? ` · ${st.error}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Console */}
+        <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-h-[220px]">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-elevated/30">
+            <span className="flex gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+            </span>
+            <span className="text-[11.5px] font-medium text-muted-foreground ml-1">Run console</span>
+            {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> live</span>}
+          </div>
+          <div ref={logRef} className="flex-1 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed max-h-[300px]">
+            {logs.length === 0 ? (
+              <p className="text-muted-foreground/60">[ idle ] No run yet — progress will stream here (no cookies or credentials are ever included).</p>
+            ) : logs.map((l, i) => (
+              <div key={i} className="whitespace-pre-wrap break-words">
+                <span className="text-muted-foreground/50">{ts(l.ts)} </span>
+                <span className={PAR_LEVEL_COLOR[l.state] || 'text-foreground'}>[{(l.state || 'info').toUpperCase()}]</span>{' '}
+                {l.profileId != null && <span className="text-violet-300">{l.profileName || profileName(l.profileId)}: </span>}
+                <span className="text-foreground/90">
+                  {l.state === 'done'
+                    ? `Run finished — ${l.passed}/${l.total} passed${l.error ? ` (${l.error})` : ''}`
+                    : (l.message || l.error || (l.ran != null && l.total != null ? `${l.ran}/${l.total} steps` : l.state))}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -372,7 +840,7 @@ function HistoryPanel() {
       <div className="rounded-xl border border-dashed border-border bg-card/40 py-14 grid place-items-center text-center">
         <History className="w-8 h-8 text-muted-foreground mb-3" />
         <p className="text-sm font-medium text-foreground">No tasks have run yet</p>
-        <p className="text-[12.5px] text-muted-foreground mt-1">Cookie-warmer runs will appear here.</p>
+        <p className="text-[12.5px] text-muted-foreground mt-1">Warmer, macro, and parallel runs will appear here.</p>
       </div>
     );
   }
@@ -384,32 +852,79 @@ function HistoryPanel() {
           <tr className="text-left">
             <th className="px-4 py-2.5 font-semibold">Task</th>
             <th className="px-4 py-2.5 font-semibold">Profiles</th>
-            <th className="px-4 py-2.5 font-semibold">Duration</th>
+            <th className="px-4 py-2.5 font-semibold">Detail</th>
             <th className="px-4 py-2.5 font-semibold">Status</th>
             <th className="px-4 py-2.5 font-semibold">When</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
-          {history.map((h, i) => (
-            <tr key={h.runId || i} className="text-foreground">
-              <td className="px-4 py-2.5 inline-flex items-center gap-2"><Flame className="w-3.5 h-3.5 text-orange-400" /> AI Cookie Warm-up</td>
-              <td className="px-4 py-2.5 text-muted-foreground">{Array.isArray(h.profileIds) ? h.profileIds.length : 0}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">{h.minutes} min</td>
-              <td className="px-4 py-2.5">
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${
-                  h.status === 'completed' ? 'bg-emerald-500/12 text-emerald-400' : 'bg-sky-500/12 text-sky-400'
-                }`}>
-                  {h.status === 'completed' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                  {h.status || 'running'}
-                </span>
-              </td>
-              <td className="px-4 py-2.5 text-muted-foreground">{fmt(h.finishedAt || h.startedAt)}</td>
-            </tr>
-          ))}
+          {history.map((h, i) => {
+            const d = describeHistoryEntry(h);
+            const Icon = d.icon;
+            return (
+              <tr key={h.runId || h.at || i} className="text-foreground">
+                <td className="px-4 py-2.5"><span className="inline-flex items-center gap-2"><Icon className={`w-3.5 h-3.5 ${d.iconCls}`} /> {d.label}</span></td>
+                <td className="px-4 py-2.5 text-muted-foreground">{d.profiles}</td>
+                <td className="px-4 py-2.5 text-muted-foreground max-w-[320px] truncate">{d.detail || '—'}</td>
+                <td className="px-4 py-2.5">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${d.statusCls}`}>
+                    <d.StatusIcon className="w-3 h-3" />
+                    {d.status}
+                  </span>
+                </td>
+                <td className="px-4 py-2.5 text-muted-foreground">{fmt(d.when)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
+}
+
+// Normalize the different automation-history entry shapes (warmer / macro /
+// parallel) into a single row descriptor so one table renders them all.
+function describeHistoryEntry(h) {
+  const type = h.type || 'warmer';
+  const statusStyle = (key) => {
+    switch (key) {
+      case 'completed':
+      case 'success': return { statusCls: 'bg-emerald-500/12 text-emerald-400', StatusIcon: CheckCircle2 };
+      case 'error': return { statusCls: 'bg-red-500/12 text-red-400', StatusIcon: XCircle };
+      case 'warn': return { statusCls: 'bg-amber-500/12 text-amber-400', StatusIcon: AlertTriangle };
+      default: return { statusCls: 'bg-sky-500/12 text-sky-400', StatusIcon: Clock };
+    }
+  };
+
+  if (type === 'parallel') {
+    const key = (h.level || 'INFO').toLowerCase();
+    return {
+      icon: Layers, iconCls: 'text-indigo-400',
+      label: h.label || 'Parallel run',
+      profiles: Array.isArray(h.profileIds) ? h.profileIds.length : 0,
+      detail: h.detail || '', status: key, when: h.at,
+      ...statusStyle(key)
+    };
+  }
+  if (type === 'macro') {
+    const key = (h.level || 'INFO').toLowerCase();
+    return {
+      icon: Bot, iconCls: 'text-violet-400',
+      label: h.label || 'Macro run',
+      profiles: h.profileId != null ? 1 : 0,
+      detail: h.detail || '', status: key, when: h.at,
+      ...statusStyle(key)
+    };
+  }
+  // Warmer (legacy/default shape).
+  const key = h.status || 'running';
+  return {
+    icon: Flame, iconCls: 'text-orange-400',
+    label: 'AI Cookie Warm-up',
+    profiles: Array.isArray(h.profileIds) ? h.profileIds.length : 0,
+    detail: h.minutes ? `${h.minutes} min` : '', status: key, when: h.finishedAt || h.startedAt,
+    ...statusStyle(key)
+  };
 }
 
 // --- helpers ---
