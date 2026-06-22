@@ -40,6 +40,7 @@ const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
+const teamPolicy = require('./teamPolicy');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -101,6 +102,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_SYNCHRONIZE: 'profile:bulk-synchronize',
   PROFILE_EXPORT_ARCHIVE: 'profile:export-archive',
   PROFILE_COOKIE_ROBOT: 'profile:cookie-robot',
+  PROFILE_GET_LOCKS: 'profile:get-locks',
   SYSTEM_HUMAN_TYPE: 'system:human-type',
   SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
@@ -142,6 +144,9 @@ const CHANNELS = Object.freeze({
   IP_PROVIDERS_UPDATE_CREDENTIALS: 'ip-providers:update-credentials',
   IP_PROVIDERS_TOGGLE_STATUS: 'ip-providers:toggle-status',
   TEAM_ACTIVITY: 'team:activity',
+  TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
+  TEAM_SEAT_USAGE: 'team:seat-usage',
+  TEAM_EXPORT_ACTIVITY: 'team:export-activity',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -1930,6 +1935,7 @@ async function bulkCloseSessions(payload) {
       result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
     }
   }
+  reconcileProfileLocks(); // release locks for the sessions just closed
   return result;
 }
 
@@ -2021,12 +2027,74 @@ async function listTags() {
   return collectTags(rows).sort((a, b) => a.localeCompare(b));
 }
 
+// ---------------------------------------------------------------------------
+// Softglaze Enterprise — Profile lock-when-in-use.
+//
+// A transient, in-memory registry of which member is currently running which
+// profile. It blocks a SECOND concurrent launch of the same profile by a
+// DIFFERENT member (a real constraint too — Chromium can't open two instances on
+// one userDataDir). Locks are NOT persisted: they're reconciled against the live
+// session set (`listAllSessions()` — the existing orphan-cleanup source of
+// truth), so a close/crash/restart clears them automatically.
+// ---------------------------------------------------------------------------
+const profileLocks = new Map(); // profileId(Number) -> { memberId, memberName, sessionId, at }
+
+function reconcileProfileLocks() {
+  if (profileLocks.size === 0) return;
+  const live = new Set(listAllSessions().map((s) => String(s.sessionId)));
+  for (const [pid, lock] of profileLocks) {
+    if (!live.has(String(lock.sessionId))) profileLocks.delete(pid);
+  }
+}
+
+// Throw if `member` may not launch this profile because another member holds a
+// live lock on it. (Same member re-launching is allowed.)
+function assertProfileLaunchable(profileId, member) {
+  reconcileProfileLocks();
+  const existing = profileLocks.get(Number(profileId));
+  const live = new Set(listAllSessions().map((s) => String(s.sessionId)));
+  const requesterId = (member && member.id != null) ? member.id : currentMemberId;
+  if (teamPolicy.lockBlocks(existing, requesterId, live)) {
+    const when = existing.at ? new Date(existing.at).toLocaleString() : 'now';
+    const e = new Error(`This profile is in use by ${existing.memberName || 'another member'} (since ${when}). Ask them to close it first.`);
+    e.code = 'PROFILE_LOCKED';
+    throw e;
+  }
+}
+
+function acquireProfileLock(profileId, sessionId, member) {
+  profileLocks.set(Number(profileId), {
+    memberId: (member && member.id != null) ? member.id : currentMemberId,
+    memberName: (member && member.name) || 'You',
+    sessionId: String(sessionId),
+    at: Date.now()
+  });
+}
+
+async function getProfileLocks() {
+  reconcileProfileLocks();
+  const out = {};
+  for (const [pid, lock] of profileLocks) {
+    out[pid] = {
+      memberId: lock.memberId,
+      memberName: lock.memberName,
+      mine: String(lock.memberId) === String(currentMemberId),
+      at: lock.at
+    };
+  }
+  return out;
+}
+
 async function launchProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
   const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!profile) throw new Error('Profile not found.');
+
+  // Block a concurrent launch by a different member (lock-when-in-use).
+  const launcher = await getActiveMember();
+  assertProfileLaunchable(id, launcher);
 
   // FlowerBrowser = real Firefox. It's a different engine (no CDP/MV3), so route to
   // the Firefox launcher which configures a dedicated profile via user.js prefs
@@ -2047,6 +2115,7 @@ async function launchProfile(payload) {
       profileRoot: ffRoot,
       profile
     });
+    acquireProfileLock(id, ffSession.sessionId, launcher);
     await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
     await logActivity(db, id, 'launch', `firefox session ${ffSession.sessionId}${ffRotated ? ` · rotated ${ffRotated.name}` : ''}`);
     return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
@@ -2101,6 +2170,7 @@ async function launchProfile(payload) {
     geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
   });
 
+  acquireProfileLock(id, session.sessionId, launcher);
   await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
   await logActivity(db, id, 'launch', `session ${session.sessionId}${rotated ? ` · rotated proxy ${rotated.name}` : ''}`);
   return { ...session, rotatedProxy: rotated ? serializeProxy(rotated) : null };
@@ -2110,8 +2180,11 @@ async function closeSession(payload) {
   const input = requireObject(payload);
   const sessionId = requiredString(input.sessionId, 'sessionId');
   // Firefox sessions live in their own engine.
-  if (firefoxEngine.isFirefoxSession(sessionId)) return firefoxEngine.closeFirefoxSession(sessionId);
-  return closeProfileSession(sessionId);
+  const result = firefoxEngine.isFirefoxSession(sessionId)
+    ? await firefoxEngine.closeFirefoxSession(sessionId)
+    : await closeProfileSession(sessionId);
+  reconcileProfileLocks(); // release any lock whose session just ended
+  return result;
 }
 
 // Combined live sessions across both engines (Chrome + Firefox) for the UI.
@@ -3297,6 +3370,9 @@ async function createMember(payload) {
         }
       }
     }
+    // Seat cap: the owner-tree's licence implies a number of seats; block new
+    // members (incl. pending invites) once they're all taken.
+    await assertSeatAvailable();
     parentMemberId = creator.id >= 0 ? creator.id : null; // super admin (id -1) is not a DB row
     permsJson = JSON.stringify(clampPermissions(input.permissions, creatorPerms, role));
   } else {
@@ -4014,6 +4090,122 @@ async function getTeamActivity(payload) {
     profileTitle: l.profileId ? (pMap[l.profileId] || `#${l.profileId}`) : null,
     createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt
   }));
+}
+
+// Handoff: reassign one or more profiles to a member (null = unassign) and write
+// a per-profile audit row. Gated to ADMIN+ and scoped to members the actor can see.
+async function reassignProfiles(payload) {
+  await requirePermission('members.manage');
+  const input = requireObject(payload);
+  const profileIds = parseIdArray(input.profileIds);
+  if (profileIds.length === 0) throw new Error('Select at least one profile to reassign.');
+  const db = getPrisma();
+
+  let targetId = null;
+  let targetName = 'Unassigned';
+  const actor = await getActiveMember();
+  const actorName = actor ? actor.name : 'Owner';
+
+  if (input.memberId != null && input.memberId !== '') {
+    targetId = parseId(input.memberId);
+    const target = await db.member.findUnique({ where: { id: targetId } });
+    if (!target) throw new Error('Target member not found.');
+    if (actor && actor.role !== 'SUPER_ADMIN') {
+      const all = await db.member.findMany();
+      const visible = permissions.visibleMemberIds(all, actor);
+      if (!visible.has(targetId)) throw new Error('You can only assign profiles to members you manage.');
+    }
+    targetName = target.name;
+  }
+
+  const res = await db.profile.updateMany({
+    where: { id: { in: profileIds }, deletedAt: null },
+    data: { assignedMemberId: targetId }
+  });
+  for (const pid of profileIds) {
+    await logActivity(db, pid, 'reassign', `${actorName} → ${targetName}`).catch(() => {});
+  }
+  return { reassigned: res.count, memberId: targetId, memberName: targetName };
+}
+
+// Seat accounting: seats are derived from the owner-tree's license type. The
+// Super Admin (source owner) is exempt; single-user mode is unrestricted.
+async function getSeatUsage() {
+  const m = await getActiveMember();
+  if (m && m.role === 'SUPER_ADMIN') {
+    return { used: 0, total: -1, type: 'source-owner', remaining: -1, full: false, exempt: true };
+  }
+  const db = getPrisma();
+  const ownerId = await resolveLicenseOwnerId();
+  const lic = await ensureLicense(ownerId);
+  const members = await db.member.findMany({ select: { id: true, status: true, parentMemberId: true } });
+  return teamPolicy.seatUsage(members, ownerId, lic);
+}
+
+// Throw when the owner-tree has no free seats. Called from createMember (never on
+// the very first OWNER bootstrap). Super Admin / single-user mode are unrestricted.
+async function assertSeatAvailable() {
+  const m = await getActiveMember();
+  if (!m || m.role === 'SUPER_ADMIN') return;
+  const db = getPrisma();
+  const ownerId = await resolveLicenseOwnerId();
+  const lic = await ensureLicense(ownerId);
+  const members = await db.member.findMany({ select: { id: true, status: true, parentMemberId: true } });
+  const usage = teamPolicy.seatUsage(members, ownerId, lic);
+  if (usage.full) {
+    const e = new Error(`Your plan includes ${usage.total} seat(s) and all are in use. Upgrade your subscription to add more team members.`);
+    e.code = 'SEAT_LIMIT';
+    throw e;
+  }
+}
+
+// CSV/JSON export of the activity feed, filterable by member/action/date range.
+async function exportTeamActivity(payload) {
+  await requirePermission('members.manage');
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const isJson = String(input.format || 'csv').toLowerCase() === 'json';
+  const db = getPrisma();
+
+  const where = {};
+  if (input.memberId != null && input.memberId !== '') where.memberId = parseId(input.memberId);
+  if (input.action) where.action = String(input.action);
+  const createdAt = {};
+  if (input.from) { const d = new Date(input.from); if (!Number.isNaN(d.getTime())) createdAt.gte = d; }
+  if (input.to) { const d = new Date(input.to); if (!Number.isNaN(d.getTime())) { d.setHours(23, 59, 59, 999); createdAt.lte = d; } }
+  if (createdAt.gte || createdAt.lte) where.createdAt = createdAt;
+
+  const take = Math.min(Math.max(parseInt(input.limit, 10) || 5000, 1), 50000);
+  const logs = await db.activityLog.findMany({ where, orderBy: { createdAt: 'desc' }, take });
+
+  const memberIds = [...new Set(logs.map((l) => l.memberId).filter(Boolean))];
+  const profileIds = [...new Set(logs.map((l) => l.profileId).filter(Boolean))];
+  const [members, profiles] = await Promise.all([
+    memberIds.length ? db.member.findMany({ where: { id: { in: memberIds } } }) : [],
+    profileIds.length ? db.profile.findMany({ where: { id: { in: profileIds } }, select: { id: true, title: true } }) : []
+  ]);
+  const mMap = Object.fromEntries(members.map((m) => [m.id, m.name]));
+  const pMap = Object.fromEntries(profiles.map((p) => [p.id, p.title]));
+
+  const rows = logs.map((l) => ({
+    id: l.id,
+    createdAt: l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt,
+    memberName: l.memberId ? (mMap[l.memberId] || 'Unknown member') : 'System',
+    action: l.action,
+    profileTitle: l.profileId ? (pMap[l.profileId] || `#${l.profileId}`) : '',
+    detail: l.detail || ''
+  }));
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const save = await dialog.showSaveDialog({
+    title: 'Export activity log',
+    defaultPath: `softglaze-activity-${stamp}.${isJson ? 'json' : 'csv'}`,
+    filters: [isJson ? { name: 'JSON', extensions: ['json'] } : { name: 'CSV', extensions: ['csv'] }]
+  });
+  if (save.canceled || !save.filePath) return { cancelled: true };
+
+  const content = isJson ? JSON.stringify(rows, null, 2) : teamPolicy.activityToCsv(rows);
+  await fs.writeFile(save.filePath, content, 'utf8');
+  return { ok: true, path: save.filePath, count: rows.length, format: isJson ? 'json' : 'csv' };
 }
 
 // ---------------------------------------------------------------------------
@@ -4866,6 +5058,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_SYNCHRONIZE, bulkSynchronize);
   registerHandler(CHANNELS.PROFILE_EXPORT_ARCHIVE, exportProfileArchive);
   registerHandler(CHANNELS.PROFILE_COOKIE_ROBOT, cookieRobot);
+  registerHandler(CHANNELS.PROFILE_GET_LOCKS, getProfileLocks);
   registerHandler(CHANNELS.SYSTEM_HUMAN_TYPE, systemHumanType);
   registerHandler(CHANNELS.SETTINGS_GET_SCHEDULER, getProxyScheduler);
   registerHandler(CHANNELS.SETTINGS_SET_SCHEDULER, setProxyScheduler);
@@ -4895,6 +5088,10 @@ function registerIpcHandlers() {
       if (mcfg && mcfg.enabled) startMacroScheduler(mcfg.everyMinutes);
     } catch (e) { /* ignore */ }
   })();
+
+  // Reap stale profile locks (crash/orphan) by reconciling against live sessions.
+  const lockSweep = setInterval(() => { try { reconcileProfileLocks(); } catch (e) { /* ignore */ } }, 60000);
+  if (lockSweep.unref) lockSweep.unref();
 
   registerHandler(CHANNELS.GROUP_LIST, listGroups);
   registerHandler(CHANNELS.GROUP_CREATE, createGroup);
@@ -4963,6 +5160,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.IP_PROVIDERS_UPDATE_CREDENTIALS, updateIpProviderCredentials);
   registerHandler(CHANNELS.IP_PROVIDERS_TOGGLE_STATUS, toggleIpProviderStatus);
   registerHandler(CHANNELS.TEAM_ACTIVITY, getTeamActivity);
+  registerHandler(CHANNELS.TEAM_REASSIGN_PROFILES, reassignProfiles);
+  registerHandler(CHANNELS.TEAM_SEAT_USAGE, getSeatUsage);
+  registerHandler(CHANNELS.TEAM_EXPORT_ACTIVITY, exportTeamActivity);
   registerHandler(CHANNELS.VAULT_STATUS, vaultStatus);
   registerHandler(CHANNELS.VAULT_SET_PASSWORD, vaultSetPassword);
   registerHandler(CHANNELS.VAULT_UNLOCK, vaultUnlock);

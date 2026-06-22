@@ -61,6 +61,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_SYNCHRONIZE: 'profile:bulk-synchronize',
   PROFILE_EXPORT_ARCHIVE: 'profile:export-archive',
   PROFILE_COOKIE_ROBOT: 'profile:cookie-robot',
+  PROFILE_GET_LOCKS: 'profile:get-locks',
   SYSTEM_HUMAN_TYPE: 'system:human-type',
   SETTINGS_GET_SCHEDULER: 'settings:get-proxy-scheduler',
   SETTINGS_SET_SCHEDULER: 'settings:set-proxy-scheduler',
@@ -105,6 +106,9 @@ const CHANNELS = Object.freeze({
   IP_PROVIDERS_UPDATE_CREDENTIALS: 'ip-providers:update-credentials',
   IP_PROVIDERS_TOGGLE_STATUS: 'ip-providers:toggle-status',
   TEAM_ACTIVITY: 'team:activity',
+  TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
+  TEAM_SEAT_USAGE: 'team:seat-usage',
+  TEAM_EXPORT_ACTIVITY: 'team:export-activity',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -234,7 +238,8 @@ const api = Object.freeze({
     get2faToken: (id) => invoke(CHANNELS.PROFILE_GET_2FA_TOKEN, { id }),
     bulkSynchronize: (ids) => invoke(CHANNELS.PROFILE_BULK_SYNCHRONIZE, { ids }),
     exportArchive: (payload) => invoke(CHANNELS.PROFILE_EXPORT_ARCHIVE, payload),
-    cookieRobot: (payload) => invoke(CHANNELS.PROFILE_COOKIE_ROBOT, payload)
+    cookieRobot: (payload) => invoke(CHANNELS.PROFILE_COOKIE_ROBOT, payload),
+    getLocks: () => invoke(CHANNELS.PROFILE_GET_LOCKS)
   }),
   templates: Object.freeze({
     list: () => invoke(CHANNELS.TEMPLATE_LIST),
@@ -286,7 +291,10 @@ const api = Object.freeze({
     setInstructions: (id, instructions) => invoke(CHANNELS.MEMBER_SET_INSTRUCTIONS, { id, instructions })
   }),
   team: Object.freeze({
-    activity: (limit) => invoke(CHANNELS.TEAM_ACTIVITY, { limit })
+    activity: (limit) => invoke(CHANNELS.TEAM_ACTIVITY, { limit }),
+    reassignProfiles: (payload) => invoke(CHANNELS.TEAM_REASSIGN_PROFILES, payload),
+    seatUsage: () => invoke(CHANNELS.TEAM_SEAT_USAGE),
+    exportActivity: (payload) => invoke(CHANNELS.TEAM_EXPORT_ACTIVITY, payload)
   }),
   license: Object.freeze({
     get: () => invoke(CHANNELS.LICENSE_GET),
