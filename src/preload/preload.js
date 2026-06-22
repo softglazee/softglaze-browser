@@ -109,6 +109,9 @@ const CHANNELS = Object.freeze({
   TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
   TEAM_SEAT_USAGE: 'team:seat-usage',
   TEAM_EXPORT_ACTIVITY: 'team:export-activity',
+  SYNC_STATUS: 'sync:status',
+  SYNC_CONFIGURE: 'sync:configure',
+  SYNC_RUN: 'sync:run',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -295,6 +298,11 @@ const api = Object.freeze({
     reassignProfiles: (payload) => invoke(CHANNELS.TEAM_REASSIGN_PROFILES, payload),
     seatUsage: () => invoke(CHANNELS.TEAM_SEAT_USAGE),
     exportActivity: (payload) => invoke(CHANNELS.TEAM_EXPORT_ACTIVITY, payload)
+  }),
+  sync: Object.freeze({
+    status: () => invoke(CHANNELS.SYNC_STATUS),
+    configure: (payload) => invoke(CHANNELS.SYNC_CONFIGURE, payload),
+    run: (payload) => invoke(CHANNELS.SYNC_RUN, payload)
   }),
   license: Object.freeze({
     get: () => invoke(CHANNELS.LICENSE_GET),

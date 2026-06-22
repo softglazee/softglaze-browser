@@ -41,6 +41,10 @@ const profileArchive = require('./profileArchive');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
+const { CloudSyncEngine } = require('./cloudSync');
+const syncTransport = require('./syncTransport');
+const syncPolicy = require('./syncPolicy');
+const secretStore = require('./secretStore');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -147,6 +151,9 @@ const CHANNELS = Object.freeze({
   TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
   TEAM_SEAT_USAGE: 'team:seat-usage',
   TEAM_EXPORT_ACTIVITY: 'team:export-activity',
+  SYNC_STATUS: 'sync:status',
+  SYNC_CONFIGURE: 'sync:configure',
+  SYNC_RUN: 'sync:run',
   VAULT_STATUS: 'vault:status',
   VAULT_SET_PASSWORD: 'vault:set-password',
   VAULT_UNLOCK: 'vault:unlock',
@@ -4209,6 +4216,307 @@ async function exportTeamActivity(payload) {
 }
 
 // ---------------------------------------------------------------------------
+// Softglaze Enterprise — End-to-End encrypted cloud sync  [needs backend]
+//
+// Wires the existing CloudSyncEngine (tested crypto envelope) to a concrete REST
+// object-store transport (src/main/syncTransport.js — an EXTERNAL service you
+// host). Everything is encrypted LOCALLY before upload (zero-knowledge): the
+// bucket only ever stores opaque envelopes. The sync passphrase is held in memory
+// for the session only and never persisted in plaintext (the vault keeps only a
+// hash, so we can't reuse it). With no endpoint configured, status reports
+// disabled and nothing pretends to sync.
+// ---------------------------------------------------------------------------
+
+// Profile fields that define identity/fingerprint and are safe to sync. NOT
+// synced: id/dataDirName/ownership/assignment/proxy bindings (all install-local).
+const SYNC_SCALAR_FIELDS = [
+  'browserCore', 'browserBrand', 'browserVersion', 'os', 'osVersion', 'userAgent', 'startupUrls',
+  'webrtc', 'timezoneType', 'timezoneCustom', 'locationType', 'locationLat', 'locationLng', 'locationAcc',
+  'languageType', 'languageCustom', 'displayLangType', 'displayLangCustom',
+  'resolutionType', 'resolutionW', 'resolutionH', 'fontsType',
+  'canvasNoise', 'webglImageNoise', 'audioContextNoise', 'clientRectsNoise', 'speechVoicesNoise', 'mediaDevice',
+  'webglMetadata', 'webglVendor', 'webglRenderer', 'webgpu',
+  'cpuType', 'cpuCores', 'ramType', 'ramGb', 'twoFactorSeed', 'notes'
+];
+
+// Session-scoped sync state. The passphrase-derived key lives ONLY here.
+let cloudSyncEngine = null;     // CloudSyncEngine (transport + derived key) when unlocked
+let cloudSyncUnlocked = false;
+let cloudSyncLastError = null;
+
+async function readCloudSyncConfig() {
+  const c = (await readSetting('cloudSync', null)) || {};
+  return {
+    enabled: Boolean(c.enabled),
+    baseUrl: c.baseUrl || '',
+    namespace: c.namespace || 'softglaze',
+    sealedToken: c.sealedToken || '',
+    passphraseSalt: c.passphraseSalt || null,
+    passphraseVerifier: c.passphraseVerifier || null
+  };
+}
+
+function cloudSyncConfigured(c) { return Boolean(c.baseUrl && c.passphraseVerifier); }
+
+function syncHostOf(url) { try { return new URL(url).host; } catch (e) { return String(url || ''); } }
+
+// Verify the passphrase against the stored verifier, then build the engine with a
+// concrete transport and derive the session key. Throws on a wrong passphrase.
+async function unlockCloudSync(passphrase) {
+  const c = await readCloudSyncConfig();
+  if (!cloudSyncConfigured(c)) { const e = new Error('Cloud sync is not configured.'); e.code = 'SYNC_NOT_CONFIGURED'; throw e; }
+  if (!verifySecret(String(passphrase || ''), c.passphraseSalt, c.passphraseVerifier)) {
+    const e = new Error('Incorrect sync passphrase.'); e.code = 'BAD_PASSPHRASE'; throw e;
+  }
+  const token = secretStore.open(c.sealedToken);
+  const transport = syncTransport.createTransport({ baseUrl: c.baseUrl, token });
+  const engine = new CloudSyncEngine({ transport, namespace: c.namespace });
+  // The key-derivation salt is the shared namespace, so two installs that agree on
+  // (passphrase, namespace) derive the SAME key and converge.
+  await engine.deriveMasterKey(String(passphrase), c.namespace);
+  cloudSyncEngine = engine;
+  cloudSyncUnlocked = true;
+  cloudSyncLastError = null;
+  return engine;
+}
+
+async function syncConfigure(payload) {
+  await requireOwnerOrSuper('configure cloud sync');
+  const input = requireObject(payload);
+  const prev = await readCloudSyncConfig();
+
+  const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
+  const namespace = (input.namespace !== undefined ? String(input.namespace || '').trim() : prev.namespace) || 'softglaze';
+  let sealedToken = prev.sealedToken;
+  if (input.token !== undefined && input.token !== '') sealedToken = secretStore.seal(String(input.token).trim());
+
+  let passphraseSalt = prev.passphraseSalt;
+  let passphraseVerifier = prev.passphraseVerifier;
+  const passphrase = (input.passphrase !== undefined && input.passphrase !== '') ? String(input.passphrase) : null;
+  if (passphrase) {
+    // First-time set or an intentional re-key only when it differs from the stored
+    // one; entering the SAME passphrase just unlocks (verifier preserved).
+    if (!passphraseVerifier || !verifySecret(passphrase, passphraseSalt, passphraseVerifier)) {
+      const h = hashSecret(passphrase); passphraseSalt = h.salt; passphraseVerifier = h.hash;
+    }
+  }
+
+  const enabled = input.enabled !== undefined ? Boolean(input.enabled) : prev.enabled;
+  if (enabled && !baseUrl) throw new Error('Enter the sync endpoint URL before enabling sync.');
+  if (enabled && !passphraseVerifier) throw new Error('Set a sync passphrase before enabling sync.');
+
+  await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier });
+
+  // Re-key invalidates a previously-derived session key.
+  cloudSyncEngine = null;
+  cloudSyncUnlocked = false;
+  if (passphrase && baseUrl) { try { await unlockCloudSync(passphrase); } catch (e) { /* surfaced via status */ } }
+  return syncStatus();
+}
+
+async function syncStatus() {
+  const c = await readCloudSyncConfig();
+  const configured = cloudSyncConfigured(c);
+  let pendingCount = 0;
+  try {
+    if (configured) {
+      const ids = (await readSetting('cloudSyncIds', {})) || {};
+      const state = (await readSetting('cloudSyncState', {})) || {};
+      const profiles = await getPrisma().profile.findMany({ where: { deletedAt: null }, select: { id: true, updatedAt: true } });
+      for (const p of profiles) {
+        const sid = ids[p.id];
+        const ls = sid ? state[sid] : null;
+        if (!ls || syncPolicy.toMs(p.updatedAt) > syncPolicy.toMs(ls.syncedAt)) pendingCount += 1;
+      }
+    }
+  } catch (e) { /* best-effort */ }
+  return {
+    enabled: c.enabled,
+    configured,
+    unlocked: cloudSyncUnlocked && Boolean(cloudSyncEngine),
+    endpointHost: configured ? syncHostOf(c.baseUrl) : '',
+    namespace: c.namespace,
+    hasToken: Boolean(c.sealedToken),
+    lastSyncedAt: (await readSetting('cloudSyncLastRun', null)) || null,
+    pendingCount,
+    lastError: cloudSyncLastError
+  };
+}
+
+// --- transport envelope helpers (encrypt locally, store opaque) -------------
+async function syncPut(engine, key, obj) {
+  const env = engine.encryptPayload(obj);
+  await engine.transport.put(`${engine.namespace}/${key}`, Buffer.from(JSON.stringify(env)));
+}
+async function syncGet(engine, key) {
+  const raw = await engine.transport.get(`${engine.namespace}/${key}`);
+  if (!raw) return null;
+  let env;
+  try { env = JSON.parse(Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw)); }
+  catch (e) { throw new Error('A remote sync object is corrupt.'); }
+  return engine.decryptPayload(env); // throws on wrong key — caller surfaces it
+}
+
+async function pullSyncIndex(engine) {
+  const raw = await engine.transport.get(`${engine.namespace}/index.sgz-env`);
+  if (!raw) return {};
+  let env;
+  try { env = JSON.parse(Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw)); }
+  catch (e) { throw new Error('The remote sync index is corrupt.'); }
+  let payload;
+  try { payload = engine.decryptPayload(env); }
+  catch (e) {
+    const err = new Error('Remote sync data was encrypted with a different passphrase. Use the original passphrase, or reset sync.');
+    err.code = 'SYNC_KEY_MISMATCH'; throw err;
+  }
+  return (payload && payload.profiles && typeof payload.profiles === 'object') ? payload.profiles : {};
+}
+
+// --- profile <-> sync state mapping -----------------------------------------
+function pickSyncFingerprint(profile) {
+  const fp = { title: profile.title };
+  for (const k of SYNC_SCALAR_FIELDS) fp[k] = profile[k];
+  try { fp.platformAccounts = profile.platformAccounts ? JSON.parse(profile.platformAccounts) : []; } catch (e) { fp.platformAccounts = []; }
+  try { fp.tags = profile.tags ? JSON.parse(profile.tags) : []; } catch (e) { fp.tags = []; }
+  if (!Array.isArray(fp.tags)) fp.tags = [];
+  return fp;
+}
+
+async function gatherProfileSyncState(profile) {
+  let cookies = [];
+  try { cookies = (await exportStoredCookies(await offlineProfileOpts(profile.id))) || []; } catch (e) { cookies = []; }
+  return { cookies, localStorage: {}, fingerprint: pickSyncFingerprint(profile) };
+}
+
+// Apply a pulled remote state onto an EXISTING local profile (build the update
+// data explicitly so we never clobber install-local fields with defaults).
+async function applyRemoteToProfile(db, profile, remoteState) {
+  const fp = (remoteState && remoteState.fingerprint) || {};
+  const data = {};
+  for (const k of SYNC_SCALAR_FIELDS) if (fp[k] !== undefined) data[k] = fp[k];
+  if (typeof fp.title === 'string' && fp.title) data.title = fp.title;
+  if (Array.isArray(fp.platformAccounts)) data.platformAccounts = JSON.stringify(fp.platformAccounts);
+  if (Array.isArray(fp.tags)) data.tags = JSON.stringify(fp.tags);
+  await db.profile.update({ where: { id: profile.id }, data });
+  const cookies = Array.isArray(remoteState.cookies) ? remoteState.cookies : [];
+  if (cookies.length) {
+    const params = cookies.map(toSetCookieParam).filter(Boolean);
+    if (params.length) await importStoredCookies(await offlineProfileOpts(profile.id), params).catch(() => {});
+  }
+  await logActivity(db, profile.id, 'sync', 'pulled from cloud').catch(() => {});
+}
+
+// Create a brand-new local profile from a pulled remote state (convergence: the
+// second install gains profiles the first one had).
+async function createProfileFromRemote(remoteState) {
+  const fp = (remoteState && remoteState.fingerprint) || {};
+  const payload = {};
+  for (const k of SYNC_SCALAR_FIELDS) if (fp[k] !== undefined) payload[k] = fp[k];
+  payload.title = (typeof fp.title === 'string' && fp.title) ? fp.title : 'Synced profile';
+  if (Array.isArray(fp.platformAccounts)) payload.platformAccounts = fp.platformAccounts;
+  if (Array.isArray(fp.tags)) payload.tags = fp.tags;
+  const created = await createProfile(payload); // serialized, includes id
+  const cookies = Array.isArray(remoteState.cookies) ? remoteState.cookies : [];
+  if (cookies.length) {
+    const params = cookies.map(toSetCookieParam).filter(Boolean);
+    if (params.length) await importStoredCookies(await offlineProfileOpts(created.id), params).catch(() => {});
+  }
+  await logActivity(getPrisma(), created.id, 'sync', 'created from cloud').catch(() => {});
+  return created.id;
+}
+
+async function syncRun(payload) {
+  await requireOwnerOrSuper('run cloud sync');
+  const c = await readCloudSyncConfig();
+  if (!cloudSyncConfigured(c)) return { ok: false, skipped: true, reason: 'Cloud sync is not configured.' };
+  if (!c.enabled) return { ok: false, skipped: true, reason: 'Cloud sync is disabled.' };
+  if (!cloudSyncEngine || !cloudSyncUnlocked) return { ok: false, locked: true, reason: 'Enter your sync passphrase to unlock sync this session.' };
+
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const onlyIds = Array.isArray(input.profileIds) && input.profileIds.length ? new Set(input.profileIds.map(Number)) : null;
+  const db = getPrisma();
+  const engine = cloudSyncEngine;
+  const ids = (await readSetting('cloudSyncIds', {})) || {};
+  const state = (await readSetting('cloudSyncState', {})) || {};
+  const results = [];
+  let pushed = 0, pulled = 0, created = 0, conflicts = 0, failed = 0;
+
+  try {
+    const index = await pullSyncIndex(engine); // throws SYNC_KEY_MISMATCH on a wrong-key remote
+
+    const profiles = await db.profile.findMany({ where: { deletedAt: null } });
+    const localSyncIds = new Map();
+    for (const p of profiles) {
+      if (onlyIds && !onlyIds.has(p.id)) continue;
+      let sid = ids[p.id];
+      if (!sid) { sid = crypto.randomUUID(); ids[p.id] = sid; }
+      localSyncIds.set(sid, p);
+    }
+
+    // Reconcile each local profile against the remote index.
+    for (const [sid, p] of localSyncIds) {
+      try {
+        const remoteMeta = index[sid] || null;
+        const lastSync = state[sid] || null;
+        const decision = syncPolicy.decideProfileSync({ localUpdatedAt: p.updatedAt, remoteMeta, lastSync });
+        if (decision.action === 'noop') { results.push({ profileId: p.id, action: 'noop' }); continue; }
+        const isConflict = decision.action === 'conflict';
+        if (isConflict) conflicts += 1;
+
+        if (decision.resolution === 'push') {
+          const nowIso = new Date().toISOString();
+          const rev = ((remoteMeta && remoteMeta.rev) || (lastSync && lastSync.rev) || 0) + 1;
+          await syncPut(engine, `${sid}.sgz-env`, { v: 1, meta: { updatedAt: nowIso, rev }, state: await gatherProfileSyncState(p) });
+          index[sid] = { updatedAt: nowIso, rev };
+          state[sid] = { syncedAt: nowIso, rev };
+          pushed += 1;
+          results.push({ profileId: p.id, action: 'push', conflict: isConflict });
+        } else {
+          const payloadObj = await syncGet(engine, `${sid}.sgz-env`);
+          if (payloadObj && payloadObj.state) {
+            await applyRemoteToProfile(db, p, payloadObj.state);
+            state[sid] = { syncedAt: new Date().toISOString(), rev: (remoteMeta && remoteMeta.rev) || 0 };
+            pulled += 1;
+            results.push({ profileId: p.id, action: 'pull', conflict: isConflict });
+          }
+        }
+      } catch (e) { failed += 1; results.push({ profileId: p.id, action: 'error', error: (e && e.message) || 'failed' }); }
+    }
+
+    // Remote profiles not present locally -> create them (full-run only).
+    if (!onlyIds) {
+      const known = new Set(Object.values(ids));
+      for (const sid of Object.keys(index)) {
+        if (known.has(sid)) continue;
+        try {
+          const payloadObj = await syncGet(engine, `${sid}.sgz-env`);
+          if (!payloadObj || !payloadObj.state) continue;
+          const newId = await createProfileFromRemote(payloadObj.state);
+          ids[newId] = sid;
+          state[sid] = { syncedAt: new Date().toISOString(), rev: (index[sid] && index[sid].rev) || 0 };
+          created += 1;
+          results.push({ profileId: newId, action: 'create' });
+        } catch (e) { failed += 1; results.push({ syncId: sid, action: 'error', error: (e && e.message) || 'failed' }); }
+      }
+    }
+
+    await pushSyncIndex(engine, index);
+    await writeSetting('cloudSyncIds', ids);
+    await writeSetting('cloudSyncState', state);
+    await writeSetting('cloudSyncLastRun', new Date().toISOString());
+    cloudSyncLastError = null;
+    return { ok: true, pushed, pulled, created, conflicts, failed, results };
+  } catch (e) {
+    cloudSyncLastError = (e && e.message) || 'Sync failed.';
+    return { ok: false, error: cloudSyncLastError, code: e && e.code, results };
+  }
+}
+
+async function pushSyncIndex(engine, profiles) {
+  await syncPut(engine, 'index.sgz-env', { v: 1, profiles });
+}
+
+// ---------------------------------------------------------------------------
 // Licensing / billing (local-first). Each OWNER tree has a licence: a 7-day free
 // trial that, when it lapses, WARNS but does not block (per product choice).
 // Payment is via Cryptomus using the SUPER ADMIN's merchant credentials; a paid
@@ -5163,6 +5471,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.TEAM_REASSIGN_PROFILES, reassignProfiles);
   registerHandler(CHANNELS.TEAM_SEAT_USAGE, getSeatUsage);
   registerHandler(CHANNELS.TEAM_EXPORT_ACTIVITY, exportTeamActivity);
+  registerHandler(CHANNELS.SYNC_STATUS, syncStatus);
+  registerHandler(CHANNELS.SYNC_CONFIGURE, syncConfigure);
+  registerHandler(CHANNELS.SYNC_RUN, syncRun);
   registerHandler(CHANNELS.VAULT_STATUS, vaultStatus);
   registerHandler(CHANNELS.VAULT_SET_PASSWORD, vaultSetPassword);
   registerHandler(CHANNELS.VAULT_UNLOCK, vaultUnlock);
