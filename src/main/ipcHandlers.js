@@ -38,6 +38,8 @@ const { generateFingerprint, normalizeBrand } = require('./fingerprintGenerator'
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
+const dbCrypto = require('./dbCrypto');
+const database = require('./database');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
@@ -210,7 +212,15 @@ const CHANNELS = Object.freeze({
   API_TOKEN_CREATE: 'api:token-create',
   API_TOKEN_REVOKE: 'api:token-revoke',
   API_SERVER_STATUS: 'api:server-status',
-  API_SERVER_SET_ENABLED: 'api:server-set-enabled'
+  API_SERVER_SET_ENABLED: 'api:server-set-enabled',
+
+  // Softglaze Enterprise — at-rest DB encryption + workspace backup/restore (Phase 6)
+  DB_ENCRYPTION_STATUS: 'db:encryption-status',
+  DB_UNLOCK: 'db:unlock',
+  DB_ENABLE_ENCRYPTION: 'db:enable-encryption',
+  DB_DISABLE_ENCRYPTION: 'db:disable-encryption',
+  WORKSPACE_BACKUP: 'workspace:backup',
+  WORKSPACE_RESTORE: 'workspace:restore'
 });
 
 const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5']);
@@ -3752,6 +3762,165 @@ async function superLogin(payload) {
   return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
 }
 
+// ---------------------------------------------------------------------------
+// Softglaze Enterprise — at-rest database encryption + workspace backup/restore
+// (Phase 6). Encrypts the whole SQLite file when the app is closed/locked (Option
+// A envelope-at-rest), keyed by the vault password. Backup-first, reversible, OFF
+// by default. Honest scope: a plaintext working file exists while the app is
+// running + unlocked (Prisma's requirement) — see DbEncryptionSettings.jsx.
+// ---------------------------------------------------------------------------
+
+// Run once the DB is readable (normal boot when unencrypted, or after a successful
+// db:unlock / workspace restore): restore the saved member session + vault lock
+// state and start the local API if the user enabled it. This is the logic that
+// used to run inline at the end of registerIpcHandlers — extracted so the unlock
+// path can reuse it.
+async function afterDbReady() {
+  try {
+    const savedMember = await readSetting('currentMemberId', null);
+    if (savedMember != null) currentMemberId = Number(savedMember) || null;
+    const v = await readSetting('vault', null);
+    if (v && v.enabled) vaultLocked = true; // require unlock at startup
+  } catch (e) { /* ignore — fall back to a fresh session */ }
+  try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
+}
+
+async function dbEncryptionStatus() {
+  const info = database.getDbEncryptionInfo();
+  let lastBackupAt = null;
+  if (info.unlocked) {
+    try { lastBackupAt = await readSetting('workspaceLastBackupAt', null); } catch (e) { /* unavailable */ }
+  }
+  return { ...info, lastBackupAt };
+}
+
+// Pre-Gate unlock. No permission gate (the workspace is not open yet); the .enc's
+// GCM tag is the authenticator. On success the DB is opened + migrated and the
+// saved session restored.
+async function dbUnlock(payload) {
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (!password) throw new Error('Enter your password to unlock the database.');
+  if (!database.isDbEncryptionEnabled()) return dbEncryptionStatus();
+  await database.unlockEncryptedDb(password); // throws DB_UNLOCK_FAILED / DB_MISSING
+  await database.bootstrapDatabase();
+  await afterDbReady();
+  // The DB key IS the vault password, and it just decrypted the database, so it is
+  // by definition correct — unlock the workspace vault too, so the user isn't asked
+  // for the same password again at the Gate.
+  try {
+    const v = await readVault();
+    if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
+  } catch (e) { /* leave vault locked — the Gate will ask */ }
+  return dbEncryptionStatus();
+}
+
+async function dbEnableEncryption(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  if (!input.confirm) throw new Error('Please confirm you understand that a lost password makes the data unrecoverable.');
+  const password = String(input.password || '');
+  // The DB key IS the vault password — require an enabled vault and verify it, so
+  // the same password that unlocks the workspace also unlocks the database.
+  const v = await readVault();
+  if (!v.enabled || !v.hash) {
+    const e = new Error('Set a workspace password (vault) first — database encryption uses it as the key.');
+    e.code = 'NO_VAULT';
+    throw e;
+  }
+  if (!verifySecret(password, v.salt, v.hash)) {
+    const e = new Error('Incorrect workspace password.'); e.code = 'BAD_PASSWORD'; throw e;
+  }
+  const info = await database.enableDbEncryption(password);
+  let lastBackupAt = null;
+  try { lastBackupAt = await readSetting('workspaceLastBackupAt', null); } catch (e) { /* noop */ }
+  return { ...info, lastBackupAt };
+}
+
+async function dbDisableEncryption(payload) {
+  await requirePermission('vault.manage');
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (!password) throw new Error('Enter your workspace password to disable encryption.');
+  const info = await database.disableDbEncryption(password); // verifies password internally
+  let lastBackupAt = null;
+  try { lastBackupAt = await readSetting('workspaceLastBackupAt', null); } catch (e) { /* noop */ }
+  return { ...info, lastBackupAt };
+}
+
+async function workspaceBackup(payload) {
+  await requireOwnerOrSuper('back up the workspace');
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (password.length < 6) throw new Error('Choose a backup password of at least 6 characters.');
+  const { dbPath } = getRuntimeConfig();
+  // Fold the WAL into the main file so the snapshot is internally consistent.
+  try { await getPrisma().$executeRawUnsafe('PRAGMA wal_checkpoint(FULL);'); } catch (e) { /* not WAL */ }
+  let settings = [];
+  try {
+    const rows = await getPrisma().setting.findMany();
+    settings = rows.map((r) => ({ key: r.key, value: r.value }));
+  } catch (e) { settings = []; }
+  const stamp = new Date().toISOString().slice(0, 10);
+  const save = await dialog.showSaveDialog({
+    title: 'Back up workspace',
+    defaultPath: `softglaze-workspace-${stamp}.sgzw`,
+    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+  });
+  if (save.canceled || !save.filePath) return { cancelled: true };
+  const res = await profileArchive.exportWorkspaceArchive({ dbPath, settings, password, outPath: save.filePath });
+  await writeSetting('workspaceLastBackupAt', new Date().toISOString()).catch(() => {});
+  return { ok: true, path: save.filePath, dbBytes: res.dbBytes, settingsCount: res.settingsCount };
+}
+
+async function workspaceRestore(payload) {
+  await requireOwnerOrSuper('restore the workspace');
+  const input = requireObject(payload);
+  const password = String(input.password || '');
+  if (!password) throw new Error('Enter the password for this backup.');
+  const selection = await dialog.showOpenDialog({
+    title: 'Restore workspace backup',
+    properties: ['openFile'],
+    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+  });
+  if (selection.canceled || !selection.filePaths || !selection.filePaths.length) return { cancelled: true };
+  const filePath = selection.filePaths[0];
+
+  // GCM-verified decrypt happens BEFORE we touch any live file — a wrong password
+  // or tampered backup throws here and the working DB is never changed.
+  const restored = await profileArchive.restoreWorkspaceArchive(filePath, password);
+
+  const { dbPath } = getRuntimeConfig();
+  const tmp = `${dbPath}.restore-tmp`;
+  await fs.writeFile(tmp, restored.db);
+  if (!dbCrypto.looksLikeSqlite(tmp)) {
+    await fs.unlink(tmp).catch(() => {});
+    throw new Error('This backup does not contain a valid database.');
+  }
+
+  // Swap with rollback: copy the current DB aside, then on any error put it back.
+  await database.disconnectPrisma();
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const safety = `${dbPath}.pre-restore-${stamp}`;
+  let hadCurrent = false;
+  try { await fs.copyFile(dbPath, safety); hadCurrent = true; } catch (e) { /* no current DB */ }
+  try {
+    await fs.rename(tmp, dbPath);
+    for (const suffix of ['-wal', '-shm']) { await fs.unlink(dbPath + suffix).catch(() => {}); }
+    await database.bootstrapDatabase();
+  } catch (e) {
+    try { if (hadCurrent) await fs.copyFile(safety, dbPath); } catch (_) { /* noop */ }
+    await database.bootstrapDatabase().catch(() => {});
+    await dbCrypto.secureUnlink(safety);
+    await fs.unlink(tmp).catch(() => {});
+    throw new Error('Restore failed — the previous database has been put back.');
+  }
+  // Success — remove the (plaintext) safety copy so it can't linger on disk.
+  await dbCrypto.secureUnlink(safety);
+  await afterDbReady();
+  return { ok: true, exportedAt: restored.exportedAt };
+}
+
 async function readVault() {
   return readSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
 }
@@ -3778,6 +3947,11 @@ async function vaultSetPassword(payload) {
   const { salt, hash } = hashSecret(next);
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes ?? v.autoLockMinutes) || 0 });
   vaultLocked = false;
+  // If the DB is encrypted with the (old) vault password, re-key the at-rest copy
+  // to the new one so "the workspace password unlocks the database" stays true.
+  if (database.isDbEncryptionEnabled()) {
+    try { await database.rekeyEncryptedDb(next); } catch (e) { console.error('[vault] DB re-key after password change failed', e); }
+  }
   return vaultStatus();
 }
 
@@ -3800,6 +3974,14 @@ async function vaultLock() {
 
 async function vaultDisable(payload) {
   await requirePermission('vault.manage');
+  // Database encryption is keyed by the vault password — removing the vault would
+  // strand the encrypted DB with no key. Force the user to turn off DB encryption
+  // first (which decrypts back to plaintext).
+  if (database.isDbEncryptionEnabled()) {
+    const e = new Error('Turn off database encryption first — it uses your workspace password as its key.');
+    e.code = 'DB_ENCRYPTION_ON';
+    throw e;
+  }
   const input = requireObject(payload);
   const v = await readVault();
   if (v.enabled && v.hash && !verifySecret(String(input.password || ''), v.salt, v.hash)) {
@@ -5474,6 +5656,12 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.SYNC_STATUS, syncStatus);
   registerHandler(CHANNELS.SYNC_CONFIGURE, syncConfigure);
   registerHandler(CHANNELS.SYNC_RUN, syncRun);
+  registerHandler(CHANNELS.DB_ENCRYPTION_STATUS, dbEncryptionStatus);
+  registerHandler(CHANNELS.DB_UNLOCK, dbUnlock);
+  registerHandler(CHANNELS.DB_ENABLE_ENCRYPTION, dbEnableEncryption);
+  registerHandler(CHANNELS.DB_DISABLE_ENCRYPTION, dbDisableEncryption);
+  registerHandler(CHANNELS.WORKSPACE_BACKUP, workspaceBackup);
+  registerHandler(CHANNELS.WORKSPACE_RESTORE, workspaceRestore);
   registerHandler(CHANNELS.VAULT_STATUS, vaultStatus);
   registerHandler(CHANNELS.VAULT_SET_PASSWORD, vaultSetPassword);
   registerHandler(CHANNELS.VAULT_UNLOCK, vaultUnlock);
@@ -5510,17 +5698,12 @@ function registerIpcHandlers() {
     readConfig: () => readSetting('localApi', { enabled: false, port: localApi.DEFAULT_PORT }),
     writeConfig: (cfg) => writeSetting('localApi', cfg)
   });
-  localApi.startIfEnabled().catch(() => {});
-
-  // Restore member session + vault lock state on boot.
-  (async () => {
-    try {
-      const savedMember = await readSetting('currentMemberId', null);
-      if (savedMember != null) currentMemberId = Number(savedMember) || null;
-      const v = await readSetting('vault', null);
-      if (v && v.enabled) vaultLocked = true; // require unlock at startup
-    } catch (e) { /* ignore */ }
-  })();
+  // Bring the session online (member + vault state + local API) only when the DB
+  // is actually readable. When at-rest encryption is on, the DB starts locked and
+  // this is deferred until the db:unlock handler runs afterDbReady() itself.
+  if (database.isDbUnlocked()) {
+    afterDbReady();
+  }
 
   registered = true;
 }
