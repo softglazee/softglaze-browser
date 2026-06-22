@@ -19,6 +19,7 @@ const ProfilesPage = lazy(() => import('@/pages/ProfilesPage.jsx'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage.jsx'));
 const AutomationPage = lazy(() => import('@/pages/AutomationPage.jsx'));
 const BatchImportPage = lazy(() => import('@/pages/BatchImportPage.jsx'));
+const BillingPage = lazy(() => import('@/pages/BillingPage.jsx'));
 
 function PageFallback() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
               <Route path="/automation" element={<AutomationPage />} />
               <Route path="/members" element={<MembersPage />} />
               <Route path="/account" element={<AccountSettingsPage />} />
+              <Route path="/billing" element={<BillingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </Suspense>

@@ -2239,6 +2239,70 @@ async function runCookieRobot(sessionId, targetUrls = [], opts = {}) {
   return result;
 }
 
+// Click a few random visible interactive elements (links/buttons) — best-effort
+// "browsing noise" for cookie warming. Never throws; stops early if the page
+// navigates away. Returns the number of clicks performed.
+async function randomClicks(page, count = 2) {
+  const n = Math.max(1, Math.min(6, Number(count) || 2));
+  let clicked = 0;
+  for (let i = 0; i < n; i++) {
+    try {
+      const did = await page.evaluate(() => {
+        const inView = (el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 8 && r.height > 8 && r.top >= 0 && r.top < (window.innerHeight || 800) && r.left >= 0;
+        };
+        const nodes = Array.from(document.querySelectorAll('a[href], button, [role="button"]')).filter(inView);
+        if (!nodes.length) return false;
+        const el = nodes[Math.floor(Math.random() * nodes.length)];
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+        return true;
+      });
+      if (!did) break;
+      clicked += 1;
+      await sleep(600 + Math.floor(Math.random() * 1400));
+    } catch (e) { break; } // page likely navigated — stop clicking
+  }
+  return clicked;
+}
+
+// Navigate to a random same-origin link to build in-site history (skips obvious
+// sign-out links). Returns true if it navigated.
+async function clickRandomLink(page) {
+  try {
+    const href = await page.evaluate(() => {
+      const origin = location.origin;
+      const links = Array.from(document.querySelectorAll('a[href]'))
+        .map((a) => a.href)
+        .filter((h) => { try { const u = new URL(h); return u.origin === origin && !/(logout|sign-?out)/i.test(h); } catch (e) { return false; } });
+      if (!links.length) return null;
+      return links[Math.floor(Math.random() * links.length)];
+    });
+    if (!href) return false;
+    await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    return true;
+  } catch (e) { return false; }
+}
+
+// Post-navigation interaction for the Cookie Warmer: dismiss the consent dialog,
+// human-scroll, then apply the per-site click behaviour. Operates on the
+// session's live page; fully best-effort. Returns what it did.
+async function warmInteract(sessionId, opts = {}) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.page) return { ok: false, consent: false, scrolled: false, clicked: 0 };
+  const page = session.page;
+  const out = { ok: true, consent: false, scrolled: false, clicked: 0 };
+  try { out.consent = Boolean(await dismissCookieConsent(page).catch(() => false)); } catch (e) { /* non-fatal */ }
+  if (opts.scroll !== false) { try { await humanScroll(page, opts); out.scrolled = true; } catch (e) { /* non-fatal */ } }
+  const mode = String(opts.clickMode || 'none');
+  try {
+    if (mode === 'random') out.clicked = await randomClicks(page, opts.clicks || 2);
+    else if (mode === 'links') out.clicked = (await clickRandomLink(page)) ? 1 : 0;
+  } catch (e) { /* best-effort */ }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Softglaze Premium — Stealth "Human Paste" typing engine.
 //
@@ -2761,6 +2825,7 @@ module.exports = {
   listActiveSessions,
   navigateSession,
   runCookieRobot,
+  warmInteract,
   runMacro,
   startMacroRecording,
   stopMacroRecording,
