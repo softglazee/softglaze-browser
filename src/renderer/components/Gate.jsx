@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
-  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, Crown, AlertTriangle, Check
+  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, Crown, AlertTriangle, Check,
+  Landmark, ExternalLink
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -101,7 +102,7 @@ function LicenseBanner({ license, busy, onPay }) {
   }
   if (license.isTrial && license.daysLeftTrial != null) {
     return (
-      <div className="fixed bottom-4 left-4 z-[90] inline-flex items-center gap-2 rounded-full bg-card border border-border px-3 py-1.5 text-[11.5px] text-muted-foreground shadow">
+      <div className="fixed bottom-4 right-4 z-[90] inline-flex items-center gap-2 rounded-full bg-card border border-border px-3 py-1.5 text-[11.5px] text-muted-foreground shadow pointer-events-none">
         <Clock className="w-3.5 h-3.5 text-primary" />
         Trial · {license.daysLeftTrial} day{license.daysLeftTrial === 1 ? '' : 's'} left
       </div>
@@ -110,9 +111,76 @@ function LicenseBanner({ license, busy, onPay }) {
   return null;
 }
 
+// Compact payment-method chooser used on the banned screen and the register
+// plan step. Shows only the methods the admin enabled; automated → hosted
+// checkout (caller polls), manual → submit a reference for admin approval.
+function PayMethods({ methods, busy, onAutomated, onManual }) {
+  const [sel, setSel] = useState(() => (methods[0] ? methods[0].id : null));
+  const [reference, setReference] = useState('');
+  const [done, setDone] = useState(false);
+  const cur = methods.find((m) => m.id === sel) || null;
+
+  if (!methods.length) {
+    return <p className="text-[12px] text-muted-dark">No payment methods are enabled yet — use a purchase code or contact your administrator.</p>;
+  }
+  if (done) {
+    return (
+      <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-[12px] text-emerald-400">
+        <Check className="w-4 h-4 inline mr-1.5" /> Payment submitted — an administrator will review it and activate your plan shortly.
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1.5">
+        {methods.map((m) => {
+          const active = m.id === sel;
+          const Icon = m.kind === 'manual' ? Landmark : CreditCard;
+          return (
+            <button
+              key={m.id}
+              onClick={() => setSel(m.id)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-colors"
+              style={active
+                ? { borderColor: 'color-mix(in srgb, var(--primary) 50%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }
+                : { borderColor: 'var(--border)' }}
+            >
+              <Icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-muted-dark'}`} />
+              <span className="flex-1 text-[12.5px] text-foreground">{m.label}</span>
+              {m.kind === 'manual' && <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">Manual</span>}
+              {active && <Check className="w-4 h-4 text-primary" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {cur && cur.kind === 'automated' && (
+        <button onClick={() => onAutomated(cur)} disabled={busy} className="w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} Continue to {cur.label}
+        </button>
+      )}
+
+      {cur && cur.kind === 'manual' && (
+        <div className="space-y-2">
+          {cur.instructions && <div className="rounded-lg bg-secondary/40 border border-border p-2.5 text-[11.5px] text-foreground/90 whitespace-pre-wrap">{cur.instructions}</div>}
+          {cur.payLink && <a href={cur.payLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-primary"><ExternalLink className="w-3.5 h-3.5" /> Open payment link</a>}
+          <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Payment reference / transaction ID" className="w-full h-9 bg-background border border-border rounded-lg px-3 text-[12.5px] text-foreground outline-none focus:border-primary" />
+          <button
+            onClick={async () => { const ok = await onManual(cur, { reference: reference.trim(), note: '' }); if (ok) setDone(true); }}
+            disabled={busy}
+            className="w-full h-10 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} I&rsquo;ve paid — submit for approval
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Full-screen blocking gate when the owner tree is banned (trial + grace lapsed).
 // No workspace access — only renew / redeem / contact / sign out.
-function BannedScreen({ account, license, planCode, setPlanCode, busy, err, onRedeem, onPay, onSignOut }) {
+function BannedScreen({ account, license, methods, planCode, setPlanCode, busy, err, onRedeem, onAutomated, onManual, onSignOut }) {
   const adminBlocked = Boolean(license?.adminBlocked);
   return (
     <div className="h-screen w-full bg-background text-foreground font-sans grid place-items-center p-6">
@@ -127,9 +195,7 @@ function BannedScreen({ account, license, planCode, setPlanCode, busy, err, onRe
 
         {!adminBlocked && (
           <>
-            <button onClick={onPay} disabled={busy} className="w-full h-11 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13.5px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} Pay now {license?.plan?.label ? `(${license.plan.label})` : ''}
-            </button>
+            <PayMethods methods={methods} busy={busy} onAutomated={onAutomated} onManual={onManual} />
             <div className="mt-5">
               <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />Have a purchase code?</label>
               <div className="flex items-center gap-2">
@@ -159,6 +225,7 @@ export default function Gate({ children }) {
   const [err, setErr] = useState('');
   const [license, setLicense] = useState(null); // resolved after auth (drives banned/grace/trial)
   const [planCode, setPlanCode] = useState(''); // register plan step: purchase-code entry
+  const [methods, setMethods] = useState([]); // enabled payment methods (banned screen + plan step)
 
   // register
   const [step, setStep] = useState('details'); // details | verify
@@ -207,6 +274,11 @@ export default function Gate({ children }) {
     } catch (e) { setPhase('licensing'); }
   }
   useEffect(() => { evaluate(); }, []);
+  useEffect(() => {
+    softglazeApi.payments.listMethods()
+      .then((r) => setMethods(r && Array.isArray(r.methods) ? r.methods : []))
+      .catch(() => setMethods([]));
+  }, []);
   useEffect(() => {
     if (resendIn <= 0) return undefined;
     const t = setInterval(() => setResendIn((x) => x - 1), 1000);
@@ -359,7 +431,26 @@ export default function Gate({ children }) {
       const inv = await softglazeApi.payments.startCheckout();
       if (inv && inv.url) window.open(inv.url, '_blank');
       pollPurchase(inv);
-    } catch (e) { setErr(e.message || 'Crypto payments are not available yet.'); setBusy(false); }
+    } catch (e) { setErr(e.message || 'No payment method is available yet.'); setBusy(false); }
+  }
+
+  // Method-aware variants used by the <PayMethods> chooser (banned screen + plan step).
+  async function buyWith(method) {
+    setErr(''); setBusy(true);
+    try {
+      const inv = await softglazeApi.payments.startCheckout({ provider: method.id });
+      if (inv && inv.url) window.open(inv.url, '_blank');
+      pollPurchase(inv);
+    } catch (e) { setErr(e.message || 'Payment could not be started.'); setBusy(false); }
+  }
+
+  async function submitManualPay(method, { reference, note }) {
+    setErr(''); setBusy(true);
+    try {
+      await softglazeApi.payments.submitManual({ provider: method.id, reference, note });
+      setBusy(false);
+      return true;
+    } catch (e) { setErr(e.message || 'Could not submit your payment.'); setBusy(false); return false; }
   }
 
   async function signOut() {
@@ -384,12 +475,14 @@ export default function Gate({ children }) {
       <BannedScreen
         account={account}
         license={license}
+        methods={methods}
         planCode={planCode}
         setPlanCode={setPlanCode}
         busy={busy}
         err={err}
         onRedeem={redeemPlan}
-        onPay={buyPlan}
+        onAutomated={buyWith}
+        onManual={submitManualPay}
         onSignOut={signOut}
       />
     );
@@ -467,10 +560,12 @@ export default function Gate({ children }) {
                   <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">Start 7-day free trial</span><span className="block text-[11.5px] text-muted-dark">No payment now — explore everything.</span></span>
                   <ArrowRight className="w-4 h-4 text-muted-dark" />
                 </button>
-                <button onClick={buyPlan} disabled={busy} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-border hover:border-muted-dark hover:bg-secondary transition-colors text-left disabled:opacity-60">
-                  {busy ? <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" /> : <CreditCard className="w-5 h-5 text-primary shrink-0" />}
-                  <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">Buy now</span><span className="block text-[11.5px] text-muted-dark">Pay with crypto{license?.plan?.label ? ` · ${license.plan.label}` : ''} (opens in your browser).</span></span>
-                </button>
+                {methods.length > 0 && (
+                  <div className="rounded-lg border border-border p-3 space-y-2.5">
+                    <span className="block text-[12px] font-semibold text-foreground flex items-center gap-1.5"><CreditCard className="w-4 h-4 text-primary" /> Activate a paid plan now</span>
+                    <PayMethods methods={methods} busy={busy} onAutomated={buyWith} onManual={submitManualPay} />
+                  </div>
+                )}
               </div>
               <div className="mt-4">
                 <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />Have a purchase code?</label>

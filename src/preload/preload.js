@@ -107,6 +107,11 @@ const CHANNELS = Object.freeze({
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
   PAYMENT_CHECKOUT_START: 'payment:checkout-start',
   PAYMENT_CHECKOUT_POLL: 'payment:checkout-poll',
+  PAYMENT_LIST_METHODS: 'payment:list-methods',
+  PAYMENT_SUBMIT_MANUAL: 'payment:submit-manual',
+  PAYMENT_MANUAL_LIST: 'payment:manual-list',
+  PAYMENT_MANUAL_RESOLVE: 'payment:manual-resolve',
+  BILLING_GET_PLANS: 'billing:get-plans',
   IP_PROVIDERS_GET_ALL: 'ip-providers:get-all',
   IP_PROVIDERS_UPDATE_CREDENTIALS: 'ip-providers:update-credentials',
   IP_PROVIDERS_TOGGLE_STATUS: 'ip-providers:toggle-status',
@@ -158,6 +163,7 @@ const CHANNELS = Object.freeze({
   AUTOMATION_SAVE_MACRO: 'automation:save-macro',
   AUTOMATION_DELETE_MACRO: 'automation:delete-macro',
   AUTOMATION_START_WARMER: 'automation:start-warmer',
+  AUTOMATION_STOP_WARMER: 'automation:stop-warmer',
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress',
   AUTOMATION_RUN_MACRO: 'automation:run-macro',
@@ -337,9 +343,16 @@ const api = Object.freeze({
   payments: Object.freeze({
     getConfig: () => invoke(CHANNELS.PAYMENT_CONFIG_GET),
     setConfig: (payload) => invoke(CHANNELS.PAYMENT_CONFIG_SET, payload),
-    validate: () => invoke(CHANNELS.PAYMENT_CONFIG_VALIDATE),
-    startCheckout: () => invoke(CHANNELS.PAYMENT_CHECKOUT_START),
-    pollCheckout: (payload) => invoke(CHANNELS.PAYMENT_CHECKOUT_POLL, payload)
+    validate: (payload) => invoke(CHANNELS.PAYMENT_CONFIG_VALIDATE, payload),
+    startCheckout: (payload) => invoke(CHANNELS.PAYMENT_CHECKOUT_START, payload),
+    pollCheckout: (payload) => invoke(CHANNELS.PAYMENT_CHECKOUT_POLL, payload),
+    listMethods: () => invoke(CHANNELS.PAYMENT_LIST_METHODS),
+    submitManual: (payload) => invoke(CHANNELS.PAYMENT_SUBMIT_MANUAL, payload),
+    manualList: () => invoke(CHANNELS.PAYMENT_MANUAL_LIST),
+    manualResolve: (payload) => invoke(CHANNELS.PAYMENT_MANUAL_RESOLVE, payload)
+  }),
+  billing: Object.freeze({
+    getPlans: () => invoke(CHANNELS.BILLING_GET_PLANS)
   }),
   ipProviders: Object.freeze({
     getAll: () => invoke(CHANNELS.IP_PROVIDERS_GET_ALL),
@@ -397,6 +410,7 @@ const api = Object.freeze({
     saveMacro: (payload) => invoke(CHANNELS.AUTOMATION_SAVE_MACRO, payload),
     deleteMacro: (id) => invoke(CHANNELS.AUTOMATION_DELETE_MACRO, { id }),
     startWarmer: (payload) => invoke(CHANNELS.AUTOMATION_START_WARMER, payload),
+    stopWarmer: (payload) => invoke(CHANNELS.AUTOMATION_STOP_WARMER, payload),
     getHistory: () => invoke(CHANNELS.AUTOMATION_GET_HISTORY),
     runMacro: (payload) => invoke(CHANNELS.AUTOMATION_RUN_MACRO, payload),
     startRecording: (payload) => invoke(CHANNELS.AUTOMATION_START_RECORDING, payload),

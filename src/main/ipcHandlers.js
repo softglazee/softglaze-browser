@@ -21,6 +21,7 @@ const {
   resolveBrowserExecutable,
   navigateSession,
   runCookieRobot,
+  warmInteract,
   runMacro,
   startMacroRecording,
   stopMacroRecording,
@@ -152,6 +153,11 @@ const CHANNELS = Object.freeze({
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
   PAYMENT_CHECKOUT_START: 'payment:checkout-start',
   PAYMENT_CHECKOUT_POLL: 'payment:checkout-poll',
+  PAYMENT_LIST_METHODS: 'payment:list-methods',
+  PAYMENT_SUBMIT_MANUAL: 'payment:submit-manual',
+  PAYMENT_MANUAL_LIST: 'payment:manual-list',
+  PAYMENT_MANUAL_RESOLVE: 'payment:manual-resolve',
+  BILLING_GET_PLANS: 'billing:get-plans',
   IP_PROVIDERS_GET_ALL: 'ip-providers:get-all',
   IP_PROVIDERS_UPDATE_CREDENTIALS: 'ip-providers:update-credentials',
   IP_PROVIDERS_TOGGLE_STATUS: 'ip-providers:toggle-status',
@@ -202,6 +208,7 @@ const CHANNELS = Object.freeze({
   AUTOMATION_SAVE_MACRO: 'automation:save-macro',
   AUTOMATION_DELETE_MACRO: 'automation:delete-macro',
   AUTOMATION_START_WARMER: 'automation:start-warmer',
+  AUTOMATION_STOP_WARMER: 'automation:stop-warmer',
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress', // main -> renderer stream
   AUTOMATION_RUN_MACRO: 'automation:run-macro',
@@ -1714,10 +1721,12 @@ async function createProfileFromTemplate(payload) {
   await reconcileReferences(db, fields);
   const dataDirName = await ensureUniqueDataDirName(db, title);
 
-  const created = await db.profile.create({
-    data: { ...fields, title, dataDirName, macAddress: randomMac(), deviceName: randomDeviceName() },
-    include: { proxy: true, group: true }
-  });
+  // A mobile template keeps its device model (e.g. Pixel 7) so the UA / Client-Hints
+  // model stays coherent; desktop profiles get a randomized machine name per profile.
+  const isMobile = fields.deviceClass === 'mobile';
+  const data = { ...fields, title, dataDirName, macAddress: randomMac() };
+  if (!isMobile) data.deviceName = randomDeviceName();
+  const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return serializeProfile(created);
 }
 
@@ -3798,6 +3807,110 @@ async function superLogin(payload) {
 // state and start the local API if the user enabled it. This is the logic that
 // used to run inline at the end of registerIpcHandlers — extracted so the unlock
 // path can reuse it.
+// ---------------------------------------------------------------------------
+// Starter content — seeded ONCE on first DB-ready so a new workspace isn't empty.
+// A few ready-to-edit automation macros (real runner step shapes) and coherent
+// profile templates (built from the real fingerprint generator). Guarded by a
+// Setting flag: never duplicates, never touches user-created rows.
+// ---------------------------------------------------------------------------
+const STARTER_MACROS = [
+  {
+    name: 'Warm & scroll',
+    description: 'Visit two popular sites and scroll like a reader — quick organic activity. Runs as-is.',
+    steps: [
+      { type: 'goto', url: 'https://www.google.com/' },
+      { type: 'wait', ms: 2000 },
+      { type: 'scroll', steps: 4 },
+      { type: 'goto', url: 'https://www.youtube.com/' },
+      { type: 'wait', ms: 2000 },
+      { type: 'scroll', steps: 5 }
+    ]
+  },
+  {
+    name: 'Account sign-up filler',
+    description: 'Template for a registration form — edit the URL, selectors and values for your target site.',
+    steps: [
+      { type: 'goto', url: 'https://example.com/signup' },
+      { type: 'wait', ms: 1500 },
+      { type: 'type', selector: '#email', value: 'you@example.com' },
+      { type: 'type', selector: '#password', value: 'ChangeMe123!' },
+      { type: 'type', selector: '#confirm-password', value: 'ChangeMe123!' },
+      { type: 'click', selector: 'button[type="submit"]' },
+      { type: 'wait', ms: 3000 }
+    ]
+  },
+  {
+    name: 'Login & wait',
+    description: 'Template for a login form — replace the selectors and credentials for your site.',
+    steps: [
+      { type: 'goto', url: 'https://example.com/login' },
+      { type: 'wait', ms: 1500 },
+      { type: 'type', selector: 'input[name="email"]', value: 'you@example.com' },
+      { type: 'type', selector: 'input[name="password"]', value: 'your-password' },
+      { type: 'click', selector: 'button[type="submit"]' },
+      { type: 'wait', ms: 3000 }
+    ]
+  },
+  {
+    name: 'Search & open result',
+    description: 'Search Google for a query and open the first result. Edit the query in the "type" step.',
+    steps: [
+      { type: 'goto', url: 'https://www.google.com/' },
+      { type: 'wait', ms: 1500 },
+      { type: 'type', selector: 'textarea[name="q"]', value: 'softglaze browser' },
+      { type: 'keypress', key: 'Enter' },
+      { type: 'wait', ms: 2500 },
+      { type: 'click', selector: 'h3' }
+    ]
+  },
+  {
+    name: 'Read & dwell',
+    description: 'Open an article and scroll/pause like a real reader — good for low-key warming. Runs as-is.',
+    steps: [
+      { type: 'goto', url: 'https://en.wikipedia.org/wiki/Web_browser' },
+      { type: 'wait', ms: 2000 },
+      { type: 'scroll', steps: 5 },
+      { type: 'wait', ms: 3000 },
+      { type: 'scroll', steps: 4 },
+      { type: 'wait', ms: 3000 }
+    ]
+  }
+];
+
+// Generate a coherent desktop fingerprint for a specific OS (the generator weights
+// OS randomly, so retry until it matches; fall back to any OS after a bounded loop).
+function starterDesktopFingerprint(targetOs) {
+  for (let i = 0; i < 80; i += 1) {
+    const fp = generateFingerprint();
+    if (fp.os === targetOs) return fp;
+  }
+  return generateFingerprint();
+}
+
+function buildStarterTemplates() {
+  return [
+    { name: 'Windows · Chrome (desktop)', data: starterDesktopFingerprint('Windows') },
+    { name: 'macOS · Chrome (desktop)', data: starterDesktopFingerprint('macOS') },
+    { name: 'Android · Chrome (mobile)', data: generateFingerprint({ deviceClass: 'mobile' }) },
+    { name: 'Linux · Chrome (desktop)', data: starterDesktopFingerprint('Linux') },
+    { name: 'EU privacy · WebRTC off', data: { ...starterDesktopFingerprint('Windows'), webrtc: 'Disabled', portScanProtection: 'Enable' } }
+  ];
+}
+
+async function seedStarters() {
+  try {
+    if (await readSetting('startersSeeded', false)) return;
+    const db = getPrisma();
+    for (const m of STARTER_MACROS) {
+      await db.macro.create({ data: { name: m.name, description: m.description, stepsJson: JSON.stringify(m.steps) } }).catch(() => {});
+    }
+    for (const t of buildStarterTemplates()) {
+      await db.template.create({ data: { name: t.name, dataJson: JSON.stringify(t.data) } }).catch(() => {});
+    }
+    await writeSetting('startersSeeded', true);
+  } catch (e) { /* best-effort — never block startup */ }
+}
+
 async function afterDbReady() {
   try {
     const savedMember = await readSetting('currentMemberId', null);
@@ -3805,6 +3918,7 @@ async function afterDbReady() {
     const v = await readSetting('vault', null);
     if (v && v.enabled) vaultLocked = true; // require unlock at startup
   } catch (e) { /* ignore — fall back to a fresh session */ }
+  try { await seedStarters(); } catch (e) { /* best-effort */ }
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
 }
 
@@ -4731,6 +4845,74 @@ const TRIAL_DAYS = 7;
 const GRACE_DAYS = 3; // after the trial/paid term lapses: app still works but nags, then bans
 const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months: 1, days: 30, label: '$5 / month' });
 
+// Purchasable plans catalog — the single source of truth for the Billing page's
+// comparison cards and for plan-aware checkout. `pro` mirrors PLAN (the app's
+// historical $5/month price); `enterprise` is a higher tier. Prices are defaults
+// the source owner can adjust here; both are billed monthly via the same checkout.
+const BILLING_PLANS = Object.freeze([
+  Object.freeze({
+    id: 'pro',
+    tier: 'pro',
+    name: 'Pro',
+    amount: PLAN.amount,
+    currency: PLAN.currency,
+    months: PLAN.months,
+    period: 'month',
+    tagline: 'Everything a solo operator needs to run profiles at scale.',
+    highlight: false,
+    features: Object.freeze([
+      'Unlimited local browser profiles',
+      'Full fingerprint engine + leak checks',
+      'Proxy pool, rotation policy & geo auto-match',
+      'Macro recorder, scheduler & data-driven runs',
+      'AI cookie warmer',
+      'Mobile / Android device profiles',
+      'Encrypted workspace backup & restore',
+      'Command palette + onboarding'
+    ])
+  }),
+  Object.freeze({
+    id: 'enterprise',
+    tier: 'enterprise',
+    name: 'Enterprise',
+    amount: '15',
+    currency: PLAN.currency,
+    months: 1,
+    period: 'month',
+    tagline: 'For teams — sync, full-disk encryption, seats & audit.',
+    highlight: true,
+    features: Object.freeze([
+      'Everything in Pro, plus:',
+      'Unlimited parallel runner + live run console',
+      'Team seats, profile lock & handoff',
+      'Audit-log export (CSV / JSON)',
+      'End-to-end encrypted cloud sync',
+      'Full at-rest database encryption',
+      'Priority support'
+    ])
+  })
+]);
+
+function findPlan(planId) {
+  const id = String(planId || '').toLowerCase();
+  return BILLING_PLANS.find((p) => p.id === id) || BILLING_PLANS[0];
+}
+
+// Renderer-facing plans catalog + the viewer's current tier/state, so the Billing
+// page can highlight the active plan and decide which CTA to show. Reuses
+// getLicense (which already handles the Super-Admin exempt path).
+async function getBillingPlans() {
+  const lic = await getLicense();
+  return {
+    plans: BILLING_PLANS,
+    currency: PLAN.currency,
+    currentTier: lic.tier || 'pro',
+    state: lic.state,
+    isPaid: Boolean(lic.isPaid),
+    isExempt: Boolean(lic.isExempt)
+  };
+}
+
 async function primaryOwnerId() {
   const owner = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } });
   return owner ? owner.id : null;
@@ -4996,73 +5178,177 @@ async function requireSuperAdmin() {
 // in this file, and reused by the developer-API, IP-provider, and monetization
 // handlers below.)
 
+// One-time, in-memory migration of the legacy single-Cryptomus config
+// ({ provider, cryptomus:{...} }) into the per-provider map shape. The legacy
+// plaintext API key is sealed on the way in (secretStore.open is fail-safe).
+function migrateLegacyPayments(cfg, providers) {
+  if (!cfg.providers && cfg.cryptomus && !providers.cryptomus) {
+    providers.cryptomus = {
+      enabled: Boolean(cfg.cryptomus.enabled),
+      merchantId: cfg.cryptomus.merchantId || '',
+      apiKey: secretStore.seal(cfg.cryptomus.apiKey || '')
+    };
+  }
+}
+
+// All saved provider configs (secrets stay sealed). Internal use only.
+async function readPaymentStore() {
+  const cfg = (await readSetting('payments', {})) || {};
+  const providers = (cfg.providers && typeof cfg.providers === 'object') ? { ...cfg.providers } : {};
+  migrateLegacyPayments(cfg, providers);
+  return providers;
+}
+
+// A single provider's config with secrets DECRYPTED — for outbound API calls only.
+async function openProviderConfig(id) {
+  const def = payments.getProviderDef(id);
+  if (!def) throw new Error('Unknown payment provider.');
+  const store = await readPaymentStore();
+  const saved = store[id] || {};
+  const out = { enabled: Boolean(saved.enabled) };
+  for (const f of def.fields) {
+    const v = saved[f.key];
+    out[f.key] = f.secret ? secretStore.open(v || '') : (v != null ? String(v) : (f.default || ''));
+  }
+  return out;
+}
+
+// True when every field a provider needs is present (env has a default).
+function providerConfigured(def, saved) {
+  return def.fields.every((f) => f.key === 'env' || Boolean(saved[f.key]));
+}
+
 async function getPaymentConfig() {
   await requireSuperAdmin();
-  const cfg = (await readSetting('payments', {})) || {};
-  const c = cfg.cryptomus || {};
-  return {
-    provider: cfg.provider || 'cryptomus',
-    enabled: Boolean(c.enabled),
-    merchantId: c.merchantId || '',
-    hasApiKey: Boolean(c.apiKey),
-    plannedProviders: payments.PLANNED_PROVIDERS,
-    docsUrl: 'https://doc.cryptomus.com/'
-  };
+  const store = await readPaymentStore();
+  const providers = payments.PROVIDER_DEFS.map((def) => {
+    const saved = store[def.id] || {};
+    const fields = def.fields.map((f) => ({
+      key: f.key,
+      label: f.label,
+      secret: Boolean(f.secret),
+      type: f.type || 'text',
+      options: f.options || null,
+      placeholder: f.placeholder || '',
+      // Secret values are NEVER returned — only whether one is stored.
+      value: f.secret ? '' : (saved[f.key] != null ? String(saved[f.key]) : (f.default || '')),
+      has: Boolean(saved[f.key])
+    }));
+    return { id: def.id, label: def.label, kind: def.kind, docsUrl: def.docsUrl || null, enabled: Boolean(saved.enabled), fields };
+  });
+  return { providers };
 }
 
 async function setPaymentConfig(payload) {
   await requireSuperAdmin();
   const input = requireObject(payload);
+  const def = payments.getProviderDef(String(input.id || '').trim());
+  if (!def) throw new Error('Unknown payment provider.');
   const cfg = (await readSetting('payments', {})) || {};
-  const prev = cfg.cryptomus || {};
-  cfg.provider = 'cryptomus';
-  cfg.cryptomus = {
-    merchantId: String(input.merchantId ?? prev.merchantId ?? '').trim(),
-    // Blank key keeps the stored one (the renderer never receives it back).
-    apiKey: (input.apiKey !== undefined && input.apiKey !== '') ? String(input.apiKey).trim() : (prev.apiKey || ''),
-    enabled: input.enabled !== undefined ? Boolean(input.enabled) : (prev.enabled ?? false)
-  };
-  await writeSetting('payments', cfg);
+  const providers = (cfg.providers && typeof cfg.providers === 'object') ? { ...cfg.providers } : {};
+  migrateLegacyPayments(cfg, providers);
+  const prev = providers[def.id] || {};
+  const values = (input.values && typeof input.values === 'object') ? input.values : {};
+  const next = { enabled: input.enabled !== undefined ? Boolean(input.enabled) : Boolean(prev.enabled) };
+  for (const f of def.fields) {
+    const incoming = values[f.key];
+    if (f.secret) {
+      // Blank → keep the stored sealed secret; non-blank → seal the new value.
+      if (incoming !== undefined && incoming !== '') next[f.key] = secretStore.seal(String(incoming).trim());
+      else if (prev[f.key]) next[f.key] = prev[f.key];
+    } else {
+      next[f.key] = incoming !== undefined ? String(incoming).trim() : (prev[f.key] != null ? prev[f.key] : (f.default || ''));
+    }
+  }
+  providers[def.id] = next;
+  // Fully migrated to the providers map — drop the legacy keys.
+  const saved = { providers };
+  await writeSetting('payments', saved);
   return getPaymentConfig();
 }
 
-async function validatePaymentConfig() {
+async function validatePaymentConfig(payload) {
   await requireSuperAdmin();
-  const cfg = (await readSetting('payments', {})) || {};
-  const provider = payments.getProvider(cfg.provider || 'cryptomus');
-  if (!provider) throw new Error('Unknown payment provider.');
-  return provider.validate(cfg.cryptomus || {});
+  const id = String((payload && payload.id) || '').trim();
+  const def = payments.getProviderDef(id);
+  if (!def) throw new Error('Unknown payment provider.');
+  if (def.kind === 'manual') return { ok: true, manual: true };
+  const provider = payments.getProvider(id);
+  if (!provider || !provider.validate) throw new Error('This provider cannot be validated.');
+  const cfg = await openProviderConfig(id);
+  return provider.validate(cfg);
 }
 
-async function loadCheckoutConfig() {
-  const cfg = (await readSetting('payments', {})) || {};
-  const c = cfg.cryptomus || {};
-  if (!c.enabled || !c.merchantId || !c.apiKey) {
-    throw new Error('Crypto payments are not available yet — the administrator has not enabled Cryptomus.');
+// Enabled methods the buyer can choose at checkout (no secrets). Automated
+// methods only appear once fully configured; manual ones carry their public
+// instructions / pay link.
+async function listPaymentMethods() {
+  const store = await readPaymentStore();
+  const methods = [];
+  for (const def of payments.PROVIDER_DEFS) {
+    const saved = store[def.id] || {};
+    if (!saved.enabled) continue;
+    if (def.kind === 'automated' && !providerConfigured(def, saved)) continue;
+    const method = { id: def.id, label: def.label, kind: def.kind };
+    if (def.kind === 'manual') {
+      method.payLink = saved.payLink || '';
+      method.instructions = saved.instructions || '';
+    }
+    methods.push(method);
   }
-  return { provider: payments.getProvider(cfg.provider || 'cryptomus'), cfg: c };
+  return { methods };
 }
 
-async function startCheckout() {
-  const { provider, cfg } = await loadCheckoutConfig();
+// Resolve the automated provider for a checkout: the one requested, else the
+// first enabled+configured automated provider. Secrets are decrypted here.
+async function loadCheckoutProvider(id) {
+  const store = await readPaymentStore();
+  let chosenId = String(id || '').trim();
+  if (!chosenId) {
+    const firstAuto = payments.PROVIDER_DEFS.find((d) => d.kind === 'automated' && store[d.id] && store[d.id].enabled && providerConfigured(d, store[d.id]));
+    chosenId = firstAuto ? firstAuto.id : '';
+  }
+  const def = payments.getProviderDef(chosenId);
+  const saved = store[chosenId] || {};
+  if (!def || !saved.enabled) throw new Error('That payment method is not available — the administrator has not enabled it.');
+  if (def.kind !== 'automated') return { provider: null, cfg: null, def };
+  if (!providerConfigured(def, saved)) throw new Error(`${def.label} is enabled but not fully configured.`);
+  return { provider: payments.getProvider(chosenId), cfg: await openProviderConfig(chosenId), def };
+}
+
+async function startCheckout(payload) {
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const plan = findPlan(input.planId);
+  const { provider, def } = await loadCheckoutProvider(input.provider);
+  if (def.kind !== 'automated') throw new Error('That payment method is processed manually — submit your payment for approval instead.');
+  const cfg = await openProviderConfig(def.id);
   const ownerId = await resolveLicenseOwnerId();
   const orderId = `sg-${ownerId || 'wks'}-${Date.now()}`;
-  const invoice = await provider.createInvoice(cfg, { amount: PLAN.amount, currency: PLAN.currency, orderId, lifetime: 3600 });
-  await writeSetting('pendingCheckout', { ownerId: ownerId ?? null, orderId: invoice.orderId, uuid: invoice.uuid, createdAt: Date.now() });
-  return { url: invoice.url, uuid: invoice.uuid, orderId: invoice.orderId, amount: invoice.amount, currency: invoice.currency, provider: provider.id };
+  const invoice = await provider.createInvoice(cfg, { amount: plan.amount, currency: plan.currency, orderId, lifetime: 3600, productName: `SoftGlaze Browser — ${plan.name}` });
+  // Stash the chosen plan + provider so pollCheckout grants the right term/tier.
+  await writeSetting('pendingCheckout', { ownerId: ownerId ?? null, provider: def.id, orderId: invoice.orderId, uuid: invoice.uuid, planId: plan.id, tier: plan.tier, months: plan.months, createdAt: Date.now() });
+  return { url: invoice.url, uuid: invoice.uuid, orderId: invoice.orderId, amount: invoice.amount, currency: invoice.currency, provider: def.id, planId: plan.id, planName: plan.name };
 }
 
 async function pollCheckout(payload) {
   const input = requireObject(payload || {});
-  const { provider, cfg } = await loadCheckoutConfig();
+  const pending = (await readSetting('pendingCheckout', null)) || {};
+  const { provider, def } = await loadCheckoutProvider(input.provider || pending.provider);
+  if (def.kind !== 'automated' || !provider) return { status: 'manual', paid: false };
+  const cfg = await openProviderConfig(def.id);
   const ref = input.uuid ? { uuid: input.uuid } : { orderId: requiredString(input.orderId, 'orderId') };
   const st = await provider.getStatus(cfg, ref);
   if (!st.paid) return { status: st.status, paid: false };
 
+  // Recover the plan chosen at startCheckout (falls back to Pro for legacy orders).
+  const plan = findPlan(pending.planId);
+  const months = Math.max(1, Number(pending.months) || plan.months || PLAN.months);
+  const tier = pending.tier || plan.tier || 'pro';
+
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
-  const code = payments.generatePurchaseCode(PLAN.months);
-  const updated = await applyPaidMonths(lic, PLAN.months, code);
+  const code = payments.generatePurchaseCode(months);
+  const updated = await applyPaidMonths(lic, months, code, tier);
   await writeSetting('pendingCheckout', null).catch(() => {});
   try {
     const db = getPrisma();
@@ -5070,6 +5356,85 @@ async function pollCheckout(payload) {
     if (owner && owner.email) await deliverPurchaseCode(owner.email, owner.name, code);
   } catch (e) { /* email is best-effort */ }
   return { status: st.status, paid: true, license: await licenseView(updated), purchaseCode: code };
+}
+
+// ---- Manual payments (Wise / bank transfer / custom) ----------------------
+// The buyer pays out-of-band and submits a reference; a Super Admin approves it
+// in-app, which grants the term. Nothing is auto-trusted from the renderer.
+async function submitManualPayment(payload) {
+  const input = requireObject(payload);
+  const def = payments.getProviderDef(String(input.provider || 'manual').trim());
+  if (!def || def.kind !== 'manual') throw new Error('That is not a manual payment method.');
+  const store = await readPaymentStore();
+  if (!store[def.id] || !store[def.id].enabled) throw new Error('That manual payment method is not enabled.');
+  const plan = findPlan(input.planId);
+  const ownerId = await resolveLicenseOwnerId();
+  const entry = {
+    id: `mp-${Date.now()}-${Math.floor(ownerId || 0)}`,
+    ownerId: ownerId ?? null,
+    provider: def.id,
+    providerLabel: def.label,
+    planId: plan.id,
+    tier: plan.tier,
+    months: plan.months,
+    amount: plan.amount,
+    currency: plan.currency,
+    reference: optionalString(input.reference) || '',
+    note: optionalString(input.note) || '',
+    status: 'pending',
+    at: new Date().toISOString()
+  };
+  const list = (await readSetting('manualPayments', [])) || [];
+  await writeSetting('manualPayments', [entry, ...(Array.isArray(list) ? list : [])].slice(0, 200));
+  return { submitted: true, id: entry.id };
+}
+
+async function listManualPayments() {
+  await requireSuperAdmin();
+  const list = (await readSetting('manualPayments', [])) || [];
+  const db = getPrisma();
+  const out = [];
+  for (const e of (Array.isArray(list) ? list : [])) {
+    let ownerName = null;
+    try { const o = e.ownerId != null ? await db.member.findUnique({ where: { id: e.ownerId } }) : null; ownerName = o ? o.name : null; }
+    catch (_) { /* owner may have been removed */ }
+    out.push({ ...e, ownerName });
+  }
+  return out;
+}
+
+async function resolveManualPayment(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const id = requiredString(input.id, 'id');
+  const action = String(input.action || '').toLowerCase();
+  const list = (await readSetting('manualPayments', [])) || [];
+  const arr = Array.isArray(list) ? [...list] : [];
+  const idx = arr.findIndex((e) => e && e.id === id);
+  if (idx < 0) throw new Error('Manual payment not found.');
+  const entry = { ...arr[idx] };
+  if (action === 'approve') {
+    const lic = await ensureLicense(entry.ownerId ?? null);
+    const months = Math.max(1, Number(entry.months) || 1);
+    const code = payments.generatePurchaseCode(months);
+    await applyPaidMonths(lic, months, code, entry.tier || 'pro');
+    entry.status = 'approved';
+    entry.purchaseCode = code;
+    entry.resolvedAt = new Date().toISOString();
+    try {
+      const db = getPrisma();
+      const owner = entry.ownerId != null ? await db.member.findUnique({ where: { id: entry.ownerId } }) : null;
+      if (owner && owner.email) await deliverPurchaseCode(owner.email, owner.name, code);
+    } catch (_) { /* email is best-effort */ }
+  } else if (action === 'reject') {
+    entry.status = 'rejected';
+    entry.resolvedAt = new Date().toISOString();
+  } else {
+    throw new Error('Action must be approve or reject.');
+  }
+  arr[idx] = entry;
+  await writeSetting('manualPayments', arr);
+  return { ok: true, status: entry.status };
 }
 
 async function deliverPurchaseCode(email, name, code) {
@@ -5519,7 +5884,53 @@ async function runParallelMacroHandler(payload, event) {
   return { started: true, runId, profileIds, concurrency, dataRows: rows.length };
 }
 
-async function warmOneProfile(profileId, durationMs, emit) {
+// Active warm-up runs, keyed by runId, so a run can be stopped or force-stopped
+// mid-flight. Each run tracks the sessions it launched (closed on force-stop).
+const warmerRuns = new Map();
+const WARM_CLICK_MODES = new Set(['none', 'random', 'links']);
+
+// Validate + normalise a user-supplied site list. Each entry → { url, label,
+// seconds, clickMode, scroll, clicks }. Invalid rows are dropped.
+function normalizeWarmSites(value) {
+  const arr = Array.isArray(value) ? value : [];
+  const out = [];
+  for (const raw of arr) {
+    if (!raw) continue;
+    const url = String(raw.url || '').trim();
+    if (!url) continue;
+    const full = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    let label = String(raw.label || '').trim();
+    if (!label) { try { label = new URL(full).hostname.replace(/^www\./, ''); } catch (e) { label = full; } }
+    out.push({
+      url: full,
+      label,
+      seconds: Math.max(3, Math.min(600, Number.parseInt(raw.seconds, 10) || 30)),
+      clickMode: WARM_CLICK_MODES.has(String(raw.clickMode)) ? String(raw.clickMode) : 'none',
+      scroll: raw.scroll !== false,
+      clicks: Math.max(1, Math.min(6, Number.parseInt(raw.clicks, 10) || 2))
+    });
+  }
+  return out;
+}
+
+function defaultWarmSites() {
+  return WARM_SITES.map((s) => ({ url: s.url, label: s.label, seconds: 30, clickMode: 'none', scroll: true, clicks: 2 }));
+}
+
+// Sleep that returns early (true) when shouldAbort() flips — lets a long dwell be
+// interrupted promptly by Stop / Force-stop.
+async function interruptibleSleep(ms, shouldAbort) {
+  let elapsed = 0;
+  while (elapsed < ms) {
+    if (shouldAbort && shouldAbort()) return true;
+    const chunk = Math.min(500, ms - elapsed);
+    await sleepMs(chunk);
+    elapsed += chunk;
+  }
+  return Boolean(shouldAbort && shouldAbort());
+}
+
+async function warmOneProfile(profileId, sites, opts, emit, run) {
   // Reuse an already-open session if the profile is running; otherwise launch.
   let sessionId = String(profileId);
   const alreadyOpen = listActiveSessions().some((s) => String(s.sessionId) === sessionId);
@@ -5529,49 +5940,94 @@ async function warmOneProfile(profileId, durationMs, emit) {
     emit(profileId, 'INFO', 'Launching profile for warm-up…');
     const res = await launchProfileById(profileId, 'about:blank');
     sessionId = res && res.sessionId ? String(res.sessionId) : sessionId;
+    if (run) run.launched.add(sessionId);
     emit(profileId, 'SUCCESS', `Session ${sessionId} started.`);
   }
+  if (run) run.sessions.add(sessionId);
 
-  const end = Date.now() + durationMs;
-  let i = 0;
-  while (Date.now() < end) {
-    const site = WARM_SITES[i % WARM_SITES.length];
-    i += 1;
-    emit(profileId, 'INFO', `Visiting ${site.label}…`);
-    const ok = await navigateSession(sessionId, site.url, { timeout: 30000 });
-    emit(profileId, ok ? 'SUCCESS' : 'WARN', ok ? `Loaded ${site.label}` : `Could not load ${site.label} (skipped)`);
-    // Realistic dwell, but never overshoot the remaining budget.
-    const remaining = end - Date.now();
-    if (remaining <= 0) break;
-    await sleepMs(Math.min(remaining, 4000 + Math.floor(Math.random() * 4000)));
+  const aborted = () => Boolean(run && run.aborted);
+  const rounds = opts.loop ? 1000 : 1; // "loop" repeats until stopped (safety cap)
+  outer:
+  for (let r = 0; r < rounds; r++) {
+    for (const site of sites) {
+      if (aborted()) break outer;
+      const tag = site.clickMode === 'random' ? ' · random clicks' : site.clickMode === 'links' ? ' · browse links' : '';
+      emit(profileId, 'INFO', `Visiting ${site.label} (${site.seconds}s${tag})…`);
+      const ok = await navigateSession(sessionId, site.url, { timeout: 30000 });
+      if (!ok) { emit(profileId, 'WARN', `Could not load ${site.label} (skipped)`); continue; }
+      emit(profileId, 'SUCCESS', `Loaded ${site.label}`);
+      try {
+        const inter = await warmInteract(sessionId, { clickMode: site.clickMode, clicks: site.clicks, scroll: site.scroll });
+        if (inter && inter.clicked) emit(profileId, 'INFO', `Interacted — ${inter.clicked} click(s) on ${site.label}`);
+      } catch (e) { /* best-effort */ }
+      if (await interruptibleSleep(site.seconds * 1000, aborted)) break outer;
+    }
+    if (opts.loop && !aborted()) emit(profileId, 'INFO', 'Looping the site list again…');
   }
-  emit(profileId, 'SUCCESS', 'Warm-up complete.');
+
+  // Cookie report — cookies + cache persist in the profile's data dir regardless.
+  let cookieCount = null;
+  try { const cookies = await exportSessionCookies(sessionId); cookieCount = Array.isArray(cookies) ? cookies.length : null; }
+  catch (e) { /* ignore */ }
+  const tail = cookieCount != null ? ` · ${cookieCount} cookies saved` : '';
+  emit(profileId, aborted() ? 'WARN' : 'SUCCESS', `${aborted() ? 'Warm-up stopped' : 'Warm-up complete'}${tail}.`);
+
+  // Close only sessions we launched, unless the user chose to keep them open.
+  if (!opts.keepOpen && run && run.launched.has(sessionId)) {
+    await closeProfileSession(sessionId).catch(() => {});
+  }
+  return { sessionId, cookieCount };
 }
 
 async function startWarmer(payload, event) {
   const input = requireObject(payload);
   const ids = parseIdArray(input.profileIds);
-  const minutes = Math.max(1, Math.min(120, Number.parseInt(input.minutes, 10) || 5));
-  const durationMs = minutes * 60000;
+  if (!ids.length) throw new Error('Select at least one profile to warm up.');
+  let sites = normalizeWarmSites(input.sites);
+  if (!sites.length) sites = defaultWarmSites();
+  const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen) };
   const runId = `warm-${Date.now()}`;
+  const run = { id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null };
+  warmerRuns.set(runId, run);
 
   const send = (data) => { try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, data); } catch (e) { /* renderer gone */ } };
+  run.send = send;
   const emit = (profileId, level, message) => send({ runId, profileId, level, message, ts: Date.now() });
 
-  send({ runId, level: 'INFO', message: `Starting AI warm-up for ${ids.length} profile(s) · ${minutes} min each.`, ts: Date.now() });
-  await appendWarmerHistory({ runId, profileIds: ids, minutes, status: 'running', startedAt: Date.now() }).catch(() => {});
+  send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s)${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
+  await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
 
   // Fire-and-forget: warm every selected profile concurrently. The handler
   // returns immediately; progress arrives via the stream above.
   (async () => {
     await Promise.allSettled(ids.map((id) =>
-      warmOneProfile(id, durationMs, emit).catch((e) => emit(id, 'ERROR', e && e.message ? e.message : 'Warm-up failed.'))
+      warmOneProfile(id, sites, opts, emit, run).catch((e) => emit(id, 'ERROR', e && e.message ? e.message : 'Warm-up failed.'))
     ));
-    send({ runId, level: 'SUCCESS', message: 'All warm-up tasks finished.', done: true, ts: Date.now() });
-    await appendWarmerHistory({ runId, profileIds: ids, minutes, status: 'completed', finishedAt: Date.now() }).catch(() => {});
+    const stopped = run.aborted;
+    send({ runId, level: stopped ? 'WARN' : 'SUCCESS', message: stopped ? 'Warm-up stopped.' : 'All warm-up tasks finished.', done: true, ts: Date.now() });
+    await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: stopped ? 'stopped' : 'completed', finishedAt: Date.now() }).catch(() => {});
+    warmerRuns.delete(runId);
   })();
 
-  return { started: true, runId, profileIds: ids, minutes };
+  return { started: true, runId, profileIds: ids, sites: sites.length, loop: opts.loop };
+}
+
+// Stop a running warm-up. `force` also closes the sessions this run launched.
+// With no runId, stops every active run.
+async function stopWarmer(payload) {
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const force = Boolean(input.force);
+  const runId = input.runId ? String(input.runId) : null;
+  const targets = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()];
+  if (!targets.length) return { stopped: false };
+  for (const run of targets) {
+    run.aborted = true;
+    if (run.send) { try { run.send({ runId: run.id, level: 'WARN', message: force ? 'Force-stopping — closing sessions…' : 'Stopping after the current step…', ts: Date.now() }); } catch (e) { /* renderer gone */ } }
+    if (force) {
+      for (const sid of run.launched) await closeProfileSession(sid).catch(() => {});
+    }
+  }
+  return { stopped: true, force, runs: targets.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -5793,6 +6249,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_SAVE_MACRO, saveMacro);
   registerHandler(CHANNELS.AUTOMATION_DELETE_MACRO, deleteMacro);
   registerHandler(CHANNELS.AUTOMATION_START_WARMER, startWarmer);
+  registerHandler(CHANNELS.AUTOMATION_STOP_WARMER, stopWarmer);
   registerHandler(CHANNELS.AUTOMATION_GET_HISTORY, getAutomationHistory);
   registerHandler(CHANNELS.AUTOMATION_RUN_MACRO, runMacroOnProfile);
   registerHandler(CHANNELS.AUTOMATION_START_RECORDING, startMacroRecordingOnProfile);
@@ -5838,6 +6295,11 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PAYMENT_CONFIG_VALIDATE, validatePaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CHECKOUT_START, startCheckout);
   registerHandler(CHANNELS.PAYMENT_CHECKOUT_POLL, pollCheckout);
+  registerHandler(CHANNELS.PAYMENT_LIST_METHODS, listPaymentMethods);
+  registerHandler(CHANNELS.PAYMENT_SUBMIT_MANUAL, submitManualPayment);
+  registerHandler(CHANNELS.PAYMENT_MANUAL_LIST, listManualPayments);
+  registerHandler(CHANNELS.PAYMENT_MANUAL_RESOLVE, resolveManualPayment);
+  registerHandler(CHANNELS.BILLING_GET_PLANS, getBillingPlans);
   registerHandler(CHANNELS.IP_PROVIDERS_GET_ALL, getIpProviders);
   registerHandler(CHANNELS.IP_PROVIDERS_UPDATE_CREDENTIALS, updateIpProviderCredentials);
   registerHandler(CHANNELS.IP_PROVIDERS_TOGGLE_STATUS, toggleIpProviderStatus);

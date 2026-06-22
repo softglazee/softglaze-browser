@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet,
   Trash2, Settings, Users, Lock, Check, ChevronsUpDown, Sun, Moon,
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
-  LogOut, UserCog
+  LogOut, UserCog, CreditCard
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
@@ -239,6 +239,7 @@ export default function AppShell({ children }) {
         <div className="px-3 pb-3 mt-auto">
           <div className="border-t border-sidebar-border pt-2.5 space-y-0.5 relative" ref={ref}>
             <ThemeToggle collapsed={collapsed} />
+            {canSee('billing') && <NavItem path="/billing" label="Billing" icon={CreditCard} collapsed={collapsed} />}
             {canSee('settings') && <NavItem path="/settings" label="Settings" icon={Settings} collapsed={collapsed} />}
 
             {/* Collapse toggle */}
@@ -310,7 +311,7 @@ export default function AppShell({ children }) {
                 ? `Your ${license.isTrial ? 'free trial' : 'subscription'} has ended — the app keeps working, but please subscribe ($5/mo) to keep it supported.`
                 : `Free trial ends in ${license.daysLeft} day${license.daysLeft === 1 ? '' : 's'}. Subscribe for $5/month to keep going.`}
             </span>
-            <button onClick={() => navigate('/settings')} className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow shadow-blue-500/25">Subscribe</button>
+            <button onClick={() => navigate('/billing')} className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow shadow-blue-500/25">Subscribe</button>
             <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground" title="Dismiss"><X className="w-4 h-4" /></button>
           </div>
         )}
