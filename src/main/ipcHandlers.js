@@ -34,7 +34,7 @@ const totp = require('./totp');
 const permissions = require('./permissions');
 const payments = require('./payments');
 const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
-const { generateFingerprint, normalizeBrand } = require('./fingerprintGenerator');
+const { generateFingerprint, normalizeBrand, deviceGpuCoherence } = require('./fingerprintGenerator');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
@@ -496,6 +496,7 @@ function extractFingerprintData(input) {
     browserVersion: input.browserVersion,
     os: input.os,
     osVersion: input.osVersion,
+    deviceClass: input.deviceClass === 'mobile' ? 'mobile' : (input.deviceClass === 'desktop' ? 'desktop' : undefined),
     userAgent: input.userAgent || 'Auto',
     startupUrls: input.startupUrls,
     platformAccounts: input.platformAccounts ? JSON.stringify(input.platformAccounts) : null,
@@ -567,7 +568,9 @@ function extractFingerprintData(input) {
 function buildFingerprintFields(input) {
   const manual = extractFingerprintData(input);
   if (input.randomFingerprint !== true) return manual;
-  const merged = { ...generateFingerprint() };
+  // Generate the right device class so a "mobile" request produces a coherent
+  // Android base (not a desktop one with a couple of fields overwritten).
+  const merged = { ...generateFingerprint({ deviceClass: input.deviceClass }) };
   for (const [key, value] of Object.entries(manual)) {
     if (value !== undefined) merged[key] = value;
   }
@@ -1410,6 +1413,11 @@ async function analyzeProfileLeaks(payload) {
     detail: noiseOn ? 'Canvas / WebGL / Audio noise enabled.' : 'One or more fingerprint-noise toggles are off.'
   });
 
+  // 7) Device ↔ GPU coherence — a mobile UA with a desktop GPU (or vice versa) is
+  // an easily-scored mismatch.
+  const coh = deviceGpuCoherence({ deviceClass: profile.deviceClass, os: profile.os, webglRenderer: profile.webglRenderer });
+  checks.push({ key: 'device', label: 'Device coherence', status: coh.status, detail: coh.detail });
+
   const score = computeTrustScore(checks);
   return { profileId: id, title: profile.title, usesProxy, geo, checks, summary: score.summary, score };
 }
@@ -1647,11 +1655,14 @@ async function cloneProfile(payload) {
   // internally-consistent one (OS↔GPU↔screen stay paired) — for safe account
   // farms where copies must NOT share a fingerprint. Otherwise just regenerate
   // the hardware identity so the copy is not a byte-identical twin.
-  const fingerprint = reroll ? generateFingerprint() : {};
-  const created = await db.profile.create({
-    data: { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac(), deviceName: randomDeviceName() },
-    include: { proxy: true, group: true }
-  });
+  // Preserve the source's device class on reroll so a mobile profile stays mobile.
+  const isMobile = src.deviceClass === 'mobile';
+  const fingerprint = reroll ? generateFingerprint({ deviceClass: src.deviceClass }) : {};
+  const data = { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac() };
+  // Desktop machine names are randomized per copy; a mobile profile keeps its device
+  // model (e.g. Pixel 7) so the UA / Client-Hints model stays coherent.
+  if (!isMobile) data.deviceName = randomDeviceName();
+  const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return serializeProfile(created);
 }
 
