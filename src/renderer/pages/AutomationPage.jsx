@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Wand2, Bot, Flame, History, Plus, Loader2, Play, Square, X, Search,
-  Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical,
+  Wand2, Bot, Flame, History, Plus, Loader2, Play, Pause, Square, X, Search,
+  Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical, Pencil, MousePointer2,
   Layers, FileSpreadsheet, XCircle, AlertTriangle
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -28,6 +28,54 @@ const PRESET_SITES = [
   { url: 'https://weather.com/', label: 'weather.com' }
 ];
 const CLICK_LABELS = { none: 'Just browse', random: 'Random clicks', links: 'Browse links' };
+
+// Macro step types — the single source of truth for the editor's add-menu and the
+// per-step field inputs. Mirrors what the engine's runMacro understands.
+const MACRO_STEP_TYPES = [
+  { type: 'goto', label: 'Go to URL', fields: [{ key: 'url', label: 'URL', placeholder: 'https://example.com' }] },
+  { type: 'click', label: 'Click', fields: [{ key: 'selector', label: 'CSS selector', placeholder: '#submit, .btn' }] },
+  { type: 'type', label: 'Type text', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="email"]' }, { key: 'value', label: 'Text to type' }] },
+  { type: 'keypress', label: 'Press key', fields: [{ key: 'key', label: 'Key', placeholder: 'Enter' }] },
+  { type: 'scroll', label: 'Scroll', fields: [{ key: 'steps', label: 'Scroll amount', kind: 'number', placeholder: '4' }] },
+  { type: 'wait', label: 'Wait', fields: [{ key: 'ms', label: 'Milliseconds', kind: 'number', placeholder: '1000' }] },
+  { type: 'move', label: 'Move mouse', fields: [{ key: 'selector', label: 'Selector (or use X/Y)', placeholder: '.target' }, { key: 'x', label: 'X', kind: 'number' }, { key: 'y', label: 'Y', kind: 'number' }] },
+  { type: 'hover', label: 'Hover', fields: [{ key: 'selector', label: 'Selector', placeholder: '.menu' }, { key: 'ms', label: 'Dwell ms', kind: 'number', placeholder: '800' }] }
+];
+const STEP_LABEL = Object.fromEntries(MACRO_STEP_TYPES.map((s) => [s.type, s.label]));
+
+function defaultStep(type) {
+  const step = { type };
+  if (type === 'scroll') step.steps = 4;
+  if (type === 'wait') step.ms = 1000;
+  if (type === 'hover') step.ms = 800;
+  return step;
+}
+
+function stepSummary(step) {
+  switch (step.type) {
+    case 'goto': return step.url || '(no URL)';
+    case 'click': return step.selector || '(no selector)';
+    case 'type': return `${step.selector || '(selector)'} ← "${step.value || ''}"`;
+    case 'keypress': return step.key || 'Enter';
+    case 'scroll': return `${step.steps || 4}×`;
+    case 'wait': return `${step.ms || 0} ms`;
+    case 'move': return step.selector || (step.x != null && step.x !== '' ? `${step.x}, ${step.y}` : '(target)');
+    case 'hover': return `${step.selector || '(selector)'} · ${step.ms || 800} ms`;
+    default: return '';
+  }
+}
+
+// Coerce an editor step into the runner shape (numeric fields → numbers, drop blanks).
+function coerceStep(s) {
+  const def = MACRO_STEP_TYPES.find((d) => d.type === s.type);
+  const out = { type: s.type };
+  for (const f of (def ? def.fields : [])) {
+    const v = s[f.key];
+    if (v === undefined || v === null || v === '') continue;
+    out[f.key] = f.kind === 'number' ? Number(v) : v;
+  }
+  return out;
+}
 
 const LEVEL_COLOR = {
   INFO: 'text-sky-400',
@@ -80,9 +128,9 @@ function MacrosPanel() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [notice, setNotice] = useState('');
-  const [showBuilder, setShowBuilder] = useState(false);
+  const [editing, setEditing] = useState(null); // null | 'new' | macro object
+  const [runState, setRunState] = useState(null); // { macro, profileId, profileName }
   const [showSchedule, setShowSchedule] = useState(false);
-  const [runningId, setRunningId] = useState(null);
   const [recording, setRecording] = useState(null); // { profileId, sessionId }
   const [busyRec, setBusyRec] = useState(false);
 
@@ -111,14 +159,12 @@ function MacrosPanel() {
     catch (e) { setErr(e.message || 'Could not delete macro.'); }
   }
 
-  async function run(macro) {
+  function openRun(macro) {
     if (!targetProfile) { setErr('Choose a target profile first.'); return; }
-    setErr(''); setNotice(''); setRunningId(macro.id);
-    try {
-      const res = await softglazeApi.automation.runMacro({ macroId: macro.id, profileId: Number(targetProfile), continueOnError: true });
-      setNotice(`"${macro.name}" ran ${res.ran}/${res.total} step(s)${res.ok ? '.' : ' — stopped on an error.'}`);
-    } catch (e) { setErr(e.message || 'Could not run macro.'); }
-    finally { setRunningId(null); }
+    if ((macro.stepCount || 0) === 0) { setErr('This macro has no steps yet — edit it first.'); return; }
+    setErr(''); setNotice('');
+    const p = profiles.find((x) => Number(x.id) === Number(targetProfile));
+    setRunState({ macro, profileId: Number(targetProfile), profileName: p ? (p.title || `Profile ${p.id}`) : `Profile ${targetProfile}` });
   }
 
   async function toggleRecording() {
@@ -175,7 +221,7 @@ function MacrosPanel() {
             <Clock className="w-4 h-4" /> Schedule
           </button>
           <button
-            onClick={() => setShowBuilder(true)}
+            onClick={() => setEditing('new')}
             className="shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 shadow shadow-indigo-500/25"
           >
             <Plus className="w-4 h-4" /> Create Macro
@@ -211,12 +257,15 @@ function MacrosPanel() {
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  onClick={() => run(m)}
-                  disabled={runningId === m.id || !targetProfile || (m.stepCount || 0) === 0}
-                  title={(m.stepCount || 0) === 0 ? 'This macro has no steps yet' : 'Run on the selected profile'}
+                  onClick={() => openRun(m)}
+                  disabled={!targetProfile || (m.stepCount || 0) === 0}
+                  title={(m.stepCount || 0) === 0 ? 'This macro has no steps yet — edit it first' : 'Run on the selected profile'}
                   className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {runningId === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Run
+                  <Play className="w-3.5 h-3.5" /> Run
+                </button>
+                <button onClick={() => setEditing(m)} title="Edit steps" className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-card border border-border text-foreground hover:border-primary">
+                  <Pencil className="w-3.5 h-3.5" /> Edit
                 </button>
                 <button onClick={() => remove(m.id)} title="Delete" className="text-muted-foreground hover:text-red-400 transition-colors">
                   <Trash2 className="w-4 h-4" />
@@ -227,7 +276,8 @@ function MacrosPanel() {
         </div>
       )}
 
-      {showBuilder && <MacroBuilderModal onClose={() => setShowBuilder(false)} onSaved={() => { setShowBuilder(false); load(); }} />}
+      {editing && <MacroEditorModal macro={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+      {runState && <MacroRunModal {...runState} onClose={() => { setRunState(null); load(); }} />}
       {showSchedule && <ScheduleModal macros={macros} profiles={profiles} onClose={() => setShowSchedule(false)} />}
     </div>
   );
@@ -334,23 +384,37 @@ function ScheduleModal({ macros, profiles, onClose }) {
   );
 }
 
-// Placeholder drag-and-drop workflow builder. The canvas/palette are scaffolded
-// (the real DnD engine lands in a later milestone); name + description + the
-// step list are persisted now so saved macros round-trip through the database.
-function MacroBuilderModal({ onClose, onSaved }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+// Visual macro editor — add/edit/remove steps with native drag-to-reorder.
+// Used for both Create and Edit (preloads the macro's steps when given one).
+function MacroEditorModal({ macro, onClose, onSaved }) {
+  const [name, setName] = useState(macro?.name || '');
+  const [description, setDescription] = useState(macro?.description || '');
+  const [steps, setSteps] = useState(() => (macro?.steps ? macro.steps.map((s) => ({ ...s })) : []));
+  const [addType, setAddType] = useState('goto');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const dragFrom = useRef(null);
 
-  const PALETTE = ['Navigate to URL', 'Click element', 'Type text', 'Wait (ms)', 'Scroll', 'Screenshot'];
+  const addStep = () => setSteps((prev) => [...prev, defaultStep(addType)]);
+  const removeStep = (i) => setSteps((prev) => prev.filter((_, idx) => idx !== i));
+  const updateStep = (i, patch) => setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  const changeType = (i, type) => setSteps((prev) => prev.map((s, idx) => (idx === i ? defaultStep(type) : s)));
+  function reorder(from, to) {
+    setSteps((prev) => {
+      if (from == null || to == null || from === to) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
 
   async function save() {
     setErr('');
     if (!name.trim()) { setErr('Give the macro a name.'); return; }
     setBusy(true);
     try {
-      await softglazeApi.automation.saveMacro({ name: name.trim(), description: description.trim(), steps: [] });
+      await softglazeApi.automation.saveMacro({ id: macro?.id, name: name.trim(), description: description.trim(), steps: steps.map(coerceStep) });
       onSaved();
     } catch (e) { setErr(e.message || 'Could not save macro.'); }
     finally { setBusy(false); }
@@ -358,49 +422,82 @@ function MacroBuilderModal({ onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-3xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-violet-500/12 border border-violet-500/20"><Wand2 className="w-4 h-4 text-violet-400" /></span>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Workflow Builder</h3>
-              <p className="text-[11px] text-muted-foreground">Drag-and-drop builder · Softglaze Pro</p>
+              <h3 className="text-sm font-semibold text-foreground">{macro ? 'Edit macro' : 'Create macro'}</h3>
+              <p className="text-[11px] text-muted-foreground">Build a no-code flow — drag the handle to reorder.</p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Macro name</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily Amazon login" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily login" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Description</label>
-              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this macro do?" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does it do?" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
             </div>
           </div>
 
-          {/* Scaffolded DnD canvas */}
-          <div className="grid grid-cols-[200px_1fr] gap-3">
-            <div className="rounded-xl border border-border bg-elevated/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Step palette</p>
-              <div className="space-y-1.5">
-                {PALETTE.map((p) => (
-                  <div key={p} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-card border border-border text-[12px] text-foreground cursor-grab opacity-80">
-                    <GripVertical className="w-3.5 h-3.5 text-muted-foreground" /> {p}
-                  </div>
-                ))}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Steps ({steps.length})</label>
+              <div className="flex items-center gap-1.5">
+                <select value={addType} onChange={(e) => setAddType(e.target.value)} className="h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground">
+                  {MACRO_STEP_TYPES.map((s) => <option key={s.type} value={s.type}>{s.label}</option>)}
+                </select>
+                <button onClick={addStep} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add step</button>
               </div>
             </div>
-            <div className="rounded-xl border border-dashed border-border bg-card/40 grid place-items-center text-center p-6 min-h-[220px]">
-              <div>
-                <Sparkles className="w-7 h-7 text-violet-400 mx-auto mb-2" />
-                <p className="text-[13px] font-medium text-foreground">Drag steps here to build your flow</p>
-                <p className="text-[11.5px] text-muted-foreground mt-1 max-w-xs">The visual canvas is coming soon. Saved macros store their step array and will open here once the builder ships.</p>
+
+            {steps.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-card/40 py-8 grid place-items-center text-center text-[12px] text-muted-foreground">No steps yet — choose a type and add one.</div>
+            ) : (
+              <div className="space-y-2">
+                {steps.map((s, i) => {
+                  const def = MACRO_STEP_TYPES.find((d) => d.type === s.type) || MACRO_STEP_TYPES[0];
+                  return (
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={() => { dragFrom.current = i; }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => { reorder(dragFrom.current, i); dragFrom.current = null; }}
+                      className="rounded-lg border border-border bg-elevated/40 p-2.5 flex items-start gap-2"
+                    >
+                      <span className="mt-1 text-muted-foreground cursor-grab active:cursor-grabbing" title="Drag to reorder"><GripVertical className="w-4 h-4" /></span>
+                      <span className="mt-1 text-[10px] font-mono text-muted-foreground w-5 text-center">{i + 1}</span>
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <select value={s.type} onChange={(e) => changeType(i, e.target.value)} className="h-7 bg-input-background border border-border rounded px-1.5 text-[12px] text-foreground">
+                          {MACRO_STEP_TYPES.map((d) => <option key={d.type} value={d.type}>{d.label}</option>)}
+                        </select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {def.fields.map((f) => (
+                            <input
+                              key={f.key}
+                              type={f.kind === 'number' ? 'number' : 'text'}
+                              value={s[f.key] ?? ''}
+                              onChange={(e) => updateStep(i, { [f.key]: e.target.value })}
+                              placeholder={f.placeholder || f.label}
+                              title={f.label}
+                              className="h-7 bg-input-background border border-border rounded px-2 text-[12px] text-foreground outline-none focus:border-primary"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <button onClick={() => removeStep(i)} title="Remove step" className="mt-0.5 shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
 
           {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
@@ -411,6 +508,114 @@ function MacroBuilderModal({ onClose, onSaved }) {
           <button onClick={save} disabled={busy} className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Save macro
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Live macro run — streams per-step progress, highlights the current step, and
+// offers Pause / Resume / Stop while it runs.
+function MacroRunModal({ macro, profileId, profileName, onClose }) {
+  const steps = Array.isArray(macro.steps) ? macro.steps : [];
+  const [statuses, setStatuses] = useState(() => steps.map(() => 'pending'));
+  const [current, setCurrent] = useState(-1);
+  const [log, setLog] = useState([]);
+  const [phase, setPhase] = useState('running'); // running | paused | done
+  const [summary, setSummary] = useState(null);
+  const [err, setErr] = useState('');
+  const [runId, setRunId] = useState(null);
+  const logRef = useRef(null);
+
+  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [log]);
+
+  useEffect(() => {
+    let live = true;
+    const off = softglazeApi.automation.onMacroProgress((data) => {
+      if (!live || !data) return;
+      if (data.kind === 'start') {
+        setRunId(data.runId);
+        setLog((l) => [...l, { level: 'INFO', msg: `Started "${data.name}" · ${data.total} step(s) on ${profileName}` }]);
+      } else if (data.kind === 'step') {
+        setCurrent(data.index);
+        setStatuses((prev) => { const n = [...prev]; if (n[data.index] !== undefined) n[data.index] = data.status === 'running' ? 'running' : data.status; return n; });
+        if (data.status === 'running') setLog((l) => [...l, { level: 'INFO', msg: `▶ ${STEP_LABEL[data.type] || data.type}: ${stepSummary(data.step || {})}` }]);
+        else if (data.status === 'error') setLog((l) => [...l, { level: 'ERROR', msg: `✕ ${STEP_LABEL[data.type] || data.type} — ${data.error || 'failed'}` }]);
+      } else if (data.kind === 'done') {
+        setPhase('done');
+        setSummary({ ok: data.ok, ran: data.ran, total: data.total, aborted: data.aborted });
+        setLog((l) => [...l, { level: data.aborted ? 'WARN' : (data.ok ? 'SUCCESS' : 'WARN'), msg: data.aborted ? 'Stopped.' : `Finished — ${data.ran}/${data.total} step(s).` }]);
+      }
+    });
+    softglazeApi.automation.runMacro({ macroId: macro.id, profileId, continueOnError: true })
+      .catch((e) => { if (live) { setErr(e.message || 'Could not run macro.'); setPhase('done'); } });
+    return () => { live = false; try { off && off(); } catch (e) { /* ignore */ } };
+  }, [macro.id, profileId, profileName]);
+
+  async function control(action) {
+    if (!runId) return;
+    try { await softglazeApi.automation.controlMacro({ runId, action }); } catch (e) { /* ignore */ }
+    if (action === 'pause') setPhase('paused');
+    else if (action === 'resume') setPhase('running');
+  }
+
+  const ICONS = {
+    running: <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />,
+    ok: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />,
+    error: <XCircle className="w-3.5 h-3.5 text-red-400" />
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={phase === 'done' ? onClose : undefined}>
+      <div className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg grid place-items-center bg-emerald-500/12 border border-emerald-500/20"><MousePointer2 className="w-4 h-4 text-emerald-400" /></span>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">{macro.name}</h3>
+              <p className="text-[11px] text-muted-foreground">Running on {profileName}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 space-y-3 overflow-y-auto">
+          {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+
+          <div className="space-y-1.5">
+            {steps.map((s, i) => (
+              <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border ${current === i && phase !== 'done' ? 'border-amber-500/40 bg-amber-500/5' : 'border-border'}`}>
+                <span className="w-4 grid place-items-center">{ICONS[statuses[i]] || <span className="text-[10px] font-mono text-muted-foreground">{i + 1}</span>}</span>
+                <span className="text-[12px] text-foreground">{STEP_LABEL[s.type] || s.type}</span>
+                <span className="text-[11px] text-muted-foreground truncate">{stepSummary(s)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div ref={logRef} className="rounded-lg border border-border bg-[#0b0f17] p-2.5 font-mono text-[11px] max-h-40 overflow-y-auto">
+            {log.length === 0 ? <p className="text-muted-foreground/60">Starting…</p> : log.map((l, i) => (
+              <div key={i} className={LEVEL_COLOR[l.level] || 'text-foreground/90'}>{l.msg}</div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-border">
+          <div className="text-[12px] text-muted-foreground">
+            {phase === 'done'
+              ? (summary ? (summary.aborted ? 'Stopped.' : `${summary.ran}/${summary.total} step(s) ${summary.ok ? 'completed' : 'ran'}.`) : 'Finished.')
+              : (phase === 'paused' ? 'Paused' : 'Running…')}
+          </div>
+          <div className="flex items-center gap-2">
+            {phase !== 'done' && (
+              <>
+                {phase === 'paused'
+                  ? <button onClick={() => control('resume')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-50"><Play className="w-4 h-4" /> Resume</button>
+                  : <button onClick={() => control('pause')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-50"><Pause className="w-4 h-4" /> Pause</button>}
+                <button onClick={() => control('stop')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-red-600 hover:bg-red-500 inline-flex items-center gap-1.5 disabled:opacity-50"><Square className="w-4 h-4" /> Stop</button>
+              </>
+            )}
+            {phase === 'done' && <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500">Close</button>}
+          </div>
         </div>
       </div>
     </div>
