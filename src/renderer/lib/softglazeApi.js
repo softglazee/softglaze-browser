@@ -149,9 +149,16 @@ export const softglazeApi = {
   payments: {
     getConfig: () => getSoftglazeApi().payments.getConfig(),
     setConfig: (payload) => getSoftglazeApi().payments.setConfig(payload),
-    validate: () => getSoftglazeApi().payments.validate(),
-    startCheckout: () => getSoftglazeApi().payments.startCheckout(),
-    pollCheckout: (payload) => getSoftglazeApi().payments.pollCheckout(payload)
+    validate: (payload) => getSoftglazeApi().payments.validate(payload),
+    startCheckout: (payload) => getSoftglazeApi().payments.startCheckout(payload),
+    pollCheckout: (payload) => getSoftglazeApi().payments.pollCheckout(payload),
+    listMethods: () => getSoftglazeApi().payments.listMethods(),
+    submitManual: (payload) => getSoftglazeApi().payments.submitManual(payload),
+    manualList: () => getSoftglazeApi().payments.manualList(),
+    manualResolve: (payload) => getSoftglazeApi().payments.manualResolve(payload)
+  },
+  billing: {
+    getPlans: () => getSoftglazeApi().billing.getPlans()
   },
   ipProviders: {
     getAll: () => getSoftglazeApi().ipProviders.getAll(),
@@ -200,6 +207,7 @@ export const softglazeApi = {
     saveMacro: (payload) => getSoftglazeApi().automation.saveMacro(payload),
     deleteMacro: (id) => getSoftglazeApi().automation.deleteMacro(id),
     startWarmer: (payload) => getSoftglazeApi().automation.startWarmer(payload),
+    stopWarmer: (payload) => getSoftglazeApi().automation.stopWarmer(payload),
     getHistory: () => getSoftglazeApi().automation.getHistory(),
     runMacro: (payload) => getSoftglazeApi().automation.runMacro(payload),
     startRecording: (payload) => getSoftglazeApi().automation.startRecording(payload),
