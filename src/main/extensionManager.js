@@ -13,9 +13,10 @@ const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
-const axios = require('axios');
-const extractZip = require('extract-zip');
 const { getPrisma } = require('./database');
+// axios + extract-zip are required lazily inside downloadAndExtract() so a
+// missing optional package degrades CRX install instead of bricking app startup
+// (extensionManager is required at boot by ipcHandlers).
 
 // Chrome Web Store IDs are exactly 32 chars from the alphabet a–p (a base-16
 // encoding of the public-key hash).
@@ -118,6 +119,13 @@ async function readManifestMeta(dir) {
 // Returns { localPath, name, version }.
 async function downloadAndExtract(chromeId) {
   if (!CHROME_ID_RE.test(chromeId)) throw new Error('Invalid Chrome extension id.');
+  let axios, extractZip;
+  try {
+    axios = require('axios');
+    extractZip = require('extract-zip');
+  } catch (e) {
+    throw new Error('Extension downloader is unavailable: the "axios"/"extract-zip" packages are not installed.');
+  }
   const root = extensionsRoot();
   await fs.mkdir(root, { recursive: true });
 
