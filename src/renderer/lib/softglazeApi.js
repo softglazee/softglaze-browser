@@ -127,6 +127,16 @@ export const softglazeApi = {
     configure: (payload) => getSoftglazeApi().sync.configure(payload),
     run: (payload) => getSoftglazeApi().sync.run(payload)
   },
+  db: {
+    encryptionStatus: () => getSoftglazeApi().db.encryptionStatus(),
+    unlock: (password) => getSoftglazeApi().db.unlock(password),
+    enableEncryption: (payload) => getSoftglazeApi().db.enableEncryption(payload),
+    disableEncryption: (payload) => getSoftglazeApi().db.disableEncryption(payload)
+  },
+  workspace: {
+    backup: (payload) => getSoftglazeApi().workspace.backup(payload),
+    restore: (payload) => getSoftglazeApi().workspace.restore(payload)
+  },
   license: {
     get: () => getSoftglazeApi().license.get(),
     redeem: (code) => getSoftglazeApi().license.redeem(code)
