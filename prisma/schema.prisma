@@ -123,6 +123,27 @@ model License {
   @@index([ownerMemberId])
 }
 
+model Invoice {
+  id            Int       @id @default(autoincrement())
+  ownerMemberId Int? // owner tree this invoice belongs to
+  memberId      Int? // member who paid (optional)
+  amount        String    @default("0")
+  currency      String    @default("USD")
+  provider      String? // cryptomus | stripe | paypal | wise | manual
+  status        String    @default("paid") // paid | pending | refunded
+  reference     String? // purchase code / transaction id
+  tier          String? // pro | enterprise
+  months        Int?      @default(1)
+  note          String?
+  source        String    @default("manual") // auto (captured from a payment) | manual
+  issuedAt      DateTime  @default(now())
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([ownerMemberId])
+  @@index([createdAt])
+}
+
 model IpProvider {
   id           Int      @id @default(autoincrement())
   name         String   @unique

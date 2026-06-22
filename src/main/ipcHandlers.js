@@ -158,6 +158,10 @@ const CHANNELS = Object.freeze({
   PAYMENT_MANUAL_LIST: 'payment:manual-list',
   PAYMENT_MANUAL_RESOLVE: 'payment:manual-resolve',
   BILLING_GET_PLANS: 'billing:get-plans',
+  INVOICE_LIST: 'invoice:list',
+  INVOICE_CREATE: 'invoice:create',
+  INVOICE_UPDATE: 'invoice:update',
+  INVOICE_DELETE: 'invoice:delete',
   IP_PROVIDERS_GET_ALL: 'ip-providers:get-all',
   IP_PROVIDERS_UPDATE_CREDENTIALS: 'ip-providers:update-credentials',
   IP_PROVIDERS_TOGGLE_STATUS: 'ip-providers:toggle-status',
@@ -212,6 +216,8 @@ const CHANNELS = Object.freeze({
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress', // main -> renderer stream
   AUTOMATION_RUN_MACRO: 'automation:run-macro',
+  AUTOMATION_MACRO_PROGRESS: 'automation:macro-progress', // main -> renderer stream
+  AUTOMATION_CONTROL_MACRO: 'automation:control-macro',
   AUTOMATION_START_RECORDING: 'automation:start-recording',
   AUTOMATION_STOP_RECORDING: 'automation:stop-recording',
   AUTOMATION_GET_SCHEDULE: 'automation:get-schedule',
@@ -3367,6 +3373,29 @@ async function listMembers() {
     totalProxies = await db.proxy.count();
   } catch (e) { /* counts are best-effort */ }
 
+  // Allocation rollup: how much of each member's quota has been handed to direct
+  // children (so an owner distributing e.g. 20 profiles sees what's left).
+  const childrenByParent = {};
+  for (const m of allMembers) {
+    if (m.parentMemberId == null) continue;
+    (childrenByParent[Number(m.parentMemberId)] = childrenByParent[Number(m.parentMemberId)] || []).push(m);
+  }
+  const allocationFor = (member) => {
+    const kids = childrenByParent[member.id] || [];
+    const own = permissions.effectivePermissions(member);
+    const roll = (key) => {
+      let allocated = 0; let unlimitedKids = 0;
+      for (const k of kids) {
+        const v = permissions.effectivePermissions(k)[key];
+        if (v === -1 || v == null) unlimitedKids += 1;
+        else allocated += Math.max(0, Number(v) || 0);
+      }
+      const cap = own[key];
+      return { cap: (cap == null ? -1 : cap), allocated, unlimitedKids };
+    };
+    return { childCount: kids.length, profiles: roll('maxProfiles'), proxies: roll('maxProxies') };
+  };
+
   const instr = (await readSetting('memberInstructions', {})) || {};
   return members.map((m) => serializeMember(m, {
     assignedProfiles: counts[m.id] || 0,
@@ -3374,6 +3403,7 @@ async function listMembers() {
     ownedProfiles: ownedProfiles[m.id] || 0,
     ownedProxies: ownedProxies[m.id] || 0,
     childCounts: childCounts[m.id] || { ADMIN: 0, MANAGER: 0, OPERATOR: 0, total: 0 },
+    allocation: allocationFor(m),
     inviteCode: m.inviteStatus === 'pending' ? m.inviteCode : null,
     workspaceProfiles: totalProfiles,
     workspaceProxies: totalProxies,
@@ -3650,6 +3680,12 @@ async function updateMemberPermissions(payload) {
     const all = await db.member.findMany();
     const visible = permissions.visibleMemberIds(all, granter);
     if (!visible.has(id) || id === granter.id) throw new Error('You can only manage members you created.');
+  }
+  // Revert to role defaults: clear the stored overrides so effectivePermissions
+  // falls back to the role's built-in defaults.
+  if (input.reset) {
+    const reverted = await db.member.update({ where: { id }, data: { permissionsJson: null } });
+    return serializeMember(reverted);
   }
   const granterPerms = permissions.effectivePermissions(granter);
   const next = clampPermissions(input.permissions, granterPerms, target.role);
@@ -5350,6 +5386,7 @@ async function pollCheckout(payload) {
   const code = payments.generatePurchaseCode(months);
   const updated = await applyPaidMonths(lic, months, code, tier);
   await writeSetting('pendingCheckout', null).catch(() => {});
+  await recordInvoice({ ownerId, provider: def.id, amount: plan.amount, currency: plan.currency, tier, months, reference: code, status: 'paid', source: 'auto' });
   try {
     const db = getPrisma();
     const owner = ownerId ? await db.member.findUnique({ where: { id: ownerId } }) : null;
@@ -5418,6 +5455,7 @@ async function resolveManualPayment(payload) {
     const months = Math.max(1, Number(entry.months) || 1);
     const code = payments.generatePurchaseCode(months);
     await applyPaidMonths(lic, months, code, entry.tier || 'pro');
+    await recordInvoice({ ownerId: entry.ownerId ?? null, provider: entry.provider, amount: entry.amount, currency: entry.currency, tier: entry.tier || 'pro', months, reference: code, note: entry.reference || null, status: 'paid', source: 'auto' });
     entry.status = 'approved';
     entry.purchaseCode = code;
     entry.resolvedAt = new Date().toISOString();
@@ -5435,6 +5473,136 @@ async function resolveManualPayment(payload) {
   arr[idx] = entry;
   await writeSetting('manualPayments', arr);
   return { ok: true, status: entry.status };
+}
+
+// ---- Invoices ----------------------------------------------------------------
+// Receipts for subscription payments: auto-captured on a successful checkout /
+// manual approval, plus manual entries by the Super Admin. Owners see their own
+// tree's invoices read-only; the Super Admin manages all.
+function serializeInvoice(inv) {
+  return {
+    id: inv.id,
+    ownerMemberId: inv.ownerMemberId ?? null,
+    memberId: inv.memberId ?? null,
+    amount: inv.amount || '0',
+    currency: inv.currency || 'USD',
+    provider: inv.provider || null,
+    status: inv.status || 'paid',
+    reference: inv.reference || null,
+    tier: inv.tier || null,
+    months: inv.months ?? null,
+    note: inv.note || null,
+    source: inv.source || 'manual',
+    issuedAt: inv.issuedAt instanceof Date ? inv.issuedAt.toISOString() : (inv.issuedAt || null),
+    paidAt: inv.paidAt instanceof Date ? inv.paidAt.toISOString() : (inv.paidAt || null),
+    createdAt: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : (inv.createdAt || null)
+  };
+}
+
+// Auto-capture — best-effort; never blocks or fails a payment.
+async function recordInvoice(data) {
+  try {
+    const status = data.status || 'paid';
+    await getPrisma().invoice.create({
+      data: {
+        ownerMemberId: data.ownerId ?? null,
+        memberId: data.memberId ?? null,
+        amount: String(data.amount ?? '0'),
+        currency: data.currency || 'USD',
+        provider: data.provider || null,
+        status,
+        reference: data.reference || null,
+        tier: data.tier || null,
+        months: data.months != null ? Number(data.months) : null,
+        note: data.note || null,
+        source: data.source || 'auto',
+        paidAt: status === 'paid' ? new Date() : null
+      }
+    });
+  } catch (e) { /* invoice is best-effort */ }
+}
+
+async function listInvoices(payload) {
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const db = getPrisma();
+  const me = await getActiveMember();
+  const isSuper = Boolean(me && me.role === 'SUPER_ADMIN');
+  let where = {};
+  if (isSuper) {
+    if (input.ownerId != null && input.ownerId !== '') where = { ownerMemberId: parseId(input.ownerId) };
+  } else {
+    const ownerId = await resolveLicenseOwnerId();
+    where = { ownerMemberId: ownerId == null ? -1 : ownerId };
+  }
+  const rows = await db.invoice.findMany({ where, orderBy: { createdAt: 'desc' }, take: 500 });
+
+  // Decorate with the owner's name (super-admin view spans owners).
+  let owners = {};
+  try {
+    const ids = [...new Set(rows.map((r) => r.ownerMemberId).filter((x) => x != null))];
+    if (ids.length) {
+      const members = await db.member.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
+      owners = Object.fromEntries(members.map((m) => [m.id, m.name]));
+    }
+  } catch (e) { /* best-effort */ }
+
+  return {
+    invoices: rows.map((r) => ({ ...serializeInvoice(r), ownerName: r.ownerMemberId != null ? (owners[r.ownerMemberId] || null) : null })),
+    canEdit: isSuper
+  };
+}
+
+const INVOICE_STATUSES = new Set(['paid', 'pending', 'refunded']);
+
+async function createInvoice(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const status = INVOICE_STATUSES.has(String(input.status)) ? String(input.status) : 'paid';
+  const created = await getPrisma().invoice.create({
+    data: {
+      ownerMemberId: (input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : null,
+      amount: String(input.amount ?? '0'),
+      currency: optionalString(input.currency) || 'USD',
+      provider: optionalString(input.provider) || 'manual',
+      status,
+      reference: optionalString(input.reference) || null,
+      tier: optionalString(input.tier) || null,
+      months: input.months != null && input.months !== '' ? Math.max(1, Number(input.months) || 1) : null,
+      note: optionalString(input.note) || null,
+      source: 'manual',
+      paidAt: status === 'paid' ? new Date() : null
+    }
+  });
+  return serializeInvoice(created);
+}
+
+async function updateInvoice(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  const data = {};
+  if (input.ownerId !== undefined) data.ownerMemberId = (input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : null;
+  if (input.amount !== undefined) data.amount = String(input.amount);
+  if (input.currency !== undefined) data.currency = optionalString(input.currency) || 'USD';
+  if (input.provider !== undefined) data.provider = optionalString(input.provider);
+  if (input.reference !== undefined) data.reference = optionalString(input.reference);
+  if (input.tier !== undefined) data.tier = optionalString(input.tier);
+  if (input.note !== undefined) data.note = optionalString(input.note);
+  if (input.months !== undefined) data.months = (input.months != null && input.months !== '') ? Math.max(1, Number(input.months) || 1) : null;
+  if (input.status !== undefined && INVOICE_STATUSES.has(String(input.status))) {
+    data.status = String(input.status);
+    data.paidAt = data.status === 'paid' ? new Date() : null;
+  }
+  const updated = await getPrisma().invoice.update({ where: { id }, data });
+  return serializeInvoice(updated);
+}
+
+async function deleteInvoice(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const id = parseId(input.id);
+  await getPrisma().invoice.delete({ where: { id } });
+  return { deleted: true, id };
 }
 
 async function deliverPurchaseCode(email, name, code) {
@@ -5648,7 +5816,10 @@ async function ensureProfileSession(profileId) {
   return res && res.sessionId ? String(res.sessionId) : pid;
 }
 
-async function runMacroOnProfile(payload) {
+// Active macro runs, keyed by runId, so a run can be paused / resumed / stopped.
+const macroRuns = new Map();
+
+async function runMacroOnProfile(payload, event) {
   const input = requireObject(payload);
   const macroId = parseId(input.macroId);
   const profileId = parseId(input.profileId);
@@ -5660,17 +5831,47 @@ async function runMacroOnProfile(payload) {
   if (!Array.isArray(steps) || steps.length === 0) throw new Error('This macro has no steps to run yet.');
 
   const sessionId = await ensureProfileSession(profileId);
-  const result = await runMacro(sessionId, steps, { continueOnError: Boolean(input.continueOnError) });
+  const runId = `macro-${Date.now()}`;
+  const control = { paused: false, aborted: false };
+  macroRuns.set(runId, control);
+
+  // Live progress stream (mirrors the warmer-progress pattern). The scheduler runs
+  // without an event, so streaming is a no-op there.
+  const sender = event && event.sender ? event.sender : null;
+  const send = (data) => { if (sender) { try { sender.send(CHANNELS.AUTOMATION_MACRO_PROGRESS, data); } catch (e) { /* renderer gone */ } } };
+  send({ runId, kind: 'start', macroId, profileId, name: macro.name, total: steps.length, ts: Date.now() });
+  const onStep = (ev) => send({ runId, kind: 'step', ...ev, ts: Date.now() });
+
+  let result;
+  try {
+    result = await runMacro(sessionId, steps, { continueOnError: Boolean(input.continueOnError), control, onStep });
+  } finally {
+    macroRuns.delete(runId);
+  }
+
+  send({ runId, kind: 'done', ok: result.ok, ran: result.ran, total: result.total, aborted: result.aborted, ts: Date.now() });
+  const level = result.aborted ? 'WARN' : (result.ok ? 'SUCCESS' : 'WARN');
+  const tail = result.aborted ? ' · stopped' : (result.ok ? '' : ' · stopped on error');
   await appendWarmerHistory({
-    type: 'macro',
-    label: macro.name,
-    profileId,
-    at: new Date().toISOString(),
-    level: result.ok ? 'SUCCESS' : 'WARN',
-    detail: `${macro.name}: ran ${result.ran}/${result.total} steps${result.ok ? '' : ' · stopped on error'}`
+    type: 'macro', label: macro.name, profileId, at: new Date().toISOString(),
+    level, detail: `${macro.name}: ran ${result.ran}/${result.total} steps${tail}`
   }).catch(() => {});
   await logActivity(db, profileId, 'macro-run', `${macro.name} (${result.ran}/${result.total})`).catch(() => {});
-  return { ...result, sessionId };
+  return { ...result, sessionId, runId };
+}
+
+// Pause / resume / stop a running macro by runId.
+async function controlMacro(payload) {
+  const input = requireObject(payload);
+  const runId = String(input.runId || '');
+  const action = String(input.action || '').toLowerCase();
+  const control = macroRuns.get(runId);
+  if (!control) return { ok: false, reason: 'not-running' };
+  if (action === 'pause') control.paused = true;
+  else if (action === 'resume') control.paused = false;
+  else if (action === 'stop') { control.aborted = true; control.paused = false; }
+  else throw new Error('Action must be pause, resume or stop.');
+  return { ok: true, action };
 }
 
 async function startMacroRecordingOnProfile(payload) {
@@ -6252,6 +6453,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_STOP_WARMER, stopWarmer);
   registerHandler(CHANNELS.AUTOMATION_GET_HISTORY, getAutomationHistory);
   registerHandler(CHANNELS.AUTOMATION_RUN_MACRO, runMacroOnProfile);
+  registerHandler(CHANNELS.AUTOMATION_CONTROL_MACRO, controlMacro);
   registerHandler(CHANNELS.AUTOMATION_START_RECORDING, startMacroRecordingOnProfile);
   registerHandler(CHANNELS.AUTOMATION_STOP_RECORDING, stopMacroRecordingOnProfile);
   registerHandler(CHANNELS.AUTOMATION_GET_SCHEDULE, getMacroSchedule);
@@ -6300,6 +6502,10 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PAYMENT_MANUAL_LIST, listManualPayments);
   registerHandler(CHANNELS.PAYMENT_MANUAL_RESOLVE, resolveManualPayment);
   registerHandler(CHANNELS.BILLING_GET_PLANS, getBillingPlans);
+  registerHandler(CHANNELS.INVOICE_LIST, listInvoices);
+  registerHandler(CHANNELS.INVOICE_CREATE, createInvoice);
+  registerHandler(CHANNELS.INVOICE_UPDATE, updateInvoice);
+  registerHandler(CHANNELS.INVOICE_DELETE, deleteInvoice);
   registerHandler(CHANNELS.IP_PROVIDERS_GET_ALL, getIpProviders);
   registerHandler(CHANNELS.IP_PROVIDERS_UPDATE_CREDENTIALS, updateIpProviderCredentials);
   registerHandler(CHANNELS.IP_PROVIDERS_TOGGLE_STATUS, toggleIpProviderStatus);

@@ -2652,6 +2652,21 @@ async function importStoredCookies(opts, cookies) {
 // ---------------------------------------------------------------------------
 const VALID_MACRO_STEPS = new Set(['goto', 'click', 'type', 'keypress', 'scroll', 'wait']);
 
+// Center point of an element in viewport coordinates (null if not found/visible).
+async function elementCenter(page, selector) {
+  const el = await page.$(selector);
+  if (!el) return null;
+  const box = await el.boundingBox();
+  if (!box) return null;
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+// Run a macro's steps in a live session. opts:
+//   continueOnError — keep going past a failed step.
+//   control { paused, aborted } — external flags for pause/resume/stop (mutated by
+//     the caller), checked between steps so a long run is interruptible.
+//   onStep(event) — progress callback: { index, total, type, status, step?, error? }.
+// Backward-compatible: callers that pass neither control nor onStep behave as before.
 async function runMacro(sessionId, steps, opts = {}) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
@@ -2660,9 +2675,19 @@ async function runMacro(sessionId, steps, opts = {}) {
   const list = Array.isArray(steps) ? steps : [];
   const log = [];
 
+  const control = opts.control || null;
+  const onStep = typeof opts.onStep === 'function' ? opts.onStep : null;
+  const isAborted = () => Boolean(control && control.aborted);
+  const waitWhilePaused = async () => { while (control && control.paused && !control.aborted) await sleep(150); };
+
   for (let i = 0; i < list.length; i += 1) {
+    if (isAborted()) break;
+    await waitWhilePaused();
+    if (isAborted()) break;
+
     const step = list[i] || {};
     const type = String(step.type || '').toLowerCase();
+    if (onStep) onStep({ index: i, total: list.length, type, status: 'running', step });
     try {
       switch (type) {
         case 'goto':
@@ -2674,6 +2699,7 @@ async function runMacro(sessionId, steps, opts = {}) {
         case 'click':
           if (!step.selector) throw new Error('click step requires a selector');
           await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          { const c = await elementCenter(page, step.selector); if (c) await page.mouse.move(c.x, c.y, { steps: 10 }); }
           await page.click(step.selector, { delay: 30 });
           break;
         case 'type':
@@ -2690,17 +2716,37 @@ async function runMacro(sessionId, steps, opts = {}) {
         case 'wait':
           await sleep(Math.max(0, Math.min(60000, Number(step.ms) || 1000)));
           break;
+        case 'move': {
+          let pt = null;
+          if (step.selector) { await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 }).catch(() => {}); pt = await elementCenter(page, step.selector); }
+          else if (step.x != null && step.y != null) pt = { x: Number(step.x), y: Number(step.y) };
+          if (!pt) throw new Error('move step needs a valid selector or x/y');
+          await page.mouse.move(pt.x, pt.y, { steps: 12 });
+          break;
+        }
+        case 'hover': {
+          if (!step.selector) throw new Error('hover step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          const pt = await elementCenter(page, step.selector);
+          if (!pt) throw new Error('hover target is not visible');
+          await page.mouse.move(pt.x, pt.y, { steps: 12 });
+          await sleep(Math.max(0, Math.min(60000, Number(step.ms) || 800)));
+          break;
+        }
         default:
           throw new Error(`Unknown step type: ${type || '(empty)'}`);
       }
       log.push({ index: i, type, ok: true });
+      if (onStep) onStep({ index: i, total: list.length, type, status: 'ok' });
     } catch (e) {
-      log.push({ index: i, type, ok: false, error: (e && e.message) || String(e) });
+      const msg = (e && e.message) || String(e);
+      log.push({ index: i, type, ok: false, error: msg });
+      if (onStep) onStep({ index: i, total: list.length, type, status: 'error', error: msg });
       if (!opts.continueOnError) break;
     }
   }
 
-  return { ok: log.length > 0 && log.every((l) => l.ok), total: list.length, ran: log.length, log };
+  return { ok: log.length > 0 && log.every((l) => l.ok), total: list.length, ran: log.length, log, aborted: isAborted() };
 }
 
 // Per-session recorder state. The exposed page->node bridge looks up the current

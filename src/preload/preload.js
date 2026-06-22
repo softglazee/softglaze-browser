@@ -112,6 +112,10 @@ const CHANNELS = Object.freeze({
   PAYMENT_MANUAL_LIST: 'payment:manual-list',
   PAYMENT_MANUAL_RESOLVE: 'payment:manual-resolve',
   BILLING_GET_PLANS: 'billing:get-plans',
+  INVOICE_LIST: 'invoice:list',
+  INVOICE_CREATE: 'invoice:create',
+  INVOICE_UPDATE: 'invoice:update',
+  INVOICE_DELETE: 'invoice:delete',
   IP_PROVIDERS_GET_ALL: 'ip-providers:get-all',
   IP_PROVIDERS_UPDATE_CREDENTIALS: 'ip-providers:update-credentials',
   IP_PROVIDERS_TOGGLE_STATUS: 'ip-providers:toggle-status',
@@ -167,6 +171,8 @@ const CHANNELS = Object.freeze({
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress',
   AUTOMATION_RUN_MACRO: 'automation:run-macro',
+  AUTOMATION_MACRO_PROGRESS: 'automation:macro-progress',
+  AUTOMATION_CONTROL_MACRO: 'automation:control-macro',
   AUTOMATION_START_RECORDING: 'automation:start-recording',
   AUTOMATION_STOP_RECORDING: 'automation:stop-recording',
   AUTOMATION_GET_SCHEDULE: 'automation:get-schedule',
@@ -308,6 +314,7 @@ const api = Object.freeze({
     requestChange: (payload) => invoke(CHANNELS.MEMBER_REQUEST_CHANGE, payload),
     commitChange: (payload) => invoke(CHANNELS.MEMBER_COMMIT_CHANGE, payload),
     updatePermissions: (id, permissions) => invoke(CHANNELS.MEMBER_UPDATE_PERMISSIONS, { id, permissions }),
+    resetPermissions: (id) => invoke(CHANNELS.MEMBER_UPDATE_PERMISSIONS, { id, reset: true }),
     setInstructions: (id, instructions) => invoke(CHANNELS.MEMBER_SET_INSTRUCTIONS, { id, instructions }),
     setStatus: (payload) => invoke(CHANNELS.MEMBER_SET_STATUS, payload)
   }),
@@ -353,6 +360,12 @@ const api = Object.freeze({
   }),
   billing: Object.freeze({
     getPlans: () => invoke(CHANNELS.BILLING_GET_PLANS)
+  }),
+  invoices: Object.freeze({
+    list: (payload) => invoke(CHANNELS.INVOICE_LIST, payload),
+    create: (payload) => invoke(CHANNELS.INVOICE_CREATE, payload),
+    update: (payload) => invoke(CHANNELS.INVOICE_UPDATE, payload),
+    remove: (payload) => invoke(CHANNELS.INVOICE_DELETE, payload)
   }),
   ipProviders: Object.freeze({
     getAll: () => invoke(CHANNELS.IP_PROVIDERS_GET_ALL),
@@ -413,6 +426,7 @@ const api = Object.freeze({
     stopWarmer: (payload) => invoke(CHANNELS.AUTOMATION_STOP_WARMER, payload),
     getHistory: () => invoke(CHANNELS.AUTOMATION_GET_HISTORY),
     runMacro: (payload) => invoke(CHANNELS.AUTOMATION_RUN_MACRO, payload),
+    controlMacro: (payload) => invoke(CHANNELS.AUTOMATION_CONTROL_MACRO, payload),
     startRecording: (payload) => invoke(CHANNELS.AUTOMATION_START_RECORDING, payload),
     stopRecording: (payload) => invoke(CHANNELS.AUTOMATION_STOP_RECORDING, payload),
     getSchedule: () => invoke(CHANNELS.AUTOMATION_GET_SCHEDULE),
@@ -424,6 +438,12 @@ const api = Object.freeze({
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);
       return () => ipcRenderer.removeListener(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);
+    },
+    // Subscribe to live macro-run progress (per-step); returns an unsubscribe function.
+    onMacroProgress: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.AUTOMATION_MACRO_PROGRESS, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.AUTOMATION_MACRO_PROGRESS, listener);
     },
     // Subscribe to live parallel-run progress frames; returns an unsubscribe function.
     onRunProgress: (callback) => {
