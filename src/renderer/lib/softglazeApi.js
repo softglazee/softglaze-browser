@@ -64,7 +64,8 @@ export const softglazeApi = {
     get2faToken: (id) => getSoftglazeApi().profiles.get2faToken(id),
     bulkSynchronize: (ids) => getSoftglazeApi().profiles.bulkSynchronize(ids),
     exportArchive: (payload) => getSoftglazeApi().profiles.exportArchive(payload),
-    cookieRobot: (payload) => getSoftglazeApi().profiles.cookieRobot(payload)
+    cookieRobot: (payload) => getSoftglazeApi().profiles.cookieRobot(payload),
+    getLocks: () => getSoftglazeApi().profiles.getLocks()
   },
   templates: {
     list: () => getSoftglazeApi().templates.list(),
@@ -116,7 +117,10 @@ export const softglazeApi = {
     setInstructions: (id, instructions) => getSoftglazeApi().members.setInstructions(id, instructions)
   },
   team: {
-    activity: (limit) => getSoftglazeApi().team.activity(limit)
+    activity: (limit) => getSoftglazeApi().team.activity(limit),
+    reassignProfiles: (payload) => getSoftglazeApi().team.reassignProfiles(payload),
+    seatUsage: () => getSoftglazeApi().team.seatUsage(),
+    exportActivity: (payload) => getSoftglazeApi().team.exportActivity(payload)
   },
   license: {
     get: () => getSoftglazeApi().license.get(),
