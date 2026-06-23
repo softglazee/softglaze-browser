@@ -6032,7 +6032,21 @@ const WARM_SITES = [
 
 async function appendWarmerHistory(entry) {
   const list = (await readSetting('automationHistory', [])) || [];
-  const next = [entry, ...(Array.isArray(list) ? list : [])].slice(0, 50);
+  const arr = Array.isArray(list) ? list : [];
+  // Upsert by runId. A run records once on start (status 'running') and again on
+  // finish (status 'completed'/'stopped'); merge those into ONE row (moved to the
+  // top) instead of appending a duplicate — which also produced duplicate React
+  // keys in the history table.
+  if (entry && entry.runId) {
+    const idx = arr.findIndex((e) => e && e.runId === entry.runId);
+    if (idx >= 0) {
+      const merged = { ...arr[idx], ...entry };
+      const next = [merged, ...arr.slice(0, idx), ...arr.slice(idx + 1)].slice(0, 50);
+      await writeSetting('automationHistory', next).catch(() => {});
+      return;
+    }
+  }
+  const next = [entry, ...arr].slice(0, 50);
   await writeSetting('automationHistory', next).catch(() => {});
 }
 
