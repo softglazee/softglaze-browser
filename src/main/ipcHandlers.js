@@ -5109,6 +5109,14 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
 
 // Coerce any raw plan record (a saved override or a default) into the canonical
 // shape the renderer + checkout expect. Tolerant of partial/edited input.
+// Coerce a money amount to a non-negative numeric string ("0" on garbage), max
+// 2 decimals — so a malformed price can never reach checkout or an invoice.
+function sanitizeAmount(value) {
+  const n = Number.parseFloat(value);
+  if (!Number.isFinite(n) || n < 0) return '0';
+  return String(Math.round(n * 100) / 100);
+}
+
 function normalizePlan(raw, idx) {
   const p = (raw && typeof raw === 'object') ? raw : {};
   let id = String(p.id || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -5122,7 +5130,7 @@ function normalizePlan(raw, idx) {
     kind,
     trialDays: Math.max(1, Number.parseInt(p.trialDays, 10) || TRIAL_DAYS),
     name: String(p.name || 'Plan').slice(0, 60),
-    amount: kind === 'trial' ? '0' : String(p.amount == null ? '0' : p.amount).slice(0, 20),
+    amount: kind === 'trial' ? '0' : sanitizeAmount(p.amount),
     currency: String(p.currency || PLAN.currency).toUpperCase().slice(0, 6),
     months: Math.max(1, Number.parseInt(p.months, 10) || 1),
     period: String(p.period || 'month').slice(0, 16),
@@ -5148,6 +5156,18 @@ async function findPlan(planId) {
   const id = String(planId || '').toLowerCase();
   const plans = await readBillingPlans();
   return plans.find((p) => p.id === id) || plans.find((p) => p.active) || plans[0] || normalizePlan(DEFAULT_BILLING_PLANS[0], 0);
+}
+
+// Like findPlan, but rejects an explicitly-supplied id that no longer resolves (a
+// plan deleted/renamed between page-load and pay) instead of silently charging a
+// different plan's price/tier. An empty id still falls back to the default plan.
+async function findPlanOrThrow(planId) {
+  const plan = await findPlan(planId);
+  const requested = String(planId == null ? '' : planId).trim().toLowerCase();
+  if (requested && requested !== plan.id) {
+    throw new Error('That plan is no longer available — refresh and choose a current plan.');
+  }
+  return plan;
 }
 
 // Renderer-facing plans catalog + the viewer's current tier/state, so the Billing
@@ -5755,7 +5775,7 @@ async function loadCheckoutProvider(id) {
 async function startCheckout(payload) {
   await requirePurchaser('purchase a subscription');
   const input = (payload && typeof payload === 'object') ? payload : {};
-  const plan = await findPlan(input.planId);
+  const plan = await findPlanOrThrow(input.planId);
   const { provider, def } = await loadCheckoutProvider(input.provider);
   if (def.kind !== 'automated') throw new Error('That payment method is processed manually — submit your payment for approval instead.');
   const cfg = await openProviderConfig(def.id);
@@ -5806,7 +5826,7 @@ async function submitManualPayment(payload) {
   if (!def || def.kind !== 'manual') throw new Error('That is not a manual payment method.');
   const store = await readPaymentStore();
   if (!store[def.id] || !store[def.id].enabled) throw new Error('That manual payment method is not enabled.');
-  const plan = await findPlan(input.planId);
+  const plan = await findPlanOrThrow(input.planId);
   const ownerId = await resolveLicenseOwnerId();
   const entry = {
     id: `mp-${Date.now()}-${Math.floor(ownerId || 0)}`,
@@ -5909,7 +5929,7 @@ async function recordInvoice(data) {
       data: {
         ownerMemberId: data.ownerId ?? null,
         memberId: data.memberId ?? null,
-        amount: String(data.amount ?? '0'),
+        amount: sanitizeAmount(data.amount),
         currency: data.currency || 'USD',
         provider: data.provider || null,
         status,
@@ -5963,7 +5983,7 @@ async function createInvoice(payload) {
   const created = await getPrisma().invoice.create({
     data: {
       ownerMemberId: (input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : null,
-      amount: String(input.amount ?? '0'),
+      amount: sanitizeAmount(input.amount),
       currency: optionalString(input.currency) || 'USD',
       provider: optionalString(input.provider) || 'manual',
       status,
@@ -5984,7 +6004,7 @@ async function updateInvoice(payload) {
   const id = parseId(input.id);
   const data = {};
   if (input.ownerId !== undefined) data.ownerMemberId = (input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : null;
-  if (input.amount !== undefined) data.amount = String(input.amount);
+  if (input.amount !== undefined) data.amount = sanitizeAmount(input.amount);
   if (input.currency !== undefined) data.currency = optionalString(input.currency) || 'USD';
   if (input.provider !== undefined) data.provider = optionalString(input.provider);
   if (input.reference !== undefined) data.reference = optionalString(input.reference);
@@ -6181,7 +6201,16 @@ const WARM_SITES = [
   { label: 'weather.com', url: 'https://weather.com/' }
 ];
 
-async function appendWarmerHistory(entry) {
+// Serialize all history writes through one in-process chain so two runs finishing
+// near-simultaneously can't clobber each other's row (the store is a single JSON
+// blob in one Setting, so a naive read-modify-write would lose updates).
+let _historyWriteChain = Promise.resolve();
+function appendWarmerHistory(entry) {
+  _historyWriteChain = _historyWriteChain.then(() => _appendWarmerHistoryUnsafe(entry)).catch(() => {});
+  return _historyWriteChain;
+}
+
+async function _appendWarmerHistoryUnsafe(entry) {
   const list = (await readSetting('automationHistory', [])) || [];
   const arr = Array.isArray(list) ? list : [];
   // Upsert by runId. A run records once on start (status 'running') and again on
