@@ -40,6 +40,7 @@ router.post('/plans', asyncHandler(async (req, res) => {
     currency: String(b.currency || 'USD').toUpperCase(),
     interval: String(b.interval || 'month'),
     months: Math.max(1, Number(b.months) || 1),
+    recurring: Boolean(b.recurring),
     active: b.active === undefined ? true : Boolean(b.active)
   };
   const plan = await prisma.plan.upsert({

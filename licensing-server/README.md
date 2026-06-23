@@ -41,6 +41,26 @@ npm run prisma:migrate          # create the schema (dev)
 npm run dev                     # or: npm start
 ```
 
+### Run with Docker (Postgres + server, one command)
+```bash
+cd licensing-server
+export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
+docker compose up --build        # syncs the schema (prisma db push) then serves :8787
+```
+Smoke-test a running server (no local DB needed):
+```bash
+BASE=http://localhost:8787 node scripts/smoke.js            # /health
+BASE=http://localhost:8787 node scripts/smoke.js <tenantId> # + register + license
+```
+
+### Recurring subscriptions (Stripe)
+Mark a plan `recurring: true` (and `interval: "month"|"year"`) and checkout uses
+Stripe **subscription** mode. The webhook handles `checkout.session.completed`
+(initial), `invoice.paid` (renewal → sets the exact period end), and
+`customer.subscription.deleted` (→ license expires). One-time plans
+(`recurring: false`) keep the grant-N-months model. **Validate against a live
+Stripe test account** — this path can't be exercised offline.
+
 ## Provision a tenant (merchant)
 ```bash
 npm run provision -- "Acme Browsers"
