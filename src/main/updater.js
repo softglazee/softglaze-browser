@@ -1,19 +1,33 @@
 'use strict';
 
 const { app, dialog } = require('electron');
+const { tenantConfig } = require('./tenantConfig');
 
-// Auto-update via electron-updater.
+// Auto-update via electron-updater. SAFE BY DEFAULT: it stays fully inert unless an
+// update feed is explicitly configured — so a build NEVER auto-pulls from a default
+// or seller-owned feed.
 //
-// This is INERT until all of the following are true:
-//   1. The app is packaged (app.isPackaged) — never runs in dev.
-//   2. `electron-updater` is installed (npm install picks it up).
-//   3. `build.publish` is configured in package.json and a release with the
-//      matching latest.yml/blockmap has been published to that provider.
-//   4. Builds are code-signed (unsigned auto-updates are blocked on Windows).
+//   • Tenant (white-label) builds: a buyer-owned `updateFeedUrl` is baked into the
+//     tenant config; we point electron-updater at that generic feed. Each buyer
+//     controls (and hosts) their own updates.
+//   • Seller's own distribution: opt in with SG_ENABLE_GITHUB_UPDATES=1 to use the
+//     baked `build.publish` feed from package.json.
+//   • Otherwise: no update check is ever made.
 //
-// Until then it logs and no-ops, so it can ship safely.
+// Note: on Windows, electron-updater verifies the downloaded installer's Authenticode
+// signature, so updates are only safe on CODE-SIGNED builds (see docs/signing-and-updates.md).
+function resolveFeed() {
+  const url = tenantConfig().updateFeedUrl;
+  if (url) return { kind: 'generic', url };
+  if (process.env.SG_ENABLE_GITHUB_UPDATES === '1') return { kind: 'baked' };
+  return null;
+}
+
 function initAutoUpdater(mainWindow) {
   if (!app.isPackaged) return;
+
+  const feed = resolveFeed();
+  if (!feed) { console.log('[updater] no update feed configured — auto-update disabled.'); return; }
 
   let autoUpdater;
   try {
@@ -21,6 +35,11 @@ function initAutoUpdater(mainWindow) {
   } catch (e) {
     console.warn('[updater] electron-updater not installed; auto-update disabled.');
     return;
+  }
+
+  if (feed.kind === 'generic') {
+    try { autoUpdater.setFeedURL({ provider: 'generic', url: feed.url }); }
+    catch (e) { console.error('[updater] invalid update feed URL; auto-update disabled:', e && e.message); return; }
   }
 
   autoUpdater.autoDownload = true;
