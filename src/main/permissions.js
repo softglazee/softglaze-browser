@@ -128,11 +128,14 @@ function childCapFor(parentPerms, targetRole) {
 }
 
 // ---------------------------------------------------------------------------
-// Super Admin — the hardcoded source-owner backdoor (explicit product spec).
-// Logs in WITHOUT registration and always bypasses role/limit/trial gating.
+// Super Admin — the source-owner account. Logs in WITHOUT registration and
+// always bypasses role/limit/trial gating. The credential is per-install: it is
+// set on first run and stored hashed in Setting['superAdminAuth'] (see
+// ipcHandlers superLogin / superAdminSetup) — there is NO shared/hardcoded
+// password in the shipped binary.
 // ---------------------------------------------------------------------------
 const SUPER_ADMIN_ID = -1;
-const SUPER_ADMIN_PASSWORD = 'Azh@rali1';
+const DEFAULT_SUPER_ADMIN_IDENTIFIER = 'superadmin';
 const SUPER_ADMIN = Object.freeze({
   id: SUPER_ADMIN_ID,
   name: 'Super Admin',
@@ -143,12 +146,6 @@ const SUPER_ADMIN = Object.freeze({
   initials: 'SA',
   status: 'active'
 });
-
-function isSuperAdminLogin(identifier, password) {
-  const u = String(identifier || '').trim().toLowerCase();
-  const idMatch = u === 'superadmin' || u === SUPER_ADMIN.email;
-  return idMatch && String(password) === SUPER_ADMIN_PASSWORD;
-}
 
 function isSuperAdminId(id) { return Number(id) === SUPER_ADMIN_ID; }
 
@@ -213,6 +210,6 @@ module.exports = {
   visibleMemberIds,
   SUPER_ADMIN,
   SUPER_ADMIN_ID,
-  isSuperAdminLogin,
+  DEFAULT_SUPER_ADMIN_IDENTIFIER,
   isSuperAdminId
 };

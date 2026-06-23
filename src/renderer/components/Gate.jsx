@@ -245,9 +245,11 @@ export default function Gate({ children }) {
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
 
-  // super admin (source-owner backdoor)
+  // super admin (per-install source-owner credential)
   const [superId, setSuperId] = useState('');
   const [superPass, setSuperPass] = useState('');
+  const [superPass2, setSuperPass2] = useState('');
+  const [superNeedsSetup, setSuperNeedsSetup] = useState(false); // first-run: show create form
 
   // invite redemption + team-member login
   const [inviteCode, setInviteCode] = useState('');
@@ -360,7 +362,23 @@ export default function Gate({ children }) {
       await softglazeApi.members.superLogin(superId.trim(), superPass);
       setSuperPass('');
       setPhase('licensing');
-    } catch (e) { setErr(e.message || 'Invalid Super Admin credentials.'); setBusy(false); }
+    } catch (e) {
+      if (e.code === 'SUPER_SETUP_REQUIRED') { setSuperNeedsSetup(true); setErr('No Super Admin credential is set yet — create one below.'); setBusy(false); return; }
+      setErr(e.message || 'Invalid Super Admin credentials.'); setBusy(false);
+    }
+  }
+
+  // First-run (or change): create the per-install Super Admin credential.
+  async function doSuperSetup() {
+    setErr('');
+    if (superPass.length < 8) return setErr('Password must be at least 8 characters.');
+    if (superPass !== superPass2) return setErr('Passwords do not match.');
+    setBusy(true);
+    try {
+      await softglazeApi.members.superSetup({ identifier: superId.trim() || 'superadmin', password: superPass });
+      setSuperPass(''); setSuperPass2('');
+      setPhase('licensing');
+    } catch (e) { setErr(e.message || 'Could not create Super Admin credentials.'); setBusy(false); }
   }
 
   async function doAcceptInvite() {
@@ -460,7 +478,7 @@ export default function Gate({ children }) {
 
   const SuperLink = () => (
     <p className="text-center text-[11px] text-muted-dark mt-5 pt-4 border-t border-border">
-      <button onClick={() => { setPhase('super'); setErr(''); }} className="inline-flex items-center gap-1 text-muted-dark hover:text-primary transition-colors">
+      <button onClick={async () => { setPhase('super'); setErr(''); setSuperPass(''); setSuperPass2(''); try { const s = await softglazeApi.members.superStatus(); setSuperNeedsSetup(!(s && s.configured)); } catch (_) { setSuperNeedsSetup(false); } }} className="inline-flex items-center gap-1 text-muted-dark hover:text-primary transition-colors">
         <ShieldCheck className="w-3.5 h-3.5" /> Super Admin access
       </button>
     </p>
@@ -650,15 +668,32 @@ export default function Gate({ children }) {
               <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
               <div className="w-11 h-11 rounded-xl grid place-items-center mb-4" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 28%, transparent)' }}><ShieldCheck className="w-5 h-5 text-amber-400" /></div>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">Super Admin</h1>
-              <p className="text-[12.5px] text-muted mt-1 mb-6">Source-owner access. Bypasses registration and unlocks the full workspace.</p>
-              <div className="space-y-3.5">
-                <div><label className={labelCls}>Username or email</label><input className={inputCls} value={superId} onChange={(e) => setSuperId(e.target.value)} placeholder="superadmin" autoFocus /></div>
-                <div><label className={labelCls}>Password</label><PasswordInput value={superPass} onChange={(e) => setSuperPass(e.target.value)} placeholder="Password" onKeyDown={(e) => { if (e.key === 'Enter') doSuperLogin(); }} /></div>
-              </div>
-              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
-              <button disabled={busy} onClick={doSuperLogin} className="mt-6 w-full h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-amber-500/25 transition-colors">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Enter workspace <ArrowRight className="w-4 h-4" /></>}
-              </button>
+              {superNeedsSetup ? (
+                <>
+                  <p className="text-[12.5px] text-muted mt-1 mb-6">First-run setup. Create the Super Admin credential for <span className="text-foreground">this installation</span> — it's stored hashed on this device and is the only way in, so keep it safe.</p>
+                  <div className="space-y-3.5">
+                    <div><label className={labelCls}>Username</label><input className={inputCls} value={superId} onChange={(e) => setSuperId(e.target.value)} placeholder="superadmin" autoFocus /></div>
+                    <div><label className={labelCls}>Password</label><PasswordInput value={superPass} onChange={(e) => setSuperPass(e.target.value)} placeholder="At least 8 characters" /></div>
+                    <div><label className={labelCls}>Confirm password</label><PasswordInput value={superPass2} onChange={(e) => setSuperPass2(e.target.value)} placeholder="Re-enter password" onKeyDown={(e) => { if (e.key === 'Enter') doSuperSetup(); }} /></div>
+                  </div>
+                  {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+                  <button disabled={busy} onClick={doSuperSetup} className="mt-6 w-full h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-amber-500/25 transition-colors">
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Create credentials <ArrowRight className="w-4 h-4" /></>}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-[12.5px] text-muted mt-1 mb-6">Source-owner access. Bypasses registration and unlocks the full workspace.</p>
+                  <div className="space-y-3.5">
+                    <div><label className={labelCls}>Username or email</label><input className={inputCls} value={superId} onChange={(e) => setSuperId(e.target.value)} placeholder="superadmin" autoFocus /></div>
+                    <div><label className={labelCls}>Password</label><PasswordInput value={superPass} onChange={(e) => setSuperPass(e.target.value)} placeholder="Password" onKeyDown={(e) => { if (e.key === 'Enter') doSuperLogin(); }} /></div>
+                  </div>
+                  {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+                  <button disabled={busy} onClick={doSuperLogin} className="mt-6 w-full h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-amber-500/25 transition-colors">
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Enter workspace <ArrowRight className="w-4 h-4" /></>}
+                  </button>
+                </>
+              )}
             </>
           )}
 
