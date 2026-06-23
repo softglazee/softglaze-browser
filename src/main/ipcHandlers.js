@@ -3396,6 +3396,19 @@ async function requireOwnerOrSuper(action = 'perform this action') {
   }
 }
 
+// Gate for buying / renewing a subscription. Owner-or-Super (or single-user),
+// but — unlike requireOwnerOrSuper — a BANNED owner is allowed through so they
+// can pay to restore their own access. Sub-members can never drive checkout.
+async function requirePurchaser(action = 'purchase a subscription') {
+  const member = await getActiveMember();
+  if (!member) return; // single-user mode == owner
+  if (member.role !== 'OWNER' && member.role !== 'SUPER_ADMIN') {
+    const err = new Error(`Only the Owner or Super Admin can ${action}.`);
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+}
+
 async function listMembers() {
   const db = getPrisma();
   const allMembers = await db.member.findMany({ orderBy: [{ createdAt: 'asc' }] });
@@ -5432,6 +5445,7 @@ async function assertNotBanned() {
 }
 
 async function redeemPurchaseCode(payload) {
+  await requirePurchaser('redeem a purchase code');
   const input = requireObject(payload);
   const code = requiredString(input.code, 'Purchase code');
   const v = payments.verifyPurchaseCode(code);
@@ -5736,6 +5750,7 @@ async function loadCheckoutProvider(id) {
 }
 
 async function startCheckout(payload) {
+  await requirePurchaser('purchase a subscription');
   const input = (payload && typeof payload === 'object') ? payload : {};
   const plan = await findPlan(input.planId);
   const { provider, def } = await loadCheckoutProvider(input.provider);
@@ -5750,6 +5765,7 @@ async function startCheckout(payload) {
 }
 
 async function pollCheckout(payload) {
+  await requirePurchaser('purchase a subscription');
   const input = requireObject(payload || {});
   const pending = (await readSetting('pendingCheckout', null)) || {};
   const { provider, def } = await loadCheckoutProvider(input.provider || pending.provider);
