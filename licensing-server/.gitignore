@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.local
+dist/
+# Generated per-tenant provisioning output (contains public config; keep out of git by default).
+tenants/
