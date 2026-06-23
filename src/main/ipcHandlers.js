@@ -419,6 +419,7 @@ async function rotateProxyIp(payload) {
 async function exportProfileArchive(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.profileId);
+  await assertCanAccessProfile(id);
   const password = requiredString(input.password, 'Encryption password');
   const db = getPrisma();
   const profile = await db.profile.findUnique({ where: { id } });
@@ -455,6 +456,7 @@ async function exportProfileArchive(payload) {
 async function cookieRobot(payload) {
   const input = requireObject(payload);
   const profileId = parseId(input.profileId ?? input.id);
+  await assertCanAccessProfile(profileId);
   const urls = Array.isArray(input.targetUrls) ? input.targetUrls.map((u) => String(u || '').trim()).filter(Boolean) : [];
   if (!urls.length) throw new Error('Provide at least one target URL for the cookie robot.');
 
@@ -652,6 +654,7 @@ async function directorySize(dir, cap = 200000) {
 async function getProfileStorageInfo(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const profile = await getPrisma().profile.findUnique({ where: { id } });
   if (!profile) throw new Error('Profile not found.');
   const dir = resolveProfileDataDir(profile.dataDirName);
@@ -1338,6 +1341,7 @@ async function analyzeProfileLeaks(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!profile) throw new Error('Profile not found.');
 
@@ -1544,6 +1548,7 @@ async function offlineProfileOpts(id) {
 async function exportProfileCookies(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const format = (optionalString(input.format) || 'json').toLowerCase();
   let cookies = await exportSessionCookies(String(id));
   if (cookies === null) {
@@ -1558,6 +1563,7 @@ async function exportProfileCookies(payload) {
 async function importProfileCookies(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const format = (optionalString(input.format) || 'json').toLowerCase();
   const data = requiredString(input.data, 'Cookie data');
 
@@ -1597,7 +1603,15 @@ async function importCookiesToRunning(payload) {
   const params = parsed.map(toSetCookieParam).filter(Boolean);
   if (params.length === 0) throw new Error('No valid cookies found to import.');
 
-  const sessions = listActiveSessions();
+  let sessions = listActiveSessions();
+  // Scope to running sessions whose profile the active member may access.
+  const accessCheck = await profileAccessChecker();
+  if (accessCheck) {
+    const sids = sessions.map((s) => Number(s.sessionId)).filter((n) => !Number.isNaN(n));
+    const rows = sids.length ? await getPrisma().profile.findMany({ where: { id: { in: sids } }, select: { id: true, ownerMemberId: true, assignedMemberId: true } }) : [];
+    const okIds = new Set(rows.filter(accessCheck).map((r) => r.id));
+    sessions = sessions.filter((s) => okIds.has(Number(s.sessionId)));
+  }
   if (sessions.length === 0) throw new Error('No profiles are running. Launch the target profiles first.');
 
   const results = [];
@@ -1670,6 +1684,7 @@ async function cloneProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const reroll = Boolean(input.reroll);
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
@@ -1744,6 +1759,58 @@ async function createProfileFromTemplate(payload) {
   return serializeProfile(created);
 }
 
+// ---- Profile access scoping (tenant isolation) ----------------------------
+// A member may only see / act on profiles within their own visible subtree
+// (assigned to, or owned by, themselves or a descendant). Single-user mode (no
+// active member) and the Super Admin are unrestricted; OWNER-and-up also keep
+// access to legacy/unstamped profiles (created before a team existed). Enforced
+// in main — never trust the renderer to hide a profile.
+async function profileAccessChecker() {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return null; // unrestricted
+  const all = await getPrisma().member.findMany();
+  const visible = permissions.visibleMemberIds(all, member);
+  const ownerPlus = permissions.rankOf(member.role) >= permissions.rankOf('OWNER');
+  return (p) => Boolean(p && (
+    (p.assignedMemberId != null && visible.has(p.assignedMemberId))
+    || (p.ownerMemberId != null && visible.has(p.ownerMemberId))
+    || (p.ownerMemberId == null && p.assignedMemberId == null && ownerPlus)
+  ));
+}
+
+async function assertCanAccessProfile(id) {
+  const check = await profileAccessChecker();
+  if (!check) return;
+  const p = await getPrisma().profile.findUnique({ where: { id }, select: { id: true, ownerMemberId: true, assignedMemberId: true } });
+  if (!p) throw new Error('Profile not found.');
+  if (!check(p)) { const e = new Error('You do not have access to this profile.'); e.code = 'FORBIDDEN'; throw e; }
+}
+
+// Split a renderer-supplied id list into the ones the active member may touch and
+// the ones they may not (the latter become per-id errors in bulk handlers).
+async function partitionAccessibleProfileIds(ids) {
+  const check = await profileAccessChecker();
+  if (!check) return { allowed: ids, denied: [] };
+  const rows = await getPrisma().profile.findMany({ where: { id: { in: ids } }, select: { id: true, ownerMemberId: true, assignedMemberId: true } });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const allowed = []; const denied = [];
+  for (const id of ids) { const r = byId.get(id); if (r && check(r)) allowed.push(id); else denied.push(id); }
+  return { allowed, denied };
+}
+
+// Merge the active member's ownership filter into a profile list query.
+async function scopedProfileWhere(baseWhere) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
+  const all = await getPrisma().member.findMany();
+  const visible = [...permissions.visibleMemberIds(all, member)];
+  const or = [{ assignedMemberId: { in: visible } }, { ownerMemberId: { in: visible } }];
+  if (permissions.rankOf(member.role) >= permissions.rankOf('OWNER')) {
+    or.push({ ownerMemberId: null, assignedMemberId: null });
+  }
+  return { AND: [baseWhere, { OR: or }] };
+}
+
 async function listProfiles(payload = {}) {
   const db = getPrisma();
   const search = optionalString(payload.search);
@@ -1752,14 +1819,14 @@ async function listProfiles(payload = {}) {
     where.OR = [{ title: { contains: search } }, { notes: { contains: search } }, { dataDirName: { contains: search } }, { proxyInfoString: { contains: search } }];
   }
 
-  const profiles = await db.profile.findMany({ where, orderBy: { createdAt: 'desc' }, include: { proxy: true, group: true } });
+  const profiles = await db.profile.findMany({ where: await scopedProfileWhere(where), orderBy: { createdAt: 'desc' }, include: { proxy: true, group: true } });
   return profiles.map(serializeProfile);
 }
 
 async function listTrash() {
   const db = getPrisma();
   const profiles = await db.profile.findMany({
-    where: { deletedAt: { not: null } },
+    where: await scopedProfileWhere({ deletedAt: { not: null } }),
     orderBy: { deletedAt: 'desc' },
     include: { proxy: true, group: true }
   });
@@ -1810,6 +1877,7 @@ async function updateProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const existing = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!existing) throw new Error('Profile not found.');
 
@@ -1861,6 +1929,7 @@ async function deleteProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
@@ -1882,6 +1951,7 @@ async function restoreProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
   await db.profile.update({ where: { id }, data: { deletedAt: null } });
@@ -1893,6 +1963,7 @@ async function purgeProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const removeLocalData = Boolean(input.removeLocalData);
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
@@ -1912,8 +1983,9 @@ async function bulkDeleteProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
-  const result = { trashed: [], errors: [] };
-  for (const id of ids) {
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids);
+  const result = { trashed: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
+  for (const id of allowed) {
     try {
       await closeProfileSession(String(id)).catch(() => {});
       await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
@@ -1930,8 +2002,9 @@ async function bulkRestoreProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
-  const result = { restored: [], errors: [] };
-  for (const id of ids) {
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids);
+  const result = { restored: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
+  for (const id of allowed) {
     try {
       await db.profile.update({ where: { id }, data: { deletedAt: null } });
       result.restored.push(id);
@@ -1946,9 +2019,10 @@ async function bulkPurgeProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids);
   const removeLocalData = Boolean(input.removeLocalData);
-  const result = { purged: [], errors: [] };
-  for (const id of ids) {
+  const result = { purged: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
+  for (const id of allowed) {
     try {
       const existing = await db.profile.findUnique({ where: { id } });
       if (!existing) { result.errors.push({ id, message: 'Profile not found.' }); continue; }
@@ -2072,7 +2146,8 @@ async function assignProfilesToGroup(payload) {
     const group = await db.group.findUnique({ where: { id: groupId } });
     if (!group) throw new Error('Selected group does not exist.');
   }
-  const res = await db.profile.updateMany({ where: { id: { in: ids } }, data: { groupId } });
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  const res = await db.profile.updateMany({ where: { id: { in: allowed } }, data: { groupId } });
   const label = groupId === null ? 'removed from group' : 'assigned to a group';
   for (const id of ids) { await logActivity(db, id, 'assign', label); }
   return { assigned: res.count, groupId };
@@ -2146,6 +2221,7 @@ async function launchProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!profile) throw new Error('Profile not found.');
 
@@ -2663,6 +2739,7 @@ async function listActivity(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const profile = await db.profile.findUnique({ where: { id }, select: { title: true, lastUsedAt: true, launchCount: true } });
   if (!profile) throw new Error('Profile not found.');
   const logs = await db.activityLog.findMany({ where: { profileId: id }, orderBy: { createdAt: 'desc' }, take: 50 });
@@ -2691,6 +2768,7 @@ async function liveProfileLeak(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const data = await liveLeakTest(String(id));
   if (data === null) throw new Error('Profile is not running. Launch it first to run a live leak test.');
 
@@ -6589,6 +6667,7 @@ async function setApiServerEnabled(payload) {
 async function getProfile2faToken(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id);
   const profile = await getPrisma().profile.findUnique({ where: { id }, select: { twoFactorSeed: true } });
   if (!profile) throw new Error('Profile not found.');
   if (!profile.twoFactorSeed) throw new Error('This profile has no 2FA secret saved.');
@@ -6609,6 +6688,8 @@ async function systemHumanType(payload) {
 async function bulkSynchronize(payload) {
   const input = requireObject(payload);
   const ids = parseIdArray(input.ids);
+  const { denied } = await partitionAccessibleProfileIds(ids);
+  if (denied.length) throw new Error('You do not have access to one or more of the selected profiles.');
   if (ids.length < 2) throw new Error('Select at least two profiles to synchronize (one Master + one or more Slaves).');
   const result = await launchSynchronizedSessions(ids, launchProfileById);
   await logActivity(getPrisma(), ids[0], 'synchronize', `master + ${ids.length - 1} slave(s)`).catch(() => {});
