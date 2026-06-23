@@ -15,7 +15,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const TARGET = path.join(__dirname, '..', 'src', 'main', 'tenant.config.json');
-const EMPTY = { tenantId: '', apiBaseUrl: '', publicKeyPem: '' };
+const EMPTY = { tenantId: '', apiBaseUrl: '', publicKeyPem: '', updateFeedUrl: '' };
 const writeConfig = (obj) => fs.writeFileSync(TARGET, JSON.stringify(obj, null, 2) + '\n');
 
 const args = process.argv.slice(2);
@@ -40,8 +40,8 @@ for (const k of ['tenantId', 'apiBaseUrl', 'publicKeyPem']) {
 }
 
 const original = fs.existsSync(TARGET) ? fs.readFileSync(TARGET, 'utf8') : (JSON.stringify(EMPTY, null, 2) + '\n');
-writeConfig({ tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem });
-console.log(`Baked tenant ${cfg.tenantId} into src/main/tenant.config.json`);
+writeConfig({ tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem, updateFeedUrl: cfg.updateFeedUrl || '' });
+console.log(`Baked tenant ${cfg.tenantId} into src/main/tenant.config.json${cfg.updateFeedUrl ? ' (with update feed)' : ''}`);
 
 if (args.includes('--bake-only')) {
   console.log('Bake-only: build skipped. Restore with: node scripts/build-tenant.js --reset');
