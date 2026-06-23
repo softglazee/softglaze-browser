@@ -80,6 +80,13 @@ export default function DbEncryptionSettings() {
         When the app is closed, the database is stored only as encrypted ciphertext that a file reader cannot open. While the app is <span className="text-foreground">running and unlocked</span>, a working copy is decrypted on disk so the app can use it — so this protects a stolen or copied drive, not a live, running machine.
       </div>
 
+      {!enabled && (
+        <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-[12px]" style={{ background: 'color-mix(in srgb, #6366f1 10%, transparent)', border: '1px solid color-mix(in srgb, #6366f1 22%, transparent)' }}>
+          <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-indigo-400" />
+          <span className="text-muted-foreground"><span className="text-foreground font-medium">Recommended.</span> This is the most complete way to protect <span className="text-foreground">proxy passwords</span>, 2FA seeds, saved cookies and account data at rest — it encrypts every field, not just some. Make a workspace backup first, then turn it on below.</span>
+        </div>
+      )}
+
       {enabled && (
         <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-[12px]" style={{ background: 'color-mix(in srgb, #10b981 10%, transparent)', color: '#10b981', border: '1px solid color-mix(in srgb, #10b981 22%, transparent)' }}>
           <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
