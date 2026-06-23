@@ -6085,9 +6085,9 @@ function serializeIpProvider(p) {
     status: p.status === 'ENABLED' ? 'ENABLED' : 'DISABLED',
     referralLink: p.referralLink || null,
     hasApiKey: Boolean(p.apiKey),
-    apiKeyMasked: maskSecret(p.apiKey),
+    apiKeyMasked: maskSecret(p.apiKey ? secretStore.open(p.apiKey) : ''),
     hasSecretKey: Boolean(p.secretKey),
-    secretKeyMasked: maskSecret(p.secretKey),
+    secretKeyMasked: maskSecret(p.secretKey ? secretStore.open(p.secretKey) : ''),
     updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : (p.updatedAt || null)
   };
 }
@@ -6109,8 +6109,10 @@ async function updateIpProviderCredentials(payload) {
   if (!provider) throw new Error('Provider not found.');
   const data = {};
   // Blank/undefined keeps the stored value (the renderer only ever sees a mask).
-  if (input.apiKey !== undefined && String(input.apiKey).trim() !== '') data.apiKey = String(input.apiKey).trim();
-  if (input.secretKey !== undefined && String(input.secretKey).trim() !== '') data.secretKey = String(input.secretKey).trim();
+  // Keys are sealed at rest; open() (in serializeIpProvider) is fail-safe for any
+  // legacy plaintext value.
+  if (input.apiKey !== undefined && String(input.apiKey).trim() !== '') data.apiKey = secretStore.seal(String(input.apiKey).trim());
+  if (input.secretKey !== undefined && String(input.secretKey).trim() !== '') data.secretKey = secretStore.seal(String(input.secretKey).trim());
   // Allow explicit clearing.
   if (input.apiKey === null || input.apiKey === '') data.apiKey = null;
   if (input.secretKey === null || input.secretKey === '') data.secretKey = null;
