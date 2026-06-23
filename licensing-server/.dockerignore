@@ -1,0 +1,7 @@
+node_modules
+.env
+tenants
+test
+*.md
+Dockerfile
+docker-compose.yml

@@ -1,0 +1,38 @@
+# One-command local stack: Postgres + the licensing server.
+#   MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))") \
+#   docker compose up --build
+# The server syncs the schema (prisma db push) on start, then listens on :8787.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: softglaze
+      POSTGRES_PASSWORD: softglaze
+      POSTGRES_DB: softglaze_licensing
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U softglaze"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://softglaze:softglaze@db:5432/softglaze_licensing?schema=public"
+      MASTER_KEY: "${MASTER_KEY:?set MASTER_KEY (32-byte base64) in your shell before compose up}"
+      PORT: "8787"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8787}"
+      LEASE_DAYS: "7"
+    command: sh -c "npx prisma db push --skip-generate --accept-data-loss && node src/server.js"
+    ports:
+      - "8787:8787"
+
+volumes:
+  pgdata:
