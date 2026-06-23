@@ -105,6 +105,8 @@ export default function AppShell({ children }) {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
+  const [pwFor, setPwFor] = useState(null); // member id needing a password (upward switch)
+  const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [counts, setCounts] = useState({ profiles: 0, sessions: 0 });
   const ref = useRef(null);
@@ -152,7 +154,7 @@ export default function AppShell({ children }) {
 
   useEffect(() => {
     function onDoc(e) {
-      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setPinFor(null); setErr(''); }
+      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); }
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
@@ -162,9 +164,13 @@ export default function AppShell({ children }) {
     setErr('');
     if (m.hasPin && pinFor !== m.id) { setPinFor(m.id); setPin(''); return; }
     try {
-      await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined);
+      await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined, pwFor === m.id ? pw : undefined);
       window.location.reload();
-    } catch (e) { setErr(e.message || 'Could not switch member.'); }
+    } catch (e) {
+      // Switching up to a higher/equal-rank member requires that member's password.
+      if (e.code === 'NEED_PASSWORD') { setPwFor(m.id); setPw(''); setErr('Enter this member’s password to switch into their account.'); return; }
+      setErr(e.message || 'Could not switch member.');
+    }
   }
 
   async function doLock() {
@@ -278,9 +284,15 @@ export default function AppShell({ children }) {
                         </span>
                         {m.isCurrent && <Check className="w-4 h-4 text-primary" />}
                       </button>
-                      {pinFor === m.id && (
+                      {pinFor === m.id && pwFor !== m.id && (
                         <div className="px-3 pb-2 flex items-center gap-2">
                           <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder="PIN" className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
+                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">Go</button>
+                        </div>
+                      )}
+                      {pwFor === m.id && (
+                        <div className="px-3 pb-2 flex items-center gap-2">
+                          <input type="password" value={pw} autoFocus onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder={`${m.name}'s password`} className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
                           <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">Go</button>
                         </div>
                       )}
