@@ -3584,6 +3584,7 @@ async function acceptInvite(payload) {
   const member = await db.member.findFirst({ where: { inviteCode: code } });
   if (!member) throw new Error('That invite code is not valid.');
   if (member.inviteStatus === 'active') throw new Error('This invite has already been used.');
+  if (member.status === 'banned' || member.status === 'suspended') throw new Error('This account is not active — contact your administrator.');
   const { salt, hash } = hashSecret(password);
   const data = { passwordSalt: salt, passwordHash: hash, inviteStatus: 'active', inviteCode: null };
   if (input.name) data.name = requiredString(input.name, 'Name');
@@ -3612,6 +3613,7 @@ async function memberLogin(payload) {
   }
   if (member.inviteStatus === 'pending') throw new Error('Redeem your invite code first to set a password.');
   if (member.status === 'suspended') throw new Error('This member is suspended.');
+  if (member.status === 'banned') throw new Error('This account is banned.');
   if (!verifySecret(password, member.passwordSalt, member.passwordHash)) {
     const err = new Error('Incorrect password.'); err.code = 'BAD_CREDS'; throw err;
   }
@@ -3813,6 +3815,7 @@ async function updateMember(payload) {
   const db = getPrisma();
   const target = await db.member.findUnique({ where: { id } });
   if (!target) throw new Error('Member not found.');
+  await assertCanManageMember(id);
   const data = {};
   if (input.name !== undefined) data.name = requiredString(input.name, 'Member name');
   if (input.email !== undefined) data.email = optionalString(input.email);
@@ -3837,6 +3840,7 @@ async function setMemberPin(payload) {
   await requirePermission('members.manage');
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanManageMember(id);
   const db = getPrisma();
   if (input.pin) {
     const { salt, hash } = hashSecret(requiredString(input.pin, 'PIN'));
@@ -3845,6 +3849,29 @@ async function setMemberPin(payload) {
     await db.member.update({ where: { id }, data: { pinSalt: null, pinHash: null } });
   }
   return { ok: true };
+}
+
+// Subtree + rank guard for acting ON another member's record (edit / pin /
+// instructions). Single-user mode and the Super Admin are unrestricted. You may
+// act on yourself (when allowSelf), or on a STRICTLY lower-ranked member inside
+// your visible subtree — mirrors deleteMember's scoping.
+async function assertCanManageMember(id, { allowSelf = true } = {}) {
+  const actor = await getActiveMember();
+  if (!actor || actor.role === 'SUPER_ADMIN') return;
+  if (Number(id) === Number(actor.id)) {
+    if (allowSelf) return;
+    const e = new Error('You cannot do this to your own account here.'); e.code = 'FORBIDDEN'; throw e;
+  }
+  const db = getPrisma();
+  const target = await db.member.findUnique({ where: { id } });
+  if (!target) throw new Error('Member not found.');
+  if (permissions.rankOf(actor.role) <= permissions.rankOf(target.role)) {
+    const e = new Error('You can only manage members below your role.'); e.code = 'FORBIDDEN'; throw e;
+  }
+  const all = await db.member.findMany();
+  if (!permissions.visibleMemberIds(all, actor).has(Number(id))) {
+    const e = new Error('You can only manage members you created.'); e.code = 'FORBIDDEN'; throw e;
+  }
 }
 
 async function deleteMember(payload) {
@@ -4527,6 +4554,7 @@ async function setMemberInstructions(payload) {
   await requirePermission('members.manage');
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanManageMember(id);
   const text = String(input.instructions || '').slice(0, 4000);
   const map = (await readSetting('memberInstructions', {})) || {};
   if (text) map[id] = text; else delete map[id];
@@ -4590,11 +4618,13 @@ async function reassignProfiles(payload) {
     targetName = target.name;
   }
 
+  // Source scoping: you can only move profiles you actually have access to.
+  const { allowed } = await partitionAccessibleProfileIds(profileIds);
   const res = await db.profile.updateMany({
-    where: { id: { in: profileIds }, deletedAt: null },
+    where: { id: { in: allowed }, deletedAt: null },
     data: { assignedMemberId: targetId }
   });
-  for (const pid of profileIds) {
+  for (const pid of allowed) {
     await logActivity(db, pid, 'reassign', `${actorName} → ${targetName}`).catch(() => {});
   }
   return { reassigned: res.count, memberId: targetId, memberName: targetName };
