@@ -1133,13 +1133,28 @@ function WarmerPanel() {
 // ---------------------------------------------------------------------------
 // Task History
 // ---------------------------------------------------------------------------
+// Collapse history rows that share a runId — older saves may hold two entries per
+// run (a 'running' start + a 'completed'/'stopped' finish). Keep the first
+// occurrence (most recent, already updated) so each run renders as one row.
+function dedupeHistory(rows) {
+  if (!Array.isArray(rows)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const r of rows) {
+    const k = r && r.runId;
+    if (k) { if (seen.has(k)) continue; seen.add(k); }
+    out.push(r);
+  }
+  return out;
+}
+
 function HistoryPanel() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     softglazeApi.automation.getHistory()
-      .then((rows) => setHistory(Array.isArray(rows) ? rows : []))
+      .then((rows) => setHistory(dedupeHistory(rows)))
       .catch(() => setHistory([]))
       .finally(() => setLoading(false));
   }, []);
@@ -1173,7 +1188,7 @@ function HistoryPanel() {
             const d = describeHistoryEntry(h);
             const Icon = d.icon;
             return (
-              <tr key={h.runId || h.at || i} className="text-foreground">
+              <tr key={`${h.runId || h.at || 'row'}-${i}`} className="text-foreground">
                 <td className="px-4 py-2.5"><span className="inline-flex items-center gap-2"><Icon className={`w-3.5 h-3.5 ${d.iconCls}`} /> {d.label}</span></td>
                 <td className="px-4 py-2.5 text-muted-foreground">{d.profiles}</td>
                 <td className="px-4 py-2.5 text-muted-foreground max-w-[320px] truncate">{d.detail || '—'}</td>
