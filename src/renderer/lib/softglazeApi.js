@@ -159,7 +159,12 @@ export const softglazeApi = {
     manualResolve: (payload) => getSoftglazeApi().payments.manualResolve(payload)
   },
   billing: {
-    getPlans: () => getSoftglazeApi().billing.getPlans()
+    getPlans: () => getSoftglazeApi().billing.getPlans(),
+    plansAdmin: () => getSoftglazeApi().billing.plansAdmin(),
+    savePlan: (payload) => getSoftglazeApi().billing.savePlan(payload),
+    deletePlan: (payload) => getSoftglazeApi().billing.deletePlan(payload),
+    assignPlan: (payload) => getSoftglazeApi().billing.assignPlan(payload),
+    subscribers: () => getSoftglazeApi().billing.subscribers()
   },
   invoices: {
     list: (payload) => getSoftglazeApi().invoices.list(payload),

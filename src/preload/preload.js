@@ -112,6 +112,11 @@ const CHANNELS = Object.freeze({
   PAYMENT_MANUAL_LIST: 'payment:manual-list',
   PAYMENT_MANUAL_RESOLVE: 'payment:manual-resolve',
   BILLING_GET_PLANS: 'billing:get-plans',
+  BILLING_PLANS_ADMIN: 'billing:plans-admin',
+  BILLING_PLAN_SAVE: 'billing:plan-save',
+  BILLING_PLAN_DELETE: 'billing:plan-delete',
+  BILLING_ASSIGN: 'billing:assign',
+  BILLING_SUBSCRIBERS: 'billing:subscribers',
   INVOICE_LIST: 'invoice:list',
   INVOICE_CREATE: 'invoice:create',
   INVOICE_UPDATE: 'invoice:update',
@@ -359,7 +364,12 @@ const api = Object.freeze({
     manualResolve: (payload) => invoke(CHANNELS.PAYMENT_MANUAL_RESOLVE, payload)
   }),
   billing: Object.freeze({
-    getPlans: () => invoke(CHANNELS.BILLING_GET_PLANS)
+    getPlans: () => invoke(CHANNELS.BILLING_GET_PLANS),
+    plansAdmin: () => invoke(CHANNELS.BILLING_PLANS_ADMIN),
+    savePlan: (payload) => invoke(CHANNELS.BILLING_PLAN_SAVE, payload),
+    deletePlan: (payload) => invoke(CHANNELS.BILLING_PLAN_DELETE, payload),
+    assignPlan: (payload) => invoke(CHANNELS.BILLING_ASSIGN, payload),
+    subscribers: () => invoke(CHANNELS.BILLING_SUBSCRIBERS)
   }),
   invoices: Object.freeze({
     list: (payload) => invoke(CHANNELS.INVOICE_LIST, payload),
