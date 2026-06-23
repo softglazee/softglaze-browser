@@ -76,6 +76,18 @@ export default function BillingPage() {
     finally { setBusy(''); }
   }
 
+  // Start the full-access free trial for this workspace.
+  async function startTrial() {
+    setErr(''); setMsg(''); setBusy('trial');
+    try {
+      const lic = await softglazeApi.license.startTrial();
+      const d = lic?.daysLeftTrial ?? '';
+      setMsg(`Your free trial is active${d ? ` — ${d} days` : ''} of full access. Enjoy!`);
+      load();
+    } catch (e) { setErr(e.message || 'Could not start the trial.'); }
+    finally { setBusy(''); }
+  }
+
   // Open the method picker for a plan. If exactly one automated method is
   // enabled, start it immediately (no extra click).
   function openPay(plan) {
@@ -136,6 +148,12 @@ export default function BillingPage() {
 
   // CTA label/state for a given plan card given the viewer's current license.
   function planCta(plan) {
+    if (plan.kind === 'trial') {
+      if (isExempt) return { label: 'Included', disabled: true, icon: Crown, trial: true };
+      if (isPaid) return { label: 'On a paid plan', disabled: true, icon: Check, trial: true };
+      if (license?.isTrial) return { label: `Trial active · ${license.daysLeftTrial ?? ''}d left`, disabled: true, icon: Sparkles, trial: true };
+      return { label: 'Start free trial', disabled: false, icon: Sparkles, trial: true };
+    }
     if (isExempt) return { label: 'Included', disabled: true, icon: Crown };
     if (isPaid && plan.tier === currentTier) return { label: 'Current plan', disabled: true, icon: Check };
     if (plan.tier === 'enterprise' && currentTier === 'pro') return { label: 'Upgrade to Enterprise', disabled: false, icon: ArrowUpRight };
@@ -258,15 +276,17 @@ export default function BillingPage() {
                   </ul>
 
                   <button
-                    onClick={() => openPay(plan)}
-                    disabled={cta.disabled}
+                    onClick={() => cta.trial ? startTrial() : openPay(plan)}
+                    disabled={cta.disabled || (cta.trial && busy === 'trial')}
                     className={`mt-5 inline-flex items-center justify-center gap-2 h-10 rounded-lg text-[13px] font-semibold disabled:opacity-60 ${
                       cta.disabled
                         ? 'bg-secondary text-muted-foreground cursor-default'
-                        : 'text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25'
+                        : cta.trial
+                          ? 'text-white bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-lg shadow-emerald-500/25'
+                          : 'text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25'
                     }`}
                   >
-                    <CtaIcon className="w-4 h-4" /> {cta.label}
+                    {cta.trial && busy === 'trial' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CtaIcon className="w-4 h-4" />} {cta.label}
                   </button>
                 </div>
               );
@@ -624,6 +644,8 @@ function PlanManager({ onChange }) {
 function PlanForm({ plan, onClose, onSaved }) {
   const [name, setName] = useState(plan?.name ?? '');
   const [tier, setTier] = useState(plan?.tier ?? 'pro');
+  const [kind, setKind] = useState(plan?.kind === 'trial' ? 'trial' : 'paid');
+  const [trialDays, setTrialDays] = useState(plan?.trialDays ?? 7);
   const [amount, setAmount] = useState(plan?.amount ?? '');
   const [currency, setCurrency] = useState(plan?.currency ?? 'USD');
   const [months, setMonths] = useState(plan?.months ?? 1);
@@ -638,13 +660,14 @@ function PlanForm({ plan, onClose, onSaved }) {
   async function save() {
     setErr('');
     if (!name.trim()) { setErr('Give the package a name.'); return; }
-    if (amount === '' || Number(amount) < 0 || Number.isNaN(Number(amount))) { setErr('Enter a valid price.'); return; }
+    if (kind === 'paid' && (amount === '' || Number(amount) < 0 || Number.isNaN(Number(amount)))) { setErr('Enter a valid price.'); return; }
     setBusy(true);
     try {
       await softglazeApi.billing.savePlan({
-        id: plan?.id, name: name.trim(), tier, amount: String(amount), currency: currency.trim() || 'USD',
-        months: Number(months) || 1, period: period.trim() || 'month', tagline: tagline.trim(),
-        highlight, active, features: features.split('\n').map((f) => f.trim()).filter(Boolean)
+        id: plan?.id, name: name.trim(), tier, kind, trialDays: Number(trialDays) || 7,
+        amount: kind === 'trial' ? '0' : String(amount), currency: currency.trim() || 'USD',
+        months: Number(months) || 1, period: kind === 'trial' ? `${Number(trialDays) || 7} days` : (period.trim() || 'month'),
+        tagline: tagline.trim(), highlight, active, features: features.split('\n').map((f) => f.trim()).filter(Boolean)
       });
       onSaved();
     } catch (e) { setErr(e.message || 'Could not save plan.'); setBusy(false); }
@@ -662,14 +685,25 @@ function PlanForm({ plan, onClose, onSaved }) {
         </div>
         <div className="p-5 grid grid-cols-2 gap-3">
           <div className="col-span-2"><label className={labelCls}>Package name</label><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Pro" /></div>
-          <div><label className={labelCls}>Price</label><input className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5" /></div>
-          <div><label className={labelCls}>Currency</label><input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} /></div>
-          <div><label className={labelCls}>Billed per</label>
-            <select className={inputCls} value={period} onChange={(e) => setPeriod(e.target.value)}>
-              {['month', 'year', 'quarter', 'week'].map((p) => <option key={p} value={p}>{p}</option>)}
+          <div><label className={labelCls}>Plan type</label>
+            <select className={inputCls} value={kind} onChange={(e) => setKind(e.target.value)}>
+              <option value="paid">Paid</option><option value="trial">Free trial</option>
             </select>
           </div>
-          <div><label className={labelCls}>Term (months granted)</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} placeholder="1" /></div>
+          {kind === 'trial'
+            ? <div><label className={labelCls}>Trial length (days)</label><input className={inputCls} value={trialDays} onChange={(e) => setTrialDays(e.target.value)} placeholder="7" /></div>
+            : <div><label className={labelCls}>Price</label><input className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5" /></div>}
+          <div><label className={labelCls}>Currency</label><input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} disabled={kind === 'trial'} /></div>
+          {kind === 'trial'
+            ? <div><label className={labelCls}>Shown as</label><input className={inputCls} value={`${Number(trialDays) || 7} days · free`} disabled /></div>
+            : (<>
+                <div><label className={labelCls}>Billed per</label>
+                  <select className={inputCls} value={period} onChange={(e) => setPeriod(e.target.value)}>
+                    {['month', 'year', 'quarter', 'week'].map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div><label className={labelCls}>Term (months granted)</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} placeholder="1" /></div>
+              </>)}
           <div><label className={labelCls}>Feature tier</label>
             <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value)}>
               <option value="pro">pro</option><option value="enterprise">enterprise</option>
