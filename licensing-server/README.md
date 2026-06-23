@@ -83,20 +83,36 @@ curl -XPOST $BASE/v1/tenant/codes -H "Authorization: Bearer $TENANT_KEY" \
 | GET | `/health` | — | liveness |
 | POST | `/v1/register` | tenant-scoped | register an install |
 | POST | `/v1/checkout` | tenant-scoped | create a hosted payment session |
-| POST | `/v1/webhooks/stripe/:tenantId` | Stripe signature | provision on payment |
+| POST | `/v1/webhooks/{stripe,paypal,cryptomus}/:tenantId` | provider signature | provision on payment |
 | POST | `/v1/license` | tenant-scoped | issue a signed lease |
 | POST | `/v1/redeem` | tenant-scoped | redeem an activation code |
 | POST | `/v1/tenant/payment-config` | tenant API key | set provider keys |
 | POST/GET | `/v1/tenant/plans` | tenant API key | manage plans |
 | POST | `/v1/tenant/codes` | tenant API key | mint activation codes |
+| POST | `/v1/tenant/rotate-key` | tenant API key | rotate the tenant Ed25519 keypair |
+
+### Provider credentials (`/v1/tenant/payment-config`)
+All keys are sealed at rest; configure the webhook URL it returns in the provider dashboard.
+- **stripe**: `{ secretKey, webhookSecret }`
+- **paypal**: `{ clientId, clientSecret, env: "live"|"sandbox", webhookId }`
+- **cryptomus**: `{ merchantId, apiKey }` (webhook signature is verified offline)
+
+Public endpoints (`register`/`checkout`/`license`/`redeem`) are rate-limited (120/min/IP,
+in-memory per instance — move to a shared store for multi-instance).
 
 ## Security notes / TODO before production
 - Put this behind **HTTPS/TLS** (required for Stripe webhooks + the Bearer keys).
 - `MASTER_KEY` should come from a real secret manager, not a flat `.env`, in prod.
 - Add **rate limiting** + request logging on the public endpoints.
-- Add **per-tenant key rotation** and an admin auth layer for cross-tenant ops.
-- Phase 4: PayPal + Cryptomus (per-tenant stored keys, per-tenant webhook verify),
-  recurring subscriptions, and replay/nonce hardening.
+- Add an admin auth layer for any cross-tenant ops.
+- Move the in-memory rate limiter to a shared store (Redis) for multi-instance.
+- **Still TODO (Phase 4 remainder): recurring subscriptions** (Stripe subscription
+  mode + invoice.paid / customer.subscription.deleted) — the current model grants a
+  fixed term per one-time payment. This needs live-Stripe testing.
+
+Done in Phase 4: PayPal + Cryptomus adapters (per-tenant stored keys, per-tenant
+webhook verification), unified Payment-row provisioning + webhook idempotency,
+per-tenant key rotation, and basic rate limiting.
 
 ## What this does NOT do
 Any client-side license can ultimately be patched out of an open desktop binary.
