@@ -6,7 +6,8 @@ const crypto = require('node:crypto');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
 const tenantApiAuth = require('../middleware/tenantApiAuth');
-const { sealJson } = require('../crypto/secrets');
+const { sealJson, seal } = require('../crypto/secrets');
+const { generateTenantKeypair } = require('../crypto/keys');
 const { publicBaseUrl } = require('../env');
 
 const router = express.Router();
@@ -67,6 +68,15 @@ router.post('/codes', asyncHandler(async (req, res) => {
     codes.push(code);
   }
   res.json({ codes });
+}));
+
+// Rotate this tenant's Ed25519 signing keypair. Returns the NEW public key — the
+// merchant must rebuild their app with it; leases signed by the old key stop
+// verifying once the rebuilt app ships.
+router.post('/rotate-key', asyncHandler(async (req, res) => {
+  const { publicKeyPem, privateKeyPem } = generateTenantKeypair();
+  await prisma.tenant.update({ where: { id: req.tenant.id }, data: { publicKeyPem, privateKeySealed: seal(privateKeyPem) } });
+  res.json({ publicKeyPem, note: 'Rebuild the tenant app with this public key. Existing leases stop verifying once the rebuilt app is installed.' });
 }));
 
 module.exports = router;
