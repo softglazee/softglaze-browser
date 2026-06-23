@@ -1,6 +1,7 @@
 'use strict';
 // Centralized, validated environment. Fails fast at startup if misconfigured.
-require('dotenv').config();
+// dotenv is optional — in containers/CI the vars come from the real environment.
+try { require('dotenv').config(); } catch (_) { /* dotenv not installed: use process.env as-is */ }
 
 function required(name) {
   const v = process.env[name];
