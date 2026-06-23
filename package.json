@@ -8,6 +8,7 @@
     "build": "vite build && electron-builder",
     "build:frontend": "vite build",
     "build:electron": "prisma generate && electron-builder --win --x64",
+    "build:tenant": "node scripts/build-tenant.js",
     "check:deps": "node scripts/check-deps.js",
     "test": "node --test \"test/**/*.test.js\"",
     "postinstall": "prisma generate"

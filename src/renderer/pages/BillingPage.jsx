@@ -31,6 +31,7 @@ export default function BillingPage() {
   const [license, setLicense] = useState(null);
   const [plansInfo, setPlansInfo] = useState(null);
   const [seats, setSeats] = useState(null);
+  const [backend, setBackend] = useState(null); // licensing-backend status (when a tenant build)
   const [loading, setLoading] = useState(true);
 
   // Checkout + redeem state lives at page level so the panel persists across cards.
@@ -49,14 +50,15 @@ export default function BillingPage() {
 
   const load = useCallback(async () => {
     try {
-      const [cur, lic, plans, seatUsage, methodList] = await Promise.all([
+      const [cur, lic, plans, seatUsage, methodList, backendInfo] = await Promise.all([
         softglazeApi.members.current().catch(() => null),
         softglazeApi.license.get().catch(() => null),
         softglazeApi.billing.getPlans().catch(() => null),
         softglazeApi.team.seatUsage().catch(() => null),
-        softglazeApi.payments.listMethods().catch(() => ({ methods: [] }))
+        softglazeApi.payments.listMethods().catch(() => ({ methods: [] })),
+        softglazeApi.license.backendInfo().catch(() => null)
       ]);
-      setMe(cur); setLicense(lic); setPlansInfo(plans); setSeats(seatUsage);
+      setMe(cur); setLicense(lic); setPlansInfo(plans); setSeats(seatUsage); setBackend(backendInfo);
       setMethods(methodList && Array.isArray(methodList.methods) ? methodList.methods : []);
     } catch (e) { /* ignore — best-effort */ }
     finally { setLoading(false); }
@@ -170,6 +172,19 @@ export default function BillingPage() {
         </h1>
         <p className="text-[13px] text-muted-foreground mt-1">Manage your subscription, compare plans, and upgrade — all in one place.</p>
       </div>
+
+      {/* Backend-licensed build: show the verified-license status */}
+      {backend?.enabled && (
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg" style={{ background: 'color-mix(in srgb, #10b981 8%, transparent)', border: '1px solid color-mix(in srgb, #10b981 22%, transparent)' }}>
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="text-[12.5px] text-foreground">
+            {backend.lease
+              ? <>Licensed &amp; verified · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · renews ${new Date(backend.lease.currentPeriodEnd).toLocaleDateString()}` : ''}</>
+              : <>Licensing active — no paid license yet for this install.</>}
+          </span>
+          <span className="ml-auto text-[10.5px] text-muted-foreground font-mono">{backend.tenantId}</span>
+        </div>
+      )}
 
       {/* Current subscription */}
       <div className="rounded-xl bg-card border border-border p-5">
