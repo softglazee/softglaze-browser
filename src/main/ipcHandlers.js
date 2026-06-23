@@ -158,6 +158,11 @@ const CHANNELS = Object.freeze({
   PAYMENT_MANUAL_LIST: 'payment:manual-list',
   PAYMENT_MANUAL_RESOLVE: 'payment:manual-resolve',
   BILLING_GET_PLANS: 'billing:get-plans',
+  BILLING_PLANS_ADMIN: 'billing:plans-admin',
+  BILLING_PLAN_SAVE: 'billing:plan-save',
+  BILLING_PLAN_DELETE: 'billing:plan-delete',
+  BILLING_ASSIGN: 'billing:assign',
+  BILLING_SUBSCRIBERS: 'billing:subscribers',
   INVOICE_LIST: 'invoice:list',
   INVOICE_CREATE: 'invoice:create',
   INVOICE_UPDATE: 'invoice:update',
@@ -4881,11 +4886,12 @@ const TRIAL_DAYS = 7;
 const GRACE_DAYS = 3; // after the trial/paid term lapses: app still works but nags, then bans
 const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months: 1, days: 30, label: '$5 / month' });
 
-// Purchasable plans catalog — the single source of truth for the Billing page's
-// comparison cards and for plan-aware checkout. `pro` mirrors PLAN (the app's
-// historical $5/month price); `enterprise` is a higher tier. Prices are defaults
-// the source owner can adjust here; both are billed monthly via the same checkout.
-const BILLING_PLANS = Object.freeze([
+// Purchasable plans catalog — the BUILT-IN DEFAULTS. The live catalog is persisted
+// in Setting['billingPlans'] and fully editable by the Super Admin (price, name,
+// tagline, features, highlight, active) plus brand-new packages. `pro` mirrors PLAN
+// (the app's historical $5/month price). When no override is saved, these defaults
+// are used verbatim; both are billed monthly via the same checkout.
+const DEFAULT_BILLING_PLANS = Object.freeze([
   Object.freeze({
     id: 'pro',
     tier: 'pro',
@@ -4929,24 +4935,171 @@ const BILLING_PLANS = Object.freeze([
   })
 ]);
 
-function findPlan(planId) {
+// Coerce any raw plan record (a saved override or a default) into the canonical
+// shape the renderer + checkout expect. Tolerant of partial/edited input.
+function normalizePlan(raw, idx) {
+  const p = (raw && typeof raw === 'object') ? raw : {};
+  let id = String(p.id || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!id) id = `plan-${idx == null ? 0 : idx}`;
+  const tier = String(p.tier || 'pro').toLowerCase() === 'enterprise' ? 'enterprise' : 'pro';
+  const features = Array.isArray(p.features) ? p.features.map((f) => String(f)).filter((f) => f.trim() !== '').slice(0, 30) : [];
+  return {
+    id,
+    tier,
+    name: String(p.name || 'Plan').slice(0, 60),
+    amount: String(p.amount == null ? '0' : p.amount).slice(0, 20),
+    currency: String(p.currency || PLAN.currency).toUpperCase().slice(0, 6),
+    months: Math.max(1, Number.parseInt(p.months, 10) || 1),
+    period: String(p.period || 'month').slice(0, 16),
+    tagline: String(p.tagline || '').slice(0, 200),
+    highlight: Boolean(p.highlight),
+    active: p.active === undefined ? true : Boolean(p.active),
+    features
+  };
+}
+
+// The LIVE plans catalog: the Super Admin's saved overrides if present, else the
+// built-in defaults. Includes inactive plans (callers filter as needed).
+async function readBillingPlans() {
+  const stored = await readSetting('billingPlans', null);
+  const list = Array.isArray(stored) && stored.length ? stored : DEFAULT_BILLING_PLANS;
+  return list.map((p, i) => normalizePlan(p, i));
+}
+
+// Resolve a plan by id from the live catalog (async — the catalog is persisted).
+// Falls back to the first active plan, then the first plan, so checkout never
+// dereferences undefined even if an id was deleted between page-load and pay.
+async function findPlan(planId) {
   const id = String(planId || '').toLowerCase();
-  return BILLING_PLANS.find((p) => p.id === id) || BILLING_PLANS[0];
+  const plans = await readBillingPlans();
+  return plans.find((p) => p.id === id) || plans.find((p) => p.active) || plans[0] || normalizePlan(DEFAULT_BILLING_PLANS[0], 0);
 }
 
 // Renderer-facing plans catalog + the viewer's current tier/state, so the Billing
 // page can highlight the active plan and decide which CTA to show. Reuses
-// getLicense (which already handles the Super-Admin exempt path).
+// getLicense (which already handles the Super-Admin exempt path). `canManage` lets
+// the page reveal the plan-editor / subscribers / assign controls.
 async function getBillingPlans() {
   const lic = await getLicense();
+  const me = await getActiveMember();
+  const all = await readBillingPlans();
   return {
-    plans: BILLING_PLANS,
+    plans: all.filter((p) => p.active),
     currency: PLAN.currency,
     currentTier: lic.tier || 'pro',
     state: lic.state,
     isPaid: Boolean(lic.isPaid),
-    isExempt: Boolean(lic.isExempt)
+    isExempt: Boolean(lic.isExempt),
+    canManage: Boolean(me && me.role === 'SUPER_ADMIN')
   };
+}
+
+// ---- Super-Admin plan management (edit prices/details, add packages) ----------
+// All plans incl. inactive — for the editor grid.
+async function listBillingPlansAdmin() {
+  await requireSuperAdmin();
+  return { plans: await readBillingPlans(), currency: PLAN.currency };
+}
+
+// Create (no/blank id) or update (matching id) a plan. New ids are slugged from
+// the name and de-duplicated. Returns the full refreshed catalog.
+async function saveBillingPlan(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const plans = await readBillingPlans();
+  let id = String(input.id || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!id) {
+    const base = String(input.name || 'plan').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'plan';
+    id = base; let n = 2;
+    while (plans.some((p) => p.id === id)) id = `${base}-${n++}`;
+  }
+  const incoming = normalizePlan({ ...input, id }, plans.length);
+  const idx = plans.findIndex((p) => p.id === id);
+  if (idx >= 0) plans[idx] = incoming; else plans.push(incoming);
+  await writeSetting('billingPlans', plans);
+  return { plan: incoming, plans };
+}
+
+// Delete a plan by id (at least one must remain so checkout always has a target).
+async function deleteBillingPlan(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const id = String(input.id || '').toLowerCase();
+  const plans = (await readBillingPlans()).filter((p) => p.id !== id);
+  if (!plans.length) throw new Error('At least one plan must remain.');
+  await writeSetting('billingPlans', plans);
+  return { plans };
+}
+
+// Assign / grant a plan to an owner tree directly (the Super Admin "self-assign"
+// and gift flow). Advances the paid term, clears any ban, and records a `grant`
+// invoice so it shows in the subscribers + invoices lists. `charge:true` records
+// the plan price (a sale logged after the fact); otherwise the invoice is $0.
+async function assignPlan(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const ownerId = (input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : await resolveLicenseOwnerId();
+  const plan = await findPlan(input.planId);
+  const months = Math.max(1, Number.parseInt(input.months, 10) || plan.months || 1);
+  const lic = await ensureLicense(ownerId);
+  const code = optionalString(input.code) || payments.generatePurchaseCode(months);
+  const updated = await applyPaidMonths(lic, months, code, plan.tier);
+  await recordInvoice({
+    ownerId: ownerId ?? null,
+    provider: 'grant',
+    amount: input.charge ? plan.amount : '0',
+    currency: plan.currency,
+    tier: plan.tier,
+    months,
+    reference: code,
+    note: optionalString(input.note) || `Assigned ${plan.name} by Super Admin`,
+    status: 'paid',
+    source: 'grant'
+  });
+  return { ok: true, ownerId, plan: { id: plan.id, name: plan.name, tier: plan.tier, amount: plan.amount, currency: plan.currency }, months, code, license: await licenseView(updated) };
+}
+
+// Subscribers overview for the Super Admin Billing console: every owner tree with
+// join date, plan/tier, expiry, days left, team size and last payment.
+async function listSubscribers() {
+  await requireSuperAdmin();
+  const db = getPrisma();
+  const owners = await db.member.findMany({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } });
+  const plans = await readBillingPlans();
+  const planNameForTier = (t) => { const p = plans.find((x) => x.tier === t && x.active) || plans.find((x) => x.tier === t); return p ? p.name : (t || 'pro'); };
+  const out = [];
+  for (const o of owners) {
+    const lic = await ensureLicense(o.id);
+    const view = await licenseView(lic);
+    let lastInvoice = null;
+    try {
+      const inv = await db.invoice.findFirst({ where: { ownerMemberId: o.id }, orderBy: { createdAt: 'desc' } });
+      if (inv) lastInvoice = { amount: inv.amount, currency: inv.currency, provider: inv.provider, source: inv.source, createdAt: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : inv.createdAt };
+    } catch (_) { /* best-effort */ }
+    let teamSize = 0;
+    try { teamSize = await db.member.count({ where: { parentMemberId: o.id } }); } catch (_) { /* best-effort */ }
+    out.push({
+      ownerId: o.id,
+      ownerName: o.name,
+      ownerEmail: o.email || null,
+      status: o.status,
+      banReason: o.banReason || null,
+      joinedAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+      tier: view.tier,
+      planName: planNameForTier(view.tier),
+      type: view.type,
+      state: view.state,
+      endsAt: view.endsAt,
+      daysLeft: view.daysLeft,
+      isPaid: view.isPaid,
+      isTrial: view.isTrial,
+      isGrace: view.isGrace,
+      isBanned: view.isBanned,
+      teamSize,
+      lastInvoice
+    });
+  }
+  return { subscribers: out };
 }
 
 async function primaryOwnerId() {
@@ -5354,7 +5507,7 @@ async function loadCheckoutProvider(id) {
 
 async function startCheckout(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
-  const plan = findPlan(input.planId);
+  const plan = await findPlan(input.planId);
   const { provider, def } = await loadCheckoutProvider(input.provider);
   if (def.kind !== 'automated') throw new Error('That payment method is processed manually — submit your payment for approval instead.');
   const cfg = await openProviderConfig(def.id);
@@ -5377,7 +5530,7 @@ async function pollCheckout(payload) {
   if (!st.paid) return { status: st.status, paid: false };
 
   // Recover the plan chosen at startCheckout (falls back to Pro for legacy orders).
-  const plan = findPlan(pending.planId);
+  const plan = await findPlan(pending.planId);
   const months = Math.max(1, Number(pending.months) || plan.months || PLAN.months);
   const tier = pending.tier || plan.tier || 'pro';
 
@@ -5404,7 +5557,7 @@ async function submitManualPayment(payload) {
   if (!def || def.kind !== 'manual') throw new Error('That is not a manual payment method.');
   const store = await readPaymentStore();
   if (!store[def.id] || !store[def.id].enabled) throw new Error('That manual payment method is not enabled.');
-  const plan = findPlan(input.planId);
+  const plan = await findPlan(input.planId);
   const ownerId = await resolveLicenseOwnerId();
   const entry = {
     id: `mp-${Date.now()}-${Math.floor(ownerId || 0)}`,
@@ -6502,6 +6655,11 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PAYMENT_MANUAL_LIST, listManualPayments);
   registerHandler(CHANNELS.PAYMENT_MANUAL_RESOLVE, resolveManualPayment);
   registerHandler(CHANNELS.BILLING_GET_PLANS, getBillingPlans);
+  registerHandler(CHANNELS.BILLING_PLANS_ADMIN, listBillingPlansAdmin);
+  registerHandler(CHANNELS.BILLING_PLAN_SAVE, saveBillingPlan);
+  registerHandler(CHANNELS.BILLING_PLAN_DELETE, deleteBillingPlan);
+  registerHandler(CHANNELS.BILLING_ASSIGN, assignPlan);
+  registerHandler(CHANNELS.BILLING_SUBSCRIBERS, listSubscribers);
   registerHandler(CHANNELS.INVOICE_LIST, listInvoices);
   registerHandler(CHANNELS.INVOICE_CREATE, createInvoice);
   registerHandler(CHANNELS.INVOICE_UPDATE, updateInvoice);
