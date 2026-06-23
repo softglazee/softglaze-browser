@@ -132,6 +132,8 @@ const CHANNELS = Object.freeze({
   MEMBER_CURRENT: 'member:current',
   MEMBER_SWITCH: 'member:switch',
   MEMBER_SUPER_LOGIN: 'member:super-login',
+  MEMBER_SUPER_STATUS: 'member:super-status',
+  MEMBER_SUPER_SETUP: 'member:super-setup',
   MEMBER_ACCEPT_INVITE: 'member:accept-invite',
   MEMBER_LOGIN: 'member:login',
   MEMBER_LOGOUT: 'member:logout',
@@ -3968,11 +3970,51 @@ async function switchMember(payload) {
 
 // Super Admin — hardcoded source-owner login. Bypasses registration AND the vault,
 // and is granted every permission. There is exactly one, never stored in the DB.
+// Per-install Super Admin credential (replaces the old shared hardcoded password).
+// Stored hashed in Setting['superAdminAuth'] = { identifier, salt, hash }. Set once
+// at first run; no plaintext, no shared secret in the binary.
+async function readSuperAdminAuth() {
+  const a = await readSetting('superAdminAuth', null);
+  return (a && a.hash && a.salt) ? a : null;
+}
+
+// Tells the renderer whether to show the first-run setup form or the login form.
+async function superAdminStatus() {
+  return { configured: Boolean(await readSuperAdminAuth()) };
+}
+
+// Create (first run) or change the Super Admin credential. Changing an existing
+// one requires the current password. On success the Super Admin is signed in.
+async function superAdminSetup(payload) {
+  const input = requireObject(payload);
+  const existing = await readSuperAdminAuth();
+  if (existing) {
+    if (!verifySecret(String(input.currentPassword || ''), existing.salt, existing.hash)) {
+      const err = new Error('Enter your current Super Admin password to change it.'); err.code = 'BAD_CREDS'; throw err;
+    }
+  }
+  const identifier = (optionalString(input.identifier) || permissions.DEFAULT_SUPER_ADMIN_IDENTIFIER).toLowerCase();
+  const password = String(input.password || '');
+  if (password.length < 8) throw new Error('Super Admin password must be at least 8 characters.');
+  const { salt, hash } = hashSecret(password);
+  await writeSetting('superAdminAuth', { identifier, salt, hash });
+  currentMemberId = permissions.SUPER_ADMIN_ID;
+  await writeSetting('currentMemberId', currentMemberId).catch(() => {});
+  vaultLocked = false;
+  return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
+}
+
 async function superLogin(payload) {
   const input = requireObject(payload);
-  const identifier = String(input.identifier || input.email || input.username || '');
+  const identifier = String(input.identifier || input.email || input.username || '').trim().toLowerCase();
   const password = String(input.password || '');
-  if (!permissions.isSuperAdminLogin(identifier, password)) {
+  const auth = await readSuperAdminAuth();
+  if (!auth) {
+    const err = new Error('No Super Admin credential is set yet — create one to continue.'); err.code = 'SUPER_SETUP_REQUIRED'; throw err;
+  }
+  const idOk = identifier === String(auth.identifier || permissions.DEFAULT_SUPER_ADMIN_IDENTIFIER).toLowerCase()
+    || identifier === String(permissions.SUPER_ADMIN.email).toLowerCase();
+  if (!idOk || !verifySecret(password, auth.salt, auth.hash)) {
     const err = new Error('Invalid Super Admin credentials.'); err.code = 'BAD_CREDS'; throw err;
   }
   currentMemberId = permissions.SUPER_ADMIN_ID;
@@ -6926,6 +6968,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.MEMBER_CURRENT, getCurrentMember);
   registerHandler(CHANNELS.MEMBER_SWITCH, switchMember);
   registerHandler(CHANNELS.MEMBER_SUPER_LOGIN, superLogin);
+  registerHandler(CHANNELS.MEMBER_SUPER_STATUS, superAdminStatus);
+  registerHandler(CHANNELS.MEMBER_SUPER_SETUP, superAdminSetup);
   registerHandler(CHANNELS.MEMBER_ACCEPT_INVITE, acceptInvite);
   registerHandler(CHANNELS.MEMBER_LOGIN, memberLogin);
   registerHandler(CHANNELS.MEMBER_LOGOUT, memberLogout);
