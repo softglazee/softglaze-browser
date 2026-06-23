@@ -51,9 +51,10 @@ model Plan {
   tier     String  @default("pro") // pro | enterprise (feature tier the client enforces)
   amount   Int // price in minor units (cents)
   currency String  @default("USD")
-  interval String  @default("month")
-  months   Int     @default(1) // term granted per successful payment
-  active   Boolean @default(true)
+  interval  String  @default("month")
+  months    Int     @default(1) // term granted per successful one-time payment
+  recurring Boolean @default(false) // true => Stripe subscription (auto-renews each interval)
+  active    Boolean @default(true)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
