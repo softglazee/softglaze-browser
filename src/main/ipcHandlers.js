@@ -3814,6 +3814,30 @@ async function switchMember(payload) {
   const m = await db.member.findUnique({ where: { id } });
   if (!m) throw new Error('Member not found.');
   if (m.status === 'suspended') throw new Error('This member is suspended.');
+  if (m.status === 'banned') throw new Error('This member is blocked.');
+
+  // Authorization. The quick-switcher is a convenience WITHIN an authenticated
+  // workspace, not a login. When a real member is already active they may only
+  // switch to members they manage, and may NEVER assume a higher- or equal-rank
+  // identity without that member's own password (prevents an OPERATOR from
+  // becoming the OWNER via DevTools). The boot path (no active actor yet — the
+  // workspace vault was just unlocked) and the Super Admin are unrestricted.
+  const actor = await getActiveMember();
+  const switchingToSelf = actor && Number(actor.id) === Number(id);
+  if (actor && actor.role !== 'SUPER_ADMIN' && !switchingToSelf) {
+    const all = await db.member.findMany();
+    if (!permissions.visibleMemberIds(all, actor).has(id)) {
+      const err = new Error('You can only switch to members you manage.'); err.code = 'FORBIDDEN'; throw err;
+    }
+    if (permissions.rankOf(m.role) >= permissions.rankOf(actor.role)) {
+      const pw = String(input.password || '');
+      if (!m.passwordHash || !verifySecret(pw, m.passwordSalt, m.passwordHash)) {
+        const err = new Error('Enter this member’s password to switch into their account.'); err.code = 'NEED_PASSWORD'; throw err;
+      }
+    }
+  }
+
+  // Per-member PIN (a secondary lock) is still honored for everyone.
   if (m.pinHash && !verifySecret(String(input.pin || ''), m.pinSalt, m.pinHash)) {
     const err = new Error('Incorrect PIN.'); err.code = 'BAD_PIN'; throw err;
   }
