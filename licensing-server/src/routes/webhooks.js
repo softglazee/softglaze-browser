@@ -8,9 +8,10 @@ const { openJson } = require('../crypto/secrets');
 const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
-const { provisionFromPaymentRef } = require('../licensing');
+const { provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription } = require('../licensing');
 
 const router = express.Router();
+const DAY = 86400000;
 
 async function tenantAndSecrets(tenantId, provider) {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
@@ -40,14 +41,42 @@ router.post('/stripe/:tenantId', express.raw({ type: '*/*' }), async (req, res) 
     } catch (e) { return res.status(400).json({ error: `Webhook signature verification failed: ${e.message}` }); }
 
     if (!(await firstTime(tenant.id, 'stripe', event.id, event.type))) return res.json({ received: true, duplicate: true });
+
     if (event.type === 'checkout.session.completed') {
       const s = event.data.object || {};
       const md = s.metadata || {};
-      await provisionFromPaymentRef(tenant, s.id, {
-        account: md.account || (s.customer_details && s.customer_details.email) || null,
-        installId: md.installId || s.client_reference_id || null,
-        planKey: md.planKey || null, tier: md.tier, months: Number(md.months) || undefined
-      });
+      if (s.mode === 'subscription' && s.subscription) {
+        // Recurring: recover install/account/plan from the Payment row, key the
+        // license to the subscription id. invoice.paid sets the exact period end.
+        const payment = await prisma.payment.findFirst({ where: { tenantId: tenant.id, providerRef: s.id }, orderBy: { createdAt: 'desc' } });
+        const planKey = (payment && payment.plan) || md.planKey || null;
+        const plan = planKey ? await prisma.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: planKey } } }) : null;
+        const months = (plan && plan.interval === 'year') ? 12 : 1;
+        await setSubscriptionPeriod(tenant, {
+          subscriptionId: s.subscription,
+          account: (payment && payment.account) || md.account || (s.customer_details && s.customer_details.email) || null,
+          installId: (payment && payment.installId) || md.installId || s.client_reference_id || null,
+          tier: (plan && plan.tier) || md.tier || 'pro',
+          plan: planKey,
+          periodEnd: new Date(Date.now() + months * 30 * DAY) // provisional until invoice.paid
+        });
+        if (payment) await prisma.payment.update({ where: { id: payment.id }, data: { status: 'paid' } }).catch(() => {});
+      } else {
+        await provisionFromPaymentRef(tenant, s.id, {
+          account: md.account || (s.customer_details && s.customer_details.email) || null,
+          installId: md.installId || s.client_reference_id || null,
+          planKey: md.planKey || null, tier: md.tier, months: Number(md.months) || undefined
+        });
+      }
+    } else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
+      // Subscription renewal (and first charge): set the period end precisely.
+      const inv = event.data.object || {};
+      const line = inv.lines && inv.lines.data && inv.lines.data[0];
+      const periodEnd = line && line.period && line.period.end ? new Date(line.period.end * 1000) : null;
+      if (inv.subscription && periodEnd) await setSubscriptionPeriod(tenant, { subscriptionId: inv.subscription, periodEnd, status: 'active' });
+    } else if (event.type === 'customer.subscription.deleted') {
+      const sub = event.data.object || {};
+      if (sub.id) await cancelSubscription(tenant, sub.id);
     }
     res.json({ received: true });
   } catch (e) { console.error('[webhook:stripe]', e && e.stack ? e.stack : e); res.status(500).json({ error: 'handler error' }); }

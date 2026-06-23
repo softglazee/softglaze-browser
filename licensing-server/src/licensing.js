@@ -55,4 +55,34 @@ async function provisionFromPaymentRef(tenant, providerRef, fallback = {}) {
   if (payment) await prisma.payment.update({ where: { id: payment.id }, data: { status: 'paid' } }).catch(() => {});
 }
 
-module.exports = { grantMonths, provisionFromPaymentRef };
+// --- Subscriptions ----------------------------------------------------------
+// Unlike grantMonths (additive, one-time), a subscription SETS the period end to
+// an absolute date (the Stripe billing-period end), keyed primarily by the Stripe
+// subscription id, so renewals are idempotent.
+async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, tier, plan, periodEnd, status = 'active' }) {
+  const or = [
+    subscriptionId ? { providerRef: String(subscriptionId) } : null,
+    account ? { account } : null,
+    installId ? { installId } : null
+  ].filter(Boolean);
+  const existing = or.length ? await prisma.license.findFirst({ where: { tenantId: tenant.id, OR: or }, orderBy: { updatedAt: 'desc' } }) : null;
+  const data = {
+    status,
+    tier: tier || (existing && existing.tier) || 'pro',
+    plan: plan || (existing && existing.plan) || null,
+    currentPeriodEnd: periodEnd || (existing && existing.currentPeriodEnd) || null,
+    providerRef: subscriptionId ? String(subscriptionId) : (existing && existing.providerRef) || null,
+    account: account || (existing && existing.account) || null,
+    installId: installId || (existing && existing.installId) || null
+  };
+  if (existing) return prisma.license.update({ where: { id: existing.id }, data });
+  return prisma.license.create({ data: { tenantId: tenant.id, ...data } });
+}
+
+// Subscription ended / canceled at Stripe — stop issuing leases.
+async function cancelSubscription(tenant, subscriptionId) {
+  const lic = await prisma.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } });
+  if (lic) await prisma.license.update({ where: { id: lic.id }, data: { status: 'expired' } });
+}
+
+module.exports = { grantMonths, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription };
