@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Users, X, Loader2, Trash2, KeyRound, Activity, ClipboardList,
   Crown, UserCog, UserCheck, User, Clock, Copy, Check, Mail, Link2, ShieldCheck,
-  Download, FolderInput, Search, Lock, CreditCard, RotateCcw, Layers
+  Download, FolderInput, Search, Lock, CreditCard, RotateCcw, Layers,
+  Sparkles, Settings2, Ban
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -265,13 +266,22 @@ const LIC_TONE = {
 
 function SuperAdminLicensePanel() {
   const [rows, setRows] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [editing, setEditing] = useState(null); // null | row
   const [err, setErr] = useState('');
 
   async function load() {
     setLoading(true); setErr('');
-    try { setRows(await softglazeApi.license.listOwners()); }
+    try {
+      const [owners, pl] = await Promise.all([
+        softglazeApi.license.listOwners(),
+        softglazeApi.billing.plansAdmin().catch(() => ({ plans: [] }))
+      ]);
+      setRows(owners);
+      setPlans(Array.isArray(pl?.plans) ? pl.plans : []);
+    }
     catch (e) { setErr(e.message || 'Could not load licenses.'); }
     finally { setLoading(false); }
   }
@@ -282,6 +292,10 @@ function SuperAdminLicensePanel() {
     try { await fn(); await load(); }
     catch (e) { setErr(e.message || 'Action failed.'); }
     finally { setBusyId(null); }
+  }
+  function terminate(r) {
+    if (!window.confirm(`Terminate ${r.ownerName}'s subscription now? Their profiles will lock until you grant access again.`)) return;
+    act(r.ownerId, () => softglazeApi.license.terminate({ ownerId: r.ownerId }));
   }
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>;
@@ -319,7 +333,10 @@ function SuperAdminLicensePanel() {
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <button onClick={() => act(r.ownerId, () => softglazeApi.license.grant({ ownerId: r.ownerId, months: 1, tier: 'pro' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><CreditCard className="w-3.5 h-3.5" />Grant 1 mo</button>
               <button onClick={() => act(r.ownerId, () => softglazeApi.license.extend({ ownerId: r.ownerId, days: 7 }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Clock className="w-3.5 h-3.5" />+7 days</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.startTrial({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60"><Sparkles className="w-3.5 h-3.5" />Start trial</button>
               <button onClick={() => act(r.ownerId, () => softglazeApi.license.reset({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" />Reset trial</button>
+              <button onClick={() => setEditing(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Settings2 className="w-3.5 h-3.5" />Edit</button>
+              <button onClick={() => terminate(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60"><Ban className="w-3.5 h-3.5" />Terminate</button>
               {banned ? (
                 <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'active' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><ShieldCheck className="w-3.5 h-3.5" />Unblock</button>
               ) : (
@@ -330,6 +347,91 @@ function SuperAdminLicensePanel() {
           </div>
         );
       })}
+      {editing && <LicenseEditModal row={editing} plans={plans} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+    </div>
+  );
+}
+
+// Full per-owner license editor: set type/tier/exact expiry, grant a chosen plan,
+// start the free trial or terminate — every action re-enforced in main.
+function LicenseEditModal({ row, plans, onClose, onSaved }) {
+  const lic = row.license || {};
+  const toDateInput = (iso) => { if (!iso) return ''; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ''; return d.toISOString().slice(0, 10); };
+
+  const [type, setType] = useState(lic.isPaid ? 'paid' : 'trial');
+  const [tier, setTier] = useState(lic.tier === 'enterprise' ? 'enterprise' : 'pro');
+  const [endsAt, setEndsAt] = useState(toDateInput(lic.endsAt));
+  const paidPlans = plans.filter((p) => p.kind !== 'trial');
+  const [planId, setPlanId] = useState(paidPlans[0] ? paidPlans[0].id : '');
+  const [months, setMonths] = useState(1);
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+
+  async function run(key, fn) {
+    setBusy(key); setErr('');
+    try { await fn(); onSaved(); }
+    catch (e) { setErr(e.message || 'Action failed.'); setBusy(''); }
+  }
+
+  const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary';
+  const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5';
+
+  return (
+    <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
+      <div className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
+          <div className="flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /><h3 className="text-sm font-semibold text-foreground">License · {row.ownerName}</h3></div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Set exact state */}
+          <div>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Set state</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className={labelCls}>Type</label>
+                <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)}>
+                  <option value="trial">trial</option><option value="paid">paid</option>
+                </select>
+              </div>
+              <div><label className={labelCls}>Tier</label>
+                <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value)}>
+                  <option value="pro">pro</option><option value="enterprise">enterprise</option>
+                </select>
+              </div>
+              <div><label className={labelCls}>Expiry</label><input type="date" className={inputCls} value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></div>
+            </div>
+            <button onClick={() => run('save', () => softglazeApi.license.edit({ ownerId: row.ownerId, type, tier, endsAt: endsAt || null }))} disabled={busy === 'save'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 disabled:opacity-60">{busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save state</button>
+          </div>
+
+          {/* Grant a plan */}
+          {paidPlans.length > 0 && (
+            <div className="border-t border-border pt-4">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Grant a plan</p>
+              <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+                <div><label className={labelCls}>Plan</label>
+                  <select className={inputCls} value={planId} onChange={(e) => setPlanId(e.target.value)}>
+                    {paidPlans.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.tier}</option>)}
+                  </select>
+                </div>
+                <div className="w-24"><label className={labelCls}>Months</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} /></div>
+              </div>
+              <button onClick={() => run('grant', () => softglazeApi.billing.assignPlan({ ownerId: row.ownerId, planId, months: Number(months) || 1 }))} disabled={busy === 'grant'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-emerald-600 disabled:opacity-60">{busy === 'grant' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} Grant plan</button>
+            </div>
+          )}
+
+          {/* Lifecycle */}
+          <div className="border-t border-border pt-4">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Lifecycle</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => run('trial', () => softglazeApi.license.startTrial({ ownerId: row.ownerId }))} disabled={busy === 'trial'} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60">{busy === 'trial' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Start free trial</button>
+              <button onClick={() => { if (window.confirm('Terminate this subscription now? Profiles lock until you grant access again.')) run('term', () => softglazeApi.license.terminate({ ownerId: row.ownerId })); }} disabled={busy === 'term'} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60">{busy === 'term' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />} Terminate now</button>
+            </div>
+          </div>
+
+          {err && <p className="text-[12px] text-red-400">{err}</p>}
+        </div>
+      </div>
     </div>
   );
 }

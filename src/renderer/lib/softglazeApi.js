@@ -145,6 +145,9 @@ export const softglazeApi = {
     grant: (payload) => getSoftglazeApi().license.grant(payload),
     extend: (payload) => getSoftglazeApi().license.extend(payload),
     reset: (payload) => getSoftglazeApi().license.reset(payload),
+    startTrial: (payload) => getSoftglazeApi().license.startTrial(payload),
+    edit: (payload) => getSoftglazeApi().license.edit(payload),
+    terminate: (payload) => getSoftglazeApi().license.terminate(payload),
     listOwners: () => getSoftglazeApi().license.listOwners()
   },
   payments: {
