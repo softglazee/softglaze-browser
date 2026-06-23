@@ -1,0 +1,137 @@
+// SoftGlaze Licensing Server — data model (Postgres).
+// Multi-tenant: one backend serves many buyer-merchants (tenants). Each tenant
+// has its own Ed25519 keypair (private key sealed at rest), its own payment
+// provider credentials (sealed), its own plans, and its own installs/licenses.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id               String   @id @default(cuid())
+  name             String
+  brandJson        String? // optional white-label branding blob (JSON string)
+  publicKeyPem     String // Ed25519 public key (SPKI PEM) — also baked into the tenant's build
+  privateKeySealed String // Ed25519 private key (PKCS8 PEM), AES-256-GCM sealed with MASTER_KEY
+  apiKeyHash       String // sha256 of the tenant-admin API key (shown once at provisioning)
+  status           String   @default("active") // active | suspended
+  createdAt        DateTime @default(now())
+
+  paymentConfigs TenantPaymentConfig[]
+  plans          Plan[]
+  installs       Install[]
+  licenses       License[]
+  payments       Payment[]
+  codes          LicenseCode[]
+}
+
+model TenantPaymentConfig {
+  id            String   @id @default(cuid())
+  tenantId      String
+  provider      String // stripe | paypal | cryptomus
+  enabled       Boolean  @default(false)
+  secretsSealed String // AES-256-GCM sealed JSON: { secretKey, webhookSecret, ... }
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+}
+
+model Plan {
+  id       String  @id @default(cuid())
+  tenantId String
+  key      String // stable id used by the client, e.g. "pro"
+  name     String
+  tier     String  @default("pro") // pro | enterprise (feature tier the client enforces)
+  amount   Int // price in minor units (cents)
+  currency String  @default("USD")
+  interval String  @default("month")
+  months   Int     @default(1) // term granted per successful payment
+  active   Boolean @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+}
+
+model Install {
+  id         String    @id @default(cuid())
+  tenantId   String
+  machineId  String
+  account    String? // optional owner/email identity
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, machineId])
+}
+
+model License {
+  id               String    @id @default(cuid())
+  tenantId         String
+  account          String? // email / owner identity the license is tied to
+  installId        String?
+  tier             String    @default("pro")
+  plan             String?
+  status           String    @default("active") // active | canceled | expired
+  currentPeriodEnd DateTime?
+  providerRef      String? // subscription / order id
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, account])
+  @@index([tenantId, installId])
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  provider    String
+  providerRef String? // session / payment-intent / order id
+  amount      Int
+  currency    String   @default("USD")
+  status      String   @default("pending") // pending | paid | failed | refunded
+  account     String?
+  plan        String?
+  installId   String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, providerRef])
+}
+
+// Idempotency / replay guard for inbound provider webhooks.
+model WebhookEvent {
+  id         String   @id // provider event id
+  tenantId   String
+  provider   String
+  type       String
+  receivedAt DateTime @default(now())
+}
+
+// Backend-issued activation codes (manual sales / resellers). Replaces the old
+// client-side self-signed purchase code.
+model LicenseCode {
+  id         String    @id @default(cuid())
+  tenantId   String
+  code       String
+  tier       String    @default("pro")
+  months     Int       @default(1)
+  redeemedAt DateTime?
+  redeemedBy String?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+}
