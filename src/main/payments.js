@@ -274,10 +274,20 @@ async function paypalValidate(cfg) {
 }
 
 // ---------------------------------------------------------------------------
-// Self-verifying purchase codes. A code carries its own signature, so it can be
-// validated OFFLINE on any machine (no backend / no shared DB) — which is what
-// "register with a purchase code" needs. The source owner (super admin) holds
-// the signing secret, so only codes the app issued (or the owner generates) pass.
+// Self-verifying purchase codes — BASE / STANDALONE BUILD ONLY.
+//
+// A code carries its own short HMAC, validated OFFLINE with a shipped secret.
+// This is inherently best-effort: the secret ships in the binary, so a base build
+// can't make it un-forgeable (that's a property of any fully-offline activation).
+//
+// Tenant-provisioned (licensing-backend) builds DO NOT use this path at all —
+// when tenantConfig().enabled is true, redeem/checkout route to the backend and
+// entitlement comes from a server-signed Ed25519 lease (licenseClient.verifyLease),
+// where the private key never ships. So for production/sold builds, ship a
+// tenant-provisioned build and this code is dead. It remains only so the base
+// build keeps a working offline trial/activation path.
+//
+// TODO(phase 4+): if the base build is retired, delete this block entirely.
 // ---------------------------------------------------------------------------
 const LICENSE_SECRET = 'SoftGlaze::license::v1::9f3a7c21';
 
