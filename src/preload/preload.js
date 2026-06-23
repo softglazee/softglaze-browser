@@ -101,6 +101,9 @@ const CHANNELS = Object.freeze({
   LICENSE_GRANT: 'license:grant',
   LICENSE_EXTEND: 'license:extend',
   LICENSE_RESET: 'license:reset',
+  LICENSE_TRIAL_START: 'license:trial-start',
+  LICENSE_EDIT: 'license:edit',
+  LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
@@ -350,6 +353,9 @@ const api = Object.freeze({
     grant: (payload) => invoke(CHANNELS.LICENSE_GRANT, payload),
     extend: (payload) => invoke(CHANNELS.LICENSE_EXTEND, payload),
     reset: (payload) => invoke(CHANNELS.LICENSE_RESET, payload),
+    startTrial: (payload) => invoke(CHANNELS.LICENSE_TRIAL_START, payload),
+    edit: (payload) => invoke(CHANNELS.LICENSE_EDIT, payload),
+    terminate: (payload) => invoke(CHANNELS.LICENSE_TERMINATE, payload),
     listOwners: () => invoke(CHANNELS.LICENSE_LIST_OWNERS)
   }),
   payments: Object.freeze({
