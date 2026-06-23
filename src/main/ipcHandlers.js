@@ -530,8 +530,9 @@ function extractFingerprintData(input) {
     startupUrls: input.startupUrls,
     platformAccounts: input.platformAccounts ? JSON.stringify(input.platformAccounts) : null,
     // Softglaze Premium 2FA vault. undefined => leave unchanged on update; an
-    // empty string clears it; otherwise store the trimmed base32 secret.
-    twoFactorSeed: input.twoFactorSeed === undefined ? undefined : (String(input.twoFactorSeed).trim() || null),
+    // empty string clears it; otherwise store the trimmed base32 secret, SEALED
+    // at rest (decrypted only when minting a live token).
+    twoFactorSeed: input.twoFactorSeed === undefined ? undefined : (String(input.twoFactorSeed).trim() ? secretStore.seal(String(input.twoFactorSeed).trim()) : null),
 
     webrtc: input.webrtc,
     timezoneType: input.timezoneType,
@@ -4366,7 +4367,8 @@ async function resolveSmtpConfig() {
   const s = (await readSetting('smtp', null)) || {};
   const host = s.host || process.env.SMTP_HOST || '';
   const user = s.user || process.env.SMTP_USER || '';
-  const pass = s.pass || process.env.SMTP_PASS || '';
+  // Stored password is sealed at rest; open() is fail-safe for legacy plaintext.
+  const pass = (s.pass ? secretStore.open(s.pass) : '') || process.env.SMTP_PASS || '';
   const port = Number(s.port || process.env.SMTP_PORT || 465);
   const secure = (s.secure !== undefined && s.secure !== null) ? Boolean(s.secure) : (port === 465);
   const fromName = s.fromName || process.env.SMTP_FROM_NAME || 'SoftGlaze Security';
@@ -4434,8 +4436,9 @@ async function setEmailConfig(payload) {
     port: Number(input.port ?? prev.port ?? 465),
     secure: input.secure !== undefined ? Boolean(input.secure) : (prev.secure ?? true),
     user: String(input.user ?? prev.user ?? '').trim(),
-    // Keep the existing password if the renderer sends a blank (it never receives it back).
-    pass: (input.pass !== undefined && input.pass !== '') ? String(input.pass) : (prev.pass || ''),
+    // Keep the existing (already-sealed) password if the renderer sends a blank
+    // (it never receives it back); a new password is sealed before storage.
+    pass: (input.pass !== undefined && input.pass !== '') ? secretStore.seal(String(input.pass)) : (prev.pass || ''),
     fromName: String(input.fromName ?? prev.fromName ?? 'SoftGlaze Security').trim()
   };
   await writeSetting('smtp', next);
@@ -6718,7 +6721,7 @@ async function getProfile2faToken(payload) {
   if (!profile) throw new Error('Profile not found.');
   if (!profile.twoFactorSeed) throw new Error('This profile has no 2FA secret saved.');
   try {
-    return totp.totpToken(profile.twoFactorSeed); // { token, period, secondsRemaining }
+    return totp.totpToken(secretStore.open(profile.twoFactorSeed)); // open() is fail-safe for legacy plaintext seeds
   } catch (e) {
     throw new Error('The saved 2FA secret is not valid base32.');
   }
