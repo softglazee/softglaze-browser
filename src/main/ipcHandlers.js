@@ -49,6 +49,8 @@ const { CloudSyncEngine } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
 const secretStore = require('./secretStore');
+const { tenantConfig } = require('./tenantConfig');
+const licenseClient = require('./licenseClient');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -150,6 +152,7 @@ const CHANNELS = Object.freeze({
   LICENSE_EXTEND: 'license:extend',
   LICENSE_RESET: 'license:reset',
   LICENSE_TRIAL_START: 'license:trial-start',
+  LICENSE_BACKEND_INFO: 'license:backend-info',
   LICENSE_EDIT: 'license:edit',
   LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
@@ -4149,6 +4152,13 @@ async function afterDbReady() {
   } catch (e) { /* ignore — fall back to a fresh session */ }
   try { await seedStarters(); } catch (e) { /* best-effort */ }
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
+  // Licensing backend (when a tenant config is baked): refresh the signed lease on
+  // startup + every 6h. Best-effort — offline keeps running on the cached lease.
+  if (tenantConfig().enabled) {
+    refreshBackendLease().catch(() => {});
+    const t = setInterval(() => { refreshBackendLease().catch(() => {}); }, 6 * 60 * 60 * 1000);
+    if (t.unref) t.unref();
+  }
 }
 
 async function dbEncryptionStatus() {
@@ -5464,6 +5474,85 @@ async function applyPaidMonths(lic, months, code, tier) {
   return updated;
 }
 
+// ---- Licensing backend client (active only when a tenant config is baked) ----
+// Install identity, online lease refresh, and OFFLINE entitlement from the cached
+// signed lease. All inert unless tenantConfig().enabled (the base build).
+async function getMachineId() {
+  let id = await readSetting('machineId', null);
+  if (!id) { id = crypto.randomUUID(); await writeSetting('machineId', id); }
+  return id;
+}
+
+async function ensureBackendInstall() {
+  let installId = await readSetting('backendInstallId', null);
+  if (installId) return installId;
+  const machineId = await getMachineId();
+  const owner = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } }).catch(() => null);
+  const res = await licenseClient.api.register(machineId, owner && owner.email ? owner.email : null);
+  installId = res && res.installId ? res.installId : null;
+  if (installId) await writeSetting('backendInstallId', installId);
+  return installId;
+}
+
+// Fetch + verify + cache the signed lease. Best-effort (network); returns the
+// entitlement or null. The cached lease (sealed) is what powers offline grace.
+async function refreshBackendLease() {
+  if (!tenantConfig().enabled) return null;
+  try {
+    const installId = await ensureBackendInstall();
+    if (!installId) return null;
+    const res = await licenseClient.api.license({ installId });
+    if (!res || !res.lease) {
+      await writeSetting('backendLease', null).catch(() => {}); // no active license server-side
+      return null;
+    }
+    const ent = licenseClient.verifyLease(res.lease);
+    if (!ent) return null;
+    await writeSetting('backendLease', secretStore.seal(JSON.stringify({
+      token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, fetchedAt: Date.now()
+    })));
+    return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: res.currentPeriodEnd || null };
+  } catch (e) { return null; } // offline / backend down → keep using the cached lease
+}
+
+// Offline entitlement: re-verify the cached lease token (catches tamper + the
+// 7-day lease expiry). Returns { tier, exp, currentPeriodEnd } or null.
+async function getBackendEntitlement() {
+  if (!tenantConfig().enabled) return null;
+  const sealed = await readSetting('backendLease', null);
+  if (!sealed) return null;
+  let cached;
+  try { cached = JSON.parse(secretStore.open(sealed)); } catch (_) { return null; }
+  const ent = licenseClient.verifyLease(cached.token);
+  if (!ent) return null;
+  return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
+}
+
+// Render a "paid" license view from a verified backend entitlement. endsAt is the
+// subscription period end (not the short lease exp).
+function licenseViewFromLease(ent) {
+  const endsAt = ent.currentPeriodEnd || (ent.exp ? new Date(ent.exp * 1000).toISOString() : null);
+  return {
+    type: 'paid', tier: ent.tier === 'enterprise' ? 'enterprise' : 'pro',
+    state: 'paid', status: 'active', endsAt,
+    daysLeft: null, daysLeftTrial: null, daysLeftGrace: null,
+    isExpired: false, isTrial: false, isPaid: true, isGrace: false, isBanned: false,
+    isExempt: false, clockTamper: false, purchaseCode: null, plan: PLAN, source: 'backend'
+  };
+}
+
+// Status surface for the renderer/dev — never returns the lease token itself.
+async function backendLicenseInfo() {
+  const cfg = tenantConfig();
+  if (!cfg.enabled) return { enabled: false };
+  const installId = await readSetting('backendInstallId', null);
+  const ent = await getBackendEntitlement();
+  return {
+    enabled: true, tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, installId: installId || null,
+    lease: ent ? { tier: ent.tier, exp: ent.exp, currentPeriodEnd: ent.currentPeriodEnd } : null
+  };
+}
+
 async function getLicense() {
   // The Super Admin is the source owner — exempt from the trial/subscription
   // system entirely. Never create or report a trial license for them.
@@ -5489,6 +5578,12 @@ async function getLicense() {
       plan: PLAN
     };
   }
+  // Backend-licensed build: a verified, unexpired lease overrides to "paid".
+  // Otherwise (and always in the base build) fall through to the local model.
+  if (tenantConfig().enabled) {
+    const ent = await getBackendEntitlement();
+    if (ent) return licenseViewFromLease(ent);
+  }
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
   return licenseView(lic);
@@ -5513,6 +5608,13 @@ async function redeemPurchaseCode(payload) {
   await requirePurchaser('redeem a purchase code');
   const input = requireObject(payload);
   const code = requiredString(input.code, 'Purchase code');
+  if (tenantConfig().enabled) {
+    const installId = await ensureBackendInstall();
+    await licenseClient.api.redeem({ code: code.trim().toUpperCase(), installId });
+    const ent = await refreshBackendLease();
+    if (!ent) throw new Error('Code accepted, but no active license yet — try again in a moment.');
+    return licenseViewFromLease(ent);
+  }
   const v = payments.verifyPurchaseCode(code);
   if (!v.valid) throw new Error('That purchase code is not valid.');
   const ownerId = await resolveLicenseOwnerId();
@@ -5817,6 +5919,12 @@ async function loadCheckoutProvider(id) {
 async function startCheckout(payload) {
   await requirePurchaser('purchase a subscription');
   const input = (payload && typeof payload === 'object') ? payload : {};
+  if (tenantConfig().enabled) {
+    const plan = await findPlanOrThrow(input.planId);
+    const installId = await ensureBackendInstall();
+    const r = await licenseClient.api.checkout({ planKey: plan.id, installId, provider: input.provider });
+    return { url: r.url, ref: r.ref, provider: r.provider || 'stripe', planId: plan.id, planName: plan.name, backend: true };
+  }
   const plan = await findPlanOrThrow(input.planId);
   const { provider, def } = await loadCheckoutProvider(input.provider);
   if (def.kind !== 'automated') throw new Error('That payment method is processed manually — submit your payment for approval instead.');
@@ -5832,6 +5940,11 @@ async function startCheckout(payload) {
 async function pollCheckout(payload) {
   await requirePurchaser('purchase a subscription');
   const input = requireObject(payload || {});
+  if (tenantConfig().enabled) {
+    const ent = await refreshBackendLease();
+    if (ent) return { status: 'paid', paid: true, license: licenseViewFromLease(ent) };
+    return { status: 'pending', paid: false };
+  }
   const pending = (await readSetting('pendingCheckout', null)) || {};
   const { provider, def } = await loadCheckoutProvider(input.provider || pending.provider);
   if (def.kind !== 'automated' || !provider) return { status: 'manual', paid: false };
@@ -6986,6 +7099,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.LICENSE_EXTEND, extendLicense);
   registerHandler(CHANNELS.LICENSE_RESET, resetLicense);
   registerHandler(CHANNELS.LICENSE_TRIAL_START, startTrial);
+  registerHandler(CHANNELS.LICENSE_BACKEND_INFO, backendLicenseInfo);
   registerHandler(CHANNELS.LICENSE_EDIT, editLicense);
   registerHandler(CHANNELS.LICENSE_TERMINATE, terminateLicense);
   registerHandler(CHANNELS.LICENSE_LIST_OWNERS, listOwnerLicenses);
