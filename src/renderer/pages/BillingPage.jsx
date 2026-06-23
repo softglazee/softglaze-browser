@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CreditCard, ShieldCheck, Loader2, Check, ExternalLink, KeyRound, Wallet,
   AlertTriangle, Sparkles, Users, Crown, ArrowUpRight, Settings2, X, Landmark,
-  FileText, Plus, Pencil, Trash2
+  FileText, Plus, Pencil, Trash2, Package, UserPlus, Power, Star, Gift
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -292,6 +292,10 @@ export default function BillingPage() {
       {msg && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{msg}</p>}
       {err && <p className="text-[12px] text-red-400">{err}</p>}
 
+      {/* Super-Admin console — plan editor + subscribers + assign */}
+      {me?.role === 'SUPER_ADMIN' && <PlanManager onChange={load} />}
+      {me?.role === 'SUPER_ADMIN' && <SubscribersSection />}
+
       {/* Invoices */}
       <InvoicesSection />
 
@@ -535,6 +539,313 @@ function InvoiceForm({ invoice, onClose, onSaved }) {
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
           <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>
           <button onClick={save} disabled={busy} className="h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 disabled:opacity-60 inline-flex items-center gap-2">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Super-Admin: plan editor ──────────────────────────────────────────────────
+// Edit prices/details of existing packages, toggle active/highlight, create new
+// packages, delete. Writes the live catalog that drives checkout + the cards above.
+function PlanManager({ onChange }) {
+  const [plans, setPlans] = useState(null);
+  const [editing, setEditing] = useState(null); // null | 'new' | plan
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    try { const r = await softglazeApi.billing.plansAdmin(); setPlans(Array.isArray(r?.plans) ? r.plans : []); }
+    catch (e) { setErr(e.message || 'Could not load plans.'); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function toggleActive(p) {
+    setBusy(`act:${p.id}`); setErr('');
+    try { await softglazeApi.billing.savePlan({ ...p, active: !p.active }); await load(); if (onChange) onChange(); }
+    catch (e) { setErr(e.message || 'Could not update plan.'); }
+    finally { setBusy(''); }
+  }
+  async function remove(p) {
+    if (!window.confirm(`Delete the “${p.name}” plan? Buyers will no longer see it.`)) return;
+    setBusy(`del:${p.id}`); setErr('');
+    try { await softglazeApi.billing.deletePlan({ id: p.id }); await load(); if (onChange) onChange(); }
+    catch (e) { setErr(e.message || 'Could not delete plan.'); }
+    finally { setBusy(''); }
+  }
+
+  if (!plans) return null;
+
+  return (
+    <div className="rounded-xl bg-card border border-border p-5">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)', border: '1px solid color-mix(in srgb, #8b5cf6 24%, transparent)' }}><Package className="w-5 h-5 text-violet-400" /></span>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Plans &amp; packages</h3>
+            <p className="text-xs text-muted-foreground">Set prices, edit details, and create new packages. Changes apply to checkout instantly.</p>
+          </div>
+        </div>
+        <button onClick={() => setEditing('new')} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-violet-500 to-violet-600 inline-flex items-center gap-1.5"><Plus className="w-4 h-4" /> New package</button>
+      </div>
+
+      {err && <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {plans.map((p) => (
+          <div key={p.id} className="rounded-lg border border-border bg-elevated/40 p-4 flex flex-col" style={p.active ? {} : { opacity: 0.62 }}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {p.tier === 'enterprise' ? <Crown className="w-4 h-4 text-violet-400 shrink-0" /> : <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" />}
+                <h4 className="text-[13.5px] font-semibold text-foreground truncate">{p.name}</h4>
+                {p.highlight && <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />}
+              </div>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${p.active ? 'bg-emerald-500/15 text-emerald-400' : 'bg-secondary text-muted-foreground'}`}>{p.active ? 'Active' : 'Hidden'}</span>
+            </div>
+            <div className="mt-1.5 flex items-baseline gap-1">
+              <span className="text-[20px] font-display font-semibold text-foreground">{money(p.amount, p.currency)}</span>
+              <span className="text-[11px] text-muted-foreground">/ {p.period} · {p.months}mo term · {p.tier}</span>
+            </div>
+            {p.tagline && <p className="mt-1 text-[11.5px] text-muted-foreground line-clamp-2">{p.tagline}</p>}
+            <div className="mt-3 flex items-center gap-1.5">
+              <button onClick={() => setEditing(p)} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" /> Edit</button>
+              <button onClick={() => toggleActive(p)} disabled={busy === `act:${p.id}`} title={p.active ? 'Hide from checkout' : 'Show on checkout'} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5">{busy === `act:${p.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Power className="w-3.5 h-3.5" />} {p.active ? 'Hide' : 'Show'}</button>
+              <button onClick={() => remove(p)} disabled={busy === `del:${p.id}`} title="Delete plan" className="h-8 px-2 ml-auto rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 inline-flex items-center">{busy === `del:${p.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editing && <PlanForm plan={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); if (onChange) onChange(); }} />}
+    </div>
+  );
+}
+
+function PlanForm({ plan, onClose, onSaved }) {
+  const [name, setName] = useState(plan?.name ?? '');
+  const [tier, setTier] = useState(plan?.tier ?? 'pro');
+  const [amount, setAmount] = useState(plan?.amount ?? '');
+  const [currency, setCurrency] = useState(plan?.currency ?? 'USD');
+  const [months, setMonths] = useState(plan?.months ?? 1);
+  const [period, setPeriod] = useState(plan?.period ?? 'month');
+  const [tagline, setTagline] = useState(plan?.tagline ?? '');
+  const [highlight, setHighlight] = useState(Boolean(plan?.highlight));
+  const [active, setActive] = useState(plan?.active === undefined ? true : Boolean(plan.active));
+  const [features, setFeatures] = useState((plan?.features || []).join('\n'));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function save() {
+    setErr('');
+    if (!name.trim()) { setErr('Give the package a name.'); return; }
+    if (amount === '' || Number(amount) < 0 || Number.isNaN(Number(amount))) { setErr('Enter a valid price.'); return; }
+    setBusy(true);
+    try {
+      await softglazeApi.billing.savePlan({
+        id: plan?.id, name: name.trim(), tier, amount: String(amount), currency: currency.trim() || 'USD',
+        months: Number(months) || 1, period: period.trim() || 'month', tagline: tagline.trim(),
+        highlight, active, features: features.split('\n').map((f) => f.trim()).filter(Boolean)
+      });
+      onSaved();
+    } catch (e) { setErr(e.message || 'Could not save plan.'); setBusy(false); }
+  }
+
+  const inputCls = 'w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[12.5px] text-foreground outline-none focus:border-primary';
+  const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1';
+
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
+      <div className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
+          <h3 className="text-sm font-semibold text-foreground">{plan ? `Edit ${plan.name}` : 'New package'}</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 grid grid-cols-2 gap-3">
+          <div className="col-span-2"><label className={labelCls}>Package name</label><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Pro" /></div>
+          <div><label className={labelCls}>Price</label><input className={inputCls} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5" /></div>
+          <div><label className={labelCls}>Currency</label><input className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} /></div>
+          <div><label className={labelCls}>Billed per</label>
+            <select className={inputCls} value={period} onChange={(e) => setPeriod(e.target.value)}>
+              {['month', 'year', 'quarter', 'week'].map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div><label className={labelCls}>Term (months granted)</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} placeholder="1" /></div>
+          <div><label className={labelCls}>Feature tier</label>
+            <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value)}>
+              <option value="pro">pro</option><option value="enterprise">enterprise</option>
+            </select>
+          </div>
+          <div className="flex items-end gap-4 pb-1">
+            <label className="flex items-center gap-1.5 text-[12px] text-foreground cursor-pointer"><input type="checkbox" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} className="accent-violet-500" /> Best value</label>
+            <label className="flex items-center gap-1.5 text-[12px] text-foreground cursor-pointer"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="accent-emerald-500" /> Active</label>
+          </div>
+          <div className="col-span-2"><label className={labelCls}>Tagline</label><input className={inputCls} value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Everything a solo operator needs." /></div>
+          <div className="col-span-2"><label className={labelCls}>Features (one per line)</label><textarea className="w-full min-h-[120px] bg-input-background border border-border rounded-lg px-3 py-2 text-[12.5px] text-foreground outline-none focus:border-primary resize-y" value={features} onChange={(e) => setFeatures(e.target.value)} placeholder={'Unlimited browser profiles\nFull fingerprint engine\nProxy pool & rotation'} /></div>
+          {err && <p className="col-span-2 text-[12px] text-red-400">{err}</p>}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border sticky bottom-0 bg-card">
+          <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>
+          <button onClick={save} disabled={busy} className="h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-violet-500 to-violet-600 disabled:opacity-60 inline-flex items-center gap-2">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save package</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Super-Admin: subscribers ──────────────────────────────────────────────────
+// Every owner tree with join date, plan, expiry + a one-click "assign plan" action.
+function SubscribersSection() {
+  const [rows, setRows] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [assigning, setAssigning] = useState(null); // null | subscriber | 'pick'
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const [subs, pl] = await Promise.all([
+        softglazeApi.billing.subscribers(),
+        softglazeApi.billing.plansAdmin().catch(() => ({ plans: [] }))
+      ]);
+      setRows(Array.isArray(subs?.subscribers) ? subs.subscribers : []);
+      setPlans(Array.isArray(pl?.plans) ? pl.plans : []);
+    } catch (e) { setErr(e.message || 'Could not load subscribers.'); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (!rows) return null;
+
+  const stateTone = (r) => r.isBanned ? 'text-red-400' : r.isGrace ? 'text-amber-400' : r.isPaid ? 'text-emerald-400' : r.isTrial ? 'text-blue-400' : 'text-muted-foreground';
+  const stateLabel = (r) => r.isBanned ? 'Ended' : r.isGrace ? 'Grace' : r.isPaid ? 'Active' : r.isTrial ? 'Trial' : (r.state || '—');
+
+  return (
+    <div className="rounded-xl bg-card border border-border p-5">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #10b981 14%, transparent)', border: '1px solid color-mix(in srgb, #10b981 24%, transparent)' }}><Users className="w-5 h-5 text-emerald-400" /></span>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Subscribers</h3>
+            <p className="text-xs text-muted-foreground">Every account, when they joined, their plan and expiry. {rows.length} total.</p>
+          </div>
+        </div>
+        <button onClick={() => setAssigning('pick')} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-emerald-600 inline-flex items-center gap-1.5"><Gift className="w-4 h-4" /> Assign plan</button>
+      </div>
+
+      {err && <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
+      {msg && <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[12px] text-emerald-400">{msg}</div>}
+
+      {rows.length === 0 ? (
+        <div className="py-8 grid place-items-center text-center text-[12.5px] text-muted-foreground">No owner accounts yet.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[12px]">
+            <thead className="text-muted-foreground text-left">
+              <tr className="border-b border-border/60">
+                <th className="py-2 pr-3 font-semibold">Account</th>
+                <th className="py-2 pr-3 font-semibold">Joined</th>
+                <th className="py-2 pr-3 font-semibold">Plan</th>
+                <th className="py-2 pr-3 font-semibold">State</th>
+                <th className="py-2 pr-3 font-semibold">Expires</th>
+                <th className="py-2 pr-3 font-semibold">Team</th>
+                <th className="py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {rows.map((r) => (
+                <tr key={r.ownerId} className="text-foreground/90">
+                  <td className="py-2 pr-3">
+                    <div className="font-medium text-foreground">{r.ownerName}</div>
+                    {r.ownerEmail && <div className="text-[11px] text-muted-foreground">{r.ownerEmail}</div>}
+                  </td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.joinedAt ? new Date(r.joinedAt).toLocaleDateString() : '—'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap"><span className="capitalize">{r.planName || r.tier}</span>{!r.isPaid && r.isTrial ? <span className="text-[10px] text-blue-400"> · trial</span> : ''}</td>
+                  <td className="py-2 pr-3"><span className={`font-semibold ${stateTone(r)}`}>{stateLabel(r)}</span>{r.isPaid && r.daysLeft != null ? '' : (r.daysLeft != null ? <span className="text-muted-foreground"> · {r.daysLeft}d</span> : '')}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.endsAt ? new Date(r.endsAt).toLocaleDateString() : '—'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.teamSize}</td>
+                  <td className="py-2 text-right whitespace-nowrap">
+                    <button onClick={() => setAssigning(r)} title="Assign / grant a plan" className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" /> Assign</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {assigning && (
+        <AssignForm
+          owner={assigning === 'pick' ? null : assigning}
+          owners={rows}
+          plans={plans.filter((p) => p.active)}
+          onClose={() => setAssigning(null)}
+          onDone={(text) => { setAssigning(null); setMsg(text); load(); setTimeout(() => setMsg(''), 5000); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AssignForm({ owner, owners, plans, onClose, onDone }) {
+  const [ownerId, setOwnerId] = useState(owner?.ownerId ?? (owners[0] ? owners[0].ownerId : ''));
+  const [planId, setPlanId] = useState(plans[0] ? plans[0].id : '');
+  const [months, setMonths] = useState('');
+  const [charge, setCharge] = useState(false);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const plan = plans.find((p) => p.id === planId) || null;
+
+  async function save() {
+    setErr('');
+    if (ownerId === '' || ownerId == null) { setErr('Choose an account.'); return; }
+    if (!planId) { setErr('Choose a plan.'); return; }
+    setBusy(true);
+    try {
+      const r = await softglazeApi.billing.assignPlan({
+        ownerId: Number(ownerId), planId,
+        months: months === '' ? undefined : Number(months),
+        charge, note: note.trim()
+      });
+      const name = (owners.find((o) => o.ownerId === Number(ownerId)) || {}).ownerName || 'account';
+      onDone(`Assigned ${r?.plan?.name || 'plan'} to ${name} — ${r?.months || ''} month${r?.months === 1 ? '' : 's'}.`);
+    } catch (e) { setErr(e.message || 'Could not assign plan.'); setBusy(false); }
+  }
+
+  const inputCls = 'w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[12.5px] text-foreground outline-none focus:border-primary';
+  const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1';
+
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
+      <div className="w-full max-w-md rounded-xl bg-card border border-border shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Gift className="w-4 h-4 text-emerald-400" /> Assign a plan</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <div>
+            <label className={labelCls}>Account</label>
+            <select className={inputCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+              {owners.map((o) => <option key={o.ownerId} value={o.ownerId}>{o.ownerName}{o.ownerEmail ? ` · ${o.ownerEmail}` : ''}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Plan</label>
+            <select className={inputCls} value={planId} onChange={(e) => setPlanId(e.target.value)}>
+              {plans.map((p) => <option key={p.id} value={p.id}>{p.name} — {money(p.amount, p.currency)} / {p.period} ({p.tier})</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className={labelCls}>Months {plan ? `(default ${plan.months})` : ''}</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} placeholder={plan ? String(plan.months) : '1'} /></div>
+            <div className="flex items-end pb-1"><label className="flex items-center gap-1.5 text-[12px] text-foreground cursor-pointer"><input type="checkbox" checked={charge} onChange={(e) => setCharge(e.target.checked)} className="accent-blue-500" /> Record as paid sale</label></div>
+          </div>
+          <div><label className={labelCls}>Note (optional)</label><input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why this was granted" /></div>
+          <p className="text-[11px] text-muted-foreground">Grants the term immediately and clears any subscription block. {charge ? 'A paid invoice is logged.' : 'Logged as a $0 grant.'}</p>
+          {err && <p className="text-[12px] text-red-400">{err}</p>}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
+          <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>
+          <button onClick={save} disabled={busy} className="h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-emerald-600 disabled:opacity-60 inline-flex items-center gap-2">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Assign</button>
         </div>
       </div>
     </div>
