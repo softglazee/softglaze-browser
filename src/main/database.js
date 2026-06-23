@@ -313,6 +313,34 @@ async function rekeyEncryptedDb(newPassword) {
 // ---------------------------------------------------------------------------
 // Automated SQLite Migration Runner
 // ---------------------------------------------------------------------------
+// Split a migration SQL blob into individual statements. Quote-aware: a ';'
+// inside a '...' string literal does NOT end a statement (SQLite escapes an inner
+// quote by doubling it: ''). Comment lines are stripped by the caller before this.
+// NOTE: trigger bodies (CREATE TRIGGER ... BEGIN ...; ...; END) are not handled —
+// author such a migration as a single statement, or split it manually.
+function splitSqlStatements(sql) {
+  const out = [];
+  let buf = '';
+  let inStr = false;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (inStr) {
+      buf += ch;
+      if (ch === "'") {
+        if (sql[i + 1] === "'") { buf += sql[++i]; } // escaped '' inside a string
+        else inStr = false;
+      }
+      continue;
+    }
+    if (ch === "'") { inStr = true; buf += ch; continue; }
+    if (ch === ';') { const s = buf.trim(); if (s) out.push(s); buf = ''; continue; }
+    buf += ch;
+  }
+  const tail = buf.trim();
+  if (tail) out.push(tail);
+  return out;
+}
+
 async function applyMigrations(db) {
   console.log('[DB] Starting automated migration runner...');
 
@@ -335,7 +363,7 @@ async function applyMigrations(db) {
     // Mark the two existing migrations as already applied so they don't run again
     const baselineMigrations = ['20260616224355_init', '20260616224734_fix_missing_models'];
     for (const m of baselineMigrations) {
-      await db.$executeRawUnsafe(`INSERT OR IGNORE INTO "_AppMigrations" ("id") VALUES ('${m}');`);
+      await db.$executeRawUnsafe(`INSERT OR IGNORE INTO "_AppMigrations" ("id") VALUES (?);`, m);
       appliedSet.add(m);
     }
   }
@@ -375,7 +403,7 @@ async function applyMigrations(db) {
           .split(/\r?\n/)
           .filter((line) => !line.trim().startsWith('--'))
           .join('\n');
-        const statements = cleaned.split(';').map(s => s.trim()).filter(s => s.length > 0);
+        const statements = splitSqlStatements(cleaned);
 
         // Execute inside a transaction
         await db.$transaction(async (tx) => {
@@ -399,7 +427,7 @@ async function applyMigrations(db) {
             }
           }
           // Record successful application
-          await tx.$executeRawUnsafe(`INSERT INTO "_AppMigrations" ("id") VALUES ('${folder}');`);
+          await tx.$executeRawUnsafe(`INSERT INTO "_AppMigrations" ("id") VALUES (?);`, folder);
         });
 
         console.log(`[DB] Successfully applied: ${folder}`);
