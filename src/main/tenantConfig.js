@@ -18,10 +18,14 @@ function load() {
   const tenantId = String(process.env.SG_TENANT_ID || fileCfg.tenantId || '').trim();
   const apiBaseUrl = String(process.env.SG_API_BASE_URL || fileCfg.apiBaseUrl || '').trim().replace(/\/+$/, '');
   const publicKeyPem = String(process.env.SG_TENANT_PUBLIC_KEY || fileCfg.publicKeyPem || '').trim();
+  // Buyer-owned auto-update feed (a generic URL hosting latest.yml + installers).
+  // Empty -> auto-update stays off (the build never phones a default/seller feed).
+  const updateFeedUrl = String(process.env.SG_UPDATE_FEED_URL || fileCfg.updateFeedUrl || '').trim().replace(/\/+$/, '');
   return {
     tenantId,
     apiBaseUrl,
     publicKeyPem,
+    updateFeedUrl,
     enabled: Boolean(tenantId && apiBaseUrl && publicKeyPem)
   };
 }
