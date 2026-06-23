@@ -147,6 +147,9 @@ const CHANNELS = Object.freeze({
   LICENSE_GRANT: 'license:grant',
   LICENSE_EXTEND: 'license:extend',
   LICENSE_RESET: 'license:reset',
+  LICENSE_TRIAL_START: 'license:trial-start',
+  LICENSE_EDIT: 'license:edit',
+  LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
@@ -4893,6 +4896,27 @@ const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months
 // are used verbatim; both are billed monthly via the same checkout.
 const DEFAULT_BILLING_PLANS = Object.freeze([
   Object.freeze({
+    id: 'free-trial',
+    kind: 'trial',
+    trialDays: TRIAL_DAYS,
+    tier: 'enterprise', // full access during the trial so everything can be tested
+    name: 'Free Trial',
+    amount: '0',
+    currency: PLAN.currency,
+    months: 1,
+    period: `${TRIAL_DAYS} days`,
+    tagline: 'Test every feature free — full access, no card required.',
+    highlight: false,
+    features: Object.freeze([
+      'Full access to every feature',
+      'All fingerprint, proxy & leak tools',
+      'Macros, AI cookie warmer & mobile profiles',
+      'Encrypted backup & team seats',
+      'No credit card required',
+      'Upgrade to a paid plan anytime'
+    ])
+  }),
+  Object.freeze({
     id: 'pro',
     tier: 'pro',
     name: 'Pro',
@@ -4942,12 +4966,15 @@ function normalizePlan(raw, idx) {
   let id = String(p.id || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
   if (!id) id = `plan-${idx == null ? 0 : idx}`;
   const tier = String(p.tier || 'pro').toLowerCase() === 'enterprise' ? 'enterprise' : 'pro';
+  const kind = String(p.kind || 'paid').toLowerCase() === 'trial' ? 'trial' : 'paid';
   const features = Array.isArray(p.features) ? p.features.map((f) => String(f)).filter((f) => f.trim() !== '').slice(0, 30) : [];
   return {
     id,
     tier,
+    kind,
+    trialDays: Math.max(1, Number.parseInt(p.trialDays, 10) || TRIAL_DAYS),
     name: String(p.name || 'Plan').slice(0, 60),
-    amount: String(p.amount == null ? '0' : p.amount).slice(0, 20),
+    amount: kind === 'trial' ? '0' : String(p.amount == null ? '0' : p.amount).slice(0, 20),
     currency: String(p.currency || PLAN.currency).toUpperCase().slice(0, 6),
     months: Math.max(1, Number.parseInt(p.months, 10) || 1),
     period: String(p.period || 'month').slice(0, 16),
@@ -4990,6 +5017,11 @@ async function getBillingPlans() {
     state: lic.state,
     isPaid: Boolean(lic.isPaid),
     isExempt: Boolean(lic.isExempt),
+    isTrial: Boolean(lic.isTrial),
+    daysLeftTrial: lic.daysLeftTrial ?? null,
+    // Who may start the free trial from the Billing page: anyone not exempt and not
+    // already on a paid plan (best-effort, local — see the Licenses panel note).
+    canStartTrial: !lic.isExempt && !lic.isPaid,
     canManage: Boolean(me && me.role === 'SUPER_ADMIN')
   };
 }
@@ -5126,8 +5158,10 @@ async function ensureLicense(ownerId) {
   const db = getPrisma();
   let lic = await db.license.findFirst({ where: { ownerMemberId: ownerId ?? null }, orderBy: { createdAt: 'desc' } });
   if (!lic) {
+    // New workspaces start on the full-access free trial so every feature can be
+    // tested out of the box. Tier 'enterprise' for the trial term.
     lic = await db.license.create({
-      data: { ownerMemberId: ownerId ?? null, type: 'trial', status: 'active', trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86400000) }
+      data: { ownerMemberId: ownerId ?? null, type: 'trial', tier: 'enterprise', status: 'active', trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86400000) }
     });
   }
   return lic;
@@ -5343,6 +5377,70 @@ async function resetLicense(payload) {
   return licenseView(updated);
 }
 
+// Start (or restart) the full-access free trial for an owner workspace. The owner
+// can call this for themselves; the Super Admin may target any owner. Best-effort
+// and local — a normal owner who has never paid can re-enter the trial (the system
+// is explicitly local-first; durable enforcement needs the backend). Tier + length
+// come from the catalog's trial plan (defaults: enterprise, 7 days).
+async function startTrial(payload) {
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const me = await getActiveMember();
+  const isSuper = Boolean(me && me.role === 'SUPER_ADMIN');
+  if (isSuper && (input.ownerId == null || input.ownerId === '')) {
+    throw new Error('Choose which owner workspace to start the trial for.');
+  }
+  if (!isSuper && me && me.role === 'SUPER_ADMIN') throw new Error('The source owner is exempt from the trial system.');
+  const ownerId = (isSuper && input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : await resolveLicenseOwnerId();
+  const lic = await ensureLicense(ownerId);
+  const view = await licenseView(lic);
+  if (!isSuper && view.isPaid) throw new Error('You are on a paid plan — the free trial does not apply.');
+  const trialPlan = (await readBillingPlans()).find((p) => p.kind === 'trial' && p.active) || (await readBillingPlans()).find((p) => p.kind === 'trial');
+  const days = trialPlan && trialPlan.trialDays ? trialPlan.trialDays : TRIAL_DAYS;
+  const tier = trialPlan ? trialPlan.tier : 'enterprise';
+  const updated = await getPrisma().license.update({
+    where: { id: lic.id },
+    data: { type: 'trial', status: 'active', tier, purchaseCode: null, trialEndsAt: new Date(Date.now() + days * 86400000) }
+  });
+  await syncOwnerBanState(ownerId, false);
+  try { await logActivity(getPrisma(), null, 'trial-start', `Free trial started (${days}d)`); } catch (_) { /* best-effort */ }
+  return licenseView(updated);
+}
+
+// Super-Admin: set a license's exact state — type (trial/paid), tier (pro/enterprise),
+// expiry date and active flag — for precise edits beyond the quick actions.
+async function editLicense(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const ownerId = parseId(input.ownerId);
+  const lic = await ensureLicense(ownerId);
+  const data = {};
+  if (input.type !== undefined) { const t = String(input.type).toLowerCase(); if (t === 'trial' || t === 'paid') data.type = t; }
+  if (input.tier !== undefined) data.tier = String(input.tier).toLowerCase() === 'enterprise' ? 'enterprise' : 'pro';
+  if (input.endsAt !== undefined && input.endsAt !== null && input.endsAt !== '') {
+    const d = new Date(input.endsAt);
+    if (!Number.isNaN(d.getTime())) data.trialEndsAt = d;
+  }
+  if (input.status !== undefined) { const s = String(input.status).toLowerCase(); if (s === 'active' || s === 'expired') data.status = s; }
+  if (Object.keys(data).length === 0) return licenseView(lic);
+  const updated = await getPrisma().license.update({ where: { id: lic.id }, data });
+  // licenseView reconciles the owner ban flag against the new expiry.
+  return licenseView(updated);
+}
+
+// Super-Admin: terminate a subscription now — push the term past grace so the
+// state machine reports it ended (profile launch locks). Reversible by a later
+// grant. Clears any paid code. This is a clean lapse, not a sticky admin block.
+async function terminateLicense(payload) {
+  await requireSuperAdmin();
+  const input = requireObject(payload);
+  const ownerId = parseId(input.ownerId);
+  const lic = await ensureLicense(ownerId);
+  const past = new Date(Date.now() - (GRACE_DAYS + 1) * 86400000);
+  const updated = await getPrisma().license.update({ where: { id: lic.id }, data: { status: 'expired', trialEndsAt: past, purchaseCode: null } });
+  try { await logActivity(getPrisma(), null, 'terminate', `Subscription terminated for owner #${ownerId}`); } catch (_) { /* best-effort */ }
+  return licenseView(updated);
+}
+
 // Per-owner-tree license overview for the Super Admin console.
 async function listOwnerLicenses() {
   await requireSuperAdmin();
@@ -5352,7 +5450,7 @@ async function listOwnerLicenses() {
   for (const o of owners) {
     const lic = await ensureLicense(o.id);
     const view = await licenseView(lic);
-    out.push({ ownerId: o.id, ownerName: o.name, ownerEmail: o.email || null, ownerStatus: o.status, banReason: o.banReason || null, license: view });
+    out.push({ ownerId: o.id, ownerName: o.name, ownerEmail: o.email || null, ownerStatus: o.status, banReason: o.banReason || null, joinedAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt, license: view });
   }
   return out;
 }
@@ -6644,6 +6742,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.LICENSE_GRANT, grantLicense);
   registerHandler(CHANNELS.LICENSE_EXTEND, extendLicense);
   registerHandler(CHANNELS.LICENSE_RESET, resetLicense);
+  registerHandler(CHANNELS.LICENSE_TRIAL_START, startTrial);
+  registerHandler(CHANNELS.LICENSE_EDIT, editLicense);
+  registerHandler(CHANNELS.LICENSE_TERMINATE, terminateLicense);
   registerHandler(CHANNELS.LICENSE_LIST_OWNERS, listOwnerLicenses);
   registerHandler(CHANNELS.PAYMENT_CONFIG_GET, getPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_SET, setPaymentConfig);
