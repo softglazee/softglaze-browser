@@ -2378,6 +2378,18 @@ function listAllSessions() {
   return [...listActiveSessions(), ...firefoxEngine.listFirefoxSessions()];
 }
 
+// Sessions the active viewer is allowed to see (their accessible profiles only).
+// Internal callers keep using listAllSessions(); only the IPC surface is scoped.
+async function listSessionsForViewer() {
+  const all = listAllSessions();
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return all;
+  const ids = all.map((s) => Number(s.sessionId)).filter((n) => Number.isFinite(n));
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  const allowedSet = new Set(allowed.map((n) => String(n)));
+  return all.filter((s) => allowedSet.has(String(Number(s.sessionId))));
+}
+
 async function previewProfilesViaDialog() {
   const selection = await dialog.showOpenDialog({
     title: 'Select a Softglaze profile spreadsheet to import',
@@ -3265,19 +3277,33 @@ async function resumeFirefoxDownload(payload) {
 
 async function getDashboardStats() {
   const db = getPrisma();
+  const member = await getActiveMember();
+  const unrestricted = !member || member.role === 'SUPER_ADMIN';
+
+  // Scope every count to what the viewer is allowed to see. Super Admin (and
+  // single-user mode) sees the whole workspace; an owner sees their own tree
+  // (their admins/managers/operators); an admin sees only their own subtree and
+  // what's assigned to them — never the owner's. Mirrors listProfiles/listProxies.
+  const profileWhere = await scopedProfileWhere({ deletedAt: null });
+  const proxyWhere = await scopedProxyWhere(undefined);
 
   const [totalProfiles, totalProxies, totalGroups] = await Promise.all([
-    db.profile.count({ where: { deletedAt: null } }),
-    db.proxy.count(),
-    db.group.count()
+    db.profile.count({ where: profileWhere }),
+    db.proxy.count({ where: proxyWhere }),
+    // Groups have no owner of their own — count those that hold a visible profile.
+    unrestricted ? db.group.count() : db.group.count({ where: { profiles: { some: profileWhere } } })
   ]);
 
-  return {
-    totalProfiles,
-    activeSessions: listActiveSessions().length + firefoxEngine.listFirefoxSessions().length,
-    totalProxies,
-    totalGroups
-  };
+  // Active sessions: only those running for a profile the viewer can access.
+  let activeSessions = listActiveSessions().length + firefoxEngine.listFirefoxSessions().length;
+  if (!unrestricted) {
+    const sessionIds = [...listActiveSessions(), ...firefoxEngine.listFirefoxSessions()]
+      .map((s) => Number(s.sessionId)).filter((n) => Number.isFinite(n));
+    const { allowed } = await partitionAccessibleProfileIds(sessionIds);
+    activeSessions = allowed.length;
+  }
+
+  return { totalProfiles, activeSessions, totalProxies, totalGroups };
 }
 
 // ===================== Members, roles & vault (app lock) =====================
@@ -3517,8 +3543,10 @@ async function listMembers() {
       (perMember[p.assignedMemberId] = perMember[p.assignedMemberId] || new Set()).add(p.proxyId);
     }
     for (const [mid, set] of Object.entries(perMember)) proxyCounts[mid] = set.size;
-    totalProfiles = await db.profile.count({ where: { deletedAt: null } });
-    totalProxies = await db.proxy.count();
+    // Workspace totals shown on the Members page must respect the viewer's scope
+    // (an owner/admin must not see the global count across other trees).
+    totalProfiles = await db.profile.count({ where: await scopedProfileWhere({ deletedAt: null }) });
+    totalProxies = await db.proxy.count({ where: await scopedProxyWhere(undefined) });
   } catch (e) { /* counts are best-effort */ }
 
   // Allocation rollup: how much of each member's quota has been handed to direct
@@ -7088,7 +7116,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.GROUP_ASSIGN, assignProfilesToGroup);
   registerHandler(CHANNELS.TAG_LIST, listTags);
 
-  registerHandler(CHANNELS.SESSION_LIST, () => listAllSessions());
+  registerHandler(CHANNELS.SESSION_LIST, () => listSessionsForViewer());
   registerHandler(CHANNELS.SESSION_CLOSE, closeSession);
 
   registerHandler(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG, previewProfilesViaDialog);
