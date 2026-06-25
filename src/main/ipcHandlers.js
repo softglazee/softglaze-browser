@@ -6522,10 +6522,12 @@ async function runMacroOnProfile(payload, event) {
     result = await runMacro(sessionId, steps, { continueOnError: Boolean(input.continueOnError), control, onStep });
   } finally {
     macroRuns.delete(runId);
-    // If this run opened the browser, close it when the macro ends — whether it
-    // finished, errored, or was stopped. A browser the user had already open
-    // (launched=false) is left alone.
-    if (launched) await closeProfileSession(sessionId).catch(() => {});
+    // Close the browser only when THIS run opened it AND the user STOPPED the
+    // macro (the requested "closing a running macro closes its browser"). A run
+    // that finishes on its own leaves the browser open so the result stays
+    // visible — and a browser the user already had open (launched=false) is never
+    // touched. This also avoids a relaunch racing a just-closed profile.
+    if (launched && result && result.aborted) await closeProfileSession(sessionId).catch(() => {});
   }
 
   send({ runId, kind: 'done', ok: result.ok, ran: result.ran, total: result.total, aborted: result.aborted, ts: Date.now() });
