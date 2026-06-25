@@ -708,7 +708,8 @@ async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint =
       host: parsed.host,
       port: parsed.port,
       username: parsed.username,
-      password: parsed.password
+      password: parsed.password,
+      ownerMemberId: ownerStampId() // stamp the creator so it stays visible in their scoped pool
     }
   });
 }
@@ -721,7 +722,7 @@ async function listProxies(payload = {}) {
     : undefined;
 
   const proxies = await db.proxy.findMany({
-    where,
+    where: await scopedProxyWhere(where),
     orderBy: { createdAt: 'desc' },
     include: { _count: { select: { profiles: true } } }
   });
@@ -766,6 +767,7 @@ async function updateProxy(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProxy(id);
   const data = {};
 
   if (input.name !== undefined) data.name = requiredString(input.name, 'Proxy name');
@@ -783,6 +785,7 @@ async function deleteProxy(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProxy(id);
   await db.proxy.delete({ where: { id } });
   return { deleted: true, id };
 }
@@ -793,8 +796,10 @@ async function bulkDeleteProxies(payload) {
   const input = requireObject(payload);
   const ids = Array.isArray(input.ids) ? input.ids.map((value) => parseId(value)) : [];
   if (ids.length === 0) throw new Error('No proxies selected.');
-  const result = await getPrisma().proxy.deleteMany({ where: { id: { in: ids } } });
-  return { deleted: result.count, ids };
+  const { allowed, denied } = await partitionAccessibleProxyIds(ids);
+  if (allowed.length === 0) { const e = new Error('You do not have access to the selected proxies.'); e.code = 'FORBIDDEN'; throw e; }
+  const result = await getPrisma().proxy.deleteMany({ where: { id: { in: allowed } } });
+  return { deleted: result.count, ids: allowed, denied };
 }
 
 // ---------- Proxy rotation / sticky-session pools ----------
@@ -808,6 +813,7 @@ async function getProxyRotation(payload) {
   const all = (await readSetting('proxyRotation', {})) || {};
   const cfg = all[id] || { enabled: false, mode: 'round-robin', proxyIds: [] };
   const proxies = (await getPrisma().proxy.findMany({
+    where: await scopedProxyWhere(undefined),
     orderBy: { createdAt: 'desc' },
     include: { _count: { select: { profiles: true } } }
   })).map(serializeProxy);
@@ -1290,6 +1296,7 @@ async function checkProxy(payload) {
   if (input.id !== undefined && input.id !== null) {
     const db = getPrisma();
     savedId = parseId(input.id);
+    await assertCanAccessProxy(savedId);
     const found = await db.proxy.findUnique({ where: { id: savedId } });
     if (!found) throw new Error('Proxy not found.');
     proxy = { type: found.type, host: found.host, port: found.port, username: found.username, password: found.password };
@@ -1776,11 +1783,13 @@ async function profileAccessChecker() {
   if (!member || member.role === 'SUPER_ADMIN') return null; // unrestricted
   const all = await getPrisma().member.findMany();
   const visible = permissions.visibleMemberIds(all, member);
-  const ownerPlus = permissions.rankOf(member.role) >= permissions.rankOf('OWNER');
+  // Fail closed: a member sees only profiles owned by, or assigned to, someone in
+  // their visible subtree. Unowned profiles (created by the Super Admin, who
+  // stamps no member id) are NOT visible to owners — the Super Admin can assign
+  // them out explicitly. This stops owners seeing each other's / the admin's data.
   return (p) => Boolean(p && (
     (p.assignedMemberId != null && visible.has(p.assignedMemberId))
     || (p.ownerMemberId != null && visible.has(p.ownerMemberId))
-    || (p.ownerMemberId == null && p.assignedMemberId == null && ownerPlus)
   ));
 }
 
@@ -1804,17 +1813,51 @@ async function partitionAccessibleProfileIds(ids) {
   return { allowed, denied };
 }
 
-// Merge the active member's ownership filter into a profile list query.
+// Merge the active member's ownership filter into a profile list query. Mirrors
+// profileAccessChecker (fail closed — no unowned-profile fallback).
 async function scopedProfileWhere(baseWhere) {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
   const all = await getPrisma().member.findMany();
   const visible = [...permissions.visibleMemberIds(all, member)];
   const or = [{ assignedMemberId: { in: visible } }, { ownerMemberId: { in: visible } }];
-  if (permissions.rankOf(member.role) >= permissions.rankOf('OWNER')) {
-    or.push({ ownerMemberId: null, assignedMemberId: null });
-  }
   return { AND: [baseWhere, { OR: or }] };
+}
+
+// --- Proxy ownership scoping (proxies carry only ownerMemberId) -------------
+// Same fail-closed model as profiles: a member sees only proxies whose owner is
+// in their visible subtree; Super Admin (and single-user mode) is unrestricted.
+async function scopedProxyWhere(baseWhere) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
+  const all = await getPrisma().member.findMany();
+  const visible = [...permissions.visibleMemberIds(all, member)];
+  const ownFilter = { ownerMemberId: { in: visible } };
+  return baseWhere ? { AND: [baseWhere, ownFilter] } : ownFilter;
+}
+
+async function assertCanAccessProxy(id) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return;
+  const all = await getPrisma().member.findMany();
+  const visible = permissions.visibleMemberIds(all, member);
+  const p = await getPrisma().proxy.findUnique({ where: { id }, select: { id: true, ownerMemberId: true } });
+  if (!p) throw new Error('Proxy not found.');
+  if (!(p.ownerMemberId != null && visible.has(p.ownerMemberId))) {
+    const e = new Error('You do not have access to this proxy.'); e.code = 'FORBIDDEN'; throw e;
+  }
+}
+
+async function partitionAccessibleProxyIds(ids) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return { allowed: ids, denied: [] };
+  const all = await getPrisma().member.findMany();
+  const visible = permissions.visibleMemberIds(all, member);
+  const rows = await getPrisma().proxy.findMany({ where: { id: { in: ids } }, select: { id: true, ownerMemberId: true } });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const allowed = []; const denied = [];
+  for (const id of ids) { const r = byId.get(id); if (r && r.ownerMemberId != null && visible.has(r.ownerMemberId)) allowed.push(id); else denied.push(id); }
+  return { allowed, denied };
 }
 
 async function listProfiles(payload = {}) {
@@ -6410,12 +6453,14 @@ async function launchProfileById(id, startUrl) {
 // ---------------------------------------------------------------------------
 
 // Return the sessionId for a profile, launching it first if it isn't open.
+// `launched` is true only when THIS call opened the browser (so the caller knows
+// whether it owns the session's lifecycle and should close it when done).
 async function ensureProfileSession(profileId) {
   const pid = String(profileId);
   const open = listActiveSessions().find((s) => String(s.sessionId) === pid);
-  if (open) return String(open.sessionId);
+  if (open) return { sessionId: String(open.sessionId), launched: false };
   const res = await launchProfileById(profileId, 'about:blank');
-  return res && res.sessionId ? String(res.sessionId) : pid;
+  return { sessionId: res && res.sessionId ? String(res.sessionId) : pid, launched: true };
 }
 
 // Active macro runs, keyed by runId, so a run can be paused / resumed / stopped.
@@ -6432,7 +6477,7 @@ async function runMacroOnProfile(payload, event) {
   try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
   if (!Array.isArray(steps) || steps.length === 0) throw new Error('This macro has no steps to run yet.');
 
-  const sessionId = await ensureProfileSession(profileId);
+  const { sessionId, launched } = await ensureProfileSession(profileId);
   const runId = `macro-${Date.now()}`;
   const control = { paused: false, aborted: false };
   macroRuns.set(runId, control);
@@ -6449,6 +6494,10 @@ async function runMacroOnProfile(payload, event) {
     result = await runMacro(sessionId, steps, { continueOnError: Boolean(input.continueOnError), control, onStep });
   } finally {
     macroRuns.delete(runId);
+    // If this run opened the browser, close it when the macro ends — whether it
+    // finished, errored, or was stopped. A browser the user had already open
+    // (launched=false) is left alone.
+    if (launched) await closeProfileSession(sessionId).catch(() => {});
   }
 
   send({ runId, kind: 'done', ok: result.ok, ran: result.ran, total: result.total, aborted: result.aborted, ts: Date.now() });
@@ -6479,7 +6528,7 @@ async function controlMacro(payload) {
 async function startMacroRecordingOnProfile(payload) {
   const input = requireObject(payload);
   const profileId = parseId(input.profileId);
-  const sessionId = await ensureProfileSession(profileId);
+  const { sessionId } = await ensureProfileSession(profileId);
   const res = await startMacroRecording(sessionId);
   return { ...res, sessionId, profileId };
 }
