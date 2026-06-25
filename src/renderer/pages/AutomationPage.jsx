@@ -133,6 +133,8 @@ function MacrosPanel() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [recording, setRecording] = useState(null); // { profileId, sessionId }
   const [busyRec, setBusyRec] = useState(false);
+  const [saveRec, setSaveRec] = useState(null); // { profileId, sessionId } — pending stop-and-save
+  const [recName, setRecName] = useState('Recorded macro');
 
   const load = useCallback(async () => {
     try {
@@ -168,24 +170,36 @@ function MacrosPanel() {
   }
 
   async function toggleRecording() {
-    setErr(''); setNotice(''); setBusyRec(true);
+    setErr(''); setNotice('');
+    // Stopping: open the in-app save modal. Electron's <webview>/renderer does not
+    // support window.prompt(), so we collect the macro name with our own dialog.
+    if (recording) { setRecName('Recorded macro'); setSaveRec(recording); return; }
+    setBusyRec(true);
     try {
-      if (recording) {
-        const name = window.prompt('Save the recorded macro as (leave blank to discard):', 'Recorded macro');
-        const res = await softglazeApi.automation.stopRecording({
-          profileId: recording.profileId,
-          sessionId: recording.sessionId,
-          saveAs: name && name.trim() ? name.trim() : undefined
-        });
-        setRecording(null);
-        if (res.saved) { setNotice(`Saved "${res.saved.name}" with ${res.count} step(s).`); load(); }
-        else setNotice(`Recording stopped — captured ${res.count} step(s) (not saved).`);
-      } else {
-        if (!targetProfile) { setErr('Choose a target profile to record in.'); return; }
-        const res = await softglazeApi.automation.startRecording({ profileId: Number(targetProfile) });
-        setRecording({ profileId: Number(targetProfile), sessionId: res.sessionId });
-        setNotice('Recording… interact with the launched browser, then press Stop to save.');
-      }
+      if (!targetProfile) { setErr('Choose a target profile to record in.'); return; }
+      const res = await softglazeApi.automation.startRecording({ profileId: Number(targetProfile) });
+      setRecording({ profileId: Number(targetProfile), sessionId: res.sessionId });
+      setNotice('Recording… interact with the launched browser, then press Stop to save.');
+    } catch (e) { setErr(e.message || 'Recording action failed.'); }
+    finally { setBusyRec(false); }
+  }
+
+  // Finish a recording opened in the save modal. save=true persists under recName;
+  // save=false stops and discards the captured steps. Either way recording ends.
+  async function finishRecording(save) {
+    const rec = saveRec;
+    if (!rec) return;
+    setBusyRec(true); setErr('');
+    try {
+      const res = await softglazeApi.automation.stopRecording({
+        profileId: rec.profileId,
+        sessionId: rec.sessionId,
+        saveAs: save && recName.trim() ? recName.trim() : undefined
+      });
+      setRecording(null);
+      setSaveRec(null);
+      if (res.saved) { setNotice(`Saved "${res.saved.name}" with ${res.count} step(s).`); load(); }
+      else setNotice(`Recording stopped — captured ${res.count} step(s) (not saved).`);
     } catch (e) { setErr(e.message || 'Recording action failed.'); }
     finally { setBusyRec(false); }
   }
@@ -279,6 +293,37 @@ function MacrosPanel() {
       {editing && <MacroEditorModal macro={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {runState && <MacroRunModal {...runState} onClose={() => { setRunState(null); load(); }} />}
       {showSchedule && <ScheduleModal macros={macros} profiles={profiles} onClose={() => setShowSchedule(false)} />}
+
+      {/* Stop-and-save recording dialog (replaces window.prompt, unsupported in Electron). */}
+      {saveRec && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={() => { if (!busyRec) setSaveRec(null); }}>
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="text-sm font-semibold text-foreground">Save recorded macro</h3>
+              <p className="text-[11px] text-muted-foreground">Name it to keep the captured steps, or discard them. The browser stays open.</p>
+            </div>
+            <div className="p-5">
+              <input
+                autoFocus
+                value={recName}
+                onChange={(e) => setRecName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && recName.trim() && !busyRec) finishRecording(true); }}
+                placeholder="Recorded macro"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-border">
+              <button onClick={() => finishRecording(false)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">Discard</button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setSaveRec(null)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary disabled:opacity-50">Cancel</button>
+                <button onClick={() => finishRecording(true)} disabled={busyRec || !recName.trim()} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-1.5">
+                  {busyRec && <Loader2 className="w-4 h-4 animate-spin" />} Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
