@@ -1170,11 +1170,11 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   <div class="right"><div id="isp">ISP: ${seedIsp || '—'}</div><div id="proxyState">Proxy: ${proxyLabel}</div></div>
 </div>
 <div class="nav-links">
-  <a href="https://browserscan.net/" target="_blank" rel="noopener">BrowserScan</a>
-  <a href="https://browserleaks.com/" target="_blank" rel="noopener">BrowserLeaks</a>
-  <a href="https://whoer.net/" target="_blank" rel="noopener">Whoer.net</a>
-  <a href="https://pixelscan.net/" target="_blank" rel="noopener">Pixelscan</a>
-  <a href="https://abrahamjuliot.github.io/creepjs/" target="_blank" rel="noopener">CreepJS</a>
+  <a href="https://browserscan.net/">BrowserScan</a>
+  <a href="https://browserleaks.com/">BrowserLeaks</a>
+  <a href="https://whoer.net/">Whoer.net</a>
+  <a href="https://pixelscan.net/">Pixelscan</a>
+  <a href="https://abrahamjuliot.github.io/creepjs/">CreepJS</a>
 </div>
 <div class="grid">
   <div class="card"><h3>Profile</h3>
@@ -2109,6 +2109,13 @@ async function launchProfileSession(options = {}) {
     try {
       const newPage = await target.page();
       if (!newPage) return;
+      // Proxy auth FIRST — before applyToPage's blank-tab early-return and before
+      // the tab navigates. A new tab's very first request hits the proxy and gets a
+      // 407; with an authenticated proxy that 407 never resolves into a
+      // 'framenavigated' event, so deferring auth to applyToPage left such tabs
+      // "loading forever". authenticate() persists on the page and answers the
+      // in-flight challenge, so the navigation completes. Harmless when no creds.
+      if (proxyCreds) await newPage.authenticate(proxyCreds).catch(() => {});
       await applyToPage(newPage, true).catch(() => {});
       // A new tab usually starts on the internal New Tab Page (skipped above), so
       // apply once it actually navigates to a real site. Idempotent via the
