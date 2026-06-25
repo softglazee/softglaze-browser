@@ -1254,6 +1254,18 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
     if(seed.ip){setIfReal('ip',seed.ip);setIfReal('loc',seed.loc);}
     else{$('ip').textContent='IP load failed';$('loc').textContent='Check proxy connection';}
   });
+  // Open each check link in a NEW tab via the main process, which attaches proxy
+  // auth BEFORE navigating — so an authenticated proxy doesn't stall the new tab
+  // on a 407 (the reason target="_blank" tabs hung at about:blank). Falls back to
+  // a normal same-tab navigation if the bridge isn't available.
+  try{
+    var navAs=document.querySelectorAll('.nav-links a');
+    for(var i=0;i<navAs.length;i++){
+      navAs[i].addEventListener('click',function(e){
+        if(window.__sgzOpenTab){e.preventDefault();try{window.__sgzOpenTab(this.href);}catch(_){}}
+      });
+    }
+  }catch(e){}
 })();
 </script></body></html>`;
   await fs.writeFile(startPagePath, html);
@@ -1854,6 +1866,12 @@ async function launchProfileSession(options = {}) {
   // native hardwareConcurrency override) and then resume. Channel-independent
   // (works on real Chrome AND Chrome-for-Testing) and never races the first doc.
   const fpInjectSource = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)});`;
+  // Fingerprint values the early auto-attach handler needs to fully spoof NEW
+  // tabs BEFORE their first byte. Declared here (so the handler closes over it)
+  // but POPULATED later, once ua/timezone/geo/mobile are computed — reading the
+  // object lazily avoids a temporal-dead-zone error and keeps it a harmless no-op
+  // for the very first page (which applyToPage covers directly).
+  const fpLate = {};
   try {
     const rootCdp = await browser.target().createCDPSession();
     rootCdp.on('Target.attachedToTarget', async (ev) => {
@@ -1868,6 +1886,31 @@ async function launchProfileSession(options = {}) {
           if (info.type === 'page' || info.type === 'iframe') {
             await sess.send('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource }).catch(() => {});
             if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+            // Apply the CDP-level identity (UA header + Client-Hints, timezone,
+            // geolocation, mobile metrics) to NEW tabs/popups while they are still
+            // PAUSED — so the very first request carries the spoofed identity
+            // instead of leaking the real UA/timezone until framenavigated lands.
+            // Emulation-domain only; request-interception / proxy-auth stay
+            // deferred to applyToPage (doing those on the NTP crashed the browser).
+            if (fpLate.ua) {
+              await sess.send('Emulation.setUserAgentOverride', {
+                userAgent: fpLate.ua.userAgent,
+                acceptLanguage: fpLate.acceptLanguage,
+                platform: fpLate.ua.navPlatform,
+                userAgentMetadata: fpLate.ua.userAgentMetadata
+              }).catch(() => {});
+            }
+            if (fpLate.timezoneId) await sess.send('Emulation.setTimezoneOverride', { timezoneId: fpLate.timezoneId }).catch(() => {});
+            if (fpLate.mobileMetrics) {
+              const m = fpLate.mobileMetrics;
+              await sess.send('Emulation.setDeviceMetricsOverride', { width: m.width, height: m.height, deviceScaleFactor: m.deviceScaleFactor, mobile: true, screenWidth: m.width, screenHeight: m.height }).catch(() => {});
+              await sess.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints }).catch(() => {});
+              await sess.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' }).catch(() => {});
+            }
+            if (fpLate.geoLat != null && fpLate.geoLng != null) {
+              await sess.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
+              await sess.send('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc }).catch(() => {});
+            }
           } else if (/worker/i.test(info.type || '')) {
             if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
           }
@@ -1980,6 +2023,17 @@ async function launchProfileSession(options = {}) {
     deviceScaleFactor: 2.625, // Pixel 7 DPR
     maxTouchPoints: 5
   } : null;
+
+  // Hand the computed identity to the early auto-attach handler (declared above)
+  // so it can spoof a new tab's first byte. Assigning onto the existing object
+  // keeps the handler's lazy reads valid without reordering the launch flow.
+  fpLate.ua = ua;
+  fpLate.acceptLanguage = acceptLanguage;
+  fpLate.timezoneId = timezoneId;
+  fpLate.geoLat = geoLat;
+  fpLate.geoLng = geoLng;
+  fpLate.geoAcc = toInt(profile.locationAcc, 100);
+  fpLate.mobileMetrics = mobileMetrics;
 
   // Apply the full fingerprint to a single page. Used for the first tab AND for
   // every tab/popup opened later, so new windows are never left un-spoofed
@@ -2128,6 +2182,23 @@ async function launchProfileSession(options = {}) {
     } catch (e) { /* ignore transient targets */ }
    } catch (outer) { /* never let a new-tab/worker target tear down the session */ }
   });
+
+  // Bridge for the start page's check links: open each in a NEW tab from the main
+  // process, attaching proxy auth BEFORE the navigation so an authenticated proxy
+  // never stalls the tab on a 407 (a window.open/target=_blank popup navigates the
+  // instant it opens, racing per-tab auth — this sequences auth-then-goto). Exposed
+  // before the start page loads so window.__sgzOpenTab exists when it runs.
+  try {
+    await page.exposeFunction('__sgzOpenTab', async (url) => {
+      try {
+        if (typeof url !== 'string' || !/^https?:/i.test(url)) return;
+        const np = await browser.newPage();
+        if (proxyCreds) await np.authenticate(proxyCreds).catch(() => {});
+        await np.bringToFront().catch(() => {});
+        await np.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      } catch (e) { /* best-effort — a failed open must never affect the session */ }
+    });
+  } catch (e) { /* already exposed on this page */ }
 
   // On-startup mode: 'detection' shows the SoftGlaze IP/fingerprint start page;
   // 'blank' and 'last' skip it (no proxy-detection page) and open about:blank.
