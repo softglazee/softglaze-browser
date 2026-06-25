@@ -1858,18 +1858,30 @@ async function launchProfileSession(options = {}) {
     const rootCdp = await browser.target().createCDPSession();
     rootCdp.on('Target.attachedToTarget', async (ev) => {
       const info = ev.targetInfo || {};
-      let sess = null;
-      try { sess = rootCdp.connection().session(ev.sessionId); } catch (e) {}
-      try {
-        if (sess && (info.type === 'page' || info.type === 'iframe')) {
-          await sess.send('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource }).catch(() => {});
-          if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
-        } else if (sess && /worker/i.test(info.type || '')) {
-          if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
-        }
-      } catch (e) { /* best-effort per target */ }
-      // ALWAYS resume — even on error — or the paused target hangs forever.
-      try { if (sess) await sess.send('Runtime.runIfWaitingForDebugger').catch(() => {}); } catch (e) {}
+      // Inject the FP script (best-effort) and ALWAYS resume the paused target.
+      // Returns true once the flattened session is available so we can resume it.
+      const handle = async () => {
+        let sess = null;
+        try { sess = rootCdp.connection().session(ev.sessionId); } catch (e) {}
+        if (!sess) return false; // puppeteer hasn't created the flattened session yet
+        try {
+          if (info.type === 'page' || info.type === 'iframe') {
+            await sess.send('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource }).catch(() => {});
+            if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+          } else if (/worker/i.test(info.type || '')) {
+            if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+          }
+        } catch (e) { /* best-effort per target */ }
+        // ALWAYS resume — even on error — or the paused target hangs at about:blank.
+        try { await sess.send('Runtime.runIfWaitingForDebugger').catch(() => {}); } catch (e) {}
+        return true;
+      };
+      // Common case: the session exists and we resume immediately. If it doesn't
+      // yet (a race with puppeteer's own target bookkeeping that otherwise leaves
+      // a new tab/popup frozen at about:blank), retry briefly so it always resumes.
+      if (!(await handle())) {
+        for (let i = 0; i < 20 && !(await handle()); i += 1) await sleep(50);
+      }
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
   } catch (e) { /* fall back to per-page evaluateOnNewDocument in applyToPage */ }
@@ -2767,6 +2779,14 @@ function macroRecorderClientScript() {
     while (node && node.nodeType === 1 && parts.length < 5) {
       if (node.id) { parts.unshift('#' + CSS.escape(node.id)); break; }
       let sel = node.nodeName.toLowerCase();
+      // Prefer a stable attribute over a positional :nth-of-type when present —
+      // far more robust to replay than "div > div:nth-of-type(3) > a".
+      let stable = '';
+      for (const attr of ['data-testid', 'name', 'aria-label', 'placeholder']) {
+        const v = node.getAttribute && node.getAttribute(attr);
+        if (v) { stable = sel + '[' + attr + '="' + CSS.escape(v) + '"]'; break; }
+      }
+      if (stable) { parts.unshift(stable); node = node.parentNode; continue; }
       const parent = node.parentNode;
       if (parent && parent.children) {
         const sibs = Array.prototype.filter.call(parent.children, (c) => c.nodeName === node.nodeName);
@@ -2779,6 +2799,15 @@ function macroRecorderClientScript() {
   }
   document.addEventListener('click', (e) => {
     try {
+      // A click on a link (or inside one) is most reliably replayed as a
+      // navigation: capture the resolved href as a 'goto'. A target="_blank" link
+      // would otherwise open a NEW tab that the runner (which drives the primary
+      // tab) never follows — the exact reason recorded link-clicks did nothing.
+      const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (a && a.href && /^https?:/i.test(a.href)) {
+        if (window.__sgzRecordStep) window.__sgzRecordStep({ type: 'goto', url: a.href });
+        return;
+      }
       const sel = cssPath(e.target);
       if (sel && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'click', selector: sel });
     } catch (err) { /* ignore */ }
