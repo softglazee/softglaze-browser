@@ -187,6 +187,23 @@ export default function ProxyPoolPage() {
     setProxyForm((current) => ({ ...current, [key]: value }));
   }
 
+  // Paste "host:port:user:pass" into the Host field to auto-fill every field
+  // (mirrors the Add Profile page's proxy section).
+  function handleProxyPaste(event) {
+    const text = ((event.clipboardData && event.clipboardData.getData('text')) || '').trim();
+    const parts = text.split(':');
+    if (parts.length >= 2 && parts.length <= 4) {
+      event.preventDefault();
+      setProxyForm((current) => ({
+        ...current,
+        host: parts[0] || '',
+        port: parts[1] || '',
+        username: parts[2] || '',
+        password: parts[3] || ''
+      }));
+    }
+  }
+
   function openCreate() {
     setProxyForm(initialProxyForm);
     setProxyOpen(true);
@@ -546,6 +563,7 @@ export default function ProxyPoolPage() {
               </DialogDescription>
             </DialogHeader>
             <DialogBody className="grid gap-5">
+              <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded">💡 Tip: paste your proxy <span className="font-mono">host:port:user:pass</span> into the Host field to auto-fill every field.</p>
               <div className="grid gap-4 lg:grid-cols-2">
                 <Field label="Proxy Name">
                   <Input value={proxyForm.name} onChange={(event) => updateProxyForm('name', event.target.value)} placeholder="Residential US 01" required />
@@ -559,7 +577,7 @@ export default function ProxyPoolPage() {
               </div>
               <div className="grid gap-4 lg:grid-cols-[1fr_160px]">
                 <Field label="Host">
-                  <Input value={proxyForm.host} onChange={(event) => updateProxyForm('host', event.target.value)} placeholder="127.0.0.1" required />
+                  <Input value={proxyForm.host} onChange={(event) => updateProxyForm('host', event.target.value)} onPaste={handleProxyPaste} placeholder="127.0.0.1" required />
                 </Field>
                 <Field label="Port">
                   <Input value={proxyForm.port} onChange={(event) => updateProxyForm('port', event.target.value)} placeholder="8080" required />
