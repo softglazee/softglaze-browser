@@ -53,6 +53,9 @@
     "appId": "com.softglaze.browser",
     "productName": "SoftGlaze Browser",
     "copyright": "Copyright \u00a9 2026 SoftGlaze",
+    "electronLanguages": [
+      "en-US"
+    ],
     "directories": {
       "output": "dist_installer"
     },
