@@ -31,9 +31,15 @@ const CHANNELS = Object.freeze({
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
+  PROXY_GROUP_LIST: 'proxy-group:list',
+  PROXY_GROUP_CREATE: 'proxy-group:create',
+  PROXY_GROUP_UPDATE: 'proxy-group:update',
+  PROXY_GROUP_DELETE: 'proxy-group:delete',
+  PROXY_GROUP_ASSIGN: 'proxy-group:assign',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
+  PROFILE_BATCH_GENERATE: 'profile:batch-generate',
   PROFILE_UPDATE: 'profile:update',
   PROFILE_DELETE: 'profile:delete',
   PROFILE_LAUNCH: 'profile:launch',
@@ -250,9 +256,17 @@ const api = Object.freeze({
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL)
   }),
+  proxyGroups: Object.freeze({
+    list: () => invoke(CHANNELS.PROXY_GROUP_LIST),
+    create: (payload) => invoke(CHANNELS.PROXY_GROUP_CREATE, payload),
+    update: (payload) => invoke(CHANNELS.PROXY_GROUP_UPDATE, payload),
+    delete: (id) => invoke(CHANNELS.PROXY_GROUP_DELETE, { id }),
+    assign: (ids, groupId) => invoke(CHANNELS.PROXY_GROUP_ASSIGN, { ids, groupId })
+  }),
   profiles: Object.freeze({
     list: (params = {}) => invoke(CHANNELS.PROFILE_LIST, params),
     create: (payload) => invoke(CHANNELS.PROFILE_CREATE, payload),
+    batchGenerate: (payload) => invoke(CHANNELS.PROFILE_BATCH_GENERATE, payload),
     update: (payload) => invoke(CHANNELS.PROFILE_UPDATE, payload),
     delete: (id, options = {}) => invoke(CHANNELS.PROFILE_DELETE, { id, removeLocalData: Boolean(options.removeLocalData) }),
     launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' }),

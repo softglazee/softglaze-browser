@@ -45,6 +45,7 @@
     "cross-env": "^7.0.3",
     "electron": "^42.4.0",
     "electron-builder": "^24.13.3",
+    "png2icons": "^2.0.1",
     "prisma": "^6.19.3",
     "vite": "^8.0.16",
     "wait-on": "^7.2.0"
@@ -52,14 +53,16 @@
   "build": {
     "appId": "com.softglaze.browser",
     "productName": "SoftGlaze Browser",
-    "copyright": "Copyright \u00a9 2026 SoftGlaze",
+    "copyright": "Copyright © 2026 SoftGlaze",
     "electronLanguages": [
       "en-US"
     ],
     "directories": {
       "output": "dist_installer"
     },
+    "afterPack": "build/afterPack.js",
     "asarUnpack": [
+      "node_modules/.prisma/**/*",
       "node_modules/@prisma/client/**/*",
       "node_modules/@prisma/engines/**/*",
       "prisma/**/*"
@@ -70,6 +73,7 @@
       "src/preload/**/*",
       "prisma/**/*",
       "node_modules/**/*",
+      "node_modules/.prisma/**/*",
       "package.json"
     ],
     "win": {
@@ -82,7 +86,7 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "icon": "public/logos/windows.ico"
+      "icon": "public/logos/app.ico"
     },
     "mac": {
       "target": [
@@ -96,6 +100,7 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,

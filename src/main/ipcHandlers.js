@@ -35,7 +35,7 @@ const totp = require('./totp');
 const permissions = require('./permissions');
 const payments = require('./payments');
 const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
-const { generateFingerprint, normalizeBrand, deviceGpuCoherence } = require('./fingerprintGenerator');
+const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSignature, CHROME_VERSIONS } = require('./fingerprintGenerator');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
@@ -81,9 +81,15 @@ const CHANNELS = Object.freeze({
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
+  PROXY_GROUP_LIST: 'proxy-group:list',
+  PROXY_GROUP_CREATE: 'proxy-group:create',
+  PROXY_GROUP_UPDATE: 'proxy-group:update',
+  PROXY_GROUP_DELETE: 'proxy-group:delete',
+  PROXY_GROUP_ASSIGN: 'proxy-group:assign',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
+  PROFILE_BATCH_GENERATE: 'profile:batch-generate',
   PROFILE_UPDATE: 'profile:update',
   PROFILE_DELETE: 'profile:delete',
   PROFILE_LAUNCH: 'profile:launch',
@@ -350,6 +356,20 @@ function buildProxyInfoString(proxy) {
   return `${proxy.host}:${proxy.port}`;
 }
 
+// Best-effort provider tag for "auto group by provider". Prefers the stored column;
+// falls back to parsing the vendor label prefix on proxies created before the column.
+function deriveProvider(proxy) {
+  if (proxy.provider) return String(proxy.provider).toLowerCase();
+  const n = String(proxy.name || '').toLowerCase();
+  if (n.startsWith('apify')) return 'apify';
+  if (n.startsWith('shopsocks5')) return 'shopsocks5';
+  if (n.startsWith('smartproxy.org') || n.startsWith('smartproxyorg')) return 'smartproxyorg';
+  if (n.startsWith('bright')) return 'brightdata';
+  if (n.startsWith('oxylabs')) return 'oxylabs';
+  if (n.startsWith('smartproxy')) return 'smartproxy';
+  return null;
+}
+
 function serializeProxy(proxy) {
   if (!proxy) return null;
   return {
@@ -363,8 +383,13 @@ function serializeProxy(proxy) {
     hasPassword: Boolean(proxy.password),
     rotationUrl: proxy.rotationUrl || null,
     hasRotationUrl: Boolean(proxy.rotationUrl),
+    provider: deriveProvider(proxy),
+    proxyGroupId: proxy.proxyGroupId ?? null,
+    groupName: proxy.proxyGroup ? proxy.proxyGroup.name : null,
+    groupColor: proxy.proxyGroup ? proxy.proxyGroup.color : null,
     createdAt: proxy.createdAt instanceof Date ? proxy.createdAt.toISOString() : proxy.createdAt,
     profileCount: proxy._count?.profiles ?? undefined,
+    profileNames: Array.isArray(proxy.profiles) ? proxy.profiles.map((p) => p.title).filter(Boolean) : undefined,
     lastStatus: proxy.lastStatus || null,
     lastLatencyMs: proxy.lastLatencyMs ?? null,
     lastCountry: proxy.lastCountry || null,
@@ -603,9 +628,10 @@ function extractFingerprintData(input) {
 function buildFingerprintFields(input) {
   const manual = extractFingerprintData(input);
   if (input.randomFingerprint !== true) return manual;
-  // Generate the right device class so a "mobile" request produces a coherent
-  // Android base (not a desktop one with a couple of fields overwritten).
-  const merged = { ...generateFingerprint({ deviceClass: input.deviceClass }) };
+  // Pass the requested OS + pinned version INTO the generator so the whole base
+  // (GPU / screen / UA major) is internally coherent for that OS. Overriding os
+  // AFTER generation would leave e.g. a macOS GPU on a Windows profile — a mismatch.
+  const merged = { ...generateFingerprint({ deviceClass: input.deviceClass, os: input.os, browserVersion: input.browserVersion }) };
   for (const [key, value] of Object.entries(manual)) {
     if (value !== undefined) merged[key] = value;
   }
@@ -717,14 +743,31 @@ async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint =
 async function listProxies(payload = {}) {
   const db = getPrisma();
   const search = optionalString(payload.search);
-  const where = search
-    ? { OR: [{ name: { contains: search } }, { host: { contains: search } }, { username: { contains: search } }] }
-    : undefined;
+  const clauses = [];
+  if (search) {
+    clauses.push({ OR: [{ name: { contains: search } }, { host: { contains: search } }, { username: { contains: search } }] });
+  }
+  // Optional category filter: a specific group id, "none" (ungrouped), or a provider tag.
+  if (payload.proxyGroupId === 'none' || payload.proxyGroupId === null) {
+    clauses.push({ proxyGroupId: null });
+  } else if (payload.proxyGroupId !== undefined && payload.proxyGroupId !== '' && payload.proxyGroupId !== 'all') {
+    clauses.push({ proxyGroupId: parseId(payload.proxyGroupId, 'proxyGroupId') });
+  }
+  if (optionalString(payload.provider)) {
+    clauses.push({ provider: optionalString(payload.provider).toLowerCase() });
+  }
+  const where = clauses.length ? (clauses.length === 1 ? clauses[0] : { AND: clauses }) : undefined;
 
   const proxies = await db.proxy.findMany({
     where: await scopedProxyWhere(where),
     orderBy: { createdAt: 'desc' },
-    include: { _count: { select: { profiles: true } } }
+    // Names of the profiles directly assigned this proxy (so the pool shows which
+    // profiles use it, not just a count). take:50 keeps the payload bounded.
+    include: {
+      _count: { select: { profiles: true } },
+      profiles: { select: { title: true }, orderBy: { title: 'asc' }, take: 50 },
+      proxyGroup: true
+    }
   });
 
   return proxies.map(serializeProxy);
@@ -973,7 +1016,8 @@ async function batchAddProxies(payload) {
 const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
-  luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5'
+  luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
+  apify: 'Apify', smartproxyorg: 'Smartproxy.org'
 });
 
 // Plausible rotating gateways used to shape the simulated rows. Replace with the
@@ -990,7 +1034,9 @@ const VENDOR_GATEWAYS = Object.freeze({
   luna: { host: 'gate.lunaproxy.com', port: 12233, type: 'HTTP' },
   ipburger: { host: 'gate.ipburger.com', port: 8080, type: 'HTTP' },
   tisocks: { host: 'gate.tisocks.net', port: 1080, type: 'SOCKS5' },
-  shopsocks5: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }
+  shopsocks5: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' },
+  apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' },
+  smartproxyorg: { host: 'gate.smartproxy.io', port: 7000, type: 'HTTP' }
 });
 
 // SIMULATION STUB: stand-in for "call the vendor API with the customer token and
@@ -1107,11 +1153,184 @@ async function fetchGatewayVerifiedPool(label, gateway, { username, password }) 
 function fetchOxylabsPool(creds) { return fetchGatewayVerifiedPool('Oxylabs', VENDOR_GATEWAYS.oxylabs, creds); }
 function fetchSmartproxyPool(creds) { return fetchGatewayVerifiedPool('Smartproxy', VENDOR_GATEWAYS.smartproxy, creds); }
 
+// --- Country / session helpers (shared by the country-aware adapters below) --
+function normCountryCode(value) {
+  const v = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(v) ? v : '';
+}
+function randSession(len = 8) {
+  let s = '';
+  while (s.length < len) s += Math.random().toString(36).slice(2);
+  return s.slice(0, len);
+}
+function clampPoolCount(value, def = 5, max = 50) {
+  const n = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(n) || n < 1) return def;
+  return Math.min(n, max);
+}
+
+// --- Apify Residential: country/session encoded in the username --------------
+// Apify residential uses ONE gateway (proxy.apify.com:8000); the exit IP is chosen
+// by the username — `groups-RESIDENTIAL` picks the pool, `country-XX` pins the
+// country, `session-<id>` makes the IP sticky. There's no list to pull, so we MINT
+// `count` sticky-session endpoints (each a distinct, reusable residential IP) with
+// the account proxy password. The chosen country is recorded on every row.
+async function fetchApifyPool({ password, country, count }) {
+  const pw = String(password || '').trim();
+  if (!pw) throw new Error('Apify: your proxy password is required (Apify Console → Proxy → HTTP settings → password).');
+  const cc = normCountryCode(country);
+  const gw = VENDOR_GATEWAYS.apify;
+  const n = clampPoolCount(count);
+  const rows = [];
+  for (let i = 1; i <= n; i += 1) {
+    const parts = ['groups-RESIDENTIAL'];
+    if (cc) parts.push(`country-${cc}`);
+    parts.push(`session-${randSession()}`);
+    rows.push({
+      type: gw.type, host: gw.host, port: gw.port,
+      username: parts.join(','), password: pw,
+      label: `Apify • ${cc || 'Global'} • #${i}`, country: cc || null
+    });
+  }
+  return rows;
+}
+
+// --- Smartproxy.org: area/state/city/session encoded in the username ---------
+// Same gateway model (gate.smartproxy.io:7000): params are appended to the proxy
+// username with dashes — `area-XX` (country), optional `state-`, `city-`, and a
+// sticky `session-`. We mint `count` endpoints; a fixed session id collapses to a
+// single sticky IP. Gateway host/port are overridable from the UI in case the
+// account uses a country-specific entry node.
+async function fetchSmartproxyOrgPool({ username, password, country, state, city, session, count, host, port, life }) {
+  const user = String(username || '').trim();
+  const pw = String(password || '');
+  if (!user) throw new Error('Smartproxy.org: a proxy username (sub-account) is required.');
+  if (!pw) throw new Error('Smartproxy.org: a proxy password is required.');
+  const cc = normCountryCode(country);
+  // The ISP plan gateway is isp.smartproxy.net:3100 (confirmed from the dashboard).
+  // Honor an explicit override; otherwise default to that so the pull just works.
+  const gwHost = String(host || '').trim() || 'isp.smartproxy.net';
+  const gwPort = Number.parseInt(String(port), 10) || 3100;
+  const fixedSession = String(session || '').trim().replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+  const st = String(state || '').trim().replace(/[^a-zA-Z0-9]/g, '');
+  const ct = String(city || '').trim().replace(/[^a-zA-Z0-9]/g, '');
+  // life = minutes to keep the same exit IP (1–1440). Blank/0 = a fresh IP per request.
+  const lifeMin = Math.min(1440, Math.max(0, Number.parseInt(String(life), 10) || 0));
+  const n = fixedSession ? 1 : clampPoolCount(count);
+  const rows = [];
+  for (let i = 1; i <= n; i += 1) {
+    // smartproxy.org joins params to the sub-account with "_" (NOT "-"); each param is
+    // key-value, e.g. smart-xxxx_area-US_state-California_life-5_session-abc123.
+    const parts = [user];
+    if (cc) parts.push(`area-${cc}`);
+    if (st) parts.push(`state-${st}`);
+    if (ct) parts.push(`city-${ct}`);
+    if (lifeMin) parts.push(`life-${lifeMin}`);
+    parts.push(`session-${fixedSession || randSession()}`);
+    rows.push({
+      type: 'HTTP', host: gwHost, port: gwPort,
+      username: parts.join('_'), password: pw,
+      label: `Smartproxy.org • ${cc || 'Random'} • #${i}`, country: cc || null
+    });
+  }
+  return rows;
+}
+
+// --- ShopSocks5: REAL list pull via the documented account API ---------------
+// POST form-urlencoded to /socks/{premium|list|daily} on shopsocks5.com, authed by
+// user_name + api_token (BOTH required — token alone fails with "User or Api Token
+// incorrect"). country/state/city filter the pool; proxy_type=proxy_sock_5 (SOCKS5)
+// or proxy_https. The list is returned under the `response` array.
+async function fetchShopSocks5Pool({ token, username, country, count, state, city, plan, proxyType }) {
+  const tok = String(token || '').trim();
+  if (!tok) throw new Error('ShopSocks5: your API token is required.');
+  const user = String(username || '').trim();
+  if (!user) throw new Error('ShopSocks5: your ShopSocks5 account username or email is required — the API authenticates with user_name + api_token together.');
+  const cc = normCountryCode(country);
+
+  // Real ShopSocks5 API (https://shopsocks5.com/document): POST form-urlencoded to
+  // /socks/{premium|list|daily}; auth = user_name + api_token; returns
+  // { success, response: [...], message }. proxy_type = proxy_sock_5 | proxy_https.
+  const ep = (String(plan || 'premium').toLowerCase().match(/^(premium|list|daily)$/) || [])[1] || 'premium';
+  const ptype = String(proxyType || 'proxy_sock_5').trim() || 'proxy_sock_5';
+  const isHttps = ptype === 'proxy_https';
+  const qty = clampPoolCount(count, 5, 100);
+
+  const form = new URLSearchParams();
+  form.set('user_name', user);
+  form.set('api_token', tok);
+  form.set('qty', String(qty));
+  if (cc) form.set('country', cc);
+  if (String(state || '').trim()) form.set('state', String(state).trim());
+  if (String(city || '').trim()) form.set('city', String(city).trim());
+  if (ep === 'premium') form.set('proxy_type', ptype); else form.set('sock_type', 'residential');
+
+  let text;
+  try {
+    text = await httpRequestText(`https://shopsocks5.com/socks/${ep}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: form.toString(),
+      timeoutMs: 30000
+    });
+  } catch (e) { throw new Error(`ShopSocks5 API error: ${e.message}`); }
+
+  let parsed;
+  try { parsed = JSON.parse(text); } catch (e) { throw new Error('ShopSocks5: the API did not return JSON — verify the username + token.'); }
+  if (!parsed || parsed.success === false) {
+    const msg = (parsed && parsed.message) || 'request failed';
+    if (/too fast|slow/i.test(msg)) throw new Error('ShopSocks5: rate limited ("Too fast, please slowly") — wait ~10 seconds and pull again.');
+    throw new Error(`ShopSocks5: ${msg} — check your account username + API token, and that the chosen country/type has stock.`);
+  }
+
+  // The proxy list lives under `response`. Confirmed daily/premium item shape:
+  // { sock_ip:"host:port", user_name, password, proxy_type:"SOCKS5 Proxy",
+  //   country_code:"US", country:"United States", city, states, ... }.
+  // Also tolerate plain {ip/host,port}, packed combo fields, or a bare string.
+  const list = Array.isArray(parsed.response) ? parsed.response : (Array.isArray(parsed) ? parsed : []);
+  const rows = [];
+  for (const it of list) {
+    let host, port, u, pw, rowCc, scheme, place;
+    if (typeof it === 'string') {
+      const parts = it.split(':'); host = parts[0]; port = parts[1]; u = parts[2]; pw = parts[3];
+    } else if (it && typeof it === 'object') {
+      host = it.ip || it.host || it.server;
+      port = it.port;
+      u = it.user || it.username || it.login || it.user_name;
+      pw = it.pass || it.password || it.passwd;
+      rowCc = it.country_code || it.geo || it.country; // prefer 2-letter code over full name
+      scheme = String(it.proxy_type || '');
+      place = [it.city, it.states].filter(Boolean).join(', ');
+      // ShopSocks5 packs host:port into `sock_ip` ("1.2.3.4:7998").
+      const combo = [it.sock_ip, it.socks, it.socks5, it.proxy, it.ip_port, it.proxy_address]
+        .find((v) => typeof v === 'string' && v.includes(':'));
+      if ((!host || !port) && combo) { const p = combo.split(':'); host = host || p[0]; port = port || p[1]; u = u || p[2]; pw = pw || p[3]; }
+    }
+    const pnum = Number.parseInt(String(port), 10);
+    if (!host || !Number.isFinite(pnum)) continue;
+    const rc = normCountryCode(rowCc) || cc || null;
+    // Honor the scheme the API reports; otherwise fall back to the requested type.
+    let rtype = isHttps ? 'HTTP' : 'SOCKS5';
+    if (/socks/i.test(scheme || '')) rtype = 'SOCKS5'; else if (/https?/i.test(scheme || '')) rtype = 'HTTP';
+    const labelGeo = [rc, place].filter(Boolean).join(' ') || String(host).trim();
+    rows.push({
+      type: rtype, host: String(host).trim(), port: pnum,
+      username: u ? String(u).trim() : null, password: pw != null ? String(pw) : null,
+      label: `ShopSocks5 • ${labelGeo}`, country: rc
+    });
+  }
+  if (!rows.length) throw new Error('ShopSocks5: the API returned no usable proxies (try a different country/state, or check your stock).');
+  return rows.slice(0, 200);
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
   oxylabs: fetchOxylabsPool,
-  smartproxy: fetchSmartproxyPool
+  smartproxy: fetchSmartproxyPool,
+  apify: fetchApifyPool,
+  smartproxyorg: fetchSmartproxyOrgPool,
+  shopsocks5: fetchShopSocks5Pool
 });
 
 async function syncVendorPool(payload) {
@@ -1131,7 +1350,22 @@ async function syncVendorPool(payload) {
       username: optionalString(input.username),
       password: input.password != null ? String(input.password) : '',
       zone: optionalString(input.zone),
-      bdpm: input.bdpm === true
+      bdpm: input.bdpm === true,
+      // Country-aware providers (Apify / Smartproxy.org / ShopSocks5): the chosen
+      // country + pool size + optional geo/session/endpoint overrides flow through.
+      country: optionalString(input.country),
+      count: input.count,
+      state: optionalString(input.state),
+      city: optionalString(input.city),
+      session: optionalString(input.session),
+      // Smartproxy.org: minutes to keep the same exit IP (sticky lifetime).
+      life: input.life,
+      apiUrl: optionalString(input.apiUrl),
+      host: optionalString(input.host),
+      port: input.port,
+      // ShopSocks5 plan endpoint (premium|list|daily) + proxy type (proxy_sock_5|proxy_https).
+      plan: optionalString(input.plan),
+      proxyType: optionalString(input.proxyType)
     });
   } else {
     // SIMULATION fallback for not-yet-wired providers (token-driven).
@@ -1151,7 +1385,12 @@ async function syncVendorPool(payload) {
     const created = await db.proxy.create({
       data: {
         name: row.label, type: row.type, host: row.host, port: row.port,
-        username: row.username, password: row.password, ownerMemberId: ownerStampId()
+        username: row.username, password: row.password, ownerMemberId: ownerStampId(),
+        // Origin tag so the pool can auto-group "by provider" (apify / shopsocks5 / …).
+        provider: vendorKey,
+        // Record the targeted country up front so the pool shows it before any
+        // health-check runs (a later checkProxy() refines it from the live exit IP).
+        ...(row.country ? { lastCountry: row.country } : {})
       }
     });
     result.created.push(serializeProxy(created));
@@ -1183,7 +1422,15 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
 
     const req = lib.get(
       url,
-      { agent, headers: { 'User-Agent': 'SoftGlaze-ProxyCheck/1.0', Accept: 'application/json' } },
+      {
+        agent,
+        // Some proxy gateways (e.g. smartproxy.org's ISP pool) return responses —
+        // especially auth-failure 407s — with LF-only line endings instead of CRLF,
+        // which Node's strict llhttp parser rejects as "Missing expected CR". Use the
+        // lenient parser here so a real exit IP / error still comes through.
+        insecureHTTPParser: true,
+        headers: { 'User-Agent': 'SoftGlaze-ProxyCheck/1.0', Accept: 'application/json' }
+      },
       (res) => {
         const status = res.statusCode || 0;
         if (status < 200 || status >= 300) {
@@ -1255,7 +1502,9 @@ async function testProxyConnectivity(proxy) {
       success: true,
       ip: data.ip || null,
       country: data.country || null,
+      region: data.region || null,
       city: data.city || null,
+      zip: data.postal || null,
       isp: data.org || null,
       timezone: data.timezone || null,
       latencyMs: Date.now() - started
@@ -1264,7 +1513,7 @@ async function testProxyConnectivity(proxy) {
     // Fallback: ip-api over plain HTTP (some proxies block 443 or SNI).
     try {
       const data = await httpGetJson(
-        'http://ip-api.com/json/?fields=status,message,query,country,countryCode,city,isp,timezone',
+        'http://ip-api.com/json/?fields=status,message,query,country,countryCode,regionName,city,zip,isp,timezone',
         agent,
         15000
       );
@@ -1275,7 +1524,9 @@ async function testProxyConnectivity(proxy) {
         success: true,
         ip: data.query || null,
         country: data.countryCode || data.country || null,
+        region: data.regionName || null,
         city: data.city || null,
+        zip: data.zip || null,
         isp: data.isp || null,
         timezone: data.timezone || null,
         latencyMs: Date.now() - started
@@ -1922,6 +2173,184 @@ async function createProfile(payload) {
   return serializeProfile(created);
 }
 
+// Crypto-seeded in-place Fisher–Yates shuffle (no Math.random — keeps entropy strong).
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = crypto.randomInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Normalize a startup-links field (array OR newline/space/comma-separated string) into
+// the newline-joined string the launch engine expects, or null when empty.
+function normalizeStartupUrls(value) {
+  if (value == null) return null;
+  const list = Array.isArray(value) ? value : String(value).split(/[\r\n,\s]+/);
+  const urls = list
+    .map((u) => String(u || '').trim())
+    .filter(Boolean)
+    .map((u) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(u) ? u : `https://${u}`));
+  return urls.length ? urls.join('\n') : null;
+}
+
+// ---------------------------------------------------------------------------
+// SERVER-SIDE BATCH GENERATOR. Owns the batch-level invariants that per-profile
+// create() calls cannot: (1) a UNIQUE proxy per profile (no proxy on two profiles),
+// capping the run at the number of available proxies and reporting the shortfall;
+// (2) UNIQUE fingerprints (deduped by the visible hardware/UA signature); (3) EVEN
+// distribution of the reported Chrome version across the batch. Reuses createProfile
+// for the actual persistence so all the normal plumbing (limits, ownership, data
+// dir, proxy-info cache) stays identical.
+// ---------------------------------------------------------------------------
+async function batchGenerateProfiles(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+
+  const count = Math.max(1, Math.min(500, Number.parseInt(String(input.count), 10) || 1));
+  const prefix = (optionalString(input.prefix) || optionalString(input.baseName) || 'Profile').slice(0, 60);
+  const startIndex = Math.max(0, Number.parseInt(String(input.startIndex), 10) || 1);
+  const os = optionalString(input.os) || 'Random';
+  const deviceClass = input.deviceClass === 'mobile' ? 'mobile' : 'desktop';
+  const randomFp = input.randomFingerprint !== false; // default ON (the whole point)
+  const distributeVersions = randomFp && input.distributeVersions !== false && deviceClass !== 'mobile';
+  const startupUrls = normalizeStartupUrls(input.startupUrls);
+  const notes = optionalString(input.notes) || 'Auto-generated batch';
+
+  // ---- Resolve the target profile group (existing id, or create a new one) ----
+  let groupId = input.groupId ? parseId(input.groupId, 'groupId') : null;
+  const newGroupName = optionalString(input.newGroupName);
+  if (!groupId && newGroupName) {
+    const g = await db.group.create({ data: { name: newGroupName.slice(0, 80) } });
+    groupId = g.id;
+  }
+
+  // ---- Build the per-profile proxy assignment plan ----
+  const proxyMode = (optionalString(input.proxyMode) || 'direct').toLowerCase(); // unique | pool | paste | direct
+  const assignments = [];
+  let proxyLimited = false;
+  let availableProxies = 0;
+  let effectiveCount = count;
+
+  if (proxyMode === 'unique' || proxyMode === 'pool') {
+    const filter = {};
+    if (input.proxyGroupId !== undefined && input.proxyGroupId !== '' && input.proxyGroupId !== 'all') {
+      filter.proxyGroupId = input.proxyGroupId === 'none' ? null : parseId(input.proxyGroupId, 'proxyGroupId');
+    }
+    if (optionalString(input.provider)) filter.provider = optionalString(input.provider).toLowerCase();
+    const cc = normCountryCode(input.country);
+    if (cc) filter.lastCountry = cc;
+    // Unique mode: only proxies NOT already bound to a live (non-deleted) profile.
+    if (proxyMode === 'unique') filter.profiles = { none: { deletedAt: null } };
+
+    const pool = await db.proxy.findMany({
+      where: await scopedProxyWhere(Object.keys(filter).length ? filter : undefined),
+      orderBy: { createdAt: 'asc' },
+      select: { id: true }
+    });
+    availableProxies = pool.length;
+
+    if (proxyMode === 'unique') {
+      shuffleInPlace(pool); // so the same proxies aren't always picked first
+      effectiveCount = Math.min(count, availableProxies);
+      if (effectiveCount < count) proxyLimited = true;
+      for (let i = 0; i < effectiveCount; i += 1) assignments.push({ proxyId: pool[i].id });
+    } else {
+      // Pool round-robin: reuse is allowed; create the full requested count.
+      for (let i = 0; i < count; i += 1) {
+        assignments.push(availableProxies ? { proxyId: pool[i % availableProxies].id } : {});
+      }
+    }
+  } else if (proxyMode === 'paste') {
+    const lines = Array.from(new Set(
+      String(input.proxyList || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+    ));
+    availableProxies = lines.length;
+    effectiveCount = Math.min(count, availableProxies);
+    if (effectiveCount < count) proxyLimited = true;
+    for (let i = 0; i < effectiveCount; i += 1) {
+      assignments.push({ proxyRaw: lines[i], proxyType: optionalString(input.proxyType) });
+    }
+  }
+  // 'direct' → assignments empty, effectiveCount = count, no proxy bound.
+
+  // ---- Even Chrome-version distribution across the run ----
+  let versionPlan = null;
+  if (distributeVersions) {
+    const order = shuffleInPlace([...CHROME_VERSIONS]);
+    versionPlan = Array.from({ length: effectiveCount }, (_, i) => order[i % order.length]);
+  }
+
+  // ---- Generate + persist ----
+  const created = [];
+  const errors = [];
+  const usedSignatures = new Set();
+  const padLen = String(startIndex + Math.max(effectiveCount, 1) - 1).length;
+
+  for (let i = 0; i < effectiveCount; i += 1) {
+    const num = String(startIndex + i).padStart(padLen, '0');
+    const title = `${prefix}-${num}`;
+    const assign = assignments[i] || {};
+    const hasProxy = Boolean(assign.proxyId || assign.proxyRaw);
+
+    const profilePayload = {
+      title,
+      dataDirName: title,
+      notes,
+      deviceClass,
+      startupUrls,
+      groupId,
+      systemProxyBehavior: hasProxy ? 'PROFILE_PROXY' : 'DIRECT',
+      randomFingerprint: false // explicit fingerprint fields are supplied below
+    };
+    if (assign.proxyId) profilePayload.proxyId = assign.proxyId;
+    if (assign.proxyRaw) { profilePayload.proxyRaw = assign.proxyRaw; if (assign.proxyType) profilePayload.proxyType = assign.proxyType; }
+
+    if (randomFp) {
+      const verPin = versionPlan ? versionPlan[i] : (optionalString(input.browserVersion) || undefined);
+      let fp = null;
+      // Regenerate up to a few times to dodge a duplicate visible signature; the
+      // random MAC / device-name / canvas seed make profiles distinct regardless,
+      // but this keeps the user-visible hardware tuple unique while the pools allow.
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        fp = generateFingerprint({ deviceClass, os, browserVersion: verPin });
+        const sig = fingerprintSignature(fp);
+        if (deviceClass === 'mobile' || !usedSignatures.has(sig)) { usedSignatures.add(sig); break; }
+      }
+      Object.assign(profilePayload, fp);
+      profilePayload.randomFingerprint = false; // fp fields are passed explicitly
+      profilePayload.deviceClass = deviceClass;
+    }
+
+    try {
+      const c = await createProfile(profilePayload);
+      created.push(c);
+    } catch (e) {
+      errors.push({ title, message: (e && e.message) || 'create failed' });
+    }
+  }
+
+  let message;
+  if (proxyLimited) {
+    const unit = proxyMode === 'paste' ? 'unique proxy line(s)' : 'unused/available proxy(ies)';
+    message = `Created ${created.length} of ${count} requested — you have ${availableProxies} ${unit}. Add ${count - availableProxies} more proxies to create the remaining ${count - effectiveCount}.`;
+  } else {
+    message = `Created ${created.length} profile${created.length === 1 ? '' : 's'}${groupId ? ' in the selected group' : ''}.`;
+  }
+
+  return {
+    requested: count,
+    createdCount: created.length,
+    profiles: created,
+    proxyLimited,
+    availableProxies,
+    proxyMode,
+    groupId,
+    errors,
+    message
+  };
+}
+
 async function updateProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
@@ -2199,6 +2628,68 @@ async function assignProfilesToGroup(payload) {
   const res = await db.profile.updateMany({ where: { id: { in: allowed } }, data: { groupId } });
   const label = groupId === null ? 'removed from group' : 'assigned to a group';
   for (const id of ids) { await logActivity(db, id, 'assign', label); }
+  return { assigned: res.count, groupId };
+}
+
+// --- Proxy categories/groups (USA, UK, Japan, …) -----------------------------
+async function listProxyGroups() {
+  const db = getPrisma();
+  const groups = await db.proxyGroup.findMany({
+    orderBy: { createdAt: 'asc' },
+    include: { _count: { select: { proxies: true } } }
+  });
+  return groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    color: g.color || '#3b82f6',
+    proxyCount: g._count?.proxies ?? 0,
+    createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt
+  }));
+}
+
+async function createProxyGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const name = requiredString(input.name, 'Group name').slice(0, 80);
+  const color = optionalString(input.color) || '#3b82f6';
+  const created = await db.proxyGroup.create({ data: { name, color, ownerMemberId: ownerStampId() } });
+  return { id: created.id, name: created.name, color: created.color, proxyCount: 0 };
+}
+
+async function updateProxyGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  const data = {};
+  if (input.name !== undefined) data.name = requiredString(input.name, 'Group name').slice(0, 80);
+  if (input.color !== undefined) data.color = optionalString(input.color) || '#3b82f6';
+  const updated = await db.proxyGroup.update({ where: { id }, data });
+  return { id: updated.id, name: updated.name, color: updated.color };
+}
+
+async function deleteProxyGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const id = parseId(input.id);
+  // Detach proxies first (keep the proxies; only drop the grouping).
+  await db.proxy.updateMany({ where: { proxyGroupId: id }, data: { proxyGroupId: null } });
+  await db.proxyGroup.delete({ where: { id } });
+  return { deleted: true, id };
+}
+
+async function assignProxiesToGroup(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const groupId = (input.groupId === null || input.groupId === undefined || input.groupId === '')
+    ? null
+    : parseId(input.groupId, 'proxyGroupId');
+  if (groupId !== null) {
+    const group = await db.proxyGroup.findUnique({ where: { id: groupId } });
+    if (!group) throw new Error('Selected proxy group does not exist.');
+  }
+  const { allowed } = await partitionAccessibleProxyIds(ids);
+  const res = await db.proxy.updateMany({ where: { id: { in: allowed } }, data: { proxyGroupId: groupId } });
   return { assigned: res.count, groupId };
 }
 
@@ -2868,16 +3359,35 @@ async function liveProfileLeak(payload) {
 
 // ---------- Proxy health: persistence + background scheduler ----------
 
+// Build a human geo label from a check result, e.g. "US Kirkland, Washington 98033".
+function proxyGeoLabel(result) {
+  if (!result || !result.success) return '';
+  const cc = String(result.country || '').toUpperCase();
+  const place = [result.city, result.region].filter(Boolean).join(', ');
+  const head = [cc, place].filter(Boolean).join(' ');
+  const zip = result.zip ? ` ${result.zip}` : '';
+  return `${head}${zip}`.trim();
+}
+
 async function persistProxyHealth(db, id, result) {
-  await db.proxy.update({
-    where: { id },
-    data: {
-      lastStatus: result.success ? 'ok' : 'fail',
-      lastLatencyMs: typeof result.latencyMs === 'number' ? result.latencyMs : null,
-      lastCountry: result.country || null,
-      lastCheckedAt: new Date()
-    }
-  }).catch(() => {});
+  const data = {
+    lastStatus: result.success ? 'ok' : 'fail',
+    lastLatencyMs: typeof result.latencyMs === 'number' ? result.latencyMs : null,
+    lastCountry: result.country || null,
+    lastCheckedAt: new Date()
+  };
+  // Enrich the proxy NAME with the verified exit location so the pool is easy to scan
+  // (matches the vendor "Provider • US City, Region" style for every proxy). The part
+  // before " • " is kept as the base (provider/user label) and only the geo is refreshed.
+  const geo = proxyGeoLabel(result);
+  if (geo) {
+    try {
+      const current = await db.proxy.findUnique({ where: { id }, select: { name: true } });
+      const base = String((current && current.name) || '').split(' • ')[0].trim() || 'Proxy';
+      data.name = `${base} • ${geo}`;
+    } catch (e) { /* leave the name untouched if the lookup fails */ }
+  }
+  await db.proxy.update({ where: { id }, data }).catch(() => {});
 }
 
 async function readSetting(key, fallback) {
@@ -7046,9 +7556,15 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_SYNC_VENDOR_POOL, syncVendorPool);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
   registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
+  registerHandler(CHANNELS.PROXY_GROUP_LIST, listProxyGroups);
+  registerHandler(CHANNELS.PROXY_GROUP_CREATE, createProxyGroup);
+  registerHandler(CHANNELS.PROXY_GROUP_UPDATE, updateProxyGroup);
+  registerHandler(CHANNELS.PROXY_GROUP_DELETE, deleteProxyGroup);
+  registerHandler(CHANNELS.PROXY_GROUP_ASSIGN, assignProxiesToGroup);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
+  registerHandler(CHANNELS.PROFILE_BATCH_GENERATE, batchGenerateProfiles);
   registerHandler(CHANNELS.PROFILE_UPDATE, updateProfile);
   registerHandler(CHANNELS.PROFILE_DELETE, deleteProfile);
   registerHandler(CHANNELS.PROFILE_LAUNCH, launchProfile);
