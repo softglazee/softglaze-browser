@@ -2,7 +2,18 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const { app, BrowserWindow, shell, session } = require('electron');
+const { app, BrowserWindow, shell, session, protocol } = require('electron');
+
+// The production renderer is an ES-module bundle. Chromium refuses to load
+// `type="module"` scripts over file:// (the null origin fails CORS) — that leaves a
+// blank window. So instead of loadFile(file://) we serve dist/ over a custom,
+// privileged scheme `app://` (standard + secure + corsEnabled), where modules load
+// normally and CSP 'self' still scopes everything to the app origin. This MUST be
+// registered before app 'ready', hence at module top level.
+const APP_SCHEME = 'app';
+protocol.registerSchemesAsPrivileged([
+  { scheme: APP_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }
+]);
 
 // Load .env from the locations that actually exist in a packaged build.
 // dotenv's default (cwd/.env) does NOT exist next to a packaged executable,
@@ -101,6 +112,51 @@ function getProductionIndexPath() {
   return path.join(__dirname, '../../dist/index.html');
 }
 
+// Resolve the SoftGlaze app icon for the BrowserWindow (taskbar + title bar).
+// In a packaged build the .exe already carries the embedded icon (build.win.icon),
+// but setting it here makes dev runs AND the live window show the brand mark too.
+// Vite copies public/ into dist/, so the packaged path is dist/logos/app.ico.
+function getAppIconPath() {
+  const candidates = [
+    path.join(__dirname, '../../public/logos/app.ico'), // dev (project source)
+    path.join(__dirname, '../../dist/logos/app.ico')     // packaged (vite-copied)
+  ];
+  for (const p of candidates) {
+    try { if (fs.existsSync(p)) return p; } catch { /* keep looking */ }
+  }
+  return undefined;
+}
+
+// Serve the built renderer (dist/) over app://. We set an explicit MIME per
+// extension because Chromium rejects a module script served with the wrong type,
+// and refuse any path that escapes dist/ (traversal guard).
+const APP_MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
+  '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject', '.map': 'application/json'
+};
+function registerAppProtocol() {
+  const distDir = path.normalize(path.join(__dirname, '../../dist'));
+  protocol.handle(APP_SCHEME, async (request) => {
+    try {
+      const { pathname } = new URL(request.url);
+      let rel = decodeURIComponent(pathname).replace(/^\/+/, '');
+      if (!rel) rel = 'index.html';
+      const full = path.normalize(path.join(distDir, rel));
+      if (full !== distDir && !full.startsWith(distDir + path.sep)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+      const data = await fs.promises.readFile(full);
+      const ext = path.extname(full).toLowerCase();
+      return new Response(data, { headers: { 'content-type': APP_MIME[ext] || 'application/octet-stream' } });
+    } catch (e) {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -108,6 +164,7 @@ function createMainWindow() {
     minWidth: 1180,
     minHeight: 720,
     title: 'SoftGlaze Browser',
+    icon: getAppIconPath(),
     backgroundColor: '#020617',
     show: false,
     autoHideMenuBar: true,
@@ -167,7 +224,10 @@ function createMainWindow() {
   if (isDev) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173');
   } else {
-    mainWindow.loadFile(getProductionIndexPath());
+    // Served via the app:// handler registered in whenReady (NOT file://, which
+    // can't load ES-module scripts). base:'./' in vite makes assets resolve to
+    // app://local/assets/… off this URL.
+    mainWindow.loadURL(`${APP_SCHEME}://local/index.html`);
   }
 
   mainWindow.on('closed', () => {
@@ -200,6 +260,9 @@ app.whenReady().then(async () => {
 
   const { registerIpcHandlers } = require('./ipcHandlers');
   registerIpcHandlers();
+
+  // Wire the app:// file server before the window loads its URL.
+  registerAppProtocol();
 
   createMainWindow();
 

@@ -32,22 +32,32 @@ export default function BatchImportPage() {
     count: 10,
     os: 'Windows',
     browserCore: 'SunBrowser',
-    browserVersion: 'Auto',
     randomFp: true,          // unique fingerprint per profile (critical)
-    proxyMode: 'direct'      // 'direct' | 'pool'
+    proxyMode: 'direct',     // 'direct' | 'pool'
+    assignUnique: true,      // pool: 1:1 unique proxy vs round-robin reuse
+    groupId: 'ungrouped',
+    newGroupName: '',
+    startupUrls: ''
   });
   const [generating, setGenerating] = useState(false);
   const [generateProgress, setGenerateProgress] = useState(0);
   const [generateResult, setGenerateResult] = useState(null);
   const [installedBrowsers, setInstalledBrowsers] = useState([]);
   const [savedProxies, setSavedProxies] = useState([]);
+  const [groups, setGroups] = useState([]);
 
-  // Load installed Chrome versions + saved proxies so Quick Generate can assign
-  // real versions and round-robin a proxy pool.
+  // Load installed Chrome versions, saved proxies, and profile groups so Quick
+  // Generate can assign real versions, a unique proxy each, and a target group.
   useEffect(() => {
     softglazeApi.system.listBrowsers().then((b) => setInstalledBrowsers(Array.isArray(b) ? b : [])).catch(() => {});
     softglazeApi.proxies.list({}).then((p) => setSavedProxies(Array.isArray(p) ? p : (p?.items || []))).catch(() => {});
+    softglazeApi.groups.list().then((g) => setGroups(Array.isArray(g) ? g : [])).catch(() => {});
   }, []);
+
+  // Styled <select>: hide the native arrow + paint an inset chevron so the dropdown
+  // icon isn't glued to the field edge.
+  const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
+  const selectCls = 'w-full bg-secondary border border-border rounded px-3 py-2 pr-9 text-foreground outline-none focus:border-blue-500 disabled:opacity-50 appearance-none cursor-pointer';
 
   // --- FILE IMPORT LOGIC ---
   const handleSelectFile = async () => {
@@ -170,48 +180,44 @@ export default function BatchImportPage() {
     if (quickForm.count < 1 || quickForm.count > 500) {
       return alert('Please enter a valid count between 1 and 500.');
     }
-
-    setGenerating(true);
-    setGenerateProgress(0);
-    setGenerateResult(null);
-    let successCount = 0;
-    let failCount = 0;
-
-    // Round-robin pool assignment: cycle through saved proxies so each profile
-    // gets its own IP instead of all sharing one.
-    const pool = quickForm.proxyMode === 'pool' ? savedProxies : [];
-
-    // We loop and hit the standard create endpoint.
-    // (In a massive scale app, you'd write a dedicated `profiles.batchCreate` IPC handler).
-    for (let i = 1; i <= quickForm.count; i++) {
-      try {
-        // Pad the number (e.g., 01, 02, 10)
-        const paddedNum = String(i).padStart(String(quickForm.count).length, '0');
-        const assignedProxy = pool.length ? pool[(i - 1) % pool.length] : null;
-        await softglazeApi.profiles.create({
-          title: `${quickForm.prefix}-${paddedNum}`,
-          notes: 'Auto-generated via Quick Batch',
-          os: quickForm.os,
-          browserCore: quickForm.browserCore,
-          browserVersion: quickForm.browserVersion,
-          // Each profile gets its OWN freshly generated fingerprint (GPU, cores,
-          // screen, canvas seed, etc.) — without this every quick profile would be
-          // an identical clone, which defeats the whole purpose.
-          randomFingerprint: quickForm.randomFp,
-          proxyId: assignedProxy ? assignedProxy.id : null,
-          systemProxyBehavior: assignedProxy ? 'PROFILE_PROXY' : 'DIRECT',
-          tagManagement: 0,
-          dataDirName: `${quickForm.prefix}-${paddedNum}`,
-        });
-        successCount++;
-      } catch (err) {
-        failCount++;
-      }
-      setGenerateProgress(Math.round((i / quickForm.count) * 100));
+    if (quickForm.groupId === '__new__' && !quickForm.newGroupName.trim()) {
+      return alert('Enter a name for the new group.');
     }
 
-    setGenerating(false);
-    setGenerateResult({ success: successCount, failed: failCount });
+    setGenerating(true);
+    setGenerateProgress(10);
+    setGenerateResult(null);
+
+    // Map proxy choice → server-side assignment mode (unique 1:1 by default).
+    const proxyMode = quickForm.proxyMode !== 'pool'
+      ? 'direct'
+      : (quickForm.assignUnique ? 'unique' : 'pool');
+
+    try {
+      const r = await softglazeApi.profiles.batchGenerate({
+        count: quickForm.count,
+        prefix: quickForm.prefix,
+        os: quickForm.os,
+        deviceClass: /android|ios|mobile/i.test(quickForm.os) ? 'mobile' : 'desktop',
+        randomFingerprint: quickForm.randomFp,
+        distributeVersions: quickForm.randomFp,
+        startupUrls: quickForm.startupUrls,
+        groupId: quickForm.groupId === '__new__' || quickForm.groupId === 'ungrouped' ? null : quickForm.groupId,
+        newGroupName: quickForm.groupId === '__new__' ? quickForm.newGroupName.trim() : null,
+        proxyMode
+      });
+      setGenerateProgress(100);
+      setGenerateResult({
+        success: r?.createdCount ?? 0,
+        failed: Array.isArray(r?.errors) ? r.errors.length : 0,
+        proxyLimited: Boolean(r?.proxyLimited),
+        message: r?.message || ''
+      });
+    } catch (err) {
+      setGenerateResult({ success: 0, failed: quickForm.count, message: err.message || 'Generation failed.', proxyLimited: false });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
@@ -487,7 +493,8 @@ export default function BatchImportPage() {
                   value={quickForm.os}
                   onChange={(e) => setQuickForm({ ...quickForm, os: e.target.value })}
                   disabled={generating}
-                  className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 disabled:opacity-50"
+                  className={selectCls}
+                  style={chevronStyle}
                 >
                   <option value="Windows">Windows (All)</option>
                   <option value="macOS">macOS (All)</option>
@@ -503,7 +510,8 @@ export default function BatchImportPage() {
                   value={quickForm.browserCore}
                   onChange={(e) => setQuickForm({ ...quickForm, browserCore: e.target.value })}
                   disabled={generating}
-                  className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 disabled:opacity-50"
+                  className={selectCls}
+                  style={chevronStyle}
                 >
                   <option value="SunBrowser">SunBrowser (Chrome-based)</option>
                   <option value="FlowerBrowser">FlowerBrowser (Firefox-based)</option>
@@ -511,20 +519,27 @@ export default function BatchImportPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Browser Version</label>
+                <label className="text-muted-foreground text-[13px] font-medium block">Group</label>
                 <select
-                  value={quickForm.browserVersion}
-                  onChange={(e) => setQuickForm({ ...quickForm, browserVersion: e.target.value })}
+                  value={quickForm.groupId}
+                  onChange={(e) => setQuickForm({ ...quickForm, groupId: e.target.value })}
                   disabled={generating}
-                  className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 disabled:opacity-50"
+                  className={selectCls}
+                  style={chevronStyle}
                 >
-                  <option value="Auto">Auto (newest installed)</option>
-                  {installedBrowsers.map((b) => (
-                    <option key={b.version || b.major} value={String(b.major)}>{`Chrome ${b.major}${b.version ? ` (${b.version})` : ''}`}</option>
-                  ))}
+                  <option value="ungrouped">Ungrouped</option>
+                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  <option value="__new__">+ Create new group…</option>
                 </select>
-                {installedBrowsers.length === 0 && (
-                  <p className="text-[11px] text-amber-400/80">No installed browsers detected in /chrome — profiles will use the bundled engine.</p>
+                {quickForm.groupId === '__new__' && (
+                  <input
+                    type="text"
+                    value={quickForm.newGroupName}
+                    onChange={(e) => setQuickForm({ ...quickForm, newGroupName: e.target.value })}
+                    placeholder="New group name"
+                    disabled={generating}
+                    className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 disabled:opacity-50"
+                  />
                 )}
               </div>
 
@@ -534,11 +549,24 @@ export default function BatchImportPage() {
                   value={quickForm.proxyMode}
                   onChange={(e) => setQuickForm({ ...quickForm, proxyMode: e.target.value })}
                   disabled={generating}
-                  className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 disabled:opacity-50"
+                  className={selectCls}
+                  style={chevronStyle}
                 >
                   <option value="direct">Direct — no proxy</option>
-                  <option value="pool">Round-robin from saved proxies ({savedProxies.length})</option>
+                  <option value="pool">From saved proxies ({savedProxies.length})</option>
                 </select>
+                {quickForm.proxyMode === 'pool' && (
+                  <label className="flex items-start gap-2 cursor-pointer select-none mt-1">
+                    <input
+                      type="checkbox"
+                      checked={quickForm.assignUnique}
+                      onChange={(e) => setQuickForm({ ...quickForm, assignUnique: e.target.checked })}
+                      disabled={generating}
+                      className="h-4 w-4 cursor-pointer accent-blue-500 mt-0.5"
+                    />
+                    <span className="text-[11px] text-muted-foreground">Unique proxy per profile (1:1) — caps at available proxies. Uncheck to reuse round-robin.</span>
+                  </label>
+                )}
                 {quickForm.proxyMode === 'pool' && savedProxies.length === 0 && (
                   <p className="text-[11px] text-amber-400/80">No saved proxies — add some in Proxy Pool first, or profiles will be created direct.</p>
                 )}
@@ -559,6 +587,18 @@ export default function BatchImportPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-muted-foreground text-[13px] font-medium block">Startup Links <span className="text-muted-foreground/60 font-normal">(optional — one per line, opens on launch)</span></label>
+              <textarea
+                rows={2}
+                value={quickForm.startupUrls}
+                onChange={(e) => setQuickForm({ ...quickForm, startupUrls: e.target.value })}
+                placeholder={'https://facebook.com\nhttps://mail.google.com'}
+                disabled={generating}
+                className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground text-[12px] outline-none focus:border-blue-500 transition disabled:opacity-50 resize-none"
+              />
+            </div>
+
             {/* Preview Hint */}
             <div className="p-3 bg-secondary rounded border border-border text-[12px] font-mono text-muted-foreground">
               Example Outputs: <span className="text-blue-400">{quickForm.prefix}-01</span>, <span className="text-blue-400">{quickForm.prefix}-02</span> ...
@@ -577,9 +617,9 @@ export default function BatchImportPage() {
             )}
 
             {generateResult && (
-              <div className="p-4 bg-emerald-900/20 border border-emerald-900/50 rounded-lg text-emerald-400 text-[13px] flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                Successfully created <strong>{generateResult.success}</strong> profiles. {generateResult.failed > 0 && `(${generateResult.failed} failed).`}
+              <div className={`p-4 rounded-lg text-[13px] flex items-start gap-2 ${generateResult.proxyLimited ? 'bg-amber-900/20 border border-amber-900/50 text-amber-300' : 'bg-emerald-900/20 border border-emerald-900/50 text-emerald-400'}`}>
+                {generateResult.proxyLimited ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> : <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />}
+                <span>{generateResult.message || <>Successfully created <strong>{generateResult.success}</strong> profiles.{generateResult.failed > 0 ? ` (${generateResult.failed} failed).` : ''}</>}</span>
               </div>
             )}
 

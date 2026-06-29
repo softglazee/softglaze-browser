@@ -39,9 +39,17 @@ export const softglazeApi = {
     rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
     testAll: () => getSoftglazeApi().proxies.testAll()
   },
+  proxyGroups: {
+    list: () => getSoftglazeApi().proxyGroups.list(),
+    create: (payload) => getSoftglazeApi().proxyGroups.create(payload),
+    update: (payload) => getSoftglazeApi().proxyGroups.update(payload),
+    delete: (id) => getSoftglazeApi().proxyGroups.delete(id),
+    assign: (ids, groupId) => getSoftglazeApi().proxyGroups.assign(ids, groupId)
+  },
   profiles: {
     list: (params) => getSoftglazeApi().profiles.list(params),
     create: (payload) => getSoftglazeApi().profiles.create(payload),
+    batchGenerate: (payload) => getSoftglazeApi().profiles.batchGenerate(payload),
     update: (payload) => getSoftglazeApi().profiles.update(payload),
     delete: (id, options) => getSoftglazeApi().profiles.delete(id, options),
     launch: (id, options) => getSoftglazeApi().profiles.launch(id, options),

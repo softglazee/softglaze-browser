@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes } from 'lucide-react';
+import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput } from 'lucide-react';
 
 import EmptyState from '@/components/EmptyState.jsx';
 import ProxyProviders from '@/components/ProxyProviders.jsx';
@@ -15,6 +15,13 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
+
+// Friendly labels for the "auto group by provider" chips.
+const PROVIDER_LABELS = {
+  apify: 'Apify', shopsocks5: 'ShopSocks5', smartproxyorg: 'Smartproxy.org',
+  smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom'
+};
+const GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
 
 // Figma-style compact stat card (tinted, glow, icon tile).
 function MiniStat({ icon: Icon, label, value, color }) {
@@ -82,6 +89,12 @@ export default function ProxyPoolPage() {
   const [testingAll, setTestingAll] = useState(false);
   const [testSummary, setTestSummary] = useState(null);
   const [proxyPolicy, setProxyPolicy] = useState('each-launch');
+  // Proxy categories/groups + the active filter ('all' | 'none' | <groupId> | 'provider:<key>').
+  const [groups, setGroups] = useState([]);
+  const [activeGroup, setActiveGroup] = useState('all');
+  const [groupModal, setGroupModal] = useState(null); // { id?, name, color } when creating/editing
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [dragOverKey, setDragOverKey] = useState(null);
 
   useEffect(() => {
     softglazeApi.settings.getProxyPolicy()
@@ -90,20 +103,48 @@ export default function ProxyPoolPage() {
   }, []);
 
   const isEditing = Boolean(proxyForm.id);
-  const filteredProxies = useMemo(() => proxies, [proxies]);
 
-  const allSelected = proxies.length > 0 && proxies.every((p) => selectedIds.has(p.id));
+  // Distinct providers present in the pool (for the "auto group by provider" chips).
+  const providerCounts = useMemo(() => {
+    const m = {};
+    for (const p of proxies) { if (p.provider) m[p.provider] = (m[p.provider] || 0) + 1; }
+    return m;
+  }, [proxies]);
+
+  // Client-side filter: search text + the active category (group / ungrouped / provider).
+  const filteredProxies = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return proxies.filter((p) => {
+      if (q) {
+        const hay = `${p.name || ''} ${p.host || ''} ${p.username || ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (activeGroup === 'all') return true;
+      if (activeGroup === 'none') return !p.proxyGroupId;
+      if (typeof activeGroup === 'string' && activeGroup.startsWith('provider:')) return p.provider === activeGroup.slice(9);
+      return String(p.proxyGroupId) === String(activeGroup);
+    });
+  }, [proxies, search, activeGroup]);
+
+  const allSelected = filteredProxies.length > 0 && filteredProxies.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const loadGroups = useCallback(async () => {
+    try { const g = await softglazeApi.proxyGroups.list(); setGroups(Array.isArray(g) ? g : []); }
+    catch (e) { /* groups are optional UI sugar — never block the pool */ }
+  }, []);
 
   const loadProxies = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const list = await softglazeApi.proxies.list({ search });
-      setProxies(list);
+      // Fetch the full pool once; search + category filtering happen client-side so
+      // the sidebar counts stay accurate and switching categories never refetches.
+      const list = await softglazeApi.proxies.list({});
+      setProxies(Array.isArray(list) ? list : []);
       // Drop any selected ids that no longer exist after a reload.
       setSelectedIds((prev) => {
-        const live = new Set(list.map((p) => p.id));
+        const live = new Set((Array.isArray(list) ? list : []).map((p) => p.id));
         const next = new Set();
         prev.forEach((id) => { if (live.has(id)) next.add(id); });
         return next;
@@ -113,7 +154,7 @@ export default function ProxyPoolPage() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, []);
 
   function toggleSelect(id) {
     setSelectedIds((prev) => {
@@ -124,7 +165,7 @@ export default function ProxyPoolPage() {
   }
 
   function toggleSelectAll() {
-    setSelectedIds(() => (allSelected ? new Set() : new Set(proxies.map((p) => p.id))));
+    setSelectedIds(() => (allSelected ? new Set() : new Set(filteredProxies.map((p) => p.id))));
   }
 
   function clearSelection() {
@@ -171,6 +212,7 @@ export default function ProxyPoolPage() {
         try {
           const result = await softglazeApi.proxies.check({ id });
           setCheckResults((prev) => ({ ...prev, [id]: result }));
+          applyGeoName(id, result);
         } catch (err) {
           setCheckResults((prev) => ({ ...prev, [id]: { success: false, error: err.message } }));
         }
@@ -181,7 +223,7 @@ export default function ProxyPoolPage() {
     }
   }
 
-  useEffect(() => { loadProxies(); }, [loadProxies]);
+  useEffect(() => { loadProxies(); loadGroups(); }, [loadProxies, loadGroups]);
 
   function updateProxyForm(key, value) {
     setProxyForm((current) => ({ ...current, [key]: value }));
@@ -253,6 +295,7 @@ export default function ProxyPoolPage() {
     try {
       const result = await softglazeApi.proxies.check({ id: proxy.id });
       setCheckResults((prev) => ({ ...prev, [proxy.id]: result }));
+      applyGeoName(proxy.id, result);
     } catch (err) {
       setCheckResults((prev) => ({ ...prev, [proxy.id]: { success: false, error: err.message } }));
     } finally {
@@ -268,6 +311,7 @@ export default function ProxyPoolPage() {
         try {
           const result = await softglazeApi.proxies.check({ id: proxy.id });
           setCheckResults((prev) => ({ ...prev, [proxy.id]: result }));
+          applyGeoName(proxy.id, result);
         } catch (err) {
           setCheckResults((prev) => ({ ...prev, [proxy.id]: { success: false, error: err.message } }));
         }
@@ -286,7 +330,7 @@ export default function ProxyPoolPage() {
     try {
       const summary = await softglazeApi.proxies.testAll();
       setTestSummary(summary);
-      const list = await softglazeApi.proxies.list({ search });
+      const list = await softglazeApi.proxies.list({});
       const rows = Array.isArray(list) ? list : [];
       setProxies(rows);
       const next = {};
@@ -307,6 +351,60 @@ export default function ProxyPoolPage() {
     catch (err) { setError(err.message || 'Could not save the proxy policy.'); }
   }
 
+  // --- Proxy groups: create / edit / delete / assign / drag-drop ---
+  async function saveGroup() {
+    const m = groupModal;
+    if (!m) return;
+    const name = (m.name || '').trim();
+    if (!name) { setError('Enter a group name.'); return; }
+    try {
+      if (m.id) await softglazeApi.proxyGroups.update({ id: m.id, name, color: m.color });
+      else await softglazeApi.proxyGroups.create({ name, color: m.color });
+      setGroupModal(null);
+      await loadGroups();
+    } catch (err) { setError(err.message || 'Could not save the group.'); }
+  }
+
+  async function removeGroup(g) {
+    if (!window.confirm(`Delete group "${g.name}"? The proxies stay in the pool — they just become ungrouped.`)) return;
+    try {
+      await softglazeApi.proxyGroups.delete(g.id);
+      if (String(activeGroup) === String(g.id)) setActiveGroup('all');
+      await Promise.all([loadGroups(), loadProxies()]);
+    } catch (err) { setError(err.message || 'Could not delete the group.'); }
+  }
+
+  async function assignSelectedToGroup(groupId) {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    try {
+      await softglazeApi.proxyGroups.assign(ids, groupId);
+      setAssignOpen(false);
+      clearSelection();
+      await Promise.all([loadGroups(), loadProxies()]);
+    } catch (err) { setError(err.message || 'Could not move the proxies.'); }
+  }
+
+  // Drag a proxy row (or, if it's part of the current selection, the whole selection)
+  // onto a group chip to assign it there.
+  function onRowDragStart(e, proxy) {
+    const ids = selectedIds.has(proxy.id) ? Array.from(selectedIds) : [proxy.id];
+    e.dataTransfer.setData('text/plain', JSON.stringify(ids));
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  async function onGroupDrop(e, groupId) {
+    e.preventDefault();
+    setDragOverKey(null);
+    let ids = [];
+    try { ids = JSON.parse(e.dataTransfer.getData('text/plain')) || []; } catch (err) { ids = []; }
+    if (!Array.isArray(ids) || !ids.length) return;
+    try {
+      await softglazeApi.proxyGroups.assign(ids, groupId);
+      clearSelection();
+      await Promise.all([loadGroups(), loadProxies()]);
+    } catch (err) { setError(err.message || 'Could not move the proxies.'); }
+  }
+
   function renderStatus(id) {
     if (checkingId === id) return <span className="text-xs text-muted">Checking…</span>;
     const r = checkResults[id];
@@ -319,6 +417,22 @@ export default function ProxyPoolPage() {
       );
     }
     return <span className="text-xs font-medium text-red-400" title={r.error || 'Failed'}>Failed{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
+  }
+
+  const chipCls = (key) => `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(key) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`;
+
+  // Mirror the backend's name enrichment so a checked proxy shows its geo immediately
+  // (e.g. "ShopSocks5 • US Kirkland, Washington 98033") without a full reload.
+  function applyGeoName(id, result) {
+    if (!result || !result.success) return;
+    const cc = String(result.country || '').toUpperCase();
+    const place = [result.city, result.region].filter(Boolean).join(', ');
+    const head = [cc, place].filter(Boolean).join(' ');
+    const geo = `${head}${result.zip ? ` ${result.zip}` : ''}`.trim();
+    if (!geo) return;
+    setProxies((prev) => prev.map((p) => (p.id === id
+      ? { ...p, name: `${String(p.name || '').split(' • ')[0].trim() || 'Proxy'} • ${geo}` }
+      : p)));
   }
 
   async function handleDelete(proxy) {
@@ -435,11 +549,58 @@ export default function ProxyPoolPage() {
         <div className="relative max-w-sm">
           <Input
             icon={Search}
-            value={search} 
-            onChange={(event) => setSearch(event.target.value)} 
-            placeholder="Search by proxy name, host, or username..." 
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by proxy name, host, or username..."
           />
         </div>
+      </div>
+
+      {/* CATEGORY / GROUP BAR — filter the pool, manage groups, drag rows here to assign */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button className={chipCls('all')} onClick={() => setActiveGroup('all')}>
+          <Boxes className="w-3.5 h-3.5" /> All <span className="opacity-60">{proxies.length}</span>
+        </button>
+        <button className={chipCls('none')} onClick={() => setActiveGroup('none')}>
+          <Folder className="w-3.5 h-3.5" /> Ungrouped <span className="opacity-60">{proxies.filter((p) => !p.proxyGroupId).length}</span>
+        </button>
+
+        {groups.map((g) => {
+          const active = String(activeGroup) === String(g.id);
+          const over = dragOverKey === `g${g.id}`;
+          return (
+            <div
+              key={g.id}
+              onClick={() => setActiveGroup(g.id)}
+              onDragOver={(e) => { e.preventDefault(); setDragOverKey(`g${g.id}`); }}
+              onDragLeave={() => setDragOverKey((k) => (k === `g${g.id}` ? null : k))}
+              onDrop={(e) => onGroupDrop(e, g.id)}
+              title="Click to filter · drag proxies here to add them"
+              className={`group/chip inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${over ? 'ring-2 ring-primary border-primary' : active ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} />
+              {g.name} <span className="opacity-60">{g.proxyCount ?? 0}</span>
+              <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title="Rename / recolor"><Edit className="w-3 h-3" /></button>
+              <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title="Delete group"><X className="w-3 h-3" /></button>
+            </div>
+          );
+        })}
+
+        <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors" onClick={() => setGroupModal({ name: '', color: GROUP_COLORS[groups.length % GROUP_COLORS.length] })}>
+          <FolderPlus className="w-3.5 h-3.5" /> New group
+        </button>
+
+        {Object.keys(providerCounts).length > 0 && (
+          <>
+            <span className="w-px h-5 bg-border mx-1" />
+            <span className="text-[10px] uppercase tracking-wider text-muted-dark mr-1">By provider</span>
+            {Object.entries(providerCounts).map(([prov, cnt]) => (
+              <button key={prov} className={chipCls(`provider:${prov}`)} onClick={() => setActiveGroup(`provider:${prov}`)}>
+                <Tag className="w-3 h-3" /> {PROVIDER_LABELS[prov] || prov} <span className="opacity-60">{cnt}</span>
+              </button>
+            ))}
+          </>
+        )}
       </div>
 
       {selectedIds.size > 0 && (
@@ -449,6 +610,25 @@ export default function ProxyPoolPage() {
           <Button size="sm" variant="secondary" onClick={handleBulkCheck} disabled={checkingAll || bulkDeleting}>
             {checkingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />} Check selected
           </Button>
+          <div className="relative">
+            <Button size="sm" variant="secondary" onClick={() => setAssignOpen((v) => !v)} disabled={bulkDeleting}>
+              <FolderInput className="h-3.5 w-3.5" /> Move to group <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+            {assignOpen && (
+              <div className="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-xl py-1">
+                {groups.length === 0 && <div className="px-3 py-2 text-[12px] text-muted">No groups yet — create one first.</div>}
+                {groups.map((g) => (
+                  <button key={g.id} onClick={() => assignSelectedToGroup(g.id)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-foreground hover:bg-secondary text-left">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} /> {g.name}
+                  </button>
+                ))}
+                <div className="my-1 h-px bg-border" />
+                <button onClick={() => assignSelectedToGroup(null)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-muted-foreground hover:bg-secondary text-left">
+                  <X className="w-3.5 h-3.5" /> Remove from group
+                </button>
+              </div>
+            )}
+          </div>
           <Button size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete selected
           </Button>
@@ -470,7 +650,7 @@ export default function ProxyPoolPage() {
               <EmptyState title="No proxies found" description="Add a proxy manually or paste a batch of proxy strings." />
             </div>
           ) : (
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-auto max-h-[60vh]">
               <table className="w-full min-w-[1000px] border-collapse text-left text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
                   <tr>
@@ -488,6 +668,7 @@ export default function ProxyPoolPage() {
                     <th className="px-5 py-4">Type</th>
                     <th className="px-5 py-4">Endpoint</th>
                     <th className="px-5 py-4">Username</th>
+                    <th className="px-5 py-4">Group</th>
                     <th className="px-5 py-4">Profiles</th>
                     <th className="px-5 py-4">Created</th>
                     <th className="px-5 py-4">Status</th>
@@ -496,7 +677,7 @@ export default function ProxyPoolPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredProxies.map((proxy) => (
-                    <tr key={proxy.id} className={`transition-colors ${selectedIds.has(proxy.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
+                    <tr key={proxy.id} draggable onDragStart={(e) => onRowDragStart(e, proxy)} className={`transition-colors cursor-grab active:cursor-grabbing ${selectedIds.has(proxy.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
                       <td className="px-5 py-4">
                         <input
                           type="checkbox"
@@ -526,7 +707,28 @@ export default function ProxyPoolPage() {
                         </div>
                       </td>
                       <td className="px-5 py-4 text-muted">{proxy.username || '—'}</td>
-                      <td className="px-5 py-4 text-muted">{proxy.profileCount ?? 0}</td>
+                      <td className="px-5 py-4">
+                        {proxy.groupName ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: proxy.groupColor || '#3b82f6' }} /> {proxy.groupName}
+                          </span>
+                        ) : <span className="text-muted-dark">—</span>}
+                      </td>
+                      <td className="px-5 py-4">
+                        {(() => {
+                          const names = proxy.profileNames || [];
+                          const count = proxy.profileCount ?? names.length;
+                          if (names.length > 0) {
+                            return (
+                              <span className="text-foreground text-xs" title={names.join(', ')}>
+                                {names.slice(0, 2).join(', ')}{names.length > 2 ? ` +${names.length - 2}` : ''}
+                              </span>
+                            );
+                          }
+                          if (count > 0) return <span className="text-foreground text-xs">{count} profile{count === 1 ? '' : 's'}</span>;
+                          return <span className="text-muted-dark">—</span>;
+                        })()}
+                      </td>
                       <td className="px-5 py-4 text-muted text-xs">{formatDateTime(proxy.createdAt)}</td>
                       <td className="px-5 py-4">{renderStatus(proxy.id)}</td>
                       <td className="px-5 py-4">
@@ -651,6 +853,41 @@ export default function ProxyPoolPage() {
               <Button type="submit" variant="primary" disabled={saving}>
                 {saving ? 'Importing...' : 'Add Proxies'}
               </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- CREATE / EDIT PROXY GROUP MODAL --- */}
+      <Dialog open={Boolean(groupModal)} onOpenChange={(o) => { if (!o) setGroupModal(null); }}>
+        <DialogContent title={groupModal?.id ? 'Edit group' : 'New group'} className="rounded border-border bg-card">
+          <form onSubmit={(e) => { e.preventDefault(); saveGroup(); }}>
+            <DialogHeader>
+              <DialogTitle>{groupModal?.id ? 'Edit Proxy Group' : 'New Proxy Group'}</DialogTitle>
+              <DialogDescription>Group proxies by country or purpose (e.g. USA, UK, Japan). You can target a group when batch-creating profiles.</DialogDescription>
+            </DialogHeader>
+            <DialogBody className="grid gap-5">
+              <Field label="Group Name">
+                <Input value={groupModal?.name || ''} onChange={(e) => setGroupModal((m) => ({ ...m, name: e.target.value }))} placeholder="USA Proxies" autoFocus required />
+              </Field>
+              <Field label="Color">
+                <div className="flex flex-wrap gap-2">
+                  {GROUP_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setGroupModal((m) => ({ ...m, color: c }))}
+                      className={`w-7 h-7 rounded-full transition-transform ${groupModal?.color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-white scale-110' : 'hover:scale-110'}`}
+                      style={{ background: c }}
+                      aria-label={`Color ${c}`}
+                    />
+                  ))}
+                </div>
+              </Field>
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setGroupModal(null)}>Cancel</Button>
+              <Button type="submit" variant="primary">{groupModal?.id ? 'Save Changes' : 'Create Group'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

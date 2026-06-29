@@ -37,12 +37,35 @@ model Proxy {
 
   ownerMemberId Int? // member who added this proxy (for per-member quotas)
 
-  profiles Profile[]
+  // Optional category/group (USA, UK, Japan, …) for organizing the pool and for
+  // targeting a batch at "proxies from group X". Cleared (SetNull) if the group
+  // is deleted so the proxy itself survives.
+  proxyGroupId Int?
+  provider     String? // origin tag: 'apify' | 'shopsocks5' | 'smartproxyorg' | 'custom' | … (for auto-grouping)
+
+  profiles   Profile[]
+  proxyGroup ProxyGroup? @relation(fields: [proxyGroupId], references: [id], onDelete: SetNull)
 
   @@index([host, port])
   @@index([createdAt])
   @@index([ownerMemberId])
+  @@index([proxyGroupId])
   @@unique([type, host, port, username])
+}
+
+// Proxy categories/folders (e.g. "USA Proxies", "UK", "Japan"). A proxy belongs to
+// at most one group; profiles can be batch-created from a chosen group's proxies.
+model ProxyGroup {
+  id        Int      @id @default(autoincrement())
+  name      String
+  color     String?  @default("#3b82f6")
+  ownerMemberId Int?
+  createdAt DateTime @default(now())
+
+  proxies Proxy[]
+
+  @@index([createdAt])
+  @@index([ownerMemberId])
 }
 
 model Group {
