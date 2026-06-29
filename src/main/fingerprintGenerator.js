@@ -34,26 +34,99 @@ function randDeviceName() {
   return `DESKTOP-${crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 7)}`;
 }
 
-const WIN_RES = ['1920x1080', '1366x768', '1536x864', '2560x1440', '1600x900', '1440x900'];
-const MAC_RES = ['2560x1440', '1680x1050', '1440x900', '1920x1080', '3024x1964'];
-const LINUX_RES = ['1920x1080', '1366x768', '2560x1440', '1600x900'];
+// Map a free-form OS request to a desktop OS key, or null for "let it be random".
+function normalizeDesktopOs(os) {
+  const s = String(os || '').toLowerCase();
+  if (!s || s === 'random' || s === 'auto') return null;
+  if (s.includes('mac') || s.includes('osx') || s.includes('os x')) return 'macOS';
+  if (s.includes('linux') || s.includes('ubuntu') || s.includes('debian') || s.includes('fedora')) return 'Linux';
+  if (s.includes('win')) return 'Windows';
+  return null;
+}
+
+// Resolve the reported Chrome version: honor an explicit pin (full version or a bare
+// major like "142"), otherwise pick one at random from the recent-stable pool.
+function pickChromeVersion(pinned) {
+  const p = String(pinned || '').trim();
+  if (p && p.toLowerCase() !== 'auto') {
+    // Full version already? use as-is. Bare major? expand against the pool (or X.0.0.0).
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(p)) return p;
+    const major = p.replace(/[^\d]/g, '');
+    if (major) {
+      const match = CHROME_VERSIONS.find((v) => v.split('.')[0] === major);
+      return match || `${major}.0.0.0`;
+    }
+  }
+  return choice(CHROME_VERSIONS);
+}
+
+const WIN_RES = [
+  '1920x1080', '1366x768', '1536x864', '2560x1440', '1600x900', '1440x900',
+  '1280x720', '1680x1050', '1920x1200', '3840x2160', '2560x1080', '1360x768',
+  '1280x1024', '3440x1440', '1280x800', '2256x1504'
+];
+const MAC_RES = [
+  '2560x1440', '1680x1050', '1440x900', '1920x1080', '3024x1964', '2880x1800',
+  '1512x982', '1728x1117', '2056x1329', '1470x956', '1280x800', '2560x1600'
+];
+const LINUX_RES = [
+  '1920x1080', '1366x768', '2560x1440', '1600x900', '1680x1050', '1280x1024',
+  '3840x2160', '1920x1200', '1440x900'
+];
 
 const WIN_GPU = [
   ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4080 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
   ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
   ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
   ['Google Inc. (Intel)', 'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (Intel)', 'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (Intel)', 'ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
   ['Google Inc. (Intel)', 'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)'],
-  ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)']
+  ['Google Inc. (Intel)', 'ANGLE (Intel, Intel(R) Arc(TM) A770 Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 6700 XT Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 7600 Direct3D11 vs_5_0 ps_5_0, D3D11)'],
+  ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)']
 ];
 const MAC_GPU = [
   ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)'],
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)'],
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)'],
   ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)'],
-  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)']
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version)'],
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Max, Unspecified Version)'],
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)'],
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)'],
+  ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)']
 ];
 const LINUX_GPU = [
   ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 3060/PCIe/SSE2, OpenGL 4.5)'],
-  ['Google Inc. (Intel)', 'ANGLE (Intel, Mesa Intel(R) UHD Graphics 620 (KBL GT2), OpenGL 4.6)']
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 3070/PCIe/SSE2, OpenGL 4.5)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4060/PCIe/SSE2, OpenGL 4.5)'],
+  ['Google Inc. (NVIDIA)', 'ANGLE (NVIDIA Corporation, NVIDIA GeForce GTX 1650/PCIe/SSE2, OpenGL 4.5)'],
+  ['Google Inc. (Intel)', 'ANGLE (Intel, Mesa Intel(R) UHD Graphics 620 (KBL GT2), OpenGL 4.6)'],
+  ['Google Inc. (Intel)', 'ANGLE (Intel, Mesa Intel(R) UHD Graphics 630 (CFL GT2), OpenGL 4.6)'],
+  ['Google Inc. (Intel)', 'ANGLE (Intel, Mesa Intel(R) Iris(R) Xe Graphics (TGL GT2), OpenGL 4.6)'],
+  ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 6600 (RADV NAVI23), OpenGL 4.6)']
+];
+
+// Recent Chrome stable full versions. Distributed across a batch so each profile's
+// reported User-Agent major differs (UA reduction freezes minor/build/patch to .0.0.0
+// in the UA string, so the MAJOR is what makes a UA unique; full versions feed the
+// Sec-CH-UA-Full-Version-List client hint). The launch engine reads profile.browserVersion
+// and reports THIS version instead of the binary's, so two profiles never share a UA.
+const CHROME_VERSIONS = [
+  '140.0.7339.208', '141.0.7390.108', '142.0.7444.176', '143.0.7499.96',
+  '144.0.7559.133', '145.0.7612.88', '146.0.7673.55', '147.0.7728.144',
+  '148.0.7780.102', '149.0.7827.155'
 ];
 
 // Mobile (Android, CDP-emulated). The UA + Client-Hints layer in browserEngine.js
@@ -287,7 +360,8 @@ function generateFingerprint(opts = {}) {
   // its own coherent generator so desktop GPU/screen pools never leak into it.
   if (opts && opts.deviceClass === 'mobile') return generateMobileFingerprint();
 
-  const os = weighted([['Windows', 65], ['macOS', 25], ['Linux', 10]]);
+  // OS can be forced by the caller (batch with a chosen OS); otherwise weighted-random.
+  const os = normalizeDesktopOs(opts && opts.os) || weighted([['Windows', 65], ['macOS', 25], ['Linux', 10]]);
 
   let osVersion;
   let res;
@@ -311,14 +385,21 @@ function generateFingerprint(opts = {}) {
   // hardwareConcurrency of the machine it was made on (which would read as a leak).
   let hostCores = 0;
   try { hostCores = (require('node:os').cpus() || []).length; } catch (e) { hostCores = 0; }
-  const corePool = ['4', '6', '8', '12', '16'].filter((c) => Number(c) !== hostCores);
+  const corePool = ['4', '6', '8', '10', '12', '16', '20', '24'].filter((c) => Number(c) !== hostCores);
   const cores = choice(corePool.length ? corePool : ['4', '6', '8']);
-  const ramGb = Number(cores) >= 12 ? choice(['16', '32']) : choice(['8', '16']);
+  const nCores = Number(cores);
+  const ramGb = nCores >= 16 ? choice(['32', '64'])
+    : nCores >= 12 ? choice(['16', '32'])
+    : nCores >= 8 ? choice(['8', '16', '32'])
+    : choice(['8', '16']);
+
+  // Per-profile reported Chrome version (caller may pin one for even batch distribution).
+  const browserVersion = pickChromeVersion(opts && opts.browserVersion);
 
   return {
     browserCore: 'Chrome',
     browserBrand: 'Chrome',
-    browserVersion: '',
+    browserVersion,
     os,
     osVersion,
     deviceClass: 'desktop',
@@ -387,11 +468,30 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
     : { status: 'pass', detail: 'Desktop profile reports a desktop GPU.' };
 }
 
+// Stable signature of the user-visible hardware/identity combo. The batch generator
+// uses it to guarantee no two profiles in a run share the same GPU + screen + CPU +
+// RAM + reported UA-major tuple (deviceName / MAC / canvas seed are random-unique on
+// their own, so they're intentionally excluded — this keeps the VISIBLE traits distinct).
+function fingerprintSignature(fp) {
+  if (!fp) return '';
+  const major = String(fp.browserVersion || '').split('.')[0] || '';
+  return [
+    fp.os || '', fp.osVersion || '',
+    `${fp.resolutionW || ''}x${fp.resolutionH || ''}`,
+    fp.webglRenderer || '',
+    fp.cpuCores || '', fp.ramGb || '',
+    major
+  ].join('|');
+}
+
 module.exports = {
   generateFingerprint,
   generateMobileFingerprint,
   generateMediaDevices,
   deviceGpuCoherence,
+  fingerprintSignature,
+  pickChromeVersion,
+  CHROME_VERSIONS,
   CHROMIUM_BRANDS,
   CHROMIUM_BRAND_IDS,
   normalizeBrand,
