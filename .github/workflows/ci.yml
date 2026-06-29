@@ -61,4 +61,9 @@ jobs:
         run: npx vite build
 
       - name: Package unpacked app (build-only)
-        run: npx electron-builder --dir --publish never
+        # Smoke test only: skip exe edit/sign so electron-builder never fetches
+        # winCodeSign (its 7z carries a macOS symlink that fails to extract on a
+        # fresh Windows runner — "Cannot create symbolic link"). The real signed
+        # build (npm run build:electron, run locally with the cert) keeps full
+        # icon + version patching and signing.
+        run: npx electron-builder --dir --publish never --config.win.signAndEditExecutable=false
