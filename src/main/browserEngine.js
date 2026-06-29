@@ -64,7 +64,9 @@ function listAvailableBrowsers() {
 function resolveBrowserExecutable(desired) {
   const all = listAvailableBrowsers();
   if (all.length === 0) return null;
-  const major = Number.parseInt(String(desired || '').replace(/[^\d]/g, ''), 10);
+  // Match on the MAJOR only — `desired` may be a bare major ("142") or a full
+  // version ("142.0.7444.176"); take the first run of digits either way.
+  const major = Number.parseInt((String(desired || '').match(/\d+/) || [])[0] || '', 10);
   if (Number.isFinite(major)) {
     const match = all.filter((b) => b.major === major); // already sorted newest-patch first
     if (match.length) return match[0];
@@ -241,11 +243,23 @@ function osTokens(os) {
 
 function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
   const os = osTokens(profile.os);
-  // Version ALWAYS comes from the real launched binary — never faked. We pick
-  // the binary by the profile's desired version, so this IS the desired version,
-  // and UA / Client-Hints / TLS / workers all agree (no detectable mismatch).
-  const major = realMajor;
-  const fullVersion = realFullVersion && /^\d+\.\d/.test(realFullVersion) ? realFullVersion : `${major}.0.0.0`;
+  // Per-profile reported version: when the profile pins a concrete browserVersion
+  // (the fingerprint generator assigns one per profile so every UA is unique), we
+  // report THAT major/full in the UA string + Client-Hints. When it's blank/'Auto'
+  // (legacy profiles, mobile) we fall back to the real launched binary's version for
+  // maximum UA/TLS coherence. UA reduction freezes the UA to "Chrome/<major>.0.0.0",
+  // so the major is what differentiates two profiles' User-Agents.
+  const pinned = String(profile.browserVersion || '').trim();
+  const pinnedFull = /^\d+\.\d+\.\d+\.\d+$/.test(pinned) ? pinned : '';
+  const pinnedMajor = (pinned && pinned.toLowerCase() !== 'auto')
+    ? Number.parseInt((pinned.match(/\d+/) || [])[0] || '', 10)
+    : NaN;
+  const usePinned = Number.isFinite(pinnedMajor) && pinnedMajor > 0;
+  const major = usePinned ? pinnedMajor : realMajor;
+  const fullVersion = pinnedFull
+    ? pinnedFull
+    : (usePinned ? `${pinnedMajor}.0.0.0`
+      : (realFullVersion && /^\d+\.\d/.test(realFullVersion) ? realFullVersion : `${major}.0.0.0`));
 
   // Chromium-family identity layer. Edge/Brave/Opera/Vivaldi/Yandex share Chrome's
   // engine, so we keep the REAL Chromium major everywhere (Chrome/<M>, "Chromium"
