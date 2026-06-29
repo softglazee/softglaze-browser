@@ -22,4 +22,5 @@ extensions/
 src/renderer/public/extensions/
 build/*
 !build/entitlements.mac.plist
+!build/afterPack.js
 out/
