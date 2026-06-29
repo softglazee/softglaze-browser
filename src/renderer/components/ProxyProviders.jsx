@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Boxes, ExternalLink, KeyRound, Loader2, Check, Activity, RefreshCw, ShieldCheck, Zap, X
+  Boxes, ExternalLink, KeyRound, Loader2, Check, Activity, RefreshCw, ShieldCheck, Zap, X, Globe2
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -25,8 +25,33 @@ export const PROVIDERS = [
   { key: 'luna', name: 'Luna Proxy', initials: 'LN', color: '#8b5cf6', tokenSync: true, referral: 'https://www.lunaproxy.com/?ref=softglaze', gateway: { host: 'gate.lunaproxy.com', port: 12233, type: 'HTTP' } },
   { key: 'ipburger', name: 'IP Burger', initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: { host: 'gate.ipburger.com', port: 8080, type: 'HTTP' } },
   { key: 'tisocks', name: 'TiSocks', initials: 'TS', color: '#14b8a6', referral: 'https://tisocks.net/?ref=softglaze', gateway: { host: 'gate.tisocks.net', port: 1080, type: 'SOCKS5' } },
-  { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' } }
+  { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, shop: true } },
+  { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
+  { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } }
 ];
+
+// Country list for the geo-targeted providers (Apify / Smartproxy.org / ShopSocks5).
+// Values are ISO 3166-1 alpha-2 codes — the format Apify (country-XX) and
+// Smartproxy.org (area-XX) expect; ShopSocks5 receives it as its country filter.
+export const PROXY_COUNTRIES = [
+  ['', 'Any / Random'],
+  ['US', 'United States'], ['GB', 'United Kingdom'], ['CA', 'Canada'], ['AU', 'Australia'],
+  ['DE', 'Germany'], ['FR', 'France'], ['ES', 'Spain'], ['IT', 'Italy'], ['NL', 'Netherlands'],
+  ['SE', 'Sweden'], ['NO', 'Norway'], ['DK', 'Denmark'], ['FI', 'Finland'], ['IE', 'Ireland'],
+  ['PL', 'Poland'], ['PT', 'Portugal'], ['CH', 'Switzerland'], ['AT', 'Austria'], ['BE', 'Belgium'],
+  ['CZ', 'Czechia'], ['RO', 'Romania'], ['GR', 'Greece'], ['TR', 'Turkey'], ['RU', 'Russia'],
+  ['UA', 'Ukraine'], ['IN', 'India'], ['PK', 'Pakistan'], ['BD', 'Bangladesh'], ['JP', 'Japan'],
+  ['KR', 'South Korea'], ['CN', 'China'], ['HK', 'Hong Kong'], ['TW', 'Taiwan'], ['SG', 'Singapore'],
+  ['MY', 'Malaysia'], ['TH', 'Thailand'], ['VN', 'Vietnam'], ['PH', 'Philippines'], ['ID', 'Indonesia'],
+  ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['IL', 'Israel'], ['EG', 'Egypt'], ['ZA', 'South Africa'],
+  ['BR', 'Brazil'], ['MX', 'Mexico'], ['AR', 'Argentina'], ['CL', 'Chile'], ['CO', 'Colombia'], ['NZ', 'New Zealand']
+];
+
+const GEO_HINTS = {
+  apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings.',
+  smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
+  shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER — token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).'
+};
 
 export default function ProxyProviders({ onSynced }) {
   const [selectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
@@ -38,7 +63,7 @@ export default function ProxyProviders({ onSynced }) {
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '' });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5' });
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -55,7 +80,7 @@ export default function ProxyProviders({ onSynced }) {
 
   // Re-prime the workspace whenever the active provider changes.
   useEffect(() => {
-    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '' });
+    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5' });
     setCheckResult(null);
     setSyncResult(null);
     setErr('');
@@ -109,7 +134,45 @@ export default function ProxyProviders({ onSynced }) {
     finally { setSyncing(false); }
   }
 
+  // Country-targeted pull (Apify / Smartproxy.org / ShopSocks5). Sends the chosen
+  // country (+ pool size and any geo/session/endpoint overrides) to syncVendorPool,
+  // which routes to the matching adapter. Irrelevant fields are ignored per provider.
+  async function handleGeoSync() {
+    setErr(''); setSyncResult(null);
+    const g = provider.geoSync || {};
+    const creds = g.creds || [];
+    if (creds.includes('token') && !form.token.trim()) { setErr('Enter your API token.'); return; }
+    if (creds.includes('username') && !form.username.trim()) { setErr('Enter the proxy username.'); return; }
+    if (creds.includes('password') && !form.password) { setErr('Enter the proxy password.'); return; }
+    setSyncing(true);
+    try {
+      const r = await softglazeApi.proxies.syncVendorPool({
+        provider: provider.key,
+        country: form.country,
+        count: form.count,
+        token: form.token.trim(),
+        username: form.username.trim(),
+        password: form.password,
+        state: form.state.trim(),
+        city: form.city.trim(),
+        session: form.session.trim(),
+        life: form.life,
+        apiUrl: form.apiUrl.trim(),
+        host: form.host.trim(),
+        port: form.port,
+        plan: form.plan,
+        proxyType: form.proxyType
+      });
+      setSyncResult(r);
+      if (typeof onSynced === 'function') onSynced();
+    } catch (e) { setErr(e.message || 'Could not pull proxies.'); }
+    finally { setSyncing(false); }
+  }
+
   const inputCls = 'w-full h-10 bg-background border border-border rounded px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
+  // Styled <select>: hide the native arrow, paint an inset chevron (icon not glued to the edge).
+  const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
+  const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
 
   return (
     <Card className="bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden">
@@ -136,7 +199,7 @@ export default function ProxyProviders({ onSynced }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`block text-[12.5px] font-medium truncate ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{p.name}</span>
-                    <span className="block text-[10px] text-muted-foreground/70">{p.tokenSync ? 'Token sync' : 'Rotating gateway'}</span>
+                    <span className="block text-[10px] text-muted-foreground/70">{p.tokenSync ? 'Token sync' : p.geoSync ? 'Geo pull' : 'Rotating gateway'}</span>
                   </span>
                 </button>
               );
@@ -201,6 +264,133 @@ export default function ProxyProviders({ onSynced }) {
               <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">
                 Entering the provider partner token will automatically synchronize your purchased proxies into Softglaze. You can view or update synchronized items globally by clicking <span className="text-foreground font-medium">Sync proxy</span>.
               </p>
+            </div>
+          ) : provider.geoSync ? (
+            /* ---- Geo-targeted pull (Apify / Smartproxy.org / ShopSocks5) ---- */
+            <div className="space-y-4 max-w-2xl">
+              <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.06] p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">Geo</span>
+                  <span className="text-[13px] font-semibold text-foreground">Country-targeted pull</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Globe2 className="w-3.5 h-3.5 text-sky-400" /> Country</label>
+                    <select value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
+                      {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{name}{code ? ` (${code})` : ''}</option>)}
+                    </select>
+                  </div>
+                  {provider.geoSync.count && (
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">How many</label>
+                      <input value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, ''))} className={inputCls + ' font-mono'} placeholder="5" />
+                    </div>
+                  )}
+                </div>
+
+                {provider.geoSync.creds.includes('username') && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.geoSync.shop ? 'Account username or email' : 'Proxy username (sub-account)'}</label>
+                    <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.shop ? 'your ShopSocks5 login (username or email)' : 'username'} autoComplete="off" />
+                  </div>
+                )}
+
+                {provider.geoSync.shop && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plan</label>
+                      <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
+                        <option value="premium">Premium</option>
+                        <option value="list">List</option>
+                        <option value="daily">Daily</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proxy type</label>
+                      <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+                        <option value="proxy_sock_5">SOCKS5</option>
+                        <option value="proxy_https">HTTPS</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {provider.geoSync.creds.includes('password') && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.key === 'apify' ? 'Apify proxy password' : 'Proxy password'}</label>
+                    <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
+                  </div>
+                )}
+                {provider.geoSync.creds.includes('token') && (
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> API token</label>
+                    <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={`Your ${provider.name} API token`} autoComplete="off" />
+                  </div>
+                )}
+
+                {provider.geoSync.geo && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">State <span className="normal-case text-muted-foreground/60">(opt)</span></label>
+                      <input value={form.state} onChange={(e) => set('state', e.target.value)} className={inputCls + ' font-mono'} placeholder="California" />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">City <span className="normal-case text-muted-foreground/60">(opt)</span></label>
+                      <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls + ' font-mono'} placeholder="NewYork" />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sticky session <span className="normal-case text-muted-foreground/60">(opt)</span></label>
+                      <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder="keep 1 IP" />
+                    </div>
+                  </div>
+                )}
+
+                {provider.geoSync.life && (
+                  <div className="sm:max-w-[260px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Keep same IP <span className="normal-case text-muted-foreground/60">(time)</span></label>
+                    <select value={form.life} onChange={(e) => set('life', e.target.value)} className={selectCls} style={chevronStyle}>
+                      <option value="">Different IP each time</option>
+                      <option value="5">5 minutes</option>
+                      <option value="10">10 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="120">2 hours</option>
+                      <option value="360">6 hours</option>
+                      <option value="720">12 hours</option>
+                      <option value="1440">24 hours (max)</option>
+                    </select>
+                  </div>
+                )}
+
+                {provider.geoSync.gateway && (
+                  <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gateway host</label>
+                        <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder="isp.smartproxy.net" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Port</label>
+                        <input value={form.port} onChange={(e) => set('port', e.target.value)} className={inputCls + ' font-mono'} placeholder="3100" />
+                      </div>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground/90">Pre-filled for the Long-Acting ISP plan (isp.smartproxy.net:3100). If your smartproxy.org dashboard → Proxy Setup shows a different host:port, paste it here to override.</p>
+                  </div>
+                )}
+
+                {provider.geoSync.apiUrl && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-amber-400">API URL — required, from your dashboard</label>
+                    <input value={form.apiUrl} onChange={(e) => set('apiUrl', e.target.value)} className={inputCls + ' font-mono text-[12px]'} placeholder="https://shopsocks5.com/api/...  (paste from SOCKS5 API guide)" autoComplete="off" />
+                    <p className="mt-1 text-[11px] text-amber-400/90">Paste the URL from your ShopSocks5 dashboard → SOCKS5 API guide. It already contains your token. Put <span className="font-mono text-foreground">{'{country}'}</span> where the country code belongs to filter by the selection above.</p>
+                  </div>
+                )}
+
+                <button onClick={handleGeoSync} disabled={syncing} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-60 shadow-lg shadow-sky-500/25">
+                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe2 className="w-4 h-4" />} Pull proxies{form.country ? ` · ${form.country}` : ''}
+                </button>
+              </div>
+              <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{GEO_HINTS[provider.key]}</p>
             </div>
           ) : (
             /* ---- Rotating engine configuration form ---- */
@@ -335,6 +525,10 @@ export function ProviderLogo({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><path d="M10 3v8l-3.2 3.2a3.6 3.6 0 0 0 5.1 5.1l4.1-4.1-3-3V3z" /><path d="M10 3h5" /></svg>);
     case 'shopsocks5': // shopping bag
       return (<svg {...line}><path d="M6.5 8h11l-1 11.5H7.5z" /><path d="M9 8a3 3 0 0 1 6 0" /></svg>);
+    case 'apify': // crawler node + spokes
+      return (<svg {...line}><circle cx="12" cy="12" r="3" /><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22M5 5l2.4 2.4M16.6 16.6L19 19M19 5l-2.4 2.4M7.4 16.6L5 19" /></svg>);
+    case 'smartproxyorg': // location pin
+      return (<svg {...line}><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>);
     default:
       return (<svg {...line}><circle cx="12" cy="12" r="7" /></svg>);
   }
