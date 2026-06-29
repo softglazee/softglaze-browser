@@ -366,6 +366,7 @@ export default function ProfilesPage() {
   const [groups, setGroups] = useState([]);
   const [allTags, setAllTags] = useState([]);
   const [allProxies, setAllProxies] = useState([]);
+  const [proxyGroups, setProxyGroups] = useState([]);
   const [runningIds, setRunningIds] = useState(() => new Set());
   const [locks, setLocks] = useState({}); // profileId -> { memberName, mine } (in-use-by-another-member)
   const [installedBrowsers, setInstalledBrowsers] = useState([]);
@@ -416,18 +417,20 @@ export default function ProfilesPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profs, grps, tgs, pxs, sess, lockMap] = await Promise.all([
+      const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
         softglazeApi.profiles.list({ search }),
         softglazeApi.groups.list(),
         softglazeApi.tags.list(),
         softglazeApi.proxies.list({}),
         softglazeApi.sessions.list(),
-        softglazeApi.profiles.getLocks().catch(() => ({}))
+        softglazeApi.profiles.getLocks().catch(() => ({})),
+        softglazeApi.proxyGroups.list().catch(() => [])
       ]);
       setProfiles(profs);
       setGroups(grps);
       setAllTags(tgs);
       setAllProxies(pxs);
+      setProxyGroups(Array.isArray(pgs) ? pgs : []);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
     } catch (err) { setError(err.message); }
@@ -471,61 +474,34 @@ export default function ProfilesPage() {
   useEffect(() => { refreshInstalledBrowsers(); }, [refreshInstalledBrowsers]);
 
   async function handleQuickGenerate(config, onProgress) {
-    const { count, baseName, startIndex, groupId, os, randomize, proxyMode, distribution, pasted } = config;
-    const pad = (x) => String(x).padStart(3, '0');
-    const osObj = OS_PLATFORMS.find((o) => o.id === os) || OS_PLATFORMS[0];
-    const osVersion = osObj.versions[0];
-    const proxyIds = proxyMode === 'pool' ? (allProxies || []).map((p) => p.id) : [];
-    const rawList = proxyMode === 'paste' ? pasted.split(/\r?\n/).map((x) => x.trim()).filter(Boolean) : [];
-    const pickIdx = (i, len) => (distribution === 'random' ? Math.floor(Math.random() * len) : i % len);
-
-    for (let i = 0; i < count; i++) {
-      const name = `${baseName} ${pad(startIndex + i)}`;
-      let webglVendor = initialProfileData.webglVendor;
-      let webglRenderer = initialProfileData.webglRenderer;
-      if (randomize) {
-        const v = WEBGL_VENDORS[Math.floor(Math.random() * WEBGL_VENDORS.length)];
-        const rs = WEBGL_RENDERERS[v] || [];
-        webglVendor = v;
-        webglRenderer = rs[Math.floor(Math.random() * rs.length)] || webglRenderer;
-      }
-      const uaIndex = randomize ? Math.floor(Math.random() * 100000) : i;
-      const batchCores = generateCpuCores();
-      const payload = {
-        ...initialProfileData,
-        id: null,
-        name,
-        title: name,
-        dataDirName: name,
-        notes: '',
-        os,
-        osVersion,
-        uaCategory: 'All',
-        userAgent: generateAutoUserAgent(os, 'All', uaIndex),
-        cpuType: 'Custom', cpuCores: batchCores,
-        ramType: 'Custom', ramGb: generateRamGb(batchCores),
-        deviceNameType: 'Custom', macAddress: generateMac(),
-        macAddressType: 'Custom', deviceName: generateDeviceName(),
-        webglVendor,
-        webglRenderer,
-        tagManagement: 0,
-        tags: [],
-        groupId: groupId && groupId !== 'ungrouped' ? Number(groupId) : null
-      };
-      if (proxyMode === 'pool' && proxyIds.length) {
-        payload.proxyId = proxyIds[pickIdx(i, proxyIds.length)];
-        payload.systemProxyBehavior = 'PROFILE_PROXY';
-      } else if (proxyMode === 'paste' && rawList.length) {
-        payload.proxyRaw = rawList[pickIdx(i, rawList.length)];
-        payload.systemProxyBehavior = 'PROFILE_PROXY';
-      } else {
-        payload.proxyRaw = null;
-        payload.systemProxyBehavior = 'DIRECT';
-      }
-      await softglazeApi.profiles.create(payload);
-      if (onProgress) onProgress(i + 1, count);
-    }
+    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource } = config;
+    if (onProgress) onProgress(0, count);
+    // proxySource (pool mode only): '' = all, 'group:<id>', or 'provider:<key>'.
+    const src = String(proxySource || '');
+    const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
+    const provider = src.startsWith('provider:') ? src.slice(9) : undefined;
+    // Server-side batch generator owns the batch-level invariants the old per-profile
+    // loop could not: a UNIQUE proxy per profile (capped at availability), UNIQUE
+    // fingerprints, and even Chrome-version distribution.
+    const result = await softglazeApi.profiles.batchGenerate({
+      count,
+      prefix: baseName,
+      startIndex,
+      os,
+      deviceClass: /android|mobile/i.test(String(os)) ? 'mobile' : 'desktop',
+      randomFingerprint: randomize,
+      distributeVersions: randomize,
+      startupUrls,
+      groupId: groupId && groupId !== 'ungrouped' ? groupId : null,
+      newGroupName: newGroupName || null,
+      proxyMode, // 'direct' | 'unique' | 'pool' | 'paste'
+      proxyGroupId,
+      provider,
+      proxyList: pasted
+    });
+    if (onProgress) onProgress(result?.createdCount ?? count, count);
     await loadData();
+    return result;
   }
 
   function openCreate() {
@@ -1874,7 +1850,7 @@ export default function ProfilesPage() {
         <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
       )}
       {showQuickGen && (
-        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} />
+        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} />
       )}
       {showBrowserManager && (
         <BrowserManagerModal onClose={() => setShowBrowserManager(false)} onInstalled={refreshInstalledBrowsers} />
