@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound } from 'lucide-react';
+import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound, Languages } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import BillingSettings from '@/components/BillingSettings.jsx';
 import MonetizationSettings from '@/components/MonetizationSettings.jsx';
@@ -15,6 +16,7 @@ import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
+import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 
 // --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
 const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
@@ -34,6 +36,7 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
 );
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [systemInfo, setSystemInfo] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,9 +91,9 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full space-y-4 pb-10">
       <PageHeader
-        eyebrow="Application"
-        title="Global Settings"
-        description="Inspect local storage paths, background tasks, and currently active browser sessions."
+        eyebrow={t('settings.eyebrow')}
+        title={t('settings.title')}
+        description={t('settings.description')}
         actions={
           <Button variant="secondary" onClick={loadSettings}>
             <RefreshCcw className="h-4 w-4" /> Refresh
@@ -103,6 +106,8 @@ export default function SettingsPage() {
           {error}
         </div>
       )}
+
+      <LanguageSection />
 
       <BillingSettings />
 
@@ -283,6 +288,34 @@ function SectionCard({ icon: Icon, accent = '#3b82f6', title, description, child
       </div>
       {children}
     </section>
+  );
+}
+
+// App display-language picker. Persists via lib/lang.js (localStorage + <html lang>)
+// and switches the live i18next language, so the whole UI re-renders instantly with
+// no reload — the same model as the theme toggle.
+function LanguageSection() {
+  const { t } = useTranslation();
+  const [lang, setLangState] = useState(getStoredLang());
+  return (
+    <SectionCard
+      icon={Languages}
+      accent="#6366f1"
+      title={t('settings.language.title')}
+      description={t('settings.language.description')}
+    >
+      <div className="py-2 max-w-md">
+        <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">
+          {t('settings.language.label')}
+        </label>
+        <CustomSelect className="w-64" value={lang} onChange={(e) => setLangState(setLang(e.target.value))}>
+          {SUPPORTED_LANGS.map((l) => (
+            <option key={l.code} value={l.code}>{l.native}</option>
+          ))}
+        </CustomSelect>
+        <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{t('settings.language.hint')}</p>
+      </div>
+    </SectionCard>
   );
 }
 

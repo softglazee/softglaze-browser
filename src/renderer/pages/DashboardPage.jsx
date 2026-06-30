@@ -4,6 +4,7 @@ import {
   TrendingUp, ArrowUpRight, Shield, RefreshCw, Cpu, HardDrive, Server,
   Sparkles, CalendarDays
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { AreaChart, Donut, Legend, GroupedBars, ProgressMeter } from '@/components/charts/Charts.jsx';
@@ -59,41 +60,30 @@ function ChartCard({ title, subtitle, icon: Icon, iconColor, children, className
   );
 }
 
-// Motivational lines — one is picked per mount so the dashboard feels fresh.
-const MOTIVATION = [
-  'Every profile you craft is a new door opening.',
-  'Discipline today, dominance tomorrow.',
-  'Small consistent actions compound into outsized wins.',
-  'Stay sharp — the edge lives in the details.',
-  'Focus beats hustle. Aim, then fire.',
-  'The quiet work you do now builds the empire later.',
-  'Precision is a habit, not an accident.',
-  'Show up, dial in, and let the results do the talking.',
-  'One more session, one more win.',
-  'Greatness is just a series of well-run days.',
-  'Your future self is watching — make them proud.',
-  'Move with intention. Scale with confidence.'
-];
+// Motivational lines live in the i18n locale files (dashboard.motivation, an
+// array); one index is picked per mount so the dashboard feels fresh.
+const MOTIVATION_COUNT = 12;
 
-function greetingFor(hour) {
-  if (hour >= 5 && hour < 12) return 'Good morning';
-  if (hour >= 12 && hour < 17) return 'Good afternoon';
-  if (hour >= 17 && hour < 22) return 'Good evening';
-  return 'Working late';
+function greetingKey(hour) {
+  if (hour >= 5 && hour < 12) return 'dashboard.greetingMorning';
+  if (hour >= 12 && hour < 17) return 'dashboard.greetingAfternoon';
+  if (hour >= 17 && hour < 22) return 'dashboard.greetingEvening';
+  return 'dashboard.greetingLate';
 }
 
 function firstNameOf(member, account) {
   const raw = (member && member.name) || (account && [account.firstName, account.lastName].filter(Boolean).join(' ')) || '';
   const first = String(raw).trim().split(/\s+/)[0];
-  return first || 'there';
+  return first || '';
 }
 
 // Personalized hero: time-aware greeting + the user's first name, a live clock and
 // date in the OS/region locale, and a rotating motivational line.
 function WelcomeBanner() {
+  const { t, i18n } = useTranslation();
   const [who, setWho] = useState({ name: '', role: '' });
   const [now, setNow] = useState(() => new Date());
-  const quote = useRef(MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)]);
+  const quoteIdx = useRef(Math.floor(Math.random() * MOTIVATION_COUNT));
 
   useEffect(() => {
     let live = true;
@@ -115,16 +105,21 @@ function WelcomeBanner() {
     return () => clearInterval(id);
   }, []);
 
+  // Format the clock/date in the app's selected language (falls back to the OS
+  // locale if the language tag isn't recognized by Intl).
+  const locale = i18n.language || undefined;
   let timeStr = '';
   let dateStr = '';
   try {
-    timeStr = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
-    dateStr = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+    timeStr = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
+    dateStr = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   } catch (e) {
     timeStr = now.toLocaleTimeString();
     dateStr = now.toLocaleDateString();
   }
-  const greeting = greetingFor(now.getHours());
+  const greeting = t(greetingKey(now.getHours()));
+  const motivation = t('dashboard.motivation', { returnObjects: true });
+  const quote = (Array.isArray(motivation) && (motivation[quoteIdx.current] || motivation[0])) || '';
 
   return (
     <div
@@ -140,12 +135,12 @@ function WelcomeBanner() {
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Welcome back</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{t('dashboard.welcomeBack')}</span>
           </div>
           <h1 className="text-2xl sm:text-[32px] font-bold text-foreground font-display tracking-tight leading-tight">
-            {greeting}, <span style={{ color: 'var(--primary)' }}>{who.name}</span> <span className="inline-block">👋</span>
+            {greeting}, <span style={{ color: 'var(--primary)' }}>{who.name || t('dashboard.guestName')}</span> <span className="inline-block">👋</span>
           </h1>
-          <p className="text-[13px] sm:text-sm text-muted-foreground mt-2 max-w-xl italic">“{quote.current}”</p>
+          <p className="text-[13px] sm:text-sm text-muted-foreground mt-2 max-w-xl italic">“{quote}”</p>
         </div>
         <div className="shrink-0 rounded-xl border border-border bg-card/60 backdrop-blur px-4 py-3 text-right">
           <div className="font-mono text-2xl sm:text-3xl font-bold text-foreground tabular-nums tracking-tight">{timeStr}</div>
@@ -161,6 +156,10 @@ function WelcomeBanner() {
 // In-app OTA update banner. Subscribes to updater events and reads the current
 // state on mount (so it appears even if the event fired before this page mounted).
 // Only visible once an update is available/downloading/downloaded.
+// i18n note: this banner and ResilienceToasts below are intentionally NOT yet
+// localized in the G3 pilot — they are event-driven (rarely on screen) and build
+// their copy from nested conditionals/concatenation; they'll be migrated in a
+// later i18n pass where the strings can be restructured into clean t() keys.
 function UpdateBanner() {
   const [state, setState] = useState(null);
   const [installing, setInstalling] = useState(false);
@@ -246,6 +245,7 @@ function UpdateBanner() {
 // Offers to restore the profiles that were open when the app last exited or crashed.
 // Pull model (like the update banner) — robust to mount timing.
 function RestoreBanner() {
+  const { t } = useTranslation();
   const [profiles, setProfiles] = useState(null);
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -278,13 +278,13 @@ function RestoreBanner() {
         <RefreshCw className="w-4 h-4 text-primary" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-foreground">Restore your last session?</p>
-        <p className="text-[11.5px] text-muted-foreground">{profiles.length} profile{profiles.length === 1 ? '' : 's'} {profiles.length === 1 ? 'was' : 'were'} open when SoftGlaze last closed.</p>
+        <p className="text-[13px] font-semibold text-foreground">{t('dashboard.restoreTitle')}</p>
+        <p className="text-[11.5px] text-muted-foreground">{t('dashboard.restoreDesc', { count: profiles.length })}</p>
       </div>
       <Button variant="primary" size="sm" onClick={restore} disabled={busy}>
-        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Restore
+        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} {t('dashboard.restore')}
       </Button>
-      <button onClick={dismiss} disabled={busy} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title="Dismiss">
+      <button onClick={dismiss} disabled={busy} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title={t('shell.dismiss')}>
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -328,6 +328,7 @@ function ResilienceToasts() {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({ totalProfiles: 0, activeSessions: 0, totalProxies: 0, totalGroups: 0 });
   const [sessions, setSessions] = useState([]);
   const [proxies, setProxies] = useState([]);
@@ -389,7 +390,7 @@ export default function DashboardPage() {
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground animate-pulse">Loading command center…</p>
+          <p className="text-sm text-muted-foreground animate-pulse">{t('dashboard.loadingCenter')}</p>
         </div>
       </div>
     );
@@ -402,17 +403,17 @@ export default function DashboardPage() {
     return acc;
   }, {});
   const proxyDonut = Object.entries(proxyTypes).map(([label, value], i) => ({ label, value, color: CHART[i % CHART.length] }));
-  if (proxyDonut.length === 0) proxyDonut.push({ label: 'No proxies', value: 1, color: 'var(--elevated)' });
+  if (proxyDonut.length === 0) proxyDonut.push({ label: t('dashboard.noProxies'), value: 1, color: 'var(--elevated)' });
 
   const memPct = sysInfo && sysInfo.memTotal ? Math.round((sysInfo.memUsed / sysInfo.memTotal) * 100) : 0;
   const activeRatio = stats.totalProfiles ? Math.round((stats.activeSessions / stats.totalProfiles) * 100) : 0;
   const proxyCoverage = stats.totalProfiles ? Math.min(100, Math.round((stats.totalProxies / stats.totalProfiles) * 100)) : (stats.totalProxies ? 100 : 0);
 
   const resourceBars = [
-    { label: 'Profiles', value: stats.totalProfiles },
-    { label: 'Active', value: stats.activeSessions },
-    { label: 'Proxies', value: stats.totalProxies },
-    { label: 'Groups', value: stats.totalGroups }
+    { label: t('dashboard.barProfiles'), value: stats.totalProfiles },
+    { label: t('dashboard.barActive'), value: stats.activeSessions },
+    { label: t('dashboard.barProxies'), value: stats.totalProxies },
+    { label: t('dashboard.barGroups'), value: stats.totalGroups }
   ];
 
   const areaData = history.map((h) => ({ x: h.x, y: h[metric] }));
@@ -433,37 +434,37 @@ export default function DashboardPage() {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">Overview</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">Command Center</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">{t('dashboard.overview')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">{t('dashboard.commandCenter')}</h1>
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
             <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" /></span>
-            Live monitoring · auto-refreshes every 10s
+            {t('dashboard.liveMonitoring')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium" style={{ background: 'color-mix(in srgb, var(--success) 9%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 18%, transparent)', color: 'var(--success)' }}>
-            <Shield className="w-3.5 h-3.5" /> Anti-detect engine active
+            <Shield className="w-3.5 h-3.5" /> {t('dashboard.antiDetectActive')}
           </div>
           <Button variant="secondary" size="md" onClick={() => setShowStatus(true)}>
-            <Activity className="h-4 w-4" /> System Status
+            <Activity className="h-4 w-4" /> {t('dashboard.systemStatus')}
           </Button>
         </div>
       </div>
 
       {/* STAT CARDS */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard icon={MonitorSmartphone} label="Total Profiles" value={stats.totalProfiles} change={`${stats.totalGroups} groups`} color="#3b82f6" delay={0} />
-        <StatCard icon={Play} label="Active Sessions" value={stats.activeSessions} change={stats.activeSessions > 0 ? 'Live right now' : 'Idle'} color="#10b981" delay={60} />
-        <StatCard icon={Globe} label="Proxy Pool" value={stats.totalProxies} change={`${proxyDonut.length} type${proxyDonut.length > 1 ? 's' : ''}`} color="#8b5cf6" delay={120} />
-        <StatCard icon={Folder} label="Groups" value={stats.totalGroups} change="Organized" color="#f59e0b" delay={180} />
+        <StatCard icon={MonitorSmartphone} label={t('dashboard.statTotalProfiles')} value={stats.totalProfiles} change={t('dashboard.changeGroups', { count: stats.totalGroups })} color="#3b82f6" delay={0} />
+        <StatCard icon={Play} label={t('dashboard.statActiveSessions')} value={stats.activeSessions} change={stats.activeSessions > 0 ? t('dashboard.changeLiveNow') : t('dashboard.changeIdle')} color="#10b981" delay={60} />
+        <StatCard icon={Globe} label={t('dashboard.statProxyPool')} value={stats.totalProxies} change={t('dashboard.changeTypes', { count: proxyDonut.length })} color="#8b5cf6" delay={120} />
+        <StatCard icon={Folder} label={t('dashboard.statGroups')} value={stats.totalGroups} change={t('dashboard.changeOrganized')} color="#f59e0b" delay={180} />
       </div>
 
       {/* CHARTS ROW 1 */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <ChartCard
           className="xl:col-span-2"
-          title="Activity Timeline"
-          subtitle="Live session & proxy counts this runtime"
+          title={t('dashboard.activityTimeline')}
+          subtitle={t('dashboard.activityTimelineSub')}
           icon={Activity}
           iconColor="#3b82f6"
           actions={
@@ -471,7 +472,7 @@ export default function DashboardPage() {
               {['sessions', 'proxies'].map((m) => (
                 <button key={m} onClick={() => setMetric(m)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${metric === m ? 'bg-card text-foreground border border-border' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}>
-                  {m}
+                  {t(m === 'sessions' ? 'dashboard.metricSessions' : 'dashboard.metricProxies')}
                 </button>
               ))}
             </div>
@@ -480,9 +481,9 @@ export default function DashboardPage() {
           <AreaChart data={areaData} color={metric === 'sessions' ? 'var(--chart-1)' : 'var(--chart-2)'} height={210} />
         </ChartCard>
 
-        <ChartCard title="Proxy Pool" subtitle={`${stats.totalProxies} total proxies`} icon={Globe} iconColor="#8b5cf6">
+        <ChartCard title={t('dashboard.statProxyPool')} subtitle={t('dashboard.proxyPoolSub', { count: stats.totalProxies })} icon={Globe} iconColor="#8b5cf6">
           <div className="flex items-center justify-center mb-4">
-            <Donut data={proxyDonut} centerLabel={stats.totalProxies} centerSub="proxies" />
+            <Donut data={proxyDonut} centerLabel={stats.totalProxies} centerSub={t('dashboard.proxiesUnit')} />
           </div>
           <Legend data={proxyDonut} />
         </ChartCard>
@@ -490,25 +491,25 @@ export default function DashboardPage() {
 
       {/* CHARTS ROW 2 */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <ChartCard title="Resource Overview" subtitle="Counts across the workspace" icon={Zap} iconColor="#3b82f6">
+        <ChartCard title={t('dashboard.resourceOverview')} subtitle={t('dashboard.resourceOverviewSub')} icon={Zap} iconColor="#3b82f6">
           <GroupedBars data={resourceBars} keys={[{ key: 'value', label: 'count', color: 'var(--chart-1)' }]} height={180} />
         </ChartCard>
 
-        <ChartCard title="Health Scores" subtitle="Derived from live metrics" icon={Shield} iconColor="#10b981">
+        <ChartCard title={t('dashboard.healthScores')} subtitle={t('dashboard.healthScoresSub')} icon={Shield} iconColor="#10b981">
           <div className="space-y-4 pt-1">
-            <ProgressMeter label="Memory available" value={100 - memPct} color="var(--chart-3)" />
-            <ProgressMeter label="Active ratio" value={activeRatio} color="var(--chart-1)" />
-            <ProgressMeter label="Proxy coverage" value={proxyCoverage} color="var(--chart-2)" />
+            <ProgressMeter label={t('dashboard.memoryAvailable')} value={100 - memPct} color="var(--chart-3)" />
+            <ProgressMeter label={t('dashboard.activeRatio')} value={activeRatio} color="var(--chart-1)" />
+            <ProgressMeter label={t('dashboard.proxyCoverage')} value={proxyCoverage} color="var(--chart-2)" />
           </div>
         </ChartCard>
 
-        <ChartCard title="System Resources" subtitle={sysInfo ? sysInfo.cpuModel : 'Real-time metrics'} icon={Cpu} iconColor="#f59e0b">
+        <ChartCard title={t('dashboard.systemResources')} subtitle={sysInfo ? sysInfo.cpuModel : t('dashboard.realTimeMetrics')} icon={Cpu} iconColor="#f59e0b">
           <div className="space-y-3">
             {[
-              { label: 'Memory', icon: Server, val: sysInfo ? `${fmtGB(sysInfo.memUsed)} / ${fmtGB(sysInfo.memTotal)} GB` : '—', color: '#8b5cf6' },
-              { label: 'CPU cores', icon: Cpu, val: sysInfo ? `${sysInfo.cpuCount} cores` : '—', color: '#3b82f6' },
-              { label: 'Active sessions', icon: Play, val: `${stats.activeSessions} running`, color: '#10b981' },
-              { label: 'Profiles', icon: HardDrive, val: `${stats.totalProfiles} stored`, color: '#f59e0b' }
+              { label: t('dashboard.resMemory'), icon: Server, val: sysInfo ? `${fmtGB(sysInfo.memUsed)} / ${fmtGB(sysInfo.memTotal)} GB` : '—', color: '#8b5cf6' },
+              { label: t('dashboard.resCpuCores'), icon: Cpu, val: sysInfo ? t('dashboard.resCpuCoresVal', { count: sysInfo.cpuCount }) : '—', color: '#3b82f6' },
+              { label: t('dashboard.resActiveSessions'), icon: Play, val: t('dashboard.resRunningVal', { count: stats.activeSessions }), color: '#10b981' },
+              { label: t('dashboard.resProfiles'), icon: HardDrive, val: t('dashboard.resStoredVal', { count: stats.totalProfiles }), color: '#f59e0b' }
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between p-3 rounded-lg bg-elevated">
                 <div className="flex items-center gap-2.5">
@@ -530,20 +531,20 @@ export default function DashboardPage() {
               <Zap className="w-3.5 h-3.5 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Live Sessions</h3>
-              <p className="text-xs text-muted-foreground">{sessions.length} profile{sessions.length === 1 ? '' : 's'} currently running</p>
+              <h3 className="text-sm font-semibold text-foreground">{t('dashboard.liveSessions')}</h3>
+              <p className="text-xs text-muted-foreground">{t('dashboard.runningCount', { count: sessions.length })}</p>
             </div>
           </div>
           <button onClick={loadDashboardData} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-            <RefreshCw className="w-3 h-3" /> Refresh
+            <RefreshCw className="w-3 h-3" /> {t('dashboard.refresh')}
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                {['Profile', 'Proxy IP', 'Uptime', 'Health', 'Action'].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground text-[10px]">{h}</th>
+                {['thProfile', 'thProxyIp', 'thUptime', 'thHealth', 'thAction'].map((k) => (
+                  <th key={k} className="px-5 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground text-[10px]">{t(`dashboard.${k}`)}</th>
                 ))}
               </tr>
             </thead>
@@ -552,8 +553,8 @@ export default function DashboardPage() {
                 <tr>
                   <td colSpan="5" className="px-5 py-12 text-center">
                     <MonitorSmartphone className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                    <p className="text-sm font-medium text-foreground">No active sessions</p>
-                    <p className="text-xs text-muted-foreground mt-1">Launch a profile to see it monitored here in real time.</p>
+                    <p className="text-sm font-medium text-foreground">{t('dashboard.noActiveSessions')}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t('dashboard.launchToMonitor')}</p>
                   </td>
                 </tr>
               ) : (
@@ -573,12 +574,12 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider" style={{ background: 'color-mix(in srgb, var(--success) 12%, transparent)', color: 'var(--success)', border: '1px solid color-mix(in srgb, var(--success) 22%, transparent)' }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} /> healthy
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} /> {t('dashboard.healthy')}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <button onClick={() => handleStopSession(s.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors">
-                        <X className="w-3 h-3" /> Stop
+                        <X className="w-3 h-3" /> {t('dashboard.stop')}
                       </button>
                     </td>
                   </tr>
@@ -595,6 +596,7 @@ export default function DashboardPage() {
 }
 
 function SystemStatusModal({ stats, sessions, onClose }) {
+  const { t } = useTranslation();
   const [info, setInfo] = useState(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
   useEffect(() => {
@@ -607,29 +609,29 @@ function SystemStatusModal({ stats, sessions, onClose }) {
   }, []);
 
   const components = [
-    { label: 'Browser engine', ok: true, note: 'Operational' },
-    { label: 'Local database', ok: true, note: info?.databaseUrlConfigured ? 'Connected (env)' : 'Connected' },
-    { label: 'IPC bridge', ok: true, note: 'Connected' },
-    { label: 'Active sessions', ok: true, note: `${stats.activeSessions || 0} running` }
+    { label: t('dashboard.compBrowserEngine'), ok: true, note: t('dashboard.compOperational') },
+    { label: t('dashboard.compLocalDatabase'), ok: true, note: info?.databaseUrlConfigured ? t('dashboard.compConnectedEnv') : t('dashboard.compConnected') },
+    { label: t('dashboard.compIpcBridge'), ok: true, note: t('dashboard.compConnected') },
+    { label: t('dashboard.compActiveSessions'), ok: true, note: t('dashboard.resRunningVal', { count: stats.activeSessions || 0 }) }
   ];
   const metrics = [
-    ['Profiles', stats.totalProfiles || 0],
-    ['Sessions', stats.activeSessions || 0],
-    ['Proxies', stats.totalProxies || 0],
-    ['Groups', stats.totalGroups || 0]
+    [t('dashboard.metricGridProfiles'), stats.totalProfiles || 0],
+    [t('dashboard.metricGridSessions'), stats.activeSessions || 0],
+    [t('dashboard.metricGridProxies'), stats.totalProxies || 0],
+    [t('dashboard.metricGridGroups'), stats.totalGroups || 0]
   ];
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onMouseDown={onClose}>
       <div className="w-[460px] bg-popover border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold text-foreground">System status</h2></div>
+          <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold text-foreground">{t('dashboard.statusTitle')}</h2></div>
           <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-5">
           <div className="flex items-center gap-2 text-[13px]">
             <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" /></span>
-            <span className="font-medium text-emerald-400">All systems operational</span>
+            <span className="font-medium text-emerald-400">{t('dashboard.allOperational')}</span>
           </div>
           <div className="space-y-2">
             {components.map((c) => (
@@ -648,13 +650,13 @@ function SystemStatusModal({ stats, sessions, onClose }) {
             ))}
           </div>
           <div className="bg-elevated border border-border rounded-xl p-3 space-y-1.5">
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">Environment</div>
+            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">{t('dashboard.environment')}</div>
             {loadingInfo ? (
-              <div className="flex items-center gap-2 text-[12px] text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Reading…</div>
+              <div className="flex items-center gap-2 text-[12px] text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('dashboard.reading')}</div>
             ) : (
               <>
-                <div className="text-[11.5px] text-muted-foreground break-all"><span className="text-muted-foreground">DB: </span><span className="font-mono text-foreground">{info?.dbPath || 'unknown'}</span></div>
-                <div className="text-[11.5px] text-muted-foreground break-all"><span className="text-muted-foreground">Profiles: </span><span className="font-mono text-foreground">{info?.profileRoot || 'unknown'}</span></div>
+                <div className="text-[11.5px] text-muted-foreground break-all"><span className="text-muted-foreground">DB: </span><span className="font-mono text-foreground">{info?.dbPath || t('dashboard.unknown')}</span></div>
+                <div className="text-[11.5px] text-muted-foreground break-all"><span className="text-muted-foreground">Profiles: </span><span className="font-mono text-foreground">{info?.profileRoot || t('dashboard.unknown')}</span></div>
                 {info?.cpuModel && <div className="text-[11.5px] text-muted-foreground break-all"><span>CPU: </span><span className="font-mono text-foreground">{info.cpuModel} ({info.cpuCount} cores)</span></div>}
               </>
             )}
