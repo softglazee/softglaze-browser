@@ -188,6 +188,22 @@ function personaAutofillMain() {
       } catch (e) { try { el.value = value; } catch (_) {} }
       el.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    // Authoritative React/SPA-safe commit (same mechanism every password
+    // manager uses): write through the NATIVE value setter from the prototype
+    // descriptor — not the element instance — so React's controlled-input
+    // override is bypassed, then fire input + change + blur so React's synthetic
+    // event system updates its Virtual DOM. Without this, the framework keeps
+    // its internal value tracker out of sync and submits an empty string.
+    function setReactInputValue(el, value) {
+      try {
+        var proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+        var desc = Object.getOwnPropertyDescriptor(proto, 'value');
+        if (desc && desc.set) desc.set.call(el, value); else el.value = value;
+      } catch (e) { try { el.value = value; } catch (_) {} }
+      try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+      try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+      try { el.dispatchEvent(new Event('blur', { bubbles: true })); } catch (e) {}
+    }
     function setSelect(el, val) {
       var v = String(val).toLowerCase(), o, i;
       for (i = 0; i < el.options.length; i++) { o = el.options[i]; if ((o.value || '').toLowerCase() === v || (o.textContent || '').trim().toLowerCase() === v) { el.value = o.value; el.dispatchEvent(new Event('change', { bubbles: true })); return; } }
@@ -204,8 +220,10 @@ function personaAutofillMain() {
         el.dispatchEvent(new KeyboardEvent('keyup', { key: ch, bubbles: true }));
         await delay(50 + rand(0, 100));
       }
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      try { el.blur(); el.dispatchEvent(new Event('blur', { bubbles: true })); } catch (e) {}
+      // Authoritative final commit so React/Vue controlled inputs register the
+      // complete value (fires input + change + blur via the native setter).
+      setReactInputValue(el, value);
+      try { el.blur(); } catch (e) {}
     }
 
     // Ordered match predicates (key, regex on the field's attribute string, extra test).
