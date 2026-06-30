@@ -1,45 +1,46 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
 // Side-by-side comparison of 2–3 profiles. Renderer-only — uses the profile objects
 // already loaded on the Profiles page. Rows where the values differ are highlighted
 // so config drift (e.g. a mismatched timezone or UA) is obvious at a glance.
-const ROWS = [
-  ['Name', (p) => p.title],
-  ['Browser', (p) => p.browserBrand || p.browserCore || '—'],
-  ['Version', (p) => p.browserVersion || 'Auto'],
-  ['OS', (p) => [p.os, p.osVersion].filter(Boolean).join(' ') || '—'],
-  ['Device', (p) => p.deviceClass || 'desktop'],
-  ['User-Agent', (p) => p.userAgent || 'Auto'],
-  ['Proxy', (p) => p.proxyInfoString || (p.proxy && p.proxy.name) || 'Direct'],
-  ['Proxy health', (p) => (p.proxy && p.proxy.lastStatus) ? p.proxy.lastStatus : '—'],
-  ['Timezone', (p) => p.timezoneType === 'Custom' ? (p.timezoneCustom || 'Custom') : (p.timezoneType || 'Real')],
-  ['Language', (p) => p.languageType === 'Custom' ? (p.languageCustom || 'Custom') : (p.languageType || 'Real')],
-  ['Resolution', (p) => p.resolutionType === 'Custom' ? `${p.resolutionW || '?'}×${p.resolutionH || '?'}` : (p.resolutionType || 'Real')],
-  ['WebRTC', (p) => p.webrtc || 'Forward'],
-  ['WebGL vendor', (p) => p.webglVendor || '—'],
-  ['WebGL renderer', (p) => p.webglRenderer || '—'],
-  ['CPU cores', (p) => p.cpu ?? '—'],
-  ['RAM (GB)', (p) => p.ram ?? '—'],
-  ['Group', (p) => (p.group && p.group.name) || '—'],
-  ['Tags', (p) => (Array.isArray(p.tags) && p.tags.length) ? p.tags.join(', ') : '—']
-];
-
 export default function CompareProfilesModal({ profiles = [], onClose }) {
+  const { t } = useTranslation('cmpModalsA');
   const { dialogRef } = useDialog({ onClose });
+  const ROWS = [
+    [t('compare.rowName'), (p) => p.title],
+    [t('compare.rowBrowser'), (p) => p.browserBrand || p.browserCore || '—'],
+    [t('compare.rowVersion'), (p) => p.browserVersion || t('compare.auto')],
+    [t('compare.rowOS'), (p) => [p.os, p.osVersion].filter(Boolean).join(' ') || '—'],
+    [t('compare.rowDevice'), (p) => p.deviceClass || t('compare.desktop')],
+    [t('compare.rowUserAgent'), (p) => p.userAgent || t('compare.auto')],
+    [t('compare.rowProxy'), (p) => p.proxyInfoString || (p.proxy && p.proxy.name) || t('compare.direct')],
+    [t('compare.rowProxyHealth'), (p) => (p.proxy && p.proxy.lastStatus) ? p.proxy.lastStatus : '—'],
+    [t('compare.rowTimezone'), (p) => p.timezoneType === 'Custom' ? (p.timezoneCustom || t('compare.custom')) : (p.timezoneType || t('compare.real'))],
+    [t('compare.rowLanguage'), (p) => p.languageType === 'Custom' ? (p.languageCustom || t('compare.custom')) : (p.languageType || t('compare.real'))],
+    [t('compare.rowResolution'), (p) => p.resolutionType === 'Custom' ? `${p.resolutionW || '?'}×${p.resolutionH || '?'}` : (p.resolutionType || t('compare.real'))],
+    [t('compare.rowWebRTC'), (p) => p.webrtc || t('compare.forward')],
+    [t('compare.rowWebglVendor'), (p) => p.webglVendor || '—'],
+    [t('compare.rowWebglRenderer'), (p) => p.webglRenderer || '—'],
+    [t('compare.rowCpuCores'), (p) => p.cpu ?? '—'],
+    [t('compare.rowRam'), (p) => p.ram ?? '—'],
+    [t('compare.rowGroup'), (p) => (p.group && p.group.name) || '—'],
+    [t('compare.rowTags'), (p) => (Array.isArray(p.tags) && p.tags.length) ? p.tags.join(', ') : '—']
+  ];
   if (!profiles.length) return null;
   const val = (get, p) => { try { const v = get(p); return (v === null || v === undefined || v === '') ? '—' : String(v); } catch (e) { return '—'; } };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Compare profiles" tabIndex={-1} className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('compare.header')} tabIndex={-1} className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Compare profiles</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Differing values are highlighted.</p>
+            <h3 className="text-sm font-semibold text-foreground">{t('compare.header')}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('compare.subtitle')}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title="Close">
+          <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title={t('compare.close')}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -47,7 +48,7 @@ export default function CompareProfilesModal({ profiles = [], onClose }) {
           <table className="w-full border-collapse text-left text-sm">
             <thead className="bg-elevated text-muted-foreground text-[10px] uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 w-40">Attribute</th>
+                <th className="px-4 py-3 w-40">{t('compare.attribute')}</th>
                 {profiles.map((p) => <th key={p.id} className="px-4 py-3 truncate max-w-[200px]">{p.title}</th>)}
               </tr>
             </thead>

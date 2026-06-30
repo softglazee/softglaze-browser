@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, Download, Check, Loader2, Play } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import i18n from '@/i18n/index.js';
+import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
+import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
+
+// Register the shared "cmpUi" namespace without touching the central i18n config.
+// addResourceBundle is a no-op if the bundle already exists, so this is safe across
+// hot reloads and the other components that register the same namespace.
+if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
+if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
 // On-demand version picker: each version row carries its own download/install
 // control. Installed versions show "Ready" (no download icon); missing ones show a
 // download button that streams a progress bar inline and flips to "Ready" on finish.
 // Works for both SunBrowser (Chrome-for-Testing) and FlowerBrowser (Firefox).
 export default function BrowserVersionSelect({ core, value, onChange }) {
+  const { t } = useTranslation('cmpUi');
   const isFirefox = core === 'FlowerBrowser';
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -26,11 +37,11 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
       for (const it of list) { if (!byMajor.has(it.major)) byMajor.set(it.major, it); }
       if (mounted.current) setItems(Array.from(byMajor.values()).sort((a, b) => b.major - a.major));
     } catch (e) {
-      if (mounted.current) setErr('Offline — can’t reach the version catalog.');
+      if (mounted.current) setErr(t('versionSelect.offlineError'));
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [isFirefox]);
+  }, [isFirefox, t]);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { if (open) load(); }, [open, load]);
@@ -74,7 +85,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
       if (isFirefox) await softglazeApi.browsers.firefoxDownload(String(it.major));
       else await softglazeApi.browsers.download(String(it.version));
     } catch (err2) {
-      setErr(err2.message || 'Download failed.');
+      setErr(err2.message || t('versionSelect.downloadFailed'));
     }
   }
 
@@ -86,7 +97,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
       if (isFirefox) await softglazeApi.browsers.firefoxResumeDownload(String(it.major));
       else await softglazeApi.browsers.resumeDownload(String(it.version));
     } catch (err2) {
-      setErr(err2.message || 'Resume failed.');
+      setErr(err2.message || t('versionSelect.resumeFailed'));
     }
   }
 
@@ -99,7 +110,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
         onClick={() => setOpen((o) => !o)}
         className="appearance-none bg-transparent outline-none text-muted hover:text-foreground pl-3 pr-2 py-2 text-sm cursor-pointer flex items-center gap-1"
       >
-        {value || 'Auto'}
+        {value || t('versionSelect.auto')}
         <ChevronDown className={`w-4 h-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -110,13 +121,13 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
             onClick={(e) => pick('Auto', e)}
             className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-secondary transition-colors ${value === 'Auto' ? 'text-primary font-medium' : 'text-foreground'}`}
           >
-            <span>Auto</span>
+            <span>{t('versionSelect.auto')}</span>
             {value === 'Auto' && <Check className="w-4 h-4" />}
           </button>
 
           {loading && (
             <div className="px-3 py-3 text-xs text-muted flex items-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading versions…
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('versionSelect.loadingVersions')}
             </div>
           )}
           {err && <div className="px-3 py-2 text-xs text-red-400">{err}</div>}
@@ -137,13 +148,13 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
                 <span className="flex-1 truncate">{label}</span>
 
                 {it.installed ? (
-                  <span title="Installed & ready to use" className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 shrink-0">
-                    <Check className="w-3.5 h-3.5" /> Ready
+                  <span title={t('versionSelect.readyTitle')} className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 shrink-0">
+                    <Check className="w-3.5 h-3.5" /> {t('versionSelect.ready')}
                   </span>
                 ) : halted ? (
                   <button
                     type="button"
-                    title={`${d.state === 'paused' ? 'Paused' : 'Interrupted'} at ${d.percent || 0}% — resume`}
+                    title={t('versionSelect.resumeTitle', { state: d.state === 'paused' ? t('versionSelect.paused') : t('versionSelect.interrupted'), percent: d.percent || 0 })}
                     onClick={(e) => resumeDownload(it, e)}
                     className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 hover:text-amber-300 shrink-0"
                   >
@@ -155,13 +166,13 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
                       <span className="block h-full bg-primary transition-all duration-300" style={{ width: `${d.percent || 0}%` }} />
                     </span>
                     <span className="text-[10px] text-muted tabular-nums w-9 text-right">
-                      {d.state === 'installing' || d.state === 'extracting' ? 'inst' : d.state === 'queued' ? '…' : `${d.percent || 0}%`}
+                      {d.state === 'installing' || d.state === 'extracting' ? t('versionSelect.statusInstalling') : d.state === 'queued' ? t('versionSelect.statusQueued') : `${d.percent || 0}%`}
                     </span>
                   </span>
                 ) : (
                   <button
                     type="button"
-                    title={failed ? `Retry — ${d.error || 'download failed'}` : 'Download & install this version'}
+                    title={failed ? t('versionSelect.retryTitle', { error: d.error || t('versionSelect.downloadFailedShort') }) : t('versionSelect.downloadInstallTitle')}
                     onClick={(e) => startDownload(it, e)}
                     className={`inline-flex items-center justify-center w-6 h-6 rounded-md transition-colors shrink-0 ${failed ? 'text-red-400 hover:bg-red-500/10' : 'text-muted hover:text-primary hover:bg-primary/10'}`}
                   >
@@ -173,7 +184,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
           })}
 
           {!loading && !items.length && !err && (
-            <div className="px-3 py-3 text-xs text-muted">No versions found.</div>
+            <div className="px-3 py-3 text-xs text-muted">{t('versionSelect.noVersions')}</div>
           )}
         </div>
       )}

@@ -1,27 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, CornerDownLeft, LayoutDashboard, Fingerprint, Layers, Globe, Puzzle,
   FileSpreadsheet, Trash2, Settings, Users, MonitorDown, Wand2, UserCog
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import i18n from '@/i18n/index.js';
+import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
+import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
+
+// Register the "cmpOverlays" namespace without touching the central i18n config.
+// addResourceBundle is a no-op if the bundle already exists, so this is safe
+// across hot reloads (and the OnboardingWizard performing the same registration).
+if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
+if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
 // Global Ctrl/Cmd-K command palette. No new dependency — a window keydown listener,
 // the existing router, and the existing list APIs. Jumps to any page and searches
 // profiles / proxies / members. Mounted once in AppShell so it's available app-wide.
+// `labelKey` is resolved to a translated display name at render time (module scope
+// can't call the hook); the search filter matches on that translated label.
 const NAV = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/profiles', label: 'Profiles', icon: Fingerprint },
-  { path: '/groups', label: 'Groups', icon: Layers },
-  { path: '/proxies', label: 'Proxy pool', icon: Globe },
-  { path: '/browsers', label: 'Browsers', icon: MonitorDown },
-  { path: '/extensions', label: 'Extensions', icon: Puzzle },
-  { path: '/batch-import', label: 'Batch import', icon: FileSpreadsheet },
-  { path: '/trash', label: 'Trash', icon: Trash2 },
-  { path: '/automation', label: 'Automation', icon: Wand2 },
-  { path: '/members', label: 'Members', icon: Users },
-  { path: '/account', label: 'Account', icon: UserCog },
-  { path: '/settings', label: 'Settings', icon: Settings }
+  { path: '/dashboard', labelKey: 'palette.nav.dashboard', icon: LayoutDashboard },
+  { path: '/profiles', labelKey: 'palette.nav.profiles', icon: Fingerprint },
+  { path: '/groups', labelKey: 'palette.nav.groups', icon: Layers },
+  { path: '/proxies', labelKey: 'palette.nav.proxies', icon: Globe },
+  { path: '/browsers', labelKey: 'palette.nav.browsers', icon: MonitorDown },
+  { path: '/extensions', labelKey: 'palette.nav.extensions', icon: Puzzle },
+  { path: '/batch-import', labelKey: 'palette.nav.batchImport', icon: FileSpreadsheet },
+  { path: '/trash', labelKey: 'palette.nav.trash', icon: Trash2 },
+  { path: '/automation', labelKey: 'palette.nav.automation', icon: Wand2 },
+  { path: '/members', labelKey: 'palette.nav.members', icon: Users },
+  { path: '/account', labelKey: 'palette.nav.account', icon: UserCog },
+  { path: '/settings', labelKey: 'palette.nav.settings', icon: Settings }
 ];
 
 // The list APIs may return a bare array or a paginated envelope — normalize both.
@@ -32,6 +44,7 @@ function asArray(res) {
 }
 
 export default function CommandPalette() {
+  const { t } = useTranslation('cmpOverlays');
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -76,26 +89,29 @@ export default function CommandPalette() {
     const q = query.trim().toLowerCase();
     const out = [];
     for (const n of NAV) {
-      if (!q || n.label.toLowerCase().includes(q)) out.push({ icon: n.icon, label: n.label, hint: 'Page', run: () => navigate(n.path) });
+      // Match the search filter against the TRANSLATED label so search still works
+      // regardless of the active UI language.
+      const label = t(n.labelKey);
+      if (!q || label.toLowerCase().includes(q)) out.push({ icon: n.icon, label, hint: t('palette.hint.page'), run: () => navigate(n.path) });
     }
     if (q) {
       for (const p of data.profiles) {
-        if (String(p.title || '').toLowerCase().includes(q)) out.push({ icon: Fingerprint, label: p.title || `Profile #${p.id}`, hint: 'Profile', run: () => navigate('/profiles') });
+        if (String(p.title || '').toLowerCase().includes(q)) out.push({ icon: Fingerprint, label: p.title || t('palette.fallback.profile', { id: p.id }), hint: t('palette.hint.profile'), run: () => navigate('/profiles') });
         if (out.length > 40) break;
       }
       for (const px of data.proxies) {
         const hay = `${px.name || ''} ${px.host || ''}`.toLowerCase();
-        if (hay.includes(q)) out.push({ icon: Globe, label: px.name || px.host || `Proxy #${px.id}`, hint: 'Proxy', run: () => navigate('/proxies') });
+        if (hay.includes(q)) out.push({ icon: Globe, label: px.name || px.host || t('palette.fallback.proxy', { id: px.id }), hint: t('palette.hint.proxy'), run: () => navigate('/proxies') });
         if (out.length > 60) break;
       }
       for (const m of data.members) {
         const hay = `${m.name || ''} ${m.email || ''}`.toLowerCase();
-        if (hay.includes(q)) out.push({ icon: Users, label: m.name || m.email || `Member #${m.id}`, hint: 'Member', run: () => navigate('/members') });
+        if (hay.includes(q)) out.push({ icon: Users, label: m.name || m.email || t('palette.fallback.member', { id: m.id }), hint: t('palette.hint.member'), run: () => navigate('/members') });
         if (out.length > 80) break;
       }
     }
     return out;
-  }, [query, data, navigate]);
+  }, [query, data, navigate, t]);
 
   useEffect(() => { setSel((s) => Math.min(s, Math.max(0, results.length - 1))); }, [results.length]);
 
@@ -112,7 +128,7 @@ export default function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4" onMouseDown={close}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div role="dialog" aria-modal="true" aria-label="Command palette" className="relative w-full max-w-[560px] rounded-xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={t('palette.dialogLabel')} className="relative w-full max-w-[560px] rounded-xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
@@ -120,19 +136,19 @@ export default function CommandPalette() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSel(0); }}
             onKeyDown={onListKey}
-            placeholder="Search pages, profiles, proxies, members…"
-            aria-label="Search pages, profiles, proxies, and members"
+            placeholder={t('palette.searchPlaceholder')}
+            aria-label={t('palette.searchAriaLabel')}
             role="combobox"
             aria-expanded={results.length > 0}
             aria-controls="cmdk-results"
             aria-activedescendant={results[sel] ? `cmdk-opt-${sel}` : undefined}
             className="flex-1 bg-transparent text-[13.5px] text-foreground placeholder:text-muted-foreground outline-none"
           />
-          <kbd className="text-[10px] font-semibold text-muted-foreground border border-border rounded px-1.5 py-0.5">Esc</kbd>
+          <kbd className="text-[10px] font-semibold text-muted-foreground border border-border rounded px-1.5 py-0.5">{t('palette.esc')}</kbd>
         </div>
-        <div id="cmdk-results" role="listbox" aria-label="Results" className="max-h-[52vh] overflow-y-auto py-1.5">
+        <div id="cmdk-results" role="listbox" aria-label={t('palette.resultsLabel')} className="max-h-[52vh] overflow-y-auto py-1.5">
           {results.length === 0 && (
-            <div className="px-4 py-6 text-center text-[12.5px] text-muted-foreground">No matches.</div>
+            <div className="px-4 py-6 text-center text-[12.5px] text-muted-foreground">{t('palette.noMatches')}</div>
           )}
           {results.map((r, i) => {
             const Icon = r.icon;

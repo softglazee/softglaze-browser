@@ -1,0 +1,96 @@
+{
+  "palette": {
+    "dialogLabel": "Paleta de comandos",
+    "searchPlaceholder": "Buscar páginas, perfiles, proxies, miembros…",
+    "searchAriaLabel": "Buscar páginas, perfiles, proxies y miembros",
+    "resultsLabel": "Resultados",
+    "esc": "Esc",
+    "noMatches": "Sin coincidencias.",
+    "nav": {
+      "dashboard": "Panel",
+      "profiles": "Perfiles",
+      "groups": "Grupos",
+      "proxies": "Grupo de proxies",
+      "browsers": "Navegadores",
+      "extensions": "Extensiones",
+      "batchImport": "Importación por lotes",
+      "trash": "Papelera",
+      "automation": "Automatización",
+      "members": "Miembros",
+      "account": "Cuenta",
+      "settings": "Configuración"
+    },
+    "hint": {
+      "page": "Página",
+      "profile": "Perfil",
+      "proxy": "Proxy",
+      "member": "Miembro"
+    },
+    "fallback": {
+      "profile": "Perfil n.º {{id}}",
+      "proxy": "Proxy n.º {{id}}",
+      "member": "Miembro n.º {{id}}"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Omitir configuración",
+    "back": "Atrás",
+    "skip": "Omitir",
+    "saveAndContinue": "Guardar y continuar",
+    "msg": {
+      "smtpSaved": "SMTP guardado.",
+      "proxySaved": "Proxy guardado."
+    },
+    "err": {
+      "smtpSaveFailed": "No se pudo guardar la configuración SMTP.",
+      "proxySaveFailed": "No se pudo guardar el proxy.",
+      "profileCreateFailed": "No se pudo crear el perfil."
+    },
+    "welcome": {
+      "title": "Bienvenido a SoftGlaze",
+      "subtitle": "Una configuración rápida de 3 pasos te lleva a tu primer perfil. Puedes omitir cualquier paso.",
+      "getStarted": "Empezar",
+      "stepEmail": "Correo electrónico (SMTP) — opcional, para códigos OTP",
+      "stepProxy": "Tu primer proxy — opcional",
+      "stepProfile": "Tu primer perfil de navegador"
+    },
+    "smtp": {
+      "title": "Correo electrónico (SMTP)",
+      "subtitle": "Opcional — permite que la aplicación envíe códigos de verificación. Puedes configurarlo más tarde en Configuración.",
+      "host": "Servidor SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Puerto",
+      "portPlaceholder": "587",
+      "username": "Usuario",
+      "usernamePlaceholder": "tu@example.com",
+      "password": "Contraseña",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Añade tu primer proxy",
+      "subtitle": "Opcional — da a cada identidad su propia red. Puedes añadir más en el grupo de proxies.",
+      "type": "Tipo",
+      "host": "Servidor",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Puerto",
+      "portPlaceholder": "8080",
+      "user": "Usuario",
+      "userPlaceholder": "opcional",
+      "password": "Contraseña",
+      "passwordPlaceholder": "opcional"
+    },
+    "profile": {
+      "title": "Crea tu primer perfil",
+      "subtitle": "Se genera para ti una huella digital única e internamente coherente.",
+      "createAndFinish": "Crear y finalizar",
+      "name": "Nombre del perfil",
+      "namePlaceholder": "Mi primer perfil",
+      "defaultName": "Mi primer perfil",
+      "deviceType": "Tipo de dispositivo",
+      "desktop": "Escritorio",
+      "mobile": "Móvil (Android)",
+      "mobileNote": "Android se emula en el motor de escritorio — UA, táctil, pantalla y GPU coherentes, pero no es un dispositivo real.",
+      "proxyAttached": "Tu nuevo proxy se asociará a este perfil."
+    }
+  }
+}

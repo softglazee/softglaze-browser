@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Fingerprint, X, Cpu, MemoryStick, Monitor, Globe, ShieldCheck, Languages, Clock, MapPin, Network } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
@@ -54,28 +55,29 @@ function Section({ icon: Icon, title, children }) {
   );
 }
 
-function noise(flag, label) {
-  return flag === false ? 'Real' : `Noise${label ? ` [${label}]` : ''}`;
+function noise(t, flag, label) {
+  return flag === false ? t('envOverview.noiseReal') : (label ? t('envOverview.noiseLabeled', { label }) : t('envOverview.noise'));
 }
 
 export default function EnvironmentOverviewModal({ profile, onClose }) {
+  const { t } = useTranslation('cmpModalsB');
   const { dialogRef } = useDialog({ onClose });
   const p = profile || {};
   const proxy = p.proxy;
   const proxyText = proxy
     ? `${proxy.type} · ${proxy.host}:${proxy.port}${proxy.lastCountry ? ` · ${proxy.lastCountry}` : ''}`
-    : (p.systemProxyBehavior === 'SYSTEM_PROXY' ? 'System proxy' : 'Direct (no proxy)');
+    : (p.systemProxyBehavior === 'SYSTEM_PROXY' ? t('envOverview.systemProxy') : t('envOverview.directNoProxy'));
   const res = (p.resolutionType && p.resolutionType !== 'Real' && p.resolutionW)
-    ? `${p.resolutionW} x ${p.resolutionH}` : 'Based on User-Agent';
+    ? `${p.resolutionW} x ${p.resolutionH}` : t('envOverview.basedOnUserAgent');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Environment overview" tabIndex={-1} className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('envOverview.dialogLabel')} tabIndex={-1} className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-1.5 rounded border border-primary/20"><Fingerprint className="w-5 h-5 text-primary" /></div>
             <div>
-              <h2 className="text-foreground font-bold text-sm uppercase tracking-wide">Environment Overview</h2>
+              <h2 className="text-foreground font-bold text-sm uppercase tracking-wide">{t('envOverview.title')}</h2>
               <p className="text-xs text-muted mt-0.5">{p.title}</p>
             </div>
           </div>
@@ -83,61 +85,61 @@ export default function EnvironmentOverviewModal({ profile, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 grid gap-4 md:grid-cols-2">
-          <Section icon={Globe} title="Browser">
-            <Row label="Browser" value={`${p.browserCore || 'Chrome'}${p.browserVersion ? ` ${p.browserVersion}` : ''}`} />
+          <Section icon={Globe} title={t('envOverview.sectionBrowser')}>
+            <Row label={t('envOverview.rowBrowser')} value={`${p.browserCore || 'Chrome'}${p.browserVersion ? ` ${p.browserVersion}` : ''}`} />
             {p.browserBrand && /^(edge|brave|opera|vivaldi|yandex)/i.test(String(p.browserBrand)) && (
-              <Row label="Identity" value={`Presents as ${p.browserBrand}`} />
+              <Row label={t('envOverview.rowIdentity')} value={t('envOverview.presentsAs', { brand: p.browserBrand })} />
             )}
-            <Row label="OS" value={`${p.os || 'Windows'}${p.osVersion ? ` ${p.osVersion}` : ''}`} />
-            <Row label="User-Agent" value={buildUa(p)} mono />
-            <Row label="UA mode" value={(!p.userAgent || p.userAgent === 'Auto') ? 'Auto (matches engine)' : 'Custom'} />
+            <Row label={t('envOverview.rowOs')} value={`${p.os || 'Windows'}${p.osVersion ? ` ${p.osVersion}` : ''}`} />
+            <Row label={t('envOverview.rowUserAgent')} value={buildUa(p)} mono />
+            <Row label={t('envOverview.rowUaMode')} value={(!p.userAgent || p.userAgent === 'Auto') ? t('envOverview.uaAuto') : t('envOverview.uaCustom')} />
           </Section>
 
-          <Section icon={Network} title="Proxy / Network">
-            <Row label="Proxy" value={proxyText} />
-            <Row label="Behavior" value={p.systemProxyBehavior} />
-            <Row label="WebRTC" value={p.webrtc || 'Forward'} />
-            <Row label="Port scan protection" value={p.portScanProtection || 'Enable'} />
+          <Section icon={Network} title={t('envOverview.sectionProxy')}>
+            <Row label={t('envOverview.rowProxy')} value={proxyText} />
+            <Row label={t('envOverview.rowBehavior')} value={p.systemProxyBehavior} />
+            <Row label={t('envOverview.rowWebrtc')} value={p.webrtc || t('envOverview.valForward')} />
+            <Row label={t('envOverview.rowPortScan')} value={p.portScanProtection || t('envOverview.valEnable')} />
           </Section>
 
-          <Section icon={Clock} title="Locale">
-            <Row label="Timezone" value={p.timezoneType === 'Custom' ? p.timezoneCustom : (p.timezoneType || 'Based on IP')} />
-            <Row label="Location" value={p.locationType === 'Custom' ? `${p.locationLat || '?'}, ${p.locationLng || '?'}` : (p.locationType || 'Based on IP')} />
-            <Row label="Language" value={p.languageType === 'Custom' ? p.languageCustom : (p.languageType || 'Based on IP')} />
-            <Row label="Display language" value={p.displayLangType || 'Based on Language'} />
+          <Section icon={Clock} title={t('envOverview.sectionLocale')}>
+            <Row label={t('envOverview.rowTimezone')} value={p.timezoneType === 'Custom' ? p.timezoneCustom : (p.timezoneType || t('envOverview.basedOnIp'))} />
+            <Row label={t('envOverview.rowLocation')} value={p.locationType === 'Custom' ? `${p.locationLat || '?'}, ${p.locationLng || '?'}` : (p.locationType || t('envOverview.basedOnIp'))} />
+            <Row label={t('envOverview.rowLanguage')} value={p.languageType === 'Custom' ? p.languageCustom : (p.languageType || t('envOverview.basedOnIp'))} />
+            <Row label={t('envOverview.rowDisplayLanguage')} value={p.displayLangType || t('envOverview.basedOnLanguage')} />
           </Section>
 
-          <Section icon={Monitor} title="Screen & Fonts">
-            <Row label="Resolution" value={res} />
-            <Row label="Fonts" value={p.fontsType || 'Default'} />
-            <Row label="Canvas" value={noise(p.canvasNoise)} accent={p.canvasNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
-            <Row label="WebGL image" value={noise(p.webglImageNoise)} accent={p.webglImageNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
-            <Row label="AudioContext" value={noise(p.audioContextNoise)} accent={p.audioContextNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
-            <Row label="ClientRects" value={noise(p.clientRectsNoise)} accent={p.clientRectsNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
-            <Row label="SpeechVoices" value={noise(p.speechVoicesNoise)} accent={p.speechVoicesNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
-            <Row label="Media device" value={p.mediaDevice || 'Auto'} />
+          <Section icon={Monitor} title={t('envOverview.sectionScreen')}>
+            <Row label={t('envOverview.rowResolution')} value={res} />
+            <Row label={t('envOverview.rowFonts')} value={p.fontsType || t('envOverview.valDefault')} />
+            <Row label={t('envOverview.rowCanvas')} value={noise(t, p.canvasNoise)} accent={p.canvasNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
+            <Row label={t('envOverview.rowWebglImage')} value={noise(t, p.webglImageNoise)} accent={p.webglImageNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
+            <Row label={t('envOverview.rowAudioContext')} value={noise(t, p.audioContextNoise)} accent={p.audioContextNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
+            <Row label={t('envOverview.rowClientRects')} value={noise(t, p.clientRectsNoise)} accent={p.clientRectsNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
+            <Row label={t('envOverview.rowSpeechVoices')} value={noise(t, p.speechVoicesNoise)} accent={p.speechVoicesNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
+            <Row label={t('envOverview.rowMediaDevice')} value={p.mediaDevice || t('envOverview.valAuto')} />
           </Section>
 
-          <Section icon={Cpu} title="Hardware">
-            <Row label="WebGL vendor" value={p.webglVendor} />
-            <Row label="WebGL renderer" value={p.webglRenderer} mono />
-            <Row label="WebGPU" value={p.webgpu || 'Based on WebGL'} />
-            <Row label="CPU cores" value={p.cpuCores ? `${p.cpuCores} cores` : 'Auto'} />
-            <Row label="RAM" value={p.ramGb ? `${p.ramGb} GB` : 'Auto'} />
-            <Row label="Device memory" value={p.ramGb ? `${Math.min(8, Number(p.ramGb) || 8)} GB — what sites see (Chrome caps navigator.deviceMemory at 8)` : 'Auto'} accent="text-muted" />
+          <Section icon={Cpu} title={t('envOverview.sectionHardware')}>
+            <Row label={t('envOverview.rowWebglVendor')} value={p.webglVendor} />
+            <Row label={t('envOverview.rowWebglRenderer')} value={p.webglRenderer} mono />
+            <Row label={t('envOverview.rowWebgpu')} value={p.webgpu || t('envOverview.basedOnWebgl')} />
+            <Row label={t('envOverview.rowCpuCores')} value={p.cpuCores ? t('envOverview.coresValue', { count: p.cpuCores }) : t('envOverview.valAuto')} />
+            <Row label={t('envOverview.rowRam')} value={p.ramGb ? t('envOverview.gbValue', { gb: p.ramGb }) : t('envOverview.valAuto')} />
+            <Row label={t('envOverview.rowDeviceMemory')} value={p.ramGb ? t('envOverview.deviceMemoryValue', { gb: Math.min(8, Number(p.ramGb) || 8) }) : t('envOverview.valAuto')} accent="text-muted" />
           </Section>
 
-          <Section icon={ShieldCheck} title="Device & Privacy">
-            <Row label="Device name" value={p.deviceName || 'Auto'} />
-            <Row label="MAC address" value={p.macAddress || 'Auto'} mono />
-            <Row label="Do Not Track" value={p.doNotTrack || 'Default'} />
-            <Row label="Hardware accel." value={p.hardwareAcceleration || 'Default'} />
-            <Row label="Disable TLS features" value={p.disableTls || 'Close'} />
+          <Section icon={ShieldCheck} title={t('envOverview.sectionDevice')}>
+            <Row label={t('envOverview.rowDeviceName')} value={p.deviceName || t('envOverview.valAuto')} />
+            <Row label={t('envOverview.rowMacAddress')} value={p.macAddress || t('envOverview.valAuto')} mono />
+            <Row label={t('envOverview.rowDoNotTrack')} value={p.doNotTrack || t('envOverview.valDefault')} />
+            <Row label={t('envOverview.rowHardwareAccel')} value={p.hardwareAcceleration || t('envOverview.valDefault')} />
+            <Row label={t('envOverview.rowDisableTls')} value={p.disableTls || t('envOverview.valClose')} />
           </Section>
         </div>
 
         <div className="px-5 py-3 border-t border-border bg-surface text-xs text-muted">
-          Values reflect the profile configuration. <span className="text-muted-foreground">User-Agent “‹engine›” means the version follows the bundled Chromium for fingerprint consistency.</span>
+          {t('envOverview.footerValues')} <span className="text-muted-foreground">{t('envOverview.footerEngineNote')}</span>
         </div>
       </div>
     </div>

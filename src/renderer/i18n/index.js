@@ -49,6 +49,22 @@ import profilesEn from './locales/en/profiles.json';
 import profilesEs from './locales/es/profiles.json';
 import settingsExtraEn from './locales/en/settingsExtra.json';
 import settingsExtraEs from './locales/es/settingsExtra.json';
+import cmpModalsAEn from './locales/en/cmpModalsA.json';
+import cmpModalsAEs from './locales/es/cmpModalsA.json';
+import cmpModalsBEn from './locales/en/cmpModalsB.json';
+import cmpModalsBEs from './locales/es/cmpModalsB.json';
+import cmpModalsCEn from './locales/en/cmpModalsC.json';
+import cmpModalsCEs from './locales/es/cmpModalsC.json';
+import cmpOverlaysEn from './locales/en/cmpOverlays.json';
+import cmpOverlaysEs from './locales/es/cmpOverlays.json';
+import cmpSettingsAEn from './locales/en/cmpSettingsA.json';
+import cmpSettingsAEs from './locales/es/cmpSettingsA.json';
+import cmpSettingsBEn from './locales/en/cmpSettingsB.json';
+import cmpSettingsBEs from './locales/es/cmpSettingsB.json';
+import cmpSettingsCEn from './locales/en/cmpSettingsC.json';
+import cmpSettingsCEs from './locales/es/cmpSettingsC.json';
+import cmpUiEn from './locales/en/cmpUi.json';
+import cmpUiEs from './locales/es/cmpUi.json';
 
 export const LANG_KEY = 'softglaze-lang';
 
@@ -65,6 +81,9 @@ export const NAMESPACES = [
   'common', 'proxies', 'groups', 'extensions', 'browsers', 'trash', 'personas',
   'batchImport', 'account', 'members', 'billing', 'automation', 'gate', 'profiles',
   'settingsExtra',
+  // Shared components
+  'cmpModalsA', 'cmpModalsB', 'cmpModalsC', 'cmpOverlays', 'cmpSettingsA',
+  'cmpSettingsB', 'cmpSettingsC', 'cmpUi',
 ];
 
 export function readStoredLang() {
@@ -86,12 +105,18 @@ i18n.use(initReactI18next).init({
       browsers: browsersEn, trash: trashEn, personas: personasEn, batchImport: batchImportEn,
       account: accountEn, members: membersEn, billing: billingEn, automation: automationEn,
       gate: gateEn, profiles: profilesEn, settingsExtra: settingsExtraEn,
+      cmpModalsA: cmpModalsAEn, cmpModalsB: cmpModalsBEn, cmpModalsC: cmpModalsCEn,
+      cmpOverlays: cmpOverlaysEn, cmpSettingsA: cmpSettingsAEn, cmpSettingsB: cmpSettingsBEn,
+      cmpSettingsC: cmpSettingsCEn, cmpUi: cmpUiEn,
     },
     es: {
       common: commonEs, proxies: proxiesEs, groups: groupsEs, extensions: extensionsEs,
       browsers: browsersEs, trash: trashEs, personas: personasEs, batchImport: batchImportEs,
       account: accountEs, members: membersEs, billing: billingEs, automation: automationEs,
       gate: gateEs, profiles: profilesEs, settingsExtra: settingsExtraEs,
+      cmpModalsA: cmpModalsAEs, cmpModalsB: cmpModalsBEs, cmpModalsC: cmpModalsCEs,
+      cmpOverlays: cmpOverlaysEs, cmpSettingsA: cmpSettingsAEs, cmpSettingsB: cmpSettingsBEs,
+      cmpSettingsC: cmpSettingsCEs, cmpUi: cmpUiEs,
     },
   },
   lng,
