@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Workspace",
+    "title": "Trash & Recovery",
+    "description": "Recover deleted profiles or permanently erase them from your storage."
+  },
+  "actions": {
+    "emptyTrash": "Empty Trash",
+    "restore": "Restore",
+    "deleteForever": "Delete Forever",
+    "clear": "Clear",
+    "restoreTitle": "Restore Profile",
+    "purgeTitle": "Permanently Delete"
+  },
+  "errors": {
+    "loadFailed": "Failed to load trash."
+  },
+  "warning": {
+    "title": "Permanent deletion",
+    "body": "Restoring returns a profile to your list unchanged. Permanent delete removes it from the database; enable the option below to also erase its local browser data (cookies, cache, logins) from disk."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search deleted profiles...",
+    "eraseLocalData": "Also erase local browser data on permanent delete"
+  },
+  "bulk": {
+    "selected": "{{count}} selected"
+  },
+  "table": {
+    "profileName": "Profile Name",
+    "proxy": "Proxy",
+    "deletedDate": "Deleted Date",
+    "actions": "Actions",
+    "directProxy": "Direct",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "Trash is empty",
+    "noMatch": "No deleted profiles match your search.",
+    "none": "You have no deleted profiles. Safe and clean!"
+  },
+  "confirm": {
+    "purge": "Permanently delete \"{{title}}\"? This cannot be undone.",
+    "purgeWithData": "Permanently delete \"{{title}}\"? This cannot be undone and its local browser data will be erased.",
+    "bulkPurge_one": "Permanently delete {{count}} profile? This cannot be undone.",
+    "bulkPurge_other": "Permanently delete {{count}} profiles? This cannot be undone.",
+    "bulkPurgeWithData_one": "Permanently delete {{count}} profile? This cannot be undone and local browser data will be erased.",
+    "bulkPurgeWithData_other": "Permanently delete {{count}} profiles? This cannot be undone and local browser data will be erased.",
+    "emptyTrash_one": "Permanently delete ALL {{count}} profile in the trash? This cannot be undone.",
+    "emptyTrash_other": "Permanently delete ALL {{count}} profiles in the trash? This cannot be undone.",
+    "emptyTrashWithData_one": "Permanently delete ALL {{count}} profile in the trash? This cannot be undone and local browser data will be erased.",
+    "emptyTrashWithData_other": "Permanently delete ALL {{count}} profiles in the trash? This cannot be undone and local browser data will be erased."
+  }
+}

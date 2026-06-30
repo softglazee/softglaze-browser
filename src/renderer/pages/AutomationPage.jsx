@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Wand2, Bot, Flame, History, Plus, Loader2, Play, Pause, Square, X, Search,
   Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical, Pencil, MousePointer2,
@@ -7,6 +8,15 @@ import {
 import PageHeader from '@/components/PageHeader.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import i18n from '@/i18n/index.js';
+import automationEn from '@/i18n/locales/en/automation.json';
+import automationEs from '@/i18n/locales/es/automation.json';
+
+// Register this page's "automation" namespace without touching the central i18n
+// config (which only bundles the "common" namespace). addResourceBundle is a
+// no-op if the bundle already exists, so this is safe across hot reloads.
+if (!i18n.hasResourceBundle('en', 'automation')) i18n.addResourceBundle('en', 'automation', automationEn);
+if (!i18n.hasResourceBundle('es', 'automation')) i18n.addResourceBundle('es', 'automation', automationEs);
 
 const TABS = [
   { key: 'macros', label: 'My Macros', icon: Workflow },
@@ -52,16 +62,19 @@ function defaultStep(type) {
   return step;
 }
 
-function stepSummary(step) {
+function stepSummary(step, t) {
+  // `t` is the "automation" namespace translator; fall back to English literals
+  // if it's not provided (e.g. called outside a component).
+  const tr = (key, fallback) => (t ? t(key) : fallback);
   switch (step.type) {
-    case 'goto': return step.url || '(no URL)';
-    case 'click': return step.selector || '(no selector)';
-    case 'type': return `${step.selector || '(selector)'} ← "${step.value || ''}"`;
+    case 'goto': return step.url || tr('stepSummary.noUrl', '(no URL)');
+    case 'click': return step.selector || tr('stepSummary.noSelector', '(no selector)');
+    case 'type': return `${step.selector || tr('stepSummary.selectorFallback', '(selector)')} ← "${step.value || ''}"`;
     case 'keypress': return step.key || 'Enter';
     case 'scroll': return `${step.steps || 4}×`;
     case 'wait': return `${step.ms || 0} ms`;
-    case 'move': return step.selector || (step.x != null && step.x !== '' ? `${step.x}, ${step.y}` : '(target)');
-    case 'hover': return `${step.selector || '(selector)'} · ${step.ms || 800} ms`;
+    case 'move': return step.selector || (step.x != null && step.x !== '' ? `${step.x}, ${step.y}` : tr('stepSummary.target', '(target)'));
+    case 'hover': return `${step.selector || tr('stepSummary.selectorFallback', '(selector)')} · ${step.ms || 800} ms`;
     default: return '';
   }
 }
@@ -86,19 +99,20 @@ const LEVEL_COLOR = {
 };
 
 export default function AutomationPage() {
+  const { t } = useTranslation('automation');
   const [tab, setTab] = useState('macros');
 
   return (
     <div className="flex flex-col h-full pb-10">
       <PageHeader
-        eyebrow="Softglaze Pro Features"
-        title="Automation"
-        description="No-code macros, AI-driven cookie warming, and a log of every background task."
+        eyebrow={t('header.eyebrow')}
+        title={t('header.title')}
+        description={t('header.description')}
       />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit mb-5">
-        {TABS.map(({ key, label, icon: Icon }) => (
+        {TABS.map(({ key, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -106,7 +120,7 @@ export default function AutomationPage() {
               tab === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className="w-4 h-4" /> {label}
+            <Icon className="w-4 h-4" /> {t(`tabs.${key}`)}
           </button>
         ))}
       </div>
@@ -123,6 +137,7 @@ export default function AutomationPage() {
 // My Macros
 // ---------------------------------------------------------------------------
 function MacrosPanel() {
+  const { t } = useTranslation('automation');
   const [macros, setMacros] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [targetProfile, setTargetProfile] = useState('');
@@ -135,15 +150,15 @@ function MacrosPanel() {
   const [recording, setRecording] = useState(null); // { profileId, sessionId }
   const [busyRec, setBusyRec] = useState(false);
   const [saveRec, setSaveRec] = useState(null); // { profileId, sessionId } — pending stop-and-save
-  const [recName, setRecName] = useState('Recorded macro');
+  const [recName, setRecName] = useState(() => t('saveRecording.placeholder'));
 
   const load = useCallback(async () => {
     try {
       const rows = await softglazeApi.automation.getMacros();
       setMacros(Array.isArray(rows) ? rows : []);
-    } catch (e) { setErr(e.message || 'Could not load macros.'); }
+    } catch (e) { setErr(e.message || t('macros.errors.loadMacros')); }
     finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -159,29 +174,29 @@ function MacrosPanel() {
   async function remove(id) {
     setErr('');
     try { await softglazeApi.automation.deleteMacro(id); setMacros((m) => m.filter((x) => x.id !== id)); }
-    catch (e) { setErr(e.message || 'Could not delete macro.'); }
+    catch (e) { setErr(e.message || t('macros.errors.deleteMacro')); }
   }
 
   function openRun(macro) {
-    if (!targetProfile) { setErr('Choose a target profile first.'); return; }
-    if ((macro.stepCount || 0) === 0) { setErr('This macro has no steps yet — edit it first.'); return; }
+    if (!targetProfile) { setErr(t('macros.errors.chooseProfile')); return; }
+    if ((macro.stepCount || 0) === 0) { setErr(t('macros.errors.noSteps')); return; }
     setErr(''); setNotice('');
     const p = profiles.find((x) => Number(x.id) === Number(targetProfile));
-    setRunState({ macro, profileId: Number(targetProfile), profileName: p ? (p.title || `Profile ${p.id}`) : `Profile ${targetProfile}` });
+    setRunState({ macro, profileId: Number(targetProfile), profileName: p ? (p.title || t('macros.profileFallback', { id: p.id })) : t('macros.profileFallback', { id: targetProfile }) });
   }
 
   async function toggleRecording() {
     setErr(''); setNotice('');
     // Stopping: open the in-app save modal. Electron's <webview>/renderer does not
     // support window.prompt(), so we collect the macro name with our own dialog.
-    if (recording) { setRecName('Recorded macro'); setSaveRec(recording); return; }
+    if (recording) { setRecName(t('saveRecording.placeholder')); setSaveRec(recording); return; }
     setBusyRec(true);
     try {
-      if (!targetProfile) { setErr('Choose a target profile to record in.'); return; }
+      if (!targetProfile) { setErr(t('macros.errors.chooseProfileRecord')); return; }
       const res = await softglazeApi.automation.startRecording({ profileId: Number(targetProfile) });
       setRecording({ profileId: Number(targetProfile), sessionId: res.sessionId });
-      setNotice('Recording… interact with the launched browser, then press Stop to save.');
-    } catch (e) { setErr(e.message || 'Recording action failed.'); }
+      setNotice(t('macros.recordingStarted'));
+    } catch (e) { setErr(e.message || t('macros.errors.recordingFailed')); }
     finally { setBusyRec(false); }
   }
 
@@ -199,9 +214,9 @@ function MacrosPanel() {
       });
       setRecording(null);
       setSaveRec(null);
-      if (res.saved) { setNotice(`Saved "${res.saved.name}" with ${res.count} step(s).`); load(); }
-      else setNotice(`Recording stopped — captured ${res.count} step(s) (not saved).`);
-    } catch (e) { setErr(e.message || 'Recording action failed.'); }
+      if (res.saved) { setNotice(t('macros.savedNotice', { name: res.saved.name, count: res.count })); load(); }
+      else setNotice(t('macros.stoppedNotice', { count: res.count }));
+    } catch (e) { setErr(e.message || t('macros.errors.recordingFailed')); }
     finally { setBusyRec(false); }
   }
 
@@ -209,17 +224,17 @@ function MacrosPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-muted-foreground max-w-md">
-          Record or build reusable, no-code workflows, then run them inside a profile (navigate, click, type, wait) — manually or on a schedule.
+          {t('macros.intro')}
         </p>
         <div className="flex items-center gap-2">
           <select
             value={targetProfile}
             onChange={(e) => setTargetProfile(e.target.value)}
             className="h-9 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground max-w-[180px]"
-            title="Profile that Run / Record act on"
+            title={t('macros.profileSelectTitle')}
           >
-            {profiles.length === 0 && <option value="">No profiles</option>}
-            {profiles.map((p) => <option key={p.id} value={String(p.id)}>{p.title || `Profile ${p.id}`}</option>)}
+            {profiles.length === 0 && <option value="">{t('macros.noProfiles')}</option>}
+            {profiles.map((p) => <option key={p.id} value={String(p.id)}>{p.title || t('macros.profileFallback', { id: p.id })}</option>)}
           </select>
           <button
             onClick={toggleRecording}
@@ -227,19 +242,19 @@ function MacrosPanel() {
             className={`shrink-0 inline-flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-semibold border transition-colors ${recording ? 'bg-red-500/15 border-red-500/40 text-red-400' : 'bg-card border-border text-foreground hover:border-primary'}`}
           >
             {busyRec ? <Loader2 className="w-4 h-4 animate-spin" /> : (recording ? <Square className="w-4 h-4" /> : <span className="w-2.5 h-2.5 rounded-full bg-red-500" />)}
-            {recording ? 'Stop & Save' : 'Record'}
+            {recording ? t('macros.stopAndSave') : t('macros.record')}
           </button>
           <button
             onClick={() => setShowSchedule(true)}
             className="shrink-0 inline-flex items-center gap-2 h-9 px-3 rounded-lg text-[13px] font-semibold bg-card border border-border text-foreground hover:border-primary"
           >
-            <Clock className="w-4 h-4" /> Schedule
+            <Clock className="w-4 h-4" /> {t('macros.schedule')}
           </button>
           <button
             onClick={() => setEditing('new')}
             className="shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 shadow shadow-indigo-500/25"
           >
-            <Plus className="w-4 h-4" /> Create Macro
+            <Plus className="w-4 h-4" /> {t('macros.createMacro')}
           </button>
         </div>
       </div>
@@ -252,8 +267,8 @@ function MacrosPanel() {
       ) : macros.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card/40 py-14 grid place-items-center text-center">
           <Workflow className="w-8 h-8 text-muted-foreground mb-3" />
-          <p className="text-sm font-medium text-foreground">No macros yet</p>
-          <p className="text-[12.5px] text-muted-foreground mt-1">Record a workflow or create one to get started.</p>
+          <p className="text-sm font-medium text-foreground">{t('macros.emptyTitle')}</p>
+          <p className="text-[12.5px] text-muted-foreground mt-1">{t('macros.emptyHint')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -265,24 +280,24 @@ function MacrosPanel() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[13.5px] font-semibold text-foreground truncate">{m.name}</span>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{m.stepCount} steps</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{t('macros.stepsBadge', { count: m.stepCount })}</span>
                 </div>
                 {m.description && <p className="text-[12px] text-muted-foreground mt-0.5 line-clamp-2">{m.description}</p>}
-                <p className="text-[10.5px] text-muted-foreground/70 mt-1.5">Updated {fmt(m.updatedAt)}</p>
+                <p className="text-[10.5px] text-muted-foreground/70 mt-1.5">{t('macros.updated', { date: fmt(m.updatedAt) })}</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => openRun(m)}
                   disabled={!targetProfile || (m.stepCount || 0) === 0}
-                  title={(m.stepCount || 0) === 0 ? 'This macro has no steps yet — edit it first' : 'Run on the selected profile'}
+                  title={(m.stepCount || 0) === 0 ? t('macros.runTitleNoSteps') : t('macros.runTitleReady')}
                   className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <Play className="w-3.5 h-3.5" /> Run
+                  <Play className="w-3.5 h-3.5" /> {t('macros.run')}
                 </button>
-                <button onClick={() => setEditing(m)} title="Edit steps" className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-card border border-border text-foreground hover:border-primary">
-                  <Pencil className="w-3.5 h-3.5" /> Edit
+                <button onClick={() => setEditing(m)} title={t('macros.editSteps')} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-card border border-border text-foreground hover:border-primary">
+                  <Pencil className="w-3.5 h-3.5" /> {t('macros.edit')}
                 </button>
-                <button onClick={() => remove(m.id)} title="Delete" className="text-muted-foreground hover:text-red-400 transition-colors">
+                <button onClick={() => remove(m.id)} title={t('macros.delete')} className="text-muted-foreground hover:text-red-400 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -312,13 +327,14 @@ function MacrosPanel() {
 // Stop-and-save recording dialog, as its own component so useDialog (and its
 // body-scroll-lock + focus-trap) only run while the modal is actually open.
 function SaveRecordingModal({ recName, setRecName, busyRec, onClose, onFinish }) {
+  const { t } = useTranslation('automation');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !busyRec });
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={() => { if (!busyRec) onClose(); }}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Save recorded macro" tabIndex={-1} className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('saveRecording.ariaLabel')} tabIndex={-1} className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-border">
-          <h3 className="text-sm font-semibold text-foreground">Save recorded macro</h3>
-          <p className="text-[11px] text-muted-foreground">Name it to keep the captured steps, or discard them. The browser stays open.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t('saveRecording.title')}</h3>
+          <p className="text-[11px] text-muted-foreground">{t('saveRecording.subtitle')}</p>
         </div>
         <div className="p-5">
           <input
@@ -326,16 +342,16 @@ function SaveRecordingModal({ recName, setRecName, busyRec, onClose, onFinish })
             value={recName}
             onChange={(e) => setRecName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && recName.trim() && !busyRec) onFinish(true); }}
-            placeholder="Recorded macro"
+            placeholder={t('saveRecording.placeholder')}
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary"
           />
         </div>
         <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-border">
-          <button onClick={() => onFinish(false)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">Discard</button>
+          <button onClick={() => onFinish(false)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">{t('saveRecording.discard')}</button>
           <div className="flex items-center gap-2">
-            <button onClick={onClose} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary disabled:opacity-50">Cancel</button>
+            <button onClick={onClose} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary disabled:opacity-50">{t('saveRecording.cancel')}</button>
             <button onClick={() => onFinish(true)} disabled={busyRec || !recName.trim()} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-1.5">
-              {busyRec && <Loader2 className="w-4 h-4 animate-spin" />} Save
+              {busyRec && <Loader2 className="w-4 h-4 animate-spin" />} {t('saveRecording.save')}
             </button>
           </div>
         </div>
@@ -347,6 +363,7 @@ function SaveRecordingModal({ recName, setRecName, busyRec, onClose, onFinish })
 // Macro scheduler — pick a macro + target profiles + interval and persist the
 // timed run (Setting.macroSchedule). The main process fires it on its own timer.
 function ScheduleModal({ macros, profiles, onClose }) {
+  const { t } = useTranslation('automation');
   const [enabled, setEnabled] = useState(false);
   const [macroId, setMacroId] = useState('');
   const [everyMinutes, setEveryMinutes] = useState(60);
@@ -381,19 +398,19 @@ function ScheduleModal({ macros, profiles, onClose }) {
         profileIds
       });
       onClose();
-    } catch (e) { setErr(e.message || 'Could not save the schedule.'); }
+    } catch (e) { setErr(e.message || t('scheduleModal.errors.save')); }
     finally { setBusy(false); }
   }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Macro Schedule" tabIndex={-1} className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('scheduleModal.ariaLabel')} tabIndex={-1} className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Clock className="w-4 h-4 text-indigo-400" /></span>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Macro Schedule</h3>
-              <p className="text-[11px] text-muted-foreground">Run a macro automatically on a timer · Softglaze Pro</p>
+              <h3 className="text-sm font-semibold text-foreground">{t('scheduleModal.title')}</h3>
+              <p className="text-[11px] text-muted-foreground">{t('scheduleModal.subtitle')}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
@@ -404,40 +421,40 @@ function ScheduleModal({ macros, profiles, onClose }) {
 
           <label className="flex items-center gap-2 text-[13px] text-foreground">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="accent-indigo-500" />
-            Enable scheduled runs
+            {t('scheduleModal.enable')}
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Macro</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('scheduleModal.macroLabel')}</label>
               <select value={macroId} onChange={(e) => setMacroId(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-2 text-[13px] text-foreground">
-                <option value="">Select a macro…</option>
+                <option value="">{t('scheduleModal.selectMacro')}</option>
                 {macros.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Every (minutes)</label>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('scheduleModal.everyMinutes')}</label>
               <input type="number" min="1" value={everyMinutes} onChange={(e) => setEveryMinutes(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Target profiles</label>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('scheduleModal.targetProfiles')}</label>
             <div className="max-h-40 overflow-auto rounded-lg border border-border divide-y divide-border">
-              {profiles.length === 0 && <p className="px-3 py-2 text-[12px] text-muted-foreground">No profiles available.</p>}
+              {profiles.length === 0 && <p className="px-3 py-2 text-[12px] text-muted-foreground">{t('scheduleModal.noProfiles')}</p>}
               {profiles.map((p) => (
                 <label key={p.id} className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-foreground cursor-pointer hover:bg-elevated/50">
                   <input type="checkbox" checked={profileIds.includes(Number(p.id))} onChange={() => toggleProfile(Number(p.id))} className="accent-indigo-500" />
-                  {p.title || `Profile ${p.id}`}
+                  {p.title || t('scheduleModal.profileFallback', { id: p.id })}
                 </label>
               ))}
             </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-card border border-border text-foreground hover:border-primary">Cancel</button>
+            <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-semibold bg-card border border-border text-foreground hover:border-primary">{t('scheduleModal.cancel')}</button>
             <button onClick={save} disabled={busy} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2">
-              {busy && <Loader2 className="w-4 h-4 animate-spin" />} Save schedule
+              {busy && <Loader2 className="w-4 h-4 animate-spin" />} {t('scheduleModal.save')}
             </button>
           </div>
         </div>
@@ -449,6 +466,7 @@ function ScheduleModal({ macros, profiles, onClose }) {
 // Visual macro editor — add/edit/remove steps with native drag-to-reorder.
 // Used for both Create and Edit (preloads the macro's steps when given one).
 function MacroEditorModal({ macro, onClose, onSaved }) {
+  const { t } = useTranslation('automation');
   const [name, setName] = useState(macro?.name || '');
   const [description, setDescription] = useState(macro?.description || '');
   const [steps, setSteps] = useState(() => (macro?.steps ? macro.steps.map((s) => ({ ...s })) : []));
@@ -474,24 +492,24 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
 
   async function save() {
     setErr('');
-    if (!name.trim()) { setErr('Give the macro a name.'); return; }
+    if (!name.trim()) { setErr(t('editorModal.errors.name')); return; }
     setBusy(true);
     try {
       await softglazeApi.automation.saveMacro({ id: macro?.id, name: name.trim(), description: description.trim(), steps: steps.map(coerceStep) });
       onSaved();
-    } catch (e) { setErr(e.message || 'Could not save macro.'); }
+    } catch (e) { setErr(e.message || t('editorModal.errors.save')); }
     finally { setBusy(false); }
   }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={macro ? 'Edit macro' : 'Create macro'} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={macro ? t('editorModal.ariaEdit') : t('editorModal.ariaCreate')} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-violet-500/12 border border-violet-500/20"><Wand2 className="w-4 h-4 text-violet-400" /></span>
             <div>
-              <h3 className="text-sm font-semibold text-foreground">{macro ? 'Edit macro' : 'Create macro'}</h3>
-              <p className="text-[11px] text-muted-foreground">Build a no-code flow — drag the handle to reorder.</p>
+              <h3 className="text-sm font-semibold text-foreground">{macro ? t('editorModal.titleEdit') : t('editorModal.titleCreate')}</h3>
+              <p className="text-[11px] text-muted-foreground">{t('editorModal.subtitle')}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
@@ -500,28 +518,28 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
         <div className="p-5 space-y-4 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Macro name</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Daily login" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('editorModal.nameLabel')}</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('editorModal.namePlaceholder')} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Description</label>
-              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does it do?" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('editorModal.descriptionLabel')}</label>
+              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('editorModal.descriptionPlaceholder')} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Steps ({steps.length})</label>
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('editorModal.stepsLabel', { count: steps.length })}</label>
               <div className="flex items-center gap-1.5">
                 <select value={addType} onChange={(e) => setAddType(e.target.value)} className="h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground">
-                  {MACRO_STEP_TYPES.map((s) => <option key={s.type} value={s.type}>{s.label}</option>)}
+                  {MACRO_STEP_TYPES.map((s) => <option key={s.type} value={s.type}>{t(`stepTypes.${s.type}`)}</option>)}
                 </select>
-                <button onClick={addStep} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add step</button>
+                <button onClick={addStep} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('editorModal.addStep')}</button>
               </div>
             </div>
 
             {steps.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-card/40 py-8 grid place-items-center text-center text-[12px] text-muted-foreground">No steps yet — choose a type and add one.</div>
+              <div className="rounded-lg border border-dashed border-border bg-card/40 py-8 grid place-items-center text-center text-[12px] text-muted-foreground">{t('editorModal.noSteps')}</div>
             ) : (
               <div className="space-y-2">
                 {steps.map((s, i) => {
@@ -535,27 +553,31 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
                       onDrop={() => { reorder(dragFrom.current, i); dragFrom.current = null; }}
                       className="rounded-lg border border-border bg-elevated/40 p-2.5 flex items-start gap-2"
                     >
-                      <span className="mt-1 text-muted-foreground cursor-grab active:cursor-grabbing" title="Drag to reorder"><GripVertical className="w-4 h-4" /></span>
+                      <span className="mt-1 text-muted-foreground cursor-grab active:cursor-grabbing" title={t('editorModal.dragToReorder')}><GripVertical className="w-4 h-4" /></span>
                       <span className="mt-1 text-[10px] font-mono text-muted-foreground w-5 text-center">{i + 1}</span>
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <select value={s.type} onChange={(e) => changeType(i, e.target.value)} className="h-7 bg-input-background border border-border rounded px-1.5 text-[12px] text-foreground">
-                          {MACRO_STEP_TYPES.map((d) => <option key={d.type} value={d.type}>{d.label}</option>)}
+                          {MACRO_STEP_TYPES.map((d) => <option key={d.type} value={d.type}>{t(`stepTypes.${d.type}`)}</option>)}
                         </select>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                          {def.fields.map((f) => (
-                            <input
-                              key={f.key}
-                              type={f.kind === 'number' ? 'number' : 'text'}
-                              value={s[f.key] ?? ''}
-                              onChange={(e) => updateStep(i, { [f.key]: e.target.value })}
-                              placeholder={f.placeholder || f.label}
-                              title={f.label}
-                              className="h-7 bg-input-background border border-border rounded px-2 text-[12px] text-foreground outline-none focus:border-primary"
-                            />
-                          ))}
+                          {def.fields.map((f) => {
+                            const fieldLabel = t(`stepFields.${s.type}.${f.key}`);
+                            const fieldPlaceholder = f.placeholder ? t(`stepFields.${s.type}.${f.key}Placeholder`) : fieldLabel;
+                            return (
+                              <input
+                                key={f.key}
+                                type={f.kind === 'number' ? 'number' : 'text'}
+                                value={s[f.key] ?? ''}
+                                onChange={(e) => updateStep(i, { [f.key]: e.target.value })}
+                                placeholder={fieldPlaceholder}
+                                title={fieldLabel}
+                                className="h-7 bg-input-background border border-border rounded px-2 text-[12px] text-foreground outline-none focus:border-primary"
+                              />
+                            );
+                          })}
                         </div>
                       </div>
-                      <button onClick={() => removeStep(i)} title="Remove step" className="mt-0.5 shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => removeStep(i)} title={t('editorModal.removeStep')} className="mt-0.5 shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   );
                 })}
@@ -567,9 +589,9 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
-          <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-medium text-muted-foreground hover:text-foreground">Cancel</button>
+          <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-medium text-muted-foreground hover:text-foreground">{t('editorModal.cancel')}</button>
           <button onClick={save} disabled={busy} className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2">
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Save macro
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} {t('editorModal.save')}
           </button>
         </div>
       </div>
@@ -580,6 +602,7 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
 // Live macro run — streams per-step progress, highlights the current step, and
 // offers Pause / Resume / Stop while it runs.
 function MacroRunModal({ macro, profileId, profileName, onClose }) {
+  const { t } = useTranslation('automation');
   const steps = Array.isArray(macro.steps) ? macro.steps : [];
   const [statuses, setStatuses] = useState(() => steps.map(() => 'pending'));
   const [current, setCurrent] = useState(-1);
@@ -599,22 +622,23 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
       if (!live || !data) return;
       if (data.kind === 'start') {
         setRunId(data.runId);
-        setLog((l) => [...l, { level: 'INFO', msg: `Started "${data.name}" · ${data.total} step(s) on ${profileName}` }]);
+        setLog((l) => [...l, { level: 'INFO', msg: t('runModal.logStarted', { name: data.name, total: data.total, profile: profileName }) }]);
       } else if (data.kind === 'step') {
         setCurrent(data.index);
         setStatuses((prev) => { const n = [...prev]; if (n[data.index] !== undefined) n[data.index] = data.status === 'running' ? 'running' : data.status; return n; });
-        if (data.status === 'running') setLog((l) => [...l, { level: 'INFO', msg: `▶ ${STEP_LABEL[data.type] || data.type}: ${stepSummary(data.step || {})}` }]);
-        else if (data.status === 'error') setLog((l) => [...l, { level: 'ERROR', msg: `✕ ${STEP_LABEL[data.type] || data.type} — ${data.error || 'failed'}` }]);
+        const stepLabel = t(`stepTypes.${data.type}`, { defaultValue: data.type });
+        if (data.status === 'running') setLog((l) => [...l, { level: 'INFO', msg: t('runModal.logStepRunning', { label: stepLabel, summary: stepSummary(data.step || {}, t) }) }]);
+        else if (data.status === 'error') setLog((l) => [...l, { level: 'ERROR', msg: t('runModal.logStepError', { label: stepLabel, error: data.error || t('runModal.logStepFailed') }) }]);
       } else if (data.kind === 'done') {
         setPhase('done');
         setSummary({ ok: data.ok, ran: data.ran, total: data.total, aborted: data.aborted });
-        setLog((l) => [...l, { level: data.aborted ? 'WARN' : (data.ok ? 'SUCCESS' : 'WARN'), msg: data.aborted ? 'Stopped.' : `Finished — ${data.ran}/${data.total} step(s).` }]);
+        setLog((l) => [...l, { level: data.aborted ? 'WARN' : (data.ok ? 'SUCCESS' : 'WARN'), msg: data.aborted ? t('runModal.logStopped') : t('runModal.logFinished', { ran: data.ran, total: data.total }) }]);
       }
     });
     softglazeApi.automation.runMacro({ macroId: macro.id, profileId, continueOnError: true })
-      .catch((e) => { if (live) { setErr(e.message || 'Could not run macro.'); setPhase('done'); } });
+      .catch((e) => { if (live) { setErr(e.message || t('runModal.errors.run')); setPhase('done'); } });
     return () => { live = false; try { off && off(); } catch (e) { /* ignore */ } };
-  }, [macro.id, profileId, profileName]);
+  }, [macro.id, profileId, profileName, t]);
 
   async function control(action) {
     if (!runId) return;
@@ -631,13 +655,13 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={phase === 'done' ? onClose : undefined}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Macro run: ${macro.name}`} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('runModal.ariaLabel', { name: macro.name })} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-emerald-500/12 border border-emerald-500/20"><MousePointer2 className="w-4 h-4 text-emerald-400" /></span>
             <div>
               <h3 className="text-sm font-semibold text-foreground">{macro.name}</h3>
-              <p className="text-[11px] text-muted-foreground">Running on {profileName}</p>
+              <p className="text-[11px] text-muted-foreground">{t('runModal.runningOn', { profile: profileName })}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
@@ -650,14 +674,14 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
             {steps.map((s, i) => (
               <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border ${current === i && phase !== 'done' ? 'border-amber-500/40 bg-amber-500/5' : 'border-border'}`}>
                 <span className="w-4 grid place-items-center">{ICONS[statuses[i]] || <span className="text-[10px] font-mono text-muted-foreground">{i + 1}</span>}</span>
-                <span className="text-[12px] text-foreground">{STEP_LABEL[s.type] || s.type}</span>
-                <span className="text-[11px] text-muted-foreground truncate">{stepSummary(s)}</span>
+                <span className="text-[12px] text-foreground">{t(`stepTypes.${s.type}`, { defaultValue: s.type })}</span>
+                <span className="text-[11px] text-muted-foreground truncate">{stepSummary(s, t)}</span>
               </div>
             ))}
           </div>
 
           <div ref={logRef} className="rounded-lg border border-border bg-[#0b0f17] p-2.5 font-mono text-[11px] max-h-40 overflow-y-auto">
-            {log.length === 0 ? <p className="text-muted-foreground/60">Starting…</p> : log.map((l, i) => (
+            {log.length === 0 ? <p className="text-muted-foreground/60">{t('runModal.starting')}</p> : log.map((l, i) => (
               <div key={i} className={LEVEL_COLOR[l.level] || 'text-foreground/90'}>{l.msg}</div>
             ))}
           </div>
@@ -666,19 +690,25 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
         <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-border">
           <div className="text-[12px] text-muted-foreground">
             {phase === 'done'
-              ? (summary ? (summary.aborted ? 'Stopped.' : `${summary.ran}/${summary.total} step(s) ${summary.ok ? 'completed' : 'ran'}.`) : 'Finished.')
-              : (phase === 'paused' ? 'Paused' : 'Running…')}
+              ? (summary
+                  ? (summary.aborted
+                      ? t('runModal.stopped')
+                      : (summary.ok
+                          ? t('runModal.summaryCompleted', { ran: summary.ran, total: summary.total })
+                          : t('runModal.summaryRan', { ran: summary.ran, total: summary.total })))
+                  : t('runModal.finished'))
+              : (phase === 'paused' ? t('runModal.paused') : t('runModal.running'))}
           </div>
           <div className="flex items-center gap-2">
             {phase !== 'done' && (
               <>
                 {phase === 'paused'
-                  ? <button onClick={() => control('resume')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-50"><Play className="w-4 h-4" /> Resume</button>
-                  : <button onClick={() => control('pause')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-50"><Pause className="w-4 h-4" /> Pause</button>}
-                <button onClick={() => control('stop')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-red-600 hover:bg-red-500 inline-flex items-center gap-1.5 disabled:opacity-50"><Square className="w-4 h-4" /> Stop</button>
+                  ? <button onClick={() => control('resume')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-50"><Play className="w-4 h-4" /> {t('runModal.resume')}</button>
+                  : <button onClick={() => control('pause')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-1.5 disabled:opacity-50"><Pause className="w-4 h-4" /> {t('runModal.pause')}</button>}
+                <button onClick={() => control('stop')} disabled={!runId} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-red-600 hover:bg-red-500 inline-flex items-center gap-1.5 disabled:opacity-50"><Square className="w-4 h-4" /> {t('runModal.stop')}</button>
               </>
             )}
-            {phase === 'done' && <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500">Close</button>}
+            {phase === 'done' && <button onClick={onClose} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500">{t('runModal.close')}</button>}
           </div>
         </div>
       </div>
@@ -703,6 +733,7 @@ const PAR_LEVEL_COLOR = {
 };
 
 function ParallelPanel() {
+  const { t } = useTranslation('automation');
   const [macros, setMacros] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [macroId, setMacroId] = useState('');
@@ -765,14 +796,14 @@ function ParallelPanel() {
       const res = await softglazeApi.automation.pickDataFile();
       if (!res || res.cancelled) return;
       setDataBinding({ token: res.token, fileName: res.fileName, headers: res.headers || [], rowCount: res.rowCount || 0 });
-    } catch (e) { setErr(e.message || 'Could not read the spreadsheet.'); }
+    } catch (e) { setErr(e.message || t('parallel.errors.readSpreadsheet')); }
   }
 
   async function start() {
     setErr('');
     const ids = [...selected];
-    if (!macroId) { setErr('Choose a macro to run.'); return; }
-    if (ids.length === 0) { setErr('Select at least one profile.'); return; }
+    if (!macroId) { setErr(t('parallel.errors.chooseMacro')); return; }
+    if (ids.length === 0) { setErr(t('parallel.errors.selectProfile')); return; }
     setRunning(true); setLogs([]); setStatuses({}); setSummary(null);
     try {
       await softglazeApi.automation.runParallel({
@@ -784,14 +815,14 @@ function ParallelPanel() {
         dataToken: dataBinding ? dataBinding.token : undefined
       });
     } catch (e) {
-      setErr(e.message || 'Could not start the parallel run.');
+      setErr(e.message || t('parallel.errors.startRun'));
       setRunning(false);
     }
   }
 
   const profileName = (id) => {
     const p = profiles.find((x) => Number(x.id) === Number(id));
-    return p ? p.title : `Profile ${id}`;
+    return p ? p.title : t('parallel.profileFallback', { id });
   };
 
   return (
@@ -801,25 +832,25 @@ function ParallelPanel() {
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Layers className="w-5 h-5 text-indigo-400" /></span>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Parallel Macro Runner</h3>
-            <p className="text-[11.5px] text-muted-foreground">Run one macro across many profiles at once, with a live status stream.</p>
+            <h3 className="text-sm font-semibold text-foreground">{t('parallel.title')}</h3>
+            <p className="text-[11.5px] text-muted-foreground">{t('parallel.subtitle')}</p>
           </div>
         </div>
 
         <div className="flex items-end gap-3">
           <div className="flex-1 min-w-0">
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Macro</label>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('parallel.macroLabel')}</label>
             <select
               value={macroId}
               onChange={(e) => setMacroId(e.target.value)}
               className="w-full h-9 rounded-lg border border-border bg-card px-2 text-[12.5px] text-foreground"
             >
-              {macros.length === 0 && <option value="">No macros yet</option>}
-              {macros.map((m) => <option key={m.id} value={String(m.id)}>{m.name} · {m.stepCount} steps</option>)}
+              {macros.length === 0 && <option value="">{t('parallel.noMacros')}</option>}
+              {macros.map((m) => <option key={m.id} value={String(m.id)}>{t('parallel.macroOption', { name: m.name, count: m.stepCount })}</option>)}
             </select>
           </div>
           <div className="w-24 shrink-0">
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Concurrency</label>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('parallel.concurrency')}</label>
             <input type="number" min={1} max={10} value={concurrency} onChange={(e) => setConcurrency(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
           </div>
         </div>
@@ -831,39 +862,39 @@ function ParallelPanel() {
               <FileSpreadsheet className="w-4 h-4 text-muted-foreground shrink-0" />
               {dataBinding ? (
                 <span className="text-[12px] text-foreground truncate">
-                  {dataBinding.fileName} · {dataBinding.rowCount} row{dataBinding.rowCount === 1 ? '' : 's'}
+                  {t('parallel.dataBound', { fileName: dataBinding.fileName, count: dataBinding.rowCount })}
                 </span>
               ) : (
-                <span className="text-[12px] text-muted-foreground">Optional: bind a spreadsheet (row → profile, in order)</span>
+                <span className="text-[12px] text-muted-foreground">{t('parallel.dataHint')}</span>
               )}
             </div>
             {dataBinding ? (
-              <button onClick={() => setDataBinding(null)} className="text-muted-foreground hover:text-red-400 transition-colors" title="Clear data binding"><X className="w-4 h-4" /></button>
+              <button onClick={() => setDataBinding(null)} className="text-muted-foreground hover:text-red-400 transition-colors" title={t('parallel.clearDataBinding')}><X className="w-4 h-4" /></button>
             ) : (
-              <button onClick={bindData} className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11.5px] font-semibold bg-card border border-border text-foreground hover:border-primary">Bind data</button>
+              <button onClick={bindData} className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11.5px] font-semibold bg-card border border-border text-foreground hover:border-primary">{t('parallel.bindData')}</button>
             )}
           </div>
           {dataBinding && dataBinding.headers.length > 0 && (
-            <p className="text-[10.5px] text-muted-foreground mt-1.5 truncate">Columns: {dataBinding.headers.join(', ')} — use <span className="font-mono text-foreground/80">{'{{Column}}'}</span> in macro steps.</p>
+            <p className="text-[10.5px] text-muted-foreground mt-1.5 truncate">{t('parallel.columnsPrefix', { columns: dataBinding.headers.join(', ') })} <span className="font-mono text-foreground/80">{'{{Column}}'}</span> {t('parallel.columnsSuffix')}</p>
           )}
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Profiles ({selected.size} selected)</label>
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('parallel.profilesLabel', { count: selected.size })}</label>
             <div className="flex items-center gap-2">
-              <button onClick={selectAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">Select all</button>
+              <button onClick={selectAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">{t('parallel.selectAll')}</button>
               <span className="text-muted-foreground/40">·</span>
-              <button onClick={clearAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">Clear</button>
+              <button onClick={clearAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">{t('parallel.clear')}</button>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="h-7 w-36 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('parallel.searchPlaceholder')} className="h-7 w-36 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
               </div>
             </div>
           </div>
           <div className="rounded-lg border border-border bg-elevated/40 max-h-[280px] overflow-y-auto divide-y divide-border/60">
             {filtered.length === 0 ? (
-              <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">No profiles found.</div>
+              <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">{t('parallel.noProfiles')}</div>
             ) : filtered.map((p) => (
               <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-secondary/50">
                 <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="accent-indigo-500" />
@@ -874,7 +905,7 @@ function ParallelPanel() {
           </div>
           {dataBinding && dataBinding.rowCount !== selected.size && selected.size > 0 && (
             <p className="text-[10.5px] text-amber-400 mt-1.5 inline-flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> {dataBinding.rowCount} data row(s) vs {selected.size} profile(s) — extras run without/with no variables.
+              <AlertTriangle className="w-3 h-3" /> {t('parallel.rowMismatch', { rows: dataBinding.rowCount, profiles: selected.size })}
             </p>
           )}
         </div>
@@ -885,7 +916,7 @@ function ParallelPanel() {
           className="w-full h-10 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 shadow shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-          {running ? 'Running…' : `Run on ${selected.size || 0} profile${selected.size === 1 ? '' : 's'}`}
+          {running ? t('parallel.running') : t('parallel.runOn', { count: selected.size || 0 })}
         </button>
 
         {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
@@ -896,20 +927,21 @@ function ParallelPanel() {
         {/* Per-profile status grid */}
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-[11.5px] font-semibold text-muted-foreground">Run status</span>
+            <span className="text-[11.5px] font-semibold text-muted-foreground">{t('parallel.runStatus')}</span>
             {summary && (
               <span className="text-[11px] text-muted-foreground">
-                <span className="text-emerald-400 font-semibold">{summary.passed}</span> passed · <span className="text-red-400 font-semibold">{summary.failed}</span> failed · {summary.total} total
+                <span className="text-emerald-400 font-semibold">{summary.passed}</span> {t('parallel.summaryPassed')} · <span className="text-red-400 font-semibold">{summary.failed}</span> {t('parallel.summaryFailed')} · {t('parallel.summaryTotal', { total: summary.total })}
               </span>
             )}
           </div>
           {selectedProfiles.length === 0 ? (
-            <p className="text-[12px] text-muted-foreground/60 px-1 py-3">Select profiles and a macro, then start the run to watch live progress.</p>
+            <p className="text-[12px] text-muted-foreground/60 px-1 py-3">{t('parallel.watchHint')}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[260px] overflow-y-auto">
               {selectedProfiles.map((p) => {
                 const st = statuses[p.id];
-                const meta = PAR_STATE[(st && st.state) || 'queued'] || PAR_STATE.queued;
+                const stateKey = (st && st.state) || 'queued';
+                const meta = PAR_STATE[stateKey] || PAR_STATE.queued;
                 const Icon = meta.Icon;
                 return (
                   <div key={p.id} className="flex items-center gap-2 rounded-lg border border-border bg-elevated/40 px-3 py-2">
@@ -919,8 +951,8 @@ function ParallelPanel() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] text-foreground truncate">{p.title}</p>
                       <p className="text-[10.5px] text-muted-foreground truncate">
-                        {meta.label}
-                        {st && (st.ran != null && st.total != null) ? ` · ${st.ran}/${st.total} steps` : ''}
+                        {t(`parallel.states.${stateKey}`, { defaultValue: meta.label })}
+                        {st && (st.ran != null && st.total != null) ? ` · ${t('parallel.steps', { ran: st.ran, total: st.total })}` : ''}
                         {st && st.error ? ` · ${st.error}` : ''}
                       </p>
                     </div>
@@ -939,12 +971,12 @@ function ParallelPanel() {
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
             </span>
-            <span className="text-[11.5px] font-medium text-muted-foreground ml-1">Run console</span>
-            {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> live</span>}
+            <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('parallel.runConsole')}</span>
+            {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('parallel.live')}</span>}
           </div>
           <div ref={logRef} className="flex-1 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed max-h-[300px]">
             {logs.length === 0 ? (
-              <p className="text-muted-foreground/60">[ idle ] No run yet — progress will stream here (no cookies or credentials are ever included).</p>
+              <p className="text-muted-foreground/60">{t('parallel.consoleIdle')}</p>
             ) : logs.map((l, i) => (
               <div key={i} className="whitespace-pre-wrap break-words">
                 <span className="text-muted-foreground/50">{ts(l.ts)} </span>
@@ -952,8 +984,10 @@ function ParallelPanel() {
                 {l.profileId != null && <span className="text-violet-300">{l.profileName || profileName(l.profileId)}: </span>}
                 <span className="text-foreground/90">
                   {l.state === 'done'
-                    ? `Run finished — ${l.passed}/${l.total} passed${l.error ? ` (${l.error})` : ''}`
-                    : (l.message || l.error || (l.ran != null && l.total != null ? `${l.ran}/${l.total} steps` : l.state))}
+                    ? (l.error
+                        ? t('parallel.logRunFinishedError', { passed: l.passed, total: l.total, error: l.error })
+                        : t('parallel.logRunFinished', { passed: l.passed, total: l.total }))
+                    : (l.message || l.error || (l.ran != null && l.total != null ? t('parallel.steps', { ran: l.ran, total: l.total }) : l.state))}
                 </span>
               </div>
             ))}
@@ -968,6 +1002,7 @@ function ParallelPanel() {
 // Cookie Warmer
 // ---------------------------------------------------------------------------
 function WarmerPanel() {
+  const { t } = useTranslation('automation');
   const [profiles, setProfiles] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
   const [search, setSearch] = useState('');
@@ -1034,8 +1069,8 @@ function WarmerPanel() {
   async function start() {
     setErr('');
     const ids = [...selected];
-    if (ids.length === 0) { setErr('Select at least one profile to warm up.'); return; }
-    if (sites.length === 0) { setErr('Add at least one site to visit.'); return; }
+    if (ids.length === 0) { setErr(t('warmer.errors.selectProfile')); return; }
+    if (sites.length === 0) { setErr(t('warmer.errors.addSite')); return; }
     setRunning(true);
     setLogs([]);
     try {
@@ -1048,19 +1083,19 @@ function WarmerPanel() {
       const res = await softglazeApi.automation.startWarmer(payload);
       setRunId(res && res.runId ? res.runId : null);
     } catch (e) {
-      setErr(e.message || 'Could not start the warm-up.');
+      setErr(e.message || t('warmer.errors.startWarmup'));
       setRunning(false);
     }
   }
 
   async function stop(force) {
     try { await softglazeApi.automation.stopWarmer({ runId, force: Boolean(force) }); }
-    catch (e) { setErr(e.message || 'Could not stop the warm-up.'); }
+    catch (e) { setErr(e.message || t('warmer.errors.stopWarmup')); }
   }
 
   const profileName = (id) => {
     const p = profiles.find((x) => Number(x.id) === Number(id));
-    return p ? p.title : `Profile ${id}`;
+    return p ? p.title : t('warmer.profileFallback', { id });
   };
 
   return (
@@ -1070,33 +1105,33 @@ function WarmerPanel() {
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-orange-500/12 border border-orange-500/20"><Flame className="w-5 h-5 text-orange-400" /></span>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">AI Cookie Warmer</h3>
-            <p className="text-[11.5px] text-muted-foreground">Builds organic cookies & history by browsing real sites.</p>
+            <h3 className="text-sm font-semibold text-foreground">{t('warmer.title')}</h3>
+            <p className="text-[11.5px] text-muted-foreground">{t('warmer.subtitle')}</p>
           </div>
         </div>
 
         {/* Sites to visit */}
         <div className="space-y-2">
-          <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Sites to visit ({sites.length})</label>
+          <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('warmer.sitesLabel', { count: sites.length })}</label>
 
           {/* Add a suggested site */}
           <div className="flex items-center gap-2">
             <select value={presetPick} onChange={(e) => setPresetPick(e.target.value)} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary">
-              <option value="">Add a suggested site…</option>
+              <option value="">{t('warmer.addSuggested')}</option>
               {PRESET_SITES.map((p) => <option key={p.url} value={p.url}>{p.label}</option>)}
             </select>
-            <button onClick={addPreset} disabled={!presetPick} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add</button>
+            <button onClick={addPreset} disabled={!presetPick} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
           {/* Add a custom URL */}
           <div className="flex items-center gap-2">
-            <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder="Or paste a custom URL (e.g. example.com)" className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
-            <button onClick={addCustom} disabled={!customUrl.trim()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add</button>
+            <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder={t('warmer.customPlaceholder')} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
+            <button onClick={addCustom} disabled={!customUrl.trim()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
 
           {/* Configured sites — per-site dwell time + behaviour */}
           <div className="rounded-lg border border-border bg-elevated/40 divide-y divide-border/60 max-h-[240px] overflow-y-auto">
             {sites.length === 0 ? (
-              <div className="px-3 py-5 text-center text-[12px] text-muted-foreground">No sites yet — add one above.</div>
+              <div className="px-3 py-5 text-center text-[12px] text-muted-foreground">{t('warmer.noSites')}</div>
             ) : sites.map((s, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2">
                 <span className="min-w-0 flex-1">
@@ -1104,13 +1139,13 @@ function WarmerPanel() {
                   <span className="block text-[10px] text-muted-foreground truncate">{s.url}</span>
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
-                  <input type="number" min={3} max={600} value={s.seconds} onChange={(e) => updateSite(i, { seconds: e.target.value })} title="Seconds to spend on this site" className="w-14 h-7 bg-input-background border border-border rounded px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
-                  <span className="text-[10px] text-muted-foreground">s</span>
+                  <input type="number" min={3} max={600} value={s.seconds} onChange={(e) => updateSite(i, { seconds: e.target.value })} title={t('warmer.secondsTitle')} className="w-14 h-7 bg-input-background border border-border rounded px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
+                  <span className="text-[10px] text-muted-foreground">{t('warmer.secondsUnit')}</span>
                 </div>
-                <select value={s.clickMode} onChange={(e) => updateSite(i, { clickMode: e.target.value })} title="What to do on this site" className="h-7 shrink-0 bg-input-background border border-border rounded px-1.5 text-[11.5px] text-foreground outline-none focus:border-primary">
-                  {Object.entries(CLICK_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                <select value={s.clickMode} onChange={(e) => updateSite(i, { clickMode: e.target.value })} title={t('warmer.behaviourTitle')} className="h-7 shrink-0 bg-input-background border border-border rounded px-1.5 text-[11.5px] text-foreground outline-none focus:border-primary">
+                  {Object.keys(CLICK_LABELS).map((k) => <option key={k} value={k}>{t(`clickLabels.${k}`)}</option>)}
                 </select>
-                <button onClick={() => removeSite(i)} title="Remove" className="shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
+                <button onClick={() => removeSite(i)} title={t('warmer.remove')} className="shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
               </div>
             ))}
           </div>
@@ -1118,41 +1153,41 @@ function WarmerPanel() {
           {/* Options */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
             <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
-              <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} className="accent-orange-500" /> Loop until stopped
+              <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} className="accent-orange-500" /> {t('warmer.loopUntilStopped')}
             </label>
             <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
-              <input type="checkbox" checked={keepOpen} onChange={(e) => setKeepOpen(e.target.checked)} className="accent-orange-500" /> Keep sessions open after
+              <input type="checkbox" checked={keepOpen} onChange={(e) => setKeepOpen(e.target.checked)} className="accent-orange-500" /> {t('warmer.keepOpen')}
             </label>
           </div>
-          <p className="text-[10.5px] text-muted-foreground/80">Cookies &amp; cache are saved to each profile automatically — the console reports how many cookies were stored.</p>
+          <p className="text-[10.5px] text-muted-foreground/80">{t('warmer.cookieNote')}</p>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
           {!running ? (
             <button onClick={start} className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 shadow shadow-orange-500/25 inline-flex items-center gap-2">
-              <Play className="w-4 h-4" /> Start warm-up
+              <Play className="w-4 h-4" /> {t('warmer.startWarmup')}
             </button>
           ) : (
             <>
-              <span className="inline-flex items-center gap-2 h-9 px-2 text-[12.5px] text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin text-orange-400" /> Warming…</span>
-              <button onClick={() => stop(false)} className="h-9 px-4 rounded-lg text-[13px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-2"><Square className="w-4 h-4" /> Stop</button>
-              <button onClick={() => stop(true)} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-red-600 hover:bg-red-500 inline-flex items-center gap-2"><X className="w-4 h-4" /> Force stop</button>
+              <span className="inline-flex items-center gap-2 h-9 px-2 text-[12.5px] text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin text-orange-400" /> {t('warmer.warming')}</span>
+              <button onClick={() => stop(false)} className="h-9 px-4 rounded-lg text-[13px] font-semibold border border-border text-foreground hover:bg-secondary inline-flex items-center gap-2"><Square className="w-4 h-4" /> {t('warmer.stop')}</button>
+              <button onClick={() => stop(true)} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-red-600 hover:bg-red-500 inline-flex items-center gap-2"><X className="w-4 h-4" /> {t('warmer.forceStop')}</button>
             </>
           )}
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Profiles ({selected.size} selected)</label>
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('warmer.profilesLabel', { count: selected.size })}</label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="h-7 w-40 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('warmer.searchPlaceholder')} className="h-7 w-40 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
             </div>
           </div>
           <div className="rounded-lg border border-border bg-elevated/40 max-h-[320px] overflow-y-auto divide-y divide-border/60">
             {filtered.length === 0 ? (
-              <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">No profiles found.</div>
+              <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">{t('warmer.noProfiles')}</div>
             ) : filtered.map((p) => (
               <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-secondary/50">
                 <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="accent-orange-500" />
@@ -1174,12 +1209,12 @@ function WarmerPanel() {
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
           </span>
-          <span className="text-[11.5px] font-medium text-muted-foreground ml-1">Warm-up console</span>
-          {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> live</span>}
+          <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('warmer.warmupConsole')}</span>
+          {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('warmer.live')}</span>}
         </div>
         <div ref={logRef} className="flex-1 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed">
           {logs.length === 0 ? (
-            <p className="text-muted-foreground/60">[ idle ] Select profiles, set a duration, and start the warm-up to see live progress.</p>
+            <p className="text-muted-foreground/60">{t('warmer.consoleIdle')}</p>
           ) : logs.map((l, i) => (
             <div key={i} className="whitespace-pre-wrap break-words">
               <span className="text-muted-foreground/50">{ts(l.ts)} </span>
@@ -1213,6 +1248,7 @@ function dedupeHistory(rows) {
 }
 
 function HistoryPanel() {
+  const { t } = useTranslation('automation');
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1229,8 +1265,8 @@ function HistoryPanel() {
     return (
       <div className="rounded-xl border border-dashed border-border bg-card/40 py-14 grid place-items-center text-center">
         <History className="w-8 h-8 text-muted-foreground mb-3" />
-        <p className="text-sm font-medium text-foreground">No tasks have run yet</p>
-        <p className="text-[12.5px] text-muted-foreground mt-1">Warmer, macro, and parallel runs will appear here.</p>
+        <p className="text-sm font-medium text-foreground">{t('history.emptyTitle')}</p>
+        <p className="text-[12.5px] text-muted-foreground mt-1">{t('history.emptyHint')}</p>
       </div>
     );
   }
@@ -1240,22 +1276,22 @@ function HistoryPanel() {
       <table className="w-full text-[12.5px]">
         <thead className="bg-elevated/40 text-muted-foreground">
           <tr className="text-left">
-            <th className="px-4 py-2.5 font-semibold">Task</th>
-            <th className="px-4 py-2.5 font-semibold">Profiles</th>
-            <th className="px-4 py-2.5 font-semibold">Detail</th>
-            <th className="px-4 py-2.5 font-semibold">Status</th>
-            <th className="px-4 py-2.5 font-semibold">When</th>
+            <th className="px-4 py-2.5 font-semibold">{t('history.columns.task')}</th>
+            <th className="px-4 py-2.5 font-semibold">{t('history.columns.profiles')}</th>
+            <th className="px-4 py-2.5 font-semibold">{t('history.columns.detail')}</th>
+            <th className="px-4 py-2.5 font-semibold">{t('history.columns.status')}</th>
+            <th className="px-4 py-2.5 font-semibold">{t('history.columns.when')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
           {history.map((h, i) => {
-            const d = describeHistoryEntry(h);
+            const d = describeHistoryEntry(h, t);
             const Icon = d.icon;
             return (
               <tr key={`${h.runId || h.at || 'row'}-${i}`} className="text-foreground">
                 <td className="px-4 py-2.5"><span className="inline-flex items-center gap-2"><Icon className={`w-3.5 h-3.5 ${d.iconCls}`} /> {d.label}</span></td>
                 <td className="px-4 py-2.5 text-muted-foreground">{d.profiles}</td>
-                <td className="px-4 py-2.5 text-muted-foreground max-w-[320px] truncate">{d.detail || '—'}</td>
+                <td className="px-4 py-2.5 text-muted-foreground max-w-[320px] truncate">{d.detail || t('history.emptyDetail')}</td>
                 <td className="px-4 py-2.5">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold ${d.statusCls}`}>
                     <d.StatusIcon className="w-3 h-3" />
@@ -1274,7 +1310,7 @@ function HistoryPanel() {
 
 // Normalize the different automation-history entry shapes (warmer / macro /
 // parallel) into a single row descriptor so one table renders them all.
-function describeHistoryEntry(h) {
+function describeHistoryEntry(h, t) {
   const type = h.type || 'warmer';
   const statusStyle = (key) => {
     switch (key) {
@@ -1290,7 +1326,7 @@ function describeHistoryEntry(h) {
     const key = (h.level || 'INFO').toLowerCase();
     return {
       icon: Layers, iconCls: 'text-indigo-400',
-      label: h.label || 'Parallel run',
+      label: h.label || t('history.parallelRun'),
       profiles: Array.isArray(h.profileIds) ? h.profileIds.length : 0,
       detail: h.detail || '', status: key, when: h.at,
       ...statusStyle(key)
@@ -1300,7 +1336,7 @@ function describeHistoryEntry(h) {
     const key = (h.level || 'INFO').toLowerCase();
     return {
       icon: Bot, iconCls: 'text-violet-400',
-      label: h.label || 'Macro run',
+      label: h.label || t('history.macroRun'),
       profiles: h.profileId != null ? 1 : 0,
       detail: h.detail || '', status: key, when: h.at,
       ...statusStyle(key)
@@ -1310,9 +1346,9 @@ function describeHistoryEntry(h) {
   const key = h.status || 'running';
   return {
     icon: Flame, iconCls: 'text-orange-400',
-    label: 'AI Cookie Warm-up',
+    label: t('history.cookieWarmup'),
     profiles: Array.isArray(h.profileIds) ? h.profileIds.length : 0,
-    detail: h.minutes ? `${h.minutes} min` : (h.sites ? `${h.sites} site${h.sites === 1 ? '' : 's'}` : ''), status: key, when: h.finishedAt || h.startedAt,
+    detail: h.minutes ? t('history.minutes', { count: h.minutes }) : (h.sites ? t('history.sites', { count: h.sites }) : ''), status: key, when: h.finishedAt || h.startedAt,
     ...statusStyle(key)
   };
 }

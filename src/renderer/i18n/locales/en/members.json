@@ -1,0 +1,290 @@
+{
+  "header": {
+    "eyebrow": "Team",
+    "title": "Members",
+    "manageCount_one": "{{count}} member you manage",
+    "manageCount_other": "{{count}} members you manage",
+    "workspaceStats": "{{profiles}} profiles · {{proxies}} proxies in workspace"
+  },
+  "tabs": {
+    "members": "Members",
+    "activity": "Activity",
+    "licenses": "Licenses"
+  },
+  "memberCount_one": "{{count}} member",
+  "memberCount_other": "{{count}} members",
+  "roles": {
+    "SUPER_ADMIN": "Super Admin",
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Operator"
+  },
+  "roleDesc": {
+    "OWNER": "Full control, including members and the vault.",
+    "ADMIN": "Manage profiles, proxies, groups and the managers/operators they create.",
+    "MANAGER": "Create, edit and launch profiles, and add operators.",
+    "OPERATOR": "Launch and use assigned profiles only."
+  },
+  "features": {
+    "dashboard": "Dashboard",
+    "profiles": "Profiles",
+    "groups": "Groups",
+    "proxies": "Proxy pool",
+    "browsers": "Browsers",
+    "extensions": "Extensions",
+    "batchImport": "Batch import",
+    "trash": "Trash",
+    "members": "Members",
+    "settings": "Settings"
+  },
+  "caps": {
+    "maxAdmins": "Admins",
+    "maxManagers": "Managers",
+    "maxOperators": "Operators"
+  },
+  "labels": {
+    "profiles": "Profiles",
+    "proxies": "Proxies",
+    "browsers": "Browsers"
+  },
+  "status": {
+    "active": "Active",
+    "suspended": "Suspended",
+    "banned": "Banned"
+  },
+  "actions": {
+    "inviteMember": "Invite member",
+    "inviteTeamMember": "Invite team member",
+    "remove": "Remove",
+    "removeMember": "Remove member",
+    "assignProfiles": "Assign profiles",
+    "cancel": "Cancel",
+    "close": "Close",
+    "clear": "Clear",
+    "save": "Save",
+    "createInvite": "Create invite",
+    "done": "Done",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "empty": {
+    "title": "No members yet",
+    "canCreate": "Invite your first team member to start delegating work.",
+    "noMembers": "You have no members under you yet."
+  },
+  "member": {
+    "you": "You",
+    "noEmail": "No email",
+    "invitePending": "Invite pending",
+    "loginSet": "Login set",
+    "subMembers_one": "{{count}} sub-member",
+    "subMembers_other": "{{count}} sub-members"
+  },
+  "time": {
+    "neverActive": "Never active",
+    "activeJustNow": "Active just now",
+    "activeMinutes": "Active {{count}}m ago",
+    "activeHours": "Active {{count}}h ago",
+    "activeDays": "Active {{count}}d ago"
+  },
+  "errors": {
+    "loadMembers": "Could not load members.",
+    "changeStatus": "Could not change status.",
+    "nameRequired": "Name is required.",
+    "saveMember": "Could not save member.",
+    "resetPerms": "Could not reset permissions.",
+    "removeMember": "Could not remove member.",
+    "loadProfiles": "Could not load profiles.",
+    "reassignProfiles": "Could not reassign profiles."
+  },
+  "confirm": {
+    "revertPerms": "Reset {{name}}'s limits and features to the defaults for their role?"
+  },
+  "modal": {
+    "inviteTitle": "Invite member",
+    "editTitle": "Edit {{name}}",
+    "noCreatableRoles": "You're not allowed to create any sub-members.",
+    "invitePendingCode": "Invite pending — code"
+  },
+  "fields": {
+    "name": "Name",
+    "namePlaceholder": "Full name",
+    "email": "Email",
+    "role": "Role",
+    "color": "Color",
+    "instructions": "Instructions",
+    "optional": "(optional)",
+    "instructionsPlaceholder": "What this member is responsible for…"
+  },
+  "invite": {
+    "createdTitle": "Invitation created",
+    "sharePrefix": "Share this code with ",
+    "shareSuffix": ". They open SoftGlaze Browser → “Have an invite code?”, enter it and set their password.",
+    "code": "Invite code",
+    "link": "Invite link",
+    "emailedTo": "Emailed to {{email}}.",
+    "emailNotSent": "Email not sent (configure SMTP in Settings → Email). Share the code manually."
+  },
+  "alloc": {
+    "heading_one": "Allocated to {{count}} sub-member",
+    "heading_other": "Allocated to {{count}} sub-members",
+    "allocated": "{{allocated}} of {{cap}} allocated",
+    "left": "· {{remaining}} left"
+  },
+  "perms": {
+    "title": "Permissions & limits",
+    "resourceLimits": "Resource limits",
+    "subMemberCaps": "Sub-member caps",
+    "visibleFeatures": "Visible features",
+    "actionPermissions": "Action permissions",
+    "actionHint": "On by default for this role. Turn one off to revoke it for this member only.",
+    "revertDefaults": "Revert to role defaults",
+    "max": "(max {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "Can invite admins",
+      "canCreateManagers": "Can invite managers",
+      "canCreateOperators": "Can invite operators"
+    }
+  },
+  "accountStatus": {
+    "title": "Account status",
+    "reason": "Reason: {{reason}}",
+    "unban": "Unban member",
+    "banHint": "Editing the fields above keeps the ban — use Unban to restore access.",
+    "suspendToggle": "Suspend this member (blocks sign-in)",
+    "ban": "Ban member"
+  },
+  "delete": {
+    "title": "Remove {{name}}",
+    "warnPrefix": "This removes ",
+    "warnMiddle": " and moves any sub-members up to you. Choose what happens to their data —",
+    "profilesWord_one": "profile",
+    "profilesWord_other": "profiles",
+    "proxiesWord_one": "proxy",
+    "proxiesWord_other": "proxies",
+    "options": {
+      "reassignMe": {
+        "label": "Keep & reassign to me",
+        "desc": "You become the owner of their profiles and proxies."
+      },
+      "reassignOther": {
+        "label": "Keep & reassign to another member",
+        "desc": "Hand their data to a specific teammate."
+      },
+      "delete": {
+        "label": "Delete all attached data",
+        "desc": "Their proxies & proxy groups are deleted; profiles move to Trash (recoverable)."
+      }
+    },
+    "pickTarget": "Pick a member to receive the data.",
+    "reassignTo": "Reassign to",
+    "noOtherMembers": "No other members available — pick another option."
+  },
+  "assign": {
+    "title": "Assign profiles · {{name}}",
+    "searchPlaceholder": "Search profiles",
+    "noProfiles": "No profiles found.",
+    "memberFallback": "member #{{id}}",
+    "updated": "Updated — {{assigned}} assigned, {{unassigned}} unassigned.",
+    "save": "Save assignment"
+  },
+  "activity": {
+    "title": "Team activity",
+    "subtitle": "who did what, on this workspace",
+    "exported": "Exported {{count}} row(s) → {{path}}",
+    "exportError": "Could not export the activity log.",
+    "filterByMember": "Filter by member",
+    "filterByAction": "Filter by action",
+    "allMembers": "All members",
+    "allActions": "All actions",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "empty": "No activity recorded yet.",
+    "noMatch": "No activity matches these filters."
+  },
+  "activityActions": {
+    "launched": "launched",
+    "stopped": "stopped",
+    "created": "created",
+    "edited": "edited",
+    "deleted": "deleted",
+    "restored": "restored",
+    "imported": "imported",
+    "assigned": "assigned",
+    "reassigned": "reassigned",
+    "parallel_run": "parallel run",
+    "macro_run": "macro run",
+    "member_added": "member added",
+    "member_edited": "member edited",
+    "member_removed": "member removed",
+    "permissions_changed": "permissions changed",
+    "status_changed": "status changed",
+    "signed_in": "signed in",
+    "signed_out": "signed out",
+    "invite_accepted": "invite accepted"
+  },
+  "feedTime": {
+    "justNow": "just now",
+    "minutes": "{{count}}m ago",
+    "hours": "{{count}}h ago",
+    "days": "{{count}}d ago"
+  },
+  "license": {
+    "intro": "Subscription state per owner workspace. Local-first and best-effort — a determined user can still edit the local DB or clock; durable enforcement needs the licensing backend.",
+    "noOwners": "No owner workspaces yet.",
+    "editTitle": "License · {{name}}",
+    "setState": "Set state",
+    "grantPlan": "Grant a plan",
+    "lifecycle": "Lifecycle",
+    "state": {
+      "paid": "Paid",
+      "trialing": "Trial",
+      "grace": "Grace",
+      "banned": "Banned"
+    },
+    "type": {
+      "trial": "trial",
+      "paid": "paid"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "Type",
+      "tier": "Tier",
+      "expiry": "Expiry",
+      "plan": "Plan",
+      "months": "Months"
+    },
+    "detail": {
+      "trial": "{{count}} trial day(s) left",
+      "grace": "Grace: {{count}} day(s) left",
+      "paid": "Paid until {{date}}",
+      "clockAnomaly": "⚠ clock anomaly"
+    },
+    "actions": {
+      "grantMonth": "Grant 1 mo",
+      "extend7": "+7 days",
+      "startTrial": "Start trial",
+      "resetTrial": "Reset trial",
+      "edit": "Edit",
+      "terminate": "Terminate",
+      "unblock": "Unblock",
+      "block": "Block",
+      "saveState": "Save state",
+      "grantPlan": "Grant plan",
+      "startFreeTrial": "Start free trial",
+      "terminateNow": "Terminate now"
+    },
+    "confirm": {
+      "terminate": "Terminate {{name}}'s subscription now? Their profiles will lock until you grant access again.",
+      "terminateModal": "Terminate this subscription now? Profiles lock until you grant access again."
+    },
+    "errors": {
+      "load": "Could not load licenses.",
+      "action": "Action failed."
+    }
+  }
+}

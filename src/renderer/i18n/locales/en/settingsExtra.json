@@ -1,0 +1,323 @@
+{
+  "actions": {
+    "refresh": "Refresh"
+  },
+  "localRuntime": {
+    "title": "Local Runtime",
+    "description": "Paths are resolved in the Electron main process.",
+    "loading": "Loading system info...",
+    "sqliteDb": "SQLite DB",
+    "profileRoot": "Profile Root",
+    "databaseUrl": "Database URL",
+    "configured": "Configured",
+    "notConfigured": "Not configured"
+  },
+  "sessions": {
+    "title": "Active Sessions",
+    "description": "Sessions currently launched and consuming resources.",
+    "loading": "Loading sessions...",
+    "emptyTitle": "No active sessions",
+    "emptyDescription": "Launch a profile to see it here.",
+    "running": "Running",
+    "created": "Created {{date}}",
+    "close": "Close"
+  },
+  "scheduler": {
+    "title": "Proxy Health Scheduler",
+    "description": "Periodically re-check every saved proxy in the background and store its health status.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "runSweepEvery": "Run sweep every",
+    "every15min": "15 min",
+    "every30min": "30 min",
+    "every1hour": "1 hour",
+    "every2hours": "2 hours",
+    "serviceRunning": "Service Running",
+    "idle": "Idle",
+    "noteLabel": "Note:",
+    "noteBody": "This background task runs in the Electron main process, so checks will continue seamlessly even when the app is minimized or you are navigating between pages. Health results will be displayed directly as status badges inside the Proxy Pool."
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "Applied at launch"
+  },
+  "globalPreferences": {
+    "heading": "Global Preferences",
+    "loading": "Loading global settings…",
+    "saving": "Saving…"
+  },
+  "security": {
+    "title": "Account Security",
+    "description": "Sign-in protection and verification policy.",
+    "remoteLogin": {
+      "title": "Remote login reminder",
+      "desc": "A reminder email is sent when your account is signed in from a new IP address instead of the 3 commonly used IPs."
+    },
+    "failedLogin": {
+      "title": "Failed login attempt alert",
+      "desc": "If login fails more than 3 times, a reminder email is sent to the Owner's email."
+    },
+    "ipAllowlist": {
+      "title": "Login IP allowlist",
+      "desc": "Once set, member login is restricted by IP (Owner not affected)."
+    },
+    "twoStep": {
+      "title": "Two-step verification",
+      "desc": "Sensitive actions require verification via an authenticator app, email, or SMS.",
+      "methodLabel": "Method",
+      "methodApp": "Authenticator app",
+      "methodEmail": "Email",
+      "methodSms": "SMS",
+      "levelLabel": "Authentication level",
+      "levelLow": "Low — new device or 90+ days since last 2FA",
+      "levelMedium": "Medium (recommended) — new device or 30+ days",
+      "levelHigh": "High — 2FA required for each login"
+    }
+  },
+  "multiDevice": {
+    "title": "Multi-Device Mode",
+    "description": "Control whether multiple members can access the same profile simultaneously.",
+    "modeOff": "Off — single member per profile",
+    "modeFull": "Full — all profiles support simultaneous access",
+    "modeSpecified": "Specified — only selected profiles",
+    "hintBefore": "When enabled, multiple members can access the same profile at the same time. In ",
+    "hintSpecified": "Specified",
+    "hintAfter": " mode, choose the eligible profiles from the Profiles page."
+  },
+  "website": {
+    "title": "Website Management",
+    "description": "URL access rules and resource loading.",
+    "blockAccess": {
+      "title": "Block access",
+      "desc": "Use the blocklist and allowlist for URL management.",
+      "blocklist": "Blocklist",
+      "allowlist": "Allowlist"
+    },
+    "fbStatic": {
+      "title": "FB static resources",
+      "desc": "When enabled, Facebook static resources load using the local network."
+    },
+    "localNetwork": {
+      "title": "Local network access",
+      "desc": "When enabled, specific URLs can be accessed on the local network."
+    }
+  },
+  "platform": {
+    "title": "Platform",
+    "description": "Customize the profile list display.",
+    "customIcon": {
+      "title": "Custom icon",
+      "desc": "Show a custom icon for profiles in the list."
+    },
+    "displayCustomNo": {
+      "title": "Display custom No.",
+      "desc": "Show the full custom serial number (e.g. \"123456\")."
+    },
+    "displayLast4": {
+      "title": "Display last 4 digits of custom No.",
+      "desc": "Show only the last 4 digits of the serial number."
+    }
+  },
+  "ipSetting": {
+    "title": "IP Setting",
+    "description": "Proxy auto-configuration priority and IP checker.",
+    "priorityPrefix": "Searching priority:",
+    "priorityChain": "Last used IP > ASN > City > Region > Country/Region",
+    "prioritySuffix": "Unchecked options are skipped.",
+    "lastUsedIp": "Last used IP",
+    "asn": "ASN",
+    "asnDesc": "Only available for Bright auto.",
+    "city": "City",
+    "region": "Region",
+    "country": "Country/Region",
+    "ipCheckerLabel": "IP checker"
+  },
+  "dataSync": {
+    "title": "Data Sync",
+    "description": "Select the data to sync across devices.",
+    "cookie": "Cookie",
+    "passwords": "Saved passwords",
+    "bookmarks": "Bookmarks",
+    "localStorage": "Local storage",
+    "indexedDb": "IndexedDB",
+    "extensionData": "Extension data",
+    "history": "History"
+  },
+  "browser": {
+    "title": "Browser Settings",
+    "description": "Behavior of the launched browser. Items marked “Applied at launch” take effect on the next profile launch.",
+    "geoMatch": {
+      "title": "Geo auto-match (timezone · locale · WebRTC)",
+      "desc": "Derive each profile's timezone, language, and WebRTC exit IP from its proxy's location at launch. Turn off to use only each profile's manual values. Applied at launch."
+    },
+    "realtimeTimezone": {
+      "title": "Real-time timezone match on dynamic IP change",
+      "desc": "Match the corresponding timezone and location when the dynamic IP changes."
+    },
+    "chromeSignin": {
+      "title": "Allow Chrome sign-in",
+      "desc": "When off, you can sign in to Google sites like Gmail without signing in to Chrome itself."
+    },
+    "offerTranslate": {
+      "title": "Offer to translate pages",
+      "desc": "Offer to translate pages that aren't in a language you read."
+    },
+    "disableDevtools": {
+      "title": "Disable Browser Developer Tools",
+      "desc": "Writes a DeveloperToolsAvailability managed-policy file into each profile. Chromium enforces it once the file is registered in the OS managed-policy location (not applied machine-wide automatically)."
+    },
+    "lockExtensions": {
+      "title": "Disable installing/removing extensions",
+      "desc": "Writes an ExtensionInstallBlocklist managed-policy file per profile (the proxy-auth extension is unaffected). Enforced once registered in the OS managed-policy location."
+    },
+    "virtualCamera": {
+      "title": "Virtual camera",
+      "desc": "Simulate local video as a live camera feed. Only valid for Chrome version 140 and above."
+    },
+    "mobileSimulation": {
+      "title": "Mobile simulation optimization",
+      "desc": "Make the interface closer to a real mobile device experience. Only valid for Chrome version 143 and above."
+    },
+    "secureAccess": {
+      "title": "Secure access (HTTPS)",
+      "desc": "Whenever possible, use HTTPS and get warned before loading non-HTTPS sites."
+    },
+    "disableVideos": {
+      "title": "Disable loading videos",
+      "desc": "Block media downloads to save proxy traffic."
+    },
+    "disableImages": {
+      "title": "Disable loading images",
+      "desc": "Block image loading to save traffic. Note: image loading is disabled fully; the KB threshold below is stored for future per-request filtering.",
+      "skipUnder": "Skip images under",
+      "kb": "KB"
+    }
+  },
+  "performance": {
+    "title": "Performance",
+    "description": "Controls for launching many profiles at once — applied to bulk launches and the running-session ceiling.",
+    "parallelLimit": {
+      "title": "Parallel launch limit",
+      "desc": "How many profiles spawn at the same time during a bulk launch. Higher is faster but uses more RAM. Recommended 3–8."
+    },
+    "maxRunning": {
+      "title": "Max running profiles",
+      "desc": "Hard ceiling on profiles running at once (memory safety). Leave at 0 for unlimited; launches past the limit are blocked with a clear message."
+    }
+  },
+  "reliability": {
+    "title": "Reliability",
+    "description": "Restore your last session, recover crashed profiles, and protect against memory exhaustion when many profiles run at once.",
+    "restoreSession": {
+      "title": "Restore last session on startup",
+      "desc": "When SoftGlaze reopens, offer to relaunch the profiles that were running when it last closed or crashed."
+    },
+    "autoRestart": {
+      "title": "Auto-restart crashed profiles",
+      "desc": "If a profile's browser crashes on its own, automatically relaunch it. Capped per profile so a persistently-crashing profile can't loop.",
+      "maxRetries": "Max retries per profile"
+    },
+    "memoryGuard": {
+      "title": "Memory guard",
+      "desc": "When system memory runs low, automatically close the oldest running profiles until memory recovers. Off by default — it will never close a profile unless enabled.",
+      "triggerBelow": "Trigger when free RAM below",
+      "stopWhenReaches": "stop once free RAM reaches"
+    }
+  },
+  "smartAutofill": {
+    "title": "Smart Autofill",
+    "description": "The Identity Data Vault widget that detects signup forms in launched profiles and fills them from your saved personas.",
+    "enable": {
+      "title": "Enable Smart Autofill",
+      "desc": "Inject the autofill widget into launched profiles. On Chromium this uses the in-page bridge; turning this off skips injection entirely."
+    },
+    "firefox": {
+      "title": "Firefox autofill",
+      "desc": "Also install the autofill WebExtension into Firefox profiles (Firefox has no in-page bridge). Loads unsigned on Firefox Developer Edition / Nightly; release Firefox requires the Mozilla-signed build bundled with the installer."
+    }
+  },
+  "audit": {
+    "title": "Audit Log",
+    "description": "How long team activity and security events (member changes, sign-ins, permission edits) are kept before being pruned on startup.",
+    "retentionTitle": "Retention period",
+    "retentionDesc": "Activity older than this is deleted when SoftGlaze starts. Set to 0 to keep the full history forever.",
+    "days": "days"
+  },
+  "updates": {
+    "title": "Updates",
+    "description": "Check for and install app updates. Updates are signature-verified before they install.",
+    "checkDefault": "Check whether a newer version of SoftGlaze Browser is available.",
+    "notEnabled": "Automatic updates are not enabled in this build.",
+    "checking": "Checking for updates…",
+    "available": "Update {{version}} available — downloading in the background…",
+    "downloading": "Downloading {{version}}… {{percent}}%",
+    "ready": "Update {{version}} is ready to install.",
+    "errorWithReason": "Couldn't check for updates — {{reason}}",
+    "errorNoReason": "Couldn't check for updates.",
+    "upToDate": "You're on the latest version.",
+    "installRestart": "Install & restart",
+    "checkForUpdates": "Check for updates"
+  },
+  "onStartup": {
+    "title": "On Startup",
+    "description": "What happens when a profile is launched.",
+    "startPageLabel": "Start page",
+    "modeDetection": "Show proxy/fingerprint detection page",
+    "modeLast": "Continue browsing the last opened page",
+    "modeBlank": "Do not start the proxy detection page (blank)",
+    "onlyWithProxy": {
+      "title": "Only open with an available proxy",
+      "desc": "If no proxy is found, the browser won't open. (Fingerprint items based on IP would otherwise not match.)"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "Only open when extension data is loaded",
+      "desc": "Open the browser only when the extension data has successfully loaded."
+    },
+    "blockIfCountryChanged": {
+      "title": "Block if country/region changed",
+      "desc": "Don't open the profile if the country/region differs from the last time it was opened."
+    }
+  },
+  "captcha": {
+    "title": "Captcha Auto-Solving",
+    "description": "Automatically solve reCAPTCHA v2 and hCaptcha during browsing using a paid third-party solver. This is separate from fingerprinting — a clean fingerprint reduces how often captchas appear, but solving them needs a paid service billed per solve by the provider (not by SoftGlaze).",
+    "enable": {
+      "title": "Enable captcha auto-solving",
+      "desc": "When on, launched profiles detect supported captchas and submit them to your solver automatically."
+    },
+    "providerLabel": "Solver provider",
+    "apiKeyLabel": "API key",
+    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
+    "apiKeyPlaceholder2captcha": "2captcha API key",
+    "billedAnticaptcha": "Stored locally in your settings DB. You are billed per solve by Anti-Captcha.",
+    "billed2captcha": "Stored locally in your settings DB. You are billed per solve by 2captcha.",
+    "solveRecaptchaV2": "Solve reCAPTCHA v2",
+    "solveHcaptcha": "Solve hCaptcha"
+  },
+  "email": {
+    "title": "Email (verification codes)",
+    "configured": "Configured",
+    "offlineMode": "Offline mode",
+    "description": "SMTP for sending OTP codes at registration. Leave blank to run offline — the code is then shown in-app instead of emailed.",
+    "smtpHost": "SMTP host",
+    "port": "Port",
+    "encryption": "Encryption",
+    "username": "Username",
+    "password": "Password",
+    "passwordSavedHint": "(saved — leave blank to keep)",
+    "fromName": "From name",
+    "saved": "Email settings saved.",
+    "saveFailed": "Could not save email settings.",
+    "noSmtpYet": "No SMTP configured yet — save your settings first.",
+    "testSent": "Test email sent to {{to}}.",
+    "testFailed": "Test failed — check your settings.",
+    "saveButton": "Save email settings",
+    "test": "Test"
+  },
+  "errors": {
+    "loadSettings": "Failed to load settings.",
+    "closeSession": "Failed to close session.",
+    "updateScheduler": "Failed to update scheduler.",
+    "loadGlobal": "Failed to load global settings.",
+    "saveSetting": "Failed to save setting."
+  }
+}
