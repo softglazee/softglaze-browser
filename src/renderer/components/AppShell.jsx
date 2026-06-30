@@ -6,6 +6,7 @@ import {
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
   LogOut, UserCog, CreditCard
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { renderFooterNodes } from '@/lib/footerText.jsx';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
@@ -13,13 +14,14 @@ import CommandPalette from '@/components/CommandPalette.jsx';
 import OnboardingWizard from '@/components/OnboardingWizard.jsx';
 
 function ThemeToggle({ collapsed }) {
+  const { t } = useTranslation();
   const [theme, setThemeState] = useState(getStoredTheme());
   const isDark = theme === 'dark';
   return (
     <button
       onClick={() => setThemeState(applyThemeChoice(isDark ? 'light' : 'dark'))}
       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-colors text-left text-[13px] font-medium text-muted-foreground hover:text-foreground"
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? t('shell.switchToLight') : t('shell.switchToDark')}
     >
       <span className="relative w-[18px] h-[18px] grid place-items-center shrink-0">
         {isDark
@@ -27,7 +29,7 @@ function ThemeToggle({ collapsed }) {
           : <Sun className="w-[18px] h-[18px]" strokeWidth={1.75} />}
       </span>
       {!collapsed && <>
-        {isDark ? 'Dark mode' : 'Light mode'}
+        {isDark ? t('shell.darkMode') : t('shell.lightMode')}
         <span className="ml-auto inline-flex items-center h-5 w-9 rounded-full p-0.5 transition-colors" style={{ background: isDark ? 'var(--switch-background)' : 'var(--primary)' }}>
           <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${isDark ? '' : 'translate-x-4'}`} />
         </span>
@@ -36,33 +38,35 @@ function ThemeToggle({ collapsed }) {
   );
 }
 
+// `labelKey` resolves through i18n at render time so nav re-labels when the app
+// language changes. `featureKey` gates visibility on the member's permissions.
 const SECTIONS = [
   {
-    label: 'Workspace',
+    labelKey: 'nav.sectionWorkspace',
     items: [
-      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, featureKey: 'dashboard' },
-      { path: '/profiles', label: 'Profiles', icon: Fingerprint, badgeKey: 'profiles', featureKey: 'profiles' },
-      { path: '/groups', label: 'Groups', icon: Layers, featureKey: 'groups' },
-      { path: '/proxies', label: 'Proxy pool', icon: Globe, featureKey: 'proxies' },
-      { path: '/browsers', label: 'Browsers', icon: MonitorDown, featureKey: 'browsers' },
-      { path: '/extensions', label: 'Extensions', icon: Puzzle, featureKey: 'extensions' }
+      { path: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, featureKey: 'dashboard' },
+      { path: '/profiles', labelKey: 'nav.profiles', icon: Fingerprint, badgeKey: 'profiles', featureKey: 'profiles' },
+      { path: '/groups', labelKey: 'nav.groups', icon: Layers, featureKey: 'groups' },
+      { path: '/proxies', labelKey: 'nav.proxies', icon: Globe, featureKey: 'proxies' },
+      { path: '/browsers', labelKey: 'nav.browsers', icon: MonitorDown, featureKey: 'browsers' },
+      { path: '/extensions', labelKey: 'nav.extensions', icon: Puzzle, featureKey: 'extensions' }
     ]
   },
   {
-    label: 'Data',
+    labelKey: 'nav.sectionData',
     items: [
-      { path: '/personas', label: 'Data Vault', icon: IdCard, featureKey: 'personas' },
-      { path: '/batch-import', label: 'Batch import', icon: FileSpreadsheet, featureKey: 'batchImport' },
-      { path: '/trash', label: 'Trash', icon: Trash2, featureKey: 'trash' }
+      { path: '/personas', labelKey: 'nav.dataVault', icon: IdCard, featureKey: 'personas' },
+      { path: '/batch-import', labelKey: 'nav.batchImport', icon: FileSpreadsheet, featureKey: 'batchImport' },
+      { path: '/trash', labelKey: 'nav.trash', icon: Trash2, featureKey: 'trash' }
     ]
   },
   {
-    label: 'Pro',
-    items: [{ path: '/automation', label: 'Automation', icon: Wand2, featureKey: 'automation' }]
+    labelKey: 'nav.sectionPro',
+    items: [{ path: '/automation', labelKey: 'nav.automation', icon: Wand2, featureKey: 'automation' }]
   },
   {
-    label: 'Team',
-    items: [{ path: '/members', label: 'Members', icon: Users, featureKey: 'members' }]
+    labelKey: 'nav.sectionTeam',
+    items: [{ path: '/members', labelKey: 'nav.members', icon: Users, featureKey: 'members' }]
   }
 ];
 
@@ -110,6 +114,10 @@ function NavItem({ path, label, icon: Icon, collapsed, badge }) {
 
 export default function AppShell({ children }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  // Localized role name; falls back to the English label map, then the raw role
+  // (covers SUPER_ADMIN and any future role not yet in the locale files).
+  const roleLabel = (r) => (r ? t(`roles.${r}`, { defaultValue: ROLE_LABEL[r] || r }) : t('shell.noMember'));
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [me, setMe] = useState(null);
@@ -186,8 +194,8 @@ export default function AppShell({ children }) {
       window.location.reload();
     } catch (e) {
       // Switching up to a higher/equal-rank member requires that member's password.
-      if (e.code === 'NEED_PASSWORD') { setPwFor(m.id); setPw(''); setErr('Enter this member’s password to switch into their account.'); return; }
-      setErr(e.message || 'Could not switch member.');
+      if (e.code === 'NEED_PASSWORD') { setPwFor(m.id); setPw(''); setErr(t('shell.needPassword')); return; }
+      setErr(e.message || t('shell.couldNotSwitch'));
     }
   }
 
@@ -204,8 +212,8 @@ export default function AppShell({ children }) {
   }
 
   const initials = me?.initials || 'SG';
-  const name = me?.name || 'Local workspace';
-  const role = me ? (ROLE_LABEL[me.role] || me.role) : 'No member';
+  const name = me?.name || t('shell.localWorkspace');
+  const role = roleLabel(me?.role);
   const badges = { profiles: counts.profiles ? String(counts.profiles) : '' };
   const canSee = makeCanSee(me);
 
@@ -226,7 +234,7 @@ export default function AppShell({ children }) {
           {!collapsed && (
             <div className="flex flex-col min-w-0 animate-fade-in">
               <span className="font-display font-semibold text-[15px] tracking-tight leading-none text-foreground">SoftGlaze</span>
-              <span className="text-[10px] text-primary font-semibold tracking-[0.18em] uppercase mt-1">Anti-Detect</span>
+              <span className="text-[10px] text-primary font-semibold tracking-[0.18em] uppercase mt-1">{t('shell.antiDetect')}</span>
             </div>
           )}
         </div>
@@ -242,7 +250,7 @@ export default function AppShell({ children }) {
               <span className={`relative inline-flex rounded-full h-2 w-2 ${counts.sessions > 0 ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
             </span>
             <span className={`text-xs font-medium ${counts.sessions > 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-              {counts.sessions > 0 ? `${counts.sessions} session${counts.sessions > 1 ? 's' : ''} active` : 'No active sessions'}
+              {counts.sessions > 0 ? t('shell.sessionsActive', { count: counts.sessions }) : t('shell.noActiveSessions')}
             </span>
             <Activity className="w-3 h-3 text-emerald-500 ml-auto" />
           </div>
@@ -253,10 +261,10 @@ export default function AppShell({ children }) {
             const items = section.items.filter((item) => canSee(item.featureKey));
             if (items.length === 0) return null;
             return (
-              <div key={section.label} className="mt-3">
-                {!collapsed && <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/70">{section.label}</div>}
+              <div key={section.labelKey} className="mt-3">
+                {!collapsed && <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/70">{t(section.labelKey)}</div>}
                 <div className="space-y-0.5">
-                  {items.map((item) => <NavItem key={item.path} {...item} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} />)}
+                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} />)}
                 </div>
               </div>
             );
@@ -266,17 +274,17 @@ export default function AppShell({ children }) {
         <div className="px-3 pb-3 mt-auto">
           <div className="border-t border-sidebar-border pt-2.5 space-y-0.5 relative" ref={ref}>
             <ThemeToggle collapsed={collapsed} />
-            {canSee('billing') && <NavItem path="/billing" label="Billing" icon={CreditCard} collapsed={collapsed} />}
-            {canSee('settings') && <NavItem path="/settings" label="Settings" icon={Settings} collapsed={collapsed} />}
+            {canSee('billing') && <NavItem path="/billing" label={t('nav.billing')} icon={CreditCard} collapsed={collapsed} />}
+            {canSee('settings') && <NavItem path="/settings" label={t('nav.settings')} icon={Settings} collapsed={collapsed} />}
 
             {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed((c) => !c)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
-              title={collapsed ? 'Expand' : 'Collapse'}
+              title={collapsed ? t('shell.expand') : t('shell.collapse')}
             >
               {collapsed ? <ChevronRight className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} /> : <ChevronLeft className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />}
-              {!collapsed && <span className="text-[13px] font-medium">Collapse</span>}
+              {!collapsed && <span className="text-[13px] font-medium">{t('shell.collapse')}</span>}
             </button>
 
             <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors text-left">
@@ -292,29 +300,29 @@ export default function AppShell({ children }) {
 
             {open && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover border border-border rounded-xl overflow-hidden shadow-2xl shadow-black/40 animate-scale-in">
-                <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">Switch member</div>
+                <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">{t('shell.switchMember')}</div>
                 <div className="max-h-60 overflow-y-auto">
-                  {members.length === 0 && <div className="px-3 py-2 text-[12px] text-muted-foreground">No members yet.</div>}
+                  {members.length === 0 && <div className="px-3 py-2 text-[12px] text-muted-foreground">{t('shell.noMembersYet')}</div>}
                   {members.map((m) => (
                     <div key={m.id}>
                       <button onClick={() => doSwitch(m)} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left">
                         <span className="w-6 h-6 rounded-full grid place-items-center text-[10px] font-semibold" style={{ background: (m.color || '#6366f1') + '22', color: m.color || '#6366f1' }}>{m.initials}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-[12.5px] truncate text-foreground">{m.name}</span>
-                          <span className="block text-[10.5px] text-muted-foreground">{ROLE_LABEL[m.role] || m.role}</span>
+                          <span className="block text-[10.5px] text-muted-foreground">{roleLabel(m.role)}</span>
                         </span>
                         {m.isCurrent && <Check className="w-4 h-4 text-primary" />}
                       </button>
                       {pinFor === m.id && pwFor !== m.id && (
                         <div className="px-3 pb-2 flex items-center gap-2">
-                          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder="PIN" className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
-                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">Go</button>
+                          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder={t('shell.pin')} className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
+                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">{t('shell.go')}</button>
                         </div>
                       )}
                       {pwFor === m.id && (
                         <div className="px-3 pb-2 flex items-center gap-2">
-                          <input type="password" value={pw} autoFocus onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder={`${m.name}'s password`} className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
-                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">Go</button>
+                          <input type="password" value={pw} autoFocus onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder={t('shell.memberPasswordPlaceholder', { name: m.name })} className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
+                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">{t('shell.go')}</button>
                         </div>
                       )}
                     </div>
@@ -322,12 +330,12 @@ export default function AppShell({ children }) {
                 </div>
                 {err && <div className="px-3 py-1.5 text-[11px] text-red-400">{err}</div>}
                 <div className="border-t border-border">
-                  <button onClick={() => { setOpen(false); navigate('/account'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><UserCog className="w-4 h-4" />Account settings</button>
-                  <button onClick={() => { setOpen(false); navigate('/members'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><Users className="w-4 h-4" />Manage members</button>
-                  {vault.enabled && <button onClick={doLock} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><Lock className="w-4 h-4" />Lock workspace</button>}
+                  <button onClick={() => { setOpen(false); navigate('/account'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><UserCog className="w-4 h-4" />{t('shell.accountSettings')}</button>
+                  <button onClick={() => { setOpen(false); navigate('/members'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><Users className="w-4 h-4" />{t('shell.manageMembers')}</button>
+                  {vault.enabled && <button onClick={doLock} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><Lock className="w-4 h-4" />{t('shell.lockWorkspace')}</button>}
                 </div>
                 <div className="border-t border-border">
-                  <button onClick={doLogout} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-red-500/10 text-left text-[12.5px] text-red-400 hover:text-red-300"><LogOut className="w-4 h-4" />Log out</button>
+                  <button onClick={doLogout} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-red-500/10 text-left text-[12.5px] text-red-400 hover:text-red-300"><LogOut className="w-4 h-4" />{t('shell.logOut')}</button>
                 </div>
               </div>
             )}
@@ -341,11 +349,11 @@ export default function AppShell({ children }) {
             {license.isExpired ? <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />}
             <span className="text-[12.5px] flex-1 min-w-0" style={{ color: license.isExpired ? 'var(--color-red-400, #f87171)' : '#fbbf24' }}>
               {license.isExpired
-                ? `Your ${license.isTrial ? 'free trial' : 'subscription'} has ended — the app keeps working, but please subscribe ($5/mo) to keep it supported.`
-                : `Free trial ends in ${license.daysLeft} day${license.daysLeft === 1 ? '' : 's'}. Subscribe for $5/month to keep going.`}
+                ? (license.isTrial ? t('shell.trialEnded') : t('shell.subscriptionEnded'))
+                : t('shell.trialEndingDays', { count: license.daysLeft })}
             </span>
-            <button onClick={() => navigate('/billing')} className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow shadow-blue-500/25">Subscribe</button>
-            <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground" title="Dismiss"><X className="w-4 h-4" /></button>
+            <button onClick={() => navigate('/billing')} className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow shadow-blue-500/25">{t('shell.subscribe')}</button>
+            <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground" title={t('shell.dismiss')}><X className="w-4 h-4" /></button>
           </div>
         )}
         <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
