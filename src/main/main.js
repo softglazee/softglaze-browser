@@ -258,8 +258,19 @@ app.whenReady().then(async () => {
   }
   configureSessionSecurity();
 
-  const { registerIpcHandlers } = require('./ipcHandlers');
+  const { registerIpcHandlers, attemptRememberedUnlock } = require('./ipcHandlers');
   registerIpcHandlers();
+
+  // "Keep me signed in on this device": if the user opted in last time, replay the
+  // DPAPI-sealed credential now — before the window loads — so the unlock/login
+  // gates open without a prompt. Handles both at-rest-encrypted DB (decrypts it) and
+  // the workspace vault. Best-effort: a stale credential self-clears and the user
+  // just sees a normal login once. Runs at process start only (not on manual lock).
+  try {
+    await attemptRememberedUnlock();
+  } catch (e) {
+    console.warn('[Startup] remembered auto-login failed:', e && e.message);
+  }
 
   // Wire the app:// file server before the window loads its URL.
   registerAppProtocol();

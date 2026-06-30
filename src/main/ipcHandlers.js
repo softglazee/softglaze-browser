@@ -49,6 +49,7 @@ const { CloudSyncEngine } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
 const secretStore = require('./secretStore');
+const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
 
@@ -197,6 +198,8 @@ const CHANNELS = Object.freeze({
   VAULT_LOCK: 'vault:lock',
   VAULT_DISABLE: 'vault:disable',
   VAULT_SET_AUTOLOCK: 'vault:set-autolock',
+  AUTH_REMEMBER_STATUS: 'auth:remember-status',
+  AUTH_FORGET: 'auth:forget',
   ACCOUNT_GET: 'account:get',
   ACCOUNT_SAVE: 'account:save',
   ACCOUNT_SEND_OTP: 'account:send-otp',
@@ -3533,6 +3536,13 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   // apply). See browserEngine launchProfileSession({ geoMatchEnabled }).
   geoMatch: {
     enabled: true
+  },
+  // App branding shown in the shell footer (editable by the Super Admin in Settings).
+  // `{year}` is replaced with the current year at render time; http(s) URLs are
+  // auto-linked. Keep it a single short line.
+  branding: {
+    footerEnabled: true,
+    footerText: '© {year} SoftGlaze — Built by the SoftGlaze Team (https://softglaze.com) · Developed by Azhar Ali (https://azhar.softglaze.com)'
   }
 });
 
@@ -4220,6 +4230,7 @@ async function memberLogin(payload) {
   currentMemberId = member.id;
   await writeSetting('currentMemberId', member.id).catch(() => {});
   vaultLocked = false; // member's own password is their auth
+  applyRememberChoice(input.remember, { kind: 'member', identifier, password });
   await db.member.update({ where: { id: member.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   return serializeMember(member, { isCurrent: true });
 }
@@ -4231,6 +4242,9 @@ async function memberLogin(payload) {
 async function memberLogout() {
   currentMemberId = null;
   await writeSetting('currentMemberId', null).catch(() => {});
+  // Signing out is an explicit "this isn't my session" — forget any remembered
+  // auto-login on this device so the next start asks for credentials again.
+  rememberStore.clear();
   return { ok: true };
 }
 
@@ -4604,6 +4618,7 @@ async function superLogin(payload) {
   currentMemberId = permissions.SUPER_ADMIN_ID;
   await writeSetting('currentMemberId', currentMemberId).catch(() => {});
   vaultLocked = false; // source owner is never gated by the workspace vault
+  applyRememberChoice(input.remember, { kind: 'super', identifier, password });
   return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
 }
 
@@ -4724,6 +4739,47 @@ async function seedStarters() {
   } catch (e) { /* best-effort — never block startup */ }
 }
 
+// First launch only: kick off background downloads of the newest few Chrome +
+// Firefox builds so a fresh install ships with browsers ready, instead of forcing
+// the user to fetch each one by hand. Fully best-effort:
+//   - idempotent  — the downloaders skip any version already installed
+//   - run-once    — a Setting flag is set only after we actually reach the network,
+//                   so a first launch that is offline simply retries next time
+//   - non-blocking — fired and forgotten; progress shows on the Browsers page
+const FIRST_RUN_BROWSER_COUNT = 3;
+async function maybeSeedBrowsers() {
+  try {
+    if (await readSetting('firstRunBrowsersSeeded', false)) return;
+    let reachedNetwork = false;
+
+    // Chrome (Chrome-for-Testing) — newest stable majors first.
+    try {
+      const chrome = await browserDownloader.listDownloadableVersions();
+      reachedNetwork = true;
+      for (const v of (Array.isArray(chrome) ? chrome : []).slice(0, FIRST_RUN_BROWSER_COUNT)) {
+        try { if (!browserDownloader.isInstalled(v.version)) browserDownloader.startDownload(v.version); }
+        catch (e) { /* skip a single version */ }
+      }
+    } catch (e) { console.warn('[browser-seed] Chrome catalog unavailable:', e && e.message); }
+
+    // Firefox — newest majors first.
+    try {
+      const ff = await firefoxEngine.listFirefoxDownloadable();
+      reachedNetwork = true;
+      const items = ff && Array.isArray(ff.items) ? ff.items : [];
+      for (const it of items.slice(0, FIRST_RUN_BROWSER_COUNT)) {
+        try { if (!it.installed) firefoxEngine.startFirefoxDownload(it.major); }
+        catch (e) { /* skip a single version */ }
+      }
+    } catch (e) { console.warn('[browser-seed] Firefox catalog unavailable:', e && e.message); }
+
+    if (reachedNetwork) {
+      await writeSetting('firstRunBrowsersSeeded', true).catch(() => {});
+      console.log('[browser-seed] First-run browser auto-install kicked off (latest 3 Chrome + 3 Firefox).');
+    }
+  } catch (e) { /* never block startup */ }
+}
+
 async function afterDbReady() {
   try {
     const savedMember = await readSetting('currentMemberId', null);
@@ -4732,6 +4788,8 @@ async function afterDbReady() {
     if (v && v.enabled) vaultLocked = true; // require unlock at startup
   } catch (e) { /* ignore — fall back to a fresh session */ }
   try { await seedStarters(); } catch (e) { /* best-effort */ }
+  // First-run browser fleet — fire-and-forget so the window opens immediately.
+  maybeSeedBrowsers().catch(() => {});
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
   // Licensing backend (when a tenant config is baked): refresh the signed lease on
   // startup + every 6h. Best-effort — offline keeps running on the cached lease.
@@ -4769,6 +4827,9 @@ async function dbUnlock(payload) {
     const v = await readVault();
     if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
   } catch (e) { /* leave vault locked — the Gate will ask */ }
+  // The same password opens both the DB and the vault, so remember it as a 'vault'
+  // credential — attemptRememberedUnlock() will replay it through this exact path.
+  applyRememberChoice(input.remember, { kind: 'vault', password });
   return dbEncryptionStatus();
 }
 
@@ -4882,6 +4943,71 @@ async function readVault() {
   return readSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
 }
 
+// ---------------------------------------------------------------------------
+// "Keep me signed in on this device" (rememberStore, DPAPI-sealed). Default OFF.
+// The login/unlock handlers call applyRememberChoice() with the verified secret;
+// attemptRememberedUnlock() replays it at boot through the same code paths.
+// ---------------------------------------------------------------------------
+
+// Persist (or forget) the auto-login credential based on the user's checkbox.
+// `remember === true`  -> seal the blob ; `remember === false` -> forget ;
+// undefined/absent     -> leave whatever is there untouched.
+function applyRememberChoice(remember, blob) {
+  try {
+    if (remember === true) rememberStore.write(blob);
+    else if (remember === false) rememberStore.clear();
+  } catch (e) { /* best-effort — never block a successful login */ }
+}
+
+// Replay the remembered credential at startup so the gates open without a prompt.
+// Returns a small status object; clears the blob if it no longer works (e.g. the
+// password was changed elsewhere) so it can't get stuck retrying forever.
+async function attemptRememberedUnlock() {
+  const blob = rememberStore.read();
+  if (!blob) return { attempted: false, unlocked: false };
+  try {
+    if (blob.kind === 'vault') {
+      const password = String(blob.password || '');
+      // 1) If the DB is encrypted-at-rest and still locked, the vault password IS the
+      //    DB key — decrypt + open it first (mirrors dbUnlock).
+      if (database.isDbEncryptionEnabled() && !database.isDbUnlocked()) {
+        await database.unlockEncryptedDb(password);
+        await database.bootstrapDatabase();
+        await afterDbReady();
+      }
+      // 2) Clear the workspace vault lock.
+      const v = await readVault();
+      if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
+      return { attempted: true, unlocked: !vaultLocked };
+    }
+    if (blob.kind === 'super') {
+      await superLogin({ identifier: blob.identifier, password: blob.password });
+      return { attempted: true, unlocked: true };
+    }
+    if (blob.kind === 'member') {
+      await memberLogin({ identifier: blob.identifier, password: blob.password });
+      return { attempted: true, unlocked: true };
+    }
+    return { attempted: true, unlocked: false };
+  } catch (e) {
+    // The stored credential no longer opens the gate (password changed, DB
+    // restored, etc.). Forget it so the user just sees a normal login once.
+    rememberStore.clear();
+    return { attempted: true, unlocked: false, error: e && e.message };
+  }
+}
+
+// Non-secret status for Settings UI. Never returns the sealed credential itself.
+function rememberStatus() {
+  return rememberStore.status();
+}
+
+// Explicit "forget this device" from Settings.
+async function forgetRemembered() {
+  rememberStore.clear();
+  return rememberStore.status();
+}
+
 async function vaultStatus() {
   const v = await readVault();
   return {
@@ -4909,6 +5035,13 @@ async function vaultSetPassword(payload) {
   if (database.isDbEncryptionEnabled()) {
     try { await database.rekeyEncryptedDb(next); } catch (e) { console.error('[vault] DB re-key after password change failed', e); }
   }
+  // Keep "stay signed in" working across a password change: re-seal the remembered
+  // vault credential with the new password (otherwise auto-login would fail once and
+  // self-clear). Untouched for super/member remember blobs.
+  try {
+    const remembered = rememberStore.read();
+    if (remembered && remembered.kind === 'vault') rememberStore.write({ kind: 'vault', password: next });
+  } catch (e) { /* best-effort */ }
   return vaultStatus();
 }
 
@@ -4916,10 +5049,12 @@ async function vaultUnlock(payload) {
   const input = requireObject(payload);
   const v = await readVault();
   if (!v.enabled || !v.hash) { vaultLocked = false; return vaultStatus(); }
-  if (!verifySecret(String(input.password || ''), v.salt, v.hash)) {
+  const password = String(input.password || '');
+  if (!verifySecret(password, v.salt, v.hash)) {
     const err = new Error('Incorrect password.'); err.code = 'BAD_PASSWORD'; throw err;
   }
   vaultLocked = false;
+  applyRememberChoice(input.remember, { kind: 'vault', password });
   return vaultStatus();
 }
 
@@ -7739,6 +7874,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.VAULT_LOCK, vaultLock);
   registerHandler(CHANNELS.VAULT_DISABLE, vaultDisable);
   registerHandler(CHANNELS.VAULT_SET_AUTOLOCK, vaultSetAutoLock);
+  registerHandler(CHANNELS.AUTH_REMEMBER_STATUS, rememberStatus);
+  registerHandler(CHANNELS.AUTH_FORGET, forgetRemembered);
   registerHandler(CHANNELS.ACCOUNT_GET, accountGet);
   registerHandler(CHANNELS.ACCOUNT_SAVE, accountSave);
   registerHandler(CHANNELS.ACCOUNT_SEND_OTP, accountSendOtp);
@@ -7791,5 +7928,6 @@ async function shutdownIpcHandlers() {
 module.exports = {
   CHANNELS,
   registerIpcHandlers,
-  shutdownIpcHandlers
+  shutdownIpcHandlers,
+  attemptRememberedUnlock
 };
