@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Database, Lock, Loader2, AlertTriangle, KeyRound, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 // Pre-Gate database unlock. When at-rest encryption is on, the database file is
@@ -10,6 +11,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors placeholder:text-muted-dark font-mono';
 
 export default function DbGate({ children }) {
+  const { t } = useTranslation('gate');
   const [phase, setPhase] = useState('loading'); // loading | unlock | ready
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false); // "keep me signed in" (default off)
@@ -35,21 +37,21 @@ export default function DbGate({ children }) {
 
   async function unlock() {
     setErr('');
-    if (!password) return setErr('Enter your workspace password.');
+    if (!password) return setErr(t('errors.enterWorkspacePassword'));
     setBusy(true);
     try {
       const s = await softglazeApi.db.unlock(password, remember);
       if (s && s.unlocked) { setPassword(''); setPhase('ready'); }
-      else setErr('The database is still locked — please try again.');
+      else setErr(t('errors.dbStillLocked'));
     } catch (e) {
       if (e.code === 'DB_MISSING') {
         setCorrupted(true);
-        setErr('The encrypted database file is missing. Restore from a workspace backup to recover.');
+        setErr(t('errors.dbMissing'));
       } else if (e.code === 'DB_UNLOCK_FAILED') {
         setCorrupted(true);
-        setErr(e.message || 'Incorrect password — or the file is corrupted.');
+        setErr(e.message || t('errors.dbUnlockFailed'));
       } else {
-        setErr(e.message || 'Could not unlock the database.');
+        setErr(e.message || t('errors.couldNotUnlockDb'));
       }
     } finally { setBusy(false); }
   }
@@ -67,16 +69,16 @@ export default function DbGate({ children }) {
           <span className="font-display font-semibold tracking-tight">SoftGlaze</span>
         </div>
         <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Database className="w-5 h-5" /></div>
-        <h1 className="font-display text-[20px] font-semibold tracking-tight">Unlock your database</h1>
-        <p className="text-[12.5px] text-muted mt-1 mb-6">This workspace's database is encrypted. Enter your workspace password to decrypt and open it.</p>
+        <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('db.title')}</h1>
+        <p className="text-[12.5px] text-muted mt-1 mb-6">{t('db.subtitle')}</p>
 
-        <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />Workspace password</label>
+        <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('db.workspacePassword')}</label>
         <input
           type="password"
           className={inputCls}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Workspace password"
+          placeholder={t('db.passwordPlaceholder')}
           autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter') unlock(); }}
         />
@@ -92,7 +94,7 @@ export default function DbGate({ children }) {
           >
             {remember && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
           </button>
-          <span className="text-[12px] text-muted">Keep me signed in on this device</span>
+          <span className="text-[12px] text-muted">{t('remember.label')}</span>
         </label>
 
         {err && (
@@ -102,12 +104,12 @@ export default function DbGate({ children }) {
         )}
 
         <button disabled={busy} onClick={unlock} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Unlock <Lock className="w-4 h-4" /></>}
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('db.unlock')} <Lock className="w-4 h-4" /></>}
         </button>
 
         {corrupted && (
           <p className="text-[11.5px] text-muted mt-4 leading-relaxed">
-            If you're certain the password is right, the database file may be damaged. You can recover by reinstalling and restoring a workspace backup (Settings → Workspace Backup &amp; Restore). There is no password reset — the data can only be opened with the correct password.
+            {t('db.corrupted')}
           </p>
         )}
       </div>

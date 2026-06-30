@@ -1,0 +1,323 @@
+{
+  "actions": {
+    "refresh": "Actualizar"
+  },
+  "localRuntime": {
+    "title": "Entorno local",
+    "description": "Las rutas se resuelven en el proceso principal de Electron.",
+    "loading": "Cargando información del sistema...",
+    "sqliteDb": "Base de datos SQLite",
+    "profileRoot": "Raíz de perfiles",
+    "databaseUrl": "URL de la base de datos",
+    "configured": "Configurada",
+    "notConfigured": "Sin configurar"
+  },
+  "sessions": {
+    "title": "Sesiones activas",
+    "description": "Sesiones actualmente iniciadas que consumen recursos.",
+    "loading": "Cargando sesiones...",
+    "emptyTitle": "No hay sesiones activas",
+    "emptyDescription": "Inicia un perfil para verlo aquí.",
+    "running": "En ejecución",
+    "created": "Creada el {{date}}",
+    "close": "Cerrar"
+  },
+  "scheduler": {
+    "title": "Programador de salud de proxies",
+    "description": "Vuelve a comprobar periódicamente cada proxy guardado en segundo plano y almacena su estado de salud.",
+    "enabled": "Activado",
+    "disabled": "Desactivado",
+    "runSweepEvery": "Ejecutar barrido cada",
+    "every15min": "15 min",
+    "every30min": "30 min",
+    "every1hour": "1 hora",
+    "every2hours": "2 horas",
+    "serviceRunning": "Servicio en ejecución",
+    "idle": "Inactivo",
+    "noteLabel": "Nota:",
+    "noteBody": "Esta tarea en segundo plano se ejecuta en el proceso principal de Electron, por lo que las comprobaciones continuarán sin interrupciones incluso cuando la aplicación esté minimizada o navegues entre páginas. Los resultados de salud se mostrarán directamente como insignias de estado dentro del Grupo de proxies."
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "Aplicado al iniciar"
+  },
+  "globalPreferences": {
+    "heading": "Preferencias globales",
+    "loading": "Cargando configuración global…",
+    "saving": "Guardando…"
+  },
+  "security": {
+    "title": "Seguridad de la cuenta",
+    "description": "Política de protección de inicio de sesión y verificación.",
+    "remoteLogin": {
+      "title": "Recordatorio de inicio de sesión remoto",
+      "desc": "Se envía un correo de recordatorio cuando se inicia sesión en tu cuenta desde una nueva dirección IP en lugar de las 3 IP usadas habitualmente."
+    },
+    "failedLogin": {
+      "title": "Alerta de intentos de inicio de sesión fallidos",
+      "desc": "Si el inicio de sesión falla más de 3 veces, se envía un correo de recordatorio a la dirección del propietario."
+    },
+    "ipAllowlist": {
+      "title": "Lista blanca de IP de inicio de sesión",
+      "desc": "Una vez establecida, el inicio de sesión de los miembros se restringe por IP (el propietario no se ve afectado)."
+    },
+    "twoStep": {
+      "title": "Verificación en dos pasos",
+      "desc": "Las acciones sensibles requieren verificación mediante una app de autenticación, correo electrónico o SMS.",
+      "methodLabel": "Método",
+      "methodApp": "App de autenticación",
+      "methodEmail": "Correo electrónico",
+      "methodSms": "SMS",
+      "levelLabel": "Nivel de autenticación",
+      "levelLow": "Bajo: nuevo dispositivo o más de 90 días desde la última 2FA",
+      "levelMedium": "Medio (recomendado): nuevo dispositivo o más de 30 días",
+      "levelHigh": "Alto: se requiere 2FA en cada inicio de sesión"
+    }
+  },
+  "multiDevice": {
+    "title": "Modo multidispositivo",
+    "description": "Controla si varios miembros pueden acceder al mismo perfil simultáneamente.",
+    "modeOff": "Desactivado: un solo miembro por perfil",
+    "modeFull": "Completo: todos los perfiles admiten acceso simultáneo",
+    "modeSpecified": "Especificado: solo los perfiles seleccionados",
+    "hintBefore": "Cuando está activado, varios miembros pueden acceder al mismo perfil al mismo tiempo. En el modo ",
+    "hintSpecified": "Especificado",
+    "hintAfter": ", elige los perfiles elegibles desde la página de Perfiles."
+  },
+  "website": {
+    "title": "Gestión de sitios web",
+    "description": "Reglas de acceso a URL y carga de recursos.",
+    "blockAccess": {
+      "title": "Bloquear acceso",
+      "desc": "Usa la lista de bloqueo y la lista de permitidos para gestionar las URL.",
+      "blocklist": "Lista de bloqueo",
+      "allowlist": "Lista de permitidos"
+    },
+    "fbStatic": {
+      "title": "Recursos estáticos de FB",
+      "desc": "Cuando está activado, los recursos estáticos de Facebook se cargan usando la red local."
+    },
+    "localNetwork": {
+      "title": "Acceso a la red local",
+      "desc": "Cuando está activado, se puede acceder a URL específicas en la red local."
+    }
+  },
+  "platform": {
+    "title": "Plataforma",
+    "description": "Personaliza la visualización de la lista de perfiles.",
+    "customIcon": {
+      "title": "Icono personalizado",
+      "desc": "Muestra un icono personalizado para los perfiles de la lista."
+    },
+    "displayCustomNo": {
+      "title": "Mostrar n.º personalizado",
+      "desc": "Muestra el número de serie personalizado completo (p. ej. \"123456\")."
+    },
+    "displayLast4": {
+      "title": "Mostrar los últimos 4 dígitos del n.º personalizado",
+      "desc": "Muestra solo los últimos 4 dígitos del número de serie."
+    }
+  },
+  "ipSetting": {
+    "title": "Configuración de IP",
+    "description": "Prioridad de autoconfiguración de proxies y verificador de IP.",
+    "priorityPrefix": "Prioridad de búsqueda:",
+    "priorityChain": "Última IP usada > ASN > Ciudad > Región > País/Región",
+    "prioritySuffix": "Las opciones sin marcar se omiten.",
+    "lastUsedIp": "Última IP usada",
+    "asn": "ASN",
+    "asnDesc": "Solo disponible para Bright auto.",
+    "city": "Ciudad",
+    "region": "Región",
+    "country": "País/Región",
+    "ipCheckerLabel": "Verificador de IP"
+  },
+  "dataSync": {
+    "title": "Sincronización de datos",
+    "description": "Selecciona los datos que se sincronizarán entre dispositivos.",
+    "cookie": "Cookies",
+    "passwords": "Contraseñas guardadas",
+    "bookmarks": "Marcadores",
+    "localStorage": "Almacenamiento local",
+    "indexedDb": "IndexedDB",
+    "extensionData": "Datos de extensiones",
+    "history": "Historial"
+  },
+  "browser": {
+    "title": "Configuración del navegador",
+    "description": "Comportamiento del navegador iniciado. Los elementos marcados como “Aplicado al iniciar” surten efecto en el próximo inicio del perfil.",
+    "geoMatch": {
+      "title": "Coincidencia geográfica automática (zona horaria · idioma · WebRTC)",
+      "desc": "Deriva la zona horaria, el idioma y la IP de salida de WebRTC de cada perfil a partir de la ubicación de su proxy al iniciar. Desactívalo para usar solo los valores manuales de cada perfil. Aplicado al iniciar."
+    },
+    "realtimeTimezone": {
+      "title": "Coincidencia de zona horaria en tiempo real al cambiar la IP dinámica",
+      "desc": "Hace coincidir la zona horaria y la ubicación correspondientes cuando cambia la IP dinámica."
+    },
+    "chromeSignin": {
+      "title": "Permitir inicio de sesión en Chrome",
+      "desc": "Cuando está desactivado, puedes iniciar sesión en sitios de Google como Gmail sin iniciar sesión en Chrome."
+    },
+    "offerTranslate": {
+      "title": "Ofrecer traducir páginas",
+      "desc": "Ofrece traducir páginas que no están en un idioma que lees."
+    },
+    "disableDevtools": {
+      "title": "Desactivar las herramientas de desarrollo del navegador",
+      "desc": "Escribe un archivo de política gestionada DeveloperToolsAvailability en cada perfil. Chromium lo aplica una vez que el archivo se registra en la ubicación de políticas gestionadas del sistema operativo (no se aplica automáticamente a toda la máquina)."
+    },
+    "lockExtensions": {
+      "title": "Desactivar la instalación/eliminación de extensiones",
+      "desc": "Escribe un archivo de política gestionada ExtensionInstallBlocklist por perfil (la extensión de autenticación de proxy no se ve afectada). Se aplica una vez registrado en la ubicación de políticas gestionadas del sistema operativo."
+    },
+    "virtualCamera": {
+      "title": "Cámara virtual",
+      "desc": "Simula vídeo local como una transmisión de cámara en vivo. Solo válido para Chrome versión 140 y superior."
+    },
+    "mobileSimulation": {
+      "title": "Optimización de simulación móvil",
+      "desc": "Hace que la interfaz se acerque más a la experiencia de un dispositivo móvil real. Solo válido para Chrome versión 143 y superior."
+    },
+    "secureAccess": {
+      "title": "Acceso seguro (HTTPS)",
+      "desc": "Siempre que sea posible, usa HTTPS y recibe avisos antes de cargar sitios sin HTTPS."
+    },
+    "disableVideos": {
+      "title": "Desactivar la carga de vídeos",
+      "desc": "Bloquea las descargas de medios para ahorrar tráfico de proxy."
+    },
+    "disableImages": {
+      "title": "Desactivar la carga de imágenes",
+      "desc": "Bloquea la carga de imágenes para ahorrar tráfico. Nota: la carga de imágenes se desactiva por completo; el umbral en KB de abajo se almacena para un futuro filtrado por solicitud.",
+      "skipUnder": "Omitir imágenes de menos de",
+      "kb": "KB"
+    }
+  },
+  "performance": {
+    "title": "Rendimiento",
+    "description": "Controles para iniciar muchos perfiles a la vez: se aplican a los inicios masivos y al límite de sesiones en ejecución.",
+    "parallelLimit": {
+      "title": "Límite de inicio en paralelo",
+      "desc": "Cuántos perfiles se inician al mismo tiempo durante un inicio masivo. Más alto es más rápido pero usa más RAM. Recomendado 3–8."
+    },
+    "maxRunning": {
+      "title": "Máximo de perfiles en ejecución",
+      "desc": "Límite máximo de perfiles en ejecución simultánea (seguridad de memoria). Déjalo en 0 para ilimitado; los inicios que superen el límite se bloquean con un mensaje claro."
+    }
+  },
+  "reliability": {
+    "title": "Fiabilidad",
+    "description": "Restaura tu última sesión, recupera perfiles que se han bloqueado y protege contra el agotamiento de memoria cuando se ejecutan muchos perfiles a la vez.",
+    "restoreSession": {
+      "title": "Restaurar la última sesión al iniciar",
+      "desc": "Cuando SoftGlaze se vuelve a abrir, ofrece reiniciar los perfiles que estaban en ejecución la última vez que se cerró o se bloqueó."
+    },
+    "autoRestart": {
+      "title": "Reiniciar automáticamente los perfiles bloqueados",
+      "desc": "Si el navegador de un perfil se bloquea por sí solo, lo reinicia automáticamente. Tiene un límite por perfil para que un perfil que se bloquea constantemente no entre en bucle.",
+      "maxRetries": "Máximo de reintentos por perfil"
+    },
+    "memoryGuard": {
+      "title": "Protección de memoria",
+      "desc": "Cuando la memoria del sistema se agota, cierra automáticamente los perfiles más antiguos en ejecución hasta que la memoria se recupere. Desactivado de forma predeterminada: nunca cerrará un perfil a menos que esté activado.",
+      "triggerBelow": "Activar cuando la RAM libre baje de",
+      "stopWhenReaches": "detener cuando la RAM libre alcance"
+    }
+  },
+  "smartAutofill": {
+    "title": "Autocompletado inteligente",
+    "description": "El widget de la Bóveda de datos de identidad que detecta formularios de registro en los perfiles iniciados y los completa con tus personas guardadas.",
+    "enable": {
+      "title": "Activar autocompletado inteligente",
+      "desc": "Inyecta el widget de autocompletado en los perfiles iniciados. En Chromium usa el puente en la página; al desactivar esto se omite la inyección por completo."
+    },
+    "firefox": {
+      "title": "Autocompletado en Firefox",
+      "desc": "También instala la WebExtension de autocompletado en los perfiles de Firefox (Firefox no tiene puente en la página). Se carga sin firmar en Firefox Developer Edition / Nightly; la versión de Firefox estable requiere la compilación firmada por Mozilla incluida con el instalador."
+    }
+  },
+  "audit": {
+    "title": "Registro de auditoría",
+    "description": "Cuánto tiempo se conservan la actividad del equipo y los eventos de seguridad (cambios de miembros, inicios de sesión, ediciones de permisos) antes de eliminarse al iniciar.",
+    "retentionTitle": "Período de retención",
+    "retentionDesc": "La actividad más antigua que esto se elimina cuando SoftGlaze se inicia. Establécelo en 0 para conservar el historial completo para siempre.",
+    "days": "días"
+  },
+  "updates": {
+    "title": "Actualizaciones",
+    "description": "Busca e instala actualizaciones de la aplicación. Las actualizaciones se verifican mediante firma antes de instalarse.",
+    "checkDefault": "Comprueba si hay una versión más reciente de SoftGlaze Browser disponible.",
+    "notEnabled": "Las actualizaciones automáticas no están habilitadas en esta compilación.",
+    "checking": "Buscando actualizaciones…",
+    "available": "Actualización {{version}} disponible: descargando en segundo plano…",
+    "downloading": "Descargando {{version}}… {{percent}}%",
+    "ready": "La actualización {{version}} está lista para instalarse.",
+    "errorWithReason": "No se pudieron buscar actualizaciones: {{reason}}",
+    "errorNoReason": "No se pudieron buscar actualizaciones.",
+    "upToDate": "Tienes la última versión.",
+    "installRestart": "Instalar y reiniciar",
+    "checkForUpdates": "Buscar actualizaciones"
+  },
+  "onStartup": {
+    "title": "Al iniciar",
+    "description": "Qué ocurre cuando se inicia un perfil.",
+    "startPageLabel": "Página de inicio",
+    "modeDetection": "Mostrar la página de detección de proxy/huella",
+    "modeLast": "Continuar navegando en la última página abierta",
+    "modeBlank": "No iniciar la página de detección de proxy (en blanco)",
+    "onlyWithProxy": {
+      "title": "Abrir solo con un proxy disponible",
+      "desc": "Si no se encuentra ningún proxy, el navegador no se abrirá. (De lo contrario, los elementos de huella basados en la IP no coincidirían.)"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "Abrir solo cuando se hayan cargado los datos de la extensión",
+      "desc": "Abre el navegador solo cuando los datos de la extensión se hayan cargado correctamente."
+    },
+    "blockIfCountryChanged": {
+      "title": "Bloquear si cambió el país/región",
+      "desc": "No abrir el perfil si el país/región difiere de la última vez que se abrió."
+    }
+  },
+  "captcha": {
+    "title": "Resolución automática de captchas",
+    "description": "Resuelve automáticamente reCAPTCHA v2 y hCaptcha durante la navegación usando un solucionador de terceros de pago. Esto es independiente de las huellas digitales: una huella limpia reduce la frecuencia con la que aparecen los captchas, pero resolverlos requiere un servicio de pago facturado por resolución por el proveedor (no por SoftGlaze).",
+    "enable": {
+      "title": "Activar la resolución automática de captchas",
+      "desc": "Cuando está activado, los perfiles iniciados detectan los captchas compatibles y los envían a tu solucionador automáticamente."
+    },
+    "providerLabel": "Proveedor de resolución",
+    "apiKeyLabel": "Clave de API",
+    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
+    "apiKeyPlaceholder2captcha": "Clave de API de 2captcha",
+    "billedAnticaptcha": "Se almacena localmente en tu base de datos de configuración. Anti-Captcha te factura por resolución.",
+    "billed2captcha": "Se almacena localmente en tu base de datos de configuración. 2captcha te factura por resolución.",
+    "solveRecaptchaV2": "Resolver reCAPTCHA v2",
+    "solveHcaptcha": "Resolver hCaptcha"
+  },
+  "email": {
+    "title": "Correo electrónico (códigos de verificación)",
+    "configured": "Configurado",
+    "offlineMode": "Modo sin conexión",
+    "description": "SMTP para enviar códigos OTP en el registro. Déjalo en blanco para funcionar sin conexión: el código se muestra entonces en la app en lugar de enviarse por correo.",
+    "smtpHost": "Servidor SMTP",
+    "port": "Puerto",
+    "encryption": "Cifrado",
+    "username": "Nombre de usuario",
+    "password": "Contraseña",
+    "passwordSavedHint": "(guardada: déjalo en blanco para conservarla)",
+    "fromName": "Nombre del remitente",
+    "saved": "Configuración de correo guardada.",
+    "saveFailed": "No se pudo guardar la configuración de correo.",
+    "noSmtpYet": "Aún no hay SMTP configurado: guarda primero tu configuración.",
+    "testSent": "Correo de prueba enviado a {{to}}.",
+    "testFailed": "La prueba falló: revisa tu configuración.",
+    "saveButton": "Guardar configuración de correo",
+    "test": "Probar"
+  },
+  "errors": {
+    "loadSettings": "No se pudo cargar la configuración.",
+    "closeSession": "No se pudo cerrar la sesión.",
+    "updateScheduler": "No se pudo actualizar el programador.",
+    "loadGlobal": "No se pudo cargar la configuración global.",
+    "saveSetting": "No se pudo guardar el ajuste."
+  }
+}

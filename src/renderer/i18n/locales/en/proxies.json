@@ -1,0 +1,226 @@
+{
+  "header": {
+    "eyebrow": "Network",
+    "title": "Proxy Pool",
+    "description": "Store reusable HTTP and SOCKS5 proxies locally, or sync purchased pools straight from integrated providers."
+  },
+  "rotation": {
+    "label": "Rotation:",
+    "tooltip": "How a profile's rotation pool is applied at launch",
+    "eachLaunch": "Rotate each launch",
+    "sticky": "Sticky (fixed proxy)",
+    "failover": "Failover to healthy",
+    "latencyOptimized": "Fastest (latency)",
+    "failoverMaxTooltip": "Skip proxies slower than this many ms (0 = no limit; falls back to the full pool if none qualify)",
+    "maxMsPlaceholder": "max ms",
+    "topNTooltip": "Round-robin among the fastest N proxies",
+    "topNPlaceholder": "top N"
+  },
+  "actions": {
+    "testAll": "Test All",
+    "testAllTooltip": "Concurrent health test of every proxy",
+    "testAllSummary": "{{ok}}/{{total}} ok",
+    "checkAll": "Check All",
+    "refresh": "Refresh",
+    "batchAdd": "Batch Add",
+    "newProxy": "New Proxy"
+  },
+  "tabs": {
+    "custom": "Custom Proxies",
+    "providers": "Proxy Providers",
+    "integrated": "Integrated"
+  },
+  "stats": {
+    "totalProxies": "Total proxies",
+    "proxyTypes": "Proxy types",
+    "verified": "Verified",
+    "nonVerified": "Non-verified",
+    "filtering": "filtering",
+    "noProxies": "No proxies",
+    "total": "total"
+  },
+  "search": {
+    "placeholder": "Search by proxy name, host, or username..."
+  },
+  "deleteFiltered": {
+    "tooltip": "Delete every proxy matching the current filter",
+    "button": "Delete all {{scope}} ({{count}})",
+    "confirm_one": "Delete all {{count}} {{scope}} proxy? This cannot be undone — linked profiles keep working with their proxy assignment cleared.",
+    "confirm_other": "Delete all {{count}} {{scope}} proxies? This cannot be undone — linked profiles keep working with their proxy assignment cleared.",
+    "scope": {
+      "all": "all",
+      "filtered": "filtered",
+      "matching": "matching",
+      "verified": "verified",
+      "failed": "failed"
+    }
+  },
+  "filters": {
+    "all": "All",
+    "ungrouped": "Ungrouped",
+    "byProvider": "By provider"
+  },
+  "groups": {
+    "chipTooltip": "Click to filter · drag proxies here to add them",
+    "renameRecolor": "Rename / recolor",
+    "deleteGroup": "Delete group",
+    "newGroup": "New group",
+    "deleteConfirm": "Delete group \"{{name}}\"? The proxies stay in the pool — they just become ungrouped."
+  },
+  "autoGroup": {
+    "granularityTooltip": "Auto-group granularity",
+    "country": "Country",
+    "state": "State",
+    "city": "City",
+    "buttonTooltip": "Create groups from each proxy's verified country/state/city. Run Test All first so proxies have a detected location.",
+    "button": "Auto-group",
+    "result_one": "+{{count}} group · {{assigned}} assigned",
+    "result_other": "+{{count}} groups · {{assigned}} assigned"
+  },
+  "sort": {
+    "tooltip": "Sort by latency",
+    "default": "Sort: default",
+    "fastest": "Fastest first",
+    "slowest": "Slowest first"
+  },
+  "geo": {
+    "toggleTooltip": "Toggle the geo breakdown",
+    "button": "Geo",
+    "byCountry": "Proxies by country",
+    "summary": "{{countries}} countries · {{proxies}} proxies",
+    "unknown": "Unknown"
+  },
+  "scheduler": {
+    "tooltip": "Automatically re-test every proxy on a schedule",
+    "autoCheckEvery": "Auto-check every",
+    "min": "min"
+  },
+  "selection": {
+    "count": "{{count}} selected",
+    "checkSelected": "Check selected",
+    "moveToGroup": "Move to group",
+    "noGroupsYet": "No groups yet — create one first.",
+    "removeFromGroup": "Remove from group",
+    "deleteSelected": "Delete selected",
+    "clear": "Clear",
+    "clearTooltip": "Clear selection"
+  },
+  "table": {
+    "loading": "Loading proxies...",
+    "emptyTitle": "No proxies found",
+    "emptyDescription": "Add a proxy manually or paste a batch of proxy strings.",
+    "selectAll": "Select all proxies",
+    "selectRow": "Select {{name}}",
+    "colName": "Name",
+    "colType": "Type",
+    "colEndpoint": "Endpoint",
+    "colUsername": "Username",
+    "colGroup": "Group",
+    "colProfiles": "Profiles",
+    "colCreated": "Created",
+    "colStatus": "Status",
+    "colActions": "Actions",
+    "profileCount_one": "{{count}} profile",
+    "profileCount_other": "{{count}} profiles",
+    "defaultProxyName": "Proxy"
+  },
+  "rowActions": {
+    "testProxy": "Test proxy",
+    "healthHistory": "Health history",
+    "editProxy": "Edit proxy",
+    "deleteProxy": "Delete proxy",
+    "copyEndpoint": "Copy host:port",
+    "check": "Check"
+  },
+  "status": {
+    "checking": "Checking…",
+    "failed": "Failed"
+  },
+  "bulkDelete": {
+    "confirm_one": "Delete {{count}} selected proxy? Linked profiles will keep working with their proxy assignment cleared.",
+    "confirm_other": "Delete {{count}} selected proxies? Linked profiles will keep working with their proxy assignment cleared."
+  },
+  "delete": {
+    "confirm": "Delete proxy \"{{name}}\"?"
+  },
+  "history": {
+    "dialogTitle": "Proxy health history",
+    "title": "Health history",
+    "empty": "No history yet. Run a health check (or enable Auto-check) and the latency/status timeline will build up here.",
+    "latencyOverTime": "Latency over time (ms)",
+    "ok": "ok",
+    "fail": "fail",
+    "checks_one": "{{count}} check",
+    "checks_other": "{{count}} checks",
+    "close": "Close"
+  },
+  "form": {
+    "dialogTitleEdit": "Edit proxy",
+    "dialogTitleCreate": "Create proxy",
+    "titleEdit": "Edit Proxy",
+    "titleCreate": "Create Proxy",
+    "descriptionEdit": "Update an existing proxy. Leave the masked password unchanged to keep the current value.",
+    "descriptionCreate": "Add a single structured proxy to the local SQLite pool.",
+    "tipPrefix": "Tip: paste your proxy",
+    "tipSuffix": "into the Host field to auto-fill every field.",
+    "proxyName": "Proxy Name",
+    "proxyNamePlaceholder": "Residential US 01",
+    "type": "Type",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "optional": "Optional",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes",
+    "createProxy": "Create Proxy"
+  },
+  "batch": {
+    "dialogTitle": "Batch add proxies",
+    "title": "Batch Add Proxies",
+    "descriptionPrefix": "Paste one proxy per line. Supported format:",
+    "defaultType": "Default Type",
+    "proxyLines": "Proxy Lines",
+    "resultTitle": "Batch Result",
+    "total": "Total",
+    "created": "Created",
+    "skipped": "Skipped",
+    "errors": "Errors",
+    "lineError": "Line {{line}}: {{message}}",
+    "close": "Close",
+    "importing": "Importing...",
+    "addProxies": "Add Proxies"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "Edit group",
+    "dialogTitleNew": "New group",
+    "titleEdit": "Edit Proxy Group",
+    "titleNew": "New Proxy Group",
+    "description": "Group proxies by country or purpose (e.g. USA, UK, Japan). You can target a group when batch-creating profiles.",
+    "groupName": "Group Name",
+    "groupNamePlaceholder": "USA Proxies",
+    "color": "Color",
+    "colorLabel": "Color {{color}}",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "createGroup": "Create Group"
+  },
+  "errors": {
+    "deleteProxies": "Failed to delete proxies.",
+    "loadProxies": "Failed to load proxies.",
+    "copyClipboard": "Could not copy to clipboard.",
+    "deleteSelected": "Failed to delete selected proxies.",
+    "saveProxy": "Failed to save proxy.",
+    "batchAdd": "Failed to batch add proxies.",
+    "bulkTest": "Bulk test failed.",
+    "savePolicy": "Could not save the proxy policy.",
+    "saveSchedule": "Could not save the schedule.",
+    "enterGroupName": "Enter a group name.",
+    "saveGroup": "Could not save the group.",
+    "deleteGroup": "Could not delete the group.",
+    "moveProxies": "Could not move the proxies.",
+    "autoGroup": "Auto-group failed. Run Test All first so proxies have a detected country.",
+    "deleteProxy": "Failed to delete proxy. Remove linked profiles or change their proxy assignment first."
+  }
+}

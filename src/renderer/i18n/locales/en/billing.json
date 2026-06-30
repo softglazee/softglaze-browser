@@ -1,0 +1,251 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "header": {
+    "title": "Billing & Plans",
+    "description": "Manage your subscription, compare plans, and upgrade — all in one place."
+  },
+  "status": {
+    "loading": "Loading…",
+    "sourceOwner": "Source owner",
+    "active": "Active",
+    "activeRenews": "Active · renews {{date}}",
+    "trial": "Trial",
+    "trialDaysLeft": "Trial · {{days}}d left",
+    "graceDaysLeft": "Grace · {{days}}d left",
+    "subscriptionEnded": "Subscription ended"
+  },
+  "backend": {
+    "licensedVerified": "Licensed & verified",
+    "renews": "renews {{date}}",
+    "noLicense": "Licensing active — no paid license yet for this install."
+  },
+  "current": {
+    "title": "Current plan",
+    "sourceOwnerAllFeatures": "Source owner · all features",
+    "paid": "paid",
+    "freeTrial": "free trial"
+  },
+  "grace": {
+    "message_one": "Your {{kind}} has ended — {{count}} grace day left. Renew below to avoid losing access.",
+    "message_other": "Your {{kind}} has ended — {{count}} grace days left. Renew below to avoid losing access.",
+    "kindTrial": "free trial",
+    "kindSubscription": "subscription"
+  },
+  "banned": {
+    "message": "Your subscription has ended and profile launching is locked. Subscribe or enter a purchase code to restore access."
+  },
+  "trialRemaining": {
+    "message_one": "Free trial — {{count}} day remaining.",
+    "message_other": "Free trial — {{count}} days remaining."
+  },
+  "seats": {
+    "label": "Team seats",
+    "usage": "{{used}} / {{total}} used",
+    "upgradeToAddMore": "· upgrade to add more"
+  },
+  "exempt": {
+    "note": "You are the source owner — exempt from the subscription system. All features are included."
+  },
+  "checkout": {
+    "waiting": "Waiting for your payment…",
+    "waitingForPlan": "Waiting for your payment · {{plan}}…",
+    "opened": "A payment page opened in your browser. After paying, this updates automatically.",
+    "reopen": "Reopen payment page"
+  },
+  "plans": {
+    "chooseHeading": "Choose a plan",
+    "bestValue": "Best value",
+    "current": "Current",
+    "footerNote": "Payments are processed by the methods your administrator has enabled. After paying in your browser, this page activates your plan automatically."
+  },
+  "cta": {
+    "included": "Included",
+    "onPaidPlan": "On a paid plan",
+    "trialActiveDaysLeft": "Trial active · {{days}}d left",
+    "startFreeTrial": "Start free trial",
+    "currentPlan": "Current plan",
+    "upgradeEnterprise": "Upgrade to Enterprise",
+    "downgradePro": "Downgrade to Pro",
+    "choosePlan": "Choose {{name}}"
+  },
+  "trial": {
+    "started": "Your free trial is active of full access. Enjoy!",
+    "startedWithDays": "Your free trial is active — {{days}} days of full access. Enjoy!",
+    "errors": {
+      "failed": "Could not start the trial."
+    }
+  },
+  "redeem": {
+    "label": "Have a purchase code?",
+    "apply": "Apply",
+    "success": "Purchase code applied — thank you!",
+    "errors": {
+      "empty": "Enter your purchase code.",
+      "failed": "Could not apply that code."
+    }
+  },
+  "pay": {
+    "received": "Payment received — your plan is now active!",
+    "errors": {
+      "noMethods": "No payment methods are enabled yet — please contact your administrator.",
+      "checkoutFailed": "Could not start checkout.",
+      "submitFailed": "Could not submit your payment."
+    }
+  },
+  "payModal": {
+    "title": "Pay for {{name}}",
+    "manualSubmitted": "Payment submitted. An administrator will review it and activate your plan shortly.",
+    "manualBadge": "Manual",
+    "continueTo": "Continue to {{method}}",
+    "openPayLink": "Open payment link",
+    "referencePlaceholder": "Payment reference / transaction ID",
+    "notePlaceholder": "Note (optional)",
+    "submitForApproval": "I’ve paid — submit for approval",
+    "manualActivationNote": "Your plan activates once an administrator confirms the payment."
+  },
+  "admin": {
+    "configureMethods": "Configure payment methods in Settings"
+  },
+  "invoices": {
+    "title": "Invoices",
+    "subtitleAdmin": "All payments across owners — auto-captured + manual.",
+    "subtitleUser": "Your payment receipts.",
+    "add": "Add",
+    "empty": "No invoices yet.",
+    "manualSuffix": "manual",
+    "confirmDelete": "Delete this invoice?",
+    "cols": {
+      "date": "Date",
+      "owner": "Owner",
+      "amount": "Amount",
+      "method": "Method",
+      "status": "Status",
+      "reference": "Reference"
+    },
+    "errors": {
+      "loadFailed": "Could not load invoices.",
+      "deleteFailed": "Could not delete."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Add invoice",
+    "editTitle": "Edit invoice",
+    "ownerMemberId": "Owner member ID",
+    "optionalPlaceholder": "(optional)",
+    "amount": "Amount",
+    "currency": "Currency",
+    "method": "Method",
+    "status": "Status",
+    "tier": "Tier",
+    "months": "Months",
+    "reference": "Reference",
+    "referencePlaceholder": "txn / code",
+    "note": "Note",
+    "errors": {
+      "invalidAmount": "Enter a valid amount.",
+      "saveFailed": "Could not save invoice."
+    }
+  },
+  "planManager": {
+    "title": "Plans & packages",
+    "subtitle": "Set prices, edit details, and create new packages. Changes apply to checkout instantly.",
+    "newPackage": "New package",
+    "activeBadge": "Active",
+    "hiddenBadge": "Hidden",
+    "termMeta": "{{months}}mo term · {{tier}}",
+    "hide": "Hide",
+    "show": "Show",
+    "hideTitle": "Hide from checkout",
+    "showTitle": "Show on checkout",
+    "deleteTitle": "Delete plan",
+    "confirmDelete": "Delete the “{{name}}” plan? Buyers will no longer see it.",
+    "errors": {
+      "loadFailed": "Could not load plans.",
+      "updateFailed": "Could not update plan.",
+      "deleteFailed": "Could not delete plan."
+    }
+  },
+  "planForm": {
+    "newTitle": "New package",
+    "editTitle": "Edit {{name}}",
+    "editTitleAria": "Edit package",
+    "packageName": "Package name",
+    "planType": "Plan type",
+    "typePaid": "Paid",
+    "typeTrial": "Free trial",
+    "trialLength": "Trial length (days)",
+    "price": "Price",
+    "currency": "Currency",
+    "shownAs": "Shown as",
+    "trialShownValue": "{{days}} days · free",
+    "billedPer": "Billed per",
+    "term": "Term (months granted)",
+    "featureTier": "Feature tier",
+    "bestValue": "Best value",
+    "active": "Active",
+    "tagline": "Tagline",
+    "taglinePlaceholder": "Everything a solo operator needs.",
+    "features": "Features (one per line)",
+    "featuresPlaceholder": "Unlimited browser profiles\nFull fingerprint engine\nProxy pool & rotation",
+    "savePackage": "Save package",
+    "errors": {
+      "nameRequired": "Give the package a name.",
+      "invalidPrice": "Enter a valid price.",
+      "saveFailed": "Could not save plan."
+    }
+  },
+  "subscribers": {
+    "title": "Subscribers",
+    "subtitle": "Every account, when they joined, their plan and expiry. {{count}} total.",
+    "assignPlan": "Assign plan",
+    "empty": "No owner accounts yet.",
+    "trialSuffix": "trial",
+    "daysLeftShort": "{{days}}d",
+    "assign": "Assign",
+    "assignTitle": "Assign / grant a plan",
+    "state": {
+      "ended": "Ended",
+      "grace": "Grace",
+      "active": "Active",
+      "trial": "Trial"
+    },
+    "cols": {
+      "account": "Account",
+      "joined": "Joined",
+      "plan": "Plan",
+      "state": "State",
+      "expires": "Expires",
+      "team": "Team"
+    },
+    "errors": {
+      "loadFailed": "Could not load subscribers."
+    }
+  },
+  "assignForm": {
+    "title": "Assign a plan",
+    "account": "Account",
+    "plan": "Plan",
+    "months": "Months",
+    "monthsWithDefault": "Months (default {{default}})",
+    "recordAsPaid": "Record as paid sale",
+    "noteOptional": "Note (optional)",
+    "notePlaceholder": "Why this was granted",
+    "grantNote": "Grants the term immediately and clears any subscription block.",
+    "grantNotePaid": "A paid invoice is logged.",
+    "grantNoteFree": "Logged as a $0 grant.",
+    "fallbackAccount": "account",
+    "fallbackPlan": "plan",
+    "success_one": "Assigned {{plan}} to {{name}} — {{count}} month.",
+    "success_other": "Assigned {{plan}} to {{name}} — {{count}} months.",
+    "errors": {
+      "chooseAccount": "Choose an account.",
+      "choosePlan": "Choose a plan.",
+      "assignFailed": "Could not assign plan."
+    }
+  }
+}
