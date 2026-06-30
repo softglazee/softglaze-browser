@@ -5,10 +5,12 @@
   "main": "src/main/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
-    "build": "vite build && electron-builder",
+    "build": "node scripts/build-firefox-ext.mjs && vite build && electron-builder",
     "build:frontend": "vite build",
     "build:electron": "prisma generate && electron-builder --win --x64",
     "build:tenant": "node scripts/build-tenant.js",
+    "build:firefox-ext": "node scripts/build-firefox-ext.mjs",
+    "sign:firefox-ext": "node scripts/build-firefox-ext.mjs && npx --yes web-ext sign --source-dir src/firefox-extension --artifacts-dir build/firefox-ext --channel unlisted --ignore-files README.md",
     "check:deps": "node scripts/check-deps.js",
     "test": "node --test \"test/**/*.test.js\"",
     "postinstall": "prisma generate"

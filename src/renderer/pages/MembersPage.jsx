@@ -48,6 +48,10 @@ const FEATURES = [
   ['batchImport', 'Batch import'], ['trash', 'Trash'], ['members', 'Members'], ['settings', 'Settings']
 ];
 
+// Role ranks (mirror of permissions.js) — used to show only the action toggles a
+// member's role can actually perform.
+const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
+
 // Child-role caps relevant to a given member role.
 const CHILD_CAPS = {
   OWNER: [['maxAdmins', 'Admins'], ['maxManagers', 'Managers'], ['maxOperators', 'Operators']],
@@ -870,6 +874,24 @@ function PermissionEditor({ role, value, onChange, granter }) {
   const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2';
   const set = (patch) => onChange({ ...value, ...patch });
   const setFeature = (k, on) => onChange({ ...value, features: { ...(value.features || {}), [k]: on } });
+  const setAction = (k, on) => onChange({ ...value, actions: { ...(value.actions || {}), [k]: on } });
+
+  // Per-action capability catalog (single source = permissions.js). We only show the
+  // actions this member's ROLE can perform; toggling one OFF revokes it (restrict-only).
+  const [catalog, setCatalog] = useState([]);
+  useEffect(() => {
+    let live = true;
+    softglazeApi.team.permissionCatalog().then((r) => { if (live) setCatalog((r && r.actions) || []); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  const rank = ROLE_RANK[String(role || '').toUpperCase()] || 0;
+  const roleActions = catalog.filter((a) => rank >= a.minRank);
+  const actionCats = [];
+  for (const a of roleActions) {
+    let g = actionCats.find((c) => c.name === a.category);
+    if (!g) { g = { name: a.category, items: [] }; actionCats.push(g); }
+    g.items.push(a);
+  }
 
   const NumLimit = ({ k, label }) => {
     const max = granter ? granter[k] : -1;
@@ -937,15 +959,71 @@ function PermissionEditor({ role, value, onChange, granter }) {
           })}
         </div>
       </div>
+
+      {actionCats.length > 0 && (
+        <div>
+          <label className={labelCls}>Action permissions</label>
+          <p className="text-[10.5px] text-muted-foreground mb-2 -mt-1">On by default for this role. Turn one off to revoke it for this member only.</p>
+          <div className="space-y-2.5">
+            {actionCats.map((cat) => (
+              <div key={cat.name}>
+                <div className="text-[10px] uppercase tracking-wider text-muted-dark mb-1">{cat.name}</div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  {cat.items.map((a) => {
+                    const granterOk = !granter || !granter.actions || granter.actions[a.key] !== false;
+                    return (
+                      <label key={a.key} className={`flex items-center gap-2 text-[12px] ${granterOk ? 'text-muted-foreground cursor-pointer' : 'text-muted-dark cursor-not-allowed'}`}>
+                        <input type="checkbox" disabled={!granterOk} checked={granterOk && ((value.actions || {})[a.key] !== false)} onChange={(e) => setAction(a.key, e.target.checked)} className="accent-blue-500" />
+                        {a.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function actionLabel(a) {
-  const map = { launch: 'launched', stop: 'stopped', create: 'created', update: 'edited', delete: 'deleted', restore: 'restored', import: 'imported', assign: 'assigned', reassign: 'reassigned', 'parallel-run': 'parallel run', 'macro-run': 'macro run' };
+  const map = {
+    launch: 'launched', stop: 'stopped', create: 'created', update: 'edited', delete: 'deleted',
+    restore: 'restored', import: 'imported', assign: 'assigned', reassign: 'reassigned',
+    'parallel-run': 'parallel run', 'macro-run': 'macro run',
+    // Security / team audit events (logAudit).
+    'member.create': 'member added', 'member.update': 'member edited', 'member.delete': 'member removed',
+    'member.permissions': 'permissions changed', 'member.status': 'status changed',
+    'member.login': 'signed in', 'member.logout': 'signed out', 'member.invite-accept': 'invite accepted'
+  };
   return map[String(a || '').toLowerCase()] || a;
 }
-const ACTION_COLORS = { launched: '#10b981', stopped: '#ef4444', created: '#3b82f6', edited: '#8b5cf6', deleted: '#ef4444', restored: '#10b981', imported: '#f59e0b', assigned: '#06b6d4', reassigned: '#06b6d4' };
+const ACTION_COLORS = {
+  launched: '#10b981', stopped: '#ef4444', created: '#3b82f6', edited: '#8b5cf6', deleted: '#ef4444',
+  restored: '#10b981', imported: '#f59e0b', assigned: '#06b6d4', reassigned: '#06b6d4',
+  'member added': '#3b82f6', 'member edited': '#8b5cf6', 'member removed': '#ef4444',
+  'permissions changed': '#f59e0b', 'status changed': '#f59e0b',
+  'signed in': '#10b981', 'signed out': '#94a3b8', 'invite accepted': '#06b6d4'
+};
+// Structured audit detail is stored as compact JSON (logAudit) — render it as a
+// readable "key: value · key: value" line; legacy free-text detail passes through.
+function humanizeDetail(detail) {
+  if (!detail) return '';
+  const s = String(detail);
+  if (s[0] !== '{' && s[0] !== '[') return s;
+  try {
+    const o = JSON.parse(s);
+    if (o && typeof o === 'object' && !Array.isArray(o)) {
+      return Object.entries(o)
+        .filter(([, v]) => v !== null && v !== undefined && v !== '')
+        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+        .join(' · ');
+    }
+  } catch (e) { /* not JSON */ }
+  return s;
+}
 function feedTime(iso) {
   if (!iso) return '';
   const d = new Date(iso); const s = (Date.now() - d.getTime()) / 1000;
@@ -1068,7 +1146,7 @@ function TeamActivityFeed() {
               <span className="text-foreground font-semibold">{r.memberName}</span>
               <span className="px-2 py-0.5 rounded-md text-[11px] font-medium" style={{ background: `color-mix(in srgb, ${ac} 14%, transparent)`, color: ac }}>{action}</span>
               {r.profileTitle && <span className="text-muted-foreground truncate">{r.profileTitle}</span>}
-              {r.detail && <span className="text-muted-foreground truncate hidden md:inline">· {r.detail}</span>}
+              {r.detail && <span className="text-muted-foreground truncate hidden md:inline">· {humanizeDetail(r.detail)}</span>}
               <span className="ml-auto text-[11px] text-muted-foreground font-mono shrink-0">{feedTime(r.createdAt)}</span>
             </div>
           );
