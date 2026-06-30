@@ -7294,9 +7294,18 @@ async function redeemPurchaseCode(payload) {
   }
   const v = payments.verifyPurchaseCode(code);
   if (!v.valid) throw new Error('That purchase code is not valid.');
+  const normalized = code.trim().toUpperCase();
   const ownerId = await resolveLicenseOwnerId();
+  // Replay guard: a purchase code may be redeemed once per workspace. A prior
+  // redemption (or the checkout/approval that generated the code) leaves an invoice
+  // carrying the code as its reference; reusing it to stack months is rejected.
+  const prior = await getPrisma().invoice.findFirst({ where: { ownerMemberId: ownerId ?? null, reference: normalized } });
+  if (prior) { const e = new Error('That purchase code has already been redeemed.'); e.code = 'CODE_ALREADY_REDEEMED'; throw e; }
   const lic = await ensureLicense(ownerId);
-  const updated = await applyPaidMonths(lic, v.months, code.trim().toUpperCase());
+  const updated = await applyPaidMonths(lic, v.months, normalized);
+  // Record a receipt so the code can't be replayed and revenue is tracked.
+  await recordInvoice({ ownerId, provider: 'code', amount: '0', currency: 'USD', tier: lic.tier || 'pro', months: v.months, reference: normalized, status: 'paid', source: 'manual', note: 'Purchase code redemption' });
+  await logAudit('billing.redeem', { detail: { months: v.months, ref: normalized } });
   return licenseView(updated);
 }
 
@@ -7632,6 +7641,17 @@ async function pollCheckout(payload) {
   const st = await provider.getStatus(cfg, ref);
   if (!st.paid) return { status: st.status, paid: false };
 
+  // Idempotency: a paid order is applied EXACTLY once. The renderer polls every few
+  // seconds, so without this guard each poll after success would stack another month.
+  // Gate on the order id via a small processed-orders ledger.
+  const orderKey = String(pending.orderId || input.orderId || input.uuid || '').trim();
+  const processedRaw = (await readSetting('processedCheckouts', [])) || [];
+  const processedList = Array.isArray(processedRaw) ? processedRaw : [];
+  if (orderKey && processedList.includes(orderKey)) {
+    const ownerIdNow = await resolveLicenseOwnerId();
+    return { status: 'paid', paid: true, alreadyProcessed: true, license: await licenseView(await ensureLicense(ownerIdNow)) };
+  }
+
   // Recover the plan chosen at startCheckout (falls back to Pro for legacy orders).
   const plan = await findPlan(pending.planId);
   const months = Math.max(1, Number(pending.months) || plan.months || PLAN.months);
@@ -7641,8 +7661,12 @@ async function pollCheckout(payload) {
   const lic = await ensureLicense(ownerId);
   const code = payments.generatePurchaseCode(months);
   const updated = await applyPaidMonths(lic, months, code, tier);
+  // Mark the order processed BEFORE the (best-effort) invoice write so a re-poll
+  // can't re-grant even if the receipt write fails.
+  if (orderKey) await writeSetting('processedCheckouts', [...processedList, orderKey].slice(-500)).catch(() => {});
   await writeSetting('pendingCheckout', null).catch(() => {});
-  await recordInvoice({ ownerId, provider: def.id, amount: plan.amount, currency: plan.currency, tier, months, reference: code, status: 'paid', source: 'auto' });
+  await recordInvoice({ ownerId, provider: def.id, amount: plan.amount, currency: plan.currency, tier, months, reference: code, status: 'paid', source: 'auto', note: orderKey || null });
+  await logAudit('billing.checkout', { detail: { provider: def.id, months, tier, order: orderKey || null } });
   try {
     const db = getPrisma();
     const owner = ownerId ? await db.member.findUnique({ where: { id: ownerId } }) : null;
@@ -7706,6 +7730,9 @@ async function resolveManualPayment(payload) {
   const idx = arr.findIndex((e) => e && e.id === id);
   if (idx < 0) throw new Error('Manual payment not found.');
   const entry = { ...arr[idx] };
+  // Idempotency: an already-resolved payment must not be re-approved (which would
+  // grant the term a second time) or flipped after the fact.
+  if (entry.status && entry.status !== 'pending') throw new Error(`This payment was already ${entry.status}.`);
   if (action === 'approve') {
     const lic = await ensureLicense(entry.ownerId ?? null);
     const months = Math.max(1, Number(entry.months) || 1);
@@ -7728,6 +7755,7 @@ async function resolveManualPayment(payload) {
   }
   arr[idx] = entry;
   await writeSetting('manualPayments', arr);
+  await logAudit('billing.manual-resolve', { detail: { id, status: entry.status, owner: entry.ownerId ?? null, months: entry.months ?? null } });
   return { ok: true, status: entry.status };
 }
 
@@ -7775,7 +7803,11 @@ async function recordInvoice(data) {
         paidAt: status === 'paid' ? new Date() : null
       }
     });
-  } catch (e) { /* invoice is best-effort */ }
+  } catch (e) {
+    // Best-effort (must never fail a payment) but NOT silent: a failure here means a
+    // license may be advanced with no receipt, which a Super Admin needs to reconcile.
+    console.error('[recordInvoice] receipt write FAILED — license may be advanced without an invoice:', e && e.message ? e.message : e);
+  }
 }
 
 async function listInvoices(payload) {
@@ -7836,6 +7868,9 @@ async function updateInvoice(payload) {
   await requireSuperAdmin();
   const input = requireObject(payload);
   const id = parseId(input.id);
+  const db = getPrisma();
+  const existing = await db.invoice.findUnique({ where: { id } });
+  if (!existing) throw new Error('Invoice not found.');
   const data = {};
   if (input.ownerId !== undefined) data.ownerMemberId = (input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : null;
   if (input.amount !== undefined) data.amount = sanitizeAmount(input.amount);
@@ -7849,7 +7884,22 @@ async function updateInvoice(payload) {
     data.status = String(input.status);
     data.paidAt = data.status === 'paid' ? new Date() : null;
   }
-  const updated = await getPrisma().invoice.update({ where: { id }, data });
+  const updated = await db.invoice.update({ where: { id }, data });
+
+  // Refund → claw back the granted term. When an invoice flips to 'refunded', subtract
+  // its months from the owner's license so access reflects the reversal; the
+  // trial→grace→ban state machine then re-evaluates (and licenseView re-syncs the ban).
+  if (data.status === 'refunded' && existing.status !== 'refunded' && existing.ownerMemberId != null && existing.months) {
+    try {
+      const lic = await db.license.findFirst({ where: { ownerMemberId: existing.ownerMemberId } });
+      if (lic && lic.trialEndsAt) {
+        const reduced = new Date(new Date(lic.trialEndsAt).getTime() - Number(existing.months) * PLAN.days * 86400000);
+        const reducedLic = await db.license.update({ where: { id: lic.id }, data: { trialEndsAt: reduced } });
+        await licenseView(reducedLic); // recomputes state + syncs owner ban
+      }
+      await logAudit('billing.refund', { detail: { invoice: id, months: existing.months, owner: existing.ownerMemberId } });
+    } catch (e) { console.error('[updateInvoice] refund downgrade failed:', e && e.message ? e.message : e); }
+  }
   return serializeInvoice(updated);
 }
 

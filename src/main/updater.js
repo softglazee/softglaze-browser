@@ -26,7 +26,7 @@ const { tenantConfig } = require('./tenantConfig');
 let autoUpdaterRef = null;
 let eventSink = null;
 // status: idle | checking | available | not-available | downloading | downloaded | error
-let lastState = { status: 'idle', version: null, percent: 0, error: null };
+let lastState = { status: 'idle', version: null, percent: 0, error: null, releaseNotes: null, checkedAt: null };
 
 // The renderer broadcast is owned by ipcHandlers (it holds the CHANNELS map and
 // sends to every window); the updater just pushes state into the sink it registers.
@@ -35,6 +35,17 @@ function setEventSink(fn) { eventSink = typeof fn === 'function' ? fn : null; }
 function sendEvent(patch) {
   lastState = { ...lastState, ...patch };
   try { if (eventSink) eventSink(lastState); } catch (e) { /* sink gone */ }
+}
+
+// electron-updater's releaseNotes is a string (generic feed) or [{version,note}]
+// (GitHub). Flatten to plain text, strip HTML, cap length for the in-app display.
+function normalizeNotes(info) {
+  const rn = info && info.releaseNotes;
+  if (!rn) return null;
+  const strip = (s) => String(s).replace(/<[^>]+>/g, '').trim();
+  if (typeof rn === 'string') return strip(rn).slice(0, 2000) || null;
+  if (Array.isArray(rn)) return (rn.map((r) => (r && r.note) ? strip(r.note) : '').filter(Boolean).join('\n\n').slice(0, 2000)) || null;
+  return null;
 }
 
 function resolveFeed() {
@@ -71,16 +82,16 @@ function initAutoUpdater(mainWindow) {
     console.error('[updater] error:', (err && err.message) || err);
     sendEvent({ status: 'error', error: (err && err.message) || String(err) });
   });
-  autoUpdater.on('checking-for-update', () => sendEvent({ status: 'checking' }));
+  autoUpdater.on('checking-for-update', () => sendEvent({ status: 'checking', error: null }));
   autoUpdater.on('update-available', (info) => {
     console.log('[updater] update available:', info && info.version);
-    sendEvent({ status: 'available', version: (info && info.version) || null });
+    sendEvent({ status: 'available', version: (info && info.version) || null, releaseNotes: normalizeNotes(info), checkedAt: Date.now(), error: null });
   });
-  autoUpdater.on('update-not-available', () => sendEvent({ status: 'not-available' }));
+  autoUpdater.on('update-not-available', () => sendEvent({ status: 'not-available', checkedAt: Date.now(), error: null }));
   autoUpdater.on('download-progress', (p) => sendEvent({ status: 'downloading', percent: Math.round((p && p.percent) || 0) }));
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[updater] update downloaded:', info && info.version);
-    sendEvent({ status: 'downloaded', version: (info && info.version) || null, percent: 100 });
+    sendEvent({ status: 'downloaded', version: (info && info.version) || null, releaseNotes: normalizeNotes(info), percent: 100, error: null });
   });
 
   autoUpdater.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
@@ -88,7 +99,7 @@ function initAutoUpdater(mainWindow) {
 
 // Current known updater state — so the banner can render correctly even if the
 // Dashboard mounts AFTER the event already fired.
-function getState() { return lastState; }
+function getState() { return { ...lastState, active: Boolean(autoUpdaterRef) }; }
 
 // Quit and install the downloaded update (driven by the banner's "Install" button).
 function installDownloadedUpdate() {
@@ -100,9 +111,9 @@ function installDownloadedUpdate() {
 
 // Manual re-check (optional; the banner can offer "Check again").
 function checkForUpdatesNow() {
-  if (!autoUpdaterRef) return { ok: false, error: 'Auto-update is not active in this build.' };
+  if (!autoUpdaterRef) return { ok: false, active: false, error: 'Automatic updates are not enabled in this build.' };
   autoUpdaterRef.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
-  return { ok: true };
+  return { ok: true, active: true };
 }
 
 module.exports = { initAutoUpdater, setEventSink, getState, installDownloadedUpdate, checkForUpdatesNow };
