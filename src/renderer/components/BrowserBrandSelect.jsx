@@ -7,6 +7,17 @@
 // The marks below are ORIGINAL stylized glyphs (currentColor), NOT the vendors'
 // trademarked logos — same trademark-safe approach as the proxy provider marks.
 
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/index.js';
+import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
+import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
+
+// Register the shared "cmpUi" namespace without touching the central i18n config.
+// addResourceBundle is a no-op if the bundle already exists, so this is safe across
+// hot reloads and the other components that register the same namespace.
+if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
+if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
+
 export const BROWSER_BRANDS = [
   { id: 'Chrome', label: 'Chrome', accent: '#4285F4' },
   { id: 'Edge', label: 'Edge', accent: '#0F8AE0' },
@@ -48,6 +59,7 @@ export function BrandMark({ id, className = 'w-4 h-4' }) {
 }
 
 export default function BrowserBrandSelect({ value, onChange }) {
+  const { t } = useTranslation('cmpUi');
   const current = normalizeBrandId(value);
   return (
     <div className="flex flex-wrap gap-2">
@@ -58,7 +70,7 @@ export default function BrowserBrandSelect({ value, onChange }) {
             key={b.id}
             type="button"
             onClick={() => onChange(b.id)}
-            title={`Present this profile as ${b.label}`}
+            title={t('brandSelect.presentAs', { brand: b.label })}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition ${active ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-background text-muted hover:border-muted hover:text-foreground'}`}
           >
             <span style={{ color: b.accent }}><BrandMark id={b.id} className="w-4 h-4" /></span>

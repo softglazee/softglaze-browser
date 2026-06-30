@@ -1,0 +1,170 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Loading…",
+      "sourceOwner": "Source owner",
+      "active": "Active",
+      "activeUntil": "Active · until {{date}}",
+      "trialDaysLeft_one": "Trial · {{count}}d left",
+      "trialDaysLeft_other": "Trial · {{count}}d left",
+      "graceDaysLeft_one": "Grace · {{count}}d left",
+      "graceDaysLeft_other": "Grace · {{count}}d left",
+      "subscriptionEnded": "Subscription ended"
+    },
+    "subscription": {
+      "title": "Subscription",
+      "planLine": "SoftGlaze Browser · {{tier}} plan",
+      "manageButton": "Manage subscription & plans"
+    },
+    "grace": {
+      "freeTrial": "free trial",
+      "subscription": "subscription",
+      "message_one": "Your {{what}} has ended — {{count}} grace day left. Renew on the Billing page to keep access.",
+      "message_other": "Your {{what}} has ended — {{count}} grace days left. Renew on the Billing page to keep access."
+    },
+    "banned": {
+      "message": "Your subscription has ended and profile launching is locked. Subscribe or enter a purchase code on the Billing page."
+    },
+    "trial": {
+      "message_one": "Free trial — {{count}} day remaining.",
+      "message_other": "Free trial — {{count}} days remaining."
+    },
+    "seats": {
+      "label": "Team seats",
+      "usage": "{{used}} / {{total}} used"
+    },
+    "gateway": {
+      "title": "Payment methods",
+      "description": "Super Admin only. Enable the methods shown to owners at checkout and store each provider’s keys.",
+      "loadError": "Could not load payment settings.",
+      "footnote": "Keys are encrypted at rest on this machine and never leave it. Checkout is poll-based (no webhooks), so cross-install enforcement still needs the licensing backend. Wise & Manual are approved by you under “Pending payments” below."
+    },
+    "provider": {
+      "kindManual": "Manual",
+      "kindAutomated": "Automated",
+      "on": "on",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enableAria": "Enable {{provider}}",
+      "documentation": "Documentation",
+      "secretStoredPlaceholder": "•••••••• (leave blank to keep current)",
+      "secretPlaceholder": "Paste the key",
+      "save": "Save",
+      "testConnection": "Test connection",
+      "enabledMsg": "Enabled.",
+      "disabledMsg": "Disabled.",
+      "updateError": "Could not update.",
+      "savedMsg": "Saved.",
+      "saveError": "Could not save.",
+      "connectionOk": "Connection looks good ✓",
+      "validationFailedKeys": "Validation failed — check the keys.",
+      "validationFailed": "Validation failed."
+    },
+    "manual": {
+      "title": "Pending payments",
+      "description": "Manual (Wise / bank transfer) submissions awaiting your approval.",
+      "loadError": "Could not load manual payments.",
+      "resolveError": "Could not update that payment.",
+      "ownerFallback": "Owner #{{id}}",
+      "refPrefix": "ref:",
+      "approve": "Approve",
+      "reject": "Reject",
+      "statusLabel": {
+        "pending": "pending",
+        "approved": "approved",
+        "rejected": "rejected"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monetization",
+    "affiliate": {
+      "title": "Affiliate & Referral Links",
+      "ownerOnly": "Owner only",
+      "description": "Your partner URLs for the Proxy marketplace “Purchase” buttons. Leave blank to use the Softglaze default.",
+      "loadError": "Could not load affiliate links.",
+      "saveError": "Could not save affiliate links.",
+      "savedMsg": "Saved. Marketplace buttons now use your links.",
+      "customLink": "Custom link",
+      "defaultLink": "Default link",
+      "openLinkTitle": "Open {{provider}} link",
+      "saving": "Saving…",
+      "saveButton": "Save links",
+      "footnote": "These links power the “Purchase at…” / “Visit dashboard” buttons on the Proxy pool → Providers tab. They are public referral URLs only — proxy tokens and credentials are never affected."
+    }
+  },
+  "developerApi": {
+    "title": "Developer API Access",
+    "description": "Generate API keys and run a local REST server to control Softglaze programmatically.",
+    "copy": "Copy",
+    "errors": {
+      "load": "Could not load developer API settings.",
+      "nameRequired": "Name the key (e.g. \"CI server\").",
+      "generate": "Could not generate API key.",
+      "revoke": "Could not revoke key.",
+      "toggleServer": "Could not change the local server state."
+    },
+    "keys": {
+      "title": "API Keys",
+      "namePlaceholder": "Key name (e.g. CI server)",
+      "generate": "Generate New API Key",
+      "copyOnce": "Copy this key now — it is shown only once and cannot be recovered.",
+      "empty": "No API keys yet.",
+      "lastUsed": "last used {{when}}",
+      "neverUsed": "never used",
+      "never": "never",
+      "revoke": "Revoke"
+    },
+    "server": {
+      "title": "Local REST API",
+      "runningAt": "Running at",
+      "stoppedPrefix": "Stopped · would bind to",
+      "loopbackOnly": "(loopback only)",
+      "disableTitle": "Disable local API",
+      "enableTitle": "Enable local API",
+      "curlExample": "Example: launch a profile via cURL",
+      "footnote": "The server only accepts requests from this machine and requires a valid Bearer key."
+    }
+  },
+  "migration": {
+    "title": "Transfer Profiles",
+    "ownerOnly": "Owner only",
+    "description": "Import your existing profiles from another anti-detect platform via its API.",
+    "sourcePlatform": "Source platform",
+    "noteLabel": "Note:",
+    "instructions": "Instructions",
+    "tokenSectionTitle": "{{platform}} API token",
+    "transferring": "Transferring…",
+    "startTransfer": "Start transfer",
+    "tokenFootnote": "Your token is used once for this transfer and is never stored. Local platforms (AdsPower, ixBrowser) must be running with their Local API enabled.",
+    "errors": {
+      "tokenRequired": "Enter your {{platform}} {{placeholder}}.",
+      "transferFailed": "Transfer failed."
+    },
+    "log": {
+      "title": "Migration log",
+      "imported": "{{created}}/{{total}} imported",
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} error(s)",
+      "waiting": "Waiting for the platform to respond…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Cookies won't be transferred if you're transferring from Dolphin's free plan."
+      },
+      "gologin": {
+        "placeholder": "GoLogin API token"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin automation token"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API Key"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API Key"
+      }
+    }
+  }
+}

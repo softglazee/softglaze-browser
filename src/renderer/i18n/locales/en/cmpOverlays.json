@@ -1,0 +1,96 @@
+{
+  "palette": {
+    "dialogLabel": "Command palette",
+    "searchPlaceholder": "Search pages, profiles, proxies, members…",
+    "searchAriaLabel": "Search pages, profiles, proxies, and members",
+    "resultsLabel": "Results",
+    "esc": "Esc",
+    "noMatches": "No matches.",
+    "nav": {
+      "dashboard": "Dashboard",
+      "profiles": "Profiles",
+      "groups": "Groups",
+      "proxies": "Proxy pool",
+      "browsers": "Browsers",
+      "extensions": "Extensions",
+      "batchImport": "Batch import",
+      "trash": "Trash",
+      "automation": "Automation",
+      "members": "Members",
+      "account": "Account",
+      "settings": "Settings"
+    },
+    "hint": {
+      "page": "Page",
+      "profile": "Profile",
+      "proxy": "Proxy",
+      "member": "Member"
+    },
+    "fallback": {
+      "profile": "Profile #{{id}}",
+      "proxy": "Proxy #{{id}}",
+      "member": "Member #{{id}}"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Skip setup",
+    "back": "Back",
+    "skip": "Skip",
+    "saveAndContinue": "Save & continue",
+    "msg": {
+      "smtpSaved": "SMTP saved.",
+      "proxySaved": "Proxy saved."
+    },
+    "err": {
+      "smtpSaveFailed": "Could not save SMTP settings.",
+      "proxySaveFailed": "Could not save the proxy.",
+      "profileCreateFailed": "Could not create the profile."
+    },
+    "welcome": {
+      "title": "Welcome to SoftGlaze",
+      "subtitle": "A quick 3-step setup gets you to your first profile. You can skip any step.",
+      "getStarted": "Get started",
+      "stepEmail": "Email (SMTP) — optional, for OTP codes",
+      "stepProxy": "Your first proxy — optional",
+      "stepProfile": "Your first browser profile"
+    },
+    "smtp": {
+      "title": "Email (SMTP)",
+      "subtitle": "Optional — lets the app send verification codes. You can set this later in Settings.",
+      "host": "SMTP host",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Port",
+      "portPlaceholder": "587",
+      "username": "Username",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Add your first proxy",
+      "subtitle": "Optional — give each identity its own network. You can add more in the Proxy pool.",
+      "type": "Type",
+      "host": "Host",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Port",
+      "portPlaceholder": "8080",
+      "user": "User",
+      "userPlaceholder": "optional",
+      "password": "Password",
+      "passwordPlaceholder": "optional"
+    },
+    "profile": {
+      "title": "Create your first profile",
+      "subtitle": "A unique, internally-consistent fingerprint is generated for you.",
+      "createAndFinish": "Create & finish",
+      "name": "Profile name",
+      "namePlaceholder": "My first profile",
+      "defaultName": "My first profile",
+      "deviceType": "Device type",
+      "desktop": "Desktop",
+      "mobile": "Mobile (Android)",
+      "mobileNote": "Android is emulated on the desktop engine — coherent UA, touch, screen & GPU, but not a real device.",
+      "proxyAttached": "Your new proxy will be attached to this profile."
+    }
+  }
+}
