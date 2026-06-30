@@ -16,8 +16,27 @@ import TemplatesModal from '@/components/TemplatesModal.jsx';
 import ActivityModal from '@/components/ActivityModal.jsx';
 import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import Pager from '@/components/ui/Pager.jsx';
+import CompareProfilesModal from '@/components/CompareProfilesModal.jsx';
+import { Pencil, GitCompare, Bookmark } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
+
+// Compact relative time ("just now", "5m ago", "3h ago", "2d ago"); the absolute
+// timestamp stays available on hover via the cell's title.
+function relTime(iso) {
+  try {
+    const d = new Date(iso).getTime();
+    if (!d) return 'Never';
+    const s = Math.max(0, Math.floor((Date.now() - d) / 1000));
+    if (s < 45) return 'just now';
+    const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+    const dys = Math.floor(h / 24); if (dys < 7) return `${dys}d ago`;
+    const w = Math.floor(dys / 7); if (w < 5) return `${w}w ago`;
+    const mo = Math.floor(dys / 30); if (mo < 12) return `${mo}mo ago`;
+    return `${Math.floor(dys / 365)}y ago`;
+  } catch (e) { return 'Never'; }
+}
 
 // --- CUSTOM STYLED SELECT DROPDOWN ---
 const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
@@ -352,6 +371,7 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
@@ -375,6 +395,13 @@ export default function ProfilesPage() {
   const [filterTag, setFilterTag] = useState('');
   const [filterProxy, setFilterProxy] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [compareProfiles, setCompareProfiles] = useState(null); // profiles being compared
+  const [filterPresets, setFilterPresets] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [renamePrefix, setRenamePrefix] = useState('');
+  const [renameStart, setRenameStart] = useState(1);
 
   const filteredProfiles = useMemo(() => {
     let list = profiles;
@@ -472,6 +499,26 @@ export default function ProfilesPage() {
     const t = setInterval(refreshSessions, 4000);
     return () => clearInterval(t);
   }, [refreshSessions]);
+
+  // Live bulk-launch progress: update the counter as each profile spawns, refresh
+  // the running indicators incrementally, and clear when the batch finishes.
+  useEffect(() => {
+    if (!softglazeApi.profiles.onBulkLaunchProgress) return undefined;
+    const off = softglazeApi.profiles.onBulkLaunchProgress((p) => {
+      if (!p) return;
+      if (p.phase === 'start') { setLaunchProgress({ done: 0, total: p.total }); return; }
+      if (p.phase === 'launched') { setLaunchProgress({ done: p.done, total: p.total }); refreshSessions(); return; }
+      if (p.phase === 'done') { setLaunchProgress(null); refreshSessions(); }
+    });
+    return off;
+  }, [refreshSessions]);
+
+  // Load saved filter presets (stored in global Settings).
+  useEffect(() => {
+    softglazeApi.settings.getGlobal()
+      .then((g) => { if (Array.isArray(g?.profileFilters)) setFilterPresets(g.profileFilters); })
+      .catch(() => {});
+  }, []);
 
   // Load the real Chrome builds installed on disk so the version picker only
   // offers versions that will actually launch a matching real binary.
@@ -720,9 +767,9 @@ export default function ProfilesPage() {
   async function handleBulkLaunch() {
     if (selectedIds.size === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); }
+    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); await refreshSessions(); }
     catch (err) { setError(err.message); }
-    finally { setBulkBusy(false); }
+    finally { setBulkBusy(false); setLaunchProgress(null); }
   }
   async function handleBulkClose(ids) {
     // Called two ways: from the bulk bar (no arg → use selection) and from a
@@ -743,6 +790,45 @@ export default function ProfilesPage() {
     try { await softglazeApi.profiles.bulkDelete([...selectedIds]); clearSelection(); await loadData(); }
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
+  }
+
+  async function handleTagAssign(mode) {
+    const tag = tagInput.trim();
+    if (!tag || selectedIds.size === 0) return;
+    setBulkBusy(true); setError('');
+    try { await softglazeApi.profiles.tagAssign([...selectedIds], tag, mode); setShowTagModal(false); setTagInput(''); await loadData(); }
+    catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  }
+  async function handleBulkRename() {
+    const prefix = renamePrefix.trim();
+    if (!prefix || selectedIds.size === 0) return;
+    setBulkBusy(true); setError('');
+    // Send ids in the current visible (filtered) order so the numbering matches the table.
+    const orderedIds = filteredProfiles.filter((p) => selectedIds.has(p.id)).map((p) => p.id);
+    try { await softglazeApi.profiles.bulkRename({ ids: orderedIds, prefix, start: Number(renameStart) || 1 }); setShowRenameModal(false); await loadData(); }
+    catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  }
+  function openCompare() {
+    const chosen = filteredProfiles.filter((p) => selectedIds.has(p.id)).slice(0, 3);
+    if (chosen.length >= 2) setCompareProfiles(chosen);
+  }
+  function applyPreset(preset) {
+    if (!preset) return;
+    setFilterGroup(preset.group ?? 'all');
+    setFilterTag(preset.tag ?? '');
+    setFilterProxy(preset.proxy ?? '');
+    setFilterStatus(preset.status ?? 'all');
+    setSearch(preset.search ?? '');
+  }
+  async function saveCurrentPreset() {
+    const name = window.prompt('Save the current filters as a preset — name:');
+    if (!name || !name.trim()) return;
+    const preset = { name: name.trim().slice(0, 40), group: filterGroup, tag: filterTag, proxy: filterProxy, status: filterStatus, search };
+    const next = [...filterPresets.filter((p) => p.name !== preset.name), preset];
+    setFilterPresets(next);
+    try { await softglazeApi.settings.setGlobal({ profileFilters: next }); } catch (err) { setError(err.message); }
   }
 
   // Softglaze Premium — fetch the live TOTP for a profile and copy it to the
@@ -1620,10 +1706,19 @@ export default function ProfilesPage() {
       {selectedIds.size > 0 && (
         <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
           <span className="text-sm text-primary font-bold">{selectedIds.size} selected</span>
+          {launchProgress && (
+            <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+              Launching {launchProgress.done}/{launchProgress.total}…
+            </span>
+          )}
           <div className="flex gap-2 ml-auto">
             <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">Launch</Button>
             <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title="Launch as Master + Slave mirrored windows (Premium)"><Combine className="w-3.5 h-3.5 mr-1" /> Synchronize</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>Close</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title="Add or remove a tag"><Tag className="w-3.5 h-3.5 mr-1" /> Tag</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title="Bulk rename with a prefix"><Pencil className="w-3.5 h-3.5 mr-1" /> Rename</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title="Compare 2–3 profiles"><GitCompare className="w-3.5 h-3.5 mr-1" /> Compare</Button>
             <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>Delete</Button>
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>Clear</Button>
           </div>
@@ -1662,6 +1757,13 @@ export default function ProfilesPage() {
         {(filterGroup !== 'all' || filterTag || filterProxy || filterStatus !== 'all' || search) && (
           <Button variant="ghost" size="sm" onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setSearch(''); }}>Clear Filters</Button>
         )}
+        {filterPresets.length > 0 && (
+          <CustomSelect value="" onChange={(e) => applyPreset(filterPresets.find((x) => x.name === e.target.value))} className="w-auto">
+            <option value="">Saved filters…</option>
+            {filterPresets.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+          </CustomSelect>
+        )}
+        <Button variant="ghost" size="sm" onClick={saveCurrentPreset} title="Save the current filters as a preset"><Bookmark className="w-3.5 h-3.5 mr-1" /> Save</Button>
         <span className="ml-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{filteredProfiles.length} profiles</span>
       </div>
       
@@ -1747,22 +1849,31 @@ export default function ProfilesPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      {p.proxyInfoString ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          <Link2 className="w-3 h-3" />
-                          {p.proxyInfoString.split(':')[0]}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
-                          Direct
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {p.proxy && p.proxy.lastStatus && (
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ background: p.proxy.lastStatus === 'ok' ? '#10b981' : (p.proxy.lastStatus === 'fail' ? '#ef4444' : '#9ca3af') }}
+                            title={`Proxy ${p.proxy.lastStatus}${p.proxy.lastLatencyMs != null ? ` · ${p.proxy.lastLatencyMs}ms` : ''}${p.proxy.lastCountry ? ` · ${p.proxy.lastCountry}` : ''}`}
+                          />
+                        )}
+                        {p.proxyInfoString ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            <Link2 className="w-3 h-3" />
+                            {p.proxyInfoString.split(':')[0]}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
+                            Direct
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">
                       <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title="View activity">
                         <History className="h-3.5 w-3.5" />
-                        {p.lastUsedAt ? formatDateTime(p.lastUsedAt) : "Never"}
+                        <span title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : 'Never used'}>{p.lastUsedAt ? relTime(p.lastUsedAt) : 'Never'}</span>
                         {p.launchCount ? <span className="text-[10px] bg-elevated border border-border px-1.5 py-0.5 rounded font-semibold ml-1">{p.launchCount}×</span> : null}
                       </button>
                     </td>
@@ -1871,6 +1982,49 @@ export default function ProfilesPage() {
       )}
       {activityProfile && (
         <ActivityModal profileId={activityProfile.id} profileName={activityProfile.title} onClose={() => setActivityProfile(null)} />
+      )}
+      {showTagModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowTagModal(false)}>
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-foreground">Tag {selectedIds.size} profile{selectedIds.size === 1 ? '' : 's'}</h3>
+            <p className="text-xs text-muted-foreground mt-1">Add or remove a tag across the selected profiles.</p>
+            <input
+              list="sg-all-tags"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="Tag name…"
+              className="mt-4 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+            <datalist id="sg-all-tags">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
+            <div className="mt-4 flex gap-2 justify-end">
+              <Button size="sm" variant="ghost" onClick={() => setShowTagModal(false)}>Cancel</Button>
+              <Button size="sm" variant="secondary" disabled={bulkBusy || !tagInput.trim()} onClick={() => handleTagAssign('remove')}>Remove</Button>
+              <Button size="sm" variant="primary" disabled={bulkBusy || !tagInput.trim()} onClick={() => handleTagAssign('add')}>Add</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showRenameModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowRenameModal(false)}>
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-foreground">Rename {selectedIds.size} profile{selectedIds.size === 1 ? '' : 's'}</h3>
+            <p className="text-xs text-muted-foreground mt-1">Number the selected profiles by a prefix, in their current visible order.</p>
+            <div className="mt-4 flex gap-2">
+              <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder="Prefix, e.g. Account" className="flex-1 bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+              <input type="number" min={0} value={renameStart} onChange={(e) => setRenameStart(Number(e.target.value) || 0)} className="w-20 bg-input-background border border-border rounded px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" title="Start number" />
+            </div>
+            {renamePrefix.trim() && (
+              <p className="mt-2 text-xs text-muted-foreground">Preview: <span className="text-foreground font-medium">{renamePrefix.trim()} {Number(renameStart) || 0}</span>, {renamePrefix.trim()} {(Number(renameStart) || 0) + 1}, …</p>
+            )}
+            <div className="mt-4 flex gap-2 justify-end">
+              <Button size="sm" variant="ghost" onClick={() => setShowRenameModal(false)}>Cancel</Button>
+              <Button size="sm" variant="primary" disabled={bulkBusy || !renamePrefix.trim()} onClick={handleBulkRename}>Rename</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {compareProfiles && (
+        <CompareProfilesModal profiles={compareProfiles} onClose={() => setCompareProfiles(null)} />
       )}
     </>
   );
