@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   IdCard, Users, Sparkles, CheckCircle2, Hash, Plus, Upload, RefreshCcw, Search,
-  Trash2, Edit, Loader2, X, RotateCcw, FileSpreadsheet, ChevronDown, ArrowLeft
+  Trash2, Edit, Loader2, X, RotateCcw, FileSpreadsheet, ChevronDown, ArrowLeft, Eye, EyeOff
 } from 'lucide-react';
 
 import EmptyState from '@/components/EmptyState.jsx';
@@ -11,10 +11,9 @@ import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
+import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
-
-const PAGE_SIZE = 25;
 
 // The five fields the schema requires (NOT NULL). Marked with * in the forms.
 const CORE_FIELDS = new Set(['firstName', 'lastName', 'email', 'username', 'password']);
@@ -133,6 +132,25 @@ function MapSelect({ value, onChange, headers }) {
   );
 }
 
+// Compose a short single-line address from the parts.
+function addressOf(p) {
+  return [p.addressLine1, p.addressLine2, p.city, p.state, p.zipCode, p.country].filter(Boolean).join(', ');
+}
+
+// Password cell: masked by default, click the eye to reveal (demo-vault data).
+function PasswordCell({ value }) {
+  const [show, setShow] = useState(false);
+  if (!value) return <span className="text-muted-dark">—</span>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="font-mono text-[12px] text-muted-foreground">{show ? value : '••••••••'}</span>
+      <button type="button" onClick={() => setShow((s) => !s)} className="text-muted-foreground hover:text-foreground" title={show ? 'Hide' : 'Reveal'}>
+        {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+    </span>
+  );
+}
+
 export default function PersonasPage() {
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,6 +158,7 @@ export default function PersonasPage() {
   const [search, setSearch] = useState('');
   const [usageFilter, setUsageFilter] = useState('all'); // 'all' | 'unused' | 'used'
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
 
@@ -195,10 +214,10 @@ export default function PersonasPage() {
     });
   }, [personas, search, usageFilter]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [search, usageFilter]);
+  const paged = pageSize === Infinity ? filtered : filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { setPage(1); }, [search, usageFilter, pageSize]);
 
   const allSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
@@ -414,7 +433,7 @@ export default function PersonasPage() {
             </div>
           ) : (
             <div className="w-full">
-              <table className="w-full min-w-[860px] border-collapse text-left text-sm whitespace-nowrap">
+              <table className="w-full min-w-[1200px] border-collapse text-left text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
                   <tr>
                     <th className="px-5 py-4 w-10">
@@ -430,6 +449,9 @@ export default function PersonasPage() {
                     <th className="px-5 py-4">Name</th>
                     <th className="px-5 py-4">Email</th>
                     <th className="px-5 py-4">Username</th>
+                    <th className="px-5 py-4">Password</th>
+                    <th className="px-5 py-4">Phone</th>
+                    <th className="px-5 py-4">Address</th>
                     <th className="px-5 py-4">Label</th>
                     <th className="px-5 py-4">Times used</th>
                     <th className="px-5 py-4">Created</th>
@@ -453,6 +475,9 @@ export default function PersonasPage() {
                         <td className="px-5 py-4 font-medium text-foreground">{name}</td>
                         <td className="px-5 py-4 text-muted-foreground">{p.email || '—'}</td>
                         <td className="px-5 py-4 text-muted-foreground">{p.username || '—'}</td>
+                        <td className="px-5 py-4"><PasswordCell value={p.password} /></td>
+                        <td className="px-5 py-4 text-muted-foreground">{p.phone || '—'}</td>
+                        <td className="px-5 py-4 text-muted-foreground max-w-[240px] truncate" title={addressOf(p)}>{addressOf(p) || '—'}</td>
                         <td className="px-5 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">—</span>}</td>
                         <td className="px-5 py-4">
                           {p.usedCount > 0
@@ -479,13 +504,8 @@ export default function PersonasPage() {
           )}
         </CardContent>
         {!loading && filtered.length > 0 && (
-          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-4 py-2.5 text-[12px] text-muted-foreground rounded-b">
-            <span>Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
-            <div className="flex items-center gap-1.5">
-              <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="px-2.5">Prev</Button>
-              <span className="px-2 tabular-nums">Page {safePage} / {pageCount}</span>
-              <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount} className="px-2.5">Next</Button>
-            </div>
+          <div className="shrink-0 border-t border-border bg-card/95 px-4 py-2.5 rounded-b">
+            <Pager total={filtered.length} page={safePage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(n) => { setPageSize(n); setPage(1); }} />
           </div>
         )}
       </Card>

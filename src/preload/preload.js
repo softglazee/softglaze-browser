@@ -38,6 +38,7 @@ const CHANNELS = Object.freeze({
   PROXY_GROUP_UPDATE: 'proxy-group:update',
   PROXY_GROUP_DELETE: 'proxy-group:delete',
   PROXY_GROUP_ASSIGN: 'proxy-group:assign',
+  PROXY_AUTO_GROUP: 'proxy:auto-group',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -217,7 +218,12 @@ const CHANNELS = Object.freeze({
   API_TOKEN_CREATE: 'api:token-create',
   API_TOKEN_REVOKE: 'api:token-revoke',
   API_SERVER_STATUS: 'api:server-status',
-  API_SERVER_SET_ENABLED: 'api:server-set-enabled'
+  API_SERVER_SET_ENABLED: 'api:server-set-enabled',
+
+  UPDATER_EVENT: 'updater:event',
+  UPDATER_GET_STATE: 'updater:get-state',
+  UPDATER_INSTALL: 'updater:install',
+  UPDATER_CHECK: 'updater:check'
 });
 
 const ALLOWED_CHANNELS = new Set(Object.values(CHANNELS));
@@ -271,7 +277,8 @@ const api = Object.freeze({
     getProviderCreds: (provider) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_GET, { provider }),
     saveProviderCreds: (payload) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_SET, payload),
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
-    testAll: () => invoke(CHANNELS.PROXY_TEST_ALL)
+    testAll: () => invoke(CHANNELS.PROXY_TEST_ALL),
+    autoGroup: (level) => invoke(CHANNELS.PROXY_AUTO_GROUP, { level })
   }),
   proxyGroups: Object.freeze({
     list: () => invoke(CHANNELS.PROXY_GROUP_LIST),
@@ -344,7 +351,7 @@ const api = Object.freeze({
     list: () => invoke(CHANNELS.MEMBER_LIST),
     create: (payload) => invoke(CHANNELS.MEMBER_CREATE, payload),
     update: (payload) => invoke(CHANNELS.MEMBER_UPDATE, payload),
-    delete: (id) => invoke(CHANNELS.MEMBER_DELETE, { id }),
+    delete: (id, options = {}) => invoke(CHANNELS.MEMBER_DELETE, { id, ...options }),
     setPin: (id, pin) => invoke(CHANNELS.MEMBER_SET_PIN, { id, pin }),
     current: () => invoke(CHANNELS.MEMBER_CURRENT),
     switch: (id, pin, password) => invoke(CHANNELS.MEMBER_SWITCH, { id, pin, password }),
@@ -526,6 +533,17 @@ const api = Object.freeze({
     revokeToken: (id) => invoke(CHANNELS.API_TOKEN_REVOKE, { id }),
     serverStatus: () => invoke(CHANNELS.API_SERVER_STATUS),
     setServerEnabled: (enabled) => invoke(CHANNELS.API_SERVER_SET_ENABLED, { enabled })
+  }),
+  updater: Object.freeze({
+    getState: () => invoke(CHANNELS.UPDATER_GET_STATE),
+    install: () => invoke(CHANNELS.UPDATER_INSTALL),
+    check: () => invoke(CHANNELS.UPDATER_CHECK),
+    // Subscribe to live updater events (available / downloading / downloaded); returns an unsubscribe fn.
+    onEvent: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.UPDATER_EVENT, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.UPDATER_EVENT, listener);
+    }
   })
 });
 

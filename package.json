@@ -104,7 +104,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "SoftGlaze Browser"
+      "shortcutName": "SoftGlaze Browser",
+      "include": "build/installer.nsh"
     },
     "publish": [
       {

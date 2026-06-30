@@ -3,7 +3,7 @@ import {
   Plus, Users, X, Loader2, Trash2, KeyRound, Activity, ClipboardList,
   Crown, UserCog, UserCheck, User, Clock, Copy, Check, Mail, Link2, ShieldCheck,
   Download, FolderInput, Search, Lock, CreditCard, RotateCcw, Layers,
-  Sparkles, Settings2, Ban
+  Sparkles, Settings2, Ban, AlertTriangle
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -250,7 +250,7 @@ export default function MembersPage() {
         <TeamActivityFeed />
       )}
 
-      {editing && <MemberModal member={editing} me={me} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+      {editing && <MemberModal member={editing} me={me} members={members} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
@@ -436,7 +436,7 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
   );
 }
 
-function MemberModal({ member, me, onClose, onSaved }) {
+function MemberModal({ member, me, members = [], onClose, onSaved }) {
   const isNew = !member.id;
   const allowed = creatableRoles(me);
   const granter = (me && me.permissions) || defaultPerms('OWNER');
@@ -453,6 +453,16 @@ function MemberModal({ member, me, onClose, onSaved }) {
   const [invite, setInvite] = useState(null); // { code, link, emailed }
   const [copied, setCopied] = useState('');
   const [showAssign, setShowAssign] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
+
+  // Change account status (suspend / ban / unban) — re-enforced in main. Owners can
+  // only be blocked/unblocked by the Super Admin (the backend enforces this).
+  async function changeStatus(status, reason) {
+    setStatusBusy(true); setErr('');
+    try { await softglazeApi.members.setStatus({ id: member.id, status, reason }); onSaved(); }
+    catch (e) { setErr(e.message || 'Could not change status.'); setStatusBusy(false); }
+  }
 
   const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2';
   const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary';
@@ -475,19 +485,12 @@ function MemberModal({ member, me, onClose, onSaved }) {
         if (created.inviteCode) { setInvite({ code: created.inviteCode, link: created.inviteLink, emailed: created.emailed }); setBusy(false); return; }
         onSaved();
       } else {
-        await softglazeApi.members.update({ id: member.id, name: name.trim(), email: email.trim() || null, color, status: suspended ? 'suspended' : 'active' });
+        await softglazeApi.members.update({ id: member.id, name: name.trim(), email: email.trim() || null, color, ...(member.status === 'banned' ? {} : { status: suspended ? 'suspended' : 'active' }) });
         await softglazeApi.members.updatePermissions(member.id, perms).catch(() => {});
         await softglazeApi.members.setInstructions(member.id, instructions.trim()).catch(() => {});
         onSaved();
       }
     } catch (e) { setErr(e.message || 'Could not save member.'); setBusy(false); }
-  }
-
-  async function remove() {
-    if (!window.confirm(`Remove ${member.name}? Their profiles are unassigned and their sub-members move up to you.`)) return;
-    setBusy(true); setErr('');
-    try { await softglazeApi.members.delete(member.id); onSaved(); }
-    catch (e) { setErr(e.message || 'Could not remove member.'); setBusy(false); }
   }
 
   // Reset this member's limits + features to their role's built-in defaults.
@@ -612,16 +615,41 @@ function MemberModal({ member, me, onClose, onSaved }) {
         </div>
 
         {!isNew && (
-          <label className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
-            <input type="checkbox" checked={suspended} onChange={(e) => setSuspended(e.target.checked)} className="accent-red-500" />
-            Suspend this member (blocks sign-in)
-          </label>
+          <div className="rounded-lg border border-border bg-elevated/40 p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Account status</span>
+              {member.status === 'banned'
+                ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30"><Lock className="w-3 h-3" />Banned</span>
+                : member.status === 'suspended'
+                  ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">Suspended</span>
+                  : <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>}
+            </div>
+            {member.status === 'banned' ? (
+              <>
+                {member.banReason && <p className="text-[11.5px] text-red-400/90">Reason: {member.banReason}</p>}
+                <button type="button" onClick={() => changeStatus('active')} disabled={statusBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60">
+                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} Unban member
+                </button>
+                <p className="text-[11px] text-muted-foreground">Editing the fields above keeps the ban — use Unban to restore access.</p>
+              </>
+            ) : (
+              <>
+                <label className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
+                  <input type="checkbox" checked={suspended} onChange={(e) => setSuspended(e.target.checked)} className="accent-red-500" />
+                  Suspend this member (blocks sign-in)
+                </label>
+                <button type="button" onClick={() => changeStatus('banned', 'Blocked by administrator.')} disabled={statusBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60">
+                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />} Ban member
+                </button>
+              </>
+            )}
+          </div>
         )}
 
         {err && <p className="text-[12px] text-red-400">{err}</p>}
       </div>
       <div className="flex items-center gap-2 px-6 py-4 border-t border-border">
-        {!isNew && !member.isCurrent && <button onClick={remove} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"><Trash2 className="w-4 h-4" />Remove</button>}
+        {!isNew && !member.isCurrent && <button onClick={() => setShowDelete(true)} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"><Trash2 className="w-4 h-4" />Remove</button>}
         {!isNew && member.inviteStatus !== 'pending' && canManageTeam(me) && (
           <button onClick={() => setShowAssign(true)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary flex items-center gap-1.5"><FolderInput className="w-4 h-4" />Assign profiles</button>
         )}
@@ -633,6 +661,81 @@ function MemberModal({ member, me, onClose, onSaved }) {
         </div>
       </div>
       {showAssign && <AssignProfilesModal member={member} onClose={() => setShowAssign(false)} />}
+      {showDelete && <DeleteMemberModal member={member} members={members} onClose={() => setShowDelete(false)} onDeleted={onSaved} />}
+    </Shell>
+  );
+}
+
+// Delete a member with an explicit choice for their data (Profiles / Proxies /
+// ProxyGroups): reassign to the actor, reassign to another member, or delete it
+// all (profiles → Trash, proxies/groups removed). Backend re-enforces every guard.
+function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
+  const pickable = (members || []).filter((m) => m.id !== member.id && m.inviteStatus !== 'pending');
+  const [action, setAction] = useState('reassign-me'); // 'reassign-me' | 'reassign-other' | 'delete'
+  const [targetId, setTargetId] = useState(pickable[0]?.id != null ? String(pickable[0].id) : '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const profiles = member.ownedProfiles ?? 0;
+  const proxies = member.ownedProxies ?? 0;
+
+  const OPTIONS = [
+    { id: 'reassign-me', label: 'Keep & reassign to me', desc: 'You become the owner of their profiles and proxies.' },
+    { id: 'reassign-other', label: 'Keep & reassign to another member', desc: 'Hand their data to a specific teammate.' },
+    { id: 'delete', label: 'Delete all attached data', desc: 'Their proxies & proxy groups are deleted; profiles move to Trash (recoverable).' }
+  ];
+
+  async function confirm() {
+    setBusy(true); setErr('');
+    try {
+      let opts;
+      if (action === 'delete') opts = { dataAction: 'delete' };
+      else if (action === 'reassign-other') {
+        if (!targetId) { setErr('Pick a member to receive the data.'); setBusy(false); return; }
+        opts = { dataAction: 'reassign', reassignToMemberId: targetId };
+      } else opts = { dataAction: 'reassign', reassignToMemberId: 'me' };
+      await softglazeApi.members.delete(member.id, opts);
+      onDeleted();
+    } catch (e) { setErr(e.message || 'Could not remove member.'); setBusy(false); }
+  }
+
+  return (
+    <Shell onClose={onClose} title={`Remove ${member.name}`} icon={Trash2}>
+      <div className="p-6 space-y-4">
+        <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[12px] text-amber-300">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>This removes <b className="text-foreground">{member.name}</b> and moves any sub-members up to you. Choose what happens to their data — <b className="text-foreground">{profiles}</b> profile{profiles === 1 ? '' : 's'} · <b className="text-foreground">{proxies}</b> prox{proxies === 1 ? 'y' : 'ies'}.</span>
+        </div>
+        <div className="space-y-2">
+          {OPTIONS.map((opt) => (
+            <label key={opt.id} className="flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors" style={action === opt.id ? { borderColor: 'var(--primary)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' } : { borderColor: 'var(--border)' }}>
+              <input type="radio" name="del-action" checked={action === opt.id} onChange={() => setAction(opt.id)} className="accent-primary mt-0.5" />
+              <span>
+                <span className="text-[12.5px] font-medium text-foreground">{opt.label}</span>
+                <span className="block text-[11px] text-muted-foreground">{opt.desc}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {action === 'reassign-other' && (
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Reassign to</label>
+            {pickable.length === 0 ? (
+              <p className="text-[12px] text-muted-foreground">No other members available — pick another option.</p>
+            ) : (
+              <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                {pickable.map((m) => <option key={m.id} value={m.id}>{m.name} ({ROLE_LABEL[m.role] || m.role})</option>)}
+              </select>
+            )}
+          </div>
+        )}
+        {err && <p className="text-[12px] text-red-400">{err}</p>}
+      </div>
+      <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+        <button onClick={onClose} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary disabled:opacity-50">Cancel</button>
+        <button onClick={confirm} disabled={busy || (action === 'reassign-other' && pickable.length === 0)} className="h-9 px-5 rounded-lg bg-red-500/90 hover:bg-red-500 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60">
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Remove member
+        </button>
+      </div>
     </Shell>
   );
 }
