@@ -55,6 +55,15 @@ const DEFAULT_WINDOW_SIZE = { width: 1280, height: 720 };
 const GEO_LOOKUP_TIMEOUT_MS = 8000;
 const activeSessions = new Map();
 
+// --- Session lifecycle events (sink set by ipcHandlers) --------------------
+// browserEngine stays free of DB/IPC deps; it just reports launched/closed/crashed
+// through a sink so ipcHandlers can persist SessionState and notify the renderer.
+let sessionEventSink = null;
+function setSessionEventSink(fn) { sessionEventSink = (typeof fn === 'function') ? fn : null; }
+function emitSessionEvent(evt) { try { if (sessionEventSink) sessionEventSink(evt); } catch (e) { /* never let reporting break a launch/close */ } }
+const intentionalClose = new Set(); // sessionIds the user explicitly closed (so the disconnect isn't read as a crash)
+let shuttingDown = false;           // app is quitting; closes are not crashes and must not clear restore state
+
 // --- Smart Autofill (Identity Data Vault) bridge -------------------------------
 // Wired by ipcHandlers at startup with the persona DB operations, so the
 // page-injected widget can reach Prisma through puppeteer's exposeFunction — no
@@ -1569,6 +1578,36 @@ function lookupProxyGeoNode(proxy) {
   });
 }
 
+// In-memory geo cache. Bulk/parallel launches frequently reuse the same few
+// proxies (pools); without caching, every launch re-hits ip-api.com THROUGH the
+// proxy — slow and easily rate-limited (the free tier allows ~45 req/min). Cache
+// successful lookups for a TTL and dedupe concurrent in-flight requests so N
+// simultaneous launches on one proxy make exactly ONE network call.
+const GEO_NODE_CACHE_TTL_MS = 10 * 60 * 1000;
+const geoNodeCache = new Map();    // key -> { value, at }
+const geoNodeInflight = new Map(); // key -> Promise<value|null>
+
+function proxyGeoKey(proxy) {
+  if (!proxy || !proxy.host || !proxy.port) return null;
+  return `${String(proxy.type || '').toLowerCase()}://${proxy.host}:${proxy.port}`;
+}
+
+async function lookupProxyGeoNodeCached(proxy) {
+  const key = proxyGeoKey(proxy);
+  if (!key) return lookupProxyGeoNode(proxy);
+  const hit = geoNodeCache.get(key);
+  if (hit && (Date.now() - hit.at) < GEO_NODE_CACHE_TTL_MS) return hit.value;
+  if (geoNodeInflight.has(key)) return geoNodeInflight.get(key);
+  const inflight = (async () => {
+    const value = await lookupProxyGeoNode(proxy);
+    if (value) geoNodeCache.set(key, { value, at: Date.now() }); // cache successes only; nulls retry next launch
+    return value;
+  })();
+  geoNodeInflight.set(key, inflight);
+  try { return await inflight; }
+  finally { geoNodeInflight.delete(key); }
+}
+
 // ---------------------------------------------------------------------------
 // Geo lookup through the active proxy (runs inside the page so it routes via
 // the proxy). Returns { countryCode, timezone, lat, lon } or null.
@@ -1788,7 +1827,7 @@ async function launchProfileSession(options = {}) {
   // workers, no injection race) and bake the proxy IP + locale into the extension.
   const manualTz = profile.timezoneType === 'Custom' && profile.timezoneCustom
     ? String(profile.timezoneCustom).trim() : null;
-  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real' ? await lookupProxyGeoNode(resolvedProxy) : null;
+  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real' ? await lookupProxyGeoNodeCached(resolvedProxy) : null;
   let timezoneId = manualTz || (geo && geo.timezone) || null;
 
   // Build the fingerprint config (geo-aware) and bake it into a MAIN-world
@@ -2339,16 +2378,28 @@ async function launchProfileSession(options = {}) {
   // can attach external Playwright/Puppeteer/Selenium scripts to this container.
   let wsEndpoint = null;
   try { wsEndpoint = browser.wsEndpoint(); } catch (e) { wsEndpoint = null; }
+  let sessionPid = null;
+  try { sessionPid = browser.process() ? browser.process().pid : null; } catch (e) { sessionPid = null; }
   activeSessions.set(sessionId, {
     browser,
     page,
     userDataDir,
     wsEndpoint,
+    pid: sessionPid,
     title: title || `Profile ${sessionId}`,
     proxyLabel,
     createdAt: new Date()
   });
-  browser.on('disconnected', () => activeSessions.delete(sessionId));
+  browser.on('disconnected', () => {
+    activeSessions.delete(sessionId);
+    // Classify the disconnect: app shutdown and explicit user-close are clean;
+    // anything else is a crash (ipcHandlers bumps crashCount + notifies).
+    let reason = 'crash';
+    if (shuttingDown) reason = 'shutdown';
+    else if (intentionalClose.has(sessionId)) { reason = 'user'; intentionalClose.delete(sessionId); }
+    emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
+  });
+  emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
 
   return { sessionId, userDataDir, wsEndpoint };
 }
@@ -2691,16 +2742,33 @@ async function closeProfileSession(sessionId) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
   if (!session) return { closed: false };
+  intentionalClose.add(id); // deliberate close — the disconnect must not be read as a crash
   try { await session.browser.close(); } catch (e) {}
   activeSessions.delete(id);
   return { closed: true };
 }
 
 async function closeAllProfileSessions() {
+  shuttingDown = true; // app is quitting — these closes are not crashes; SessionState rows stay 'running' for restore
   for (const session of activeSessions.values()) {
     try { await session.browser.close(); } catch (e) {}
   }
   activeSessions.clear();
+}
+
+// Validate the live-session registry against real browser connections and drop
+// entries whose Chromium exited silently without firing 'disconnected' (external
+// kill, crash, OOM). Keeps the running count honest for the concurrency ceiling
+// and the UI. Returns the number of stale sessions pruned.
+function pruneDeadSessions() {
+  let pruned = 0;
+  for (const [sessionId, session] of activeSessions) {
+    let alive = true;
+    try { alive = Boolean(session && session.browser && session.browser.isConnected()); }
+    catch (e) { alive = false; }
+    if (!alive) { activeSessions.delete(sessionId); pruned += 1; }
+  }
+  return pruned;
 }
 
 function formatUptime(createdAt) {
@@ -3094,6 +3162,17 @@ function listActiveSessions() {
   }));
 }
 
+// Snapshot of running sessions with their main-process PID, for OS-level memory
+// queries (ipcHandlers maps PIDs -> RSS via tasklist). pid is null when the
+// browser didn't expose a process handle.
+function listSessionPids() {
+  return Array.from(activeSessions.entries()).map(([sessionId, s]) => ({
+    sessionId,
+    pid: s.pid || null,
+    title: s.title
+  }));
+}
+
 module.exports = {
   DEFAULT_PROFILE_ROOT,
   parseProxyInput,
@@ -3102,6 +3181,9 @@ module.exports = {
   closeProfileSession,
   closeAllProfileSessions,
   listActiveSessions,
+  pruneDeadSessions,
+  listSessionPids,
+  setSessionEventSink,
   navigateSession,
   runCookieRobot,
   warmInteract,

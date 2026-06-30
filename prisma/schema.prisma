@@ -106,6 +106,23 @@ model Setting {
   value String
 }
 
+// Session restore + crash recovery. One row per profile that is (or was) running.
+// status stays 'running' across a clean quit OR a crash so the next launch can
+// offer to restore it; a deliberate user-close marks it 'closed'.
+model SessionState {
+  id           Int      @id @default(autoincrement())
+  profileId    Int      @unique
+  engine       String   @default("chrome") // chrome | firefox
+  status       String   @default("running") // running | closed
+  launchedAt   DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  crashCount   Int      @default(0)
+  lastExitCode Int?
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+}
+
 model Member {
   id           Int       @id @default(autoincrement())
   name         String

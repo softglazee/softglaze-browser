@@ -63,7 +63,10 @@ export const softglazeApi = {
     bulkRestore: (ids) => getSoftglazeApi().profiles.bulkRestore(ids),
     bulkPurge: (ids, options) => getSoftglazeApi().profiles.bulkPurge(ids, options),
     bulkLaunch: (ids) => getSoftglazeApi().profiles.bulkLaunch(ids),
+    tagAssign: (ids, tag, mode) => getSoftglazeApi().profiles.tagAssign(ids, tag, mode),
+    bulkRename: (payload) => getSoftglazeApi().profiles.bulkRename(payload),
     bulkClose: (ids) => getSoftglazeApi().profiles.bulkClose(ids),
+    onBulkLaunchProgress: (cb) => getSoftglazeApi().profiles.onBulkLaunchProgress(cb),
     analyzeLeaks: (id) => getSoftglazeApi().profiles.analyzeLeaks(id),
     exportCookies: (id, format) => getSoftglazeApi().profiles.exportCookies(id, format),
     importCookies: (id, data, format) => getSoftglazeApi().profiles.importCookies(id, data, format),
@@ -107,7 +110,12 @@ export const softglazeApi = {
   },
   sessions: {
     list: () => getSoftglazeApi().sessions.list(),
-    close: (sessionId) => getSoftglazeApi().sessions.close(sessionId)
+    close: (sessionId) => getSoftglazeApi().sessions.close(sessionId),
+    restoreGet: () => getSoftglazeApi().sessions.restoreGet(),
+    restoreRun: (payload) => getSoftglazeApi().sessions.restoreRun(payload),
+    resourceUsage: () => getSoftglazeApi().sessions.resourceUsage(),
+    onCrash: (cb) => getSoftglazeApi().sessions.onCrash(cb),
+    onMemoryPressure: (cb) => getSoftglazeApi().sessions.onMemoryPressure(cb)
   },
   members: {
     list: () => getSoftglazeApi().members.list(),
