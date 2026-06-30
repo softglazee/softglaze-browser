@@ -3,7 +3,7 @@
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
-const { ipcMain, dialog } = require('electron');
+const { ipcMain, dialog, BrowserWindow } = require('electron');
 
 const { getPrisma, getRuntimeConfig, disconnectPrisma } = require('./database');
 const {
@@ -32,6 +32,7 @@ const {
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
+const updater = require('./updater');
 const totp = require('./totp');
 const permissions = require('./permissions');
 const payments = require('./payments');
@@ -90,6 +91,7 @@ const CHANNELS = Object.freeze({
   PROXY_GROUP_UPDATE: 'proxy-group:update',
   PROXY_GROUP_DELETE: 'proxy-group:delete',
   PROXY_GROUP_ASSIGN: 'proxy-group:assign',
+  PROXY_AUTO_GROUP: 'proxy:auto-group',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -276,7 +278,13 @@ const CHANNELS = Object.freeze({
   DB_ENABLE_ENCRYPTION: 'db:enable-encryption',
   DB_DISABLE_ENCRYPTION: 'db:disable-encryption',
   WORKSPACE_BACKUP: 'workspace:backup',
-  WORKSPACE_RESTORE: 'workspace:restore'
+  WORKSPACE_RESTORE: 'workspace:restore',
+
+  // In-app OTA updates (electron-updater). UPDATER_EVENT is a main→renderer push.
+  UPDATER_EVENT: 'updater:event',
+  UPDATER_GET_STATE: 'updater:get-state',
+  UPDATER_INSTALL: 'updater:install',
+  UPDATER_CHECK: 'updater:check'
 });
 
 const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5']);
@@ -2762,6 +2770,87 @@ async function assignProxiesToGroup(payload) {
   return { assigned: res.count, groupId };
 }
 
+// Friendly country names for auto-group labels (fall back to the 2-letter code).
+const AUTO_GROUP_COUNTRY_NAMES = {
+  US: 'United States', GB: 'United Kingdom', CA: 'Canada', AU: 'Australia',
+  DE: 'Germany', FR: 'France', NL: 'Netherlands', ES: 'Spain', IT: 'Italy',
+  IE: 'Ireland', SE: 'Sweden', NO: 'Norway', FI: 'Finland', DK: 'Denmark',
+  PL: 'Poland', PT: 'Portugal', CH: 'Switzerland', AT: 'Austria', BE: 'Belgium',
+  CZ: 'Czechia', RO: 'Romania', GR: 'Greece', HU: 'Hungary',
+  JP: 'Japan', KR: 'South Korea', CN: 'China', HK: 'Hong Kong', TW: 'Taiwan',
+  SG: 'Singapore', IN: 'India', ID: 'Indonesia', PH: 'Philippines', VN: 'Vietnam',
+  TH: 'Thailand', MY: 'Malaysia', TR: 'Turkey', AE: 'United Arab Emirates',
+  SA: 'Saudi Arabia', IL: 'Israel', BR: 'Brazil', MX: 'Mexico', AR: 'Argentina',
+  CL: 'Chile', CO: 'Colombia', ZA: 'South Africa', NG: 'Nigeria', EG: 'Egypt',
+  RU: 'Russia', UA: 'Ukraine', NZ: 'New Zealand'
+};
+const AUTO_GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
+function autoGroupColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AUTO_GROUP_COLORS[h % AUTO_GROUP_COLORS.length];
+}
+
+// Auto-categorize proxies into ProxyGroups by verified exit geo. `level`:
+//   'country' (default) → "United States"
+//   'state'             → "United States — California"  (falls back to country)
+//   'city'              → "United States — Los Angeles" (falls back to state/country)
+// ProxyGroup membership is single, so each proxy lands in exactly ONE group at the
+// chosen level. Geo comes from the health check (lastCountry/lastRegion/lastCity);
+// proxies without a known country are skipped. `onlyUngrouped` (used by the auto-run
+// after Test All) leaves manually-grouped proxies untouched.
+async function autoGroupProxies(payload) {
+  const input = requireObject(payload || {});
+  const level = ['country', 'state', 'city'].includes(String(input.level)) ? String(input.level) : 'country';
+  const onlyUngrouped = input.onlyUngrouped === true;
+  const db = getPrisma();
+
+  const base = { lastCountry: { not: null } };
+  if (onlyUngrouped) base.proxyGroupId = null;
+  const proxies = await db.proxy.findMany({
+    where: await scopedProxyWhere(base),
+    select: { id: true, lastCountry: true, lastRegion: true, lastCity: true }
+  });
+
+  const targetName = (p) => {
+    const cc = normCountryCode(p.lastCountry);
+    if (!cc) return null;
+    const country = AUTO_GROUP_COUNTRY_NAMES[cc] || cc;
+    if (level === 'country') return country;
+    const region = optionalString(p.lastRegion);
+    const city = optionalString(p.lastCity);
+    if (level === 'state') return region ? `${country} — ${region}` : country;
+    return city ? `${country} — ${city}` : (region ? `${country} — ${region}` : country);
+  };
+
+  // Bucket proxy ids by their target group name.
+  const buckets = new Map();
+  for (const p of proxies) {
+    const name = targetName(p);
+    if (!name) continue;
+    if (!buckets.has(name)) buckets.set(name, []);
+    buckets.get(name).push(p.id);
+  }
+
+  // Find-or-create each group by case-insensitive name, then assign its proxies.
+  const existing = await db.proxyGroup.findMany({ select: { id: true, name: true } });
+  const byName = new Map(existing.map((g) => [String(g.name).toLowerCase(), g.id]));
+  let createdGroups = 0;
+  let assigned = 0;
+  for (const [name, ids] of buckets) {
+    let gid = byName.get(name.toLowerCase());
+    if (!gid) {
+      const g = await db.proxyGroup.create({ data: { name: name.slice(0, 80), color: autoGroupColor(name), ownerMemberId: ownerStampId() } });
+      gid = g.id;
+      byName.set(name.toLowerCase(), gid);
+      createdGroups += 1;
+    }
+    const res = await db.proxy.updateMany({ where: { id: { in: ids } }, data: { proxyGroupId: gid } });
+    assigned += res.count;
+  }
+  return { level, groups: buckets.size, createdGroups, assigned };
+}
+
 async function listTags() {
   const db = getPrisma();
   const rows = await db.profile.findMany({ where: { deletedAt: null }, select: { tags: true } });
@@ -3443,6 +3532,8 @@ async function persistProxyHealth(db, id, result) {
     lastStatus: result.success ? 'ok' : 'fail',
     lastLatencyMs: typeof result.latencyMs === 'number' ? result.latencyMs : null,
     lastCountry: result.country || null,
+    lastRegion: result.region || null,
+    lastCity: result.city || null,
     lastCheckedAt: new Date()
   };
   // Enrich the proxy NAME with the verified exit location so the pool is easy to scan
@@ -3508,7 +3599,11 @@ async function runProxyHealthSweepConcurrent(limit = 8) {
 // "Test all" action — concurrent health check of every proxy. No secrets are
 // returned (only a count summary), so it is safe for any role.
 async function testAllProxies() {
-  return runProxyHealthSweepConcurrent(8);
+  const summary = await runProxyHealthSweepConcurrent(8);
+  // Freshly-checked proxies now carry geo — auto-bucket the UNGROUPED ones by
+  // country (never disturbs manually-grouped proxies). Best-effort, non-fatal.
+  try { await autoGroupProxies({ level: 'country', onlyUngrouped: true }); } catch (e) { /* ignore */ }
+  return summary;
 }
 
 function stopProxyScheduler() {
@@ -3608,8 +3703,11 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   // auto-linked. Keep it a single short line.
   branding: {
     footerEnabled: true,
-    footerText: '© {year} SoftGlaze — Built by the SoftGlaze Team (https://softglaze.com) · Developed by Azhar Ali (https://azhar.softglaze.com)'
-  }
+    footerText: '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
+  },
+  // Smart Autofill — the in-page identity widget injected into launched Chromium
+  // profiles (Data Vault). ON by default; off skips injection entirely.
+  smartAutofill: { enabled: true }
 });
 
 function deepMergeSettings(base, patch) {
@@ -4836,11 +4934,51 @@ async function deleteMember(payload) {
   // Re-parent the removed member's direct children up to its own parent so no
   // subtree is orphaned (keeps everyone reachable by the owner).
   await db.member.updateMany({ where: { parentMemberId: id }, data: { parentMemberId: target.parentMemberId ?? null } }).catch(() => {});
-  await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
-  await db.profile.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: null } }).catch(() => {});
+
+  // What to do with the member's data (Profiles / Proxies / ProxyGroups):
+  //   'reassign' → move ownership (+ assignment) to another member, or to the actor
+  //   'delete'   → soft-delete their owned profiles to Trash + remove their proxies/groups
+  //   (unset)    → legacy behaviour: unassign + orphan owned profiles (owner→null)
+  const dataAction = String(input.dataAction || '').toLowerCase();
+  let reassignedTo = null;
+  if (dataAction === 'reassign') {
+    let toId;
+    if (input.reassignToMemberId === 'me' || input.reassignToMemberId == null || input.reassignToMemberId === '') {
+      toId = actor ? actor.id : null;
+    } else {
+      toId = parseId(input.reassignToMemberId, 'reassignToMemberId');
+    }
+    if (!toId) throw new Error('Choose a member to receive the data.');
+    if (toId === id) throw new Error('Cannot reassign the data to the member being deleted.');
+    const tgt = await db.member.findUnique({ where: { id: toId } });
+    if (!tgt) throw new Error('Reassignment target member not found.');
+    if (actor && actor.role !== 'SUPER_ADMIN' && toId !== actor.id) {
+      const all = await db.member.findMany();
+      if (!permissions.visibleMemberIds(all, actor).has(toId)) throw new Error('You can only reassign data to members you manage.');
+    }
+    reassignedTo = toId;
+    // Owned profiles → new owner + assignee; merely-assigned profiles → new assignee.
+    await db.profile.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId, assignedMemberId: toId } }).catch(() => {});
+    await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: toId } }).catch(() => {});
+    await db.proxy.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
+    await db.proxyGroup.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
+  } else if (dataAction === 'delete') {
+    // Soft-delete owned profiles (recoverable from Trash; preserves local data dirs)
+    // and remove the member's proxies + proxy groups. Deleting a proxy nulls proxyId
+    // on any profile using it (relation onDelete: SetNull). Assigned-not-owned
+    // profiles are merely unassigned.
+    await db.profile.updateMany({ where: { ownerMemberId: id, deletedAt: null }, data: { deletedAt: new Date(), assignedMemberId: null, ownerMemberId: null } }).catch(() => {});
+    await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
+    await db.proxy.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
+    await db.proxyGroup.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
+  } else {
+    await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
+    await db.profile.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: null } }).catch(() => {});
+  }
+
   await db.member.delete({ where: { id } });
   if (currentMemberId === id) { currentMemberId = null; await writeSetting('currentMemberId', null).catch(() => {}); }
-  return { deleted: true };
+  return { deleted: true, dataAction: dataAction || 'orphan', reassignedTo };
 }
 
 async function getCurrentMember() {
@@ -5071,15 +5209,22 @@ async function seedStarters() {
 const FIRST_RUN_BROWSER_COUNT = 3;
 async function maybeSeedBrowsers() {
   try {
-    if (await readSetting('firstRunBrowsersSeeded', false)) return;
-    let reachedNetwork = false;
+    const seeded = await readSetting('firstRunBrowsersSeeded', false);
+    // Fast path: already seeded AND we can see an installed Chrome → nothing to do.
+    // (If the flag was set on a prior boot but NOTHING actually installed — a failed
+    // or partial first run — we fall through and try again, so the seed self-heals.)
+    let anyInstalled = false;
+    try { anyInstalled = (listAvailableBrowsers() || []).length > 0; } catch (e) { /* none yet */ }
+    if (seeded && anyInstalled) return;
+
+    let started = 0;
 
     // Chrome (Chrome-for-Testing) — newest stable majors first.
     try {
       const chrome = await browserDownloader.listDownloadableVersions();
-      reachedNetwork = true;
       for (const v of (Array.isArray(chrome) ? chrome : []).slice(0, FIRST_RUN_BROWSER_COUNT)) {
-        try { if (!browserDownloader.isInstalled(v.version)) browserDownloader.startDownload(v.version); }
+        if (browserDownloader.isInstalled(v.version)) { anyInstalled = true; continue; }
+        try { browserDownloader.startDownload(v.version); started += 1; }
         catch (e) { /* skip a single version */ }
       }
     } catch (e) { console.warn('[browser-seed] Chrome catalog unavailable:', e && e.message); }
@@ -5087,17 +5232,22 @@ async function maybeSeedBrowsers() {
     // Firefox — newest majors first.
     try {
       const ff = await firefoxEngine.listFirefoxDownloadable();
-      reachedNetwork = true;
       const items = ff && Array.isArray(ff.items) ? ff.items : [];
       for (const it of items.slice(0, FIRST_RUN_BROWSER_COUNT)) {
-        try { if (!it.installed) firefoxEngine.startFirefoxDownload(it.major); }
+        if (it.installed) { anyInstalled = true; continue; }
+        try { firefoxEngine.startFirefoxDownload(it.major); started += 1; }
         catch (e) { /* skip a single version */ }
       }
     } catch (e) { console.warn('[browser-seed] Firefox catalog unavailable:', e && e.message); }
 
-    if (reachedNetwork) {
+    // Only mark the run as seeded once a download has actually STARTED (or a browser
+    // is already present). If nothing started — offline / empty catalog — leave the
+    // flag unset so the next boot retries instead of silently giving up forever.
+    if (started > 0 || anyInstalled) {
       await writeSetting('firstRunBrowsersSeeded', true).catch(() => {});
-      console.log('[browser-seed] First-run browser auto-install kicked off (latest 3 Chrome + 3 Firefox).');
+      console.log(`[browser-seed] First-run fleet: ${started} download(s) started (latest ${FIRST_RUN_BROWSER_COUNT} Chrome + ${FIRST_RUN_BROWSER_COUNT} Firefox).`);
+    } else {
+      console.warn('[browser-seed] No downloads started (offline or empty catalogs) — will retry on next launch.');
     }
   } catch (e) { /* never block startup */ }
 }
@@ -8020,6 +8170,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_GROUP_UPDATE, updateProxyGroup);
   registerHandler(CHANNELS.PROXY_GROUP_DELETE, deleteProxyGroup);
   registerHandler(CHANNELS.PROXY_GROUP_ASSIGN, assignProxiesToGroup);
+  registerHandler(CHANNELS.PROXY_AUTO_GROUP, autoGroupProxies);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
@@ -8081,11 +8232,25 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PERSONA_UPDATE, updatePersona);
   registerHandler(CHANNELS.PERSONA_PREVIEW_FILE, previewPersonaFile);
 
+  // In-app OTA updates (electron-updater) — state/install/check for the Dashboard banner.
+  registerHandler(CHANNELS.UPDATER_GET_STATE, () => updater.getState());
+  registerHandler(CHANNELS.UPDATER_INSTALL, () => updater.installDownloadedUpdate());
+  registerHandler(CHANNELS.UPDATER_CHECK, () => updater.checkForUpdatesNow());
+  // Broadcast updater events to every window — owned here so the channel definition
+  // and its emit live alongside the rest of the renderer comms.
+  updater.setEventSink((payload) => {
+    for (const w of BrowserWindow.getAllWindows()) {
+      try { w.webContents.send(CHANNELS.UPDATER_EVENT, payload); } catch (e) { /* window gone */ }
+    }
+  });
+
   // Smart Autofill — let the in-page widget (injected into launched Chromium
   // profiles) reach the persona vault through puppeteer's exposeFunction bridge.
   configurePersonaBridge({
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
-    markUsed: (id, url) => markPersonaUsed({ id, url })
+    markUsed: (id, url) => markPersonaUsed({ id, url }),
+    // Gate injection on the global Smart Autofill toggle (default on; fail-open).
+    isEnabled: async () => { try { const g = await getGlobalSettings(); return g?.smartAutofill?.enabled !== false; } catch (e) { return true; } }
   });
 
   // Resume the background proxy scheduler if it was enabled previously.

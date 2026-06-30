@@ -72,6 +72,8 @@ function configurePersonaBridge(deps) {
 // swallow. Chromium-only: this whole module is the puppeteer/CDP launch path.
 async function attachPersonaAutofill(targetPage) {
   if (!personaBridge || !targetPage) return;
+  // Respect the global Smart Autofill toggle (fail-open if the check throws).
+  if (personaBridge.isEnabled) { try { if (!(await personaBridge.isEnabled())) return; } catch (e) { /* default on */ } }
   try {
     await targetPage.exposeFunction('__sgPersonaList', async (url) => {
       try {
@@ -84,6 +86,39 @@ async function attachPersonaAutofill(targetPage) {
     await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id, url) => {
       try { await personaBridge.markUsed(String(id || ''), String(url || '')); return { ok: true }; }
       catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+    });
+  } catch (e) { /* already exposed on this page */ }
+  try {
+    // CDP "trusted" typing: the in-page widget stamps each matched field and hands
+    // us a fill plan; we type it here with REAL keyboard events (isTrusted:true) and
+    // human-like random delays — defeating isTrusted-based bot checks. Selects are
+    // set via the native picker. The widget falls back to in-page typing if this
+    // bridge is absent (e.g. Firefox).
+    await targetPage.exposeFunction('__sgPersonaFillPlan', async (plan) => {
+      if (!Array.isArray(plan)) return { ok: false, filled: 0 };
+      let filled = 0;
+      for (const item of plan) {
+        const sel = item && item.sel;
+        const value = item && item.value != null ? String(item.value) : '';
+        if (!sel) continue;
+        try {
+          if (item.kind === 'select') {
+            await targetPage.select(sel, value).catch(() => {});
+            filled += 1;
+            continue;
+          }
+          const el = await targetPage.$(sel);
+          if (!el) continue;
+          await el.click({ clickCount: 3 }).catch(() => {}); // focus + select any existing text (first keystroke overwrites)
+          for (const ch of value) {
+            await targetPage.keyboard.type(ch, { delay: 50 + Math.floor(Math.random() * 100) });
+          }
+          await el.evaluate((node) => { try { node.dispatchEvent(new Event('change', { bubbles: true })); if (node.blur) node.blur(); } catch (e) {} }).catch(() => {});
+          await el.dispose().catch(() => {});
+          filled += 1;
+        } catch (e) { /* skip one field, keep going */ }
+      }
+      return { ok: true, filled };
     });
   } catch (e) { /* already exposed on this page */ }
   try { await targetPage.evaluateOnNewDocument(PERSONA_AUTOFILL_SOURCE); } catch (e) {}

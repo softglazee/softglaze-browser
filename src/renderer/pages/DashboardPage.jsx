@@ -158,6 +158,58 @@ function WelcomeBanner() {
   );
 }
 
+// In-app OTA update banner. Subscribes to updater events and reads the current
+// state on mount (so it appears even if the event fired before this page mounted).
+// Only visible once an update is available/downloading/downloaded.
+function UpdateBanner() {
+  const [state, setState] = useState(null);
+  const [installing, setInstalling] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    softglazeApi.updater.getState().then((s) => { if (live) setState(s); }).catch(() => {});
+    const off = softglazeApi.updater.onEvent((s) => { if (live) { setState(s); setDismissed(false); } });
+    return () => { live = false; if (typeof off === 'function') off(); };
+  }, []);
+
+  if (!state || dismissed) return null;
+  const { status, version, percent } = state;
+  if (status !== 'available' && status !== 'downloading' && status !== 'downloaded') return null;
+  const downloaded = status === 'downloaded';
+  const v = version ? `v${version}` : '';
+
+  async function install() {
+    setInstalling(true);
+    try { await softglazeApi.updater.install(); }
+    catch (e) { setInstalling(false); }
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border px-4 py-3 animate-fade-up" style={{ background: 'color-mix(in srgb, var(--primary) 10%, var(--card))', borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)' }}>
+      <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)' }}>
+        <Sparkles className="w-4 h-4 text-primary" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold text-foreground">
+          {downloaded ? `Update ready ${v}` : status === 'downloading' ? `Downloading update ${v}…` : `New update available ${v}`}
+        </p>
+        <p className="text-[11.5px] text-muted-foreground">
+          {downloaded ? 'Click install to restart and apply the new version.' : status === 'downloading' ? `${percent || 0}% downloaded` : 'It will download in the background.'}
+        </p>
+      </div>
+      {downloaded && (
+        <Button variant="primary" size="sm" onClick={install} disabled={installing}>
+          {installing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Install &amp; restart
+        </Button>
+      )}
+      <button onClick={() => setDismissed(true)} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title="Dismiss">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({ totalProfiles: 0, activeSessions: 0, totalProxies: 0, totalGroups: 0 });
   const [sessions, setSessions] = useState([]);
@@ -250,6 +302,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-10">
+      {/* IN-APP OTA UPDATE BANNER */}
+      <UpdateBanner />
+
       {/* PERSONALIZED WELCOME */}
       <WelcomeBanner />
 

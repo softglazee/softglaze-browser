@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import Switch from '@/components/ui/Switch.jsx';
 
 function statusTone(license) {
   if (!license) return { color: '#9ca3af', label: 'Loading…' };
@@ -171,6 +172,21 @@ function ProviderConfig({ provider, onSaved }) {
 
   const setField = (key, val) => setValues((prev) => ({ ...prev, [key]: val }));
 
+  // Toggle enabled instantly (auto-save). Sends only { id, enabled } — the backend
+  // keeps the stored API keys when `values` is omitted — and reverts on failure.
+  async function toggleEnabled(next) {
+    setEnabled(next); setErr(''); setMsg(''); setBusy('toggle');
+    try {
+      await softglazeApi.payments.setConfig({ id: provider.id, enabled: next });
+      setMsg(next ? 'Enabled.' : 'Disabled.');
+      setTimeout(() => setMsg(''), 1800);
+      onSaved && onSaved();
+    } catch (e) {
+      setEnabled(!next); // revert the optimistic flip
+      setErr(e.message || 'Could not update.');
+    } finally { setBusy(''); }
+  }
+
   async function save() {
     setBusy('save'); setErr(''); setMsg('');
     try {
@@ -218,10 +234,11 @@ function ProviderConfig({ provider, onSaved }) {
           </span>
           {enabled && <span className="text-[10px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> on</span>}
         </button>
-        <label className="flex items-center gap-2 text-[11.5px] text-muted-foreground cursor-pointer shrink-0">
-          <input type="checkbox" checked={enabled} onChange={(e) => { setEnabled(e.target.checked); setOpen(true); }} className="accent-blue-500" />
-          Enabled
-        </label>
+        <div className="flex items-center gap-2 shrink-0">
+          {busy === 'toggle' && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+          <span className="text-[11.5px] text-muted-foreground w-14 text-right">{enabled ? 'Enabled' : 'Disabled'}</span>
+          <Switch checked={enabled} disabled={busy === 'toggle'} onChange={toggleEnabled} label={`Enable ${provider.label}`} />
+        </div>
       </div>
 
       {open && (
