@@ -17,7 +17,8 @@ import ActivityModal from '@/components/ActivityModal.jsx';
 import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import CompareProfilesModal from '@/components/CompareProfilesModal.jsx';
-import { Pencil, GitCompare, Bookmark } from 'lucide-react';
+import ShareProfileModal from '@/components/ShareProfileModal.jsx';
+import { Pencil, GitCompare, Bookmark, Share2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import { formatDateTime } from '@/lib/utils.js';
@@ -450,6 +451,7 @@ export default function ProfilesPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showTagModal, setShowTagModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [compareProfiles, setCompareProfiles] = useState(null); // profiles being compared
   const [filterPresets, setFilterPresets] = useState([]);
   const [tagInput, setTagInput] = useState('');
@@ -1771,6 +1773,7 @@ export default function ProfilesPage() {
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>Close</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title="Add or remove a tag"><Tag className="w-3.5 h-3.5 mr-1" /> Tag</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title="Bulk rename with a prefix"><Pencil className="w-3.5 h-3.5 mr-1" /> Rename</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title="Share with team members"><Share2 className="w-3.5 h-3.5 mr-1" /> Share</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title="Compare 2–3 profiles"><GitCompare className="w-3.5 h-3.5 mr-1" /> Compare</Button>
             <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>Delete</Button>
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>Clear</Button>
@@ -2058,6 +2061,9 @@ export default function ProfilesPage() {
           bulkBusy={bulkBusy}
           onRename={handleBulkRename}
         />
+      )}
+      {showShareModal && (
+        <ShareProfileModal profileIds={[...selectedIds]} onClose={() => setShowShareModal(false)} />
       )}
       {compareProfiles && (
         <CompareProfilesModal profiles={compareProfiles} onClose={() => setCompareProfiles(null)} />
