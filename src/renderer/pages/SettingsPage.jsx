@@ -17,6 +17,15 @@ import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
+import i18n from '@/i18n/index.js';
+import settingsExtraEn from '@/i18n/locales/en/settingsExtra.json';
+import settingsExtraEs from '@/i18n/locales/es/settingsExtra.json';
+
+// Register this page's "settingsExtra" namespace without touching the central
+// i18n config (which only bundles the "common" namespace). addResourceBundle is
+// a no-op if the bundle already exists, so this is safe across hot reloads.
+if (!i18n.hasResourceBundle('en', 'settingsExtra')) i18n.addResourceBundle('en', 'settingsExtra', settingsExtraEn);
+if (!i18n.hasResourceBundle('es', 'settingsExtra')) i18n.addResourceBundle('es', 'settingsExtra', settingsExtraEs);
 
 // --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
 const CustomSelect = ({ value, onChange, className = '', children, disabled, id }) => (
@@ -38,6 +47,7 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled, id 
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+  const { t: tx } = useTranslation('settingsExtra');
   const [systemInfo, setSystemInfo] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +68,7 @@ export default function SettingsPage() {
       setSessions(activeSessions);
       setScheduler(sched);
     } catch (err) {
-      setError(err.message || 'Failed to load settings.');
+      setError(err.message || tx('errors.loadSettings'));
     } finally {
       setLoading(false);
     }
@@ -72,7 +82,7 @@ export default function SettingsPage() {
       await softglazeApi.sessions.close(sessionId);
       await loadSettings();
     } catch (err) {
-      setError(err.message || 'Failed to close session.');
+      setError(err.message || tx('errors.closeSession'));
     }
   }
 
@@ -83,7 +93,7 @@ export default function SettingsPage() {
       const result = await softglazeApi.settings.setProxyScheduler(next);
       setScheduler(result);
     } catch (err) {
-      setError(err.message || 'Failed to update scheduler.');
+      setError(err.message || tx('errors.updateScheduler'));
     } finally {
       setSavingSched(false);
     }
@@ -97,7 +107,7 @@ export default function SettingsPage() {
         description={t('settings.description')}
         actions={
           <Button variant="secondary" onClick={loadSettings}>
-            <RefreshCcw className="h-4 w-4" /> Refresh
+            <RefreshCcw className="h-4 w-4" /> {tx('actions.refresh')}
           </Button>
         }
       />
@@ -131,18 +141,18 @@ export default function SettingsPage() {
         <SectionCard
           icon={Database}
           accent="#3b82f6"
-          title="Local Runtime"
-          description="Paths are resolved in the Electron main process."
+          title={tx('localRuntime.title')}
+          description={tx('localRuntime.description')}
         >
           {loading ? (
             <div className="text-sm text-muted-foreground flex items-center gap-2 py-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading system info...
+              <Loader2 className="w-4 h-4 animate-spin" /> {tx('localRuntime.loading')}
             </div>
           ) : (
             <dl className="space-y-4 text-sm">
-              <InfoRow label="SQLite DB" value={systemInfo?.dbPath} />
-              <InfoRow label="Profile Root" value={systemInfo?.profileRoot} />
-              <InfoRow label="Database URL" value={systemInfo?.databaseUrlConfigured ? 'Configured' : 'Not configured'} />
+              <InfoRow label={tx('localRuntime.sqliteDb')} value={systemInfo?.dbPath} />
+              <InfoRow label={tx('localRuntime.profileRoot')} value={systemInfo?.profileRoot} />
+              <InfoRow label={tx('localRuntime.databaseUrl')} value={systemInfo?.databaseUrlConfigured ? tx('localRuntime.configured') : tx('localRuntime.notConfigured')} />
             </dl>
           )}
         </SectionCard>
@@ -151,15 +161,15 @@ export default function SettingsPage() {
         <SectionCard
           icon={Zap}
           accent="#10b981"
-          title="Active Sessions"
-          description="Sessions currently launched and consuming resources."
+          title={tx('sessions.title')}
+          description={tx('sessions.description')}
         >
           {loading ? (
             <div className="text-sm text-muted-foreground flex items-center gap-2 py-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading sessions...
+              <Loader2 className="w-4 h-4 animate-spin" /> {tx('sessions.loading')}
             </div>
           ) : sessions.length === 0 ? (
-            <EmptyState title="No active sessions" description="Launch a profile to see it here." />
+            <EmptyState title={tx('sessions.emptyTitle')} description={tx('sessions.emptyDescription')} />
           ) : (
             <div className="space-y-3">
               {sessions.map((session) => (
@@ -169,7 +179,7 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-3">
                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] uppercase font-bold tracking-wider">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Running
+                          {tx('sessions.running')}
                         </span>
                         <code className="truncate text-xs font-mono text-muted-foreground bg-elevated px-2 py-0.5 rounded border border-border">
                           {session.sessionId}
@@ -180,11 +190,11 @@ export default function SettingsPage() {
                       </div>
                       <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
-                        Created {formatDateTime(session.createdAt)}
+                        {tx('sessions.created', { date: formatDateTime(session.createdAt) })}
                       </div>
                     </div>
                     <Button size="sm" variant="danger" onClick={() => handleCloseSession(session.sessionId)} className="shrink-0 px-3">
-                      <StopCircle className="h-4 w-4 mr-1" /> Close
+                      <StopCircle className="h-4 w-4 mr-1" /> {tx('sessions.close')}
                     </Button>
                   </div>
                 </div>
@@ -198,8 +208,8 @@ export default function SettingsPage() {
       <SectionCard
         icon={Settings2}
         accent="#f59e0b"
-        title="Proxy Health Scheduler"
-        description="Periodically re-check every saved proxy in the background and store its health status."
+        title={tx('scheduler.title')}
+        description={tx('scheduler.description')}
       >
         <div className="flex flex-wrap items-center gap-5">
           {/* Custom Toggle Switch */}
@@ -213,14 +223,15 @@ export default function SettingsPage() {
           </button>
 
           <span className="text-sm font-medium text-foreground w-16">
-            {scheduler.enabled ? 'Enabled' : 'Disabled'}
+            {scheduler.enabled ? tx('scheduler.enabled') : tx('scheduler.disabled')}
           </span>
 
           <div className="w-px h-6 bg-border" />
 
-          <label className="flex items-center gap-3 text-sm text-muted-foreground">
-            Run sweep every
+          <label htmlFor="set-scheduler-interval" className="flex items-center gap-3 text-sm text-muted-foreground">
+            {tx('scheduler.runSweepEvery')}
             <CustomSelect
+              id="set-scheduler-interval"
               value={scheduler.minutes}
               disabled={savingSched}
               onChange={(e) => {
@@ -230,10 +241,10 @@ export default function SettingsPage() {
               }}
               className="w-32"
             >
-              <option value={15}>15 min</option>
-              <option value={30}>30 min</option>
-              <option value={60}>1 hour</option>
-              <option value={120}>2 hours</option>
+              <option value={15}>{tx('scheduler.every15min')}</option>
+              <option value={30}>{tx('scheduler.every30min')}</option>
+              <option value={60}>{tx('scheduler.every1hour')}</option>
+              <option value={120}>{tx('scheduler.every2hours')}</option>
             </CustomSelect>
           </label>
 
@@ -241,18 +252,18 @@ export default function SettingsPage() {
             {scheduler.running ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Service Running
+                {tx('scheduler.serviceRunning')}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-elevated text-muted-foreground border border-border text-xs font-semibold uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-muted-dark" />
-                Idle
+                {tx('scheduler.idle')}
               </span>
             )}
           </div>
         </div>
         <p className="mt-5 text-xs text-muted-foreground leading-relaxed bg-input-background p-4 rounded-lg border border-border">
-          <strong className="text-primary font-medium">Note:</strong> This background task runs in the Electron main process, so checks will continue seamlessly even when the app is minimized or you are navigating between pages. Health results will be displayed directly as status badges inside the Proxy Pool.
+          <strong className="text-primary font-medium">{tx('scheduler.noteLabel')}</strong> {tx('scheduler.noteBody')}
         </p>
       </SectionCard>
 
@@ -336,6 +347,7 @@ function Toggle({ checked, onChange, disabled }) {
 }
 
 function ToggleRow({ title, description, checked, onChange, disabled, wired, children }) {
+  const { t: tx } = useTranslation('settingsExtra');
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-0">
       <div className="min-w-0">
@@ -343,7 +355,7 @@ function ToggleRow({ title, description, checked, onChange, disabled, wired, chi
           <span className="text-sm text-foreground">{title}</span>
           {wired && (
             <span className="inline-flex items-center rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
-              Applied at launch
+              {tx('toggleRow.appliedAtLaunch')}
             </span>
           )}
         </div>
@@ -370,6 +382,7 @@ function SettingsSection({ icon: Icon, accent, title, description, children, cla
 // whether updates are even enabled in this build. The Dashboard banner handles the
 // proactive "an update is ready" prompt; this is where the user can check on demand.
 function UpdatesSection() {
+  const { t: tx } = useTranslation('settingsExtra');
   const [st, setSt] = useState(null);
   const [checked, setChecked] = useState(false); // user pressed Check at least once this session
 
@@ -393,17 +406,17 @@ function UpdatesSection() {
   }
   function install() { softglazeApi.updater.install().catch(() => {}); }
 
-  let line = 'Check whether a newer version of SoftGlaze Browser is available.';
-  if (!active) line = 'Automatic updates are not enabled in this build.';
-  else if (checking) line = 'Checking for updates…';
-  else if (status === 'available') line = `Update ${v} available — downloading in the background…`;
-  else if (status === 'downloading') line = `Downloading ${v}… ${st.percent || 0}%`;
-  else if (downloaded) line = `Update ${v} is ready to install.`;
-  else if (status === 'error') line = `Couldn't check for updates${st && st.error ? ` — ${String(st.error).slice(0, 120)}` : '.'}`;
-  else if (status === 'not-available' && checked) line = "You're on the latest version.";
+  let line = tx('updates.checkDefault');
+  if (!active) line = tx('updates.notEnabled');
+  else if (checking) line = tx('updates.checking');
+  else if (status === 'available') line = tx('updates.available', { version: v });
+  else if (status === 'downloading') line = tx('updates.downloading', { version: v, percent: st.percent || 0 });
+  else if (downloaded) line = tx('updates.ready', { version: v });
+  else if (status === 'error') line = st && st.error ? tx('updates.errorWithReason', { reason: String(st.error).slice(0, 120) }) : tx('updates.errorNoReason');
+  else if (status === 'not-available' && checked) line = tx('updates.upToDate');
 
   return (
-    <SettingsSection icon={RefreshCcw} accent="#0ea5e9" title="Updates" description="Check for and install app updates. Updates are signature-verified before they install.">
+    <SettingsSection icon={RefreshCcw} accent="#0ea5e9" title={tx('updates.title')} description={tx('updates.description')}>
       <div className="flex items-center justify-between gap-4 py-3">
         <div className="min-w-0 flex items-center gap-2">
           {checking ? <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
@@ -413,10 +426,10 @@ function UpdatesSection() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {downloaded && (
-            <Button variant="primary" size="sm" onClick={install}><RefreshCcw className="w-3.5 h-3.5" /> Install &amp; restart</Button>
+            <Button variant="primary" size="sm" onClick={install}><RefreshCcw className="w-3.5 h-3.5" /> {tx('updates.installRestart')}</Button>
           )}
           <Button variant="secondary" size="sm" onClick={check} disabled={checking || !active}>
-            {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />} Check for updates
+            {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />} {tx('updates.checkForUpdates')}
           </Button>
         </div>
       </div>
@@ -443,6 +456,7 @@ function mergeLocal(base, patch) {
 // the browser engine actually honors today; the rest are stored preferences.
 // ---------------------------------------------------------------------------
 function GlobalPreferences() {
+  const { t: tx } = useTranslation('settingsExtra');
   const [s, setS] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -451,7 +465,7 @@ function GlobalPreferences() {
   useEffect(() => {
     softglazeApi.settings.getGlobal()
       .then((cfg) => setS(cfg))
-      .catch((e) => setErr(e.message || 'Failed to load global settings.'))
+      .catch((e) => setErr(e.message || tx('errors.loadGlobal')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -462,14 +476,14 @@ function GlobalPreferences() {
     setErr('');
     softglazeApi.settings.setGlobal(patch)
       .then((next) => setS(next))
-      .catch((e) => setErr(e.message || 'Failed to save setting.'))
+      .catch((e) => setErr(e.message || tx('errors.saveSetting')))
       .finally(() => setSaving(false));
   }, []);
 
   if (loading) {
     return (
       <div className="bg-card border border-border rounded-xl p-6 mt-6 text-sm text-muted-foreground flex items-center gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading global settings…
+        <Loader2 className="w-4 h-4 animate-spin" /> {tx('globalPreferences.loading')}
       </div>
     );
   }
@@ -478,55 +492,55 @@ function GlobalPreferences() {
   return (
     <div className="space-y-4 mt-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Global Preferences</h2>
-        {saving && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</span>}
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{tx('globalPreferences.heading')}</h2>
+        {saving && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {tx('globalPreferences.saving')}</span>}
       </div>
 
       {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{err}</div>}
 
       <div className="grid gap-4 xl:grid-cols-2">
         {/* Account Security */}
-        <SettingsSection icon={ShieldCheck} accent="#3b82f6" title="Account Security" description="Sign-in protection and verification policy.">
+        <SettingsSection icon={ShieldCheck} accent="#3b82f6" title={tx('security.title')} description={tx('security.description')}>
           <ToggleRow
-            title="Remote login reminder"
-            description="A reminder email is sent when your account is signed in from a new IP address instead of the 3 commonly used IPs."
+            title={tx('security.remoteLogin.title')}
+            description={tx('security.remoteLogin.desc')}
             checked={s.security.remoteLoginReminder}
             onChange={(v) => apply({ security: { remoteLoginReminder: v } })}
           />
           <ToggleRow
-            title="Failed login attempt alert"
-            description="If login fails more than 3 times, a reminder email is sent to the Owner's email."
+            title={tx('security.failedLogin.title')}
+            description={tx('security.failedLogin.desc')}
             checked={s.security.failedLoginAlert}
             onChange={(v) => apply({ security: { failedLoginAlert: v } })}
           />
           <ToggleRow
-            title="Login IP allowlist"
-            description="Once set, member login is restricted by IP (Owner not affected)."
+            title={tx('security.ipAllowlist.title')}
+            description={tx('security.ipAllowlist.desc')}
             checked={s.security.loginIpAllowlist.enabled}
             onChange={(v) => apply({ security: { loginIpAllowlist: { enabled: v } } })}
           />
           <ToggleRow
-            title="Two-step verification"
-            description="Sensitive actions require verification via an authenticator app, email, or SMS."
+            title={tx('security.twoStep.title')}
+            description={tx('security.twoStep.desc')}
             checked={s.security.twoStep.enabled}
             onChange={(v) => apply({ security: { twoStep: { enabled: v } } })}
           >
             {s.security.twoStep.enabled && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  Method
-                  <CustomSelect className="w-36" value={s.security.twoStep.method} onChange={(e) => apply({ security: { twoStep: { method: e.target.value } } })}>
-                    <option value="app">Authenticator app</option>
-                    <option value="email">Email</option>
-                    <option value="sms">SMS</option>
+                <label htmlFor="set-security-2fa-method" className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {tx('security.twoStep.methodLabel')}
+                  <CustomSelect id="set-security-2fa-method" className="w-36" value={s.security.twoStep.method} onChange={(e) => apply({ security: { twoStep: { method: e.target.value } } })}>
+                    <option value="app">{tx('security.twoStep.methodApp')}</option>
+                    <option value="email">{tx('security.twoStep.methodEmail')}</option>
+                    <option value="sms">{tx('security.twoStep.methodSms')}</option>
                   </CustomSelect>
                 </label>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  Authentication level
-                  <CustomSelect className="w-64" value={s.security.twoStep.level} onChange={(e) => apply({ security: { twoStep: { level: e.target.value } } })}>
-                    <option value="low">Low — new device or 90+ days since last 2FA</option>
-                    <option value="medium">Medium (recommended) — new device or 30+ days</option>
-                    <option value="high">High — 2FA required for each login</option>
+                <label htmlFor="set-security-2fa-level" className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {tx('security.twoStep.levelLabel')}
+                  <CustomSelect id="set-security-2fa-level" className="w-64" value={s.security.twoStep.level} onChange={(e) => apply({ security: { twoStep: { level: e.target.value } } })}>
+                    <option value="low">{tx('security.twoStep.levelLow')}</option>
+                    <option value="medium">{tx('security.twoStep.levelMedium')}</option>
+                    <option value="high">{tx('security.twoStep.levelHigh')}</option>
                   </CustomSelect>
                 </label>
               </div>
@@ -535,85 +549,85 @@ function GlobalPreferences() {
         </SettingsSection>
 
         {/* Multi-Device mode */}
-        <SettingsSection icon={Users} accent="#0ea5e9" title="Multi-Device Mode" description="Control whether multiple members can access the same profile simultaneously.">
+        <SettingsSection icon={Users} accent="#0ea5e9" title={tx('multiDevice.title')} description={tx('multiDevice.description')}>
           <div className="py-3">
             <CustomSelect value={s.multiDevice.mode} onChange={(e) => apply({ multiDevice: { mode: e.target.value } })}>
-              <option value="off">Off — single member per profile</option>
-              <option value="full">Full — all profiles support simultaneous access</option>
-              <option value="specified">Specified — only selected profiles</option>
+              <option value="off">{tx('multiDevice.modeOff')}</option>
+              <option value="full">{tx('multiDevice.modeFull')}</option>
+              <option value="specified">{tx('multiDevice.modeSpecified')}</option>
             </CustomSelect>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              When enabled, multiple members can access the same profile at the same time. In <strong className="text-foreground">Specified</strong> mode, choose the eligible profiles from the Profiles page.
+              {tx('multiDevice.hintBefore')}<strong className="text-foreground">{tx('multiDevice.hintSpecified')}</strong>{tx('multiDevice.hintAfter')}
             </p>
           </div>
         </SettingsSection>
 
         {/* Website Management */}
-        <SettingsSection icon={Globe2} accent="#8b5cf6" title="Website Management" description="URL access rules and resource loading.">
+        <SettingsSection icon={Globe2} accent="#8b5cf6" title={tx('website.title')} description={tx('website.description')}>
           <ToggleRow
-            title="Block access"
-            description="Use the blocklist and allowlist for URL management."
+            title={tx('website.blockAccess.title')}
+            description={tx('website.blockAccess.desc')}
             checked={s.website.blockAccess.enabled}
             onChange={(v) => apply({ website: { blockAccess: { enabled: v } } })}
           >
             {s.website.blockAccess.enabled && (
               <div className="mt-3">
                 <CustomSelect className="w-48" value={s.website.blockAccess.mode} onChange={(e) => apply({ website: { blockAccess: { mode: e.target.value } } })}>
-                  <option value="blocklist">Blocklist</option>
-                  <option value="allowlist">Allowlist</option>
+                  <option value="blocklist">{tx('website.blockAccess.blocklist')}</option>
+                  <option value="allowlist">{tx('website.blockAccess.allowlist')}</option>
                 </CustomSelect>
               </div>
             )}
           </ToggleRow>
           <ToggleRow
-            title="FB static resources"
-            description="When enabled, Facebook static resources load using the local network."
+            title={tx('website.fbStatic.title')}
+            description={tx('website.fbStatic.desc')}
             checked={s.website.fbStaticLocal}
             onChange={(v) => apply({ website: { fbStaticLocal: v } })}
           />
           <ToggleRow
-            title="Local network access"
-            description="When enabled, specific URLs can be accessed on the local network."
+            title={tx('website.localNetwork.title')}
+            description={tx('website.localNetwork.desc')}
             checked={s.website.localNetworkAccess}
             onChange={(v) => apply({ website: { localNetworkAccess: v } })}
           />
         </SettingsSection>
 
         {/* Platform / Custom Icon */}
-        <SettingsSection icon={Layers} accent="#d946ef" title="Platform" description="Customize the profile list display.">
+        <SettingsSection icon={Layers} accent="#d946ef" title={tx('platform.title')} description={tx('platform.description')}>
           <ToggleRow
-            title="Custom icon"
-            description="Show a custom icon for profiles in the list."
+            title={tx('platform.customIcon.title')}
+            description={tx('platform.customIcon.desc')}
             checked={s.platform.customIconEnabled}
             onChange={(v) => apply({ platform: { customIconEnabled: v } })}
           />
           <ToggleRow
-            title="Display custom No."
-            description='Show the full custom serial number (e.g. "123456").'
+            title={tx('platform.displayCustomNo.title')}
+            description={tx('platform.displayCustomNo.desc')}
             checked={s.platform.displayCustomNo}
             onChange={(v) => apply({ platform: { displayCustomNo: v } })}
           />
           <ToggleRow
-            title="Display last 4 digits of custom No."
-            description="Show only the last 4 digits of the serial number."
+            title={tx('platform.displayLast4.title')}
+            description={tx('platform.displayLast4.desc')}
             checked={s.platform.displayLast4}
             onChange={(v) => apply({ platform: { displayLast4: v } })}
           />
         </SettingsSection>
 
         {/* IP Setting */}
-        <SettingsSection icon={Network} accent="#f59e0b" title="IP Setting" description="Proxy auto-configuration priority and IP checker.">
+        <SettingsSection icon={Network} accent="#f59e0b" title={tx('ipSetting.title')} description={tx('ipSetting.description')}>
           <div className="py-3 text-xs text-muted-foreground leading-relaxed">
-            Searching priority: <span className="text-foreground">Last used IP &gt; ASN &gt; City &gt; Region &gt; Country/Region</span>. Unchecked options are skipped.
+            {tx('ipSetting.priorityPrefix')} <span className="text-foreground">{tx('ipSetting.priorityChain')}</span>. {tx('ipSetting.prioritySuffix')}
           </div>
-          <ToggleRow title="Last used IP" checked={s.ipSetting.autoConfig.lastUsedIp} onChange={(v) => apply({ ipSetting: { autoConfig: { lastUsedIp: v } } })} />
-          <ToggleRow title="ASN" description="Only available for Bright auto." checked={s.ipSetting.autoConfig.asn} onChange={(v) => apply({ ipSetting: { autoConfig: { asn: v } } })} />
-          <ToggleRow title="City" checked={s.ipSetting.autoConfig.city} onChange={(v) => apply({ ipSetting: { autoConfig: { city: v } } })} />
-          <ToggleRow title="Region" checked={s.ipSetting.autoConfig.region} onChange={(v) => apply({ ipSetting: { autoConfig: { region: v } } })} />
-          <ToggleRow title="Country/Region" checked={s.ipSetting.autoConfig.country} onChange={(v) => apply({ ipSetting: { autoConfig: { country: v } } })} />
+          <ToggleRow title={tx('ipSetting.lastUsedIp')} checked={s.ipSetting.autoConfig.lastUsedIp} onChange={(v) => apply({ ipSetting: { autoConfig: { lastUsedIp: v } } })} />
+          <ToggleRow title={tx('ipSetting.asn')} description={tx('ipSetting.asnDesc')} checked={s.ipSetting.autoConfig.asn} onChange={(v) => apply({ ipSetting: { autoConfig: { asn: v } } })} />
+          <ToggleRow title={tx('ipSetting.city')} checked={s.ipSetting.autoConfig.city} onChange={(v) => apply({ ipSetting: { autoConfig: { city: v } } })} />
+          <ToggleRow title={tx('ipSetting.region')} checked={s.ipSetting.autoConfig.region} onChange={(v) => apply({ ipSetting: { autoConfig: { region: v } } })} />
+          <ToggleRow title={tx('ipSetting.country')} checked={s.ipSetting.autoConfig.country} onChange={(v) => apply({ ipSetting: { autoConfig: { country: v } } })} />
           <div className="py-3">
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">IP checker</label>
-            <CustomSelect className="w-56" value={s.ipSetting.ipChecker} onChange={(e) => apply({ ipSetting: { ipChecker: e.target.value } })}>
+            <label htmlFor="set-ip-checker" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{tx('ipSetting.ipCheckerLabel')}</label>
+            <CustomSelect id="set-ip-checker" className="w-56" value={s.ipSetting.ipChecker} onChange={(e) => apply({ ipSetting: { ipChecker: e.target.value } })}>
               <option value="ip-api">ip-api.com</option>
               <option value="ipinfo">ipinfo.io</option>
               <option value="ip2location">IP2Location</option>
@@ -623,15 +637,15 @@ function GlobalPreferences() {
         </SettingsSection>
 
         {/* Data Sync */}
-        <SettingsSection icon={FolderSync} accent="#14b8a6" title="Data Sync" description="Select the data to sync across devices.">
+        <SettingsSection icon={FolderSync} accent="#14b8a6" title={tx('dataSync.title')} description={tx('dataSync.description')}>
           {[
-            ['cookie', 'Cookie'],
-            ['passwords', 'Saved passwords'],
-            ['bookmarks', 'Bookmarks'],
-            ['localStorage', 'Local storage'],
-            ['indexedDb', 'IndexedDB'],
-            ['extensionData', 'Extension data'],
-            ['history', 'History']
+            ['cookie', tx('dataSync.cookie')],
+            ['passwords', tx('dataSync.passwords')],
+            ['bookmarks', tx('dataSync.bookmarks')],
+            ['localStorage', tx('dataSync.localStorage')],
+            ['indexedDb', tx('dataSync.indexedDb')],
+            ['extensionData', tx('dataSync.extensionData')],
+            ['history', tx('dataSync.history')]
           ].map(([key, label]) => (
             <ToggleRow key={key} title={label} checked={s.dataSync[key]} onChange={(v) => apply({ dataSync: { [key]: v } })} />
           ))}
@@ -639,79 +653,79 @@ function GlobalPreferences() {
       </div>
 
       {/* Browser Settings — full width */}
-      <SettingsSection icon={SlidersHorizontal} accent="#f97316" title="Browser Settings" description="Behavior of the launched browser. Items marked “Applied at launch” take effect on the next profile launch.">
+      <SettingsSection icon={SlidersHorizontal} accent="#f97316" title={tx('browser.title')} description={tx('browser.description')}>
         <ToggleRow
-          title="Geo auto-match (timezone · locale · WebRTC)"
-          description="Derive each profile's timezone, language, and WebRTC exit IP from its proxy's location at launch. Turn off to use only each profile's manual values. Applied at launch."
+          title={tx('browser.geoMatch.title')}
+          description={tx('browser.geoMatch.desc')}
           checked={!(s.geoMatch && s.geoMatch.enabled === false)}
           onChange={(v) => apply({ geoMatch: { enabled: v } })}
         />
         <ToggleRow
-          title="Real-time timezone match on dynamic IP change"
-          description="Match the corresponding timezone and location when the dynamic IP changes."
+          title={tx('browser.realtimeTimezone.title')}
+          description={tx('browser.realtimeTimezone.desc')}
           checked={s.browser.matchTimezoneOnIpChange}
           onChange={(v) => apply({ browser: { matchTimezoneOnIpChange: v } })}
         />
         <ToggleRow
-          title="Allow Chrome sign-in"
-          description="When off, you can sign in to Google sites like Gmail without signing in to Chrome itself."
+          title={tx('browser.chromeSignin.title')}
+          description={tx('browser.chromeSignin.desc')}
           checked={s.browser.allowChromeSignin}
           onChange={(v) => apply({ browser: { allowChromeSignin: v } })}
         />
         <ToggleRow
-          title="Offer to translate pages"
-          description="Offer to translate pages that aren't in a language you read."
+          title={tx('browser.offerTranslate.title')}
+          description={tx('browser.offerTranslate.desc')}
           checked={s.browser.offerTranslate}
           onChange={(v) => apply({ browser: { offerTranslate: v } })}
         />
         <ToggleRow
-          title="Disable Browser Developer Tools"
-          description="Writes a DeveloperToolsAvailability managed-policy file into each profile. Chromium enforces it once the file is registered in the OS managed-policy location (not applied machine-wide automatically)."
+          title={tx('browser.disableDevtools.title')}
+          description={tx('browser.disableDevtools.desc')}
           checked={s.browser.disableDevtools}
           onChange={(v) => apply({ browser: { disableDevtools: v } })}
         />
         <ToggleRow
-          title="Disable installing/removing extensions"
-          description="Writes an ExtensionInstallBlocklist managed-policy file per profile (the proxy-auth extension is unaffected). Enforced once registered in the OS managed-policy location."
+          title={tx('browser.lockExtensions.title')}
+          description={tx('browser.lockExtensions.desc')}
           checked={s.browser.lockExtensions}
           onChange={(v) => apply({ browser: { lockExtensions: v } })}
         />
         <ToggleRow
-          title="Virtual camera"
-          description="Simulate local video as a live camera feed. Only valid for Chrome version 140 and above."
+          title={tx('browser.virtualCamera.title')}
+          description={tx('browser.virtualCamera.desc')}
           checked={s.browser.enableVirtualCamera}
           onChange={(v) => apply({ browser: { enableVirtualCamera: v } })}
         />
         <ToggleRow
-          title="Mobile simulation optimization"
-          description="Make the interface closer to a real mobile device experience. Only valid for Chrome version 143 and above."
+          title={tx('browser.mobileSimulation.title')}
+          description={tx('browser.mobileSimulation.desc')}
           checked={s.browser.mobileSimulation}
           onChange={(v) => apply({ browser: { mobileSimulation: v } })}
         />
         <ToggleRow
           wired
-          title="Secure access (HTTPS)"
-          description="Whenever possible, use HTTPS and get warned before loading non-HTTPS sites."
+          title={tx('browser.secureAccess.title')}
+          description={tx('browser.secureAccess.desc')}
           checked={s.browser.secureAccess}
           onChange={(v) => apply({ browser: { secureAccess: v } })}
         />
         <ToggleRow
           wired
-          title="Disable loading videos"
-          description="Block media downloads to save proxy traffic."
+          title={tx('browser.disableVideos.title')}
+          description={tx('browser.disableVideos.desc')}
           checked={s.browser.disableVideos}
           onChange={(v) => apply({ browser: { disableVideos: v } })}
         />
         <ToggleRow
           wired
-          title="Disable loading images"
-          description="Block image loading to save traffic. Note: image loading is disabled fully; the KB threshold below is stored for future per-request filtering."
+          title={tx('browser.disableImages.title')}
+          description={tx('browser.disableImages.desc')}
           checked={s.browser.disableImages}
           onChange={(v) => apply({ browser: { disableImages: v } })}
         >
           {s.browser.disableImages && (
             <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-              Skip images under
+              {tx('browser.disableImages.skipUnder')}
               <input
                 type="number"
                 min={0}
@@ -719,18 +733,18 @@ function GlobalPreferences() {
                 onChange={(e) => apply({ browser: { imageMinKb: Number(e.target.value) || 0 } })}
                 className="w-20 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
-              KB
+              {tx('browser.disableImages.kb')}
             </div>
           )}
         </ToggleRow>
       </SettingsSection>
 
       {/* Performance — bulk-launch concurrency + running ceiling */}
-      <SettingsSection icon={SlidersHorizontal} accent="#22c55e" title="Performance" description="Controls for launching many profiles at once — applied to bulk launches and the running-session ceiling.">
+      <SettingsSection icon={SlidersHorizontal} accent="#22c55e" title={tx('performance.title')} description={tx('performance.description')}>
         <div className="flex items-center justify-between gap-4 py-3 border-b border-border/60">
           <div>
-            <p className="text-sm font-medium text-foreground">Parallel launch limit</p>
-            <p className="text-xs text-muted-foreground mt-0.5">How many profiles spawn at the same time during a bulk launch. Higher is faster but uses more RAM. Recommended 3–8.</p>
+            <p className="text-sm font-medium text-foreground">{tx('performance.parallelLimit.title')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{tx('performance.parallelLimit.desc')}</p>
           </div>
           <input
             type="number" min={1} max={50}
@@ -741,8 +755,8 @@ function GlobalPreferences() {
         </div>
         <div className="flex items-center justify-between gap-4 py-3">
           <div>
-            <p className="text-sm font-medium text-foreground">Max running profiles</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Hard ceiling on profiles running at once (memory safety). Leave at 0 for unlimited; launches past the limit are blocked with a clear message.</p>
+            <p className="text-sm font-medium text-foreground">{tx('performance.maxRunning.title')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{tx('performance.maxRunning.desc')}</p>
           </div>
           <input
             type="number" min={0} max={500}
@@ -754,22 +768,22 @@ function GlobalPreferences() {
       </SettingsSection>
 
       {/* Reliability — session restore, crash recovery, memory guard */}
-      <SettingsSection icon={SlidersHorizontal} accent="#0ea5e9" title="Reliability" description="Restore your last session, recover crashed profiles, and protect against memory exhaustion when many profiles run at once.">
+      <SettingsSection icon={SlidersHorizontal} accent="#0ea5e9" title={tx('reliability.title')} description={tx('reliability.description')}>
         <ToggleRow
-          title="Restore last session on startup"
-          description="When SoftGlaze reopens, offer to relaunch the profiles that were running when it last closed or crashed."
+          title={tx('reliability.restoreSession.title')}
+          description={tx('reliability.restoreSession.desc')}
           checked={!(s.sessionRestore && s.sessionRestore.enabled === false)}
           onChange={(v) => apply({ sessionRestore: { enabled: v } })}
         />
         <ToggleRow
-          title="Auto-restart crashed profiles"
-          description="If a profile's browser crashes on its own, automatically relaunch it. Capped per profile so a persistently-crashing profile can't loop."
+          title={tx('reliability.autoRestart.title')}
+          description={tx('reliability.autoRestart.desc')}
           checked={Boolean(s.crashRecovery && s.crashRecovery.autoRestart)}
           onChange={(v) => apply({ crashRecovery: { autoRestart: v } })}
         >
           {s.crashRecovery && s.crashRecovery.autoRestart && (
             <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-              Max retries per profile
+              {tx('reliability.autoRestart.maxRetries')}
               <input
                 type="number" min={1} max={10}
                 value={s.crashRecovery?.maxRetries ?? 2}
@@ -780,15 +794,15 @@ function GlobalPreferences() {
           )}
         </ToggleRow>
         <ToggleRow
-          title="Memory guard"
-          description="When system memory runs low, automatically close the oldest running profiles until memory recovers. Off by default — it will never close a profile unless enabled."
+          title={tx('reliability.memoryGuard.title')}
+          description={tx('reliability.memoryGuard.desc')}
           checked={Boolean(s.memoryGuard && s.memoryGuard.enabled)}
           onChange={(v) => apply({ memoryGuard: { enabled: v } })}
         >
           {s.memoryGuard && s.memoryGuard.enabled && (
             <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-2">
-                Trigger when free RAM below
+                {tx('reliability.memoryGuard.triggerBelow')}
                 <input
                   type="number" min={1} max={90}
                   value={s.memoryGuard?.lowFreePct ?? 12}
@@ -798,7 +812,7 @@ function GlobalPreferences() {
                 %
               </span>
               <span className="flex items-center gap-2">
-                stop once free RAM reaches
+                {tx('reliability.memoryGuard.stopWhenReaches')}
                 <input
                   type="number" min={1} max={95}
                   value={s.memoryGuard?.recoverFreePct ?? 25}
@@ -813,16 +827,16 @@ function GlobalPreferences() {
       </SettingsSection>
 
       {/* Smart Autofill — Identity Data Vault widget injected into launched profiles */}
-      <SettingsSection icon={Zap} accent="#3DC6DA" title="Smart Autofill" description="The Identity Data Vault widget that detects signup forms in launched profiles and fills them from your saved personas.">
+      <SettingsSection icon={Zap} accent="#3DC6DA" title={tx('smartAutofill.title')} description={tx('smartAutofill.description')}>
         <ToggleRow
-          title="Enable Smart Autofill"
-          description="Inject the autofill widget into launched profiles. On Chromium this uses the in-page bridge; turning this off skips injection entirely."
+          title={tx('smartAutofill.enable.title')}
+          description={tx('smartAutofill.enable.desc')}
           checked={!(s.smartAutofill && s.smartAutofill.enabled === false)}
           onChange={(v) => apply({ smartAutofill: { enabled: v } })}
         />
         <ToggleRow
-          title="Firefox autofill"
-          description="Also install the autofill WebExtension into Firefox profiles (Firefox has no in-page bridge). Loads unsigned on Firefox Developer Edition / Nightly; release Firefox requires the Mozilla-signed build bundled with the installer."
+          title={tx('smartAutofill.firefox.title')}
+          description={tx('smartAutofill.firefox.desc')}
           checked={!(s.smartAutofill && s.smartAutofill.firefox === false)}
           disabled={s.smartAutofill && s.smartAutofill.enabled === false}
           onChange={(v) => apply({ smartAutofill: { firefox: v } })}
@@ -830,11 +844,11 @@ function GlobalPreferences() {
       </SettingsSection>
 
       {/* Audit log — team activity retention */}
-      <SettingsSection icon={ShieldCheck} accent="#f59e0b" title="Audit Log" description="How long team activity and security events (member changes, sign-ins, permission edits) are kept before being pruned on startup.">
+      <SettingsSection icon={ShieldCheck} accent="#f59e0b" title={tx('audit.title')} description={tx('audit.description')}>
         <div className="flex items-center justify-between gap-4 py-3">
           <div>
-            <p className="text-sm font-medium text-foreground">Retention period</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Activity older than this is deleted when SoftGlaze starts. Set to 0 to keep the full history forever.</p>
+            <p className="text-sm font-medium text-foreground">{tx('audit.retentionTitle')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{tx('audit.retentionDesc')}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <input
@@ -843,7 +857,7 @@ function GlobalPreferences() {
               onChange={(e) => apply({ audit: { retentionDays: Math.max(0, Number(e.target.value) || 0) } })}
               className="w-20 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
-            <span className="text-xs text-muted-foreground">days</span>
+            <span className="text-xs text-muted-foreground">{tx('audit.days')}</span>
           </div>
         </div>
       </SettingsSection>
@@ -852,75 +866,76 @@ function GlobalPreferences() {
       <UpdatesSection />
 
       {/* On Startup — full width */}
-      <SettingsSection icon={Power} accent="#ef4444" title="On Startup" description="What happens when a profile is launched.">
+      <SettingsSection icon={Power} accent="#ef4444" title={tx('onStartup.title')} description={tx('onStartup.description')}>
         <div className="py-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Start page</label>
-            <span className="inline-flex items-center rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">Applied at launch</span>
+            <label htmlFor="set-onstartup-mode" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{tx('onStartup.startPageLabel')}</label>
+            <span className="inline-flex items-center rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">{tx('toggleRow.appliedAtLaunch')}</span>
           </div>
-          <CustomSelect className="w-72 mt-2" value={s.onStartup.mode} onChange={(e) => apply({ onStartup: { mode: e.target.value } })}>
-            <option value="detection">Show proxy/fingerprint detection page</option>
-            <option value="last">Continue browsing the last opened page</option>
-            <option value="blank">Do not start the proxy detection page (blank)</option>
+          <CustomSelect id="set-onstartup-mode" className="w-72 mt-2" value={s.onStartup.mode} onChange={(e) => apply({ onStartup: { mode: e.target.value } })}>
+            <option value="detection">{tx('onStartup.modeDetection')}</option>
+            <option value="last">{tx('onStartup.modeLast')}</option>
+            <option value="blank">{tx('onStartup.modeBlank')}</option>
           </CustomSelect>
         </div>
         <ToggleRow
           wired
-          title="Only open with an available proxy"
-          description="If no proxy is found, the browser won't open. (Fingerprint items based on IP would otherwise not match.)"
+          title={tx('onStartup.onlyWithProxy.title')}
+          description={tx('onStartup.onlyWithProxy.desc')}
           checked={s.onStartup.onlyOpenWithProxy}
           onChange={(v) => apply({ onStartup: { onlyOpenWithProxy: v } })}
         />
         <ToggleRow
-          title="Only open when extension data is loaded"
-          description="Open the browser only when the extension data has successfully loaded."
+          title={tx('onStartup.onlyWhenExtensionLoaded.title')}
+          description={tx('onStartup.onlyWhenExtensionLoaded.desc')}
           checked={s.onStartup.onlyOpenWhenExtensionLoaded}
           onChange={(v) => apply({ onStartup: { onlyOpenWhenExtensionLoaded: v } })}
         />
         <ToggleRow
-          title="Block if country/region changed"
-          description="Don't open the profile if the country/region differs from the last time it was opened."
+          title={tx('onStartup.blockIfCountryChanged.title')}
+          description={tx('onStartup.blockIfCountryChanged.desc')}
           checked={s.onStartup.blockIfCountryChanged}
           onChange={(v) => apply({ onStartup: { blockIfCountryChanged: v } })}
         />
       </SettingsSection>
 
       {/* Captcha solver — full width */}
-      <SettingsSection icon={KeyRound} accent="#10b981" title="Captcha Auto-Solving" description="Automatically solve reCAPTCHA v2 and hCaptcha during browsing using a paid third-party solver. This is separate from fingerprinting — a clean fingerprint reduces how often captchas appear, but solving them needs a paid service billed per solve by the provider (not by SoftGlaze).">
+      <SettingsSection icon={KeyRound} accent="#10b981" title={tx('captcha.title')} description={tx('captcha.description')}>
         <ToggleRow
           wired
-          title="Enable captcha auto-solving"
-          description="When on, launched profiles detect supported captchas and submit them to your solver automatically."
+          title={tx('captcha.enable.title')}
+          description={tx('captcha.enable.desc')}
           checked={s.captcha.enabled}
           onChange={(v) => apply({ captcha: { enabled: v } })}
         />
         <div className="py-3">
-          <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Solver provider</label>
-          <CustomSelect className="w-72" value={s.captcha.provider} onChange={(e) => apply({ captcha: { provider: e.target.value } })}>
+          <label htmlFor="set-captcha-provider" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{tx('captcha.providerLabel')}</label>
+          <CustomSelect id="set-captcha-provider" className="w-72" value={s.captcha.provider} onChange={(e) => apply({ captcha: { provider: e.target.value } })}>
             <option value="2captcha">2captcha</option>
             <option value="anticaptcha">Anti-Captcha</option>
           </CustomSelect>
         </div>
         <div className="py-3">
-          <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">API key</label>
+          <label htmlFor="set-captcha-apikey" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{tx('captcha.apiKeyLabel')}</label>
           <input
+            id="set-captcha-apikey"
             type="password"
             autoComplete="off"
             spellCheck={false}
-            placeholder={s.captcha.provider === 'anticaptcha' ? 'Anti-Captcha clientKey' : '2captcha API key'}
+            placeholder={s.captcha.provider === 'anticaptcha' ? tx('captcha.apiKeyPlaceholderAnticaptcha') : tx('captcha.apiKeyPlaceholder2captcha')}
             value={s.captcha.apiKey || ''}
             onChange={(e) => apply({ captcha: { apiKey: e.target.value } })}
             className="w-full max-w-md bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition font-mono"
           />
-          <p className="text-[11px] text-muted-foreground mt-2">Stored locally in your settings DB. You are billed per solve by {s.captcha.provider === 'anticaptcha' ? 'Anti-Captcha' : '2captcha'}.</p>
+          <p className="text-[11px] text-muted-foreground mt-2">{s.captcha.provider === 'anticaptcha' ? tx('captcha.billedAnticaptcha') : tx('captcha.billed2captcha')}</p>
         </div>
         <ToggleRow
-          title="Solve reCAPTCHA v2"
+          title={tx('captcha.solveRecaptchaV2')}
           checked={s.captcha.solveRecaptchaV2}
           onChange={(v) => apply({ captcha: { solveRecaptchaV2: v } })}
         />
         <ToggleRow
-          title="Solve hCaptcha"
+          title={tx('captcha.solveHcaptcha')}
           checked={s.captcha.solveHcaptcha}
           onChange={(v) => apply({ captcha: { solveHcaptcha: v } })}
         />
@@ -932,6 +947,7 @@ function GlobalPreferences() {
 // Email (SMTP) configuration for sending OTP verification codes. Optional:
 // when left blank the app runs in offline mode and shows the code in-app.
 function EmailSettingsCard() {
+  const { t: tx } = useTranslation('settingsExtra');
   const [cfg, setCfg] = useState({ host: '', port: 465, secure: true, user: '', fromName: 'SoftGlaze Security', configured: false, hasPassword: false });
   const [pass, setPass] = useState('');
   const [testTo, setTestTo] = useState('');
@@ -955,8 +971,8 @@ function EmailSettingsCard() {
         user: cfg.user, fromName: cfg.fromName,
         pass: pass || undefined // blank keeps the stored password
       });
-      setCfg(saved); setPass(''); setMsg('Email settings saved.');
-    } catch (e) { setErr(e.message || 'Could not save email settings.'); }
+      setCfg(saved); setPass(''); setMsg(tx('email.saved'));
+    } catch (e) { setErr(e.message || tx('email.saveFailed')); }
     finally { setBusy(false); }
   }
 
@@ -964,9 +980,9 @@ function EmailSettingsCard() {
     setTesting(true); setErr(''); setMsg('');
     try {
       const r = await softglazeApi.settings.testEmail(testTo.trim().toLowerCase());
-      if (r.devMode) setErr('No SMTP configured yet — save your settings first.');
-      else setMsg(`Test email sent to ${testTo.trim()}.`);
-    } catch (e) { setErr(e.message || 'Test failed — check your settings.'); }
+      if (r.devMode) setErr(tx('email.noSmtpYet'));
+      else setMsg(tx('email.testSent', { to: testTo.trim() }));
+    } catch (e) { setErr(e.message || tx('email.testFailed')); }
     finally { setTesting(false); }
   }
 
@@ -984,13 +1000,13 @@ function EmailSettingsCard() {
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">Email (verification codes)</p>
+            <p className="text-sm font-semibold text-foreground">{tx('email.title')}</p>
             {cfg.configured
-              ? <Badge className="bg-green-500/15 text-green-400 border-0">Configured</Badge>
-              : <Badge className="bg-secondary text-muted-foreground border-0">Offline mode</Badge>}
+              ? <Badge className="bg-green-500/15 text-green-400 border-0">{tx('email.configured')}</Badge>
+              : <Badge className="bg-secondary text-muted-foreground border-0">{tx('email.offlineMode')}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-            SMTP for sending OTP codes at registration. Leave blank to run offline — the code is then shown in-app instead of emailed.
+            {tx('email.description')}
           </p>
         </div>
       </div>
@@ -998,31 +1014,31 @@ function EmailSettingsCard() {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 sm:col-span-1">
-            <label className={labelCls}>SMTP host</label>
-            <input className={inputCls} value={cfg.host} onChange={(e) => setCfg({ ...cfg, host: e.target.value })} placeholder="smtp.hostinger.com" />
+            <label htmlFor="set-email-host" className={labelCls}>{tx('email.smtpHost')}</label>
+            <input id="set-email-host" className={inputCls} value={cfg.host} onChange={(e) => setCfg({ ...cfg, host: e.target.value })} placeholder="smtp.hostinger.com" />
           </div>
           <div>
-            <label className={labelCls}>Port</label>
-            <input className={inputCls} value={cfg.port} onChange={(e) => setCfg({ ...cfg, port: e.target.value })} placeholder="465" />
+            <label htmlFor="set-email-port" className={labelCls}>{tx('email.port')}</label>
+            <input id="set-email-port" className={inputCls} value={cfg.port} onChange={(e) => setCfg({ ...cfg, port: e.target.value })} placeholder="465" />
           </div>
           <div>
-            <label className={labelCls}>Encryption</label>
-            <CustomSelect value={cfg.secure ? 'ssl' : 'starttls'} onChange={(e) => setCfg({ ...cfg, secure: e.target.value === 'ssl' })}>
+            <label htmlFor="set-email-encryption" className={labelCls}>{tx('email.encryption')}</label>
+            <CustomSelect id="set-email-encryption" value={cfg.secure ? 'ssl' : 'starttls'} onChange={(e) => setCfg({ ...cfg, secure: e.target.value === 'ssl' })}>
               <option value="ssl">SSL/TLS (465)</option>
               <option value="starttls">STARTTLS (587)</option>
             </CustomSelect>
           </div>
           <div>
-            <label className={labelCls}>Username</label>
-            <input className={inputCls} value={cfg.user} onChange={(e) => setCfg({ ...cfg, user: e.target.value })} placeholder="security@yourdomain.com" />
+            <label htmlFor="set-email-user" className={labelCls}>{tx('email.username')}</label>
+            <input id="set-email-user" className={inputCls} value={cfg.user} onChange={(e) => setCfg({ ...cfg, user: e.target.value })} placeholder="security@yourdomain.com" />
           </div>
           <div>
-            <label className={labelCls}>Password {cfg.hasPassword && <span className="text-muted-dark normal-case tracking-normal">(saved — leave blank to keep)</span>}</label>
-            <input type="password" className={inputCls} value={pass} onChange={(e) => setPass(e.target.value)} placeholder={cfg.hasPassword ? '••••••••' : 'App password'} />
+            <label htmlFor="set-email-password" className={labelCls}>{tx('email.password')} {cfg.hasPassword && <span className="text-muted-dark normal-case tracking-normal">{tx('email.passwordSavedHint')}</span>}</label>
+            <input id="set-email-password" type="password" className={inputCls} value={pass} onChange={(e) => setPass(e.target.value)} placeholder={cfg.hasPassword ? '••••••••' : 'App password'} />
           </div>
           <div className="col-span-2">
-            <label className={labelCls}>From name</label>
-            <input className={inputCls} value={cfg.fromName} onChange={(e) => setCfg({ ...cfg, fromName: e.target.value })} placeholder="SoftGlaze Security" />
+            <label htmlFor="set-email-fromname" className={labelCls}>{tx('email.fromName')}</label>
+            <input id="set-email-fromname" className={inputCls} value={cfg.fromName} onChange={(e) => setCfg({ ...cfg, fromName: e.target.value })} placeholder="SoftGlaze Security" />
           </div>
         </div>
 
@@ -1035,12 +1051,12 @@ function EmailSettingsCard() {
             disabled={busy}
             className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25 transition hover:from-blue-500 hover:to-blue-700 disabled:opacity-60"
           >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save email settings'}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : tx('email.saveButton')}
           </button>
           <div className="ml-auto flex items-center gap-2">
             <input className={inputCls + ' w-56'} value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="test@recipient.com" />
             <Button variant="secondary" onClick={sendTest} disabled={testing || !testTo.trim()}>
-              {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Test</>}
+              {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> {tx('email.test')}</>}
             </Button>
           </div>
         </div>

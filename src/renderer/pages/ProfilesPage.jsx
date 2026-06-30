@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -22,22 +23,32 @@ import { Pencil, GitCompare, Bookmark, Share2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import { formatDateTime } from '@/lib/utils.js';
+import i18n from '@/i18n/index.js';
+import profilesEn from '@/i18n/locales/en/profiles.json';
+import profilesEs from '@/i18n/locales/es/profiles.json';
+
+// Register this page's "profiles" namespace without touching the central i18n
+// config. addResourceBundle is a no-op if the bundle already exists, so this is
+// safe across hot reloads.
+if (!i18n.hasResourceBundle('en', 'profiles')) i18n.addResourceBundle('en', 'profiles', profilesEn);
+if (!i18n.hasResourceBundle('es', 'profiles')) i18n.addResourceBundle('es', 'profiles', profilesEs);
 
 // Compact relative time ("just now", "5m ago", "3h ago", "2d ago"); the absolute
 // timestamp stays available on hover via the cell's title.
 function relTime(iso) {
+  const tr = (k, opts) => i18n.t(k, { ns: 'profiles', ...opts });
   try {
     const d = new Date(iso).getTime();
-    if (!d) return 'Never';
+    if (!d) return tr('relTime.never');
     const s = Math.max(0, Math.floor((Date.now() - d) / 1000));
-    if (s < 45) return 'just now';
-    const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
-    const dys = Math.floor(h / 24); if (dys < 7) return `${dys}d ago`;
-    const w = Math.floor(dys / 7); if (w < 5) return `${w}w ago`;
-    const mo = Math.floor(dys / 30); if (mo < 12) return `${mo}mo ago`;
-    return `${Math.floor(dys / 365)}y ago`;
-  } catch (e) { return 'Never'; }
+    if (s < 45) return tr('relTime.justNow');
+    const m = Math.floor(s / 60); if (m < 60) return tr('relTime.minutes', { count: m });
+    const h = Math.floor(m / 60); if (h < 24) return tr('relTime.hours', { count: h });
+    const dys = Math.floor(h / 24); if (dys < 7) return tr('relTime.days', { count: dys });
+    const w = Math.floor(dys / 7); if (w < 5) return tr('relTime.weeks', { count: w });
+    const mo = Math.floor(dys / 30); if (mo < 12) return tr('relTime.months', { count: mo });
+    return tr('relTime.years', { count: Math.floor(dys / 365) });
+  } catch (e) { return tr('relTime.never'); }
 }
 
 // --- CUSTOM STYLED SELECT DROPDOWN ---
@@ -360,24 +371,25 @@ const MOCK_SAVED_PROXIES = [
 // Bulk-tag dialog for the current selection. Markup is unchanged from its former
 // inline form; useDialog adds Escape/focus-trap/scroll-lock without altering it.
 function TagModal({ onClose, count, tagInput, setTagInput, allTags, bulkBusy, onAssign }) {
+  const { t } = useTranslation('profiles');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Tag selected profiles" tabIndex={-1} className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-foreground">Tag {count} profile{count === 1 ? '' : 's'}</h3>
-        <p className="text-xs text-muted-foreground mt-1">Add or remove a tag across the selected profiles.</p>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('tagModal.ariaLabel')} tabIndex={-1} className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-foreground">{t('tagModal.title', { count })}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t('tagModal.subtitle')}</p>
         <input
           list="sg-all-tags"
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
-          placeholder="Tag name…"
+          placeholder={t('tagModal.placeholder')}
           className="mt-4 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
         <datalist id="sg-all-tags">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
         <div className="mt-4 flex gap-2 justify-end">
-          <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button size="sm" variant="secondary" disabled={bulkBusy || !tagInput.trim()} onClick={() => onAssign('remove')}>Remove</Button>
-          <Button size="sm" variant="primary" disabled={bulkBusy || !tagInput.trim()} onClick={() => onAssign('add')}>Add</Button>
+          <Button size="sm" variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button size="sm" variant="secondary" disabled={bulkBusy || !tagInput.trim()} onClick={() => onAssign('remove')}>{t('tagModal.remove')}</Button>
+          <Button size="sm" variant="primary" disabled={bulkBusy || !tagInput.trim()} onClick={() => onAssign('add')}>{t('tagModal.add')}</Button>
         </div>
       </div>
     </div>
@@ -387,22 +399,23 @@ function TagModal({ onClose, count, tagInput, setTagInput, allTags, bulkBusy, on
 // Bulk-rename dialog for the current selection. Markup unchanged from its former
 // inline form; useDialog adds the standard modal a11y behaviors.
 function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStart, setRenameStart, bulkBusy, onRename }) {
+  const { t } = useTranslation('profiles');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Rename selected profiles" tabIndex={-1} className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold text-foreground">Rename {count} profile{count === 1 ? '' : 's'}</h3>
-        <p className="text-xs text-muted-foreground mt-1">Number the selected profiles by a prefix, in their current visible order.</p>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('renameModal.ariaLabel')} tabIndex={-1} className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-foreground">{t('renameModal.title', { count })}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t('renameModal.subtitle')}</p>
         <div className="mt-4 flex gap-2">
-          <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder="Prefix, e.g. Account" className="flex-1 bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
-          <input type="number" min={0} value={renameStart} onChange={(e) => setRenameStart(Number(e.target.value) || 0)} className="w-20 bg-input-background border border-border rounded px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" title="Start number" />
+          <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder={t('renameModal.prefixPlaceholder')} className="flex-1 bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+          <input type="number" min={0} value={renameStart} onChange={(e) => setRenameStart(Number(e.target.value) || 0)} className="w-20 bg-input-background border border-border rounded px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" title={t('renameModal.startNumber')} />
         </div>
         {renamePrefix.trim() && (
-          <p className="mt-2 text-xs text-muted-foreground">Preview: <span className="text-foreground font-medium">{renamePrefix.trim()} {Number(renameStart) || 0}</span>, {renamePrefix.trim()} {(Number(renameStart) || 0) + 1}, …</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t('renameModal.preview')} <span className="text-foreground font-medium">{renamePrefix.trim()} {Number(renameStart) || 0}</span>, {renamePrefix.trim()} {(Number(renameStart) || 0) + 1}, …</p>
         )}
         <div className="mt-4 flex gap-2 justify-end">
-          <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button size="sm" variant="primary" disabled={bulkBusy || !renamePrefix.trim()} onClick={onRename}>Rename</Button>
+          <Button size="sm" variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button size="sm" variant="primary" disabled={bulkBusy || !renamePrefix.trim()} onClick={onRename}>{t('renameModal.rename')}</Button>
         </div>
       </div>
     </div>
@@ -410,6 +423,7 @@ function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStar
 }
 
 export default function ProfilesPage() {
+  const { t } = useTranslation('profiles');
   const [profiles, setProfiles] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -748,16 +762,16 @@ export default function ProfilesPage() {
     try {
       const res = await softglazeApi.profiles.exportCookies(pd.id, 'json');
       updatePd('cookie', res.content || '');
-      if (!res.count) setError('No saved cookies found for this profile yet.');
+      if (!res.count) setError(t('errors.noCookies'));
     } catch (err) {
-      setError(err.message || 'Could not load saved cookies.');
+      setError(err.message || t('errors.loadCookies'));
     } finally {
       setLoadingCookies(false);
     }
   }
 
   async function handleSaveProfile() {
-    if (!pd.name) return setError('Profile Name is required.');
+    if (!pd.name) return setError(t('errors.nameRequired'));
     setSaving(true);
     try {
       const finalUA = pd.userAgent === 'Auto' ? generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length, effectiveChromeMajor) : pd.userAgent;
@@ -840,7 +854,7 @@ export default function ProfilesPage() {
   }
   async function handleBulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`Move ${selectedIds.size} profile(s) to Trash?`)) return;
+    if (!window.confirm(t('confirm.bulkDelete', { count: selectedIds.size }))) return;
     setBulkBusy(true); setError('');
     try { await softglazeApi.profiles.bulkDelete([...selectedIds]); clearSelection(); await loadData(); }
     catch (err) { setError(err.message); }
@@ -878,7 +892,7 @@ export default function ProfilesPage() {
     setSearch(preset.search ?? '');
   }
   async function saveCurrentPreset() {
-    const name = window.prompt('Save the current filters as a preset — name:');
+    const name = window.prompt(t('filters.savePresetPrompt'));
     if (!name || !name.trim()) return;
     const preset = { name: name.trim().slice(0, 40), group: filterGroup, tag: filterTag, proxy: filterProxy, status: filterStatus, search };
     const next = [...filterPresets.filter((p) => p.name !== preset.name), preset];
@@ -895,29 +909,29 @@ export default function ProfilesPage() {
       await navigator.clipboard.writeText(token);
       setCopied2fa(profileId);
       setTimeout(() => setCopied2fa((cur) => (cur === profileId ? null : cur)), 1500);
-    } catch (err) { setError(err.message || 'Could not generate the 2FA code.'); }
+    } catch (err) { setError(err.message || t('errors.gen2fa')); }
   }
 
   // Softglaze Premium — launch selected profiles as one Master + Slave windows.
   async function handleSynchronize() {
-    if (selectedIds.size < 2) { setError('Select at least two profiles to synchronize.'); return; }
+    if (selectedIds.size < 2) { setError(t('errors.syncMin')); return; }
     setBulkBusy(true); setError('');
     try {
       await softglazeApi.profiles.bulkSynchronize([...selectedIds]);
       await refreshSessions();
-    } catch (err) { setError(err.message || 'Could not start the synchronizer.'); }
+    } catch (err) { setError(err.message || t('errors.syncFailed')); }
     finally { setBulkBusy(false); }
   }
 
   async function handleCheckProxy(e) {
     e.preventDefault();
     const proxyRaw = constructProxyString();
-    if (pd.proxySetting === 'Custom' && (!pd.proxyHost || !pd.proxyPort)) return setError('Please enter at least Host and Port to check.');
+    if (pd.proxySetting === 'Custom' && (!pd.proxyHost || !pd.proxyPort)) return setError(t('errors.proxyHostPort'));
     setCheckingProxy(true); setError(''); setProxyResult(null);
     try {
       setProxyResult(await softglazeApi.proxies.check({ type: pd.proxyType, raw: proxyRaw }));
-    } catch (err) { 
-      setError(err.message || 'Proxy check failed.'); 
+    } catch (err) {
+      setError(err.message || t('errors.proxyCheckFailed'));
     } finally { 
       setCheckingProxy(false); 
     }
@@ -948,10 +962,10 @@ export default function ProfilesPage() {
         <div className="bg-surface border-b border-border px-5 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-4">
             <button onClick={closeEditor} className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-foreground transition"><ArrowLeft className="h-5 w-5" /></button>
-            <h1 className="text-lg font-bold text-foreground tracking-tight">{isEditing ? 'Edit Browser Profile' : 'New Browser Profile'}</h1>
+            <h1 className="text-lg font-bold text-foreground tracking-tight">{isEditing ? t('editor.titleEdit') : t('editor.titleNew')}</h1>
           </div>
           <div className="flex items-center gap-3 text-xs text-amber-400 bg-amber-500/10 px-4 py-2 rounded border border-amber-500/20">
-            <ShieldCheck className="h-4 w-4" /> Recommended: bind an authenticator in Settings to keep your account secure.
+            <ShieldCheck className="h-4 w-4" /> {t('editor.authBanner')}
           </div>
         </div>
 
@@ -961,7 +975,7 @@ export default function ProfilesPage() {
           <div className="flex-1 bg-surface rounded border border-border overflow-hidden flex flex-col min-w-0 shadow-sm">
             <div className="flex border-b border-border bg-surface overflow-x-auto shrink-0 sticky top-0 z-10 px-2 pt-2">
               {tabs.map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap px-6 py-3 text-sm font-medium transition-all border-b-2 rounded-t ${activeTab === tab ? 'border-primary text-primary bg-primary/10' : 'border-transparent text-muted hover:text-foreground hover:bg-card'}`}>{tab}</button>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap px-6 py-3 text-sm font-medium transition-all border-b-2 rounded-t ${activeTab === tab ? 'border-primary text-primary bg-primary/10' : 'border-transparent text-muted hover:text-foreground hover:bg-card'}`}>{t(`tabs.${tab.toLowerCase()}`)}</button>
               ))}
             </div>
 
@@ -971,12 +985,12 @@ export default function ProfilesPage() {
               {activeTab === 'General' && (
                 <div className="space-y-6 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">Name</label>
-                    <input type="text" value={pd.name} onChange={e => updatePd('name', e.target.value)} placeholder="e.g. FB Mailsi 01" className="w-full bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
+                    <label htmlFor="pf-general-name" className="text-left lg:text-right text-muted font-medium">{t('general.name')}</label>
+                    <input id="pf-general-name" type="text" value={pd.name} onChange={e => updatePd('name', e.target.value)} placeholder={t('general.namePlaceholder')} className="w-full bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
                   </div>
-                  
+
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">Browser</label>
+                    <label className="text-left lg:text-right text-muted font-medium">{t('general.browser')}</label>
                     <div className="flex flex-wrap gap-4">
                       {['SunBrowser', 'FlowerBrowser'].map(core => (
                         <div key={core} className={`flex items-center rounded border transition shadow-sm ${pd.browserCore === core ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-muted'}`}>
@@ -1000,29 +1014,29 @@ export default function ProfilesPage() {
                       <div>
                         <p className="text-xs text-muted">
                           {installedBrowsers.length > 0
-                            ? `${installedBrowsers.length} real Chrome builds installed — the selected version launches the matching binary, so UA, Client-Hints and TLS all genuinely match. "Auto" uses the newest installed.`
-                            : 'No on-disk Chrome builds detected — using the bundled engine. Download a version below to install it.'}
+                            ? t('general.installedBuilds', { count: installedBrowsers.length })
+                            : t('general.noBuilds')}
                         </p>
                         <button type="button" onClick={() => setShowBrowserManager(true)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-hover transition">
-                          <Download className="w-3.5 h-3.5" /> Download more versions
+                          <Download className="w-3.5 h-3.5" /> {t('general.downloadMore')}
                         </button>
                       </div>
                     </div>
                   )}
                   {pd.browserCore === 'SunBrowser' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
-                      <label className="text-left lg:text-right text-muted font-medium pt-2">Identity</label>
+                      <label className="text-left lg:text-right text-muted font-medium pt-2">{t('general.identity')}</label>
                       <div>
                         <BrowserBrandSelect value={pd.browserBrand || 'Chrome'} onChange={(v) => updatePd('browserBrand', v)} />
                         <p className="mt-2 text-xs text-muted">
-                          Runs the same real Chrome build above, but presents as the chosen Chromium browser — UA token, Sec-CH-UA brands and navigator identity all match, while TLS/JA4 stay genuine (it <span className="text-foreground">is</span> Chromium under the hood).
+                          {t('general.identityHelpPre')}<span className="text-foreground">{t('general.identityHelpEmph')}</span>{t('general.identityHelpPost')}
                         </p>
                       </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">OS</label>
+                    <label className="text-left lg:text-right text-muted font-medium">{t('general.os')}</label>
                     <div className="flex flex-wrap gap-3">
                       {OS_PLATFORMS.map(os => {
                         const Icon = os.icon;
@@ -1051,15 +1065,15 @@ export default function ProfilesPage() {
                   <div className="w-full h-px bg-border"></div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <div className="text-left lg:text-right mt-2"><label className="text-muted font-medium block">User-Agent</label></div>
+                    <div className="text-left lg:text-right mt-2"><label className="text-muted font-medium block">{t('general.userAgent')}</label></div>
                     <div className="w-full flex flex-col sm:flex-row gap-3 items-start">
                       <CustomSelect value={pd.uaCategory} onChange={e => updatePd('uaCategory', e.target.value)} className="w-full sm:w-[200px] shrink-0">
-                        <option value="All">All Categories</option>
+                        <option value="All">{t('general.allCategories')}</option>
                         {filteredUAGroups.map((g, i) => <option key={i} value={g.label}>{g.label}</option>)}
                       </CustomSelect>
                       <div className="flex w-full gap-2">
                         <CustomSelect value={pd.userAgent} onChange={e => updatePd('userAgent', e.target.value)} className="flex-1 min-w-0">
-                          <option value="Auto">Auto (Smart assignment from unused profiles)</option>
+                          <option value="Auto">{t('general.uaAuto')}</option>
                           {filteredUAGroups.filter(g => pd.uaCategory === 'All' || g.label === pd.uaCategory).map((group, idx) => (
                             <optgroup key={idx} label={group.label} className="bg-surface text-primary font-semibold italic">
                               {group.options.map((ua, optIdx) => (
@@ -1068,33 +1082,33 @@ export default function ProfilesPage() {
                             </optgroup>
                           ))}
                         </CustomSelect>
-                        <button type="button" onClick={handleRollAgent} title="Swap to a random User-Agent" className="shrink-0 h-10 w-10 flex items-center justify-center bg-surface hover:bg-muted-dark border border-border text-foreground rounded transition"><RefreshCcw className="w-4 h-4" /></button>
+                        <button type="button" onClick={handleRollAgent} title={t('general.swapUa')} className="shrink-0 h-10 w-10 flex items-center justify-center bg-surface hover:bg-muted-dark border border-border text-foreground rounded transition"><RefreshCcw className="w-4 h-4" /></button>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium"><span className="text-red-500 mr-1">*</span>Group</label>
+                    <label className="text-left lg:text-right text-muted font-medium"><span className="text-red-500 mr-1">*</span>{t('general.group')}</label>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <CustomSelect value={pd.group} onChange={e => updatePd('group', e.target.value)} className="w-full sm:w-[220px]">
-                        <option value="Ungrouped">Ungrouped</option><option value="New">+ Add new group</option><option value="Lead Gen">Lead Gen</option>
+                        <option value="Ungrouped">{t('general.ungrouped')}</option><option value="New">{t('general.addNewGroup')}</option><option value="Lead Gen">Lead Gen</option>
                       </CustomSelect>
                       <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded px-3 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition">
                         <Tag className="w-4 h-4 text-muted" />
-                        <input type="text" value={pd.tags} onChange={e => updatePd('tags', e.target.value)} placeholder="Tags" className="w-full bg-transparent outline-none text-foreground py-2.5 text-sm" />
+                        <input type="text" value={pd.tags} onChange={e => updatePd('tags', e.target.value)} placeholder={t('general.tagsPlaceholder')} className="w-full bg-transparent outline-none text-foreground py-2.5 text-sm" />
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium mt-2">Cookie</label>
+                    <label htmlFor="pf-general-cookie" className="text-left lg:text-right text-muted font-medium mt-2">{t('general.cookie')}</label>
                     <div className="w-full">
-                      <textarea value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder="Formats: JSON, Netscape, Name=Value" className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
+                      <textarea id="pf-general-cookie" value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder={t('general.cookiePlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
                       {isEditing && (
                         <div className="flex items-center justify-end gap-3 mt-2">
                           <button type="button" onClick={handleLoadCookies} disabled={loadingCookies} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-hover disabled:opacity-50 transition">
                             {loadingCookies ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Cookie className="w-3.5 h-3.5" />}
-                            Load this profile's saved cookies
+                            {t('general.loadCookies')}
                           </button>
                         </div>
                       )}
@@ -1102,8 +1116,8 @@ export default function ProfilesPage() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium mt-2">Remarks / Notes</label>
-                    <textarea value={pd.remark} onChange={e => updatePd('remark', e.target.value)} rows="2" placeholder="Optional notes for this profile..." className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y transition"></textarea>
+                    <label htmlFor="pf-general-remark" className="text-left lg:text-right text-muted font-medium mt-2">{t('general.remarks')}</label>
+                    <textarea id="pf-general-remark" value={pd.remark} onChange={e => updatePd('remark', e.target.value)} rows="2" placeholder={t('general.remarksPlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y transition"></textarea>
                   </div>
                 </div>
               )}
@@ -1112,29 +1126,29 @@ export default function ProfilesPage() {
               {activeTab === 'Proxy' && (
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">Proxy setting</label>
+                    <label className="text-left lg:text-right text-muted font-medium">{t('proxy.setting')}</label>
                     <ButtonTabs value={pd.proxySetting} onChange={v => { updatePd('proxySetting', v); setProxyResult(null); setError(''); }} options={['Custom', 'Saved Proxies', 'Rotating Proxy']} />
                   </div>
 
                   {pd.proxySetting === 'Custom' && (
                     <>
                       <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                        <label className="text-left lg:text-right text-muted font-medium mt-2">Proxy type</label>
+                        <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.type')}</label>
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-wrap gap-3">
                             <CustomSelect value={pd.proxyType} onChange={e => updatePd('proxyType', e.target.value)} className="w-[140px]"><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="Socks5">Socks5</option><option value="Local">Local</option></CustomSelect>
                             <CustomSelect value={pd.ipChecker} onChange={e => updatePd('ipChecker', e.target.value)} className="w-[180px]"><option value="IP2Location">IP2Location</option><option value="IPinfo">IPinfo</option></CustomSelect>
                             <Button variant="secondary" onClick={handleCheckProxy} disabled={checkingProxy} className="gap-2">
-                              {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? 'Checking...' : 'Check network'}
+                              {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? t('proxy.checking') : t('proxy.checkNetwork')}
                             </Button>
                           </div>
                           {proxyResult && (
                             <div className="text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded w-full max-w-xl">
-                              <div className="font-semibold flex items-center gap-2 mb-3"><Check className="w-4 h-4"/> Connection Successful</div>
+                              <div className="font-semibold flex items-center gap-2 mb-3"><Check className="w-4 h-4"/> {t('proxy.connectionOk')}</div>
                               <div className="grid grid-cols-3 gap-4">
-                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">IP</span> {proxyResult.ip || pd.proxyHost}</div>
-                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">Country</span> {proxyResult.country || 'US'}</div>
-                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">Latency</span> {proxyResult.latencyMs || '120'}ms</div>
+                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.ip')}</span> {proxyResult.ip || pd.proxyHost}</div>
+                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.country')}</span> {proxyResult.country || 'US'}</div>
+                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.latency')}</span> {proxyResult.latencyMs || '120'}ms</div>
                               </div>
                             </div>
                           )}
@@ -1144,14 +1158,14 @@ export default function ProfilesPage() {
                       <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 pt-2">
                         <label className="text-left lg:text-right text-muted font-medium mt-2"></label>
                         <div className="space-y-4 w-full">
-                          <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded w-max mb-4">💡 Tip: Paste your proxy "host:port:user:pass" into the Host field to auto-fill.</p>
+                          <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded w-max mb-4">{t('proxy.pasteTip')}</p>
                           <div className="flex gap-4">
-                            <input type="text" placeholder="Host (e.g. proxy.smartproxy.net)" value={pd.proxyHost} onChange={e => updatePd('proxyHost', e.target.value)} onPaste={handleProxyPaste} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
-                            <input type="text" placeholder="Port" value={pd.proxyPort} onChange={e => updatePd('proxyPort', e.target.value)} className="w-[140px] bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder={t('proxy.hostPlaceholder')} value={pd.proxyHost} onChange={e => updatePd('proxyHost', e.target.value)} onPaste={handleProxyPaste} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder={t('proxy.portPlaceholder')} value={pd.proxyPort} onChange={e => updatePd('proxyPort', e.target.value)} className="w-[140px] bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
                           </div>
                           <div className="flex gap-4">
-                            <input type="text" placeholder="Proxy Username (Optional)" value={pd.proxyUser} onChange={e => updatePd('proxyUser', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
-                            <input type="text" placeholder="Proxy Password (Optional)" value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder={t('proxy.userPlaceholder')} value={pd.proxyUser} onChange={e => updatePd('proxyUser', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <input type="text" placeholder={t('proxy.passPlaceholder')} value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
                           </div>
                         </div>
                       </div>
@@ -1159,19 +1173,19 @@ export default function ProfilesPage() {
                   )}
                   {pd.proxySetting === 'Saved Proxies' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 mt-4">
-                      <label className="text-left lg:text-right text-muted font-medium mt-2">Select Proxy</label>
+                      <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.selectProxy')}</label>
                       <CustomSelect value={pd.selectedSavedProxy} onChange={e => updatePd('selectedSavedProxy', e.target.value)} className="w-full max-w-md">
-                        <option value="">-- Choose a saved proxy --</option>
+                        <option value="">{t('proxy.chooseSaved')}</option>
                         {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
                       </CustomSelect>
-                      {allProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">No saved proxies yet — add them on the Proxy Pool page.</p>}
+                      {allProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
                     </div>
                   )}
 
                   {/* Network — per-profile HTTP/3 (QUIC) toggle */}
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium mt-2">Network</label>
+                    <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.network')}</label>
                     <div className="w-full">
                       <div className="flex items-start gap-3 bg-background border border-border rounded px-4 py-3.5">
                         <button
@@ -1181,7 +1195,7 @@ export default function ProfilesPage() {
                           onClick={() => updatePd('enableQuic', !pd.enableQuic)}
                           className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 mt-0.5"
                           style={{ background: pd.enableQuic ? '#22c55e' : 'var(--switch-background, #3f3f46)' }}
-                          title={pd.enableQuic ? 'Disable HTTP/3 (QUIC)' : 'Enable HTTP/3 (QUIC)'}
+                          title={pd.enableQuic ? t('proxy.quicDisableTitle') : t('proxy.quicEnableTitle')}
                         >
                           <span
                             className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.enableQuic ? 'translate-x-5' : 'translate-x-1'}`}
@@ -1189,9 +1203,9 @@ export default function ProfilesPage() {
                           />
                         </button>
                         <div className="min-w-0">
-                          <span className="text-sm font-medium text-foreground">Enable HTTP/3 (QUIC Support)</span>
+                          <span className="text-sm font-medium text-foreground">{t('proxy.quicLabel')}</span>
                           <p className="text-xs text-amber-400/90 mt-1 leading-relaxed">
-                            ⚠️ Warning: Only enable this on premium, high-quality proxies that fully support UDP tracking isolation. Enabling QUIC unlocks HTTP/3 speeds but can cause network leaks on poor setups. Default is Disabled (Maximum Stealth).
+                            {t('proxy.quicWarning')}
                           </p>
                         </div>
                       </div>
@@ -1204,29 +1218,29 @@ export default function ProfilesPage() {
               {activeTab === 'Platform' && (
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium mt-2">Startup Tabs</label>
+                    <label htmlFor="pf-platform-startup" className="text-left lg:text-right text-muted font-medium mt-2">{t('platform.startupTabs')}</label>
                     <div className="w-full">
-                      <textarea value={pd.startupUrls} onChange={e => updatePd('startupUrls', e.target.value)} rows="3" placeholder="https://facebook.com&#10;https://google.com&#10;(Enter one URL per line)" className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 resize-y font-mono text-sm"></textarea>
-                      <p className="text-xs text-muted mt-2 italic">URLs to open automatically when the profile launches.</p>
+                      <textarea id="pf-platform-startup" value={pd.startupUrls} onChange={e => updatePd('startupUrls', e.target.value)} rows="3" placeholder={t('platform.startupPlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 resize-y font-mono text-sm"></textarea>
+                      <p className="text-xs text-muted mt-2 italic">{t('platform.startupHint')}</p>
                     </div>
                   </div>
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <div className="text-left lg:text-right mt-2">
-                      <label className="text-muted font-medium block">Platform Accounts</label>
+                      <label className="text-muted font-medium block">{t('platform.accounts')}</label>
                       <button type="button" onClick={() => updatePd('platformAccounts', [...pd.platformAccounts, { platform: 'Facebook', username: '', password: '' }])} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover transition">
-                        <Plus className="w-4 h-4" /> Add Account
+                        <Plus className="w-4 h-4" /> {t('platform.addAccount')}
                       </button>
                     </div>
                     <div className="w-full space-y-4">
-                      {pd.platformAccounts.length === 0 && <div className="text-sm text-muted italic p-6 border border-dashed border-border rounded text-center bg-surface">No platform credentials added.</div>}
+                      {pd.platformAccounts.length === 0 && <div className="text-sm text-muted italic p-6 border border-dashed border-border rounded text-center bg-surface">{t('platform.noCredentials')}</div>}
                       {pd.platformAccounts.map((acc, idx) => (
                         <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-background p-4 rounded border border-border shadow-sm">
                           <CustomSelect value={acc.platform} onChange={e => { const a = [...pd.platformAccounts]; a[idx].platform = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:w-[160px] shrink-0">
-                            {['Facebook', 'Instagram', 'Twitter / X', 'Amazon', 'Google', 'TikTok', 'LinkedIn', 'Other'].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            {['Facebook', 'Instagram', 'Twitter / X', 'Amazon', 'Google', 'TikTok', 'LinkedIn', 'Other'].map(opt => <option key={opt} value={opt}>{opt === 'Other' ? t('platform.platformOther') : opt}</option>)}
                           </CustomSelect>
-                          <input type="text" placeholder="Username / Email" value={acc.username} onChange={e => { const a = [...pd.platformAccounts]; a[idx].username = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
-                          <input type="password" placeholder="Password" value={acc.password} onChange={e => { const a = [...pd.platformAccounts]; a[idx].password = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                          <input type="text" placeholder={t('platform.usernamePlaceholder')} value={acc.username} onChange={e => { const a = [...pd.platformAccounts]; a[idx].username = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                          <input type="password" placeholder={t('platform.passwordPlaceholder')} value={acc.password} onChange={e => { const a = [...pd.platformAccounts]; a[idx].password = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
                           <button type="button" onClick={() => { const a = [...pd.platformAccounts]; a.splice(idx, 1); updatePd('platformAccounts', a); }} className="p-2 text-muted hover:text-red-400 bg-surface rounded border border-transparent hover:border-red-500/30 transition"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
@@ -1238,20 +1252,21 @@ export default function ProfilesPage() {
                   {/* Softglaze Premium — native 2FA vault */}
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <div className="text-left lg:text-right mt-2">
-                      <label className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> 2FA Secret</label>
-                      <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider text-violet-400/80">Premium</span>
+                      <label htmlFor="pf-platform-2fa" className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('platform.twoFactor')}</label>
+                      <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider text-violet-400/80">{t('platform.premium')}</span>
                     </div>
                     <div className="w-full">
                       <input
+                        id="pf-platform-2fa"
                         type="text"
                         value={pd.twoFactorSeed || ''}
                         onChange={e => updatePd('twoFactorSeed', e.target.value)}
-                        placeholder="Base32 authenticator seed, e.g. JBSWY3DPEHPK3PXP"
+                        placeholder={t('platform.twoFactorPlaceholder')}
                         autoComplete="off"
                         spellCheck={false}
                         className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm tracking-wide"
                       />
-                      <p className="text-xs text-muted mt-2 italic">Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes — copy them with one click from the Profiles list (🔑 2FA badge).</p>
+                      <p className="text-xs text-muted mt-2 italic">{t('platform.twoFactorHint')}</p>
                     </div>
                   </div>
                 </div>
@@ -1265,55 +1280,55 @@ export default function ProfilesPage() {
                       <ShieldCheck className="w-4 h-4 text-blue-400" />
                     </div>
                     <div>
-                      <h2 className="text-sm font-semibold text-foreground">Core Identity</h2>
-                      <p className="text-xs text-muted-foreground">Timezone, language, screen &amp; locale signals</p>
+                      <h2 className="text-sm font-semibold text-foreground">{t('fp.coreIdentity')}</h2>
+                      <p className="text-xs text-muted-foreground">{t('fp.coreIdentitySub')}</p>
                     </div>
                   </div>
-                  
-                  <FpRow label="WebRTC" description="Controls WebRTC behavior to prevent real IP leaks while keeping compatibility.">
+
+                  <FpRow label={t('fp.webrtc')} description={t('fp.webrtcDesc')}>
                     <ButtonTabs value={pd.webrtc} onChange={v => updatePd('webrtc', v)} options={['Forward', 'Replace', 'Real', 'Disabled', 'Proxy UDP']} />
                   </FpRow>
 
-                  <FpRow label="Timezone" description="Browser timezone matches proxy location or your system.">
+                  <FpRow label={t('fp.timezone')} description={t('fp.timezoneDesc')}>
                     <ButtonTabs value={pd.timezoneType} onChange={v => updatePd('timezoneType', v)} options={['Based on IP', 'Real', 'Custom']} />
                     {pd.timezoneType === 'Custom' && (
-                      <input type="text" placeholder="e.g. America/New_York" value={pd.timezoneCustom} onChange={e => updatePd('timezoneCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
+                      <input type="text" placeholder={t('fp.timezonePlaceholder')} value={pd.timezoneCustom} onChange={e => updatePd('timezoneCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
                     )}
                   </FpRow>
 
-                  <FpRow label="Location" description="Geolocation API permission behavior and coordinates.">
+                  <FpRow label={t('fp.location')} description={t('fp.locationDesc')}>
                     <div className="flex gap-4 items-center">
                       <ButtonTabs value={pd.locationType} onChange={v => updatePd('locationType', v)} options={['Based on IP', 'Custom', 'Block']} />
                       {pd.locationType !== 'Block' && (
                         <CustomSelect value={pd.locationPrompt} onChange={e => updatePd('locationPrompt', e.target.value)} className="w-[180px]">
-                          <option value="Ask each time">Ask each time</option><option value="Always allow">Always allow</option>
+                          <option value="Ask each time">{t('fp.askEachTime')}</option><option value="Always allow">{t('fp.alwaysAllow')}</option>
                         </CustomSelect>
                       )}
                     </div>
                     {pd.locationType === 'Custom' && (
                       <div className="flex gap-3 mt-3">
-                        <input type="text" placeholder="Latitude (e.g. 52.3676)" value={pd.locationLat} onChange={e => updatePd('locationLat', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
-                        <input type="text" placeholder="Longitude (e.g. 4.9041)" value={pd.locationLng} onChange={e => updatePd('locationLng', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
-                        <input type="text" placeholder="Accuracy (m)" value={pd.locationAcc} onChange={e => updatePd('locationAcc', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                        <input type="text" placeholder={t('fp.latPlaceholder')} value={pd.locationLat} onChange={e => updatePd('locationLat', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                        <input type="text" placeholder={t('fp.lngPlaceholder')} value={pd.locationLng} onChange={e => updatePd('locationLng', e.target.value)} className="w-[160px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                        <input type="text" placeholder={t('fp.accPlaceholder')} value={pd.locationAcc} onChange={e => updatePd('locationAcc', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
                       </div>
                     )}
                   </FpRow>
 
-                  <FpRow label="Language" description="Navigator language code for website requests.">
+                  <FpRow label={t('fp.language')} description={t('fp.languageDesc')}>
                     <ButtonTabs value={pd.languageType} onChange={v => updatePd('languageType', v)} options={['Based on IP', 'Custom']} />
                     {pd.languageType === 'Custom' && (
                       <input type="text" placeholder="e.g. en-US,en;q=0.9" value={pd.languageCustom} onChange={e => updatePd('languageCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
                     )}
                   </FpRow>
 
-                  <FpRow label="Display Language" description="Browser internal UI language. Websites can sometimes read this.">
+                  <FpRow label={t('fp.displayLanguage')} description={t('fp.displayLanguageDesc')}>
                     <ButtonTabs value={pd.displayLangType} onChange={v => updatePd('displayLangType', v)} options={['Based on Language', 'Real', 'Custom']} />
                     {pd.displayLangType === 'Custom' && (
                       <input type="text" placeholder="e.g. en-US" value={pd.displayLangCustom} onChange={e => updatePd('displayLangCustom', e.target.value)} className="w-[250px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary mt-3 text-sm" />
                     )}
                   </FpRow>
 
-                  <FpRow label="Screen Resolution" description="Dimensions reported to websites. Keep consistent with your device/OS.">
+                  <FpRow label={t('fp.screenResolution')} description={t('fp.screenResolutionDesc')}>
                     <div className="flex flex-col gap-4">
                       <ButtonTabs value={pd.resolutionType} onChange={v => updatePd('resolutionType', v)} options={['Random', 'Predefined', 'Custom']} />
                       {pd.resolutionType === 'Predefined' && (
@@ -1323,15 +1338,15 @@ export default function ProfilesPage() {
                       )}
                       {pd.resolutionType === 'Custom' && (
                         <div className="flex items-center gap-3">
-                          <input type="text" placeholder="Width" value={pd.resolutionW} onChange={e => updatePd('resolutionW', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-center text-sm" />
+                          <input type="text" placeholder={t('fp.width')} value={pd.resolutionW} onChange={e => updatePd('resolutionW', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-center text-sm" />
                           <span className="text-muted font-medium">x</span>
-                          <input type="text" placeholder="Height" value={pd.resolutionH} onChange={e => updatePd('resolutionH', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-center text-sm" />
+                          <input type="text" placeholder={t('fp.height')} value={pd.resolutionH} onChange={e => updatePd('resolutionH', e.target.value)} className="w-[120px] bg-background border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-center text-sm" />
                         </div>
                       )}
                     </div>
                   </FpRow>
-                  
-                  <FpRow label="Fonts" description="System fonts exposed to websites.">
+
+                  <FpRow label={t('fp.fonts')} description={t('fp.fontsDesc')}>
                     <ButtonTabs value={pd.fontsType} onChange={v => updatePd('fontsType', v)} options={['Default', 'Custom']} />
                   </FpRow>
 
@@ -1340,57 +1355,57 @@ export default function ProfilesPage() {
                       <Settings2 className="w-4 h-4 text-amber-400" />
                     </div>
                     <div>
-                      <h2 className="text-sm font-semibold text-foreground">Hardware Noise &amp; Graphics</h2>
-                      <p className="text-xs text-muted-foreground">Canvas, WebGL, audio noise &amp; GPU metadata</p>
+                      <h2 className="text-sm font-semibold text-foreground">{t('fp.hardwareNoise')}</h2>
+                      <p className="text-xs text-muted-foreground">{t('fp.hardwareNoiseSub')}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8">
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">Canvas Noise</span>
+                      <span className="text-foreground text-sm font-medium">{t('fp.canvasNoise')}</span>
                       <ToggleSwitch checked={pd.canvasNoise} onChange={v => updatePd('canvasNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">WebGL Image Noise</span>
+                      <span className="text-foreground text-sm font-medium">{t('fp.webglImageNoise')}</span>
                       <ToggleSwitch checked={pd.webglImageNoise} onChange={v => updatePd('webglImageNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">AudioContext Noise</span>
+                      <span className="text-foreground text-sm font-medium">{t('fp.audioContextNoise')}</span>
                       <ToggleSwitch checked={pd.audioContextNoise} onChange={v => updatePd('audioContextNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">ClientRects Noise</span>
+                      <span className="text-foreground text-sm font-medium">{t('fp.clientRectsNoise')}</span>
                       <ToggleSwitch checked={pd.clientRectsNoise} onChange={v => updatePd('clientRectsNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">SpeechVoices Noise</span>
+                      <span className="text-foreground text-sm font-medium">{t('fp.speechVoicesNoise')}</span>
                       <ToggleSwitch checked={pd.speechVoicesNoise} onChange={v => updatePd('speechVoicesNoise', v)} />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">Media Device</span>
+                      <span className="text-foreground text-sm font-medium">{t('fp.mediaDevice')}</span>
                       <ButtonTabs value={pd.mediaDevice} onChange={v => updatePd('mediaDevice', v)} options={['Auto', 'Edit']} />
                     </div>
                   </div>
 
-                  <FpRow label="WebGL Metadata" description="Real (recommended) reports your true GPU consistently across the page, workers AND service worker — no mismatch. Custom spoofs the GPU string but a service worker still shows the real one, which detectors flag.">
+                  <FpRow label={t('fp.webglMetadata')} description={t('fp.webglMetadataDesc')}>
                     <div className="flex flex-col gap-4">
                       <ButtonTabs value={pd.webglMetadata} onChange={v => updatePd('webglMetadata', v)} options={['Real', 'Custom']} />
                       {pd.webglMetadata === 'Custom' && (
                         <div className="space-y-5 bg-background p-5 rounded border border-border shadow-sm">
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-primary text-sm font-semibold">Configure Custom GPU</span>
+                            <span className="text-primary text-sm font-semibold">{t('fp.configureGpu')}</span>
                             <Button size="sm" variant="secondary" onClick={handleRandomWebGL} className="gap-2">
-                              <Zap className="w-4 h-4 text-amber-400" /> Auto Randomize
+                              <Zap className="w-4 h-4 text-amber-400" /> {t('fp.autoRandomize')}
                             </Button>
                           </div>
                           <div>
-                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-2">Vendor</label>
+                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-2">{t('fp.vendor')}</label>
                             <CustomSelect value={pd.webglVendor} onChange={e => { updatePd('webglVendor', e.target.value); updatePd('webglRenderer', WEBGL_RENDERERS[e.target.value][0]); }} className="w-full">
                               {WEBGL_VENDORS.map(v => <option key={v} value={v}>{v}</option>)}
                             </CustomSelect>
                           </div>
                           <div>
-                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-2">Renderer</label>
+                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-2">{t('fp.renderer')}</label>
                             <CustomSelect value={pd.webglRenderer} onChange={e => updatePd('webglRenderer', e.target.value)} className="w-full">
                               {(WEBGL_RENDERERS[pd.webglVendor] || []).map(r => <option key={r} value={r}>{r}</option>)}
                             </CustomSelect>
@@ -1400,7 +1415,7 @@ export default function ProfilesPage() {
                     </div>
                   </FpRow>
 
-                  <FpRow label="WebGPU" description="Modern replacement for WebGL in newer browsers.">
+                  <FpRow label={t('fp.webgpu')} description={t('fp.webgpuDesc')}>
                     <ButtonTabs value={pd.webgpu} onChange={v => updatePd('webgpu', v)} options={['Based on WebGL', 'Real', 'Disabled']} />
                   </FpRow>
 
@@ -1409,40 +1424,40 @@ export default function ProfilesPage() {
                       <Monitor className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div>
-                      <h2 className="text-sm font-semibold text-foreground">Hardware Configuration</h2>
-                      <p className="text-xs text-muted-foreground">CPU, RAM, device name &amp; MAC address</p>
+                      <h2 className="text-sm font-semibold text-foreground">{t('fp.hardwareConfig')}</h2>
+                      <p className="text-xs text-muted-foreground">{t('fp.hardwareConfigSub')}</p>
                     </div>
                   </div>
 
-                  <FpRow label="CPU Cores">
+                  <FpRow label={t('fp.cpuCores')}>
                     <div className="flex items-center gap-4">
                       <ButtonTabs value={pd.cpuType} onChange={v => updatePd('cpuType', v)} options={['Real', 'Custom']} />
                       {pd.cpuType === 'Custom' && (
                         <CustomSelect value={pd.cpuCores} onChange={e => updatePd('cpuCores', e.target.value)} className="w-[140px]">
-                          {['2', '4', '6', '8', '10', '12', '16'].map(v => <option key={v} value={v}>{v} cores</option>)}
+                          {['2', '4', '6', '8', '10', '12', '16'].map(v => <option key={v} value={v}>{t('fp.coresUnit', { count: Number(v) })}</option>)}
                         </CustomSelect>
                       )}
                     </div>
                   </FpRow>
 
-                  <FpRow label="RAM">
+                  <FpRow label={t('fp.ram')}>
                     <div className="flex items-center gap-4">
                       <ButtonTabs value={pd.ramType} onChange={v => updatePd('ramType', v)} options={['Real', 'Custom']} />
                       {pd.ramType === 'Custom' && (
                         <CustomSelect value={pd.ramGb} onChange={e => updatePd('ramGb', e.target.value)} className="w-[140px]">
-                          {['2', '4', '8', '16', '32'].map(v => <option key={v} value={v}>{v} GB</option>)}
+                          {['2', '4', '8', '16', '32'].map(v => <option key={v} value={v}>{t('fp.gbUnit', { value: v })}</option>)}
                         </CustomSelect>
                       )}
                     </div>
                   </FpRow>
 
-                  <FpRow label="Device Name" description="Internal identifier, mostly organizational.">
+                  <FpRow label={t('fp.deviceName')} description={t('fp.deviceNameDesc')}>
                     <div className="flex flex-col gap-4">
                       <ButtonTabs value={pd.deviceNameType} onChange={v => updatePd('deviceNameType', v)} options={['Real', 'Custom']} />
                       {pd.deviceNameType === 'Custom' && (
                         <div className="flex items-center gap-3">
                           <input type="text" value={pd.deviceName} onChange={e => updatePd('deviceName', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
-                          <Button size="sm" variant="secondary" onClick={() => updatePd('deviceName', generateDeviceName())} title="Generate random device name" className="px-3 py-2">
+                          <Button size="sm" variant="secondary" onClick={() => updatePd('deviceName', generateDeviceName())} title={t('fp.genDeviceName')} className="px-3 py-2">
                             <RefreshCcw className="w-4 h-4" />
                           </Button>
                         </div>
@@ -1450,13 +1465,13 @@ export default function ProfilesPage() {
                     </div>
                   </FpRow>
 
-                  <FpRow label="MAC Address" description="Helps isolate profiles inside local network bounds.">
+                  <FpRow label={t('fp.macAddress')} description={t('fp.macAddressDesc')}>
                     <div className="flex flex-col gap-4">
                       <ButtonTabs value={pd.macAddressType} onChange={v => updatePd('macAddressType', v)} options={['Real', 'Custom']} />
                       {pd.macAddressType === 'Custom' && (
                         <div className="flex items-center gap-3">
                           <input type="text" value={pd.macAddress} onChange={e => updatePd('macAddress', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
-                          <Button size="sm" variant="secondary" onClick={() => updatePd('macAddress', generateMac())} title="Generate random MAC address" className="px-3 py-2">
+                          <Button size="sm" variant="secondary" onClick={() => updatePd('macAddress', generateMac())} title={t('fp.genMac')} className="px-3 py-2">
                             <RefreshCcw className="w-4 h-4" />
                           </Button>
                         </div>
@@ -1469,28 +1484,28 @@ export default function ProfilesPage() {
                       <Terminal className="w-4 h-4 text-purple-400" />
                     </div>
                     <div>
-                      <h2 className="text-sm font-semibold text-foreground">Advanced Fingerprint Settings</h2>
-                      <p className="text-xs text-muted-foreground">DNT, port-scan, TLS &amp; launch arguments</p>
+                      <h2 className="text-sm font-semibold text-foreground">{t('fp.advancedSettings')}</h2>
+                      <p className="text-xs text-muted-foreground">{t('fp.advancedSettingsSub')}</p>
                     </div>
                   </div>
 
-                  <FpRow label="Do Not Track">
+                  <FpRow label={t('fp.doNotTrack')}>
                     <ButtonTabs value={pd.doNotTrack} onChange={v => updatePd('doNotTrack', v)} options={['Default', 'Open', 'Close']} />
                   </FpRow>
-                  
-                  <FpRow label="Port Scan Protection">
+
+                  <FpRow label={t('fp.portScanProtection')}>
                     <ButtonTabs value={pd.portScanProtection} onChange={v => updatePd('portScanProtection', v)} options={['Enable', 'Close']} />
                   </FpRow>
 
-                  <FpRow label="Hardware Acceleration">
+                  <FpRow label={t('fp.hardwareAcceleration')}>
                     <ButtonTabs value={pd.hardwareAcceleration} onChange={v => updatePd('hardwareAcceleration', v)} options={['Default', 'Open', 'Close']} />
                   </FpRow>
 
-                  <FpRow label="Disable TLS Features">
+                  <FpRow label={t('fp.disableTls')}>
                     <ButtonTabs value={pd.disableTls} onChange={v => updatePd('disableTls', v)} options={['Open', 'Close']} />
                   </FpRow>
 
-                  <FpRow label="Launch Args" description="Additional raw Chromium startup arguments (e.g. --disable-notifications)">
+                  <FpRow label={t('fp.launchArgs')} description={t('fp.launchArgsDesc')}>
                     <textarea value={pd.launchArgs} onChange={e => updatePd('launchArgs', e.target.value)} rows="3" placeholder="--disable-notifications&#10;--disable-gpu" className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary resize-y font-mono text-xs shadow-sm"></textarea>
                   </FpRow>
 
@@ -1505,66 +1520,66 @@ export default function ProfilesPage() {
                       <Settings2 className="w-4 h-4 text-blue-400" />
                     </div>
                     <div>
-                      <h2 className="text-sm font-semibold text-foreground">Core Settings</h2>
-                      <p className="text-xs text-muted-foreground">Extensions, data sync &amp; browser behavior</p>
+                      <h2 className="text-sm font-semibold text-foreground">{t('advanced.coreSettings')}</h2>
+                      <p className="text-xs text-muted-foreground">{t('advanced.coreSettingsSub')}</p>
                     </div>
                   </div>
-                  
-                  <FpRow label="Extension" description="The enabled extensions from [Extensions - Team's Extensions] will be installed in the profile.">
+
+                  <FpRow label={t('advanced.extension')} description={t('advanced.extensionDesc')}>
                     <CustomSelect value={pd.advancedExt} onChange={e => updatePd('advancedExt', e.target.value)} className="w-[220px]">
-                      <option value="Team">Team's Extensions</option>
-                      <option value="None">No Extensions</option>
+                      <option value="Team">{t('advanced.teamExtensions')}</option>
+                      <option value="None">{t('advanced.noExtensions')}</option>
                     </CustomSelect>
                   </FpRow>
 
-                  <FpRow label="Data Sync" description="Select the data you need to sync across devices.">
+                  <FpRow label={t('advanced.dataSync')} description={t('advanced.dataSyncDesc')}>
                     <div className="space-y-4">
                       <ButtonTabs value={pd.advancedSync} onChange={v => updatePd('advancedSync', v)} options={['Global', 'Customize']} />
                       {pd.advancedSync === 'Customize' && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 bg-background p-6 rounded border border-border shadow-sm">
-                          <CustomCheckbox label="Cookie" checked={pd.syncItems.cookie} onChange={v => updateNestedPd('syncItems', 'cookie', v)} />
-                          <CustomCheckbox label="Saved passwords" checked={pd.syncItems.passwords} onChange={v => updateNestedPd('syncItems', 'passwords', v)} />
-                          <CustomCheckbox label="Bookmarks" checked={pd.syncItems.bookmarks} onChange={v => updateNestedPd('syncItems', 'bookmarks', v)} />
-                          <CustomCheckbox label="Local storage" checked={pd.syncItems.localStorage} onChange={v => updateNestedPd('syncItems', 'localStorage', v)} />
-                          <CustomCheckbox label="IndexedDB" checked={pd.syncItems.indexedDB} onChange={v => updateNestedPd('syncItems', 'indexedDB', v)} />
-                          <CustomCheckbox label="Extension Data" checked={pd.syncItems.extensionData} onChange={v => updateNestedPd('syncItems', 'extensionData', v)} />
-                          <CustomCheckbox label="History" checked={pd.syncItems.history} onChange={v => updateNestedPd('syncItems', 'history', v)} />
+                          <CustomCheckbox label={t('advanced.syncCookie')} checked={pd.syncItems.cookie} onChange={v => updateNestedPd('syncItems', 'cookie', v)} />
+                          <CustomCheckbox label={t('advanced.syncPasswords')} checked={pd.syncItems.passwords} onChange={v => updateNestedPd('syncItems', 'passwords', v)} />
+                          <CustomCheckbox label={t('advanced.syncBookmarks')} checked={pd.syncItems.bookmarks} onChange={v => updateNestedPd('syncItems', 'bookmarks', v)} />
+                          <CustomCheckbox label={t('advanced.syncLocalStorage')} checked={pd.syncItems.localStorage} onChange={v => updateNestedPd('syncItems', 'localStorage', v)} />
+                          <CustomCheckbox label={t('advanced.syncIndexedDB')} checked={pd.syncItems.indexedDB} onChange={v => updateNestedPd('syncItems', 'indexedDB', v)} />
+                          <CustomCheckbox label={t('advanced.syncExtensionData')} checked={pd.syncItems.extensionData} onChange={v => updateNestedPd('syncItems', 'extensionData', v)} />
+                          <CustomCheckbox label={t('advanced.syncHistory')} checked={pd.syncItems.history} onChange={v => updateNestedPd('syncItems', 'history', v)} />
                         </div>
                       )}
                     </div>
                   </FpRow>
 
-                  <FpRow label="Browser Settings" description="General browser behaviors and startup limits.">
+                  <FpRow label={t('advanced.browserSettings')} description={t('advanced.browserSettingsDesc')}>
                     <div className="space-y-4">
                       <ButtonTabs value={pd.advancedBrowser} onChange={v => updatePd('advancedBrowser', v)} options={['Global', 'Customize']} />
                       {pd.advancedBrowser === 'Customize' && (
                         <div className="space-y-5 bg-background p-6 rounded border border-border shadow-sm">
-                          <CustomCheckbox label="Real-time match timezone and location to dynamic IP" checked={pd.browserSettings.matchTimezone} onChange={v => updateNestedPd('browserSettings', 'matchTimezone', v)} />
-                          <CustomCheckbox label="Allow Chrome sign-in (Disabling logs you out of Google)" checked={pd.browserSettings.allowChromeSignIn} onChange={v => updateNestedPd('browserSettings', 'allowChromeSignIn', v)} />
-                          <CustomCheckbox label="Offer to translate pages" checked={pd.browserSettings.offerTranslate} onChange={v => updateNestedPd('browserSettings', 'offerTranslate', v)} />
-                          <CustomCheckbox label="Disable access to Browser Developer Tools" checked={pd.browserSettings.disableDevTools} onChange={v => updateNestedPd('browserSettings', 'disableDevTools', v)} />
-                          <CustomCheckbox label="Disable installation and removal of extensions" checked={pd.browserSettings.disableExtInstall} onChange={v => updateNestedPd('browserSettings', 'disableExtInstall', v)} />
-                          <CustomCheckbox label="Enable virtual camera to simulate live feed" checked={pd.browserSettings.enableVirtualCamera} onChange={v => updateNestedPd('browserSettings', 'enableVirtualCamera', v)} />
-                          <CustomCheckbox label="Enable mobile simulation optimization" checked={pd.browserSettings.enableMobileSim} onChange={v => updateNestedPd('browserSettings', 'enableMobileSim', v)} />
-                          
+                          <CustomCheckbox label={t('advanced.matchTimezone')} checked={pd.browserSettings.matchTimezone} onChange={v => updateNestedPd('browserSettings', 'matchTimezone', v)} />
+                          <CustomCheckbox label={t('advanced.allowChromeSignIn')} checked={pd.browserSettings.allowChromeSignIn} onChange={v => updateNestedPd('browserSettings', 'allowChromeSignIn', v)} />
+                          <CustomCheckbox label={t('advanced.offerTranslate')} checked={pd.browserSettings.offerTranslate} onChange={v => updateNestedPd('browserSettings', 'offerTranslate', v)} />
+                          <CustomCheckbox label={t('advanced.disableDevTools')} checked={pd.browserSettings.disableDevTools} onChange={v => updateNestedPd('browserSettings', 'disableDevTools', v)} />
+                          <CustomCheckbox label={t('advanced.disableExtInstall')} checked={pd.browserSettings.disableExtInstall} onChange={v => updateNestedPd('browserSettings', 'disableExtInstall', v)} />
+                          <CustomCheckbox label={t('advanced.enableVirtualCamera')} checked={pd.browserSettings.enableVirtualCamera} onChange={v => updateNestedPd('browserSettings', 'enableVirtualCamera', v)} />
+                          <CustomCheckbox label={t('advanced.enableMobileSim')} checked={pd.browserSettings.enableMobileSim} onChange={v => updateNestedPd('browserSettings', 'enableMobileSim', v)} />
+
                           <div className="border-t border-border my-6 pt-6">
-                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-3">On startup</label>
+                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-3">{t('advanced.onStartup')}</label>
                             <CustomSelect value={pd.browserSettings.startupAction} onChange={e => updateNestedPd('browserSettings', 'startupAction', e.target.value)} className="w-full sm:w-[320px] mb-5">
-                              <option value="lastPage">Continue browsing the last opened page</option>
-                              <option value="blank">Open new blank tab</option>
+                              <option value="lastPage">{t('advanced.startupLastPage')}</option>
+                              <option value="blank">{t('advanced.startupBlank')}</option>
                             </CustomSelect>
-                            
+
                             <div className="space-y-4">
-                              <CustomCheckbox label="Only open the browser with an available proxy" checked={pd.browserSettings.onlyOpenWithProxy} onChange={v => updateNestedPd('browserSettings', 'onlyOpenWithProxy', v)} />
-                              <CustomCheckbox label="Only open browser when extension data is successfully loaded" checked={pd.browserSettings.onlyOpenExtLoaded} onChange={v => updateNestedPd('browserSettings', 'onlyOpenExtLoaded', v)} />
-                              <CustomCheckbox label="Secure access (Warn before non-HTTPS)" checked={pd.browserSettings.secureAccess} onChange={v => updateNestedPd('browserSettings', 'secureAccess', v)} />
-                              <CustomCheckbox label="Disable loading videos" checked={pd.browserSettings.disableVideos} onChange={v => updateNestedPd('browserSettings', 'disableVideos', v)} />
+                              <CustomCheckbox label={t('advanced.onlyOpenWithProxy')} checked={pd.browserSettings.onlyOpenWithProxy} onChange={v => updateNestedPd('browserSettings', 'onlyOpenWithProxy', v)} />
+                              <CustomCheckbox label={t('advanced.onlyOpenExtLoaded')} checked={pd.browserSettings.onlyOpenExtLoaded} onChange={v => updateNestedPd('browserSettings', 'onlyOpenExtLoaded', v)} />
+                              <CustomCheckbox label={t('advanced.secureAccess')} checked={pd.browserSettings.secureAccess} onChange={v => updateNestedPd('browserSettings', 'secureAccess', v)} />
+                              <CustomCheckbox label={t('advanced.disableVideos')} checked={pd.browserSettings.disableVideos} onChange={v => updateNestedPd('browserSettings', 'disableVideos', v)} />
                             </div>
-                            
+
                             <div className="flex items-center gap-3 mt-6 p-4 bg-surface rounded border border-border">
-                              <span className="text-sm text-foreground">Disable loading images over</span>
+                              <span className="text-sm text-foreground">{t('advanced.disableImagesOver')}</span>
                               <input type="text" value={pd.browserSettings.disableImagesLimit} onChange={e => updateNestedPd('browserSettings', 'disableImagesLimit', e.target.value)} className="w-[80px] bg-background border border-border rounded px-3 py-1.5 text-center text-foreground outline-none focus:border-primary text-sm shadow-sm" />
-                              <span className="text-sm text-foreground">KB (0 KB means no images loaded)</span>
+                              <span className="text-sm text-foreground">{t('advanced.disableImagesUnit')}</span>
                             </div>
                           </div>
                         </div>
@@ -1572,7 +1587,7 @@ export default function ProfilesPage() {
                     </div>
                   </FpRow>
 
-                  <FpRow label="Random Fingerprint" description="New fingerprint will be randomly generated on each startup, ignoring some existing settings.">
+                  <FpRow label={t('advanced.randomFingerprint')} description={t('advanced.randomFingerprintDesc')}>
                     <ToggleSwitch checked={pd.randomFingerprint} onChange={v => updatePd('randomFingerprint', v)} />
                   </FpRow>
                 </div>
@@ -1581,18 +1596,18 @@ export default function ProfilesPage() {
 
             {/* Bottom Actions */}
             <div className="bg-surface border-t border-border p-5 flex justify-end gap-3 shrink-0 rounded-b">
-              <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 mr-1.5" /> Preview Environment</Button>
+              <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 mr-1.5" /> {t('editor.previewEnvironment')}</Button>
               <div className="flex-1" />
-              <Button variant="secondary" onClick={closeEditor}>Cancel</Button>
-              <Button variant="primary" onClick={handleSaveProfile} isLoading={saving}>Save Profile</Button>
+              <Button variant="secondary" onClick={closeEditor}>{t('common.cancel')}</Button>
+              <Button variant="primary" onClick={handleSaveProfile} isLoading={saving}>{t('editor.saveProfile')}</Button>
             </div>
           </div>
 
           {/* Right Sidebar Matrix */}
           <div className="hidden lg:flex w-80 shrink-0 bg-surface rounded border border-border p-5 flex-col shadow-sm h-fit sticky top-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Environment Overview</h2>
-              <button className="text-primary hover:text-primary-hover transition-colors text-xs flex items-center gap-1 font-medium"><Settings2 className="h-3.5 w-3.5"/> Settings</button>
+              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t('env.overview')}</h2>
+              <button className="text-primary hover:text-primary-hover transition-colors text-xs flex items-center gap-1 font-medium"><Settings2 className="h-3.5 w-3.5"/> {t('env.settings')}</button>
             </div>
             
             <div className="space-y-1 text-sm max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
@@ -1609,57 +1624,57 @@ export default function ProfilesPage() {
                 const deviceMem = Math.min(8, Number(pd.ramGb) || 8); // Chrome caps deviceMemory at 8
                 const proxyText = pd.proxySetting === 'Custom' && pd.proxyHost
                   ? `${pd.proxyType} ${pd.proxyHost}:${pd.proxyPort || ''}`
-                  : (pd.selectedSavedProxy ? 'Saved proxy' : 'Direct (no proxy)');
-                const noiseTag = (on) => on === false ? 'Real' : 'Noise';
+                  : (pd.selectedSavedProxy ? t('env.savedProxy') : t('env.directNoProxy'));
+                const noiseTag = (on) => on === false ? t('env.real') : t('env.noise');
                 return (
                   <>
-                    <EnvHead>Browser / OS</EnvHead>
-                    <EnvRow k="Browser" v={`${pd.browserCore} ${pd.browserVersion}`} />
-                    <EnvRow k="OS" v={`${pd.os} ${pd.osVersion}`} />
+                    <EnvHead>{t('env.headBrowserOs')}</EnvHead>
+                    <EnvRow k={t('env.browser')} v={`${pd.browserCore} ${pd.browserVersion}`} />
+                    <EnvRow k={t('env.os')} v={`${pd.os} ${pd.osVersion}`} />
                     <div className="flex flex-col gap-1.5 py-1.5">
-                      <span className="text-muted text-xs">User-Agent</span>
+                      <span className="text-muted text-xs">{t('env.userAgent')}</span>
                       <span className="text-primary font-mono text-[11px] bg-primary/5 border border-primary/20 p-2.5 rounded break-all leading-relaxed max-h-28 overflow-y-auto">{displayUA}</span>
                     </div>
 
-                    <EnvHead>Locale</EnvHead>
-                    <EnvRow k="Timezone" v={pd.timezoneType === 'Custom' ? pd.timezoneCustom : pd.timezoneType} />
-                    <EnvRow k="Language" v={pd.languageType === 'Custom' ? pd.languageCustom : pd.languageType} />
-                    <EnvRow k="Location" v={pd.locationType === 'Custom' ? `${pd.locationLat || '?'}, ${pd.locationLng || '?'}` : pd.locationType} />
-                    <EnvRow k="Display lang" v={pd.displayLangType} />
+                    <EnvHead>{t('env.headLocale')}</EnvHead>
+                    <EnvRow k={t('env.timezone')} v={pd.timezoneType === 'Custom' ? pd.timezoneCustom : pd.timezoneType} />
+                    <EnvRow k={t('env.language')} v={pd.languageType === 'Custom' ? pd.languageCustom : pd.languageType} />
+                    <EnvRow k={t('env.location')} v={pd.locationType === 'Custom' ? `${pd.locationLat || '?'}, ${pd.locationLng || '?'}` : pd.locationType} />
+                    <EnvRow k={t('env.displayLang')} v={pd.displayLangType} />
 
-                    <EnvHead>Screen &amp; Fonts</EnvHead>
-                    <EnvRow k="Resolution" v={pd.resolutionType === 'Real' ? 'Real' : `${pd.resolutionW}×${pd.resolutionH}`} />
-                    <EnvRow k="Fonts" v={pd.fontsType} />
+                    <EnvHead>{t('env.headScreenFonts')}</EnvHead>
+                    <EnvRow k={t('env.resolution')} v={pd.resolutionType === 'Real' ? t('env.real') : `${pd.resolutionW}×${pd.resolutionH}`} />
+                    <EnvRow k={t('env.fonts')} v={pd.fontsType} />
 
-                    <EnvHead>Graphics</EnvHead>
-                    <EnvRow k="WebGL vendor" v={pd.webglVendor} />
-                    <EnvRow k="WebGL renderer" v={pd.webglRenderer} mono />
-                    <EnvRow k="WebGPU" v={pd.webgpu} />
+                    <EnvHead>{t('env.headGraphics')}</EnvHead>
+                    <EnvRow k={t('env.webglVendor')} v={pd.webglVendor} />
+                    <EnvRow k={t('env.webglRenderer')} v={pd.webglRenderer} mono />
+                    <EnvRow k={t('env.webgpu')} v={pd.webgpu} />
 
-                    <EnvHead>Hardware</EnvHead>
-                    <EnvRow k="CPU cores" v={`${pd.cpuCores} cores`} />
-                    <EnvRow k="RAM" v={`${pd.ramGb} GB`} />
-                    <EnvRow k="Device memory" v={`${deviceMem} GB (Chrome caps at 8)`} />
+                    <EnvHead>{t('env.headHardware')}</EnvHead>
+                    <EnvRow k={t('env.cpuCores')} v={t('fp.coresUnit', { count: Number(pd.cpuCores) })} />
+                    <EnvRow k={t('env.ram')} v={t('fp.gbUnit', { value: pd.ramGb })} />
+                    <EnvRow k={t('env.deviceMemory')} v={t('env.deviceMemoryValue', { value: deviceMem })} />
 
-                    <EnvHead>Noise / Privacy</EnvHead>
-                    <EnvRow k="Canvas" v={noiseTag(pd.canvasNoise)} />
-                    <EnvRow k="WebGL image" v={noiseTag(pd.webglImageNoise)} />
-                    <EnvRow k="AudioContext" v={noiseTag(pd.audioContextNoise)} />
-                    <EnvRow k="ClientRects" v={noiseTag(pd.clientRectsNoise)} />
-                    <EnvRow k="Media device" v={pd.mediaDevice} />
-                    <EnvRow k="Do Not Track" v={pd.doNotTrack} />
-                    <EnvRow k="Port scan" v={pd.portScanProtection} />
+                    <EnvHead>{t('env.headNoise')}</EnvHead>
+                    <EnvRow k={t('env.canvas')} v={noiseTag(pd.canvasNoise)} />
+                    <EnvRow k={t('env.webglImage')} v={noiseTag(pd.webglImageNoise)} />
+                    <EnvRow k={t('env.audioContext')} v={noiseTag(pd.audioContextNoise)} />
+                    <EnvRow k={t('env.clientRects')} v={noiseTag(pd.clientRectsNoise)} />
+                    <EnvRow k={t('env.mediaDevice')} v={pd.mediaDevice} />
+                    <EnvRow k={t('env.doNotTrack')} v={pd.doNotTrack} />
+                    <EnvRow k={t('env.portScan')} v={pd.portScanProtection} />
 
-                    <EnvHead>Network / Device</EnvHead>
-                    <EnvRow k="Proxy" v={proxyText} mono />
-                    <EnvRow k="WebRTC" v={pd.webrtc} />
-                    <EnvRow k="Device name" v={pd.deviceName} mono />
-                    <EnvRow k="MAC" v={pd.macAddress} mono />
+                    <EnvHead>{t('env.headNetworkDevice')}</EnvHead>
+                    <EnvRow k={t('env.proxy')} v={proxyText} mono />
+                    <EnvRow k={t('env.webrtc')} v={pd.webrtc} />
+                    <EnvRow k={t('env.deviceName')} v={pd.deviceName} mono />
+                    <EnvRow k={t('env.mac')} v={pd.macAddress} mono />
                   </>
                 );
               })()}
               <button onClick={() => setPreviewDraft(pd)} className="w-full mt-3 text-xs text-primary hover:text-primary-hover border border-primary/20 hover:border-primary/40 rounded py-2 transition flex items-center justify-center gap-1.5">
-                <Fingerprint className="w-3.5 h-3.5" /> Open full live preview
+                <Fingerprint className="w-3.5 h-3.5" /> {t('env.openFullPreview')}
               </button>
             </div>
           </div>
@@ -1672,18 +1687,18 @@ export default function ProfilesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Workspace"
-        title="Profiles"
-        description={`${totalCount} total · ${runningCount} running right now`}
+        eyebrow={t('header.eyebrow')}
+        title={t('header.title')}
+        description={t('header.description', { total: totalCount, running: runningCount })}
         actions={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setShowTemplates(true)}>
               <LayoutTemplate className="h-4 w-4" />
-              Templates
+              {t('header.templates')}
             </Button>
             <Button variant="secondary" onClick={() => setShowQuickGen(true)}>
               <FileSpreadsheet className="h-4 w-4" />
-              Batch Create
+              {t('header.batchCreate')}
             </Button>
             <Button
               variant="primary"
@@ -1691,7 +1706,7 @@ export default function ProfilesPage() {
               className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-blue-600"
             >
               <Plus className="h-4 w-4" />
-              New Profile
+              {t('header.newProfile')}
             </Button>
           </div>
         }
@@ -1714,7 +1729,7 @@ export default function ProfilesPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-foreground font-display leading-none">{totalCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total profiles</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('stats.totalProfiles')}</p>
           </div>
         </div>
 
@@ -1733,7 +1748,7 @@ export default function ProfilesPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-foreground font-display leading-none">{runningCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">Running now</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('stats.runningNow')}</p>
           </div>
         </div>
 
@@ -1752,7 +1767,7 @@ export default function ProfilesPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-foreground font-display leading-none">{proxiedCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">With proxy</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('stats.withProxy')}</p>
           </div>
         </div>
       </div>
@@ -1760,67 +1775,67 @@ export default function ProfilesPage() {
       
       {selectedIds.size > 0 && (
         <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
-          <span className="text-sm text-primary font-bold">{selectedIds.size} selected</span>
+          <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>
           {launchProgress && (
             <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-              Launching {launchProgress.done}/{launchProgress.total}…
+              {t('bulk.launching', { done: launchProgress.done, total: launchProgress.total })}
             </span>
           )}
           <div className="flex gap-2 ml-auto">
-            <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">Launch</Button>
-            <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title="Launch as Master + Slave mirrored windows (Premium)"><Combine className="w-3.5 h-3.5 mr-1" /> Synchronize</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>Close</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title="Add or remove a tag"><Tag className="w-3.5 h-3.5 mr-1" /> Tag</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title="Bulk rename with a prefix"><Pencil className="w-3.5 h-3.5 mr-1" /> Rename</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title="Share with team members"><Share2 className="w-3.5 h-3.5 mr-1" /> Share</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title="Compare 2–3 profiles"><GitCompare className="w-3.5 h-3.5 mr-1" /> Compare</Button>
-            <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>Delete</Button>
-            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>Clear</Button>
+            <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</Button>
+            <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 mr-1" /> {t('bulk.tag')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 mr-1" /> {t('bulk.rename')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.share')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title={t('bulk.compareTitle')}><GitCompare className="w-3.5 h-3.5 mr-1" /> {t('bulk.compare')}</Button>
+            <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</Button>
+            <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>{t('bulk.clear')}</Button>
           </div>
         </div>
       )}
       
       <div className="mb-6 flex flex-wrap items-center gap-3 bg-card p-3 rounded-xl border border-border hover:border-border-strong transition-colors">
         <CustomSelect value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} className="w-auto">
-          <option value="all">All groups</option>
-          <option value="ungrouped">Ungrouped</option>
+          <option value="all">{t('filters.allGroups')}</option>
+          <option value="ungrouped">{t('filters.ungrouped')}</option>
           {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
         </CustomSelect>
 
         <CustomSelect value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="w-auto">
-          <option value="">All tags</option>
-          {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+          <option value="">{t('filters.allTags')}</option>
+          {allTags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
         </CustomSelect>
 
         <CustomSelect value={filterProxy} onChange={(e) => setFilterProxy(e.target.value)} className="w-auto">
-          <option value="">All proxies</option>
-          <option value="none">Direct (no proxy)</option>
+          <option value="">{t('filters.allProxies')}</option>
+          <option value="none">{t('filters.directNoProxy')}</option>
           {allProxies.map((px) => <option key={px.id} value={px.id}>{px.name}</option>)}
         </CustomSelect>
 
         <CustomSelect value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto">
-          <option value="all">Any status</option>
-          <option value="running">Running</option>
-          <option value="proxied">Has proxy</option>
-          <option value="direct">No proxy</option>
+          <option value="all">{t('filters.anyStatus')}</option>
+          <option value="running">{t('filters.running')}</option>
+          <option value="proxied">{t('filters.hasProxy')}</option>
+          <option value="direct">{t('filters.noProxy')}</option>
         </CustomSelect>
 
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name…" className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('filters.searchPlaceholder')} className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
         </div>
         {(filterGroup !== 'all' || filterTag || filterProxy || filterStatus !== 'all' || search) && (
-          <Button variant="ghost" size="sm" onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setSearch(''); }}>Clear Filters</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setSearch(''); }}>{t('filters.clearFilters')}</Button>
         )}
         {filterPresets.length > 0 && (
           <CustomSelect value="" onChange={(e) => applyPreset(filterPresets.find((x) => x.name === e.target.value))} className="w-auto">
-            <option value="">Saved filters…</option>
+            <option value="">{t('filters.savedFilters')}</option>
             {filterPresets.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </CustomSelect>
         )}
-        <Button variant="ghost" size="sm" onClick={saveCurrentPreset} title="Save the current filters as a preset"><Bookmark className="w-3.5 h-3.5 mr-1" /> Save</Button>
-        <span className="ml-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{filteredProfiles.length} profiles</span>
+        <Button variant="ghost" size="sm" onClick={saveCurrentPreset} title={t('filters.savePresetTitle')}><Bookmark className="w-3.5 h-3.5 mr-1" /> {t('filters.save')}</Button>
+        <span className="ml-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{t('filters.profileCount', { count: filteredProfiles.length })}</span>
       </div>
       
       <Card className="bg-card border border-border hover:border-border-strong transition-colors flex flex-col flex-1 rounded-xl">
@@ -1834,18 +1849,18 @@ export default function ProfilesPage() {
                       {filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length && <span className="w-2 h-2 bg-white rounded-sm" />}
                     </button>
                   </th>
-                  <th className="px-5 py-4">Name</th>
-                  <th className="px-5 py-4">Proxy</th>
-                  <th className="px-5 py-4">Created</th>
-                  <th className="px-5 py-4">Last used</th>
-                  <th className="px-5 py-4 text-right">Actions</th>
+                  <th className="px-5 py-4">{t('table.name')}</th>
+                  <th className="px-5 py-4">{t('table.proxy')}</th>
+                  <th className="px-5 py-4">{t('table.created')}</th>
+                  <th className="px-5 py-4">{t('table.lastUsed')}</th>
+                  <th className="px-5 py-4 text-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredProfiles.length === 0 && (
                   <tr>
                     <td colSpan="6" className="p-12">
-                       <EmptyState title="No Profiles Found" description="Create your first isolated browser profile to get started." icon={<Monitor className="w-10 h-10 text-muted" />} />
+                       <EmptyState title={t('table.emptyTitle')} description={t('table.emptyDesc')} icon={<Monitor className="w-10 h-10 text-muted" />} />
                     </td>
                   </tr>
                 )}
@@ -1870,7 +1885,7 @@ export default function ProfilesPage() {
                           <span
                             className="shrink-0"
                             style={{ color: (BROWSER_BRANDS.find((b) => b.id === normalizeBrandId(p.browserBrand)) || {}).accent }}
-                            title={`Presents as ${normalizeBrandId(p.browserBrand)}`}
+                            title={t('row.presentsAs', { brand: normalizeBrandId(p.browserBrand) })}
                           >
                             <BrandMark id={p.browserBrand} className="w-3.5 h-3.5" />
                           </span>
@@ -1878,28 +1893,28 @@ export default function ProfilesPage() {
                         <span className="truncate max-w-[200px]">{p.title}</span>
                         {(p.deviceClass === 'mobile' || /android/i.test(p.os || '')) && (
                           <span
-                            title="Android (emulated mobile device)"
+                            title={t('row.mobileTitle')}
                             className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-teal-500/12 text-teal-400 border border-teal-500/25"
                           >
-                            <Smartphone className="w-3 h-3" /> Mobile
+                            <Smartphone className="w-3 h-3" /> {t('row.mobile')}
                           </span>
                         )}
                         {locks[p.id] && !locks[p.id].mine && (
                           <span
-                            title={`In use by ${locks[p.id].memberName || 'another member'}`}
+                            title={t('row.inUseBy', { member: locks[p.id].memberName || t('row.anotherMember') })}
                             className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-500/12 text-amber-400 border border-amber-500/25"
                           >
-                            <Lock className="w-3 h-3" /> {locks[p.id].memberName || 'In use'}
+                            <Lock className="w-3 h-3" /> {locks[p.id].memberName || t('row.inUse')}
                           </span>
                         )}
                         {p.twoFactorSeed && (
                           <button
                             type="button"
                             onClick={() => handleCopy2fa(p.id)}
-                            title="Copy current 2FA code"
+                            title={t('row.copy2fa')}
                             className="relative shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-violet-500/12 text-violet-300 border border-violet-500/25 hover:bg-violet-500/20 transition"
                           >
-                            {copied2fa === p.id ? <><Check className="w-3 h-3" /> Copied!</> : <><KeyRound className="w-3 h-3" /> 2FA</>}
+                            {copied2fa === p.id ? <><Check className="w-3 h-3" /> {t('row.copied')}</> : <><KeyRound className="w-3 h-3" /> {t('row.twoFa')}</>}
                           </button>
                         )}
                       </div>
@@ -1910,7 +1925,7 @@ export default function ProfilesPage() {
                           <span
                             className="w-2 h-2 rounded-full shrink-0"
                             style={{ background: p.proxy.lastStatus === 'ok' ? '#10b981' : (p.proxy.lastStatus === 'fail' ? '#ef4444' : '#9ca3af') }}
-                            title={`Proxy ${p.proxy.lastStatus}${p.proxy.lastLatencyMs != null ? ` · ${p.proxy.lastLatencyMs}ms` : ''}${p.proxy.lastCountry ? ` · ${p.proxy.lastCountry}` : ''}`}
+                            title={`${t('row.proxyStatus')} ${p.proxy.lastStatus}${p.proxy.lastLatencyMs != null ? ` · ${p.proxy.lastLatencyMs}ms` : ''}${p.proxy.lastCountry ? ` · ${p.proxy.lastCountry}` : ''}`}
                           />
                         )}
                         {p.proxyInfoString ? (
@@ -1920,62 +1935,62 @@ export default function ProfilesPage() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
-                            Direct
+                            {t('row.direct')}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>
                     <td className="px-5 py-3.5 text-muted-foreground">
-                      <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title="View activity">
+                      <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title={t('row.viewActivity')}>
                         <History className="h-3.5 w-3.5" />
-                        <span title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : 'Never used'}>{p.lastUsedAt ? relTime(p.lastUsedAt) : 'Never'}</span>
+                        <span title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.neverUsed')}>{p.lastUsedAt ? relTime(p.lastUsedAt) : t('relTime.never')}</span>
                         {p.launchCount ? <span className="text-[10px] bg-elevated border border-border px-1.5 py-0.5 rounded font-semibold ml-1">{p.launchCount}×</span> : null}
                       </button>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1.5">
                         {runningIds.has(p.id) ? (
-                          <Button size="sm" variant="danger" onClick={() => handleBulkClose([p.id])} className="px-3" title="Stop">
-                            <Square className="w-3.5 h-3.5 mr-1" /> Stop
+                          <Button size="sm" variant="danger" onClick={() => handleBulkClose([p.id])} className="px-3" title={t('actions.stop')}>
+                            <Square className="w-3.5 h-3.5 mr-1" /> {t('actions.stop')}
                           </Button>
                         ) : (locks[p.id] && !locks[p.id].mine) ? (
-                          <Button size="sm" variant="ghost" disabled className="px-3 opacity-60 cursor-not-allowed" title={`In use by ${locks[p.id].memberName || 'another member'} — ask them to close it first`}>
-                            <Lock className="w-3.5 h-3.5 mr-1" /> In use
+                          <Button size="sm" variant="ghost" disabled className="px-3 opacity-60 cursor-not-allowed" title={t('actions.inUseTitle', { member: locks[p.id].memberName || t('row.anotherMember') })}>
+                            <Lock className="w-3.5 h-3.5 mr-1" /> {t('row.inUse')}
                           </Button>
                         ) : (
-                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title="Launch">
-                            <Play className="w-3.5 h-3.5 mr-1" /> Launch
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title={t('actions.launch')}>
+                            <Play className="w-3.5 h-3.5 mr-1" /> {t('actions.launch')}
                           </Button>
                         )}
-                        
-                        <div className="w-px h-6 bg-border mx-1 my-auto" />
-                        
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setEnvProfile(p)} title="Environment Overview">
-                          <Fingerprint className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => openEdit(p)} title="Edit Configuration">
-                          <Settings2 className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setLeakProfile({ id: p.id, title: p.title })} title="Leak Check">
-                          <ShieldCheck className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title="Manage Cookies">
-                          <Cookie className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title="Proxy Rotation">
-                          <Shuffle className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id)} title="Clone Profile (same fingerprint)">
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id, true)} title="Clone with new fingerprint">
-                          <Dices className="w-4 h-4" />
-                        </Button>
-                        
+
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
 
-                        <Button size="sm" variant="ghost" className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => handleDelete(p.id, p.title)} title="Move to Trash">
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setEnvProfile(p)} title={t('actions.environmentOverview')}>
+                          <Fingerprint className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
+                          <Settings2 className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setLeakProfile({ id: p.id, title: p.title })} title={t('actions.leakCheck')}>
+                          <ShieldCheck className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
+                          <Cookie className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')}>
+                          <Shuffle className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')}>
+                          <Dices className="w-4 h-4" />
+                        </Button>
+
+                        <div className="w-px h-6 bg-border mx-1 my-auto" />
+
+                        <Button size="sm" variant="ghost" className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => handleDelete(p.id, p.title)} title={t('actions.moveToTrash')}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

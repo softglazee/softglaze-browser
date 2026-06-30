@@ -5,6 +5,7 @@ import {
   Download, FolderInput, Search, Lock, CreditCard, RotateCcw, Layers,
   Sparkles, Settings2, Ban, AlertTriangle
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 
@@ -88,13 +89,13 @@ function roleBadgeStyle(role) {
   const color = (ROLE_CONFIG[role] || ROLE_CONFIG.OPERATOR).color;
   return { background: `color-mix(in srgb, ${color} 14%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 22%, transparent)` };
 }
-function relTime(iso) {
-  if (!iso) return 'Never active';
+function relTime(iso, t) {
+  if (!iso) return t('time.neverActive');
   const d = new Date(iso); const s = (Date.now() - d.getTime()) / 1000;
-  if (s < 60) return 'Active just now';
-  if (s < 3600) return `Active ${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `Active ${Math.floor(s / 3600)}h ago`;
-  return `Active ${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return t('time.activeJustNow');
+  if (s < 3600) return t('time.activeMinutes', { count: Math.floor(s / 60) });
+  if (s < 86400) return t('time.activeHours', { count: Math.floor(s / 3600) });
+  return t('time.activeDays', { count: Math.floor(s / 86400) });
 }
 function fmtLimit(used, max) {
   if (max === -1 || max == null) return `${used || 0} / ∞`;
@@ -102,6 +103,7 @@ function fmtLimit(used, max) {
 }
 
 export default function MembersPage() {
+  const { t } = useTranslation('members');
   const [members, setMembers] = useState([]);
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function MembersPage() {
       ]);
       setMembers(Array.isArray(list) ? list : []);
       setMe(cur);
-    } catch (e) { setError(e.message || 'Could not load members.'); }
+    } catch (e) { setError(e.message || t('errors.loadMembers')); }
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
@@ -131,16 +133,16 @@ export default function MembersPage() {
     <div>
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">Team</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">Members</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">{t('header.eyebrow')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">{t('header.title')}</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            {members.length} member{members.length === 1 ? '' : 's'} you manage
-            {members[0] && <> · {workspaceProfiles} profiles · {workspaceProxies} proxies in workspace</>}
+            {t('header.manageCount', { count: members.length })}
+            {members[0] && <> · {t('header.workspaceStats', { profiles: workspaceProfiles, proxies: workspaceProxies })}</>}
           </p>
         </div>
         {canCreate && (
           <button onClick={() => setEditing({})} className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
-            <Plus className="w-3.5 h-3.5" />Invite member
+            <Plus className="w-3.5 h-3.5" />{t('actions.inviteMember')}
           </button>
         )}
       </div>
@@ -158,8 +160,8 @@ export default function MembersPage() {
                   <Icon className="w-4 h-4" style={{ color: cfg.color }} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{cfg.label}</p>
-                  <p className="text-xs text-muted-foreground">{count} member{count === 1 ? '' : 's'}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{t(`roles.${role}`)}</p>
+                  <p className="text-xs text-muted-foreground">{t('memberCount', { count })}</p>
                 </div>
               </div>
             );
@@ -169,12 +171,12 @@ export default function MembersPage() {
 
       {!loading && members.length > 0 && (
         <div className="bg-elevated p-1 rounded-lg inline-flex gap-1 mb-5">
-          {[{ id: 'members', label: 'Members', icon: Users }, { id: 'activity', label: 'Activity', icon: Activity },
-            ...(me && me.role === 'SUPER_ADMIN' ? [{ id: 'licenses', label: 'Licenses', icon: CreditCard }] : [])].map((t) => {
-            const Icon = t.icon; const active = tab === t.id;
+          {[{ id: 'members', label: t('tabs.members'), icon: Users }, { id: 'activity', label: t('tabs.activity'), icon: Activity },
+            ...(me && me.role === 'SUPER_ADMIN' ? [{ id: 'licenses', label: t('tabs.licenses'), icon: CreditCard }] : [])].map((tab2) => {
+            const Icon = tab2.icon; const active = tab === tab2.id;
             return (
-              <button key={t.id} onClick={() => setTab(t.id)} className={`px-4 py-2 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${active ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
-                <Icon className="w-3.5 h-3.5" />{t.label}
+              <button key={tab2.id} onClick={() => setTab(tab2.id)} className={`px-4 py-2 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${active ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
+                <Icon className="w-3.5 h-3.5" />{tab2.label}
               </button>
             );
           })}
@@ -186,9 +188,9 @@ export default function MembersPage() {
       ) : members.length === 0 ? (
         <div className="bg-card border border-border rounded-xl grid place-items-center py-16 text-center animate-fade-up">
           <Users className="w-7 h-7 text-muted-foreground mb-3" />
-          <p className="text-[13px] text-foreground font-medium">No members yet</p>
-          <p className="text-[12px] text-muted-foreground mt-1 mb-4">{canCreate ? 'Invite your first team member to start delegating work.' : 'You have no members under you yet.'}</p>
-          {canCreate && <button onClick={() => setEditing({})} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25"><Plus className="w-3.5 h-3.5" />Invite member</button>}
+          <p className="text-[13px] text-foreground font-medium">{t('empty.title')}</p>
+          <p className="text-[12px] text-muted-foreground mt-1 mb-4">{canCreate ? t('empty.canCreate') : t('empty.noMembers')}</p>
+          {canCreate && <button onClick={() => setEditing({})} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25"><Plus className="w-3.5 h-3.5" />{t('actions.inviteMember')}</button>}
         </div>
       ) : tab === 'members' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -213,30 +215,30 @@ export default function MembersPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-foreground truncate">{m.name}</span>
-                      {m.isCurrent && <span className="text-[10px] text-primary shrink-0">You</span>}
+                      {m.isCurrent && <span className="text-[10px] text-primary shrink-0">{t('member.you')}</span>}
                     </div>
-                    <div className="text-[11px] text-muted-foreground truncate">{m.email || 'No email'}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{m.email || t('member.noEmail')}</div>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 mt-4">
                   <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium" style={roleBadgeStyle(m.role)}>
-                    <RoleIcon className="w-3 h-3" />{ROLE_LABEL[m.role] || m.role}
+                    <RoleIcon className="w-3 h-3" />{ROLE_LABEL[m.role] ? t(`roles.${m.role}`) : m.role}
                   </span>
-                  {pending && <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"><Mail className="w-3 h-3" />Invite pending</span>}
-                  {m.hasPassword && !pending && <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border"><KeyRound className="w-3 h-3" />Login set</span>}
-                  {m.status === 'suspended' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">Suspended</span>}
-                  {m.status === 'banned' && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30"><Lock className="w-3 h-3" />Banned</span>}
+                  {pending && <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"><Mail className="w-3 h-3" />{t('member.invitePending')}</span>}
+                  {m.hasPassword && !pending && <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border"><KeyRound className="w-3 h-3" />{t('member.loginSet')}</span>}
+                  {m.status === 'suspended' && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">{t('status.suspended')}</span>}
+                  {m.status === 'banned' && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30"><Lock className="w-3 h-3" />{t('status.banned')}</span>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-4 text-[11px]">
-                  <div className="rounded-lg bg-elevated border border-border px-2.5 py-1.5"><span className="text-muted-foreground">Profiles</span><div className="font-mono text-foreground">{fmtLimit(m.ownedProfiles, perms.maxProfiles)}</div></div>
-                  <div className="rounded-lg bg-elevated border border-border px-2.5 py-1.5"><span className="text-muted-foreground">Proxies</span><div className="font-mono text-foreground">{fmtLimit(m.ownedProxies, perms.maxProxies)}</div></div>
+                  <div className="rounded-lg bg-elevated border border-border px-2.5 py-1.5"><span className="text-muted-foreground">{t('labels.profiles')}</span><div className="font-mono text-foreground">{fmtLimit(m.ownedProfiles, perms.maxProfiles)}</div></div>
+                  <div className="rounded-lg bg-elevated border border-border px-2.5 py-1.5"><span className="text-muted-foreground">{t('labels.proxies')}</span><div className="font-mono text-foreground">{fmtLimit(m.ownedProxies, perms.maxProxies)}</div></div>
                 </div>
 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{relTime(m.lastActiveAt)}</span>
-                  {m.childCounts?.total > 0 && <span className="font-mono">{m.childCounts.total} sub-member{m.childCounts.total === 1 ? '' : 's'}</span>}
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{relTime(m.lastActiveAt, t)}</span>
+                  {m.childCounts?.total > 0 && <span className="font-mono">{t('member.subMembers', { count: m.childCounts.total })}</span>}
                 </div>
               </button>
             );
@@ -245,7 +247,7 @@ export default function MembersPage() {
           {canCreate && (
             <button onClick={() => setEditing({})} className="rounded-xl p-5 flex flex-col items-center justify-center gap-3 min-h-[160px] transition-colors animate-fade-up" style={{ background: 'color-mix(in srgb, #3b82f6 4%, transparent)', border: '1px dashed color-mix(in srgb, #3b82f6 28%, transparent)' }}>
               <span className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, #3b82f6 12%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 24%, transparent)' }}><Plus className="w-4 h-4 text-blue-400" /></span>
-              <p className="text-xs font-medium text-blue-400">Invite team member</p>
+              <p className="text-xs font-medium text-blue-400">{t('actions.inviteTeamMember')}</p>
             </button>
           )}
         </div>
@@ -270,6 +272,7 @@ const LIC_TONE = {
 };
 
 function SuperAdminLicensePanel() {
+  const { t } = useTranslation('members');
   const [rows, setRows] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -287,7 +290,7 @@ function SuperAdminLicensePanel() {
       setRows(owners);
       setPlans(Array.isArray(pl?.plans) ? pl.plans : []);
     }
-    catch (e) { setErr(e.message || 'Could not load licenses.'); }
+    catch (e) { setErr(e.message || t('license.errors.load')); }
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
@@ -295,11 +298,11 @@ function SuperAdminLicensePanel() {
   async function act(ownerId, fn) {
     setBusyId(ownerId); setErr('');
     try { await fn(); await load(); }
-    catch (e) { setErr(e.message || 'Action failed.'); }
+    catch (e) { setErr(e.message || t('license.errors.action')); }
     finally { setBusyId(null); }
   }
   function terminate(r) {
-    if (!window.confirm(`Terminate ${r.ownerName}'s subscription now? Their profiles will lock until you grant access again.`)) return;
+    if (!window.confirm(t('license.confirm.terminate', { name: r.ownerName }))) return;
     act(r.ownerId, () => softglazeApi.license.terminate({ ownerId: r.ownerId }));
   }
 
@@ -308,8 +311,8 @@ function SuperAdminLicensePanel() {
   return (
     <div className="space-y-3">
       {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12.5px] text-red-400">{err}</div>}
-      <p className="text-[12px] text-muted-foreground">Subscription state per owner workspace. Local-first and best-effort — a determined user can still edit the local DB or clock; durable enforcement needs the licensing backend.</p>
-      {rows.length === 0 && <div className="bg-card border border-border rounded-xl py-12 text-center text-[13px] text-muted-foreground">No owner workspaces yet.</div>}
+      <p className="text-[12px] text-muted-foreground">{t('license.intro')}</p>
+      {rows.length === 0 && <div className="bg-card border border-border rounded-xl py-12 text-center text-[13px] text-muted-foreground">{t('license.noOwners')}</div>}
       {rows.map((r) => {
         const lic = r.license || {};
         const tone = LIC_TONE[lic.state] || LIC_TONE.trialing;
@@ -322,30 +325,30 @@ function SuperAdminLicensePanel() {
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4 text-amber-400 shrink-0" />
                   <span className="text-sm font-semibold text-foreground truncate">{r.ownerName}</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${tone.c} 14%, transparent)`, color: tone.c, border: `1px solid color-mix(in srgb, ${tone.c} 28%, transparent)` }}>{tone.label}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${tone.c} 14%, transparent)`, color: tone.c, border: `1px solid color-mix(in srgb, ${tone.c} 28%, transparent)` }}>{t(`license.state.${LIC_TONE[lic.state] ? lic.state : 'trialing'}`)}</span>
                   {lic.tier && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{lic.tier}</span>}
                 </div>
-                <div className="text-[11.5px] text-muted-foreground mt-0.5">{r.ownerEmail || 'No email'}</div>
+                <div className="text-[11.5px] text-muted-foreground mt-0.5">{r.ownerEmail || t('member.noEmail')}</div>
                 <div className="text-[11.5px] text-muted-foreground mt-1">
-                  {lic.isTrial && `${lic.daysLeftTrial} trial day(s) left`}
-                  {lic.isGrace && `Grace: ${lic.daysLeftGrace} day(s) left`}
-                  {lic.isPaid && `Paid until ${lic.endsAt ? new Date(lic.endsAt).toLocaleDateString() : '—'}`}
-                  {lic.isBanned && (r.banReason || 'Banned')}
-                  {lic.clockTamper && <span className="ml-2 text-amber-400">⚠ clock anomaly</span>}
+                  {lic.isTrial && t('license.detail.trial', { count: lic.daysLeftTrial })}
+                  {lic.isGrace && t('license.detail.grace', { count: lic.daysLeftGrace })}
+                  {lic.isPaid && t('license.detail.paid', { date: lic.endsAt ? new Date(lic.endsAt).toLocaleDateString() : '—' })}
+                  {lic.isBanned && (r.banReason || t('status.banned'))}
+                  {lic.clockTamper && <span className="ml-2 text-amber-400">{t('license.detail.clockAnomaly')}</span>}
                 </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <button onClick={() => act(r.ownerId, () => softglazeApi.license.grant({ ownerId: r.ownerId, months: 1, tier: 'pro' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><CreditCard className="w-3.5 h-3.5" />Grant 1 mo</button>
-              <button onClick={() => act(r.ownerId, () => softglazeApi.license.extend({ ownerId: r.ownerId, days: 7 }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Clock className="w-3.5 h-3.5" />+7 days</button>
-              <button onClick={() => act(r.ownerId, () => softglazeApi.license.startTrial({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60"><Sparkles className="w-3.5 h-3.5" />Start trial</button>
-              <button onClick={() => act(r.ownerId, () => softglazeApi.license.reset({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" />Reset trial</button>
-              <button onClick={() => setEditing(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Settings2 className="w-3.5 h-3.5" />Edit</button>
-              <button onClick={() => terminate(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60"><Ban className="w-3.5 h-3.5" />Terminate</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.grant({ ownerId: r.ownerId, months: 1, tier: 'pro' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><CreditCard className="w-3.5 h-3.5" />{t('license.actions.grantMonth')}</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.extend({ ownerId: r.ownerId, days: 7 }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Clock className="w-3.5 h-3.5" />{t('license.actions.extend7')}</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.startTrial({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60"><Sparkles className="w-3.5 h-3.5" />{t('license.actions.startTrial')}</button>
+              <button onClick={() => act(r.ownerId, () => softglazeApi.license.reset({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" />{t('license.actions.resetTrial')}</button>
+              <button onClick={() => setEditing(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Settings2 className="w-3.5 h-3.5" />{t('license.actions.edit')}</button>
+              <button onClick={() => terminate(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60"><Ban className="w-3.5 h-3.5" />{t('license.actions.terminate')}</button>
               {banned ? (
-                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'active' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><ShieldCheck className="w-3.5 h-3.5" />Unblock</button>
+                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'active' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><ShieldCheck className="w-3.5 h-3.5" />{t('license.actions.unblock')}</button>
               ) : (
-                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'banned', reason: 'Blocked by Super Admin.' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60"><Lock className="w-3.5 h-3.5" />Block</button>
+                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'banned', reason: 'Blocked by Super Admin.' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60"><Lock className="w-3.5 h-3.5" />{t('license.actions.block')}</button>
               )}
               {busy && <Loader2 className="w-4 h-4 animate-spin text-muted" />}
             </div>
@@ -360,6 +363,7 @@ function SuperAdminLicensePanel() {
 // Full per-owner license editor: set type/tier/exact expiry, grant a chosen plan,
 // start the free trial or terminate — every action re-enforced in main.
 function LicenseEditModal({ row, plans, onClose, onSaved }) {
+  const { t } = useTranslation('members');
   const lic = row.license || {};
   const toDateInput = (iso) => { if (!iso) return ''; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ''; return d.toISOString().slice(0, 10); };
 
@@ -376,7 +380,7 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
   async function run(key, fn) {
     setBusy(key); setErr('');
     try { await fn(); onSaved(); }
-    catch (e) { setErr(e.message || 'Action failed.'); setBusy(''); }
+    catch (e) { setErr(e.message || t('license.errors.action')); setBusy(''); }
   }
 
   const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary';
@@ -384,54 +388,54 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`License · ${row.ownerName}`} tabIndex={-1} className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('license.editTitle', { name: row.ownerName })} tabIndex={-1} className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
-          <div className="flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /><h3 className="text-sm font-semibold text-foreground">License · {row.ownerName}</h3></div>
+          <div className="flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /><h3 className="text-sm font-semibold text-foreground">{t('license.editTitle', { name: row.ownerName })}</h3></div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-5">
           {/* Set exact state */}
           <div>
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Set state</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('license.setState')}</p>
             <div className="grid grid-cols-3 gap-3">
-              <div><label className={labelCls}>Type</label>
+              <div><label className={labelCls}>{t('license.fields.type')}</label>
                 <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)}>
-                  <option value="trial">trial</option><option value="paid">paid</option>
+                  <option value="trial">{t('license.type.trial')}</option><option value="paid">{t('license.type.paid')}</option>
                 </select>
               </div>
-              <div><label className={labelCls}>Tier</label>
+              <div><label className={labelCls}>{t('license.fields.tier')}</label>
                 <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value)}>
-                  <option value="pro">pro</option><option value="enterprise">enterprise</option>
+                  <option value="pro">{t('license.tier.pro')}</option><option value="enterprise">{t('license.tier.enterprise')}</option>
                 </select>
               </div>
-              <div><label className={labelCls}>Expiry</label><input type="date" className={inputCls} value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></div>
+              <div><label className={labelCls}>{t('license.fields.expiry')}</label><input type="date" className={inputCls} value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></div>
             </div>
-            <button onClick={() => run('save', () => softglazeApi.license.edit({ ownerId: row.ownerId, type, tier, endsAt: endsAt || null }))} disabled={busy === 'save'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 disabled:opacity-60">{busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save state</button>
+            <button onClick={() => run('save', () => softglazeApi.license.edit({ ownerId: row.ownerId, type, tier, endsAt: endsAt || null }))} disabled={busy === 'save'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 disabled:opacity-60">{busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('license.actions.saveState')}</button>
           </div>
 
           {/* Grant a plan */}
           {paidPlans.length > 0 && (
             <div className="border-t border-border pt-4">
-              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Grant a plan</p>
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('license.grantPlan')}</p>
               <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-                <div><label className={labelCls}>Plan</label>
+                <div><label className={labelCls}>{t('license.fields.plan')}</label>
                   <select className={inputCls} value={planId} onChange={(e) => setPlanId(e.target.value)}>
                     {paidPlans.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.tier}</option>)}
                   </select>
                 </div>
-                <div className="w-24"><label className={labelCls}>Months</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} /></div>
+                <div className="w-24"><label className={labelCls}>{t('license.fields.months')}</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} /></div>
               </div>
-              <button onClick={() => run('grant', () => softglazeApi.billing.assignPlan({ ownerId: row.ownerId, planId, months: Number(months) || 1 }))} disabled={busy === 'grant'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-emerald-600 disabled:opacity-60">{busy === 'grant' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} Grant plan</button>
+              <button onClick={() => run('grant', () => softglazeApi.billing.assignPlan({ ownerId: row.ownerId, planId, months: Number(months) || 1 }))} disabled={busy === 'grant'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-emerald-600 disabled:opacity-60">{busy === 'grant' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />} {t('license.actions.grantPlan')}</button>
             </div>
           )}
 
           {/* Lifecycle */}
           <div className="border-t border-border pt-4">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Lifecycle</p>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('license.lifecycle')}</p>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => run('trial', () => softglazeApi.license.startTrial({ ownerId: row.ownerId }))} disabled={busy === 'trial'} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60">{busy === 'trial' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Start free trial</button>
-              <button onClick={() => { if (window.confirm('Terminate this subscription now? Profiles lock until you grant access again.')) run('term', () => softglazeApi.license.terminate({ ownerId: row.ownerId })); }} disabled={busy === 'term'} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60">{busy === 'term' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />} Terminate now</button>
+              <button onClick={() => run('trial', () => softglazeApi.license.startTrial({ ownerId: row.ownerId }))} disabled={busy === 'trial'} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60">{busy === 'trial' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} {t('license.actions.startFreeTrial')}</button>
+              <button onClick={() => { if (window.confirm(t('license.confirm.terminateModal'))) run('term', () => softglazeApi.license.terminate({ ownerId: row.ownerId })); }} disabled={busy === 'term'} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60">{busy === 'term' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />} {t('license.actions.terminateNow')}</button>
             </div>
           </div>
 
@@ -443,6 +447,7 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
 }
 
 function MemberModal({ member, me, members = [], onClose, onSaved }) {
+  const { t } = useTranslation('members');
   const isNew = !member.id;
   const allowed = creatableRoles(me);
   const granter = (me && me.permissions) || defaultPerms('OWNER');
@@ -467,7 +472,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
   async function changeStatus(status, reason) {
     setStatusBusy(true); setErr('');
     try { await softglazeApi.members.setStatus({ id: member.id, status, reason }); onSaved(); }
-    catch (e) { setErr(e.message || 'Could not change status.'); setStatusBusy(false); }
+    catch (e) { setErr(e.message || t('errors.changeStatus')); setStatusBusy(false); }
   }
 
   const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2';
@@ -482,7 +487,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
 
   async function save() {
     setErr('');
-    if (!name.trim()) { setErr('Name is required.'); return; }
+    if (!name.trim()) { setErr(t('errors.nameRequired')); return; }
     setBusy(true);
     try {
       if (isNew) {
@@ -496,34 +501,34 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         await softglazeApi.members.setInstructions(member.id, instructions.trim()).catch(() => {});
         onSaved();
       }
-    } catch (e) { setErr(e.message || 'Could not save member.'); setBusy(false); }
+    } catch (e) { setErr(e.message || t('errors.saveMember')); setBusy(false); }
   }
 
   // Reset this member's limits + features to their role's built-in defaults.
   async function revertPerms() {
-    if (!window.confirm(`Reset ${member.name}'s limits and features to the defaults for their role?`)) return;
+    if (!window.confirm(t('confirm.revertPerms', { name: member.name }))) return;
     setBusy(true); setErr('');
     try { const updated = await softglazeApi.members.resetPermissions(member.id); setPerms(updated.permissions); }
-    catch (e) { setErr(e.message || 'Could not reset permissions.'); }
+    catch (e) { setErr(e.message || t('errors.resetPerms')); }
     finally { setBusy(false); }
   }
 
   // Invite-code result screen.
   if (invite) {
     return (
-      <Shell onClose={onSaved} title="Invitation created" icon={Mail}>
+      <Shell onClose={onSaved} title={t('invite.createdTitle')} icon={Mail}>
         <div className="p-6 space-y-4">
-          <p className="text-[12.5px] text-muted-foreground">Share this code with <b className="text-foreground">{name}</b>. They open SoftGlaze Browser → “Have an invite code?”, enter it and set their password.</p>
+          <p className="text-[12.5px] text-muted-foreground">{t('invite.sharePrefix')}<b className="text-foreground">{name}</b>{t('invite.shareSuffix')}</p>
           <div>
-            <label className={labelCls}>Invite code</label>
+            <label className={labelCls}>{t('invite.code')}</label>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-11 rounded-lg bg-input-background border border-border grid place-items-center font-mono text-lg tracking-widest text-foreground">{invite.code}</div>
-              <button onClick={() => copy(invite.code, 'code')} className="h-11 px-3 rounded-lg bg-secondary hover:bg-secondary/70 text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[12px]">{copied === 'code' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}{copied === 'code' ? 'Copied' : 'Copy'}</button>
+              <button onClick={() => copy(invite.code, 'code')} className="h-11 px-3 rounded-lg bg-secondary hover:bg-secondary/70 text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[12px]">{copied === 'code' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}{copied === 'code' ? t('actions.copied') : t('actions.copy')}</button>
             </div>
           </div>
           {invite.link && (
             <div>
-              <label className={labelCls}>Invite link</label>
+              <label className={labelCls}>{t('invite.link')}</label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-10 rounded-lg bg-input-background border border-border flex items-center px-3 font-mono text-[12px] text-muted-foreground truncate">{invite.link}</div>
                 <button onClick={() => copy(invite.link, 'link')} className="h-10 px-3 rounded-lg bg-secondary hover:bg-secondary/70 text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[12px]">{copied === 'link' ? <Check className="w-4 h-4 text-emerald-400" /> : <Link2 className="w-4 h-4" />}</button>
@@ -531,29 +536,29 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
             </div>
           )}
           <div className={`px-3 py-2 rounded-lg text-[12px] border ${invite.emailed ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 border-amber-500/20 text-amber-400'}`}>
-            {invite.emailed ? `Emailed to ${email}.` : 'Email not sent (configure SMTP in Settings → Email). Share the code manually.'}
+            {invite.emailed ? t('invite.emailedTo', { email }) : t('invite.emailNotSent')}
           </div>
         </div>
         <div className="flex justify-end px-6 py-4 border-t border-border">
-          <button onClick={onSaved} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] shadow-lg shadow-blue-500/25">Done</button>
+          <button onClick={onSaved} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] shadow-lg shadow-blue-500/25">{t('actions.done')}</button>
         </div>
       </Shell>
     );
   }
 
   return (
-    <Shell onClose={onClose} title={isNew ? 'Invite member' : `Edit ${member.name}`} icon={Users}>
+    <Shell onClose={onClose} title={isNew ? t('modal.inviteTitle') : t('modal.editTitle', { name: member.name })} icon={Users}>
       <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
         <div className="grid grid-cols-2 gap-4">
-          <div><label className={labelCls}>Name</label><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus /></div>
-          <div><label className={labelCls}>Email</label><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@domain.com" /></div>
+          <div><label className={labelCls}>{t('fields.name')}</label><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('fields.namePlaceholder')} autoFocus /></div>
+          <div><label className={labelCls}>{t('fields.email')}</label><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@domain.com" /></div>
         </div>
 
         {isNew ? (
           <div>
-            <label className={labelCls}>Role</label>
+            <label className={labelCls}>{t('fields.role')}</label>
             {allowed.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground">You're not allowed to create any sub-members.</p>
+              <p className="text-[12px] text-muted-foreground">{t('modal.noCreatableRoles')}</p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {allowed.map((r) => {
@@ -562,8 +567,8 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
                     <button key={r} onClick={() => pickRole(r)} className="flex items-start gap-2.5 p-3 rounded-lg text-left border transition-colors" style={active ? { borderColor: cfg.color, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)` } : { borderColor: 'var(--border)', background: 'var(--input-background)' }}>
                       <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: cfg.color }} />
                       <div>
-                        <div className="text-[12.5px] font-semibold" style={{ color: active ? cfg.color : undefined }}>{ROLE_LABEL[r]}</div>
-                        <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">{ROLE_DESC[r]}</div>
+                        <div className="text-[12.5px] font-semibold" style={{ color: active ? cfg.color : undefined }}>{t(`roles.${r}`)}</div>
+                        <div className="text-[10.5px] text-muted-foreground leading-snug mt-0.5">{t(`roleDesc.${r}`)}</div>
                       </div>
                     </button>
                   );
@@ -573,13 +578,13 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
           </div>
         ) : (
           <div>
-            <label className={labelCls}>Role</label>
-            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium" style={roleBadgeStyle(member.role)}>{ROLE_LABEL[member.role] || member.role}</span>
+            <label className={labelCls}>{t('fields.role')}</label>
+            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium" style={roleBadgeStyle(member.role)}>{ROLE_LABEL[member.role] ? t(`roles.${member.role}`) : member.role}</span>
           </div>
         )}
 
         <div>
-          <label className={labelCls}>Color</label>
+          <label className={labelCls}>{t('fields.color')}</label>
           <div className="flex gap-2">
             {COLORS.map((c) => <button key={c} onClick={() => setColor(c)} className="w-7 h-7 rounded-full transition-transform" style={{ background: c, transform: color === c ? 'scale(1.12)' : 'none', boxShadow: color === c ? `0 0 0 2px var(--color-card), 0 0 0 4px ${c}` : 'none' }} aria-label={c} />)}
           </div>
@@ -588,8 +593,8 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         {member.inviteStatus === 'pending' && member.inviteCode && (
           <div className="px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[12px] text-amber-400 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Invite pending — code <b className="font-mono">{member.inviteCode}</b></span>
-              <button onClick={() => copy(member.inviteCode, 'code')} className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1">{copied === 'code' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}Copy</button>
+              <span className="text-[12px] text-amber-400 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{t('modal.invitePendingCode')} <b className="font-mono">{member.inviteCode}</b></span>
+              <button onClick={() => copy(member.inviteCode, 'code')} className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1">{copied === 'code' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}{t('actions.copy')}</button>
             </div>
           </div>
         )}
@@ -597,9 +602,9 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         {/* Allocation rollup — how much of this member's quota is handed to their team */}
         {!isNew && member.allocation && member.allocation.childCount > 0 && (
           <div className="rounded-xl border border-border bg-elevated/40 p-3 space-y-1.5">
-            <div className="flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-primary" /><span className="text-[12px] font-semibold text-foreground">Allocated to {member.allocation.childCount} sub-member{member.allocation.childCount === 1 ? '' : 's'}</span></div>
-            <AllocRow label="Profiles" roll={member.allocation.profiles} />
-            <AllocRow label="Proxies" roll={member.allocation.proxies} />
+            <div className="flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-primary" /><span className="text-[12px] font-semibold text-foreground">{t('alloc.heading', { count: member.allocation.childCount })}</span></div>
+            <AllocRow label={t('labels.profiles')} roll={member.allocation.profiles} t={t} />
+            <AllocRow label={t('labels.proxies')} roll={member.allocation.proxies} t={t} />
           </div>
         )}
 
@@ -609,43 +614,43 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
             <PermissionEditor role={isNew ? role : member.role} value={perms} onChange={setPerms} granter={granter} />
             {!isNew && (
               <button onClick={revertPerms} disabled={busy} className="text-[11.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 disabled:opacity-50">
-                <RotateCcw className="w-3.5 h-3.5" /> Revert to role defaults
+                <RotateCcw className="w-3.5 h-3.5" /> {t('perms.revertDefaults')}
               </button>
             )}
           </div>
         )}
 
         <div>
-          <label className={`${labelCls} flex items-center gap-1.5`}><ClipboardList className="w-3.5 h-3.5" />Instructions <span className="text-muted-dark normal-case">(optional)</span></label>
-          <textarea className={inputCls.replace('h-10', 'min-h-[64px] py-2 leading-snug resize-y')} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="What this member is responsible for…" maxLength={4000} />
+          <label className={`${labelCls} flex items-center gap-1.5`}><ClipboardList className="w-3.5 h-3.5" />{t('fields.instructions')} <span className="text-muted-dark normal-case">{t('fields.optional')}</span></label>
+          <textarea className={inputCls.replace('h-10', 'min-h-[64px] py-2 leading-snug resize-y')} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder={t('fields.instructionsPlaceholder')} maxLength={4000} />
         </div>
 
         {!isNew && (
           <div className="rounded-lg border border-border bg-elevated/40 p-3 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Account status</span>
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('accountStatus.title')}</span>
               {member.status === 'banned'
-                ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30"><Lock className="w-3 h-3" />Banned</span>
+                ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-red-500/15 text-red-400 border border-red-500/30"><Lock className="w-3 h-3" />{t('status.banned')}</span>
                 : member.status === 'suspended'
-                  ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">Suspended</span>
-                  : <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>}
+                  ? <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">{t('status.suspended')}</span>
+                  : <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{t('status.active')}</span>}
             </div>
             {member.status === 'banned' ? (
               <>
-                {member.banReason && <p className="text-[11.5px] text-red-400/90">Reason: {member.banReason}</p>}
+                {member.banReason && <p className="text-[11.5px] text-red-400/90">{t('accountStatus.reason', { reason: member.banReason })}</p>}
                 <button type="button" onClick={() => changeStatus('active')} disabled={statusBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60">
-                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} Unban member
+                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} {t('accountStatus.unban')}
                 </button>
-                <p className="text-[11px] text-muted-foreground">Editing the fields above keeps the ban — use Unban to restore access.</p>
+                <p className="text-[11px] text-muted-foreground">{t('accountStatus.banHint')}</p>
               </>
             ) : (
               <>
                 <label className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
                   <input type="checkbox" checked={suspended} onChange={(e) => setSuspended(e.target.checked)} className="accent-red-500" />
-                  Suspend this member (blocks sign-in)
+                  {t('accountStatus.suspendToggle')}
                 </label>
                 <button type="button" onClick={() => changeStatus('banned', 'Blocked by administrator.')} disabled={statusBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60">
-                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />} Ban member
+                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />} {t('accountStatus.ban')}
                 </button>
               </>
             )}
@@ -655,14 +660,14 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         {err && <p className="text-[12px] text-red-400">{err}</p>}
       </div>
       <div className="flex items-center gap-2 px-6 py-4 border-t border-border">
-        {!isNew && !member.isCurrent && <button onClick={() => setShowDelete(true)} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"><Trash2 className="w-4 h-4" />Remove</button>}
+        {!isNew && !member.isCurrent && <button onClick={() => setShowDelete(true)} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"><Trash2 className="w-4 h-4" />{t('actions.remove')}</button>}
         {!isNew && member.inviteStatus !== 'pending' && canManageTeam(me) && (
-          <button onClick={() => setShowAssign(true)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary flex items-center gap-1.5"><FolderInput className="w-4 h-4" />Assign profiles</button>
+          <button onClick={() => setShowAssign(true)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary flex items-center gap-1.5"><FolderInput className="w-4 h-4" />{t('actions.assignProfiles')}</button>
         )}
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>
+          <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">{t('actions.cancel')}</button>
           <button onClick={save} disabled={busy} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (isNew ? 'Create invite' : 'Save')}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (isNew ? t('actions.createInvite') : t('actions.save'))}
           </button>
         </div>
       </div>
@@ -676,6 +681,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
 // ProxyGroups): reassign to the actor, reassign to another member, or delete it
 // all (profiles → Trash, proxies/groups removed). Backend re-enforces every guard.
 function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
+  const { t } = useTranslation('members');
   const pickable = (members || []).filter((m) => m.id !== member.id && m.inviteStatus !== 'pending');
   const [action, setAction] = useState('reassign-me'); // 'reassign-me' | 'reassign-other' | 'delete'
   const [targetId, setTargetId] = useState(pickable[0]?.id != null ? String(pickable[0].id) : '');
@@ -685,9 +691,9 @@ function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
   const proxies = member.ownedProxies ?? 0;
 
   const OPTIONS = [
-    { id: 'reassign-me', label: 'Keep & reassign to me', desc: 'You become the owner of their profiles and proxies.' },
-    { id: 'reassign-other', label: 'Keep & reassign to another member', desc: 'Hand their data to a specific teammate.' },
-    { id: 'delete', label: 'Delete all attached data', desc: 'Their proxies & proxy groups are deleted; profiles move to Trash (recoverable).' }
+    { id: 'reassign-me', label: t('delete.options.reassignMe.label'), desc: t('delete.options.reassignMe.desc') },
+    { id: 'reassign-other', label: t('delete.options.reassignOther.label'), desc: t('delete.options.reassignOther.desc') },
+    { id: 'delete', label: t('delete.options.delete.label'), desc: t('delete.options.delete.desc') }
   ];
 
   async function confirm() {
@@ -696,20 +702,20 @@ function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
       let opts;
       if (action === 'delete') opts = { dataAction: 'delete' };
       else if (action === 'reassign-other') {
-        if (!targetId) { setErr('Pick a member to receive the data.'); setBusy(false); return; }
+        if (!targetId) { setErr(t('delete.pickTarget')); setBusy(false); return; }
         opts = { dataAction: 'reassign', reassignToMemberId: targetId };
       } else opts = { dataAction: 'reassign', reassignToMemberId: 'me' };
       await softglazeApi.members.delete(member.id, opts);
       onDeleted();
-    } catch (e) { setErr(e.message || 'Could not remove member.'); setBusy(false); }
+    } catch (e) { setErr(e.message || t('errors.removeMember')); setBusy(false); }
   }
 
   return (
-    <Shell onClose={onClose} title={`Remove ${member.name}`} icon={Trash2}>
+    <Shell onClose={onClose} title={t('delete.title', { name: member.name })} icon={Trash2}>
       <div className="p-6 space-y-4">
         <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[12px] text-amber-300">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>This removes <b className="text-foreground">{member.name}</b> and moves any sub-members up to you. Choose what happens to their data — <b className="text-foreground">{profiles}</b> profile{profiles === 1 ? '' : 's'} · <b className="text-foreground">{proxies}</b> prox{proxies === 1 ? 'y' : 'ies'}.</span>
+          <span>{t('delete.warnPrefix')}<b className="text-foreground">{member.name}</b>{t('delete.warnMiddle')} <b className="text-foreground">{profiles}</b> {t('delete.profilesWord', { count: profiles })} · <b className="text-foreground">{proxies}</b> {t('delete.proxiesWord', { count: proxies })}</span>
         </div>
         <div className="space-y-2">
           {OPTIONS.map((opt) => (
@@ -724,12 +730,12 @@ function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
         </div>
         {action === 'reassign-other' && (
           <div>
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Reassign to</label>
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('delete.reassignTo')}</label>
             {pickable.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground">No other members available — pick another option.</p>
+              <p className="text-[12px] text-muted-foreground">{t('delete.noOtherMembers')}</p>
             ) : (
               <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className="w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-                {pickable.map((m) => <option key={m.id} value={m.id}>{m.name} ({ROLE_LABEL[m.role] || m.role})</option>)}
+                {pickable.map((m) => <option key={m.id} value={m.id}>{m.name} ({ROLE_LABEL[m.role] ? t(`roles.${m.role}`) : m.role})</option>)}
               </select>
             )}
           </div>
@@ -737,9 +743,9 @@ function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
         {err && <p className="text-[12px] text-red-400">{err}</p>}
       </div>
       <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
-        <button onClick={onClose} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary disabled:opacity-50">Cancel</button>
+        <button onClick={onClose} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary disabled:opacity-50">{t('actions.cancel')}</button>
         <button onClick={confirm} disabled={busy || (action === 'reassign-other' && pickable.length === 0)} className="h-9 px-5 rounded-lg bg-red-500/90 hover:bg-red-500 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Remove member
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} {t('actions.removeMember')}
         </button>
       </div>
     </Shell>
@@ -750,6 +756,7 @@ function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
 // already assigned to them; on save, newly checked are assigned and previously-
 // assigned-but-unchecked are unassigned (each writes an audit row in main).
 function AssignProfilesModal({ member, onClose }) {
+  const { t } = useTranslation('members');
   const [profiles, setProfiles] = useState([]);
   const [members, setMembers] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
@@ -775,7 +782,7 @@ function AssignProfilesModal({ member, onClose }) {
         const mine = new Set(rows.filter((p) => Number(p.assignedMemberId) === Number(member.id)).map((p) => p.id));
         setSelected(new Set(mine));
         setInitial(new Set(mine));
-      } catch (e) { if (alive) setErr(e.message || 'Could not load profiles.'); }
+      } catch (e) { if (alive) setErr(e.message || t('errors.loadProfiles')); }
       finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
@@ -796,30 +803,30 @@ function AssignProfilesModal({ member, onClose }) {
       if (toAssign.length) await softglazeApi.team.reassignProfiles({ profileIds: toAssign, memberId: member.id });
       if (toUnassign.length) await softglazeApi.team.reassignProfiles({ profileIds: toUnassign, memberId: null });
       setInitial(new Set(selected));
-      setDone(`Updated — ${toAssign.length} assigned, ${toUnassign.length} unassigned.`);
-    } catch (e) { setErr(e.message || 'Could not reassign profiles.'); }
+      setDone(t('assign.updated', { assigned: toAssign.length, unassigned: toUnassign.length }));
+    } catch (e) { setErr(e.message || t('errors.reassignProfiles')); }
     finally { setBusy(false); }
   }
 
   return (
-    <Shell onClose={onClose} title={`Assign profiles · ${member.name}`} icon={FolderInput}>
+    <Shell onClose={onClose} title={t('assign.title', { name: member.name })} icon={FolderInput}>
       <div className="p-6 space-y-3">
         <div className="relative">
           <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search profiles" className="w-full h-9 bg-input-background border border-border rounded-lg pl-8 pr-3 text-[12.5px] text-foreground outline-none focus:border-primary" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('assign.searchPlaceholder')} className="w-full h-9 bg-input-background border border-border rounded-lg pl-8 pr-3 text-[12.5px] text-foreground outline-none focus:border-primary" />
         </div>
         <div className="rounded-lg border border-border bg-elevated/40 max-h-[44vh] overflow-y-auto divide-y divide-border/60">
           {loading ? (
             <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>
           ) : filtered.length === 0 ? (
-            <div className="py-8 text-center text-[12px] text-muted-foreground">No profiles found.</div>
+            <div className="py-8 text-center text-[12px] text-muted-foreground">{t('assign.noProfiles')}</div>
           ) : filtered.map((p) => {
             const other = p.assignedMemberId != null && Number(p.assignedMemberId) !== Number(member.id);
             return (
               <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-secondary/50">
                 <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} className="accent-blue-500" />
                 <span className="text-[12.5px] text-foreground truncate flex-1">{p.title}</span>
-                {other && <span className="text-[10.5px] text-muted-foreground shrink-0">{nameById.get(Number(p.assignedMemberId)) || `member #${p.assignedMemberId}`}</span>}
+                {other && <span className="text-[10.5px] text-muted-foreground shrink-0">{nameById.get(Number(p.assignedMemberId)) || t('assign.memberFallback', { id: p.assignedMemberId })}</span>}
                 <span className="text-[10.5px] text-muted-foreground/70 shrink-0">#{p.id}</span>
               </label>
             );
@@ -829,9 +836,9 @@ function AssignProfilesModal({ member, onClose }) {
         {done && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{done}</p>}
       </div>
       <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
-        <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Close</button>
+        <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">{t('actions.close')}</button>
         <button onClick={save} disabled={busy || loading} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save assignment'}
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('assign.save')}
         </button>
       </div>
     </Shell>
@@ -857,7 +864,7 @@ function Shell({ children, onClose, title, icon: Icon }) {
 }
 
 // One line of the allocation rollup: how much of a cap is handed to sub-members.
-function AllocRow({ label, roll }) {
+function AllocRow({ label, roll, t }) {
   const cap = roll.cap;
   const capLabel = cap === -1 ? '∞' : cap;
   const remaining = cap === -1 ? '∞' : Math.max(0, cap - roll.allocated);
@@ -865,8 +872,8 @@ function AllocRow({ label, roll }) {
     <div className="flex items-center justify-between text-[11.5px]">
       <span className="text-muted-foreground">{label}</span>
       <span className="text-foreground">
-        {roll.allocated}{roll.unlimitedKids ? ` +${roll.unlimitedKids}×∞` : ''} of {capLabel} allocated
-        <span className="text-muted-foreground"> · {remaining} left</span>
+        {t('alloc.allocated', { allocated: `${roll.allocated}${roll.unlimitedKids ? ` +${roll.unlimitedKids}×∞` : ''}`, cap: capLabel })}
+        <span className="text-muted-foreground"> {t('alloc.left', { remaining })}</span>
       </span>
     </div>
   );
@@ -874,6 +881,7 @@ function AllocRow({ label, roll }) {
 
 // Limits + child caps + create flags + feature toggles, clamped to the granter.
 function PermissionEditor({ role, value, onChange, granter }) {
+  const { t } = useTranslation('members');
   const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2';
   const set = (patch) => onChange({ ...value, ...patch });
   const setFeature = (k, on) => onChange({ ...value, features: { ...(value.features || {}), [k]: on } });
@@ -902,7 +910,7 @@ function PermissionEditor({ role, value, onChange, granter }) {
     const gUnlimited = max === -1 || max == null;
     return (
       <div>
-        <label className="block text-[11px] text-muted-foreground mb-1">{label}{!gUnlimited && <span className="text-muted-dark"> (max {max})</span>}</label>
+        <label className="block text-[11px] text-muted-foreground mb-1">{label}{!gUnlimited && <span className="text-muted-dark"> {t('perms.max', { max })}</span>}</label>
         <div className="flex items-center gap-2">
           <input type="number" min={0} disabled={unlimited} value={unlimited ? '' : (value[k] ?? 0)} onChange={(e) => set({ [k]: Math.max(0, Number(e.target.value) || 0) })} placeholder={unlimited ? '∞' : '0'} className="w-full h-9 bg-input-background border border-border rounded-lg px-2.5 text-[12.5px] text-foreground outline-none focus:border-primary disabled:opacity-50" />
           {gUnlimited && (
@@ -917,30 +925,30 @@ function PermissionEditor({ role, value, onChange, granter }) {
 
   return (
     <div className="rounded-xl border border-border bg-elevated/50 p-4 space-y-4">
-      <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[12px] font-semibold text-foreground">Permissions & limits</span></div>
+      <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[12px] font-semibold text-foreground">{t('perms.title')}</span></div>
 
       <div>
-        <label className={labelCls}>Resource limits</label>
+        <label className={labelCls}>{t('perms.resourceLimits')}</label>
         <div className="grid grid-cols-3 gap-2">
-          <NumLimit k="maxProfiles" label="Profiles" />
-          <NumLimit k="maxProxies" label="Proxies" />
-          <NumLimit k="maxBrowsers" label="Browsers" />
+          <NumLimit k="maxProfiles" label={t('labels.profiles')} />
+          <NumLimit k="maxProxies" label={t('labels.proxies')} />
+          <NumLimit k="maxBrowsers" label={t('labels.browsers')} />
         </div>
       </div>
 
       {(CHILD_CAPS[role] || []).length > 0 && (
         <div>
-          <label className={labelCls}>Sub-member caps</label>
+          <label className={labelCls}>{t('perms.subMemberCaps')}</label>
           <div className="grid grid-cols-3 gap-2">
-            {(CHILD_CAPS[role] || []).map(([k, lbl]) => <NumLimit key={k} k={k} label={lbl} />)}
+            {(CHILD_CAPS[role] || []).map(([k]) => <NumLimit key={k} k={k} label={t(`caps.${k}`)} />)}
           </div>
           <div className="mt-2 space-y-1.5">
-            {(CREATE_FLAGS[role] || []).map(([flag, lbl]) => {
+            {(CREATE_FLAGS[role] || []).map(([flag]) => {
               const granterOk = !granter || granter[flag];
               return (
                 <label key={flag} className={`flex items-center gap-2 text-[12px] ${granterOk ? 'text-muted-foreground cursor-pointer' : 'text-muted-dark cursor-not-allowed'}`}>
                   <input type="checkbox" disabled={!granterOk} checked={Boolean(value[flag]) && granterOk} onChange={(e) => set({ [flag]: e.target.checked })} className="accent-blue-500" />
-                  Can invite {lbl}
+                  {t(`perms.canInvite.${flag}`)}
                 </label>
               );
             })}
@@ -949,14 +957,14 @@ function PermissionEditor({ role, value, onChange, granter }) {
       )}
 
       <div>
-        <label className={labelCls}>Visible features</label>
+        <label className={labelCls}>{t('perms.visibleFeatures')}</label>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-          {FEATURES.map(([k, lbl]) => {
+          {FEATURES.map(([k]) => {
             const granterOk = !granter || !granter.features || granter.features[k] !== false;
             return (
               <label key={k} className={`flex items-center gap-2 text-[12px] ${granterOk ? 'text-muted-foreground cursor-pointer' : 'text-muted-dark cursor-not-allowed'}`}>
                 <input type="checkbox" disabled={!granterOk} checked={(value.features || {})[k] !== false && granterOk} onChange={(e) => setFeature(k, e.target.checked)} className="accent-blue-500" />
-                {lbl}
+                {t(`features.${k}`)}
               </label>
             );
           })}
@@ -965,8 +973,8 @@ function PermissionEditor({ role, value, onChange, granter }) {
 
       {actionCats.length > 0 && (
         <div>
-          <label className={labelCls}>Action permissions</label>
-          <p className="text-[10.5px] text-muted-foreground mb-2 -mt-1">On by default for this role. Turn one off to revoke it for this member only.</p>
+          <label className={labelCls}>{t('perms.actionPermissions')}</label>
+          <p className="text-[10.5px] text-muted-foreground mb-2 -mt-1">{t('perms.actionHint')}</p>
           <div className="space-y-2.5">
             {actionCats.map((cat) => (
               <div key={cat.name}>
@@ -1003,6 +1011,13 @@ function actionLabel(a) {
   };
   return map[String(a || '').toLowerCase()] || a;
 }
+// Translated display label for an action. Keeps actionLabel() as the canonical
+// English value (used for ACTION_COLORS lookup); this only swaps the visible text.
+function actionLabelT(a, t) {
+  const eng = actionLabel(a);
+  const key = String(eng).replace(/[^a-z0-9]+/gi, '_');
+  return t(`activityActions.${key}`, { defaultValue: eng });
+}
 const ACTION_COLORS = {
   launched: '#10b981', stopped: '#ef4444', created: '#3b82f6', edited: '#8b5cf6', deleted: '#ef4444',
   restored: '#10b981', imported: '#f59e0b', assigned: '#06b6d4', reassigned: '#06b6d4',
@@ -1027,16 +1042,17 @@ function humanizeDetail(detail) {
   } catch (e) { /* not JSON */ }
   return s;
 }
-function feedTime(iso) {
+function feedTime(iso, t) {
   if (!iso) return '';
   const d = new Date(iso); const s = (Date.now() - d.getTime()) / 1000;
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return t('feedTime.justNow');
+  if (s < 3600) return t('feedTime.minutes', { count: Math.floor(s / 60) });
+  if (s < 86400) return t('feedTime.hours', { count: Math.floor(s / 3600) });
+  return t('feedTime.days', { count: Math.floor(s / 86400) });
 }
 
 function TeamActivityFeed() {
+  const { t } = useTranslation('members');
   const [rows, setRows] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1095,8 +1111,8 @@ function TeamActivityFeed() {
         to: to || undefined
       });
       if (res && res.cancelled) return;
-      if (res && res.ok) setNotice(`Exported ${res.count} row(s) → ${res.path}`);
-    } catch (e) { setErr(e.message || 'Could not export the activity log.'); }
+      if (res && res.ok) setNotice(t('activity.exported', { count: res.count, path: res.path }));
+    } catch (e) { setErr(e.message || t('activity.exportError')); }
     finally { setExporting(''); }
   }
 
@@ -1106,7 +1122,7 @@ function TeamActivityFeed() {
     <div className="bg-card border border-border rounded-xl p-5 animate-fade-up">
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <span className="w-7 h-7 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 16%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 28%, transparent)' }}><Activity className="w-3.5 h-3.5 text-blue-400" /></span>
-        <div className="mr-auto"><h2 className="text-sm font-semibold text-foreground">Team activity</h2><p className="text-xs text-muted-foreground">who did what, on this workspace</p></div>
+        <div className="mr-auto"><h2 className="text-sm font-semibold text-foreground">{t('activity.title')}</h2><p className="text-xs text-muted-foreground">{t('activity.subtitle')}</p></div>
         <button onClick={() => doExport('csv')} disabled={!!exporting} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
           {exporting === 'csv' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} CSV
         </button>
@@ -1117,18 +1133,18 @@ function TeamActivityFeed() {
 
       {/* Filters (apply to the view below and to the export) */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <select value={fMember} onChange={(e) => setFMember(e.target.value)} className={selCls} title="Filter by member">
-          <option value="">All members</option>
+        <select value={fMember} onChange={(e) => setFMember(e.target.value)} className={selCls} title={t('activity.filterByMember')}>
+          <option value="">{t('activity.allMembers')}</option>
           {members.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
         </select>
-        <select value={fAction} onChange={(e) => setFAction(e.target.value)} className={selCls} title="Filter by action">
-          <option value="">All actions</option>
-          {actionOptions.map((a) => <option key={a} value={a}>{actionLabel(a)}</option>)}
+        <select value={fAction} onChange={(e) => setFAction(e.target.value)} className={selCls} title={t('activity.filterByAction')}>
+          <option value="">{t('activity.allActions')}</option>
+          {actionOptions.map((a) => <option key={a} value={a}>{actionLabelT(a, t)}</option>)}
         </select>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={selCls} title="From date" />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={selCls} title="To date" />
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={selCls} title={t('activity.fromDate')} />
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={selCls} title={t('activity.toDate')} />
         {(fMember || fAction || from || to) && (
-          <button onClick={() => { setFMember(''); setFAction(''); setFrom(''); setTo(''); }} className="text-[11.5px] text-muted-foreground hover:text-foreground">Clear</button>
+          <button onClick={() => { setFMember(''); setFAction(''); setFrom(''); setTo(''); }} className="text-[11.5px] text-muted-foreground hover:text-foreground">{t('actions.clear')}</button>
         )}
       </div>
 
@@ -1139,7 +1155,7 @@ function TeamActivityFeed() {
         {loading ? (
           <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>
         ) : visible.length === 0 ? (
-          <div className="py-10 text-center text-[12.5px] text-muted-foreground">{rows.length === 0 ? 'No activity recorded yet.' : 'No activity matches these filters.'}</div>
+          <div className="py-10 text-center text-[12.5px] text-muted-foreground">{rows.length === 0 ? t('activity.empty') : t('activity.noMatch')}</div>
         ) : visible.map((r) => {
           const action = actionLabel(r.action);
           const ac = ACTION_COLORS[String(action).toLowerCase()] || '#8b94a7';
@@ -1147,10 +1163,10 @@ function TeamActivityFeed() {
             <div key={r.id} className="flex items-center gap-3 px-5 py-3 text-[12.5px] border-b border-border hover:bg-secondary/50 transition-colors last:border-b-0">
               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: ac }} />
               <span className="text-foreground font-semibold">{r.memberName}</span>
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium" style={{ background: `color-mix(in srgb, ${ac} 14%, transparent)`, color: ac }}>{action}</span>
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium" style={{ background: `color-mix(in srgb, ${ac} 14%, transparent)`, color: ac }}>{actionLabelT(r.action, t)}</span>
               {r.profileTitle && <span className="text-muted-foreground truncate">{r.profileTitle}</span>}
               {r.detail && <span className="text-muted-foreground truncate hidden md:inline">· {humanizeDetail(r.detail)}</span>}
-              <span className="ml-auto text-[11px] text-muted-foreground font-mono shrink-0">{feedTime(r.createdAt)}</span>
+              <span className="ml-auto text-[11px] text-muted-foreground font-mono shrink-0">{feedTime(r.createdAt, t)}</span>
             </div>
           );
         })}

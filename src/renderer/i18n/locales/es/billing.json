@@ -1,0 +1,251 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "edit": "Editar",
+    "delete": "Eliminar"
+  },
+  "header": {
+    "title": "Facturación y planes",
+    "description": "Gestiona tu suscripción, compara planes y mejora tu plan — todo en un solo lugar."
+  },
+  "status": {
+    "loading": "Cargando…",
+    "sourceOwner": "Propietario del código",
+    "active": "Activo",
+    "activeRenews": "Activo · se renueva el {{date}}",
+    "trial": "Prueba",
+    "trialDaysLeft": "Prueba · quedan {{days}} d",
+    "graceDaysLeft": "Gracia · quedan {{days}} d",
+    "subscriptionEnded": "Suscripción finalizada"
+  },
+  "backend": {
+    "licensedVerified": "Con licencia y verificado",
+    "renews": "se renueva el {{date}}",
+    "noLicense": "Licencia activa — aún no hay una licencia de pago para esta instalación."
+  },
+  "current": {
+    "title": "Plan actual",
+    "sourceOwnerAllFeatures": "Propietario del código · todas las funciones",
+    "paid": "de pago",
+    "freeTrial": "prueba gratuita"
+  },
+  "grace": {
+    "message_one": "Tu {{kind}} ha finalizado — queda {{count}} día de gracia. Renueva abajo para no perder el acceso.",
+    "message_other": "Tu {{kind}} ha finalizado — quedan {{count}} días de gracia. Renueva abajo para no perder el acceso.",
+    "kindTrial": "prueba gratuita",
+    "kindSubscription": "suscripción"
+  },
+  "banned": {
+    "message": "Tu suscripción ha finalizado y el lanzamiento de perfiles está bloqueado. Suscríbete o introduce un código de compra para restaurar el acceso."
+  },
+  "trialRemaining": {
+    "message_one": "Prueba gratuita — queda {{count}} día.",
+    "message_other": "Prueba gratuita — quedan {{count}} días."
+  },
+  "seats": {
+    "label": "Asientos del equipo",
+    "usage": "{{used}} / {{total}} usados",
+    "upgradeToAddMore": "· mejora tu plan para añadir más"
+  },
+  "exempt": {
+    "note": "Eres el propietario del código — estás exento del sistema de suscripción. Todas las funciones están incluidas."
+  },
+  "checkout": {
+    "waiting": "Esperando tu pago…",
+    "waitingForPlan": "Esperando tu pago · {{plan}}…",
+    "opened": "Se abrió una página de pago en tu navegador. Después de pagar, esto se actualiza automáticamente.",
+    "reopen": "Reabrir la página de pago"
+  },
+  "plans": {
+    "chooseHeading": "Elige un plan",
+    "bestValue": "Mejor valor",
+    "current": "Actual",
+    "footerNote": "Los pagos se procesan con los métodos que tu administrador ha habilitado. Después de pagar en tu navegador, esta página activa tu plan automáticamente."
+  },
+  "cta": {
+    "included": "Incluido",
+    "onPaidPlan": "En un plan de pago",
+    "trialActiveDaysLeft": "Prueba activa · quedan {{days}} d",
+    "startFreeTrial": "Iniciar prueba gratuita",
+    "currentPlan": "Plan actual",
+    "upgradeEnterprise": "Mejorar a Enterprise",
+    "downgradePro": "Cambiar a Pro",
+    "choosePlan": "Elegir {{name}}"
+  },
+  "trial": {
+    "started": "Tu prueba gratuita con acceso completo está activa. ¡Disfrútala!",
+    "startedWithDays": "Tu prueba gratuita está activa — {{days}} días de acceso completo. ¡Disfrútala!",
+    "errors": {
+      "failed": "No se pudo iniciar la prueba."
+    }
+  },
+  "redeem": {
+    "label": "¿Tienes un código de compra?",
+    "apply": "Aplicar",
+    "success": "Código de compra aplicado — ¡gracias!",
+    "errors": {
+      "empty": "Introduce tu código de compra.",
+      "failed": "No se pudo aplicar ese código."
+    }
+  },
+  "pay": {
+    "received": "Pago recibido — ¡tu plan ya está activo!",
+    "errors": {
+      "noMethods": "Aún no hay métodos de pago habilitados — contacta con tu administrador.",
+      "checkoutFailed": "No se pudo iniciar el pago.",
+      "submitFailed": "No se pudo enviar tu pago."
+    }
+  },
+  "payModal": {
+    "title": "Pagar por {{name}}",
+    "manualSubmitted": "Pago enviado. Un administrador lo revisará y activará tu plan en breve.",
+    "manualBadge": "Manual",
+    "continueTo": "Continuar a {{method}}",
+    "openPayLink": "Abrir enlace de pago",
+    "referencePlaceholder": "Referencia de pago / ID de transacción",
+    "notePlaceholder": "Nota (opcional)",
+    "submitForApproval": "He pagado — enviar para aprobación",
+    "manualActivationNote": "Tu plan se activa una vez que un administrador confirma el pago."
+  },
+  "admin": {
+    "configureMethods": "Configurar métodos de pago en Ajustes"
+  },
+  "invoices": {
+    "title": "Facturas",
+    "subtitleAdmin": "Todos los pagos de todos los propietarios — capturados automáticamente + manuales.",
+    "subtitleUser": "Tus recibos de pago.",
+    "add": "Añadir",
+    "empty": "Aún no hay facturas.",
+    "manualSuffix": "manual",
+    "confirmDelete": "¿Eliminar esta factura?",
+    "cols": {
+      "date": "Fecha",
+      "owner": "Propietario",
+      "amount": "Importe",
+      "method": "Método",
+      "status": "Estado",
+      "reference": "Referencia"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar las facturas.",
+      "deleteFailed": "No se pudo eliminar."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Añadir factura",
+    "editTitle": "Editar factura",
+    "ownerMemberId": "ID de miembro propietario",
+    "optionalPlaceholder": "(opcional)",
+    "amount": "Importe",
+    "currency": "Moneda",
+    "method": "Método",
+    "status": "Estado",
+    "tier": "Nivel",
+    "months": "Meses",
+    "reference": "Referencia",
+    "referencePlaceholder": "transacción / código",
+    "note": "Nota",
+    "errors": {
+      "invalidAmount": "Introduce un importe válido.",
+      "saveFailed": "No se pudo guardar la factura."
+    }
+  },
+  "planManager": {
+    "title": "Planes y paquetes",
+    "subtitle": "Define precios, edita detalles y crea nuevos paquetes. Los cambios se aplican al instante en el pago.",
+    "newPackage": "Nuevo paquete",
+    "activeBadge": "Activo",
+    "hiddenBadge": "Oculto",
+    "termMeta": "plazo de {{months}} meses · {{tier}}",
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "hideTitle": "Ocultar del pago",
+    "showTitle": "Mostrar en el pago",
+    "deleteTitle": "Eliminar plan",
+    "confirmDelete": "¿Eliminar el plan «{{name}}»? Los compradores dejarán de verlo.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los planes.",
+      "updateFailed": "No se pudo actualizar el plan.",
+      "deleteFailed": "No se pudo eliminar el plan."
+    }
+  },
+  "planForm": {
+    "newTitle": "Nuevo paquete",
+    "editTitle": "Editar {{name}}",
+    "editTitleAria": "Editar paquete",
+    "packageName": "Nombre del paquete",
+    "planType": "Tipo de plan",
+    "typePaid": "De pago",
+    "typeTrial": "Prueba gratuita",
+    "trialLength": "Duración de la prueba (días)",
+    "price": "Precio",
+    "currency": "Moneda",
+    "shownAs": "Se muestra como",
+    "trialShownValue": "{{days}} días · gratis",
+    "billedPer": "Facturado por",
+    "term": "Plazo (meses otorgados)",
+    "featureTier": "Nivel de funciones",
+    "bestValue": "Mejor valor",
+    "active": "Activo",
+    "tagline": "Lema",
+    "taglinePlaceholder": "Todo lo que necesita un operador individual.",
+    "features": "Funciones (una por línea)",
+    "featuresPlaceholder": "Perfiles de navegador ilimitados\nMotor de huella digital completo\nGrupo de proxies y rotación",
+    "savePackage": "Guardar paquete",
+    "errors": {
+      "nameRequired": "Dale un nombre al paquete.",
+      "invalidPrice": "Introduce un precio válido.",
+      "saveFailed": "No se pudo guardar el plan."
+    }
+  },
+  "subscribers": {
+    "title": "Suscriptores",
+    "subtitle": "Cada cuenta, cuándo se unió, su plan y su vencimiento. {{count}} en total.",
+    "assignPlan": "Asignar plan",
+    "empty": "Aún no hay cuentas propietarias.",
+    "trialSuffix": "prueba",
+    "daysLeftShort": "{{days}} d",
+    "assign": "Asignar",
+    "assignTitle": "Asignar / conceder un plan",
+    "state": {
+      "ended": "Finalizado",
+      "grace": "Gracia",
+      "active": "Activo",
+      "trial": "Prueba"
+    },
+    "cols": {
+      "account": "Cuenta",
+      "joined": "Se unió",
+      "plan": "Plan",
+      "state": "Estado",
+      "expires": "Vence",
+      "team": "Equipo"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los suscriptores."
+    }
+  },
+  "assignForm": {
+    "title": "Asignar un plan",
+    "account": "Cuenta",
+    "plan": "Plan",
+    "months": "Meses",
+    "monthsWithDefault": "Meses (predeterminado {{default}})",
+    "recordAsPaid": "Registrar como venta pagada",
+    "noteOptional": "Nota (opcional)",
+    "notePlaceholder": "Por qué se concedió",
+    "grantNote": "Concede el plazo de inmediato y elimina cualquier bloqueo de suscripción.",
+    "grantNotePaid": "Se registra una factura pagada.",
+    "grantNoteFree": "Registrado como una concesión de $0.",
+    "fallbackAccount": "cuenta",
+    "fallbackPlan": "plan",
+    "success_one": "Se asignó {{plan}} a {{name}} — {{count}} mes.",
+    "success_other": "Se asignó {{plan}} a {{name}} — {{count}} meses.",
+    "errors": {
+      "chooseAccount": "Elige una cuenta.",
+      "choosePlan": "Elige un plan.",
+      "assignFailed": "No se pudo asignar el plan."
+    }
+  }
+}

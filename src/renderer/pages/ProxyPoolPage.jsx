@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput } from 'lucide-react';
 
 import EmptyState from '@/components/EmptyState.jsx';
@@ -38,6 +39,7 @@ function proxyHealthOf(p, checkResults) {
 // Figma-style compact stat card (tinted, glow, icon tile). When `onClick` is given
 // it renders as a button and shows an accent ring while `active` (drives the filter).
 function MiniStat({ icon: Icon, label, value, color, onClick, active }) {
+  const { t } = useTranslation('proxies');
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
@@ -53,7 +55,7 @@ function MiniStat({ icon: Icon, label, value, color, onClick, active }) {
         </div>
         <div className="min-w-0">
           <p className="text-[18px] font-bold text-foreground font-display leading-none">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ' · filtering' : ''}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ` · ${t('stats.filtering')}` : ''}</p>
         </div>
       </div>
     </Tag>
@@ -87,6 +89,7 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
 );
 
 export default function ProxyPoolPage() {
+  const { t } = useTranslation('proxies');
   const [proxies, setProxies] = useState([]);
   const [search, setSearch] = useState('');
   const [proxyOpen, setProxyOpen] = useState(false);
@@ -179,7 +182,7 @@ export default function ProxyPoolPage() {
   // Geo breakdown of the whole pool by verified country (for the toggle-able panel).
   const geoBreakdown = useMemo(() => {
     const m = {};
-    for (const p of proxies) { const c = p.lastCountry || 'Unknown'; m[c] = (m[c] || 0) + 1; }
+    for (const p of proxies) { const c = p.lastCountry || t('geo.unknown'); m[c] = (m[c] || 0) + 1; }
     return Object.entries(m).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count);
   }, [proxies]);
 
@@ -199,7 +202,8 @@ export default function ProxyPoolPage() {
     const ids = filteredProxies.map((p) => p.id);
     if (ids.length === 0) return;
     const scope = statusFilter !== 'all' ? statusFilter : (activeGroup !== 'all' ? 'filtered' : (search.trim() ? 'matching' : 'all'));
-    if (!window.confirm(`Delete all ${ids.length} ${scope} prox${ids.length === 1 ? 'y' : 'ies'}? This cannot be undone — linked profiles keep working with their proxy assignment cleared.`)) return;
+    const scopeLabel = t(`deleteFiltered.scope.${scope}`);
+    if (!window.confirm(t('deleteFiltered.confirm', { count: ids.length, scope: scopeLabel }))) return;
     setBulkDeleting(true);
     setError('');
     try {
@@ -207,7 +211,7 @@ export default function ProxyPoolPage() {
       clearSelection();
       await loadProxies();
     } catch (err) {
-      setError(err.message || 'Failed to delete proxies.');
+      setError(err.message || t('errors.deleteProxies'));
     } finally {
       setBulkDeleting(false);
     }
@@ -237,7 +241,7 @@ export default function ProxyPoolPage() {
         return next;
       });
     } catch (err) {
-      setError(err.message || 'Failed to load proxies.');
+      setError(err.message || t('errors.loadProxies'));
     } finally {
       setLoading(false);
     }
@@ -266,14 +270,14 @@ export default function ProxyPoolPage() {
       setCopiedId(proxy.id);
       setTimeout(() => setCopiedId((cur) => (cur === proxy.id ? null : cur)), 1200);
     } catch (err) {
-      setError('Could not copy to clipboard.');
+      setError(t('errors.copyClipboard'));
     }
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!window.confirm(`Delete ${ids.length} selected ${ids.length === 1 ? 'proxy' : 'proxies'}? Linked profiles will keep working with their proxy assignment cleared.`)) return;
+    if (!window.confirm(t('bulkDelete.confirm', { count: ids.length }))) return;
     setBulkDeleting(true);
     setError('');
     try {
@@ -281,7 +285,7 @@ export default function ProxyPoolPage() {
       clearSelection();
       await loadProxies();
     } catch (err) {
-      setError(err.message || 'Failed to delete selected proxies.');
+      setError(err.message || t('errors.deleteSelected'));
     } finally {
       setBulkDeleting(false);
     }
@@ -355,7 +359,7 @@ export default function ProxyPoolPage() {
       setProxyOpen(false);
       await loadProxies();
     } catch (err) {
-      setError(err.message || 'Failed to save proxy.');
+      setError(err.message || t('errors.saveProxy'));
     } finally {
       setSaving(false);
     }
@@ -371,7 +375,7 @@ export default function ProxyPoolPage() {
       setBatchResult(result);
       await loadProxies();
     } catch (err) {
-      setError(err.message || 'Failed to batch add proxies.');
+      setError(err.message || t('errors.batchAdd'));
     } finally {
       setSaving(false);
     }
@@ -426,7 +430,7 @@ export default function ProxyPoolPage() {
       }
       setCheckResults(next);
     } catch (err) {
-      setError(err.message || 'Bulk test failed.');
+      setError(err.message || t('errors.bulkTest'));
     } finally {
       setTestingAll(false);
     }
@@ -435,17 +439,17 @@ export default function ProxyPoolPage() {
   async function applyProxyPolicy(mode) {
     setProxyPolicy(mode);
     try { await softglazeApi.settings.setProxyPolicy({ default: mode }); }
-    catch (err) { setError(err.message || 'Could not save the proxy policy.'); }
+    catch (err) { setError(err.message || t('errors.savePolicy')); }
   }
   async function applyPolicyParam(patch) {
     setPolicyDetail((d) => ({ ...d, ...patch }));
     try { await softglazeApi.settings.setProxyPolicy(patch); }
-    catch (err) { setError(err.message || 'Could not save the proxy policy.'); }
+    catch (err) { setError(err.message || t('errors.savePolicy')); }
   }
   async function applyScheduler(next) {
     setScheduler(next);
     try { await softglazeApi.settings.setProxyScheduler(next); }
-    catch (err) { setError(err.message || 'Could not save the schedule.'); }
+    catch (err) { setError(err.message || t('errors.saveSchedule')); }
   }
   async function openHistory(proxy) {
     setHistoryProxy(proxy);
@@ -459,22 +463,22 @@ export default function ProxyPoolPage() {
     const m = groupModal;
     if (!m) return;
     const name = (m.name || '').trim();
-    if (!name) { setError('Enter a group name.'); return; }
+    if (!name) { setError(t('errors.enterGroupName')); return; }
     try {
       if (m.id) await softglazeApi.proxyGroups.update({ id: m.id, name, color: m.color });
       else await softglazeApi.proxyGroups.create({ name, color: m.color });
       setGroupModal(null);
       await loadGroups();
-    } catch (err) { setError(err.message || 'Could not save the group.'); }
+    } catch (err) { setError(err.message || t('errors.saveGroup')); }
   }
 
   async function removeGroup(g) {
-    if (!window.confirm(`Delete group "${g.name}"? The proxies stay in the pool — they just become ungrouped.`)) return;
+    if (!window.confirm(t('groups.deleteConfirm', { name: g.name }))) return;
     try {
       await softglazeApi.proxyGroups.delete(g.id);
       if (String(activeGroup) === String(g.id)) setActiveGroup('all');
       await Promise.all([loadGroups(), loadProxies()]);
-    } catch (err) { setError(err.message || 'Could not delete the group.'); }
+    } catch (err) { setError(err.message || t('errors.deleteGroup')); }
   }
 
   async function assignSelectedToGroup(groupId) {
@@ -485,7 +489,7 @@ export default function ProxyPoolPage() {
       setAssignOpen(false);
       clearSelection();
       await Promise.all([loadGroups(), loadProxies()]);
-    } catch (err) { setError(err.message || 'Could not move the proxies.'); }
+    } catch (err) { setError(err.message || t('errors.moveProxies')); }
   }
 
   // Drag a proxy row (or, if it's part of the current selection, the whole selection)
@@ -505,7 +509,7 @@ export default function ProxyPoolPage() {
       await softglazeApi.proxyGroups.assign(ids, groupId);
       clearSelection();
       await Promise.all([loadGroups(), loadProxies()]);
-    } catch (err) { setError(err.message || 'Could not move the proxies.'); }
+    } catch (err) { setError(err.message || t('errors.moveProxies')); }
   }
 
   // Auto-categorize proxies into Country/State/City groups from their verified geo
@@ -515,16 +519,16 @@ export default function ProxyPoolPage() {
     try {
       const r = await softglazeApi.proxies.autoGroup(autoGroupLevel);
       await Promise.all([loadGroups(), loadProxies()]);
-      setAutoGroupMsg(`+${r?.createdGroups ?? 0} group${(r?.createdGroups ?? 0) === 1 ? '' : 's'} · ${r?.assigned ?? 0} assigned`);
+      setAutoGroupMsg(t('autoGroup.result', { count: r?.createdGroups ?? 0, assigned: r?.assigned ?? 0 }));
     } catch (e) {
-      setError(e.message || 'Auto-group failed. Run Test All first so proxies have a detected country.');
+      setError(e.message || t('errors.autoGroup'));
     } finally {
       setAutoGrouping(false);
     }
   }
 
   function renderStatus(id) {
-    if (checkingId === id) return <span className="text-xs text-muted">Checking…</span>;
+    if (checkingId === id) return <span className="text-xs text-muted">{t('status.checking')}</span>;
     const r = checkResults[id];
     if (!r) return <span className="text-xs text-muted-dark">—</span>;
     if (r.success) {
@@ -534,7 +538,7 @@ export default function ProxyPoolPage() {
         </span>
       );
     }
-    return <span className="text-xs font-medium text-red-400" title={r.error || 'Failed'}>Failed{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
+    return <span className="text-xs font-medium text-red-400" title={r.error || t('status.failed')}>{t('status.failed')}{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
   }
 
   const chipCls = (key) => `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(key) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`;
@@ -549,18 +553,18 @@ export default function ProxyPoolPage() {
     const geo = `${head}${result.zip ? ` ${result.zip}` : ''}`.trim();
     if (!geo) return;
     setProxies((prev) => prev.map((p) => (p.id === id
-      ? { ...p, name: `${String(p.name || '').split(' • ')[0].trim() || 'Proxy'} • ${geo}` }
+      ? { ...p, name: `${String(p.name || '').split(' • ')[0].trim() || t('table.defaultProxyName')} • ${geo}` }
       : p)));
   }
 
   async function handleDelete(proxy) {
-    if (!window.confirm(`Delete proxy "${proxy.name}"?`)) return;
+    if (!window.confirm(t('delete.confirm', { name: proxy.name }))) return;
     setError('');
     try {
       await softglazeApi.proxies.delete(proxy.id);
       await loadProxies();
     } catch (err) {
-      setError(err.message || 'Failed to delete proxy. Remove linked profiles or change their proxy assignment first.');
+      setError(err.message || t('errors.deleteProxy'));
     }
   }
 
@@ -575,56 +579,56 @@ export default function ProxyPoolPage() {
   }, {});
   const TYPE_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
   const typeDonut = Object.entries(typeCounts).map(([label, value], i) => ({ label, value, color: TYPE_COLORS[i % TYPE_COLORS.length] }));
-  if (typeDonut.length === 0) typeDonut.push({ label: 'No proxies', value: 1, color: 'var(--elevated)' });
+  if (typeDonut.length === 0) typeDonut.push({ label: t('stats.noProxies'), value: 1, color: 'var(--elevated)' });
 
   return (
     <div className="flex flex-col h-full space-y-4 pb-10">
       <PageHeader
-        eyebrow="Network"
-        title="Proxy Pool"
-        description="Store reusable HTTP and SOCKS5 proxies locally, or sync purchased pools straight from integrated providers."
+        eyebrow={t('header.eyebrow')}
+        title={t('header.title')}
+        description={t('header.description')}
         actions={
           view === 'custom' ? (
             <>
               <div className="flex items-center gap-2 mr-1">
-                <span className="text-[11px] font-medium text-muted-foreground">Rotation:</span>
+                <span className="text-[11px] font-medium text-muted-foreground">{t('rotation.label')}</span>
                 <select
                   value={proxyPolicy}
                   onChange={(e) => applyProxyPolicy(e.target.value)}
                   className="h-9 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground"
-                  title="How a profile's rotation pool is applied at launch"
+                  title={t('rotation.tooltip')}
                 >
-                  <option value="each-launch">Rotate each launch</option>
-                  <option value="sticky">Sticky (fixed proxy)</option>
-                  <option value="failover">Failover to healthy</option>
-                  <option value="latency-optimized">Fastest (latency)</option>
+                  <option value="each-launch">{t('rotation.eachLaunch')}</option>
+                  <option value="sticky">{t('rotation.sticky')}</option>
+                  <option value="failover">{t('rotation.failover')}</option>
+                  <option value="latency-optimized">{t('rotation.latencyOptimized')}</option>
                 </select>
                 {proxyPolicy === 'failover' && (
-                  <input type="number" min={0} value={policyDetail.failoverMaxLatencyMs} onChange={(e) => applyPolicyParam({ failoverMaxLatencyMs: Math.max(0, Number(e.target.value) || 0) })} title="Skip proxies slower than this many ms (0 = no limit; falls back to the full pool if none qualify)" placeholder="max ms" className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                  <input type="number" min={0} value={policyDetail.failoverMaxLatencyMs} onChange={(e) => applyPolicyParam({ failoverMaxLatencyMs: Math.max(0, Number(e.target.value) || 0) })} title={t('rotation.failoverMaxTooltip')} placeholder={t('rotation.maxMsPlaceholder')} className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
                 )}
                 {proxyPolicy === 'latency-optimized' && (
-                  <input type="number" min={1} value={policyDetail.latencyTopN} onChange={(e) => applyPolicyParam({ latencyTopN: Math.max(1, Number(e.target.value) || 1) })} title="Round-robin among the fastest N proxies" placeholder="top N" className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                  <input type="number" min={1} value={policyDetail.latencyTopN} onChange={(e) => applyPolicyParam({ latencyTopN: Math.max(1, Number(e.target.value) || 1) })} title={t('rotation.topNTooltip')} placeholder={t('rotation.topNPlaceholder')} className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
                 )}
               </div>
-              <Button variant="secondary" onClick={handleTestAllFast} disabled={testingAll || proxies.length === 0} title="Concurrent health test of every proxy">
+              <Button variant="secondary" onClick={handleTestAllFast} disabled={testingAll || proxies.length === 0} title={t('actions.testAllTooltip')}>
                 {testingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                Test All{testSummary ? ` · ${testSummary.ok}/${testSummary.total} ok` : ''}
+                {t('actions.testAll')}{testSummary ? ` · ${t('actions.testAllSummary', { ok: testSummary.ok, total: testSummary.total })}` : ''}
               </Button>
               <Button variant="secondary" onClick={handleCheckAll} disabled={checkingAll || proxies.length === 0}>
                 {checkingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
-                Check All
+                {t('actions.checkAll')}
               </Button>
               <Button variant="secondary" onClick={loadProxies}>
                 <RefreshCcw className="h-4 w-4" />
-                Refresh
+                {t('actions.refresh')}
               </Button>
               <Button variant="secondary" onClick={() => setBatchOpen(true)}>
                 <Upload className="h-4 w-4" />
-                Batch Add
+                {t('actions.batchAdd')}
               </Button>
               <Button variant="primary" onClick={openCreate}>
                 <Plus className="h-4 w-4" />
-                New Proxy
+                {t('actions.newProxy')}
               </Button>
             </>
           ) : null
@@ -634,8 +638,8 @@ export default function ProxyPoolPage() {
       {/* Dual-view tab partition */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
         {[
-          { key: 'custom', label: 'Custom Proxies', icon: Server },
-          { key: 'providers', label: 'Proxy Providers', icon: Boxes }
+          { key: 'custom', label: t('tabs.custom'), icon: Server },
+          { key: 'providers', label: t('tabs.providers'), icon: Boxes }
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -644,7 +648,7 @@ export default function ProxyPoolPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Icon className="w-4 h-4" /> {label}
-            {key === 'providers' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 uppercase tracking-wide">Integrated</span>}
+            {key === 'providers' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 uppercase tracking-wide">{t('tabs.integrated')}</span>}
           </button>
         ))}
       </div>
@@ -653,13 +657,13 @@ export default function ProxyPoolPage() {
       {view === 'custom' && (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <MiniStat icon={Globe} label="Total proxies" value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
-          <MiniStat icon={Wifi} label="Proxy types" value={Object.keys(typeCounts).length} color="#3b82f6" />
-          <MiniStat icon={ShieldCheck} label="Verified" value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
-          <MiniStat icon={ShieldOff} label="Non-verified" value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
+          <MiniStat icon={Globe} label={t('stats.totalProxies')} value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
+          <MiniStat icon={Wifi} label={t('stats.proxyTypes')} value={Object.keys(typeCounts).length} color="#3b82f6" />
+          <MiniStat icon={ShieldCheck} label={t('stats.verified')} value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
+          <MiniStat icon={ShieldOff} label={t('stats.nonVerified')} value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
         </div>
         <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-4">
-          <Donut data={typeDonut} size={104} thickness={16} centerLabel={proxies.length} centerSub="total" />
+          <Donut data={typeDonut} size={104} thickness={16} centerLabel={proxies.length} centerSub={t('stats.total')} />
           <div className="flex-1 min-w-0"><Legend data={typeDonut} /></div>
         </div>
       </div>
@@ -676,13 +680,13 @@ export default function ProxyPoolPage() {
             icon={Search}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by proxy name, host, or username..."
+            placeholder={t('search.placeholder')}
           />
         </div>
         {(statusFilter !== 'all' || activeGroup !== 'all' || search.trim()) && filteredProxies.length > 0 && (
-          <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title="Delete every proxy matching the current filter">
+          <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            Delete all {statusFilter !== 'all' ? statusFilter : 'filtered'} ({filteredProxies.length})
+            {t('deleteFiltered.button', { scope: statusFilter !== 'all' ? t(`deleteFiltered.scope.${statusFilter}`) : t('deleteFiltered.scope.filtered'), count: filteredProxies.length })}
           </Button>
         )}
       </div>
@@ -690,10 +694,10 @@ export default function ProxyPoolPage() {
       {/* CATEGORY / GROUP BAR — filter the pool, manage groups, drag rows here to assign */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button className={chipCls('all')} onClick={() => setActiveGroup('all')}>
-          <Boxes className="w-3.5 h-3.5" /> All <span className="opacity-60">{proxies.length}</span>
+          <Boxes className="w-3.5 h-3.5" /> {t('filters.all')} <span className="opacity-60">{proxies.length}</span>
         </button>
         <button className={chipCls('none')} onClick={() => setActiveGroup('none')}>
-          <Folder className="w-3.5 h-3.5" /> Ungrouped <span className="opacity-60">{proxies.filter((p) => !p.proxyGroupId).length}</span>
+          <Folder className="w-3.5 h-3.5" /> {t('filters.ungrouped')} <span className="opacity-60">{proxies.filter((p) => !p.proxyGroupId).length}</span>
         </button>
 
         {groups.map((g) => {
@@ -706,53 +710,53 @@ export default function ProxyPoolPage() {
               onDragOver={(e) => { e.preventDefault(); setDragOverKey(`g${g.id}`); }}
               onDragLeave={() => setDragOverKey((k) => (k === `g${g.id}` ? null : k))}
               onDrop={(e) => onGroupDrop(e, g.id)}
-              title="Click to filter · drag proxies here to add them"
+              title={t('groups.chipTooltip')}
               className={`group/chip inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${over ? 'ring-2 ring-primary border-primary' : active ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`}
             >
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} />
               {g.name} <span className="opacity-60">{g.proxyCount ?? 0}</span>
-              <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title="Rename / recolor"><Edit className="w-3 h-3" /></button>
-              <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title="Delete group"><X className="w-3 h-3" /></button>
+              <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
+              <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title={t('groups.deleteGroup')}><X className="w-3 h-3" /></button>
             </div>
           );
         })}
 
         <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors" onClick={() => setGroupModal({ name: '', color: GROUP_COLORS[groups.length % GROUP_COLORS.length] })}>
-          <FolderPlus className="w-3.5 h-3.5" /> New group
+          <FolderPlus className="w-3.5 h-3.5" /> {t('groups.newGroup')}
         </button>
 
         {/* Auto-group by verified geo (run Test All first to populate country/state/city) */}
         <span className="w-px h-5 bg-border mx-1" />
-        <select value={autoGroupLevel} onChange={(e) => setAutoGroupLevel(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title="Auto-group granularity">
-          <option value="country">Country</option>
-          <option value="state">State</option>
-          <option value="city">City</option>
+        <select value={autoGroupLevel} onChange={(e) => setAutoGroupLevel(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('autoGroup.granularityTooltip')}>
+          <option value="country">{t('autoGroup.country')}</option>
+          <option value="state">{t('autoGroup.state')}</option>
+          <option value="city">{t('autoGroup.city')}</option>
         </select>
-        <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0} title="Create groups from each proxy's verified country/state/city. Run Test All first so proxies have a detected location." className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
-          {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} Auto-group
+        <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0} title={t('autoGroup.buttonTooltip')} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
+          {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} {t('autoGroup.button')}
         </button>
         {autoGroupMsg && <span className="text-[11px] text-emerald-400">{autoGroupMsg}</span>}
 
         <span className="w-px h-5 bg-border mx-1" />
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title="Sort by latency">
-          <option value="default">Sort: default</option>
-          <option value="fastest">Fastest first</option>
-          <option value="slowest">Slowest first</option>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('sort.tooltip')}>
+          <option value="default">{t('sort.default')}</option>
+          <option value="fastest">{t('sort.fastest')}</option>
+          <option value="slowest">{t('sort.slowest')}</option>
         </select>
-        <button onClick={() => setShowGeo((v) => !v)} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${showGeo ? 'border-primary text-primary' : 'border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary'}`} title="Toggle the geo breakdown">
-          <BarChart3 className="w-3.5 h-3.5" /> Geo
+        <button onClick={() => setShowGeo((v) => !v)} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${showGeo ? 'border-primary text-primary' : 'border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary'}`} title={t('geo.toggleTooltip')}>
+          <BarChart3 className="w-3.5 h-3.5" /> {t('geo.button')}
         </button>
         <span className="w-px h-5 bg-border mx-1" />
-        <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title="Automatically re-test every proxy on a schedule">
+        <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title={t('scheduler.tooltip')}>
           <input type="checkbox" checked={scheduler.enabled} onChange={(e) => applyScheduler({ ...scheduler, enabled: e.target.checked })} className="accent-primary" />
-          <Clock className="w-3.5 h-3.5" /> Auto-check every
-          <input type="number" min={1} value={scheduler.minutes} onChange={(e) => applyScheduler({ ...scheduler, minutes: Math.max(1, Number(e.target.value) || 30) })} className="h-7 w-14 rounded border border-border bg-card px-1.5 text-[12px] text-foreground" /> min
+          <Clock className="w-3.5 h-3.5" /> {t('scheduler.autoCheckEvery')}
+          <input type="number" min={1} value={scheduler.minutes} onChange={(e) => applyScheduler({ ...scheduler, minutes: Math.max(1, Number(e.target.value) || 30) })} className="h-7 w-14 rounded border border-border bg-card px-1.5 text-[12px] text-foreground" /> {t('scheduler.min')}
         </label>
 
         {Object.keys(providerCounts).length > 0 && (
           <>
             <span className="w-px h-5 bg-border mx-1" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-dark mr-1">By provider</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-dark mr-1">{t('filters.byProvider')}</span>
             {Object.entries(providerCounts).map(([prov, cnt]) => (
               <button key={prov} className={chipCls(`provider:${prov}`)} onClick={() => setActiveGroup(`provider:${prov}`)}>
                 <Tag className="w-3 h-3" /> {PROVIDER_LABELS[prov] || prov} <span className="opacity-60">{cnt}</span>
@@ -765,8 +769,8 @@ export default function ProxyPoolPage() {
       {showGeo && geoBreakdown.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-foreground">Proxies by country</span>
-            <span className="text-[11px] text-muted-foreground">{geoBreakdown.length} countries · {proxies.length} proxies</span>
+            <span className="text-sm font-semibold text-foreground">{t('geo.byCountry')}</span>
+            <span className="text-[11px] text-muted-foreground">{t('geo.summary', { countries: geoBreakdown.length, proxies: proxies.length })}</span>
           </div>
           <div className="flex flex-col gap-1.5">
             {geoBreakdown.slice(0, 12).map((g) => (
@@ -784,18 +788,18 @@ export default function ProxyPoolPage() {
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
-          <span className="font-medium text-foreground">{selectedIds.size} selected</span>
+          <span className="font-medium text-foreground">{t('selection.count', { count: selectedIds.size })}</span>
           <div className="w-px h-5 bg-border" />
           <Button size="sm" variant="secondary" onClick={handleBulkCheck} disabled={checkingAll || bulkDeleting}>
-            {checkingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />} Check selected
+            {checkingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />} {t('selection.checkSelected')}
           </Button>
           <div className="relative">
             <Button size="sm" variant="secondary" onClick={() => setAssignOpen((v) => !v)} disabled={bulkDeleting}>
-              <FolderInput className="h-3.5 w-3.5" /> Move to group <ChevronDown className="h-3.5 w-3.5" />
+              <FolderInput className="h-3.5 w-3.5" /> {t('selection.moveToGroup')} <ChevronDown className="h-3.5 w-3.5" />
             </Button>
             {assignOpen && (
               <div className="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-xl py-1">
-                {groups.length === 0 && <div className="px-3 py-2 text-[12px] text-muted">No groups yet — create one first.</div>}
+                {groups.length === 0 && <div className="px-3 py-2 text-[12px] text-muted">{t('selection.noGroupsYet')}</div>}
                 {groups.map((g) => (
                   <button key={g.id} onClick={() => assignSelectedToGroup(g.id)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-foreground hover:bg-secondary text-left">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} /> {g.name}
@@ -803,16 +807,16 @@ export default function ProxyPoolPage() {
                 ))}
                 <div className="my-1 h-px bg-border" />
                 <button onClick={() => assignSelectedToGroup(null)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-muted-foreground hover:bg-secondary text-left">
-                  <X className="w-3.5 h-3.5" /> Remove from group
+                  <X className="w-3.5 h-3.5" /> {t('selection.removeFromGroup')}
                 </button>
               </div>
             )}
           </div>
           <Button size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
-            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete selected
+            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('selection.deleteSelected')}
           </Button>
-          <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title="Clear selection">
-            <X className="h-4 w-4" /> Clear
+          <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title={t('selection.clearTooltip')}>
+            <X className="h-4 w-4" /> {t('selection.clear')}
           </Button>
         </div>
       )}
@@ -822,11 +826,11 @@ export default function ProxyPoolPage() {
           {loading ? (
             <div className="p-12 text-sm text-muted text-center flex flex-col items-center gap-3">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              Loading proxies...
+              {t('table.loading')}
             </div>
           ) : filteredProxies.length === 0 ? (
             <div className="p-12">
-              <EmptyState title="No proxies found" description="Add a proxy manually or paste a batch of proxy strings." />
+              <EmptyState title={t('table.emptyTitle')} description={t('table.emptyDescription')} />
             </div>
           ) : (
             <div className="w-full">
@@ -836,22 +840,22 @@ export default function ProxyPoolPage() {
                     <th className="px-5 py-4 w-10">
                       <input
                         type="checkbox"
-                        aria-label="Select all proxies"
+                        aria-label={t('table.selectAll')}
                         className="h-4 w-4 cursor-pointer accent-primary align-middle"
                         checked={allSelected}
                         ref={(el) => { if (el) el.indeterminate = someSelected; }}
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="px-5 py-4">Name</th>
-                    <th className="px-5 py-4">Type</th>
-                    <th className="px-5 py-4">Endpoint</th>
-                    <th className="px-5 py-4">Username</th>
-                    <th className="px-5 py-4">Group</th>
-                    <th className="px-5 py-4">Profiles</th>
-                    <th className="px-5 py-4">Created</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
+                    <th className="px-5 py-4">{t('table.colName')}</th>
+                    <th className="px-5 py-4">{t('table.colType')}</th>
+                    <th className="px-5 py-4">{t('table.colEndpoint')}</th>
+                    <th className="px-5 py-4">{t('table.colUsername')}</th>
+                    <th className="px-5 py-4">{t('table.colGroup')}</th>
+                    <th className="px-5 py-4">{t('table.colProfiles')}</th>
+                    <th className="px-5 py-4">{t('table.colCreated')}</th>
+                    <th className="px-5 py-4">{t('table.colStatus')}</th>
+                    <th className="px-5 py-4 text-right">{t('table.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -860,7 +864,7 @@ export default function ProxyPoolPage() {
                       <td className="px-5 py-4">
                         <input
                           type="checkbox"
-                          aria-label={`Select ${proxy.name}`}
+                          aria-label={t('table.selectRow', { name: proxy.name })}
                           className="h-4 w-4 cursor-pointer accent-primary align-middle"
                           checked={selectedIds.has(proxy.id)}
                           onChange={() => toggleSelect(proxy.id)}
@@ -870,14 +874,14 @@ export default function ProxyPoolPage() {
                         <div className="flex items-center gap-2">
                           <span className="truncate">{proxy.name}</span>
                           <span className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 transition-opacity">
-                            <button type="button" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title="Test proxy" className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
+                            <button type="button" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
                               {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                             </button>
-                            <button type="button" onClick={() => openHistory(proxy)} title="Health history" className="p-1 rounded hover:bg-card text-muted hover:text-foreground">
+                            <button type="button" onClick={() => openHistory(proxy)} title={t('rowActions.healthHistory')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground">
                               <History className="h-3.5 w-3.5" />
                             </button>
-                            <button type="button" onClick={() => openEdit(proxy)} title="Edit proxy" className="p-1 rounded hover:bg-card text-muted hover:text-foreground"><Edit className="h-3.5 w-3.5" /></button>
-                            <button type="button" onClick={() => handleDelete(proxy)} title="Delete proxy" className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <button type="button" onClick={() => openEdit(proxy)} title={t('rowActions.editProxy')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground"><Edit className="h-3.5 w-3.5" /></button>
+                            <button type="button" onClick={() => handleDelete(proxy)} title={t('rowActions.deleteProxy')} className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
                           </span>
                         </div>
                       </td>
@@ -892,7 +896,7 @@ export default function ProxyPoolPage() {
                           <button
                             type="button"
                             onClick={() => handleCopy(proxy)}
-                            title="Copy host:port"
+                            title={t('rowActions.copyEndpoint')}
                             className="text-muted hover:text-foreground transition-colors p-1 rounded hover:bg-card"
                           >
                             {copiedId === proxy.id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
@@ -918,7 +922,7 @@ export default function ProxyPoolPage() {
                               </span>
                             );
                           }
-                          if (count > 0) return <span className="text-foreground text-xs">{count} profile{count === 1 ? '' : 's'}</span>;
+                          if (count > 0) return <span className="text-foreground text-xs">{t('table.profileCount', { count })}</span>;
                           return <span className="text-muted-dark">—</span>;
                         })()}
                       </td>
@@ -926,8 +930,8 @@ export default function ProxyPoolPage() {
                       <td className="px-5 py-4">{renderStatus(proxy.id)}</td>
                       <td className="px-5 py-4">
                         <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
-                          <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title="Test proxy" className="px-3">
-                            {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 mr-1" />} Check
+                          <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="px-3">
+                            {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 mr-1" />} {t('rowActions.check')}
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => openEdit(proxy)} className="px-2.5">
                             <Edit className="h-4 w-4" />
@@ -954,53 +958,53 @@ export default function ProxyPoolPage() {
 
       {/* --- PROXY HEALTH HISTORY --- */}
       <Dialog open={!!historyProxy} onOpenChange={(o) => { if (!o) { setHistoryProxy(null); setHistoryData(null); } }}>
-        <DialogContent title="Proxy health history" className="rounded border-border bg-card">
+        <DialogContent title={t('history.dialogTitle')} className="rounded border-border bg-card">
           <DialogHeader>
-            <DialogTitle>Health history</DialogTitle>
+            <DialogTitle>{t('history.title')}</DialogTitle>
             <DialogDescription>{historyProxy ? (historyProxy.name || `${historyProxy.host}:${historyProxy.port}`) : ''}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             {historyData === null ? (
               <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
             ) : historyData.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">No history yet. Run a health check (or enable Auto-check) and the latency/status timeline will build up here.</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">{t('history.empty')}</p>
             ) : (
               <div className="space-y-4">
                 <div>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Latency over time (ms)</p>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">{t('history.latencyOverTime')}</p>
                   <AreaChart data={historyData.filter((e) => typeof e.latencyMs === 'number').map((e) => ({ x: new Date(e.ts).toLocaleString(), y: e.latencyMs }))} height={160} />
                 </div>
                 <div className="flex gap-4 text-[12px] text-muted-foreground">
-                  <span><span className="text-emerald-400 font-semibold">{historyData.filter((e) => e.status === 'ok').length}</span> ok</span>
-                  <span><span className="text-red-400 font-semibold">{historyData.filter((e) => e.status === 'fail').length}</span> fail</span>
-                  <span>{historyData.length} checks</span>
+                  <span><span className="text-emerald-400 font-semibold">{historyData.filter((e) => e.status === 'ok').length}</span> {t('history.ok')}</span>
+                  <span><span className="text-red-400 font-semibold">{historyData.filter((e) => e.status === 'fail').length}</span> {t('history.fail')}</span>
+                  <span>{t('history.checks', { count: historyData.length })}</span>
                 </div>
               </div>
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setHistoryProxy(null); setHistoryData(null); }}>Close</Button>
+            <Button variant="ghost" onClick={() => { setHistoryProxy(null); setHistoryData(null); }}>{t('history.close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* --- CREATE / EDIT MODAL --- */}
       <Dialog open={proxyOpen} onOpenChange={setProxyOpen}>
-        <DialogContent title={isEditing ? 'Edit proxy' : 'Create proxy'} className="rounded border-border bg-card">
+        <DialogContent title={isEditing ? t('form.dialogTitleEdit') : t('form.dialogTitleCreate')} className="rounded border-border bg-card">
           <form onSubmit={handleSaveProxy}>
             <DialogHeader>
-              <DialogTitle>{isEditing ? 'Edit Proxy' : 'Create Proxy'}</DialogTitle>
+              <DialogTitle>{isEditing ? t('form.titleEdit') : t('form.titleCreate')}</DialogTitle>
               <DialogDescription>
-                {isEditing ? 'Update an existing proxy. Leave the masked password unchanged to keep the current value.' : 'Add a single structured proxy to the local SQLite pool.'}
+                {isEditing ? t('form.descriptionEdit') : t('form.descriptionCreate')}
               </DialogDescription>
             </DialogHeader>
             <DialogBody className="grid gap-5">
-              <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded">💡 Tip: paste your proxy <span className="font-mono">host:port:user:pass</span> into the Host field to auto-fill every field.</p>
+              <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded">💡 {t('form.tipPrefix')} <span className="font-mono">host:port:user:pass</span> {t('form.tipSuffix')}</p>
               <div className="grid gap-4 lg:grid-cols-2">
-                <Field label="Proxy Name">
-                  <Input value={proxyForm.name} onChange={(event) => updateProxyForm('name', event.target.value)} placeholder="Residential US 01" required />
+                <Field label={t('form.proxyName')}>
+                  <Input value={proxyForm.name} onChange={(event) => updateProxyForm('name', event.target.value)} placeholder={t('form.proxyNamePlaceholder')} required />
                 </Field>
-                <Field label="Type">
+                <Field label={t('form.type')}>
                   <CustomSelect value={proxyForm.type} onChange={(event) => updateProxyForm('type', event.target.value)}>
                     <option value="HTTP">HTTP</option>
                     <option value="SOCKS5">SOCKS5</option>
@@ -1008,26 +1012,26 @@ export default function ProxyPoolPage() {
                 </Field>
               </div>
               <div className="grid gap-4 lg:grid-cols-[1fr_160px]">
-                <Field label="Host">
+                <Field label={t('form.host')}>
                   <Input value={proxyForm.host} onChange={(event) => updateProxyForm('host', event.target.value)} onPaste={handleProxyPaste} placeholder="127.0.0.1" required />
                 </Field>
-                <Field label="Port">
+                <Field label={t('form.port')}>
                   <Input value={proxyForm.port} onChange={(event) => updateProxyForm('port', event.target.value)} placeholder="8080" required />
                 </Field>
               </div>
               <div className="grid gap-4 lg:grid-cols-2">
-                <Field label="Username">
-                  <Input value={proxyForm.username} onChange={(event) => updateProxyForm('username', event.target.value)} placeholder="Optional" />
+                <Field label={t('form.username')}>
+                  <Input value={proxyForm.username} onChange={(event) => updateProxyForm('username', event.target.value)} placeholder={t('form.optional')} />
                 </Field>
-                <Field label="Password">
-                  <Input type="password" value={proxyForm.password} onChange={(event) => updateProxyForm('password', event.target.value)} placeholder="Optional" />
+                <Field label={t('form.password')}>
+                  <Input type="password" value={proxyForm.password} onChange={(event) => updateProxyForm('password', event.target.value)} placeholder={t('form.optional')} />
                 </Field>
               </div>
             </DialogBody>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setProxyOpen(false)} disabled={saving}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setProxyOpen(false)} disabled={saving}>{t('form.cancel')}</Button>
               <Button type="submit" variant="primary" disabled={saving}>
-                {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Proxy'}
+                {saving ? t('form.saving') : isEditing ? t('form.saveChanges') : t('form.createProxy')}
               </Button>
             </DialogFooter>
           </form>
@@ -1036,42 +1040,42 @@ export default function ProxyPoolPage() {
 
       {/* --- BATCH IMPORT MODAL --- */}
       <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
-        <DialogContent title="Batch add proxies" className="rounded border-border bg-card">
+        <DialogContent title={t('batch.dialogTitle')} className="rounded border-border bg-card">
           <form onSubmit={handleBatchAdd}>
             <DialogHeader>
-              <DialogTitle>Batch Add Proxies</DialogTitle>
-              <DialogDescription>Paste one proxy per line. Supported format: <code className="font-mono text-muted-foreground">host:port:username:password</code>.</DialogDescription>
+              <DialogTitle>{t('batch.title')}</DialogTitle>
+              <DialogDescription>{t('batch.descriptionPrefix')} <code className="font-mono text-muted-foreground">host:port:username:password</code>.</DialogDescription>
             </DialogHeader>
             <DialogBody className="grid gap-5">
-              <Field label="Default Type">
+              <Field label={t('batch.defaultType')}>
                 <CustomSelect value={batchType} onChange={(event) => setBatchType(event.target.value)}>
                   <option value="HTTP">HTTP</option>
                   <option value="SOCKS5">SOCKS5</option>
                 </CustomSelect>
               </Field>
-              <Field label="Proxy Lines">
-                <Textarea 
-                  value={batchRaw} 
-                  onChange={(event) => setBatchRaw(event.target.value)} 
-                  rows={10} 
-                  placeholder={`1.2.3.4:8080:user:pass\n5.6.7.8:9000:user2:pass2`} 
+              <Field label={t('batch.proxyLines')}>
+                <Textarea
+                  value={batchRaw}
+                  onChange={(event) => setBatchRaw(event.target.value)}
+                  rows={10}
+                  placeholder={`1.2.3.4:8080:user:pass\n5.6.7.8:9000:user2:pass2`}
                   className="font-mono text-sm bg-background border-border"
-                  required 
+                  required
                 />
               </Field>
               {batchResult ? (
                 <div className="rounded border border-border bg-background p-4 text-sm">
-                  <div className="font-medium text-foreground mb-2">Batch Result</div>
+                  <div className="font-medium text-foreground mb-2">{t('batch.resultTitle')}</div>
                   <div className="grid gap-2 text-muted sm:grid-cols-4 font-mono text-xs">
-                    <div>Total: {batchResult.total}</div>
-                    <div className="text-emerald-400">Created: {batchResult.created?.length ?? 0}</div>
-                    <div className="text-amber-400">Skipped: {batchResult.skipped?.length ?? 0}</div>
-                    <div className="text-red-400">Errors: {batchResult.errors?.length ?? 0}</div>
+                    <div>{t('batch.total')}: {batchResult.total}</div>
+                    <div className="text-emerald-400">{t('batch.created')}: {batchResult.created?.length ?? 0}</div>
+                    <div className="text-amber-400">{t('batch.skipped')}: {batchResult.skipped?.length ?? 0}</div>
+                    <div className="text-red-400">{t('batch.errors')}: {batchResult.errors?.length ?? 0}</div>
                   </div>
                   {batchResult.errors?.length ? (
                     <div className="mt-3 max-h-32 overflow-y-auto rounded border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300 font-mono">
                       {batchResult.errors.map((item) => (
-                        <div key={`${item.line}-${item.raw}`}>Line {item.line}: {item.message}</div>
+                        <div key={`${item.line}-${item.raw}`}>{t('batch.lineError', { line: item.line, message: item.message })}</div>
                       ))}
                     </div>
                   ) : null}
@@ -1079,9 +1083,9 @@ export default function ProxyPoolPage() {
               ) : null}
             </DialogBody>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setBatchOpen(false)} disabled={saving}>Close</Button>
+              <Button variant="ghost" onClick={() => setBatchOpen(false)} disabled={saving}>{t('batch.close')}</Button>
               <Button type="submit" variant="primary" disabled={saving}>
-                {saving ? 'Importing...' : 'Add Proxies'}
+                {saving ? t('batch.importing') : t('batch.addProxies')}
               </Button>
             </DialogFooter>
           </form>
@@ -1090,17 +1094,17 @@ export default function ProxyPoolPage() {
 
       {/* --- CREATE / EDIT PROXY GROUP MODAL --- */}
       <Dialog open={Boolean(groupModal)} onOpenChange={(o) => { if (!o) setGroupModal(null); }}>
-        <DialogContent title={groupModal?.id ? 'Edit group' : 'New group'} className="rounded border-border bg-card">
+        <DialogContent title={groupModal?.id ? t('groupModal.dialogTitleEdit') : t('groupModal.dialogTitleNew')} className="rounded border-border bg-card">
           <form onSubmit={(e) => { e.preventDefault(); saveGroup(); }}>
             <DialogHeader>
-              <DialogTitle>{groupModal?.id ? 'Edit Proxy Group' : 'New Proxy Group'}</DialogTitle>
-              <DialogDescription>Group proxies by country or purpose (e.g. USA, UK, Japan). You can target a group when batch-creating profiles.</DialogDescription>
+              <DialogTitle>{groupModal?.id ? t('groupModal.titleEdit') : t('groupModal.titleNew')}</DialogTitle>
+              <DialogDescription>{t('groupModal.description')}</DialogDescription>
             </DialogHeader>
             <DialogBody className="grid gap-5">
-              <Field label="Group Name">
-                <Input value={groupModal?.name || ''} onChange={(e) => setGroupModal((m) => ({ ...m, name: e.target.value }))} placeholder="USA Proxies" autoFocus required />
+              <Field label={t('groupModal.groupName')}>
+                <Input value={groupModal?.name || ''} onChange={(e) => setGroupModal((m) => ({ ...m, name: e.target.value }))} placeholder={t('groupModal.groupNamePlaceholder')} autoFocus required />
               </Field>
-              <Field label="Color">
+              <Field label={t('groupModal.color')}>
                 <div className="flex flex-wrap gap-2">
                   {GROUP_COLORS.map((c) => (
                     <button
@@ -1109,15 +1113,15 @@ export default function ProxyPoolPage() {
                       onClick={() => setGroupModal((m) => ({ ...m, color: c }))}
                       className={`w-7 h-7 rounded-full transition-transform ${groupModal?.color === c ? 'ring-2 ring-offset-2 ring-offset-card ring-white scale-110' : 'hover:scale-110'}`}
                       style={{ background: c }}
-                      aria-label={`Color ${c}`}
+                      aria-label={t('groupModal.colorLabel', { color: c })}
                     />
                   ))}
                 </div>
               </Field>
             </DialogBody>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setGroupModal(null)}>Cancel</Button>
-              <Button type="submit" variant="primary">{groupModal?.id ? 'Save Changes' : 'Create Group'}</Button>
+              <Button variant="ghost" onClick={() => setGroupModal(null)}>{t('groupModal.cancel')}</Button>
+              <Button type="submit" variant="primary">{groupModal?.id ? t('groupModal.saveChanges') : t('groupModal.createGroup')}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

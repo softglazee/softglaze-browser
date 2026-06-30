@@ -1,0 +1,76 @@
+{
+  "header": {
+    "eyebrow": "Automatización",
+    "title": "Creación de perfiles por lotes",
+    "description": "Despliega rápidamente varios entornos de navegador mediante una hoja de cálculo o generación secuencial.",
+    "exportProfiles": "Exportar perfiles"
+  },
+  "exportNotice_one": "Se exportó {{count}} perfil a {{path}}",
+  "exportNotice_other": "Se exportaron {{count}} perfiles a {{path}}",
+  "tabs": {
+    "importFromFile": "Importar desde archivo",
+    "quickGenerate": "Generación rápida"
+  },
+  "step1": {
+    "title": "Descargar plantilla",
+    "description": "Para garantizar un análisis correcto, utiliza nuestra plantilla estandarizada de Excel o CSV. Completa los nombres de tus perfiles, proxies y reglas de huella digital.",
+    "downloadButton": "Descargar plantilla .XLSX"
+  },
+  "step2": {
+    "title": "Subir y previsualizar",
+    "description": "Selecciona tu hoja de cálculo completada. La analizaremos localmente y comprobaremos si hay errores de formato antes de guardar.",
+    "selectButton": "Seleccionar archivo"
+  },
+  "step3": {
+    "title": "Previsualizar y confirmar datos"
+  },
+  "awaiting": {
+    "title": "Esperando datos",
+    "description": "Selecciona un archivo para previsualizar aquí tus perfiles estructurados."
+  },
+  "preview": {
+    "file": "Archivo:",
+    "validRows": "Filas válidas:",
+    "errors": "Errores:"
+  },
+  "processing": {
+    "importing": "Importando… {{index}}/{{total}}",
+    "backendLog": "Registro de procesamiento del backend",
+    "connecting": "Conectando con el motor de importación…"
+  },
+  "table": {
+    "row": "Fila",
+    "title": "Título",
+    "group": "Grupo",
+    "proxyMethod": "Método de proxy",
+    "dataDir": "Directorio de datos",
+    "auto": "Automático"
+  },
+  "autoBind": {
+    "label": "Vincular proxies automáticamente por país",
+    "descPrefix": "— para las filas sin su propio proxy, asigna un proxy guardado cuyo país verificado coincida con la columna",
+    "descSuffix": "de la fila (rotación equilibrada entre las coincidencias)."
+  },
+  "commitButton_one": "Confirmar {{count}} perfil",
+  "commitButton_other": "Confirmar {{count}} perfiles",
+  "success": {
+    "title": "Importación correcta",
+    "importedPrefix": "Se importaron correctamente",
+    "importedMiddle": "perfiles y se asignaron",
+    "importedSuffix": "proxies nuevos",
+    "autoBoundPrefix": "· vinculados automáticamente",
+    "autoBoundSuffix": "por país",
+    "importAnother": "Importar otro"
+  },
+  "quick": {
+    "engineTitle": "Motor de generación secuencial",
+    "description": "Crea varios perfiles al instante sin una hoja de cálculo: huellas digitales únicas, nombres secuenciales, un grupo de destino (créalo en línea) y asignación de proxy desde un grupo o proveedor específico. Usa exactamente el mismo motor que la página de Perfiles.",
+    "openButton": "Abrir generación rápida"
+  },
+  "errors": {
+    "parse": "No se pudo analizar el archivo. Asegúrate de que sea una hoja de cálculo válida.",
+    "commit": "No se pudieron confirmar los perfiles en la base de datos.",
+    "importFailed": "La importación falló.",
+    "export": "No se pudieron exportar los perfiles."
+  }
+}

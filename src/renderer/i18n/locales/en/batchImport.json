@@ -1,0 +1,76 @@
+{
+  "header": {
+    "eyebrow": "Automation",
+    "title": "Batch Profile Creation",
+    "description": "Rapidly deploy multiple browser environments via spreadsheet or sequential generation.",
+    "exportProfiles": "Export Profiles"
+  },
+  "exportNotice_one": "Exported {{count}} profile to {{path}}",
+  "exportNotice_other": "Exported {{count}} profiles to {{path}}",
+  "tabs": {
+    "importFromFile": "Import from File",
+    "quickGenerate": "Quick Generate"
+  },
+  "step1": {
+    "title": "Download Template",
+    "description": "To ensure smooth parsing, please use our standardized Excel or CSV template. Fill in your profile names, proxies, and fingerprint rules.",
+    "downloadButton": "Download .XLSX Template"
+  },
+  "step2": {
+    "title": "Upload & Preview",
+    "description": "Select your filled spreadsheet. We will parse it locally and check for formatting errors before saving.",
+    "selectButton": "Select File"
+  },
+  "step3": {
+    "title": "Preview & Commit Data"
+  },
+  "awaiting": {
+    "title": "Awaiting Data",
+    "description": "Select a file to preview your structured profiles here."
+  },
+  "preview": {
+    "file": "File:",
+    "validRows": "Valid Rows:",
+    "errors": "Errors:"
+  },
+  "processing": {
+    "importing": "Importing… {{index}}/{{total}}",
+    "backendLog": "Backend processing log",
+    "connecting": "Connecting to the import engine…"
+  },
+  "table": {
+    "row": "Row",
+    "title": "Title",
+    "group": "Group",
+    "proxyMethod": "Proxy Method",
+    "dataDir": "Data Dir",
+    "auto": "Auto"
+  },
+  "autoBind": {
+    "label": "Auto-bind proxies by country",
+    "descPrefix": "— for rows without their own proxy, assign a saved proxy whose health-checked country matches the row's",
+    "descSuffix": "column (round-robin across matches)."
+  },
+  "commitButton_one": "Commit {{count}} Profile",
+  "commitButton_other": "Commit {{count}} Profiles",
+  "success": {
+    "title": "Import Successful",
+    "importedPrefix": "Successfully imported",
+    "importedMiddle": "profiles and mapped",
+    "importedSuffix": "new proxies",
+    "autoBoundPrefix": "· auto-bound",
+    "autoBoundSuffix": "by country",
+    "importAnother": "Import Another"
+  },
+  "quick": {
+    "engineTitle": "Sequential Generation Engine",
+    "description": "Spin up multiple profiles instantly without a spreadsheet — unique fingerprints, sequential names, a target group (create one inline), and proxy assignment from a specific group or provider. Uses the exact same engine as the Profiles page.",
+    "openButton": "Open Quick Generate"
+  },
+  "errors": {
+    "parse": "Failed to parse the file. Ensure it is a valid spreadsheet.",
+    "commit": "Failed to commit profiles to database.",
+    "importFailed": "Import failed.",
+    "export": "Failed to export profiles."
+  }
+}
