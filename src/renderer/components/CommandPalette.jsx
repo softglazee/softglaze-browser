@@ -112,7 +112,7 @@ export default function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4" onMouseDown={close}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative w-full max-w-[560px] rounded-xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Command palette" className="relative w-full max-w-[560px] rounded-xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
@@ -121,11 +121,16 @@ export default function CommandPalette() {
             onChange={(e) => { setQuery(e.target.value); setSel(0); }}
             onKeyDown={onListKey}
             placeholder="Search pages, profiles, proxies, members…"
+            aria-label="Search pages, profiles, proxies, and members"
+            role="combobox"
+            aria-expanded={results.length > 0}
+            aria-controls="cmdk-results"
+            aria-activedescendant={results[sel] ? `cmdk-opt-${sel}` : undefined}
             className="flex-1 bg-transparent text-[13.5px] text-foreground placeholder:text-muted-foreground outline-none"
           />
           <kbd className="text-[10px] font-semibold text-muted-foreground border border-border rounded px-1.5 py-0.5">Esc</kbd>
         </div>
-        <div className="max-h-[52vh] overflow-y-auto py-1.5">
+        <div id="cmdk-results" role="listbox" aria-label="Results" className="max-h-[52vh] overflow-y-auto py-1.5">
           {results.length === 0 && (
             <div className="px-4 py-6 text-center text-[12.5px] text-muted-foreground">No matches.</div>
           )}
@@ -134,6 +139,9 @@ export default function CommandPalette() {
             return (
               <button
                 key={`${r.hint}-${r.label}-${i}`}
+                id={`cmdk-opt-${i}`}
+                role="option"
+                aria-selected={i === sel}
                 onMouseEnter={() => setSel(i)}
                 onClick={() => exec(i)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] ${i === sel ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
