@@ -195,6 +195,11 @@
 
   button, input, textarea, select { font: inherit; }
 
+  /* Accessibility: always show a visible focus ring for KEYBOARD focus. :focus-visible
+     never triggers on mouse clicks, so this doesn't affect pointer users. !important is
+     needed to beat the pervasive `focus:outline-none` utility on inputs/buttons. */
+  :focus-visible { outline: 2px solid var(--ring) !important; outline-offset: 2px; border-radius: 3px; }
+
   /* Theme-aware custom scrollbar */
   ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }

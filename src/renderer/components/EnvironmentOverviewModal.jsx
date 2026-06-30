@@ -1,5 +1,6 @@
 import React from 'react';
 import { Fingerprint, X, Cpu, MemoryStick, Monitor, Globe, ShieldCheck, Languages, Clock, MapPin, Network } from 'lucide-react';
+import { useDialog } from '@/lib/useDialog.js';
 
 // Build a representative User-Agent string from the profile's OS + version, so
 // the overview shows what sites will see. Mirrors the launch engine's logic.
@@ -58,6 +59,7 @@ function noise(flag, label) {
 }
 
 export default function EnvironmentOverviewModal({ profile, onClose }) {
+  const { dialogRef } = useDialog({ onClose });
   const p = profile || {};
   const proxy = p.proxy;
   const proxyText = proxy
@@ -68,7 +70,7 @@ export default function EnvironmentOverviewModal({ profile, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Environment overview" tabIndex={-1} className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-1.5 rounded border border-primary/20"><Fingerprint className="w-5 h-5 text-primary" /></div>
