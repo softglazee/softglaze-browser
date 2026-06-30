@@ -73,6 +73,24 @@ function makeCanSee(me) {
 
 const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATOR: 'Operator' };
 
+// App-wide footer. `{year}` resolves to the current year; http(s) URLs become
+// links (shown without the scheme) that open in the default browser. Text is set
+// by the Super Admin in Settings → App footer.
+function FooterBar({ text }) {
+  if (!text) return null;
+  const resolved = String(text).replace(/\{year\}/g, String(new Date().getFullYear()));
+  const parts = resolved.split(/(https?:\/\/[^\s)]+)/g);
+  return (
+    <footer className="shrink-0 border-t border-border px-7 py-2.5 text-[11px] text-muted-foreground/80 text-center leading-relaxed">
+      {parts.map((part, i) => (
+        /^https?:\/\//.test(part)
+          ? <a key={i} href={part} target="_blank" rel="noreferrer" className="text-primary hover:underline">{part.replace(/^https?:\/\//, '')}</a>
+          : <span key={i}>{part}</span>
+      ))}
+    </footer>
+  );
+}
+
 function NavItem({ path, label, icon: Icon, collapsed, badge }) {
   return (
     <NavLink to={path} className="block" title={collapsed ? label : undefined}>
@@ -102,6 +120,7 @@ export default function AppShell({ children }) {
   const [members, setMembers] = useState([]);
   const [vault, setVault] = useState({ enabled: false });
   const [license, setLicense] = useState(null);
+  const [footer, setFooter] = useState({ text: '', enabled: true });
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
@@ -115,17 +134,20 @@ export default function AppShell({ children }) {
     let live = true;
     (async () => {
       try {
-        const [cur, list, vs, lic] = await Promise.all([
+        const [cur, list, vs, lic, cfg] = await Promise.all([
           softglazeApi.members.current().catch(() => null),
           softglazeApi.members.list().catch(() => []),
           softglazeApi.vault.status().catch(() => ({ enabled: false })),
-          softglazeApi.license.get().catch(() => null)
+          softglazeApi.license.get().catch(() => null),
+          softglazeApi.settings.getGlobal().catch(() => null)
         ]);
         if (!live) return;
         setMe(cur);
         setMembers(Array.isArray(list) ? list : []);
         setVault(vs || { enabled: false });
         setLicense(lic);
+        const b = (cfg && cfg.branding) || {};
+        setFooter({ text: b.footerText != null ? b.footerText : '', enabled: b.footerEnabled !== false });
       } catch (e) { /* members API unavailable on older builds */ }
     })();
     return () => { live = false; };
@@ -199,9 +221,12 @@ export default function AppShell({ children }) {
       >
         {/* Brand */}
         <div className="flex items-center gap-3 px-4 py-5 shrink-0 overflow-hidden">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 grid place-items-center shrink-0 shadow-lg shadow-blue-500/25">
-            <Shield className="w-[18px] h-[18px] text-white" strokeWidth={2} />
-          </div>
+          <img
+            src="/logos/app-source-512.png"
+            alt="SoftGlaze"
+            className="w-9 h-9 shrink-0 object-contain drop-shadow-[0_2px_8px_rgba(59,130,246,0.35)]"
+            draggable={false}
+          />
           {!collapsed && (
             <div className="flex flex-col min-w-0 animate-fade-in">
               <span className="font-display font-semibold text-[15px] tracking-tight leading-none text-foreground">SoftGlaze</span>
@@ -328,6 +353,7 @@ export default function AppShell({ children }) {
           </div>
         )}
         <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
+        {footer.enabled && <FooterBar text={footer.text} />}
       </main>
       <CommandPalette />
       <OnboardingWizard />
