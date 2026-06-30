@@ -22,6 +22,27 @@ function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
   );
 }
 
+// "Keep me signed in on this device" — opt-in (default off). When ticked, the
+// login secret is sealed with the OS keychain (DPAPI) and replayed at the next app
+// start, so the password isn't asked for again. See rememberStore.js (main).
+function RememberToggle({ checked, onChange }) {
+  return (
+    <label className="flex items-center gap-2.5 mt-4 cursor-pointer select-none">
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className="w-[18px] h-[18px] rounded-[5px] border grid place-items-center transition-colors shrink-0"
+        style={{ borderColor: checked ? 'var(--primary)' : 'var(--border)', background: checked ? 'var(--primary)' : 'transparent' }}
+      >
+        {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+      </button>
+      <span className="text-[12px] text-muted">Keep me signed in on this device</span>
+    </label>
+  );
+}
+
 function OtpInput({ value, onChange, onComplete }) {
   const refs = useRef([]);
   function setAt(i, ch) {
@@ -241,6 +262,7 @@ export default function Gate({ children }) {
 
   // login / pick
   const [loginPass, setLoginPass] = useState('');
+  const [remember, setRemember] = useState(false); // "keep me signed in" (default off)
   const [forgot, setForgot] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
@@ -276,6 +298,13 @@ export default function Gate({ children }) {
     } catch (e) { setPhase('licensing'); }
   }
   useEffect(() => { evaluate(); }, []);
+  // Reflect the current "stay signed in" state so unlocking with the box left
+  // checked preserves it (an unchecked submit clears the remembered credential).
+  useEffect(() => {
+    (softglazeApi.auth && softglazeApi.auth.rememberStatus ? softglazeApi.auth.rememberStatus() : Promise.resolve(null))
+      .then((s) => { if (s && s.enabled) setRemember(true); })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     softglazeApi.payments.listMethods()
       .then((r) => setMethods(r && Array.isArray(r.methods) ? r.methods : []))
@@ -335,7 +364,7 @@ export default function Gate({ children }) {
   async function login() {
     setErr(''); setBusy(true);
     try {
-      await softglazeApi.vault.unlock(loginPass);
+      await softglazeApi.vault.unlock(loginPass, remember);
       const list = await softglazeApi.members.list().catch(() => []);
       if (!list.length) { setPhase('register'); setStep('details'); setErr(''); setBusy(false); return; }
       const owner = list.find((x) => account?.email && x.email && x.email.toLowerCase() === account.email.toLowerCase())
@@ -359,7 +388,7 @@ export default function Gate({ children }) {
   async function doSuperLogin() {
     setErr(''); setBusy(true);
     try {
-      await softglazeApi.members.superLogin(superId.trim(), superPass);
+      await softglazeApi.members.superLogin(superId.trim(), superPass, remember);
       setSuperPass('');
       setPhase('licensing');
     } catch (e) {
@@ -398,7 +427,7 @@ export default function Gate({ children }) {
     if (!memberIdf.trim() || !memberPass) return setErr('Enter your email/name and password.');
     setBusy(true);
     try {
-      await softglazeApi.members.login(memberIdf.trim(), memberPass);
+      await softglazeApi.members.login(memberIdf.trim(), memberPass, remember);
       setMemberPass('');
       setPhase('licensing');
     } catch (e) { setErr(e.message || 'Could not sign in.'); setBusy(false); }
@@ -609,6 +638,7 @@ export default function Gate({ children }) {
                   <PasswordInput value={loginPass} onChange={(e) => setLoginPass(e.target.value)} placeholder="Master password" autoFocus onKeyDown={(e) => { if (e.key === 'Enter') login(); }} />
                 </div>
               </div>
+              <RememberToggle checked={remember} onChange={setRemember} />
               {forgot && <p className="text-[11.5px] text-muted mt-3 leading-relaxed">Your master password isn't recoverable on a local install — it never leaves this device. If it's lost, the workspace has to be reset from Settings.</p>}
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
               <button disabled={busy} onClick={login} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
@@ -654,6 +684,7 @@ export default function Gate({ children }) {
                 <div><label className={labelCls}>Email or name</label><input className={inputCls} value={memberIdf} onChange={(e) => setMemberIdf(e.target.value)} placeholder="you@workspace.com" autoFocus /></div>
                 <div><label className={labelCls}>Password</label><PasswordInput value={memberPass} onChange={(e) => setMemberPass(e.target.value)} placeholder="Your password" onKeyDown={(e) => { if (e.key === 'Enter') doMemberLogin(); }} /></div>
               </div>
+              <RememberToggle checked={remember} onChange={setRemember} />
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
               <button disabled={busy} onClick={doMemberLogin} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sign in <ArrowRight className="w-4 h-4" /></>}
@@ -688,6 +719,7 @@ export default function Gate({ children }) {
                     <div><label className={labelCls}>Username or email</label><input className={inputCls} value={superId} onChange={(e) => setSuperId(e.target.value)} placeholder="superadmin" autoFocus /></div>
                     <div><label className={labelCls}>Password</label><PasswordInput value={superPass} onChange={(e) => setSuperPass(e.target.value)} placeholder="Password" onKeyDown={(e) => { if (e.key === 'Enter') doSuperLogin(); }} /></div>
                   </div>
+                  <RememberToggle checked={remember} onChange={setRemember} />
                   {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
                   <button disabled={busy} onClick={doSuperLogin} className="mt-6 w-full h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-amber-500/25 transition-colors">
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Enter workspace <ArrowRight className="w-4 h-4" /></>}

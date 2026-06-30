@@ -114,11 +114,11 @@ export const softglazeApi = {
     setPin: (id, pin) => getSoftglazeApi().members.setPin(id, pin),
     current: () => getSoftglazeApi().members.current(),
     switch: (id, pin, password) => getSoftglazeApi().members.switch(id, pin, password),
-    superLogin: (identifier, password) => getSoftglazeApi().members.superLogin(identifier, password),
+    superLogin: (identifier, password, remember) => getSoftglazeApi().members.superLogin(identifier, password, remember),
     superStatus: () => getSoftglazeApi().members.superStatus(),
     superSetup: (payload) => getSoftglazeApi().members.superSetup(payload),
     acceptInvite: (payload) => getSoftglazeApi().members.acceptInvite(payload),
-    login: (identifier, password) => getSoftglazeApi().members.login(identifier, password),
+    login: (identifier, password, remember) => getSoftglazeApi().members.login(identifier, password, remember),
     logout: () => getSoftglazeApi().members.logout(),
     updateSelf: (payload) => getSoftglazeApi().members.updateSelf(payload),
     requestChange: (payload) => getSoftglazeApi().members.requestChange(payload),
@@ -141,7 +141,7 @@ export const softglazeApi = {
   },
   db: {
     encryptionStatus: () => getSoftglazeApi().db.encryptionStatus(),
-    unlock: (password) => getSoftglazeApi().db.unlock(password),
+    unlock: (password, remember) => getSoftglazeApi().db.unlock(password, remember),
     enableEncryption: (payload) => getSoftglazeApi().db.enableEncryption(payload),
     disableEncryption: (payload) => getSoftglazeApi().db.disableEncryption(payload)
   },
@@ -204,11 +204,15 @@ export const softglazeApi = {
   vault: {
     status: () => getSoftglazeApi().vault.status(),
     setPassword: (payload) => getSoftglazeApi().vault.setPassword(payload),
-    unlock: (password) => getSoftglazeApi().vault.unlock(password),
+    unlock: (password, remember) => getSoftglazeApi().vault.unlock(password, remember),
     recover: (recoveryCode, password) => getSoftglazeApi().vault.recover(recoveryCode, password),
     lock: () => getSoftglazeApi().vault.lock(),
     disable: (password) => getSoftglazeApi().vault.disable(password),
     setAutoLock: (minutes) => getSoftglazeApi().vault.setAutoLock(minutes)
+  },
+  auth: {
+    rememberStatus: () => getSoftglazeApi().auth.rememberStatus(),
+    forget: () => getSoftglazeApi().auth.forget()
   },
   account: {
     get: () => getSoftglazeApi().account.get(),
