@@ -8,6 +8,7 @@ import MigrationSettings from '@/components/MigrationSettings.jsx';
 import SyncSettings from '@/components/SyncSettings.jsx';
 import DbEncryptionSettings from '@/components/DbEncryptionSettings.jsx';
 import WorkspaceBackupSettings from '@/components/WorkspaceBackupSettings.jsx';
+import BrandingSettings from '@/components/BrandingSettings.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
@@ -110,6 +111,8 @@ export default function SettingsPage() {
       <MigrationSettings />
 
       <SyncSettings />
+
+      <BrandingSettings />
 
       <DbEncryptionSettings />
 
