@@ -105,13 +105,15 @@ model Template {
 
 model ActivityLog {
   id        Int      @id @default(autoincrement())
-  profileId Int
+  profileId Int // 0 = system/security event with no associated profile (see logAudit)
   memberId  Int?
   action    String
   detail    String?
   createdAt DateTime @default(now())
 
   @@index([profileId, createdAt])
+  @@index([memberId, createdAt])
+  @@index([action, createdAt])
 }
 
 model Setting {

@@ -41,6 +41,7 @@ const autofillBridge = require('./autofillBridge');
 const updater = require('./updater');
 const totp = require('./totp');
 const permissions = require('./permissions');
+const rbacPolicy = require('./rbacPolicy');
 const payments = require('./payments');
 const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
 const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSignature, CHROME_VERSIONS } = require('./fingerprintGenerator');
@@ -214,6 +215,7 @@ const CHANNELS = Object.freeze({
   TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
   TEAM_SEAT_USAGE: 'team:seat-usage',
   TEAM_EXPORT_ACTIVITY: 'team:export-activity',
+  TEAM_PERMISSION_CATALOG: 'team:permission-catalog',
   SYNC_STATUS: 'sync:status',
   SYNC_CONFIGURE: 'sync:configure',
   SYNC_RUN: 'sync:run',
@@ -309,6 +311,10 @@ let registered = false;
 let proxySchedulerTimer = null;
 let memoryGuardTimer = null;
 let currentMemberId = null;
+// Cached capability of the active member, refreshed by getActiveMember(). Used by the
+// (synchronous) proxy serializer to decide credential redaction without an async hop.
+// Single-user mode (no member) is treated as owner → full reveal.
+let currentMemberCanRevealProxy = true;
 let vaultLocked = false;
 const importPreviewCache = new Map();
 
@@ -365,6 +371,22 @@ async function logActivity(db, profileId, action, detail = null) {
   try { await db.activityLog.create({ data: { profileId, action, detail, memberId: currentMemberId } }); } catch (e) { /* non-fatal */ }
 }
 
+// Audit-trail helper for SECURITY / team events that have no associated profile
+// (member lifecycle, permission/role/status changes, logins, exports). Stored with
+// profileId 0 — the "system" sentinel (no profile has id 0; the activity feed renders
+// a falsy profileId as a System actor). `detail` may be a string OR an object: objects
+// are stored as compact JSON so the structured context survives, and the renderer
+// pretty-prints them. Never throws — auditing must not break the underlying action.
+async function logAudit(action, opts = {}) {
+  try {
+    const raw = opts && opts.detail;
+    const detail = (raw && typeof raw === 'object') ? JSON.stringify(raw) : (raw || null);
+    await getPrisma().activityLog.create({
+      data: { profileId: (opts && opts.profileId) || 0, action, detail, memberId: currentMemberId }
+    });
+  } catch (e) { /* non-fatal */ }
+}
+
 function parsePort(value) {
   const port = Number.parseInt(String(value), 10);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -414,7 +436,7 @@ function deriveProvider(proxy) {
 
 function serializeProxy(proxy) {
   if (!proxy) return null;
-  return {
+  const out = {
     id: proxy.id,
     name: proxy.name,
     type: proxy.type,
@@ -437,6 +459,12 @@ function serializeProxy(proxy) {
     lastCountry: proxy.lastCountry || null,
     lastCheckedAt: proxy.lastCheckedAt instanceof Date ? proxy.lastCheckedAt.toISOString() : (proxy.lastCheckedAt || null)
   };
+  // Raw-credential redaction (rbacPolicy): the password is already masked for everyone;
+  // also mask the username for viewers who lack the `proxies.reveal` capability
+  // (Operators by default, or anyone an admin has revoked it from). Single-user/owner
+  // sessions reveal in full. Connectivity still works — launches use the raw DB row,
+  // never this serialized view.
+  return currentMemberCanRevealProxy ? out : rbacPolicy.redactForRole('OPERATOR', 'proxyCredentials', out);
 }
 
 // Pro — trigger a vendor-side IP rotation. Many mobile/residential plans expose a
@@ -816,6 +844,7 @@ async function listProxies(payload = {}) {
 }
 
 async function createProxy(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   await assertWithinLimit('proxies');
@@ -849,6 +878,7 @@ async function createProxy(payload) {
 }
 
 async function updateProxy(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -867,6 +897,7 @@ async function updateProxy(payload) {
 }
 
 async function deleteProxy(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -878,6 +909,7 @@ async function deleteProxy(payload) {
 // Bulk-delete by id list. Profiles referencing a deleted proxy have their
 // proxyId nulled automatically (Profile.proxy relation uses onDelete: SetNull).
 async function bulkDeleteProxies(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const ids = Array.isArray(input.ids) ? input.ids.map((value) => parseId(value)) : [];
   if (ids.length === 0) throw new Error('No proxies selected.');
@@ -2232,6 +2264,7 @@ async function listTrash() {
 }
 
 async function createProfile(payload) {
+  await requirePermission('profiles.create');
   const input = requireObject(payload);
   const db = getPrisma();
   await assertWithinLimit('profiles');
@@ -2490,6 +2523,7 @@ async function batchGenerateProfiles(payload) {
 }
 
 async function updateProfile(payload) {
+  await requirePermission('profiles.edit');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -3098,6 +3132,7 @@ async function getProfileLocks() {
 }
 
 async function launchProfile(payload) {
+  await requirePermission('profiles.launch');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -3794,11 +3829,13 @@ async function gatherExport() {
 
 // Data API (returns the full matrix for programmatic use).
 async function exportProfiles() {
+  await requirePermission('profiles.export');
   return gatherExport();
 }
 
 // Native save-dialog export to a CSV or Excel workbook (default xlsx).
 async function exportProfilesToFile(payload) {
+  await requirePermission('profiles.export');
   const input = (payload && typeof payload === 'object') ? payload : {};
   const format = input.format === 'csv' ? 'csv' : 'xlsx';
   const { headers, rows, count } = await gatherExport();
@@ -4118,7 +4155,10 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   // Smart Autofill — the identity widget from the Data Vault. `enabled` is the
   // master toggle (Chromium in-page injection + Firefox). `firefox` separately
   // gates the Firefox WebExtension path (no CDP there; uses the loopback bridge).
-  smartAutofill: { enabled: true, firefox: true }
+  smartAutofill: { enabled: true, firefox: true },
+  // Audit log retention — activity/security events older than this are pruned at
+  // startup. 0 = keep forever. Default 90 days.
+  audit: { retentionDays: 90 }
 });
 
 function deepMergeSettings(base, patch) {
@@ -4662,14 +4702,11 @@ const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 
 const VALID_ROLES = ['OPERATOR', 'MANAGER', 'ADMIN', 'OWNER']; // SUPER_ADMIN is virtual, never a DB row
 
 // Minimum role rank required for each gated action.
-const PERMISSIONS = {
-  'members.manage': 3, // ADMIN+
-  'members.delete': 4, // OWNER
-  'profiles.delete': 3,
-  'profiles.purge': 4,
-  'vault.manage': 4,
-  'extensions.manage': 3 // ADMIN+ — team extensions inject into every profile
-};
+// Action -> minimum role rank, derived from the single-source capability catalog in
+// permissions.js. The original six gated actions keep their exact ranks; the catalog
+// adds more (launch/create/edit/export profiles, proxies.manage/reveal, automation.run)
+// whose baselines preserve prior behavior, so granularity comes from per-member revokes.
+const PERMISSIONS = permissions.ACTION_MIN_RANK;
 
 function rankOf(role) { return ROLE_RANK[String(role || '').toUpperCase()] || 0; }
 
@@ -4748,6 +4785,20 @@ function clampPermissions(requested, granterPerms, childRole) {
   const features = {};
   for (const k of permissions.FEATURE_KEYS) features[k] = Boolean(rf[k]) && (gf[k] !== false);
   out.features = features;
+  // Per-action overrides (restrict-only): keep only known catalog keys, coerce to
+  // boolean, and never grant an action the granter itself lacks. We persist only the
+  // keys the admin explicitly set; effectivePermissions fills the rest from the role.
+  const reqActions = (requested && requested.actions && typeof requested.actions === 'object') ? requested.actions : null;
+  if (reqActions) {
+    const gActions = granterPerms.actions || {};
+    const actions = {};
+    for (const a of permissions.ACTION_CATALOG) {
+      if (a.key in reqActions) actions[a.key] = Boolean(reqActions[a.key]) && (gActions[a.key] !== false);
+    }
+    if (Object.keys(actions).length) out.actions = actions; else delete out.actions;
+  } else {
+    delete out.actions; // don't persist a raw/garbage actions blob
+  }
   return out;
 }
 
@@ -4783,10 +4834,14 @@ function ownerStampId() {
 }
 
 async function getActiveMember() {
-  if (currentMemberId == null) return null;
-  if (permissions.isSuperAdminId(currentMemberId)) return { ...permissions.SUPER_ADMIN };
-  try { return await getPrisma().member.findUnique({ where: { id: currentMemberId } }); }
-  catch (e) { return null; }
+  if (currentMemberId == null) { currentMemberCanRevealProxy = true; return null; } // single-user == owner
+  if (permissions.isSuperAdminId(currentMemberId)) { currentMemberCanRevealProxy = true; return { ...permissions.SUPER_ADMIN }; }
+  try {
+    const m = await getPrisma().member.findUnique({ where: { id: currentMemberId } });
+    // Refresh the cached redaction capability (rank baseline + any per-member revoke).
+    currentMemberCanRevealProxy = m ? (permissions.effectivePermissions(m).actions['proxies.reveal'] !== false) : true;
+    return m;
+  } catch (e) { return null; }
 }
 
 // In single-user mode (no active member) everything is allowed so the app keeps working
@@ -4801,6 +4856,14 @@ async function requirePermission(action) {
   }
   if (rankOf(member.role) < need) {
     const err = new Error('Your role does not permit this action.');
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+  // Granular per-member override (restrict-only): an admin can revoke a specific
+  // capability the role would otherwise allow. Cannot escalate above role rank.
+  const eff = permissions.effectivePermissions(member);
+  if (eff.actions && eff.actions[action] === false) {
+    const err = new Error('This capability has been turned off for your account by an administrator.');
     err.code = 'FORBIDDEN';
     throw err;
   }
@@ -4833,6 +4896,13 @@ async function requirePurchaser(action = 'purchase a subscription') {
     err.code = 'FORBIDDEN';
     throw err;
   }
+}
+
+// Static per-action capability catalog for the Members UI's action toggles
+// (single source of truth = permissions.js). Ungated metadata; editing a member's
+// actions is still gated by members.manage in updateMemberPermissions.
+async function getPermissionCatalog() {
+  return { actions: permissions.ACTION_CATALOG };
 }
 
 async function listMembers() {
@@ -5004,6 +5074,7 @@ async function createMember(payload) {
   if (input.password) { const { salt, hash } = hashSecret(String(input.password)); data.passwordSalt = salt; data.passwordHash = hash; }
 
   const m = await db.member.create({ data });
+  await logAudit('member.create', { detail: { target: m.id, name: m.name, role } });
   const out = serializeMember(m, { assignedProfiles: 0 });
   if (m.inviteCode) {
     out.inviteCode = m.inviteCode;
@@ -5038,6 +5109,7 @@ async function acceptInvite(payload) {
   await writeSetting('currentMemberId', updated.id).catch(() => {});
   vaultLocked = false;
   await db.member.update({ where: { id: updated.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
+  await logAudit('member.invite-accept', { detail: { name: updated.name } });
   return serializeMember(updated, { isCurrent: true });
 }
 
@@ -5063,6 +5135,7 @@ async function memberLogin(payload) {
   vaultLocked = false; // member's own password is their auth
   applyRememberChoice(input.remember, { kind: 'member', identifier, password });
   await db.member.update({ where: { id: member.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
+  await logAudit('member.login', { detail: { name: member.name } });
   return serializeMember(member, { isCurrent: true });
 }
 
@@ -5071,6 +5144,7 @@ async function memberLogin(payload) {
 // than silently re-activating the last member. The vault state is left untouched
 // (logging out is not the same as locking the workspace).
 async function memberLogout() {
+  await logAudit('member.logout'); // log while currentMemberId is still the departing member
   currentMemberId = null;
   await writeSetting('currentMemberId', null).catch(() => {});
   // Signing out is an explicit "this isn't my session" — forget any remembered
@@ -5218,11 +5292,13 @@ async function updateMemberPermissions(payload) {
   // falls back to the role's built-in defaults.
   if (input.reset) {
     const reverted = await db.member.update({ where: { id }, data: { permissionsJson: null } });
+    await logAudit('member.permissions', { detail: { target: id, name: target.name, reset: true } });
     return serializeMember(reverted);
   }
   const granterPerms = permissions.effectivePermissions(granter);
   const next = clampPermissions(input.permissions, granterPerms, target.role);
   const updated = await db.member.update({ where: { id }, data: { permissionsJson: JSON.stringify(next) } });
+  await logAudit('member.permissions', { detail: { target: id, name: target.name } });
   return serializeMember(updated);
 }
 
@@ -5278,6 +5354,7 @@ async function updateMember(payload) {
     data.role = role;
   }
   const m = await db.member.update({ where: { id }, data });
+  await logAudit('member.update', { detail: { target: id, name: m.name, changed: Object.keys(data) } });
   return serializeMember(m);
 }
 
@@ -5388,6 +5465,7 @@ async function deleteMember(payload) {
   }
 
   await db.member.delete({ where: { id } });
+  await logAudit('member.delete', { detail: { target: id, name: target.name, role: target.role, dataAction: dataAction || 'orphan', reassignedTo } });
   if (currentMemberId === id) { currentMemberId = null; await writeSetting('currentMemberId', null).catch(() => {}); }
   return { deleted: true, dataAction: dataAction || 'orphan', reassignedTo };
 }
@@ -7246,7 +7324,9 @@ async function setMemberStatus(payload) {
   const data = { status };
   data.banReason = status === 'banned' ? (optionalString(input.reason) || 'Blocked by administrator.') : null;
   const updated = await db.member.update({ where: { id }, data });
-  await logActivity(db, null, status === 'active' ? 'unban' : status, `${target.name} → ${status}`);
+  // Was logActivity(db, null, …) — but profileId is required, so that insert silently
+  // failed and these status changes were never audited. logAudit (profileId 0) fixes it.
+  await logAudit('member.status', { detail: { target: id, name: target.name, status, reason: data.banReason || null } });
   return serializeMember(updated);
 }
 
@@ -8023,6 +8103,7 @@ async function ensureProfileSession(profileId) {
 const macroRuns = new Map();
 
 async function runMacroOnProfile(payload, event) {
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const macroId = parseId(input.macroId);
   const profileId = parseId(input.profileId);
@@ -8208,6 +8289,7 @@ async function pickDataFile() {
 }
 
 async function runParallelMacroHandler(payload, event) {
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const macroId = parseId(input.macroId);
   const profileIds = parseIdArray(input.profileIds);
@@ -8689,6 +8771,15 @@ function registerIpcHandlers() {
       const cutoff = new Date(Date.now() - 30 * 86400000);
       await getPrisma().proxyHealthEvent.deleteMany({ where: { ts: { lt: cutoff } } });
     } catch (e) { /* ignore */ }
+    try {
+      // Audit-log retention — prune activity/security events past the configured age.
+      const g = await getGlobalSettings();
+      const days = Number(g && g.audit && g.audit.retentionDays);
+      if (Number.isFinite(days) && days > 0) {
+        const auditCutoff = new Date(Date.now() - days * 86400000);
+        await getPrisma().activityLog.deleteMany({ where: { createdAt: { lt: auditCutoff } } });
+      }
+    } catch (e) { /* ignore */ }
   })();
 
   // Reap stale profile locks (crash/orphan) by reconciling against live sessions.
@@ -8807,6 +8898,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.TEAM_REASSIGN_PROFILES, reassignProfiles);
   registerHandler(CHANNELS.TEAM_SEAT_USAGE, getSeatUsage);
   registerHandler(CHANNELS.TEAM_EXPORT_ACTIVITY, exportTeamActivity);
+  registerHandler(CHANNELS.TEAM_PERMISSION_CATALOG, getPermissionCatalog);
   registerHandler(CHANNELS.SYNC_STATUS, syncStatus);
   registerHandler(CHANNELS.SYNC_CONFIGURE, syncConfigure);
   registerHandler(CHANNELS.SYNC_RUN, syncRun);
