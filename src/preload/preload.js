@@ -83,6 +83,17 @@ const CHANNELS = Object.freeze({
   EXTENSIONS_INSTALL_FROM_ID: 'extensions:install-from-id',
   EXTENSIONS_DELETE: 'extensions:delete',
   EXTENSIONS_TOGGLE_GLOBAL: 'extensions:toggle-global',
+
+  PERSONA_IMPORT_BATCH: 'personas:import-batch',
+  PERSONA_CREATE_MANUAL: 'personas:create-manual',
+  PERSONA_GET_ALL: 'personas:get-all',
+  PERSONA_GET_AVAILABLE_FOR_URL: 'personas:get-available-for-url',
+  PERSONA_MARK_USED: 'personas:mark-used',
+  PERSONA_CLEAR_USED: 'personas:clear-used',
+  PERSONA_DELETE: 'personas:delete',
+  PERSONA_UPDATE: 'personas:update',
+  PERSONA_PREVIEW_FILE: 'personas:preview-file',
+
   EMAIL_GET_CONFIG: 'email:get-config',
   EMAIL_SET_CONFIG: 'email:set-config',
   EMAIL_TEST: 'email:test',
@@ -423,6 +434,17 @@ const api = Object.freeze({
     installFromId: (idOrUrl) => invoke(CHANNELS.EXTENSIONS_INSTALL_FROM_ID, { idOrUrl }),
     delete: (id) => invoke(CHANNELS.EXTENSIONS_DELETE, { id }),
     toggleGlobal: (id, isGlobal) => invoke(CHANNELS.EXTENSIONS_TOGGLE_GLOBAL, { id, isGlobal })
+  }),
+  personas: Object.freeze({
+    importBatch: (personas) => invoke(CHANNELS.PERSONA_IMPORT_BATCH, { personas }),
+    createManual: (payload) => invoke(CHANNELS.PERSONA_CREATE_MANUAL, payload),
+    getAll: () => invoke(CHANNELS.PERSONA_GET_ALL),
+    getAvailableForUrl: (url) => invoke(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, { url }),
+    markUsed: (id, url) => invoke(CHANNELS.PERSONA_MARK_USED, { id, url }),
+    clearUsed: (payload) => invoke(CHANNELS.PERSONA_CLEAR_USED, payload),
+    delete: (payload) => invoke(CHANNELS.PERSONA_DELETE, payload),
+    update: (payload) => invoke(CHANNELS.PERSONA_UPDATE, payload),
+    previewFile: () => invoke(CHANNELS.PERSONA_PREVIEW_FILE)
   }),
   vault: Object.freeze({
     status: () => invoke(CHANNELS.VAULT_STATUS),
