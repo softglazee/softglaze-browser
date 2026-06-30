@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Coins, Link2, ShieldCheck, ExternalLink, Loader2, CheckCircle2, Save } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import IpProvidersSettings from '@/components/IpProvidersSettings.jsx';
@@ -13,6 +14,7 @@ import { PROVIDERS, ProviderLogo } from '@/components/ProxyProviders.jsx';
 // New monetization methods drop straight into this section.
 // ---------------------------------------------------------------------------
 export default function MonetizationSettings() {
+  const { t } = useTranslation('cmpSettingsA');
   const [me, setMe] = useState(undefined); // undefined = loading
 
   // Owner / Super Admin only (single-user mode counts as the owner).
@@ -29,7 +31,7 @@ export default function MonetizationSettings() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Coins className="w-4 h-4 text-amber-400" />
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Monetization</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('monetization.heading')}</h2>
       </div>
 
       <AffiliateLinksCard />
@@ -45,6 +47,7 @@ export default function MonetizationSettings() {
 // override map; a blank field clears the override so the button uses the
 // built-in Softglaze default.
 function AffiliateLinksCard() {
+  const { t } = useTranslation('cmpSettingsA');
   const [links, setLinks] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +57,7 @@ function AffiliateLinksCard() {
   useEffect(() => {
     softglazeApi.monetization.getLinks()
       .then((r) => setLinks(r && r.links ? { ...r.links } : {}))
-      .catch((e) => setErr(e.message || 'Could not load affiliate links.'))
+      .catch((e) => setErr(e.message || t('monetization.affiliate.loadError')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -66,15 +69,15 @@ function AffiliateLinksCard() {
       // Drop blanks so they fall back to the default; trim the rest.
       const payload = {};
       for (const [k, v] of Object.entries(links)) {
-        const t = (v || '').trim();
-        if (t) payload[k] = t;
+        const trimmed = (v || '').trim();
+        if (trimmed) payload[k] = trimmed;
       }
       const r = await softglazeApi.monetization.setLinks({ links: payload });
       setLinks(r && r.links ? { ...r.links } : {});
-      setSavedMsg('Saved. Marketplace buttons now use your links.');
+      setSavedMsg(t('monetization.affiliate.savedMsg'));
       setTimeout(() => setSavedMsg(''), 2500);
     } catch (e) {
-      setErr(e.message || 'Could not save affiliate links.');
+      setErr(e.message || t('monetization.affiliate.saveError'));
     } finally {
       setSaving(false);
     }
@@ -91,12 +94,12 @@ function AffiliateLinksCard() {
         </span>
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            Affiliate &amp; Referral Links
+            {t('monetization.affiliate.title')}
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/12 text-violet-300 border border-violet-500/20">
-              <ShieldCheck className="w-3 h-3" /> Owner only
+              <ShieldCheck className="w-3 h-3" /> {t('monetization.affiliate.ownerOnly')}
             </span>
           </h3>
-          <p className="text-xs text-muted-foreground">Your partner URLs for the Proxy marketplace &ldquo;Purchase&rdquo; buttons. Leave blank to use the Softglaze default.</p>
+          <p className="text-xs text-muted-foreground">{t('monetization.affiliate.description')}</p>
         </div>
       </div>
 
@@ -120,7 +123,7 @@ function AffiliateLinksCard() {
                 </span>
                 <span className="w-28 shrink-0 min-w-0">
                   <span className="block text-[13px] font-medium text-foreground truncate">{p.name}</span>
-                  <span className={`block text-[10px] ${custom ? 'text-emerald-400' : 'text-muted-foreground'}`}>{custom ? 'Custom link' : 'Default link'}</span>
+                  <span className={`block text-[10px] ${custom ? 'text-emerald-400' : 'text-muted-foreground'}`}>{custom ? t('monetization.affiliate.customLink') : t('monetization.affiliate.defaultLink')}</span>
                 </span>
                 <input
                   type="url"
@@ -135,7 +138,7 @@ function AffiliateLinksCard() {
                   href={effective}
                   target="_blank"
                   rel="noreferrer"
-                  title={`Open ${p.name} link`}
+                  title={t('monetization.affiliate.openLinkTitle', { provider: p.name })}
                   className="shrink-0 w-9 h-9 grid place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-muted-dark transition"
                 >
                   <ExternalLink className="w-4 h-4" />
@@ -154,14 +157,14 @@ function AffiliateLinksCard() {
             className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? 'Saving…' : 'Save links'}
+            {saving ? t('monetization.affiliate.saving') : t('monetization.affiliate.saveButton')}
           </button>
           {savedMsg && <span className="text-[12px] text-emerald-400 inline-flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {savedMsg}</span>}
         </div>
       )}
 
       <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
-        These links power the &ldquo;Purchase at&hellip;&rdquo; / &ldquo;Visit dashboard&rdquo; buttons on the Proxy pool &rarr; Providers tab. They are public referral URLs only — proxy tokens and credentials are never affected.
+        {t('monetization.affiliate.footnote')}
       </p>
     </div>
   );

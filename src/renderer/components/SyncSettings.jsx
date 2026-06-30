@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FolderSync, Loader2, Check, AlertTriangle, Lock, RefreshCw, ShieldCheck, ChevronDown } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -6,14 +7,15 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 // this card configures the endpoint + a sync passphrase, shows honest status,
 // and runs a sync. Nothing is faked: with no endpoint it says "disabled", and a
 // run only reports success when the main process confirms it.
-function statusTone(s) {
-  if (!s || !s.configured) return { color: '#9ca3af', label: 'Disabled' };
-  if (!s.unlocked) return { color: '#f59e0b', label: 'Locked' };
-  if (!s.enabled) return { color: '#9ca3af', label: 'Paused' };
-  return { color: '#10b981', label: 'Active' };
+function statusTone(s, t) {
+  if (!s || !s.configured) return { color: '#9ca3af', label: t('sync.toneDisabled') };
+  if (!s.unlocked) return { color: '#f59e0b', label: t('sync.toneLocked') };
+  if (!s.enabled) return { color: '#9ca3af', label: t('sync.tonePaused') };
+  return { color: '#10b981', label: t('sync.toneActive') };
 }
 
 export default function SyncSettings() {
+  const { t } = useTranslation('cmpSettingsB');
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
@@ -36,14 +38,14 @@ export default function SyncSettings() {
       setEnabled(Boolean(s.enabled));
       setNamespace(s.namespace || 'softglaze');
       if (!s.configured) setShowConfig(true);
-    } catch (e) { setErr(e.message || 'Could not load sync status.'); }
+    } catch (e) { setErr(e.message || t('sync.errLoadStatus')); }
     finally { setLoading(false); }
-  }, []);
+  }, [t]);
   useEffect(() => { load(); }, [load]);
 
   if (loading) return null;
 
-  const tone = statusTone(status);
+  const tone = statusTone(status, t);
 
   async function saveConfig() {
     setErr(''); setMsg(''); setBusy('save');
@@ -53,8 +55,8 @@ export default function SyncSettings() {
       if (passphrase) payload.passphrase = passphrase;
       const s = await softglazeApi.sync.configure(payload);
       setStatus(s); setToken(''); setPassphrase(''); setShowConfig(false);
-      setMsg(s.unlocked ? 'Sync configured and unlocked for this session.' : 'Saved. Enter your sync passphrase to unlock.');
-    } catch (e) { setErr(e.message || 'Could not save sync settings.'); }
+      setMsg(s.unlocked ? t('sync.msgConfiguredUnlocked') : t('sync.msgSavedEnterPassphrase'));
+    } catch (e) { setErr(e.message || t('sync.errSaveSettings')); }
     finally { setBusy(''); }
   }
 
@@ -63,8 +65,8 @@ export default function SyncSettings() {
     try {
       const s = await softglazeApi.sync.configure({ passphrase: unlockPass });
       setStatus(s); setUnlockPass('');
-      if (s.unlocked) setMsg('Sync unlocked for this session.'); else setErr('Could not unlock — check your passphrase.');
-    } catch (e) { setErr(e.message || 'Incorrect passphrase.'); }
+      if (s.unlocked) setMsg(t('sync.msgUnlocked')); else setErr(t('sync.errUnlockCheckPassphrase'));
+    } catch (e) { setErr(e.message || t('sync.errIncorrectPassphrase')); }
     finally { setBusy(''); }
   }
 
@@ -72,12 +74,12 @@ export default function SyncSettings() {
     setErr(''); setMsg(''); setBusy('run');
     try {
       const r = await softglazeApi.sync.run({});
-      if (r.ok) setMsg(`Synced — ${r.pushed} pushed, ${r.pulled} pulled, ${r.created} created${r.conflicts ? `, ${r.conflicts} conflict(s) resolved (newest won)` : ''}.`);
-      else if (r.locked) setErr('Sync is locked — enter your passphrase first.');
-      else if (r.skipped) setErr(r.reason || 'Sync is not active.');
-      else setErr(r.error || 'Sync failed.');
+      if (r.ok) setMsg(t('sync.msgSynced', { pushed: r.pushed, pulled: r.pulled, created: r.created }) + (r.conflicts ? t('sync.msgSyncedConflicts', { count: r.conflicts }) : '') + '.');
+      else if (r.locked) setErr(t('sync.errLockedEnterPassphrase'));
+      else if (r.skipped) setErr(r.reason || t('sync.errNotActive'));
+      else setErr(r.error || t('sync.errSyncFailed'));
       setStatus(await softglazeApi.sync.status());
-    } catch (e) { setErr(e.message || 'Sync failed.'); }
+    } catch (e) { setErr(e.message || t('sync.errSyncFailed')); }
     finally { setBusy(''); }
   }
 
@@ -90,8 +92,8 @@ export default function SyncSettings() {
         <div className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #14b8a6 14%, transparent)', border: '1px solid color-mix(in srgb, #14b8a6 24%, transparent)' }}><FolderSync className="w-5 h-5 text-teal-400" /></span>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Cloud Sync <span className="text-[10px] font-medium text-muted-foreground align-middle">(end-to-end encrypted)</span></h3>
-            <p className="text-xs text-muted-foreground">Sync profiles across your devices. Only encrypted ciphertext leaves this machine.</p>
+            <h3 className="text-sm font-semibold text-foreground">{t('sync.title')} <span className="text-[10px] font-medium text-muted-foreground align-middle">{t('sync.titleBadge')}</span></h3>
+            <p className="text-xs text-muted-foreground">{t('sync.subtitle')}</p>
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0" style={{ background: `color-mix(in srgb, ${tone.color} 14%, transparent)`, color: tone.color, border: `1px solid color-mix(in srgb, ${tone.color} 26%, transparent)` }}>
@@ -102,10 +104,10 @@ export default function SyncSettings() {
       {/* Status line */}
       {status?.configured && (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
-          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">Endpoint</div><div className="text-foreground truncate font-mono">{status.endpointHost || '—'}</div></div>
-          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">Pending</div><div className="text-foreground">{status.pendingCount} profile(s)</div></div>
-          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">Last synced</div><div className="text-foreground">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : 'Never'}</div></div>
-          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">Namespace</div><div className="text-foreground truncate font-mono">{status.namespace}</div></div>
+          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statEndpoint')}</div><div className="text-foreground truncate font-mono">{status.endpointHost || '—'}</div></div>
+          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statPending')}</div><div className="text-foreground">{t('sync.pendingProfiles', { count: status.pendingCount })}</div></div>
+          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statLastSynced')}</div><div className="text-foreground">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : t('sync.never')}</div></div>
+          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statNamespace')}</div><div className="text-foreground truncate font-mono">{status.namespace}</div></div>
         </div>
       )}
 
@@ -118,18 +120,18 @@ export default function SyncSettings() {
       {/* Not configured → explicit disabled notice */}
       {!status?.configured && !showConfig && (
         <div className="mt-4 px-3 py-2.5 rounded-lg bg-elevated border border-border text-[12px] text-muted-foreground">
-          Sync is disabled — no endpoint configured. Nothing is uploaded.
+          {t('sync.disabledNotice')}
         </div>
       )}
 
       {/* Configured & locked → unlock with passphrase */}
       {status?.configured && !status?.unlocked && (
         <div className="mt-4">
-          <label className={labelCls}><Lock className="w-3 h-3 inline mr-1" />Unlock with your sync passphrase</label>
+          <label className={labelCls}><Lock className="w-3 h-3 inline mr-1" />{t('sync.unlockLabel')}</label>
           <div className="flex items-center gap-2">
-            <input type="password" className={inputCls + ' font-mono'} value={unlockPass} onChange={(e) => setUnlockPass(e.target.value)} placeholder="Sync passphrase" />
+            <input type="password" className={inputCls + ' font-mono'} value={unlockPass} onChange={(e) => setUnlockPass(e.target.value)} placeholder={t('sync.unlockPlaceholder')} />
             <button onClick={unlock} disabled={busy === 'unlock' || !unlockPass} className="h-10 px-4 rounded-lg text-[12.5px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
-              {busy === 'unlock' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Unlock
+              {busy === 'unlock' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t('sync.unlockBtn')}
             </button>
           </div>
         </div>
@@ -139,11 +141,11 @@ export default function SyncSettings() {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {status?.configured && status?.unlocked && status?.enabled && (
           <button onClick={runNow} disabled={busy === 'run'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 disabled:opacity-60">
-            {busy === 'run' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Sync now
+            {busy === 'run' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} {t('sync.syncNow')}
           </button>
         )}
         <button onClick={() => setShowConfig((v) => !v)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">
-          <ChevronDown className={`w-4 h-4 transition-transform ${showConfig ? 'rotate-180' : ''}`} /> {status?.configured ? 'Reconfigure' : 'Configure'}
+          <ChevronDown className={`w-4 h-4 transition-transform ${showConfig ? 'rotate-180' : ''}`} /> {status?.configured ? t('sync.reconfigure') : t('sync.configure')}
         </button>
       </div>
 
@@ -151,33 +153,33 @@ export default function SyncSettings() {
       {showConfig && (
         <div className="mt-4 pt-4 border-t border-border space-y-3.5">
           <div>
-            <label className={labelCls}>Endpoint URL (your object-store service)</label>
+            <label className={labelCls}>{t('sync.endpointLabel')}</label>
             <input className={inputCls + ' font-mono'} value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://sync.example.com/bucket" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Access token (Bearer)</label>
-              <input type="password" className={inputCls + ' font-mono'} value={token} onChange={(e) => setToken(e.target.value)} placeholder={status?.hasToken ? '•••••••• (leave blank to keep)' : 'Bearer token'} />
+              <label className={labelCls}>{t('sync.tokenLabel')}</label>
+              <input type="password" className={inputCls + ' font-mono'} value={token} onChange={(e) => setToken(e.target.value)} placeholder={status?.hasToken ? t('sync.tokenPlaceholderSaved') : t('sync.tokenPlaceholder')} />
             </div>
             <div>
-              <label className={labelCls}>Shared namespace</label>
+              <label className={labelCls}>{t('sync.namespaceLabel')}</label>
               <input className={inputCls + ' font-mono'} value={namespace} onChange={(e) => setNamespace(e.target.value)} placeholder="softglaze" />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Sync passphrase (encrypts everything — share it across your devices)</label>
-            <input type="password" className={inputCls + ' font-mono'} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} placeholder={status?.configured ? 'Re-enter to unlock, or set a new one to re-key' : 'Choose a strong passphrase'} />
-            <p className="text-[11px] text-amber-400 mt-1.5 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" /> Zero-knowledge: this passphrase never leaves your device. If you lose it, synced data can't be recovered. Changing it re-keys (old remote data becomes unreadable).</p>
+            <label className={labelCls}>{t('sync.passphraseLabel')}</label>
+            <input type="password" className={inputCls + ' font-mono'} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} placeholder={status?.configured ? t('sync.passphrasePlaceholderConfigured') : t('sync.passphrasePlaceholder')} />
+            <p className="text-[11px] text-amber-400 mt-1.5 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" /> {t('sync.passphraseWarning')}</p>
           </div>
           <label className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="accent-teal-500" />
-            Enable sync
+            {t('sync.enableSync')}
           </label>
           <div className="flex items-center gap-2">
             <button onClick={saveConfig} disabled={busy === 'save'} className="h-9 px-5 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-teal-500/25">
-              {busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+              {busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : t('sync.save')}
             </button>
-            {status?.configured && <button onClick={() => setShowConfig(false)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">Cancel</button>}
+            {status?.configured && <button onClick={() => setShowConfig(false)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">{t('sync.cancel')}</button>}
           </div>
         </div>
       )}

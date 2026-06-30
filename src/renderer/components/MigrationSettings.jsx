@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FolderSync, ShieldCheck, AlertTriangle, KeyRound, Terminal, CheckCircle2, Loader2, Globe2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// Source platforms (mirrors the ids in src/main/migrationService.js).
+// Source platforms (mirrors the ids in src/main/migrationService.js). User-facing
+// placeholder/warning copy is resolved at render via i18n keys (see *Key fields).
 const PLATFORMS = [
-  { id: 'dolphin', label: 'Dolphin{anty}', placeholder: 'Dolphin_Token', instructionsUrl: 'https://dolphin-anty.com/docs/basic-templates-api/', warning: "Cookies won't be transferred if you're transferring from Dolphin's free plan." },
-  { id: 'gologin', label: 'GoLogin', placeholder: 'GoLogin API token', instructionsUrl: 'https://gologin.com/docs/api-reference/quick-start' },
-  { id: 'multilogin', label: 'Multilogin', placeholder: 'Multilogin automation token', instructionsUrl: 'https://documentation.multilogin.com/docs/quick-start-guide' },
-  { id: 'adspower', label: 'AdsPower', placeholder: 'AdsPower Local API Key', instructionsUrl: 'https://localapi-doc-en.adspower.com/' },
-  { id: 'ixbrowser', label: 'ixBrowser', placeholder: 'ixBrowser Local API Key', instructionsUrl: 'https://ixbrowser.com/' }
+  { id: 'dolphin', label: 'Dolphin{anty}', placeholderKey: 'migration.platforms.dolphin.placeholder', instructionsUrl: 'https://dolphin-anty.com/docs/basic-templates-api/', warningKey: 'migration.platforms.dolphin.warning' },
+  { id: 'gologin', label: 'GoLogin', placeholderKey: 'migration.platforms.gologin.placeholder', instructionsUrl: 'https://gologin.com/docs/api-reference/quick-start' },
+  { id: 'multilogin', label: 'Multilogin', placeholderKey: 'migration.platforms.multilogin.placeholder', instructionsUrl: 'https://documentation.multilogin.com/docs/quick-start-guide' },
+  { id: 'adspower', label: 'AdsPower', placeholderKey: 'migration.platforms.adspower.placeholder', instructionsUrl: 'https://localapi-doc-en.adspower.com/' },
+  { id: 'ixbrowser', label: 'ixBrowser', placeholderKey: 'migration.platforms.ixbrowser.placeholder', instructionsUrl: 'https://ixbrowser.com/' }
 ];
 
 const LEVEL_CLASS = {
@@ -19,6 +21,7 @@ const LEVEL_CLASS = {
 };
 
 export default function MigrationSettings() {
+  const { t } = useTranslation('cmpSettingsA');
   const [me, setMe] = useState(undefined); // undefined = loading
   const [platformId, setPlatformId] = useState('dolphin');
   const [token, setToken] = useState('');
@@ -32,6 +35,8 @@ export default function MigrationSettings() {
   // (admin/manager/operator) never see or call the migration tool.
   const allowed = me !== undefined && (!me || me.role === 'OWNER' || me.role === 'SUPER_ADMIN');
   const platform = PLATFORMS.find((p) => p.id === platformId) || PLATFORMS[0];
+  const platformPlaceholder = t(platform.placeholderKey);
+  const platformWarning = platform.warningKey ? t(platform.warningKey) : null;
 
   useEffect(() => {
     softglazeApi.members.current().then((m) => setMe(m || null)).catch(() => setMe(null));
@@ -58,13 +63,13 @@ export default function MigrationSettings() {
     if (running) return;
     setErr('');
     setSummary(null);
-    if (!token.trim()) { setErr(`Enter your ${platform.label} ${platform.placeholder}.`); return; }
+    if (!token.trim()) { setErr(t('migration.errors.tokenRequired', { platform: platform.label, placeholder: platformPlaceholder })); return; }
     setLog([]);
     setRunning(true);
     try {
       await softglazeApi.migration.startTransfer({ platform: platformId, token: token.trim() });
     } catch (e) {
-      setErr(e.message || 'Transfer failed.');
+      setErr(e.message || t('migration.errors.transferFailed'));
     } finally {
       setRunning(false);
     }
@@ -79,12 +84,12 @@ export default function MigrationSettings() {
         </span>
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            Transfer Profiles
+            {t('migration.title')}
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/12 text-violet-300 border border-violet-500/20">
-              <ShieldCheck className="w-3 h-3" /> Owner only
+              <ShieldCheck className="w-3 h-3" /> {t('migration.ownerOnly')}
             </span>
           </h3>
-          <p className="text-xs text-muted-foreground">Import your existing profiles from another anti-detect platform via its API.</p>
+          <p className="text-xs text-muted-foreground">{t('migration.description')}</p>
         </div>
       </div>
 
@@ -93,7 +98,7 @@ export default function MigrationSettings() {
       <div className="mt-4 space-y-5">
         {/* Step 1 — source platform */}
         <div className="rounded-xl border border-border bg-elevated/50 p-4">
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Source platform</span>
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('migration.sourcePlatform')}</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {PLATFORMS.map((p) => {
               const active = p.id === platformId;
@@ -115,14 +120,14 @@ export default function MigrationSettings() {
         </div>
 
         {/* Dolphin free-plan cookie warning */}
-        {platform.warning && (
+        {platformWarning && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <p className="text-[12px] text-amber-300">
-                <span className="font-medium">Note:</span> {platform.warning}{' '}
+                <span className="font-medium">{t('migration.noteLabel')}</span> {platformWarning}{' '}
                 <a href={platform.instructionsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline decoration-amber-400/50 hover:text-amber-200">
-                  <Globe2 className="w-3 h-3" /> Instructions
+                  <Globe2 className="w-3 h-3" /> {t('migration.instructions')}
                 </a>
               </p>
             </div>
@@ -133,10 +138,10 @@ export default function MigrationSettings() {
         <div className="rounded-xl border border-border bg-elevated/50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <KeyRound className="w-4 h-4 text-muted-foreground" />
-            <span className="text-[13px] font-semibold text-foreground">{platform.label} API token</span>
-            {!platform.warning && (
+            <span className="text-[13px] font-semibold text-foreground">{t('migration.tokenSectionTitle', { platform: platform.label })}</span>
+            {!platformWarning && (
               <a href={platform.instructionsUrl} target="_blank" rel="noreferrer" className="ml-auto text-[11px] font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-                <Globe2 className="w-3 h-3" /> Instructions
+                <Globe2 className="w-3 h-3" /> {t('migration.instructions')}
               </a>
             )}
           </div>
@@ -147,7 +152,7 @@ export default function MigrationSettings() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') startTransfer(); }}
-              placeholder={platform.placeholder}
+              placeholder={platformPlaceholder}
               autoComplete="off"
               spellCheck={false}
               disabled={running}
@@ -159,11 +164,11 @@ export default function MigrationSettings() {
               className="shrink-0 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2"
             >
               {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderSync className="w-4 h-4" />}
-              {running ? 'Transferring…' : 'Start transfer'}
+              {running ? t('migration.transferring') : t('migration.startTransfer')}
             </button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Your token is used once for this transfer and is never stored. Local platforms (AdsPower, ixBrowser) must be running with their Local API enabled.
+            {t('migration.tokenFootnote')}
           </p>
         </div>
 
@@ -172,17 +177,17 @@ export default function MigrationSettings() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground inline-flex items-center gap-1.5">
-                <Terminal className="w-3 h-3" /> Migration log
+                <Terminal className="w-3 h-3" /> {t('migration.log.title')}
               </span>
               {summary && (
                 <span className="text-[11px] font-medium text-emerald-400 inline-flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {summary.created}/{summary.total} imported{summary.errors ? ` · ${summary.errors} error(s)` : ''}
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {t('migration.log.imported', { created: summary.created, total: summary.total })}{summary.errors ? ` · ${t('migration.log.errors', { count: summary.errors })}` : ''}
                 </span>
               )}
             </div>
             <div ref={logRef} className="rounded-lg bg-[#0b0f17] border border-border p-3 font-mono text-[11.5px] leading-relaxed h-44 overflow-y-auto whitespace-pre-wrap">
               {log.length === 0 ? (
-                <span className="text-muted-foreground">Waiting for the platform to respond…</span>
+                <span className="text-muted-foreground">{t('migration.log.waiting')}</span>
               ) : log.map((line, i) => (
                 <div key={i} className={LEVEL_CLASS[line.level] || LEVEL_CLASS.info}>{line.message}</div>
               ))}

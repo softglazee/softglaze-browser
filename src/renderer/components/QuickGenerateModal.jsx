@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
@@ -12,6 +13,7 @@ const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
 const PROVIDER_LABELS = { apify: 'Apify', shopsocks5: 'ShopSocks5', smartproxyorg: 'Smartproxy.org', smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom' };
 
 export default function QuickGenerateModal({ osPlatforms = [], groups = [], proxies = [], proxyGroups = [], onClose, onGenerate, onCreateGroup }) {
+  const { t } = useTranslation('cmpModalsC');
   const [count, setCount] = useState(5);
   const [baseName, setBaseName] = useState('Profile');
   const [startIndex, setStartIndex] = useState(1);
@@ -32,9 +34,9 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [savingGroup, setSavingGroup] = useState(false);
 
   const proxyModes = [
-    { id: 'none', label: 'Direct', icon: Ban },
-    { id: 'pool', label: `Pool (${proxies.length})`, icon: Server },
-    { id: 'paste', label: 'Paste list', icon: ListPlus }
+    { id: 'none', label: t('quickGenerate.proxyModeDirect'), icon: Ban },
+    { id: 'pool', label: t('quickGenerate.proxyModePool', { count: proxies.length }), icon: Server },
+    { id: 'paste', label: t('quickGenerate.proxyModePaste'), icon: ListPlus }
   ];
   const start = Number(startIndex) || 1;
   const pad = (x) => String(x).padStart(3, '0');
@@ -60,18 +62,18 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     try {
       const g = await onCreateGroup(name);
       if (g && g.id != null) { setGroupId(String(g.id)); setNewGroupName(''); }
-    } catch (e) { setErr(e.message || 'Could not create the group.'); }
+    } catch (e) { setErr(e.message || t('quickGenerate.errCreateGroup')); }
     finally { setSavingGroup(false); }
   }
 
   async function submit() {
     setErr(''); setResult(null);
     const n = Number(count);
-    if (!Number.isFinite(n) || n < 1 || n > 500) return setErr('Choose a quantity between 1 and 500.');
-    if (!baseName.trim()) return setErr('Enter a base name.');
-    if (groupId === '__new__' && !newGroupName.trim()) return setErr('Enter a name for the new group.');
-    if (proxyMode === 'pool' && proxies.length === 0) return setErr('No proxies in the pool — add some first, or paste a list.');
-    if (proxyMode === 'paste' && !pasted.trim()) return setErr('Paste at least one proxy, or pick another option.');
+    if (!Number.isFinite(n) || n < 1 || n > 500) return setErr(t('quickGenerate.errQuantityRange'));
+    if (!baseName.trim()) return setErr(t('quickGenerate.errBaseName'));
+    if (groupId === '__new__' && !newGroupName.trim()) return setErr(t('quickGenerate.errNewGroupName'));
+    if (proxyMode === 'pool' && proxies.length === 0) return setErr(t('quickGenerate.errNoPoolProxies'));
+    if (proxyMode === 'paste' && !pasted.trim()) return setErr(t('quickGenerate.errNoPasted'));
     setBusy(true); setProgress({ done: 0, total: n });
     try {
       const r = await onGenerate(
@@ -97,37 +99,37 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
       } else {
         onClose();
       }
-    } catch (e) { setErr(e.message || 'Generation failed.'); setBusy(false); }
+    } catch (e) { setErr(e.message || t('quickGenerate.errGeneration')); setBusy(false); }
   }
 
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onMouseDown={() => !busy && onClose()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Quick generate profiles" tabIndex={-1} className="w-[500px] max-h-[92vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('quickGenerate.ariaLabel')} tabIndex={-1} className="w-[500px] max-h-[92vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card z-10">
-          <div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold">Quick generate</h2></div>
+          <div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold">{t('quickGenerate.title')}</h2></div>
           <button onClick={() => !busy && onClose()} className="w-8 h-8 grid place-items-center rounded-lg text-muted hover:bg-secondary hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <div><label className={labelCls}>Quantity</label><input type="number" min={1} max={500} className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} /></div>
-            <div className="col-span-2"><label className={labelCls}>Base name</label><input className={inputCls} value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Profile" /></div>
+            <div><label className={labelCls}>{t('quickGenerate.quantity')}</label><input type="number" min={1} max={500} className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} /></div>
+            <div className="col-span-2"><label className={labelCls}>{t('quickGenerate.baseName')}</label><input className={inputCls} value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Profile" /></div>
           </div>
-          <p className="text-[11px] text-muted-dark -mt-2">Creates <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(start)}</span>, <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(start + 1)}</span> …</p>
+          <p className="text-[11px] text-muted-dark -mt-2">{t('quickGenerate.createsPrefix')} <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(start)}</span>, <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(start + 1)}</span> …</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Group</label>
+              <label className={labelCls}>{t('quickGenerate.group')}</label>
               <select className={selectCls} style={chevronStyle} value={groupId} onChange={(e) => setGroupId(e.target.value)}>
-                <option value="ungrouped">Ungrouped</option>
+                <option value="ungrouped">{t('quickGenerate.ungrouped')}</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                <option value="__new__">+ Create new group…</option>
+                <option value="__new__">{t('quickGenerate.createNewGroup')}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Operating system</label>
+              <label className={labelCls}>{t('quickGenerate.operatingSystem')}</label>
               <select className={selectCls} style={chevronStyle} value={os} onChange={(e) => setOs(e.target.value)}>
                 {osPlatforms.map((o) => <option key={o.id} value={o.id}>{o.id}</option>)}
               </select>
@@ -136,38 +138,38 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
 
           {groupId === '__new__' && (
             <div>
-              <label className={labelCls}>New group name</label>
+              <label className={labelCls}>{t('quickGenerate.newGroupName')}</label>
               <div className="flex gap-2">
                 <input
                   className={inputCls}
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveNewGroup(); } }}
-                  placeholder="e.g. Facebook US batch"
+                  placeholder={t('quickGenerate.newGroupPlaceholder')}
                   autoFocus
                 />
                 {onCreateGroup && (
                   <button type="button" onClick={saveNewGroup} disabled={savingGroup || !newGroupName.trim()} className="h-10 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-1.5 disabled:opacity-50 shrink-0 transition-colors">
-                    {savingGroup ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
+                    {savingGroup ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('quickGenerate.save')}
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-muted-dark mt-1">Press Enter or Save to create it now — otherwise it’s created when you generate.</p>
+              <p className="text-[11px] text-muted-dark mt-1">{t('quickGenerate.newGroupHint')}</p>
             </div>
           )}
 
           <label className="flex items-center gap-2.5 text-[12.5px] text-foreground cursor-pointer">
             <input type="checkbox" checked={randomize} onChange={(e) => setRandomize(e.target.checked)} className="accent-[#6366f1]" />
-            Unique fingerprint per profile <span className="text-muted-dark">— distinct UA &amp; version, GPU, screen, CPU, MAC &amp; device each</span>
+            {t('quickGenerate.uniqueFingerprint')} <span className="text-muted-dark">{t('quickGenerate.uniqueFingerprintDetail')}</span>
           </label>
 
           <div>
-            <label className={labelCls}><Link2 className="inline w-3 h-3 mr-1 -mt-0.5" />Startup links <span className="text-muted-dark">(optional — one per line, opens on launch)</span></label>
+            <label className={labelCls}><Link2 className="inline w-3 h-3 mr-1 -mt-0.5" />{t('quickGenerate.startupLinks')} <span className="text-muted-dark">{t('quickGenerate.startupLinksHint')}</span></label>
             <textarea rows={2} className={inputCls + ' h-auto py-2 text-[12px] resize-none'} value={startupUrls} onChange={(e) => setStartupUrls(e.target.value)} placeholder={'https://facebook.com\nhttps://mail.google.com'} />
           </div>
 
           <div>
-            <label className={labelCls}>Proxy</label>
+            <label className={labelCls}>{t('quickGenerate.proxy')}</label>
             <div className="grid grid-cols-3 gap-2">
               {proxyModes.map((m) => (
                 <button key={m.id} type="button" onClick={() => setProxyMode(m.id)} className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border text-[11.5px] transition-colors ${proxyMode === m.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:border-muted-dark'}`}>
@@ -179,16 +181,16 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
 
           {proxyMode === 'pool' && (proxyGroups.length > 0 || providers.length > 0) && (
             <div>
-              <label className={labelCls}>Proxy source</label>
+              <label className={labelCls}>{t('quickGenerate.proxySource')}</label>
               <select className={selectCls} style={chevronStyle} value={proxySource} onChange={(e) => setProxySource(e.target.value)}>
-                <option value="">All proxies ({proxies.length})</option>
+                <option value="">{t('quickGenerate.allProxies', { count: proxies.length })}</option>
                 {proxyGroups.length > 0 && (
-                  <optgroup label="Groups">
+                  <optgroup label={t('quickGenerate.optgroupGroups')}>
                     {proxyGroups.map((g) => <option key={`g${g.id}`} value={`group:${g.id}`}>{g.name} ({g.proxyCount ?? 0})</option>)}
                   </optgroup>
                 )}
                 {providers.length > 0 && (
-                  <optgroup label="By provider">
+                  <optgroup label={t('quickGenerate.optgroupByProvider')}>
                     {providers.map(([k, c]) => <option key={`p${k}`} value={`provider:${k}`}>{PROVIDER_LABELS[k] || k} ({c})</option>)}
                   </optgroup>
                 )}
@@ -200,15 +202,15 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
             <label className="flex items-start gap-2.5 text-[12px] text-foreground cursor-pointer bg-background border border-border rounded-lg px-3 py-2.5">
               <input type="checkbox" checked={assignUnique} onChange={(e) => setAssignUnique(e.target.checked)} className="accent-[#6366f1] mt-0.5" />
               <span>
-                <span className="font-medium">Assign a unique proxy to each profile (1:1)</span>
-                <span className="block text-[11px] text-muted-dark">Each profile gets its own unused proxy. If you request more profiles than you have free proxies, only that many are created. Uncheck to reuse proxies round-robin.</span>
+                <span className="font-medium">{t('quickGenerate.assignUnique')}</span>
+                <span className="block text-[11px] text-muted-dark">{t('quickGenerate.assignUniqueDetail')}</span>
               </span>
             </label>
           )}
 
           {proxyMode === 'paste' && (
             <div>
-              <label className={labelCls}>Proxies — one per line <span className="text-muted-dark">(host:port or host:port:user:pass — each used once)</span></label>
+              <label className={labelCls}>{t('quickGenerate.proxiesLabel')} <span className="text-muted-dark">{t('quickGenerate.proxiesLabelHint')}</span></label>
               <textarea rows={4} className={inputCls + ' h-auto py-2 font-mono text-[12px] resize-none'} value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder={'74.222.7.54:7957\n74.81.46.200:6288:user:pass'} />
             </div>
           )}
@@ -224,17 +226,17 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
 
           {busy && (
             <div>
-              <div className="flex items-center justify-between text-[11.5px] text-muted mb-1.5"><span>Creating profiles…</span><span className="font-mono">{progress.done}/{progress.total}</span></div>
+              <div className="flex items-center justify-between text-[11.5px] text-muted mb-1.5"><span>{t('quickGenerate.creatingProfiles')}</span><span className="font-mono">{progress.done}/{progress.total}</span></div>
               <div className="h-1.5 rounded-full bg-background overflow-hidden"><div className="h-full bg-primary transition-all duration-200" style={{ width: `${pct}%` }} /></div>
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border sticky bottom-0 bg-card">
-          <button onClick={() => !busy && onClose()} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-secondary disabled:opacity-50">{result ? 'Done' : 'Cancel'}</button>
+          <button onClick={() => !busy && onClose()} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-secondary disabled:opacity-50">{result ? t('quickGenerate.done') : t('quickGenerate.cancel')}</button>
           {!result && (
             <button onClick={submit} disabled={busy} className="h-9 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}{busy ? 'Generating…' : `Generate ${Number(count) || 0}`}
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}{busy ? t('quickGenerate.generating') : t('quickGenerate.generate', { count: Number(count) || 0 })}
             </button>
           )}
         </div>

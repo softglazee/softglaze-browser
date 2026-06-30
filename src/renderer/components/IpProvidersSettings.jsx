@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Network, Loader2, Check, ExternalLink, ChevronDown, KeyRound, ShieldCheck } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import i18n from '@/i18n/index.js';
+import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
+import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
+
+// Register the "cmpSettingsC" namespace without touching the central i18n config.
+// addResourceBundle is a no-op if the bundle already exists, so this is safe
+// across hot reloads (and ProxyProviders performing the same registration).
+if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
+if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
 // Brand accent + initials per provider (lucide has no brand glyphs).
 const BRAND = {
@@ -14,6 +24,7 @@ const BRAND = {
 const brandOf = (name) => BRAND[name] || { color: '#64748b', initials: (name || '?').slice(0, 2).toUpperCase() };
 
 export default function IpProvidersSettings() {
+  const { t } = useTranslation('cmpSettingsC');
   const [me, setMe] = useState(undefined); // undefined = loading
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +35,9 @@ export default function IpProvidersSettings() {
       const res = await softglazeApi.ipProviders.getAll();
       setProviders(Array.isArray(res?.providers) ? res.providers : []);
     } catch (e) {
-      setErr(e.message || 'Could not load IP providers.');
+      setErr(e.message || t('ipProviders.errors.load'));
     } finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     softglazeApi.members.current().then((m) => setMe(m || null)).catch(() => setMe(null));
@@ -52,13 +63,13 @@ export default function IpProvidersSettings() {
           </span>
           <div>
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              IP Provider Settings
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><ShieldCheck className="w-3 h-3" /> Super Admin</span>
+              {t('ipProviders.title')}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><ShieldCheck className="w-3 h-3" /> {t('ipProviders.superAdmin')}</span>
             </h3>
-            <p className="text-xs text-muted-foreground">Master API credentials for the proxy vendors you resell.</p>
+            <p className="text-xs text-muted-foreground">{t('ipProviders.subtitle')}</p>
           </div>
         </div>
-        <span className="text-[11px] text-muted-foreground shrink-0">{enabledCount}/{providers.length} enabled</span>
+        <span className="text-[11px] text-muted-foreground shrink-0">{t('ipProviders.enabledCount', { enabled: enabledCount, total: providers.length })}</span>
       </div>
 
       {err && <div className="mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
@@ -75,6 +86,7 @@ export default function IpProvidersSettings() {
 }
 
 function ProviderCard({ provider, onChange, onError }) {
+  const { t } = useTranslation('cmpSettingsC');
   const brand = brandOf(provider.name);
   const [expanded, setExpanded] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -90,7 +102,7 @@ function ProviderCard({ provider, onChange, onError }) {
     try {
       const updated = await softglazeApi.ipProviders.toggleStatus({ id: provider.id, status: enabled ? 'DISABLED' : 'ENABLED' });
       onChange(updated);
-    } catch (e) { onError(e.message || 'Could not update status.'); }
+    } catch (e) { onError(e.message || t('ipProviders.errors.status')); }
     finally { setBusy(''); }
   }
 
@@ -104,9 +116,9 @@ function ProviderCard({ provider, onChange, onError }) {
       const updated = await softglazeApi.ipProviders.updateCredentials(payload);
       onChange(updated);
       setApiKey(''); setSecretKey('');
-      setMsg('Saved.');
+      setMsg(t('ipProviders.saved'));
       setTimeout(() => setMsg(''), 1500);
-    } catch (e) { onError(e.message || 'Could not save credentials.'); }
+    } catch (e) { onError(e.message || t('ipProviders.errors.save')); }
     finally { setBusy(''); }
   }
 
@@ -122,11 +134,11 @@ function ProviderCard({ provider, onChange, onError }) {
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold text-foreground truncate">{provider.name}</span>
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={enabled ? { background: 'color-mix(in srgb, #22c55e 14%, transparent)', color: '#22c55e' } : { background: 'var(--secondary)', color: 'var(--muted-foreground)' }}>
-              {enabled ? 'Enabled' : 'Disabled'}
+              {enabled ? t('ipProviders.statusEnabled') : t('ipProviders.statusDisabled')}
             </span>
           </div>
           <span className="text-[10.5px] text-muted-foreground">
-            {provider.hasApiKey ? `Key: ${provider.apiKeyMasked}` : 'No API key set'}
+            {provider.hasApiKey ? t('ipProviders.keyMasked', { masked: provider.apiKeyMasked }) : t('ipProviders.noApiKey')}
           </span>
         </div>
 
@@ -139,7 +151,7 @@ function ProviderCard({ provider, onChange, onError }) {
           onClick={toggle}
           className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 disabled:opacity-60"
           style={{ background: enabled ? '#22c55e' : 'var(--switch-background, #3f3f46)' }}
-          title={enabled ? 'Disable' : 'Enable'}
+          title={enabled ? t('ipProviders.disable') : t('ipProviders.enable')}
         >
           <span className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-1'}`} style={{ height: 18, width: 18 }} />
         </button>
@@ -150,30 +162,30 @@ function ProviderCard({ provider, onChange, onError }) {
         onClick={() => setExpanded((e) => !e)}
         className="w-full flex items-center justify-between px-3.5 py-2 text-[11.5px] text-muted-foreground hover:text-foreground border-t border-border transition-colors"
       >
-        <span className="flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> Configure API credentials</span>
+        <span className="flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> {t('ipProviders.configureCredentials')}</span>
         <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
       {expanded && (
         <div className="px-3.5 pb-3.5 pt-1 space-y-2.5 border-t border-border">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">API Key</label>
-            <input type="password" autoComplete="off" className={inputCls} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={provider.hasApiKey ? `${provider.apiKeyMasked} (leave blank to keep)` : 'Paste API key'} />
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('ipProviders.apiKeyLabel')}</label>
+            <input type="password" autoComplete="off" className={inputCls} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={provider.hasApiKey ? t('ipProviders.maskedKeepBlank', { masked: provider.apiKeyMasked }) : t('ipProviders.pasteApiKey')} />
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">Secret Key <span className="text-muted-dark normal-case">(if required)</span></label>
-            <input type="password" autoComplete="off" className={inputCls} value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={provider.hasSecretKey ? `${provider.secretKeyMasked} (leave blank to keep)` : 'Paste secret key'} />
+            <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('ipProviders.secretKeyLabel')} <span className="text-muted-dark normal-case">{t('ipProviders.ifRequired')}</span></label>
+            <input type="password" autoComplete="off" className={inputCls} value={secretKey} onChange={(e) => setSecretKey(e.target.value)} placeholder={provider.hasSecretKey ? t('ipProviders.maskedKeepBlank', { masked: provider.secretKeyMasked }) : t('ipProviders.pasteSecretKey')} />
           </div>
           <div className="flex items-center justify-between gap-2 pt-1">
             {provider.referralLink ? (
               <a href={provider.referralLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: brand.color }}>
-                <ExternalLink className="w-3 h-3" /> {provider.name} dashboard
+                <ExternalLink className="w-3 h-3" /> {t('ipProviders.providerDashboard', { provider: provider.name })}
               </a>
             ) : <span />}
             <div className="flex items-center gap-2">
               {msg && <span className="text-[11px] text-emerald-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" />{msg}</span>}
               <button onClick={save} disabled={busy === 'save' || (!apiKey && !secretKey)} className="h-8 px-4 rounded-lg text-[12px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow shadow-blue-500/25 disabled:opacity-50 flex items-center gap-1.5">
-                {busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
+                {busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('ipProviders.save')}
               </button>
             </div>
           </div>
@@ -182,7 +194,7 @@ function ProviderCard({ provider, onChange, onError }) {
 
       {!expanded && provider.referralLink && (
         <a href={provider.referralLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3.5 pb-3 text-[11px] font-medium" style={{ color: brand.color }}>
-          <ExternalLink className="w-3 h-3" /> Get API keys at {provider.name} dashboard
+          <ExternalLink className="w-3 h-3" /> {t('ipProviders.getApiKeysAt', { provider: provider.name })}
         </a>
       )}
     </div>
