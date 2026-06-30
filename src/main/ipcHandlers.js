@@ -26,7 +26,8 @@ const {
   startMacroRecording,
   stopMacroRecording,
   humanType,
-  launchSynchronizedSessions
+  launchSynchronizedSessions,
+  configurePersonaBridge
 } = require('./browserEngine');
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
@@ -135,6 +136,18 @@ const CHANNELS = Object.freeze({
   EXTENSIONS_INSTALL_FROM_ID: 'extensions:install-from-id',
   EXTENSIONS_DELETE: 'extensions:delete',
   EXTENSIONS_TOGGLE_GLOBAL: 'extensions:toggle-global',
+
+  // Identity Data Vault — personas for the Smart Autofill engine
+  PERSONA_IMPORT_BATCH: 'personas:import-batch',
+  PERSONA_CREATE_MANUAL: 'personas:create-manual',
+  PERSONA_GET_ALL: 'personas:get-all',
+  PERSONA_GET_AVAILABLE_FOR_URL: 'personas:get-available-for-url',
+  PERSONA_MARK_USED: 'personas:mark-used',
+  PERSONA_CLEAR_USED: 'personas:clear-used',
+  PERSONA_DELETE: 'personas:delete',
+  PERSONA_UPDATE: 'personas:update',
+  PERSONA_PREVIEW_FILE: 'personas:preview-file',
+
   MEMBER_LIST: 'member:list',
   MEMBER_CREATE: 'member:create',
   MEMBER_UPDATE: 'member:update',
@@ -3784,6 +3797,215 @@ async function toggleExtensionGlobal(payload) {
   const isGlobal = input.isGlobal !== undefined ? Boolean(input.isGlobal) : !ext.isGlobal;
   const updated = await db.extension.update({ where: { id }, data: { isGlobal } });
   return serializeExtension(updated);
+}
+
+// ---------------------------------------------------------------------------
+// Identity Data Vault — personas/identities for the Smart Autofill engine.
+// A workspace-global vault of demo registration identities. Each persona tracks
+// which domains it has already been used on (`usedOnUrls`, a JSON array of
+// hostnames) so the in-page autofill widget stops offering it on those sites.
+// Passwords are stored as a plaintext column (the autofill engine must type them
+// verbatim); the optional whole-DB at-rest encryption covers them at rest.
+// ---------------------------------------------------------------------------
+
+// Persona fields the vault accepts from the client, in form order. `id`,
+// `usedOnUrls`, and the timestamps are managed by the DB / handlers.
+const PERSONA_TEXT_FIELDS = Object.freeze([
+  'label', 'firstName', 'lastName', 'email', 'username', 'password', 'phone',
+  'dateOfBirth', 'addressLine1', 'addressLine2', 'city', 'state', 'zipCode',
+  'country', 'company'
+]);
+// Required at the model level (NOT NULL). Coerced to '' if a sparse import row
+// omits them, so a bulk import never aborts on a single missing cell.
+const PERSONA_REQUIRED_FIELDS = Object.freeze(['firstName', 'lastName', 'email', 'username', 'password']);
+
+// Reduce a URL or bare hostname to a comparable registrable host: lowercase, no
+// scheme/path, no leading "www.". Returns '' when nothing usable is present.
+function normalizeHostname(value) {
+  let s = String(value == null ? '' : value).trim().toLowerCase();
+  if (!s) return '';
+  if (!/^[a-z][a-z0-9+.-]*:\/\//.test(s)) s = `http://${s}`; // give URL() a scheme to parse
+  let host = '';
+  try { host = new URL(s).hostname; } catch (e) { host = ''; }
+  return host ? host.replace(/^www\./, '') : '';
+}
+
+// Parse a persona's usedOnUrls JSON blob into a clean, deduped hostname list.
+function parseUsedOnUrls(value) {
+  try {
+    const arr = JSON.parse(value || '[]');
+    if (!Array.isArray(arr)) return [];
+    return [...new Set(arr.map((h) => String(h || '').trim().toLowerCase()).filter(Boolean))];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Build a clean PersonaData write payload from arbitrary client input: keep only
+// known fields, coerce to trimmed strings, and guarantee the required ones exist.
+function sanitizePersonaInput(raw) {
+  const input = requireObject(raw, 'persona');
+  const data = {};
+  for (const f of PERSONA_TEXT_FIELDS) {
+    if (input[f] === undefined || input[f] === null) continue;
+    const v = String(input[f]).trim();
+    if (v) data[f] = v;
+  }
+  for (const f of PERSONA_REQUIRED_FIELDS) {
+    if (data[f] === undefined) data[f] = '';
+  }
+  return data;
+}
+
+// Shape a DB row for the renderer: ISO timestamps + a derived usedOnUrls array and
+// usedCount for the "Times Used" column and per-domain availability checks.
+function serializePersona(p) {
+  const used = parseUsedOnUrls(p.usedOnUrls);
+  return {
+    id: p.id,
+    label: p.label || null,
+    firstName: p.firstName || '',
+    lastName: p.lastName || '',
+    email: p.email || '',
+    username: p.username || '',
+    password: p.password || '',
+    phone: p.phone || null,
+    dateOfBirth: p.dateOfBirth || null,
+    addressLine1: p.addressLine1 || null,
+    addressLine2: p.addressLine2 || null,
+    city: p.city || null,
+    state: p.state || null,
+    zipCode: p.zipCode || null,
+    country: p.country || null,
+    company: p.company || null,
+    usedOnUrls: used,
+    usedCount: used.length,
+    createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : (p.createdAt || null),
+    updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : (p.updatedAt || null)
+  };
+}
+
+// Bulk-insert an already-mapped array of personas (the Excel/CSV reading and
+// column-mapping happen in the renderer; this handler just persists the result).
+async function importPersonas(payload) {
+  const input = requireObject(payload);
+  const list = Array.isArray(input.personas) ? input.personas : [];
+  if (list.length === 0) throw new Error('No personas were provided to import.');
+  if (list.length > 5000) throw new Error('Too many rows in one import (max 5000).');
+  const rows = list.map(sanitizePersonaInput);
+  const result = await getPrisma().personaData.createMany({ data: rows });
+  return { created: result.count };
+}
+
+async function createPersonaManual(payload) {
+  const data = sanitizePersonaInput(payload);
+  const created = await getPrisma().personaData.create({ data });
+  return serializePersona(created);
+}
+
+async function getAllPersonas() {
+  const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
+  return { personas: rows.map(serializePersona) };
+}
+
+// Return only personas whose usedOnUrls does NOT already contain this host.
+async function getAvailablePersonasForUrl(payload) {
+  const input = requireObject(payload);
+  const host = normalizeHostname(input.url ?? input.hostname);
+  if (!host) throw new Error('A valid URL or hostname is required.');
+  const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
+  const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).includes(host));
+  return { hostname: host, personas: available.map(serializePersona) };
+}
+
+// Append a domain to a persona's usedOnUrls (deduped) so it stops being offered there.
+async function markPersonaUsed(payload) {
+  const input = requireObject(payload);
+  const id = requiredString(input.id, 'Persona id');
+  const host = normalizeHostname(input.url ?? input.hostname);
+  if (!host) throw new Error('A valid URL or hostname is required.');
+  const db = getPrisma();
+  const row = await db.personaData.findUnique({ where: { id } });
+  if (!row) throw new Error('Persona not found.');
+  const used = parseUsedOnUrls(row.usedOnUrls);
+  if (!used.includes(host)) used.push(host);
+  const updated = await db.personaData.update({ where: { id }, data: { usedOnUrls: JSON.stringify(used) } });
+  return serializePersona(updated);
+}
+
+// Reset usedOnUrls to "[]" for specific personas ({ ids }) or all ({ all: true }),
+// making them available on every domain again.
+async function clearPersonaUsed(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  if (input.all === true) {
+    const result = await db.personaData.updateMany({ data: { usedOnUrls: '[]' } });
+    return { updated: result.count };
+  }
+  const ids = Array.isArray(input.ids) ? input.ids.map((v) => requiredString(v, 'Persona id')) : [];
+  if (ids.length === 0) throw new Error('Provide persona ids, or { all: true }, to reset.');
+  const result = await db.personaData.updateMany({ where: { id: { in: ids } }, data: { usedOnUrls: '[]' } });
+  return { updated: result.count };
+}
+
+// Delete specific personas ({ ids }) or clear the whole vault ({ all: true }).
+async function deletePersonas(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  if (input.all === true) {
+    const result = await db.personaData.deleteMany({});
+    return { deleted: result.count };
+  }
+  const ids = Array.isArray(input.ids) ? input.ids.map((v) => requiredString(v, 'Persona id')) : [];
+  if (ids.length === 0) throw new Error('Provide persona ids, or { all: true }, to delete.');
+  const result = await db.personaData.deleteMany({ where: { id: { in: ids } } });
+  return { deleted: result.count };
+}
+
+// Build an update patch: only the keys actually present in the input (trimmed).
+// Unlike sanitizePersonaInput it never injects '' for an absent required field, so
+// editing one field leaves the others untouched.
+function sanitizePersonaPatch(raw) {
+  const input = requireObject(raw, 'persona');
+  const data = {};
+  for (const f of PERSONA_TEXT_FIELDS) {
+    if (input[f] === undefined) continue;
+    data[f] = String(input[f] == null ? '' : input[f]).trim();
+  }
+  return data;
+}
+
+async function updatePersona(payload) {
+  const input = requireObject(payload);
+  const id = requiredString(input.id, 'Persona id');
+  const data = sanitizePersonaPatch(input);
+  const db = getPrisma();
+  if (Object.keys(data).length === 0) {
+    const cur = await db.personaData.findUnique({ where: { id } });
+    if (!cur) throw new Error('Persona not found.');
+    return serializePersona(cur);
+  }
+  const updated = await db.personaData.update({ where: { id }, data });
+  return serializePersona(updated);
+}
+
+// Open a native file dialog, parse the chosen workbook/CSV in the main process
+// (reusing the xlsx-backed importParser, so the renderer never bundles xlsx), and
+// return the raw headers + row objects for the column-mapping step. The renderer
+// maps columns to fields and calls personas:import-batch with the result. Capped at
+// parseDataRows' 1000-row limit per import.
+async function previewPersonaFile() {
+  const selection = await dialog.showOpenDialog({
+    title: 'Select a spreadsheet of identities to import',
+    properties: ['openFile'],
+    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+  });
+  if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
+  const filePath = selection.filePaths[0];
+  const ext = path.extname(filePath).toLowerCase();
+  if (!['.xlsx', '.xls', '.csv'].includes(ext)) throw new Error('Unsupported file type. Choose an .xlsx, .xls, or .csv file.');
+  const parsed = parseDataRows(filePath);
+  return { fileName: parsed.fileName, headers: parsed.headers, rows: parsed.rows, totalRows: parsed.rows.length };
 }
 
 async function getSystemInfo() {
@@ -7847,6 +8069,24 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.EXTENSIONS_INSTALL_FROM_ID, installExtensionFromId);
   registerHandler(CHANNELS.EXTENSIONS_DELETE, deleteExtension);
   registerHandler(CHANNELS.EXTENSIONS_TOGGLE_GLOBAL, toggleExtensionGlobal);
+
+  // Identity Data Vault — personas for the Smart Autofill engine
+  registerHandler(CHANNELS.PERSONA_IMPORT_BATCH, importPersonas);
+  registerHandler(CHANNELS.PERSONA_CREATE_MANUAL, createPersonaManual);
+  registerHandler(CHANNELS.PERSONA_GET_ALL, getAllPersonas);
+  registerHandler(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, getAvailablePersonasForUrl);
+  registerHandler(CHANNELS.PERSONA_MARK_USED, markPersonaUsed);
+  registerHandler(CHANNELS.PERSONA_CLEAR_USED, clearPersonaUsed);
+  registerHandler(CHANNELS.PERSONA_DELETE, deletePersonas);
+  registerHandler(CHANNELS.PERSONA_UPDATE, updatePersona);
+  registerHandler(CHANNELS.PERSONA_PREVIEW_FILE, previewPersonaFile);
+
+  // Smart Autofill — let the in-page widget (injected into launched Chromium
+  // profiles) reach the persona vault through puppeteer's exposeFunction bridge.
+  configurePersonaBridge({
+    listForUrl: (url) => getAvailablePersonasForUrl({ url }),
+    markUsed: (id, url) => markPersonaUsed({ id, url })
+  });
 
   // Resume the background proxy scheduler if it was enabled previously.
   (async () => {

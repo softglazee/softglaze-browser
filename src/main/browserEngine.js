@@ -13,6 +13,10 @@ const { applyBrandWindowIcon } = require('./windowIcon');
 // binary RESOLVER reads exactly where the DOWNLOADER writes (userData when packaged,
 // project root in dev). No circular dep — browserDownloader needs only node + electron.
 const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
+// Smart Autofill (Identity Data Vault) — source of the in-page widget injected
+// into every launched page. No deps; just returns a self-contained IIFE string.
+const { buildAutofillBootstrap } = require('./personaAutofill');
+const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
 
 // SoftGlaze first-party extension (Chrome Web Store ID). Best-effort force-install
 // on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
@@ -50,6 +54,41 @@ const DEFAULT_PROFILE_ROOT = path.resolve(process.cwd(), 'softglaze_profiles');
 const DEFAULT_WINDOW_SIZE = { width: 1280, height: 720 };
 const GEO_LOOKUP_TIMEOUT_MS = 8000;
 const activeSessions = new Map();
+
+// --- Smart Autofill (Identity Data Vault) bridge -------------------------------
+// Wired by ipcHandlers at startup with the persona DB operations, so the
+// page-injected widget can reach Prisma through puppeteer's exposeFunction — no
+// HTTP server, no auth, in-process. Stays a no-op until configured.
+let personaBridge = null;
+function configurePersonaBridge(deps) {
+  if (deps && typeof deps.listForUrl === 'function' && typeof deps.markUsed === 'function') {
+    personaBridge = deps;
+  }
+}
+
+// Expose the two persona bridge functions on a page and inject the autofill widget
+// (both for future navigations and the currently-loaded document). Safe to call
+// once per page — exposeFunction throws if a name is already bound, which we
+// swallow. Chromium-only: this whole module is the puppeteer/CDP launch path.
+async function attachPersonaAutofill(targetPage) {
+  if (!personaBridge || !targetPage) return;
+  try {
+    await targetPage.exposeFunction('__sgPersonaList', async (url) => {
+      try {
+        const r = await personaBridge.listForUrl(String(url || ''));
+        return (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+      } catch (e) { return []; }
+    });
+  } catch (e) { /* already exposed on this page */ }
+  try {
+    await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id, url) => {
+      try { await personaBridge.markUsed(String(id || ''), String(url || '')); return { ok: true }; }
+      catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+    });
+  } catch (e) { /* already exposed on this page */ }
+  try { await targetPage.evaluateOnNewDocument(PERSONA_AUTOFILL_SOURCE); } catch (e) {}
+  try { await targetPage.evaluate(PERSONA_AUTOFILL_SOURCE); } catch (e) {}
+}
 
 // ---------------------------------------------------------------------------
 // Real Chrome binaries. Profiles launch an ACTUAL Chrome build (Chrome for
@@ -2182,6 +2221,9 @@ async function launchProfileSession(options = {}) {
           }
         });
       }
+      // Smart Autofill — expose the persona bridge + inject the in-page widget on
+      // this tab and its future navigations (no-op unless the bridge is configured).
+      await attachPersonaAutofill(targetPage);
     } catch (e) { /* best-effort per page — never block the launch */ }
   };
 
@@ -3020,6 +3062,7 @@ function listActiveSessions() {
 module.exports = {
   DEFAULT_PROFILE_ROOT,
   parseProxyInput,
+  configurePersonaBridge,
   launchProfileSession,
   closeProfileSession,
   closeAllProfileSessions,
