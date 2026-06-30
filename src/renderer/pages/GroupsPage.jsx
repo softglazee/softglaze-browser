@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Folder, FolderOpen, Plus, Edit2, Trash2,
   Search, Monitor, Check, X, Tag as TagIcon, Loader2, ChevronDown
@@ -40,6 +41,7 @@ const Checkbox = ({ checked, onChange }) => (
 );
 
 export default function GroupsPage() {
+  const { t } = useTranslation('groups');
   const [groups, setGroups] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ export default function GroupsPage() {
       setGroups(g);
       setProfiles(p);
     } catch (err) {
-      setError(err.message || 'Failed to load groups.');
+      setError(err.message || t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -149,7 +151,7 @@ export default function GroupsPage() {
   };
 
   const handleDeleteGroup = async (id, name) => {
-    if (!window.confirm(`Delete group "${name}"? Its profiles will become Ungrouped (the profiles themselves are not deleted).`)) return;
+    if (!window.confirm(t('deleteConfirm', { name }))) return;
     setBusy(true); setError('');
     try {
       await softglazeApi.groups.delete(id);
@@ -198,18 +200,20 @@ export default function GroupsPage() {
     await commitTags(profile, (profile.tags || []).filter((x) => x !== tag));
   };
 
+  const removeTagLabel = t('tags.remove');
+
   const headerTitle = activeGroupId === 'all'
-    ? 'All Profiles'
+    ? t('filters.allProfiles')
     : activeGroupId === 'ungrouped'
-      ? 'Ungrouped'
-      : (activeGroup?.name || 'Group');
+      ? t('filters.ungrouped')
+      : (activeGroup?.name || t('filters.group'));
 
   return (
     <div className="flex flex-col h-full space-y-4 pb-10">
       <PageHeader
-        eyebrow="Organization"
-        title="Groups & Tags"
-        description="Organize profiles into groups and label them with tags for rapid filtering."
+        eyebrow={t('header.eyebrow')}
+        title={t('header.title')}
+        description={t('header.description')}
       />
 
       {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
@@ -219,11 +223,11 @@ export default function GroupsPage() {
         {/* LEFT SIDEBAR (Groups) */}
         <Card className="w-full md:w-72 shrink-0 flex flex-col bg-surface border-border shadow-sm rounded">
           <div className="p-4 border-b border-border bg-card/50 flex justify-between items-center rounded-t">
-            <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider">Directories</h2>
+            <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider">{t('sidebar.directories')}</h2>
             <button
               onClick={() => { setIsAddingGroup(true); setEditingGroupId(null); }}
               className="p-1 hover:bg-muted-dark rounded text-primary hover:text-primary-hover transition"
-              title="Create new group"
+              title={t('sidebar.createGroup')}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -236,7 +240,7 @@ export default function GroupsPage() {
             >
               <div className="flex items-center gap-3">
                 <Monitor className={`w-4 h-4 ${activeGroupId === 'all' ? 'text-primary' : 'text-muted'}`} />
-                <span className="text-sm">All Profiles</span>
+                <span className="text-sm">{t('filters.allProfiles')}</span>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded font-mono ${activeGroupId === 'all' ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{profiles.length}</span>
             </button>
@@ -247,7 +251,7 @@ export default function GroupsPage() {
             >
               <div className="flex items-center gap-3">
                 <Folder className={`w-4 h-4 ${activeGroupId === 'ungrouped' ? 'text-primary' : 'text-muted'}`} />
-                <span className="text-sm">Ungrouped</span>
+                <span className="text-sm">{t('filters.ungrouped')}</span>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded font-mono ${activeGroupId === 'ungrouped' ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{ungroupedCount}</span>
             </button>
@@ -262,7 +266,7 @@ export default function GroupsPage() {
                   <input
                     autoFocus
                     type="text"
-                    placeholder="Group name..."
+                    placeholder={t('sidebar.groupNamePlaceholder')}
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                     className="bg-transparent border-none outline-none text-foreground text-sm w-full placeholder:text-muted"
@@ -360,7 +364,7 @@ export default function GroupsPage() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
-                  placeholder="Search profiles..."
+                  placeholder={t('table.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="bg-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground outline-none focus:border-primary w-full sm:w-64 transition shadow-sm"
@@ -371,7 +375,7 @@ export default function GroupsPage() {
             {/* Tag filter bar */}
             {allTags.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-xs text-muted font-medium uppercase tracking-wider flex items-center gap-1.5 mr-1"><TagIcon className="w-3 h-3" /> Filters</span>
+                <span className="text-xs text-muted font-medium uppercase tracking-wider flex items-center gap-1.5 mr-1"><TagIcon className="w-3 h-3" /> {t('tagFilter.label')}</span>
                 {allTags.map((t) => (
                   <button
                     key={t}
@@ -382,7 +386,7 @@ export default function GroupsPage() {
                   </button>
                 ))}
                 {activeTag && (
-                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-foreground flex items-center gap-1 ml-1"><X className="w-3 h-3" /> clear</button>
+                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-foreground flex items-center gap-1 ml-1"><X className="w-3 h-3" /> {t('tagFilter.clear')}</button>
                 )}
               </div>
             )}
@@ -391,20 +395,20 @@ export default function GroupsPage() {
           {/* Bulk move toolbar */}
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-primary/5 shadow-inner transition-all animate-in fade-in slide-in-from-top-2">
-              <span className="text-sm text-primary font-bold">{selectedIds.size} selected</span>
+              <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>
               <div className="flex items-center gap-3 ml-auto">
-                <span className="text-xs text-muted font-medium uppercase tracking-wider">Move to:</span>
+                <span className="text-xs text-muted font-medium uppercase tracking-wider">{t('bulk.moveTo')}</span>
                 <CustomSelect
                   disabled={busy}
                   value=""
                   onChange={(e) => { handleBulkMove(e.target.value); }}
                   className="w-40"
                 >
-                  <option value="" disabled>Choose group…</option>
-                  <option value="__ungroup">Ungrouped</option>
+                  <option value="" disabled>{t('bulk.chooseGroup')}</option>
+                  <option value="__ungroup">{t('filters.ungrouped')}</option>
                   {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </CustomSelect>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={clearSelection}>Clear</Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={clearSelection}>{t('bulk.clear')}</Button>
               </div>
             </div>
           )}
@@ -413,16 +417,16 @@ export default function GroupsPage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center p-16 gap-3 text-muted">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="text-sm font-medium">Loading groups...</span>
+                <span className="text-sm font-medium">{t('table.loading')}</span>
               </div>
             ) : (
               <table className="w-full min-w-[760px] border-collapse text-left text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-sm border-b border-border">
                   <tr>
                     <th className="px-5 py-3.5 w-10 text-center"><Checkbox checked={allSelected} onChange={toggleSelectAll} /></th>
-                    <th className="px-5 py-3.5">Profile Name</th>
-                    <th className="px-5 py-3.5">Group Assignment</th>
-                    <th className="px-5 py-3.5">Tags</th>
+                    <th className="px-5 py-3.5">{t('table.colProfileName')}</th>
+                    <th className="px-5 py-3.5">{t('table.colGroupAssignment')}</th>
+                    <th className="px-5 py-3.5">{t('table.colTags')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -430,8 +434,8 @@ export default function GroupsPage() {
                     <tr>
                       <td colSpan="4" className="p-12">
                         <EmptyState
-                          title="No profiles found"
-                          description={search || activeTag ? 'No profiles match your filters.' : 'This group is empty. Move profiles here using the Group dropdown.'}
+                          title={t('empty.title')}
+                          description={search || activeTag ? t('empty.noMatch') : t('empty.groupEmpty')}
                         />
                       </td>
                     </tr>
@@ -449,7 +453,7 @@ export default function GroupsPage() {
                             onChange={(e) => handleAssign([p.id], e.target.value === '' ? null : Number(e.target.value))}
                             className="w-[160px]"
                           >
-                            <option value="">Ungrouped</option>
+                            <option value="">{t('filters.ungrouped')}</option>
                             {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                           </CustomSelect>
                         </td>
@@ -458,7 +462,7 @@ export default function GroupsPage() {
                             {(p.tags || []).map((t) => (
                               <span key={t} className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-surface border border-border text-muted-foreground px-2 py-1 rounded shadow-sm">
                                 {t}
-                                <button onClick={() => handleRemoveTag(p, t)} className="text-muted hover:text-red-400 transition-colors" title="Remove tag"><X className="w-3 h-3" /></button>
+                                <button onClick={() => handleRemoveTag(p, t)} className="text-muted hover:text-red-400 transition-colors" title={removeTagLabel}><X className="w-3 h-3" /></button>
                               </span>
                             ))}
                             {tagEditFor === p.id ? (
@@ -469,7 +473,7 @@ export default function GroupsPage() {
                                 onChange={(e) => setTagInput(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(p); if (e.key === 'Escape') { setTagEditFor(null); setTagInput(''); } }}
                                 onBlur={() => handleAddTag(p)}
-                                placeholder="tag + Enter"
+                                placeholder={t('tags.inputPlaceholder')}
                                 className="bg-surface border border-primary rounded px-2 py-1 text-xs text-foreground outline-none w-28 shadow-glow transition-all"
                               />
                             ) : (
@@ -477,7 +481,7 @@ export default function GroupsPage() {
                                 onClick={() => { setTagEditFor(p.id); setTagInput(''); }}
                                 className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-primary border border-dashed border-border hover:border-primary/50 rounded px-2 py-1 transition bg-surface"
                               >
-                                <Plus className="w-3 h-3" /> Add Tag
+                                <Plus className="w-3 h-3" /> {t('tags.add')}
                               </button>
                             )}
                           </div>

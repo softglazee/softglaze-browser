@@ -1,0 +1,49 @@
+{
+  "header": {
+    "eyebrow": "Organization",
+    "title": "Groups & Tags",
+    "description": "Organize profiles into groups and label them with tags for rapid filtering."
+  },
+  "filters": {
+    "allProfiles": "All Profiles",
+    "ungrouped": "Ungrouped",
+    "group": "Group"
+  },
+  "sidebar": {
+    "directories": "Directories",
+    "createGroup": "Create new group",
+    "groupNamePlaceholder": "Group name..."
+  },
+  "table": {
+    "searchPlaceholder": "Search profiles...",
+    "loading": "Loading groups...",
+    "colProfileName": "Profile Name",
+    "colGroupAssignment": "Group Assignment",
+    "colTags": "Tags"
+  },
+  "tagFilter": {
+    "label": "Filters",
+    "clear": "clear"
+  },
+  "bulk": {
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "moveTo": "Move to:",
+    "chooseGroup": "Choose group…",
+    "clear": "Clear"
+  },
+  "empty": {
+    "title": "No profiles found",
+    "noMatch": "No profiles match your filters.",
+    "groupEmpty": "This group is empty. Move profiles here using the Group dropdown."
+  },
+  "tags": {
+    "add": "Add Tag",
+    "remove": "Remove tag",
+    "inputPlaceholder": "tag + Enter"
+  },
+  "deleteConfirm": "Delete group \"{{name}}\"? Its profiles will become Ungrouped (the profiles themselves are not deleted).",
+  "errors": {
+    "loadFailed": "Failed to load groups."
+  }
+}

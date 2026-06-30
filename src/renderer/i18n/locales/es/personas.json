@@ -1,0 +1,142 @@
+{
+  "header": {
+    "eyebrow": "Identidades",
+    "title": "Bóveda de datos",
+    "description": "Una bóveda reutilizable de identidades de demostración para el motor de Autocompletado Inteligente. Añádelas manualmente o importa una hoja de cálculo; cada una recuerda los sitios en los que ya se ha utilizado.",
+    "refresh": "Actualizar",
+    "import": "Importar Excel/CSV",
+    "addManually": "Añadir manualmente"
+  },
+  "stats": {
+    "totalIdentities": "Identidades totales",
+    "neverUsed": "Nunca usadas",
+    "usedAtLeastOnce": "Usadas al menos una vez",
+    "totalUses": "Usos totales",
+    "filtering": "filtrando"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar por nombre, correo, usuario o etiqueta...",
+    "showing": "Mostrando {{count}} {{kind}}",
+    "kindNeverUsed": "nunca usadas",
+    "kindUsed": "usadas",
+    "clear": "limpiar"
+  },
+  "bulk": {
+    "selected": "{{count}} seleccionadas",
+    "resetUsedStatus": "Restablecer estado de uso",
+    "deleteSelected": "Eliminar seleccionadas",
+    "clear": "Limpiar",
+    "clearSelectionTitle": "Limpiar selección"
+  },
+  "table": {
+    "loading": "Cargando identidades...",
+    "selectAll": "Seleccionar todas las identidades",
+    "selectRow": "Seleccionar {{name}}",
+    "colName": "Nombre",
+    "colEmail": "Correo",
+    "colUsername": "Usuario",
+    "colPassword": "Contraseña",
+    "colPhone": "Teléfono",
+    "colAddress": "Dirección",
+    "colLabel": "Etiqueta",
+    "colTimesUsed": "Veces usada",
+    "colCreated": "Creada",
+    "colActions": "Acciones",
+    "sitesUsed_one": "{{count}} sitio",
+    "sitesUsed_other": "{{count}} sitios",
+    "never": "Nunca",
+    "editIdentity": "Editar identidad",
+    "deleteIdentity": "Eliminar identidad",
+    "hidePassword": "Ocultar",
+    "revealPassword": "Mostrar"
+  },
+  "empty": {
+    "title": "Tu bóveda de datos está vacía",
+    "description": "Añade una identidad manualmente o importa una hoja de Excel/CSV para empezar a construir tu bóveda de autocompletado.",
+    "filteredTitle": "Ninguna identidad coincide con tu filtro",
+    "filteredDescription": "Prueba otra búsqueda o limpia el filtro."
+  },
+  "groups": {
+    "identity": "Identidad",
+    "account": "Cuenta",
+    "address": "Dirección",
+    "meta": "Metadatos"
+  },
+  "fields": {
+    "firstName": "Nombre",
+    "lastName": "Apellidos",
+    "email": "Correo",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "phone": "Teléfono",
+    "dateOfBirth": "Fecha de nacimiento",
+    "addressLine1": "Dirección línea 1",
+    "addressLine2": "Dirección línea 2",
+    "city": "Ciudad",
+    "state": "Estado / Provincia",
+    "zipCode": "Código postal",
+    "country": "País",
+    "company": "Empresa",
+    "label": "Etiqueta de lote"
+  },
+  "form": {
+    "dialogTitleEdit": "Editar identidad",
+    "dialogTitleAdd": "Añadir identidad",
+    "titleEdit": "Editar identidad",
+    "titleAdd": "Añadir identidad",
+    "descEdit": "Actualiza los datos de esta persona.",
+    "descAdd": "Añade una sola persona a tu bóveda de datos. Los campos marcados con * son obligatorios.",
+    "cancel": "Cancelar",
+    "saving": "Guardando...",
+    "saveChanges": "Guardar cambios",
+    "addIdentity": "Añadir identidad"
+  },
+  "import": {
+    "dialogTitle": "Importar identidades",
+    "title": "Importar desde Excel / CSV",
+    "descStep1": "Elige un archivo .xlsx, .xls o .csv. La primera fila debe contener los encabezados de columna. Hasta 1000 filas por importación.",
+    "descStep2": "Asigna tus columnas a los campos de identidad. Se detectaron {{count}} fila(s) en {{fileName}}.",
+    "yourFile": "tu archivo",
+    "chooseSpreadsheet": "Elige una hoja de cálculo",
+    "colIdentityField": "Campo de identidad",
+    "colYourColumn": "Tu columna",
+    "skipOption": "— omitir —",
+    "mappedCount_one": "{{count}} campo asignado. Se omiten las filas sin nombre/correo/usuario.",
+    "mappedCount_other": "{{count}} campos asignados. Se omiten las filas sin nombre/correo/usuario.",
+    "done": "Listo",
+    "cancel": "Cancelar",
+    "back": "Atrás",
+    "importing": "Importando...",
+    "importRows_one": "Importar {{count}} fila",
+    "importRows_other": "Importar {{count}} filas",
+    "result": {
+      "complete": "Importación completada",
+      "addedPrefix": "Se añadieron",
+      "addedSuffix_one": "identidad a la bóveda.",
+      "addedSuffix_other": "identidades a la bóveda.",
+      "skipped_one": "Se omitió {{count}} fila vacía.",
+      "skipped_other": "Se omitieron {{count}} filas vacías."
+    },
+    "errors": {
+      "noRows": "Ese archivo no tiene una fila de encabezados ni filas de datos legibles.",
+      "readFile": "No se pudo leer ese archivo.",
+      "nothingMapped": "No hay filas para importar — asigna al menos uno de Nombre / Apellidos / Correo / Usuario.",
+      "failed": "Falló la importación."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "¿Eliminar la identidad \"{{name}}\"? Esto no se puede deshacer.",
+    "deleteSelected_one": "¿Eliminar {{count}} identidad seleccionada? Esto no se puede deshacer.",
+    "deleteSelected_other": "¿Eliminar {{count}} identidades seleccionadas? Esto no se puede deshacer.",
+    "resetSelected_one": "¿Restablecer el historial de \"usado en\" de {{count}} identidad seleccionada? Volverá a estar disponible en todos los sitios.",
+    "resetSelected_other": "¿Restablecer el historial de \"usado en\" de {{count}} identidades seleccionadas? Volverán a estar disponibles en todos los sitios."
+  },
+  "errors": {
+    "load": "No se pudo cargar la bóveda de datos.",
+    "save": "No se pudo guardar esta identidad.",
+    "deleteOne": "No se pudo eliminar la identidad.",
+    "deleteSelected": "No se pudieron eliminar las identidades seleccionadas.",
+    "resetSelected": "No se pudieron restablecer las identidades seleccionadas."
+  }
+}

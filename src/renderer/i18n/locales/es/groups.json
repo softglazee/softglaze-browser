@@ -1,0 +1,49 @@
+{
+  "header": {
+    "eyebrow": "Organización",
+    "title": "Grupos y etiquetas",
+    "description": "Organiza los perfiles en grupos y etiquétalos para filtrarlos rápidamente."
+  },
+  "filters": {
+    "allProfiles": "Todos los perfiles",
+    "ungrouped": "Sin grupo",
+    "group": "Grupo"
+  },
+  "sidebar": {
+    "directories": "Directorios",
+    "createGroup": "Crear nuevo grupo",
+    "groupNamePlaceholder": "Nombre del grupo..."
+  },
+  "table": {
+    "searchPlaceholder": "Buscar perfiles...",
+    "loading": "Cargando grupos...",
+    "colProfileName": "Nombre del perfil",
+    "colGroupAssignment": "Asignación de grupo",
+    "colTags": "Etiquetas"
+  },
+  "tagFilter": {
+    "label": "Filtros",
+    "clear": "limpiar"
+  },
+  "bulk": {
+    "selected_one": "{{count}} seleccionado",
+    "selected_other": "{{count}} seleccionados",
+    "moveTo": "Mover a:",
+    "chooseGroup": "Elegir grupo…",
+    "clear": "Limpiar"
+  },
+  "empty": {
+    "title": "No se encontraron perfiles",
+    "noMatch": "Ningún perfil coincide con tus filtros.",
+    "groupEmpty": "Este grupo está vacío. Mueve perfiles aquí usando el menú desplegable de grupo."
+  },
+  "tags": {
+    "add": "Añadir etiqueta",
+    "remove": "Eliminar etiqueta",
+    "inputPlaceholder": "etiqueta + Intro"
+  },
+  "deleteConfirm": "¿Eliminar el grupo \"{{name}}\"? Sus perfiles quedarán sin grupo (los perfiles en sí no se eliminan).",
+  "errors": {
+    "loadFailed": "No se pudieron cargar los grupos."
+  }
+}

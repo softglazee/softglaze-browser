@@ -1,0 +1,277 @@
+{
+  "header": {
+    "eyebrow": "Funciones de Softglaze Pro",
+    "title": "Automatización",
+    "description": "Macros sin código, calentamiento de cookies con IA y un registro de cada tarea en segundo plano."
+  },
+  "tabs": {
+    "macros": "Mis macros",
+    "parallel": "Ejecuciones paralelas",
+    "warmer": "Calentador de cookies",
+    "history": "Historial de tareas"
+  },
+  "clickLabels": {
+    "none": "Solo navegar",
+    "random": "Clics aleatorios",
+    "links": "Navegar enlaces"
+  },
+  "stepTypes": {
+    "goto": "Ir a URL",
+    "click": "Clic",
+    "type": "Escribir texto",
+    "keypress": "Pulsar tecla",
+    "scroll": "Desplazar",
+    "wait": "Esperar",
+    "move": "Mover ratón",
+    "hover": "Pasar el cursor"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "Selector CSS",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Texto a escribir"
+    },
+    "keypress": {
+      "key": "Tecla",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Cantidad de desplazamiento",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Milisegundos",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Selector (o usar X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Selector",
+      "selectorPlaceholder": ".menu",
+      "ms": "ms de permanencia",
+      "msPlaceholder": "800"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(sin URL)",
+    "noSelector": "(sin selector)",
+    "selectorFallback": "(selector)",
+    "target": "(destino)"
+  },
+  "macros": {
+    "intro": "Graba o crea flujos de trabajo reutilizables y sin código, luego ejecútalos dentro de un perfil (navegar, hacer clic, escribir, esperar): manualmente o según una programación.",
+    "profileSelectTitle": "Perfil sobre el que actúan Ejecutar / Grabar",
+    "noProfiles": "Sin perfiles",
+    "profileFallback": "Perfil {{id}}",
+    "stopAndSave": "Detener y guardar",
+    "record": "Grabar",
+    "schedule": "Programar",
+    "createMacro": "Crear macro",
+    "stepsBadge_one": "{{count}} paso",
+    "stepsBadge_other": "{{count}} pasos",
+    "updated": "Actualizado {{date}}",
+    "run": "Ejecutar",
+    "edit": "Editar",
+    "editSteps": "Editar pasos",
+    "delete": "Eliminar",
+    "runTitleNoSteps": "Esta macro aún no tiene pasos; edítala primero",
+    "runTitleReady": "Ejecutar en el perfil seleccionado",
+    "emptyTitle": "Aún no hay macros",
+    "emptyHint": "Graba un flujo de trabajo o crea uno para empezar.",
+    "errors": {
+      "loadMacros": "No se pudieron cargar las macros.",
+      "deleteMacro": "No se pudo eliminar la macro.",
+      "chooseProfile": "Elige primero un perfil de destino.",
+      "noSteps": "Esta macro aún no tiene pasos; edítala primero.",
+      "chooseProfileRecord": "Elige un perfil de destino para grabar.",
+      "recordingFailed": "La acción de grabación falló."
+    },
+    "recordingStarted": "Grabando… interactúa con el navegador abierto y luego pulsa Detener para guardar.",
+    "savedNotice": "Se guardó \"{{name}}\" con {{count}} paso(s).",
+    "stoppedNotice": "Grabación detenida: se capturaron {{count}} paso(s) (no guardados)."
+  },
+  "saveRecording": {
+    "ariaLabel": "Guardar macro grabada",
+    "title": "Guardar macro grabada",
+    "subtitle": "Ponle un nombre para conservar los pasos capturados o descártalos. El navegador permanece abierto.",
+    "placeholder": "Macro grabada",
+    "discard": "Descartar",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Programación de macros",
+    "title": "Programación de macros",
+    "subtitle": "Ejecuta una macro automáticamente con un temporizador · Softglaze Pro",
+    "enable": "Habilitar ejecuciones programadas",
+    "macroLabel": "Macro",
+    "selectMacro": "Selecciona una macro…",
+    "everyMinutes": "Cada (minutos)",
+    "targetProfiles": "Perfiles de destino",
+    "noProfiles": "No hay perfiles disponibles.",
+    "profileFallback": "Perfil {{id}}",
+    "cancel": "Cancelar",
+    "save": "Guardar programación",
+    "errors": {
+      "save": "No se pudo guardar la programación."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Editar macro",
+    "ariaCreate": "Crear macro",
+    "titleEdit": "Editar macro",
+    "titleCreate": "Crear macro",
+    "subtitle": "Crea un flujo sin código: arrastra el controlador para reordenar.",
+    "nameLabel": "Nombre de la macro",
+    "namePlaceholder": "p. ej. Inicio de sesión diario",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "¿Qué hace?",
+    "stepsLabel": "Pasos ({{count}})",
+    "addStep": "Añadir paso",
+    "noSteps": "Aún no hay pasos: elige un tipo y añade uno.",
+    "dragToReorder": "Arrastra para reordenar",
+    "removeStep": "Quitar paso",
+    "cancel": "Cancelar",
+    "save": "Guardar macro",
+    "errors": {
+      "name": "Ponle un nombre a la macro.",
+      "save": "No se pudo guardar la macro."
+    }
+  },
+  "runModal": {
+    "ariaLabel": "Ejecución de macro: {{name}}",
+    "runningOn": "Ejecutándose en {{profile}}",
+    "starting": "Iniciando…",
+    "logStarted": "Se inició \"{{name}}\" · {{total}} paso(s) en {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} — {{error}}",
+    "logStepFailed": "falló",
+    "logStopped": "Detenido.",
+    "logFinished": "Finalizado: {{ran}}/{{total}} paso(s).",
+    "stopped": "Detenido.",
+    "finished": "Finalizado.",
+    "summaryCompleted": "{{ran}}/{{total}} paso(s) completados.",
+    "summaryRan": "{{ran}}/{{total}} paso(s) ejecutados.",
+    "paused": "En pausa",
+    "running": "Ejecutándose…",
+    "resume": "Reanudar",
+    "pause": "Pausar",
+    "stop": "Detener",
+    "close": "Cerrar",
+    "errors": {
+      "run": "No se pudo ejecutar la macro."
+    }
+  },
+  "parallel": {
+    "states": {
+      "queued": "En cola",
+      "launching": "Iniciando",
+      "running": "Ejecutándose",
+      "passed": "Superado",
+      "failed": "Fallido"
+    },
+    "title": "Ejecutor de macros en paralelo",
+    "subtitle": "Ejecuta una macro en muchos perfiles a la vez, con un flujo de estado en vivo.",
+    "macroLabel": "Macro",
+    "noMacros": "Aún no hay macros",
+    "macroOption": "{{name}} · {{count}} pasos",
+    "concurrency": "Concurrencia",
+    "dataBound_one": "{{fileName}} · {{count}} fila",
+    "dataBound_other": "{{fileName}} · {{count}} filas",
+    "dataHint": "Opcional: vincula una hoja de cálculo (fila → perfil, en orden)",
+    "clearDataBinding": "Borrar vinculación de datos",
+    "bindData": "Vincular datos",
+    "columnsPrefix": "Columnas: {{columns}} — usa",
+    "columnsSuffix": "en los pasos de la macro.",
+    "profilesLabel": "Perfiles ({{count}} seleccionados)",
+    "selectAll": "Seleccionar todo",
+    "clear": "Borrar",
+    "searchPlaceholder": "Buscar",
+    "noProfiles": "No se encontraron perfiles.",
+    "rowMismatch": "{{rows}} fila(s) de datos frente a {{profiles}} perfil(es): los sobrantes se ejecutan sin variables.",
+    "running": "Ejecutándose…",
+    "runOn_one": "Ejecutar en {{count}} perfil",
+    "runOn_other": "Ejecutar en {{count}} perfiles",
+    "runStatus": "Estado de la ejecución",
+    "summaryPassed": "superados",
+    "summaryFailed": "fallidos",
+    "summaryTotal": "{{total}} en total",
+    "watchHint": "Selecciona perfiles y una macro, luego inicia la ejecución para ver el progreso en vivo.",
+    "steps": "{{ran}}/{{total}} pasos",
+    "profileFallback": "Perfil {{id}}",
+    "runConsole": "Consola de ejecución",
+    "live": "en vivo",
+    "consoleIdle": "[ inactivo ] Aún no hay ejecución: el progreso se transmitirá aquí (nunca se incluyen cookies ni credenciales).",
+    "logRunFinished": "Ejecución finalizada: {{passed}}/{{total}} superados",
+    "logRunFinishedError": "Ejecución finalizada: {{passed}}/{{total}} superados ({{error}})",
+    "errors": {
+      "readSpreadsheet": "No se pudo leer la hoja de cálculo.",
+      "chooseMacro": "Elige una macro para ejecutar.",
+      "selectProfile": "Selecciona al menos un perfil.",
+      "startRun": "No se pudo iniciar la ejecución paralela."
+    }
+  },
+  "warmer": {
+    "title": "Calentador de cookies con IA",
+    "subtitle": "Genera cookies e historial orgánicos navegando por sitios reales.",
+    "sitesLabel": "Sitios a visitar ({{count}})",
+    "addSuggested": "Añade un sitio sugerido…",
+    "add": "Añadir",
+    "customPlaceholder": "O pega una URL personalizada (p. ej. example.com)",
+    "noSites": "Aún no hay sitios: añade uno arriba.",
+    "secondsTitle": "Segundos a pasar en este sitio",
+    "secondsUnit": "s",
+    "behaviourTitle": "Qué hacer en este sitio",
+    "remove": "Quitar",
+    "loopUntilStopped": "Repetir hasta detener",
+    "keepOpen": "Mantener las sesiones abiertas después",
+    "cookieNote": "Las cookies y la caché se guardan automáticamente en cada perfil; la consola informa cuántas cookies se almacenaron.",
+    "startWarmup": "Iniciar calentamiento",
+    "warming": "Calentando…",
+    "stop": "Detener",
+    "forceStop": "Forzar detención",
+    "profilesLabel": "Perfiles ({{count}} seleccionados)",
+    "searchPlaceholder": "Buscar",
+    "noProfiles": "No se encontraron perfiles.",
+    "profileFallback": "Perfil {{id}}",
+    "warmupConsole": "Consola de calentamiento",
+    "live": "en vivo",
+    "consoleIdle": "[ inactivo ] Selecciona perfiles, establece una duración e inicia el calentamiento para ver el progreso en vivo.",
+    "errors": {
+      "selectProfile": "Selecciona al menos un perfil para calentar.",
+      "addSite": "Añade al menos un sitio para visitar.",
+      "startWarmup": "No se pudo iniciar el calentamiento.",
+      "stopWarmup": "No se pudo detener el calentamiento."
+    }
+  },
+  "history": {
+    "emptyTitle": "Aún no se ha ejecutado ninguna tarea",
+    "emptyHint": "Las ejecuciones de calentador, macros y paralelas aparecerán aquí.",
+    "columns": {
+      "task": "Tarea",
+      "profiles": "Perfiles",
+      "detail": "Detalle",
+      "status": "Estado",
+      "when": "Cuándo"
+    },
+    "emptyDetail": "—",
+    "parallelRun": "Ejecución paralela",
+    "macroRun": "Ejecución de macro",
+    "cookieWarmup": "Calentamiento de cookies con IA",
+    "minutes": "{{count}} min",
+    "sites_one": "{{count}} sitio",
+    "sites_other": "{{count}} sitios"
+  }
+}
