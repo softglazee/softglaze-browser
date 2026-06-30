@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Activity, Play, Globe, Folder, Clock, X, MonitorSmartphone, Zap, Loader2,
-  TrendingUp, ArrowUpRight, Shield, RefreshCw, Cpu, HardDrive, Server
+  TrendingUp, ArrowUpRight, Shield, RefreshCw, Cpu, HardDrive, Server,
+  Sparkles, CalendarDays
 } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -54,6 +55,105 @@ function ChartCard({ title, subtitle, icon: Icon, iconColor, children, className
         {actions}
       </div>
       {children}
+    </div>
+  );
+}
+
+// Motivational lines — one is picked per mount so the dashboard feels fresh.
+const MOTIVATION = [
+  'Every profile you craft is a new door opening.',
+  'Discipline today, dominance tomorrow.',
+  'Small consistent actions compound into outsized wins.',
+  'Stay sharp — the edge lives in the details.',
+  'Focus beats hustle. Aim, then fire.',
+  'The quiet work you do now builds the empire later.',
+  'Precision is a habit, not an accident.',
+  'Show up, dial in, and let the results do the talking.',
+  'One more session, one more win.',
+  'Greatness is just a series of well-run days.',
+  'Your future self is watching — make them proud.',
+  'Move with intention. Scale with confidence.'
+];
+
+function greetingFor(hour) {
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Working late';
+}
+
+function firstNameOf(member, account) {
+  const raw = (member && member.name) || (account && [account.firstName, account.lastName].filter(Boolean).join(' ')) || '';
+  const first = String(raw).trim().split(/\s+/)[0];
+  return first || 'there';
+}
+
+// Personalized hero: time-aware greeting + the user's first name, a live clock and
+// date in the OS/region locale, and a rotating motivational line.
+function WelcomeBanner() {
+  const [who, setWho] = useState({ name: '', role: '' });
+  const [now, setNow] = useState(() => new Date());
+  const quote = useRef(MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)]);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const [member, account] = await Promise.all([
+          softglazeApi.members.current().catch(() => null),
+          softglazeApi.account.get().catch(() => null)
+        ]);
+        if (!live) return;
+        setWho({ name: firstNameOf(member, account), role: member ? member.role : '' });
+      } catch (e) { /* ignore — fall back to a generic greeting */ }
+    })();
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  let timeStr = '';
+  let dateStr = '';
+  try {
+    timeStr = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
+    dateStr = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+  } catch (e) {
+    timeStr = now.toLocaleTimeString();
+    dateStr = now.toLocaleDateString();
+  }
+  const greeting = greetingFor(now.getHours());
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border p-6 sm:p-7 animate-fade-up"
+      style={{
+        background: 'linear-gradient(120deg, color-mix(in srgb, var(--chart-1) 16%, var(--card)) 0%, color-mix(in srgb, var(--chart-2) 14%, var(--card)) 55%, var(--card) 100%)',
+        borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)'
+      }}
+    >
+      <div className="absolute -top-10 -right-8 w-48 h-48 rounded-full opacity-30 pointer-events-none" style={{ background: 'var(--chart-2)', filter: 'blur(70px)' }} />
+      <div className="absolute -bottom-12 -left-6 w-44 h-44 rounded-full opacity-20 pointer-events-none" style={{ background: 'var(--chart-1)', filter: 'blur(70px)' }} />
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Welcome back</span>
+          </div>
+          <h1 className="text-2xl sm:text-[32px] font-bold text-foreground font-display tracking-tight leading-tight">
+            {greeting}, <span style={{ color: 'var(--primary)' }}>{who.name}</span> <span className="inline-block">👋</span>
+          </h1>
+          <p className="text-[13px] sm:text-sm text-muted-foreground mt-2 max-w-xl italic">“{quote.current}”</p>
+        </div>
+        <div className="shrink-0 rounded-xl border border-border bg-card/60 backdrop-blur px-4 py-3 text-right">
+          <div className="font-mono text-2xl sm:text-3xl font-bold text-foreground tabular-nums tracking-tight">{timeStr}</div>
+          <div className="flex items-center justify-end gap-1.5 text-[12px] text-muted-foreground mt-1">
+            <CalendarDays className="w-3.5 h-3.5" /> {dateStr}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -150,6 +250,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-10">
+      {/* PERSONALIZED WELCOME */}
+      <WelcomeBanner />
+
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
