@@ -6,6 +6,7 @@ import {
   Sparkles, Settings2, Ban, AlertTriangle
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { useDialog } from '@/lib/useDialog.js';
 
 // Roles that may reassign profiles / manage the team (mirrors the main-side
 // `members.manage` gate; the backend re-checks regardless).
@@ -370,6 +371,7 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
   const [months, setMonths] = useState(1);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   async function run(key, fn) {
     setBusy(key); setErr('');
@@ -382,7 +384,7 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`License · ${row.ownerName}`} tabIndex={-1} className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
           <div className="flex items-center gap-2"><Crown className="w-4 h-4 text-amber-400" /><h3 className="text-sm font-semibold text-foreground">License · {row.ownerName}</h3></div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
@@ -837,9 +839,10 @@ function AssignProfilesModal({ member, onClose }) {
 }
 
 function Shell({ children, onClose, title, icon: Icon }) {
+  const { dialogRef } = useDialog({ onClose });
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm grid place-items-center p-4" onMouseDown={onClose}>
-      <div className="w-[480px] bg-card border border-border rounded-2xl shadow-2xl shadow-black/50 animate-scale-in overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="w-[480px] bg-card border border-border rounded-2xl shadow-2xl shadow-black/50 animate-scale-in overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div className="flex items-center gap-3">
             <span className="w-8 h-8 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 24%, transparent)' }}><Icon className="w-4 h-4 text-blue-400" /></span>

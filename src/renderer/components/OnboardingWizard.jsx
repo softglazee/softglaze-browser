@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, Mail, Globe, Fingerprint, Smartphone, Check, ArrowRight, ArrowLeft, Loader2, X } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { useDialog } from '@/lib/useDialog.js';
 
 // First-run setup. Reuses the existing SMTP / proxy / profile flows behind a few
 // guided steps. Shown only on a genuinely fresh workspace (no profiles yet) and
@@ -13,10 +14,14 @@ const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-
 // type on every render — otherwise the inputs would remount and lose focus on each
 // keystroke.
 function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, onSkip, err, msg }) {
+  // Focus-trap + scroll-lock + focus-restore + ARIA. Escape is intentionally NOT
+  // wired to close: this is a setup flow, and a stray Escape shouldn't permanently
+  // skip onboarding (the X / Skip buttons remain the explicit exits).
+  const { dialogRef } = useDialog({ onClose: onSkip, closeOnEscape: false });
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-[480px] rounded-2xl bg-card border border-border shadow-2xl p-6">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="relative w-full max-w-[480px] rounded-2xl bg-card border border-border shadow-2xl p-6">
         <button onClick={onSkip} title="Skip setup" className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Icon className="w-5 h-5" /></div>
         <h2 className="font-display text-[19px] font-semibold tracking-tight text-foreground">{title}</h2>
