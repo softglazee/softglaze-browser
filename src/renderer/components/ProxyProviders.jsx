@@ -86,7 +86,47 @@ export default function ProxyProviders({ onSynced }) {
     setErr('');
   }, [provider]);
 
+  // Pre-fill saved credentials for this provider (sealed at rest with DPAPI). Runs
+  // after the reset above so saved values win; guarded so a fast provider switch
+  // can't apply stale creds.
+  useEffect(() => {
+    let live = true;
+    try {
+      softglazeApi.proxies.getProviderCreds(provider.key)
+        .then((c) => {
+          if (!live || !c || !c.found) return;
+          setForm((f) => ({
+            ...f,
+            ...(c.username != null ? { username: c.username } : {}),
+            ...(c.password != null ? { password: c.password } : {}),
+            ...(c.token != null ? { token: c.token } : {}),
+            ...(c.apiToken != null ? { apiToken: c.apiToken } : {}),
+            ...(c.zone != null ? { zone: c.zone } : {}),
+            ...(c.plan != null ? { plan: c.plan } : {}),
+            ...(c.host ? { host: c.host } : {}),
+            ...(c.port != null ? { port: String(c.port) } : {})
+          }));
+        })
+        .catch(() => {});
+    } catch (e) { /* older build without the creds API — ignore */ }
+    return () => { live = false; };
+  }, [provider]);
+
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Remember the entered credentials for this provider so they're pre-filled next
+  // time. Best-effort; secrets are DPAPI-sealed in the main process. Empty fields
+  // are cleared. Called after a successful pull/sync.
+  function persistCreds() {
+    try {
+      softglazeApi.proxies.saveProviderCreds({
+        provider: provider.key,
+        username: form.username, password: form.password, token: form.token,
+        apiToken: form.apiToken, zone: form.zone, plan: form.plan,
+        host: form.host, port: form.port
+      }).catch(() => {});
+    } catch (e) { /* ignore */ }
+  }
 
   async function handleCheck() {
     setErr(''); setCheckResult(null); setChecking(true);
@@ -106,6 +146,7 @@ export default function ProxyProviders({ onSynced }) {
     try {
       const r = await softglazeApi.proxies.syncVendorPool({ provider: provider.key, token: form.token.trim(), bdpm: form.bdpm });
       setSyncResult(r);
+      persistCreds();
       if (typeof onSynced === 'function') onSynced();
     } catch (e) { setErr(e.message || 'Could not sync proxies.'); }
     finally { setSyncing(false); }
@@ -129,6 +170,7 @@ export default function ProxyProviders({ onSynced }) {
         bdpm: form.bdpm
       });
       setSyncResult(r);
+      persistCreds();
       if (typeof onSynced === 'function') onSynced();
     } catch (e) { setErr(e.message || 'Live sync failed.'); }
     finally { setSyncing(false); }
@@ -164,6 +206,7 @@ export default function ProxyProviders({ onSynced }) {
         proxyType: form.proxyType
       });
       setSyncResult(r);
+      persistCreds();
       if (typeof onSynced === 'function') onSynced();
     } catch (e) { setErr(e.message || 'Could not pull proxies.'); }
     finally { setSyncing(false); }

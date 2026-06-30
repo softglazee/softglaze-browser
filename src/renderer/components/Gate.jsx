@@ -85,11 +85,14 @@ function BrandPanel() {
     <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-surface p-10 border-r border-border">
       <div className="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-primary/20 blur-[120px]" />
       <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-primary/10 blur-[120px]" />
-      <div className="relative flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl bg-primary text-white grid place-items-center font-display font-bold text-lg shadow-glow">S</div>
-        <span className="font-display font-semibold text-lg tracking-tight">SoftGlaze</span>
+      <div className="relative flex items-center gap-3 animate-fade-in">
+        <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-11 h-11 object-contain drop-shadow-[0_2px_14px_rgba(59,130,246,0.5)]" draggable={false} />
+        <div className="flex flex-col leading-none">
+          <span className="font-display font-semibold text-lg tracking-tight">SoftGlaze</span>
+          <span className="text-[10px] text-primary font-semibold tracking-[0.2em] uppercase mt-1">Anti-Detect</span>
+        </div>
       </div>
-      <div className="relative">
+      <div className="relative animate-fade-up">
         <h2 className="font-display text-[28px] font-semibold leading-[1.15] tracking-tight">Run hundreds of identities.<br />Leave zero trace.</h2>
         <p className="text-[13px] text-muted mt-3 max-w-sm leading-relaxed">A local-first anti-detect browser. Every profile gets a unique, consistent fingerprint and its own network identity.</p>
         <ul className="mt-8 space-y-3.5">
@@ -539,9 +542,9 @@ export default function Gate({ children }) {
     <div className="h-screen w-full bg-background text-foreground font-sans grid md:grid-cols-2">
       <BrandPanel />
       <div className="grid place-items-center p-6 overflow-y-auto">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-[400px] animate-fade-up">
           <div className="flex items-center gap-2.5 mb-7 md:hidden">
-            <div className="w-8 h-8 rounded-xl bg-primary text-white grid place-items-center font-display font-bold shadow-glow">S</div>
+            <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-9 h-9 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
             <span className="font-display font-semibold tracking-tight">SoftGlaze</span>
           </div>
 
