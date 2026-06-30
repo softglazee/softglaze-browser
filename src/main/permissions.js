@@ -38,6 +38,39 @@ function allFeaturesOn() {
 
 function rankOf(role) { return ROLE_RANK[String(role || '').toUpperCase()] || 0; }
 
+// Per-action capability catalog. Each action has a role-rank BASELINE — the rank at
+// or above which the role may perform it by default. On top of the baseline a parent
+// can REVOKE an action for an individual member (restrict-only: an override can never
+// escalate above the role baseline). Baselines preserve existing behavior — actions
+// that were previously ungated are rank 1 (everyone), so nothing changes until an
+// admin explicitly revokes. `proxies.reveal` is MANAGER+ to match the raw-credential
+// redaction policy (rbacPolicy.js). requirePermission() reads ACTION_MIN_RANK.
+const ACTION_CATALOG = [
+  { key: 'profiles.launch', label: 'Launch profiles', category: 'Profiles', minRank: 1 },
+  { key: 'profiles.create', label: 'Create profiles', category: 'Profiles', minRank: 1 },
+  { key: 'profiles.edit', label: 'Edit profiles', category: 'Profiles', minRank: 1 },
+  { key: 'profiles.export', label: 'Export profiles', category: 'Profiles', minRank: 1 },
+  { key: 'profiles.delete', label: 'Delete profiles (to trash)', category: 'Profiles', minRank: 3 },
+  { key: 'profiles.purge', label: 'Permanently purge profiles', category: 'Profiles', minRank: 4 },
+  { key: 'proxies.manage', label: 'Add / edit / delete proxies', category: 'Proxies', minRank: 1 },
+  { key: 'proxies.reveal', label: 'Reveal raw proxy credentials', category: 'Proxies', minRank: 2 },
+  { key: 'automation.run', label: 'Run automation / macros', category: 'Automation', minRank: 1 },
+  { key: 'extensions.manage', label: 'Manage team extensions', category: 'Workspace', minRank: 3 },
+  { key: 'vault.manage', label: 'Manage the Identity Vault', category: 'Workspace', minRank: 4 },
+  { key: 'members.manage', label: 'Manage team members', category: 'Team', minRank: 3 },
+  { key: 'members.delete', label: 'Delete members / change roles', category: 'Team', minRank: 4 }
+];
+const ACTION_MIN_RANK = ACTION_CATALOG.reduce((m, a) => { m[a.key] = a.minRank; return m; }, {});
+
+// Default per-action allow map for a role: an action is on iff the role meets the
+// baseline rank. Stored overrides may only turn within-rank actions OFF.
+function defaultActionsFor(role) {
+  const r = rankOf(role);
+  const out = {};
+  for (const a of ACTION_CATALOG) out[a.key] = r >= a.minRank;
+  return out;
+}
+
 // -1 means "unlimited" for any numeric limit.
 function defaultPermissionsFor(role) {
   const r = String(role || '').toUpperCase();
@@ -89,11 +122,20 @@ function effectivePermissions(member) {
   if (member && member.permissionsJson) {
     try { stored = JSON.parse(member.permissionsJson); } catch (e) { stored = null; }
   }
-  if (!stored || typeof stored !== 'object') return def;
+  // Effective per-action map: role baseline, minus any stored within-rank revokes.
+  // A stored value can never enable an action above the role's baseline rank.
+  const storedActions = (stored && stored.actions && typeof stored.actions === 'object') ? stored.actions : {};
+  const actions = {};
+  for (const a of ACTION_CATALOG) {
+    const rankAllows = rankOf(role) >= a.minRank;
+    actions[a.key] = (a.key in storedActions) ? (Boolean(storedActions[a.key]) && rankAllows) : rankAllows;
+  }
+  if (!stored || typeof stored !== 'object') return { ...def, actions };
   return {
     ...def,
     ...stored,
-    features: { ...def.features, ...(stored.features || {}) }
+    features: { ...def.features, ...(stored.features || {}) },
+    actions
   };
 }
 
@@ -199,6 +241,9 @@ module.exports = {
   VALID_MEMBER_ROLES,
   ROLES_BELOW,
   FEATURE_KEYS,
+  ACTION_CATALOG,
+  ACTION_MIN_RANK,
+  defaultActionsFor,
   rankOf,
   allFeaturesOn,
   defaultPermissionsFor,
