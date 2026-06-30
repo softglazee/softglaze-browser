@@ -165,6 +165,8 @@ function UpdateBanner() {
   const [state, setState] = useState(null);
   const [installing, setInstalling] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const sawActive = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -174,38 +176,69 @@ function UpdateBanner() {
   }, []);
 
   if (!state || dismissed) return null;
-  const { status, version, percent } = state;
-  if (status !== 'available' && status !== 'downloading' && status !== 'downloaded') return null;
+  const { status, version, percent, releaseNotes } = state;
+  if (status === 'available' || status === 'downloading' || status === 'downloaded') sawActive.current = true;
+  // Always surface the actionable states; surface error/checking ONLY once an update
+  // was in flight, so a cold offline launch-check doesn't nag here (Settings → Updates
+  // is the home for manual checks + "up to date").
+  const isError = status === 'error' && sawActive.current;
+  const isChecking = status === 'checking' && sawActive.current;
+  const actionable = status === 'available' || status === 'downloading' || status === 'downloaded';
+  if (!actionable && !isError && !isChecking) return null;
   const downloaded = status === 'downloaded';
   const v = version ? `v${version}` : '';
+  const accent = isError ? '#ef4444' : 'var(--primary)';
 
   async function install() {
     setInstalling(true);
     try { await softglazeApi.updater.install(); }
     catch (e) { setInstalling(false); }
   }
+  function retry() { softglazeApi.updater.check().catch(() => {}); }
+
+  const title = isError ? `Update download failed${v ? ` (${v})` : ''}`
+    : isChecking ? 'Checking for updates…'
+    : downloaded ? `Update ready ${v}`
+    : status === 'downloading' ? `Downloading update ${v}…`
+    : `New update available ${v}`;
+  const subtitle = isError ? (state.error ? String(state.error).slice(0, 140) : 'Could not download the update. Check your connection and retry.')
+    : isChecking ? 'Contacting the update server…'
+    : downloaded ? 'Click install to restart and apply the new version.'
+    : status === 'downloading' ? `${percent || 0}% downloaded`
+    : 'It will download in the background.';
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border px-4 py-3 animate-fade-up" style={{ background: 'color-mix(in srgb, var(--primary) 10%, var(--card))', borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)' }}>
-      <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)' }}>
-        <Sparkles className="w-4 h-4 text-primary" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-foreground">
-          {downloaded ? `Update ready ${v}` : status === 'downloading' ? `Downloading update ${v}…` : `New update available ${v}`}
-        </p>
-        <p className="text-[11.5px] text-muted-foreground">
-          {downloaded ? 'Click install to restart and apply the new version.' : status === 'downloading' ? `${percent || 0}% downloaded` : 'It will download in the background.'}
-        </p>
+    <div className="rounded-xl border px-4 py-3 animate-fade-up" style={{ background: `color-mix(in srgb, ${accent} 10%, var(--card))`, borderColor: `color-mix(in srgb, ${accent} 30%, transparent)` }}>
+      <div className="flex items-center gap-3">
+        <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${accent} 16%, transparent)` }}>
+          {isChecking ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: accent }} /> : <Sparkles className="w-4 h-4" style={{ color: accent }} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-foreground">{title}</p>
+          <p className="text-[11.5px] text-muted-foreground">{subtitle}</p>
+        </div>
+        {downloaded && (
+          <Button variant="primary" size="sm" onClick={install} disabled={installing}>
+            {installing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Install &amp; restart
+          </Button>
+        )}
+        {isError && (
+          <Button variant="secondary" size="sm" onClick={retry}>
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </Button>
+        )}
+        {(downloaded || status === 'available') && releaseNotes && (
+          <button onClick={() => setShowNotes((s) => !s)} className="shrink-0 text-[11px] text-primary hover:underline px-1" title="What's new">
+            {showNotes ? 'Hide notes' : "What's new"}
+          </button>
+        )}
+        <button onClick={() => setDismissed(true)} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title="Dismiss">
+          <X className="w-4 h-4" />
+        </button>
       </div>
-      {downloaded && (
-        <Button variant="primary" size="sm" onClick={install} disabled={installing}>
-          {installing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Install &amp; restart
-        </Button>
+      {showNotes && releaseNotes && (
+        <pre className="mt-2 ml-12 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed text-muted-foreground bg-secondary/40 rounded-lg p-2.5 border border-border">{releaseNotes}</pre>
       )}
-      <button onClick={() => setDismissed(true)} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title="Dismiss">
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }
