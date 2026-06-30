@@ -184,6 +184,8 @@ const CHANNELS = Object.freeze({
   GROUP_DELETE: 'group:delete',
   GROUP_ASSIGN: 'group:assign',
   TAG_LIST: 'tag:list',
+  PROFILE_TAG_ASSIGN: 'profile:tag-assign',
+  PROFILE_BULK_RENAME: 'profile:bulk-rename',
 
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
@@ -307,6 +309,8 @@ const api = Object.freeze({
     bulkRestore: (ids) => invoke(CHANNELS.PROFILE_BULK_RESTORE, { ids }),
     bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
     bulkLaunch: (ids) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids }),
+    tagAssign: (ids, tag, mode) => invoke(CHANNELS.PROFILE_TAG_ASSIGN, { ids, tag, mode }),
+    bulkRename: (payload) => invoke(CHANNELS.PROFILE_BULK_RENAME, payload),
     bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids }),
     // Subscribe to live bulk-launch progress; returns an unsubscribe function.
     onBulkLaunchProgress: (callback) => {
