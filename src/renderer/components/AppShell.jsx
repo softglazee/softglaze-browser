@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet,
+  LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, Lock, Check, ChevronsUpDown, Sun, Moon,
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
   LogOut, UserCog, CreditCard
@@ -50,6 +50,7 @@ const SECTIONS = [
   {
     label: 'Data',
     items: [
+      { path: '/personas', label: 'Data Vault', icon: IdCard, featureKey: 'personas' },
       { path: '/batch-import', label: 'Batch import', icon: FileSpreadsheet, featureKey: 'batchImport' },
       { path: '/trash', label: 'Trash', icon: Trash2, featureKey: 'trash' }
     ]
