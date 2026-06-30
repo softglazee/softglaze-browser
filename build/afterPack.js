@@ -40,4 +40,32 @@ exports.default = async function afterPack(context) {
     fs.cpSync(src, dest, { recursive: true });
     console.log(`[afterPack] Copied ${name} -> ${dest}`);
   }
+
+  // --- Firefox Smart Autofill: bundle the Mozilla-signed extension -------------
+  // firefoxEngine installs <resources>/firefox-extension/autofill@softglaze.app.xpi
+  // into release-Firefox profiles. `npm run sign:firefox-ext` drops the signed .xpi
+  // into build/firefox-ext/ (a gitignored build artifact, named by web-ext). Copy
+  // the newest one in under the stable filename the engine resolves. If none is
+  // present, autofill simply stays unavailable on release Firefox for this build
+  // (Chromium autofill + the dev/Nightly unpacked path are unaffected).
+  try {
+    const signedDir = path.join(projectDir, 'build', 'firefox-ext');
+    const xpis = fs.existsSync(signedDir)
+      ? fs.readdirSync(signedDir).filter((f) => f.toLowerCase().endsWith('.xpi'))
+      : [];
+    if (xpis.length) {
+      const newest = xpis
+        .map((f) => ({ f, t: fs.statSync(path.join(signedDir, f)).mtimeMs }))
+        .sort((a, b) => b.t - a.t)[0].f;
+      const destDir = path.join(context.appOutDir, 'resources', 'firefox-extension');
+      fs.mkdirSync(destDir, { recursive: true });
+      const dest = path.join(destDir, 'autofill@softglaze.app.xpi');
+      fs.copyFileSync(path.join(signedDir, newest), dest);
+      console.log(`[afterPack] Bundled signed Firefox autofill extension ${newest} -> ${dest}`);
+    } else {
+      console.warn('[afterPack] No signed Firefox autofill .xpi in build/firefox-ext — Firefox autofill unavailable on release Firefox for this build. Run `npm run sign:firefox-ext`.');
+    }
+  } catch (e) {
+    console.warn('[afterPack] Firefox autofill extension copy skipped:', e && e.message ? e.message : e);
+  }
 };
