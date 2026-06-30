@@ -1,0 +1,170 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Cargando…",
+      "sourceOwner": "Propietario de origen",
+      "active": "Activo",
+      "activeUntil": "Activo · hasta {{date}}",
+      "trialDaysLeft_one": "Prueba · queda {{count}} d",
+      "trialDaysLeft_other": "Prueba · quedan {{count}} d",
+      "graceDaysLeft_one": "Gracia · queda {{count}} d",
+      "graceDaysLeft_other": "Gracia · quedan {{count}} d",
+      "subscriptionEnded": "Suscripción finalizada"
+    },
+    "subscription": {
+      "title": "Suscripción",
+      "planLine": "SoftGlaze Browser · plan {{tier}}",
+      "manageButton": "Gestionar suscripción y planes"
+    },
+    "grace": {
+      "freeTrial": "prueba gratuita",
+      "subscription": "suscripción",
+      "message_one": "Tu {{what}} ha finalizado — queda {{count}} día de gracia. Renueva en la página de Facturación para mantener el acceso.",
+      "message_other": "Tu {{what}} ha finalizado — quedan {{count}} días de gracia. Renueva en la página de Facturación para mantener el acceso."
+    },
+    "banned": {
+      "message": "Tu suscripción ha finalizado y el lanzamiento de perfiles está bloqueado. Suscríbete o introduce un código de compra en la página de Facturación."
+    },
+    "trial": {
+      "message_one": "Prueba gratuita — queda {{count}} día.",
+      "message_other": "Prueba gratuita — quedan {{count}} días."
+    },
+    "seats": {
+      "label": "Plazas del equipo",
+      "usage": "{{used}} / {{total}} usadas"
+    },
+    "gateway": {
+      "title": "Métodos de pago",
+      "description": "Solo para Súper Administrador. Activa los métodos que se muestran a los propietarios al pagar y guarda las claves de cada proveedor.",
+      "loadError": "No se pudo cargar la configuración de pagos.",
+      "footnote": "Las claves se cifran en reposo en esta máquina y nunca la abandonan. El pago se basa en sondeo (sin webhooks), por lo que la verificación entre instalaciones aún necesita el backend de licencias. Wise y Manual los apruebas tú en «Pagos pendientes» más abajo."
+    },
+    "provider": {
+      "kindManual": "Manual",
+      "kindAutomated": "Automatizado",
+      "on": "activo",
+      "enabled": "Activado",
+      "disabled": "Desactivado",
+      "enableAria": "Activar {{provider}}",
+      "documentation": "Documentación",
+      "secretStoredPlaceholder": "•••••••• (deja en blanco para mantener la actual)",
+      "secretPlaceholder": "Pega la clave",
+      "save": "Guardar",
+      "testConnection": "Probar conexión",
+      "enabledMsg": "Activado.",
+      "disabledMsg": "Desactivado.",
+      "updateError": "No se pudo actualizar.",
+      "savedMsg": "Guardado.",
+      "saveError": "No se pudo guardar.",
+      "connectionOk": "La conexión funciona correctamente ✓",
+      "validationFailedKeys": "La validación falló — revisa las claves.",
+      "validationFailed": "La validación falló."
+    },
+    "manual": {
+      "title": "Pagos pendientes",
+      "description": "Envíos manuales (Wise / transferencia bancaria) a la espera de tu aprobación.",
+      "loadError": "No se pudieron cargar los pagos manuales.",
+      "resolveError": "No se pudo actualizar ese pago.",
+      "ownerFallback": "Propietario n.º {{id}}",
+      "refPrefix": "ref.:",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "statusLabel": {
+        "pending": "pendiente",
+        "approved": "aprobado",
+        "rejected": "rechazado"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monetización",
+    "affiliate": {
+      "title": "Enlaces de afiliados y referidos",
+      "ownerOnly": "Solo propietario",
+      "description": "Tus URL de socios para los botones «Comprar» del mercado de Proxy. Deja en blanco para usar el valor predeterminado de Softglaze.",
+      "loadError": "No se pudieron cargar los enlaces de afiliados.",
+      "saveError": "No se pudieron guardar los enlaces de afiliados.",
+      "savedMsg": "Guardado. Los botones del mercado ahora usan tus enlaces.",
+      "customLink": "Enlace personalizado",
+      "defaultLink": "Enlace predeterminado",
+      "openLinkTitle": "Abrir el enlace de {{provider}}",
+      "saving": "Guardando…",
+      "saveButton": "Guardar enlaces",
+      "footnote": "Estos enlaces alimentan los botones «Comprar en…» / «Visitar panel» de la pestaña Grupo de proxy → Proveedores. Son solo URL de referido públicas — los tokens y credenciales de proxy nunca se ven afectados."
+    }
+  },
+  "developerApi": {
+    "title": "Acceso a la API para desarrolladores",
+    "description": "Genera claves de API y ejecuta un servidor REST local para controlar Softglaze mediante programación.",
+    "copy": "Copiar",
+    "errors": {
+      "load": "No se pudo cargar la configuración de la API para desarrolladores.",
+      "nameRequired": "Asigna un nombre a la clave (p. ej. \"Servidor CI\").",
+      "generate": "No se pudo generar la clave de API.",
+      "revoke": "No se pudo revocar la clave.",
+      "toggleServer": "No se pudo cambiar el estado del servidor local."
+    },
+    "keys": {
+      "title": "Claves de API",
+      "namePlaceholder": "Nombre de la clave (p. ej. Servidor CI)",
+      "generate": "Generar nueva clave de API",
+      "copyOnce": "Copia esta clave ahora — se muestra solo una vez y no se puede recuperar.",
+      "empty": "Aún no hay claves de API.",
+      "lastUsed": "último uso {{when}}",
+      "neverUsed": "nunca usada",
+      "never": "nunca",
+      "revoke": "Revocar"
+    },
+    "server": {
+      "title": "API REST local",
+      "runningAt": "En ejecución en",
+      "stoppedPrefix": "Detenido · se enlazaría a",
+      "loopbackOnly": "(solo loopback)",
+      "disableTitle": "Desactivar la API local",
+      "enableTitle": "Activar la API local",
+      "curlExample": "Ejemplo: lanzar un perfil con cURL",
+      "footnote": "El servidor solo acepta solicitudes desde esta máquina y requiere una clave Bearer válida."
+    }
+  },
+  "migration": {
+    "title": "Transferir perfiles",
+    "ownerOnly": "Solo propietario",
+    "description": "Importa tus perfiles existentes desde otra plataforma antidetección a través de su API.",
+    "sourcePlatform": "Plataforma de origen",
+    "noteLabel": "Nota:",
+    "instructions": "Instrucciones",
+    "tokenSectionTitle": "Token de API de {{platform}}",
+    "transferring": "Transfiriendo…",
+    "startTransfer": "Iniciar transferencia",
+    "tokenFootnote": "Tu token se usa una sola vez para esta transferencia y nunca se almacena. Las plataformas locales (AdsPower, ixBrowser) deben estar en ejecución con su API local activada.",
+    "errors": {
+      "tokenRequired": "Introduce tu {{placeholder}} de {{platform}}.",
+      "transferFailed": "La transferencia falló."
+    },
+    "log": {
+      "title": "Registro de migración",
+      "imported": "{{created}}/{{total}} importados",
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} error(es)",
+      "waiting": "Esperando la respuesta de la plataforma…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Las cookies no se transferirán si transfieres desde el plan gratuito de Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Token de API de GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Token de automatización de Multilogin"
+      },
+      "adspower": {
+        "placeholder": "Clave de API local de AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "Clave de API local de ixBrowser"
+      }
+    }
+  }
+}

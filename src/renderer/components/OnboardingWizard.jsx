@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sparkles, Mail, Globe, Fingerprint, Smartphone, Check, ArrowRight, ArrowLeft, Loader2, X } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import i18n from '@/i18n/index.js';
+import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
+import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
+
+// Register the "cmpOverlays" namespace without touching the central i18n config.
+// addResourceBundle is a no-op if the bundle already exists, so this is safe across
+// hot reloads (and the CommandPalette performing the same registration).
+if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
+if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
 // First-run setup. Reuses the existing SMTP / proxy / profile flows behind a few
 // guided steps. Shown only on a genuinely fresh workspace (no profiles yet) and
@@ -14,6 +24,7 @@ const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-
 // type on every render — otherwise the inputs would remount and lose focus on each
 // keystroke.
 function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, onSkip, err, msg }) {
+  const { t } = useTranslation('cmpOverlays');
   // Focus-trap + scroll-lock + focus-restore + ARIA. Escape is intentionally NOT
   // wired to close: this is a setup flow, and a stray Escape shouldn't permanently
   // skip onboarding (the X / Skip buttons remain the explicit exits).
@@ -22,14 +33,14 @@ function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, on
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="relative w-full max-w-[480px] rounded-2xl bg-card border border-border shadow-2xl p-6">
-        <button onClick={onSkip} title="Skip setup" className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        <button onClick={onSkip} title={t('wizard.skipTitle')} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Icon className="w-5 h-5" /></div>
         <h2 className="font-display text-[19px] font-semibold tracking-tight text-foreground">{title}</h2>
         <p className="text-[12.5px] text-muted-foreground mt-1 mb-5">{subtitle}</p>
         {children}
         {(err || msg) && <p className={`mt-3 text-[12px] ${err ? 'text-red-400' : 'text-emerald-400'}`}>{err || msg}</p>}
         <div className="mt-6 flex items-center justify-between">
-          {onBack ? <button onClick={onBack} className="text-[12.5px] text-muted-foreground hover:text-foreground flex items-center gap-1.5"><ArrowLeft className="w-3.5 h-3.5" /> Back</button> : <span />}
+          {onBack ? <button onClick={onBack} className="text-[12.5px] text-muted-foreground hover:text-foreground flex items-center gap-1.5"><ArrowLeft className="w-3.5 h-3.5" /> {t('wizard.back')}</button> : <span />}
           <div className="flex items-center gap-2">{footer}</div>
         </div>
       </div>
@@ -38,6 +49,7 @@ function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, on
 }
 
 export default function OnboardingWizard() {
+  const { t } = useTranslation('cmpOverlays');
   const [phase, setPhase] = useState('checking'); // checking | hidden | active
   const [step, setStep] = useState(0); // 0 welcome · 1 smtp · 2 proxy · 3 profile
   const [busy, setBusy] = useState('');
@@ -47,7 +59,7 @@ export default function OnboardingWizard() {
   const [smtp, setSmtp] = useState({ host: '', port: '587', user: '', pass: '', from: '' });
   const [proxy, setProxy] = useState({ name: '', type: 'HTTP', host: '', port: '', username: '', password: '' });
   const [proxyId, setProxyId] = useState(null);
-  const [profileName, setProfileName] = useState('My first profile');
+  const [profileName, setProfileName] = useState(t('wizard.profile.defaultName'));
   const [deviceClass, setDeviceClass] = useState('desktop');
 
   useEffect(() => {
@@ -81,8 +93,8 @@ export default function OnboardingWizard() {
     setErr(''); setMsg(''); setBusy('smtp');
     try {
       await softglazeApi.settings.setEmail({ host: smtp.host.trim(), port: Number(smtp.port) || 587, user: smtp.user.trim(), pass: smtp.pass, from: smtp.from.trim() || smtp.user.trim() });
-      setMsg('SMTP saved.'); setStep(2);
-    } catch (e) { setErr(e.message || 'Could not save SMTP settings.'); }
+      setMsg(t('wizard.msg.smtpSaved')); setStep(2);
+    } catch (e) { setErr(e.message || t('wizard.err.smtpSaveFailed')); }
     finally { setBusy(''); }
   }
 
@@ -95,34 +107,34 @@ export default function OnboardingWizard() {
         username: proxy.username.trim() || null, password: proxy.password || null
       });
       if (created && created.id) setProxyId(created.id);
-      setMsg('Proxy saved.'); setStep(3);
-    } catch (e) { setErr(e.message || 'Could not save the proxy.'); }
+      setMsg(t('wizard.msg.proxySaved')); setStep(3);
+    } catch (e) { setErr(e.message || t('wizard.err.proxySaveFailed')); }
     finally { setBusy(''); }
   }
 
   async function createProfile() {
     setErr(''); setMsg(''); setBusy('profile');
     try {
-      const payload = { title: profileName.trim() || 'My first profile', randomFingerprint: true, deviceClass };
+      const payload = { title: profileName.trim() || t('wizard.profile.defaultName'), randomFingerprint: true, deviceClass };
       if (deviceClass === 'mobile') payload.os = 'Android';
       if (proxyId) { payload.proxyId = proxyId; payload.systemProxyBehavior = 'PROFILE_PROXY'; }
       await softglazeApi.profiles.create(payload);
       await finish();
-    } catch (e) { setErr(e.message || 'Could not create the profile.'); setBusy(''); }
+    } catch (e) { setErr(e.message || t('wizard.err.profileCreateFailed')); setBusy(''); }
   }
 
   if (step === 0) {
     return (
-      <WizardShell icon={Sparkles} title="Welcome to SoftGlaze" subtitle="A quick 3-step setup gets you to your first profile. You can skip any step."
+      <WizardShell icon={Sparkles} title={t('wizard.welcome.title')} subtitle={t('wizard.welcome.subtitle')}
         onSkip={finish} err={err} msg={msg}
         footer={<>
-          <button onClick={finish} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">Skip</button>
-          <button onClick={() => { setErr(''); setMsg(''); setStep(1); }} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2">Get started <ArrowRight className="w-4 h-4" /></button>
+          <button onClick={finish} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
+          <button onClick={() => { setErr(''); setMsg(''); setStep(1); }} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2">{t('wizard.welcome.getStarted')} <ArrowRight className="w-4 h-4" /></button>
         </>}>
         <ul className="space-y-2.5 text-[13px] text-foreground">
-          <li className="flex items-center gap-2.5"><Mail className="w-4 h-4 text-primary" /> Email (SMTP) — optional, for OTP codes</li>
-          <li className="flex items-center gap-2.5"><Globe className="w-4 h-4 text-primary" /> Your first proxy — optional</li>
-          <li className="flex items-center gap-2.5"><Fingerprint className="w-4 h-4 text-primary" /> Your first browser profile</li>
+          <li className="flex items-center gap-2.5"><Mail className="w-4 h-4 text-primary" /> {t('wizard.welcome.stepEmail')}</li>
+          <li className="flex items-center gap-2.5"><Globe className="w-4 h-4 text-primary" /> {t('wizard.welcome.stepProxy')}</li>
+          <li className="flex items-center gap-2.5"><Fingerprint className="w-4 h-4 text-primary" /> {t('wizard.welcome.stepProfile')}</li>
         </ul>
       </WizardShell>
     );
@@ -130,19 +142,19 @@ export default function OnboardingWizard() {
 
   if (step === 1) {
     return (
-      <WizardShell icon={Mail} title="Email (SMTP)" subtitle="Optional — lets the app send verification codes. You can set this later in Settings."
+      <WizardShell icon={Mail} title={t('wizard.smtp.title')} subtitle={t('wizard.smtp.subtitle')}
         onBack={() => setStep(0)} onSkip={finish} err={err} msg={msg}
         footer={<>
-          <button onClick={() => { setErr(''); setMsg(''); setStep(2); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">Skip</button>
-          <button onClick={saveSmtp} disabled={busy === 'smtp' || !smtp.host} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'smtp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} Save &amp; continue</button>
+          <button onClick={() => { setErr(''); setMsg(''); setStep(2); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
+          <button onClick={saveSmtp} disabled={busy === 'smtp' || !smtp.host} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'smtp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} {t('wizard.saveAndContinue')}</button>
         </>}>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2"><label className={labelCls}>SMTP host</label><input className={inputCls} value={smtp.host} onChange={(e) => setSmtp({ ...smtp, host: e.target.value })} placeholder="smtp.example.com" /></div>
-            <div><label className={labelCls}>Port</label><input className={inputCls} value={smtp.port} onChange={(e) => setSmtp({ ...smtp, port: e.target.value })} placeholder="587" /></div>
+            <div className="col-span-2"><label className={labelCls}>{t('wizard.smtp.host')}</label><input className={inputCls} value={smtp.host} onChange={(e) => setSmtp({ ...smtp, host: e.target.value })} placeholder={t('wizard.smtp.hostPlaceholder')} /></div>
+            <div><label className={labelCls}>{t('wizard.smtp.port')}</label><input className={inputCls} value={smtp.port} onChange={(e) => setSmtp({ ...smtp, port: e.target.value })} placeholder={t('wizard.smtp.portPlaceholder')} /></div>
           </div>
-          <div><label className={labelCls}>Username</label><input className={inputCls} value={smtp.user} onChange={(e) => setSmtp({ ...smtp, user: e.target.value })} placeholder="you@example.com" /></div>
-          <div><label className={labelCls}>Password</label><input type="password" className={inputCls} value={smtp.pass} onChange={(e) => setSmtp({ ...smtp, pass: e.target.value })} placeholder="••••••••" /></div>
+          <div><label className={labelCls}>{t('wizard.smtp.username')}</label><input className={inputCls} value={smtp.user} onChange={(e) => setSmtp({ ...smtp, user: e.target.value })} placeholder={t('wizard.smtp.usernamePlaceholder')} /></div>
+          <div><label className={labelCls}>{t('wizard.smtp.password')}</label><input type="password" className={inputCls} value={smtp.pass} onChange={(e) => setSmtp({ ...smtp, pass: e.target.value })} placeholder={t('wizard.smtp.passwordPlaceholder')} /></div>
         </div>
       </WizardShell>
     );
@@ -150,26 +162,26 @@ export default function OnboardingWizard() {
 
   if (step === 2) {
     return (
-      <WizardShell icon={Globe} title="Add your first proxy" subtitle="Optional — give each identity its own network. You can add more in the Proxy pool."
+      <WizardShell icon={Globe} title={t('wizard.proxy.title')} subtitle={t('wizard.proxy.subtitle')}
         onBack={() => setStep(1)} onSkip={finish} err={err} msg={msg}
         footer={<>
-          <button onClick={() => { setErr(''); setMsg(''); setStep(3); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">Skip</button>
-          <button onClick={saveProxy} disabled={busy === 'proxy' || !proxy.host || !proxy.port} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'proxy' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} Save &amp; continue</button>
+          <button onClick={() => { setErr(''); setMsg(''); setStep(3); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
+          <button onClick={saveProxy} disabled={busy === 'proxy' || !proxy.host || !proxy.port} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'proxy' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} {t('wizard.saveAndContinue')}</button>
         </>}>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div><label className={labelCls}>Type</label>
+            <div><label className={labelCls}>{t('wizard.proxy.type')}</label>
               <select className={inputCls} value={proxy.type} onChange={(e) => setProxy({ ...proxy, type: e.target.value })}>
                 <option value="HTTP">HTTP</option>
                 <option value="SOCKS5">SOCKS5</option>
               </select>
             </div>
-            <div className="col-span-2"><label className={labelCls}>Host</label><input className={inputCls} value={proxy.host} onChange={(e) => setProxy({ ...proxy, host: e.target.value })} placeholder="1.2.3.4" /></div>
+            <div className="col-span-2"><label className={labelCls}>{t('wizard.proxy.host')}</label><input className={inputCls} value={proxy.host} onChange={(e) => setProxy({ ...proxy, host: e.target.value })} placeholder={t('wizard.proxy.hostPlaceholder')} /></div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><label className={labelCls}>Port</label><input className={inputCls} value={proxy.port} onChange={(e) => setProxy({ ...proxy, port: e.target.value })} placeholder="8080" /></div>
-            <div><label className={labelCls}>User</label><input className={inputCls} value={proxy.username} onChange={(e) => setProxy({ ...proxy, username: e.target.value })} placeholder="optional" /></div>
-            <div><label className={labelCls}>Password</label><input type="password" className={inputCls} value={proxy.password} onChange={(e) => setProxy({ ...proxy, password: e.target.value })} placeholder="optional" /></div>
+            <div><label className={labelCls}>{t('wizard.proxy.port')}</label><input className={inputCls} value={proxy.port} onChange={(e) => setProxy({ ...proxy, port: e.target.value })} placeholder={t('wizard.proxy.portPlaceholder')} /></div>
+            <div><label className={labelCls}>{t('wizard.proxy.user')}</label><input className={inputCls} value={proxy.username} onChange={(e) => setProxy({ ...proxy, username: e.target.value })} placeholder={t('wizard.proxy.userPlaceholder')} /></div>
+            <div><label className={labelCls}>{t('wizard.proxy.password')}</label><input type="password" className={inputCls} value={proxy.password} onChange={(e) => setProxy({ ...proxy, password: e.target.value })} placeholder={t('wizard.proxy.passwordPlaceholder')} /></div>
           </div>
         </div>
       </WizardShell>
@@ -178,20 +190,20 @@ export default function OnboardingWizard() {
 
   // step 3 — first profile
   return (
-    <WizardShell icon={Fingerprint} title="Create your first profile" subtitle="A unique, internally-consistent fingerprint is generated for you."
+    <WizardShell icon={Fingerprint} title={t('wizard.profile.title')} subtitle={t('wizard.profile.subtitle')}
       onBack={() => setStep(2)} onSkip={finish} err={err} msg={msg}
-      footer={<button onClick={createProfile} disabled={busy === 'profile'} className="h-9 px-5 rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'profile' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Create &amp; finish</button>}>
+      footer={<button onClick={createProfile} disabled={busy === 'profile'} className="h-9 px-5 rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'profile' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('wizard.profile.createAndFinish')}</button>}>
       <div className="space-y-3.5">
-        <div><label className={labelCls}>Profile name</label><input className={inputCls} value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="My first profile" /></div>
+        <div><label className={labelCls}>{t('wizard.profile.name')}</label><input className={inputCls} value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder={t('wizard.profile.namePlaceholder')} /></div>
         <div>
-          <label className={labelCls}>Device type</label>
+          <label className={labelCls}>{t('wizard.profile.deviceType')}</label>
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setDeviceClass('desktop')} className={`h-10 rounded-lg border text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 ${deviceClass === 'desktop' ? 'border-primary text-primary bg-primary/10' : 'border-border text-muted-foreground hover:text-foreground'}`}><Fingerprint className="w-4 h-4" /> Desktop</button>
-            <button type="button" onClick={() => setDeviceClass('mobile')} className={`h-10 rounded-lg border text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 ${deviceClass === 'mobile' ? 'border-primary text-primary bg-primary/10' : 'border-border text-muted-foreground hover:text-foreground'}`}><Smartphone className="w-4 h-4" /> Mobile (Android)</button>
+            <button type="button" onClick={() => setDeviceClass('desktop')} className={`h-10 rounded-lg border text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 ${deviceClass === 'desktop' ? 'border-primary text-primary bg-primary/10' : 'border-border text-muted-foreground hover:text-foreground'}`}><Fingerprint className="w-4 h-4" /> {t('wizard.profile.desktop')}</button>
+            <button type="button" onClick={() => setDeviceClass('mobile')} className={`h-10 rounded-lg border text-[12.5px] font-semibold inline-flex items-center justify-center gap-2 ${deviceClass === 'mobile' ? 'border-primary text-primary bg-primary/10' : 'border-border text-muted-foreground hover:text-foreground'}`}><Smartphone className="w-4 h-4" /> {t('wizard.profile.mobile')}</button>
           </div>
-          {deviceClass === 'mobile' && <p className="text-[11px] text-muted-foreground mt-1.5">Android is emulated on the desktop engine — coherent UA, touch, screen &amp; GPU, but not a real device.</p>}
+          {deviceClass === 'mobile' && <p className="text-[11px] text-muted-foreground mt-1.5">{t('wizard.profile.mobileNote')}</p>}
         </div>
-        {proxyId && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Your new proxy will be attached to this profile.</p>}
+        {proxyId && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> {t('wizard.profile.proxyAttached')}</p>}
       </div>
     </WizardShell>
   );

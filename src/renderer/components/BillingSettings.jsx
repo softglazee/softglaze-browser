@@ -4,18 +4,19 @@ import {
   AlertTriangle, Sparkles, Users, ArrowUpRight, X, Clock, Wallet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import Switch from '@/components/ui/Switch.jsx';
 
-function statusTone(license) {
-  if (!license) return { color: '#9ca3af', label: 'Loading…' };
-  if (license.isExempt) return { color: '#10b981', label: 'Source owner' };
+function statusTone(license, t) {
+  if (!license) return { color: '#9ca3af', label: t('billing.status.loading') };
+  if (license.isExempt) return { color: '#10b981', label: t('billing.status.sourceOwner') };
   switch (license.state) {
-    case 'paid': return { color: '#10b981', label: license.endsAt ? `Active · until ${new Date(license.endsAt).toLocaleDateString()}` : 'Active' };
-    case 'trialing': return { color: '#3b82f6', label: `Trial · ${license.daysLeftTrial}d left` };
-    case 'grace': return { color: '#f59e0b', label: `Grace · ${license.daysLeftGrace}d left` };
-    case 'banned': return { color: '#ef4444', label: 'Subscription ended' };
-    default: return { color: license.isPaid ? '#10b981' : '#f59e0b', label: license.isPaid ? 'Active' : `Trial · ${license.daysLeft}d left` };
+    case 'paid': return { color: '#10b981', label: license.endsAt ? t('billing.status.activeUntil', { date: new Date(license.endsAt).toLocaleDateString() }) : t('billing.status.active') };
+    case 'trialing': return { color: '#3b82f6', label: t('billing.status.trialDaysLeft', { count: license.daysLeftTrial }) };
+    case 'grace': return { color: '#f59e0b', label: t('billing.status.graceDaysLeft', { count: license.daysLeftGrace }) };
+    case 'banned': return { color: '#ef4444', label: t('billing.status.subscriptionEnded') };
+    default: return { color: license.isPaid ? '#10b981' : '#f59e0b', label: license.isPaid ? t('billing.status.active') : t('billing.status.trialDaysLeft', { count: license.daysLeft }) };
   }
 }
 
@@ -60,7 +61,8 @@ export default function BillingSettings() {
 // this card shows status at a glance and links there.
 function SubscriptionCard({ license, seats }) {
   const navigate = useNavigate();
-  const tone = statusTone(license);
+  const { t } = useTranslation('cmpSettingsA');
+  const tone = statusTone(license, t);
 
   return (
     <div className="rounded-xl bg-card border border-border p-5">
@@ -68,8 +70,8 @@ function SubscriptionCard({ license, seats }) {
         <div className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 24%, transparent)' }}><CreditCard className="w-5 h-5 text-blue-400" /></span>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Subscription</h3>
-            <p className="text-xs text-muted-foreground capitalize">SoftGlaze Browser · {license?.tier || 'pro'} plan</p>
+            <h3 className="text-sm font-semibold text-foreground">{t('billing.subscription.title')}</h3>
+            <p className="text-xs text-muted-foreground capitalize">{t('billing.subscription.planLine', { tier: license?.tier || 'pro' })}</p>
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0" style={{ background: `color-mix(in srgb, ${tone.color} 14%, transparent)`, color: tone.color, border: `1px solid color-mix(in srgb, ${tone.color} 26%, transparent)` }}>
@@ -80,31 +82,31 @@ function SubscriptionCard({ license, seats }) {
       {license?.isGrace && (
         <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[12px] text-amber-400">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>Your {license.type === 'trial' ? 'free trial' : 'subscription'} has ended — {license.daysLeftGrace} grace day{license.daysLeftGrace === 1 ? '' : 's'} left. Renew on the Billing page to keep access.</span>
+          <span>{t('billing.grace.message', { what: license.type === 'trial' ? t('billing.grace.freeTrial') : t('billing.grace.subscription'), count: license.daysLeftGrace })}</span>
         </div>
       )}
       {license?.isBanned && (
         <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>Your subscription has ended and profile launching is locked. Subscribe or enter a purchase code on the Billing page.</span>
+          <span>{t('billing.banned.message')}</span>
         </div>
       )}
       {license?.isTrial && !license?.isGrace && (
-        <p className="mt-4 text-[12px] text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-400" /> Free trial — {license.daysLeftTrial} day{license.daysLeftTrial === 1 ? '' : 's'} remaining.</p>
+        <p className="mt-4 text-[12px] text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-400" /> {t('billing.trial.message', { count: license.daysLeftTrial })}</p>
       )}
 
       {seats && seats.total >= 0 && (
         <div className="mt-4 flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-elevated/50 border border-border">
           <div className="flex items-center gap-2 text-[12.5px] text-foreground">
             <Users className="w-4 h-4 text-muted-foreground" />
-            <span>Team seats</span>
+            <span>{t('billing.seats.label')}</span>
           </div>
-          <span className={`text-[12.5px] font-semibold ${seats.full ? 'text-amber-400' : 'text-foreground'}`}>{seats.used} / {seats.total} used</span>
+          <span className={`text-[12.5px] font-semibold ${seats.full ? 'text-amber-400' : 'text-foreground'}`}>{t('billing.seats.usage', { used: seats.used, total: seats.total })}</span>
         </div>
       )}
 
       <button onClick={() => navigate('/billing')} className="mt-4 w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25">
-        Manage subscription &amp; plans <ArrowUpRight className="w-4 h-4" />
+        {t('billing.subscription.manageButton')} <ArrowUpRight className="w-4 h-4" />
       </button>
     </div>
   );
@@ -115,13 +117,14 @@ function SubscriptionCard({ license, seats }) {
 // the main process returns — so adding a provider in payments.js surfaces here
 // automatically. Secret values are never sent back to the renderer.
 function PaymentGatewayCard() {
+  const { t } = useTranslation('cmpSettingsA');
   const [config, setConfig] = useState(null);
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     try { setConfig(await softglazeApi.payments.getConfig()); }
-    catch (e) { setErr(e.message || 'Could not load payment settings.'); }
-  }, []);
+    catch (e) { setErr(e.message || t('billing.gateway.loadError')); }
+  }, [t]);
   useEffect(() => { load(); }, [load]);
 
   return (
@@ -129,8 +132,8 @@ function PaymentGatewayCard() {
       <div className="flex items-center gap-3 mb-1">
         <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 24%, transparent)' }}><ShieldCheck className="w-5 h-5 text-amber-400" /></span>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Payment methods</h3>
-          <p className="text-xs text-muted-foreground">Super Admin only. Enable the methods shown to owners at checkout and store each provider&rsquo;s keys.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t('billing.gateway.title')}</h3>
+          <p className="text-xs text-muted-foreground">{t('billing.gateway.description')}</p>
         </div>
       </div>
 
@@ -145,7 +148,7 @@ function PaymentGatewayCard() {
       )}
 
       <p className="mt-4 text-[11px] text-muted-foreground leading-relaxed">
-        Keys are encrypted at rest on this machine and never leave it. Checkout is poll-based (no webhooks), so cross-install enforcement still needs the licensing backend. Wise &amp; Manual are approved by you under &ldquo;Pending payments&rdquo; below.
+        {t('billing.gateway.footnote')}
       </p>
     </div>
   );
@@ -154,6 +157,7 @@ function PaymentGatewayCard() {
 // One provider's editable config. Holds its own field state; secret fields show a
 // "stored" hint and a blank submit keeps the existing secret.
 function ProviderConfig({ provider, onSaved }) {
+  const { t } = useTranslation('cmpSettingsA');
   const [enabled, setEnabled] = useState(Boolean(provider.enabled));
   const [values, setValues] = useState(() => {
     const v = {};
@@ -178,12 +182,12 @@ function ProviderConfig({ provider, onSaved }) {
     setEnabled(next); setErr(''); setMsg(''); setBusy('toggle');
     try {
       await softglazeApi.payments.setConfig({ id: provider.id, enabled: next });
-      setMsg(next ? 'Enabled.' : 'Disabled.');
+      setMsg(next ? t('billing.provider.enabledMsg') : t('billing.provider.disabledMsg'));
       setTimeout(() => setMsg(''), 1800);
       onSaved && onSaved();
     } catch (e) {
       setEnabled(!next); // revert the optimistic flip
-      setErr(e.message || 'Could not update.');
+      setErr(e.message || t('billing.provider.updateError'));
     } finally { setBusy(''); }
   }
 
@@ -204,9 +208,9 @@ function ProviderConfig({ provider, onSaved }) {
         provider.fields.forEach((f) => { if (f.secret) n[f.key] = ''; });
         return n;
       });
-      setMsg('Saved.');
+      setMsg(t('billing.provider.savedMsg'));
       onSaved && onSaved();
-    } catch (e) { setErr(e.message || 'Could not save.'); }
+    } catch (e) { setErr(e.message || t('billing.provider.saveError')); }
     finally { setBusy(''); }
   }
 
@@ -214,9 +218,9 @@ function ProviderConfig({ provider, onSaved }) {
     setBusy('test'); setErr(''); setMsg('');
     try {
       const r = await softglazeApi.payments.validate({ id: provider.id });
-      if (r.ok) setMsg('Connection looks good ✓');
-      else setErr(r.error || 'Validation failed — check the keys.');
-    } catch (e) { setErr(e.message || 'Validation failed.'); }
+      if (r.ok) setMsg(t('billing.provider.connectionOk'));
+      else setErr(r.error || t('billing.provider.validationFailedKeys'));
+    } catch (e) { setErr(e.message || t('billing.provider.validationFailed')); }
     finally { setBusy(''); }
   }
 
@@ -230,21 +234,21 @@ function ProviderConfig({ provider, onSaved }) {
         <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="text-[13px] font-semibold text-foreground">{provider.label}</span>
           <span className={`text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full ${provider.kind === 'manual' ? 'bg-amber-500/15 text-amber-400' : 'bg-blue-500/15 text-blue-400'}`}>
-            {provider.kind === 'manual' ? 'Manual' : 'Automated'}
+            {provider.kind === 'manual' ? t('billing.provider.kindManual') : t('billing.provider.kindAutomated')}
           </span>
-          {enabled && <span className="text-[10px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> on</span>}
+          {enabled && <span className="text-[10px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {t('billing.provider.on')}</span>}
         </button>
         <div className="flex items-center gap-2 shrink-0">
           {busy === 'toggle' && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-          <span className="text-[11.5px] text-muted-foreground w-14 text-right">{enabled ? 'Enabled' : 'Disabled'}</span>
-          <Switch checked={enabled} disabled={busy === 'toggle'} onChange={toggleEnabled} label={`Enable ${provider.label}`} />
+          <span className="text-[11.5px] text-muted-foreground w-14 text-right">{enabled ? t('billing.provider.enabled') : t('billing.provider.disabled')}</span>
+          <Switch checked={enabled} disabled={busy === 'toggle'} onChange={toggleEnabled} label={t('billing.provider.enableAria', { provider: provider.label })} />
         </div>
       </div>
 
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-border/60 pt-3">
           {provider.docsUrl && (
-            <a href={provider.docsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary-hover"><ExternalLink className="w-3 h-3" /> Documentation</a>
+            <a href={provider.docsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary-hover"><ExternalLink className="w-3 h-3" /> {t('billing.provider.documentation')}</a>
           )}
           {provider.fields.map((f) => (
             <div key={f.key}>
@@ -261,7 +265,7 @@ function ProviderConfig({ provider, onSaved }) {
                   className={inputCls + (f.secret ? ' font-mono' : '')}
                   value={values[f.key]}
                   onChange={(e) => setField(f.key, e.target.value)}
-                  placeholder={f.secret ? (stored[f.key] ? '•••••••• (leave blank to keep current)' : (f.placeholder || 'Paste the key')) : (f.placeholder || '')}
+                  placeholder={f.secret ? (stored[f.key] ? t('billing.provider.secretStoredPlaceholder') : (f.placeholder || t('billing.provider.secretPlaceholder'))) : (f.placeholder || '')}
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -271,11 +275,11 @@ function ProviderConfig({ provider, onSaved }) {
 
           <div className="flex items-center gap-2 pt-1">
             <button onClick={save} disabled={busy === 'save'} className="h-8 px-4 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12px] flex items-center gap-1.5 disabled:opacity-60">
-              {busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save
+              {busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t('billing.provider.save')}
             </button>
             {provider.kind === 'automated' && (
               <button onClick={test} disabled={busy === 'test'} className="h-8 px-3 rounded-lg text-[12px] text-muted-foreground hover:bg-secondary border border-border flex items-center gap-1.5 disabled:opacity-50">
-                {busy === 'test' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} Test connection
+                {busy === 'test' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} {t('billing.provider.testConnection')}
               </button>
             )}
           </div>
@@ -291,20 +295,21 @@ function ProviderConfig({ provider, onSaved }) {
 // Super-Admin review queue for manual (Wise / bank-transfer / custom) payments.
 // Approving grants the buyer's plan; nothing is auto-trusted from the renderer.
 function ManualPaymentsCard() {
+  const { t } = useTranslation('cmpSettingsA');
   const [items, setItems] = useState(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     try { setItems(await softglazeApi.payments.manualList()); }
-    catch (e) { setErr(e.message || 'Could not load manual payments.'); }
-  }, []);
+    catch (e) { setErr(e.message || t('billing.manual.loadError')); }
+  }, [t]);
   useEffect(() => { load(); }, [load]);
 
   async function resolve(id, action) {
     setBusy(`${id}:${action}`); setErr('');
     try { await softglazeApi.payments.manualResolve({ id, action }); await load(); }
-    catch (e) { setErr(e.message || 'Could not update that payment.'); }
+    catch (e) { setErr(e.message || t('billing.manual.resolveError')); }
     finally { setBusy(''); }
   }
 
@@ -316,8 +321,8 @@ function ManualPaymentsCard() {
       <div className="flex items-center gap-3 mb-3">
         <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 24%, transparent)' }}><Wallet className="w-5 h-5 text-amber-400" /></span>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Pending payments</h3>
-          <p className="text-xs text-muted-foreground">Manual (Wise / bank transfer) submissions awaiting your approval.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t('billing.manual.title')}</h3>
+          <p className="text-xs text-muted-foreground">{t('billing.manual.description')}</p>
         </div>
       </div>
 
@@ -328,25 +333,25 @@ function ManualPaymentsCard() {
           <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-elevated/40 px-3 py-2.5">
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] text-foreground truncate">
-                {m.ownerName || `Owner #${m.ownerId ?? '—'}`} · <span className="capitalize">{m.tier}</span> · {m.providerLabel || m.provider}
+                {m.ownerName || t('billing.manual.ownerFallback', { id: m.ownerId ?? '—' })} · <span className="capitalize">{m.tier}</span> · {m.providerLabel || m.provider}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
-                {m.amount ? `${m.currency || ''} ${m.amount}` : ''}{m.reference ? ` · ref: ${m.reference}` : ''}{m.note ? ` · ${m.note}` : ''}
+                {m.amount ? `${m.currency || ''} ${m.amount}` : ''}{m.reference ? ` · ${t('billing.manual.refPrefix')} ${m.reference}` : ''}{m.note ? ` · ${m.note}` : ''}
               </div>
             </div>
             {m.status === 'pending' ? (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button onClick={() => resolve(m.id, 'approve')} disabled={busy === `${m.id}:approve`} className="h-8 px-3 rounded-lg text-[12px] font-semibold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-1.5 disabled:opacity-60">
-                  {busy === `${m.id}:approve` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Approve
+                  {busy === `${m.id}:approve` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t('billing.manual.approve')}
                 </button>
                 <button onClick={() => resolve(m.id, 'reject')} disabled={busy === `${m.id}:reject`} className="h-8 px-3 rounded-lg text-[12px] font-semibold text-muted-foreground hover:bg-secondary border border-border flex items-center gap-1.5 disabled:opacity-60">
-                  {busy === `${m.id}:reject` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />} Reject
+                  {busy === `${m.id}:reject` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />} {t('billing.manual.reject')}
                 </button>
               </div>
             ) : (
               <span className={`text-[11.5px] font-semibold capitalize inline-flex items-center gap-1 shrink-0 ${tone(m.status)}`}>
                 {m.status === 'pending' ? <Clock className="w-3.5 h-3.5" /> : m.status === 'approved' ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                {m.status}
+                {t(`billing.manual.statusLabel.${m.status}`)}
               </span>
             )}
           </div>

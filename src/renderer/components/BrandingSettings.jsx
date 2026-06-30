@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Palette, ShieldCheck, Loader2, Check, MonitorSmartphone, Info, Wand2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { renderFooterNodes } from '@/lib/footerText.jsx';
@@ -27,6 +28,7 @@ function Card({ icon: Icon, accent = '#3b82f6', title, description, children }) 
 
 // Footer branding (Super Admin only) + per-device "stay signed in" control.
 export default function BrandingSettings() {
+  const { t } = useTranslation('cmpSettingsB');
   const [me, setMe] = useState(null);
   const [footer, setFooter] = useState(DEFAULT_FOOTER);
   const [footerEnabled, setFooterEnabled] = useState(true);
@@ -65,7 +67,7 @@ export default function BrandingSettings() {
   async function toggleAutofill(next) {
     setAutofill(next);
     try { await softglazeApi.settings.setGlobal({ smartAutofill: { enabled: next } }); }
-    catch (e) { setAutofill(!next); setErr(e.message || 'Could not update Smart Autofill.'); }
+    catch (e) { setAutofill(!next); setErr(e.message || t('branding.errUpdateAutofill')); }
   }
 
   async function saveFooter(nextEnabled) {
@@ -76,7 +78,7 @@ export default function BrandingSettings() {
       setFooterEnabled(enabled);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch (e) { setErr(e.message || 'Could not save the footer.'); }
+    } catch (e) { setErr(e.message || t('branding.errSaveFooter')); }
     finally { setSaving(false); }
   }
 
@@ -89,8 +91,8 @@ export default function BrandingSettings() {
 
   if (loading) {
     return (
-      <Card icon={Palette} title="Appearance & Branding" description="Footer and per-device sign-in.">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      <Card icon={Palette} title={t('branding.loadingCardTitle')} description={t('branding.loadingCardDesc')}>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('branding.loading')}</div>
       </Card>
     );
   }
@@ -98,7 +100,7 @@ export default function BrandingSettings() {
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       {/* App footer — Super Admin editable */}
-      <Card icon={Palette} accent="#8b5cf6" title="App footer" description="Shown at the bottom of every page. Use {year} for the current year; links open in your browser.">
+      <Card icon={Palette} accent="#8b5cf6" title={t('branding.footerCardTitle')} description={t('branding.footerCardDesc')}>
         {isSuper ? (
           <div className="space-y-3">
             <textarea
@@ -109,58 +111,58 @@ export default function BrandingSettings() {
               placeholder={DEFAULT_FOOTER}
             />
             <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[11.5px] text-muted-foreground">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 block mb-1">Preview</span>
-              {footer && footer.trim() ? renderFooterNodes(footer) : <span className="opacity-60">— empty —</span>}
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 block mb-1">{t('branding.preview')}</span>
+              {footer && footer.trim() ? renderFooterNodes(footer) : <span className="opacity-60">{t('branding.previewEmpty')}</span>}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button onClick={() => saveFooter()} disabled={saving} className="h-9 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save footer
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('branding.saveFooter')}
               </button>
               <button onClick={() => saveFooter(!footerEnabled)} disabled={saving} className="h-9 px-3 rounded-lg border border-border text-foreground text-[12.5px] hover:bg-secondary">
-                {footerEnabled ? 'Hide footer' : 'Show footer'}
+                {footerEnabled ? t('branding.hideFooter') : t('branding.showFooter')}
               </button>
               <button onClick={() => setFooter(DEFAULT_FOOTER)} disabled={saving} className="h-9 px-3 rounded-lg border border-border text-muted-foreground text-[12.5px] hover:bg-secondary">
-                Reset to default
+                {t('branding.resetDefault')}
               </button>
-              {saved && <span className="text-[12px] text-emerald-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved · reopens on next page load</span>}
+              {saved && <span className="text-[12px] text-emerald-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> {t('branding.savedReopens')}</span>}
             </div>
             {err && <p className="text-[12px] text-red-400">{err}</p>}
           </div>
         ) : (
           <div className="space-y-2">
             <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[12px] text-muted-foreground">{renderFooterNodes(footer)}</div>
-            <p className="text-[11.5px] text-muted-foreground flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Only the Super Admin can change the footer.</p>
+            <p className="text-[11.5px] text-muted-foreground flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> {t('branding.onlySuperFooter')}</p>
           </div>
         )}
       </Card>
 
       {/* Stay signed in — per device */}
-      <Card icon={ShieldCheck} accent="#10b981" title="Stay signed in on this device" description="Skip the password on every restart. The credential is encrypted to your Windows account (DPAPI).">
+      <Card icon={ShieldCheck} accent="#10b981" title={t('branding.staySignedInTitle')} description={t('branding.staySignedInDesc')}>
         {!remember.available ? (
-          <p className="text-[12.5px] text-muted-foreground flex items-center gap-2"><Info className="w-4 h-4" /> OS encryption isn't available on this device, so auto sign-in can't be enabled here.</p>
+          <p className="text-[12.5px] text-muted-foreground flex items-center gap-2"><Info className="w-4 h-4" /> {t('branding.osEncryptionUnavailable')}</p>
         ) : remember.enabled ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[13px] text-emerald-400"><MonitorSmartphone className="w-4 h-4" /> Auto sign-in is <span className="font-semibold">ON</span> for this device.</div>
-            <p className="text-[11.5px] text-muted-foreground">This device will open the workspace without asking for the password. Turn it off to require the password again on the next start.</p>
+            <div className="flex items-center gap-2 text-[13px] text-emerald-400"><MonitorSmartphone className="w-4 h-4" /> {t('branding.autoSignInOnBefore')} <span className="font-semibold">{t('branding.autoSignInOnEmphasis')}</span> {t('branding.autoSignInOnAfter')}</div>
+            <p className="text-[11.5px] text-muted-foreground">{t('branding.autoSignInOnHint')}</p>
             <button onClick={forgetDevice} className="h-9 px-4 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 font-semibold text-[12.5px] hover:bg-red-500/20">
-              Forget this device
+              {t('branding.forgetDevice')}
             </button>
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[13px] text-muted-foreground"><MonitorSmartphone className="w-4 h-4" /> Auto sign-in is <span className="font-semibold">off</span>.</div>
-            <p className="text-[11.5px] text-muted-foreground">Tick <span className="text-foreground">“Keep me signed in on this device”</span> on the sign-in screen to enable it. Signing out always turns it off.</p>
+            <div className="flex items-center gap-2 text-[13px] text-muted-foreground"><MonitorSmartphone className="w-4 h-4" /> {t('branding.autoSignInOffBefore')} <span className="font-semibold">{t('branding.autoSignInOffEmphasis')}</span>{t('branding.autoSignInOffAfter')}</div>
+            <p className="text-[11.5px] text-muted-foreground">{t('branding.autoSignInOffHintBefore')} <span className="text-foreground">{t('branding.autoSignInOffHintQuote')}</span> {t('branding.autoSignInOffHintAfter')}</p>
           </div>
         )}
       </Card>
 
       {/* Smart Autofill — workspace toggle (Owner / Super Admin) */}
-      <Card icon={Wand2} accent="#6366f1" title="Smart Autofill" description="The in-page identity widget shown on signup forms in launched Chromium profiles.">
+      <Card icon={Wand2} accent="#6366f1" title={t('branding.autofillTitle')} description={t('branding.autofillDesc')}>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[12.5px] text-muted-foreground">{autofill ? 'Enabled — the Data Vault widget is injected into launched profiles.' : 'Disabled — no autofill widget is injected.'}</span>
-          <Switch checked={autofill} disabled={!canManageAutofill} onChange={toggleAutofill} label="Toggle Smart Autofill" />
+          <span className="text-[12.5px] text-muted-foreground">{autofill ? t('branding.autofillEnabled') : t('branding.autofillDisabled')}</span>
+          <Switch checked={autofill} disabled={!canManageAutofill} onChange={toggleAutofill} label={t('branding.autofillToggleLabel')} />
         </div>
-        {!canManageAutofill && <p className="mt-2 text-[11px] text-muted-foreground">Only the Owner or Super Admin can change this.</p>}
+        {!canManageAutofill && <p className="mt-2 text-[11px] text-muted-foreground">{t('branding.autofillOnlyOwner')}</p>}
       </Card>
     </div>
   );
