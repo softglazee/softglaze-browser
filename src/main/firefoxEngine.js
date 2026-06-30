@@ -59,6 +59,13 @@ function resolveFirefoxBinary(version) {
 }
 
 const ffSessions = new Map(); // sessionId -> { proc, relay, userDataDir, title, proxyLabel, createdAt }
+// Session lifecycle sink (set by ipcHandlers) — parity with browserEngine so Firefox
+// launches/closes/crashes feed the same SessionState + crash-recovery pipeline.
+let sessionEventSink = null;
+function setSessionEventSink(fn) { sessionEventSink = (typeof fn === 'function') ? fn : null; }
+function emitSessionEvent(evt) { try { if (sessionEventSink) sessionEventSink(evt); } catch (e) { /* never break a launch/close */ } }
+const ffIntentionalClose = new Set(); // sessionIds the user explicitly closed
+let ffShuttingDown = false;            // app quitting — closes are not crashes
 
 // Local HTTP proxy that injects Proxy-Authorization to an authenticated upstream,
 // so Firefox connects auth-free to 127.0.0.1:<port>. Supports GET + CONNECT.
@@ -200,14 +207,18 @@ async function launchFirefoxProfile(options = {}) {
   const session = { proc, relay, userDataDir, title: title || `Profile ${sessionId}`, proxyLabel, createdAt: new Date(), engine: 'firefox' };
   ffSessions.set(sessionId, session);
 
-  proc.on('exit', () => {
+  const onGone = () => {
     if (session.relay) session.relay.close();
     ffSessions.delete(sessionId);
-  });
-  proc.on('error', () => {
-    if (session.relay) session.relay.close();
-    ffSessions.delete(sessionId);
-  });
+    let reason = 'crash';
+    if (ffShuttingDown) reason = 'shutdown';
+    else if (ffIntentionalClose.has(sessionId)) { reason = 'user'; ffIntentionalClose.delete(sessionId); }
+    emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason, engine: 'firefox' });
+  };
+  proc.on('exit', onGone);
+  proc.on('error', onGone);
+
+  emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'firefox' });
 
   return { sessionId, userDataDir, engine: 'firefox' };
 }
@@ -216,6 +227,7 @@ async function closeFirefoxSession(sessionId) {
   const id = String(sessionId || '').trim();
   const session = ffSessions.get(id);
   if (!session) return { closed: false };
+  ffIntentionalClose.add(id); // deliberate close — the exit must not be read as a crash
   try { session.proc.kill(); } catch (e) { /* ignore */ }
   if (session.relay) session.relay.close();
   ffSessions.delete(id);
@@ -240,6 +252,7 @@ function listFirefoxSessions() {
 }
 
 async function closeAllFirefoxSessions() {
+  ffShuttingDown = true; // app quitting — Firefox closes are not crashes
   for (const id of Array.from(ffSessions.keys())) await closeFirefoxSession(id);
 }
 
@@ -554,5 +567,6 @@ module.exports = {
   isFirefoxSession,
   listFirefoxSessions,
   closeAllFirefoxSessions,
+  setSessionEventSink,
   FIREFOX_ROOT
 };
