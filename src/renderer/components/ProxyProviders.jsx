@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Boxes, ExternalLink, KeyRound, Loader2, Check, Activity, RefreshCw, ShieldCheck, Zap, X, Globe2
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import i18n from '@/i18n/index.js';
+import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
+import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
+
+// Register the "cmpSettingsC" namespace without touching the central i18n config.
+// addResourceBundle is a no-op if the bundle already exists, so this is safe
+// across hot reloads (and IpProvidersSettings performing the same registration).
+if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
+if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
 // ---------------------------------------------------------------------------
 // Softglaze Provider Core — integrated proxy-vendor marketplace.
@@ -54,6 +64,7 @@ const GEO_HINTS = {
 };
 
 export default function ProxyProviders({ onSynced }) {
+  const { t } = useTranslation('cmpSettingsC');
   const [selectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
   const provider = useMemo(() => PROVIDERS.find((p) => p.key === selectedKey) || PROVIDERS[0], [selectedKey]);
 
@@ -135,20 +146,20 @@ export default function ProxyProviders({ onSynced }) {
         type: provider.gateway.type, host: form.host, port: form.port, username: form.username, password: form.password
       });
       setCheckResult(r);
-    } catch (e) { setErr(e.message || 'Could not check the proxy.'); }
+    } catch (e) { setErr(e.message || t('proxyProviders.errors.check')); }
     finally { setChecking(false); }
   }
 
   async function handleSync() {
     setErr(''); setSyncResult(null);
-    if (!form.token.trim()) { setErr('Enter your provider token to sync.'); return; }
+    if (!form.token.trim()) { setErr(t('proxyProviders.errors.enterProviderToken')); return; }
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({ provider: provider.key, token: form.token.trim(), bdpm: form.bdpm });
       setSyncResult(r);
       persistCreds();
       if (typeof onSynced === 'function') onSynced();
-    } catch (e) { setErr(e.message || 'Could not sync proxies.'); }
+    } catch (e) { setErr(e.message || t('proxyProviders.errors.sync')); }
     finally { setSyncing(false); }
   }
 
@@ -157,8 +168,8 @@ export default function ProxyProviders({ onSynced }) {
   // password from the rotating form against the vendor gateway.
   async function handleApiSync() {
     setErr(''); setSyncResult(null);
-    if (provider.key === 'brightdata' && !form.apiToken.trim()) { setErr('Enter your Bright Data API token.'); return; }
-    if (provider.key !== 'brightdata' && !form.username.trim()) { setErr('Enter the proxy username above first.'); return; }
+    if (provider.key === 'brightdata' && !form.apiToken.trim()) { setErr(t('proxyProviders.errors.enterBrightDataToken', { provider: 'Bright Data' })); return; }
+    if (provider.key !== 'brightdata' && !form.username.trim()) { setErr(t('proxyProviders.errors.enterUsernameFirst')); return; }
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
@@ -172,7 +183,7 @@ export default function ProxyProviders({ onSynced }) {
       setSyncResult(r);
       persistCreds();
       if (typeof onSynced === 'function') onSynced();
-    } catch (e) { setErr(e.message || 'Live sync failed.'); }
+    } catch (e) { setErr(e.message || t('proxyProviders.errors.liveSync')); }
     finally { setSyncing(false); }
   }
 
@@ -183,9 +194,9 @@ export default function ProxyProviders({ onSynced }) {
     setErr(''); setSyncResult(null);
     const g = provider.geoSync || {};
     const creds = g.creds || [];
-    if (creds.includes('token') && !form.token.trim()) { setErr('Enter your API token.'); return; }
-    if (creds.includes('username') && !form.username.trim()) { setErr('Enter the proxy username.'); return; }
-    if (creds.includes('password') && !form.password) { setErr('Enter the proxy password.'); return; }
+    if (creds.includes('token') && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
+    if (creds.includes('username') && !form.username.trim()) { setErr(t('proxyProviders.errors.enterProxyUsername')); return; }
+    if (creds.includes('password') && !form.password) { setErr(t('proxyProviders.errors.enterProxyPassword')); return; }
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
@@ -208,7 +219,7 @@ export default function ProxyProviders({ onSynced }) {
       setSyncResult(r);
       persistCreds();
       if (typeof onSynced === 'function') onSynced();
-    } catch (e) { setErr(e.message || 'Could not pull proxies.'); }
+    } catch (e) { setErr(e.message || t('proxyProviders.errors.pull')); }
     finally { setSyncing(false); }
   }
 
@@ -224,8 +235,8 @@ export default function ProxyProviders({ onSynced }) {
         <div className="border-b lg:border-b-0 lg:border-r border-border bg-card/40 flex flex-col min-h-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
             <Boxes className="w-4 h-4 text-primary" />
-            <span className="text-[13px] font-semibold text-foreground">Proxy Providers</span>
-            <span className="ml-auto text-[10.5px] text-muted-foreground">{PROVIDERS.length} integrated</span>
+            <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.heading')}</span>
+            <span className="ml-auto text-[10.5px] text-muted-foreground">{t('proxyProviders.integratedCount', { count: PROVIDERS.length })}</span>
           </div>
           <div className="overflow-y-auto p-2 grid grid-cols-2 lg:grid-cols-1 gap-1.5">
             {PROVIDERS.map((p) => {
@@ -242,7 +253,7 @@ export default function ProxyProviders({ onSynced }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`block text-[12.5px] font-medium truncate ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{p.name}</span>
-                    <span className="block text-[10px] text-muted-foreground/70">{p.tokenSync ? 'Token sync' : p.geoSync ? 'Geo pull' : 'Rotating gateway'}</span>
+                    <span className="block text-[10px] text-muted-foreground/70">{p.tokenSync ? t('proxyProviders.kind.tokenSync') : p.geoSync ? t('proxyProviders.kind.geoPull') : t('proxyProviders.kind.rotatingGateway')}</span>
                   </span>
                 </button>
               );
@@ -262,7 +273,7 @@ export default function ProxyProviders({ onSynced }) {
                 </span>
                 <div>
                   <h3 className="text-base font-bold text-foreground font-display">{provider.name}</h3>
-                  <p className="text-[12px] text-muted-foreground">Premium proxies, synced straight into Softglaze Provider Core.</p>
+                  <p className="text-[12px] text-muted-foreground">{t('proxyProviders.banner.subtitle')}</p>
                 </div>
               </div>
               <a
@@ -273,7 +284,7 @@ export default function ProxyProviders({ onSynced }) {
                 style={{ background: provider.color, boxShadow: `0 10px 30px -10px ${provider.color}` }}
               >
                 <Zap className="w-4 h-4" />
-                {provider.tokenSync ? `Purchase at ${provider.name}` : `Visit ${provider.name} Dashboard`}
+                {provider.tokenSync ? t('proxyProviders.banner.purchaseAt', { provider: provider.name }) : t('proxyProviders.banner.visitDashboard', { provider: provider.name })}
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -286,7 +297,7 @@ export default function ProxyProviders({ onSynced }) {
             <div className="space-y-4 max-w-2xl">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> Proxy Token</label>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.tokenSync.label')}</label>
                   <span className={`text-[11px] font-mono ${form.token.length > 50 ? 'text-red-400' : 'text-muted-foreground'}`}>{form.token.length} / 50</span>
                 </div>
                 <input
@@ -295,17 +306,17 @@ export default function ProxyProviders({ onSynced }) {
                   maxLength={50}
                   autoComplete="off"
                   onChange={(e) => set('token', e.target.value)}
-                  placeholder={`Paste your ${provider.name} account token`}
+                  placeholder={t('proxyProviders.tokenSync.placeholder', { provider: provider.name })}
                   className={inputCls + ' font-mono'}
                 />
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={handleSync} disabled={syncing} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-60 shadow-lg shadow-emerald-500/25">
-                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Sync proxy
+                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} {t('proxyProviders.tokenSync.sync')}
                 </button>
               </div>
               <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">
-                Entering the provider partner token will automatically synchronize your purchased proxies into Softglaze. You can view or update synchronized items globally by clicking <span className="text-foreground font-medium">Sync proxy</span>.
+                {t('proxyProviders.tokenSync.helpBefore')}<span className="text-foreground font-medium">{t('proxyProviders.tokenSync.sync')}</span>{t('proxyProviders.tokenSync.helpAfter')}
               </p>
             </div>
           ) : provider.geoSync ? (
@@ -313,20 +324,20 @@ export default function ProxyProviders({ onSynced }) {
             <div className="space-y-4 max-w-2xl">
               <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.06] p-4 space-y-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">Geo</span>
-                  <span className="text-[13px] font-semibold text-foreground">Country-targeted pull</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">{t('proxyProviders.geo.badge')}</span>
+                  <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.geo.title')}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
                   <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Globe2 className="w-3.5 h-3.5 text-sky-400" /> Country</label>
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
                     <select value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
-                      {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{name}{code ? ` (${code})` : ''}</option>)}
+                      {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}{code ? ` (${code})` : ''}</option>)}
                     </select>
                   </div>
                   {provider.geoSync.count && (
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">How many</label>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.howMany')}</label>
                       <input value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, ''))} className={inputCls + ' font-mono'} placeholder="5" />
                     </div>
                   )}
@@ -334,23 +345,23 @@ export default function ProxyProviders({ onSynced }) {
 
                 {provider.geoSync.creds.includes('username') && (
                   <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.geoSync.shop ? 'Account username or email' : 'Proxy username (sub-account)'}</label>
-                    <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.shop ? 'your ShopSocks5 login (username or email)' : 'username'} autoComplete="off" />
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : t('proxyProviders.geo.usernameSubLabel')}</label>
+                    <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : 'username'} autoComplete="off" />
                   </div>
                 )}
 
                 {provider.geoSync.shop && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plan</label>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.planLabel')}</label>
                       <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
-                        <option value="premium">Premium</option>
-                        <option value="list">List</option>
-                        <option value="daily">Daily</option>
+                        <option value="premium">{t('proxyProviders.geo.planPremium')}</option>
+                        <option value="list">{t('proxyProviders.geo.planList')}</option>
+                        <option value="daily">{t('proxyProviders.geo.planDaily')}</option>
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proxy type</label>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.proxyTypeLabel')}</label>
                       <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
                         <option value="proxy_sock_5">SOCKS5</option>
                         <option value="proxy_https">HTTPS</option>
@@ -360,47 +371,47 @@ export default function ProxyProviders({ onSynced }) {
                 )}
                 {provider.geoSync.creds.includes('password') && (
                   <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.key === 'apify' ? 'Apify proxy password' : 'Proxy password'}</label>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.key === 'apify' ? t('proxyProviders.geo.apifyPasswordLabel', { provider: 'Apify' }) : t('proxyProviders.geo.proxyPasswordLabel')}</label>
                     <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
                   </div>
                 )}
                 {provider.geoSync.creds.includes('token') && (
                   <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> API token</label>
-                    <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={`Your ${provider.name} API token`} autoComplete="off" />
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiTokenLabel')}</label>
+                    <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.apiTokenPlaceholder', { provider: provider.name })} autoComplete="off" />
                   </div>
                 )}
 
                 {provider.geoSync.geo && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">State <span className="normal-case text-muted-foreground/60">(opt)</span></label>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.stateLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
                       <input value={form.state} onChange={(e) => set('state', e.target.value)} className={inputCls + ' font-mono'} placeholder="California" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">City <span className="normal-case text-muted-foreground/60">(opt)</span></label>
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.cityLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
                       <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls + ' font-mono'} placeholder="NewYork" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sticky session <span className="normal-case text-muted-foreground/60">(opt)</span></label>
-                      <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder="keep 1 IP" />
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.stickySessionLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
+                      <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.stickySessionPlaceholder')} />
                     </div>
                   </div>
                 )}
 
                 {provider.geoSync.life && (
                   <div className="sm:max-w-[260px]">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Keep same IP <span className="normal-case text-muted-foreground/60">(time)</span></label>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.keepSameIpLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.timeMarker')}</span></label>
                     <select value={form.life} onChange={(e) => set('life', e.target.value)} className={selectCls} style={chevronStyle}>
-                      <option value="">Different IP each time</option>
-                      <option value="5">5 minutes</option>
-                      <option value="10">10 minutes</option>
-                      <option value="30">30 minutes</option>
-                      <option value="60">1 hour</option>
-                      <option value="120">2 hours</option>
-                      <option value="360">6 hours</option>
-                      <option value="720">12 hours</option>
-                      <option value="1440">24 hours (max)</option>
+                      <option value="">{t('proxyProviders.geo.lifeDifferent')}</option>
+                      <option value="5">{t('proxyProviders.geo.life5')}</option>
+                      <option value="10">{t('proxyProviders.geo.life10')}</option>
+                      <option value="30">{t('proxyProviders.geo.life30')}</option>
+                      <option value="60">{t('proxyProviders.geo.life60')}</option>
+                      <option value="120">{t('proxyProviders.geo.life120')}</option>
+                      <option value="360">{t('proxyProviders.geo.life360')}</option>
+                      <option value="720">{t('proxyProviders.geo.life720')}</option>
+                      <option value="1440">{t('proxyProviders.geo.life1440')}</option>
                     </select>
                   </div>
                 )}
@@ -409,52 +420,52 @@ export default function ProxyProviders({ onSynced }) {
                   <div>
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
                       <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gateway host</label>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.gatewayHostLabel')}</label>
                         <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder="isp.smartproxy.net" />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Port</label>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.portLabel')}</label>
                         <input value={form.port} onChange={(e) => set('port', e.target.value)} className={inputCls + ' font-mono'} placeholder="3100" />
                       </div>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground/90">Pre-filled for the Long-Acting ISP plan (isp.smartproxy.net:3100). If your smartproxy.org dashboard → Proxy Setup shows a different host:port, paste it here to override.</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground/90">{t('proxyProviders.geo.gatewayHint')}</p>
                   </div>
                 )}
 
                 {provider.geoSync.apiUrl && (
                   <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-amber-400">API URL — required, from your dashboard</label>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-amber-400">{t('proxyProviders.geo.apiUrlLabel')}</label>
                     <input value={form.apiUrl} onChange={(e) => set('apiUrl', e.target.value)} className={inputCls + ' font-mono text-[12px]'} placeholder="https://shopsocks5.com/api/...  (paste from SOCKS5 API guide)" autoComplete="off" />
-                    <p className="mt-1 text-[11px] text-amber-400/90">Paste the URL from your ShopSocks5 dashboard → SOCKS5 API guide. It already contains your token. Put <span className="font-mono text-foreground">{'{country}'}</span> where the country code belongs to filter by the selection above.</p>
+                    <p className="mt-1 text-[11px] text-amber-400/90">{t('proxyProviders.geo.apiUrlHintBefore')}<span className="font-mono text-foreground">{'{country}'}</span>{t('proxyProviders.geo.apiUrlHintAfter')}</p>
                   </div>
                 )}
 
                 <button onClick={handleGeoSync} disabled={syncing} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-60 shadow-lg shadow-sky-500/25">
-                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe2 className="w-4 h-4" />} Pull proxies{form.country ? ` · ${form.country}` : ''}
+                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe2 className="w-4 h-4" />} {t('proxyProviders.geo.pullProxies')}{form.country ? ` · ${form.country}` : ''}
                 </button>
               </div>
-              <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{GEO_HINTS[provider.key]}</p>
+              <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{t(`proxyProviders.geoHints.${provider.key}`, GEO_HINTS[provider.key])}</p>
             </div>
           ) : (
             /* ---- Rotating engine configuration form ---- */
             <div className="space-y-4 max-w-2xl">
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-4">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Host : Port (rotating gateway)</label>
-                  <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder="gateway host" />
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.rotating.hostPortLabel')}</label>
+                  <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.rotating.hostPlaceholder')} />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Port</label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.rotating.portLabel')}</label>
                   <input value={form.port} onChange={(e) => set('port', e.target.value)} className={inputCls + ' font-mono'} placeholder="port" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Proxy Username</label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.rotating.usernameLabel')}</label>
                   <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder="username" autoComplete="off" />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Proxy Password</label>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.rotating.passwordLabel')}</label>
                   <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
                 </div>
               </div>
@@ -463,50 +474,50 @@ export default function ProxyProviders({ onSynced }) {
               {provider.bdpm && (
                 <label className="flex items-start gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer bg-card border border-border rounded-lg px-3.5 py-3">
                   <input type="checkbox" checked={form.bdpm} onChange={(e) => set('bdpm', e.target.checked)} className="accent-primary mt-0.5" />
-                  <span><span className="text-foreground font-medium">BDPM-Session:</span> Select only when utilizing a Bright Data BDPM proxy configuration path.</span>
+                  <span><span className="text-foreground font-medium">{t('proxyProviders.rotating.bdpmLabel')}</span> {t('proxyProviders.rotating.bdpmDesc')}</span>
                 </label>
               )}
 
               <div className="flex items-center gap-3 flex-wrap">
                 <button onClick={handleCheck} disabled={checking} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
-                  {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} Check Proxy
+                  {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {t('proxyProviders.rotating.checkProxy')}
                 </button>
                 {checkResult && (
                   checkResult.success ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-400"><ShieldCheck className="w-4 h-4" /> {checkResult.ip || 'OK'}{checkResult.country ? ` · ${checkResult.country}` : ''}{typeof checkResult.latencyMs === 'number' ? ` · ${checkResult.latencyMs}ms` : ''}</span>
+                    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-400"><ShieldCheck className="w-4 h-4" /> {checkResult.ip || t('proxyProviders.rotating.ok')}{checkResult.country ? ` · ${checkResult.country}` : ''}{typeof checkResult.latencyMs === 'number' ? ` · ${checkResult.latencyMs}ms` : ''}</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-red-400" title={checkResult.error}><X className="w-4 h-4" /> {String(checkResult.error || 'Failed').slice(0, 60)}</span>
+                    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-red-400" title={checkResult.error}><X className="w-4 h-4" /> {String(checkResult.error || t('proxyProviders.rotating.failed')).slice(0, 60)}</span>
                   )
                 )}
               </div>
-              <p className="text-[11.5px] text-muted-foreground italic">Tip: a rotating gateway uses the same host:port for every session — your username/password (or sticky-session token) selects the exit IP.</p>
+              <p className="text-[11.5px] text-muted-foreground italic">{t('proxyProviders.rotating.tip')}</p>
 
               {/* Live API sync for wired vendors */}
               {provider.apiSync && (
                 <div className="mt-1 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4">
                   <div className="flex items-center gap-2 mb-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">Live</span>
-                    <span className="text-[13px] font-semibold text-foreground">API Sync</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{t('proxyProviders.apiSync.badge')}</span>
+                    <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.apiSync.title')}</span>
                   </div>
                   {provider.key === 'brightdata' ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">API Token</label>
-                          <input type="password" value={form.apiToken} onChange={(e) => set('apiToken', e.target.value)} className={inputCls + ' font-mono'} placeholder="Bright Data API token" autoComplete="off" />
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.apiSync.apiTokenLabel')}</label>
+                          <input type="password" value={form.apiToken} onChange={(e) => set('apiToken', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.apiSync.apiTokenPlaceholder', { provider: 'Bright Data' })} autoComplete="off" />
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Zone <span className="normal-case text-muted-foreground/60">(optional)</span></label>
-                          <input value={form.zone} onChange={(e) => set('zone', e.target.value)} className={inputCls + ' font-mono'} placeholder="auto-detected from username" />
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.apiSync.zoneLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.apiSync.optionalMarker')}</span></label>
+                          <input value={form.zone} onChange={(e) => set('zone', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.apiSync.zonePlaceholder')} />
                         </div>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">Pulls the zone's routable IPs via Bright Data's API and pins each to the super-proxy gateway using the username &amp; password above.</p>
+                      <p className="text-[11px] text-muted-foreground">{t('proxyProviders.apiSync.brightDataHelp', { provider: 'Bright Data' })}</p>
                     </div>
                   ) : (
-                    <p className="text-[11.5px] text-muted-foreground">Verifies the <span className="text-foreground font-medium">username &amp; password</span> above against the {provider.name} gateway with a live request, then adds the working endpoint.</p>
+                    <p className="text-[11.5px] text-muted-foreground">{t('proxyProviders.apiSync.verifyBefore')}<span className="text-foreground font-medium">{t('proxyProviders.apiSync.verifyCreds')}</span>{t('proxyProviders.apiSync.verifyAfter', { provider: provider.name })}</p>
                   )}
                   <button onClick={handleApiSync} disabled={syncing} className="mt-3 inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-60 shadow-lg shadow-emerald-500/25">
-                    {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Sync via API
+                    {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} {t('proxyProviders.apiSync.syncViaApi')}
                   </button>
                 </div>
               )}
@@ -516,13 +527,13 @@ export default function ProxyProviders({ onSynced }) {
           {/* Sync result */}
           {syncResult && (
             <div className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 max-w-2xl">
-              <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-400 mb-1.5"><Check className="w-4 h-4" /> {syncResult.provider} synced into Softglaze Provider Core</div>
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-400 mb-1.5"><Check className="w-4 h-4" /> {t('proxyProviders.result.syncedInto', { provider: syncResult.provider })}</div>
               <div className="grid grid-cols-3 gap-3 text-[12px] font-mono text-muted-foreground">
-                <div>Returned: {syncResult.total}</div>
-                <div className="text-emerald-400">Added: {syncResult.created?.length ?? 0}</div>
-                <div className="text-amber-400">Existing: {syncResult.skipped?.length ?? 0}</div>
+                <div>{t('proxyProviders.result.returned', { count: syncResult.total })}</div>
+                <div className="text-emerald-400">{t('proxyProviders.result.added', { count: syncResult.created?.length ?? 0 })}</div>
+                <div className="text-amber-400">{t('proxyProviders.result.existing', { count: syncResult.skipped?.length ?? 0 })}</div>
               </div>
-              {syncResult.simulated && <p className="mt-2 text-[11px] text-amber-400/90">Simulation: these entries demonstrate the sync pipeline. Live vendor-API wiring drops in behind the same flow.</p>}
+              {syncResult.simulated && <p className="mt-2 text-[11px] text-amber-400/90">{t('proxyProviders.result.simulation')}</p>}
             </div>
           )}
         </div>
