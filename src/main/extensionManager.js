@@ -23,7 +23,15 @@ const { getPrisma } = require('./database');
 const CHROME_ID_RE = /^[a-p]{32}$/;
 
 // Setting key that records the one-time recommended-extension seeding has run.
-const SEED_FLAG = 'recommendedExtensionsSeeded';
+// Bumped to _v2 when the SoftGlaze Screen Recorder was added so existing installs
+// seed the new extension once. installById is idempotent (already-present ones are
+// skipped), and a user who later deletes a recommended extension won't see it
+// return because the (bumped) flag stays set.
+const SEED_FLAG = 'recommendedExtensionsSeeded_v2';
+
+// The SoftGlaze first-party extension — always injected into every profile and
+// (best-effort) force-installed from the Web Store so active users are counted.
+const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 
 // Curated set auto-installed on first run. IDs are verified to download from the
 // anonymous CRX endpoint. `enable` decides the default isGlobal:
@@ -32,6 +40,7 @@ const SEED_FLAG = 'recommendedExtensionsSeeded';
 //     (content blockers change page/network behavior; SwitchyOmega can override
 //     Softglaze's native per-profile proxy).
 const RECOMMENDED_EXTENSIONS = [
+  { chromeId: SOFTGLAZE_RECORDER_ID, name: 'SoftGlaze Screen Recorder', enable: true },
   { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: true },
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: true },
   { chromeId: 'cjpalhdlnbpafiamejdnhcphjbkeiagm', name: 'uBlock Origin', enable: false },
@@ -251,6 +260,7 @@ async function removeExtensionFiles(localPath) {
 module.exports = {
   CHROME_ID_RE,
   RECOMMENDED_EXTENSIONS,
+  SOFTGLAZE_RECORDER_ID,
   extensionsRoot,
   parseChromeId,
   downloadAndExtract,

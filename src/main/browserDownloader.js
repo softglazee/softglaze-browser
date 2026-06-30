@@ -16,9 +16,18 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+// `app` is a string path (not the API object) when required outside Electron
+// (e.g. unit tests), so `app && app.isPackaged` is a safe runtime guard.
+const { app } = require('electron');
 
 const CFT_ENDPOINT = 'https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json';
-const CHROME_ROOT = path.resolve(__dirname, '../../chrome');
+// Downloads MUST land in a writable, real directory. In a packaged build
+// `__dirname` is inside app.asar (a FILE), so `../../chrome` resolves to
+// `…/app.asar/chrome` and every mkdir/write throws ENOTDIR. Use userData when
+// packaged; keep the project-root path in dev so the existing dev cache is reused.
+const CHROME_ROOT = (app && app.isPackaged)
+  ? path.join(app.getPath('userData'), 'chrome')
+  : path.resolve(__dirname, '../../chrome');
 const STATE_FILE = path.join(CHROME_ROOT, '.download-state.json');
 
 // version -> { version, major, percent, state, error, receivedBytes, totalBytes, url, dest }
