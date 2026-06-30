@@ -736,6 +736,25 @@ function GlobalPreferences() {
         />
       </SettingsSection>
 
+      {/* Audit log — team activity retention */}
+      <SettingsSection icon={ShieldCheck} accent="#f59e0b" title="Audit Log" description="How long team activity and security events (member changes, sign-ins, permission edits) are kept before being pruned on startup.">
+        <div className="flex items-center justify-between gap-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Retention period</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Activity older than this is deleted when SoftGlaze starts. Set to 0 to keep the full history forever.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <input
+              type="number" min={0} max={3650}
+              value={s.audit?.retentionDays ?? 90}
+              onChange={(e) => apply({ audit: { retentionDays: Math.max(0, Number(e.target.value) || 0) } })}
+              className="w-20 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted-foreground">days</span>
+          </div>
+        </div>
+      </SettingsSection>
+
       {/* On Startup — full width */}
       <SettingsSection icon={Power} accent="#ef4444" title="On Startup" description="What happens when a profile is launched.">
         <div className="py-3">
