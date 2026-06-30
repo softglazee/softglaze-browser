@@ -216,6 +216,37 @@ model Extension {
   @@index([isGlobal])
 }
 
+// --- Identity Data Vault: personas/identities for the Smart Autofill engine ---
+// A workspace-global vault of demo registration identities. `usedOnUrls` is a
+// JSON array of hostnames the persona has already been used on, so the in-page
+// autofill widget stops offering it on those sites. Passwords are stored as a
+// plaintext column (the autofill engine must type them verbatim); the optional
+// whole-DB at-rest encryption covers them at rest.
+model PersonaData {
+  id           String   @id @default(uuid())
+  label        String? // optional batch label, e.g. "US Gen Z Batch"
+  firstName    String
+  lastName     String
+  email        String
+  username     String
+  password     String
+  phone        String?
+  dateOfBirth  String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  zipCode      String?
+  country      String?
+  company      String?
+  usedOnUrls   String   @default("[]") // JSON array of hostnames already used
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt @default(now())
+
+  @@index([createdAt])
+  @@index([email])
+}
+
 model Profile {
   id                  Int                 @id @default(autoincrement())
   title               String
