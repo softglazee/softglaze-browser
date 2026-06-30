@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Shuffle, X, Loader2, Check, Repeat, Dices } from 'lucide-react';
+import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 // Configure a proxy-rotation pool for one profile. The profile keeps its own
 // browser data dir (cookies persist) while the exit IP rotates across the pool.
 export default function ProxyRotationModal({ profileId, profileName, onClose }) {
+  const { dialogRef } = useDialog({ onClose });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -52,7 +54,7 @@ export default function ProxyRotationModal({ profileId, profileName, onClose }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-lg max-h-[88vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Rotate proxy" tabIndex={-1} className="w-full max-w-lg max-h-[88vh] overflow-hidden flex flex-col rounded border border-border bg-card shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-1.5 rounded border border-primary/20">

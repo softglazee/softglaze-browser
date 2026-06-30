@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { X, Download, Check, Loader2, RefreshCcw, MonitorDown, Cloud, Play } from 'lucide-react';
+import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 // On-demand browser manager: lists every Chrome-for-Testing build,
 // shows installed vs downloadable, and downloads+installs on demand with progress.
 export default function BrowserManagerModal({ onClose, onInstalled }) {
+  const { dialogRef } = useDialog({ onClose });
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -62,7 +64,7 @@ export default function BrowserManagerModal({ onClose, onInstalled }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onMouseDown={onClose}>
-      <div className="w-[620px] max-w-full max-h-[82vh] flex flex-col bg-popover border border-border rounded-xl shadow-2xl shadow-black/50 animate-scale-in" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Browser manager" tabIndex={-1} className="w-[620px] max-w-full max-h-[82vh] flex flex-col bg-popover border border-border rounded-xl shadow-2xl shadow-black/50 animate-scale-in" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 24%, transparent)' }}>
