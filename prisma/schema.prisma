@@ -384,10 +384,31 @@ model Profile {
 
   proxy Proxy? @relation(fields: [proxyId], references: [id], onDelete: SetNull)
   group Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  accesses ProfileAccess[]
 
   @@index([proxyId])
   @@index([groupId])
   @@index([assignedMemberId])
   @@index([createdAt])
   @@index([deletedAt])
+}
+
+// Shared profile pools / resource ACLs (Phase F2). A profile is visible+usable by
+// its owner and its single assignedMember (the existing model); ProfileAccess adds
+// explicit many-to-many sharing on top, WITHOUT loosening the fail-closed scoping.
+// level: 'use' = view + launch; 'edit' = also edit. Delete/purge stay gated by the
+// existing rank-based action permissions, so a shared member can never delete.
+model ProfileAccess {
+  id                Int      @id @default(autoincrement())
+  profileId         Int
+  memberId          Int
+  level             String   @default("use") // 'use' | 'edit'
+  grantedByMemberId Int?
+  createdAt         DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, memberId])
+  @@index([memberId])
+  @@index([profileId])
 }
