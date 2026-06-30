@@ -70,6 +70,19 @@ model ProxyGroup {
   @@index([ownerMemberId])
 }
 
+// Time-series proxy health (one row per check) for latency-over-time + status
+// history charts. Appended by persistProxyHealth; pruned to ~30 days at startup.
+model ProxyHealthEvent {
+  id        Int      @id @default(autoincrement())
+  proxyId   Int
+  ts        DateTime @default(now())
+  status    String // 'ok' | 'fail'
+  latencyMs Int?
+  country   String?
+
+  @@index([proxyId, ts])
+}
+
 model Group {
   id        Int      @id @default(autoincrement())
   name      String

@@ -3,7 +3,8 @@ import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2,
 
 import EmptyState from '@/components/EmptyState.jsx';
 import ProxyProviders from '@/components/ProxyProviders.jsx';
-import { Donut, Legend } from '@/components/charts/Charts.jsx';
+import { Donut, Legend, AreaChart } from '@/components/charts/Charts.jsx';
+import { Clock, BarChart3, History } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -120,10 +121,20 @@ export default function ProxyPoolPage() {
   const [autoGroupLevel, setAutoGroupLevel] = useState('country');
   const [autoGrouping, setAutoGrouping] = useState(false);
   const [autoGroupMsg, setAutoGroupMsg] = useState('');
+  // Phase D — proxy intelligence: latency sort, rotation tuning, scheduler, geo, history.
+  const [sortBy, setSortBy] = useState('default'); // 'default' | 'fastest' | 'slowest'
+  const [policyDetail, setPolicyDetail] = useState({ failoverMaxLatencyMs: 0, latencyTopN: 3 });
+  const [scheduler, setScheduler] = useState({ enabled: false, minutes: 30 });
+  const [showGeo, setShowGeo] = useState(false);
+  const [historyProxy, setHistoryProxy] = useState(null);
+  const [historyData, setHistoryData] = useState(null); // null = loading; [] = none
 
   useEffect(() => {
     softglazeApi.settings.getProxyPolicy()
-      .then((p) => { if (p && p.default) setProxyPolicy(p.default); })
+      .then((p) => { if (p && p.default) { setProxyPolicy(p.default); setPolicyDetail({ failoverMaxLatencyMs: Number(p.failoverMaxLatencyMs) || 0, latencyTopN: Math.max(1, Number(p.latencyTopN) || 3) }); } })
+      .catch(() => {});
+    softglazeApi.settings.getProxyScheduler()
+      .then((s) => { if (s) setScheduler({ enabled: Boolean(s.enabled), minutes: Number(s.minutes) || 30 }); })
       .catch(() => {});
   }, []);
 
@@ -153,13 +164,32 @@ export default function ProxyPoolPage() {
     });
   }, [proxies, search, activeGroup, statusFilter, checkResults]);
 
-  // Pagination over the filtered set (keeps long lists fast; pager is pinned at the
-  // bottom of the table card so you never scroll to the end to change pages).
-  const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filteredProxies.length / pageSize));
+  // Latency sort (live check result wins over the stored snapshot; unknown sinks last).
+  const sortedProxies = useMemo(() => {
+    if (sortBy === 'default') return filteredProxies;
+    const lat = (p) => {
+      const r = checkResults[p.id];
+      const v = (r && typeof r.latencyMs === 'number') ? r.latencyMs : (typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null);
+      return v == null ? Infinity : v;
+    };
+    const arr = filteredProxies.slice().sort((a, b) => lat(a) - lat(b));
+    return sortBy === 'slowest' ? arr.reverse() : arr;
+  }, [filteredProxies, sortBy, checkResults]);
+
+  // Geo breakdown of the whole pool by verified country (for the toggle-able panel).
+  const geoBreakdown = useMemo(() => {
+    const m = {};
+    for (const p of proxies) { const c = p.lastCountry || 'Unknown'; m[c] = (m[c] || 0) + 1; }
+    return Object.entries(m).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count);
+  }, [proxies]);
+
+  // Pagination over the filtered+sorted set (keeps long lists fast; pager is pinned at
+  // the bottom of the table card so you never scroll to the end to change pages).
+  const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(sortedProxies.length / pageSize));
   const safePage = Math.min(page, pageCount);
-  const pagedProxies = pageSize === Infinity ? filteredProxies : filteredProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
-  // Reset to page 1 whenever the filter set changes out from under us.
-  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, pageSize]);
+  const pagedProxies = pageSize === Infinity ? sortedProxies : sortedProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
+  // Reset to page 1 whenever the filter/sort set changes out from under us.
+  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, pageSize, sortBy]);
 
   // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
@@ -407,6 +437,22 @@ export default function ProxyPoolPage() {
     try { await softglazeApi.settings.setProxyPolicy({ default: mode }); }
     catch (err) { setError(err.message || 'Could not save the proxy policy.'); }
   }
+  async function applyPolicyParam(patch) {
+    setPolicyDetail((d) => ({ ...d, ...patch }));
+    try { await softglazeApi.settings.setProxyPolicy(patch); }
+    catch (err) { setError(err.message || 'Could not save the proxy policy.'); }
+  }
+  async function applyScheduler(next) {
+    setScheduler(next);
+    try { await softglazeApi.settings.setProxyScheduler(next); }
+    catch (err) { setError(err.message || 'Could not save the schedule.'); }
+  }
+  async function openHistory(proxy) {
+    setHistoryProxy(proxy);
+    setHistoryData(null);
+    try { const ev = await softglazeApi.proxies.healthHistory(proxy.id); setHistoryData(Array.isArray(ev) ? ev : []); }
+    catch (e) { setHistoryData([]); }
+  }
 
   // --- Proxy groups: create / edit / delete / assign / drag-drop ---
   async function saveGroup() {
@@ -551,7 +597,14 @@ export default function ProxyPoolPage() {
                   <option value="each-launch">Rotate each launch</option>
                   <option value="sticky">Sticky (fixed proxy)</option>
                   <option value="failover">Failover to healthy</option>
+                  <option value="latency-optimized">Fastest (latency)</option>
                 </select>
+                {proxyPolicy === 'failover' && (
+                  <input type="number" min={0} value={policyDetail.failoverMaxLatencyMs} onChange={(e) => applyPolicyParam({ failoverMaxLatencyMs: Math.max(0, Number(e.target.value) || 0) })} title="Skip proxies slower than this many ms (0 = no limit; falls back to the full pool if none qualify)" placeholder="max ms" className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                )}
+                {proxyPolicy === 'latency-optimized' && (
+                  <input type="number" min={1} value={policyDetail.latencyTopN} onChange={(e) => applyPolicyParam({ latencyTopN: Math.max(1, Number(e.target.value) || 1) })} title="Round-robin among the fastest N proxies" placeholder="top N" className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                )}
               </div>
               <Button variant="secondary" onClick={handleTestAllFast} disabled={testingAll || proxies.length === 0} title="Concurrent health test of every proxy">
                 {testingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
@@ -680,6 +733,22 @@ export default function ProxyPoolPage() {
         </button>
         {autoGroupMsg && <span className="text-[11px] text-emerald-400">{autoGroupMsg}</span>}
 
+        <span className="w-px h-5 bg-border mx-1" />
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title="Sort by latency">
+          <option value="default">Sort: default</option>
+          <option value="fastest">Fastest first</option>
+          <option value="slowest">Slowest first</option>
+        </select>
+        <button onClick={() => setShowGeo((v) => !v)} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${showGeo ? 'border-primary text-primary' : 'border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary'}`} title="Toggle the geo breakdown">
+          <BarChart3 className="w-3.5 h-3.5" /> Geo
+        </button>
+        <span className="w-px h-5 bg-border mx-1" />
+        <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title="Automatically re-test every proxy on a schedule">
+          <input type="checkbox" checked={scheduler.enabled} onChange={(e) => applyScheduler({ ...scheduler, enabled: e.target.checked })} className="accent-primary" />
+          <Clock className="w-3.5 h-3.5" /> Auto-check every
+          <input type="number" min={1} value={scheduler.minutes} onChange={(e) => applyScheduler({ ...scheduler, minutes: Math.max(1, Number(e.target.value) || 30) })} className="h-7 w-14 rounded border border-border bg-card px-1.5 text-[12px] text-foreground" /> min
+        </label>
+
         {Object.keys(providerCounts).length > 0 && (
           <>
             <span className="w-px h-5 bg-border mx-1" />
@@ -692,6 +761,26 @@ export default function ProxyPoolPage() {
           </>
         )}
       </div>
+
+      {showGeo && geoBreakdown.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-foreground">Proxies by country</span>
+            <span className="text-[11px] text-muted-foreground">{geoBreakdown.length} countries · {proxies.length} proxies</span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {geoBreakdown.slice(0, 12).map((g) => (
+              <div key={g.country} className="flex items-center gap-2">
+                <span className="w-28 shrink-0 text-[12px] text-muted-foreground truncate" title={g.country}>{g.country}</span>
+                <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${proxies.length ? Math.round((g.count / proxies.length) * 100) : 0}%` }} />
+                </div>
+                <span className="w-10 text-right text-[12px] text-foreground tabular-nums">{g.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
@@ -784,6 +873,9 @@ export default function ProxyPoolPage() {
                             <button type="button" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title="Test proxy" className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
                               {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                             </button>
+                            <button type="button" onClick={() => openHistory(proxy)} title="Health history" className="p-1 rounded hover:bg-card text-muted hover:text-foreground">
+                              <History className="h-3.5 w-3.5" />
+                            </button>
                             <button type="button" onClick={() => openEdit(proxy)} title="Edit proxy" className="p-1 rounded hover:bg-card text-muted hover:text-foreground"><Edit className="h-3.5 w-3.5" /></button>
                             <button type="button" onClick={() => handleDelete(proxy)} title="Delete proxy" className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
                           </span>
@@ -859,6 +951,38 @@ export default function ProxyPoolPage() {
         )}
       </Card>
       </>)}
+
+      {/* --- PROXY HEALTH HISTORY --- */}
+      <Dialog open={!!historyProxy} onOpenChange={(o) => { if (!o) { setHistoryProxy(null); setHistoryData(null); } }}>
+        <DialogContent title="Proxy health history" className="rounded border-border bg-card">
+          <DialogHeader>
+            <DialogTitle>Health history</DialogTitle>
+            <DialogDescription>{historyProxy ? (historyProxy.name || `${historyProxy.host}:${historyProxy.port}`) : ''}</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            {historyData === null ? (
+              <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : historyData.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No history yet. Run a health check (or enable Auto-check) and the latency/status timeline will build up here.</p>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Latency over time (ms)</p>
+                  <AreaChart data={historyData.filter((e) => typeof e.latencyMs === 'number').map((e) => ({ x: new Date(e.ts).toLocaleString(), y: e.latencyMs }))} height={160} />
+                </div>
+                <div className="flex gap-4 text-[12px] text-muted-foreground">
+                  <span><span className="text-emerald-400 font-semibold">{historyData.filter((e) => e.status === 'ok').length}</span> ok</span>
+                  <span><span className="text-red-400 font-semibold">{historyData.filter((e) => e.status === 'fail').length}</span> fail</span>
+                  <span>{historyData.length} checks</span>
+                </div>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setHistoryProxy(null); setHistoryData(null); }}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* --- CREATE / EDIT MODAL --- */}
       <Dialog open={proxyOpen} onOpenChange={setProxyOpen}>
