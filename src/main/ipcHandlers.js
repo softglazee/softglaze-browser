@@ -115,6 +115,9 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_ACCESS_GRANT: 'profile:access-grant',
+  PROFILE_ACCESS_REVOKE: 'profile:access-revoke',
+  PROFILE_ACCESS_LIST: 'profile:access-list',
   PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress', // main -> renderer stream
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
@@ -2159,49 +2162,66 @@ async function createProfileFromTemplate(payload) {
 // active member) and the Super Admin are unrestricted; OWNER-and-up also keep
 // access to legacy/unstamped profiles (created before a team existed). Enforced
 // in main — never trust the renderer to hide a profile.
+// Profiles a member may touch are selected with their owner/assignee ids AND the
+// ProfileAccess (F2 sharing) rows, so the fail-closed check is ACL-aware.
+const PROFILE_ACCESS_SELECT = { id: true, ownerMemberId: true, assignedMemberId: true, accesses: { select: { memberId: true, level: true } } };
+
 async function profileAccessChecker() {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return null; // unrestricted
   const all = await getPrisma().member.findMany();
   const visible = permissions.visibleMemberIds(all, member);
-  // Fail closed: a member sees only profiles owned by, or assigned to, someone in
-  // their visible subtree. Unowned profiles (created by the Super Admin, who
-  // stamps no member id) are NOT visible to owners — the Super Admin can assign
-  // them out explicitly. This stops owners seeing each other's / the admin's data.
-  return (p) => Boolean(p && (
-    (p.assignedMemberId != null && visible.has(p.assignedMemberId))
-    || (p.ownerMemberId != null && visible.has(p.ownerMemberId))
-  ));
+  // Fail closed: a member sees only profiles owned by, assigned to, OR explicitly
+  // SHARED (ProfileAccess) with someone in their visible subtree. Unowned profiles
+  // (Super Admin, who stamps no member id) stay hidden until assigned/shared out.
+  return (p) => permissions.profileRowAccessible(visible, p, false);
 }
 
-async function assertCanAccessProfile(id) {
-  const check = await profileAccessChecker();
-  if (!check) return;
-  const p = await getPrisma().profile.findUnique({ where: { id }, select: { id: true, ownerMemberId: true, assignedMemberId: true } });
+async function assertCanAccessProfile(id, opts = {}) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return;
+  const all = await getPrisma().member.findMany();
+  const visible = permissions.visibleMemberIds(all, member);
+  const p = await getPrisma().profile.findUnique({ where: { id }, select: PROFILE_ACCESS_SELECT });
   if (!p) throw new Error('Profile not found.');
-  if (!check(p)) { const e = new Error('You do not have access to this profile.'); e.code = 'FORBIDDEN'; throw e; }
+  if (!permissions.profileRowAccessible(visible, p, Boolean(opts.requireEdit))) {
+    const e = new Error('You do not have access to this profile.'); e.code = 'FORBIDDEN'; throw e;
+  }
 }
 
 // Split a renderer-supplied id list into the ones the active member may touch and
 // the ones they may not (the latter become per-id errors in bulk handlers).
-async function partitionAccessibleProfileIds(ids) {
-  const check = await profileAccessChecker();
-  if (!check) return { allowed: ids, denied: [] };
-  const rows = await getPrisma().profile.findMany({ where: { id: { in: ids } }, select: { id: true, ownerMemberId: true, assignedMemberId: true } });
+// `requireEdit` filters to profiles the member may edit (owner/assignee or an
+// 'edit'-level share) — used by the sharing handlers.
+async function partitionAccessibleProfileIds(ids, opts = {}) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return { allowed: ids, denied: [] };
+  const all = await getPrisma().member.findMany();
+  const visible = permissions.visibleMemberIds(all, member);
+  const rows = await getPrisma().profile.findMany({ where: { id: { in: ids } }, select: PROFILE_ACCESS_SELECT });
   const byId = new Map(rows.map((r) => [r.id, r]));
   const allowed = []; const denied = [];
-  for (const id of ids) { const r = byId.get(id); if (r && check(r)) allowed.push(id); else denied.push(id); }
+  for (const id of ids) {
+    const r = byId.get(id);
+    if (r && permissions.profileRowAccessible(visible, r, Boolean(opts.requireEdit))) allowed.push(id);
+    else denied.push(id);
+  }
   return { allowed, denied };
 }
 
 // Merge the active member's ownership filter into a profile list query. Mirrors
-// profileAccessChecker (fail closed — no unowned-profile fallback).
+// profileAccessChecker (fail closed) — owner OR assignee OR an ACL share to a
+// visible member.
 async function scopedProfileWhere(baseWhere) {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
   const all = await getPrisma().member.findMany();
   const visible = [...permissions.visibleMemberIds(all, member)];
-  const or = [{ assignedMemberId: { in: visible } }, { ownerMemberId: { in: visible } }];
+  const or = [
+    { assignedMemberId: { in: visible } },
+    { ownerMemberId: { in: visible } },
+    { accesses: { some: { memberId: { in: visible } } } }
+  ];
   return { AND: [baseWhere, { OR: or }] };
 }
 
@@ -2302,6 +2322,75 @@ async function createProfile(payload) {
 
   await logActivity(db, created.id, 'create', `created "${created.title}"`);
   return serializeProfile(created);
+}
+
+// --- Phase F2: shared profile pools / resource ACLs -------------------------
+// Grant (or update) access to one or more profiles for a member. The actor must
+// have EDIT access to each profile (owner/assignee or an 'edit' share) and may
+// only share with a member in their visible subtree. level: 'use' | 'edit'.
+async function grantProfileAccess(payload) {
+  await requirePermission('profiles.share');
+  const input = requireObject(payload);
+  const profileIds = parseIdArray(input.profileIds != null ? input.profileIds : (input.profileId != null ? [input.profileId] : []));
+  const memberId = parseId(input.memberId, 'memberId');
+  const level = input.level === 'edit' ? 'edit' : 'use';
+  const db = getPrisma();
+
+  const target = await db.member.findUnique({ where: { id: memberId } });
+  if (!target) throw new Error('Target member not found.');
+  const actor = await getActiveMember();
+  if (actor && actor.role !== 'SUPER_ADMIN') {
+    const all = await db.member.findMany();
+    const visible = permissions.visibleMemberIds(all, actor);
+    if (!visible.has(memberId)) throw new Error('You can only share profiles with members you manage.');
+  }
+
+  // Only profiles the actor may edit can be shared out.
+  const { allowed } = await partitionAccessibleProfileIds(profileIds, { requireEdit: true });
+  const grantedBy = ownerStampId();
+  let granted = 0;
+  for (const pid of allowed) {
+    await db.profileAccess.upsert({
+      where: { profileId_memberId: { profileId: pid, memberId } },
+      update: { level, grantedByMemberId: grantedBy },
+      create: { profileId: pid, memberId, level, grantedByMemberId: grantedBy }
+    });
+    await logAudit('profile.share', { profileId: pid, detail: { member: target.name, level } });
+    granted += 1;
+  }
+  return { ok: true, granted, denied: profileIds.length - allowed.length, memberId, level };
+}
+
+// Revoke a member's access to one or more profiles. Same edit-access gate.
+async function revokeProfileAccess(payload) {
+  await requirePermission('profiles.share');
+  const input = requireObject(payload);
+  const profileIds = parseIdArray(input.profileIds != null ? input.profileIds : (input.profileId != null ? [input.profileId] : []));
+  const memberId = parseId(input.memberId, 'memberId');
+  const db = getPrisma();
+  const { allowed } = await partitionAccessibleProfileIds(profileIds, { requireEdit: true });
+  let revoked = 0;
+  for (const pid of allowed) {
+    const res = await db.profileAccess.deleteMany({ where: { profileId: pid, memberId } });
+    if (res.count) { await logAudit('profile.unshare', { profileId: pid, detail: { memberId } }); revoked += res.count; }
+  }
+  return { ok: true, revoked };
+}
+
+// List who a profile is shared with (members + level). Any access to the profile
+// is enough to view its share list.
+async function listProfileAccess(payload) {
+  const input = requireObject(payload);
+  const profileId = parseId(input.profileId, 'profileId');
+  await assertCanAccessProfile(profileId);
+  const db = getPrisma();
+  const rows = await db.profileAccess.findMany({ where: { profileId }, orderBy: { createdAt: 'asc' } });
+  const ids = rows.map((r) => r.memberId);
+  const members = ids.length
+    ? await db.member.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, initials: true, color: true, role: true } })
+    : [];
+  const byId = new Map(members.map((m) => [m.id, m]));
+  return rows.map((r) => ({ memberId: r.memberId, level: r.level, member: byId.get(r.memberId) || null }));
 }
 
 // Crypto-seeded in-place Fisher–Yates shuffle (no Math.random — keeps entropy strong).
@@ -2527,7 +2616,7 @@ async function updateProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
-  await assertCanAccessProfile(id);
+  await assertCanAccessProfile(id, { requireEdit: true });
   const existing = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!existing) throw new Error('Profile not found.');
 
@@ -8730,6 +8819,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
+  registerHandler(CHANNELS.PROFILE_ACCESS_GRANT, grantProfileAccess);
+  registerHandler(CHANNELS.PROFILE_ACCESS_REVOKE, revokeProfileAccess);
+  registerHandler(CHANNELS.PROFILE_ACCESS_LIST, listProfileAccess);
   registerHandler(CHANNELS.PROFILE_ANALYZE_LEAKS, analyzeProfileLeaks);
   registerHandler(CHANNELS.PROFILE_EXPORT_COOKIES, exportProfileCookies);
   registerHandler(CHANNELS.PROFILE_IMPORT_COOKIES, importProfileCookies);
