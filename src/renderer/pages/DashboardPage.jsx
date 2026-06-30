@@ -210,6 +210,90 @@ function UpdateBanner() {
   );
 }
 
+// Offers to restore the profiles that were open when the app last exited or crashed.
+// Pull model (like the update banner) — robust to mount timing.
+function RestoreBanner() {
+  const [profiles, setProfiles] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    if (!softglazeApi.sessions.restoreGet) return undefined;
+    softglazeApi.sessions.restoreGet()
+      .then((r) => { if (live) setProfiles((r && r.profiles) || []); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
+
+  if (hidden || !profiles || profiles.length === 0) return null;
+
+  async function restore() {
+    setBusy(true);
+    try { await softglazeApi.sessions.restoreRun({ action: 'restore', ids: profiles.map((p) => p.id) }); } catch (e) { /* ignore */ }
+    setHidden(true);
+  }
+  async function dismiss() {
+    setBusy(true);
+    try { await softglazeApi.sessions.restoreRun({ action: 'dismiss' }); } catch (e) { /* ignore */ }
+    setHidden(true);
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border px-4 py-3 animate-fade-up" style={{ background: 'color-mix(in srgb, var(--primary) 10%, var(--card))', borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)' }}>
+      <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)' }}>
+        <RefreshCw className="w-4 h-4 text-primary" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold text-foreground">Restore your last session?</p>
+        <p className="text-[11.5px] text-muted-foreground">{profiles.length} profile{profiles.length === 1 ? '' : 's'} {profiles.length === 1 ? 'was' : 'were'} open when SoftGlaze last closed.</p>
+      </div>
+      <Button variant="primary" size="sm" onClick={restore} disabled={busy}>
+        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Restore
+      </Button>
+      <button onClick={dismiss} disabled={busy} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title="Dismiss">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+// Transient toasts for crash + memory-pressure notifications pushed from main.
+function ResilienceToasts() {
+  const [toasts, setToasts] = useState([]); // { id, kind, text }
+  const idRef = useRef(0);
+  useEffect(() => {
+    const add = (kind, text) => {
+      const id = ++idRef.current;
+      setToasts((t) => [...t, { id, kind, text }]);
+      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6500);
+    };
+    const offs = [];
+    if (softglazeApi.sessions.onCrash) offs.push(softglazeApi.sessions.onCrash((d) => {
+      if (!d) return;
+      add('crash', `${d.title || 'A profile'} stopped unexpectedly${d.restarted ? ' — restarting…' : ''}.`);
+    }));
+    if (softglazeApi.sessions.onMemoryPressure) offs.push(softglazeApi.sessions.onMemoryPressure((d) => {
+      if (!d) return;
+      add('memory', `Low memory — closed ${d.closed} profile${d.closed === 1 ? '' : 's'} (free ${d.freePct}%).`);
+    }));
+    return () => offs.forEach((off) => { if (typeof off === 'function') off(); });
+  }, []);
+  if (!toasts.length) return null;
+  return (
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm">
+      {toasts.map((t) => (
+        <div key={t.id} className="flex items-start gap-2.5 rounded-xl border px-4 py-3 shadow-lg animate-fade-up" style={{ background: 'var(--card)', borderColor: 'color-mix(in srgb, #ef4444 35%, transparent)' }}>
+          {t.kind === 'crash'
+            ? <Zap className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#f59e0b' }} />
+            : <Cpu className="w-4 h-4 mt-0.5 shrink-0" style={{ color: '#ef4444' }} />}
+          <p className="text-[12.5px] text-foreground">{t.text}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({ totalProfiles: 0, activeSessions: 0, totalProxies: 0, totalGroups: 0 });
   const [sessions, setSessions] = useState([]);
@@ -304,6 +388,11 @@ export default function DashboardPage() {
     <div className="space-y-6 pb-10">
       {/* IN-APP OTA UPDATE BANNER */}
       <UpdateBanner />
+
+      {/* SESSION RESTORE OFFER (after a crash or last close) */}
+      <RestoreBanner />
+      {/* CRASH / MEMORY-PRESSURE TOASTS */}
+      <ResilienceToasts />
 
       {/* PERSONALIZED WELCOME */}
       <WelcomeBanner />
