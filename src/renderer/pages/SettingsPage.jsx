@@ -331,6 +331,65 @@ function SettingsSection({ icon: Icon, accent, title, description, children, cla
   );
 }
 
+// App auto-update: the manual-check home that surfaces every updater state (idle /
+// checking / up-to-date / available / downloading / downloaded / error+retry) and
+// whether updates are even enabled in this build. The Dashboard banner handles the
+// proactive "an update is ready" prompt; this is where the user can check on demand.
+function UpdatesSection() {
+  const [st, setSt] = useState(null);
+  const [checked, setChecked] = useState(false); // user pressed Check at least once this session
+
+  useEffect(() => {
+    let live = true;
+    softglazeApi.updater.getState().then((s) => { if (live) setSt(s); }).catch(() => {});
+    const off = softglazeApi.updater.onEvent((s) => { if (live) setSt(s); });
+    return () => { live = false; if (typeof off === 'function') off(); };
+  }, []);
+
+  const status = (st && st.status) || 'idle';
+  const active = !st || st.active !== false; // assume active until told otherwise
+  const checking = status === 'checking';
+  const downloaded = status === 'downloaded';
+  const v = st && st.version ? `v${st.version}` : '';
+
+  async function check() {
+    setChecked(true);
+    try { const r = await softglazeApi.updater.check(); if (r && r.active === false) setSt((p) => ({ ...(p || {}), active: false, status: 'idle' })); }
+    catch (e) { /* ignore */ }
+  }
+  function install() { softglazeApi.updater.install().catch(() => {}); }
+
+  let line = 'Check whether a newer version of SoftGlaze Browser is available.';
+  if (!active) line = 'Automatic updates are not enabled in this build.';
+  else if (checking) line = 'Checking for updates…';
+  else if (status === 'available') line = `Update ${v} available — downloading in the background…`;
+  else if (status === 'downloading') line = `Downloading ${v}… ${st.percent || 0}%`;
+  else if (downloaded) line = `Update ${v} is ready to install.`;
+  else if (status === 'error') line = `Couldn't check for updates${st && st.error ? ` — ${String(st.error).slice(0, 120)}` : '.'}`;
+  else if (status === 'not-available' && checked) line = "You're on the latest version.";
+
+  return (
+    <SettingsSection icon={RefreshCcw} accent="#0ea5e9" title="Updates" description="Check for and install app updates. Updates are signature-verified before they install.">
+      <div className="flex items-center justify-between gap-4 py-3">
+        <div className="min-w-0 flex items-center gap-2">
+          {checking ? <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+            : status === 'not-available' && checked ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            : null}
+          <p className="text-sm text-foreground truncate">{line}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {downloaded && (
+            <Button variant="primary" size="sm" onClick={install}><RefreshCcw className="w-3.5 h-3.5" /> Install &amp; restart</Button>
+          )}
+          <Button variant="secondary" size="sm" onClick={check} disabled={checking || !active}>
+            {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />} Check for updates
+          </Button>
+        </div>
+      </div>
+    </SettingsSection>
+  );
+}
+
 // Recursive merge for optimistic local updates (mirrors the main-process store).
 function mergeLocal(base, patch) {
   if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) return patch;
@@ -754,6 +813,9 @@ function GlobalPreferences() {
           </div>
         </div>
       </SettingsSection>
+
+      {/* Updates — manual check + all updater states */}
+      <UpdatesSection />
 
       {/* On Startup — full width */}
       <SettingsSection icon={Power} accent="#ef4444" title="On Startup" description="What happens when a profile is launched.">
