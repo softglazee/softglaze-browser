@@ -1,0 +1,191 @@
+{
+  "common": {
+    "back": "Atrás",
+    "redeem": "Canjear",
+    "go": "Ir"
+  },
+  "remember": {
+    "label": "Mantener la sesión iniciada en este dispositivo"
+  },
+  "brand": {
+    "tagline": "Anti-Detect",
+    "bullets": {
+      "fingerprints": "Huellas digitales únicas y consistentes por perfil",
+      "proxy": "Un proxy dedicado para cada identidad",
+      "localFirst": "Local primero — tus datos nunca salen de este dispositivo"
+    },
+    "heroLine1": "Ejecuta cientos de identidades.",
+    "heroLine2": "Sin dejar rastro.",
+    "heroBody": "Un navegador anti-detect que prioriza lo local. Cada perfil obtiene una huella digital única y consistente y su propia identidad de red.",
+    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local"
+  },
+  "license": {
+    "graceMessage_one": "Tu suscripción ha terminado — queda {{count}} día de gracia. Renueva para mantener el acceso.",
+    "graceMessage_other": "Tu suscripción ha terminado — quedan {{count}} días de gracia. Renueva para mantener el acceso.",
+    "renew": "Renovar",
+    "trialChip_one": "Prueba · queda {{count}} día",
+    "trialChip_other": "Prueba · quedan {{count}} días"
+  },
+  "pay": {
+    "noMethods": "Aún no hay métodos de pago habilitados — usa un código de compra o contacta con tu administrador.",
+    "submitted": "Pago enviado — un administrador lo revisará y activará tu plan en breve.",
+    "manualBadge": "Manual",
+    "continueTo": "Continuar a {{label}}",
+    "openPaymentLink": "Abrir enlace de pago",
+    "referencePlaceholder": "Referencia de pago / ID de transacción",
+    "submitForApproval": "He pagado — enviar para aprobación"
+  },
+  "banned": {
+    "blockedHeading": "Tu cuenta está bloqueada",
+    "endedHeading": "Tu suscripción ha terminado",
+    "blockedBodyNamed": "{{name}}, tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso — tus datos están a salvo.",
+    "blockedBody": "Tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso — tus datos están a salvo.",
+    "endedBodyNamed": "{{name}}, tu prueba gratuita y tu periodo de gracia han terminado. Renueva para desbloquear tu espacio de trabajo — tus perfiles y datos están a salvo y esperando.",
+    "endedBody": "Tu prueba gratuita y tu periodo de gracia han terminado. Renueva para desbloquear tu espacio de trabajo — tus perfiles y datos están a salvo y esperando.",
+    "haveCode": "¿Tienes un código de compra?",
+    "needHelp": "¿Necesitas ayuda? Contacta con tu administrador.",
+    "signOut": "Cerrar sesión"
+  },
+  "register": {
+    "title": "Crea tu cuenta",
+    "subtitle": "Esta es tu cuenta maestra — la propietaria del espacio de trabajo.",
+    "firstName": "Nombre",
+    "lastName": "Apellidos",
+    "email": "Correo electrónico",
+    "emailPlaceholder": "tu@espaciodetrabajo.com",
+    "phone": "Número de teléfono",
+    "phonePlaceholder": "+31 6 12345678",
+    "password": "Contraseña",
+    "passwordPlaceholder": "8+ caracteres",
+    "confirm": "Confirmar",
+    "confirmPlaceholder": "Repetir",
+    "continue": "Continuar",
+    "storedLocally": "Almacenado localmente y cifrado en este dispositivo",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "logIn": "Iniciar sesión"
+  },
+  "verify": {
+    "title": "Verifica tu correo electrónico",
+    "subtitlePrefix": "Introduce el código de 6 dígitos enviado a",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Modo de desarrollo — todavía no se envía ningún correo. Tu código es",
+    "devModeSuffix": ".",
+    "verifyCreate": "Verificar y crear cuenta",
+    "resendIn": "Reenviar código en {{count}}s",
+    "resend": "Reenviar código"
+  },
+  "plan": {
+    "title": "Todo listo",
+    "subtitlePrefix": "Tu cuenta está lista con una",
+    "trialHighlight": "prueba gratuita de 7 días",
+    "subtitleSuffix": ". Empieza ahora o activa un plan de pago.",
+    "startTrialTitle": "Iniciar prueba gratuita de 7 días",
+    "startTrialSubtitle": "Sin pago ahora — explóralo todo.",
+    "activatePaid": "Activar un plan de pago ahora",
+    "haveCode": "¿Tienes un código de compra?",
+    "skip": "Omitir — iniciar la prueba"
+  },
+  "login": {
+    "welcomeBackNamed": "Bienvenido de nuevo, {{name}}",
+    "welcomeBack": "Bienvenido de nuevo",
+    "subtitle": "Inicia sesión para desbloquear tu espacio de trabajo.",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "forgot": "¿Olvidaste?",
+    "passwordPlaceholder": "Contraseña maestra",
+    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local — nunca sale de este dispositivo. Si se pierde, el espacio de trabajo debe restablecerse desde Ajustes.",
+    "signIn": "Iniciar sesión",
+    "noAccount": "¿No tienes una cuenta?",
+    "createOne": "Crea una",
+    "haveInvite": "¿Tienes un código de invitación?",
+    "teamSignIn": "Inicio de sesión de miembro del equipo"
+  },
+  "invite": {
+    "title": "Canjea tu invitación",
+    "subtitle": "Introduce el código que te dieron y establece una contraseña para tu cuenta.",
+    "code": "Código de invitación",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Tu nombre",
+    "optional": "(opcional)",
+    "namePlaceholder": "Nombre completo",
+    "setPassword": "Establece una contraseña",
+    "passwordPlaceholder": "6+ caracteres",
+    "join": "Unirse al espacio de trabajo"
+  },
+  "member": {
+    "title": "Inicio de sesión de miembro del equipo",
+    "subtitle": "Usa el correo/nombre y la contraseña que estableciste al canjear tu invitación.",
+    "identifier": "Correo o nombre",
+    "identifierPlaceholder": "tu@espaciodetrabajo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Tu contraseña",
+    "signIn": "Iniciar sesión",
+    "haveInviteInstead": "¿Tienes un código de invitación en su lugar?",
+    "redeemIt": "Canjéalo"
+  },
+  "super": {
+    "title": "Super Admin",
+    "access": "Acceso de Super Admin",
+    "setupSubtitlePrefix": "Configuración inicial. Crea la credencial de Super Admin para",
+    "setupSubtitleHighlight": "esta instalación",
+    "setupSubtitleSuffix": "— se almacena cifrada en este dispositivo y es la única forma de entrar, así que mantenla segura.",
+    "username": "Nombre de usuario",
+    "usernamePlaceholder": "superadmin",
+    "password": "Contraseña",
+    "setupPasswordPlaceholder": "Al menos 8 caracteres",
+    "confirmPassword": "Confirmar contraseña",
+    "confirmPasswordPlaceholder": "Vuelve a introducir la contraseña",
+    "createCredentials": "Crear credenciales",
+    "loginSubtitle": "Acceso del propietario de origen. Omite el registro y desbloquea todo el espacio de trabajo.",
+    "usernameOrEmail": "Nombre de usuario o correo",
+    "loginPasswordPlaceholder": "Contraseña",
+    "enterWorkspace": "Entrar al espacio de trabajo"
+  },
+  "pick": {
+    "title": "¿Quién está trabajando?",
+    "subtitle": "Selecciona tu perfil de miembro para continuar.",
+    "pin": "PIN",
+    "suspended": "Suspendido",
+    "pinPlaceholder": "Introduce el PIN",
+    "haveInvite": "¿Tienes un código de invitación?",
+    "teamSignIn": "Inicio de sesión de miembro del equipo"
+  },
+  "db": {
+    "title": "Desbloquea tu base de datos",
+    "subtitle": "La base de datos de este espacio de trabajo está cifrada. Introduce tu contraseña del espacio de trabajo para descifrarla y abrirla.",
+    "workspacePassword": "Contraseña del espacio de trabajo",
+    "passwordPlaceholder": "Contraseña del espacio de trabajo",
+    "unlock": "Desbloquear",
+    "corrupted": "Si estás seguro de que la contraseña es correcta, el archivo de la base de datos podría estar dañado. Puedes recuperarte reinstalando y restaurando una copia de seguridad del espacio de trabajo (Ajustes → Copia de seguridad y restauración del espacio de trabajo). No hay restablecimiento de contraseña — los datos solo se pueden abrir con la contraseña correcta."
+  },
+  "errors": {
+    "enterFirstLast": "Introduce tu nombre y apellidos.",
+    "validEmail": "Introduce una dirección de correo válida.",
+    "validPhone": "Introduce un número de teléfono válido.",
+    "password8": "La contraseña debe tener al menos 8 caracteres.",
+    "passwordsNoMatch": "Las contraseñas no coinciden.",
+    "couldNotSendCode": "No se pudo enviar el código de verificación.",
+    "couldNotResendCode": "No se pudo reenviar el código.",
+    "enter6Digit": "Introduce el código de 6 dígitos.",
+    "verificationFailed": "La verificación falló.",
+    "incorrectPassword": "Contraseña incorrecta.",
+    "couldNotSignIn": "No se pudo iniciar sesión.",
+    "superSetupRequired": "Aún no se ha establecido ninguna credencial de Super Admin — crea una abajo.",
+    "invalidSuperCredentials": "Credenciales de Super Admin no válidas.",
+    "couldNotCreateSuper": "No se pudieron crear las credenciales de Super Admin.",
+    "enterInviteCode": "Introduce tu código de invitación.",
+    "password6": "La contraseña debe tener al menos 6 caracteres.",
+    "couldNotRedeemInvite": "No se pudo canjear ese código de invitación.",
+    "enterEmailNamePassword": "Introduce tu correo/nombre y contraseña.",
+    "enterPurchaseCode": "Introduce tu código de compra.",
+    "invalidPurchaseCode": "Ese código de compra no es válido.",
+    "noPaymentMethod": "Aún no hay ningún método de pago disponible.",
+    "paymentNotStarted": "No se pudo iniciar el pago.",
+    "couldNotSubmitPayment": "No se pudo enviar tu pago.",
+    "enterWorkspacePassword": "Introduce tu contraseña del espacio de trabajo.",
+    "dbStillLocked": "La base de datos sigue bloqueada — inténtalo de nuevo.",
+    "dbMissing": "Falta el archivo cifrado de la base de datos. Restaura desde una copia de seguridad del espacio de trabajo para recuperarlo.",
+    "dbUnlockFailed": "Contraseña incorrecta — o el archivo está dañado.",
+    "couldNotUnlockDb": "No se pudo desbloquear la base de datos."
+  }
+}

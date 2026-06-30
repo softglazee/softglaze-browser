@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Motores",
+    "title": "Navegadores",
+    "subtitle": "Descarga compilaciones reales de Chrome y Firefox cuando las necesites: se instalan automáticamente y quedan listas para iniciarse.",
+    "refresh": "Actualizar"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome instalado",
+    "chromeAvailable": "Chrome disponible",
+    "firefoxInstalled": "Firefox instalado",
+    "firefoxAvailable": "Firefox disponible"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} instalados · {{available}} disponibles"
+  },
+  "firefox": {
+    "heading": "FlowerBrowser (motor Firefox)",
+    "ready": "Listo",
+    "notDetected": "No detectado",
+    "detectedDesc": "Listo. Detectado en {{path}}. Los perfiles asignados a FlowerBrowser inician Firefox real con proxy, UA, idioma, zona horaria y WebRTC desactivado.",
+    "notDetectedDesc": "No se detectó ningún Firefox del sistema. Descarga una versión abajo: se instala en la aplicación y los perfiles de FlowerBrowser iniciarán Firefox real con proxy, UA, idioma, zona horaria y WebRTC desactivado.",
+    "fetching": "Obteniendo el catálogo de versiones de Firefox…",
+    "empty": "No hay versiones de Firefox disponibles (¿estás sin conexión?)."
+  },
+  "chrome": {
+    "heading": "SunBrowser (Chrome for Testing)",
+    "subtitle": "Compilaciones reales: UA, Client-Hints, TLS y workers coinciden realmente con la versión.",
+    "fetching": "Obteniendo el catálogo de Chrome for Testing…",
+    "empty": "No hay versiones disponibles (¿estás sin conexión?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Listo",
+    "paused": "En pausa",
+    "interrupted": "Interrumpido",
+    "resume": "Reanudar",
+    "download": "Descargar",
+    "retry": "Reintentar",
+    "downloading": "Descargando",
+    "installing": "Instalando…",
+    "installingShort": "Instalando",
+    "queued": "En cola…",
+    "pauseDownload": "Pausar descarga",
+    "pausedPercent": "En pausa · {{percent}}%",
+    "interruptedPercent": "Interrumpido · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "No se pudo acceder al catálogo de navegadores. Comprueba tu conexión a Internet.",
+    "downloadFailed": "La descarga falló.",
+    "pauseFailed": "No se pudo pausar.",
+    "resumeFailed": "No se pudo reanudar."
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "common": {
+    "back": "Back",
+    "redeem": "Redeem",
+    "go": "Go"
+  },
+  "remember": {
+    "label": "Keep me signed in on this device"
+  },
+  "brand": {
+    "tagline": "Anti-Detect",
+    "bullets": {
+      "fingerprints": "Unique, consistent fingerprints per profile",
+      "proxy": "A dedicated proxy for every identity",
+      "localFirst": "Local-first — your data never leaves this device"
+    },
+    "heroLine1": "Run hundreds of identities.",
+    "heroLine2": "Leave zero trace.",
+    "heroBody": "A local-first anti-detect browser. Every profile gets a unique, consistent fingerprint and its own network identity.",
+    "footer": "© {{year}} SoftGlaze · Local workspace"
+  },
+  "license": {
+    "graceMessage_one": "Your subscription has ended — {{count}} day of grace left. Renew to keep access.",
+    "graceMessage_other": "Your subscription has ended — {{count}} days of grace left. Renew to keep access.",
+    "renew": "Renew",
+    "trialChip_one": "Trial · {{count}} day left",
+    "trialChip_other": "Trial · {{count}} days left"
+  },
+  "pay": {
+    "noMethods": "No payment methods are enabled yet — use a purchase code or contact your administrator.",
+    "submitted": "Payment submitted — an administrator will review it and activate your plan shortly.",
+    "manualBadge": "Manual",
+    "continueTo": "Continue to {{label}}",
+    "openPaymentLink": "Open payment link",
+    "referencePlaceholder": "Payment reference / transaction ID",
+    "submitForApproval": "I’ve paid — submit for approval"
+  },
+  "banned": {
+    "blockedHeading": "Your account is blocked",
+    "endedHeading": "Your subscription has ended",
+    "blockedBodyNamed": "{{name}}, your account has been blocked by an administrator. Please contact them to restore access — your data is safe.",
+    "blockedBody": "Your account has been blocked by an administrator. Please contact them to restore access — your data is safe.",
+    "endedBodyNamed": "{{name}}, your free trial and grace period are over. Renew to unlock your workspace — your profiles and data are safe and waiting.",
+    "endedBody": "Your free trial and grace period are over. Renew to unlock your workspace — your profiles and data are safe and waiting.",
+    "haveCode": "Have a purchase code?",
+    "needHelp": "Need help? Contact your administrator.",
+    "signOut": "Sign out"
+  },
+  "register": {
+    "title": "Create your account",
+    "subtitle": "This is your master account — the owner of the workspace.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "emailPlaceholder": "you@workspace.com",
+    "phone": "Phone number",
+    "phonePlaceholder": "+31 6 12345678",
+    "password": "Password",
+    "passwordPlaceholder": "8+ characters",
+    "confirm": "Confirm",
+    "confirmPlaceholder": "Repeat",
+    "continue": "Continue",
+    "storedLocally": "Stored locally and encrypted on this device",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in"
+  },
+  "verify": {
+    "title": "Verify your email",
+    "subtitlePrefix": "Enter the 6-digit code sent to",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Dev mode — no email is actually sent yet. Your code is",
+    "devModeSuffix": ".",
+    "verifyCreate": "Verify & create account",
+    "resendIn": "Resend code in {{count}}s",
+    "resend": "Resend code"
+  },
+  "plan": {
+    "title": "You're all set",
+    "subtitlePrefix": "Your account is ready with a",
+    "trialHighlight": "7-day free trial",
+    "subtitleSuffix": ". Start now, or activate a paid plan.",
+    "startTrialTitle": "Start 7-day free trial",
+    "startTrialSubtitle": "No payment now — explore everything.",
+    "activatePaid": "Activate a paid plan now",
+    "haveCode": "Have a purchase code?",
+    "skip": "Skip — start the trial"
+  },
+  "login": {
+    "welcomeBackNamed": "Welcome back, {{name}}",
+    "welcomeBack": "Welcome back",
+    "subtitle": "Sign in to unlock your workspace.",
+    "email": "Email",
+    "password": "Password",
+    "forgot": "Forgot?",
+    "passwordPlaceholder": "Master password",
+    "forgotBody": "Your master password isn't recoverable on a local install — it never leaves this device. If it's lost, the workspace has to be reset from Settings.",
+    "signIn": "Sign in",
+    "noAccount": "Don't have an account?",
+    "createOne": "Create one",
+    "haveInvite": "Have an invite code?",
+    "teamSignIn": "Team member sign in"
+  },
+  "invite": {
+    "title": "Redeem your invite",
+    "subtitle": "Enter the code you were given and set a password for your account.",
+    "code": "Invite code",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Your name",
+    "optional": "(optional)",
+    "namePlaceholder": "Full name",
+    "setPassword": "Set a password",
+    "passwordPlaceholder": "6+ characters",
+    "join": "Join workspace"
+  },
+  "member": {
+    "title": "Team member sign in",
+    "subtitle": "Use the email/name and password set when you redeemed your invite.",
+    "identifier": "Email or name",
+    "identifierPlaceholder": "you@workspace.com",
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "signIn": "Sign in",
+    "haveInviteInstead": "Have an invite code instead?",
+    "redeemIt": "Redeem it"
+  },
+  "super": {
+    "title": "Super Admin",
+    "access": "Super Admin access",
+    "setupSubtitlePrefix": "First-run setup. Create the Super Admin credential for",
+    "setupSubtitleHighlight": "this installation",
+    "setupSubtitleSuffix": "— it's stored hashed on this device and is the only way in, so keep it safe.",
+    "username": "Username",
+    "usernamePlaceholder": "superadmin",
+    "password": "Password",
+    "setupPasswordPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Re-enter password",
+    "createCredentials": "Create credentials",
+    "loginSubtitle": "Source-owner access. Bypasses registration and unlocks the full workspace.",
+    "usernameOrEmail": "Username or email",
+    "loginPasswordPlaceholder": "Password",
+    "enterWorkspace": "Enter workspace"
+  },
+  "pick": {
+    "title": "Who's working?",
+    "subtitle": "Select your member profile to continue.",
+    "pin": "PIN",
+    "suspended": "Suspended",
+    "pinPlaceholder": "Enter PIN",
+    "haveInvite": "Have an invite code?",
+    "teamSignIn": "Team member sign in"
+  },
+  "db": {
+    "title": "Unlock your database",
+    "subtitle": "This workspace's database is encrypted. Enter your workspace password to decrypt and open it.",
+    "workspacePassword": "Workspace password",
+    "passwordPlaceholder": "Workspace password",
+    "unlock": "Unlock",
+    "corrupted": "If you're certain the password is right, the database file may be damaged. You can recover by reinstalling and restoring a workspace backup (Settings → Workspace Backup & Restore). There is no password reset — the data can only be opened with the correct password."
+  },
+  "errors": {
+    "enterFirstLast": "Enter your first and last name.",
+    "validEmail": "Enter a valid email address.",
+    "validPhone": "Enter a valid phone number.",
+    "password8": "Password must be at least 8 characters.",
+    "passwordsNoMatch": "Passwords do not match.",
+    "couldNotSendCode": "Could not send the verification code.",
+    "couldNotResendCode": "Could not resend the code.",
+    "enter6Digit": "Enter the 6-digit code.",
+    "verificationFailed": "Verification failed.",
+    "incorrectPassword": "Incorrect password.",
+    "couldNotSignIn": "Could not sign in.",
+    "superSetupRequired": "No Super Admin credential is set yet — create one below.",
+    "invalidSuperCredentials": "Invalid Super Admin credentials.",
+    "couldNotCreateSuper": "Could not create Super Admin credentials.",
+    "enterInviteCode": "Enter your invite code.",
+    "password6": "Password must be at least 6 characters.",
+    "couldNotRedeemInvite": "Could not redeem that invite code.",
+    "enterEmailNamePassword": "Enter your email/name and password.",
+    "enterPurchaseCode": "Enter your purchase code.",
+    "invalidPurchaseCode": "That purchase code is not valid.",
+    "noPaymentMethod": "No payment method is available yet.",
+    "paymentNotStarted": "Payment could not be started.",
+    "couldNotSubmitPayment": "Could not submit your payment.",
+    "enterWorkspacePassword": "Enter your workspace password.",
+    "dbStillLocked": "The database is still locked — please try again.",
+    "dbMissing": "The encrypted database file is missing. Restore from a workspace backup to recover.",
+    "dbUnlockFailed": "Incorrect password — or the file is corrupted.",
+    "couldNotUnlockDb": "Could not unlock the database."
+  }
+}

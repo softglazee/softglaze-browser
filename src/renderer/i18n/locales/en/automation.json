@@ -1,0 +1,277 @@
+{
+  "header": {
+    "eyebrow": "Softglaze Pro Features",
+    "title": "Automation",
+    "description": "No-code macros, AI-driven cookie warming, and a log of every background task."
+  },
+  "tabs": {
+    "macros": "My Macros",
+    "parallel": "Parallel Runs",
+    "warmer": "Cookie Warmer",
+    "history": "Task History"
+  },
+  "clickLabels": {
+    "none": "Just browse",
+    "random": "Random clicks",
+    "links": "Browse links"
+  },
+  "stepTypes": {
+    "goto": "Go to URL",
+    "click": "Click",
+    "type": "Type text",
+    "keypress": "Press key",
+    "scroll": "Scroll",
+    "wait": "Wait",
+    "move": "Move mouse",
+    "hover": "Hover"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS selector",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Text to type"
+    },
+    "keypress": {
+      "key": "Key",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Scroll amount",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Milliseconds",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Selector (or use X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Selector",
+      "selectorPlaceholder": ".menu",
+      "ms": "Dwell ms",
+      "msPlaceholder": "800"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(no URL)",
+    "noSelector": "(no selector)",
+    "selectorFallback": "(selector)",
+    "target": "(target)"
+  },
+  "macros": {
+    "intro": "Record or build reusable, no-code workflows, then run them inside a profile (navigate, click, type, wait) — manually or on a schedule.",
+    "profileSelectTitle": "Profile that Run / Record act on",
+    "noProfiles": "No profiles",
+    "profileFallback": "Profile {{id}}",
+    "stopAndSave": "Stop & Save",
+    "record": "Record",
+    "schedule": "Schedule",
+    "createMacro": "Create Macro",
+    "stepsBadge_one": "{{count}} step",
+    "stepsBadge_other": "{{count}} steps",
+    "updated": "Updated {{date}}",
+    "run": "Run",
+    "edit": "Edit",
+    "editSteps": "Edit steps",
+    "delete": "Delete",
+    "runTitleNoSteps": "This macro has no steps yet — edit it first",
+    "runTitleReady": "Run on the selected profile",
+    "emptyTitle": "No macros yet",
+    "emptyHint": "Record a workflow or create one to get started.",
+    "errors": {
+      "loadMacros": "Could not load macros.",
+      "deleteMacro": "Could not delete macro.",
+      "chooseProfile": "Choose a target profile first.",
+      "noSteps": "This macro has no steps yet — edit it first.",
+      "chooseProfileRecord": "Choose a target profile to record in.",
+      "recordingFailed": "Recording action failed."
+    },
+    "recordingStarted": "Recording… interact with the launched browser, then press Stop to save.",
+    "savedNotice": "Saved \"{{name}}\" with {{count}} step(s).",
+    "stoppedNotice": "Recording stopped — captured {{count}} step(s) (not saved)."
+  },
+  "saveRecording": {
+    "ariaLabel": "Save recorded macro",
+    "title": "Save recorded macro",
+    "subtitle": "Name it to keep the captured steps, or discard them. The browser stays open.",
+    "placeholder": "Recorded macro",
+    "discard": "Discard",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Macro Schedule",
+    "title": "Macro Schedule",
+    "subtitle": "Run a macro automatically on a timer · Softglaze Pro",
+    "enable": "Enable scheduled runs",
+    "macroLabel": "Macro",
+    "selectMacro": "Select a macro…",
+    "everyMinutes": "Every (minutes)",
+    "targetProfiles": "Target profiles",
+    "noProfiles": "No profiles available.",
+    "profileFallback": "Profile {{id}}",
+    "cancel": "Cancel",
+    "save": "Save schedule",
+    "errors": {
+      "save": "Could not save the schedule."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Edit macro",
+    "ariaCreate": "Create macro",
+    "titleEdit": "Edit macro",
+    "titleCreate": "Create macro",
+    "subtitle": "Build a no-code flow — drag the handle to reorder.",
+    "nameLabel": "Macro name",
+    "namePlaceholder": "e.g. Daily login",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What does it do?",
+    "stepsLabel": "Steps ({{count}})",
+    "addStep": "Add step",
+    "noSteps": "No steps yet — choose a type and add one.",
+    "dragToReorder": "Drag to reorder",
+    "removeStep": "Remove step",
+    "cancel": "Cancel",
+    "save": "Save macro",
+    "errors": {
+      "name": "Give the macro a name.",
+      "save": "Could not save macro."
+    }
+  },
+  "runModal": {
+    "ariaLabel": "Macro run: {{name}}",
+    "runningOn": "Running on {{profile}}",
+    "starting": "Starting…",
+    "logStarted": "Started \"{{name}}\" · {{total}} step(s) on {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} — {{error}}",
+    "logStepFailed": "failed",
+    "logStopped": "Stopped.",
+    "logFinished": "Finished — {{ran}}/{{total}} step(s).",
+    "stopped": "Stopped.",
+    "finished": "Finished.",
+    "summaryCompleted": "{{ran}}/{{total}} step(s) completed.",
+    "summaryRan": "{{ran}}/{{total}} step(s) ran.",
+    "paused": "Paused",
+    "running": "Running…",
+    "resume": "Resume",
+    "pause": "Pause",
+    "stop": "Stop",
+    "close": "Close",
+    "errors": {
+      "run": "Could not run macro."
+    }
+  },
+  "parallel": {
+    "states": {
+      "queued": "Queued",
+      "launching": "Launching",
+      "running": "Running",
+      "passed": "Passed",
+      "failed": "Failed"
+    },
+    "title": "Parallel Macro Runner",
+    "subtitle": "Run one macro across many profiles at once, with a live status stream.",
+    "macroLabel": "Macro",
+    "noMacros": "No macros yet",
+    "macroOption": "{{name}} · {{count}} steps",
+    "concurrency": "Concurrency",
+    "dataBound_one": "{{fileName}} · {{count}} row",
+    "dataBound_other": "{{fileName}} · {{count}} rows",
+    "dataHint": "Optional: bind a spreadsheet (row → profile, in order)",
+    "clearDataBinding": "Clear data binding",
+    "bindData": "Bind data",
+    "columnsPrefix": "Columns: {{columns}} — use",
+    "columnsSuffix": "in macro steps.",
+    "profilesLabel": "Profiles ({{count}} selected)",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "searchPlaceholder": "Search",
+    "noProfiles": "No profiles found.",
+    "rowMismatch": "{{rows}} data row(s) vs {{profiles}} profile(s) — extras run without/with no variables.",
+    "running": "Running…",
+    "runOn_one": "Run on {{count}} profile",
+    "runOn_other": "Run on {{count}} profiles",
+    "runStatus": "Run status",
+    "summaryPassed": "passed",
+    "summaryFailed": "failed",
+    "summaryTotal": "{{total}} total",
+    "watchHint": "Select profiles and a macro, then start the run to watch live progress.",
+    "steps": "{{ran}}/{{total}} steps",
+    "profileFallback": "Profile {{id}}",
+    "runConsole": "Run console",
+    "live": "live",
+    "consoleIdle": "[ idle ] No run yet — progress will stream here (no cookies or credentials are ever included).",
+    "logRunFinished": "Run finished — {{passed}}/{{total}} passed",
+    "logRunFinishedError": "Run finished — {{passed}}/{{total}} passed ({{error}})",
+    "errors": {
+      "readSpreadsheet": "Could not read the spreadsheet.",
+      "chooseMacro": "Choose a macro to run.",
+      "selectProfile": "Select at least one profile.",
+      "startRun": "Could not start the parallel run."
+    }
+  },
+  "warmer": {
+    "title": "AI Cookie Warmer",
+    "subtitle": "Builds organic cookies & history by browsing real sites.",
+    "sitesLabel": "Sites to visit ({{count}})",
+    "addSuggested": "Add a suggested site…",
+    "add": "Add",
+    "customPlaceholder": "Or paste a custom URL (e.g. example.com)",
+    "noSites": "No sites yet — add one above.",
+    "secondsTitle": "Seconds to spend on this site",
+    "secondsUnit": "s",
+    "behaviourTitle": "What to do on this site",
+    "remove": "Remove",
+    "loopUntilStopped": "Loop until stopped",
+    "keepOpen": "Keep sessions open after",
+    "cookieNote": "Cookies & cache are saved to each profile automatically — the console reports how many cookies were stored.",
+    "startWarmup": "Start warm-up",
+    "warming": "Warming…",
+    "stop": "Stop",
+    "forceStop": "Force stop",
+    "profilesLabel": "Profiles ({{count}} selected)",
+    "searchPlaceholder": "Search",
+    "noProfiles": "No profiles found.",
+    "profileFallback": "Profile {{id}}",
+    "warmupConsole": "Warm-up console",
+    "live": "live",
+    "consoleIdle": "[ idle ] Select profiles, set a duration, and start the warm-up to see live progress.",
+    "errors": {
+      "selectProfile": "Select at least one profile to warm up.",
+      "addSite": "Add at least one site to visit.",
+      "startWarmup": "Could not start the warm-up.",
+      "stopWarmup": "Could not stop the warm-up."
+    }
+  },
+  "history": {
+    "emptyTitle": "No tasks have run yet",
+    "emptyHint": "Warmer, macro, and parallel runs will appear here.",
+    "columns": {
+      "task": "Task",
+      "profiles": "Profiles",
+      "detail": "Detail",
+      "status": "Status",
+      "when": "When"
+    },
+    "emptyDetail": "—",
+    "parallelRun": "Parallel run",
+    "macroRun": "Macro run",
+    "cookieWarmup": "AI Cookie Warm-up",
+    "minutes": "{{count}} min",
+    "sites_one": "{{count}} site",
+    "sites_other": "{{count}} sites"
+  }
+}

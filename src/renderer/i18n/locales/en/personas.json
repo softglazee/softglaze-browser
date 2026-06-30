@@ -1,0 +1,142 @@
+{
+  "header": {
+    "eyebrow": "Identities",
+    "title": "Data Vault",
+    "description": "A reusable vault of demo identities for the Smart Autofill engine. Add them manually or import a spreadsheet; each one remembers the sites it has already been used on.",
+    "refresh": "Refresh",
+    "import": "Import Excel/CSV",
+    "addManually": "Add manually"
+  },
+  "stats": {
+    "totalIdentities": "Total identities",
+    "neverUsed": "Never used",
+    "usedAtLeastOnce": "Used at least once",
+    "totalUses": "Total uses",
+    "filtering": "filtering"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search by name, email, username, or label...",
+    "showing": "Showing {{count}} {{kind}}",
+    "kindNeverUsed": "never-used",
+    "kindUsed": "used",
+    "clear": "clear"
+  },
+  "bulk": {
+    "selected": "{{count}} selected",
+    "resetUsedStatus": "Reset used status",
+    "deleteSelected": "Delete selected",
+    "clear": "Clear",
+    "clearSelectionTitle": "Clear selection"
+  },
+  "table": {
+    "loading": "Loading identities...",
+    "selectAll": "Select all identities",
+    "selectRow": "Select {{name}}",
+    "colName": "Name",
+    "colEmail": "Email",
+    "colUsername": "Username",
+    "colPassword": "Password",
+    "colPhone": "Phone",
+    "colAddress": "Address",
+    "colLabel": "Label",
+    "colTimesUsed": "Times used",
+    "colCreated": "Created",
+    "colActions": "Actions",
+    "sitesUsed_one": "{{count}} site",
+    "sitesUsed_other": "{{count}} sites",
+    "never": "Never",
+    "editIdentity": "Edit identity",
+    "deleteIdentity": "Delete identity",
+    "hidePassword": "Hide",
+    "revealPassword": "Reveal"
+  },
+  "empty": {
+    "title": "Your data vault is empty",
+    "description": "Add an identity manually or import an Excel/CSV sheet to start building your autofill vault.",
+    "filteredTitle": "No identities match your filter",
+    "filteredDescription": "Try a different search, or clear the filter."
+  },
+  "groups": {
+    "identity": "Identity",
+    "account": "Account",
+    "address": "Address",
+    "meta": "Meta"
+  },
+  "fields": {
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "username": "Username",
+    "password": "Password",
+    "phone": "Phone",
+    "dateOfBirth": "Date of birth",
+    "addressLine1": "Address line 1",
+    "addressLine2": "Address line 2",
+    "city": "City",
+    "state": "State / Province",
+    "zipCode": "Zip / Postal",
+    "country": "Country",
+    "company": "Company",
+    "label": "Batch label"
+  },
+  "form": {
+    "dialogTitleEdit": "Edit identity",
+    "dialogTitleAdd": "Add identity",
+    "titleEdit": "Edit Identity",
+    "titleAdd": "Add Identity",
+    "descEdit": "Update this persona's details.",
+    "descAdd": "Add a single persona to your data vault. Fields marked * are required.",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes",
+    "addIdentity": "Add Identity"
+  },
+  "import": {
+    "dialogTitle": "Import identities",
+    "title": "Import from Excel / CSV",
+    "descStep1": "Choose an .xlsx, .xls, or .csv file. The first row should be your column headers. Up to 1000 rows per import.",
+    "descStep2": "Map your columns to identity fields. Detected {{count}} row(s) in {{fileName}}.",
+    "yourFile": "your file",
+    "chooseSpreadsheet": "Choose a spreadsheet",
+    "colIdentityField": "Identity field",
+    "colYourColumn": "Your column",
+    "skipOption": "— skip —",
+    "mappedCount_one": "{{count}} field mapped. Rows with no name/email/username are skipped.",
+    "mappedCount_other": "{{count}} fields mapped. Rows with no name/email/username are skipped.",
+    "done": "Done",
+    "cancel": "Cancel",
+    "back": "Back",
+    "importing": "Importing...",
+    "importRows_one": "Import {{count}} row",
+    "importRows_other": "Import {{count}} rows",
+    "result": {
+      "complete": "Import complete",
+      "addedPrefix": "Added",
+      "addedSuffix_one": "identity to the vault.",
+      "addedSuffix_other": "identities to the vault.",
+      "skipped_one": "Skipped {{count}} empty row.",
+      "skipped_other": "Skipped {{count}} empty rows."
+    },
+    "errors": {
+      "noRows": "That file has no readable header row or data rows.",
+      "readFile": "Could not read that file.",
+      "nothingMapped": "No rows to import — map at least one of First name / Last name / Email / Username.",
+      "failed": "Import failed."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "Delete identity \"{{name}}\"? This cannot be undone.",
+    "deleteSelected_one": "Delete {{count}} selected identity? This cannot be undone.",
+    "deleteSelected_other": "Delete {{count}} selected identities? This cannot be undone.",
+    "resetSelected_one": "Reset the \"used on\" history for {{count}} selected identity? They become available on every site again.",
+    "resetSelected_other": "Reset the \"used on\" history for {{count}} selected identities? They become available on every site again."
+  },
+  "errors": {
+    "load": "Could not load the data vault.",
+    "save": "Could not save this identity.",
+    "deleteOne": "Could not delete the identity.",
+    "deleteSelected": "Could not delete the selected identities.",
+    "resetSelected": "Could not reset the selected identities."
+  }
+}

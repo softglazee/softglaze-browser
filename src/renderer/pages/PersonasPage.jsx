@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   IdCard, Users, Sparkles, CheckCircle2, Hash, Plus, Upload, RefreshCcw, Search,
   Trash2, Edit, Loader2, X, RotateCcw, FileSpreadsheet, ChevronDown, ArrowLeft, Eye, EyeOff
@@ -12,8 +13,17 @@ import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
 import Pager from '@/components/ui/Pager.jsx';
+import i18n from '@/i18n/index.js';
+import personasEn from '@/i18n/locales/en/personas.json';
+import personasEs from '@/i18n/locales/es/personas.json';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
+
+// Register this page's "personas" namespace without touching the central i18n
+// config (which only bundles the "common" namespace). addResourceBundle is a
+// no-op if the bundle already exists, so this is safe across hot reloads.
+if (!i18n.hasResourceBundle('en', 'personas')) i18n.addResourceBundle('en', 'personas', personasEn);
+if (!i18n.hasResourceBundle('es', 'personas')) i18n.addResourceBundle('es', 'personas', personasEs);
 
 // The five fields the schema requires (NOT NULL). Marked with * in the forms.
 const CORE_FIELDS = new Set(['firstName', 'lastName', 'email', 'username', 'password']);
@@ -82,6 +92,7 @@ function autoGuessMapping(headers) {
 // Tinted, clickable stat card (matches the Proxy Pool / Extensions cards). Shows an
 // accent ring while it's the active filter.
 function StatCard({ icon: Icon, label, value, color, onClick, active }) {
+  const { t } = useTranslation('personas');
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
@@ -97,7 +108,7 @@ function StatCard({ icon: Icon, label, value, color, onClick, active }) {
         </div>
         <div className="min-w-0">
           <p className="text-[18px] font-bold text-foreground font-display leading-none">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ' · filtering' : ''}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ` · ${t('stats.filtering')}` : ''}</p>
         </div>
       </div>
     </Tag>
@@ -117,6 +128,7 @@ function Field({ label, required, children }) {
 
 // A native select styled to match the design system (used by the import mapper).
 function MapSelect({ value, onChange, headers }) {
+  const { t } = useTranslation('personas');
   return (
     <div className="relative flex items-center">
       <select
@@ -124,7 +136,7 @@ function MapSelect({ value, onChange, headers }) {
         onChange={onChange}
         className="w-full appearance-none bg-input-background border border-border rounded pl-3 pr-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap"
       >
-        <option value="">— skip —</option>
+        <option value="">{t('import.skipOption')}</option>
         {headers.map((h) => <option key={h} value={h}>{h}</option>)}
       </select>
       <div className="absolute right-3 pointer-events-none text-muted-foreground"><ChevronDown className="w-4 h-4" /></div>
@@ -139,12 +151,13 @@ function addressOf(p) {
 
 // Password cell: masked by default, click the eye to reveal (demo-vault data).
 function PasswordCell({ value }) {
+  const { t } = useTranslation('personas');
   const [show, setShow] = useState(false);
   if (!value) return <span className="text-muted-dark">—</span>;
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="font-mono text-[12px] text-muted-foreground">{show ? value : '••••••••'}</span>
-      <button type="button" onClick={() => setShow((s) => !s)} className="text-muted-foreground hover:text-foreground" title={show ? 'Hide' : 'Reveal'}>
+      <button type="button" onClick={() => setShow((s) => !s)} className="text-muted-foreground hover:text-foreground" title={show ? t('table.hidePassword') : t('table.revealPassword')}>
         {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </button>
     </span>
@@ -152,6 +165,7 @@ function PasswordCell({ value }) {
 }
 
 export default function PersonasPage() {
+  const { t } = useTranslation('personas');
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -193,7 +207,7 @@ export default function PersonasPage() {
         return next;
       });
     } catch (e) {
-      setError(e.message || 'Could not load the data vault.');
+      setError(e.message || t('errors.load'));
     } finally {
       setLoading(false);
     }
@@ -261,7 +275,7 @@ export default function PersonasPage() {
       setForm(EMPTY_FORM);
       await load();
     } catch (err) {
-      setFormError(err.message || 'Could not save this identity.');
+      setFormError(err.message || t('errors.save'));
     } finally {
       setSaving(false);
     }
@@ -269,31 +283,32 @@ export default function PersonasPage() {
 
   // --- Row + bulk actions ---
   async function handleDeleteOne(p) {
-    if (!window.confirm(`Delete identity "${[p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || p.username || 'persona'}"? This cannot be undone.`)) return;
+    const who = [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || p.username || t('confirm.fallbackName');
+    if (!window.confirm(t('confirm.deleteOne', { name: who }))) return;
     setError('');
     try { await softglazeApi.personas.delete({ ids: [p.id] }); await load(); }
-    catch (err) { setError(err.message || 'Could not delete the identity.'); }
+    catch (err) { setError(err.message || t('errors.deleteOne')); }
   }
 
   async function handleDeleteSelected() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!window.confirm(`Delete ${ids.length} selected ${ids.length === 1 ? 'identity' : 'identities'}? This cannot be undone.`)) return;
+    if (!window.confirm(t('confirm.deleteSelected', { count: ids.length }))) return;
     setBusy(true);
     setError('');
     try { await softglazeApi.personas.delete({ ids }); clearSelection(); await load(); }
-    catch (err) { setError(err.message || 'Could not delete the selected identities.'); }
+    catch (err) { setError(err.message || t('errors.deleteSelected')); }
     finally { setBusy(false); }
   }
 
   async function handleResetSelected() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!window.confirm(`Reset the "used on" history for ${ids.length} selected ${ids.length === 1 ? 'identity' : 'identities'}? They become available on every site again.`)) return;
+    if (!window.confirm(t('confirm.resetSelected', { count: ids.length }))) return;
     setBusy(true);
     setError('');
     try { await softglazeApi.personas.clearUsed({ ids }); clearSelection(); await load(); }
-    catch (err) { setError(err.message || 'Could not reset the selected identities.'); }
+    catch (err) { setError(err.message || t('errors.resetSelected')); }
     finally { setBusy(false); }
   }
 
@@ -313,14 +328,14 @@ export default function PersonasPage() {
       const res = await softglazeApi.personas.previewFile();
       if (!res || res.cancelled) return;
       if (!Array.isArray(res.headers) || res.headers.length === 0 || !Array.isArray(res.rows) || res.rows.length === 0) {
-        setImportError('That file has no readable header row or data rows.');
+        setImportError(t('import.errors.noRows'));
         return;
       }
       setPreview(res);
       setMapping(autoGuessMapping(res.headers));
       setImportStep(2);
     } catch (err) {
-      setImportError(err.message || 'Could not read that file.');
+      setImportError(err.message || t('import.errors.readFile'));
     }
   }
 
@@ -338,7 +353,7 @@ export default function PersonasPage() {
         return o;
       }).filter((o) => o.firstName || o.lastName || o.email || o.username);
       if (arr.length === 0) {
-        setImportError('No rows to import — map at least one of First name / Last name / Email / Username.');
+        setImportError(t('import.errors.nothingMapped'));
         setImporting(false);
         return;
       }
@@ -346,7 +361,7 @@ export default function PersonasPage() {
       setImportResult({ created: result?.created ?? 0, skipped: preview.rows.length - arr.length });
       await load();
     } catch (err) {
-      setImportError(err.message || 'Import failed.');
+      setImportError(err.message || t('import.errors.failed'));
     } finally {
       setImporting(false);
     }
@@ -357,20 +372,20 @@ export default function PersonasPage() {
   return (
     <div className="flex flex-col h-full space-y-4 pb-10">
       <PageHeader
-        eyebrow="Identities"
-        title="Data Vault"
-        description="A reusable vault of demo identities for the Smart Autofill engine. Add them manually or import a spreadsheet; each one remembers the sites it has already been used on."
+        eyebrow={t('header.eyebrow')}
+        title={t('header.title')}
+        description={t('header.description')}
         actions={
           <>
             <Button variant="secondary" onClick={load} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-              Refresh
+              {t('header.refresh')}
             </Button>
             <Button variant="secondary" onClick={openImport}>
-              <Upload className="h-4 w-4" /> Import Excel/CSV
+              <Upload className="h-4 w-4" /> {t('header.import')}
             </Button>
             <Button variant="primary" onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Add manually
+              <Plus className="h-4 w-4" /> {t('header.addManually')}
             </Button>
           </>
         }
@@ -378,10 +393,10 @@ export default function PersonasPage() {
 
       {/* STATS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={Users} label="Total identities" value={personas.length} color="#8b5cf6" onClick={() => setUsageFilter('all')} active={usageFilter === 'all'} />
-        <StatCard icon={Sparkles} label="Never used" value={neverUsed} color="#10b981" onClick={() => setFilter('unused')} active={usageFilter === 'unused'} />
-        <StatCard icon={CheckCircle2} label="Used at least once" value={everUsed} color="#3b82f6" onClick={() => setFilter('used')} active={usageFilter === 'used'} />
-        <StatCard icon={Hash} label="Total uses" value={totalUses} color="#f59e0b" />
+        <StatCard icon={Users} label={t('stats.totalIdentities')} value={personas.length} color="#8b5cf6" onClick={() => setUsageFilter('all')} active={usageFilter === 'all'} />
+        <StatCard icon={Sparkles} label={t('stats.neverUsed')} value={neverUsed} color="#10b981" onClick={() => setFilter('unused')} active={usageFilter === 'unused'} />
+        <StatCard icon={CheckCircle2} label={t('stats.usedAtLeastOnce')} value={everUsed} color="#3b82f6" onClick={() => setFilter('used')} active={usageFilter === 'used'} />
+        <StatCard icon={Hash} label={t('stats.totalUses')} value={totalUses} color="#f59e0b" />
       </div>
 
       {error && <div className="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
@@ -389,11 +404,11 @@ export default function PersonasPage() {
       {/* TOOLBAR */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative max-w-sm flex-1 min-w-[220px]">
-          <Input icon={Search} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, email, username, or label..." />
+          <Input icon={Search} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('toolbar.searchPlaceholder')} />
         </div>
         {usageFilter !== 'all' && (
           <span className="text-[12px] text-muted-foreground">
-            Showing {filtered.length} {usageFilter === 'unused' ? 'never-used' : 'used'} · <button className="text-primary hover:underline" onClick={() => setUsageFilter('all')}>clear</button>
+            {t('toolbar.showing', { count: filtered.length, kind: usageFilter === 'unused' ? t('toolbar.kindNeverUsed') : t('toolbar.kindUsed') })} · <button className="text-primary hover:underline" onClick={() => setUsageFilter('all')}>{t('toolbar.clear')}</button>
           </span>
         )}
       </div>
@@ -401,16 +416,16 @@ export default function PersonasPage() {
       {/* BULK BAR */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
-          <span className="font-medium text-foreground">{selectedIds.size} selected</span>
+          <span className="font-medium text-foreground">{t('bulk.selected', { count: selectedIds.size })}</span>
           <div className="w-px h-5 bg-border" />
           <Button size="sm" variant="secondary" onClick={handleResetSelected} disabled={busy}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} Reset used status
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} {t('bulk.resetUsedStatus')}
           </Button>
           <Button size="sm" variant="danger" onClick={handleDeleteSelected} disabled={busy}>
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Delete selected
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('bulk.deleteSelected')}
           </Button>
-          <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title="Clear selection">
-            <X className="h-4 w-4" /> Clear
+          <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title={t('bulk.clearSelectionTitle')}>
+            <X className="h-4 w-4" /> {t('bulk.clear')}
           </Button>
         </div>
       )}
@@ -420,15 +435,15 @@ export default function PersonasPage() {
         <CardContent className="p-0 overflow-auto flex-1 min-h-0 rounded">
           {loading ? (
             <div className="p-12 text-sm text-muted-foreground text-center flex flex-col items-center gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" /> Loading identities...
+              <Loader2 className="h-6 w-6 animate-spin text-primary" /> {t('table.loading')}
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-12">
               <EmptyState
-                title={personas.length === 0 ? 'Your data vault is empty' : 'No identities match your filter'}
+                title={personas.length === 0 ? t('empty.title') : t('empty.filteredTitle')}
                 description={personas.length === 0
-                  ? 'Add an identity manually or import an Excel/CSV sheet to start building your autofill vault.'
-                  : 'Try a different search, or clear the filter.'}
+                  ? t('empty.description')
+                  : t('empty.filteredDescription')}
               />
             </div>
           ) : (
@@ -439,23 +454,23 @@ export default function PersonasPage() {
                     <th className="px-5 py-4 w-10">
                       <input
                         type="checkbox"
-                        aria-label="Select all identities"
+                        aria-label={t('table.selectAll')}
                         className="h-4 w-4 cursor-pointer accent-primary align-middle"
                         checked={allSelected}
                         ref={(el) => { if (el) el.indeterminate = someSelected; }}
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="px-5 py-4">Name</th>
-                    <th className="px-5 py-4">Email</th>
-                    <th className="px-5 py-4">Username</th>
-                    <th className="px-5 py-4">Password</th>
-                    <th className="px-5 py-4">Phone</th>
-                    <th className="px-5 py-4">Address</th>
-                    <th className="px-5 py-4">Label</th>
-                    <th className="px-5 py-4">Times used</th>
-                    <th className="px-5 py-4">Created</th>
-                    <th className="px-5 py-4 text-right">Actions</th>
+                    <th className="px-5 py-4">{t('table.colName')}</th>
+                    <th className="px-5 py-4">{t('table.colEmail')}</th>
+                    <th className="px-5 py-4">{t('table.colUsername')}</th>
+                    <th className="px-5 py-4">{t('table.colPassword')}</th>
+                    <th className="px-5 py-4">{t('table.colPhone')}</th>
+                    <th className="px-5 py-4">{t('table.colAddress')}</th>
+                    <th className="px-5 py-4">{t('table.colLabel')}</th>
+                    <th className="px-5 py-4">{t('table.colTimesUsed')}</th>
+                    <th className="px-5 py-4">{t('table.colCreated')}</th>
+                    <th className="px-5 py-4 text-right">{t('table.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -466,7 +481,7 @@ export default function PersonasPage() {
                         <td className="px-5 py-4">
                           <input
                             type="checkbox"
-                            aria-label={`Select ${name}`}
+                            aria-label={t('table.selectRow', { name })}
                             className="h-4 w-4 cursor-pointer accent-primary align-middle"
                             checked={selectedIds.has(p.id)}
                             onChange={() => toggleSelect(p.id)}
@@ -481,16 +496,16 @@ export default function PersonasPage() {
                         <td className="px-5 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">—</span>}</td>
                         <td className="px-5 py-4">
                           {p.usedCount > 0
-                            ? <Badge variant="amber" title={p.usedOnUrls?.join(', ')}>{p.usedCount} site{p.usedCount === 1 ? '' : 's'}</Badge>
-                            : <span className="text-xs text-muted-foreground">Never</span>}
+                            ? <Badge variant="amber" title={p.usedOnUrls?.join(', ')}>{t('table.sitesUsed', { count: p.usedCount })}</Badge>
+                            : <span className="text-xs text-muted-foreground">{t('table.never')}</span>}
                         </td>
                         <td className="px-5 py-4 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>
                         <td className="px-5 py-4">
                           <div className="flex justify-end gap-1.5 transition-opacity opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100">
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(p)} className="px-2.5" title="Edit identity">
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(p)} className="px-2.5" title={t('table.editIdentity')}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteOne(p)} className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" title="Delete identity">
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteOne(p)} className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" title={t('table.deleteIdentity')}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -512,24 +527,24 @@ export default function PersonasPage() {
 
       {/* --- ADD / EDIT MODAL --- */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent title={isEditing ? 'Edit identity' : 'Add identity'} className="rounded border-border bg-card flex flex-col max-h-[88vh]">
+        <DialogContent title={isEditing ? t('form.dialogTitleEdit') : t('form.dialogTitleAdd')} className="rounded border-border bg-card flex flex-col max-h-[88vh]">
           <form onSubmit={handleSave} className="flex flex-col min-h-0">
             <DialogHeader>
-              <DialogTitle>{isEditing ? 'Edit Identity' : 'Add Identity'}</DialogTitle>
-              <DialogDescription>{isEditing ? 'Update this persona\'s details.' : 'Add a single persona to your data vault. Fields marked * are required.'}</DialogDescription>
+              <DialogTitle>{isEditing ? t('form.titleEdit') : t('form.titleAdd')}</DialogTitle>
+              <DialogDescription>{isEditing ? t('form.descEdit') : t('form.descAdd')}</DialogDescription>
             </DialogHeader>
             <DialogBody className="grid gap-6 overflow-y-auto">
               {FORM_GROUPS.map((group) => (
                 <div key={group.title}>
-                  <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">{group.title}</p>
+                  <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">{t(`groups.${group.title.toLowerCase()}`)}</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {group.fields.map((key) => (
-                      <Field key={key} label={FIELD_LABEL[key]} required={CORE_FIELDS.has(key)}>
+                      <Field key={key} label={t(`fields.${key}`)} required={CORE_FIELDS.has(key)}>
                         <Input
                           value={form[key]}
                           onChange={(e) => updateForm(key, e.target.value)}
                           required={CORE_FIELDS.has(key)}
-                          placeholder={FIELD_LABEL[key]}
+                          placeholder={t(`fields.${key}`)}
                         />
                       </Field>
                     ))}
@@ -541,9 +556,9 @@ export default function PersonasPage() {
               )}
             </DialogBody>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setFormOpen(false)} disabled={saving} type="button">Cancel</Button>
+              <Button variant="ghost" onClick={() => setFormOpen(false)} disabled={saving} type="button">{t('form.cancel')}</Button>
               <Button type="submit" variant="primary" disabled={saving}>
-                {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Identity'}
+                {saving ? t('form.saving') : isEditing ? t('form.saveChanges') : t('form.addIdentity')}
               </Button>
             </DialogFooter>
           </form>
@@ -552,22 +567,22 @@ export default function PersonasPage() {
 
       {/* --- IMPORT MODAL --- */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent title="Import identities" className="rounded border-border bg-card flex flex-col max-h-[88vh]">
+        <DialogContent title={t('import.dialogTitle')} className="rounded border-border bg-card flex flex-col max-h-[88vh]">
           <DialogHeader>
-            <DialogTitle>Import from Excel / CSV</DialogTitle>
+            <DialogTitle>{t('import.title')}</DialogTitle>
             <DialogDescription>
               {importStep === 1
-                ? 'Choose an .xlsx, .xls, or .csv file. The first row should be your column headers. Up to 1000 rows per import.'
-                : `Map your columns to identity fields. Detected ${preview?.rows?.length ?? 0} row(s) in ${preview?.fileName || 'your file'}.`}
+                ? t('import.descStep1')
+                : t('import.descStep2', { count: preview?.rows?.length ?? 0, fileName: preview?.fileName || t('import.yourFile') })}
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="grid gap-5 overflow-y-auto">
             {importResult ? (
               <div className="rounded border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
-                <div className="font-medium text-foreground mb-1">Import complete</div>
+                <div className="font-medium text-foreground mb-1">{t('import.result.complete')}</div>
                 <div className="text-muted-foreground">
-                  Added <span className="text-emerald-400 font-semibold">{importResult.created}</span> identit{importResult.created === 1 ? 'y' : 'ies'} to the vault.
-                  {importResult.skipped > 0 ? ` Skipped ${importResult.skipped} empty row${importResult.skipped === 1 ? '' : 's'}.` : ''}
+                  {t('import.result.addedPrefix')} <span className="text-emerald-400 font-semibold">{importResult.created}</span> {t('import.result.addedSuffix', { count: importResult.created })}
+                  {importResult.skipped > 0 ? ` ${t('import.result.skipped', { count: importResult.skipped })}` : ''}
                 </div>
               </div>
             ) : importStep === 1 ? (
@@ -580,19 +595,19 @@ export default function PersonasPage() {
                   <FileSpreadsheet className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Choose a spreadsheet</p>
+                  <p className="text-sm font-semibold text-foreground">{t('import.chooseSpreadsheet')}</p>
                   <p className="text-xs text-muted-foreground mt-1">.xlsx · .xls · .csv</p>
                 </div>
               </button>
             ) : (
               <div className="grid gap-3">
                 <div className="grid grid-cols-[1fr_1.2fr] gap-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
-                  <span>Identity field</span><span>Your column</span>
+                  <span>{t('import.colIdentityField')}</span><span>{t('import.colYourColumn')}</span>
                 </div>
                 {FIELD_DEFS.map((def) => (
                   <div key={def.key} className="grid grid-cols-[1fr_1.2fr] gap-3 items-center">
                     <span className="text-sm text-foreground">
-                      {def.label}{CORE_FIELDS.has(def.key) ? <span className="text-primary"> *</span> : null}
+                      {t(`fields.${def.key}`)}{CORE_FIELDS.has(def.key) ? <span className="text-primary"> *</span> : null}
                     </span>
                     <MapSelect
                       value={mapping[def.key] || ''}
@@ -601,7 +616,7 @@ export default function PersonasPage() {
                     />
                   </div>
                 ))}
-                <p className="text-[11px] text-muted-foreground mt-1">{mappedFieldCount} field{mappedFieldCount === 1 ? '' : 's'} mapped. Rows with no name/email/username are skipped.</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{t('import.mappedCount', { count: mappedFieldCount })}</p>
               </div>
             )}
             {importError && (
@@ -610,16 +625,16 @@ export default function PersonasPage() {
           </DialogBody>
           <DialogFooter>
             {importResult ? (
-              <Button variant="primary" onClick={() => setImportOpen(false)} type="button">Done</Button>
+              <Button variant="primary" onClick={() => setImportOpen(false)} type="button">{t('import.done')}</Button>
             ) : importStep === 1 ? (
-              <Button variant="ghost" onClick={() => setImportOpen(false)} type="button">Cancel</Button>
+              <Button variant="ghost" onClick={() => setImportOpen(false)} type="button">{t('import.cancel')}</Button>
             ) : (
               <>
                 <Button variant="ghost" onClick={() => { setImportStep(1); setPreview(null); setImportError(''); }} disabled={importing} type="button">
-                  <ArrowLeft className="h-4 w-4" /> Back
+                  <ArrowLeft className="h-4 w-4" /> {t('import.back')}
                 </Button>
                 <Button variant="primary" onClick={handleImport} disabled={importing} type="button">
-                  {importing ? <><Loader2 className="h-4 w-4 animate-spin" /> Importing...</> : <>Import {preview?.rows?.length ?? 0} row{(preview?.rows?.length ?? 0) === 1 ? '' : 's'}</>}
+                  {importing ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('import.importing')}</> : <>{t('import.importRows', { count: preview?.rows?.length ?? 0 })}</>}
                 </Button>
               </>
             )}

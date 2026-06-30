@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Repositorio Empresarial",
+    "title": "Extensiones",
+    "summary_one": "{{count}} extensión instalada · {{enabled}} inyectadas en cada perfil al iniciar",
+    "summary_other": "{{count}} extensiones instaladas · {{enabled}} inyectadas en cada perfil al iniciar"
+  },
+  "stats": {
+    "total": "Extensiones totales",
+    "injected": "Inyectadas globalmente",
+    "disabled": "Desactivadas"
+  },
+  "caveat": {
+    "before": "Las extensiones instaladas se descomprimen localmente y se montan en cada perfil mediante el",
+    "middle": "de Chromium al iniciar. Se aplican en el",
+    "nextLaunch": "próximo inicio",
+    "after": "de cada perfil donde la extensión esté activada. Algunas versiones reforzadas de Chrome estable restringen las extensiones sin empaquetar, pero el motor integrado de Softglaze las carga de forma fiable."
+  },
+  "importer": {
+    "title": "Importar al equipo",
+    "description": "Pega una URL de Chrome Web Store o su ID de 32 caracteres: Softglaze descarga y descomprime el paquete real.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  o  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Importar al equipo"
+  },
+  "installPhase": {
+    "downloading": "Descargando paquete…",
+    "extracting": "Extrayendo archivo…",
+    "registering": "Registrando…"
+  },
+  "permissionNotice": "Solo los administradores y superiores pueden gestionar las extensiones del equipo. Puedes ver el repositorio.",
+  "searchPlaceholder": "Buscar por nombre o ID…",
+  "empty": {
+    "loadErrorTitle": "No se pudieron cargar las extensiones",
+    "noExtTitle": "Aún no hay extensiones",
+    "noMatchTitle": "Ninguna extensión coincide con tu búsqueda",
+    "noExtDesc": "Importa una extensión de Chrome Web Store arriba para añadirla al repositorio de tu equipo e inyectarla en cada perfil.",
+    "noMatchDesc": "Prueba con otro nombre o ID."
+  },
+  "card": {
+    "unpacked": "Extensión sin empaquetar",
+    "removeTitle": "Quitar del equipo",
+    "injected": "Inyectada",
+    "disabled": "Desactivada"
+  },
+  "confirmRemove": "¿Quitar \"{{name}}\" del repositorio del equipo? Sus archivos locales se eliminarán.",
+  "errors": {
+    "couldNotLoad": "No se pudieron cargar las extensiones.",
+    "installFailed": "Error en la instalación.",
+    "couldNotUpdate": "No se pudo actualizar la extensión.",
+    "couldNotRemove": "No se pudo quitar la extensión."
+  }
+}
