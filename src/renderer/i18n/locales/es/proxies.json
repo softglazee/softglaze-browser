@@ -1,0 +1,226 @@
+{
+  "header": {
+    "eyebrow": "Red",
+    "title": "Grupo de proxies",
+    "description": "Guarda proxies HTTP y SOCKS5 reutilizables de forma local, o sincroniza grupos comprados directamente desde proveedores integrados."
+  },
+  "rotation": {
+    "label": "Rotación:",
+    "tooltip": "Cómo se aplica el grupo de rotación de un perfil al iniciarse",
+    "eachLaunch": "Rotar en cada inicio",
+    "sticky": "Fijo (proxy fijo)",
+    "failover": "Conmutación a uno sano",
+    "latencyOptimized": "El más rápido (latencia)",
+    "failoverMaxTooltip": "Omitir proxies más lentos que estos ms (0 = sin límite; recurre al grupo completo si ninguno cumple)",
+    "maxMsPlaceholder": "máx ms",
+    "topNTooltip": "Turno rotativo entre los N proxies más rápidos",
+    "topNPlaceholder": "N principales"
+  },
+  "actions": {
+    "testAll": "Probar todo",
+    "testAllTooltip": "Prueba de estado simultánea de todos los proxies",
+    "testAllSummary": "{{ok}}/{{total}} correctos",
+    "checkAll": "Verificar todo",
+    "refresh": "Actualizar",
+    "batchAdd": "Añadir en lote",
+    "newProxy": "Nuevo proxy"
+  },
+  "tabs": {
+    "custom": "Proxies personalizados",
+    "providers": "Proveedores de proxy",
+    "integrated": "Integrado"
+  },
+  "stats": {
+    "totalProxies": "Total de proxies",
+    "proxyTypes": "Tipos de proxy",
+    "verified": "Verificados",
+    "nonVerified": "No verificados",
+    "filtering": "filtrando",
+    "noProxies": "Sin proxies",
+    "total": "total"
+  },
+  "search": {
+    "placeholder": "Buscar por nombre de proxy, host o usuario..."
+  },
+  "deleteFiltered": {
+    "tooltip": "Eliminar todos los proxies que coincidan con el filtro actual",
+    "button": "Eliminar todos los {{scope}} ({{count}})",
+    "confirm_one": "¿Eliminar {{count}} proxy {{scope}}? Esto no se puede deshacer — los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
+    "confirm_other": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer — los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
+    "scope": {
+      "all": "totales",
+      "filtered": "filtrados",
+      "matching": "coincidentes",
+      "verified": "verificados",
+      "failed": "fallidos"
+    }
+  },
+  "filters": {
+    "all": "Todos",
+    "ungrouped": "Sin grupo",
+    "byProvider": "Por proveedor"
+  },
+  "groups": {
+    "chipTooltip": "Haz clic para filtrar · arrastra proxies aquí para añadirlos",
+    "renameRecolor": "Renombrar / cambiar color",
+    "deleteGroup": "Eliminar grupo",
+    "newGroup": "Nuevo grupo",
+    "deleteConfirm": "¿Eliminar el grupo \"{{name}}\"? Los proxies permanecen en el grupo — solo dejan de estar agrupados."
+  },
+  "autoGroup": {
+    "granularityTooltip": "Granularidad del agrupamiento automático",
+    "country": "País",
+    "state": "Estado",
+    "city": "Ciudad",
+    "buttonTooltip": "Crea grupos a partir del país/estado/ciudad verificado de cada proxy. Ejecuta Probar todo primero para que los proxies tengan una ubicación detectada.",
+    "button": "Agrupar automáticamente",
+    "result_one": "+{{count}} grupo · {{assigned}} asignados",
+    "result_other": "+{{count}} grupos · {{assigned}} asignados"
+  },
+  "sort": {
+    "tooltip": "Ordenar por latencia",
+    "default": "Orden: predeterminado",
+    "fastest": "Más rápidos primero",
+    "slowest": "Más lentos primero"
+  },
+  "geo": {
+    "toggleTooltip": "Mostrar u ocultar el desglose geográfico",
+    "button": "Geo",
+    "byCountry": "Proxies por país",
+    "summary": "{{countries}} países · {{proxies}} proxies",
+    "unknown": "Desconocido"
+  },
+  "scheduler": {
+    "tooltip": "Volver a probar todos los proxies automáticamente según una programación",
+    "autoCheckEvery": "Verificar automáticamente cada",
+    "min": "min"
+  },
+  "selection": {
+    "count": "{{count}} seleccionados",
+    "checkSelected": "Verificar seleccionados",
+    "moveToGroup": "Mover al grupo",
+    "noGroupsYet": "Aún no hay grupos — crea uno primero.",
+    "removeFromGroup": "Quitar del grupo",
+    "deleteSelected": "Eliminar seleccionados",
+    "clear": "Limpiar",
+    "clearTooltip": "Limpiar selección"
+  },
+  "table": {
+    "loading": "Cargando proxies...",
+    "emptyTitle": "No se encontraron proxies",
+    "emptyDescription": "Añade un proxy manualmente o pega un lote de cadenas de proxy.",
+    "selectAll": "Seleccionar todos los proxies",
+    "selectRow": "Seleccionar {{name}}",
+    "colName": "Nombre",
+    "colType": "Tipo",
+    "colEndpoint": "Punto de conexión",
+    "colUsername": "Usuario",
+    "colGroup": "Grupo",
+    "colProfiles": "Perfiles",
+    "colCreated": "Creado",
+    "colStatus": "Estado",
+    "colActions": "Acciones",
+    "profileCount_one": "{{count}} perfil",
+    "profileCount_other": "{{count}} perfiles",
+    "defaultProxyName": "Proxy"
+  },
+  "rowActions": {
+    "testProxy": "Probar proxy",
+    "healthHistory": "Historial de estado",
+    "editProxy": "Editar proxy",
+    "deleteProxy": "Eliminar proxy",
+    "copyEndpoint": "Copiar host:port",
+    "check": "Verificar"
+  },
+  "status": {
+    "checking": "Verificando…",
+    "failed": "Fallido"
+  },
+  "bulkDelete": {
+    "confirm_one": "¿Eliminar {{count}} proxy seleccionado? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada.",
+    "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada."
+  },
+  "delete": {
+    "confirm": "¿Eliminar el proxy \"{{name}}\"?"
+  },
+  "history": {
+    "dialogTitle": "Historial de estado del proxy",
+    "title": "Historial de estado",
+    "empty": "Aún no hay historial. Ejecuta una verificación de estado (o activa la verificación automática) y la cronología de latencia/estado se irá construyendo aquí.",
+    "latencyOverTime": "Latencia a lo largo del tiempo (ms)",
+    "ok": "correctos",
+    "fail": "fallidos",
+    "checks_one": "{{count}} verificación",
+    "checks_other": "{{count}} verificaciones",
+    "close": "Cerrar"
+  },
+  "form": {
+    "dialogTitleEdit": "Editar proxy",
+    "dialogTitleCreate": "Crear proxy",
+    "titleEdit": "Editar proxy",
+    "titleCreate": "Crear proxy",
+    "descriptionEdit": "Actualiza un proxy existente. Deja la contraseña enmascarada sin cambios para conservar el valor actual.",
+    "descriptionCreate": "Añade un único proxy estructurado al grupo local de SQLite.",
+    "tipPrefix": "Consejo: pega tu proxy",
+    "tipSuffix": "en el campo Host para rellenar todos los campos automáticamente.",
+    "proxyName": "Nombre del proxy",
+    "proxyNamePlaceholder": "Residencial US 01",
+    "type": "Tipo",
+    "host": "Host",
+    "port": "Puerto",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "optional": "Opcional",
+    "cancel": "Cancelar",
+    "saving": "Guardando...",
+    "saveChanges": "Guardar cambios",
+    "createProxy": "Crear proxy"
+  },
+  "batch": {
+    "dialogTitle": "Añadir proxies en lote",
+    "title": "Añadir proxies en lote",
+    "descriptionPrefix": "Pega un proxy por línea. Formato admitido:",
+    "defaultType": "Tipo predeterminado",
+    "proxyLines": "Líneas de proxy",
+    "resultTitle": "Resultado del lote",
+    "total": "Total",
+    "created": "Creados",
+    "skipped": "Omitidos",
+    "errors": "Errores",
+    "lineError": "Línea {{line}}: {{message}}",
+    "close": "Cerrar",
+    "importing": "Importando...",
+    "addProxies": "Añadir proxies"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "Editar grupo",
+    "dialogTitleNew": "Nuevo grupo",
+    "titleEdit": "Editar grupo de proxies",
+    "titleNew": "Nuevo grupo de proxies",
+    "description": "Agrupa los proxies por país o propósito (p. ej. EE. UU., Reino Unido, Japón). Puedes seleccionar un grupo al crear perfiles en lote.",
+    "groupName": "Nombre del grupo",
+    "groupNamePlaceholder": "Proxies de EE. UU.",
+    "color": "Color",
+    "colorLabel": "Color {{color}}",
+    "cancel": "Cancelar",
+    "saveChanges": "Guardar cambios",
+    "createGroup": "Crear grupo"
+  },
+  "errors": {
+    "deleteProxies": "No se pudieron eliminar los proxies.",
+    "loadProxies": "No se pudieron cargar los proxies.",
+    "copyClipboard": "No se pudo copiar al portapapeles.",
+    "deleteSelected": "No se pudieron eliminar los proxies seleccionados.",
+    "saveProxy": "No se pudo guardar el proxy.",
+    "batchAdd": "No se pudieron añadir los proxies en lote.",
+    "bulkTest": "La prueba en lote falló.",
+    "savePolicy": "No se pudo guardar la política de proxy.",
+    "saveSchedule": "No se pudo guardar la programación.",
+    "enterGroupName": "Introduce un nombre de grupo.",
+    "saveGroup": "No se pudo guardar el grupo.",
+    "deleteGroup": "No se pudo eliminar el grupo.",
+    "moveProxies": "No se pudieron mover los proxies.",
+    "autoGroup": "El agrupamiento automático falló. Ejecuta Probar todo primero para que los proxies tengan un país detectado.",
+    "deleteProxy": "No se pudo eliminar el proxy. Quita los perfiles vinculados o cambia su asignación de proxy primero."
+  }
+}

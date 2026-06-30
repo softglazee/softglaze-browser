@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Your account",
+    "title": "Account settings",
+    "description": "Manage your profile picture, name, email, and password."
+  },
+  "notice": {
+    "superAdmin": "This is a Super-Admin / source-owner session — there's no editable member record to change here."
+  },
+  "fields": {
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Your name",
+    "email": "Email",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Leave blank to keep current",
+    "confirmPassword": "Confirm new password",
+    "confirmPasswordPlaceholder": "Repeat new password",
+    "verificationRequired": "verification required"
+  },
+  "avatar": {
+    "alt": "avatar",
+    "changeTitle": "Change picture",
+    "newSelected": "New picture selected — save to apply.",
+    "notImage": "Please choose an image file.",
+    "tooLarge": "That image is larger than 2 MB. Pick a smaller one.",
+    "readFailed": "Could not read that image."
+  },
+  "verification": {
+    "banner": "Changing your email or password requires a 6-digit code sent to your current email"
+  },
+  "actions": {
+    "save": "Save changes",
+    "saving": "Saving…",
+    "verifyAndSave": "Verify & save",
+    "discard": "Discard"
+  },
+  "validation": {
+    "nameEmpty": "Name cannot be empty.",
+    "emailInvalid": "Enter a valid email address.",
+    "passwordTooShort": "New password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match."
+  },
+  "messages": {
+    "profileUpdated": "Profile updated.",
+    "accountUpdated": "Account updated successfully."
+  },
+  "errors": {
+    "loadFailed": "Could not load your account.",
+    "saveFailed": "Could not save your changes."
+  },
+  "verify": {
+    "title": "Confirm it's you",
+    "codeSentTo": "Code sent to {{email}}",
+    "codeLabel": "6-digit code",
+    "devMode": "Dev mode — no email configured. Your code is",
+    "apply": "Verify & apply",
+    "resend": "Resend",
+    "enterCode": "Enter the 6-digit code.",
+    "failed": "Verification failed.",
+    "resendFailed": "Could not resend the code."
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Engines",
+    "title": "Browsers",
+    "subtitle": "Download real Chrome & Firefox builds on demand — installed automatically and ready to launch.",
+    "refresh": "Refresh"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome installed",
+    "chromeAvailable": "Chrome available",
+    "firefoxInstalled": "Firefox installed",
+    "firefoxAvailable": "Firefox available"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} installed · {{available}} available"
+  },
+  "firefox": {
+    "heading": "FlowerBrowser (Firefox engine)",
+    "ready": "Ready",
+    "notDetected": "Not detected",
+    "detectedDesc": "Ready. Detected at {{path}}. Profiles set to FlowerBrowser launch real Firefox with proxy, UA, locale, timezone and WebRTC off.",
+    "notDetectedDesc": "No system Firefox detected. Download a version below — it installs into the app and FlowerBrowser profiles will launch real Firefox with proxy, UA, locale, timezone and WebRTC off.",
+    "fetching": "Fetching the Firefox release catalog…",
+    "empty": "No Firefox versions available (are you offline?)."
+  },
+  "chrome": {
+    "heading": "SunBrowser (Chrome for Testing)",
+    "subtitle": "Real builds — UA, Client-Hints, TLS and workers all genuinely match the version.",
+    "fetching": "Fetching the Chrome-for-Testing catalog…",
+    "empty": "No versions available (are you offline?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Ready",
+    "paused": "Paused",
+    "interrupted": "Interrupted",
+    "resume": "Resume",
+    "download": "Download",
+    "retry": "Retry",
+    "downloading": "Downloading",
+    "installing": "Installing…",
+    "installingShort": "Installing",
+    "queued": "Queued…",
+    "pauseDownload": "Pause download",
+    "pausedPercent": "Paused · {{percent}}%",
+    "interruptedPercent": "Interrupted · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Could not reach the browser catalog. Check your internet connection.",
+    "downloadFailed": "Download failed.",
+    "pauseFailed": "Pause failed.",
+    "resumeFailed": "Resume failed."
+  }
+}

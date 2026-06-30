@@ -3,6 +3,7 @@ import {
   Puzzle, ShieldCheck, Download, Search, Check, ExternalLink, Package,
   ToggleRight, Plus, Loader2, Trash2, Power, AlertTriangle, Info
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 // Members at ADMIN and above may install / toggle / remove team extensions.
@@ -19,9 +20,10 @@ function accentFor(id) {
 
 // The download → unzip → register pipeline runs as one backend call; we surface
 // its phases as a staged label so the user sees real, honest progress.
-const INSTALL_PHASES = ['Downloading package…', 'Extracting archive…', 'Registering…'];
+const INSTALL_PHASE_KEYS = ['installPhase.downloading', 'installPhase.extracting', 'installPhase.registering'];
 
 export default function ExtensionsPage() {
+  const { t } = useTranslation('extensions');
   const [extensions, setExtensions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -43,7 +45,7 @@ export default function ExtensionsPage() {
       const res = await softglazeApi.extensions.list();
       setExtensions(Array.isArray(res?.extensions) ? res.extensions : []);
     } catch (e) {
-      setLoadError(e.message || 'Could not load extensions.');
+      setLoadError(e.message || t('errors.couldNotLoad'));
     } finally {
       setLoading(false);
     }
@@ -74,14 +76,14 @@ export default function ExtensionsPage() {
     setInstallPhase(0);
     // Advance the staged label while the single backend call runs.
     phaseTimer.current = setInterval(() => {
-      setInstallPhase((p) => Math.min(p + 1, INSTALL_PHASES.length - 1));
+      setInstallPhase((p) => Math.min(p + 1, INSTALL_PHASE_KEYS.length - 1));
     }, 1100);
     try {
       const created = await softglazeApi.extensions.installFromId(manualId.trim());
       setExtensions((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
       setManualId('');
     } catch (err) {
-      setInstallError(err.message || 'Installation failed.');
+      setInstallError(err.message || t('errors.installFailed'));
     } finally {
       if (phaseTimer.current) { clearInterval(phaseTimer.current); phaseTimer.current = null; }
       setInstalling(false);
@@ -96,7 +98,7 @@ export default function ExtensionsPage() {
       const updated = await softglazeApi.extensions.toggleGlobal(ext.id, !ext.isGlobal);
       setExtensions((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
     } catch (err) {
-      setInstallError(err.message || 'Could not update the extension.');
+      setInstallError(err.message || t('errors.couldNotUpdate'));
     } finally {
       setBusyId(null);
     }
@@ -104,14 +106,14 @@ export default function ExtensionsPage() {
 
   async function handleDelete(ext) {
     if (busyId) return;
-    if (!window.confirm(`Remove "${ext.name}" from the team repository? Its local files will be deleted.`)) return;
+    if (!window.confirm(t('confirmRemove', { name: ext.name }))) return;
     setInstallError('');
     setBusyId(ext.id);
     try {
       await softglazeApi.extensions.delete(ext.id);
       setExtensions((prev) => prev.filter((x) => x.id !== ext.id));
     } catch (err) {
-      setInstallError(err.message || 'Could not remove the extension.');
+      setInstallError(err.message || t('errors.couldNotRemove'));
     } finally {
       setBusyId(null);
     }
@@ -122,10 +124,10 @@ export default function ExtensionsPage() {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">Enterprise Repository</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">Extensions</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">{t('header.eyebrow')}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight">{t('header.title')}</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            {totalCount} extension{totalCount === 1 ? '' : 's'} installed · {enabledCount} injected into every profile at launch
+            {t('header.summary', { count: totalCount, enabled: enabledCount })}
           </p>
         </div>
       </div>
@@ -133,9 +135,9 @@ export default function ExtensionsPage() {
       {/* STAT ROW — real derived counts */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Extensions', value: totalCount, icon: Package, color: '#3b82f6' },
-          { label: 'Injected Globally', value: enabledCount, icon: ToggleRight, color: '#10b981' },
-          { label: 'Disabled', value: disabledCount, icon: Power, color: '#8b5cf6' }
+          { label: t('stats.total'), value: totalCount, icon: Package, color: '#3b82f6' },
+          { label: t('stats.injected'), value: enabledCount, icon: ToggleRight, color: '#10b981' },
+          { label: t('stats.disabled'), value: disabledCount, icon: Power, color: '#8b5cf6' }
         ].map((stat) => {
           const Icon = stat.icon;
           return (
@@ -163,8 +165,7 @@ export default function ExtensionsPage() {
       <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <p className="text-[12px] text-muted-foreground leading-relaxed">
-          Installed extensions are unpacked locally and mounted into each profile via Chromium&apos;s <code className="text-foreground/80 font-mono text-[11px]">--load-extension</code> at launch.
-          They apply on the <span className="text-foreground font-medium">next launch</span> of every profile where the extension is enabled. Some hardened stable-Chrome builds restrict unpacked extensions — Softglaze&apos;s bundled engine loads them reliably.
+          {t('caveat.before')} <code className="text-foreground/80 font-mono text-[11px]">--load-extension</code> {t('caveat.middle')} <span className="text-foreground font-medium">{t('caveat.nextLaunch')}</span> {t('caveat.after')}
         </p>
       </div>
 
@@ -175,15 +176,15 @@ export default function ExtensionsPage() {
             <Plus className="w-4 h-4" style={{ color: '#3b82f6' }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-foreground">Import to Team</h2>
-            <p className="text-xs text-muted-foreground">Paste a Chrome Web Store URL or its 32-character ID — Softglaze downloads and unpacks the real package.</p>
+            <h2 className="text-sm font-semibold text-foreground">{t('importer.title')}</h2>
+            <p className="text-xs text-muted-foreground">{t('importer.description')}</p>
           </div>
         </div>
 
         <form onSubmit={handleInstall} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <input
             type="text"
-            placeholder="https://chromewebstore.google.com/detail/…  or  cjpalhdlnbpafiamejdnhcphjbkeiagm"
+            placeholder={t('importer.inputPlaceholder')}
             value={manualId}
             onChange={(e) => setManualId(e.target.value)}
             disabled={installing || !canManage}
@@ -195,8 +196,8 @@ export default function ExtensionsPage() {
             className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 px-4 py-2 text-xs font-semibold transition-opacity disabled:opacity-40 min-w-[150px]"
           >
             {installing
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {INSTALL_PHASES[installPhase]}</>
-              : <><Download className="w-3.5 h-3.5" /> Import to Team</>}
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t(INSTALL_PHASE_KEYS[installPhase])}</>
+              : <><Download className="w-3.5 h-3.5" /> {t('importer.submit')}</>}
           </button>
         </form>
 
@@ -207,7 +208,7 @@ export default function ExtensionsPage() {
         )}
         {!canManage && me && (
           <p className="mt-3 text-[11px] text-muted-foreground inline-flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" /> Only Admins and above can manage team extensions. You can view the repository.
+            <ShieldCheck className="w-3.5 h-3.5" /> {t('permissionNotice')}
           </p>
         )}
       </div>
@@ -217,7 +218,7 @@ export default function ExtensionsPage() {
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Search by name or ID…"
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors"
@@ -226,15 +227,15 @@ export default function ExtensionsPage() {
 
       {/* GRID */}
       {loadError ? (
-        <EmptyStateInline title="Could not load extensions" description={loadError} />
+        <EmptyStateInline title={t('empty.loadErrorTitle')} description={loadError} />
       ) : loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 text-muted-foreground animate-spin" /></div>
       ) : filtered.length === 0 ? (
         <EmptyStateInline
-          title={extensions.length === 0 ? 'No extensions yet' : 'No extensions match your search'}
+          title={extensions.length === 0 ? t('empty.noExtTitle') : t('empty.noMatchTitle')}
           description={extensions.length === 0
-            ? 'Import a Chrome Web Store extension above to add it to your team repository and inject it into every profile.'
-            : 'Try a different name or ID.'}
+            ? t('empty.noExtDesc')
+            : t('empty.noMatchDesc')}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -262,14 +263,14 @@ export default function ExtensionsPage() {
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-foreground truncate" title={ext.name}>{ext.name}</h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                      {ext.version ? `v${ext.version}` : 'Unpacked extension'}
+                      {ext.version ? `v${ext.version}` : t('card.unpacked')}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleDelete(ext)}
                     disabled={!canManage || busy}
-                    title="Remove from team"
+                    title={t('card.removeTitle')}
                     className="shrink-0 w-8 h-8 grid place-items-center rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/40 transition disabled:opacity-40"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -300,7 +301,7 @@ export default function ExtensionsPage() {
                   >
                     {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       : enabled ? <Check className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
-                    {enabled ? 'Injected' : 'Disabled'}
+                    {enabled ? t('card.injected') : t('card.disabled')}
                   </button>
                 </div>
               </div>

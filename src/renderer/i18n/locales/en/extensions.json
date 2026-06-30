@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Enterprise Repository",
+    "title": "Extensions",
+    "summary_one": "{{count}} extension installed · {{enabled}} injected into every profile at launch",
+    "summary_other": "{{count}} extensions installed · {{enabled}} injected into every profile at launch"
+  },
+  "stats": {
+    "total": "Total Extensions",
+    "injected": "Injected Globally",
+    "disabled": "Disabled"
+  },
+  "caveat": {
+    "before": "Installed extensions are unpacked locally and mounted into each profile via Chromium's",
+    "middle": "at launch. They apply on the",
+    "nextLaunch": "next launch",
+    "after": "of every profile where the extension is enabled. Some hardened stable-Chrome builds restrict unpacked extensions — Softglaze's bundled engine loads them reliably."
+  },
+  "importer": {
+    "title": "Import to Team",
+    "description": "Paste a Chrome Web Store URL or its 32-character ID — Softglaze downloads and unpacks the real package.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  or  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Import to Team"
+  },
+  "installPhase": {
+    "downloading": "Downloading package…",
+    "extracting": "Extracting archive…",
+    "registering": "Registering…"
+  },
+  "permissionNotice": "Only Admins and above can manage team extensions. You can view the repository.",
+  "searchPlaceholder": "Search by name or ID…",
+  "empty": {
+    "loadErrorTitle": "Could not load extensions",
+    "noExtTitle": "No extensions yet",
+    "noMatchTitle": "No extensions match your search",
+    "noExtDesc": "Import a Chrome Web Store extension above to add it to your team repository and inject it into every profile.",
+    "noMatchDesc": "Try a different name or ID."
+  },
+  "card": {
+    "unpacked": "Unpacked extension",
+    "removeTitle": "Remove from team",
+    "injected": "Injected",
+    "disabled": "Disabled"
+  },
+  "confirmRemove": "Remove \"{{name}}\" from the team repository? Its local files will be deleted.",
+  "errors": {
+    "couldNotLoad": "Could not load extensions.",
+    "installFailed": "Installation failed.",
+    "couldNotUpdate": "Could not update the extension.",
+    "couldNotRemove": "Could not remove the extension."
+  }
+}

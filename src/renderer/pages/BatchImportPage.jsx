@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FileSpreadsheet, UploadCloud, Download, AlertTriangle,
   CheckCircle2, Server, ListPlus, Terminal, Loader2, Info, FileDown, Wand2
@@ -13,6 +14,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 const QUICK_OS_PLATFORMS = [{ id: 'Windows' }, { id: 'macOS' }, { id: 'Linux' }, { id: 'Android' }, { id: 'iOS' }];
 
 export default function BatchImportPage() {
+  const { t } = useTranslation('batchImport');
   const [activeTab, setActiveTab] = useState('file'); // 'file' | 'quick'
 
   // --- FILE IMPORT STATES ---
@@ -56,7 +58,7 @@ export default function BatchImportPage() {
       if (result.cancelled) return;
       setPreviewData(result);
     } catch (err) {
-      setFileError(err.message || 'Failed to parse the file. Ensure it is a valid spreadsheet.');
+      setFileError(err.message || t('errors.parse'));
     }
   };
 
@@ -82,8 +84,8 @@ export default function BatchImportPage() {
       setImportResult(result);
       setPreviewData(null); // Clear preview once committed
     } catch (err) {
-      setFileError(err.message || 'Failed to commit profiles to database.');
-      setImportLog((lines) => [...lines, { kind: 'error', message: err.message || 'Import failed.' }]);
+      setFileError(err.message || t('errors.commit'));
+      setImportLog((lines) => [...lines, { kind: 'error', message: err.message || t('errors.importFailed') }]);
     } finally {
       if (typeof unsubscribe === 'function') unsubscribe();
       setImporting(false);
@@ -99,9 +101,9 @@ export default function BatchImportPage() {
     try {
       const res = await softglazeApi.batch.exportProfilesToFile({ format });
       if (res?.cancelled) return;
-      if (res?.saved) setExportNotice(`Exported ${res.count} profile${res.count === 1 ? '' : 's'} to ${res.path}`);
+      if (res?.saved) setExportNotice(t('exportNotice', { count: res.count, path: res.path }));
     } catch (err) {
-      setFileError(err.message || 'Failed to export profiles.');
+      setFileError(err.message || t('errors.export'));
     } finally {
       setExporting(false);
     }
@@ -195,9 +197,9 @@ export default function BatchImportPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Automation"
-        title="Batch Profile Creation"
-        description="Rapidly deploy multiple browser environments via spreadsheet or sequential generation."
+        eyebrow={t('header.eyebrow')}
+        title={t('header.title')}
+        description={t('header.description')}
         actions={
           <Button
             onClick={() => handleExport('xlsx')}
@@ -205,7 +207,7 @@ export default function BatchImportPage() {
             className="bg-secondary hover:bg-secondary text-foreground border border-border"
           >
             {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileDown className="w-4 h-4 mr-2" />}
-            Export Profiles
+            {t('header.exportProfiles')}
           </Button>
         }
       />
@@ -222,13 +224,13 @@ export default function BatchImportPage() {
           onClick={() => setActiveTab('file')}
           className={`px-6 py-3 text-[14px] font-medium transition-all border-b-2 flex items-center gap-2 ${activeTab === 'file' ? 'border-blue-500 text-blue-400' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
         >
-          <FileSpreadsheet className="w-4 h-4" /> Import from File
+          <FileSpreadsheet className="w-4 h-4" /> {t('tabs.importFromFile')}
         </button>
         <button
           onClick={() => setActiveTab('quick')}
           className={`px-6 py-3 text-[14px] font-medium transition-all border-b-2 flex items-center gap-2 ${activeTab === 'quick' ? 'border-blue-500 text-blue-400' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
         >
-          <ListPlus className="w-4 h-4" /> Quick Generate
+          <ListPlus className="w-4 h-4" /> {t('tabs.quickGenerate')}
         </button>
       </div>
 
@@ -242,15 +244,15 @@ export default function BatchImportPage() {
               <CardHeader className="pb-3 border-b border-border">
                 <CardTitle className="text-foreground text-[15px] flex items-center gap-2">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-xs">1</span>
-                  Download Template
+                  {t('step1.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-[13px] text-muted-foreground mb-4 leading-relaxed">
-                  To ensure smooth parsing, please use our standardized Excel or CSV template. Fill in your profile names, proxies, and fingerprint rules.
+                  {t('step1.description')}
                 </p>
                 <Button onClick={handleDownloadTemplate} className="w-full bg-secondary hover:bg-secondary text-foreground border border-border">
-                  <Download className="w-4 h-4 mr-2" /> Download .XLSX Template
+                  <Download className="w-4 h-4 mr-2" /> {t('step1.downloadButton')}
                 </Button>
               </CardContent>
             </Card>
@@ -260,18 +262,18 @@ export default function BatchImportPage() {
               <CardHeader className="pb-3 border-b border-border">
                 <CardTitle className="text-foreground text-[15px] flex items-center gap-2">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-xs">2</span>
-                  Upload & Preview
+                  {t('step2.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
                 <p className="text-[13px] text-muted-foreground mb-4">
-                  Select your filled spreadsheet. We will parse it locally and check for formatting errors before saving.
+                  {t('step2.description')}
                 </p>
                 <Button
                   onClick={handleSelectFile}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white"
                 >
-                  <UploadCloud className="w-4 h-4 mr-2" /> Select File
+                  <UploadCloud className="w-4 h-4 mr-2" /> {t('step2.selectButton')}
                 </Button>
 
                 {fileError && (
@@ -290,7 +292,7 @@ export default function BatchImportPage() {
               <CardHeader className="pb-3 border-b border-border">
                 <CardTitle className="text-foreground text-[15px] flex items-center gap-2">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-xs">3</span>
-                  Preview & Commit Data
+                  {t('step3.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 flex-1 flex flex-col relative">
@@ -299,8 +301,8 @@ export default function BatchImportPage() {
                 {!previewData && !importResult && (
                   <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
                     <Server className="w-12 h-12 mb-4 text-muted-foreground" />
-                    <h3 className="text-foreground font-medium mb-1">Awaiting Data</h3>
-                    <p className="text-[13px]">Select a file to preview your structured profiles here.</p>
+                    <h3 className="text-foreground font-medium mb-1">{t('awaiting.title')}</h3>
+                    <p className="text-[13px]">{t('awaiting.description')}</p>
                   </div>
                 )}
 
@@ -309,11 +311,11 @@ export default function BatchImportPage() {
                   <div className="flex flex-col h-full">
                     <div className="p-4 bg-secondary border-b border-border flex justify-between items-center text-xs">
                       <div className="text-muted-foreground">
-                        File: <span className="font-medium text-foreground">{previewData.fileName}</span>
+                        {t('preview.file')} <span className="font-medium text-foreground">{previewData.fileName}</span>
                         <span className="mx-2 text-muted-foreground">|</span>
-                        Valid Rows: <span className="font-medium text-emerald-400">{previewData.items.length}</span>
+                        {t('preview.validRows')} <span className="font-medium text-emerald-400">{previewData.items.length}</span>
                         <span className="mx-2 text-muted-foreground">|</span>
-                        Errors: <span className={`font-medium ${previewData.errors.length > 0 ? 'text-red-400' : 'text-muted-foreground'}`}>{previewData.errors.length}</span>
+                        {t('preview.errors')} <span className={`font-medium ${previewData.errors.length > 0 ? 'text-red-400' : 'text-muted-foreground'}`}>{previewData.errors.length}</span>
                       </div>
                     </div>
 
@@ -322,17 +324,17 @@ export default function BatchImportPage() {
                       <div className="flex-1 flex flex-col p-4 gap-3 min-h-0">
                         <div>
                           <div className="flex justify-between text-[12px] text-muted-foreground mb-1.5">
-                            <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" /> Importing… {importProgress?.index || 0}/{importProgress?.total || 0}</span>
+                            <span className="flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" /> {t('processing.importing', { index: importProgress?.index || 0, total: importProgress?.total || 0 })}</span>
                             <span className="font-mono">{importProgress?.pct || 0}%</span>
                           </div>
                           <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                             <div className="h-full bg-blue-500 transition-all duration-200" style={{ width: `${importProgress?.pct || 0}%` }} />
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Terminal className="w-3.5 h-3.5" /> Backend processing log</div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Terminal className="w-3.5 h-3.5" /> {t('processing.backendLog')}</div>
                         <div className="flex-1 min-h-[220px] bg-[#0a0d14] border border-border rounded-lg overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed">
                           {importLog.length === 0 ? (
-                            <span className="text-slate-500">Connecting to the import engine…</span>
+                            <span className="text-slate-500">{t('processing.connecting')}</span>
                           ) : importLog.map((line, i) => (
                             <div key={i} className={line.kind === 'error' ? 'text-red-400' : line.kind === 'warn' ? 'text-amber-400' : line.kind === 'ok' ? 'text-emerald-400' : 'text-blue-300'}>
                               <span className="text-slate-600 select-none">{'$ '}</span>{line.message}
@@ -347,11 +349,11 @@ export default function BatchImportPage() {
                           <table className="w-full text-left text-[12px] min-w-[600px]">
                             <thead className="bg-secondary text-muted-foreground sticky top-0 shadow-sm border-b border-border">
                               <tr>
-                                <th className="px-4 py-2 font-medium">Row</th>
-                                <th className="px-4 py-2 font-medium">Title</th>
-                                <th className="px-4 py-2 font-medium">Group</th>
-                                <th className="px-4 py-2 font-medium">Proxy Method</th>
-                                <th className="px-4 py-2 font-medium">Data Dir</th>
+                                <th className="px-4 py-2 font-medium">{t('table.row')}</th>
+                                <th className="px-4 py-2 font-medium">{t('table.title')}</th>
+                                <th className="px-4 py-2 font-medium">{t('table.group')}</th>
+                                <th className="px-4 py-2 font-medium">{t('table.proxyMethod')}</th>
+                                <th className="px-4 py-2 font-medium">{t('table.dataDir')}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -361,7 +363,7 @@ export default function BatchImportPage() {
                                   <td className="px-4 py-2 text-foreground font-medium">{item.title}</td>
                                   <td className="px-4 py-2 text-muted-foreground">{item.group || '—'}</td>
                                   <td className="px-4 py-2 text-muted-foreground">{item.proxyMethod}</td>
-                                  <td className="px-4 py-2 text-muted-foreground">{item.dataDirName || 'Auto'}</td>
+                                  <td className="px-4 py-2 text-muted-foreground">{item.dataDirName || t('table.auto')}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -377,7 +379,7 @@ export default function BatchImportPage() {
                               className="h-4 w-4 mt-0.5 cursor-pointer accent-emerald-500"
                             />
                             <span className="text-[12px] text-muted-foreground leading-relaxed">
-                              <strong className="text-muted-foreground">Auto-bind proxies by country</strong> — for rows without their own proxy, assign a saved proxy whose health-checked country matches the row's <code className="text-emerald-400">Country</code> column (round-robin across matches).
+                              <strong className="text-muted-foreground">{t('autoBind.label')}</strong> {t('autoBind.descPrefix')} <code className="text-emerald-400">Country</code> {t('autoBind.descSuffix')}
                             </span>
                           </label>
                           <Button
@@ -385,7 +387,7 @@ export default function BatchImportPage() {
                             disabled={importing}
                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
                           >
-                            <CheckCircle2 className="w-4 h-4 mr-2" /> Commit {previewData.items.length} Profiles
+                            <CheckCircle2 className="w-4 h-4 mr-2" /> {t('commitButton', { count: previewData.items.length })}
                           </Button>
                         </div>
                       </>
@@ -399,14 +401,14 @@ export default function BatchImportPage() {
                     <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
                       <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                     </div>
-                    <h3 className="text-foreground text-lg font-medium mb-2">Import Successful</h3>
+                    <h3 className="text-foreground text-lg font-medium mb-2">{t('success.title')}</h3>
                     <p className="text-[13px] text-muted-foreground max-w-md mx-auto mb-6">
-                      Successfully imported <strong className="text-foreground">{importResult.createdProfiles.length}</strong> profiles
-                      and mapped <strong className="text-foreground">{importResult.createdProxies.length}</strong> new proxies
-                      {importResult.autoBound?.length ? <> · auto-bound <strong className="text-foreground">{importResult.autoBound.length}</strong> by country</> : null}.
+                      {t('success.importedPrefix')} <strong className="text-foreground">{importResult.createdProfiles.length}</strong> {t('success.importedMiddle')}
+                      {' '}<strong className="text-foreground">{importResult.createdProxies.length}</strong> {t('success.importedSuffix')}
+                      {importResult.autoBound?.length ? <>{t('success.autoBoundPrefix')} <strong className="text-foreground">{importResult.autoBound.length}</strong> {t('success.autoBoundSuffix')}</> : null}.
                     </p>
                     <div className="flex gap-3">
-                      <Button onClick={() => setImportResult(null)} variant="outline" className="bg-secondary border-border text-foreground">Import Another</Button>
+                      <Button onClick={() => setImportResult(null)} variant="outline" className="bg-secondary border-border text-foreground">{t('success.importAnother')}</Button>
                     </div>
                   </div>
                 )}
@@ -421,18 +423,18 @@ export default function BatchImportPage() {
         <Card className="bg-card border-border max-w-3xl">
           <CardHeader className="border-b border-border">
             <CardTitle className="text-foreground text-[15px] flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-blue-400" /> Sequential Generation Engine
+              <Terminal className="w-4 h-4 text-blue-400" /> {t('quick.engineTitle')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="bg-secondary border border-border p-4 rounded-lg flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[12px] text-muted-foreground leading-relaxed">
-                Spin up multiple profiles instantly without a spreadsheet — unique fingerprints, sequential names, a target group (create one inline), and proxy assignment from a specific group or provider. Uses the exact same engine as the Profiles page.
+                {t('quick.description')}
               </p>
             </div>
             <Button onClick={() => setShowQuickGen(true)} className="bg-blue-600 hover:bg-blue-500 text-white">
-              <Wand2 className="w-4 h-4 mr-2" /> Open Quick Generate
+              <Wand2 className="w-4 h-4 mr-2" /> {t('quick.openButton')}
             </Button>
           </CardContent>
         </Card>
