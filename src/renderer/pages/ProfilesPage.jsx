@@ -19,6 +19,7 @@ import Pager from '@/components/ui/Pager.jsx';
 import CompareProfilesModal from '@/components/CompareProfilesModal.jsx';
 import { Pencil, GitCompare, Bookmark } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { useDialog } from '@/lib/useDialog.js';
 import { formatDateTime } from '@/lib/utils.js';
 
 // Compact relative time ("just now", "5m ago", "3h ago", "2d ago"); the absolute
@@ -354,6 +355,58 @@ const MOCK_SAVED_PROXIES = [
   { id: '1', name: 'US Rotating - SmartProxy', host: 'proxy.smartproxy.com', port: '10000', tags: 'US, Unused' },
   { id: '2', name: 'UK Datacenter - Oxylabs', host: 'uk.oxylabs.io', port: '8000', tags: 'UK, Unused' }
 ];
+
+// Bulk-tag dialog for the current selection. Markup is unchanged from its former
+// inline form; useDialog adds Escape/focus-trap/scroll-lock without altering it.
+function TagModal({ onClose, count, tagInput, setTagInput, allTags, bulkBusy, onAssign }) {
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Tag selected profiles" tabIndex={-1} className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-foreground">Tag {count} profile{count === 1 ? '' : 's'}</h3>
+        <p className="text-xs text-muted-foreground mt-1">Add or remove a tag across the selected profiles.</p>
+        <input
+          list="sg-all-tags"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          placeholder="Tag name…"
+          className="mt-4 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        />
+        <datalist id="sg-all-tags">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
+        <div className="mt-4 flex gap-2 justify-end">
+          <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="secondary" disabled={bulkBusy || !tagInput.trim()} onClick={() => onAssign('remove')}>Remove</Button>
+          <Button size="sm" variant="primary" disabled={bulkBusy || !tagInput.trim()} onClick={() => onAssign('add')}>Add</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bulk-rename dialog for the current selection. Markup unchanged from its former
+// inline form; useDialog adds the standard modal a11y behaviors.
+function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStart, setRenameStart, bulkBusy, onRename }) {
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Rename selected profiles" tabIndex={-1} className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-foreground">Rename {count} profile{count === 1 ? '' : 's'}</h3>
+        <p className="text-xs text-muted-foreground mt-1">Number the selected profiles by a prefix, in their current visible order.</p>
+        <div className="mt-4 flex gap-2">
+          <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder="Prefix, e.g. Account" className="flex-1 bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+          <input type="number" min={0} value={renameStart} onChange={(e) => setRenameStart(Number(e.target.value) || 0)} className="w-20 bg-input-background border border-border rounded px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" title="Start number" />
+        </div>
+        {renamePrefix.trim() && (
+          <p className="mt-2 text-xs text-muted-foreground">Preview: <span className="text-foreground font-medium">{renamePrefix.trim()} {Number(renameStart) || 0}</span>, {renamePrefix.trim()} {(Number(renameStart) || 0) + 1}, …</p>
+        )}
+        <div className="mt-4 flex gap-2 justify-end">
+          <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="primary" disabled={bulkBusy || !renamePrefix.trim()} onClick={onRename}>Rename</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilesPage() {
   const [profiles, setProfiles] = useState([]);
@@ -1984,44 +2037,27 @@ export default function ProfilesPage() {
         <ActivityModal profileId={activityProfile.id} profileName={activityProfile.title} onClose={() => setActivityProfile(null)} />
       )}
       {showTagModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowTagModal(false)}>
-          <div className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-foreground">Tag {selectedIds.size} profile{selectedIds.size === 1 ? '' : 's'}</h3>
-            <p className="text-xs text-muted-foreground mt-1">Add or remove a tag across the selected profiles.</p>
-            <input
-              list="sg-all-tags"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              placeholder="Tag name…"
-              className="mt-4 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            />
-            <datalist id="sg-all-tags">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
-            <div className="mt-4 flex gap-2 justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setShowTagModal(false)}>Cancel</Button>
-              <Button size="sm" variant="secondary" disabled={bulkBusy || !tagInput.trim()} onClick={() => handleTagAssign('remove')}>Remove</Button>
-              <Button size="sm" variant="primary" disabled={bulkBusy || !tagInput.trim()} onClick={() => handleTagAssign('add')}>Add</Button>
-            </div>
-          </div>
-        </div>
+        <TagModal
+          onClose={() => setShowTagModal(false)}
+          count={selectedIds.size}
+          tagInput={tagInput}
+          setTagInput={setTagInput}
+          allTags={allTags}
+          bulkBusy={bulkBusy}
+          onAssign={handleTagAssign}
+        />
       )}
       {showRenameModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowRenameModal(false)}>
-          <div className="w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-foreground">Rename {selectedIds.size} profile{selectedIds.size === 1 ? '' : 's'}</h3>
-            <p className="text-xs text-muted-foreground mt-1">Number the selected profiles by a prefix, in their current visible order.</p>
-            <div className="mt-4 flex gap-2">
-              <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder="Prefix, e.g. Account" className="flex-1 bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
-              <input type="number" min={0} value={renameStart} onChange={(e) => setRenameStart(Number(e.target.value) || 0)} className="w-20 bg-input-background border border-border rounded px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary" title="Start number" />
-            </div>
-            {renamePrefix.trim() && (
-              <p className="mt-2 text-xs text-muted-foreground">Preview: <span className="text-foreground font-medium">{renamePrefix.trim()} {Number(renameStart) || 0}</span>, {renamePrefix.trim()} {(Number(renameStart) || 0) + 1}, …</p>
-            )}
-            <div className="mt-4 flex gap-2 justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setShowRenameModal(false)}>Cancel</Button>
-              <Button size="sm" variant="primary" disabled={bulkBusy || !renamePrefix.trim()} onClick={handleBulkRename}>Rename</Button>
-            </div>
-          </div>
-        </div>
+        <RenameModal
+          onClose={() => setShowRenameModal(false)}
+          count={selectedIds.size}
+          renamePrefix={renamePrefix}
+          setRenamePrefix={setRenamePrefix}
+          renameStart={renameStart}
+          setRenameStart={setRenameStart}
+          bulkBusy={bulkBusy}
+          onRename={handleBulkRename}
+        />
       )}
       {compareProfiles && (
         <CompareProfilesModal profiles={compareProfiles} onClose={() => setCompareProfiles(null)} />

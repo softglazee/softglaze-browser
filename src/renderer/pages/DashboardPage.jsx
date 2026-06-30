@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button.jsx';
+import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { AreaChart, Donut, Legend, GroupedBars, ProgressMeter } from '@/components/charts/Charts.jsx';
 
@@ -599,6 +600,7 @@ function SystemStatusModal({ stats, sessions, onClose }) {
   const { t } = useTranslation();
   const [info, setInfo] = useState(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
+  const { dialogRef } = useDialog({ onClose });
   useEffect(() => {
     let live = true;
     softglazeApi.system.getInfo()
@@ -623,7 +625,7 @@ function SystemStatusModal({ stats, sessions, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onMouseDown={onClose}>
-      <div className="w-[460px] bg-popover border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="System Status" tabIndex={-1} className="w-[460px] bg-popover border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold text-foreground">{t('dashboard.statusTitle')}</h2></div>
           <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="w-4 h-4" /></button>
