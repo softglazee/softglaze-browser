@@ -54,6 +54,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress',
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
@@ -186,6 +187,11 @@ const CHANNELS = Object.freeze({
 
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
+  SESSION_RESTORE_GET: 'session:restore-get',
+  SESSION_RESTORE_RUN: 'session:restore-run',
+  SESSION_RESOURCE_USAGE: 'session:resource-usage',
+  SESSION_CRASH: 'session:crash',
+  MEMORY_PRESSURE: 'system:memory-pressure',
 
   BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
   BATCH_COMMIT_PROFILE_IMPORT: 'batch:commit-profile-import',
@@ -302,6 +308,12 @@ const api = Object.freeze({
     bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
     bulkLaunch: (ids) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids }),
     bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids }),
+    // Subscribe to live bulk-launch progress; returns an unsubscribe function.
+    onBulkLaunchProgress: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.PROFILE_BULK_LAUNCH_PROGRESS, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.PROFILE_BULK_LAUNCH_PROGRESS, listener);
+    },
     analyzeLeaks: (id) => invoke(CHANNELS.PROFILE_ANALYZE_LEAKS, { id }),
     exportCookies: (id, format) => invoke(CHANNELS.PROFILE_EXPORT_COOKIES, { id, format }),
     importCookies: (id, data, format) => invoke(CHANNELS.PROFILE_IMPORT_COOKIES, { id, data, format }),
@@ -345,7 +357,22 @@ const api = Object.freeze({
   }),
   sessions: Object.freeze({
     list: () => invoke(CHANNELS.SESSION_LIST),
-    close: (sessionId) => invoke(CHANNELS.SESSION_CLOSE, { sessionId })
+    close: (sessionId) => invoke(CHANNELS.SESSION_CLOSE, { sessionId }),
+    restoreGet: () => invoke(CHANNELS.SESSION_RESTORE_GET),
+    restoreRun: (payload) => invoke(CHANNELS.SESSION_RESTORE_RUN, payload),
+    resourceUsage: () => invoke(CHANNELS.SESSION_RESOURCE_USAGE),
+    // Subscribe to crash notifications; returns an unsubscribe function.
+    onCrash: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.SESSION_CRASH, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.SESSION_CRASH, listener);
+    },
+    // Subscribe to memory-pressure notifications; returns an unsubscribe function.
+    onMemoryPressure: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.MEMORY_PRESSURE, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.MEMORY_PRESSURE, listener);
+    }
   }),
   members: Object.freeze({
     list: () => invoke(CHANNELS.MEMBER_LIST),
