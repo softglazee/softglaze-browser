@@ -39,7 +39,8 @@ export const softglazeApi = {
     getProviderCreds: (provider) => getSoftglazeApi().proxies.getProviderCreds(provider),
     saveProviderCreds: (payload) => getSoftglazeApi().proxies.saveProviderCreds(payload),
     rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
-    testAll: () => getSoftglazeApi().proxies.testAll()
+    testAll: () => getSoftglazeApi().proxies.testAll(),
+    autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level)
   },
   proxyGroups: {
     list: () => getSoftglazeApi().proxyGroups.list(),
@@ -112,7 +113,7 @@ export const softglazeApi = {
     list: () => getSoftglazeApi().members.list(),
     create: (payload) => getSoftglazeApi().members.create(payload),
     update: (payload) => getSoftglazeApi().members.update(payload),
-    delete: (id) => getSoftglazeApi().members.delete(id),
+    delete: (id, options) => getSoftglazeApi().members.delete(id, options),
     setPin: (id, pin) => getSoftglazeApi().members.setPin(id, pin),
     current: () => getSoftglazeApi().members.current(),
     switch: (id, pin, password) => getSoftglazeApi().members.switch(id, pin, password),
@@ -270,5 +271,11 @@ export const softglazeApi = {
     revokeToken: (id) => getSoftglazeApi().developerApi.revokeToken(id),
     serverStatus: () => getSoftglazeApi().developerApi.serverStatus(),
     setServerEnabled: (enabled) => getSoftglazeApi().developerApi.setServerEnabled(enabled)
+  },
+  updater: {
+    getState: () => getSoftglazeApi().updater.getState(),
+    install: () => getSoftglazeApi().updater.install(),
+    check: () => getSoftglazeApi().updater.check(),
+    onEvent: (callback) => getSoftglazeApi().updater.onEvent(callback)
   }
 };

@@ -7,6 +7,7 @@ import {
   LogOut, UserCog, CreditCard
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { renderFooterNodes } from '@/lib/footerText.jsx';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
 import CommandPalette from '@/components/CommandPalette.jsx';
 import OnboardingWizard from '@/components/OnboardingWizard.jsx';
@@ -79,15 +80,9 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATO
 // by the Super Admin in Settings → App footer.
 function FooterBar({ text }) {
   if (!text) return null;
-  const resolved = String(text).replace(/\{year\}/g, String(new Date().getFullYear()));
-  const parts = resolved.split(/(https?:\/\/[^\s)]+)/g);
   return (
     <footer className="shrink-0 border-t border-border px-7 py-2.5 text-[11px] text-muted-foreground/80 text-center leading-relaxed">
-      {parts.map((part, i) => (
-        /^https?:\/\//.test(part)
-          ? <a key={i} href={part} target="_blank" rel="noreferrer" className="text-primary hover:underline">{part.replace(/^https?:\/\//, '')}</a>
-          : <span key={i}>{part}</span>
-      ))}
+      {renderFooterNodes(text)}
     </footer>
   );
 }
