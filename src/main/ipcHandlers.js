@@ -80,6 +80,8 @@ const CHANNELS = Object.freeze({
   PROXY_ROTATION_GET: 'proxy:rotation-get',
   PROXY_ROTATION_SET: 'proxy:rotation-set',
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
+  PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
+  PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_GROUP_LIST: 'proxy-group:list',
@@ -1479,6 +1481,17 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
   });
 }
 
+// Encode a proxy username for a proxy URL WITHOUT mangling the comma-separated
+// tokens that gateways like Apify (`groups-RESIDENTIAL,country-US,session-…`) and
+// Smartproxy.org depend on. Commas are valid in URL userinfo (RFC 3986 sub-delims),
+// but encodeURIComponent turns them into %2C, which the proxy agent forwards
+// un-decoded — so Apify sees one malformed token, can't read `country-US`, and
+// returns a global IP (the "country ignored / mixed countries on check" bug). Keep
+// commas literal; everything else still gets encoded.
+function proxyUserinfo(user) {
+  return encodeURIComponent(String(user)).replace(/%2C/gi, ',');
+}
+
 // Routes a request to an IP/geo service THROUGH the given proxy and returns
 // { success, ip, country, city, isp, latencyMs } (or { success:false, error }).
 async function testProxyConnectivity(proxy) {
@@ -1491,7 +1504,7 @@ async function testProxyConnectivity(proxy) {
 
   const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
   const auth = proxy.username
-    ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password || '')}@`
+    ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@`
     : '';
   const proxyUrl = `${scheme}://${auth}${proxy.host}:${proxy.port}`;
   const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
@@ -2234,6 +2247,7 @@ async function batchGenerateProfiles(payload) {
   let proxyLimited = false;
   let availableProxies = 0;
   let effectiveCount = count;
+  let proxyVerifyExcluded = 0;
 
   if (proxyMode === 'unique' || proxyMode === 'pool') {
     const filter = {};
@@ -2249,19 +2263,52 @@ async function batchGenerateProfiles(payload) {
     const pool = await db.proxy.findMany({
       where: await scopedProxyWhere(Object.keys(filter).length ? filter : undefined),
       orderBy: { createdAt: 'asc' },
-      select: { id: true }
+      select: { id: true, type: true, host: true, port: true, username: true, password: true, lastStatus: true, lastCheckedAt: true }
     });
-    availableProxies = pool.length;
+
+    // STRICT VERIFICATION GATE (default on): only attach proxies that pass a LIVE
+    // health check. Proxies verified 'ok' within the last 30 min are trusted as-is
+    // (skip-recent); the rest are checked live and their health persisted. A failed
+    // proxy is never assigned. Set input.verifyProxies === false to bypass.
+    const verify = input.verifyProxies !== false;
+    const FRESH_MS = 30 * 60 * 1000;
+    const isHealthy = async (p) => {
+      if (!verify) return true;
+      if (p.lastStatus === 'ok' && p.lastCheckedAt && (Date.now() - new Date(p.lastCheckedAt).getTime()) < FRESH_MS) return true;
+      try {
+        const result = await testProxyConnectivity({ type: p.type, host: p.host, port: p.port, username: p.username, password: p.password });
+        await persistProxyHealth(db, p.id, result).catch(() => {});
+        return Boolean(result && result.success);
+      } catch (e) { return false; }
+    };
+    // Bounded-concurrency scan; stops once `limit` healthy proxies are found.
+    const collectHealthy = async (candidates, limit) => {
+      const healthy = [];
+      let checked = 0;
+      const CONC = 8;
+      for (let i = 0; i < candidates.length && healthy.length < limit; i += CONC) {
+        const slice = candidates.slice(i, i + CONC);
+        const res = await Promise.all(slice.map(async (p) => ({ p, ok: await isHealthy(p) })));
+        for (const r of res) { checked += 1; if (r.ok && healthy.length < limit) healthy.push(r.p); }
+      }
+      return { healthy, checked };
+    };
 
     if (proxyMode === 'unique') {
       shuffleInPlace(pool); // so the same proxies aren't always picked first
-      effectiveCount = Math.min(count, availableProxies);
-      if (effectiveCount < count) proxyLimited = true;
-      for (let i = 0; i < effectiveCount; i += 1) assignments.push({ proxyId: pool[i].id });
+      const { healthy, checked } = await collectHealthy(pool, count);
+      availableProxies = healthy.length;
+      effectiveCount = Math.min(count, healthy.length);
+      if (effectiveCount < count) { proxyLimited = true; proxyVerifyExcluded = Math.max(0, checked - healthy.length); }
+      for (let i = 0; i < effectiveCount; i += 1) assignments.push({ proxyId: healthy[i].id });
     } else {
-      // Pool round-robin: reuse is allowed; create the full requested count.
+      // Pool: round-robin over the healthy subset (reuse allowed). Need at most
+      // `count` distinct healthy proxies. If none pass, profiles are created direct.
+      const { healthy, checked } = await collectHealthy(pool, count);
+      availableProxies = healthy.length;
+      proxyVerifyExcluded = Math.max(0, checked - healthy.length);
       for (let i = 0; i < count; i += 1) {
-        assignments.push(availableProxies ? { proxyId: pool[i % availableProxies].id } : {});
+        assignments.push(healthy.length ? { proxyId: healthy[i % healthy.length].id } : {});
       }
     }
   } else if (proxyMode === 'paste') {
@@ -2335,10 +2382,15 @@ async function batchGenerateProfiles(payload) {
 
   let message;
   if (proxyLimited) {
-    const unit = proxyMode === 'paste' ? 'unique proxy line(s)' : 'unused/available proxy(ies)';
-    message = `Created ${created.length} of ${count} requested — you have ${availableProxies} ${unit}. Add ${count - availableProxies} more proxies to create the remaining ${count - effectiveCount}.`;
+    if (proxyMode === 'paste') {
+      message = `Created ${created.length} of ${count} requested — you have ${availableProxies} unique proxy line(s). Add ${count - availableProxies} more to create the remaining ${count - effectiveCount}.`;
+    } else {
+      const failNote = proxyVerifyExcluded ? ` (${proxyVerifyExcluded} failed the live health check and were skipped)` : '';
+      message = `Created ${created.length} of ${count} requested — only ${availableProxies} proxy(ies) passed verification${failNote}. Add more working proxies to create the remaining ${count - effectiveCount}.`;
+    }
   } else {
-    message = `Created ${created.length} profile${created.length === 1 ? '' : 's'}${groupId ? ' in the selected group' : ''}.`;
+    const failNote = proxyVerifyExcluded ? ` — ${proxyVerifyExcluded} unhealthy prox${proxyVerifyExcluded === 1 ? 'y was' : 'ies were'} skipped` : '';
+    message = `Created ${created.length} profile${created.length === 1 ? '' : 's'}${groupId ? ' in the selected group' : ''}${failNote}.`;
   }
 
   return {
@@ -2347,6 +2399,7 @@ async function batchGenerateProfiles(payload) {
     profiles: created,
     proxyLimited,
     availableProxies,
+    proxyVerifyExcluded,
     proxyMode,
     groupId,
     errors,
@@ -3571,6 +3624,53 @@ async function setGlobalSettings(payload) {
   const next = deepMergeSettings(current, input);
   await writeSetting('globalSettings', next);
   return next;
+}
+
+// ---------------------------------------------------------------------------
+// Proxy provider credentials — remembered so the user doesn't re-type API tokens
+// / usernames / passwords on every pull. Stored workspace-wide in one Setting blob
+// keyed by provider; secret fields are DPAPI-sealed via secretStore (same pattern
+// as IpProvider). Pre-filled into the Proxy Providers modal on open.
+// ---------------------------------------------------------------------------
+const PROXY_CRED_SECRET_FIELDS = ['password', 'token', 'apiToken'];
+const PROXY_CRED_PLAIN_FIELDS = ['username', 'zone', 'plan', 'host', 'port'];
+
+async function readProxyProviderCredMap() {
+  const raw = await readSetting('proxyProviderCreds', {});
+  return raw && typeof raw === 'object' ? raw : {};
+}
+
+async function getProxyProviderCreds(payload) {
+  const input = requireObject(payload);
+  const provider = requiredString(input.provider, 'provider').toLowerCase();
+  const map = await readProxyProviderCredMap();
+  const stored = map[provider];
+  if (!stored || typeof stored !== 'object') return { found: false };
+  const out = { found: true };
+  for (const f of PROXY_CRED_PLAIN_FIELDS) if (stored[f] != null) out[f] = stored[f];
+  // Secrets are sealed at rest; open() is fail-safe (returns input if not sealed).
+  for (const f of PROXY_CRED_SECRET_FIELDS) if (stored[f] != null) out[f] = secretStore.open(stored[f]);
+  return out;
+}
+
+async function saveProxyProviderCreds(payload) {
+  const input = requireObject(payload);
+  const provider = requiredString(input.provider, 'provider').toLowerCase();
+  const map = await readProxyProviderCredMap();
+  const entry = { ...(map[provider] && typeof map[provider] === 'object' ? map[provider] : {}) };
+  for (const f of PROXY_CRED_PLAIN_FIELDS) {
+    if (input[f] === undefined) continue;
+    const v = String(input[f] == null ? '' : input[f]).trim();
+    if (v) entry[f] = v; else delete entry[f];
+  }
+  for (const f of PROXY_CRED_SECRET_FIELDS) {
+    if (input[f] === undefined) continue;
+    const v = String(input[f] == null ? '' : input[f]);
+    if (v) entry[f] = secretStore.seal(v); else delete entry[f];
+  }
+  map[provider] = entry;
+  await writeSetting('proxyProviderCreds', map);
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -7689,6 +7789,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_ROTATION_GET, getProxyRotation);
   registerHandler(CHANNELS.PROXY_ROTATION_SET, setProxyRotation);
   registerHandler(CHANNELS.PROXY_SYNC_VENDOR_POOL, syncVendorPool);
+  registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_GET, getProxyProviderCreds);
+  registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_SET, saveProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
   registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
   registerHandler(CHANNELS.PROXY_GROUP_LIST, listProxyGroups);

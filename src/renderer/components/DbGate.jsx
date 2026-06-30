@@ -61,9 +61,9 @@ export default function DbGate({ children }) {
 
   return (
     <div className="h-screen w-full bg-background text-foreground font-sans grid place-items-center p-6">
-      <div className="w-full max-w-[400px]">
+      <div className="w-full max-w-[400px] animate-fade-up">
         <div className="flex items-center gap-2.5 mb-7">
-          <div className="w-8 h-8 rounded-xl bg-primary text-white grid place-items-center font-display font-bold shadow-glow">S</div>
+          <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-9 h-9 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
           <span className="font-display font-semibold tracking-tight">SoftGlaze</span>
         </div>
         <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Database className="w-5 h-5" /></div>
