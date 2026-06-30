@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2, X, Loader2, AlertTriangle, HardDrive } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
+import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 function formatBytes(n) {
@@ -20,6 +21,7 @@ export default function DeleteProfileModal({ profile, onClose, onDeleted }) {
   const [wipe, setWipe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const { dialogRef } = useDialog({ onClose });
 
   useEffect(() => {
     let alive = true;
@@ -40,7 +42,7 @@ export default function DeleteProfileModal({ profile, onClose, onDeleted }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Move to Trash" tabIndex={-1} className="w-full max-w-md rounded border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface">
           <div className="flex items-center gap-3">
             <div className="bg-red-500/10 p-1.5 rounded border border-red-500/20"><Trash2 className="w-5 h-5 text-red-400" /></div>
