@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { useDialog } from '@/lib/useDialog.js';
 
 // Side-by-side comparison of 2–3 profiles. Renderer-only — uses the profile objects
 // already loaded on the Profiles page. Rows where the values differ are highlighted
@@ -26,12 +27,13 @@ const ROWS = [
 ];
 
 export default function CompareProfilesModal({ profiles = [], onClose }) {
+  const { dialogRef } = useDialog({ onClose });
   if (!profiles.length) return null;
   const val = (get, p) => { try { const v = get(p); return (v === null || v === undefined || v === '') ? '—' : String(v); } catch (e) { return '—'; } };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Compare profiles" tabIndex={-1} className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Compare profiles</h3>

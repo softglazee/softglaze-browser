@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LayoutTemplate, X, Loader2, Trash2, Plus, Save } from 'lucide-react';
+import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 export default function TemplatesModal({ onClose, onProfilesChanged }) {
+  const { dialogRef } = useDialog({ onClose });
   const [templates, setTemplates] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-xl max-h-[88vh] overflow-hidden flex flex-col rounded-xl border border-border bg-popover shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Templates" tabIndex={-1} className="w-full max-w-xl max-h-[88vh] overflow-hidden flex flex-col rounded-xl border border-border bg-popover shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <LayoutTemplate className="w-5 h-5 text-blue-400" />

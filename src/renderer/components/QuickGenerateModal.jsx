@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useDialog } from '@/lib/useDialog.js';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -24,6 +25,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [proxySource, setProxySource] = useState(''); // '' all | group:<id> | provider:<key>
   const [pasted, setPasted] = useState('');
   const [busy, setBusy] = useState(false);
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
@@ -102,7 +104,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onMouseDown={() => !busy && onClose()}>
-      <div className="w-[500px] max-h-[92vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Quick generate profiles" tabIndex={-1} className="w-[500px] max-h-[92vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card z-10">
           <div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold">Quick generate</h2></div>
           <button onClick={() => !busy && onClose()} className="w-8 h-8 grid place-items-center rounded-lg text-muted hover:bg-secondary hover:text-foreground"><X className="w-4 h-4" /></button>

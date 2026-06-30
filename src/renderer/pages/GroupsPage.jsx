@@ -312,7 +312,7 @@ export default function GroupsPage() {
               return (
                 <div key={group.id} className={`group rounded transition-colors cursor-pointer ${isActive ? 'bg-primary/10' : 'hover:bg-card'}`}>
                   <div className="flex items-center justify-between px-3 py-2.5">
-                    <div className="flex items-center gap-3 flex-1 overflow-hidden" onClick={() => setActiveGroupId(group.id)}>
+                    <div role="button" tabIndex={0} aria-pressed={isActive} className="flex items-center gap-3 flex-1 overflow-hidden cursor-pointer rounded" onClick={() => setActiveGroupId(group.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveGroupId(group.id); } }}>
                       <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: group.color || '#3b82f6' }} />
                       <span className={`text-sm truncate ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{group.name}</span>
                     </div>
