@@ -13,6 +13,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
 import { initTheme } from './lib/theme.js';
+import './i18n/index.js'; // initializes i18next synchronously from the saved language
 
 // Apply the saved theme before first paint to avoid a flash of the wrong theme.
 initTheme();
