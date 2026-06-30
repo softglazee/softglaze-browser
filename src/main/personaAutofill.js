@@ -233,7 +233,9 @@ function personaAutofillMain() {
         for (var i = 0; i < all.length; i++) { if (used.indexOf(all[i]) >= 0) continue; if (pred(all[i])) { used.push(all[i]); return all[i]; } }
         return null;
       }
-      var filled = 0;
+      // 1) Collect the matched (field, value) pairs. Filling happens afterwards —
+      //    either via CDP "trusted" typing (Chromium bridge) or in-page events.
+      var matches = []; // { el, value, kind }
       for (var i = 0; i < PLAN.length; i++) {
         var key = PLAN[i][0], rx = PLAN[i][1], ac = PLAN[i][2];
         var val = p[key];
@@ -248,9 +250,7 @@ function personaAutofillMain() {
           };
         })(rx, ac, key));
         if (!el) continue;
-        if (el.tagName === 'SELECT') setSelect(el, String(val)); else await typeInto(el, String(val));
-        filled++;
-        await delay(100 + rand(0, 140));
+        matches.push({ el: el, value: String(val), kind: el.tagName === 'SELECT' ? 'select' : 'text' });
       }
       // Full-name fallback: a single name field when no first/last was matched.
       if (p.firstName || p.lastName) {
@@ -261,12 +261,37 @@ function personaAutofillMain() {
           var s = attrStr(e);
           return /full[\s_-]*name|your[\s_-]*name|^name$|\bname\b/.test(s) && !/user|first|last|given|family|sur/.test(s);
         });
-        if (nameEl) { await typeInto(nameEl, [p.firstName, p.lastName].filter(Boolean).join(' ')); filled++; await delay(120); }
+        if (nameEl) matches.push({ el: nameEl, value: [p.firstName, p.lastName].filter(Boolean).join(' '), kind: 'text' });
       }
       // Passwords: fill EVERY password field (covers "confirm password").
       if (p.password) {
         var pws = all.filter(function (e) { return (e.type || '').toLowerCase() === 'password' && used.indexOf(e) < 0; });
-        for (var k = 0; k < pws.length; k++) { used.push(pws[k]); await typeInto(pws[k], String(p.password)); filled++; await delay(120); }
+        for (var k = 0; k < pws.length; k++) { used.push(pws[k]); matches.push({ el: pws[k], value: String(p.password), kind: 'text' }); }
+      }
+
+      // 2) Fill. Prefer CDP trusted typing when the host exposes the bridge
+      //    (Chromium) — real keydown/keyup with isTrusted:true. Otherwise fall back
+      //    to in-page synthetic typing (e.g. Firefox, or if the bridge errors).
+      var filled = 0;
+      var trusted = (typeof window.__sgPersonaFillPlan === 'function');
+      if (trusted && matches.length) {
+        var plan = matches.map(function (m, idx) {
+          try { m.el.setAttribute('data-sgfill', String(idx)); } catch (e) {}
+          return { sel: '[data-sgfill="' + idx + '"]', value: m.value, kind: m.kind };
+        });
+        try {
+          var r = await window.__sgPersonaFillPlan(plan);
+          filled = (r && typeof r.filled === 'number') ? r.filled : matches.length;
+        } catch (e) { trusted = false; }
+        matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} });
+      }
+      if (!trusted) {
+        for (var j = 0; j < matches.length; j++) {
+          var m = matches[j];
+          if (m.kind === 'select') setSelect(m.el, m.value); else await typeInto(m.el, m.value);
+          filled++;
+          await delay(100 + rand(0, 140));
+        }
       }
       footer.hidden = false;
       toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '. Review, then mark as used.') : 'No matching fields found on this page.');

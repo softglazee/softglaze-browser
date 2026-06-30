@@ -15,6 +15,7 @@ import DeleteProfileModal from '@/components/DeleteProfileModal.jsx';
 import TemplatesModal from '@/components/TemplatesModal.jsx';
 import ActivityModal from '@/components/ActivityModal.jsx';
 import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
+import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
@@ -387,6 +388,14 @@ export default function ProfilesPage() {
     else if (filterStatus === 'direct') list = list.filter((p) => !p.proxyId);
     return list;
   }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
+
+  // Universal pagination (items-per-page selector via the shared Pager).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filteredProfiles.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pagedProfiles = pageSize === Infinity ? filteredProfiles : filteredProfiles.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { setPage(1); }, [filterGroup, filterTag, filterProxy, filterStatus, pageSize]);
 
   // Real, derived counts for the header subtitle + stat cards (no mock data).
   const totalCount = profiles.length;
@@ -1682,7 +1691,7 @@ export default function ProfilesPage() {
                     </td>
                   </tr>
                 )}
-                {filteredProfiles.map((p) => (
+                {pagedProfiles.map((p) => (
                   <tr key={p.id} className="border-b border-border hover:bg-secondary/50 transition-colors group">
                     <td className="px-5 py-3.5 text-center">
                       <button type="button" onClick={() => toggleSelect(p.id)} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${selectedIds.has(p.id) ? 'bg-primary border-primary' : 'bg-input-background border-border hover:border-border-strong'}`}>
@@ -1810,6 +1819,11 @@ export default function ProfilesPage() {
             </table>
           </div>
         </CardContent>
+        {filteredProfiles.length > 0 && (
+          <div className="shrink-0 border-t border-border bg-card/95 px-4 py-2.5 rounded-b-xl">
+            <Pager total={filteredProfiles.length} page={safePage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(n) => { setPageSize(n); setPage(1); }} />
+          </div>
+        )}
       </Card>
 
       {leakProfile && (
@@ -1850,7 +1864,7 @@ export default function ProfilesPage() {
         <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
       )}
       {showQuickGen && (
-        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} />
+        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} onCreateGroup={async (name) => { const g = await softglazeApi.groups.create({ name }); await loadData(); return g; }} />
       )}
       {showBrowserManager && (
         <BrowserManagerModal onClose={() => setShowBrowserManager(false)} onInstalled={refreshInstalledBrowsers} />

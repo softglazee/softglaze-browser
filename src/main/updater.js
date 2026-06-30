@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, dialog } = require('electron');
+const { app } = require('electron');
 const { tenantConfig } = require('./tenantConfig');
 
 // Auto-update via electron-updater. SAFE BY DEFAULT: it stays fully inert unless an
@@ -14,8 +14,29 @@ const { tenantConfig } = require('./tenantConfig');
 //     baked `build.publish` feed from package.json.
 //   • Otherwise: no update check is ever made.
 //
+// On `update-available` / `download-progress` / `update-downloaded` we push an
+// `updater:event` to the renderer, which shows an in-app banner on the Dashboard
+// ("New update available — Click to install"). `autoInstallOnAppQuit` stays on as a
+// silent fallback if the user never clicks. quitAndInstall is driven from the
+// banner via the `updater:install` IPC.
+//
 // Note: on Windows, electron-updater verifies the downloaded installer's Authenticode
 // signature, so updates are only safe on CODE-SIGNED builds (see docs/signing-and-updates.md).
+
+let autoUpdaterRef = null;
+let eventSink = null;
+// status: idle | checking | available | not-available | downloading | downloaded | error
+let lastState = { status: 'idle', version: null, percent: 0, error: null };
+
+// The renderer broadcast is owned by ipcHandlers (it holds the CHANNELS map and
+// sends to every window); the updater just pushes state into the sink it registers.
+function setEventSink(fn) { eventSink = typeof fn === 'function' ? fn : null; }
+
+function sendEvent(patch) {
+  lastState = { ...lastState, ...patch };
+  try { if (eventSink) eventSink(lastState); } catch (e) { /* sink gone */ }
+}
+
 function resolveFeed() {
   const url = tenantConfig().updateFeedUrl;
   if (url) return { kind: 'generic', url };
@@ -36,6 +57,7 @@ function initAutoUpdater(mainWindow) {
     console.warn('[updater] electron-updater not installed; auto-update disabled.');
     return;
   }
+  autoUpdaterRef = autoUpdater;
 
   if (feed.kind === 'generic') {
     try { autoUpdater.setFeedURL({ provider: 'generic', url: feed.url }); }
@@ -45,27 +67,42 @@ function initAutoUpdater(mainWindow) {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
-  autoUpdater.on('error', (err) => console.error('[updater] error:', (err && err.message) || err));
-  autoUpdater.on('update-available', (info) => console.log('[updater] update available:', info && info.version));
-  autoUpdater.on('update-not-available', () => console.log('[updater] up to date.'));
-  autoUpdater.on('update-downloaded', async (info) => {
-    try {
-      const res = await dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        buttons: ['Restart now', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Update ready',
-        message: `SoftGlaze ${(info && info.version) || ''} has been downloaded.`,
-        detail: 'Restart the app to apply the update.'
-      });
-      if (res.response === 0) autoUpdater.quitAndInstall();
-    } catch (e) {
-      console.error('[updater] prompt failed:', e.message);
-    }
+  autoUpdater.on('error', (err) => {
+    console.error('[updater] error:', (err && err.message) || err);
+    sendEvent({ status: 'error', error: (err && err.message) || String(err) });
+  });
+  autoUpdater.on('checking-for-update', () => sendEvent({ status: 'checking' }));
+  autoUpdater.on('update-available', (info) => {
+    console.log('[updater] update available:', info && info.version);
+    sendEvent({ status: 'available', version: (info && info.version) || null });
+  });
+  autoUpdater.on('update-not-available', () => sendEvent({ status: 'not-available' }));
+  autoUpdater.on('download-progress', (p) => sendEvent({ status: 'downloading', percent: Math.round((p && p.percent) || 0) }));
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[updater] update downloaded:', info && info.version);
+    sendEvent({ status: 'downloaded', version: (info && info.version) || null, percent: 100 });
   });
 
   autoUpdater.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
 }
 
-module.exports = { initAutoUpdater };
+// Current known updater state — so the banner can render correctly even if the
+// Dashboard mounts AFTER the event already fired.
+function getState() { return lastState; }
+
+// Quit and install the downloaded update (driven by the banner's "Install" button).
+function installDownloadedUpdate() {
+  if (!autoUpdaterRef) return { ok: false, error: 'Auto-update is not active in this build.' };
+  if (lastState.status !== 'downloaded') return { ok: false, error: 'No update has finished downloading yet.' };
+  try { autoUpdaterRef.quitAndInstall(); return { ok: true }; }
+  catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+}
+
+// Manual re-check (optional; the banner can offer "Check again").
+function checkForUpdatesNow() {
+  if (!autoUpdaterRef) return { ok: false, error: 'Auto-update is not active in this build.' };
+  autoUpdaterRef.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
+  return { ok: true };
+}
+
+module.exports = { initAutoUpdater, setEventSink, getState, installDownloadedUpdate, checkForUpdatesNow };
