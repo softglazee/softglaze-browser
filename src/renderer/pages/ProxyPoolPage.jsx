@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
+import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 
@@ -105,7 +106,7 @@ export default function ProxyPoolPage() {
   const [view, setView] = useState('custom'); // 'custom' | 'providers'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'failed' (driven by the stat cards)
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const [pageSize, setPageSize] = useState(25);
   const [testingAll, setTestingAll] = useState(false);
   const [testSummary, setTestSummary] = useState(null);
   const [proxyPolicy, setProxyPolicy] = useState('each-launch');
@@ -115,6 +116,10 @@ export default function ProxyPoolPage() {
   const [groupModal, setGroupModal] = useState(null); // { id?, name, color } when creating/editing
   const [assignOpen, setAssignOpen] = useState(false);
   const [dragOverKey, setDragOverKey] = useState(null);
+  // Auto-grouping by verified geo (Country / State / City).
+  const [autoGroupLevel, setAutoGroupLevel] = useState('country');
+  const [autoGrouping, setAutoGrouping] = useState(false);
+  const [autoGroupMsg, setAutoGroupMsg] = useState('');
 
   useEffect(() => {
     softglazeApi.settings.getProxyPolicy()
@@ -150,11 +155,11 @@ export default function ProxyPoolPage() {
 
   // Pagination over the filtered set (keeps long lists fast; pager is pinned at the
   // bottom of the table card so you never scroll to the end to change pages).
-  const pageCount = Math.max(1, Math.ceil(filteredProxies.length / PAGE_SIZE));
+  const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filteredProxies.length / pageSize));
   const safePage = Math.min(page, pageCount);
-  const pagedProxies = filteredProxies.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pagedProxies = pageSize === Infinity ? filteredProxies : filteredProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
   // Reset to page 1 whenever the filter set changes out from under us.
-  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter]);
+  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, pageSize]);
 
   // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
@@ -457,6 +462,21 @@ export default function ProxyPoolPage() {
     } catch (err) { setError(err.message || 'Could not move the proxies.'); }
   }
 
+  // Auto-categorize proxies into Country/State/City groups from their verified geo
+  // (set by the proxy health check). Run Test All first so proxies have a country.
+  async function handleAutoGroup() {
+    setAutoGrouping(true); setError(''); setAutoGroupMsg('');
+    try {
+      const r = await softglazeApi.proxies.autoGroup(autoGroupLevel);
+      await Promise.all([loadGroups(), loadProxies()]);
+      setAutoGroupMsg(`+${r?.createdGroups ?? 0} group${(r?.createdGroups ?? 0) === 1 ? '' : 's'} · ${r?.assigned ?? 0} assigned`);
+    } catch (e) {
+      setError(e.message || 'Auto-group failed. Run Test All first so proxies have a detected country.');
+    } finally {
+      setAutoGrouping(false);
+    }
+  }
+
   function renderStatus(id) {
     if (checkingId === id) return <span className="text-xs text-muted">Checking…</span>;
     const r = checkResults[id];
@@ -648,6 +668,18 @@ export default function ProxyPoolPage() {
           <FolderPlus className="w-3.5 h-3.5" /> New group
         </button>
 
+        {/* Auto-group by verified geo (run Test All first to populate country/state/city) */}
+        <span className="w-px h-5 bg-border mx-1" />
+        <select value={autoGroupLevel} onChange={(e) => setAutoGroupLevel(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title="Auto-group granularity">
+          <option value="country">Country</option>
+          <option value="state">State</option>
+          <option value="city">City</option>
+        </select>
+        <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0} title="Create groups from each proxy's verified country/state/city. Run Test All first so proxies have a detected location." className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
+          {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} Auto-group
+        </button>
+        {autoGroupMsg && <span className="text-[11px] text-emerald-400">{autoGroupMsg}</span>}
+
         {Object.keys(providerCounts).length > 0 && (
           <>
             <span className="w-px h-5 bg-border mx-1" />
@@ -745,7 +777,18 @@ export default function ProxyPoolPage() {
                           onChange={() => toggleSelect(proxy.id)}
                         />
                       </td>
-                      <td className="px-5 py-4 font-medium text-foreground">{proxy.name}</td>
+                      <td className="px-5 py-4 font-medium text-foreground">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate">{proxy.name}</span>
+                          <span className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title="Test proxy" className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
+                              {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                            </button>
+                            <button type="button" onClick={() => openEdit(proxy)} title="Edit proxy" className="p-1 rounded hover:bg-card text-muted hover:text-foreground"><Edit className="h-3.5 w-3.5" /></button>
+                            <button type="button" onClick={() => handleDelete(proxy)} title="Delete proxy" className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-5 py-4">
                         <Badge variant={proxy.type === 'SOCKS5' ? 'amber' : 'blue'}>{proxy.type}</Badge>
                       </td>
@@ -810,13 +853,8 @@ export default function ProxyPoolPage() {
           )}
         </CardContent>
         {!loading && filteredProxies.length > 0 && (
-          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-4 py-2.5 text-[12px] text-muted-foreground rounded-b">
-            <span>Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredProxies.length)} of {filteredProxies.length}</span>
-            <div className="flex items-center gap-1.5">
-              <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="px-2.5">Prev</Button>
-              <span className="px-2 tabular-nums">Page {safePage} / {pageCount}</span>
-              <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount} className="px-2.5">Next</Button>
-            </div>
+          <div className="shrink-0 border-t border-border bg-card/95 px-4 py-2.5 rounded-b">
+            <Pager total={filteredProxies.length} page={safePage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(n) => { setPageSize(n); setPage(1); }} />
           </div>
         )}
       </Card>

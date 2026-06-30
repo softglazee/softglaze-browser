@@ -10,7 +10,7 @@ const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
 
 const PROVIDER_LABELS = { apify: 'Apify', shopsocks5: 'ShopSocks5', smartproxyorg: 'Smartproxy.org', smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom' };
 
-export default function QuickGenerateModal({ osPlatforms = [], groups = [], proxies = [], proxyGroups = [], onClose, onGenerate }) {
+export default function QuickGenerateModal({ osPlatforms = [], groups = [], proxies = [], proxyGroups = [], onClose, onGenerate, onCreateGroup }) {
   const [count, setCount] = useState(5);
   const [baseName, setBaseName] = useState('Profile');
   const [startIndex, setStartIndex] = useState(1);
@@ -27,6 +27,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
+  const [savingGroup, setSavingGroup] = useState(false);
 
   const proxyModes = [
     { id: 'none', label: 'Direct', icon: Ban },
@@ -46,6 +47,19 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     if (proxyMode === 'none') return 'direct';
     if (proxyMode === 'paste') return 'paste'; // unique-by-line
     return assignUnique ? 'unique' : 'pool';
+  }
+
+  // Inline "create group" — create it immediately, select it, and hide the input.
+  // Falls back to the deferred create-on-generate path if onCreateGroup isn't given.
+  async function saveNewGroup() {
+    const name = newGroupName.trim();
+    if (!name || !onCreateGroup || savingGroup) return;
+    setSavingGroup(true); setErr('');
+    try {
+      const g = await onCreateGroup(name);
+      if (g && g.id != null) { setGroupId(String(g.id)); setNewGroupName(''); }
+    } catch (e) { setErr(e.message || 'Could not create the group.'); }
+    finally { setSavingGroup(false); }
   }
 
   async function submit() {
@@ -121,7 +135,22 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           {groupId === '__new__' && (
             <div>
               <label className={labelCls}>New group name</label>
-              <input className={inputCls} value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Facebook US batch" />
+              <div className="flex gap-2">
+                <input
+                  className={inputCls}
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveNewGroup(); } }}
+                  placeholder="e.g. Facebook US batch"
+                  autoFocus
+                />
+                {onCreateGroup && (
+                  <button type="button" onClick={saveNewGroup} disabled={savingGroup || !newGroupName.trim()} className="h-10 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-1.5 disabled:opacity-50 shrink-0 transition-colors">
+                    {savingGroup ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-dark mt-1">Press Enter or Save to create it now — otherwise it’s created when you generate.</p>
             </div>
           )}
 
