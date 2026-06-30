@@ -4,6 +4,7 @@ import {
   AlertTriangle, X, Save, Eye, EyeOff
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { useDialog } from '@/lib/useDialog.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // ~2 MB before base64 expansion
@@ -291,6 +292,7 @@ function VerifyModal({ info, onClose, onVerified }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [resending, setResending] = useState(false);
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   async function commit() {
     const c = code.replace(/\D/g, '');
@@ -319,7 +321,7 @@ function VerifyModal({ info, onClose, onVerified }) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl shadow-black/50 p-6 animate-scale-in">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Confirm it's you" tabIndex={-1} className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl shadow-black/50 p-6 animate-scale-in">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <span className="w-10 h-10 rounded-xl grid place-items-center bg-primary/12 border border-primary/20"><ShieldCheck className="w-5 h-5 text-primary" /></span>

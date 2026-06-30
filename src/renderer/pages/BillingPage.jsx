@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { useDialog } from '@/lib/useDialog.js';
 
 // Format a plan price using the plan's own currency (USD gets a $ glyph).
 function money(amount, currency) {
@@ -65,6 +66,13 @@ export default function BillingPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+  // a11y: close the inline payment-method picker on Escape while it's open.
+  useEffect(() => {
+    if (!payFor) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setPayFor(null); } };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [payFor]);
 
   async function redeem() {
     setErr(''); setMsg('');
@@ -339,7 +347,7 @@ export default function BillingPage() {
         const sel = methods.find((m) => m.id === selMethod) || null;
         return (
           <div className="fixed inset-0 z-[100] bg-black/50 grid place-items-center p-4" onClick={() => setPayFor(null)}>
-            <div className="w-full max-w-[460px] rounded-xl bg-card border border-border p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label={`Pay for ${payFor.name}`} tabIndex={-1} className="w-full max-w-[460px] rounded-xl bg-card border border-border p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">Pay for {payFor.name}</h3>
@@ -520,6 +528,7 @@ function InvoiceForm({ invoice, onClose, onSaved }) {
   const [note, setNote] = useState(invoice?.note ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   async function save() {
     setErr('');
@@ -542,7 +551,7 @@ function InvoiceForm({ invoice, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-card border border-border shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={invoice ? 'Edit invoice' : 'Add invoice'} tabIndex={-1} className="w-full max-w-md rounded-xl bg-card border border-border shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h3 className="text-sm font-semibold text-foreground">{invoice ? 'Edit invoice' : 'Add invoice'}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
@@ -671,6 +680,7 @@ function PlanForm({ plan, onClose, onSaved }) {
   const [features, setFeatures] = useState((plan?.features || []).join('\n'));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   async function save() {
     setErr('');
@@ -693,7 +703,7 @@ function PlanForm({ plan, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={plan ? 'Edit package' : 'New package'} tabIndex={-1} className="w-full max-w-lg rounded-xl bg-card border border-border shadow-2xl max-h-[90vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card">
           <h3 className="text-sm font-semibold text-foreground">{plan ? `Edit ${plan.name}` : 'New package'}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
@@ -842,6 +852,7 @@ function AssignForm({ owner, owners, plans, onClose, onDone }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   const plan = plans.find((p) => p.id === planId) || null;
 
@@ -866,7 +877,7 @@ function AssignForm({ owner, owners, plans, onClose, onDone }) {
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-card border border-border shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Assign a plan" tabIndex={-1} className="w-full max-w-md rounded-xl bg-card border border-border shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Gift className="w-4 h-4 text-emerald-400" /> Assign a plan</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
