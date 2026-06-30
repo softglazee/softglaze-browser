@@ -156,6 +156,7 @@ const CHANNELS = Object.freeze({
   TEAM_REASSIGN_PROFILES: 'team:reassign-profiles',
   TEAM_SEAT_USAGE: 'team:seat-usage',
   TEAM_EXPORT_ACTIVITY: 'team:export-activity',
+  TEAM_PERMISSION_CATALOG: 'team:permission-catalog',
   SYNC_STATUS: 'sync:status',
   SYNC_CONFIGURE: 'sync:configure',
   SYNC_RUN: 'sync:run',
@@ -406,7 +407,8 @@ const api = Object.freeze({
     activity: (limit) => invoke(CHANNELS.TEAM_ACTIVITY, { limit }),
     reassignProfiles: (payload) => invoke(CHANNELS.TEAM_REASSIGN_PROFILES, payload),
     seatUsage: () => invoke(CHANNELS.TEAM_SEAT_USAGE),
-    exportActivity: (payload) => invoke(CHANNELS.TEAM_EXPORT_ACTIVITY, payload)
+    exportActivity: (payload) => invoke(CHANNELS.TEAM_EXPORT_ACTIVITY, payload),
+    permissionCatalog: () => invoke(CHANNELS.TEAM_PERMISSION_CATALOG)
   }),
   sync: Object.freeze({
     status: () => invoke(CHANNELS.SYNC_STATUS),
