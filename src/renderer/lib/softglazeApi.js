@@ -36,6 +36,8 @@ export const softglazeApi = {
     getRotation: (profileId) => getSoftglazeApi().proxies.getRotation(profileId),
     setRotation: (payload) => getSoftglazeApi().proxies.setRotation(payload),
     syncVendorPool: (payload) => getSoftglazeApi().proxies.syncVendorPool(payload),
+    getProviderCreds: (provider) => getSoftglazeApi().proxies.getProviderCreds(provider),
+    saveProviderCreds: (payload) => getSoftglazeApi().proxies.saveProviderCreds(payload),
     rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
     testAll: () => getSoftglazeApi().proxies.testAll()
   },

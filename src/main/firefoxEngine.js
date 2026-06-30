@@ -14,8 +14,16 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { parseProxyInput } = require('./browserEngine');
+// `app` is a string path (not the API object) when required outside Electron, so
+// `app && app.isPackaged` is a safe runtime guard.
+const { app } = require('electron');
 
-const FIREFOX_ROOT = path.resolve(__dirname, '../../firefox');
+// Must be a writable, real directory. In a packaged build `__dirname` lives inside
+// app.asar (a FILE), so `../../firefox` → `…/app.asar/firefox` and any write throws
+// ENOTDIR. Use userData when packaged; keep the project-root path in dev.
+const FIREFOX_ROOT = (app && app.isPackaged)
+  ? path.join(app.getPath('userData'), 'firefox')
+  : path.resolve(__dirname, '../../firefox');
 
 const FIREFOX_CANDIDATES = [
   path.join(process.env.ProgramFiles || 'C:/Program Files', 'Mozilla Firefox', 'firefox.exe'),
@@ -476,6 +484,9 @@ function startFirefoxDownload(version) {
       entry.state = 'installing';
       entry.percent = 88;
       ffPersistState(true);
+      // Ensure the version dir exists before the NSIS installer writes into it
+      // (mirrors the Chrome path; harmless if /D= would create it anyway).
+      await fsp.mkdir(firefoxInstallDir(major), { recursive: true });
       await runFirefoxInstaller(part, firefoxInstallDir(major));
       await fsp.unlink(part).catch(() => {});
 
