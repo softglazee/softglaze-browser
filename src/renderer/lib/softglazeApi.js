@@ -40,7 +40,8 @@ export const softglazeApi = {
     saveProviderCreds: (payload) => getSoftglazeApi().proxies.saveProviderCreds(payload),
     rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
     testAll: () => getSoftglazeApi().proxies.testAll(),
-    autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level)
+    autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level),
+    healthHistory: (id) => getSoftglazeApi().proxies.healthHistory(id)
   },
   proxyGroups: {
     list: () => getSoftglazeApi().proxyGroups.list(),
