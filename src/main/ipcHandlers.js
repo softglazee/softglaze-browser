@@ -97,6 +97,7 @@ const CHANNELS = Object.freeze({
   PROXY_GROUP_DELETE: 'proxy-group:delete',
   PROXY_GROUP_ASSIGN: 'proxy-group:assign',
   PROXY_AUTO_GROUP: 'proxy:auto-group',
+  PROXY_HEALTH_HISTORY: 'proxy:health-history',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -934,19 +935,29 @@ async function setProxyRotation(payload) {
 // This LAYERS on top of the existing rotation primitive (proxyRotation config);
 // it does not replace it.
 // ---------------------------------------------------------------------------
-const PROXY_POLICY_MODES = new Set(['each-launch', 'sticky', 'failover']);
+const PROXY_POLICY_MODES = new Set(['each-launch', 'sticky', 'failover', 'latency-optimized']);
 
 async function getProxyPolicy() {
   const cfg = (await readSetting('proxyPolicy', {})) || {};
   const def = PROXY_POLICY_MODES.has(cfg.default) ? cfg.default : 'each-launch';
   const byProfile = (cfg.byProfile && typeof cfg.byProfile === 'object' && !Array.isArray(cfg.byProfile)) ? cfg.byProfile : {};
-  return { default: def, byProfile, modes: Array.from(PROXY_POLICY_MODES) };
+  return {
+    default: def,
+    byProfile,
+    modes: Array.from(PROXY_POLICY_MODES),
+    failoverMaxLatencyMs: Number(cfg.failoverMaxLatencyMs) || 0, // 0 = no ceiling
+    latencyTopN: Math.max(1, Number(cfg.latencyTopN) || 3)
+  };
 }
 
 async function setProxyPolicy(payload) {
   const input = requireObject(payload);
-  const cur = await getProxyPolicy();
-  const next = { default: cur.default, byProfile: { ...cur.byProfile } };
+  const cur = (await readSetting('proxyPolicy', {})) || {};
+  const next = {
+    ...cur,
+    default: PROXY_POLICY_MODES.has(cur.default) ? cur.default : 'each-launch',
+    byProfile: (cur.byProfile && typeof cur.byProfile === 'object' && !Array.isArray(cur.byProfile)) ? { ...cur.byProfile } : {}
+  };
   if (input.default !== undefined) {
     if (!PROXY_POLICY_MODES.has(input.default)) throw new Error('Invalid proxy policy mode.');
     next.default = input.default;
@@ -961,8 +972,10 @@ async function setProxyPolicy(payload) {
       next.byProfile[pid] = input.mode;
     }
   }
+  if (input.failoverMaxLatencyMs !== undefined) next.failoverMaxLatencyMs = Math.max(0, Number(input.failoverMaxLatencyMs) || 0);
+  if (input.latencyTopN !== undefined) next.latencyTopN = Math.max(1, Number(input.latencyTopN) || 3);
   await writeSetting('proxyPolicy', next);
-  return next;
+  return getProxyPolicy();
 }
 
 // Resolve the effective policy mode for a profile (per-profile override wins).
@@ -999,9 +1012,30 @@ async function pickRotationProxy(db, profileId) {
   // Failover: prefer proxies that passed their last health check. If every one is
   // failing (or none has been checked yet), fall back to the full list so a launch
   // is never blocked by a stale/empty health table.
+  const policyCfg = (await readSetting('proxyPolicy', {})) || {};
   if (policy === 'failover') {
     const healthy = ordered.filter((p) => p.lastStatus !== 'fail');
     if (healthy.length > 0) ordered = healthy;
+    // Optional latency ceiling — skip proxies slower than the threshold, but never
+    // empty the pool (a launch must not be blocked by a strict ceiling).
+    const maxMs = Number(policyCfg.failoverMaxLatencyMs) || 0;
+    if (maxMs > 0) {
+      const fast = ordered.filter((p) => typeof p.lastLatencyMs === 'number' && p.lastLatencyMs <= maxMs);
+      if (fast.length > 0) ordered = fast;
+    }
+  } else if (policy === 'latency-optimized') {
+    // Prefer healthy proxies (a failed proxy's latency is stale/meaningless), then
+    // order by measured latency (unknown sinks to the end) and keep the fastest N.
+    // Fall back to the full pool if none are known-healthy so a launch isn't blocked.
+    let healthy = ordered.filter((p) => p.lastStatus !== 'fail');
+    if (healthy.length === 0) healthy = ordered;
+    const sorted = healthy.slice().sort((a, b) => {
+      const la = typeof a.lastLatencyMs === 'number' ? a.lastLatencyMs : Infinity;
+      const lb = typeof b.lastLatencyMs === 'number' ? b.lastLatencyMs : Infinity;
+      return la - lb;
+    });
+    const topN = Math.max(1, Number(policyCfg.latencyTopN) || 3);
+    ordered = sorted.slice(0, Math.min(topN, sorted.length));
   }
 
   if (cfg.mode === 'random') return ordered[crypto.randomInt(ordered.length)];
@@ -3888,6 +3922,23 @@ async function persistProxyHealth(db, id, result) {
     } catch (e) { /* leave the name untouched if the lookup fails */ }
   }
   await db.proxy.update({ where: { id }, data }).catch(() => {});
+  // Append a time-series event for the history charts (best-effort).
+  try {
+    await db.proxyHealthEvent.create({ data: { proxyId: id, status: data.lastStatus, latencyMs: data.lastLatencyMs, country: data.lastCountry } });
+  } catch (e) { /* history is best-effort; never block a health write */ }
+}
+
+// Recent health events for one proxy, chronological, for the latency/status charts.
+async function getProxyHealthHistory(payload) {
+  const input = requireObject(payload);
+  const id = parseId(input.id, 'id');
+  const limit = Math.min(500, Math.max(10, Number(input.limit) || 200));
+  const events = await getPrisma().proxyHealthEvent
+    .findMany({ where: { proxyId: id }, orderBy: { ts: 'desc' }, take: limit })
+    .catch(() => []);
+  return events
+    .map((e) => ({ ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, status: e.status, latencyMs: e.latencyMs, country: e.country }))
+    .reverse();
 }
 
 async function readSetting(key, fallback) {
@@ -8524,6 +8575,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_GROUP_DELETE, deleteProxyGroup);
   registerHandler(CHANNELS.PROXY_GROUP_ASSIGN, assignProxiesToGroup);
   registerHandler(CHANNELS.PROXY_AUTO_GROUP, autoGroupProxies);
+  registerHandler(CHANNELS.PROXY_HEALTH_HISTORY, getProxyHealthHistory);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
@@ -8615,6 +8667,11 @@ function registerIpcHandlers() {
     try {
       const mcfg = await readSetting('macroSchedule', null);
       if (mcfg && mcfg.enabled) startMacroScheduler(mcfg.everyMinutes);
+    } catch (e) { /* ignore */ }
+    try {
+      // Keep the proxy health-history table bounded (~30 days).
+      const cutoff = new Date(Date.now() - 30 * 86400000);
+      await getPrisma().proxyHealthEvent.deleteMany({ where: { ts: { lt: cutoff } } });
     } catch (e) { /* ignore */ }
   })();
 
