@@ -155,6 +155,8 @@ const CHANNELS = Object.freeze({
   VAULT_LOCK: 'vault:lock',
   VAULT_DISABLE: 'vault:disable',
   VAULT_SET_AUTOLOCK: 'vault:set-autolock',
+  AUTH_REMEMBER_STATUS: 'auth:remember-status',
+  AUTH_FORGET: 'auth:forget',
   ACCOUNT_GET: 'account:get',
   ACCOUNT_SAVE: 'account:save',
   ACCOUNT_SEND_OTP: 'account:send-otp',
@@ -331,11 +333,11 @@ const api = Object.freeze({
     setPin: (id, pin) => invoke(CHANNELS.MEMBER_SET_PIN, { id, pin }),
     current: () => invoke(CHANNELS.MEMBER_CURRENT),
     switch: (id, pin, password) => invoke(CHANNELS.MEMBER_SWITCH, { id, pin, password }),
-    superLogin: (identifier, password) => invoke(CHANNELS.MEMBER_SUPER_LOGIN, { identifier, password }),
+    superLogin: (identifier, password, remember) => invoke(CHANNELS.MEMBER_SUPER_LOGIN, { identifier, password, remember }),
     superStatus: () => invoke(CHANNELS.MEMBER_SUPER_STATUS),
     superSetup: (payload) => invoke(CHANNELS.MEMBER_SUPER_SETUP, payload),
     acceptInvite: (payload) => invoke(CHANNELS.MEMBER_ACCEPT_INVITE, payload),
-    login: (identifier, password) => invoke(CHANNELS.MEMBER_LOGIN, { identifier, password }),
+    login: (identifier, password, remember) => invoke(CHANNELS.MEMBER_LOGIN, { identifier, password, remember }),
     logout: () => invoke(CHANNELS.MEMBER_LOGOUT),
     updateSelf: (payload) => invoke(CHANNELS.MEMBER_UPDATE_SELF, payload),
     requestChange: (payload) => invoke(CHANNELS.MEMBER_REQUEST_CHANGE, payload),
@@ -358,7 +360,7 @@ const api = Object.freeze({
   }),
   db: Object.freeze({
     encryptionStatus: () => invoke(CHANNELS.DB_ENCRYPTION_STATUS),
-    unlock: (password) => invoke(CHANNELS.DB_UNLOCK, { password }),
+    unlock: (password, remember) => invoke(CHANNELS.DB_UNLOCK, { password, remember }),
     enableEncryption: (payload) => invoke(CHANNELS.DB_ENABLE_ENCRYPTION, payload),
     disableEncryption: (payload) => invoke(CHANNELS.DB_DISABLE_ENCRYPTION, payload)
   }),
@@ -421,10 +423,14 @@ const api = Object.freeze({
   vault: Object.freeze({
     status: () => invoke(CHANNELS.VAULT_STATUS),
     setPassword: (payload) => invoke(CHANNELS.VAULT_SET_PASSWORD, payload),
-    unlock: (password) => invoke(CHANNELS.VAULT_UNLOCK, { password }),
+    unlock: (password, remember) => invoke(CHANNELS.VAULT_UNLOCK, { password, remember }),
     lock: () => invoke(CHANNELS.VAULT_LOCK),
     disable: (password) => invoke(CHANNELS.VAULT_DISABLE, { password }),
     setAutoLock: (minutes) => invoke(CHANNELS.VAULT_SET_AUTOLOCK, { minutes })
+  }),
+  auth: Object.freeze({
+    rememberStatus: () => invoke(CHANNELS.AUTH_REMEMBER_STATUS),
+    forget: () => invoke(CHANNELS.AUTH_FORGET)
   }),
   account: Object.freeze({
     get: () => invoke(CHANNELS.ACCOUNT_GET),

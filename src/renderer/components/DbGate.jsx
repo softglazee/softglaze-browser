@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Database, Lock, Loader2, AlertTriangle, KeyRound } from 'lucide-react';
+import { Database, Lock, Loader2, AlertTriangle, KeyRound, Check } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 // Pre-Gate database unlock. When at-rest encryption is on, the database file is
@@ -12,6 +12,7 @@ const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3
 export default function DbGate({ children }) {
   const [phase, setPhase] = useState('loading'); // loading | unlock | ready
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false); // "keep me signed in" (default off)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [corrupted, setCorrupted] = useState(false);
@@ -26,13 +27,18 @@ export default function DbGate({ children }) {
     }
   }
   useEffect(() => { evaluate(); }, []);
+  useEffect(() => {
+    (softglazeApi.auth && softglazeApi.auth.rememberStatus ? softglazeApi.auth.rememberStatus() : Promise.resolve(null))
+      .then((s) => { if (s && s.enabled) setRemember(true); })
+      .catch(() => {});
+  }, []);
 
   async function unlock() {
     setErr('');
     if (!password) return setErr('Enter your workspace password.');
     setBusy(true);
     try {
-      const s = await softglazeApi.db.unlock(password);
+      const s = await softglazeApi.db.unlock(password, remember);
       if (s && s.unlocked) { setPassword(''); setPhase('ready'); }
       else setErr('The database is still locked — please try again.');
     } catch (e) {
@@ -74,6 +80,20 @@ export default function DbGate({ children }) {
           autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter') unlock(); }}
         />
+
+        <label className="flex items-center gap-2.5 mt-4 cursor-pointer select-none">
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={remember}
+            onClick={() => setRemember((r) => !r)}
+            className="w-[18px] h-[18px] rounded-[5px] border grid place-items-center transition-colors shrink-0"
+            style={{ borderColor: remember ? 'var(--primary)' : 'var(--border)', background: remember ? 'var(--primary)' : 'transparent' }}
+          >
+            {remember && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+          </button>
+          <span className="text-[12px] text-muted">Keep me signed in on this device</span>
+        </label>
 
         {err && (
           <div className="mt-3 flex items-start gap-2 text-[12px] text-red-400">
