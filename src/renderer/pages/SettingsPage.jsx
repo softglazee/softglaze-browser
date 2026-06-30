@@ -719,6 +719,23 @@ function GlobalPreferences() {
         </ToggleRow>
       </SettingsSection>
 
+      {/* Smart Autofill — Identity Data Vault widget injected into launched profiles */}
+      <SettingsSection icon={Zap} accent="#3DC6DA" title="Smart Autofill" description="The Identity Data Vault widget that detects signup forms in launched profiles and fills them from your saved personas.">
+        <ToggleRow
+          title="Enable Smart Autofill"
+          description="Inject the autofill widget into launched profiles. On Chromium this uses the in-page bridge; turning this off skips injection entirely."
+          checked={!(s.smartAutofill && s.smartAutofill.enabled === false)}
+          onChange={(v) => apply({ smartAutofill: { enabled: v } })}
+        />
+        <ToggleRow
+          title="Firefox autofill"
+          description="Also install the autofill WebExtension into Firefox profiles (Firefox has no in-page bridge). Loads unsigned on Firefox Developer Edition / Nightly; release Firefox requires the Mozilla-signed build bundled with the installer."
+          checked={!(s.smartAutofill && s.smartAutofill.firefox === false)}
+          disabled={s.smartAutofill && s.smartAutofill.enabled === false}
+          onChange={(v) => apply({ smartAutofill: { firefox: v } })}
+        />
+      </SettingsSection>
+
       {/* On Startup — full width */}
       <SettingsSection icon={Power} accent="#ef4444" title="On Startup" description="What happens when a profile is launched.">
         <div className="py-3">

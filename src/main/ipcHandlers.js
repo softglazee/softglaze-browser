@@ -37,6 +37,7 @@ const {
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
+const autofillBridge = require('./autofillBridge');
 const updater = require('./updater');
 const totp = require('./totp');
 const permissions = require('./permissions');
@@ -3140,6 +3141,10 @@ async function launchProfile(payload) {
       const useFfProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
       const ffRotated = await pickRotationProxy(db, id);
       const ffProxy = ffRotated || (useFfProxy ? profile.proxy : null);
+      // Smart Autofill on Firefox: master toggle AND the firefox sub-flag must
+      // both be on. Installs the WebExtension + enables the loopback bridge path.
+      const ffAutofill = (globalSettings.smartAutofill?.enabled !== false)
+        && (globalSettings.smartAutofill?.firefox !== false);
       const ffSession = await firefoxEngine.launchFirefoxProfile({
         profileId: profile.id,
         title: profile.title,
@@ -3148,7 +3153,8 @@ async function launchProfile(payload) {
         proxyInfoString: ffRotated ? null : (useFfProxy ? profile.proxyInfoString : null),
         startUrl: input.startUrl || 'about:blank',
         profileRoot: ffRoot,
-        profile
+        profile,
+        autofillEnabled: ffAutofill
       });
       acquireProfileLock(id, ffSession.sessionId, launcher);
       await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
@@ -4109,9 +4115,10 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   memoryGuard: { enabled: false, lowFreePct: 12, recoverFreePct: 25 },
   // Saved profile-filter presets (name + filter state) — managed from the Profiles page.
   profileFilters: [],
-  // Smart Autofill — the in-page identity widget injected into launched Chromium
-  // profiles (Data Vault). ON by default; off skips injection entirely.
-  smartAutofill: { enabled: true }
+  // Smart Autofill — the identity widget from the Data Vault. `enabled` is the
+  // master toggle (Chromium in-page injection + Firefox). `firefox` separately
+  // gates the Firefox WebExtension path (no CDP there; uses the loopback bridge).
+  smartAutofill: { enabled: true, firefox: true }
 });
 
 function deepMergeSettings(base, patch) {
@@ -8658,6 +8665,15 @@ function registerIpcHandlers() {
     isEnabled: async () => { try { const g = await getGlobalSettings(); return g?.smartAutofill?.enabled !== false; } catch (e) { return true; } }
   });
 
+  // Firefox Smart Autofill — same persona vault, reached over a loopback bridge
+  // (Firefox has no CDP/exposeFunction; its WebExtension talks to this server).
+  // Loopback-only, started best-effort so a busy port never breaks boot.
+  autofillBridge.configure({
+    listForUrl: (url) => getAvailablePersonasForUrl({ url }),
+    markUsed: (id, url) => markPersonaUsed({ id, url })
+  });
+  autofillBridge.start().catch(() => {});
+
   // Resume the background proxy scheduler if it was enabled previously.
   (async () => {
     try {
@@ -8853,6 +8869,7 @@ async function shutdownIpcHandlers() {
   stopMacroScheduler();
   if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
   await localApi.stop().catch(() => {});
+  await autofillBridge.stop().catch(() => {});
   await closeAllProfileSessions();
   await firefoxEngine.closeAllFirefoxSessions().catch(() => {});
   await disconnectPrisma();

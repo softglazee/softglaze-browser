@@ -1,0 +1,26 @@
+{
+  "manifest_version": 2,
+  "name": "SoftGlaze Smart Autofill",
+  "version": "1.0.0",
+  "description": "Fills signup/registration forms inside SoftGlaze profiles from your Identity Data Vault. Talks only to the local SoftGlaze app over loopback.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "autofill@softglaze.app",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "scripts": ["sg-background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["sg-bridge.js", "sg-widget.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
