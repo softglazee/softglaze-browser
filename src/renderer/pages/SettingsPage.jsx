@@ -632,6 +632,93 @@ function GlobalPreferences() {
         </ToggleRow>
       </SettingsSection>
 
+      {/* Performance — bulk-launch concurrency + running ceiling */}
+      <SettingsSection icon={SlidersHorizontal} accent="#22c55e" title="Performance" description="Controls for launching many profiles at once — applied to bulk launches and the running-session ceiling.">
+        <div className="flex items-center justify-between gap-4 py-3 border-b border-border/60">
+          <div>
+            <p className="text-sm font-medium text-foreground">Parallel launch limit</p>
+            <p className="text-xs text-muted-foreground mt-0.5">How many profiles spawn at the same time during a bulk launch. Higher is faster but uses more RAM. Recommended 3–8.</p>
+          </div>
+          <input
+            type="number" min={1} max={50}
+            value={s.performance?.launchConcurrency ?? 5}
+            onChange={(e) => apply({ performance: { launchConcurrency: Math.max(1, Number(e.target.value) || 1) } })}
+            className="w-20 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Max running profiles</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Hard ceiling on profiles running at once (memory safety). Leave at 0 for unlimited; launches past the limit are blocked with a clear message.</p>
+          </div>
+          <input
+            type="number" min={0} max={500}
+            value={s.performance?.maxConcurrentProfiles ?? 0}
+            onChange={(e) => { const n = Math.max(0, Number(e.target.value) || 0); apply({ performance: { maxConcurrentProfiles: n === 0 ? null : n } }); }}
+            className="w-20 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+        </div>
+      </SettingsSection>
+
+      {/* Reliability — session restore, crash recovery, memory guard */}
+      <SettingsSection icon={SlidersHorizontal} accent="#0ea5e9" title="Reliability" description="Restore your last session, recover crashed profiles, and protect against memory exhaustion when many profiles run at once.">
+        <ToggleRow
+          title="Restore last session on startup"
+          description="When SoftGlaze reopens, offer to relaunch the profiles that were running when it last closed or crashed."
+          checked={!(s.sessionRestore && s.sessionRestore.enabled === false)}
+          onChange={(v) => apply({ sessionRestore: { enabled: v } })}
+        />
+        <ToggleRow
+          title="Auto-restart crashed profiles"
+          description="If a profile's browser crashes on its own, automatically relaunch it. Capped per profile so a persistently-crashing profile can't loop."
+          checked={Boolean(s.crashRecovery && s.crashRecovery.autoRestart)}
+          onChange={(v) => apply({ crashRecovery: { autoRestart: v } })}
+        >
+          {s.crashRecovery && s.crashRecovery.autoRestart && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              Max retries per profile
+              <input
+                type="number" min={1} max={10}
+                value={s.crashRecovery?.maxRetries ?? 2}
+                onChange={(e) => apply({ crashRecovery: { maxRetries: Math.max(1, Number(e.target.value) || 1) } })}
+                className="w-16 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          )}
+        </ToggleRow>
+        <ToggleRow
+          title="Memory guard"
+          description="When system memory runs low, automatically close the oldest running profiles until memory recovers. Off by default — it will never close a profile unless enabled."
+          checked={Boolean(s.memoryGuard && s.memoryGuard.enabled)}
+          onChange={(v) => apply({ memoryGuard: { enabled: v } })}
+        >
+          {s.memoryGuard && s.memoryGuard.enabled && (
+            <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-2">
+                Trigger when free RAM below
+                <input
+                  type="number" min={1} max={90}
+                  value={s.memoryGuard?.lowFreePct ?? 12}
+                  onChange={(e) => apply({ memoryGuard: { lowFreePct: Math.max(1, Number(e.target.value) || 1) } })}
+                  className="w-16 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                %
+              </span>
+              <span className="flex items-center gap-2">
+                stop once free RAM reaches
+                <input
+                  type="number" min={1} max={95}
+                  value={s.memoryGuard?.recoverFreePct ?? 25}
+                  onChange={(e) => apply({ memoryGuard: { recoverFreePct: Math.max(1, Number(e.target.value) || 1) } })}
+                  className="w-16 bg-input-background border border-border rounded px-2 py-1 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                %
+              </span>
+            </div>
+          )}
+        </ToggleRow>
+      </SettingsSection>
+
       {/* On Startup — full width */}
       <SettingsSection icon={Power} accent="#ef4444" title="On Startup" description="What happens when a profile is launched.">
         <div className="py-3">

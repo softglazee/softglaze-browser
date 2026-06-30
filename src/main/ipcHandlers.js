@@ -4,6 +4,8 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const { ipcMain, dialog, BrowserWindow } = require('electron');
+const os = require('node:os');
+const { execFile } = require('node:child_process');
 
 const { getPrisma, getRuntimeConfig, disconnectPrisma } = require('./database');
 const {
@@ -27,7 +29,10 @@ const {
   stopMacroRecording,
   humanType,
   launchSynchronizedSessions,
-  configurePersonaBridge
+  configurePersonaBridge,
+  pruneDeadSessions,
+  listSessionPids,
+  setSessionEventSink
 } = require('./browserEngine');
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
@@ -107,6 +112,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress', // main -> renderer stream
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
@@ -235,6 +241,11 @@ const CHANNELS = Object.freeze({
 
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
+  SESSION_RESTORE_GET: 'session:restore-get',
+  SESSION_RESTORE_RUN: 'session:restore-run',
+  SESSION_RESOURCE_USAGE: 'session:resource-usage',
+  SESSION_CRASH: 'session:crash', // main -> renderer push
+  MEMORY_PRESSURE: 'system:memory-pressure', // main -> renderer push
 
   BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
   BATCH_COMMIT_PROFILE_IMPORT: 'batch:commit-profile-import',
@@ -292,6 +303,7 @@ const VALID_SYSTEM_PROXY_BEHAVIORS = new Set(['DIRECT', 'PROFILE_PROXY', 'SYSTEM
 
 let registered = false;
 let proxySchedulerTimer = null;
+let memoryGuardTimer = null;
 let currentMemberId = null;
 let vaultLocked = false;
 const importPreviewCache = new Map();
@@ -958,6 +970,16 @@ async function resolveProxyPolicyMode(profileId) {
   return PROXY_POLICY_MODES.has(byId) ? byId : cfg.default;
 }
 
+// Serialize the round-robin cursor's read-modify-write so parallel launches don't
+// lose updates (which would hand the same proxy to several profiles and stall the
+// cursor). The critical section is tiny, so one global chain suffices.
+let rotationCursorLock = Promise.resolve();
+function withRotationCursorLock(fn) {
+  const run = rotationCursorLock.then(fn, fn);
+  rotationCursorLock = run.then(() => {}, () => {});
+  return run;
+}
+
 async function pickRotationProxy(db, profileId) {
   const policy = await resolveProxyPolicyMode(profileId);
   // Sticky: never rotate — the profile keeps its own fixed proxy.
@@ -982,11 +1004,13 @@ async function pickRotationProxy(db, profileId) {
 
   if (cfg.mode === 'random') return ordered[crypto.randomInt(ordered.length)];
 
-  const state = (await readSetting('proxyRotationState', {})) || {};
-  const next = (Number(state[profileId]) || 0) % ordered.length;
-  state[profileId] = next + 1;
-  await writeSetting('proxyRotationState', state);
-  return ordered[next];
+  return withRotationCursorLock(async () => {
+    const state = (await readSetting('proxyRotationState', {})) || {};
+    const next = (Number(state[profileId]) || 0) % ordered.length;
+    state[profileId] = next + 1;
+    await writeSetting('proxyRotationState', state);
+    return ordered[next];
+  });
 }
 
 async function batchAddProxies(payload) {
@@ -2594,18 +2618,51 @@ async function bulkPurgeProfiles(payload) {
   return result;
 }
 
+// Push live bulk-launch progress to all renderer windows (mirrors the updater
+// sink). Emitting from ipcHandlers keeps the IPC-parity test happy.
+function emitBulkLaunchProgress(data) {
+  try {
+    for (const w of BrowserWindow.getAllWindows()) {
+      try { w.webContents.send(CHANNELS.PROFILE_BULK_LAUNCH_PROGRESS, data); } catch (e) { /* window gone */ }
+    }
+  } catch (e) { /* ignore */ }
+}
+
 async function bulkLaunchProfiles(payload) {
   const input = requireObject(payload);
   const ids = parseIdArray(input.ids);
   const result = { launched: [], errors: [] };
-  for (const id of ids) {
-    try {
-      const session = await launchProfile({ id });
-      result.launched.push({ id, sessionId: session.sessionId });
-    } catch (error) {
-      result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
+  if (ids.length === 0) return result;
+
+  // Bounded-PARALLEL launch (was a serial for-loop). Chromium spawns are heavy, so
+  // cap how many start at once (configurable; default 5). A shared cursor feeds the
+  // worker pool; each profile is independent so a failure is isolated to that id.
+  const settings = await getGlobalSettings().catch(() => ({}));
+  const cap = Math.max(1, Number((settings.performance && settings.performance.launchConcurrency) || 5));
+  const total = ids.length;
+  const width = Math.min(cap, total);
+  let done = 0;
+  let cursor = 0;
+  emitBulkLaunchProgress({ phase: 'start', total, done });
+
+  const worker = async () => {
+    while (cursor < ids.length) {
+      const id = ids[cursor++]; // ++ is atomic between awaits (single-threaded JS)
+      try {
+        const session = await launchProfile({ id });
+        result.launched.push({ id, sessionId: session.sessionId });
+        done += 1;
+        emitBulkLaunchProgress({ phase: 'launched', id, total, done, ok: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        result.errors.push({ id, message });
+        done += 1;
+        emitBulkLaunchProgress({ phase: 'launched', id, total, done, ok: false, message });
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: width }, () => worker()));
+  emitBulkLaunchProgress({ phase: 'done', total, done });
   return result;
 }
 
@@ -2868,11 +2925,21 @@ async function listTags() {
 // truth), so a close/crash/restart clears them automatically.
 // ---------------------------------------------------------------------------
 const profileLocks = new Map(); // profileId(Number) -> { memberId, memberName, sessionId, at }
+// A pending reservation is held between the launchability check and the moment a
+// real session lock is acquired, so a parallel launch of the SAME profile can't
+// slip through that window. It is NOT a live session, so reconcile must not prune
+// it — but a launch that dies before acquiring auto-clears after a TTL.
+const PENDING_LOCK = '__pending__';
+const PENDING_LOCK_TTL_MS = 120000;
 
 function reconcileProfileLocks() {
   if (profileLocks.size === 0) return;
   const live = new Set(listAllSessions().map((s) => String(s.sessionId)));
   for (const [pid, lock] of profileLocks) {
+    if (lock.sessionId === PENDING_LOCK) {
+      if (Date.now() - (lock.at || 0) > PENDING_LOCK_TTL_MS) profileLocks.delete(pid);
+      continue; // launch in progress — not yet a live session
+    }
     if (!live.has(String(lock.sessionId))) profileLocks.delete(pid);
   }
 }
@@ -2899,6 +2966,21 @@ function acquireProfileLock(profileId, sessionId, member) {
     sessionId: String(sessionId),
     at: Date.now()
   });
+}
+
+// Two-phase lock: reserve BEFORE the heavy spawn (placeholder session id),
+// upgrade via acquireProfileLock on success, release on failure.
+function reserveProfileLock(profileId, member) {
+  profileLocks.set(Number(profileId), {
+    memberId: (member && member.id != null) ? member.id : currentMemberId,
+    memberName: (member && member.name) || 'You',
+    sessionId: PENDING_LOCK,
+    at: Date.now()
+  });
+}
+function releaseReservedLock(profileId) {
+  const lock = profileLocks.get(Number(profileId));
+  if (lock && lock.sessionId === PENDING_LOCK) profileLocks.delete(Number(profileId));
 }
 
 async function getProfileLocks() {
@@ -2931,84 +3013,105 @@ async function launchProfile(payload) {
   const launcher = await getActiveMember();
   assertProfileLaunchable(id, launcher);
 
-  // FlowerBrowser = real Firefox. It's a different engine (no CDP/MV3), so route to
-  // the Firefox launcher which configures a dedicated profile via user.js prefs
-  // (proxy + auth relay, UA, locale, timezone, WebRTC off).
-  const isFirefox = /flower|firefox/i.test(String(profile.browserCore || ''));
-  if (isFirefox) {
-    const { profileRoot: ffRoot } = getRuntimeConfig();
-    const useFfProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
-    const ffRotated = await pickRotationProxy(db, id);
-    const ffProxy = ffRotated || (useFfProxy ? profile.proxy : null);
-    const ffSession = await firefoxEngine.launchFirefoxProfile({
+  // Global browser / on-startup preferences honored at launch time (fetched before
+  // the engine split so the concurrency ceiling applies to Chrome AND Firefox).
+  const globalSettings = await getGlobalSettings();
+
+  // Optional hard ceiling on total concurrently-running sessions (memory safety).
+  // null/0 = unlimited. Reject past it with a clear, catchable error rather than
+  // OOM the machine; the bulk launcher surfaces this per-profile.
+  const ceiling = Number((globalSettings.performance && globalSettings.performance.maxConcurrentProfiles) || 0);
+  if (ceiling > 0 && listAllSessions().length >= ceiling) {
+    const e = new Error(`Concurrent profile limit reached (${ceiling} running). Close a profile or raise the limit in Settings → Performance.`);
+    e.code = 'CONCURRENCY_LIMIT';
+    throw e;
+  }
+
+  // Reserve the lock BEFORE the heavy spawn so a parallel launch of the SAME
+  // profile can't slip through the check->acquire window. Released on failure;
+  // upgraded to a real session lock on success.
+  reserveProfileLock(id, launcher);
+  try {
+    // FlowerBrowser = real Firefox. It's a different engine (no CDP/MV3), so route to
+    // the Firefox launcher which configures a dedicated profile via user.js prefs
+    // (proxy + auth relay, UA, locale, timezone, WebRTC off).
+    const isFirefox = /flower|firefox/i.test(String(profile.browserCore || ''));
+    if (isFirefox) {
+      const { profileRoot: ffRoot } = getRuntimeConfig();
+      const useFfProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
+      const ffRotated = await pickRotationProxy(db, id);
+      const ffProxy = ffRotated || (useFfProxy ? profile.proxy : null);
+      const ffSession = await firefoxEngine.launchFirefoxProfile({
+        profileId: profile.id,
+        title: profile.title,
+        dataDirName: profile.dataDirName,
+        proxy: ffProxy,
+        proxyInfoString: ffRotated ? null : (useFfProxy ? profile.proxyInfoString : null),
+        startUrl: input.startUrl || 'about:blank',
+        profileRoot: ffRoot,
+        profile
+      });
+      acquireProfileLock(id, ffSession.sessionId, launcher);
+      await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
+      await logActivity(db, id, 'launch', `firefox session ${ffSession.sessionId}${ffRotated ? ` · rotated ${ffRotated.name}` : ''}`);
+      return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
+    }
+
+    // A stored CUSTOM User-Agent that doesn't match the real binary would be a
+    // detection tell — but the Chrome engine ALWAYS derives the UA from the real
+    // launched binary and ignores profile.userAgent, so the safe thing is to launch
+    // anyway with that auto-derived (matching) UA rather than block the user. We only
+    // warn for legacy/mismatched values; we never reject the launch.
+    const uaStr = String(profile.userAgent || '').trim();
+    if (uaStr && uaStr.toLowerCase() !== 'auto') {
+      const resolved = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
+      const binaryMajor = resolved && resolved.major ? resolved.major : null;
+      const uaChrome = uaStr.match(/Chrome\/(\d+)/i);
+      if (!uaChrome || (binaryMajor && Number(uaChrome[1]) !== binaryMajor)) {
+        console.warn(`[profile:launch] Profile "${profile.title}" has a custom UA that doesn't match the Chrome ${binaryMajor || '?'} engine — launching with the auto-derived (matching) UA instead.`);
+      }
+    }
+
+    const { profileRoot } = getRuntimeConfig();
+    const useProfileProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
+
+    // browser + onStartup drive launch flags; website rules drive request filtering.
+    const browserSettings = { ...globalSettings.browser, ...globalSettings.onStartup, website: globalSettings.website };
+
+    // Proxy rotation: if a pool is configured, the chosen pool proxy overrides the
+    // profile's fixed proxy for this launch (sticky session — same userDataDir).
+    const rotated = await pickRotationProxy(db, id);
+    const launchProxy = rotated || (useProfileProxy ? profile.proxy : null);
+    const launchProxyInfo = rotated ? null : (useProfileProxy ? profile.proxyInfoString : null);
+
+    // Global team extensions to mount into this launch (merged into --load-extension
+    // alongside the fingerprint extension inside launchProfileSession).
+    const globalExtensionDirs = await extensionManager.resolveGlobalExtensionDirs();
+
+    const session = await launchProfileSession({
       profileId: profile.id,
       title: profile.title,
       dataDirName: profile.dataDirName,
-      proxy: ffProxy,
-      proxyInfoString: ffRotated ? null : (useFfProxy ? profile.proxyInfoString : null),
+      proxy: launchProxy,
+      proxyInfoString: launchProxyInfo,
       startUrl: input.startUrl || 'about:blank',
-      profileRoot: ffRoot,
-      profile
+      profileRoot,
+      headless: false,
+      profile, // full fingerprint config applied at launch
+      browserSettings,
+      captcha: globalSettings.captcha,
+      globalExtensionDirs,
+      geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
     });
-    acquireProfileLock(id, ffSession.sessionId, launcher);
+
+    acquireProfileLock(id, session.sessionId, launcher);
     await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
-    await logActivity(db, id, 'launch', `firefox session ${ffSession.sessionId}${ffRotated ? ` · rotated ${ffRotated.name}` : ''}`);
-    return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
+    await logActivity(db, id, 'launch', `session ${session.sessionId}${rotated ? ` · rotated proxy ${rotated.name}` : ''}`);
+    return { ...session, rotatedProxy: rotated ? serializeProxy(rotated) : null };
+  } catch (err) {
+    releaseReservedLock(id); // no-op once the lock has been upgraded to a real session
+    throw err;
   }
-
-  // A stored CUSTOM User-Agent that doesn't match the real binary would be a
-  // detection tell — but the Chrome engine ALWAYS derives the UA from the real
-  // launched binary and ignores profile.userAgent, so the safe thing is to launch
-  // anyway with that auto-derived (matching) UA rather than block the user. We only
-  // warn for legacy/mismatched values; we never reject the launch.
-  const uaStr = String(profile.userAgent || '').trim();
-  if (uaStr && uaStr.toLowerCase() !== 'auto') {
-    const resolved = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
-    const binaryMajor = resolved && resolved.major ? resolved.major : null;
-    const uaChrome = uaStr.match(/Chrome\/(\d+)/i);
-    if (!uaChrome || (binaryMajor && Number(uaChrome[1]) !== binaryMajor)) {
-      console.warn(`[profile:launch] Profile "${profile.title}" has a custom UA that doesn't match the Chrome ${binaryMajor || '?'} engine — launching with the auto-derived (matching) UA instead.`);
-    }
-  }
-
-  const { profileRoot } = getRuntimeConfig();
-  const useProfileProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
-
-  // Global browser / on-startup preferences honored at launch time.
-  const globalSettings = await getGlobalSettings();
-  // browser + onStartup drive launch flags; website rules drive request filtering.
-  const browserSettings = { ...globalSettings.browser, ...globalSettings.onStartup, website: globalSettings.website };
-
-  // Proxy rotation: if a pool is configured, the chosen pool proxy overrides the
-  // profile's fixed proxy for this launch (sticky session — same userDataDir).
-  const rotated = await pickRotationProxy(db, id);
-  const launchProxy = rotated || (useProfileProxy ? profile.proxy : null);
-  const launchProxyInfo = rotated ? null : (useProfileProxy ? profile.proxyInfoString : null);
-
-  // Global team extensions to mount into this launch (merged into --load-extension
-  // alongside the fingerprint extension inside launchProfileSession).
-  const globalExtensionDirs = await extensionManager.resolveGlobalExtensionDirs();
-
-  const session = await launchProfileSession({
-    profileId: profile.id,
-    title: profile.title,
-    dataDirName: profile.dataDirName,
-    proxy: launchProxy,
-    proxyInfoString: launchProxyInfo,
-    startUrl: input.startUrl || 'about:blank',
-    profileRoot,
-    headless: false,
-    profile, // full fingerprint config applied at launch
-    browserSettings,
-    captcha: globalSettings.captcha,
-    globalExtensionDirs,
-    geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
-  });
-
-  acquireProfileLock(id, session.sessionId, launcher);
-  await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
-  await logActivity(db, id, 'launch', `session ${session.sessionId}${rotated ? ` · rotated proxy ${rotated.name}` : ''}`);
-  return { ...session, rotatedProxy: rotated ? serializeProxy(rotated) : null };
 }
 
 async function closeSession(payload) {
@@ -3037,6 +3140,178 @@ async function listSessionsForViewer() {
   const { allowed } = await partitionAccessibleProfileIds(ids);
   const allowedSet = new Set(allowed.map((n) => String(n)));
   return all.filter((s) => allowedSet.has(String(Number(s.sessionId))));
+}
+
+// ---------------------------------------------------------------------------
+// Resilience (Phase B): SessionState persistence, restore, crash recovery, and an
+// opt-in memory-pressure guard. browserEngine/firefoxEngine report lifecycle via
+// the session-event sink (set in registerIpcHandlers); the DB writes + renderer
+// notifications live here.
+// ---------------------------------------------------------------------------
+function emitSessionCrash(data) {
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.SESSION_CRASH, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
+}
+function emitMemoryPressure(data) {
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.MEMORY_PRESSURE, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
+}
+
+const restartGuard = new Map(); // profileId -> { count, since } — caps auto-restart loops
+
+// status stays 'running' across a clean quit/crash so the next launch can offer to
+// restore; a deliberate user-close marks it 'closed'. crashCount is cumulative.
+async function markSessionLaunched(profileId, engine) {
+  if (profileId == null) return; // temp/leak-test sessions aren't persisted
+  const db = getPrisma();
+  const now = new Date();
+  try {
+    await db.sessionState.upsert({
+      where: { profileId: Number(profileId) },
+      create: { profileId: Number(profileId), engine: engine || 'chrome', status: 'running', launchedAt: now, lastSeenAt: now, crashCount: 0 },
+      update: { engine: engine || 'chrome', status: 'running', launchedAt: now, lastSeenAt: now }
+    });
+  } catch (e) { /* table may be mid-migration; never block a launch */ }
+}
+async function markSessionClosed(profileId) {
+  if (profileId == null) return;
+  try { await getPrisma().sessionState.updateMany({ where: { profileId: Number(profileId) }, data: { status: 'closed', lastSeenAt: new Date() } }); } catch (e) { /* ignore */ }
+}
+async function markSessionCrashed(profileId) {
+  if (profileId == null) return 0;
+  const db = getPrisma();
+  try {
+    const row = await db.sessionState.findUnique({ where: { profileId: Number(profileId) } });
+    const crashCount = (row ? row.crashCount : 0) + 1;
+    await db.sessionState.upsert({
+      where: { profileId: Number(profileId) },
+      create: { profileId: Number(profileId), status: 'running', crashCount, lastSeenAt: new Date() },
+      update: { crashCount, lastSeenAt: new Date() }
+    });
+    return crashCount;
+  } catch (e) { return 0; }
+}
+
+// The sink browserEngine/firefoxEngine call on every launch / close / crash.
+function handleSessionEvent(evt) {
+  if (!evt || !evt.type) return;
+  const pid = (evt.profileId != null) ? Number(evt.profileId) : (Number.isFinite(Number(evt.sessionId)) ? Number(evt.sessionId) : null);
+  if (evt.type === 'launched') { markSessionLaunched(pid, evt.engine).catch(() => {}); return; }
+  if (evt.type === 'closed') {
+    if (evt.reason === 'shutdown') return; // app quitting — leave the row 'running' so it can be restored next launch
+    markSessionClosed(pid).catch(() => {});
+    return;
+  }
+  if (evt.type === 'crashed') { onSessionCrashed(pid).catch(() => {}); }
+}
+
+async function onSessionCrashed(profileId) {
+  if (profileId == null) return;
+  const crashCount = await markSessionCrashed(profileId);
+  let title = `Profile ${profileId}`;
+  try { const p = await getPrisma().profile.findUnique({ where: { id: Number(profileId) }, select: { title: true } }); if (p && p.title) title = p.title; } catch (e) { /* ignore */ }
+  let settings = {};
+  try { settings = await getGlobalSettings(); } catch (e) { /* ignore */ }
+  const rec = (settings && settings.crashRecovery) || {};
+  const maxRetries = Number(rec.maxRetries) || 2;
+  let restarted = false;
+  if (rec.autoRestart) {
+    const now = Date.now();
+    const g = restartGuard.get(Number(profileId)) || { count: 0, since: now };
+    if (now - g.since > 5 * 60 * 1000) { g.count = 0; g.since = now; } // reset window after 5 min
+    if (g.count < maxRetries) {
+      g.count += 1; restartGuard.set(Number(profileId), g);
+      restarted = true;
+      // Delay so the OS releases the crashed process and userDataDir lock.
+      setTimeout(() => { launchProfile({ id: Number(profileId) }).catch(() => {}); }, 1500);
+    }
+  }
+  emitSessionCrash({ profileId: Number(profileId), title, crashCount, restarted });
+}
+
+// Profiles whose SessionState row is still 'running' (were open at the last exit or
+// crash) and are NOT already live this session — the Dashboard restore candidates.
+async function getSessionRestore() {
+  let settings = {};
+  try { settings = await getGlobalSettings(); } catch (e) { /* ignore */ }
+  if (settings && settings.sessionRestore && settings.sessionRestore.enabled === false) return { profiles: [] };
+  const db = getPrisma();
+  let rows = [];
+  try { rows = await db.sessionState.findMany({ where: { status: 'running' } }); } catch (e) { return { profiles: [] }; }
+  if (!rows.length) return { profiles: [] };
+  const live = new Set(listAllSessions().map((s) => String(Number(s.sessionId))));
+  const ids = rows.map((r) => r.profileId).filter((id) => !live.has(String(id)));
+  if (!ids.length) return { profiles: [] };
+  let profiles = [];
+  try { profiles = await db.profile.findMany({ where: { id: { in: ids }, deletedAt: null }, select: { id: true, title: true } }); } catch (e) { return { profiles: [] }; }
+  const { allowed } = await partitionAccessibleProfileIds(profiles.map((p) => p.id));
+  const allowedSet = new Set(allowed.map((n) => Number(n)));
+  return { profiles: profiles.filter((p) => allowedSet.has(p.id)).map((p) => ({ id: p.id, title: p.title })) };
+}
+
+async function runSessionRestore(payload) {
+  const input = requireObject(payload);
+  const action = String(input.action || 'restore');
+  const ids = Array.isArray(input.ids) ? input.ids.map((n) => Number(n)).filter(Number.isFinite) : [];
+  if (action === 'dismiss') {
+    try { await getPrisma().sessionState.updateMany({ where: { status: 'running' }, data: { status: 'closed' } }); } catch (e) { /* ignore */ }
+    return { dismissed: true };
+  }
+  if (!ids.length) return { launched: 0, errors: [] };
+  const res = await bulkLaunchProfiles({ ids }); // respects the Phase A concurrency cap
+  return { launched: res.launched.length, errors: res.errors };
+}
+
+// Per-session memory via ONE batched Windows tasklist call -> main-process RSS (KB).
+// Best-effort / approximate (Chromium's child-process tree is not summed).
+function readProcessRssKb() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve({});
+    execFile('tasklist', ['/FO', 'CSV', '/NH'], { maxBuffer: 8 * 1024 * 1024, windowsHide: true }, (err, stdout) => {
+      if (err || !stdout) return resolve({});
+      const out = {};
+      for (const line of String(stdout).split(/\r?\n/)) {
+        const m = line.match(/^"[^"]*","(\d+)",".*?","[^"]*","([\d.,\s]+) K"/);
+        if (m) out[Number(m[1])] = Math.round(Number(String(m[2]).replace(/[^\d]/g, '')) || 0);
+      }
+      resolve(out);
+    });
+  });
+}
+async function getSessionResourceUsage() {
+  const sessions = listSessionPids();
+  const rss = await readProcessRssKb();
+  return {
+    approximate: true,
+    sessions: sessions.map((s) => ({ sessionId: s.sessionId, title: s.title, pid: s.pid, memoryMB: (s.pid && rss[s.pid]) ? Math.round(rss[s.pid] / 1024) : null }))
+  };
+}
+
+// Memory-pressure guard (opt-in). When free RAM drops below the floor, close the
+// OLDEST sessions until recovered, then notify the renderer.
+let memoryGuardBusy = false;
+async function checkMemoryPressure() {
+  if (memoryGuardBusy) return;
+  let settings = {};
+  try { settings = await getGlobalSettings(); } catch (e) { return; }
+  const cfg = (settings && settings.memoryGuard) || {};
+  if (!cfg.enabled) return;
+  const total = os.totalmem();
+  if (!total) return;
+  const lowPct = Number(cfg.lowFreePct) || 12;
+  const recoverPct = Number(cfg.recoverFreePct) || 25;
+  if ((os.freemem() / total) * 100 >= lowPct) return;
+  memoryGuardBusy = true;
+  try {
+    const closed = [];
+    const oldestFirst = listActiveSessions().slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    for (const s of oldestFirst) {
+      if ((os.freemem() / total) * 100 >= recoverPct) break;
+      try { await closeProfileSession(String(s.sessionId)); closed.push(s.sessionId); } catch (e) { /* ignore */ }
+    }
+    if (closed.length) {
+      reconcileProfileLocks();
+      emitMemoryPressure({ closed: closed.length, freePct: Math.round((os.freemem() / total) * 100) });
+    }
+  } finally { memoryGuardBusy = false; }
 }
 
 async function previewProfilesViaDialog() {
@@ -3705,6 +3980,17 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     footerEnabled: true,
     footerText: '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
   },
+  // Launch performance / scale controls (heavy-user). launchConcurrency caps how
+  // many profiles spawn in PARALLEL during a bulk launch (Chromium is RAM-heavy,
+  // so this is bounded, not unlimited). maxConcurrentProfiles is an optional hard
+  // ceiling on total running sessions (null = unlimited); launches past it are
+  // reported, never silently dropped. See launchProfile + bulkLaunchProfiles.
+  performance: { launchConcurrency: 5, maxConcurrentProfiles: null },
+  // Resilience: restore last session's profiles on next launch; auto-restart crashed
+  // profiles (opt-in, capped); close oldest sessions under memory pressure (opt-in).
+  sessionRestore: { enabled: true },
+  crashRecovery: { autoRestart: false, maxRetries: 2 },
+  memoryGuard: { enabled: false, lowFreePct: 12, recoverFreePct: 25 },
   // Smart Autofill — the in-page identity widget injected into launched Chromium
   // profiles (Data Vault). ON by default; off skips injection entirely.
   smartAutofill: { enabled: true }
@@ -8266,8 +8552,18 @@ function registerIpcHandlers() {
   })();
 
   // Reap stale profile locks (crash/orphan) by reconciling against live sessions.
-  const lockSweep = setInterval(() => { try { reconcileProfileLocks(); } catch (e) { /* ignore */ } }, 60000);
+  const lockSweep = setInterval(() => {
+    try { pruneDeadSessions(); } catch (e) { /* ignore */ } // drop Chromium sessions that died without firing 'disconnected'
+    try { reconcileProfileLocks(); } catch (e) { /* ignore */ }
+  }, 60000);
   if (lockSweep.unref) lockSweep.unref();
+
+  // Resilience: persist/restore sessions, surface crashes, optional auto-restart.
+  setSessionEventSink(handleSessionEvent);
+  try { firefoxEngine.setSessionEventSink(handleSessionEvent); } catch (e) { /* firefox engine optional */ }
+  // Memory-pressure guard (opt-in via settings; checks every 30s, no-op when off).
+  memoryGuardTimer = setInterval(() => { checkMemoryPressure().catch(() => {}); }, 30000);
+  if (memoryGuardTimer.unref) memoryGuardTimer.unref();
 
   registerHandler(CHANNELS.GROUP_LIST, listGroups);
   registerHandler(CHANNELS.GROUP_CREATE, createGroup);
@@ -8278,6 +8574,9 @@ function registerIpcHandlers() {
 
   registerHandler(CHANNELS.SESSION_LIST, () => listSessionsForViewer());
   registerHandler(CHANNELS.SESSION_CLOSE, closeSession);
+  registerHandler(CHANNELS.SESSION_RESTORE_GET, getSessionRestore);
+  registerHandler(CHANNELS.SESSION_RESTORE_RUN, runSessionRestore);
+  registerHandler(CHANNELS.SESSION_RESOURCE_USAGE, getSessionResourceUsage);
 
   registerHandler(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG, previewProfilesViaDialog);
   registerHandler(CHANNELS.BATCH_COMMIT_PROFILE_IMPORT, commitProfileImport);
@@ -8426,6 +8725,7 @@ function registerIpcHandlers() {
 async function shutdownIpcHandlers() {
   stopProxyScheduler();
   stopMacroScheduler();
+  if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
   await localApi.stop().catch(() => {});
   await closeAllProfileSessions();
   await firefoxEngine.closeAllFirefoxSessions().catch(() => {});

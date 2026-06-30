@@ -352,6 +352,7 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
@@ -471,6 +472,19 @@ export default function ProfilesPage() {
   useEffect(() => {
     const t = setInterval(refreshSessions, 4000);
     return () => clearInterval(t);
+  }, [refreshSessions]);
+
+  // Live bulk-launch progress: update the counter as each profile spawns, refresh
+  // the running indicators incrementally, and clear when the batch finishes.
+  useEffect(() => {
+    if (!softglazeApi.profiles.onBulkLaunchProgress) return undefined;
+    const off = softglazeApi.profiles.onBulkLaunchProgress((p) => {
+      if (!p) return;
+      if (p.phase === 'start') { setLaunchProgress({ done: 0, total: p.total }); return; }
+      if (p.phase === 'launched') { setLaunchProgress({ done: p.done, total: p.total }); refreshSessions(); return; }
+      if (p.phase === 'done') { setLaunchProgress(null); refreshSessions(); }
+    });
+    return off;
   }, [refreshSessions]);
 
   // Load the real Chrome builds installed on disk so the version picker only
@@ -720,9 +734,9 @@ export default function ProfilesPage() {
   async function handleBulkLaunch() {
     if (selectedIds.size === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); }
+    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); await refreshSessions(); }
     catch (err) { setError(err.message); }
-    finally { setBulkBusy(false); }
+    finally { setBulkBusy(false); setLaunchProgress(null); }
   }
   async function handleBulkClose(ids) {
     // Called two ways: from the bulk bar (no arg → use selection) and from a
@@ -1620,6 +1634,12 @@ export default function ProfilesPage() {
       {selectedIds.size > 0 && (
         <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
           <span className="text-sm text-primary font-bold">{selectedIds.size} selected</span>
+          {launchProgress && (
+            <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+              Launching {launchProgress.done}/{launchProgress.total}…
+            </span>
+          )}
           <div className="flex gap-2 ml-auto">
             <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">Launch</Button>
             <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title="Launch as Master + Slave mirrored windows (Premium)"><Combine className="w-3.5 h-3.5 mr-1" /> Synchronize</Button>
