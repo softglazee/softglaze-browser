@@ -55,6 +55,9 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_ACCESS_GRANT: 'profile:access-grant',
+  PROFILE_ACCESS_REVOKE: 'profile:access-revoke',
+  PROFILE_ACCESS_LIST: 'profile:access-list',
   PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress',
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
@@ -315,6 +318,9 @@ const api = Object.freeze({
     tagAssign: (ids, tag, mode) => invoke(CHANNELS.PROFILE_TAG_ASSIGN, { ids, tag, mode }),
     bulkRename: (payload) => invoke(CHANNELS.PROFILE_BULK_RENAME, payload),
     bulkClose: (ids) => invoke(CHANNELS.PROFILE_BULK_CLOSE, { ids }),
+    grantAccess: (payload) => invoke(CHANNELS.PROFILE_ACCESS_GRANT, payload),
+    revokeAccess: (payload) => invoke(CHANNELS.PROFILE_ACCESS_REVOKE, payload),
+    listAccess: (profileId) => invoke(CHANNELS.PROFILE_ACCESS_LIST, { profileId }),
     // Subscribe to live bulk-launch progress; returns an unsubscribe function.
     onBulkLaunchProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };

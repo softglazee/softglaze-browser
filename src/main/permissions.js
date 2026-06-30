@@ -50,6 +50,7 @@ const ACTION_CATALOG = [
   { key: 'profiles.create', label: 'Create profiles', category: 'Profiles', minRank: 1 },
   { key: 'profiles.edit', label: 'Edit profiles', category: 'Profiles', minRank: 1 },
   { key: 'profiles.export', label: 'Export profiles', category: 'Profiles', minRank: 1 },
+  { key: 'profiles.share', label: 'Share profiles with members', category: 'Profiles', minRank: 2 },
   { key: 'profiles.delete', label: 'Delete profiles (to trash)', category: 'Profiles', minRank: 3 },
   { key: 'profiles.purge', label: 'Permanently purge profiles', category: 'Profiles', minRank: 4 },
   { key: 'proxies.manage', label: 'Add / edit / delete proxies', category: 'Proxies', minRank: 1 },
@@ -236,6 +237,26 @@ function visibleMemberIds(members, viewer) {
   return ids;
 }
 
+// --- Phase F2: shared-profile (ProfileAccess) ACL resolution ----------------
+// Pure, DB-free so it is unit-testable. `row` is a profile selected with
+// { ownerMemberId, assignedMemberId, accesses:[{memberId, level}] }; `visibleSet`
+// is the viewer's visibleMemberIds(). Owner/assignee always get full (edit) access;
+// a ProfileAccess grant to a visible member adds access at its level.
+const ACCESS_LEVEL_RANK = { use: 1, edit: 2 };
+function accessLevelRank(level) { return ACCESS_LEVEL_RANK[String(level)] || 1; }
+
+function profileRowAccessible(visibleSet, row, requireEdit = false) {
+  if (!row || !visibleSet) return false;
+  const ownerOrAssignee = (row.assignedMemberId != null && visibleSet.has(row.assignedMemberId))
+    || (row.ownerMemberId != null && visibleSet.has(row.ownerMemberId));
+  if (ownerOrAssignee) return true; // owner/assignee are edit-capable
+  const acc = Array.isArray(row.accesses) ? row.accesses : [];
+  for (const a of acc) {
+    if (a && visibleSet.has(a.memberId) && (!requireEdit || accessLevelRank(a.level) >= 2)) return true;
+  }
+  return false;
+}
+
 module.exports = {
   ROLE_RANK,
   VALID_MEMBER_ROLES,
@@ -253,6 +274,8 @@ module.exports = {
   childCapFor,
   descendantIds,
   visibleMemberIds,
+  accessLevelRank,
+  profileRowAccessible,
   SUPER_ADMIN,
   SUPER_ADMIN_ID,
   DEFAULT_SUPER_ADMIN_IDENTIFIER,
