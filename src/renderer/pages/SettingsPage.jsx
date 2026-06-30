@@ -19,9 +19,10 @@ import { formatDateTime } from '@/lib/utils.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 
 // --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
-const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
+const CustomSelect = ({ value, onChange, className = '', children, disabled, id }) => (
   <div className={`relative flex items-center ${className}`}>
     <select
+      id={id}
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -305,10 +306,10 @@ function LanguageSection() {
       description={t('settings.language.description')}
     >
       <div className="py-2 max-w-md">
-        <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">
+        <label htmlFor="settings-language-select" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">
           {t('settings.language.label')}
         </label>
-        <CustomSelect className="w-64" value={lang} onChange={(e) => setLangState(setLang(e.target.value))}>
+        <CustomSelect id="settings-language-select" className="w-64" value={lang} onChange={(e) => setLangState(setLang(e.target.value))}>
           {SUPPORTED_LANGS.map((l) => (
             <option key={l.code} value={l.code}>{l.native}</option>
           ))}
