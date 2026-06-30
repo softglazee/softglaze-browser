@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FileSpreadsheet, UploadCloud, Download, AlertTriangle,
-  CheckCircle2, Server, ListPlus, Terminal, Loader2, Info, FileDown
+  CheckCircle2, Server, ListPlus, Terminal, Loader2, Info, FileDown, Wand2
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card.jsx';
+import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+
+// OS choices for the shared Quick Generate modal (expects [{ id }]).
+const QUICK_OS_PLATFORMS = [{ id: 'Windows' }, { id: 'macOS' }, { id: 'Linux' }, { id: 'Android' }, { id: 'iOS' }];
 
 export default function BatchImportPage() {
   const [activeTab, setActiveTab] = useState('file'); // 'file' | 'quick'
-  
+
   // --- FILE IMPORT STATES ---
   const [previewData, setPreviewData] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -26,38 +30,21 @@ export default function BatchImportPage() {
   // Auto-scroll the terminal log to the newest line.
   useEffect(() => { logEndRef.current?.scrollIntoView({ block: 'end' }); }, [importLog]);
 
-  // --- QUICK GENERATE STATES ---
-  const [quickForm, setQuickForm] = useState({
-    prefix: 'Profile',
-    count: 10,
-    os: 'Windows',
-    browserCore: 'SunBrowser',
-    randomFp: true,          // unique fingerprint per profile (critical)
-    proxyMode: 'direct',     // 'direct' | 'pool'
-    assignUnique: true,      // pool: 1:1 unique proxy vs round-robin reuse
-    groupId: 'ungrouped',
-    newGroupName: '',
-    startupUrls: ''
-  });
-  const [generating, setGenerating] = useState(false);
-  const [generateProgress, setGenerateProgress] = useState(0);
-  const [generateResult, setGenerateResult] = useState(null);
-  const [installedBrowsers, setInstalledBrowsers] = useState([]);
+  // --- QUICK GENERATE (shared modal — identical to the Profiles page) ---
+  const [showQuickGen, setShowQuickGen] = useState(false);
   const [savedProxies, setSavedProxies] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [proxyGroups, setProxyGroups] = useState([]);
 
-  // Load installed Chrome versions, saved proxies, and profile groups so Quick
-  // Generate can assign real versions, a unique proxy each, and a target group.
-  useEffect(() => {
-    softglazeApi.system.listBrowsers().then((b) => setInstalledBrowsers(Array.isArray(b) ? b : [])).catch(() => {});
+  // Load saved proxies, profile groups, and proxy groups so Quick Generate can
+  // assign a unique proxy each, target a group (create one inline), and pick a
+  // specific proxy group / provider as the source.
+  const loadGenData = () => {
     softglazeApi.proxies.list({}).then((p) => setSavedProxies(Array.isArray(p) ? p : (p?.items || []))).catch(() => {});
     softglazeApi.groups.list().then((g) => setGroups(Array.isArray(g) ? g : [])).catch(() => {});
-  }, []);
-
-  // Styled <select>: hide the native arrow + paint an inset chevron so the dropdown
-  // icon isn't glued to the field edge.
-  const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
-  const selectCls = 'w-full bg-secondary border border-border rounded px-3 py-2 pr-9 text-foreground outline-none focus:border-blue-500 disabled:opacity-50 appearance-none cursor-pointer';
+    softglazeApi.proxyGroups.list().then((pg) => setProxyGroups(Array.isArray(pg) ? pg : [])).catch(() => {});
+  };
+  useEffect(() => { loadGenData(); }, []);
 
   // --- FILE IMPORT LOGIC ---
   const handleSelectFile = async () => {
@@ -174,50 +161,35 @@ export default function BatchImportPage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  // --- QUICK GENERATE LOGIC ---
-  const handleQuickGenerate = async (e) => {
-    e.preventDefault();
-    if (quickForm.count < 1 || quickForm.count > 500) {
-      return alert('Please enter a valid count between 1 and 500.');
-    }
-    if (quickForm.groupId === '__new__' && !quickForm.newGroupName.trim()) {
-      return alert('Enter a name for the new group.');
-    }
-
-    setGenerating(true);
-    setGenerateProgress(10);
-    setGenerateResult(null);
-
-    // Map proxy choice → server-side assignment mode (unique 1:1 by default).
-    const proxyMode = quickForm.proxyMode !== 'pool'
-      ? 'direct'
-      : (quickForm.assignUnique ? 'unique' : 'pool');
-
-    try {
-      const r = await softglazeApi.profiles.batchGenerate({
-        count: quickForm.count,
-        prefix: quickForm.prefix,
-        os: quickForm.os,
-        deviceClass: /android|ios|mobile/i.test(quickForm.os) ? 'mobile' : 'desktop',
-        randomFingerprint: quickForm.randomFp,
-        distributeVersions: quickForm.randomFp,
-        startupUrls: quickForm.startupUrls,
-        groupId: quickForm.groupId === '__new__' || quickForm.groupId === 'ungrouped' ? null : quickForm.groupId,
-        newGroupName: quickForm.groupId === '__new__' ? quickForm.newGroupName.trim() : null,
-        proxyMode
-      });
-      setGenerateProgress(100);
-      setGenerateResult({
-        success: r?.createdCount ?? 0,
-        failed: Array.isArray(r?.errors) ? r.errors.length : 0,
-        proxyLimited: Boolean(r?.proxyLimited),
-        message: r?.message || ''
-      });
-    } catch (err) {
-      setGenerateResult({ success: 0, failed: quickForm.count, message: err.message || 'Generation failed.', proxyLimited: false });
-    } finally {
-      setGenerating(false);
-    }
+  // --- QUICK GENERATE LOGIC (shared modal) ---
+  // Identical contract to the Profiles page: proxySource ('group:<id>' | 'provider:<key>')
+  // maps to proxyGroupId/provider so only that selection is assigned; the modal owns
+  // progress + result display and inline group creation.
+  const handleQuickGenerate = async (config, onProgress) => {
+    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource } = config;
+    if (onProgress) onProgress(0, count);
+    const src = String(proxySource || '');
+    const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
+    const provider = src.startsWith('provider:') ? src.slice(9) : undefined;
+    const result = await softglazeApi.profiles.batchGenerate({
+      count,
+      prefix: baseName,
+      startIndex,
+      os,
+      deviceClass: /android|ios|mobile/i.test(String(os)) ? 'mobile' : 'desktop',
+      randomFingerprint: randomize,
+      distributeVersions: randomize,
+      startupUrls,
+      groupId: groupId && groupId !== 'ungrouped' ? groupId : null,
+      newGroupName: newGroupName || null,
+      proxyMode,
+      proxyGroupId,
+      provider,
+      proxyList: pasted
+    });
+    if (onProgress) onProgress(result?.createdCount ?? count, count);
+    loadGenData();
+    return result;
   };
 
   return (
@@ -264,7 +236,7 @@ export default function BatchImportPage() {
       {activeTab === 'file' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
-            
+
             {/* Step 1 */}
             <Card className="bg-card border-border">
               <CardHeader className="pb-3 border-b border-border">
@@ -295,8 +267,8 @@ export default function BatchImportPage() {
                 <p className="text-[13px] text-muted-foreground mb-4">
                   Select your filled spreadsheet. We will parse it locally and check for formatting errors before saving.
                 </p>
-                <Button 
-                  onClick={handleSelectFile} 
+                <Button
+                  onClick={handleSelectFile}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white"
                 >
                   <UploadCloud className="w-4 h-4 mr-2" /> Select File
@@ -322,7 +294,7 @@ export default function BatchImportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 flex-1 flex flex-col relative">
-                
+
                 {/* STATE: Waiting for file */}
                 {!previewData && !importResult && (
                   <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
@@ -344,7 +316,7 @@ export default function BatchImportPage() {
                         Errors: <span className={`font-medium ${previewData.errors.length > 0 ? 'text-red-400' : 'text-muted-foreground'}`}>{previewData.errors.length}</span>
                       </div>
                     </div>
-                    
+
                     {importing ? (
                       /* STATE: Live processing — progress bar + scrolling terminal log */
                       <div className="flex-1 flex flex-col p-4 gap-3 min-h-0">
@@ -444,7 +416,7 @@ export default function BatchImportPage() {
         </div>
       )}
 
-      {/* --- TAB 2: QUICK GENERATE --- */}
+      {/* --- TAB 2: QUICK GENERATE (shared modal) --- */}
       {activeTab === 'quick' && (
         <Card className="bg-card border-border max-w-3xl">
           <CardHeader className="border-b border-border">
@@ -453,186 +425,34 @@ export default function BatchImportPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            
             <div className="bg-secondary border border-border p-4 rounded-lg flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[12px] text-muted-foreground leading-relaxed">
-                Quick generate allows you to spin up multiple profiles instantly without a spreadsheet. The system will automatically append a sequential number (e.g. 01, 02) to your prefix and assign entirely unique User-Agents mathematically mapped to your selected OS.
+                Spin up multiple profiles instantly without a spreadsheet — unique fingerprints, sequential names, a target group (create one inline), and proxy assignment from a specific group or provider. Uses the exact same engine as the Profiles page.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Profile Name Prefix</label>
-                <input 
-                  type="text" 
-                  value={quickForm.prefix}
-                  onChange={(e) => setQuickForm({ ...quickForm, prefix: e.target.value })}
-                  placeholder="e.g. FB-Farming"
-                  disabled={generating}
-                  className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 transition disabled:opacity-50"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Number of Profiles to Create</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="500"
-                  value={quickForm.count}
-                  onChange={(e) => setQuickForm({ ...quickForm, count: Number(e.target.value) })}
-                  disabled={generating}
-                  className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 transition disabled:opacity-50"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Target OS Array</label>
-                <select 
-                  value={quickForm.os}
-                  onChange={(e) => setQuickForm({ ...quickForm, os: e.target.value })}
-                  disabled={generating}
-                  className={selectCls}
-                  style={chevronStyle}
-                >
-                  <option value="Windows">Windows (All)</option>
-                  <option value="macOS">macOS (All)</option>
-                  <option value="Linux">Linux (All)</option>
-                  <option value="Android">Android Mobile</option>
-                  <option value="iOS">iOS Mobile</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Browser Kernel</label>
-                <select 
-                  value={quickForm.browserCore}
-                  onChange={(e) => setQuickForm({ ...quickForm, browserCore: e.target.value })}
-                  disabled={generating}
-                  className={selectCls}
-                  style={chevronStyle}
-                >
-                  <option value="SunBrowser">SunBrowser (Chrome-based)</option>
-                  <option value="FlowerBrowser">FlowerBrowser (Firefox-based)</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Group</label>
-                <select
-                  value={quickForm.groupId}
-                  onChange={(e) => setQuickForm({ ...quickForm, groupId: e.target.value })}
-                  disabled={generating}
-                  className={selectCls}
-                  style={chevronStyle}
-                >
-                  <option value="ungrouped">Ungrouped</option>
-                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  <option value="__new__">+ Create new group…</option>
-                </select>
-                {quickForm.groupId === '__new__' && (
-                  <input
-                    type="text"
-                    value={quickForm.newGroupName}
-                    onChange={(e) => setQuickForm({ ...quickForm, newGroupName: e.target.value })}
-                    placeholder="New group name"
-                    disabled={generating}
-                    className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground outline-none focus:border-blue-500 disabled:opacity-50"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Proxy Assignment</label>
-                <select
-                  value={quickForm.proxyMode}
-                  onChange={(e) => setQuickForm({ ...quickForm, proxyMode: e.target.value })}
-                  disabled={generating}
-                  className={selectCls}
-                  style={chevronStyle}
-                >
-                  <option value="direct">Direct — no proxy</option>
-                  <option value="pool">From saved proxies ({savedProxies.length})</option>
-                </select>
-                {quickForm.proxyMode === 'pool' && (
-                  <label className="flex items-start gap-2 cursor-pointer select-none mt-1">
-                    <input
-                      type="checkbox"
-                      checked={quickForm.assignUnique}
-                      onChange={(e) => setQuickForm({ ...quickForm, assignUnique: e.target.checked })}
-                      disabled={generating}
-                      className="h-4 w-4 cursor-pointer accent-blue-500 mt-0.5"
-                    />
-                    <span className="text-[11px] text-muted-foreground">Unique proxy per profile (1:1) — caps at available proxies. Uncheck to reuse round-robin.</span>
-                  </label>
-                )}
-                {quickForm.proxyMode === 'pool' && savedProxies.length === 0 && (
-                  <p className="text-[11px] text-amber-400/80">No saved proxies — add some in Proxy Pool first, or profiles will be created direct.</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-muted-foreground text-[13px] font-medium block">Fingerprint</label>
-                <label className="flex items-center gap-2.5 cursor-pointer select-none bg-secondary border border-border rounded px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={quickForm.randomFp}
-                    onChange={(e) => setQuickForm({ ...quickForm, randomFp: e.target.checked })}
-                    disabled={generating}
-                    className="h-4 w-4 cursor-pointer accent-blue-500"
-                  />
-                  <span className="text-[12px] text-muted-foreground">Unique randomized fingerprint per profile</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-muted-foreground text-[13px] font-medium block">Startup Links <span className="text-muted-foreground/60 font-normal">(optional — one per line, opens on launch)</span></label>
-              <textarea
-                rows={2}
-                value={quickForm.startupUrls}
-                onChange={(e) => setQuickForm({ ...quickForm, startupUrls: e.target.value })}
-                placeholder={'https://facebook.com\nhttps://mail.google.com'}
-                disabled={generating}
-                className="w-full bg-secondary border border-border rounded px-3 py-2 text-foreground text-[12px] outline-none focus:border-blue-500 transition disabled:opacity-50 resize-none"
-              />
-            </div>
-
-            {/* Preview Hint */}
-            <div className="p-3 bg-secondary rounded border border-border text-[12px] font-mono text-muted-foreground">
-              Example Outputs: <span className="text-blue-400">{quickForm.prefix}-01</span>, <span className="text-blue-400">{quickForm.prefix}-02</span> ...
-            </div>
-
-            {generating && (
-              <div className="space-y-2 pt-2">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Generating Profiles...</span>
-                  <span>{generateProgress}%</span>
-                </div>
-                <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 transition-all duration-200" style={{ width: `${generateProgress}%` }}></div>
-                </div>
-              </div>
-            )}
-
-            {generateResult && (
-              <div className={`p-4 rounded-lg text-[13px] flex items-start gap-2 ${generateResult.proxyLimited ? 'bg-amber-900/20 border border-amber-900/50 text-amber-300' : 'bg-emerald-900/20 border border-emerald-900/50 text-emerald-400'}`}>
-                {generateResult.proxyLimited ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> : <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />}
-                <span>{generateResult.message || <>Successfully created <strong>{generateResult.success}</strong> profiles.{generateResult.failed > 0 ? ` (${generateResult.failed} failed).` : ''}</>}</span>
-              </div>
-            )}
-
-            <Button 
-              onClick={handleQuickGenerate} 
-              disabled={generating || quickForm.count < 1}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white mt-4"
-            >
-              {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</> : `Generate ${quickForm.count} Profiles`}
+            <Button onClick={() => setShowQuickGen(true)} className="bg-blue-600 hover:bg-blue-500 text-white">
+              <Wand2 className="w-4 h-4 mr-2" /> Open Quick Generate
             </Button>
-
           </CardContent>
         </Card>
+      )}
+
+      {showQuickGen && (
+        <QuickGenerateModal
+          osPlatforms={QUICK_OS_PLATFORMS}
+          groups={groups}
+          proxies={savedProxies}
+          proxyGroups={proxyGroups}
+          onClose={() => setShowQuickGen(false)}
+          onGenerate={handleQuickGenerate}
+          onCreateGroup={async (name) => {
+            const g = await softglazeApi.groups.create({ name });
+            const list = await softglazeApi.groups.list().catch(() => null);
+            if (Array.isArray(list)) setGroups(list);
+            return g;
+          }}
+        />
       )}
 
     </>

@@ -33,6 +33,8 @@ model Proxy {
   lastStatus    String? // 'ok' | 'fail'
   lastLatencyMs Int?
   lastCountry   String?
+  lastRegion    String? // verified exit region/state (for auto-grouping)
+  lastCity      String? // verified exit city (for auto-grouping)
   lastCheckedAt DateTime?
 
   ownerMemberId Int? // member who added this proxy (for per-member quotas)

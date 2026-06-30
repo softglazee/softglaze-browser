@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Palette, ShieldCheck, Loader2, Check, MonitorSmartphone, Info } from 'lucide-react';
+import { Palette, ShieldCheck, Loader2, Check, MonitorSmartphone, Info, Wand2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { renderFooterNodes } from '@/lib/footerText.jsx';
+import Switch from '@/components/ui/Switch.jsx';
 
 // Default mirrors GLOBAL_SETTINGS_DEFAULTS.branding.footerText in the main process.
-const DEFAULT_FOOTER = '© {year} SoftGlaze — Built by the SoftGlaze Team (https://softglaze.com) · Developed by Azhar Ali (https://azhar.softglaze.com)';
+// [label](url) renders as an anchor showing the label; {year} → current year.
+const DEFAULT_FOOTER = '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)';
 
 function Card({ icon: Icon, accent = '#3b82f6', title, description, children }) {
   return (
@@ -32,6 +35,7 @@ export default function BrandingSettings() {
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
   const [remember, setRemember] = useState({ enabled: false, available: true, kind: null });
+  const [autofill, setAutofill] = useState(true);
 
   useEffect(() => {
     let live = true;
@@ -47,6 +51,7 @@ export default function BrandingSettings() {
         const b = (cfg && cfg.branding) || {};
         setFooter(b.footerText != null ? b.footerText : DEFAULT_FOOTER);
         setFooterEnabled(b.footerEnabled !== false);
+        setAutofill(!(cfg && cfg.smartAutofill && cfg.smartAutofill.enabled === false));
         if (rem) setRemember(rem);
       } catch (e) { /* ignore */ }
       finally { if (live) setLoading(false); }
@@ -55,7 +60,13 @@ export default function BrandingSettings() {
   }, []);
 
   const isSuper = me && me.role === 'SUPER_ADMIN';
-  const preview = String(footer || '').replace(/\{year\}/g, String(new Date().getFullYear()));
+  const canManageAutofill = me && (me.role === 'SUPER_ADMIN' || me.role === 'OWNER');
+
+  async function toggleAutofill(next) {
+    setAutofill(next);
+    try { await softglazeApi.settings.setGlobal({ smartAutofill: { enabled: next } }); }
+    catch (e) { setAutofill(!next); setErr(e.message || 'Could not update Smart Autofill.'); }
+  }
 
   async function saveFooter(nextEnabled) {
     setSaving(true); setErr(''); setSaved(false);
@@ -99,7 +110,7 @@ export default function BrandingSettings() {
             />
             <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[11.5px] text-muted-foreground">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 block mb-1">Preview</span>
-              {preview || <span className="opacity-60">— empty —</span>}
+              {footer && footer.trim() ? renderFooterNodes(footer) : <span className="opacity-60">— empty —</span>}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button onClick={() => saveFooter()} disabled={saving} className="h-9 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60">
@@ -117,7 +128,7 @@ export default function BrandingSettings() {
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[12px] text-muted-foreground">{preview}</div>
+            <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[12px] text-muted-foreground">{renderFooterNodes(footer)}</div>
             <p className="text-[11.5px] text-muted-foreground flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Only the Super Admin can change the footer.</p>
           </div>
         )}
@@ -141,6 +152,15 @@ export default function BrandingSettings() {
             <p className="text-[11.5px] text-muted-foreground">Tick <span className="text-foreground">“Keep me signed in on this device”</span> on the sign-in screen to enable it. Signing out always turns it off.</p>
           </div>
         )}
+      </Card>
+
+      {/* Smart Autofill — workspace toggle (Owner / Super Admin) */}
+      <Card icon={Wand2} accent="#6366f1" title="Smart Autofill" description="The in-page identity widget shown on signup forms in launched Chromium profiles.">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[12.5px] text-muted-foreground">{autofill ? 'Enabled — the Data Vault widget is injected into launched profiles.' : 'Disabled — no autofill widget is injected.'}</span>
+          <Switch checked={autofill} disabled={!canManageAutofill} onChange={toggleAutofill} label="Toggle Smart Autofill" />
+        </div>
+        {!canManageAutofill && <p className="mt-2 text-[11px] text-muted-foreground">Only the Owner or Super Admin can change this.</p>}
       </Card>
     </div>
   );

@@ -23,4 +23,5 @@ src/renderer/public/extensions/
 build/*
 !build/entitlements.mac.plist
 !build/afterPack.js
+!build/installer.nsh
 out/
