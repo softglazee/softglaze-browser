@@ -203,6 +203,17 @@ export const softglazeApi = {
     delete: (id) => getSoftglazeApi().extensions.delete(id),
     toggleGlobal: (id, isGlobal) => getSoftglazeApi().extensions.toggleGlobal(id, isGlobal)
   },
+  personas: {
+    importBatch: (personas) => getSoftglazeApi().personas.importBatch(personas),
+    createManual: (payload) => getSoftglazeApi().personas.createManual(payload),
+    getAll: () => getSoftglazeApi().personas.getAll(),
+    getAvailableForUrl: (url) => getSoftglazeApi().personas.getAvailableForUrl(url),
+    markUsed: (id, url) => getSoftglazeApi().personas.markUsed(id, url),
+    clearUsed: (payload) => getSoftglazeApi().personas.clearUsed(payload),
+    delete: (payload) => getSoftglazeApi().personas.delete(payload),
+    update: (payload) => getSoftglazeApi().personas.update(payload),
+    previewFile: () => getSoftglazeApi().personas.previewFile()
+  },
   vault: {
     status: () => getSoftglazeApi().vault.status(),
     setPassword: (payload) => getSoftglazeApi().vault.setPassword(payload),
