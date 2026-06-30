@@ -29,6 +29,8 @@ const CHANNELS = Object.freeze({
   PROXY_ROTATION_GET: 'proxy:rotation-get',
   PROXY_ROTATION_SET: 'proxy:rotation-set',
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
+  PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
+  PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_GROUP_LIST: 'proxy-group:list',
@@ -255,6 +257,8 @@ const api = Object.freeze({
     getRotation: (profileId) => invoke(CHANNELS.PROXY_ROTATION_GET, { id: profileId }),
     setRotation: (payload) => invoke(CHANNELS.PROXY_ROTATION_SET, payload),
     syncVendorPool: (payload) => invoke(CHANNELS.PROXY_SYNC_VENDOR_POOL, payload),
+    getProviderCreds: (provider) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_GET, { provider }),
+    saveProviderCreds: (payload) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_SET, payload),
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL)
   }),

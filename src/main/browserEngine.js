@@ -9,6 +9,31 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGenerator');
 const { applyBrandWindowIcon } = require('./windowIcon');
+// Canonical install root for downloaded Chrome-for-Testing builds. Imported so the
+// binary RESOLVER reads exactly where the DOWNLOADER writes (userData when packaged,
+// project root in dev). No circular dep — browserDownloader needs only node + electron.
+const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
+
+// SoftGlaze first-party extension (Chrome Web Store ID). Best-effort force-install
+// on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
+// --load-extension load remains the guaranteed fallback (and is what loads it in
+// SoftGlaze profiles). Real stable Chrome ignores --load-extension, so the policy
+// path is the only way it would load there — but we scope the policy to the Chromium
+// key ONLY and never touch the user's personal Google Chrome.
+const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
+let forceInstallWritten = false;
+function ensureChromiumForceInstall(extId) {
+  if (process.platform !== 'win32' || forceInstallWritten) return;
+  forceInstallWritten = true;
+  try {
+    const { spawn } = require('node:child_process');
+    const value = `${extId};https://clients2.google.com/service/update2/crx`;
+    // Per-user (HKCU → no admin) policy read by Chromium / Chrome-for-Testing.
+    const key = 'HKCU\\Software\\Policies\\Chromium\\ExtensionInstallForcelist';
+    const p = spawn('reg', ['add', key, '/v', '100', '/t', 'REG_SZ', '/d', value, '/f'], { windowsHide: true, stdio: 'ignore' });
+    p.on('error', () => {}); // best-effort — the unpacked inject fallback covers any failure
+  } catch (e) { /* ignore */ }
+}
 
 // Stealth hides automation tells, but several of its evasions set the SAME
 // properties we spoof ourselves (UA, WebGL vendor, hardwareConcurrency,
@@ -35,8 +60,9 @@ const activeSessions = new Map();
 // mismatch). Layout on disk: <root>/chrome/win64-<version>/chrome-win64/chrome.exe
 // ---------------------------------------------------------------------------
 const CHROME_DIRS = [
-  path.resolve(__dirname, '../../chrome'),                 // dev: project root
-  process.env.SOFTGLAZE_CHROME_DIR || ''                   // optional override (packaged)
+  DOWNLOAD_CHROME_ROOT,                                     // where the downloader installs (userData when packaged)
+  path.resolve(__dirname, '../../chrome'),                 // dev: project root (same as above in dev)
+  process.env.SOFTGLAZE_CHROME_DIR || ''                   // optional override
 ].filter(Boolean);
 
 function listAvailableBrowsers() {
@@ -1707,6 +1733,14 @@ async function launchProfileSession(options = {}) {
   // every one of them is whitelisted AND loaded.
   const extensionDirs = [fpExtDir, ...(Array.isArray(globalExtensionDirs) ? globalExtensionDirs : [])].filter(Boolean);
   const extensionArg = extensionDirs.join(',');
+
+  // If the SoftGlaze recorder is among the globally-injected extensions and we're
+  // launching Chrome-for-Testing, also register it as a store force-install (counts
+  // CWS active users). Best-effort + scoped to the Chromium policy key; the unpacked
+  // load above is the guaranteed fallback.
+  if (usingCft && extensionDirs.some((d) => path.basename(d) === SOFTGLAZE_RECORDER_ID)) {
+    ensureChromiumForceInstall(SOFTGLAZE_RECORDER_ID);
+  }
 
   const args = [
     `--window-size=${winW},${winH}`,

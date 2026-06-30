@@ -23,10 +23,27 @@ const PROVIDER_LABELS = {
 };
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
 
-// Figma-style compact stat card (tinted, glow, icon tile).
-function MiniStat({ icon: Icon, label, value, color }) {
+// A proxy's health bucket: a live check result wins; otherwise fall back to the
+// persisted lastStatus. Drives both the stat-card counts and the status filter.
+function proxyHealthOf(p, checkResults) {
+  const r = checkResults[p.id];
+  if (r) return r.success ? 'verified' : 'failed';
+  if (p.lastStatus === 'ok') return 'verified';
+  if (p.lastStatus === 'fail') return 'failed';
+  return 'unknown';
+}
+
+// Figma-style compact stat card (tinted, glow, icon tile). When `onClick` is given
+// it renders as a button and shows an accent ring while `active` (drives the filter).
+function MiniStat({ icon: Icon, label, value, color, onClick, active }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className="rounded-xl p-4 relative overflow-hidden group animate-fade-up" style={{ background: `color-mix(in srgb, ${color} 8%, var(--card))`, border: `1px solid color-mix(in srgb, ${color} 20%, transparent)` }}>
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={`rounded-xl p-4 relative overflow-hidden group animate-fade-up text-left w-full ${onClick ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''}`}
+      style={{ background: `color-mix(in srgb, ${color} 8%, var(--card))`, border: `1px solid ${active ? color : `color-mix(in srgb, ${color} 20%, transparent)`}`, boxShadow: active ? `0 0 0 1px ${color}` : undefined }}
+    >
       <div className="absolute -top-5 -right-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
       <div className="relative z-10 flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)` }}>
@@ -34,10 +51,10 @@ function MiniStat({ icon: Icon, label, value, color }) {
         </div>
         <div className="min-w-0">
           <p className="text-[18px] font-bold text-foreground font-display leading-none">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ' · filtering' : ''}</p>
         </div>
       </div>
-    </div>
+    </Tag>
   );
 }
 
@@ -86,6 +103,9 @@ export default function ProxyPoolPage() {
   const [copiedId, setCopiedId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [view, setView] = useState('custom'); // 'custom' | 'providers'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'failed' (driven by the stat cards)
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
   const [testingAll, setTestingAll] = useState(false);
   const [testSummary, setTestSummary] = useState(null);
   const [proxyPolicy, setProxyPolicy] = useState('each-launch');
@@ -111,7 +131,8 @@ export default function ProxyPoolPage() {
     return m;
   }, [proxies]);
 
-  // Client-side filter: search text + the active category (group / ungrouped / provider).
+  // Client-side filter: search text + active category (group / ungrouped / provider)
+  // + the verified/failed status filter (driven by the clickable stat cards).
   const filteredProxies = useMemo(() => {
     const q = search.trim().toLowerCase();
     return proxies.filter((p) => {
@@ -119,12 +140,43 @@ export default function ProxyPoolPage() {
         const hay = `${p.name || ''} ${p.host || ''} ${p.username || ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      if (statusFilter !== 'all' && proxyHealthOf(p, checkResults) !== statusFilter) return false;
       if (activeGroup === 'all') return true;
       if (activeGroup === 'none') return !p.proxyGroupId;
       if (typeof activeGroup === 'string' && activeGroup.startsWith('provider:')) return p.provider === activeGroup.slice(9);
       return String(p.proxyGroupId) === String(activeGroup);
     });
-  }, [proxies, search, activeGroup]);
+  }, [proxies, search, activeGroup, statusFilter, checkResults]);
+
+  // Pagination over the filtered set (keeps long lists fast; pager is pinned at the
+  // bottom of the table card so you never scroll to the end to change pages).
+  const pageCount = Math.max(1, Math.ceil(filteredProxies.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pagedProxies = filteredProxies.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  // Reset to page 1 whenever the filter set changes out from under us.
+  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter]);
+
+  // Toggle a status filter from a stat card (clicking the active one clears it).
+  const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
+
+  // Delete every proxy currently matched by the active filter/search.
+  async function handleDeleteFiltered() {
+    const ids = filteredProxies.map((p) => p.id);
+    if (ids.length === 0) return;
+    const scope = statusFilter !== 'all' ? statusFilter : (activeGroup !== 'all' ? 'filtered' : (search.trim() ? 'matching' : 'all'));
+    if (!window.confirm(`Delete all ${ids.length} ${scope} prox${ids.length === 1 ? 'y' : 'ies'}? This cannot be undone — linked profiles keep working with their proxy assignment cleared.`)) return;
+    setBulkDeleting(true);
+    setError('');
+    try {
+      await softglazeApi.proxies.bulkDelete(ids);
+      clearSelection();
+      await loadProxies();
+    } catch (err) {
+      setError(err.message || 'Failed to delete proxies.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
 
   const allSelected = filteredProxies.length > 0 && filteredProxies.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
@@ -446,10 +498,10 @@ export default function ProxyPoolPage() {
     }
   }
 
-  // REAL stats derived from the proxy list + any check results.
-  const checkList = Object.values(checkResults);
-  const aliveCount = checkList.filter((r) => r && r.success).length;
-  const deadCount = checkList.filter((r) => r && r.success === false).length;
+  // REAL stats derived from the proxy list + any check results. verified/failed use
+  // the same health resolution as the filter so card counts match the filtered rows.
+  const verifiedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'verified').length;
+  const failedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'failed').length;
   const typeCounts = proxies.reduce((acc, p) => {
     const t = String(p.type || 'OTHER').toUpperCase();
     acc[t] = (acc[t] || 0) + 1;
@@ -528,10 +580,10 @@ export default function ProxyPoolPage() {
       {view === 'custom' && (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <MiniStat icon={Globe} label="Total proxies" value={proxies.length} color="#8b5cf6" />
+          <MiniStat icon={Globe} label="Total proxies" value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
           <MiniStat icon={Wifi} label="Proxy types" value={Object.keys(typeCounts).length} color="#3b82f6" />
-          <MiniStat icon={ShieldCheck} label="Verified live" value={aliveCount} color="#10b981" />
-          <MiniStat icon={ShieldOff} label="Failed checks" value={deadCount} color="#ef4444" />
+          <MiniStat icon={ShieldCheck} label="Verified" value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
+          <MiniStat icon={ShieldOff} label="Non-verified" value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
         </div>
         <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-4">
           <Donut data={typeDonut} size={104} thickness={16} centerLabel={proxies.length} centerSub="total" />
@@ -545,8 +597,8 @@ export default function ProxyPoolPage() {
       {view === 'providers' && <ProxyProviders onSynced={loadProxies} />}
 
       {view === 'custom' && (<>
-      <div className="mb-2">
-        <div className="relative max-w-sm">
+      <div className="mb-2 flex items-center gap-3 flex-wrap">
+        <div className="relative max-w-sm flex-1 min-w-[220px]">
           <Input
             icon={Search}
             value={search}
@@ -554,6 +606,12 @@ export default function ProxyPoolPage() {
             placeholder="Search by proxy name, host, or username..."
           />
         </div>
+        {(statusFilter !== 'all' || activeGroup !== 'all' || search.trim()) && filteredProxies.length > 0 && (
+          <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title="Delete every proxy matching the current filter">
+            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Delete all {statusFilter !== 'all' ? statusFilter : 'filtered'} ({filteredProxies.length})
+          </Button>
+        )}
       </div>
 
       {/* CATEGORY / GROUP BAR — filter the pool, manage groups, drag rows here to assign */}
@@ -638,8 +696,8 @@ export default function ProxyPoolPage() {
         </div>
       )}
 
-      <Card className="bg-surface border-border flex flex-col shadow-xl flex-1 rounded">
-        <CardContent className="p-0 overflow-auto flex-1 rounded">
+      <Card className="bg-surface border-border flex flex-col shadow-xl flex-1 min-h-0 rounded">
+        <CardContent className="p-0 overflow-auto flex-1 min-h-0 rounded">
           {loading ? (
             <div className="p-12 text-sm text-muted text-center flex flex-col items-center gap-3">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -650,7 +708,7 @@ export default function ProxyPoolPage() {
               <EmptyState title="No proxies found" description="Add a proxy manually or paste a batch of proxy strings." />
             </div>
           ) : (
-            <div className="w-full overflow-auto max-h-[60vh]">
+            <div className="w-full">
               <table className="w-full min-w-[1000px] border-collapse text-left text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
                   <tr>
@@ -676,8 +734,8 @@ export default function ProxyPoolPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredProxies.map((proxy) => (
-                    <tr key={proxy.id} draggable onDragStart={(e) => onRowDragStart(e, proxy)} className={`transition-colors cursor-grab active:cursor-grabbing ${selectedIds.has(proxy.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
+                  {pagedProxies.map((proxy) => (
+                    <tr key={proxy.id} draggable onDragStart={(e) => onRowDragStart(e, proxy)} className={`group/row transition-colors cursor-grab active:cursor-grabbing ${selectedIds.has(proxy.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
                       <td className="px-5 py-4">
                         <input
                           type="checkbox"
@@ -732,7 +790,7 @@ export default function ProxyPoolPage() {
                       <td className="px-5 py-4 text-muted text-xs">{formatDateTime(proxy.createdAt)}</td>
                       <td className="px-5 py-4">{renderStatus(proxy.id)}</td>
                       <td className="px-5 py-4">
-                        <div className="flex justify-end gap-1.5">
+                        <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
                           <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title="Test proxy" className="px-3">
                             {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 mr-1" />} Check
                           </Button>
@@ -751,6 +809,16 @@ export default function ProxyPoolPage() {
             </div>
           )}
         </CardContent>
+        {!loading && filteredProxies.length > 0 && (
+          <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-4 py-2.5 text-[12px] text-muted-foreground rounded-b">
+            <span>Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredProxies.length)} of {filteredProxies.length}</span>
+            <div className="flex items-center gap-1.5">
+              <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="px-2.5">Prev</Button>
+              <span className="px-2 tabular-nums">Page {safePage} / {pageCount}</span>
+              <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage >= pageCount} className="px-2.5">Next</Button>
+            </div>
+          </div>
+        )}
       </Card>
       </>)}
 
