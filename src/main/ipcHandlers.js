@@ -238,6 +238,8 @@ const CHANNELS = Object.freeze({
   GROUP_DELETE: 'group:delete',
   GROUP_ASSIGN: 'group:assign',
   TAG_LIST: 'tag:list',
+  PROFILE_TAG_ASSIGN: 'profile:tag-assign',
+  PROFILE_BULK_RENAME: 'profile:bulk-rename',
 
   SESSION_LIST: 'session:list',
   SESSION_CLOSE: 'session:close',
@@ -2765,6 +2767,69 @@ async function assignProfilesToGroup(payload) {
   return { assigned: res.count, groupId };
 }
 
+// Add or remove a single tag across the selected profiles. Tags are a JSON array
+// per profile, so this is a scoped per-profile read-modify-write (case-insensitive
+// dedupe on add, case-insensitive filter on remove).
+async function assignTagToProfiles(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const tag = String(input.tag || '').trim().slice(0, 40);
+  const mode = input.mode === 'remove' ? 'remove' : 'add';
+  if (!tag) throw new Error('A tag is required.');
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  if (!allowed.length) return { updated: 0, tag, mode };
+  const rows = await db.profile.findMany({ where: { id: { in: allowed } }, select: { id: true, tags: true } });
+  let updated = 0;
+  for (const r of rows) {
+    let arr = [];
+    try { arr = r.tags ? JSON.parse(r.tags) : []; if (!Array.isArray(arr)) arr = []; } catch (e) { arr = []; }
+    const has = arr.some((t) => String(t).toLowerCase() === tag.toLowerCase());
+    let next;
+    if (mode === 'add') { if (has) continue; next = [...arr, tag]; }
+    else { if (!has) continue; next = arr.filter((t) => String(t).toLowerCase() !== tag.toLowerCase()); }
+    await db.profile.update({ where: { id: r.id }, data: { tags: JSON.stringify(next) } });
+    await logActivity(db, r.id, 'tag', `${mode === 'add' ? 'tagged' : 'untagged'} ${tag}`).catch(() => {});
+    updated += 1;
+  }
+  return { updated, tag, mode };
+}
+
+// Bulk rename selected profiles. Either an explicit list [{id,title}] or a pattern
+// { prefix, start } numbered in the order the renderer sent (its visible order).
+// Only the display title changes — dataDirName (the on-disk profile) is untouched.
+async function bulkRenameProfiles(payload) {
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  if (!allowed.length) return { renamed: 0 };
+  const allowedSet = new Set(allowed.map((n) => Number(n)));
+  let renamed = 0;
+  if (Array.isArray(input.renames)) {
+    for (const r of input.renames) {
+      const id = Number(r && r.id);
+      const title = String((r && r.title) || '').trim().slice(0, 120);
+      if (!allowedSet.has(id) || !title) continue;
+      await db.profile.update({ where: { id }, data: { title } });
+      await logActivity(db, id, 'rename', `renamed to ${title}`).catch(() => {});
+      renamed += 1;
+    }
+    return { renamed };
+  }
+  const prefix = String(input.prefix || '').trim().slice(0, 100);
+  if (!prefix) throw new Error('A name prefix is required.');
+  let n = Number.isFinite(Number(input.start)) ? Number(input.start) : 1;
+  for (const id of ids) { // preserve the sent (visible) order
+    if (!allowedSet.has(Number(id))) continue;
+    const title = `${prefix} ${n}`.trim().slice(0, 120);
+    await db.profile.update({ where: { id: Number(id) }, data: { title } });
+    await logActivity(db, Number(id), 'rename', `renamed to ${title}`).catch(() => {});
+    n += 1; renamed += 1;
+  }
+  return { renamed };
+}
+
 // --- Proxy categories/groups (USA, UK, Japan, …) -----------------------------
 async function listProxyGroups() {
   const db = getPrisma();
@@ -3991,6 +4056,8 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   sessionRestore: { enabled: true },
   crashRecovery: { autoRestart: false, maxRetries: 2 },
   memoryGuard: { enabled: false, lowFreePct: 12, recoverFreePct: 25 },
+  // Saved profile-filter presets (name + filter state) — managed from the Profiles page.
+  profileFilters: [],
   // Smart Autofill — the in-page identity widget injected into launched Chromium
   // profiles (Data Vault). ON by default; off skips injection entirely.
   smartAutofill: { enabled: true }
@@ -8571,6 +8638,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.GROUP_DELETE, deleteGroup);
   registerHandler(CHANNELS.GROUP_ASSIGN, assignProfilesToGroup);
   registerHandler(CHANNELS.TAG_LIST, listTags);
+  registerHandler(CHANNELS.PROFILE_TAG_ASSIGN, assignTagToProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_RENAME, bulkRenameProfiles);
 
   registerHandler(CHANNELS.SESSION_LIST, () => listSessionsForViewer());
   registerHandler(CHANNELS.SESSION_CLOSE, closeSession);
