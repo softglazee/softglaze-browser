@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { useDialog } from '@/lib/useDialog.js';
 
 const TABS = [
   { key: 'macros', label: 'My Macros', icon: Workflow },
@@ -296,34 +297,49 @@ function MacrosPanel() {
 
       {/* Stop-and-save recording dialog (replaces window.prompt, unsupported in Electron). */}
       {saveRec && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={() => { if (!busyRec) setSaveRec(null); }}>
-          <div className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">Save recorded macro</h3>
-              <p className="text-[11px] text-muted-foreground">Name it to keep the captured steps, or discard them. The browser stays open.</p>
-            </div>
-            <div className="p-5">
-              <input
-                autoFocus
-                value={recName}
-                onChange={(e) => setRecName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && recName.trim() && !busyRec) finishRecording(true); }}
-                placeholder="Recorded macro"
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-border">
-              <button onClick={() => finishRecording(false)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">Discard</button>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setSaveRec(null)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary disabled:opacity-50">Cancel</button>
-                <button onClick={() => finishRecording(true)} disabled={busyRec || !recName.trim()} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-1.5">
-                  {busyRec && <Loader2 className="w-4 h-4 animate-spin" />} Save
-                </button>
-              </div>
-            </div>
+        <SaveRecordingModal
+          recName={recName}
+          setRecName={setRecName}
+          busyRec={busyRec}
+          onClose={() => setSaveRec(null)}
+          onFinish={finishRecording}
+        />
+      )}
+    </div>
+  );
+}
+
+// Stop-and-save recording dialog, as its own component so useDialog (and its
+// body-scroll-lock + focus-trap) only run while the modal is actually open.
+function SaveRecordingModal({ recName, setRecName, busyRec, onClose, onFinish }) {
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busyRec });
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={() => { if (!busyRec) onClose(); }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Save recorded macro" tabIndex={-1} className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">Save recorded macro</h3>
+          <p className="text-[11px] text-muted-foreground">Name it to keep the captured steps, or discard them. The browser stays open.</p>
+        </div>
+        <div className="p-5">
+          <input
+            autoFocus
+            value={recName}
+            onChange={(e) => setRecName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && recName.trim() && !busyRec) onFinish(true); }}
+            placeholder="Recorded macro"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-border">
+          <button onClick={() => onFinish(false)} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">Discard</button>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} disabled={busyRec} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold border border-border text-foreground hover:bg-secondary disabled:opacity-50">Cancel</button>
+            <button onClick={() => onFinish(true)} disabled={busyRec || !recName.trim()} className="h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-violet-500 to-indigo-600 hover:from-violet-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-1.5">
+              {busyRec && <Loader2 className="w-4 h-4 animate-spin" />} Save
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -337,6 +353,7 @@ function ScheduleModal({ macros, profiles, onClose }) {
   const [profileIds, setProfileIds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   useEffect(() => {
     softglazeApi.automation.getSchedule()
@@ -370,7 +387,7 @@ function ScheduleModal({ macros, profiles, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Macro Schedule" tabIndex={-1} className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Clock className="w-4 h-4 text-indigo-400" /></span>
@@ -439,6 +456,7 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const dragFrom = useRef(null);
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
 
   const addStep = () => setSteps((prev) => [...prev, defaultStep(addType)]);
   const removeStep = (i) => setSteps((prev) => prev.filter((_, idx) => idx !== i));
@@ -467,7 +485,7 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={macro ? 'Edit macro' : 'Create macro'} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-violet-500/12 border border-violet-500/20"><Wand2 className="w-4 h-4 text-violet-400" /></span>
@@ -571,6 +589,7 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
   const [err, setErr] = useState('');
   const [runId, setRunId] = useState(null);
   const logRef = useRef(null);
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: phase === 'done' });
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [log]);
 
@@ -612,7 +631,7 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={phase === 'done' ? onClose : undefined}>
-      <div className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Macro run: ${macro.name}`} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg grid place-items-center bg-emerald-500/12 border border-emerald-500/20"><MousePointer2 className="w-4 h-4 text-emerald-400" /></span>
