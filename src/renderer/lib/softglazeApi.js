@@ -144,7 +144,8 @@ export const softglazeApi = {
     activity: (limit) => getSoftglazeApi().team.activity(limit),
     reassignProfiles: (payload) => getSoftglazeApi().team.reassignProfiles(payload),
     seatUsage: () => getSoftglazeApi().team.seatUsage(),
-    exportActivity: (payload) => getSoftglazeApi().team.exportActivity(payload)
+    exportActivity: (payload) => getSoftglazeApi().team.exportActivity(payload),
+    permissionCatalog: () => getSoftglazeApi().team.permissionCatalog()
   },
   sync: {
     status: () => getSoftglazeApi().sync.status(),

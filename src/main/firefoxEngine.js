@@ -58,6 +58,61 @@ function resolveFirefoxBinary(version) {
   return findFirefoxBinary();
 }
 
+// --- Smart Autofill extension --------------------------------------------------
+// Firefox has no CDP/exposeFunction, so the Identity-Vault autofill widget ships
+// as a real WebExtension installed into the profile's extensions/ dir + a loopback
+// bridge (src/main/autofillBridge.js). Packaged builds use the Mozilla-SIGNED .xpi
+// (release Firefox requires signing); dev copies the unpacked source for
+// Developer-Edition/Nightly testing (with xpinstall.signatures.required=false).
+const AUTOFILL_EXT_ID = 'autofill@softglaze.app';
+
+// Bundled signed .xpi (copied into resources by build/afterPack.js). Only present
+// in packaged builds once `npm run sign:firefox-ext` has produced it.
+function autofillSignedXpiPath() {
+  if (app && app.isPackaged && process.resourcesPath) {
+    return path.join(process.resourcesPath, 'firefox-extension', `${AUTOFILL_EXT_ID}.xpi`);
+  }
+  return null;
+}
+
+// Unpacked extension source (dev only — inside app.asar when packaged, so it is
+// never loadable from there; the signed .xpi is the packaged path).
+function autofillUnpackedSrcDir() {
+  return path.resolve(__dirname, '../firefox-extension');
+}
+
+// Place the extension where Firefox auto-installs profile add-ons. Returns the
+// install mode so the caller knows whether to enable the autofill prefs.
+//   { mode: 'xpi' | 'unpacked' | 'none' }
+async function installAutofillExtension(userDataDir) {
+  const extDir = path.join(userDataDir, 'extensions');
+  try { await fsp.mkdir(extDir, { recursive: true }); } catch (e) { return { mode: 'none' }; }
+
+  // Packaged: the signed .xpi is the only thing release Firefox will load (and the
+  // src/ tree lives inside app.asar, which Firefox can't read).
+  if (app && app.isPackaged) {
+    const signed = autofillSignedXpiPath();
+    if (signed) {
+      try {
+        await fsp.access(signed);
+        await fsp.copyFile(signed, path.join(extDir, `${AUTOFILL_EXT_ID}.xpi`));
+        return { mode: 'xpi' };
+      } catch (e) { /* not signed/bundled yet */ }
+    }
+    return { mode: 'none' };
+  }
+
+  // Dev: copy the unpacked source so Developer-Edition/Nightly can load it unsigned.
+  const src = autofillUnpackedSrcDir();
+  try {
+    await fsp.access(path.join(src, 'manifest.json'));
+    const dest = path.join(extDir, AUTOFILL_EXT_ID);
+    await fsp.rm(dest, { recursive: true, force: true });
+    await fsp.cp(src, dest, { recursive: true });
+    return { mode: 'unpacked' };
+  } catch (e) { return { mode: 'none' }; }
+}
+
 const ffSessions = new Map(); // sessionId -> { proc, relay, userDataDir, title, proxyLabel, createdAt }
 // Session lifecycle sink (set by ipcHandlers) — parity with browserEngine so Firefox
 // launches/closes/crashes feed the same SessionState + crash-recovery pipeline.
@@ -134,6 +189,21 @@ function buildUserJs(opts) {
     pref('intl.locale.requested', opts.acceptLanguages.split(',')[0]);
   }
 
+  // Smart Autofill extension (installed into <profile>/extensions/). Allow
+  // profile-scope (sideloaded) add-ons to install + stay enabled, and don't let
+  // Firefox phone home to update them.
+  if (opts.autofill) {
+    pref('extensions.autoDisableScopes', 0);
+    pref('extensions.enabledScopes', 15);
+    pref('extensions.startupScanScopes', 15);
+    pref('extensions.installDistroAddons', false);
+    pref('extensions.update.enabled', false);
+    pref('extensions.getAddons.cache.enabled', false);
+    // Honored on Developer Edition / Nightly / ESR-unbranded → loads the UNSIGNED
+    // build for testing. Locked-true on release/beta, which require the signed .xpi.
+    pref('xpinstall.signatures.required', false);
+  }
+
   // Proxy. type 1 = manual. For auth HTTP proxies we point at the local relay.
   if (opts.proxy) {
     const p = opts.proxy;
@@ -188,11 +258,21 @@ async function launchFirefoxProfile(options = {}) {
   const timezoneId = profile.timezoneType === 'Custom' && profile.timezoneCustom
     ? String(profile.timezoneCustom).trim() : null;
 
+  // Smart Autofill — install the WebExtension into the profile (and only enable
+  // the supporting prefs if it actually landed). Gated by the caller's setting;
+  // never fatal to a launch.
+  let autofillInstalled = false;
+  if (options.autofillEnabled !== false) {
+    const r = await installAutofillExtension(userDataDir).catch(() => ({ mode: 'none' }));
+    autofillInstalled = r.mode !== 'none';
+  }
+
   const userJs = buildUserJs({
     proxy,
     relayPort: relay ? relay.port : null,
     userAgent: profile.userAgent && profile.userAgent !== 'Auto' ? profile.userAgent : null,
-    acceptLanguages
+    acceptLanguages,
+    autofill: autofillInstalled
   });
   await fsp.writeFile(path.join(userDataDir, 'user.js'), userJs);
 
