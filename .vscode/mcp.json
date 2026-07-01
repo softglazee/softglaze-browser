@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "aidesigner": {
+      "type": "http",
+      "url": "https://api.aidesigner.ai/api/v1/mcp"
+    }
+  }
+}
