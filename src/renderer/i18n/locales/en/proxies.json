@@ -136,6 +136,36 @@
     "checking": "Checking…",
     "failed": "Failed"
   },
+  "checker": {
+    "running": "Checking proxies…",
+    "done": "Check complete",
+    "healthy": "{{n}} healthy",
+    "failed": "{{n}} failed",
+    "eta": "ETA",
+    "stop": "Stop",
+    "dismiss": "Dismiss",
+    "idle": "Waiting to start…",
+    "health": "Health",
+    "blacklisted": "Blacklisted on",
+    "blacklistShort": "blacklisted",
+    "notBlacklisted": "Not on any checked blocklist",
+    "clean": "clean",
+    "hideLog": "Hide log",
+    "showLog": "Show log",
+    "speed": {
+      "fast": "fast",
+      "good": "good",
+      "ok": "ok",
+      "slow": "slow"
+    }
+  },
+  "blacklistFilter": {
+    "all": "All",
+    "clean": "Clean",
+    "blacklisted": "Blacklisted",
+    "cleanTip": "Show only proxies not on any checked blocklist",
+    "blacklistedTip": "Show only proxies flagged on a DNS blocklist"
+  },
   "bulkDelete": {
     "confirm_one": "Delete {{count}} selected proxy? Linked profiles will keep working with their proxy assignment cleared.",
     "confirm_other": "Delete {{count}} selected proxies? Linked profiles will keep working with their proxy assignment cleared."
