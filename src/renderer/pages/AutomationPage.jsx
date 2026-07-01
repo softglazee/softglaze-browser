@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Wand2, Bot, Flame, History, Plus, Loader2, Play, Pause, Square, X, Search,
   Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical, Pencil, MousePointer2,
-  Layers, FileSpreadsheet, XCircle, AlertTriangle
+  Layers, FileSpreadsheet, XCircle, AlertTriangle, Save
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -39,6 +39,20 @@ const PRESET_SITES = [
   { url: 'https://weather.com/', label: 'weather.com' }
 ];
 const CLICK_LABELS = { none: 'Just browse', random: 'Random clicks', links: 'Browse links' };
+
+// Coerce a persisted/imported site row into the warmer's shape (defensive against
+// hand-edited settings, older saved lists, or a malformed import).
+function normalizeSavedSite(s) {
+  const url = String((s && s.url) || '').trim();
+  let label = String((s && s.label) || '').trim();
+  if (!label) { try { label = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { label = url; } }
+  return {
+    url,
+    label,
+    seconds: Math.max(3, Math.min(600, Number(s && s.seconds) || 30)),
+    clickMode: ['none', 'random', 'links'].includes(s && s.clickMode) ? s.clickMode : 'none'
+  };
+}
 
 // Macro step types — the single source of truth for the editor's add-menu and the
 // per-step field inputs. Mirrors what the engine's runMacro understands.
@@ -1024,10 +1038,44 @@ function WarmerPanel() {
   const [showBulk, setShowBulk] = useState(false);
   const [pasteIds, setPasteIds] = useState('');
   const fileRef = useRef(null);
+  // Add-time defaults: dwell time + behaviour applied to newly added links.
+  const [addSeconds, setAddSeconds] = useState(30);
+  const [addBehavior, setAddBehavior] = useState('none');
+  // Named, reusable link lists + which site rows are ticked for bulk edit/delete.
+  const [savedLists, setSavedLists] = useState([]);
+  const [selSites, setSelSites] = useState(() => new Set());
+  const hydratedRef = useRef(false); // gate auto-save until the saved plan has loaded
+  const saveTimer = useRef(null);
 
   useEffect(() => {
     softglazeApi.profiles.list({}).then((rows) => setProfiles(Array.isArray(rows) ? rows : [])).catch(() => setProfiles([]));
   }, []);
+
+  // Restore the saved warm-up plan (sites + options + named lists) so it survives
+  // switching tabs AND app restarts. Runs once; guards the auto-save until loaded.
+  useEffect(() => {
+    let alive = true;
+    softglazeApi.settings.getGlobal().then((g) => {
+      if (!alive) return;
+      const w = (g && g.warmer) || {};
+      if (Array.isArray(w.sites) && w.sites.length) setSites(w.sites.map(normalizeSavedSite));
+      if (typeof w.loop === 'boolean') setLoop(w.loop);
+      if (typeof w.keepOpen === 'boolean') setKeepOpen(w.keepOpen);
+      if (typeof w.hidden === 'boolean') setHidden(w.hidden);
+      if (Array.isArray(w.lists)) setSavedLists(w.lists);
+    }).catch(() => {}).finally(() => { hydratedRef.current = true; });
+    return () => { alive = false; };
+  }, []);
+
+  // Auto-persist the working plan (debounced) whenever it changes, once hydrated.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      softglazeApi.settings.setGlobal({ warmer: { sites, loop, keepOpen, hidden } }).catch(() => {});
+    }, 600);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [sites, loop, keepOpen, hidden]);
 
   // Subscribe to live warm-up progress for the whole panel lifetime.
   useEffect(() => {
@@ -1057,7 +1105,7 @@ function WarmerPanel() {
   function addPreset() {
     const p = PRESET_SITES.find((s) => s.url === presetPick);
     if (!p) return;
-    setSites((prev) => [...prev, { url: p.url, label: p.label, seconds: 30, clickMode: 'none' }]);
+    setSites((prev) => [...prev, { url: p.url, label: p.label, seconds: addSeconds, clickMode: addBehavior }]);
     setPresetPick('');
   }
 
@@ -1067,13 +1115,40 @@ function WarmerPanel() {
     const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     let label = url;
     try { label = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { /* keep url */ }
-    setSites((prev) => [...prev, { url, label, seconds: 30, clickMode: 'none' }]);
+    setSites((prev) => [...prev, { url, label, seconds: addSeconds, clickMode: addBehavior }]);
     setCustomUrl('');
   }
 
   function updateSite(i, patch) { setSites((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s))); }
-  function removeSite(i) { setSites((prev) => prev.filter((_, idx) => idx !== i)); }
-  function clearSites() { setSites([]); }
+  function removeSite(i) { setSites((prev) => prev.filter((_, idx) => idx !== i)); setSelSites(new Set()); }
+  function clearSites() { setSites([]); setSelSites(new Set()); }
+
+  // ---- Named, reusable link lists (persisted in global settings) ----
+  function persistLists(next) {
+    setSavedLists(next);
+    softglazeApi.settings.setGlobal({ warmer: { lists: next } }).catch(() => {});
+  }
+  function saveCurrentList() {
+    if (!sites.length) { setErr(t('warmer.errors.addSite')); return; }
+    const name = (window.prompt(t('warmer.saveListPrompt')) || '').trim();
+    if (!name) return;
+    const entry = { id: `wl-${Date.now()}`, name: name.slice(0, 60), sites: sites.map((s) => ({ ...s })) };
+    persistLists([...savedLists.filter((l) => l.name !== entry.name), entry]);
+  }
+  function loadList(id) {
+    const l = savedLists.find((x) => x.id === id);
+    if (!l) return;
+    setSites(Array.isArray(l.sites) ? l.sites.map(normalizeSavedSite) : []);
+    setSelSites(new Set());
+  }
+  function deleteList(id) { persistLists(savedLists.filter((l) => l.id !== id)); }
+
+  // ---- Bulk edit / delete of the site rows ----
+  function toggleSiteSel(i) { setSelSites((prev) => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; }); }
+  function toggleSelectAllSites() { setSelSites((prev) => (prev.size === sites.length ? new Set() : new Set(sites.map((_, i) => i)))); }
+  function bulkDeleteSites() { setSites((prev) => prev.filter((_, i) => !selSites.has(i))); setSelSites(new Set()); }
+  function bulkSetSeconds(v) { const s = Math.max(3, Math.min(600, Number(v) || 30)); setSites((prev) => prev.map((site, i) => (selSites.has(i) ? { ...site, seconds: s } : site))); }
+  function bulkSetBehavior(v) { const b = ['none', 'random', 'links'].includes(v) ? v : 'none'; setSites((prev) => prev.map((site, i) => (selSites.has(i) ? { ...site, clickMode: b } : site))); }
 
   // Parse many links at once. One entry per line; a line may be a bare domain, a
   // full URL, or a CSV row "url, seconds, behaviour". Blank/# lines are ignored and
@@ -1092,8 +1167,8 @@ function WarmerPanel() {
         try { host = new URL(url).hostname; } catch (e) { continue; }
         if (seen.has(url)) continue;
         seen.add(url);
-        const seconds = Math.max(3, Math.min(600, Number.parseInt(cols[1], 10) || 30));
-        const clickMode = ['none', 'random', 'links'].includes(cols[2]) ? cols[2] : 'none';
+        const seconds = Math.max(3, Math.min(600, Number.parseInt(cols[1], 10) || addSeconds));
+        const clickMode = ['none', 'random', 'links'].includes(cols[2]) ? cols[2] : addBehavior;
         additions.push({ url, label: host.replace(/^www\./, ''), seconds, clickMode });
       }
       return additions.length ? [...prev, ...additions] : prev;
@@ -1192,9 +1267,13 @@ function WarmerPanel() {
             </select>
             <button onClick={addPreset} disabled={!presetPick} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
-          {/* Add a custom URL */}
+          {/* Add a custom URL — the seconds + behaviour here apply to every link you add */}
           <div className="flex items-center gap-2">
             <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder={t('warmer.customPlaceholder')} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
+            <input type="number" min={3} max={600} value={addSeconds} onChange={(e) => setAddSeconds(Math.max(3, Math.min(600, Number(e.target.value) || 30)))} title={t('warmer.addSecondsTitle')} className="w-14 h-8 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
+            <select value={addBehavior} onChange={(e) => setAddBehavior(e.target.value)} title={t('warmer.addBehaviorTitle')} className="h-8 shrink-0 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-foreground outline-none focus:border-primary">
+              {Object.keys(CLICK_LABELS).map((k) => <option key={k} value={k}>{t(`clickLabels.${k}`)}</option>)}
+            </select>
             <button onClick={addCustom} disabled={!customUrl.trim()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
 
@@ -1217,12 +1296,45 @@ function WarmerPanel() {
             </div>
           )}
 
+          {/* Reusable saved link lists — persisted for future use */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button onClick={saveCurrentList} disabled={!sites.length} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Save className="w-3.5 h-3.5" /> {t('warmer.saveList')}</button>
+            {savedLists.map((l) => (
+              <span key={l.id} className="inline-flex items-center gap-1 h-7 pl-2 pr-1 rounded-md border border-border bg-elevated/40 text-[11px] text-foreground">
+                <button onClick={() => loadList(l.id)} title={t('warmer.loadListTitle')} className="hover:text-orange-400 max-w-[130px] truncate">{l.name} <span className="text-muted-foreground">({(l.sites || []).length})</span></button>
+                <button onClick={() => deleteList(l.id)} title={t('warmer.deleteListTitle')} className="w-4 h-4 grid place-items-center rounded text-muted-foreground hover:text-red-400"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+          </div>
+
+          {/* Site-row bulk edit toolbar — select rows, then set time/behaviour or delete */}
+          {sites.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <label className="flex items-center gap-1.5 text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={selSites.size === sites.length && sites.length > 0} onChange={toggleSelectAllSites} className="accent-orange-500" />
+                {selSites.size > 0 ? t('warmer.nSelected', { count: selSites.size }) : t('warmer.selectRows')}
+              </label>
+              {selSites.size > 0 && (
+                <>
+                  <input type="number" min={3} max={600} defaultValue={addSeconds} onChange={(e) => bulkSetSeconds(e.target.value)} title={t('warmer.bulkSetSeconds')} className="w-14 h-7 bg-input-background border border-border rounded px-1.5 text-center text-foreground outline-none focus:border-primary" />
+                  <span className="text-muted-foreground">{t('warmer.secondsUnit')}</span>
+                  <select value="" onChange={(e) => { if (e.target.value) bulkSetBehavior(e.target.value); }} title={t('warmer.bulkSetBehavior')} className="h-7 bg-input-background border border-border rounded px-1.5 text-foreground outline-none focus:border-primary">
+                    <option value="">{t('warmer.setBehavior')}</option>
+                    {Object.keys(CLICK_LABELS).map((k) => <option key={k} value={k}>{t(`clickLabels.${k}`)}</option>)}
+                  </select>
+                  <button onClick={bulkDeleteSites} className="h-7 px-2 rounded border border-border text-red-400 hover:bg-red-500/10 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" /> {t('warmer.deleteSelected')}</button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Configured sites — per-site dwell time + behaviour */}
           <div className="rounded-lg border border-border bg-elevated/40 divide-y divide-border/60 max-h-[240px] overflow-y-auto">
             {sites.length === 0 ? (
               <div className="px-3 py-5 text-center text-[12px] text-muted-foreground">{t('warmer.noSites')}</div>
             ) : sites.map((s, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2">
+                <input type="checkbox" checked={selSites.has(i)} onChange={() => toggleSiteSel(i)} className="accent-orange-500 shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[12.5px] text-foreground truncate">{s.label}</span>
                   <span className="block text-[10px] text-muted-foreground truncate">{s.url}</span>
