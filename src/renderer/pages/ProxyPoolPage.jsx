@@ -606,25 +606,66 @@ export default function ProxyPoolPage() {
     }
   }
 
-  function renderStatus(id) {
+  function renderStatus(proxy) {
+    const id = proxy.id;
     if (checkingId === id) return <span className="text-xs text-muted">{t('status.checking')}</span>;
     const r = checkResults[id];
-    if (!r) return <span className="text-xs text-muted-dark">—</span>;
-    if (r.success) {
-      const ms = r.avgMs ?? r.latencyMs;
-      const grade = r.health && r.health.grade;
+    if (r) {
+      if (r.success) {
+        const ms = r.avgMs ?? r.latencyMs;
+        const grade = r.health && r.health.grade;
+        return (
+          <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium">
+            <span className="text-emerald-400">{r.ip || '?'}{r.country ? ` · ${r.country}` : ''}{typeof ms === 'number' ? ` · ${ms}ms` : ''}</span>
+            {grade && <span className={`font-bold ${GRADE_COLOR[grade] || 'text-foreground'}`} title={r.health.label ? `${t('checker.health')}: ${r.health.label} (${r.health.score})` : undefined}>{grade}</span>}
+          </span>
+        );
+      }
+      return <span className="text-xs font-medium text-red-400" title={r.error || t('status.failed')}>{t('status.failed')}{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
+    }
+    // No fresh check this session — fall back to the persisted snapshot so a
+    // previously-checked proxy still shows its last known result instead of "—".
+    if (proxy.lastStatus === 'ok') {
+      const ms = typeof proxy.lastLatencyMs === 'number' ? proxy.lastLatencyMs : null;
       return (
-        <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium">
-          <span className="text-emerald-400">{r.ip || '?'}{r.country ? ` · ${r.country}` : ''}{typeof ms === 'number' ? ` · ${ms}ms` : ''}</span>
-          {grade && <span className={`font-bold ${GRADE_COLOR[grade] || 'text-foreground'}`} title={r.health.label ? `${t('checker.health')}: ${r.health.label} (${r.health.score})` : undefined}>{grade}</span>}
-          {r.speed && r.speed.rating && r.speed.rating !== 'unknown' && <span className="text-muted-foreground">{t(`checker.speed.${r.speed.rating}`)}</span>}
-          {r.blacklist && r.blacklist.listed
-            ? <span className="inline-flex items-center gap-0.5 text-amber-400" title={`${t('checker.blacklisted')}: ${(r.blacklist.sources || []).join(', ')}`}><AlertTriangle className="h-3 w-3" /> {t('checker.blacklistShort')}</span>
-            : (r.blacklist && r.blacklist.checked ? <span className="text-emerald-400/70" title={t('checker.notBlacklisted')}>{t('checker.clean')}</span> : null)}
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <span className="text-emerald-400/90">{proxy.lastCountry || t('status.ok')}{ms != null ? ` · ${ms}ms` : ''}</span>
         </span>
       );
     }
-    return <span className="text-xs font-medium text-red-400" title={r.error || t('status.failed')}>{t('status.failed')}{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
+    if (proxy.lastStatus === 'fail') return <span className="text-xs font-medium text-red-400/90">{t('status.failed')}</span>;
+    return <span className="text-xs text-muted-dark">—</span>;
+  }
+
+  // Compact table badges: proxy speed bucket and blocklist state (fresh check wins
+  // over the stored snapshot). Shown as their own columns so the whole pool can be
+  // scanned at a glance without opening the checker.
+  function renderSpeedCell(proxy) {
+    const s = speedOf(proxy, checkResults);
+    if (s === 'unknown') return <span className="text-muted-dark text-xs">—</span>;
+    const r = checkResults[proxy.id];
+    const live = r ? (typeof r.avgMs === 'number' ? r.avgMs : (typeof r.latencyMs === 'number' ? r.latencyMs : null)) : null;
+    const ms = live != null ? live : (typeof proxy.lastLatencyMs === 'number' ? proxy.lastLatencyMs : null);
+    const fast = s === 'fast';
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${fast ? 'bg-sky-500/12 text-sky-400' : 'bg-orange-500/12 text-orange-400'}`} title={ms != null ? `${ms}ms` : undefined}>
+        {fast ? <Zap className="h-3 w-3" /> : <Turtle className="h-3 w-3" />}
+        {fast ? t('speedFilter.fast') : t('speedFilter.slow')}
+        {ms != null && <span className="opacity-70 font-normal">{ms}ms</span>}
+      </span>
+    );
+  }
+  function renderBlacklistCell(proxy) {
+    const b = blacklistOf(proxy, checkResults);
+    if (b === 'unknown') return <span className="text-muted-dark text-xs">—</span>;
+    const listed = b === 'blacklisted';
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${listed ? 'bg-amber-500/12 text-amber-400' : 'bg-emerald-500/12 text-emerald-400'}`}>
+        {listed ? <AlertTriangle className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
+        {listed ? t('blacklistFilter.blacklisted') : t('blacklistFilter.clean')}
+      </span>
+    );
   }
 
   const chipCls = (key) => `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(key) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`;
@@ -668,7 +709,7 @@ export default function ProxyPoolPage() {
   if (typeDonut.length === 0) typeDonut.push({ label: t('stats.noProxies'), value: 1, color: 'var(--elevated)' });
 
   return (
-    <div className="flex flex-col h-full space-y-4 pb-10">
+    <div className="flex flex-col h-full space-y-4 pb-1">
       <PageHeader
         eyebrow={t('header.eyebrow')}
         title={t('header.title')}
@@ -748,8 +789,8 @@ export default function ProxyPoolPage() {
           <MiniStat icon={ShieldCheck} label={t('stats.verified')} value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
           <MiniStat icon={ShieldOff} label={t('stats.nonVerified')} value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
         </div>
-        <div className="rounded-xl bg-card border border-border p-4 flex items-center gap-4">
-          <Donut data={typeDonut} size={104} thickness={16} centerLabel={proxies.length} centerSub={t('stats.total')} />
+        <div className="rounded-xl bg-card border border-border p-3 flex items-center gap-3">
+          <Donut data={typeDonut} size={84} thickness={13} centerLabel={proxies.length} centerSub={t('stats.total')} />
           <div className="flex-1 min-w-0"><Legend data={typeDonut} /></div>
         </div>
       </div>
@@ -997,7 +1038,7 @@ export default function ProxyPoolPage() {
             </div>
           ) : (
             <div className="w-full">
-              <table className="w-full min-w-[1000px] border-collapse text-left text-sm whitespace-nowrap">
+              <table className="w-full min-w-[1180px] border-collapse text-left text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
                   <tr>
                     <th className="px-5 py-4 w-10">
@@ -1017,6 +1058,8 @@ export default function ProxyPoolPage() {
                     <th className="px-5 py-4">{t('table.colGroup')}</th>
                     <th className="px-5 py-4">{t('table.colProfiles')}</th>
                     <th className="px-5 py-4">{t('table.colCreated')}</th>
+                    <th className="px-5 py-4">{t('table.colSpeed')}</th>
+                    <th className="px-5 py-4">{t('table.colBlocklist')}</th>
                     <th className="px-5 py-4">{t('table.colStatus')}</th>
                     <th className="px-5 py-4 text-right">{t('table.colActions')}</th>
                   </tr>
@@ -1090,7 +1133,9 @@ export default function ProxyPoolPage() {
                         })()}
                       </td>
                       <td className="px-5 py-4 text-muted text-xs">{formatDateTime(proxy.createdAt)}</td>
-                      <td className="px-5 py-4">{renderStatus(proxy.id)}</td>
+                      <td className="px-5 py-4">{renderSpeedCell(proxy)}</td>
+                      <td className="px-5 py-4">{renderBlacklistCell(proxy)}</td>
+                      <td className="px-5 py-4">{renderStatus(proxy)}</td>
                       <td className="px-5 py-4">
                         <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
                           <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="px-3">

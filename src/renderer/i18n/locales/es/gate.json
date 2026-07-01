@@ -22,6 +22,24 @@
       "local": "Local primero",
       "encrypted": "Bóveda cifrada",
       "private": "Sin telemetría"
+    },
+    "slides": {
+      "security": {
+        "title": "Seguridad de datos robusta",
+        "body": "El almacenamiento local con una bóveda cifrada mantiene los datos sensibles en tu dispositivo — nada se sincroniza en la nube."
+      },
+      "fingerprint": {
+        "title": "Huellas indetectables",
+        "body": "Cada perfil incluye una huella única y consistente: canvas, WebGL, fuentes, audio y hardware."
+      },
+      "proxy": {
+        "title": "Un proxy para cada identidad",
+        "body": "Asigna una identidad de red dedicada a cada perfil y rota con confianza."
+      },
+      "automation": {
+        "title": "Automatización que ahorra tiempo",
+        "body": "Calienta cookies, genera perfiles en lote y orquesta todo a escala."
+      }
     }
   },
   "license": {
@@ -101,7 +119,8 @@
     "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local — nunca sale de este dispositivo. Si se pierde, el espacio de trabajo debe restablecerse desde Ajustes.",
     "signIn": "Iniciar sesión",
     "noAccount": "¿No tienes una cuenta?",
-    "createOne": "Crea una",
+    "newHere": "¿Nuevo en SoftGlaze?",
+    "createOne": "Crea tu cuenta",
     "haveInvite": "¿Tienes un código de invitación?",
     "teamSignIn": "Inicio de sesión de miembro del equipo"
   },
