@@ -7,9 +7,22 @@ import {
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors placeholder:text-muted-dark';
+const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
+// Shared primary CTA — gradient fill, soft glow, and a subtle lift on hover. Used by
+// every "continue / sign in / create" button so the whole flow feels of a piece.
+const primaryBtn = 'mt-6 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200 hover:shadow-[0_10px_28px_-8px_rgba(59,130,246,0.65)] hover:-translate-y-px active:translate-y-0';
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+// Ambient aurora used behind the form column — two slow-floating blobs for depth.
+function AuthAura() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute -top-24 left-1/4 w-[26rem] h-[26rem] rounded-full bg-primary/10 blur-[130px] animate-float-slow" />
+      <div className="absolute -bottom-24 -right-16 w-96 h-96 rounded-full bg-accent/10 blur-[130px] animate-float-slower" />
+    </div>
+  );
+}
 
 function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
   const [show, setShow] = useState(false);
@@ -84,29 +97,63 @@ function BrandPanel() {
     [Globe, t('brand.bullets.proxy')],
     [ShieldCheck, t('brand.bullets.localFirst')]
   ];
+  const trust = [
+    [Lock, t('brand.trust.local')],
+    [ShieldCheck, t('brand.trust.encrypted')],
+    [Eye, t('brand.trust.private')]
+  ];
   return (
-    <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-surface p-10 border-r border-border">
-      <div className="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-primary/20 blur-[120px]" />
-      <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-primary/10 blur-[120px]" />
+    <div
+      className="relative hidden md:flex flex-col justify-between overflow-hidden p-10 border-r border-border"
+      style={{ background: 'linear-gradient(160deg, #0a0e18 0%, #0b1120 46%, #090b12 100%)' }}
+    >
+      {/* Ambient depth: drifting grid + three floating aurora blobs */}
+      <div aria-hidden className="absolute inset-0 auth-grid opacity-60" />
+      <div aria-hidden className="absolute -top-28 -left-24 w-96 h-96 rounded-full bg-primary/25 blur-[130px] animate-float-slow" />
+      <div aria-hidden className="absolute top-1/3 -right-24 w-80 h-80 rounded-full bg-accent/20 blur-[130px] animate-float-slower" />
+      <div aria-hidden className="absolute -bottom-24 left-8 w-72 h-72 rounded-full bg-emerald-500/10 blur-[120px] animate-aurora" />
+
+      {/* Logo with a soft pulsing halo */}
       <div className="relative flex items-center gap-3 animate-fade-in">
-        <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-11 h-11 object-contain drop-shadow-[0_2px_14px_rgba(59,130,246,0.5)]" draggable={false} />
+        <div className="relative">
+          <div aria-hidden className="absolute inset-0 rounded-2xl bg-primary/40 blur-lg animate-aurora" />
+          <img src="/logos/app-source-512.png" alt="SoftGlaze" className="relative w-11 h-11 object-contain drop-shadow-[0_2px_16px_rgba(59,130,246,0.6)]" draggable={false} />
+        </div>
         <div className="flex flex-col leading-none">
           <span className="font-display font-semibold text-lg tracking-tight">SoftGlaze</span>
           <span className="text-[10px] text-primary font-semibold tracking-[0.2em] uppercase mt-1">{t('brand.tagline')}</span>
         </div>
       </div>
+
+      {/* Hero */}
       <div className="relative animate-fade-up">
-        <h2 className="font-display text-[28px] font-semibold leading-[1.15] tracking-tight">{t('brand.heroLine1')}<br />{t('brand.heroLine2')}</h2>
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10.5px] font-semibold text-primary/90 mb-5">
+          <Sparkles className="w-3 h-3" /> {t('brand.tagline')}
+        </div>
+        <h2 className="font-display text-[30px] font-semibold leading-[1.12] tracking-tight">
+          <span className="shimmer-text">{t('brand.heroLine1')}</span><br />{t('brand.heroLine2')}
+        </h2>
         <p className="text-[13px] text-muted mt-3 max-w-sm leading-relaxed">{t('brand.heroBody')}</p>
-        <ul className="mt-8 space-y-3.5">
+        <ul className="mt-8 space-y-2.5 max-w-sm">
           {bullets.map(([Icon, label], i) => (
-            <li key={i} className="flex items-center gap-3 text-[13px] text-foreground">
-              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0"><Icon className="w-4 h-4" /></span>{label}
+            <li key={i} className="flex items-center gap-3 text-[13px] text-foreground rounded-xl border border-border/70 bg-white/[0.02] px-3.5 py-2.5 backdrop-blur-sm transition-colors hover:border-primary/30 hover:bg-primary/[0.04]">
+              <span className="w-8 h-8 rounded-lg bg-primary/12 text-primary grid place-items-center shrink-0"><Icon className="w-4 h-4" /></span>{label}
             </li>
           ))}
         </ul>
       </div>
-      <div className="relative text-[11px] text-muted-dark">{t('brand.footer', { year: new Date().getFullYear() })}</div>
+
+      {/* Trust strip + footer */}
+      <div className="relative">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {trust.map(([Icon, label], i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-white/[0.03] px-2.5 py-1 text-[10.5px] text-muted">
+              <Icon className="w-3 h-3 text-emerald-400" /> {label}
+            </span>
+          ))}
+        </div>
+        <div className="text-[11px] text-muted-dark">{t('brand.footer', { year: new Date().getFullYear() })}</div>
+      </div>
     </div>
   );
 }
@@ -546,10 +593,12 @@ export default function Gate({ children }) {
   }
 
   return (
-    <div className="h-screen w-full bg-background text-foreground font-sans grid md:grid-cols-2">
+    <div className="relative h-screen w-full bg-background text-foreground font-sans grid md:grid-cols-2 overflow-hidden">
       <BrandPanel />
-      <div className="grid place-items-center p-6 overflow-y-auto">
-        <div className="w-full max-w-[400px] animate-fade-up">
+      <div className="relative grid place-items-center p-6 overflow-y-auto">
+        <AuthAura />
+        <div className="relative w-full max-w-[420px] animate-fade-up">
+          <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
           <div className="flex items-center gap-2.5 mb-7 md:hidden">
             <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-9 h-9 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
             <span className="font-display font-semibold tracking-tight">SoftGlaze</span>
@@ -573,7 +622,7 @@ export default function Gate({ children }) {
                 </div>
               </div>
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
-              <button disabled={busy} onClick={sendCode} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+              <button disabled={busy} onClick={sendCode} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('register.continue')} <ArrowRight className="w-4 h-4" /></>}
               </button>
               <p className="text-[11px] text-muted-dark mt-4 flex items-center justify-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> {t('register.storedLocally')}</p>
@@ -596,7 +645,7 @@ export default function Gate({ children }) {
                 </div>
               )}
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
-              <button disabled={busy} onClick={() => verifyAndCreate()} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+              <button disabled={busy} onClick={() => verifyAndCreate()} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('verify.verifyCreate')}
               </button>
               <button onClick={resend} disabled={resendIn > 0 || busy} className="mt-3 w-full text-[12px] text-muted-dark hover:text-muted disabled:hover:text-muted-dark">
@@ -651,7 +700,7 @@ export default function Gate({ children }) {
               <RememberToggle checked={remember} onChange={setRemember} />
               {forgot && <p className="text-[11.5px] text-muted mt-3 leading-relaxed">{t('login.forgotBody')}</p>}
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
-              <button disabled={busy} onClick={login} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+              <button disabled={busy} onClick={login} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('login.signIn')} <Lock className="w-4 h-4" /></>}
               </button>
               <p className="text-center text-[12px] text-muted-dark mt-4">{t('login.noAccount')} <button onClick={() => { setPhase('register'); setStep('details'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">{t('login.createOne')}</button></p>
@@ -677,7 +726,7 @@ export default function Gate({ children }) {
                 <div><label className={labelCls}>{t('invite.setPassword')}</label><PasswordInput value={invitePass} onChange={(e) => setInvitePass(e.target.value)} placeholder={t('invite.passwordPlaceholder')} onKeyDown={(e) => { if (e.key === 'Enter') doAcceptInvite(); }} /></div>
               </div>
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
-              <button disabled={busy} onClick={doAcceptInvite} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+              <button disabled={busy} onClick={doAcceptInvite} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('invite.join')} <ArrowRight className="w-4 h-4" /></>}
               </button>
             </>
@@ -696,7 +745,7 @@ export default function Gate({ children }) {
               </div>
               <RememberToggle checked={remember} onChange={setRemember} />
               {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
-              <button disabled={busy} onClick={doMemberLogin} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+              <button disabled={busy} onClick={doMemberLogin} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('member.signIn')} <ArrowRight className="w-4 h-4" /></>}
               </button>
               <p className="text-center text-[12px] text-muted-dark mt-4">{t('member.haveInviteInstead')} <button onClick={() => { setPhase('invite'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">{t('member.redeemIt')}</button></p>
@@ -773,6 +822,8 @@ export default function Gate({ children }) {
               <SuperLink />
             </>
           )}
+          </div>
+          <p className="mt-4 text-center text-[10.5px] text-muted-dark md:hidden">{t('brand.footer', { year: new Date().getFullYear() })}</p>
         </div>
       </div>
     </div>

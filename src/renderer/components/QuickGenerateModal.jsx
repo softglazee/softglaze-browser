@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2, Zap, Turtle, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
@@ -25,6 +25,8 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [proxyMode, setProxyMode] = useState('none'); // none | pool | paste
   const [assignUnique, setAssignUnique] = useState(true); // pool: 1:1 unique vs round-robin reuse
   const [proxySource, setProxySource] = useState(''); // '' all | group:<id> | provider:<key>
+  const [proxySpeed, setProxySpeed] = useState('any'); // any | fast | slow (by measured latency)
+  const [proxyBlacklist, setProxyBlacklist] = useState('any'); // any | clean | blacklisted
   const [pasted, setPasted] = useState('');
   const [busy, setBusy] = useState(false);
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
@@ -45,6 +47,17 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const providerCounts = {};
   for (const p of proxies) { if (p.provider) providerCounts[p.provider] = (providerCounts[p.provider] || 0) + 1; }
   const providers = Object.entries(providerCounts);
+
+  // Pool quality tallies (same thresholds as the Proxy Pool page) so the user can
+  // see how many proxies match a Fast/Slow or Clean/Blacklisted filter up front.
+  const SPEED_FAST_MAX_MS = 1500;
+  const q = { fast: 0, slow: 0, clean: 0, blacklisted: 0 };
+  for (const p of proxies) {
+    const ms = typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null;
+    if (ms != null) { if (ms <= SPEED_FAST_MAX_MS) q.fast += 1; else q.slow += 1; }
+    if (p.lastBlacklisted === false) q.clean += 1;
+    else if (p.lastBlacklisted === true) q.blacklisted += 1;
+  }
 
   // Map the UI proxy choice to the server-side assignment mode.
   function resolveProxyMode() {
@@ -88,6 +101,8 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           startupUrls: startupUrls.trim(),
           proxyMode: resolveProxyMode(),
           proxySource: proxyMode === 'pool' ? proxySource : '',
+          proxySpeed: proxyMode === 'pool' ? proxySpeed : 'any',
+          proxyBlacklist: proxyMode === 'pool' ? proxyBlacklist : 'any',
           pasted
         },
         (done, total) => setProgress({ done, total })
@@ -195,6 +210,45 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
                   </optgroup>
                 )}
               </select>
+            </div>
+          )}
+
+          {proxyMode === 'pool' && (
+            <div className="space-y-2">
+              <label className={labelCls}>{t('quickGenerate.quality')}</label>
+              {/* Speed — narrow the pool to fast / slow proxies before assigning */}
+              <div className="flex items-center gap-2">
+                <span className="w-16 shrink-0 text-[11px] text-muted-dark">{t('quickGenerate.qSpeed')}</span>
+                <div className="flex-1 flex items-center gap-1 rounded-lg border border-border bg-background p-1">
+                  {[
+                    { key: 'any', label: t('quickGenerate.qAny'), icon: null },
+                    { key: 'fast', label: t('quickGenerate.qFast'), icon: Zap, n: q.fast },
+                    { key: 'slow', label: t('quickGenerate.qSlow'), icon: Turtle, n: q.slow }
+                  ].map((o) => (
+                    <button key={o.key} type="button" onClick={() => setProxySpeed(o.key)}
+                      className={`flex-1 inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition-colors ${proxySpeed === o.key ? (o.key === 'fast' ? 'bg-sky-500/15 text-sky-400' : o.key === 'slow' ? 'bg-orange-500/15 text-orange-400' : 'bg-secondary text-foreground') : 'text-muted hover:text-foreground'}`}>
+                      {o.icon && <o.icon className="w-3 h-3" />}{o.label}{typeof o.n === 'number' ? <span className="opacity-60">{o.n}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Blocklist — clean vs flagged (from the DNSBL health check) */}
+              <div className="flex items-center gap-2">
+                <span className="w-16 shrink-0 text-[11px] text-muted-dark">{t('quickGenerate.qBlocklist')}</span>
+                <div className="flex-1 flex items-center gap-1 rounded-lg border border-border bg-background p-1">
+                  {[
+                    { key: 'any', label: t('quickGenerate.qAny'), icon: null },
+                    { key: 'clean', label: t('quickGenerate.qClean'), icon: ShieldCheck, n: q.clean },
+                    { key: 'blacklisted', label: t('quickGenerate.qBlacklisted'), icon: ShieldAlert, n: q.blacklisted }
+                  ].map((o) => (
+                    <button key={o.key} type="button" onClick={() => setProxyBlacklist(o.key)}
+                      className={`flex-1 inline-flex items-center justify-center gap-1 h-7 rounded-md text-[11.5px] font-medium transition-colors ${proxyBlacklist === o.key ? (o.key === 'blacklisted' ? 'bg-amber-500/15 text-amber-400' : o.key === 'clean' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-secondary text-foreground') : 'text-muted hover:text-foreground'}`}>
+                      {o.icon && <o.icon className="w-3 h-3" />}{o.label}{typeof o.n === 'number' ? <span className="opacity-60">{o.n}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-dark">{t('quickGenerate.qualityHint')}</p>
             </div>
           )}
 

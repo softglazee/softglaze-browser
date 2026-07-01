@@ -2666,6 +2666,16 @@ async function batchGenerateProfiles(payload) {
     if (optionalString(input.provider)) filter.provider = optionalString(input.provider).toLowerCase();
     const cc = normCountryCode(input.country);
     if (cc) filter.lastCountry = cc;
+    // Quality filters (from the generate modal): pre-narrow the candidate pool by the
+    // proxies' stored latency and DNSBL result before the live health-check gate runs.
+    const speedSel = (optionalString(input.proxySpeed) || 'any').toLowerCase();
+    if (speedSel === 'fast') filter.lastLatencyMs = { lte: 1500 };
+    else if (speedSel === 'slow') filter.lastLatencyMs = { gt: 1500 };
+    const blSel = (optionalString(input.proxyBlacklist) || 'any').toLowerCase();
+    // Strict, to match the count chips / Proxy Pool page: false = clean, true = flagged,
+    // never-checked (null) = neither (so "Clean" doesn't silently pull in unchecked proxies).
+    if (blSel === 'clean') filter.lastBlacklisted = false;
+    else if (blSel === 'blacklisted') filter.lastBlacklisted = true;
     // Unique mode: only proxies NOT already bound to a live (non-deleted) profile.
     if (proxyMode === 'unique') filter.profiles = { none: { deletedAt: null } };
 
