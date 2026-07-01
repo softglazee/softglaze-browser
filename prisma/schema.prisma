@@ -35,6 +35,7 @@ model Proxy {
   lastCountry   String?
   lastRegion    String? // verified exit region/state (for auto-grouping)
   lastCity      String? // verified exit city (for auto-grouping)
+  lastBlacklisted Boolean? // last DNSBL result: true = on a blocklist, false = clean, null = never checked
   lastCheckedAt DateTime?
 
   ownerMemberId Int? // member who added this proxy (for per-member quotas)
