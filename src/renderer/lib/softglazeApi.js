@@ -64,6 +64,7 @@ export const softglazeApi = {
     bulkRestore: (ids) => getSoftglazeApi().profiles.bulkRestore(ids),
     bulkPurge: (ids, options) => getSoftglazeApi().profiles.bulkPurge(ids, options),
     bulkLaunch: (ids) => getSoftglazeApi().profiles.bulkLaunch(ids),
+    bulkAssignProxy: (payload) => getSoftglazeApi().profiles.bulkAssignProxy(payload),
     tagAssign: (ids, tag, mode) => getSoftglazeApi().profiles.tagAssign(ids, tag, mode),
     bulkRename: (payload) => getSoftglazeApi().profiles.bulkRename(payload),
     bulkClose: (ids) => getSoftglazeApi().profiles.bulkClose(ids),

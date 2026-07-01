@@ -31,6 +31,36 @@
     "preview": "Preview:",
     "rename": "Rename"
   },
+  "reassignModal": {
+    "ariaLabel": "Reassign proxies to selected profiles",
+    "title_one": "Proxies · {{count}} profile",
+    "title_other": "Proxies · {{count}} profiles",
+    "subtitle": "Reassign, swap, or clear the proxies on the selected profiles.",
+    "modeLabel": "Action",
+    "modes": {
+      "unique": "Unique — one distinct proxy per profile",
+      "pool": "Round-robin — spread a set across profiles",
+      "single": "One proxy for all selected",
+      "shuffle": "Shuffle — swap the proxies they already have",
+      "clear": "Clear — remove proxy (direct)"
+    },
+    "sourceLabel": "Take proxies from",
+    "sources": {
+      "all": "Whole proxy pool",
+      "unassigned": "Only unassigned proxies",
+      "group": "A proxy group",
+      "paste": "Paste a list"
+    },
+    "pickGroup": "Choose a group…",
+    "pastePlaceholder": "host:port:user:pass — one per line",
+    "verify": "Verify proxies are live first (slower)",
+    "proxyLabel": "Proxy",
+    "pickProxy": "Choose a proxy…",
+    "shuffleNote": "Each selected profile swaps to another selected profile's proxy. Needs at least two proxied profiles.",
+    "clearNote": "Removes the proxy from every selected profile (they connect directly).",
+    "apply": "Apply",
+    "limited": "Assigned {{assigned}} — {{skipped}} profile(s) had no proxy left in the source."
+  },
   "tabs": {
     "general": "General",
     "proxy": "Proxy",
@@ -277,6 +307,8 @@
     "tagTitle": "Add or remove a tag",
     "rename": "Rename",
     "renameTitle": "Bulk rename with a prefix",
+    "reassignProxy": "Proxy",
+    "reassignProxyTitle": "Reassign, swap, or clear proxies on the selected profiles",
     "share": "Share",
     "shareTitle": "Share with team members",
     "compare": "Compare",
