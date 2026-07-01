@@ -115,6 +115,7 @@ const CHANNELS = Object.freeze({
   PROFILE_BULK_PURGE: 'profile:bulk-purge',
   PROFILE_BULK_LAUNCH: 'profile:bulk-launch',
   PROFILE_BULK_CLOSE: 'profile:bulk-close',
+  PROFILE_BULK_ASSIGN_PROXY: 'profile:bulk-assign-proxy',
   PROFILE_ACCESS_GRANT: 'profile:access-grant',
   PROFILE_ACCESS_REVOKE: 'profile:access-revoke',
   PROFILE_ACCESS_LIST: 'profile:access-list',
@@ -3050,6 +3051,126 @@ async function assignProxiesToGroup(payload) {
   return { assigned: res.count, groupId };
 }
 
+// Bulk (re)assign / swap proxies across a set of EXISTING profiles. Complements
+// batchGenerateProfiles (which only assigns at creation time). Modes:
+//   'unique'  — each profile gets a DISTINCT proxy drawn from a source set (whole
+//               pool, a proxy group, or only-unassigned); caps if the source runs dry.
+//   'pool'    — round-robin a source set across the profiles (reuse allowed).
+//   'single'  — assign ONE chosen proxy (input.proxyId) to every selected profile.
+//   'shuffle' — reshuffle (swap) the proxies the selected profiles ALREADY have.
+//   'clear'   — detach the proxy from each profile (set DIRECT).
+// For 'unique'/'pool' the source set comes from input.source ('all' | 'unassigned' |
+// 'group' | 'paste'). The pool source is ordered newest-first so "reassign the proxies I just added"
+// naturally pulls the freshest proxies. Optional live health gate (verifyProxies,
+// default OFF — the user is deliberately moving known proxies here).
+async function bulkAssignProxies(payload) {
+  await requirePermission('profiles.edit');
+  const input = requireObject(payload);
+  const db = getPrisma();
+  const ids = parseIdArray(input.ids);
+  const mode = (optionalString(input.mode) || 'unique').toLowerCase();
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
+  const result = { mode, updated: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
+  const finish = (extra = {}) => ({ ...result, assigned: result.updated.length, ...extra });
+  if (!allowed.length) return finish({ source: 0 });
+
+  // Apply (or clear) one profile's proxy + keep the cached info string and behavior flag in sync.
+  const applyProxy = async (profileId, proxy) => {
+    const data = proxy
+      ? { proxyId: proxy.id, proxyInfoString: buildProxyInfoString(proxy), systemProxyBehavior: 'PROFILE_PROXY' }
+      : { proxyId: null, proxyInfoString: null, systemProxyBehavior: 'DIRECT' };
+    await db.profile.update({ where: { id: profileId }, data });
+    await logActivity(db, profileId, 'proxy-reassign', proxy ? `proxy → ${proxy.name || `${proxy.host}:${proxy.port}`}` : 'proxy cleared');
+    result.updated.push(profileId);
+  };
+  const safeApply = async (profileId, proxy) => {
+    try { await applyProxy(profileId, proxy); }
+    catch (e) { result.errors.push({ id: profileId, message: (e && e.message) || 'update failed' }); }
+  };
+
+  // ---- CLEAR: detach proxies (direct connection) ----
+  if (mode === 'clear') {
+    for (const id of allowed) await safeApply(id, null);
+    return finish({ source: 0 });
+  }
+
+  // ---- SHUFFLE: swap the proxies already on the selected profiles among themselves ----
+  if (mode === 'shuffle') {
+    const rows = await db.profile.findMany({ where: { id: { in: allowed } }, select: { id: true, proxyId: true } });
+    const proxied = rows.filter((r) => r.proxyId != null);
+    if (proxied.length < 2) throw new Error('Select at least two proxied profiles to shuffle their proxies.');
+    const proxyIds = proxied.map((r) => r.proxyId);
+    const shifted = proxyIds.map((_, i) => proxyIds[(i + 1) % proxyIds.length]); // rotate by one → every profile swaps
+    const uniqueIds = [...new Set(shifted)];
+    const proxyRows = await db.proxy.findMany({ where: { id: { in: uniqueIds } } });
+    const proxyById = new Map(proxyRows.map((p) => [p.id, p]));
+    for (let i = 0; i < proxied.length; i += 1) await safeApply(proxied[i].id, proxyById.get(shifted[i]) || null);
+    return finish({ source: proxied.length });
+  }
+
+  // ---- SINGLE: one chosen proxy → all selected profiles ----
+  if (mode === 'single') {
+    const proxyId = parseId(input.proxyId, 'proxyId');
+    await assertCanAccessProxy(proxyId);
+    const proxy = await db.proxy.findUnique({ where: { id: proxyId } });
+    if (!proxy) throw new Error('Selected proxy does not exist.');
+    for (const id of allowed) await safeApply(id, proxy);
+    return finish({ source: 1 });
+  }
+
+  // ---- Build the SOURCE proxy set for unique / pool ----
+  // source: 'all' (whole pool) | 'unassigned' (not bound to a live profile) |
+  //         'group' (a proxy group) | 'paste' (raw lines, created/reused on the fly).
+  let sourceProxies = [];
+  const source = (optionalString(input.source) || 'all').toLowerCase();
+  if (source === 'paste') {
+    const lines = Array.from(new Set(String(input.proxyList || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)));
+    const typeHint = optionalString(input.proxyType) ? parseProxyType(input.proxyType) : null;
+    for (const line of lines) {
+      try { const p = await findOrCreateProxy(db, line, null, typeHint); if (p) sourceProxies.push(p); }
+      catch (e) { /* skip an unparseable line */ }
+    }
+  } else {
+    const filter = {};
+    if (source === 'unassigned') filter.profiles = { none: { deletedAt: null } };
+    else if (source === 'group') filter.proxyGroupId = parseId(input.proxyGroupId, 'proxyGroupId');
+    sourceProxies = await db.proxy.findMany({
+      where: await scopedProxyWhere(Object.keys(filter).length ? filter : undefined),
+      orderBy: { createdAt: 'desc' } // newest first — "reassign the proxies newly added"
+    });
+  }
+
+  // Optional live health gate (skip-recent within 30 min, else test + persist).
+  if (input.verifyProxies === true && sourceProxies.length) {
+    const FRESH_MS = 30 * 60 * 1000;
+    const healthy = [];
+    const CONC = 8;
+    for (let i = 0; i < sourceProxies.length; i += CONC) {
+      const res = await Promise.all(sourceProxies.slice(i, i + CONC).map(async (p) => {
+        if (p.lastStatus === 'ok' && p.lastCheckedAt && (Date.now() - new Date(p.lastCheckedAt).getTime()) < FRESH_MS) return { p, ok: true };
+        try { const r = await testProxyConnectivity({ type: p.type, host: p.host, port: p.port, username: p.username, password: p.password }); await persistProxyHealth(db, p.id, r).catch(() => {}); return { p, ok: Boolean(r && r.success) }; }
+        catch (e) { return { p, ok: false }; }
+      }));
+      for (const r of res) if (r.ok) healthy.push(r.p);
+    }
+    sourceProxies = healthy;
+  }
+
+  const sourceCount = sourceProxies.length;
+  if (!sourceCount) throw new Error('No proxies available in the chosen source to assign.');
+
+  if (mode === 'unique') {
+    shuffleInPlace(sourceProxies);
+    const n = Math.min(allowed.length, sourceCount);
+    for (let i = 0; i < n; i += 1) await safeApply(allowed[i], sourceProxies[i]);
+    return finish({ source: sourceCount, limited: n < allowed.length, skipped: allowed.length - n });
+  }
+
+  // pool → round-robin the source across every selected profile
+  for (let i = 0; i < allowed.length; i += 1) await safeApply(allowed[i], sourceProxies[i % sourceCount]);
+  return finish({ source: sourceCount });
+}
+
 // Friendly country names for auto-group labels (fall back to the 2-letter code).
 const AUTO_GROUP_COUNTRY_NAMES = {
   US: 'United States', GB: 'United Kingdom', CA: 'Canada', AU: 'Australia',
@@ -3325,7 +3446,7 @@ async function launchProfile(payload) {
       proxyInfoString: launchProxyInfo,
       startUrl: input.startUrl || 'about:blank',
       profileRoot,
-      headless: false,
+      headless: Boolean(input.headless), // hidden warm-ups (Cookie Warmer) launch headless; normal launches stay visible
       profile, // full fingerprint config applied at launch
       browserSettings,
       captcha: globalSettings.captcha,
@@ -8213,8 +8334,8 @@ async function getAutomationHistory() {
 // Wrapper that runs the full launch pipeline (Firefox routing, proxy rotation,
 // global settings) for a given profile id. Shared by the local REST API and the
 // warmer so neither duplicates launch logic.
-async function launchProfileById(id, startUrl) {
-  return launchProfile({ id: parseId(id), startUrl: startUrl || 'about:blank' });
+async function launchProfileById(id, startUrl, opts = {}) {
+  return launchProfile({ id: parseId(id), startUrl: startUrl || 'about:blank', headless: Boolean(opts.headless) });
 }
 
 // ---------------------------------------------------------------------------
@@ -8568,11 +8689,11 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
   if (alreadyOpen) {
     emit(profileId, 'INFO', 'Using the already-open session.');
   } else {
-    emit(profileId, 'INFO', 'Launching profile for warm-up…');
-    const res = await launchProfileById(profileId, 'about:blank');
+    emit(profileId, 'INFO', opts.headless ? 'Launching profile hidden (no window) for warm-up…' : 'Launching profile for warm-up…');
+    const res = await launchProfileById(profileId, 'about:blank', { headless: opts.headless });
     sessionId = res && res.sessionId ? String(res.sessionId) : sessionId;
     if (run) run.launched.add(sessionId);
-    emit(profileId, 'SUCCESS', `Session ${sessionId} started.`);
+    emit(profileId, 'SUCCESS', `Session ${sessionId} started${opts.headless ? ' (hidden)' : ''}.`);
   }
   if (run) run.sessions.add(sessionId);
 
@@ -8596,17 +8717,32 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
     if (opts.loop && !aborted()) emit(profileId, 'INFO', 'Looping the site list again…');
   }
 
-  // Cookie report — cookies + cache persist in the profile's data dir regardless.
+  // Cookie report — read the live cookie jar BEFORE closing (needs the open session).
   let cookieCount = null;
   try { const cookies = await exportSessionCookies(sessionId); cookieCount = Array.isArray(cookies) ? cookies.length : null; }
   catch (e) { /* ignore */ }
-  const tail = cookieCount != null ? ` · ${cookieCount} cookies saved` : '';
-  emit(profileId, aborted() ? 'WARN' : 'SUCCESS', `${aborted() ? 'Warm-up stopped' : 'Warm-up complete'}${tail}.`);
 
-  // Close only sessions we launched, unless the user chose to keep them open.
-  if (!opts.keepOpen && run && run.launched.has(sessionId)) {
-    await closeProfileSession(sessionId).catch(() => {});
+  // Close only sessions we launched, unless the user chose to keep them open. A
+  // graceful browser.close() FLUSHES cookies + cache to the profile's userDataDir,
+  // so a later, separate normal launch of this profile reuses the warmed session.
+  const didClose = !opts.keepOpen && run && run.launched.has(sessionId);
+  if (didClose) await closeProfileSession(sessionId).catch(() => {});
+
+  // On-disk footprint proof — cookies + cache now persisted in the profile folder.
+  // Only meaningful once flushed (i.e. after a close), so we skip it for keep-open runs.
+  let diskNote = '';
+  if (didClose) {
+    try {
+      const prof = await getPrisma().profile.findUnique({ where: { id: parseId(profileId) }, select: { dataDirName: true } });
+      if (prof && prof.dataDirName) {
+        const size = await directorySize(resolveProfileDataDir(prof.dataDirName));
+        if (size && size.bytes) diskNote = ` · ${(size.bytes / 1048576).toFixed(1)} MB cache+cookies on disk`;
+      }
+    } catch (e) { /* ignore */ }
   }
+
+  const cookieNote = cookieCount != null ? ` · ${cookieCount} cookies saved` : '';
+  emit(profileId, aborted() ? 'WARN' : 'SUCCESS', `${aborted() ? 'Warm-up stopped' : 'Warm-up complete'}${cookieNote}${diskNote}.`);
   return { sessionId, cookieCount };
 }
 
@@ -8616,7 +8752,7 @@ async function startWarmer(payload, event) {
   if (!ids.length) throw new Error('Select at least one profile to warm up.');
   let sites = normalizeWarmSites(input.sites);
   if (!sites.length) sites = defaultWarmSites();
-  const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen) };
+  const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen), headless: Boolean(input.headless) };
   const runId = `warm-${Date.now()}`;
   const run = { id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null };
   warmerRuns.set(runId, run);
@@ -8625,7 +8761,7 @@ async function startWarmer(payload, event) {
   run.send = send;
   const emit = (profileId, level, message) => send({ runId, profileId, level, message, ts: Date.now() });
 
-  send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s)${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
+  send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s)${opts.headless ? ' · hidden (no windows)' : ''}${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
   await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
 
   // Fire-and-forget: warm every selected profile concurrently. The handler
@@ -8819,6 +8955,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
+  registerHandler(CHANNELS.PROFILE_BULK_ASSIGN_PROXY, bulkAssignProxies);
   registerHandler(CHANNELS.PROFILE_ACCESS_GRANT, grantProfileAccess);
   registerHandler(CHANNELS.PROFILE_ACCESS_REVOKE, revokeProfileAccess);
   registerHandler(CHANNELS.PROFILE_ACCESS_LIST, listProfileAccess);
