@@ -3,6 +3,58 @@
     "aidesigner": {
       "type": "http",
       "url": "https://api.aidesigner.ai/api/v1/mcp"
+    },
+    "codebase-memory-mcp": {
+      "type": "stdio",
+      "command": "C:/Users/copyc/AppData/Local/Programs/codebase-memory-mcp/codebase-memory-mcp.exe",
+      "args": []
+    },
+    "shadcn": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx shadcn@latest mcp"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx @playwright/mcp@latest"]
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx -y @upstash/context7-mcp"]
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx -y @modelcontextprotocol/server-filesystem H:/softglaze-browser"]
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx -y @modelcontextprotocol/server-sequential-thinking"]
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx -y chrome-devtools-mcp@latest"]
+    },
+    "memory": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx -y @modelcontextprotocol/server-memory"]
+    },
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp"
     }
   }
 }
