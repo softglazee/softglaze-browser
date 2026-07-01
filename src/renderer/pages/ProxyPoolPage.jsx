@@ -1,6 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput } from 'lucide-react';
+import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput, AlertTriangle } from 'lucide-react';
+
+// Live-checker log level → colour, health grade → colour, and a short duration format.
+const CHECK_LEVEL_COLOR = { INFO: 'text-sky-300', SUCCESS: 'text-emerald-400', WARN: 'text-amber-400', ERROR: 'text-red-400' };
+const GRADE_COLOR = { A: 'text-emerald-400', B: 'text-lime-400', C: 'text-amber-400', D: 'text-orange-400', F: 'text-red-400' };
+function fmtDuration(ms) {
+  if (ms == null) return '—';
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+}
 
 import EmptyState from '@/components/EmptyState.jsx';
 import ProxyProviders from '@/components/ProxyProviders.jsx';
@@ -33,6 +42,15 @@ function proxyHealthOf(p, checkResults) {
   if (r) return r.success ? 'verified' : 'failed';
   if (p.lastStatus === 'ok') return 'verified';
   if (p.lastStatus === 'fail') return 'failed';
+  return 'unknown';
+}
+
+// A proxy's blocklist bucket: a fresh check result wins over the persisted snapshot;
+// 'unknown' if it was never DNSBL-checked.
+function blacklistOf(p, checkResults) {
+  const r = checkResults[p.id];
+  if (r && r.blacklist && r.blacklist.checked) return r.blacklist.listed ? 'blacklisted' : 'clean';
+  if (typeof p.lastBlacklisted === 'boolean') return p.lastBlacklisted ? 'blacklisted' : 'clean';
   return 'unknown';
 }
 
@@ -113,6 +131,12 @@ export default function ProxyPoolPage() {
   const [pageSize, setPageSize] = useState(25);
   const [testingAll, setTestingAll] = useState(false);
   const [testSummary, setTestSummary] = useState(null);
+  // Live streamed checker: progress + counts + ETA + running log.
+  const [checkRun, setCheckRun] = useState(null);
+  const [showCheckLog, setShowCheckLog] = useState(true); // collapse the log to keep the table large
+  const checkLogRef = useRef(null);
+  const loadProxiesRef = useRef(null);
+  const [blacklistFilter, setBlacklistFilter] = useState('all'); // 'all' | 'clean' | 'blacklisted'
   const [proxyPolicy, setProxyPolicy] = useState('each-launch');
   // Proxy categories/groups + the active filter ('all' | 'none' | <groupId> | 'provider:<key>').
   const [groups, setGroups] = useState([]);
@@ -160,12 +184,13 @@ export default function ProxyPoolPage() {
         if (!hay.includes(q)) return false;
       }
       if (statusFilter !== 'all' && proxyHealthOf(p, checkResults) !== statusFilter) return false;
+      if (blacklistFilter !== 'all' && blacklistOf(p, checkResults) !== blacklistFilter) return false;
       if (activeGroup === 'all') return true;
       if (activeGroup === 'none') return !p.proxyGroupId;
       if (typeof activeGroup === 'string' && activeGroup.startsWith('provider:')) return p.provider === activeGroup.slice(9);
       return String(p.proxyGroupId) === String(activeGroup);
     });
-  }, [proxies, search, activeGroup, statusFilter, checkResults]);
+  }, [proxies, search, activeGroup, statusFilter, blacklistFilter, checkResults]);
 
   // Latency sort (live check result wins over the stored snapshot; unknown sinks last).
   const sortedProxies = useMemo(() => {
@@ -186,13 +211,20 @@ export default function ProxyPoolPage() {
     return Object.entries(m).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count);
   }, [proxies]);
 
+  // Blocklist tallies for the filter chips (a fresh check wins over the stored value).
+  const blCounts = useMemo(() => {
+    let clean = 0, listed = 0;
+    for (const p of proxies) { const b = blacklistOf(p, checkResults); if (b === 'clean') clean += 1; else if (b === 'blacklisted') listed += 1; }
+    return { clean, listed };
+  }, [proxies, checkResults]);
+
   // Pagination over the filtered+sorted set (keeps long lists fast; pager is pinned at
   // the bottom of the table card so you never scroll to the end to change pages).
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(sortedProxies.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const pagedProxies = pageSize === Infinity ? sortedProxies : sortedProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
   // Reset to page 1 whenever the filter/sort set changes out from under us.
-  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, pageSize, sortBy]);
+  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, blacklistFilter, pageSize, sortBy]);
 
   // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
@@ -291,30 +323,70 @@ export default function ProxyPoolPage() {
     }
   }
 
+  // Deep-check the current selection (streamed, concurrent, with progress + log).
   async function handleBulkCheck() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    await startStreamCheck(ids);
+  }
+
+  // Kick off a streamed deep-check run. `ids` = a specific selection, or null/[] = all.
+  async function startStreamCheck(ids) {
+    setError('');
     setCheckingAll(true);
+    setCheckRun({ running: true, runId: null, done: 0, total: (ids && ids.length) ? ids.length : proxies.length, percent: 0, ok: 0, fail: 0, etaMs: null, totalMs: null, logs: [] });
     try {
-      for (const id of ids) {
-        const proxy = proxies.find((p) => p.id === id);
-        if (!proxy) continue;
-        setCheckingId(id);
-        try {
-          const result = await softglazeApi.proxies.check({ id });
-          setCheckResults((prev) => ({ ...prev, [id]: result }));
-          applyGeoName(id, result);
-        } catch (err) {
-          setCheckResults((prev) => ({ ...prev, [id]: { success: false, error: err.message } }));
-        }
-      }
-    } finally {
-      setCheckingId(null);
+      const res = await softglazeApi.proxies.checkStream(ids && ids.length ? { ids } : {});
+      setCheckRun((prev) => (prev ? { ...prev, runId: res && res.runId ? res.runId : null, total: res && typeof res.total === 'number' ? res.total : prev.total } : prev));
+    } catch (err) {
+      setError(err.message || t('errors.bulkTest'));
       setCheckingAll(false);
+      setCheckRun((prev) => (prev ? { ...prev, running: false } : null));
     }
+  }
+  async function stopStreamCheck() {
+    try { await softglazeApi.proxies.stopCheck(checkRun && checkRun.runId ? { runId: checkRun.runId } : {}); }
+    catch (err) { /* the run ends on its own if the message is lost */ }
   }
 
   useEffect(() => { loadProxies(); loadGroups(); }, [loadProxies, loadGroups]);
+  useEffect(() => { loadProxiesRef.current = loadProxies; }, [loadProxies]);
+
+  // Subscribe once to the streamed proxy-checker progress. Each event updates the
+  // progress bar/counts + appends a log line; per-proxy 'result' events also update
+  // the inline row status. On finish, reload so persisted health/geo is reflected.
+  useEffect(() => {
+    if (!softglazeApi.proxies.onCheckProgress) return undefined;
+    const off = softglazeApi.proxies.onCheckProgress((data) => {
+      if (!data) return;
+      setCheckRun((prev) => {
+        const base = prev || { logs: [] };
+        const logs = data.message ? [...base.logs.slice(-400), { level: data.level, message: data.message, ts: data.ts }] : base.logs;
+        return {
+          ...base,
+          runId: data.runId ?? base.runId ?? null,
+          running: !data.finished,
+          done: data.done ?? base.done ?? 0,
+          total: data.total ?? base.total ?? 0,
+          percent: data.percent ?? base.percent ?? 0,
+          ok: data.ok ?? base.ok ?? 0,
+          fail: data.fail ?? base.fail ?? 0,
+          etaMs: data.etaMs ?? (data.finished ? 0 : base.etaMs ?? null),
+          totalMs: data.totalMs ?? base.totalMs ?? null,
+          logs
+        };
+      });
+      if (data.phase === 'result' && data.proxyId != null && data.result) {
+        setCheckResults((prev) => ({ ...prev, [data.proxyId]: data.result }));
+        applyGeoName(data.proxyId, data.result);
+      }
+      if (data.finished) { setCheckingAll(false); if (loadProxiesRef.current) loadProxiesRef.current(); }
+    });
+    return () => { try { off && off(); } catch (e) { /* ignore */ } };
+  }, []);
+
+  // Auto-scroll the checker log to the newest line.
+  useEffect(() => { if (checkLogRef.current) checkLogRef.current.scrollTop = checkLogRef.current.scrollHeight; }, [checkRun && checkRun.logs && checkRun.logs.length]);
 
   function updateProxyForm(key, value) {
     setProxyForm((current) => ({ ...current, [key]: value }));
@@ -394,23 +466,9 @@ export default function ProxyPoolPage() {
     }
   }
 
+  // Deep-check every proxy (streamed, concurrent, with progress + log).
   async function handleCheckAll() {
-    setCheckingAll(true);
-    try {
-      for (const proxy of proxies) {
-        setCheckingId(proxy.id);
-        try {
-          const result = await softglazeApi.proxies.check({ id: proxy.id });
-          setCheckResults((prev) => ({ ...prev, [proxy.id]: result }));
-          applyGeoName(proxy.id, result);
-        } catch (err) {
-          setCheckResults((prev) => ({ ...prev, [proxy.id]: { success: false, error: err.message } }));
-        }
-      }
-    } finally {
-      setCheckingId(null);
-      setCheckingAll(false);
-    }
+    await startStreamCheck(null);
   }
 
   // Concurrent bulk health test (worker-capped in main). Reflects the persisted
@@ -532,9 +590,16 @@ export default function ProxyPoolPage() {
     const r = checkResults[id];
     if (!r) return <span className="text-xs text-muted-dark">—</span>;
     if (r.success) {
+      const ms = r.avgMs ?? r.latencyMs;
+      const grade = r.health && r.health.grade;
       return (
-        <span className="text-xs font-medium text-emerald-400">
-          {r.ip || '?'}{r.country ? ` · ${r.country}` : ''}{typeof r.latencyMs === 'number' ? ` · ${r.latencyMs}ms` : ''}
+        <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium">
+          <span className="text-emerald-400">{r.ip || '?'}{r.country ? ` · ${r.country}` : ''}{typeof ms === 'number' ? ` · ${ms}ms` : ''}</span>
+          {grade && <span className={`font-bold ${GRADE_COLOR[grade] || 'text-foreground'}`} title={r.health.label ? `${t('checker.health')}: ${r.health.label} (${r.health.score})` : undefined}>{grade}</span>}
+          {r.speed && r.speed.rating && r.speed.rating !== 'unknown' && <span className="text-muted-foreground">{t(`checker.speed.${r.speed.rating}`)}</span>}
+          {r.blacklist && r.blacklist.listed
+            ? <span className="inline-flex items-center gap-0.5 text-amber-400" title={`${t('checker.blacklisted')}: ${(r.blacklist.sources || []).join(', ')}`}><AlertTriangle className="h-3 w-3" /> {t('checker.blacklistShort')}</span>
+            : (r.blacklist && r.blacklist.checked ? <span className="text-emerald-400/70" title={t('checker.notBlacklisted')}>{t('checker.clean')}</span> : null)}
         </span>
       );
     }
@@ -669,6 +734,46 @@ export default function ProxyPoolPage() {
       </div>
       )}
 
+      {/* LIVE CHECKER — progress bar, ETA, counts + a running log of what's happening */}
+      {view === 'custom' && checkRun && (
+        <div className="mb-4 rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {checkRun.running
+              ? <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
+              : <ShieldCheck className="h-4 w-4 text-emerald-400" />}
+            <span className="text-sm font-semibold text-foreground">{checkRun.running ? t('checker.running') : t('checker.done')}</span>
+            <span className="text-[12px] text-muted-foreground">{checkRun.done}/{checkRun.total} · {checkRun.percent}%</span>
+            <span className="text-[12px] text-emerald-400">{t('checker.healthy', { n: checkRun.ok })}</span>
+            <span className="text-[12px] text-red-400">{t('checker.failed', { n: checkRun.fail })}</span>
+            {checkRun.running && checkRun.etaMs != null && <span className="text-[12px] text-muted-foreground">{t('checker.eta')} {fmtDuration(checkRun.etaMs)}</span>}
+            {!checkRun.running && checkRun.totalMs != null && <span className="text-[12px] text-muted-foreground">{fmtDuration(checkRun.totalMs)}</span>}
+            <div className="ml-auto flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setShowCheckLog((v) => !v)} title={showCheckLog ? t('checker.hideLog') : t('checker.showLog')}>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCheckLog ? '' : '-rotate-90'}`} /> {showCheckLog ? t('checker.hideLog') : t('checker.showLog')}
+              </Button>
+              {checkRun.running
+                ? <Button size="sm" variant="secondary" onClick={stopStreamCheck}><X className="h-3.5 w-3.5" /> {t('checker.stop')}</Button>
+                : <Button size="sm" variant="ghost" onClick={() => setCheckRun(null)}><X className="h-3.5 w-3.5" /> {t('checker.dismiss')}</Button>}
+            </div>
+          </div>
+          <div className="h-2.5 w-full rounded-full bg-elevated overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-[width] duration-300" style={{ width: `${Math.max(2, checkRun.percent)}%` }} />
+          </div>
+          {showCheckLog && (
+            <div ref={checkLogRef} className="max-h-36 overflow-y-auto rounded-lg bg-[#0b0f17] border border-border/60 p-2.5 font-mono text-[11px] leading-relaxed">
+              {(!checkRun.logs || checkRun.logs.length === 0)
+                ? <p className="text-muted-foreground/60">{t('checker.idle')}</p>
+                : checkRun.logs.map((l, i) => (
+                  <div key={i} className="whitespace-pre-wrap break-words">
+                    <span className={CHECK_LEVEL_COLOR[l.level] || 'text-foreground'}>[{l.level || 'INFO'}]</span>{' '}
+                    <span className="text-foreground/90">{l.message}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
 
       {view === 'providers' && <ProxyProviders onSynced={loadProxies} />}
@@ -683,10 +788,28 @@ export default function ProxyPoolPage() {
             placeholder={t('search.placeholder')}
           />
         </div>
-        {(statusFilter !== 'all' || activeGroup !== 'all' || search.trim()) && filteredProxies.length > 0 && (
+        {/* Blocklist filter — clean vs blacklisted (from the DNSBL check) */}
+        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[12px]">
+          {[
+            { key: 'all', label: t('blacklistFilter.all') },
+            { key: 'clean', label: t('blacklistFilter.clean'), n: blCounts.clean },
+            { key: 'blacklisted', label: t('blacklistFilter.blacklisted'), n: blCounts.listed }
+          ].map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => setBlacklistFilter(o.key)}
+              title={o.key === 'blacklisted' ? t('blacklistFilter.blacklistedTip') : (o.key === 'clean' ? t('blacklistFilter.cleanTip') : undefined)}
+              className={`inline-flex items-center gap-1 px-2.5 h-7 rounded-md font-medium transition-colors ${blacklistFilter === o.key ? (o.key === 'blacklisted' ? 'bg-amber-500/15 text-amber-400' : o.key === 'clean' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-secondary text-foreground') : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {o.key === 'blacklisted' && <AlertTriangle className="h-3 w-3" />}{o.label}{typeof o.n === 'number' ? <span className="opacity-60">{o.n}</span> : null}
+            </button>
+          ))}
+        </div>
+        {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || search.trim()) && filteredProxies.length > 0 && (
           <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {t('deleteFiltered.button', { scope: statusFilter !== 'all' ? t(`deleteFiltered.scope.${statusFilter}`) : t('deleteFiltered.scope.filtered'), count: filteredProxies.length })}
+            {t('deleteFiltered.button', { scope: statusFilter !== 'all' ? t(`deleteFiltered.scope.${statusFilter}`) : (blacklistFilter !== 'all' ? t(`blacklistFilter.${blacklistFilter}`) : t('deleteFiltered.scope.filtered')), count: filteredProxies.length })}
           </Button>
         )}
       </div>
