@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput, AlertTriangle } from 'lucide-react';
+import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput, AlertTriangle, Zap, Turtle } from 'lucide-react';
 
 // Live-checker log level → colour, health grade → colour, and a short duration format.
 const CHECK_LEVEL_COLOR = { INFO: 'text-sky-300', SUCCESS: 'text-emerald-400', WARN: 'text-amber-400', ERROR: 'text-red-400' };
@@ -52,6 +52,18 @@ function blacklistOf(p, checkResults) {
   if (r && r.blacklist && r.blacklist.checked) return r.blacklist.listed ? 'blacklisted' : 'clean';
   if (typeof p.lastBlacklisted === 'boolean') return p.lastBlacklisted ? 'blacklisted' : 'clean';
   return 'unknown';
+}
+
+// A proxy's speed bucket from its measured latency (a fresh check wins over the
+// stored snapshot). 'fast' ≤ 1.5s, 'slow' above; 'unknown' when never measured
+// (so it's excluded from an explicit Fast/Slow filter rather than mislabelled).
+const SPEED_FAST_MAX_MS = 1500;
+function speedOf(p, checkResults) {
+  const r = checkResults[p.id];
+  const live = r ? (typeof r.avgMs === 'number' ? r.avgMs : (typeof r.latencyMs === 'number' ? r.latencyMs : null)) : null;
+  const ms = live != null ? live : (typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null);
+  if (ms == null) return 'unknown';
+  return ms <= SPEED_FAST_MAX_MS ? 'fast' : 'slow';
 }
 
 // Figma-style compact stat card (tinted, glow, icon tile). When `onClick` is given
@@ -137,6 +149,7 @@ export default function ProxyPoolPage() {
   const checkLogRef = useRef(null);
   const loadProxiesRef = useRef(null);
   const [blacklistFilter, setBlacklistFilter] = useState('all'); // 'all' | 'clean' | 'blacklisted'
+  const [speedFilter, setSpeedFilter] = useState('all'); // 'all' | 'fast' | 'slow' (by measured latency)
   const [proxyPolicy, setProxyPolicy] = useState('each-launch');
   // Proxy categories/groups + the active filter ('all' | 'none' | <groupId> | 'provider:<key>').
   const [groups, setGroups] = useState([]);
@@ -185,12 +198,13 @@ export default function ProxyPoolPage() {
       }
       if (statusFilter !== 'all' && proxyHealthOf(p, checkResults) !== statusFilter) return false;
       if (blacklistFilter !== 'all' && blacklistOf(p, checkResults) !== blacklistFilter) return false;
+      if (speedFilter !== 'all' && speedOf(p, checkResults) !== speedFilter) return false;
       if (activeGroup === 'all') return true;
       if (activeGroup === 'none') return !p.proxyGroupId;
       if (typeof activeGroup === 'string' && activeGroup.startsWith('provider:')) return p.provider === activeGroup.slice(9);
       return String(p.proxyGroupId) === String(activeGroup);
     });
-  }, [proxies, search, activeGroup, statusFilter, blacklistFilter, checkResults]);
+  }, [proxies, search, activeGroup, statusFilter, blacklistFilter, speedFilter, checkResults]);
 
   // Latency sort (live check result wins over the stored snapshot; unknown sinks last).
   const sortedProxies = useMemo(() => {
@@ -218,13 +232,20 @@ export default function ProxyPoolPage() {
     return { clean, listed };
   }, [proxies, checkResults]);
 
+  // Speed tallies for the Fast/Slow filter chips (fresh check wins over the snapshot).
+  const spdCounts = useMemo(() => {
+    let fast = 0, slow = 0;
+    for (const p of proxies) { const s = speedOf(p, checkResults); if (s === 'fast') fast += 1; else if (s === 'slow') slow += 1; }
+    return { fast, slow };
+  }, [proxies, checkResults]);
+
   // Pagination over the filtered+sorted set (keeps long lists fast; pager is pinned at
   // the bottom of the table card so you never scroll to the end to change pages).
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(sortedProxies.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const pagedProxies = pageSize === Infinity ? sortedProxies : sortedProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
   // Reset to page 1 whenever the filter/sort set changes out from under us.
-  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, blacklistFilter, pageSize, sortBy]);
+  useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, blacklistFilter, speedFilter, pageSize, sortBy]);
 
   // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
@@ -734,9 +755,10 @@ export default function ProxyPoolPage() {
       </div>
       )}
 
-      {/* LIVE CHECKER — progress bar, ETA, counts + a running log of what's happening */}
+      {/* LIVE CHECKER — a floating docked card (bottom-right) so opening the log never
+          steals height from the proxy table. Progress bar, ETA, counts + running log. */}
       {view === 'custom' && checkRun && (
-        <div className="mb-4 rounded-xl border border-border bg-card p-4 space-y-3">
+        <div className="fixed bottom-5 right-5 z-40 w-[440px] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border-strong bg-card/85 backdrop-blur-xl p-4 space-y-3 shadow-2xl shadow-black/50 animate-scale-in">
           <div className="flex items-center gap-3 flex-wrap">
             {checkRun.running
               ? <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
@@ -760,7 +782,7 @@ export default function ProxyPoolPage() {
             <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-[width] duration-300" style={{ width: `${Math.max(2, checkRun.percent)}%` }} />
           </div>
           {showCheckLog && (
-            <div ref={checkLogRef} className="max-h-36 overflow-y-auto rounded-lg bg-[#0b0f17] border border-border/60 p-2.5 font-mono text-[11px] leading-relaxed">
+            <div ref={checkLogRef} className="max-h-52 overflow-y-auto rounded-lg bg-[#0b0f17] border border-border/60 p-2.5 font-mono text-[11px] leading-relaxed">
               {(!checkRun.logs || checkRun.logs.length === 0)
                 ? <p className="text-muted-foreground/60">{t('checker.idle')}</p>
                 : checkRun.logs.map((l, i) => (
@@ -806,7 +828,25 @@ export default function ProxyPoolPage() {
             </button>
           ))}
         </div>
-        {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || search.trim()) && filteredProxies.length > 0 && (
+        {/* Speed filter — fast vs slow, by measured latency */}
+        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[12px]">
+          {[
+            { key: 'all', label: t('speedFilter.all'), icon: null },
+            { key: 'fast', label: t('speedFilter.fast'), n: spdCounts.fast, icon: Zap },
+            { key: 'slow', label: t('speedFilter.slow'), n: spdCounts.slow, icon: Turtle }
+          ].map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => setSpeedFilter(o.key)}
+              title={o.key === 'fast' ? t('speedFilter.fastTip') : (o.key === 'slow' ? t('speedFilter.slowTip') : undefined)}
+              className={`inline-flex items-center gap-1 px-2.5 h-7 rounded-md font-medium transition-colors ${speedFilter === o.key ? (o.key === 'fast' ? 'bg-sky-500/15 text-sky-400' : o.key === 'slow' ? 'bg-orange-500/15 text-orange-400' : 'bg-secondary text-foreground') : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {o.icon && <o.icon className="h-3 w-3" />}{o.label}{typeof o.n === 'number' ? <span className="opacity-60">{o.n}</span> : null}
+            </button>
+          ))}
+        </div>
+        {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || speedFilter !== 'all' || search.trim()) && filteredProxies.length > 0 && (
           <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {t('deleteFiltered.button', { scope: statusFilter !== 'all' ? t(`deleteFiltered.scope.${statusFilter}`) : (blacklistFilter !== 'all' ? t(`blacklistFilter.${blacklistFilter}`) : t('deleteFiltered.scope.filtered')), count: filteredProxies.length })}

@@ -17,7 +17,12 @@
     "heroLine1": "Run hundreds of identities.",
     "heroLine2": "Leave zero trace.",
     "heroBody": "A local-first anti-detect browser. Every profile gets a unique, consistent fingerprint and its own network identity.",
-    "footer": "© {{year}} SoftGlaze · Local workspace"
+    "footer": "© {{year}} SoftGlaze · Local workspace",
+    "trust": {
+      "local": "Local-first",
+      "encrypted": "Encrypted vault",
+      "private": "Zero telemetry"
+    }
   },
   "license": {
     "graceMessage_one": "Your subscription has ended — {{count}} day of grace left. Renew to keep access.",

@@ -166,6 +166,13 @@
     "cleanTip": "Show only proxies not on any checked blocklist",
     "blacklistedTip": "Show only proxies flagged on a DNS blocklist"
   },
+  "speedFilter": {
+    "all": "All",
+    "fast": "Fast",
+    "slow": "Slow",
+    "fastTip": "Show only proxies measured at 1.5s or faster",
+    "slowTip": "Show only proxies measured slower than 1.5s"
+  },
   "bulkDelete": {
     "confirm_one": "Delete {{count}} selected proxy? Linked profiles will keep working with their proxy assignment cleared.",
     "confirm_other": "Delete {{count}} selected proxies? Linked profiles will keep working with their proxy assignment cleared."
