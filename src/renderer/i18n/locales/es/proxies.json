@@ -166,6 +166,13 @@
     "cleanTip": "Mostrar solo proxies que no están en ninguna lista negra verificada",
     "blacklistedTip": "Mostrar solo proxies marcados en una lista negra DNS"
   },
+  "speedFilter": {
+    "all": "Todos",
+    "fast": "Rápidos",
+    "slow": "Lentos",
+    "fastTip": "Mostrar solo proxies medidos en 1.5s o menos",
+    "slowTip": "Mostrar solo proxies medidos con más de 1.5s"
+  },
   "bulkDelete": {
     "confirm_one": "¿Eliminar {{count}} proxy seleccionado? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada.",
     "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada."

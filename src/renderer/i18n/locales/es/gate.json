@@ -17,7 +17,12 @@
     "heroLine1": "Ejecuta cientos de identidades.",
     "heroLine2": "Sin dejar rastro.",
     "heroBody": "Un navegador anti-detect que prioriza lo local. Cada perfil obtiene una huella digital única y consistente y su propia identidad de red.",
-    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local"
+    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local",
+    "trust": {
+      "local": "Local primero",
+      "encrypted": "Bóveda cifrada",
+      "private": "Sin telemetría"
+    }
   },
   "license": {
     "graceMessage_one": "Tu suscripción ha terminado — queda {{count}} día de gracia. Renueva para mantener el acceso.",
