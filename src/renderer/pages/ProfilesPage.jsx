@@ -701,7 +701,7 @@ export default function ProfilesPage() {
   useEffect(() => { refreshInstalledBrowsers(); }, [refreshInstalledBrowsers]);
 
   async function handleQuickGenerate(config, onProgress) {
-    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource } = config;
+    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
     // proxySource (pool mode only): '' = all, 'group:<id>', or 'provider:<key>'.
     const src = String(proxySource || '');
@@ -724,6 +724,8 @@ export default function ProfilesPage() {
       proxyMode, // 'direct' | 'unique' | 'pool' | 'paste'
       proxyGroupId,
       provider,
+      proxySpeed, // 'any' | 'fast' | 'slow' (pool/unique: pre-filter by latency)
+      proxyBlacklist, // 'any' | 'clean' | 'blacklisted' (pool/unique: pre-filter by DNSBL result)
       proxyList: pasted
     });
     if (onProgress) onProgress(result?.createdCount ?? count, count);

@@ -8,7 +8,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 // BEFORE <Gate>, collects the workspace password, and asks main to decrypt + open
 // the database. Once unlocked it renders its children (the normal Gate flow). When
 // encryption is off (the default) it is a transparent pass-through.
-const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors placeholder:text-muted-dark font-mono';
+const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark font-mono';
 
 export default function DbGate({ children }) {
   const { t } = useTranslation('gate');
@@ -62,8 +62,12 @@ export default function DbGate({ children }) {
   }
 
   return (
-    <div className="h-screen w-full bg-background text-foreground font-sans grid place-items-center p-6">
-      <div className="w-full max-w-[400px] animate-fade-up">
+    <div className="relative h-screen w-full bg-background text-foreground font-sans grid place-items-center p-6 overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-28 left-1/3 w-[26rem] h-[26rem] rounded-full bg-primary/12 blur-[130px] animate-float-slow" />
+        <div className="absolute -bottom-24 right-1/4 w-96 h-96 rounded-full bg-accent/10 blur-[130px] animate-float-slower" />
+      </div>
+      <div className="relative w-full max-w-[420px] animate-fade-up rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
         <div className="flex items-center gap-2.5 mb-7">
           <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-9 h-9 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
           <span className="font-display font-semibold tracking-tight">SoftGlaze</span>
@@ -103,7 +107,7 @@ export default function DbGate({ children }) {
           </div>
         )}
 
-        <button disabled={busy} onClick={unlock} className="mt-6 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
+        <button disabled={busy} onClick={unlock} className="mt-6 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200 hover:shadow-[0_10px_28px_-8px_rgba(59,130,246,0.65)] hover:-translate-y-px active:translate-y-0">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('db.unlock')} <Lock className="w-4 h-4" /></>}
         </button>
 
