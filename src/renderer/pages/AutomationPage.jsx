@@ -1019,6 +1019,11 @@ function WarmerPanel() {
   const [customUrl, setCustomUrl] = useState('');
   const [loop, setLoop] = useState(false);
   const [keepOpen, setKeepOpen] = useState(false);
+  const [hidden, setHidden] = useState(true); // default ON — warm without opening visible windows
+  const [bulkText, setBulkText] = useState('');
+  const [showBulk, setShowBulk] = useState(false);
+  const [pasteIds, setPasteIds] = useState('');
+  const fileRef = useRef(null);
 
   useEffect(() => {
     softglazeApi.profiles.list({}).then((rows) => setProfiles(Array.isArray(rows) ? rows : [])).catch(() => setProfiles([]));
@@ -1037,6 +1042,9 @@ function WarmerPanel() {
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
 
   const filtered = profiles.filter((p) => !search || String(p.title || '').toLowerCase().includes(search.toLowerCase()));
+  // Distinct groups/tags across the loaded profiles, for one-click bulk selection.
+  const groupList = Array.from(new Map(profiles.filter((p) => p.group).map((p) => [p.group.id, p.group.name])).entries());
+  const tagList = Array.from(new Set(profiles.flatMap((p) => (Array.isArray(p.tags) ? p.tags : [])))).sort();
 
   function toggle(id) {
     setSelected((prev) => {
@@ -1065,6 +1073,67 @@ function WarmerPanel() {
 
   function updateSite(i, patch) { setSites((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s))); }
   function removeSite(i) { setSites((prev) => prev.filter((_, idx) => idx !== i)); }
+  function clearSites() { setSites([]); }
+
+  // Parse many links at once. One entry per line; a line may be a bare domain, a
+  // full URL, or a CSV row "url, seconds, behaviour". Blank/# lines are ignored and
+  // duplicates (against what's already listed) are dropped.
+  function addLinksFromText(text) {
+    setSites((prev) => {
+      const seen = new Set(prev.map((s) => s.url));
+      const additions = [];
+      for (const rawLine of String(text || '').split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith('#')) continue;
+        const cols = line.split(',').map((c) => c.trim());
+        if (!cols[0]) continue;
+        const url = /^https?:\/\//i.test(cols[0]) ? cols[0] : `https://${cols[0]}`;
+        let host;
+        try { host = new URL(url).hostname; } catch (e) { continue; }
+        if (seen.has(url)) continue;
+        seen.add(url);
+        const seconds = Math.max(3, Math.min(600, Number.parseInt(cols[1], 10) || 30));
+        const clickMode = ['none', 'random', 'links'].includes(cols[2]) ? cols[2] : 'none';
+        additions.push({ url, label: host.replace(/^www\./, ''), seconds, clickMode });
+      }
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+  }
+  function addBulk() { addLinksFromText(bulkText); setBulkText(''); setShowBulk(false); }
+  async function importFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      try { addLinksFromText(await file.text()); }
+      catch (err) { setErr(t('warmer.errors.importFile')); }
+    }
+    e.target.value = ''; // allow re-selecting the same file
+  }
+
+  // ---- Bulk profile selection over the (search-)filtered list ----
+  function selectAll() { setSelected(new Set(filtered.map((p) => p.id))); }
+  function selectNone() { setSelected(new Set()); }
+  function invertSel() {
+    setSelected((prev) => { const next = new Set(prev); filtered.forEach((p) => { if (next.has(p.id)) next.delete(p.id); else next.add(p.id); }); return next; });
+  }
+  function addByGroup(gid) {
+    if (!gid) return;
+    setSelected((prev) => { const next = new Set(prev); profiles.forEach((p) => { if (p.group && String(p.group.id) === String(gid)) next.add(p.id); }); return next; });
+  }
+  function addByTag(tag) {
+    if (!tag) return;
+    setSelected((prev) => { const next = new Set(prev); profiles.forEach((p) => { if (Array.isArray(p.tags) && p.tags.includes(tag)) next.add(p.id); }); return next; });
+  }
+  function selectFromPaste() {
+    const raw = pasteIds.trim();
+    if (!raw) return;
+    const tokens = new Set(raw.split(/[\s,;]+/).map((s) => s.trim().replace(/^#/, '').toLowerCase()).filter(Boolean));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      profiles.forEach((p) => { if (tokens.has(String(p.id)) || tokens.has(String(p.title || '').toLowerCase())) next.add(p.id); });
+      return next;
+    });
+    setPasteIds('');
+  }
 
   async function start() {
     setErr('');
@@ -1078,6 +1147,7 @@ function WarmerPanel() {
         profileIds: ids,
         loop,
         keepOpen,
+        headless: hidden,
         sites: sites.map((s) => ({ url: s.url, label: s.label, seconds: Number(s.seconds) || 30, clickMode: s.clickMode || 'none' }))
       };
       const res = await softglazeApi.automation.startWarmer(payload);
@@ -1128,6 +1198,25 @@ function WarmerPanel() {
             <button onClick={addCustom} disabled={!customUrl.trim()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
 
+          {/* Bulk add links · import a .txt/.csv · clear all */}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowBulk((v) => !v)} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> {t('warmer.bulkAdd')}</button>
+            <button onClick={() => fileRef.current && fileRef.current.click()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><FileSpreadsheet className="w-3.5 h-3.5" /> {t('warmer.importFile')}</button>
+            <input ref={fileRef} type="file" accept=".txt,.csv,text/plain,text/csv" onChange={importFile} className="hidden" />
+            {sites.length > 0 && (
+              <button onClick={clearSites} className="h-8 px-2.5 ml-auto rounded-lg border border-border text-[12px] text-muted-foreground hover:text-red-400 hover:bg-red-500/10 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" /> {t('warmer.clearAll')}</button>
+            )}
+          </div>
+          {showBulk && (
+            <div className="space-y-1.5">
+              <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={5} placeholder={t('warmer.bulkPlaceholder')} className="w-full bg-input-background border border-border rounded-lg px-3 py-2 text-[11.5px] font-mono text-foreground outline-none focus:border-primary resize-y" />
+              <div className="flex items-center gap-2">
+                <button onClick={addBulk} disabled={!bulkText.trim()} className="h-8 px-3 rounded-lg text-[12px] font-semibold text-white bg-orange-500 hover:bg-orange-400 disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.addList')}</button>
+                <span className="text-[10.5px] text-muted-foreground">{t('warmer.bulkHint')}</span>
+              </div>
+            </div>
+          )}
+
           {/* Configured sites — per-site dwell time + behaviour */}
           <div className="rounded-lg border border-border bg-elevated/40 divide-y divide-border/60 max-h-[240px] overflow-y-auto">
             {sites.length === 0 ? (
@@ -1158,6 +1247,9 @@ function WarmerPanel() {
             <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
               <input type="checkbox" checked={keepOpen} onChange={(e) => setKeepOpen(e.target.checked)} className="accent-orange-500" /> {t('warmer.keepOpen')}
             </label>
+            <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer" title={t('warmer.hiddenTitle')}>
+              <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} className="accent-orange-500" /> {t('warmer.hidden')}
+            </label>
           </div>
           <p className="text-[10.5px] text-muted-foreground/80">{t('warmer.cookieNote')}</p>
         </div>
@@ -1185,6 +1277,30 @@ function WarmerPanel() {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('warmer.searchPlaceholder')} className="h-7 w-40 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
             </div>
           </div>
+
+          {/* Bulk selection — all/none/invert + add a whole group or tag at once */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <button onClick={selectAll} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.selectAll')}</button>
+            <button onClick={selectNone} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.selectNone')}</button>
+            <button onClick={invertSel} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.invert')}</button>
+            {groupList.length > 0 && (
+              <select value="" onChange={(e) => addByGroup(e.target.value)} className="h-7 rounded-md border border-border bg-input-background text-[11px] text-foreground px-1.5 outline-none focus:border-primary">
+                <option value="">{t('warmer.addGroup')}</option>
+                {groupList.map(([gid, gname]) => <option key={gid} value={gid}>{gname}</option>)}
+              </select>
+            )}
+            {tagList.length > 0 && (
+              <select value="" onChange={(e) => addByTag(e.target.value)} className="h-7 rounded-md border border-border bg-input-background text-[11px] text-foreground px-1.5 outline-none focus:border-primary">
+                <option value="">{t('warmer.addTag')}</option>
+                {tagList.map((tg) => <option key={tg} value={tg}>{tg}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <input value={pasteIds} onChange={(e) => setPasteIds(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') selectFromPaste(); }} placeholder={t('warmer.pasteIdsPlaceholder')} className="h-7 flex-1 min-w-0 bg-input-background border border-border rounded-md px-2 text-[11.5px] text-foreground outline-none focus:border-primary" />
+            <button onClick={selectFromPaste} disabled={!pasteIds.trim()} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50">{t('warmer.selectPaste')}</button>
+          </div>
+
           <div className="rounded-lg border border-border bg-elevated/40 max-h-[320px] overflow-y-auto divide-y divide-border/60">
             {filtered.length === 0 ? (
               <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">{t('warmer.noProfiles')}</div>

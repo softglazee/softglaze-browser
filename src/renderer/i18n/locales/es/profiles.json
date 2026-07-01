@@ -31,6 +31,36 @@
     "preview": "Vista previa:",
     "rename": "Renombrar"
   },
+  "reassignModal": {
+    "ariaLabel": "Reasignar proxies a los perfiles seleccionados",
+    "title_one": "Proxies · {{count}} perfil",
+    "title_other": "Proxies · {{count}} perfiles",
+    "subtitle": "Reasigna, intercambia o quita los proxies de los perfiles seleccionados.",
+    "modeLabel": "Acción",
+    "modes": {
+      "unique": "Único — un proxy distinto por perfil",
+      "pool": "Rotación — reparte un conjunto entre los perfiles",
+      "single": "Un proxy para todos los seleccionados",
+      "shuffle": "Barajar — intercambia los proxies que ya tienen",
+      "clear": "Quitar — sin proxy (directo)"
+    },
+    "sourceLabel": "Tomar proxies de",
+    "sources": {
+      "all": "Todo el grupo de proxies",
+      "unassigned": "Solo proxies sin asignar",
+      "group": "Un grupo de proxies",
+      "paste": "Pegar una lista"
+    },
+    "pickGroup": "Elige un grupo…",
+    "pastePlaceholder": "host:puerto:usuario:contraseña — uno por línea",
+    "verify": "Verificar que los proxies estén activos primero (más lento)",
+    "proxyLabel": "Proxy",
+    "pickProxy": "Elige un proxy…",
+    "shuffleNote": "Cada perfil seleccionado cambia al proxy de otro perfil seleccionado. Requiere al menos dos perfiles con proxy.",
+    "clearNote": "Quita el proxy de todos los perfiles seleccionados (se conectan directamente).",
+    "apply": "Aplicar",
+    "limited": "Asignados {{assigned}} — {{skipped}} perfil(es) se quedaron sin proxy en la fuente."
+  },
   "tabs": {
     "general": "General",
     "proxy": "Proxy",
@@ -277,6 +307,8 @@
     "tagTitle": "Añadir o quitar una etiqueta",
     "rename": "Renombrar",
     "renameTitle": "Renombrar en lote con un prefijo",
+    "reassignProxy": "Proxy",
+    "reassignProxyTitle": "Reasignar, intercambiar o quitar proxies en los perfiles seleccionados",
     "share": "Compartir",
     "shareTitle": "Compartir con miembros del equipo",
     "compare": "Comparar",
