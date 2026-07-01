@@ -33,6 +33,9 @@ const CHANNELS = Object.freeze({
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
+  PROXY_CHECK_STREAM: 'proxy:check-stream',
+  PROXY_CHECK_STOP: 'proxy:check-stop',
+  PROXY_CHECK_PROGRESS: 'proxy:check-progress',
   PROXY_GROUP_LIST: 'proxy-group:list',
   PROXY_GROUP_CREATE: 'proxy-group:create',
   PROXY_GROUP_UPDATE: 'proxy-group:update',
@@ -292,6 +295,13 @@ const api = Object.freeze({
     saveProviderCreds: (payload) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_SET, payload),
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL),
+    checkStream: (payload) => invoke(CHANNELS.PROXY_CHECK_STREAM, payload),
+    stopCheck: (payload) => invoke(CHANNELS.PROXY_CHECK_STOP, payload),
+    onCheckProgress: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.PROXY_CHECK_PROGRESS, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.PROXY_CHECK_PROGRESS, listener);
+    },
     autoGroup: (level) => invoke(CHANNELS.PROXY_AUTO_GROUP, { level }),
     healthHistory: (id) => invoke(CHANNELS.PROXY_HEALTH_HISTORY, { id })
   }),

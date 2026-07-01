@@ -136,6 +136,36 @@
     "checking": "Verificando…",
     "failed": "Fallido"
   },
+  "checker": {
+    "running": "Verificando proxies…",
+    "done": "Verificación completa",
+    "healthy": "{{n}} sanos",
+    "failed": "{{n}} fallidos",
+    "eta": "Tiempo restante",
+    "stop": "Detener",
+    "dismiss": "Descartar",
+    "idle": "Esperando para empezar…",
+    "health": "Salud",
+    "blacklisted": "En lista negra de",
+    "blacklistShort": "en lista negra",
+    "notBlacklisted": "No está en ninguna lista negra verificada",
+    "clean": "limpio",
+    "hideLog": "Ocultar registro",
+    "showLog": "Mostrar registro",
+    "speed": {
+      "fast": "rápido",
+      "good": "bueno",
+      "ok": "aceptable",
+      "slow": "lento"
+    }
+  },
+  "blacklistFilter": {
+    "all": "Todos",
+    "clean": "Limpios",
+    "blacklisted": "En lista negra",
+    "cleanTip": "Mostrar solo proxies que no están en ninguna lista negra verificada",
+    "blacklistedTip": "Mostrar solo proxies marcados en una lista negra DNS"
+  },
   "bulkDelete": {
     "confirm_one": "¿Eliminar {{count}} proxy seleccionado? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada.",
     "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada."
