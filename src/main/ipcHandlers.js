@@ -93,6 +93,9 @@ const CHANNELS = Object.freeze({
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
+  PROXY_CHECK_STREAM: 'proxy:check-stream',
+  PROXY_CHECK_STOP: 'proxy:check-stop',
+  PROXY_CHECK_PROGRESS: 'proxy:check-progress', // main → renderer stream
   PROXY_GROUP_LIST: 'proxy-group:list',
   PROXY_GROUP_CREATE: 'proxy-group:create',
   PROXY_GROUP_UPDATE: 'proxy-group:update',
@@ -460,6 +463,7 @@ function serializeProxy(proxy) {
     profileNames: Array.isArray(proxy.profiles) ? proxy.profiles.map((p) => p.title).filter(Boolean) : undefined,
     lastStatus: proxy.lastStatus || null,
     lastLatencyMs: proxy.lastLatencyMs ?? null,
+    lastBlacklisted: typeof proxy.lastBlacklisted === 'boolean' ? proxy.lastBlacklisted : null,
     lastCountry: proxy.lastCountry || null,
     lastCheckedAt: proxy.lastCheckedAt instanceof Date ? proxy.lastCheckedAt.toISOString() : (proxy.lastCheckedAt || null)
   };
@@ -1708,6 +1712,206 @@ async function checkProxy(payload) {
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Deep proxy check — connectivity + geo, extra real-site probes, DNSBL blacklist
+// lookup, and a rolled-up health score + speed rating. Streamed to the UI in
+// batches (runProxyCheckStream) with live per-proxy progress.
+// ---------------------------------------------------------------------------
+
+// Build a proxy agent for ad-hoc probes (mirrors testProxyConnectivity's agent).
+function buildProxyAgent(proxy) {
+  let ProxyAgent;
+  try { ({ ProxyAgent } = require('proxy-agent')); } catch (e) { return null; }
+  const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  const auth = proxy.username ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
+  return new ProxyAgent({ getProxyForUrl: () => `${scheme}://${auth}${proxy.host}:${proxy.port}` });
+}
+
+// Lightweight connectivity probe THROUGH a proxy agent — returns the HTTP status
+// (any response means bytes flowed end-to-end) or throws on timeout/refusal. The
+// body is drained and ignored.
+function httpProbeStatus(url, agent, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    let lib;
+    try { const u = new URL(url); lib = u.protocol === 'https:' ? require('node:https') : require('node:http'); }
+    catch (e) { return reject(new Error('Invalid probe URL.')); }
+    let done = false; let timer;
+    const cleanup = () => { done = true; if (timer) clearTimeout(timer); };
+    const req = lib.get(url, { agent, insecureHTTPParser: true, headers: { 'User-Agent': 'SoftGlaze-ProxyCheck/1.0', Accept: '*/*' } }, (res) => {
+      const status = res.statusCode || 0;
+      res.resume(); // drain the body — we only care that a response came back
+      res.on('end', () => { if (done) return; cleanup(); resolve(status); });
+      res.on('error', () => { if (done) return; cleanup(); resolve(status); });
+    });
+    timer = setTimeout(() => { if (done) return; cleanup(); req.destroy(); reject(new Error('timed out')); }, timeoutMs);
+    req.on('error', (err) => { if (done) return; cleanup(); reject(err); });
+  });
+}
+
+// Two ultra-light, globally-reachable endpoints (tiny responses) to prove the proxy
+// can load real sites, not just the IP service.
+const PROXY_PROBE_URLS = [
+  { name: 'Google', url: 'https://www.google.com/generate_204', host: 'google.com' },
+  { name: 'Cloudflare', url: 'https://www.cloudflare.com/cdn-cgi/trace', host: 'cloudflare.com' }
+];
+async function probeUrl(agent, target) {
+  const started = Date.now();
+  try {
+    const status = await httpProbeStatus(target.url, agent, 12000);
+    return { name: target.name, host: target.host, ok: status > 0 && status < 500, status, ms: Date.now() - started };
+  } catch (e) {
+    return { name: target.name, host: target.host, ok: false, status: 0, ms: Date.now() - started, error: (e && e.message) || 'failed' };
+  }
+}
+
+// DNSBL (DNS blocklist) reputation check for the proxy's EXIT IP. Reverses the
+// octets and queries a few well-known blocklists; a listing-range A record (127.0.0.x)
+// = flagged. Best-effort: a zone that errors/times out or returns a non-listing
+// sentinel (e.g. Spamhaus's "public resolver blocked" 127.255.255.x) is treated as
+// NOT listed, so we never raise a false positive.
+const DNSBL_ZONES = [
+  { zone: 'zen.spamhaus.org', name: 'Spamhaus' },
+  { zone: 'bl.spamcop.net', name: 'SpamCop' },
+  { zone: 'dnsbl.sorbs.net', name: 'SORBS' },
+  { zone: 'b.barracudacentral.org', name: 'Barracuda' }
+];
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+}
+async function checkBlacklist(ip) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || ''));
+  if (!m) return { checked: false, listed: false, sources: [] }; // IPv6 / unknown → skip
+  const rev = `${m[4]}.${m[3]}.${m[2]}.${m[1]}`;
+  const dns = require('node:dns').promises;
+  const sources = [];
+  await Promise.all(DNSBL_ZONES.map(async ({ zone, name }) => {
+    try {
+      const a = await withTimeout(dns.resolve4(`${rev}.${zone}`), 4000);
+      if (Array.isArray(a) && a.some((addr) => /^127\.0\.0\.\d+$/.test(addr))) sources.push(name);
+    } catch (e) { /* NXDOMAIN / timeout / error → not listed */ }
+  }));
+  return { checked: true, listed: sources.length > 0, sources };
+}
+
+function speedRating(avgMs) {
+  if (avgMs == null) return { rating: 'unknown', avgMs: null };
+  if (avgMs < 500) return { rating: 'fast', avgMs };
+  if (avgMs < 1500) return { rating: 'good', avgMs };
+  if (avgMs < 3000) return { rating: 'ok', avgMs };
+  return { rating: 'slow', avgMs };
+}
+function computeProxyHealthScore({ okCount, total, avgMs, listedCount }) {
+  if (!total || okCount === 0) return { score: 0, grade: 'F', label: 'Dead' };
+  let score = Math.round((okCount / total) * 100);
+  if (avgMs != null) { if (avgMs > 3000) score -= 30; else if (avgMs > 1500) score -= 18; else if (avgMs > 800) score -= 8; }
+  score -= Math.min(30, (listedCount || 0) * 12);
+  score = Math.max(0, Math.min(100, score));
+  let grade = 'F', label = 'At risk';
+  if (score >= 90) { grade = 'A'; label = 'Excellent'; }
+  else if (score >= 80) { grade = 'B'; label = 'Good'; }
+  else if (score >= 65) { grade = 'C'; label = 'Fair'; }
+  else if (score >= 45) { grade = 'D'; label = 'Weak'; }
+  return { score, grade, label };
+}
+
+// Superset of testProxyConnectivity's result (adds urlChecks, blacklist, avgMs,
+// health, speed) — persistProxyHealth still reads the same base fields unchanged.
+async function deepCheckProxy(proxy) {
+  const geo = await testProxyConnectivity(proxy); // primary probe (IP/geo service)
+  const urlChecks = [{ name: 'IP / Geo', host: 'ipinfo.io', ok: !!geo.success, status: geo.success ? 200 : 0, ms: geo.latencyMs ?? null }];
+  if (geo.success) {
+    const agent = buildProxyAgent(proxy);
+    if (agent) for (const target of PROXY_PROBE_URLS) urlChecks.push(await probeUrl(agent, target));
+  }
+  let blacklist = { checked: false, listed: false, sources: [] };
+  if (geo.success && geo.ip) { try { blacklist = await checkBlacklist(geo.ip); } catch (e) { /* best-effort */ } }
+  const okCount = urlChecks.filter((u) => u.ok).length;
+  const times = urlChecks.filter((u) => u.ok && typeof u.ms === 'number').map((u) => u.ms);
+  const avgMs = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
+  const health = geo.success
+    ? computeProxyHealthScore({ okCount, total: urlChecks.length, avgMs, listedCount: blacklist.sources.length })
+    : { score: 0, grade: 'F', label: 'Dead' };
+  return { ...geo, urlChecks, blacklist, avgMs, health, speed: speedRating(avgMs) };
+}
+
+// Only non-secret, display-safe fields cross to the renderer.
+function publicProxyCheckResult(r) {
+  return {
+    success: !!r.success, ip: r.ip || null, country: r.country || null, region: r.region || null,
+    city: r.city || null, isp: r.isp || null, latencyMs: r.latencyMs ?? null, avgMs: r.avgMs ?? null,
+    urlChecks: Array.isArray(r.urlChecks) ? r.urlChecks : [],
+    blacklist: r.blacklist || { checked: false, listed: false, sources: [] },
+    health: r.health || { score: 0, grade: 'F', label: '' },
+    speed: r.speed || { rating: 'unknown', avgMs: null },
+    error: r.error || null
+  };
+}
+
+// Live, streamed batch checker for "Check all" / "Check selected". Deep-checks with
+// bounded concurrency and pushes per-proxy + overall progress (proxy:check-progress)
+// so the UI can render a real progress bar, ETA, counts and a running log.
+const proxyCheckRuns = new Map();
+
+async function runProxyCheckStream(payload, event) {
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const db = getPrisma();
+  let proxies;
+  if (Array.isArray(input.ids) && input.ids.length) {
+    const ids = parseIdArray(input.ids);
+    const { allowed } = await partitionAccessibleProxyIds(ids);
+    proxies = await db.proxy.findMany({ where: { id: { in: allowed } }, orderBy: { createdAt: 'asc' } });
+  } else {
+    proxies = await db.proxy.findMany({ where: await scopedProxyWhere(undefined), orderBy: { createdAt: 'asc' } });
+  }
+  const total = proxies.length;
+  const runId = `pcheck-${Date.now()}`;
+  const send = (data) => { try { event.sender.send(CHANNELS.PROXY_CHECK_PROGRESS, { runId, ts: Date.now(), ...data }); } catch (e) { /* renderer gone */ } };
+  if (!total) { send({ level: 'WARN', message: 'No proxies to check.', done: 0, total: 0, percent: 100, ok: 0, fail: 0, finished: true }); return { started: true, runId, total: 0 }; }
+
+  const run = { aborted: false };
+  proxyCheckRuns.set(runId, run);
+  const cap = Math.max(1, Math.min(12, Number(input.concurrency) || 6));
+  send({ level: 'INFO', message: `Starting health check · ${total} prox${total === 1 ? 'y' : 'ies'} · up to ${cap} at a time…`, done: 0, total, percent: 0, ok: 0, fail: 0 });
+
+  let cursor = 0, done = 0, ok = 0, fail = 0;
+  const startedAt = Date.now();
+  async function worker() {
+    while (cursor < proxies.length && !run.aborted) {
+      const p = proxies[cursor++];
+      const label = p.name || `${p.host}:${p.port}`;
+      send({ level: 'INFO', proxyId: p.id, phase: 'start', message: `Checking ${label} · ${p.type} · ${p.host}:${p.port} …` });
+      let result;
+      try { result = await deepCheckProxy({ type: p.type, host: p.host, port: p.port, username: p.username, password: p.password }); }
+      catch (e) { result = { success: false, error: (e && e.message) || 'check failed', urlChecks: [], blacklist: { checked: false, listed: false, sources: [] }, health: { score: 0, grade: 'F', label: 'Dead' }, speed: { rating: 'unknown', avgMs: null }, avgMs: null }; }
+      await persistProxyHealth(db, p.id, result).catch(() => {});
+      done += 1; if (result.success) ok += 1; else fail += 1;
+      const elapsed = Date.now() - startedAt;
+      const etaMs = done ? Math.max(0, Math.round((elapsed / done) * (total - done))) : null;
+      const urls = result.urlChecks || [];
+      const okUrls = urls.filter((u) => u.ok).length;
+      const line = result.success
+        ? `${label} → ${result.country || '??'}${result.city ? ' · ' + result.city : ''} · ${result.avgMs != null ? result.avgMs + 'ms' : '—'} · ${okUrls}/${urls.length} sites · ${result.health.grade} ${result.health.label} · ${result.speed.rating}${result.blacklist.listed ? ` · ⚠ blacklisted (${result.blacklist.sources.join(', ')})` : (result.blacklist.checked ? ' · clean' : '')}`
+        : `${label} → FAILED · ${result.error || 'unreachable'}`;
+      send({ level: result.success ? (result.blacklist.listed ? 'WARN' : 'SUCCESS') : 'ERROR', proxyId: p.id, phase: 'result', message: line, result: publicProxyCheckResult(result), done, total, ok, fail, percent: Math.round((done / total) * 100), etaMs });
+    }
+  }
+  (async () => {
+    await Promise.all(Array.from({ length: Math.min(cap, total) }, () => worker()));
+    try { await autoGroupProxies({ level: 'country', onlyUngrouped: true }); } catch (e) { /* ignore */ }
+    const totalMs = Date.now() - startedAt;
+    send({ level: run.aborted ? 'WARN' : 'SUCCESS', message: run.aborted ? `Stopped · ${done}/${total} checked · ${ok} healthy, ${fail} failed` : `Finished · ${ok} healthy, ${fail} failed · ${(totalMs / 1000).toFixed(1)}s`, done, total, ok, fail, percent: Math.round((done / total) * 100), finished: true, totalMs });
+    proxyCheckRuns.delete(runId);
+  })();
+  return { started: true, runId, total };
+}
+
+async function stopProxyCheck(payload) {
+  const runId = payload && payload.runId ? String(payload.runId) : null;
+  const runs = runId ? (proxyCheckRuns.has(runId) ? [proxyCheckRuns.get(runId)] : []) : [...proxyCheckRuns.values()];
+  runs.forEach((r) => { r.aborted = true; });
+  return { stopped: runs.length };
 }
 
 // Cross-checks a profile's fingerprint configuration against its proxy's real
@@ -4163,6 +4367,10 @@ async function persistProxyHealth(db, id, result) {
     lastCity: result.city || null,
     lastCheckedAt: new Date()
   };
+  // Persist the DNSBL blocklist verdict when the deep checker actually ran it, so the
+  // pool can be filtered by blacklisted/clean even after a reload. Left untouched when
+  // a check didn't reach the blacklist stage (e.g. an unreachable proxy).
+  if (result.blacklist && result.blacklist.checked) data.lastBlacklisted = !!result.blacklist.listed;
   // Enrich the proxy NAME with the verified exit location so the pool is easy to scan
   // (matches the vendor "Provider • US City, Region" style for every proxy). The part
   // before " • " is kept as the base (provider/user label) and only the geo is refreshed.
@@ -8933,6 +9141,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_SET, saveProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
   registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
+  registerHandler(CHANNELS.PROXY_CHECK_STREAM, runProxyCheckStream);
+  registerHandler(CHANNELS.PROXY_CHECK_STOP, stopProxyCheck);
   registerHandler(CHANNELS.PROXY_GROUP_LIST, listProxyGroups);
   registerHandler(CHANNELS.PROXY_GROUP_CREATE, createProxyGroup);
   registerHandler(CHANNELS.PROXY_GROUP_UPDATE, updateProxyGroup);
