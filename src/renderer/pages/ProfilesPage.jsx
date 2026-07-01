@@ -422,6 +422,107 @@ function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStar
   );
 }
 
+// Bulk proxy (re)assign / swap dialog for the current selection. Draws proxies from
+// the whole pool, a group, only-unassigned, or a pasted list — unique 1:1, round-robin,
+// or one-to-all — and can also shuffle the proxies profiles already have, or clear them.
+function ProxyReassignModal({ onClose, count, allProxies, proxyGroups, bulkBusy, onApply }) {
+  const { t } = useTranslation('profiles');
+  const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
+  const [mode, setMode] = useState('unique');   // unique | pool | single | shuffle | clear
+  const [source, setSource] = useState('all');  // all | unassigned | group | paste
+  const [groupId, setGroupId] = useState('');
+  const [proxyId, setProxyId] = useState('');
+  const [proxyList, setProxyList] = useState('');
+  const [proxyType, setProxyType] = useState('HTTP');
+  const [verify, setVerify] = useState(false);
+
+  const needsSource = mode === 'unique' || mode === 'pool';
+  const canApply = !bulkBusy && (
+    (mode === 'shuffle' || mode === 'clear') ? true
+      : mode === 'single' ? Boolean(proxyId)
+      : source === 'group' ? Boolean(groupId)
+      : source === 'paste' ? Boolean(proxyList.trim())
+      : true
+  );
+
+  function apply() {
+    if (!canApply) return;
+    const payload = { mode };
+    if (mode === 'single') payload.proxyId = Number(proxyId);
+    if (needsSource) {
+      payload.source = source;
+      if (source === 'group') payload.proxyGroupId = Number(groupId);
+      if (source === 'paste') { payload.proxyList = proxyList; payload.proxyType = proxyType; }
+      payload.verifyProxies = verify;
+    }
+    onApply(payload);
+  }
+
+  const MODES = ['unique', 'pool', 'single', 'shuffle', 'clear'];
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('reassignModal.ariaLabel')} tabIndex={-1} className="w-full max-w-md rounded-xl border border-border bg-card shadow-2xl p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-foreground">{t('reassignModal.title', { count })}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{t('reassignModal.subtitle')}</p>
+
+        <label className="block mt-4 text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">{t('reassignModal.modeLabel')}</label>
+        <select value={mode} onChange={(e) => setMode(e.target.value)} className="mt-1.5 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+          {MODES.map((m) => <option key={m} value={m}>{t(`reassignModal.modes.${m}`)}</option>)}
+        </select>
+
+        {needsSource && (
+          <>
+            <label className="block mt-3 text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">{t('reassignModal.sourceLabel')}</label>
+            <select value={source} onChange={(e) => setSource(e.target.value)} className="mt-1.5 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+              <option value="all">{t('reassignModal.sources.all')}</option>
+              <option value="unassigned">{t('reassignModal.sources.unassigned')}</option>
+              <option value="group">{t('reassignModal.sources.group')}</option>
+              <option value="paste">{t('reassignModal.sources.paste')}</option>
+            </select>
+            {source === 'group' && (
+              <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className="mt-2 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+                <option value="">{t('reassignModal.pickGroup')}</option>
+                {proxyGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            )}
+            {source === 'paste' && (
+              <div className="mt-2 space-y-2">
+                <textarea value={proxyList} onChange={(e) => setProxyList(e.target.value)} rows={4} placeholder={t('reassignModal.pastePlaceholder')} className="w-full bg-input-background border border-border rounded px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary resize-y" />
+                <select value={proxyType} onChange={(e) => setProxyType(e.target.value)} className="w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+                  <option value="HTTP">HTTP</option>
+                  <option value="SOCKS5">SOCKS5</option>
+                </select>
+              </div>
+            )}
+            <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={verify} onChange={(e) => setVerify(e.target.checked)} className="accent-primary" /> {t('reassignModal.verify')}
+            </label>
+          </>
+        )}
+
+        {mode === 'single' && (
+          <>
+            <label className="block mt-3 text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">{t('reassignModal.proxyLabel')}</label>
+            <select value={proxyId} onChange={(e) => setProxyId(e.target.value)} className="mt-1.5 w-full bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-primary">
+              <option value="">{t('reassignModal.pickProxy')}</option>
+              {allProxies.map((p) => <option key={p.id} value={p.id}>{p.name || `${p.host}:${p.port}`}</option>)}
+            </select>
+          </>
+        )}
+
+        {(mode === 'shuffle' || mode === 'clear') && (
+          <p className="mt-3 text-xs text-muted-foreground">{mode === 'shuffle' ? t('reassignModal.shuffleNote') : t('reassignModal.clearNote')}</p>
+        )}
+
+        <div className="mt-5 flex gap-2 justify-end">
+          <Button size="sm" variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button size="sm" variant={mode === 'clear' ? 'danger' : 'primary'} disabled={!canApply} onClick={apply}>{t('reassignModal.apply')}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilesPage() {
   const { t } = useTranslation('profiles');
   const [profiles, setProfiles] = useState([]);
@@ -465,6 +566,7 @@ export default function ProfilesPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showTagModal, setShowTagModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [compareProfiles, setCompareProfiles] = useState(null); // profiles being compared
   const [filterPresets, setFilterPresets] = useState([]);
@@ -877,6 +979,19 @@ export default function ProfilesPage() {
     const orderedIds = filteredProfiles.filter((p) => selectedIds.has(p.id)).map((p) => p.id);
     try { await softglazeApi.profiles.bulkRename({ ids: orderedIds, prefix, start: Number(renameStart) || 1 }); setShowRenameModal(false); await loadData(); }
     catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
+  }
+  async function handleReassignProxy(payload) {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true); setError('');
+    try {
+      const res = await softglazeApi.profiles.bulkAssignProxy({ ids: [...selectedIds], ...payload });
+      setShowReassignModal(false);
+      await loadData();
+      if (res && res.limited && res.skipped > 0) {
+        setError(t('reassignModal.limited', { assigned: res.assigned, skipped: res.skipped }));
+      }
+    } catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
   function openCompare() {
@@ -1788,6 +1903,7 @@ export default function ProfilesPage() {
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 mr-1" /> {t('bulk.tag')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 mr-1" /> {t('bulk.rename')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowReassignModal(true)} title={t('bulk.reassignProxyTitle')}><Link2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.reassignProxy')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.share')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title={t('bulk.compareTitle')}><GitCompare className="w-3.5 h-3.5 mr-1" /> {t('bulk.compare')}</Button>
             <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</Button>
@@ -2075,6 +2191,16 @@ export default function ProfilesPage() {
           setRenameStart={setRenameStart}
           bulkBusy={bulkBusy}
           onRename={handleBulkRename}
+        />
+      )}
+      {showReassignModal && (
+        <ProxyReassignModal
+          onClose={() => setShowReassignModal(false)}
+          count={selectedIds.size}
+          allProxies={allProxies}
+          proxyGroups={proxyGroups}
+          bulkBusy={bulkBusy}
+          onApply={handleReassignProxy}
         />
       )}
       {showShareModal && (
