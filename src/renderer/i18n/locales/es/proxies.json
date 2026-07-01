@@ -118,6 +118,8 @@
     "colGroup": "Grupo",
     "colProfiles": "Perfiles",
     "colCreated": "Creado",
+    "colSpeed": "Velocidad",
+    "colBlocklist": "Lista negra",
     "colStatus": "Estado",
     "colActions": "Acciones",
     "profileCount_one": "{{count}} perfil",
@@ -134,7 +136,8 @@
   },
   "status": {
     "checking": "Verificando…",
-    "failed": "Fallido"
+    "failed": "Fallido",
+    "ok": "OK"
   },
   "checker": {
     "running": "Verificando proxies…",

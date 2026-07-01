@@ -22,6 +22,24 @@
       "local": "Local-first",
       "encrypted": "Encrypted vault",
       "private": "Zero telemetry"
+    },
+    "slides": {
+      "security": {
+        "title": "Robust data security",
+        "body": "Local-first storage with an encrypted vault keeps sensitive data on your device — nothing is synced to a cloud."
+      },
+      "fingerprint": {
+        "title": "Undetectable fingerprints",
+        "body": "Every profile ships a unique, consistent fingerprint: canvas, WebGL, fonts, audio, and hardware."
+      },
+      "proxy": {
+        "title": "A proxy for every identity",
+        "body": "Bind a dedicated network identity to each profile and rotate with confidence."
+      },
+      "automation": {
+        "title": "Time-saving automation",
+        "body": "Warm cookies, generate profiles in bulk, and orchestrate everything at scale."
+      }
     }
   },
   "license": {
@@ -101,7 +119,8 @@
     "forgotBody": "Your master password isn't recoverable on a local install — it never leaves this device. If it's lost, the workspace has to be reset from Settings.",
     "signIn": "Sign in",
     "noAccount": "Don't have an account?",
-    "createOne": "Create one",
+    "newHere": "New to SoftGlaze?",
+    "createOne": "Create your account",
     "haveInvite": "Have an invite code?",
     "teamSignIn": "Team member sign in"
   },
