@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
   Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, Crown, AlertTriangle, Check,
-  Landmark, ExternalLink
+  Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { getStoredTheme, setTheme } from '@/lib/theme.js';
+import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -90,70 +92,127 @@ function OtpInput({ value, onChange, onComplete }) {
   );
 }
 
-function BrandPanel() {
+// Slides for the left carousel — self-contained (gradient + icon graphic), so the
+// screen needs no bundled photography and works fully offline. Each maps to a
+// gate.brand.slides.<key> {title, body} i18n pair.
+const SLIDES = [
+  { key: 'security', Icon: ShieldCheck, from: '#0b3b8f', via: '#0a1730', accent: '#3b82f6' },
+  { key: 'fingerprint', Icon: Fingerprint, from: '#3b1d6e', via: '#160b2c', accent: '#8b5cf6' },
+  { key: 'proxy', Icon: Globe, from: '#065f46', via: '#062018', accent: '#10b981' },
+  { key: 'automation', Icon: Zap, from: '#7c2d12', via: '#241006', accent: '#f59e0b' }
+];
+
+// Left brand panel — an auto-rotating carousel that mirrors the reference layout
+// (big graphic, bold caption bottom-left, dot indicators). Manual dots too.
+function CarouselPanel() {
   const { t } = useTranslation('gate');
-  const bullets = [
-    [Fingerprint, t('brand.bullets.fingerprints')],
-    [Globe, t('brand.bullets.proxy')],
-    [ShieldCheck, t('brand.bullets.localFirst')]
-  ];
-  const trust = [
-    [Lock, t('brand.trust.local')],
-    [ShieldCheck, t('brand.trust.encrypted')],
-    [Eye, t('brand.trust.private')]
-  ];
+  const [i, setI] = useState(0);
+  const n = SLIDES.length;
+  useEffect(() => {
+    const id = setInterval(() => setI((x) => (x + 1) % n), 5500);
+    return () => clearInterval(id);
+  }, [n]);
+  const slide = SLIDES[i];
+  const Icon = slide.Icon;
   return (
-    <div
-      className="relative hidden md:flex flex-col justify-between overflow-hidden p-10 border-r border-border"
-      style={{ background: 'linear-gradient(160deg, #0a0e18 0%, #0b1120 46%, #090b12 100%)' }}
-    >
-      {/* Ambient depth: drifting grid + three floating aurora blobs */}
-      <div aria-hidden className="absolute inset-0 auth-grid opacity-60" />
-      <div aria-hidden className="absolute -top-28 -left-24 w-96 h-96 rounded-full bg-primary/25 blur-[130px] animate-float-slow" />
-      <div aria-hidden className="absolute top-1/3 -right-24 w-80 h-80 rounded-full bg-accent/20 blur-[130px] animate-float-slower" />
-      <div aria-hidden className="absolute -bottom-24 left-8 w-72 h-72 rounded-full bg-emerald-500/10 blur-[120px] animate-aurora" />
+    <div className="relative hidden md:flex flex-col overflow-hidden border-r border-border">
+      {/* Cross-fading per-slide gradient background */}
+      {SLIDES.map((s, idx) => (
+        <div
+          key={s.key}
+          aria-hidden
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: idx === i ? 1 : 0, background: `linear-gradient(150deg, ${s.from} 0%, ${s.via} 55%, #06070d 100%)` }}
+        />
+      ))}
+      <div aria-hidden className="absolute inset-0 auth-grid opacity-40" />
+      <div aria-hidden className="absolute -top-24 -left-20 w-96 h-96 rounded-full blur-[130px] animate-float-slow" style={{ background: `${slide.accent}40` }} />
+      <div aria-hidden className="absolute bottom-16 -right-16 w-80 h-80 rounded-full blur-[130px] animate-float-slower" style={{ background: `${slide.accent}33` }} />
 
-      {/* Logo with a soft pulsing halo */}
-      <div className="relative flex items-center gap-3 animate-fade-in">
-        <div className="relative">
-          <div aria-hidden className="absolute inset-0 rounded-2xl bg-primary/40 blur-lg animate-aurora" />
-          <img src="/logos/app-source-512.png" alt="SoftGlaze" className="relative w-11 h-11 object-contain drop-shadow-[0_2px_16px_rgba(59,130,246,0.6)]" draggable={false} />
-        </div>
+      {/* Logo */}
+      <div className="relative flex items-center gap-3 p-9">
+        <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-10 h-10 object-contain drop-shadow-[0_2px_16px_rgba(59,130,246,0.6)]" draggable={false} />
         <div className="flex flex-col leading-none">
-          <span className="font-display font-semibold text-lg tracking-tight">SoftGlaze</span>
-          <span className="text-[10px] text-primary font-semibold tracking-[0.2em] uppercase mt-1">{t('brand.tagline')}</span>
+          <span className="font-display font-semibold text-[17px] tracking-tight text-white">SoftGlaze</span>
+          <span className="text-[10px] font-semibold tracking-[0.2em] uppercase mt-1" style={{ color: slide.accent }}>{t('brand.tagline')}</span>
         </div>
       </div>
 
-      {/* Hero */}
-      <div className="relative animate-fade-up">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10.5px] font-semibold text-primary/90 mb-5">
-          <Sparkles className="w-3 h-3" /> {t('brand.tagline')}
+      {/* Center graphic — concentric rings + a glassy icon tile */}
+      <div className="relative flex-1 grid place-items-center px-10">
+        <div className="relative grid place-items-center">
+          <div aria-hidden className="absolute w-60 h-60 rounded-full border animate-aurora" style={{ borderColor: `${slide.accent}3a` }} />
+          <div aria-hidden className="absolute w-44 h-44 rounded-full border" style={{ borderColor: `${slide.accent}2a` }} />
+          <div className="relative w-28 h-28 rounded-3xl grid place-items-center backdrop-blur-sm shadow-2xl" style={{ background: `${slide.accent}1f`, border: `1px solid ${slide.accent}55` }}>
+            <Icon className="w-12 h-12" style={{ color: slide.accent }} strokeWidth={1.5} />
+          </div>
         </div>
-        <h2 className="font-display text-[30px] font-semibold leading-[1.12] tracking-tight">
-          <span className="shimmer-text">{t('brand.heroLine1')}</span><br />{t('brand.heroLine2')}
+      </div>
+
+      {/* Caption + dot indicators */}
+      <div className="relative p-10">
+        <h2 key={slide.key} className="font-display text-white text-[30px] font-semibold leading-tight tracking-tight animate-fade-up">
+          {t(`brand.slides.${slide.key}.title`)}
         </h2>
-        <p className="text-[13px] text-muted mt-3 max-w-sm leading-relaxed">{t('brand.heroBody')}</p>
-        <ul className="mt-8 space-y-2.5 max-w-sm">
-          {bullets.map(([Icon, label], i) => (
-            <li key={i} className="flex items-center gap-3 text-[13px] text-foreground rounded-xl border border-border/70 bg-white/[0.02] px-3.5 py-2.5 backdrop-blur-sm transition-colors hover:border-primary/30 hover:bg-primary/[0.04]">
-              <span className="w-8 h-8 rounded-lg bg-primary/12 text-primary grid place-items-center shrink-0"><Icon className="w-4 h-4" /></span>{label}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Trust strip + footer */}
-      <div className="relative">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {trust.map(([Icon, label], i) => (
-            <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-white/[0.03] px-2.5 py-1 text-[10.5px] text-muted">
-              <Icon className="w-3 h-3 text-emerald-400" /> {label}
-            </span>
+        <p className="text-[13.5px] text-white/70 mt-3 max-w-md leading-relaxed">{t(`brand.slides.${slide.key}.body`)}</p>
+        <div className="flex items-center gap-2 mt-7">
+          {SLIDES.map((s, idx) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setI(idx)}
+              aria-label={t(`brand.slides.${s.key}.title`)}
+              className="h-1.5 rounded-full transition-all duration-300"
+              style={{ width: idx === i ? 28 : 8, background: idx === i ? '#ffffff' : 'rgba(255,255,255,0.35)' }}
+            />
           ))}
         </div>
-        <div className="text-[11px] text-muted-dark">{t('brand.footer', { year: new Date().getFullYear() })}</div>
       </div>
+    </div>
+  );
+}
+
+// Language + light/dark switchers pinned to the top-right of the form column.
+function ThemeLangControls() {
+  const [theme, setThemeState] = useState(getStoredTheme());
+  const [lang, setLangState] = useState(getStoredLang());
+  const [open, setOpen] = useState(false);
+  const isDark = theme === 'dark';
+  const cur = SUPPORTED_LANGS.find((l) => l.code === lang) || SUPPORTED_LANGS[0];
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border text-[12.5px] text-muted-foreground hover:text-foreground hover:border-muted-dark transition-colors"
+        >
+          <Globe className="w-4 h-4" /> {cur.native} <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+        {open && (
+          <div className="absolute right-0 mt-1 w-40 rounded-lg border border-border bg-popover shadow-xl py-1 z-50">
+            {SUPPORTED_LANGS.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                onMouseDown={() => { setLangState(setLang(l.code)); setOpen(false); }}
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-left hover:bg-secondary ${l.code === lang ? 'text-primary' : 'text-foreground'}`}
+              >
+                {l.native}{l.code === lang && <Check className="w-3.5 h-3.5 ml-auto" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => setThemeState(setTheme(isDark ? 'light' : 'dark'))}
+        title={isDark ? 'Switch to light' : 'Switch to dark'}
+        className="h-9 w-9 grid place-items-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-muted-dark transition-colors"
+      >
+        {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
     </div>
   );
 }
@@ -594,15 +653,20 @@ export default function Gate({ children }) {
 
   return (
     <div className="relative h-screen w-full bg-background text-foreground font-sans grid md:grid-cols-2 overflow-hidden">
-      <BrandPanel />
-      <div className="relative grid place-items-center p-6 overflow-y-auto">
+      <CarouselPanel />
+      <div className="relative flex flex-col overflow-y-auto">
         <AuthAura />
-        <div className="relative w-full max-w-[420px] animate-fade-up">
-          <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
-          <div className="flex items-center gap-2.5 mb-7 md:hidden">
-            <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-9 h-9 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
-            <span className="font-display font-semibold tracking-tight">SoftGlaze</span>
+        {/* Top bar: brand (mobile) + language & theme switchers */}
+        <div className="relative flex items-center justify-between gap-3 px-6 pt-5">
+          <div className="flex items-center gap-2.5 md:invisible">
+            <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-8 h-8 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
+            <span className="font-display font-semibold tracking-tight text-[15px]">SoftGlaze</span>
           </div>
+          <ThemeLangControls />
+        </div>
+        <div className="relative flex-1 grid place-items-center p-6">
+          <div className="w-full max-w-[420px] animate-fade-up">
+            <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
 
           {/* REGISTER — details */}
           {phase === 'register' && step === 'details' && (
@@ -626,7 +690,10 @@ export default function Gate({ children }) {
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('register.continue')} <ArrowRight className="w-4 h-4" /></>}
               </button>
               <p className="text-[11px] text-muted-dark mt-4 flex items-center justify-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> {t('register.storedLocally')}</p>
-              <p className="text-center text-[12px] text-muted-dark mt-3">{t('register.haveAccount')} <button onClick={() => { setPhase('login'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">{t('register.logIn')}</button></p>
+              <div className="mt-6 pt-4 border-t border-border text-center text-[12.5px]">
+                <span className="text-muted">{t('register.haveAccount')} </span>
+                <button onClick={() => { setPhase('login'); setErr(''); }} className="font-semibold text-primary hover:text-primary-hover">{t('register.logIn')}</button>
+              </div>
               <SuperLink />
             </>
           )}
@@ -703,7 +770,15 @@ export default function Gate({ children }) {
               <button disabled={busy} onClick={login} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('login.signIn')} <Lock className="w-4 h-4" /></>}
               </button>
-              <p className="text-center text-[12px] text-muted-dark mt-4">{t('login.noAccount')} <button onClick={() => { setPhase('register'); setStep('details'); setErr(''); }} className="text-primary hover:text-primary-hover font-medium">{t('login.createOne')}</button></p>
+              <div className="mt-6 pt-4 border-t border-border">
+                <p className="text-center text-[11px] text-muted-dark mb-2.5">{t('login.newHere')}</p>
+                <button
+                  onClick={() => { setPhase('register'); setStep('details'); setErr(''); }}
+                  className="w-full h-10 rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold text-[13px] flex items-center justify-center gap-2 transition-colors"
+                >
+                  {t('login.createOne')} <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
               <div className="flex items-center justify-center gap-4 mt-3 text-[11.5px]">
                 <button onClick={() => { setPhase('invite'); setErr(''); }} className="text-muted-dark hover:text-primary">{t('login.haveInvite')}</button>
                 <span className="text-border">·</span>
@@ -822,8 +897,9 @@ export default function Gate({ children }) {
               <SuperLink />
             </>
           )}
+            </div>
+            <p className="mt-4 text-center text-[10.5px] text-muted-dark">{t('brand.footer', { year: new Date().getFullYear() })}</p>
           </div>
-          <p className="mt-4 text-center text-[10.5px] text-muted-dark md:hidden">{t('brand.footer', { year: new Date().getFullYear() })}</p>
         </div>
       </div>
     </div>

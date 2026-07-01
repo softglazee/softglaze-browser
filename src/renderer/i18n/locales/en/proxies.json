@@ -118,6 +118,8 @@
     "colGroup": "Group",
     "colProfiles": "Profiles",
     "colCreated": "Created",
+    "colSpeed": "Speed",
+    "colBlocklist": "Blocklist",
     "colStatus": "Status",
     "colActions": "Actions",
     "profileCount_one": "{{count}} profile",
@@ -134,7 +136,8 @@
   },
   "status": {
     "checking": "Checking…",
-    "failed": "Failed"
+    "failed": "Failed",
+    "ok": "OK"
   },
   "checker": {
     "running": "Checking proxies…",
