@@ -13,37 +13,14 @@ This package intentionally does **not** include stealth plugins, fingerprint spo
 - Puppeteer for launching local profile windows
 - SheetJS `xlsx` for Excel/CSV parsing
 
-## Included phases
+## Features
 
-### Phase 1
-
-- `package.json`
-- `prisma/schema.prisma`
-- `src/main/browserEngine.js`
-
-### Phase 2
-
-- Electron main process
-- IPC handlers
-- Preload bridge using context isolation
-
-### Phase 3
-
-- Full-width React dashboard
-- Left navigation rail
-- Profiles page
-- Proxy Pool page
-- Batch Import page
-- Settings page
-
-### Phase 4
-
-- Runtime database bootstrap in Electron
-- Packaged-app-safe SQLite location using `app.getPath('userData')`
-- Profile edit modal
-- Proxy edit modal
-- Spreadsheet preview-before-commit import
-- Active session cleanup on app quit
+- Local browser profile management with per-profile data directories
+- Reusable proxy pool with health checking and background re-checks
+- Spreadsheet (`.xlsx` / `.xls` / `.csv`) batch import with preview-before-commit
+- Profile grouping, tagging, bulk operations, trash/restore
+- Team members with role-based access control
+- Localized interface (English and Spanish)
 
 ## Requirements
 
@@ -92,7 +69,7 @@ npm run build
 Build output is written to:
 
 ```txt
-dist-packaged/
+dist_installer/
 ```
 
 ## Local data locations
