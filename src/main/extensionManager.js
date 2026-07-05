@@ -14,6 +14,11 @@ const fsSync = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
 const { getPrisma } = require('./database');
+const { assertAllowedDownloadUrl, hostAllowed, HOSTS } = require('./downloadGuard');
+
+// Extensions are small; cap the CRX download so a malicious/oversized redirect
+// target can't buffer an unbounded arraybuffer and OOM the main process.
+const MAX_CRX_BYTES = 128 * 1024 * 1024;
 // axios + extract-zip are required lazily inside downloadAndExtract() so a
 // missing optional package degrades CRX install instead of bricking app startup
 // (extensionManager is required at boot by ipcHandlers).
@@ -138,14 +143,26 @@ async function downloadAndExtract(chromeId) {
   const root = extensionsRoot();
   await fs.mkdir(root, { recursive: true });
 
+  // audit: https-only + Google-host allowlist on the URL and every redirect, and a
+  // hard size cap so an oversized/hostile response can't OOM the main process.
+  const startUrl = downloadUrlFor(chromeId);
+  assertAllowedDownloadUrl(startUrl, HOSTS.crx, 'extension download');
   let resp;
   try {
-    resp = await axios.get(downloadUrlFor(chromeId), {
+    resp = await axios.get(startUrl, {
       responseType: 'arraybuffer',
       maxRedirects: 5,
+      maxContentLength: MAX_CRX_BYTES,
+      maxBodyLength: MAX_CRX_BYTES,
       timeout: 60000,
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Softglaze' },
-      validateStatus: (s) => s >= 200 && s < 400
+      validateStatus: (s) => s >= 200 && s < 400,
+      beforeRedirect: (options) => {
+        const proto = String(options.protocol || '').toLowerCase();
+        if (proto && proto !== 'https:') throw new Error('Refusing a non-https redirect while downloading the extension.');
+        const host = String(options.hostname || options.host || '').toLowerCase().replace(/:\d+$/, '');
+        if (!hostAllowed(host, HOSTS.crx)) throw new Error(`Refusing extension redirect to untrusted host "${host}".`);
+      }
     });
   } catch (e) {
     const status = e && e.response && e.response.status;

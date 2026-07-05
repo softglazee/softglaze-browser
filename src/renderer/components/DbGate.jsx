@@ -20,12 +20,20 @@ export default function DbGate({ children }) {
   const [corrupted, setCorrupted] = useState(false);
 
   async function evaluate() {
-    try {
-      const s = await softglazeApi.db.encryptionStatus();
-      setPhase(s && s.enabled && !s.unlocked ? 'unlock' : 'ready');
-    } catch (e) {
-      // If we can't even read status, don't block the app — let the normal Gate run.
-      setPhase('ready');
+    // audit: fail closed. A status-read failure could mean the DB is encrypted +
+    // still locked, so don't silently pass into the app. Retry once to absorb a
+    // transient IPC hiccup; if it still fails, show the unlock screen (the data is
+    // ciphertext either way, and unlocking re-drives the open path).
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const s = await softglazeApi.db.encryptionStatus();
+        setPhase(s && s.enabled && !s.unlocked ? 'unlock' : 'ready');
+        return;
+      } catch (e) {
+        if (attempt === 0) { await new Promise((r) => setTimeout(r, 400)); continue; }
+        setErr(t('errors.couldNotUnlockDb'));
+        setPhase('unlock');
+      }
     }
   }
   useEffect(() => { evaluate(); }, []);

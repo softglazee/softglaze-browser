@@ -399,7 +399,10 @@ export default function Gate({ children }) {
   async function evaluate() {
     try {
       const [vs, acct, cur, list] = await Promise.all([
-        softglazeApi.vault.status().catch(() => ({ enabled: false, locked: false })),
+        // audit: FAIL CLOSED. An unreadable vault status must be treated as LOCKED
+        // (show the unlock/login screen), never as unlocked — otherwise a transient
+        // read error would drop the user straight past the auth gate.
+        softglazeApi.vault.status().catch(() => ({ enabled: true, locked: true })),
         softglazeApi.account.get().catch(() => null),
         softglazeApi.members.current().catch(() => null),
         softglazeApi.members.list().catch(() => [])
@@ -411,7 +414,10 @@ export default function Gate({ children }) {
       if (ms.length === 0) { setPhase('register'); setStep('details'); return; }
       if (!cur) { setPhase('pick'); return; }
       setPhase('licensing');
-    } catch (e) { setPhase('licensing'); }
+    } catch (e) {
+      // audit: fail closed to the login screen rather than dropping into the app.
+      setPhase('login');
+    }
   }
   useEffect(() => { evaluate(); }, []);
   // Reflect the current "stay signed in" state so unlocking with the box left
