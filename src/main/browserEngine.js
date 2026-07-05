@@ -140,14 +140,40 @@ async function attachPersonaAutofill(targetPage) {
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
       let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
+      // audit C2 bypass: the page supplies both the selector AND the personaId, so a
+      // hostile page could aim a password fill at its own hidden input and read the
+      // value back — defeating "the plaintext only reaches the field the user is
+      // filling". Two HARD gates guard the secret path, resolved once per plan:
+      //   (1) the page must have had a genuine user gesture (userActivation), and
+      //   (2) the personaId must be one actually OFFERED for THIS committed origin
+      //       (present in listForUrl(pageUrl())) — never an arbitrary/guessed id.
+      // Non-secret fields are unaffected. An empty allow-set → no password resolves.
+      let allowedSecretIds = null;
+      const ensureAllowedSecretIds = async () => {
+        if (allowedSecretIds) return allowedSecretIds;
+        allowedSecretIds = new Set();
+        let gestured = false;
+        try { gestured = await targetPage.evaluate(() => { try { return !!(navigator.userActivation && navigator.userActivation.hasBeenActive); } catch (e) { return false; } }); } catch (e) { gestured = false; }
+        if (!gestured) return allowedSecretIds;
+        if (typeof personaBridge.listForUrl !== 'function') return allowedSecretIds;
+        try {
+          const r = await personaBridge.listForUrl(pageUrl());
+          const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+          for (const p of list) if (p && p.id != null) allowedSecretIds.add(String(p.id));
+        } catch (e) { /* empty set → refuse every secret */ }
+        return allowedSecretIds;
+      };
       for (const item of items) {
         const sel = item && item.sel;
         if (!sel) continue;
         let value;
         if (item.kind === 'password') {
-          // Password value NEVER comes from the page — resolve it server-side by id.
+          // Password value NEVER comes from the page — resolve it server-side by id,
+          // but only when gesture-gated AND offered for this origin (see above).
           const pid = item.personaId != null ? String(item.personaId) : '';
           if (!pid || typeof personaBridge.getSecret !== 'function') continue;
+          const allowed = await ensureAllowedSecretIds();
+          if (!allowed.has(pid)) continue;
           if (!secretCache.has(pid)) {
             try { const s = await personaBridge.getSecret(pid); secretCache.set(pid, (s && s.password != null) ? String(s.password) : ''); }
             catch (e) { secretCache.set(pid, ''); }

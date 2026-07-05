@@ -2380,10 +2380,20 @@ async function saveProfileAsTemplate(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  // audit: this had NO ownership/permission gate (unlike cloneProfile and every
+  // other profile handler), so an Operator could template a victim profile they
+  // couldn't access and round-trip it into one they own. Gate it like a clone.
+  await requirePermission('profiles.create');
+  await assertCanAccessProfile(id);
   const name = requiredString(input.name, 'Template name');
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
   const fields = pickCloneableFields(src);
+  // audit: a Template is workspace-global, so it must never carry live secrets —
+  // strip the 2FA seed and platform-account credentials (createProfileFromTemplate
+  // re-stamps ownership anyway). Cloning keeps them; templating does not.
+  delete fields.twoFactorSeed;
+  delete fields.platformAccounts;
   const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields) } });
   return serializeTemplate(created);
 }
@@ -4986,6 +4996,17 @@ async function getAllPersonas() {
   return { personas: rows.map(serializePersona) };
 }
 
+// Password-free projection for the autofill bridge / URL-availability path. The
+// plaintext password (audit C2) must NEVER leave the main process in a list
+// payload — it is resolved one persona at a time, server-side and origin-scoped,
+// by getPersonaSecretById at fill time. Keeps the non-secret fields the widget
+// fills plus a `hasPassword` flag so the widget knows whether to request the secret.
+function toPublicPersona(p) {
+  if (!p || typeof p !== 'object') return p;
+  const { password, ...rest } = p;
+  return { ...rest, hasPassword: Boolean(password) };
+}
+
 // Return only personas whose usedOnUrls does NOT already contain this host.
 async function getAvailablePersonasForUrl(payload) {
   const input = requireObject(payload);
@@ -4993,7 +5014,25 @@ async function getAvailablePersonasForUrl(payload) {
   if (!host) throw new Error('A valid URL or hostname is required.');
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
   const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).includes(host));
-  return { hostname: host, personas: available.map(serializePersona) };
+  // audit C2: never ship the plaintext password in a list payload — strip it here
+  // so the Chromium bridge, the Firefox loopback bridge, AND the renderer channel
+  // are all password-free at the source.
+  return { hostname: host, personas: available.map((p) => toPublicPersona(serializePersona(p))) };
+}
+
+// Origin-scoped secret resolution for the autofill bridges (audit C2 bypass): a
+// page/widget may only obtain a persona's password if that persona is actually
+// OFFERED for the committed origin (i.e. present in getAvailablePersonasForUrl),
+// never for an arbitrary or guessed id. Returns { password } or null.
+async function getPersonaSecretForUrl(id, url) {
+  const pid = optionalString(id);
+  if (!pid) return null;
+  let avail;
+  try { avail = await getAvailablePersonasForUrl({ url }); }
+  catch (e) { return null; }
+  const offered = (avail && Array.isArray(avail.personas) ? avail.personas : []).some((p) => String(p.id) === pid);
+  if (!offered) return null; // not offered for this origin — refuse to resolve
+  return getPersonaSecretById(pid);
 }
 
 // Server-side ONLY: resolve a persona's plaintext password by id for the trusted
@@ -9431,8 +9470,19 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PERSONA_IMPORT_BATCH, importPersonas);
   registerHandler(CHANNELS.PERSONA_CREATE_MANUAL, createPersonaManual);
   registerHandler(CHANNELS.PERSONA_GET_ALL, getAllPersonas);
-  registerHandler(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, getAvailablePersonasForUrl);
-  registerHandler(CHANNELS.PERSONA_MARK_USED, markPersonaUsed);
+  // audit: these two persona helpers were ungated on the renderer channel (a
+  // non-owner member could enumerate the vault by iterating hostnames / poison
+  // usedOnUrls). Gate the *channels* behind vault.manage; the autofill bridges
+  // below intentionally call the raw functions (password-free + origin-scoped) so
+  // in-session autofill still works for any member without vault.manage.
+  registerHandler(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, async (payload) => {
+    await requirePermission('vault.manage');
+    return getAvailablePersonasForUrl(payload);
+  });
+  registerHandler(CHANNELS.PERSONA_MARK_USED, async (payload) => {
+    await requirePermission('vault.manage');
+    return markPersonaUsed(payload);
+  });
   registerHandler(CHANNELS.PERSONA_CLEAR_USED, clearPersonaUsed);
   registerHandler(CHANNELS.PERSONA_DELETE, deletePersonas);
   registerHandler(CHANNELS.PERSONA_UPDATE, updatePersona);
@@ -9467,7 +9517,11 @@ function registerIpcHandlers() {
   // Loopback-only, started best-effort so a busy port never breaks boot.
   autofillBridge.configure({
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
-    markUsed: (id, url) => markPersonaUsed({ id, url })
+    markUsed: (id, url) => markPersonaUsed({ id, url }),
+    // Firefox has no CDP trusted-typer, so the isolated content-script fills the
+    // password itself — but only for a persona OFFERED on the committed origin
+    // (audit C2), resolved one id at a time via the loopback /secret endpoint.
+    getSecret: (id, url) => getPersonaSecretForUrl(id, url)
   });
   autofillBridge.start().catch(() => {});
 
