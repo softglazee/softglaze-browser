@@ -22,6 +22,26 @@
 >
 > **DEFERRED (documented, deliberate):** (1) **crash-leftover plaintext DB adoption** — a fix risks losing a genuine crash session's unsaved data, and the residual attacker (write access to `%APPDATA%` while the app is closed) is beyond at-rest encryption's threat model (the password is already authenticated against the `.enc` before adoption). (2) **offline purchase-code retirement** — a symmetric secret must ship, so base-build codes are inherently forgeable; the vendor's own design routes production to the tenant/Ed25519 build. Added `SOFTGLAZE_STRICT_LICENSE=1` to disable offline redemption in a sold base build — **needs a product decision.** (3) **renderer polish** — `window.prompt`→modal for Save-preset/Save-warmer-list, and the cosmetic items (index-as-key, components-in-render, stale-`t`-after-language-switch) — want runtime testing. (4) **inherent local-proxy exposure** (socksRelay + Firefox relay are loopback-only but unauthenticated while a session runs), PID-file atomicity (write-only, not consumed), relay redaction allowlist (transport still stubbed), per-tab handler accumulation, importPreviewCache TTL, and a few cosmetic swallows — low-impact, tracked here.
 
+> **Checkbox reconciliation (2026-07-05, follow-up).** The `[ ]` boxes in the sections
+> below **predate** the three remediation passes above and were never ticked, so the list
+> reads as "nothing done" when in fact the CRITICAL/HIGH/MEDIUM/LOW fixes are **landed on
+> `main`** (see commits through `0f7fc93`) with 119/119 tests passing. Re-verified against
+> the live code this pass and confirmed FIXED: **C2** persona fill-plan (userActivation +
+> origin scope), **delete/purge** permission gates (`requirePermission('profiles.delete'/'purge')`
+> at ipcHandlers.js:2986/3021/3042/3079), **`rotateProxyIp`** authz + redirect-SSRF re-validation,
+> **`getProxyProviderCreds`** role gate, **entitlement/`pollCheckout`** (bound to the
+> server-stashed order — renderer can no longer point at a cheap invoice — and the price is
+> the server-set `plan.amount`, enforced by the gateway's `paid` status), **Gate** fail-closed,
+> **proxy password-mask** preserve-on-edit, **member-limit input focus**, **`batchAddProxies`**
+> (now also persists `provider`). **Intentionally NOT changed** (would regress): deleting
+> `browser.removeAllListeners('targetcreated')` (re-enables the puppeteer-extra-stealth per-tab
+> injector that floods `TargetCloseError` and destabilizes new tabs — new-tab stealth is already
+> done by the browser-level CDP auto-attach); a strict `st.amount === plan.amount` equality check
+> (would reject legitimate over-payments / `paid_over` and cross-provider amount formats); and
+> defaulting **uBlock Origin** to `enable: true` (documented anti-detect rationale — content
+> blockers alter page/network behavior; it's a per-profile opt-in). A full box-by-box tick pass
+> can be run on request.
+
 ## Verified-correct (not bugs — do not "fix" these)
 - Core crypto: AES-256-GCM with a random 12-byte IV per encryption, scrypt KDF, GCM tag verified on decrypt; Ed25519 lease verification. All correct.
 - `totp.js` is a generator only (no verifier), and base32/HMAC/RFC-4226 truncation are correct.
@@ -44,7 +64,7 @@
   Never checks whether an OWNER already exists; unconditionally creates a new OWNER, sets `currentMemberId`, and **overwrites the vault password**. Reachable because `account:sendOtp` (`ipcHandlers.js:6635`) returns the OTP to the caller (`devCode`) when no SMTP is configured (the default).
   **Fix:** refuse registration when an OWNER exists (require owner/super auth to add owners); never overwrite an existing vault here.
 
-- [ ] **C2 · Any website can steal the entire persona vault (plaintext passwords)** — `src/main/browserEngine.js:87-92`
+- [x] **C2 · Any website can steal the entire persona vault (plaintext passwords)** — `src/main/browserEngine.js:87-92` — *FIXED (fix/audit-remainder + follow-up): origin derived from the committed page URL server-side; the list payload is password-free (`toPublicPersona`); the secret resolves only on explicit fill of a persona OFFERED for that origin AND behind a real `navigator.userActivation` gesture; persona handlers gated by `vault.manage`; Firefox fills via the token-gated origin-scoped `/sg-autofill/secret` endpoint.*
   `page.exposeFunction('__sgPersonaList', …)` binds into the page's **main world**; any script can call `window.__sgPersonaList('https://x'+Math.random())`. Backend trusts the page-supplied URL and `serializePersona` (`ipcHandlers.js:4848`) returns `password` in cleartext. Persona IPC handlers (`ipcHandlers.js:4867-4940`) have no authorization, and the same secret leaks over the loopback bridge guarded only by a **hardcoded token shipped in the .xpi** (`src/main/autofillBridge.js:27`).
   **Fix:** derive origin from `page.url()` server-side (ignore page-supplied URL); never send `password` in the list payload (fetch it only on explicit fill of one id); require a user gesture; gate persona handlers behind `vault.manage`.
 
@@ -57,13 +77,13 @@
 ## 🟠 HIGH
 
 ### Authorization gaps (IPC)
-- [ ] **Delete/purge enforce no permission** — `src/main/ipcHandlers.js:2882` (deleteProfile), `:2916` (purgeProfile), `:2936` (bulkDelete), `:2972` (bulkPurge). Check access scope but never `requirePermission('profiles.delete'/'purge')` → an Operator can irreversibly `fs.rm` profile data.
+- [x] **Delete/purge enforce no permission** — `src/main/ipcHandlers.js:2882` (deleteProfile), `:2916` (purgeProfile), `:2936` (bulkDelete), `:2972` (bulkPurge). Check access scope but never `requirePermission('profiles.delete'/'purge')` → an Operator can irreversibly `fs.rm` profile data. — *FIXED: all four now call `requirePermission('profiles.delete'/'purge')` (ipcHandlers.js:2986/3021/3042/3079).*
 - [ ] **Full-workspace secret export at rank-1** — `src/main/ipcHandlers.js:4241` (gatherExport). Query unscoped (`deletedAt:null`, no tenant scope); emits **Proxy Password / Account Password / 2FA Key in cleartext**; gated only by `profiles.export` (every member).
-- [ ] **`rotateProxyIp` = SSRF + no authz** — `src/main/ipcHandlers.js:483`. No access/permission check; persists renderer-supplied `rotationUrl` and `axios.get`s it (only `^https?://` checked) → target other members' proxies + coerce GETs to internal/localhost.
-- [ ] **Decrypted provider secrets handed to renderer** — `src/main/ipcHandlers.js:4633` (getProxyProviderCreds). Returns `secretStore.open(...)` plaintext (password/token/apiToken) with no role gate.
+- [x] **`rotateProxyIp` = SSRF + no authz** — `src/main/ipcHandlers.js:483`. No access/permission check; persists renderer-supplied `rotationUrl` and `axios.get`s it (only `^https?://` checked) → target other members' proxies + coerce GETs to internal/localhost. — *FIXED: access + `proxies.manage` gated; `assertPublicHttpUrl` blocks private/loopback/metadata targets and re-runs in a `beforeRedirect` hook so a redirect can't smuggle SSRF; maxRedirects lowered to 3.*
+- [x] **Decrypted provider secrets handed to renderer** — `src/main/ipcHandlers.js:4633` (getProxyProviderCreds). Returns `secretStore.open(...)` plaintext (password/token/apiToken) with no role gate. — *FIXED: gated behind `proxies.manage`.*
 
 ### Licensing / payments
-- [ ] **Entitlement on a bare `paid` boolean** — `src/main/payments.js:82/203/268` + `src/main/ipcHandlers.js:8069` (pollCheckout). `getStatus` never asserts amount/currency == plan; `pollCheckout` grants the full term on a **renderer-supplied** order id → point at any cheap already-paid invoice.
+- [x] **Entitlement on a bare `paid` boolean** — `src/main/payments.js:82/203/268` + `src/main/ipcHandlers.js:8069` (pollCheckout). `getStatus` never asserts amount/currency == plan; `pollCheckout` grants the full term on a **renderer-supplied** order id → point at any cheap already-paid invoice. — *FIXED (exploit closed): `pollCheckout` now grants ONLY against the server-stashed `pendingCheckout` order created in `startCheckout` (renderer-supplied uuid/orderId fallback removed, ipcHandlers.js:8344), and the invoice was created server-side for the catalog `plan.amount` — the renderer never supplies an amount, and the gateway only reports `paid`/`paid_over`/`COMPLETED` once that amount is met. A redundant `st.amount === plan.amount` equality check was deliberately NOT added: it would reject legitimate over-payments (Cryptomus `paid_over`) and differing per-provider amount string formats. A conservative per-provider lower-bound assertion remains available as optional defense-in-depth.*
   **Fix:** `getStatus` must return the gateway's actual amount+currency; reject unless they meet the stashed plan price and the order id matches the one created in `startCheckout`.
 - [ ] **Offline license secret ships in the binary** — `src/main/payments.js:292`. Hardcoded `LICENSE_SECRET`, signature truncated to 32 bits, `generatePurchaseCode` exported → anyone can mint lifetime codes. Gate real entitlement on the Ed25519 server lease; remove this fallback from production builds.
 
