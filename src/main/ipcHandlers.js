@@ -6440,13 +6440,31 @@ async function maybeSeedBrowsers() {
   } catch (e) { /* never block startup */ }
 }
 
-async function afterDbReady() {
+// The critical, must-finish-before-the-window-loads slice of afterDbReady: restore
+// the persisted member session (currentMemberId) and the vault-lock state. Kept
+// separate and awaitable (see whenSessionReady) because the renderer's very first
+// members.current() answers INSTANTLY from an as-yet-unrestored `currentMemberId`
+// (getActiveMember short-circuits on null with no DB read), while this cold Setting
+// read is still in flight — so a returning user was dropped onto the member picker
+// on every launch. main.js now blocks window creation on this.
+async function restoreSession() {
   try {
     const savedMember = await readSetting('currentMemberId', null);
     if (savedMember != null) currentMemberId = Number(savedMember) || null;
     const v = await readSetting('vault', null);
     if (v && v.enabled) vaultLocked = true; // require unlock at startup
   } catch (e) { /* ignore — fall back to a fresh session */ }
+}
+
+// Set to the in-flight restoreSession() promise for this boot so main.js can await
+// it before showing the window. Null until the DB is readable (on the encrypted
+// path the restore happens later, inside db:unlock -> afterDbReady).
+let sessionRestore = null;
+async function whenSessionReady() { try { await sessionRestore; } catch (e) { /* proceed */ } }
+
+async function afterDbReady() {
+  sessionRestore = restoreSession();
+  await sessionRestore;
   try { await seedStarters(); } catch (e) { /* best-effort */ }
   // First-run browser fleet — fire-and-forget so the window opens immediately.
   maybeSeedBrowsers().catch(() => {});
@@ -9895,5 +9913,6 @@ module.exports = {
   CHANNELS,
   registerIpcHandlers,
   shutdownIpcHandlers,
-  attemptRememberedUnlock
+  attemptRememberedUnlock,
+  whenSessionReady
 };
