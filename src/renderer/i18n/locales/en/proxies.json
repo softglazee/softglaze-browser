@@ -194,6 +194,13 @@
     "checks_other": "{{count}} checks",
     "close": "Close"
   },
+  "historyCards": {
+    "title": "Recent check history",
+    "openDetail": "Open full history",
+    "regressed": "Verified before, failed later",
+    "regressedCount_one": "{{count}} verified then failed",
+    "regressedCount_other": "{{count}} verified then failed"
+  },
   "form": {
     "dialogTitleEdit": "Edit proxy",
     "dialogTitleCreate": "Create proxy",

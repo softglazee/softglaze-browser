@@ -168,6 +168,18 @@ export default function ProxyPoolPage() {
   const [showGeo, setShowGeo] = useState(false);
   const [historyProxy, setHistoryProxy] = useState(null);
   const [historyData, setHistoryData] = useState(null); // null = loading; [] = none
+  // History cards: each recently-checked proxy's last N results as pass/fail pips, so
+  // "verified before, failed on a later check" is visible at a glance for cross-verification.
+  const [healthCards, setHealthCards] = useState([]);
+  const [showHistoryCards, setShowHistoryCards] = useState(true);
+
+  const loadHealthCards = useCallback(async () => {
+    if (!softglazeApi.proxies.recentHealth) return;
+    try {
+      const rows = await softglazeApi.proxies.recentHealth({ perProxy: 10, maxProxies: 40 });
+      setHealthCards(Array.isArray(rows) ? rows : []);
+    } catch (e) { /* non-fatal — cards just stay as they were */ }
+  }, []);
 
   useEffect(() => {
     softglazeApi.settings.getProxyPolicy()
@@ -403,7 +415,7 @@ export default function ProxyPoolPage() {
     catch (err) { /* the run ends on its own if the message is lost */ }
   }
 
-  useEffect(() => { loadProxies(); loadGroups(); }, [loadProxies, loadGroups]);
+  useEffect(() => { loadProxies(); loadGroups(); loadHealthCards(); }, [loadProxies, loadGroups, loadHealthCards]);
   useEffect(() => { loadProxiesRef.current = loadProxies; }, [loadProxies]);
 
   // Subscribe once to the streamed proxy-checker progress. Each event updates the
@@ -434,7 +446,7 @@ export default function ProxyPoolPage() {
         setCheckResults((prev) => ({ ...prev, [data.proxyId]: data.result }));
         applyGeoName(data.proxyId, data.result);
       }
-      if (data.finished) { setCheckingAll(false); if (loadProxiesRef.current) loadProxiesRef.current(); }
+      if (data.finished) { setCheckingAll(false); if (loadProxiesRef.current) loadProxiesRef.current(); loadHealthCards(); }
     });
     return () => { try { off && off(); } catch (e) { /* ignore */ } };
   }, []);
@@ -899,6 +911,64 @@ export default function ProxyPoolPage() {
       {view === 'providers' && <ProxyProviders onSynced={loadProxies} />}
 
       {view === 'custom' && (<>
+      {/* PROXY HISTORY CARDS — each recently-checked proxy's last N results as pass/fail
+          pips, kept for cross-verification. An amber card = "verified before, failed on a
+          later check". Click a card to open the full latency/status history. */}
+      {healthCards.length > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5 gap-3 flex-wrap">
+            <button onClick={() => setShowHistoryCards((v) => !v)} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground">
+              <History className="w-3.5 h-3.5" />
+              {t('historyCards.title', 'Recent check history')}
+              <span className="text-[10.5px] font-normal text-muted-foreground/70">({healthCards.length})</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showHistoryCards ? '' : '-rotate-90'}`} />
+            </button>
+            {healthCards.some((c) => c.regressed) && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-amber-400">
+                <AlertTriangle className="w-3 h-3" />
+                {t('historyCards.regressedCount', { count: healthCards.filter((c) => c.regressed).length, defaultValue: '{{count}} verified then failed' })}
+              </span>
+            )}
+          </div>
+          {showHistoryCards && (
+            <div className="flex gap-2.5 overflow-x-auto pb-1.5">
+              {healthCards.map((c) => (
+                <button
+                  key={c.proxyId}
+                  onClick={() => openHistory({ id: c.proxyId, name: c.name, host: c.host, port: c.port })}
+                  title={t('historyCards.openDetail', 'Open full history')}
+                  className={`shrink-0 w-[190px] text-left rounded-xl border p-3 bg-card hover:border-primary/60 transition-colors ${c.regressed ? 'border-amber-500/45' : 'border-border'}`}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.lastStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                    <span className="text-[12px] font-semibold text-foreground truncate">{c.name || `${c.host}:${c.port}`}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate mb-2">{c.host}:{c.port}</div>
+                  <div className="flex items-center gap-1 mb-2">
+                    {c.checks.map((ck, i) => (
+                      <span
+                        key={i}
+                        title={`${ck.status === 'ok' ? 'OK' : 'FAIL'}${ck.latencyMs != null ? ` · ${ck.latencyMs}ms` : ''}`}
+                        className={`h-3.5 w-2 rounded-sm ${ck.status === 'ok' ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between text-[10.5px]">
+                    <span className="text-emerald-400">{c.okCount}✓</span>
+                    <span className="text-red-400">{c.failCount}✕</span>
+                    <span className="text-muted-foreground">{c.lastLatencyMs != null ? `${c.lastLatencyMs}ms` : '—'}</span>
+                  </div>
+                  {c.regressed && (
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-amber-400">
+                      <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> {t('historyCards.regressed', 'Verified before, failed later')}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="mb-2 flex items-center gap-3 flex-wrap">
         <div className="relative max-w-sm flex-1 min-w-[220px]">
           <Input
