@@ -1312,46 +1312,11 @@ function fingerprintScript(fp) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Proxy auth extension
-// ---------------------------------------------------------------------------
-async function createProxyAuthExtension(userDataDir, proxy) {
-  if (!proxy || !proxy.username || !proxy.password) return null;
-  const extensionDir = path.join(userDataDir, 'proxy-auth-extension');
-  await fs.mkdir(extensionDir, { recursive: true });
-
-  const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
-  const manifest = {
-    version: '1.0.0',
-    manifest_version: 2,
-    name: 'SoftGlaze Proxy Auth',
-    permissions: ['proxy', 'tabs', 'unlimitedStorage', 'storage', '<all_urls>', 'webRequest', 'webRequestBlocking'],
-    background: { scripts: ['background.js'] },
-    minimum_chrome_version: '22.0.0'
-  };
-
-  // Escape every value via JSON.stringify so a credential containing quotes,
-  // backslashes, or newlines cannot break out of the string literal (or inject
-  // arbitrary JS) into the generated extension script.
-  const backgroundJs = `
-    var config = {
-        mode: "fixed_servers",
-        rules: {
-          singleProxy: { scheme: ${JSON.stringify(scheme)}, host: ${JSON.stringify(String(proxy.host))}, port: ${Number.parseInt(proxy.port, 10)} },
-          bypassList: ["localhost", "127.0.0.1"]
-        }
-      };
-    chrome.proxy.settings.set({ value: config, scope: "regular" }, function () {});
-    function callbackFn(details) {
-        return { authCredentials: { username: ${JSON.stringify(String(proxy.username))}, password: ${JSON.stringify(String(proxy.password))} } };
-    }
-    chrome.webRequest.onAuthRequired.addListener(callbackFn, { urls: ["<all_urls>"] }, ['blocking']);
-  `;
-
-  await fs.writeFile(path.join(extensionDir, 'manifest.json'), JSON.stringify(manifest));
-  await fs.writeFile(path.join(extensionDir, 'background.js'), backgroundJs);
-  return extensionDir;
-}
+// audit: the old createProxyAuthExtension() was removed here — it wrote the proxy
+// username/password in PLAINTEXT into a generated background.js inside the profile
+// dir. It was dead code (never called or exported). Authenticated proxies are
+// handled without touching disk: HTTP via page.authenticate() and SOCKS5 via the
+// in-memory local socksRelay (socksRelay.js).
 
 // ---------------------------------------------------------------------------
 // Managed policy file. Expresses the dev-tools / extension-lock settings as a
@@ -3044,8 +3009,16 @@ async function closeBrowserWithTimeout(session, timeoutMs = 8000) {
   const outcome = await Promise.race([closed, timeout]);
   if (timer) clearTimeout(timer);
   if (outcome !== 'closed') {
-    try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
-    if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
+    // audit: SIGKILL on only the parent Chrome PID orphans its renderer/GPU/utility
+    // children on Windows (no process groups), leaving them holding the profile's
+    // userDataDir lock + memory until the next launch. Use taskkill /T (tree kill).
+    if (process.platform === 'win32' && pid) {
+      try { require('node:child_process').spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true }); }
+      catch (e) { try { process.kill(pid, 'SIGKILL'); } catch (e2) { /* already gone */ } }
+    } else {
+      try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+      if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
+    }
   }
   // Tear down the SOCKS relay too (idempotent — the 'disconnected' handler may
   // also close it; double-close is safe). Guards the force-kill path where the
