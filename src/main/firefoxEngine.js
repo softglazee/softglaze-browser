@@ -327,9 +327,16 @@ async function launchFirefoxProfile(options = {}) {
     autofillInstalled = r.mode !== 'none';
   }
 
+  // UA override for real Firefox. NEVER apply a Chrome-family UA to a Gecko binary: the
+  // engine still exposes Firefox-only tells (buildID, oscpu, no navigator.userAgentData),
+  // so a `Chrome/NNN` UA over them is an instant engine/UA mismatch (the pixelscan flag).
+  // Honor an explicit *Firefox* UA if one is set; for 'Auto', empty, or a Chrome UA fall
+  // back to null → the binary's own native, coherent Firefox UA (matches its TLS/JA4).
+  const storedUa = profile.userAgent && profile.userAgent !== 'Auto' ? String(profile.userAgent).trim() : '';
+  const firefoxUserAgent = (/firefox\//i.test(storedUa) && !/chrome\//i.test(storedUa)) ? storedUa : null;
   const userJs = buildUserJs({
     proxy: effectiveProxy,
-    userAgent: profile.userAgent && profile.userAgent !== 'Auto' ? profile.userAgent : null,
+    userAgent: firefoxUserAgent,
     acceptLanguages,
     autofill: autofillInstalled
   });

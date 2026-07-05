@@ -2219,7 +2219,12 @@ async function launchProfileSession(options = {}) {
     userDataDir,
     defaultViewport: null,
     args,
-    ignoreDefaultArgs: ['--enable-automation']
+    ignoreDefaultArgs: ['--enable-automation'],
+    // Give CDP longer to attach/initialize new targets. The browser-level auto-attach
+    // (waitForDebuggerOnStart) can hold a "+"-tab / worker target briefly before it
+    // resumes, and puppeteer's own Network.enable on that target was hitting the default
+    // timeout ("Network.enable timed out") on slower machines/proxies.
+    protocolTimeout: 120000
   };
   if (resolvedBrowser && resolvedBrowser.exePath) launchOptions.executablePath = resolvedBrowser.exePath;
   // Set the timezone on the Chrome PROCESS via the TZ env var. Chromium honors it
