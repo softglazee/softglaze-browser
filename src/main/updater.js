@@ -49,14 +49,53 @@ function normalizeNotes(info) {
 }
 
 function resolveFeed() {
-  const url = tenantConfig().updateFeedUrl;
-  if (url) return { kind: 'generic', url };
+  const url = tenantConfig().updateFeedUrl; // already https-validated by tenantConfig
+  if (url) {
+    // Defense-in-depth: refuse anything that isn't https (an http feed can be
+    // MITM'd to serve a malicious installer). tenantConfig already drops http, so
+    // this only fires if that ever changes.
+    if (!/^https:\/\//i.test(url)) { console.error('[updater] refusing non-https update feed — auto-update disabled.'); return null; }
+    return { kind: 'generic', url };
+  }
   if (process.env.SG_ENABLE_GITHUB_UPDATES === '1') return { kind: 'baked' };
   return null;
 }
 
+// audit C3: electron-updater can only verify a downloaded installer's authenticity
+// when the INSTALLED app is itself Authenticode-signed (it matches the update's
+// publisher against the running app's). On an UNSIGNED build there is nothing to
+// verify against, so auto-download + auto-install is a silent RCE vector. Verify at
+// runtime that the current executable carries a Valid signature; if not, the whole
+// updater stays disabled. Windows-only target; anything else is treated as unsigned.
+let _signedCache = null;
+function isSignedBuild() {
+  if (_signedCache !== null) return _signedCache;
+  _signedCache = false;
+  if (process.platform !== 'win32') return _signedCache;
+  try {
+    const exe = process.execPath.replace(/'/g, "''");
+    const psCmd = `(Get-AuthenticodeSignature -FilePath '${exe}').Status`;
+    const out = require('node:child_process').execFileSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', psCmd],
+      { encoding: 'utf8', timeout: 10000, windowsHide: true }
+    );
+    _signedCache = out.trim() === 'Valid';
+  } catch (e) {
+    console.warn('[updater] signature check failed; treating build as unsigned:', e && e.message);
+    _signedCache = false;
+  }
+  return _signedCache;
+}
+
 function initAutoUpdater(mainWindow) {
   if (!app.isPackaged) return;
+
+  // Hard gate (audit C3): never auto-update an unsigned build.
+  if (!isSignedBuild()) {
+    console.warn('[updater] build is not code-signed — auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');
+    return;
+  }
 
   const feed = resolveFeed();
   if (!feed) { console.log('[updater] no update feed configured — auto-update disabled.'); return; }

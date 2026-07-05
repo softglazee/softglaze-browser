@@ -24,12 +24,12 @@ function MiniStat({ icon: Icon, label, value, color }) {
 function VersionRow({ label, versionText, installed, download, accent, onDownload, onPause, onResume }) {
   const { t } = useTranslation('browsers');
   const d = download;
-  const downloading = d && (d.state === 'downloading' || d.state === 'extracting' || d.state === 'installing' || d.state === 'queued');
+  const downloading = d && (d.state === 'downloading' || d.state === 'extracting' || d.state === 'installing' || d.state === 'verifying' || d.state === 'queued');
   const paused = d && d.state === 'paused';
   const interrupted = d && d.state === 'interrupted';
   const failed = d && d.state === 'error';
   const canPause = d && (d.state === 'downloading' || d.state === 'queued');
-  const stateLabel = d ? (d.state === 'extracting' || d.state === 'installing' ? t('row.installing') : d.state === 'queued' ? t('row.queued') : `${d.percent || 0}%`) : '';
+  const stateLabel = d ? (d.state === 'extracting' || d.state === 'installing' || d.state === 'verifying' ? t('row.installing') : d.state === 'queued' ? t('row.queued') : `${d.percent || 0}%`) : '';
   // Progress bar tint: amber while paused/interrupted, primary while active.
   const barColor = (paused || interrupted) ? '#f59e0b' : 'var(--primary)';
   return (
@@ -70,7 +70,7 @@ function VersionRow({ label, versionText, installed, download, accent, onDownloa
       ) : downloading ? (
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-muted-foreground">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> {d.state === 'extracting' || d.state === 'installing' ? t('row.installingShort') : t('row.downloading')}
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> {d.state === 'extracting' || d.state === 'installing' || d.state === 'verifying' ? t('row.installingShort') : t('row.downloading')}
           </span>
           {canPause && (
             <button onClick={onPause} title={t('row.pauseDownload')} className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
