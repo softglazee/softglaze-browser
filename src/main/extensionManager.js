@@ -49,7 +49,7 @@ const RECOMMENDED_EXTENSIONS = [
   { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: true },
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: true },
   { chromeId: 'cjpalhdlnbpafiamejdnhcphjbkeiagm', name: 'uBlock Origin', enable: true }, // enabled by request; note: content blockers alter page/network behavior (anti-detect tradeoff)
-  { chromeId: 'padekgcemlokbadohgkifijomclgjgif', name: 'Proxy SwitchyOmega', enable: false }
+  { chromeId: 'padekgcemlokbadohgkifijomclgjgif', name: 'Proxy SwitchyOmega', enable: true } // enabled by request; note: can override Softglaze's native per-profile proxy
 ];
 
 function extensionsRoot() {
