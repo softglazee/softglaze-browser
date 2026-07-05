@@ -442,6 +442,15 @@ export default function ProxyPoolPage() {
   // Auto-scroll the checker log to the newest line.
   useEffect(() => { if (checkLogRef.current) checkLogRef.current.scrollTop = checkLogRef.current.scrollHeight; }, [checkRun && checkRun.logs && checkRun.logs.length]);
 
+  // Auto-close the checker console shortly after the final check finishes — the
+  // per-proxy results persist to health history, so nothing is lost. A running or
+  // freshly-started run cancels the pending close.
+  useEffect(() => {
+    if (!checkRun || checkRun.running) return undefined;
+    const id = setTimeout(() => setCheckRun(null), 5000);
+    return () => clearTimeout(id);
+  }, [checkRun && checkRun.running, checkRun && checkRun.runId]);
+
   function updateProxyForm(key, value) {
     setProxyForm((current) => ({ ...current, [key]: value }));
   }
@@ -809,44 +818,11 @@ export default function ProxyPoolPage() {
         }
       />
 
-      {/* Dual-view tab partition */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
-        {[
-          { key: 'custom', label: t('tabs.custom'), icon: Server },
-          { key: 'providers', label: t('tabs.providers'), icon: Boxes }
-        ].map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setView(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            <Icon className="w-4 h-4" /> {label}
-            {key === 'providers' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 uppercase tracking-wide">{t('tabs.integrated')}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* STATS ROW — real counts + proxy-type donut (custom view only) */}
-      {view === 'custom' && (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <MiniStat icon={Globe} label={t('stats.totalProxies')} value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
-          <MiniStat icon={Wifi} label={t('stats.proxyTypes')} value={Object.keys(typeCounts).length} color="#3b82f6" />
-          <MiniStat icon={ShieldCheck} label={t('stats.verified')} value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
-          <MiniStat icon={ShieldOff} label={t('stats.nonVerified')} value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
-        </div>
-        <div className="rounded-xl bg-card border border-border p-3 flex items-center gap-3">
-          <Donut data={typeDonut} size={84} thickness={13} centerLabel={proxies.length} centerSub={t('stats.total')} />
-          <div className="flex-1 min-w-0"><Legend data={typeDonut} /></div>
-        </div>
-      </div>
-      )}
-
-      {/* LIVE CHECKER — a floating docked card (bottom-right) so opening the log never
-          steals height from the proxy table. Progress bar, ETA, counts + running log. */}
-      {view === 'custom' && checkRun && (
-        <div className="fixed bottom-5 right-5 z-40 w-[440px] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-border-strong bg-card/85 backdrop-blur-xl p-4 space-y-3 shadow-2xl shadow-black/50 animate-scale-in">
+      {/* LIVE CHECKER — inline, ABOVE the Custom / Integrations tabs (was a floating
+          bottom-right card). Auto-closes ~5s after the run finishes; per-proxy results
+          persist to each proxy's health history for cross-verification. */}
+      {checkRun && (
+        <div className="mb-4 rounded-2xl border border-border-strong bg-card p-4 space-y-3 animate-scale-in">
           <div className="flex items-center gap-3 flex-wrap">
             {checkRun.running
               ? <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
@@ -882,6 +858,40 @@ export default function ProxyPoolPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Dual-view tab partition */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
+        {[
+          { key: 'custom', label: t('tabs.custom'), icon: Server },
+          { key: 'providers', label: t('tabs.providers'), icon: Boxes }
+        ].map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setView(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Icon className="w-4 h-4" /> {label}
+            {key === 'providers' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 uppercase tracking-wide">{t('tabs.integrated')}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* STATS ROW — real counts + proxy-type donut (custom view only) */}
+      {view === 'custom' && (
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <MiniStat icon={Globe} label={t('stats.totalProxies')} value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
+          <MiniStat icon={Wifi} label={t('stats.proxyTypes')} value={Object.keys(typeCounts).length} color="#3b82f6" />
+          <MiniStat icon={ShieldCheck} label={t('stats.verified')} value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
+          <MiniStat icon={ShieldOff} label={t('stats.nonVerified')} value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
+        </div>
+        <div className="rounded-xl bg-card border border-border p-3 flex items-center gap-3">
+          <Donut data={typeDonut} size={84} thickness={13} centerLabel={proxies.length} centerSub={t('stats.total')} />
+          <div className="flex-1 min-w-0"><Legend data={typeDonut} /></div>
+        </div>
+      </div>
       )}
 
       {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
