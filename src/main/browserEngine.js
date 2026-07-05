@@ -17,6 +17,9 @@ const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
 // into every launched page. No deps; just returns a self-contained IIFE string.
 const { buildAutofillBootstrap } = require('./personaAutofill');
 const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
+// Local SOCKS5 auth-injecting relay — Chromium can't authenticate to a SOCKS5
+// proxy, so an authenticated one is routed through this instead (audit).
+const { startSocksAuthRelay } = require('./socksRelay');
 
 // SoftGlaze first-party extension (Chrome Web Store ID). Best-effort force-install
 // on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
@@ -2025,15 +2028,32 @@ async function launchProfileSession(options = {}) {
   if (enableFeatures.length) args.push(`--enable-features=${[...new Set(enableFeatures)].join(',')}`);
   if (disableFeatures.length) args.push(`--disable-features=${[...new Set(disableFeatures)].join(',')}`);
 
-  // Proxy via --proxy-server; credentials handled per-page with page.authenticate
-  // (below). This replaces the old Manifest V2 auth extension, which newer Chrome
-  // builds (≈139+) no longer load — so authenticated proxies kept working on the
-  // bundled 127 but would silently fail on a real Chrome 149.
+  // Authenticated SOCKS5: Chromium has NO SOCKS proxy-auth support and
+  // page.authenticate() only answers HTTP 407, so an authenticated SOCKS5 proxy
+  // silently fails on every request. Route it through a local no-auth SOCKS5 relay
+  // that injects the credentials upstream, and point Chromium at the relay. HTTP(S)
+  // proxies keep using page.authenticate below (which works for their 407). (audit)
+  const proxyIsSocks = resolvedProxy && String(resolvedProxy.type).toLowerCase() === 'socks5';
+  const socksNeedsAuth = proxyIsSocks && Boolean(resolvedProxy.username || resolvedProxy.password);
+  let socksRelay = null;
+  let proxyForArg = resolvedProxy;
+  if (socksNeedsAuth) {
+    try {
+      socksRelay = await startSocksAuthRelay(resolvedProxy);
+    } catch (e) {
+      throw new Error(`Could not start the local SOCKS5 authentication relay for this proxy: ${(e && e.message) || e}`);
+    }
+    proxyForArg = { type: 'SOCKS5', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
+  }
+
+  // Proxy via --proxy-server. HTTP(S) credentials are handled per-page with
+  // page.authenticate (below); SOCKS5 credentials are handled by the relay above,
+  // so page.authenticate is NOT used for SOCKS (it would do nothing).
   if (resolvedProxy) {
-    const proxyServer = buildProxyServerArgument(resolvedProxy);
+    const proxyServer = buildProxyServerArgument(proxyForArg);
     if (proxyServer) args.push(`--proxy-server=${proxyServer}`);
   }
-  const proxyCreds = resolvedProxy && (resolvedProxy.username || resolvedProxy.password)
+  const proxyCreds = resolvedProxy && !proxyIsSocks && (resolvedProxy.username || resolvedProxy.password)
     ? { username: resolvedProxy.username || '', password: resolvedProxy.password || '' }
     : null;
 
@@ -2060,7 +2080,14 @@ async function launchProfileSession(options = {}) {
   // fix for the real-timezone leak (proxy in the US but JS reporting Asia/Karachi).
   if (timezoneId) launchOptions.env = { ...process.env, TZ: timezoneId };
 
-  const browser = await puppeteer.launch(launchOptions);
+  let browser;
+  try {
+    browser = await puppeteer.launch(launchOptions);
+  } catch (launchErr) {
+    // Launch itself failed — the SOCKS relay (if any) would otherwise leak.
+    if (socksRelay) { try { socksRelay.close(); } catch (e) {} }
+    throw launchErr;
+  }
 
   // Guard the ENTIRE post-launch setup (audit: launch-failure orphans Chrome).
   // Until the session is registered in activeSessions (and its 'disconnected'
@@ -2473,11 +2500,13 @@ async function launchProfileSession(options = {}) {
     title: title || `Profile ${sessionId}`,
     proxyLabel,
     injectionOk: !injectionDegraded,
+    socksRelay, // local SOCKS5 auth relay (or null) — closed when the session ends
     createdAt: new Date()
   });
   sessionRegistered = true;
   browser.on('disconnected', () => {
     activeSessions.delete(sessionId);
+    if (socksRelay) { try { socksRelay.close(); } catch (e) {} } // tear down the relay with the browser
     // Classify the disconnect: app shutdown and explicit user-close are clean;
     // anything else is a crash (ipcHandlers bumps crashCount + notifies).
     let reason = 'crash';
@@ -2488,8 +2517,12 @@ async function launchProfileSession(options = {}) {
 
   } catch (launchErr) {
     // Post-launch setup failed before the session was registered. Close the
-    // now-orphaned browser (best-effort) and rethrow so the caller reports failure.
-    if (!sessionRegistered) { try { await browser.close(); } catch (e) { /* already gone */ } }
+    // now-orphaned browser + SOCKS relay (best-effort) and rethrow so the caller
+    // reports failure.
+    if (!sessionRegistered) {
+      try { await browser.close(); } catch (e) { /* already gone */ }
+      if (socksRelay) { try { socksRelay.close(); } catch (e) {} }
+    }
     throw launchErr;
   }
 
@@ -2850,6 +2883,10 @@ async function closeBrowserWithTimeout(session, timeoutMs = 8000) {
     try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
     if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
   }
+  // Tear down the SOCKS relay too (idempotent — the 'disconnected' handler may
+  // also close it; double-close is safe). Guards the force-kill path where the
+  // disconnect event might not fire.
+  if (session.socksRelay) { try { session.socksRelay.close(); } catch (e) {} }
 }
 
 async function closeProfileSession(sessionId) {
