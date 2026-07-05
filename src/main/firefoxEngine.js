@@ -15,6 +15,7 @@ const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const { parseProxyInput } = require('./browserEngine');
+const { startSocksAuthRelay } = require('./socksRelay');
 const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
 // `app` is a string path (not the API object) when required outside Electron, so
 // `app && app.isPackaged` is a safe runtime guard.
@@ -241,7 +242,10 @@ function buildUserJs(opts) {
     pref('xpinstall.signatures.required', false);
   }
 
-  // Proxy. type 1 = manual. For auth HTTP proxies we point at the local relay.
+  // Proxy. type 1 = manual. `opts.proxy` is the EFFECTIVE proxy — the caller has
+  // already swapped it to point at a local no-auth relay when the upstream needs
+  // credentials (Firefox prefs can carry NO proxy auth, for HTTP or SOCKS), so this
+  // just maps host/port/type onto the right prefs.
   if (opts.proxy) {
     const p = opts.proxy;
     const isSocks = /socks/i.test(p.type);
@@ -253,12 +257,10 @@ function buildUserJs(opts) {
       pref('network.proxy.socks_version', /4/.test(p.type) ? 4 : 5);
       pref('network.proxy.socks_remote_dns', true);
     } else {
-      const host = opts.relayPort ? '127.0.0.1' : p.host;
-      const port = opts.relayPort ? opts.relayPort : Number(p.port);
-      pref('network.proxy.http', host);
-      pref('network.proxy.http_port', port);
-      pref('network.proxy.ssl', host);
-      pref('network.proxy.ssl_port', port);
+      pref('network.proxy.http', p.host);
+      pref('network.proxy.http_port', Number(p.port));
+      pref('network.proxy.ssl', p.host);
+      pref('network.proxy.ssl_port', Number(p.port));
       pref('network.proxy.share_proxy_settings', true);
     }
   }
@@ -283,10 +285,31 @@ async function launchFirefoxProfile(options = {}) {
   const proxy = parseProxyInput(options.proxy || options.proxyInfoString);
   const proxyLabel = proxy ? `${proxy.type} ${proxy.host}:${proxy.port}` : 'Direct (No Proxy)';
 
-  // Auth HTTP proxy -> local relay so Firefox connects without a credential prompt.
-  let relay = null;
-  if (proxy && (proxy.username || proxy.password) && !/socks/i.test(proxy.type)) {
-    relay = await startAuthRelay(proxy).catch(() => null);
+  // Firefox prefs can carry NO proxy credentials — neither for HTTP nor SOCKS. When the
+  // upstream needs auth, run a tiny local NO-AUTH relay that injects the credentials and
+  // point Firefox at 127.0.0.1:<relayPort> instead:
+  //   • authenticated HTTP(S) proxy → HTTP relay (startAuthRelay)
+  //   • authenticated SOCKS5 proxy  → SOCKS5 relay (startSocksAuthRelay) — mirrors the
+  //     Chrome engine; without it an auth SOCKS5 proxy makes Firefox report "The proxy
+  //     server is refusing connections" because it can only offer NO-AUTH.
+  // No-auth proxies (IP-whitelisted) are pointed at directly. A relay that fails to bind
+  // now THROWS a clear error instead of silently falling back to a broken direct config.
+  let relay = null;              // { port, close } — closed on teardown / launch failure
+  let effectiveProxy = proxy;
+  if (proxy && (proxy.username || proxy.password)) {
+    const typeLc = String(proxy.type || '').toLowerCase();
+    const isSocks5 = typeLc === 'socks5';   // only SOCKS5 carries username/password auth
+    const isSocks4 = typeLc.startsWith('socks') && !isSocks5; // socks4/4a can't carry a password
+    // A SOCKS4/4a upstream has no password handshake — its optional userid isn't auth we
+    // can inject, so pass it directly (matches the Chrome engine, which only relays socks5).
+    if (!isSocks4) {
+      try {
+        relay = isSocks5 ? await startSocksAuthRelay(proxy) : await startAuthRelay(proxy);
+      } catch (e) {
+        throw new Error(`Could not start the local ${isSocks5 ? 'SOCKS5' : 'HTTP'} proxy authentication relay for this profile: ${(e && e.message) || e}`);
+      }
+      effectiveProxy = { type: isSocks5 ? 'SOCKS5' : 'HTTP', host: '127.0.0.1', port: relay.port, username: null, password: null };
+    }
   }
 
   const acceptLanguages = profile.languageCustom && profile.languageType === 'Custom'
@@ -305,8 +328,7 @@ async function launchFirefoxProfile(options = {}) {
   }
 
   const userJs = buildUserJs({
-    proxy,
-    relayPort: relay ? relay.port : null,
+    proxy: effectiveProxy,
     userAgent: profile.userAgent && profile.userAgent !== 'Auto' ? profile.userAgent : null,
     acceptLanguages,
     autofill: autofillInstalled
