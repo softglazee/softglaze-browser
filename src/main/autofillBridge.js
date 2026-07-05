@@ -53,9 +53,14 @@ function authed(req) {
 function readBody(req) {
   return new Promise((resolve) => {
     let data = '';
-    req.on('data', (c) => { data += c; if (data.length > 1e6) req.destroy(); });
-    req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { resolve({}); } });
-    req.on('error', () => resolve({}));
+    let done = false;
+    const finish = (val) => { if (!done) { done = true; resolve(val); } };
+    req.on('data', (c) => { data += c; if (data.length > 1e6) { try { req.destroy(); } catch (e) {} finish({}); } });
+    req.on('end', () => { try { finish(data ? JSON.parse(data) : {}); } catch (e) { finish({}); } });
+    req.on('error', () => finish({}));
+    // A client abort OR our own req.destroy() (the size-cap path) emits 'close', not 'error'
+    // — without this the promise would hang forever and the await never returns.
+    req.on('close', () => finish({}));
   });
 }
 
