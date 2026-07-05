@@ -32,7 +32,7 @@ const CHROME_ID_RE = /^[a-p]{32}$/;
 // seed the new extension once. installById is idempotent (already-present ones are
 // skipped), and a user who later deletes a recommended extension won't see it
 // return because the (bumped) flag stays set.
-const SEED_FLAG = 'recommendedExtensionsSeeded_v2';
+const SEED_FLAG = 'recommendedExtensionsSeeded_v3'; // v3: swapped uBlock + SwitchyOmega to their MV3 IDs
 
 // One-time reconcile flag (separate from SEED_FLAG). The seeder only sets isGlobal on
 // FIRST install and never revisits it, so a recommended extension that was installed
@@ -40,7 +40,7 @@ const SEED_FLAG = 'recommendedExtensionsSeeded_v2';
 // dormant even after the default is flipped to `enable:true`. reconcileRecommendedExtensions()
 // runs ONCE to force-enable those, then locks — so a user's later manual disable is
 // respected. Bump the suffix to re-run the reconcile after changing the defaults again.
-const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v1';
+const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v2'; // v2: re-run after the MV3 uBlock/SwitchyOmega swap
 
 // The SoftGlaze first-party extension — always injected into every profile and
 // (best-effort) force-installed from the Web Store so active users are counted.
@@ -56,8 +56,8 @@ const RECOMMENDED_EXTENSIONS = [
   { chromeId: SOFTGLAZE_RECORDER_ID, name: 'SoftGlaze Screen Recorder', enable: true },
   { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: true },
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: true },
-  { chromeId: 'cjpalhdlnbpafiamejdnhcphjbkeiagm', name: 'uBlock Origin', enable: true }, // enabled by request; note: content blockers alter page/network behavior (anti-detect tradeoff)
-  { chromeId: 'padekgcemlokbadohgkifijomclgjgif', name: 'Proxy SwitchyOmega', enable: true } // enabled by request; note: can override Softglaze's native per-profile proxy
+  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: true }, // MV3 successor (Chrome is disabling the MV2 build); content blockers alter page/network behavior (anti-detect tradeoff)
+  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: true } // MV3 successor; can override Softglaze's native per-profile proxy
 ];
 
 function extensionsRoot() {
