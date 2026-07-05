@@ -3717,9 +3717,15 @@ async function launchProfile(payload) {
     const launchProxy = rotated || (useProfileProxy ? profile.proxy : null);
     const launchProxyInfo = rotated ? null : (useProfileProxy ? profile.proxyInfoString : null);
 
-    // Global team extensions to mount into this launch (merged into --load-extension
-    // alongside the fingerprint extension inside launchProfileSession).
-    const globalExtensionDirs = await extensionManager.resolveGlobalExtensionDirs();
+    // Per-profile opt-in for loading SoftGlaze/team extensions. Real stable Chrome
+    // ignores --load-extension, so a profile that wants extensions launches on
+    // Chrome-for-Testing (chooseBrowserBinary honors this); profiles that don't stay on
+    // stealthier real Chrome. Only resolve/attach the team extensions when the profile
+    // opted in — otherwise they're neither mounted nor worth carrying.
+    let perProfileBrowser = {};
+    try { perProfileBrowser = profile.browserSettingsJson ? JSON.parse(profile.browserSettingsJson) : {}; } catch (e) { perProfileBrowser = {}; }
+    const loadExtensions = perProfileBrowser.loadExtensions === true;
+    const globalExtensionDirs = loadExtensions ? await extensionManager.resolveGlobalExtensionDirs() : [];
 
     const session = await launchProfileSession({
       profileId: profile.id,
@@ -3734,6 +3740,7 @@ async function launchProfile(payload) {
       browserSettings,
       captcha: globalSettings.captcha,
       globalExtensionDirs,
+      loadExtensions,
       geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
     });
 

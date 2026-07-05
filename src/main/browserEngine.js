@@ -271,7 +271,18 @@ function findRealChrome() {
 // fragile NTP-override workaround (which Chrome's consent bubble lets the user
 // disable — re-breaking CfT). Only when no real Chrome exists do we fall back to a
 // downloaded CfT build (+ NTP override) by the profile's pinned/auto version.
-function chooseBrowserBinary(profile) {
+function chooseBrowserBinary(profile, opts = {}) {
+  // When this profile is set to load SoftGlaze/team extensions, prefer Chrome-for-Testing:
+  // real stable Chrome SILENTLY IGNORES --load-extension (a 2025 security change), so the
+  // extensions would never mount there. This is a deliberate per-profile trade-off —
+  // real Chrome is stealthier (genuine binary, no "Testing" build, no NTP-override
+  // workaround), so profiles that DON'T need extensions keep preferring it.
+  if (opts.preferCftForExtensions) {
+    const cft = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
+    if (cft) return { ...cft, isReal: false };
+    // No CfT build installed — fall through to real Chrome so the profile still launches
+    // (the extensions just won't mount; the UI hint tells the user to install a browser).
+  }
   const real = findRealChrome();
   if (real) return real;
   const cft = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
@@ -1880,6 +1891,9 @@ async function launchProfileSession(options = {}) {
     browserSettings = {},
     captcha = null,
     globalExtensionDirs = [],
+    // Per-profile opt-in: load SoftGlaze/team extensions (prefers Chrome-for-Testing so
+    // --load-extension actually mounts them). Off = prefer real Chrome (stealthier).
+    loadExtensions = false,
     // Geo auto-match (timezone/locale/WebRTC derived from the proxy exit) is ON by
     // default. A global Settings toggle can disable it; when off we skip the geo
     // lookup entirely so only the profile's manual values apply.
@@ -1939,7 +1953,7 @@ async function launchProfileSession(options = {}) {
   const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId });
   // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
   // extension is written with the NTP override ONLY when launching CfT.
-  const chosenBrowser = chooseBrowserBinary(profile);
+  const chosenBrowser = chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, { ntpOverride: usingCft });
 
