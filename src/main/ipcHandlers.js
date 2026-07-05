@@ -7124,7 +7124,9 @@ async function readCloudSyncConfig() {
     namespace: c.namespace || 'softglaze',
     sealedToken: c.sealedToken || '',
     passphraseSalt: c.passphraseSalt || null,
-    passphraseVerifier: c.passphraseVerifier || null
+    passphraseVerifier: c.passphraseVerifier || null,
+    // Random per-workspace salt for the E2E master key (audit: NOT the namespace).
+    workspaceSalt: c.workspaceSalt || null
   };
 }
 
@@ -7143,9 +7145,17 @@ async function unlockCloudSync(passphrase) {
   const token = secretStore.open(c.sealedToken);
   const transport = syncTransport.createTransport({ baseUrl: c.baseUrl, token });
   const engine = new CloudSyncEngine({ transport, namespace: c.namespace });
-  // The key-derivation salt is the shared namespace, so two installs that agree on
-  // (passphrase, namespace) derive the SAME key and converge.
-  await engine.deriveMasterKey(String(passphrase), c.namespace);
+  // Derive the E2E master key from a RANDOM per-workspace salt (audit: never the
+  // public namespace/bucket name). A legacy config predating this carries no salt —
+  // mint one now and persist it; the transport is not yet wired, so there is no
+  // prior ciphertext to invalidate. (When the transport ships, this salt should be
+  // uploaded to the bucket so a second device converges on the same key.)
+  let workspaceSalt = c.workspaceSalt;
+  if (!workspaceSalt) {
+    workspaceSalt = crypto.randomBytes(16).toString('base64');
+    try { await writeSetting('cloudSync', { ...c, workspaceSalt }); } catch (e) { /* best-effort persist */ }
+  }
+  await engine.deriveMasterKey(String(passphrase), Buffer.from(workspaceSalt, 'base64'));
   cloudSyncEngine = engine;
   cloudSyncUnlocked = true;
   cloudSyncLastError = null;
@@ -7159,6 +7169,11 @@ async function syncConfigure(payload) {
 
   const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
   const namespace = (input.namespace !== undefined ? String(input.namespace || '').trim() : prev.namespace) || 'softglaze';
+  // audit: the namespace is interpolated into the bucket object key — keep it to a
+  // single safe path segment so it can never escape its prefix (see syncTransport._url).
+  if (!/^[A-Za-z0-9._-]+$/.test(namespace) || namespace === '.' || namespace === '..') {
+    throw new Error('Namespace may only contain letters, numbers, dot, underscore, and hyphen — no path separators.');
+  }
   let sealedToken = prev.sealedToken;
   if (input.token !== undefined && input.token !== '') sealedToken = secretStore.seal(String(input.token).trim());
 
@@ -7177,7 +7192,10 @@ async function syncConfigure(payload) {
   if (enabled && !baseUrl) throw new Error('Enter the sync endpoint URL before enabling sync.');
   if (enabled && !passphraseVerifier) throw new Error('Set a sync passphrase before enabling sync.');
 
-  await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier });
+  // Random per-workspace salt for the E2E master key (audit: not the namespace).
+  // Generated once and preserved thereafter so the derived key stays stable.
+  const workspaceSalt = prev.workspaceSalt || crypto.randomBytes(16).toString('base64');
+  await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier, workspaceSalt });
 
   // Re-key invalidates a previously-derived session key.
   cloudSyncEngine = null;

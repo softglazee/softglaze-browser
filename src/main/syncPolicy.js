@@ -34,8 +34,14 @@ function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   // Nothing remote yet -> first upload.
   if (remote == null) return { action: 'push', resolution: 'push', reason: 'remote-absent' };
 
+  // Prefer the monotonic `rev` for remote change detection — it is immune to clock
+  // skew. With wall-clock only, a device whose clock lags could write a remote
+  // updatedAt <= our syncedAt; we'd read remoteChanged=false and, if we also
+  // changed, silently push over its genuine change (the conflict never even fires).
+  // Fall back to updatedAt only when a rev isn't present on both sides.
+  const haveRevs = remoteMeta && remoteMeta.rev != null && lastSync && lastSync.rev != null;
   const localChanged = local > syncedAt;
-  const remoteChanged = remote > syncedAt;
+  const remoteChanged = haveRevs ? (remoteMeta.rev !== lastSync.rev) : (remote > syncedAt);
 
   if (!localChanged && !remoteChanged) return { action: 'noop', resolution: null, reason: 'in-sync' };
   if (localChanged && !remoteChanged) return { action: 'push', resolution: 'push', reason: 'local-changed' };
