@@ -276,6 +276,7 @@ const CHANNELS = Object.freeze({
   AUTOMATION_DELETE_MACRO: 'automation:delete-macro',
   AUTOMATION_START_WARMER: 'automation:start-warmer',
   AUTOMATION_STOP_WARMER: 'automation:stop-warmer',
+  AUTOMATION_LIST_WARMERS: 'automation:list-warmers', // re-attach to a running warm-up
   AUTOMATION_GET_HISTORY: 'automation:get-history',
   AUTOMATION_WARMER_PROGRESS: 'automation:warmer-progress', // main -> renderer stream
   AUTOMATION_RUN_MACRO: 'automation:run-macro',
@@ -3070,7 +3071,13 @@ async function bulkLaunchProfiles(payload) {
   // cap how many start at once (configurable; default 5). A shared cursor feeds the
   // worker pool; each profile is independent so a failure is isolated to that id.
   const settings = await getGlobalSettings().catch(() => ({}));
-  const cap = Math.max(1, Number((settings.performance && settings.performance.launchConcurrency) || 5));
+  const settingCap = Math.max(1, Number((settings.performance && settings.performance.launchConcurrency) || 5));
+  // A per-launch override lets the Profiles page offer "Queue (one-by-one)" vs "All at
+  // once" without touching the global setting: queue passes concurrency 1, so a worker
+  // pool of width 1 launches each profile only after the previous one is up.
+  const cap = input.concurrency != null
+    ? Math.max(1, Math.min(32, Number.parseInt(input.concurrency, 10) || settingCap))
+    : settingCap;
   const total = ids.length;
   const width = Math.min(cap, total);
   let done = 0;
@@ -9095,30 +9102,68 @@ async function startWarmer(payload, event) {
   let sites = normalizeWarmSites(input.sites);
   if (!sites.length) sites = defaultWarmSites();
   const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen), headless: Boolean(input.headless) };
+  // Concurrency: default 1 = a strict one-by-one QUEUE (launch a profile, let it finish
+  // its sites and close, THEN the next). This replaces the old fire-everything-at-once
+  // fan-out (Promise.allSettled over ids.map) that launched N real browsers in the same
+  // tick and OOM-crashed the app on large selections. A higher value warms that many at
+  // a time via a shared-cursor worker pool.
+  const concurrency = Math.max(1, Math.min(16, Number.parseInt(input.concurrency, 10) || 1));
   const runId = `warm-${Date.now()}`;
-  const run = { id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null };
+  const run = {
+    id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null,
+    // Metadata + a rolling log buffer so a renderer that navigated away and came back can
+    // re-attach to (and stop) the still-running job instead of orphaning it.
+    profileIds: ids, total: ids.length, done: 0, concurrency,
+    loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: []
+  };
   warmerRuns.set(runId, run);
 
-  const send = (data) => { try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, data); } catch (e) { /* renderer gone */ } };
+  const send = (data) => {
+    try { run.logs.push(data); if (run.logs.length > 300) run.logs.splice(0, run.logs.length - 300); } catch (e) {}
+    try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, data); } catch (e) { /* renderer gone */ }
+  };
   run.send = send;
   const emit = (profileId, level, message) => send({ runId, profileId, level, message, ts: Date.now() });
 
-  send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s)${opts.headless ? ' · hidden (no windows)' : ''}${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
+  send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s) · ${concurrency === 1 ? 'one-by-one (queue)' : concurrency + ' at a time'}${opts.headless ? ' · hidden (no windows)' : ''}${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
   await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
 
-  // Fire-and-forget: warm every selected profile concurrently. The handler
+  // Fire-and-forget: a shared-cursor worker pool caps how many profiles warm at once.
+  // width=1 (default) is a strict queue; a worker pulls the next id only after the
+  // previous profile it was handling has fully finished (and closed). The handler
   // returns immediately; progress arrives via the stream above.
   (async () => {
-    await Promise.allSettled(ids.map((id) =>
-      warmOneProfile(id, sites, opts, emit, run).catch((e) => emit(id, 'ERROR', e && e.message ? e.message : 'Warm-up failed.'))
-    ));
+    let cursor = 0;
+    const worker = async () => {
+      while (!run.aborted) {
+        const i = cursor; cursor += 1;
+        if (i >= ids.length) break;
+        try { await warmOneProfile(ids[i], sites, opts, emit, run); }
+        catch (e) { emit(ids[i], 'ERROR', e && e.message ? e.message : 'Warm-up failed.'); }
+        run.done += 1;
+      }
+    };
+    const width = Math.min(concurrency, ids.length);
+    await Promise.all(Array.from({ length: width }, () => worker()));
     const stopped = run.aborted;
     send({ runId, level: stopped ? 'WARN' : 'SUCCESS', message: stopped ? 'Warm-up stopped.' : 'All warm-up tasks finished.', done: true, ts: Date.now() });
     await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: stopped ? 'stopped' : 'completed', finishedAt: Date.now() }).catch(() => {});
     warmerRuns.delete(runId);
   })();
 
-  return { started: true, runId, profileIds: ids, sites: sites.length, loop: opts.loop };
+  return { started: true, runId, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
+}
+
+// List active warm-up runs so a renderer returning to the Automation page can RE-ATTACH
+// to a job still running in the main process — instead of showing an idle panel while the
+// launched browsers keep running orphaned (and unstoppable). Returns each run's metadata
+// plus its recent log buffer so the console can be restored.
+function listActiveWarmers() {
+  return [...warmerRuns.values()].map((r) => ({
+    runId: r.id, total: r.total, done: r.done, concurrency: r.concurrency,
+    loop: r.loop, headless: r.headless, sites: r.sitesCount, startedAt: r.startedAt,
+    aborted: r.aborted, logs: Array.isArray(r.logs) ? r.logs.slice(-300) : []
+  }));
 }
 
 // Stop a running warm-up. `force` also closes the sessions this run launched.
@@ -9454,6 +9499,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_DELETE_MACRO, deleteMacro);
   registerHandler(CHANNELS.AUTOMATION_START_WARMER, startWarmer);
   registerHandler(CHANNELS.AUTOMATION_STOP_WARMER, stopWarmer);
+  registerHandler(CHANNELS.AUTOMATION_LIST_WARMERS, listActiveWarmers);
   registerHandler(CHANNELS.AUTOMATION_GET_HISTORY, getAutomationHistory);
   registerHandler(CHANNELS.AUTOMATION_RUN_MACRO, runMacroOnProfile);
   registerHandler(CHANNELS.AUTOMATION_CONTROL_MACRO, controlMacro);
