@@ -358,7 +358,8 @@ const initialProfileData = {
   browserSettings: {
     matchTimezone: true, allowChromeSignIn: false, offerTranslate: false, disableDevTools: false, disableExtInstall: false,
     enableVirtualCamera: false, enableMobileSim: false, startupAction: 'lastPage', onlyOpenWithProxy: false,
-    onlyOpenExtLoaded: false, checkCountryMatch: false, secureAccess: false, disableVideos: false, disableImagesLimit: '0'
+    onlyOpenExtLoaded: false, checkCountryMatch: false, secureAccess: false, disableVideos: false, disableImagesLimit: '0',
+    loadExtensions: false
   },
   randomFingerprint: false,
 };
@@ -770,6 +771,10 @@ export default function ProfilesPage() {
       platformAccounts: profile.platformAccounts || [],
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
       proxyType: profile.proxyType || 'HTTP',
+      // Merge saved per-profile browser settings over the defaults so newly added keys
+      // (e.g. loadExtensions) always have a boolean value — keeping their checkboxes
+      // controlled and letting the flag round-trip on save.
+      browserSettings: { ...initialProfileData.browserSettings, ...(profile.browserSettings || {}) },
       // Pre-select the linked saved proxy so editing shows it (and re-saving keeps
       // PROFILE_PROXY instead of silently reverting to DIRECT).
       proxySetting: profile.proxyId ? 'Saved Proxies' : 'Custom',
@@ -1679,6 +1684,7 @@ export default function ProfilesPage() {
                           <CustomCheckbox label={t('advanced.offerTranslate')} checked={pd.browserSettings.offerTranslate} onChange={v => updateNestedPd('browserSettings', 'offerTranslate', v)} />
                           <CustomCheckbox label={t('advanced.disableDevTools')} checked={pd.browserSettings.disableDevTools} onChange={v => updateNestedPd('browserSettings', 'disableDevTools', v)} />
                           <CustomCheckbox label={t('advanced.disableExtInstall')} checked={pd.browserSettings.disableExtInstall} onChange={v => updateNestedPd('browserSettings', 'disableExtInstall', v)} />
+                          <CustomCheckbox label={t('advanced.loadExtensions', 'Load SoftGlaze extensions (uses Chrome-for-Testing)')} checked={pd.browserSettings.loadExtensions} onChange={v => updateNestedPd('browserSettings', 'loadExtensions', v)} />
                           <CustomCheckbox label={t('advanced.enableVirtualCamera')} checked={pd.browserSettings.enableVirtualCamera} onChange={v => updateNestedPd('browserSettings', 'enableVirtualCamera', v)} />
                           <CustomCheckbox label={t('advanced.enableMobileSim')} checked={pd.browserSettings.enableMobileSim} onChange={v => updateNestedPd('browserSettings', 'enableMobileSim', v)} />
 
