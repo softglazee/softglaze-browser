@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
@@ -623,7 +623,9 @@ export default function ProfilesPage() {
     : FIREFOX_VERSIONS;
   const filteredUAGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(pd.os));
 
+  const loadSeq = useRef(0);
   const loadData = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     try {
       const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
@@ -635,6 +637,9 @@ export default function ProfilesPage() {
         softglazeApi.profiles.getLocks().catch(() => ({})),
         softglazeApi.proxyGroups.list().catch(() => [])
       ]);
+      // audit: ignore a stale response — a slow broad search ("a") could resolve after
+      // a fast narrow one ("ab") and overwrite the correct list.
+      if (seq !== loadSeq.current) return;
       setProfiles(profs);
       setGroups(grps);
       setAllTags(tgs);
@@ -642,11 +647,17 @@ export default function ProfilesPage() {
       setProxyGroups(Array.isArray(pgs) ? pgs : []);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    } catch (err) { if (seq === loadSeq.current) setError(err.message); }
+    finally { if (seq === loadSeq.current) setLoading(false); }
   }, [search]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // audit: debounce the search-driven reload (each keystroke fired 7 IPC calls with no
+  // debounce). Direct loadData() calls after mutations stay immediate; only this
+  // search-dependency effect waits ~200ms, and the loadSeq guard above drops stragglers.
+  useEffect(() => {
+    const h = setTimeout(() => { loadData(); }, 200);
+    return () => clearTimeout(h);
+  }, [loadData]);
 
   // Learn the real machine's core count once so generated profiles never spoof to
   // the exact host value (which would look like a hardware leak — see HOST_CORES).

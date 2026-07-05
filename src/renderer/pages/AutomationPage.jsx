@@ -832,6 +832,10 @@ function ParallelPanel() {
         closeWhenDone: true,
         dataToken: dataBinding ? dataBinding.token : undefined
       });
+      // audit: `running` is normally cleared by the terminal 'done' progress frame.
+      // If that single at-most-once frame is dropped, the spinner would stick forever.
+      // The run has resolved here, so backstop it — idempotent if the frame arrives.
+      setTimeout(() => setRunning(false), 1500);
     } catch (e) {
       setErr(e.message || t('parallel.errors.startRun'));
       setRunning(false);
