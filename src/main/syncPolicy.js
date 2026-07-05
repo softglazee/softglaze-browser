@@ -23,9 +23,9 @@ function toMs(value) {
 // lastSync       : { syncedAt, rev } from local sync state, or null if never synced
 //
 // Returns { action: 'push'|'pull'|'noop'|'conflict', resolution: 'push'|'pull'|null, reason }.
-// `resolution` is the concrete operation to perform (LWW winner); for a conflict
-// it is still set (the newer side wins) AND action==='conflict' so the caller can
-// both resolve and report it.
+// `resolution` is the concrete operation to perform (LWW winner) for the unambiguous
+// cases. For a genuine conflict (both sides changed) resolution is null — the caller must
+// resolve it explicitly rather than trust a wall-clock winner.
 function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   const local = toMs(localUpdatedAt);
   const remote = remoteMeta ? toMs(remoteMeta.updatedAt) : null;
@@ -41,9 +41,11 @@ function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   if (localChanged && !remoteChanged) return { action: 'push', resolution: 'push', reason: 'local-changed' };
   if (!localChanged && remoteChanged) return { action: 'pull', resolution: 'pull', reason: 'remote-changed' };
 
-  // Both changed since the last sync -> conflict. LWW picks the newer side.
-  const resolution = remote > local ? 'pull' : 'push';
-  return { action: 'conflict', resolution, reason: 'both-changed' };
+  // Both changed since the last sync -> a genuine conflict. Do NOT auto-pick a winner:
+  // wall-clock last-write-wins lets a skewed or rolled-back clock permanently clobber the
+  // good side. Report it with resolution:null so the caller resolves it explicitly (or
+  // surfaces it) instead of silently applying a timestamp race.
+  return { action: 'conflict', resolution: null, reason: 'both-changed' };
 }
 
 module.exports = { decideProfileSync, toMs };
