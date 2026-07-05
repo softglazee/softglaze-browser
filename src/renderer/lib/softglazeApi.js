@@ -58,7 +58,9 @@ export const softglazeApi = {
     rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
     testAll: () => getSoftglazeApi().proxies.testAll(),
     autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level),
-    healthHistory: (id) => getSoftglazeApi().proxies.healthHistory(id)
+    healthHistory: (id) => getSoftglazeApi().proxies.healthHistory(id),
+    // Recent checks grouped per proxy — powers the Proxy Pool history-cards row.
+    recentHealth: (opts) => getSoftglazeApi().proxies.recentHealth(opts)
   },
   proxyGroups: {
     list: () => getSoftglazeApi().proxyGroups.list(),
