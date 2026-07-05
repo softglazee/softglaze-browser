@@ -1192,6 +1192,9 @@ async function batchAddProxies(payload) {
           port: parsed.port,
           username: parsed.username,
           password: parsed.password,
+          // Origin tag for auto-grouping (schema: Proxy.provider). Persisted from the
+          // batch's declared vendor when supplied, else null.
+          provider: input.provider ? String(input.provider).toLowerCase() : null,
           ownerMemberId: proxyStampId
         }
       });
