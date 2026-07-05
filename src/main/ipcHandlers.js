@@ -103,6 +103,7 @@ const CHANNELS = Object.freeze({
   PROXY_GROUP_ASSIGN: 'proxy-group:assign',
   PROXY_AUTO_GROUP: 'proxy:auto-group',
   PROXY_HEALTH_HISTORY: 'proxy:health-history',
+  PROXY_RECENT_HEALTH: 'proxy:recent-health',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -4547,6 +4548,58 @@ async function getProxyHealthHistory(payload) {
   return events
     .map((e) => ({ ts: e.ts instanceof Date ? e.ts.toISOString() : e.ts, status: e.status, latencyMs: e.latencyMs, country: e.country }))
     .reverse();
+}
+
+// Recent health events across the viewer's ACCESSIBLE proxies, grouped per proxy —
+// powers the Proxy Pool "history cards" row (each proxy's last N checks as pass/fail
+// pips, plus a verified→failed flag). One access-scoped query + JS grouping instead of
+// N per-proxy round-trips. Only proxies that have at least one recorded check appear.
+async function getRecentProxyHealth(payload) {
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  const perProxy = Math.min(20, Math.max(3, Number(input.perProxy) || 8));   // pips per card
+  const maxProxies = Math.min(60, Math.max(1, Number(input.maxProxies) || 40));
+  const db = getPrisma();
+  // Same fail-closed scope as listProxies: a member sees only their subtree's proxies.
+  const proxies = await db.proxy
+    .findMany({ where: await scopedProxyWhere(undefined), select: { id: true, name: true, host: true, port: true, type: true } })
+    .catch(() => []);
+  if (!proxies.length) return [];
+  const byId = new Map(proxies.map((p) => [p.id, p]));
+  const ids = proxies.map((p) => p.id);
+  const events = await db.proxyHealthEvent
+    .findMany({ where: { proxyId: { in: ids } }, orderBy: { ts: 'desc' }, take: Math.min(3000, ids.length * perProxy + 200) })
+    .catch(() => []);
+  // Keep the newest `perProxy` events per proxy (events already arrive newest-first).
+  const grouped = new Map();
+  for (const e of events) {
+    let arr = grouped.get(e.proxyId);
+    if (!arr) { arr = []; grouped.set(e.proxyId, arr); }
+    if (arr.length < perProxy) arr.push(e);
+  }
+  const iso = (t) => (t instanceof Date ? t.toISOString() : t);
+  const cards = [];
+  for (const [proxyId, evs] of grouped) {
+    const p = byId.get(proxyId);
+    if (!p) continue;
+    const checks = evs.slice().reverse().map((e) => ({ ts: iso(e.ts), status: e.status === 'ok' ? 'ok' : 'fail', latencyMs: e.latencyMs })); // oldest → newest
+    const latest = evs[0];
+    // "Verified before, failed on a later check": at least one OK earlier AND the most
+    // recent check failed — the exact cross-verification signal the user asked for.
+    const okBefore = checks.slice(0, -1).some((c) => c.status === 'ok');
+    const regressed = okBefore && checks[checks.length - 1].status === 'fail';
+    cards.push({
+      proxyId, name: p.name, host: p.host, port: p.port, type: p.type,
+      checks,
+      lastTs: iso(latest.ts),
+      lastStatus: latest.status === 'ok' ? 'ok' : 'fail',
+      lastLatencyMs: latest.latencyMs,
+      okCount: checks.filter((c) => c.status === 'ok').length,
+      failCount: checks.filter((c) => c.status !== 'ok').length,
+      regressed
+    });
+  }
+  cards.sort((a, b) => new Date(b.lastTs) - new Date(a.lastTs)); // most-recently-checked first
+  return cards.slice(0, maxProxies);
 }
 
 async function readSetting(key, fallback) {
@@ -9512,6 +9565,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_GROUP_ASSIGN, assignProxiesToGroup);
   registerHandler(CHANNELS.PROXY_AUTO_GROUP, autoGroupProxies);
   registerHandler(CHANNELS.PROXY_HEALTH_HISTORY, getProxyHealthHistory);
+  registerHandler(CHANNELS.PROXY_RECENT_HEALTH, getRecentProxyHealth);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);

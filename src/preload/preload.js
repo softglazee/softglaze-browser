@@ -43,6 +43,7 @@ const CHANNELS = Object.freeze({
   PROXY_GROUP_ASSIGN: 'proxy-group:assign',
   PROXY_AUTO_GROUP: 'proxy:auto-group',
   PROXY_HEALTH_HISTORY: 'proxy:health-history',
+  PROXY_RECENT_HEALTH: 'proxy:recent-health',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -304,7 +305,8 @@ const api = Object.freeze({
       return () => ipcRenderer.removeListener(CHANNELS.PROXY_CHECK_PROGRESS, listener);
     },
     autoGroup: (level) => invoke(CHANNELS.PROXY_AUTO_GROUP, { level }),
-    healthHistory: (id) => invoke(CHANNELS.PROXY_HEALTH_HISTORY, { id })
+    healthHistory: (id) => invoke(CHANNELS.PROXY_HEALTH_HISTORY, { id }),
+    recentHealth: (opts) => invoke(CHANNELS.PROXY_RECENT_HEALTH, opts || {})
   }),
   proxyGroups: Object.freeze({
     list: () => invoke(CHANNELS.PROXY_GROUP_LIST),
