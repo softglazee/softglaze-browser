@@ -6732,7 +6732,26 @@ function otpKey(scope) {
   return `otp:${String(scope || '').toLowerCase()}`;
 }
 
+// audit C1: the master-account bootstrap (OTP send + register) creates the very
+// first OWNER and sets the vault password. It must run ONLY at genuine first run.
+// Once any member exists — or a vault is already enabled — refuse: otherwise a
+// logged-in member (or anyone with renderer/devtools access) could self-serve an
+// OTP, register a NEW owner, and OVERWRITE the vault password to seize the whole
+// workspace and lock everyone else out. Additional owners are added later through
+// the authenticated member-management flow, never through this bootstrap.
+async function assertFirstRunSetup() {
+  let memberCount = 0;
+  try { memberCount = await getPrisma().member.count(); } catch (e) { memberCount = 0; }
+  const vault = await readSetting('vault', null);
+  if (memberCount > 0 || (vault && vault.enabled)) {
+    const err = new Error('This workspace is already set up — registration is only available on first run.');
+    err.code = 'ALREADY_SETUP';
+    throw err;
+  }
+}
+
 async function accountSendOtp(payload) {
+  await assertFirstRunSetup();
   const input = requireObject(payload);
   const email = requiredString(input.email, 'Email').toLowerCase();
   const code = String(crypto.randomInt(100000, 1000000));
@@ -6766,6 +6785,7 @@ async function accountVerifyOtp(payload) {
 // fragile multi-call sequence in the renderer that could leave the flow
 // half-finished (OTP already spent, vault not set, member created as OPERATOR).
 async function accountRegister(payload) {
+  await assertFirstRunSetup(); // audit C1: first-run bootstrap only — never re-register / clobber the vault
   const input = requireObject(payload);
   const firstName = requiredString(input.firstName, 'First name');
   const lastName = requiredString(input.lastName, 'Last name');
