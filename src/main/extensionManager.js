@@ -34,6 +34,14 @@ const CHROME_ID_RE = /^[a-p]{32}$/;
 // return because the (bumped) flag stays set.
 const SEED_FLAG = 'recommendedExtensionsSeeded_v2';
 
+// One-time reconcile flag (separate from SEED_FLAG). The seeder only sets isGlobal on
+// FIRST install and never revisits it, so a recommended extension that was installed
+// while its default was `enable:false` (historically uBlock, then SwitchyOmega) stays
+// dormant even after the default is flipped to `enable:true`. reconcileRecommendedExtensions()
+// runs ONCE to force-enable those, then locks — so a user's later manual disable is
+// respected. Bump the suffix to re-run the reconcile after changing the defaults again.
+const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v1';
+
 // The SoftGlaze first-party extension — always injected into every profile and
 // (best-effort) force-installed from the Web Store so active users are counted.
 const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
@@ -246,6 +254,36 @@ async function seedRecommendedExtensions() {
   return { installed, present, failed };
 }
 
+// One-time reconcile: force-enable (isGlobal:true) the recommended extensions that ship
+// enabled-by-default but may already be installed-yet-dormant from a build where their
+// default was `enable:false`. seedRecommendedExtensions() never updates isGlobal on an
+// existing row, so this closes that exact gap once. Idempotent and gated by
+// RECONCILE_FLAG: after it succeeds, a user's deliberate later disable is NOT undone.
+async function reconcileRecommendedExtensions() {
+  const db = getPrisma();
+  const flag = await db.setting.findUnique({ where: { key: RECONCILE_FLAG } }).catch(() => null);
+  if (flag && flag.value === 'true') return { skipped: true };
+
+  const wantIds = RECOMMENDED_EXTENSIONS.filter((r) => r.enable).map((r) => r.chromeId);
+  let enabled = 0;
+  try {
+    // Flip only the recommended rows that are currently OFF — never touches an already
+    // -global row, and never touches a non-recommended extension the user installed.
+    const res = await db.extension.updateMany({
+      where: { chromeId: { in: wantIds }, isGlobal: false },
+      data: { isGlobal: true }
+    });
+    enabled = (res && res.count) || 0;
+  } catch (e) {
+    // DB not ready / transient error — leave the flag unset so the next launch retries.
+    console.warn(`[ext-reconcile] failed: ${(e && e.message) || e}`);
+    return { failed: true };
+  }
+  await db.setting.upsert({ where: { key: RECONCILE_FLAG }, create: { key: RECONCILE_FLAG, value: 'true' }, update: { value: 'true' } }).catch(() => {});
+  if (enabled) console.log(`[ext-reconcile] force-enabled ${enabled} recommended extension(s)`);
+  return { enabled };
+}
+
 // All currently-global extension folders that still exist on disk. Passed to the
 // browser engine at launch and merged into --load-extension. Missing folders are
 // skipped (an extension can be deleted off disk without breaking a launch).
@@ -283,6 +321,7 @@ module.exports = {
   downloadAndExtract,
   installById,
   seedRecommendedExtensions,
+  reconcileRecommendedExtensions,
   resolveGlobalExtensionDirs,
   removeExtensionFiles
 };
