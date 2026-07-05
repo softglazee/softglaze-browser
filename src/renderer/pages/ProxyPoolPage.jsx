@@ -206,6 +206,11 @@ export default function ProxyPoolPage() {
     });
   }, [proxies, search, activeGroup, statusFilter, blacklistFilter, speedFilter, checkResults]);
 
+  // Live ref to the filtered set so the selection-prune effect can read the current view
+  // without depending on checkResults (which would clear the selection mid-health-check).
+  const filteredIdsRef = useRef(null);
+  filteredIdsRef.current = filteredProxies;
+
   // Latency sort (live check result wins over the stored snapshot; unknown sinks last).
   const sortedProxies = useMemo(() => {
     if (sortBy === 'default') return filteredProxies;
@@ -239,6 +244,16 @@ export default function ProxyPoolPage() {
     return { fast, slow };
   }, [proxies, checkResults]);
 
+  // Proxies that have NEVER been checked — no live result and no persisted health. These
+  // are what a fresh import adds; because the health/speed/blacklist filters treat them
+  // as 'unknown' (excluded), they "disappear" the moment such a filter is active until
+  // they're checked. The "Check new" button (below) checks exactly this set so imports
+  // gain health without re-checking the whole pool.
+  const uncheckedIds = useMemo(
+    () => proxies.filter((p) => !p.lastStatus && !checkResults[p.id]).map((p) => p.id),
+    [proxies, checkResults]
+  );
+
   // Pagination over the filtered+sorted set (keeps long lists fast; pager is pinned at
   // the bottom of the table card so you never scroll to the end to change pages).
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(sortedProxies.length / pageSize));
@@ -246,6 +261,20 @@ export default function ProxyPoolPage() {
   const pagedProxies = pageSize === Infinity ? sortedProxies : sortedProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
   // Reset to page 1 whenever the filter/sort set changes out from under us.
   useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, blacklistFilter, speedFilter, pageSize, sortBy]);
+
+  // When the FILTER changes, drop any selected ids that are no longer visible. Without
+  // this, a "select all" under one filter carries hidden ids into a delete under another
+  // — the "select 5, but delete everything" bug. Keyed on the filter inputs only (not
+  // checkResults) so a live health check never clears the selection mid-run.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set((filteredIdsRef.current || []).map((p) => p.id));
+      const next = new Set();
+      prev.forEach((id) => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [search, activeGroup, statusFilter, blacklistFilter, speedFilter]);
 
   // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
@@ -328,7 +357,11 @@ export default function ProxyPoolPage() {
   }
 
   async function handleBulkDelete() {
-    const ids = Array.from(selectedIds);
+    // Only delete selected proxies that are ACTUALLY visible under the current filter —
+    // never hidden ones carried over from a prior select-all (defense-in-depth on top of
+    // the filter-change prune effect above).
+    const visible = new Set(filteredProxies.map((p) => p.id));
+    const ids = Array.from(selectedIds).filter((id) => visible.has(id));
     if (ids.length === 0) return;
     if (!window.confirm(t('bulkDelete.confirm', { count: ids.length }))) return;
     setBulkDeleting(true);
@@ -490,6 +523,14 @@ export default function ProxyPoolPage() {
   // Deep-check every proxy (streamed, concurrent, with progress + log).
   async function handleCheckAll() {
     await startStreamCheck(null);
+  }
+
+  // Deep-check ONLY the never-checked proxies (freshly imported ones). Lets imports gain
+  // health so the health/speed filters include them — without the full-pool re-check the
+  // user previously needed just to make filtering work.
+  async function handleCheckNew() {
+    if (uncheckedIds.length === 0) return;
+    await startStreamCheck(uncheckedIds);
   }
 
   // Concurrent bulk health test (worker-capped in main). Reflects the persisted
@@ -744,6 +785,10 @@ export default function ProxyPoolPage() {
               <Button variant="secondary" onClick={handleCheckAll} disabled={checkingAll || proxies.length === 0}>
                 {checkingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
                 {t('actions.checkAll')}
+              </Button>
+              <Button variant="secondary" onClick={handleCheckNew} disabled={checkingAll || uncheckedIds.length === 0} title={t('actions.checkNewTooltip', 'Check only the newly added, never-checked proxies.')}>
+                {checkingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
+                {t('actions.checkNew', 'Check new')}{uncheckedIds.length ? ` · ${uncheckedIds.length}` : ''}
               </Button>
               <Button variant="secondary" onClick={loadProxies}>
                 <RefreshCcw className="h-4 w-4" />
