@@ -48,7 +48,7 @@ const RECOMMENDED_EXTENSIONS = [
   { chromeId: SOFTGLAZE_RECORDER_ID, name: 'SoftGlaze Screen Recorder', enable: true },
   { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: true },
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: true },
-  { chromeId: 'cjpalhdlnbpafiamejdnhcphjbkeiagm', name: 'uBlock Origin', enable: false },
+  { chromeId: 'cjpalhdlnbpafiamejdnhcphjbkeiagm', name: 'uBlock Origin', enable: true }, // enabled by request; note: content blockers alter page/network behavior (anti-detect tradeoff)
   { chromeId: 'padekgcemlokbadohgkifijomclgjgif', name: 'Proxy SwitchyOmega', enable: false }
 ];
 
