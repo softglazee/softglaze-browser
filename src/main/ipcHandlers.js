@@ -536,7 +536,16 @@ async function rotateProxyIp(payload) {
   try {
     res = await axios.get(rotationUrl, {
       timeout: 20000,
-      maxRedirects: 5,
+      maxRedirects: 3,
+      // audit SSRF: the initial-URL guard alone let a 302 Location:
+      // http://169.254.169.254/... (cloud metadata) or a LAN/loopback service be
+      // chased and its body returned. Re-run the public-URL guard on EVERY hop.
+      beforeRedirect: (options) => {
+        const proto = options.protocol || 'https:';
+        const hostPart = options.hostname || options.host || '';
+        const port = (options.port && !String(hostPart).includes(':')) ? `:${options.port}` : '';
+        assertPublicHttpUrl(`${proto}//${hostPart}${port}${options.path || ''}`, 'rotation redirect');
+      },
       validateStatus: () => true,
       headers: { 'User-Agent': 'Softglaze/RotationBot' }
     });
@@ -600,6 +609,10 @@ async function cookieRobot(payload) {
   await assertCanAccessProfile(profileId);
   const urls = Array.isArray(input.targetUrls) ? input.targetUrls.map((u) => String(u || '').trim()).filter(Boolean) : [];
   if (!urls.length) throw new Error('Provide at least one target URL for the cookie robot.');
+  // audit: only http(s) targets — otherwise a file:// URL drives the profile to local files.
+  for (const u of urls) {
+    if (!/^https?:\/\//i.test(u)) throw new Error('Cookie Robot targets must be http(s) URLs.');
+  }
 
   const profile = await getPrisma().profile.findUnique({ where: { id: profileId } });
   if (!profile) throw new Error('Profile not found.');
@@ -1151,6 +1164,15 @@ async function batchAddProxies(payload) {
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    // audit: enforce the quota PER ROW — it was checked once before this unbounded
+    // loop, so a member at 5/10 could paste 10k lines and blow past maxProxies. Once
+    // the limit is hit, mark the remaining lines skipped and stop (bounded work).
+    try {
+      await assertWithinLimit('proxies');
+    } catch (quotaErr) {
+      for (let j = index; j < lines.length; j += 1) result.skipped.push({ line: j + 1, reason: 'QUOTA', message: 'Proxy limit reached.' });
+      break;
+    }
     try {
       const parsed = parseColonProxyLine(line, fallbackType);
       const existing = await db.proxy.findFirst({
@@ -8816,6 +8838,13 @@ async function launchProfileById(id, startUrl, opts = {}) {
 // `launched` is true only when THIS call opened the browser (so the caller knows
 // whether it owns the session's lifecycle and should close it when done).
 async function ensureProfileSession(profileId) {
+  // audit: gate access to the target profile HERE, before returning OR launching a
+  // session. The macro/recording/warmer handlers only enforced access via the launch
+  // path, but the already-open-session shortcut (and sessions surviving switchMember)
+  // let a lower member drive macros/keystrokes/navigation inside another member's
+  // AUTHENTICATED running session. Every automation handler routes through this, so a
+  // single check closes the whole class — exactly what systemHumanType was patched for.
+  await assertCanAccessProfile(parseId(profileId));
   const pid = String(profileId);
   const open = listActiveSessions().find((s) => String(s.sessionId) === pid);
   if (open) return { sessionId: String(open.sessionId), launched: false };
@@ -9018,6 +9047,9 @@ async function runParallelMacroHandler(payload, event) {
   const macroId = parseId(input.macroId);
   const profileIds = parseIdArray(input.profileIds);
   if (profileIds.length === 0) throw new Error('Select at least one profile for the parallel run.');
+  // audit: verify access to EVERY target profile — the parallel path reuses
+  // already-open sessions and otherwise never hits the launch-time access check.
+  for (const pid of profileIds) await assertCanAccessProfile(pid);
   const concurrency = Math.max(1, Math.min(10, Number.parseInt(input.concurrency, 10) || 3));
   const continueOnError = input.continueOnError !== false;
   const closeWhenDone = input.closeWhenDone !== false;
@@ -9211,9 +9243,15 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 }
 
 async function startWarmer(payload, event) {
+  // audit: startWarmer alone among the automation handlers had NO permission gate,
+  // so a member whose automation.run capability was revoked could still drive it —
+  // and no per-profile access check, so it could warm (drive) another member's
+  // already-open authenticated session. Add both, like its peers.
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const ids = parseIdArray(input.profileIds);
   if (!ids.length) throw new Error('Select at least one profile to warm up.');
+  for (const pid of ids) await assertCanAccessProfile(pid);
   let sites = normalizeWarmSites(input.sites);
   if (!sites.length) sites = defaultWarmSites();
   const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen), headless: Boolean(input.headless) };
