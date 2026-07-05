@@ -17,6 +17,9 @@ const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
 // into every launched page. No deps; just returns a self-contained IIFE string.
 const { buildAutofillBootstrap } = require('./personaAutofill');
 const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
+// Local SOCKS5 auth-injecting relay — Chromium can't authenticate to a SOCKS5
+// proxy, so an authenticated one is routed through this instead (audit).
+const { startSocksAuthRelay } = require('./socksRelay');
 
 // SoftGlaze first-party extension (Chrome Web Store ID). Best-effort force-install
 // on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
@@ -79,21 +82,49 @@ function configurePersonaBridge(deps) {
 // (both for future navigations and the currently-loaded document). Safe to call
 // once per page — exposeFunction throws if a name is already bound, which we
 // swallow. Chromium-only: this whole module is the puppeteer/CDP launch path.
+// Hardening (audit C2): exposeFunction binds into the page's MAIN world, so ANY
+// script on ANY page can call these — not just our widget. Three defenses:
+//   1. Origin is taken from the REAL committed page URL (targetPage.url()), never
+//      from a page-supplied argument, so a hostile page can't pass a random host
+//      to dump personas it hasn't "used" yet.
+//   2. Passwords are NEVER sent into page context: the list payload omits the
+//      password (only `hasPassword` is exposed), and password fields are filled
+//      server-side by persona id via the fill plan — the plaintext only ever
+//      reaches the DOM field the user is filling, exactly like a password manager.
+//   3. The fill plan is bounded (item count + a total typed-character budget) so a
+//      page can't tie up the CDP keyboard for hours with a giant value.
+const PERSONA_FILL_MAX_ITEMS = 40;
+const PERSONA_FILL_MAX_VALUE_LEN = 256;   // per page-supplied field value
+const PERSONA_FILL_MAX_TOTAL_CHARS = 4000; // whole-plan typing budget
+
+// Strip secrets from a persona before it is handed to page JS. Keeps the
+// non-secret fields the widget needs to fill (name/email/address/…) but replaces
+// the password with a boolean so the page can never read it in bulk.
+function toPublicPersona(p) {
+  if (!p || typeof p !== 'object') return null;
+  const { password, ...rest } = p;
+  return { ...rest, hasPassword: Boolean(password) };
+}
+
 async function attachPersonaAutofill(targetPage) {
   if (!personaBridge || !targetPage) return;
   // Respect the global Smart Autofill toggle (fail-open if the check throws).
   if (personaBridge.isEnabled) { try { if (!(await personaBridge.isEnabled())) return; } catch (e) { /* default on */ } }
+  // The real committed origin of THIS page — the single source of truth for which
+  // host personas are scoped to. Falls back to '' (bridge then returns nothing).
+  const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
   try {
-    await targetPage.exposeFunction('__sgPersonaList', async (url) => {
+    await targetPage.exposeFunction('__sgPersonaList', async () => {
       try {
-        const r = await personaBridge.listForUrl(String(url || ''));
-        return (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+        const r = await personaBridge.listForUrl(pageUrl());
+        const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+        return list.map(toPublicPersona).filter(Boolean);
       } catch (e) { return []; }
     });
   } catch (e) { /* already exposed on this page */ }
   try {
-    await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id, url) => {
-      try { await personaBridge.markUsed(String(id || ''), String(url || '')); return { ok: true }; }
+    await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id) => {
+      try { await personaBridge.markUsed(String(id || ''), pageUrl()); return { ok: true }; }
       catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
     });
   } catch (e) { /* already exposed on this page */ }
@@ -101,15 +132,32 @@ async function attachPersonaAutofill(targetPage) {
     // CDP "trusted" typing: the in-page widget stamps each matched field and hands
     // us a fill plan; we type it here with REAL keyboard events (isTrusted:true) and
     // human-like random delays — defeating isTrusted-based bot checks. Selects are
-    // set via the native picker. The widget falls back to in-page typing if this
-    // bridge is absent (e.g. Firefox).
+    // set via the native picker. Password items carry NO value — only a personaId —
+    // and the plaintext is resolved server-side (see defense #2 above).
     await targetPage.exposeFunction('__sgPersonaFillPlan', async (plan) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
+      const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
+      const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
-      for (const item of plan) {
+      let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
+      for (const item of items) {
         const sel = item && item.sel;
-        const value = item && item.value != null ? String(item.value) : '';
         if (!sel) continue;
+        let value;
+        if (item.kind === 'password') {
+          // Password value NEVER comes from the page — resolve it server-side by id.
+          const pid = item.personaId != null ? String(item.personaId) : '';
+          if (!pid || typeof personaBridge.getSecret !== 'function') continue;
+          if (!secretCache.has(pid)) {
+            try { const s = await personaBridge.getSecret(pid); secretCache.set(pid, (s && s.password != null) ? String(s.password) : ''); }
+            catch (e) { secretCache.set(pid, ''); }
+          }
+          value = secretCache.get(pid);
+          if (!value) continue;
+        } else {
+          value = item.value != null ? String(item.value) : '';
+          if (value.length > PERSONA_FILL_MAX_VALUE_LEN) value = value.slice(0, PERSONA_FILL_MAX_VALUE_LEN);
+        }
         try {
           if (item.kind === 'select') {
             await targetPage.select(sel, value).catch(() => {});
@@ -119,9 +167,11 @@ async function attachPersonaAutofill(targetPage) {
           const el = await targetPage.$(sel);
           if (!el) continue;
           await el.click({ clickCount: 3 }).catch(() => {}); // focus + select any existing text (first keystroke overwrites)
-          for (const ch of value) {
+          const typed = charBudget > 0 ? value.slice(0, charBudget) : '';
+          for (const ch of typed) {
             await targetPage.keyboard.type(ch, { delay: 50 + Math.floor(Math.random() * 100) });
           }
+          charBudget -= typed.length;
           await el.evaluate((node) => { try { node.dispatchEvent(new Event('change', { bubbles: true })); if (node.blur) node.blur(); } catch (e) {} }).catch(() => {});
           await el.dispose().catch(() => {});
           filled += 1;
@@ -274,8 +324,14 @@ function resolveInside(baseDir, childSegment) {
 function parseProxyString(rawProxyString) {
   const raw = String(rawProxyString || '').trim();
   if (!raw) return null;
-  const type = /^socks/i.test(raw) ? 'SOCKS5' : 'HTTP';
-  const working = raw.replace(/^(http|https|socks5|socks):\/\//i, '');
+  // Classify by scheme: socks4/socks4a → SOCKS4, socks5/bare socks → SOCKS5, else HTTP.
+  // SOCKS4 vs SOCKS5 is not cosmetic — Chromium speaks a different wire protocol for
+  // each and SOCKS4 has no username/password auth, so mislabeling one as the other
+  // breaks the connection. The prefix (INCLUDING socks4://, which the old regex missed
+  // and left in — mangling host:port) is stripped for every scheme before parsing.
+  const scheme = (raw.match(/^(socks4a?|socks5|socks|https?):\/\//i) || [])[1] || '';
+  const type = /^socks4/i.test(scheme) ? 'SOCKS4' : (/^socks/i.test(scheme) ? 'SOCKS5' : 'HTTP');
+  const working = raw.replace(/^(socks4a?|socks5|socks|https?):\/\//i, '');
   const parts = working.split(':');
   if (parts.length >= 4) {
     return { type, host: parts[0].trim(), port: Number.parseInt(parts[1].trim(), 10), username: parts[2].trim(), password: parts.slice(3).join(':').trim() };
@@ -306,7 +362,11 @@ function parseProxyInput(input) {
 
 function buildProxyServerArgument(proxy) {
   if (!proxy) return null;
-  const protocol = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  // Chromium accepts socks5://, socks4:// and http:// proxy schemes natively. Emitting
+  // the WRONG scheme (e.g. http:// for a SOCKS proxy) makes every request fail, so map
+  // the type exactly rather than collapsing everything non-socks5 to http.
+  const t = String(proxy.type).toLowerCase();
+  const protocol = t === 'socks5' ? 'socks5' : (t === 'socks4' ? 'socks4' : 'http');
   return `${protocol}://${proxy.host}:${proxy.port}`;
 }
 
@@ -352,23 +412,34 @@ function osTokens(os) {
 
 function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
   const os = osTokens(profile.os);
-  // Per-profile reported version: when the profile pins a concrete browserVersion
-  // (the fingerprint generator assigns one per profile so every UA is unique), we
-  // report THAT major/full in the UA string + Client-Hints. When it's blank/'Auto'
-  // (legacy profiles, mobile) we fall back to the real launched binary's version for
-  // maximum UA/TLS coherence. UA reduction freezes the UA to "Chrome/<major>.0.0.0",
-  // so the major is what differentiates two profiles' User-Agents.
+  // COHERENCE GUARD (anti-detect critical). The reported Chrome major MUST equal the
+  // major of the binary we actually launched. TLS ClientHello (JA3/JA4), the HTTP/2
+  // SETTINGS frame, and JS-engine feature detection all come from the REAL binary and
+  // cannot be spoofed — so a UA / Client-Hints major that disagrees with them is a hard,
+  // deterministic bot signal. The fingerprint generator pins a per-profile
+  // browserVersion drawn from a fixed pool; on a machine whose real Chrome has
+  // auto-updated PAST that pool, honoring the pin would advertise e.g. Chrome 149 over a
+  // real-150+ handshake — the exact mismatch this guard closes.
+  //
+  // So whenever we can read the launched binary's version (the normal case) we report
+  // THAT major AND full version — every layer then agrees. The profile's pin is used
+  // only as a best-guess fallback when browser.version() is unreadable (essentially
+  // never after a successful launch). Build/patch digits are not observable on the wire,
+  // so reporting the binary's real full version is both coherent and safe. Two profiles
+  // on the same real Chrome build therefore share a UA — which is exactly what two real
+  // Chrome users do; a fake-unique major that contradicts the TLS is far more detectable.
   const pinned = String(profile.browserVersion || '').trim();
   const pinnedFull = /^\d+\.\d+\.\d+\.\d+$/.test(pinned) ? pinned : '';
   const pinnedMajor = (pinned && pinned.toLowerCase() !== 'auto')
     ? Number.parseInt((pinned.match(/\d+/) || [])[0] || '', 10)
     : NaN;
-  const usePinned = Number.isFinite(pinnedMajor) && pinnedMajor > 0;
-  const major = usePinned ? pinnedMajor : realMajor;
-  const fullVersion = pinnedFull
-    ? pinnedFull
-    : (usePinned ? `${pinnedMajor}.0.0.0`
-      : (realFullVersion && /^\d+\.\d/.test(realFullVersion) ? realFullVersion : `${major}.0.0.0`));
+  const binaryVersionKnown = /^\d+\.\d/.test(String(realFullVersion || ''));
+  const major = binaryVersionKnown
+    ? realMajor
+    : ((Number.isFinite(pinnedMajor) && pinnedMajor > 0) ? pinnedMajor : realMajor);
+  const fullVersion = binaryVersionKnown
+    ? realFullVersion
+    : (pinnedFull || `${major}.0.0.0`);
 
   // Chromium-family identity layer. Edge/Brave/Opera/Vivaldi/Yandex share Chrome's
   // engine, so we keep the REAL Chromium major everywhere (Chrome/<M>, "Chromium"
@@ -1795,6 +1866,19 @@ async function launchProfileSession(options = {}) {
     geoMatchEnabled = true
   } = options;
 
+  // Dedupe (audit: double-launch orphans Chrome). A profile has exactly ONE
+  // session (sessionId === String(profileId)). A rapid double-launch — a
+  // double-click, or the same profileId appearing twice in a batch — would
+  // otherwise open a SECOND Chrome on the same userDataDir (singleton-lock
+  // conflict) and overwrite the activeSessions entry, leaving the first browser
+  // unreachable and unclosable. Return the running session instead of relaunching.
+  if (profileId != null) {
+    const existing = activeSessions.get(String(profileId));
+    if (existing) {
+      return { sessionId: String(profileId), userDataDir: existing.userDataDir, wsEndpoint: existing.wsEndpoint, alreadyRunning: true };
+    }
+  }
+
   const resolvedProxy = parseProxyInput(options.proxy || options.proxyInfoString);
   const proxyLabel = resolvedProxy ? `${resolvedProxy.type} ${resolvedProxy.host}:${resolvedProxy.port}` : 'Direct (No Proxy)';
 
@@ -1965,15 +2049,34 @@ async function launchProfileSession(options = {}) {
   if (enableFeatures.length) args.push(`--enable-features=${[...new Set(enableFeatures)].join(',')}`);
   if (disableFeatures.length) args.push(`--disable-features=${[...new Set(disableFeatures)].join(',')}`);
 
-  // Proxy via --proxy-server; credentials handled per-page with page.authenticate
-  // (below). This replaces the old Manifest V2 auth extension, which newer Chrome
-  // builds (≈139+) no longer load — so authenticated proxies kept working on the
-  // bundled 127 but would silently fail on a real Chrome 149.
+  // Authenticated SOCKS5: Chromium has NO SOCKS proxy-auth support and
+  // page.authenticate() only answers HTTP 407, so an authenticated SOCKS5 proxy
+  // silently fails on every request. Route it through a local no-auth SOCKS5 relay
+  // that injects the credentials upstream, and point Chromium at the relay. HTTP(S)
+  // proxies keep using page.authenticate below (which works for their 407). (audit)
+  const proxyTypeLc = resolvedProxy ? String(resolvedProxy.type).toLowerCase() : '';
+  const proxyIsSocks = proxyTypeLc.startsWith('socks'); // socks4 OR socks5 — neither answers HTTP 407
+  const proxyIsSocks5 = proxyTypeLc === 'socks5';       // only socks5 carries user/pass auth (via the relay)
+  const socksNeedsAuth = proxyIsSocks5 && Boolean(resolvedProxy.username || resolvedProxy.password);
+  let socksRelay = null;
+  let proxyForArg = resolvedProxy;
+  if (socksNeedsAuth) {
+    try {
+      socksRelay = await startSocksAuthRelay(resolvedProxy);
+    } catch (e) {
+      throw new Error(`Could not start the local SOCKS5 authentication relay for this proxy: ${(e && e.message) || e}`);
+    }
+    proxyForArg = { type: 'SOCKS5', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
+  }
+
+  // Proxy via --proxy-server. HTTP(S) credentials are handled per-page with
+  // page.authenticate (below); SOCKS5 credentials are handled by the relay above,
+  // so page.authenticate is NOT used for SOCKS (it would do nothing).
   if (resolvedProxy) {
-    const proxyServer = buildProxyServerArgument(resolvedProxy);
+    const proxyServer = buildProxyServerArgument(proxyForArg);
     if (proxyServer) args.push(`--proxy-server=${proxyServer}`);
   }
-  const proxyCreds = resolvedProxy && (resolvedProxy.username || resolvedProxy.password)
+  const proxyCreds = resolvedProxy && !proxyIsSocks && (resolvedProxy.username || resolvedProxy.password)
     ? { username: resolvedProxy.username || '', password: resolvedProxy.password || '' }
     : null;
 
@@ -2000,7 +2103,23 @@ async function launchProfileSession(options = {}) {
   // fix for the real-timezone leak (proxy in the US but JS reporting Asia/Karachi).
   if (timezoneId) launchOptions.env = { ...process.env, TZ: timezoneId };
 
-  const browser = await puppeteer.launch(launchOptions);
+  let browser;
+  try {
+    browser = await puppeteer.launch(launchOptions);
+  } catch (launchErr) {
+    // Launch itself failed — the SOCKS relay (if any) would otherwise leak.
+    if (socksRelay) { try { socksRelay.close(); } catch (e) {} }
+    throw launchErr;
+  }
+
+  // Guard the ENTIRE post-launch setup (audit: launch-failure orphans Chrome).
+  // Until the session is registered in activeSessions (and its 'disconnected'
+  // cleanup wired), this browser is tracked NOWHERE else — so any throw here
+  // (browser.version()/pages()/newPage() and generateStartPage are the classic
+  // offenders) would leave a live Chrome running forever with no handle to close
+  // it. On failure, tear it down and rethrow.
+  let sessionRegistered = false;
+  try {
 
   // CRITICAL: stop puppeteer-extra-stealth from auto-injecting its ~11 evasions
   // into EVERY new tab. On the transient New Tab Page (chrome://new-tab-page),
@@ -2200,6 +2319,10 @@ async function launchProfileSession(options = {}) {
   // every tab/popup opened later, so new windows are never left un-spoofed
   // (leaking the real UA / timezone / devices). Idempotent per page.
   const appliedPages = new WeakSet();
+  // audit: applyToPage previously swallowed ALL injection errors, so a profile
+  // could report "launched" while running with the REAL identity. Track whether
+  // the identity setup on the primary tab actually completed and surface it.
+  let injectionDegraded = false;
   const applyToPage = async (targetPage, isNewTab = false) => {
     if (!targetPage || appliedPages.has(targetPage)) return;
     // Never touch browser-internal pages (New Tab Page, settings, devtools). There
@@ -2298,10 +2421,21 @@ async function launchProfileSession(options = {}) {
       // Smart Autofill — expose the persona bridge + inject the in-page widget on
       // this tab and its future navigations (no-op unless the bridge is configured).
       await attachPersonaAutofill(targetPage);
-    } catch (e) { /* best-effort per page — never block the launch */ }
+    } catch (e) {
+      // Per-page best-effort — never block the launch — but no longer SILENT:
+      // record that this tab's identity setup did not fully complete so the
+      // caller/UI can warn instead of implying protection that isn't there.
+      if (!isNewTab) injectionDegraded = true;
+      console.error('[SG][fingerprint] injection error on', (isNewTab ? 'new tab' : 'primary tab'),
+        'for profile', profileId, title || '', '—', (e && e.message) || e);
+    }
   };
 
   await applyToPage(page);
+  if (injectionDegraded) {
+    console.error('[SG][fingerprint] WARNING: profile', (title || profileId),
+      'launched WITHOUT full fingerprint masking — the real UA/timezone/devices may be exposed.');
+  }
 
   // NEW tabs/popups: the CDP auto-attach above already injects the full JS
   // fingerprint (cores/RAM/GPU/screen/WebRTC/etc.) before any page script runs in
@@ -2388,10 +2522,14 @@ async function launchProfileSession(options = {}) {
     pid: sessionPid,
     title: title || `Profile ${sessionId}`,
     proxyLabel,
+    injectionOk: !injectionDegraded,
+    socksRelay, // local SOCKS5 auth relay (or null) — closed when the session ends
     createdAt: new Date()
   });
+  sessionRegistered = true;
   browser.on('disconnected', () => {
     activeSessions.delete(sessionId);
+    if (socksRelay) { try { socksRelay.close(); } catch (e) {} } // tear down the relay with the browser
     // Classify the disconnect: app shutdown and explicit user-close are clean;
     // anything else is a crash (ipcHandlers bumps crashCount + notifies).
     let reason = 'crash';
@@ -2399,9 +2537,21 @@ async function launchProfileSession(options = {}) {
     else if (intentionalClose.has(sessionId)) { reason = 'user'; intentionalClose.delete(sessionId); }
     emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
   });
+
+  } catch (launchErr) {
+    // Post-launch setup failed before the session was registered. Close the
+    // now-orphaned browser + SOCKS relay (best-effort) and rethrow so the caller
+    // reports failure.
+    if (!sessionRegistered) {
+      try { await browser.close(); } catch (e) { /* already gone */ }
+      if (socksRelay) { try { socksRelay.close(); } catch (e) {} }
+    }
+    throw launchErr;
+  }
+
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
 
-  return { sessionId, userDataDir, wsEndpoint };
+  return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded };
 }
 
 // Drive an already-open session's primary page to a URL. Used by the Pro
@@ -2738,21 +2888,45 @@ function stopSyncGroup(masterSessionId) {
   return { stopped: true };
 }
 
+// Close a browser but NEVER hang the caller (audit: close() had no timeout and
+// never force-killed). A wedged Chrome can leave close() pending forever, which
+// would block app quit. Race close() against a timeout; if it doesn't finish,
+// SIGKILL the tracked OS process so the app can still exit cleanly.
+async function closeBrowserWithTimeout(session, timeoutMs = 8000) {
+  if (!session || !session.browser) return;
+  const browser = session.browser;
+  let pid = session.pid || null;
+  if (!pid) { try { const p = browser.process(); pid = p ? p.pid : null; } catch (e) { pid = null; } }
+  let timer = null;
+  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), timeoutMs); });
+  const closed = browser.close().then(() => 'closed', () => 'error');
+  const outcome = await Promise.race([closed, timeout]);
+  if (timer) clearTimeout(timer);
+  if (outcome !== 'closed') {
+    try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+    if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
+  }
+  // Tear down the SOCKS relay too (idempotent — the 'disconnected' handler may
+  // also close it; double-close is safe). Guards the force-kill path where the
+  // disconnect event might not fire.
+  if (session.socksRelay) { try { session.socksRelay.close(); } catch (e) {} }
+}
+
 async function closeProfileSession(sessionId) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
   if (!session) return { closed: false };
   intentionalClose.add(id); // deliberate close — the disconnect must not be read as a crash
-  try { await session.browser.close(); } catch (e) {}
+  await closeBrowserWithTimeout(session);
   activeSessions.delete(id);
   return { closed: true };
 }
 
 async function closeAllProfileSessions() {
   shuttingDown = true; // app is quitting — these closes are not crashes; SessionState rows stay 'running' for restore
-  for (const session of activeSessions.values()) {
-    try { await session.browser.close(); } catch (e) {}
-  }
+  // Close every session concurrently, each with its own timeout+force-kill, so one
+  // wedged Chrome can't stall the whole quit sequence behind the others.
+  await Promise.all(Array.from(activeSessions.values()).map((s) => closeBrowserWithTimeout(s)));
   activeSessions.clear();
 }
 
@@ -3176,6 +3350,9 @@ function listSessionPids() {
 module.exports = {
   DEFAULT_PROFILE_ROOT,
   parseProxyInput,
+  // Pure helper exported for regression tests: maps a proxy type to its --proxy-server
+  // scheme (asserts SOCKS4 → socks4://, not http://).
+  buildProxyServerArgument,
   configurePersonaBridge,
   launchProfileSession,
   closeProfileSession,
@@ -3200,6 +3377,10 @@ module.exports = {
   importStoredCookies,
   listAvailableBrowsers,
   resolveBrowserExecutable,
+  // Pure helper exported for regression tests: builds the reported UA + Client-Hints
+  // bundle. Tests assert the coherence guard clamps the reported major to the launched
+  // binary (guarding against the "reported 149 vs real 150+" TLS mismatch).
+  buildUserAgentBundle,
   // Debug hook (used by test harnesses) — returns the live puppeteer Browser.
   __browserFor: (sessionId) => {
     const s = activeSessions.get(String(sessionId));

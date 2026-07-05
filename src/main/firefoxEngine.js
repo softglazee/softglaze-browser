@@ -14,6 +14,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { parseProxyInput } = require('./browserEngine');
+const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
 // `app` is a string path (not the API object) when required outside Electron, so
 // `app && app.isPackaged` is a safe runtime guard.
 const { app } = require('electron');
@@ -402,10 +403,17 @@ async function initFirefoxResumableState() {
 function ffHttpsGet(url, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 6) return reject(new Error('Too many redirects'));
-    const req = https.get(url, { headers: { 'User-Agent': 'SoftGlaze' } }, (res) => {
+    // audit: https-only + Mozilla-host allowlist on the URL and every redirect.
+    let target;
+    try { target = assertAllowedDownloadUrl(url, HOSTS.firefox, 'Firefox download'); }
+    catch (e) { return reject(e); }
+    const req = https.get(target, { headers: { 'User-Agent': 'SoftGlaze' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
-        return ffHttpsGet(res.headers.location, redirects + 1).then(resolve, reject);
+        let next;
+        try { next = resolveRedirect(res.headers.location, target, HOSTS.firefox, 'Firefox download'); }
+        catch (e) { return reject(e); }
+        return ffHttpsGet(next, redirects + 1).then(resolve, reject);
       }
       resolve(res);
     });
@@ -430,6 +438,37 @@ function ffFullVersion(v) { const s = String(v); return /^\d+\.\d/.test(s) ? s :
 function ffInstallerUrl(version) {
   const full = ffFullVersion(version);
   return `https://ftp.mozilla.org/pub/firefox/releases/${full}/win64/en-US/Firefox%20Setup%20${full}.exe`;
+}
+
+// SHA-256 of a local file (streamed).
+function ffSha256File(file) {
+  return new Promise((resolve, reject) => {
+    const h = crypto.createHash('sha256');
+    const rs = fs.createReadStream(file);
+    rs.on('error', reject);
+    rs.on('data', (c) => h.update(c));
+    rs.on('end', () => resolve(h.digest('hex')));
+  });
+}
+
+// Fetch Mozilla's published SHA256SUMS for a release and return the expected hash
+// for the win64/en-US installer, or null if it can't be obtained/parsed. Served
+// from the ftp.mozilla.org ORIGIN (the installer itself may come from a CDN edge),
+// so this is an independent integrity path on top of https + host-pinning.
+async function ffExpectedInstallerSha(version) {
+  const full = ffFullVersion(version);
+  const url = `https://ftp.mozilla.org/pub/firefox/releases/${full}/SHA256SUMS`;
+  let res;
+  try { res = await ffHttpsGet(url); } catch (e) { return null; }
+  if (res.statusCode !== 200) { try { res.resume(); } catch (_) {} return null; }
+  let text = '';
+  try { for await (const chunk of res) { text += chunk; if (text.length > 5_000_000) break; } } catch (e) { return null; }
+  const wanted = `win64/en-US/Firefox Setup ${full}.exe`;
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^([0-9a-fA-F]{64})\s+(.+)$/.exec(line.trim());
+    if (m && m[2] === wanted) return m[1].toLowerCase();
+  }
+  return null;
 }
 
 // Recent major Firefox releases available for win64, newest first, with install status.
@@ -466,10 +505,17 @@ async function listFirefoxDownloadable() {
 function ffRawGet(url, headers, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 6) return reject(new Error('Too many redirects'));
-    const req = https.get(url, { headers: Object.assign({ 'User-Agent': 'SoftGlaze' }, headers) }, (res) => {
+    // audit: https-only + Mozilla-host allowlist on the URL and every redirect.
+    let target;
+    try { target = assertAllowedDownloadUrl(url, HOSTS.firefox, 'Firefox download'); }
+    catch (e) { return reject(e); }
+    const req = https.get(target, { headers: Object.assign({ 'User-Agent': 'SoftGlaze' }, headers) }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
-        return ffRawGet(res.headers.location, headers, redirects + 1).then(resolve, reject);
+        let next;
+        try { next = resolveRedirect(res.headers.location, target, HOSTS.firefox, 'Firefox download'); }
+        catch (e) { return reject(e); }
+        return ffRawGet(next, headers, redirects + 1).then(resolve, reject);
       }
       resolve({ res, req });
     });
@@ -572,6 +618,22 @@ function startFirefoxDownload(version) {
 
       if (total && received < total) {
         throw Object.assign(new Error('Connection interrupted before completion.'), { interrupted: true });
+      }
+
+      // audit: verify the downloaded installer against Mozilla's published
+      // SHA256SUMS before running it. If the checksum is available and mismatches,
+      // refuse to execute (fatal — the partial file is then wiped below). If
+      // SHA256SUMS can't be fetched (offline / older layout), fall back to the
+      // transport trust already enforced (https + Mozilla-host pinning).
+      entry.state = 'verifying';
+      entry.percent = 86;
+      ffPersistState(true);
+      const expectedSha = await ffExpectedInstallerSha(major);
+      if (expectedSha) {
+        const actualSha = (await ffSha256File(part)).toLowerCase();
+        if (actualSha !== expectedSha) {
+          throw Object.assign(new Error('Firefox installer failed SHA-256 verification — refusing to run it.'), { fatal: true });
+        }
       }
 
       entry.state = 'installing';
