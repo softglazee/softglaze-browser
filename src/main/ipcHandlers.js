@@ -968,6 +968,7 @@ async function bulkDeleteProxies(payload) {
 async function getProxyRotation(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id); // rotation config is per-profile — gate on profile access
   const all = (await readSetting('proxyRotation', {})) || {};
   const cfg = all[id] || { enabled: false, mode: 'round-robin', proxyIds: [] };
   const proxies = (await getPrisma().proxy.findMany({
@@ -985,12 +986,23 @@ async function getProxyRotation(payload) {
 }
 
 async function setProxyRotation(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id); // rotation config is per-profile — gate on profile access
   const enabled = Boolean(input.enabled);
   const mode = input.mode === 'random' ? 'random' : 'round-robin';
   const proxyIds = Array.isArray(input.proxyIds) ? input.proxyIds.map((v) => parseId(v)) : [];
   if (enabled && proxyIds.length === 0) throw new Error('Select at least one proxy for the rotation pool.');
+  // Only allow proxies the caller can actually access into the rotation pool (no binding a
+  // profile to another member's proxies).
+  if (proxyIds.length) {
+    const accessible = await getPrisma().proxy.findMany({
+      where: await scopedProxyWhere({ id: { in: proxyIds } }), select: { id: true }
+    });
+    const okSet = new Set(accessible.map((p) => p.id));
+    if (proxyIds.some((pid) => !okSet.has(pid))) throw new Error('One or more selected proxies are not accessible to you.');
+  }
   const all = (await readSetting('proxyRotation', {})) || {};
   all[id] = { enabled, mode, proxyIds };
   await writeSetting('proxyRotation', all);
@@ -4483,6 +4495,7 @@ async function persistProxyHealth(db, id, result) {
 async function getProxyHealthHistory(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id, 'id');
+  await assertCanAccessProxy(id); // don't leak another member's proxy latency/geo history
   const limit = Math.min(500, Math.max(10, Number(input.limit) || 200));
   const events = await getPrisma().proxyHealthEvent
     .findMany({ where: { proxyId: id }, orderBy: { ts: 'desc' }, take: limit })
@@ -6089,6 +6102,15 @@ async function superAdminSetup(payload) {
     const actor = await getActiveMember();
     if (actor && actor.role !== 'OWNER' && actor.role !== 'SUPER_ADMIN') {
       const err = new Error('Only the workspace Owner can set up the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
+    }
+    if (!actor) {
+      // Pre-login claim: only a genuine first run (no members yet) may proceed. If members
+      // already exist the workspace is set up — an unauthenticated caller must NOT be able
+      // to seize Super Admin; require the Owner to sign in first.
+      const memberCount = await getPrisma().member.count().catch(() => 0);
+      if (memberCount > 0) {
+        const err = new Error('This workspace is already set up — sign in as the Owner to configure the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
+      }
     }
   }
   const identifier = (optionalString(input.identifier) || permissions.DEFAULT_SUPER_ADMIN_IDENTIFIER).toLowerCase();
