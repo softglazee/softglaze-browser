@@ -282,9 +282,11 @@ function personaAutofillMain() {
         if (nameEl) matches.push({ el: nameEl, value: [p.firstName, p.lastName].filter(Boolean).join(' '), kind: 'text' });
       }
       // Passwords: fill EVERY password field (covers "confirm password"). The
-      // plaintext is NEVER shipped to page JS (audit C2) — the list payload only
-      // tells us `hasPassword`, and the backend types the real value server-side
-      // by persona id via the trusted CDP bridge. Kind 'password' carries no value.
+      // plaintext is NEVER shipped to page JS in the list payload (audit C2) — the
+      // list only tells us `hasPassword`. On Chromium the backend types the real
+      // value server-side by persona id via the trusted CDP bridge; on Firefox the
+      // ISOLATED content-script fetches it on demand via __sgPersonaGetSecret (see
+      // the fallback below). Kind 'password' carries only the persona id.
       if (p.hasPassword) {
         var pws = all.filter(function (e) { return (e.type || '').toLowerCase() === 'password' && used.indexOf(e) < 0; });
         for (var k = 0; k < pws.length; k++) { used.push(pws[k]); matches.push({ el: pws[k], kind: 'password', personaId: p.id }); }
@@ -311,17 +313,35 @@ function personaAutofillMain() {
         matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} });
       }
       if (!trusted) {
-        // Fallback in-page typing (bridge absent/errored). Password fields can't be
-        // filled here because the plaintext never entered the page — skip them.
+        // Fallback in-page typing (Firefox, or if the CDP bridge errored). On Firefox
+        // the widget runs in the extension's ISOLATED content-script world — page JS
+        // cannot read these expandos or the typed value beyond the DOM field itself —
+        // so it fetches ONLY the selected persona's password on demand via
+        // __sgPersonaGetSecret (origin-scoped server-side) and types it here. When
+        // that bridge is absent (e.g. plain Chromium fallback) password fields are
+        // skipped rather than filled blank.
+        var canGetSecret = (typeof window.__sgPersonaGetSecret === 'function');
+        var secretVal = null; // resolved once per fill (same persona for every pw field)
         var skippedSecret = false;
         for (var j = 0; j < matches.length; j++) {
           var m = matches[j];
-          if (m.kind === 'password') { skippedSecret = true; continue; }
+          if (m.kind === 'password') {
+            if (!canGetSecret) { skippedSecret = true; continue; }
+            if (secretVal === null) {
+              try { var sr = await window.__sgPersonaGetSecret(p.id, location.href); secretVal = (sr && sr.password != null) ? String(sr.password) : ''; }
+              catch (e) { secretVal = ''; }
+            }
+            if (!secretVal) { skippedSecret = true; continue; }
+            await typeInto(m.el, secretVal);
+            filled++;
+            await delay(100 + rand(0, 140));
+            continue;
+          }
           if (m.kind === 'select') setSelect(m.el, m.value); else await typeInto(m.el, m.value);
           filled++;
           await delay(100 + rand(0, 140));
         }
-        if (skippedSecret && !filled) { toast('Autofill bridge unavailable — could not fill password on this page.'); }
+        if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable — could not fill the password on this page.'); }
       }
       footer.hidden = false;
       toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '. Review, then mark as used.') : 'No matching fields found on this page.');
