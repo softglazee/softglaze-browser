@@ -43,20 +43,42 @@ function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
 // start, so the password isn't asked for again. See rememberStore.js (main).
 function RememberToggle({ checked, onChange }) {
   const { t } = useTranslation('gate');
+  // Surface the silent failure mode: rememberStore REFUSES to persist a login secret
+  // unless the OS keychain (DPAPI/Keychain/libsecret) is available — a login credential
+  // must never hit disk in the clear. When it's unavailable, "keep me signed in" can't
+  // work and the user would otherwise just be re-prompted every launch with no reason.
+  const [available, setAvailable] = useState(true);
+  useEffect(() => {
+    let live = true;
+    if (softglazeApi.auth && softglazeApi.auth.rememberStatus) {
+      softglazeApi.auth.rememberStatus()
+        .then((s) => { if (live && s) setAvailable(s.available !== false); })
+        .catch(() => {});
+    }
+    return () => { live = false; };
+  }, []);
   return (
-    <label className="flex items-center gap-2.5 mt-4 cursor-pointer select-none">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className="w-[18px] h-[18px] rounded-[5px] border grid place-items-center transition-colors shrink-0"
-        style={{ borderColor: checked ? 'var(--primary)' : 'var(--border)', background: checked ? 'var(--primary)' : 'transparent' }}
-      >
-        {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-      </button>
-      <span className="text-[12px] text-muted">{t('remember.label')}</span>
-    </label>
+    <div className="mt-4">
+      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={checked}
+          onClick={() => onChange(!checked)}
+          className="w-[18px] h-[18px] rounded-[5px] border grid place-items-center transition-colors shrink-0"
+          style={{ borderColor: checked ? 'var(--primary)' : 'var(--border)', background: checked ? 'var(--primary)' : 'transparent' }}
+        >
+          {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+        </button>
+        <span className="text-[12px] text-muted">{t('remember.label')}</span>
+      </label>
+      {checked && !available && (
+        <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-amber-400">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          {t('remember.unavailable', "This device can't securely store a login (OS encryption is unavailable), so you'll be asked to sign in again next launch.")}
+        </p>
+      )}
+    </div>
   );
 }
 
