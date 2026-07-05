@@ -478,7 +478,9 @@ export default function ProxyPoolPage() {
     setSaving(true);
     setError('');
     try {
-      const payload = { name: proxyForm.name, type: proxyForm.type, host: proxyForm.host, port: proxyForm.port, username: proxyForm.username, password: proxyForm.password };
+      // Don't send the masked placeholder back on save — that would overwrite the real
+      // stored password with the bullets and break the proxy's auth on any unrelated edit.
+      const payload = { name: proxyForm.name, type: proxyForm.type, host: proxyForm.host, port: proxyForm.port, username: proxyForm.username, password: proxyForm.password === '••••••••' ? undefined : proxyForm.password };
       if (isEditing) await softglazeApi.proxies.update({ id: proxyForm.id, ...payload });
       else await softglazeApi.proxies.create(payload);
       setProxyForm(initialProxyForm);

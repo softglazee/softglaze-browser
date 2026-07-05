@@ -652,7 +652,11 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
     softglazeApi.automation.runMacro({ macroId: macro.id, profileId, continueOnError: true })
       .catch((e) => { if (live) { setErr(e.message || t('runModal.errors.run')); setPhase('done'); } });
     return () => { live = false; try { off && off(); } catch (e) { /* ignore */ } };
-  }, [macro.id, profileId, profileName, t]);
+    // Depend ONLY on the run identity. Including `t`/`profileName` meant a mid-run language
+    // switch re-ran this effect and started a SECOND concurrent macro run. Log strings use
+    // the closure's `t` (cosmetic if the language changes mid-run).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [macro.id, profileId]);
 
   async function control(action) {
     if (!runId) return;
