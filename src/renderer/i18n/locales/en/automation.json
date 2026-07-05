@@ -275,6 +275,9 @@
     "profileFallback": "Profile {{id}}",
     "warmupConsole": "Warm-up console",
     "live": "live",
+    "progressTitle": "Warm-up progress",
+    "modeQueue": "Queue · one at a time",
+    "modeBulk": "Bulk · {{n}} at a time",
     "consoleIdle": "[ idle ] Select profiles, set a duration, and start the warm-up to see live progress.",
     "errors": {
       "selectProfile": "Select at least one profile to warm up.",
@@ -283,6 +286,18 @@
       "stopWarmup": "Could not stop the warm-up.",
       "importFile": "Could not read that file."
     }
+  },
+  "counter": {
+    "total": "total",
+    "running": "running",
+    "done": "done",
+    "queued": "queued"
+  },
+  "console": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "export": "Export",
+    "clear": "Clear"
   },
   "history": {
     "emptyTitle": "No tasks have run yet",
