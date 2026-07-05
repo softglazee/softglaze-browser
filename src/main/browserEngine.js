@@ -2256,22 +2256,36 @@ async function launchProfileSession(options = {}) {
     const rootCdp = await browser.target().createCDPSession();
     rootCdp.on('Target.attachedToTarget', async (ev) => {
       const info = ev.targetInfo || {};
-      // Inject the FP script (best-effort) and ALWAYS resume the paused target.
-      // Returns true once the flattened session is available so we can resume it.
-      const handle = async () => {
+      const isPageish = info.type === 'page' || info.type === 'iframe';
+      const isWorker = /worker/i.test(info.type || '');
+      // Register the fingerprint init script on the PAUSED target and apply the CDP
+      // Emulation extras. The whole new-tab fingerprint rides on this script landing
+      // BEFORE the target resumes and commits its first document — so, unlike before,
+      // the addScript is NOT a swallowed best-effort call: a failure makes inject()
+      // report false and we retry (below) before resuming. Previously a single
+      // transient addScript failure silently resumed an un-spoofed tab, which is the
+      // reported "+ tab leaks real GPU/RAM/WebRTC" bug. A scriptAdded latch means a
+      // retry triggered by a failed EXTRA never double-registers the script.
+      let scriptAdded = false;
+      const inject = async () => {
         let sess = null;
         try { sess = rootCdp.connection().session(ev.sessionId); } catch (e) {}
-        if (!sess) return false; // puppeteer hasn't created the flattened session yet
+        if (!sess) return false; // puppeteer hasn't surfaced the flattened session yet
         try {
-          if (info.type === 'page' || info.type === 'iframe') {
-            await sess.send('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource }).catch(() => {});
+          if (isPageish) {
+            if (!scriptAdded) {
+              // NOT .catch()'d: a throw means the script did not register, so inject()
+              // fails and the loop retries it before the target is allowed to run.
+              await sess.send('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource });
+              scriptAdded = true;
+            }
+            // Best-effort CDP identity extras (cores, UA + Client-Hints, timezone,
+            // mobile metrics, geo) applied while still PAUSED so the first request
+            // carries the spoofed identity. Emulation-domain only; request-interception
+            // / proxy-auth stay deferred to applyToPage (doing those on the NTP crashed
+            // the browser). A failure here does NOT un-spoof GPU/RAM/WebRTC (that is the
+            // JS script, already in), so it must not block the resume.
             if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
-            // Apply the CDP-level identity (UA header + Client-Hints, timezone,
-            // geolocation, mobile metrics) to NEW tabs/popups while they are still
-            // PAUSED — so the very first request carries the spoofed identity
-            // instead of leaking the real UA/timezone until framenavigated lands.
-            // Emulation-domain only; request-interception / proxy-auth stay
-            // deferred to applyToPage (doing those on the NTP crashed the browser).
             if (fpLate.ua) {
               await sess.send('Emulation.setUserAgentOverride', {
                 userAgent: fpLate.ua.userAgent,
@@ -2291,20 +2305,35 @@ async function launchProfileSession(options = {}) {
               await sess.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
               await sess.send('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc }).catch(() => {});
             }
-          } else if (/worker/i.test(info.type || '')) {
-            if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+            return true;
           }
-        } catch (e) { /* best-effort per target */ }
-        // ALWAYS resume — even on error — or the paused target hangs at about:blank.
-        try { await sess.send('Runtime.runIfWaitingForDebugger').catch(() => {}); } catch (e) {}
-        return true;
+          if (isWorker) {
+            if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+            return true;
+          }
+          return true; // 'other'/'browser' target — nothing to inject; just needs a resume.
+        } catch (e) {
+          return false; // e.g. addScript raced a target detach — retry on the next tick.
+        }
       };
-      // Common case: the session exists and we resume immediately. If it doesn't
-      // yet (a race with puppeteer's own target bookkeeping that otherwise leaves
-      // a new tab/popup frozen at about:blank), retry briefly so it always resumes.
-      if (!(await handle())) {
-        for (let i = 0; i < 20 && !(await handle()); i += 1) await sleep(50);
+      const resume = async () => {
+        let sess = null;
+        try { sess = rootCdp.connection().session(ev.sessionId); } catch (e) {}
+        if (sess) { try { await sess.send('Runtime.runIfWaitingForDebugger').catch(() => {}); } catch (e) {} }
+      };
+      // Land the injection BEFORE resuming. Retry briefly (25ms × 20 ≈ 0.5s cap) while
+      // the target is held at the waitForDebuggerOnStart pause — this both waits for
+      // puppeteer to surface the flattened session AND re-tries a transient addScript.
+      // Then ALWAYS resume so a tab can never hang at about:blank, even if injection
+      // ultimately failed — and, in that case, LOG it (this path was silent before, so
+      // an un-spoofed new tab looked identical to a healthy one).
+      let injected = await inject();
+      for (let i = 0; i < 20 && !injected; i += 1) { await sleep(25); injected = await inject(); }
+      if (isPageish && !injected) {
+        console.error('[SG][fingerprint] new-tab injection FAILED — this tab may expose the REAL GPU/RAM/WebRTC. profile',
+          profileId, title || '', '— target', info.url || info.targetId || info.type);
       }
+      await resume();
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
   } catch (e) { /* fall back to per-page evaluateOnNewDocument in applyToPage */ }

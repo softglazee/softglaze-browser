@@ -327,11 +327,17 @@ app.whenReady().then(async () => {
 
   createMainWindow();
 
-  // One-time, best-effort: auto-install the recommended team extensions
-  // (download + unzip) in the background so the window opens immediately.
-  require('./extensionManager').seedRecommendedExtensions().catch((e) => {
-    console.warn('[ext-seed] recommended extension seeding failed:', e && e.message);
-  });
+  // One-time, best-effort: auto-install the recommended team extensions (download +
+  // unzip) then run the one-time reconcile that force-enables any recommended
+  // extension left dormant by an older `enable:false` default. Background so the
+  // window opens immediately; reconcile runs after the seed so a just-installed
+  // extension is present for it to flip.
+  {
+    const extMgr = require('./extensionManager');
+    extMgr.seedRecommendedExtensions()
+      .then(() => extMgr.reconcileRecommendedExtensions())
+      .catch((e) => console.warn('[ext-seed] recommended extension seed/reconcile failed:', e && e.message));
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
