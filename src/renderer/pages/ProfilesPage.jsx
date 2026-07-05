@@ -540,6 +540,7 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [launchQueue, setLaunchQueue] = useState(false); // true = launch selected one-by-one (queue)
   const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
@@ -940,7 +941,9 @@ export default function ProfilesPage() {
   async function handleBulkLaunch() {
     if (selectedIds.size === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); await refreshSessions(); }
+    // Queue mode → concurrency 1 (one-by-one). Otherwise the main process uses the
+    // configured launch-concurrency cap (launch several at once).
+    try { await softglazeApi.profiles.bulkLaunch([...selectedIds], launchQueue ? { concurrency: 1 } : undefined); await refreshSessions(); }
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); setLaunchProgress(null); }
   }
@@ -1899,7 +1902,10 @@ export default function ProfilesPage() {
               {t('bulk.launching', { done: launchProgress.done, total: launchProgress.total })}
             </span>
           )}
-          <div className="flex gap-2 ml-auto">
+          <div className="flex items-center gap-2 ml-auto">
+            <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 cursor-pointer select-none" title={t('bulk.queueTitle', 'Launch the selected profiles one at a time (a queue) instead of several at once.')}>
+              <input type="checkbox" checked={launchQueue} onChange={(e) => setLaunchQueue(e.target.checked)} disabled={bulkBusy} className="accent-primary" /> {t('bulk.queue', 'Queue')}
+            </label>
             <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</Button>
             <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
