@@ -20,6 +20,7 @@ const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
 // Local SOCKS5 auth-injecting relay — Chromium can't authenticate to a SOCKS5
 // proxy, so an authenticated one is routed through this instead (audit).
 const { startSocksAuthRelay } = require('./socksRelay');
+const { startHttpAuthRelay } = require('./httpRelay');
 
 // SoftGlaze first-party extension (Chrome Web Store ID). Best-effort force-install
 // on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
@@ -2158,6 +2159,16 @@ async function launchProfileSession(options = {}) {
   const proxyIsSocks = proxyTypeLc.startsWith('socks'); // socks4 OR socks5 — neither answers HTTP 407
   const proxyIsSocks5 = proxyTypeLc === 'socks5';       // only socks5 carries user/pass auth (via the relay)
   const socksNeedsAuth = proxyIsSocks5 && Boolean(resolvedProxy.username || resolvedProxy.password);
+  // HTTP(S) proxies CAN answer page.authenticate()'s 407, but that is applied per-page
+  // and only after a tab exists — so a browser-opened "+" tab fires its FIRST request
+  // BEFORE auth is wired, drawing a 407 that stalls the tab and looks suspicious to
+  // bot-detection. Give authenticated HTTP(S) proxies the same treatment as SOCKS5: a
+  // local no-auth relay that injects the credentials upstream, so Chromium never sees a
+  // challenge on ANY tab and the new-tab proxy-auth race disappears.
+  const httpNeedsAuth = Boolean(resolvedProxy) && !proxyIsSocks && Boolean(resolvedProxy.username || resolvedProxy.password);
+  // Holds whichever local auth-injecting relay is active — SOCKS5 (startSocksAuthRelay)
+  // OR HTTP (startHttpAuthRelay). Both expose { port, close }, so the session teardown
+  // that calls socksRelay.close() tears down either kind. (Named socksRelay historically.)
   let socksRelay = null;
   let proxyForArg = resolvedProxy;
   if (socksNeedsAuth) {
@@ -2167,16 +2178,30 @@ async function launchProfileSession(options = {}) {
       throw new Error(`Could not start the local SOCKS5 authentication relay for this proxy: ${(e && e.message) || e}`);
     }
     proxyForArg = { type: 'SOCKS5', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
+  } else if (httpNeedsAuth) {
+    try {
+      socksRelay = await startHttpAuthRelay(resolvedProxy);
+      proxyForArg = { type: 'HTTP', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
+    } catch (e) {
+      // Relay failed to START — degrade gracefully to the previous per-page
+      // page.authenticate() path (proxyForArg stays the real proxy; proxyCreds below is
+      // set because socksRelay is null) rather than failing the whole launch.
+      console.warn('[SG][proxy] HTTP auth relay failed to start — falling back to page.authenticate:', (e && e.message) || e);
+      socksRelay = null;
+    }
   }
 
-  // Proxy via --proxy-server. HTTP(S) credentials are handled per-page with
-  // page.authenticate (below); SOCKS5 credentials are handled by the relay above,
-  // so page.authenticate is NOT used for SOCKS (it would do nothing).
+  // Proxy via --proxy-server. Authenticated proxies now route through the local relay
+  // above (auth-free to Chromium); page.authenticate stays only as a fallback for the
+  // unexpected case where a relay wasn't started for an authenticated HTTP(S) proxy.
   if (resolvedProxy) {
     const proxyServer = buildProxyServerArgument(proxyForArg);
     if (proxyServer) args.push(`--proxy-server=${proxyServer}`);
   }
-  const proxyCreds = resolvedProxy && !proxyIsSocks && (resolvedProxy.username || resolvedProxy.password)
+  // With a relay in front, Chromium points at an auth-free local proxy, so per-page
+  // authenticate() is unnecessary (and never fires). Only fall back to it when no relay
+  // is active for an authenticated HTTP(S) proxy.
+  const proxyCreds = (resolvedProxy && !proxyIsSocks && !socksRelay && (resolvedProxy.username || resolvedProxy.password))
     ? { username: resolvedProxy.username || '', password: resolvedProxy.password || '' }
     : null;
 
@@ -2221,15 +2246,16 @@ async function launchProfileSession(options = {}) {
   let sessionRegistered = false;
   try {
 
-  // CRITICAL: stop puppeteer-extra-stealth from auto-injecting its ~11 evasions
-  // into EVERY new tab. On the transient New Tab Page (chrome://new-tab-page),
-  // the target's CDP session closes before injection finishes, so each evasion
-  // throws `TargetCloseError (Page.addScriptToEvaluateOnNewDocument)` — a flood of
-  // unhandled rejections on every "+" tab that destabilized the browser. The
-  // FIRST page was processed by stealth during launch; the CDP auto-attach below
-  // injects the full fingerprint into every subsequent tab, so removing the
-  // plugin's new-target listener loses nothing and ends the crash.
-  browser.removeAllListeners('targetcreated');
+  // KEEP puppeteer-extra-stealth's onTargetCreated listener so its ~11 evasions
+  // (window.chrome, navigator.plugins, navigator.permissions, iframe.contentWindow,
+  // WebGL vendor, etc.) apply to EVERY new tab — not just the first. The custom CDP
+  // auto-attach below only spoofs GPU/RAM/WebRTC/screen; with stealth stripped from new
+  // tabs, Google's BotGuard saw a missing window.chrome and threw the /sorry CAPTCHA on
+  // a "+"-tab search. The known cost of leaving it on — stealth injecting into a
+  // transient New Tab Page whose CDP session closes mid-write throws
+  // `TargetCloseError (Page.addScriptToEvaluateOnNewDocument)` — is a rejected promise
+  // caught by the global unhandledRejection handler in main.js (one-offs are swallowed;
+  // the app is not torn down), so we no longer removeAllListeners('targetcreated').
 
   // --- Reliable cross-channel fingerprint injection -------------------------
   // Real Chrome (stable channel) SILENTLY IGNORES --load-extension (a 2025
