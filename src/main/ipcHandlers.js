@@ -1329,7 +1329,12 @@ function randSession(len = 8) {
   while (s.length < len) s += Math.random().toString(36).slice(2);
   return s.slice(0, len);
 }
-function clampPoolCount(value, def = 5, max = 50) {
+// Clamp a requested pool size. The default ceiling was 50, which silently truncated
+// requests (asking for 100 minted 50) on the count-driven adapters (Apify,
+// Smartproxy.org). Those adapters build each row as a local sticky-session string with
+// no per-row network call, so a higher ceiling is cheap; 500 covers realistic requests
+// while still bounding a runaway value. Adapters with a real API limit pass their own max.
+function clampPoolCount(value, def = 5, max = 500) {
   const n = Number.parseInt(String(value), 10);
   if (!Number.isFinite(n) || n < 1) return def;
   return Math.min(n, max);

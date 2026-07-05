@@ -338,7 +338,7 @@ export default function ProxyProviders({ onSynced }) {
                   {provider.geoSync.count && (
                     <div>
                       <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.howMany')}</label>
-                      <input value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, ''))} className={inputCls + ' font-mono'} placeholder="5" />
+                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder="5" title={t('proxyProviders.geo.howManyTitle', 'How many proxies to mint (up to 500).')} />
                     </div>
                   )}
                 </div>
