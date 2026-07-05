@@ -152,6 +152,76 @@ test('looksLikeSqlite recognises a real header and rejects junk', async () => {
   await fsp.rm(dir, { recursive: true, force: true });
 });
 
+// --- versioned KDF (v1 legacy / v2 strong) ---------------------------------
+
+test('v1 deriveKey equals the original param-less scrypt (existing SGDB1 DBs still open)', async () => {
+  const { promisify } = require('node:util');
+  const scrypt = promisify(crypto.scrypt);
+  const salt = dbCrypto.newSalt();
+  // What the ORIGINAL code shipped: crypto.scrypt(password, salt, 32) with no opts.
+  const legacyKey = await scrypt('vault-passphrase', salt, dbCrypto.KEY_LEN);
+  // The new versioned derive at v1 must produce a byte-identical key, or every
+  // already-encrypted database on disk would fail to decrypt after this change.
+  const v1Key = await dbCrypto.deriveKey('vault-passphrase', salt, dbCrypto.LEGACY_VERSION);
+  const v1Default = await dbCrypto.deriveKey('vault-passphrase', salt); // default = legacy
+  assert.ok(v1Key.equals(legacyKey), 'explicit v1 key matches the legacy param-less key');
+  assert.ok(v1Default.equals(legacyKey), 'default (no version) still derives the legacy key');
+});
+
+test('a v1-written file carries SGDB1 and readHeader reports version 1', async () => {
+  const dir = await tmpDir();
+  const plain = path.join(dir, 'db.sqlite');
+  const enc = path.join(dir, 'db.sqlite.enc');
+  const out = path.join(dir, 'db.out.sqlite');
+  const original = fakeSqliteBytes();
+  await fsp.writeFile(plain, original);
+
+  const salt = dbCrypto.newSalt();
+  const key = await dbCrypto.deriveKey('pw-legacy', salt); // default v1
+  await dbCrypto.encryptDbFile(plain, enc, key, salt);     // default v1 magic
+
+  const encBytes = await fsp.readFile(enc);
+  assert.ok(encBytes.subarray(0, 5).equals(dbCrypto.MAGIC), 'header is SGDB1');
+  const hdr = await dbCrypto.readHeader(enc);
+  assert.equal(hdr.version, 1);
+  assert.ok(hdr.salt.equals(salt));
+  // Unlock path: derive with the header version and decrypt.
+  const k = await dbCrypto.deriveKey('pw-legacy', hdr.salt, hdr.version);
+  await dbCrypto.decryptDbFile(enc, out, k);
+  assert.ok((await fsp.readFile(out)).equals(original));
+
+  await fsp.rm(dir, { recursive: true, force: true });
+});
+
+test('v2 round-trips, carries SGDB2, and derives a different (stronger) key', async () => {
+  const dir = await tmpDir();
+  const plain = path.join(dir, 'db.sqlite');
+  const enc = path.join(dir, 'db.sqlite.enc');
+  const out = path.join(dir, 'db.out.sqlite');
+  const original = fakeSqliteBytes();
+  await fsp.writeFile(plain, original);
+
+  const salt = dbCrypto.newSalt();
+  const v2Key = await dbCrypto.deriveKey('pw-strong', salt, dbCrypto.CURRENT_VERSION);
+  const v1Key = await dbCrypto.deriveKey('pw-strong', salt, dbCrypto.LEGACY_VERSION);
+  assert.ok(!v2Key.equals(v1Key), 'v2 (higher cost) yields a different key than v1');
+
+  await dbCrypto.encryptDbFile(plain, enc, v2Key, salt, dbCrypto.CURRENT_VERSION);
+  const encBytes = await fsp.readFile(enc);
+  assert.ok(encBytes.subarray(0, 5).equals(dbCrypto.MAGIC2), 'header is SGDB2');
+
+  const hdr = await dbCrypto.readHeader(enc);
+  assert.equal(hdr.version, 2);
+  const k = await dbCrypto.deriveKey('pw-strong', hdr.salt, hdr.version);
+  await dbCrypto.decryptDbFile(enc, out, k);
+  assert.ok((await fsp.readFile(out)).equals(original), 'v2 decrypts byte-for-byte');
+
+  // Decrypting a v2 file with a v1-derived key must fail the tag (not silently pass).
+  await assert.rejects(() => dbCrypto.decryptDbFile(enc, path.join(dir, 'x'), v1Key), (e) => e.code === 'DB_DECRYPT_FAILED');
+
+  await fsp.rm(dir, { recursive: true, force: true });
+});
+
 test('secureUnlink removes the file and never throws on a missing path', async () => {
   const dir = await tmpDir();
   const f = path.join(dir, 'secret.sqlite');
