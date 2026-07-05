@@ -6,7 +6,7 @@
 
 **~95 verified issues.** This is a working checklist — tick items as they're fixed.
 
-> **Status (branch `fix/top5-systemic-audit`, 2026-07-05):** the 5 systemic themes below are addressed. Fixed: **C2** persona/autofill bridge (origin-bound, passwords no longer sent to page JS, fill plan capped); the **single-instance lock**; a **permission-enforcement pass** (delete/purge, clone/from-template, batchAddProxies, syncVendorPool, rotateProxyIp + SSRF guard, getProxyProviderCreds, systemHumanType, persona-vault handlers, export scoping, switchMember/superAdminSetup auth); **fail-open → fail-closed** (rbacPolicy unknown-kind + combined creds, licensePolicy null-expiry, secretStore seal, softglazeApi sync-throw, Gate vault-status, DbGate); and **browser-lifecycle** hardening (launch try/catch, session dedupe, close timeout + force-kill, surfaced injection failures). Verified: 90/90 tests pass + frontend builds clean. **Not yet done** (follow-ups): C3 updater signing, download SHA-256 pinning, `xlsx` upgrade, SOCKS5-auth relay, fingerprint version-pin mismatch, and the remaining 🟡/🔵 items.
+> **Status (branch `fix/top5-systemic-audit`, 2026-07-05):** the 5 systemic themes below **plus C1** are addressed. Fixed: **C1** account-registration takeover (first-run-only guard on OTP send + register); **C2** persona/autofill bridge (origin-bound, passwords no longer sent to page JS, fill plan capped); the **single-instance lock**; a **permission-enforcement pass** (delete/purge, clone/from-template, batchAddProxies, syncVendorPool, rotateProxyIp + SSRF guard, getProxyProviderCreds, systemHumanType, persona-vault handlers, export scoping, switchMember/superAdminSetup auth); **fail-open → fail-closed** (rbacPolicy unknown-kind + combined creds, licensePolicy null-expiry, secretStore seal, softglazeApi sync-throw, Gate vault-status, DbGate); and **browser-lifecycle** hardening (launch try/catch, session dedupe, close timeout + force-kill, surfaced injection failures). Verified: 90/90 tests pass + frontend builds clean. **Not yet done** (follow-ups): **C3** updater signing, download SHA-256 pinning, `xlsx` upgrade, SOCKS5-auth relay, fingerprint version-pin mismatch, and the remaining 🟡/🔵 items.
 
 ## Verified-correct (not bugs — do not "fix" these)
 - Core crypto: AES-256-GCM with a random 12-byte IV per encryption, scrypt KDF, GCM tag verified on decrypt; Ed25519 lease verification. All correct.
@@ -26,7 +26,7 @@
 
 ## 🔴 CRITICAL — fix before any further release
 
-- [ ] **C1 · Workspace takeover via `account:register`** — `src/main/ipcHandlers.js:6668`
+- [x] **C1 · Workspace takeover via `account:register`** — `src/main/ipcHandlers.js:6768` — *FIXED (branch fix/top5-systemic-audit): `assertFirstRunSetup()` now gates both `accountSendOtp` and `accountRegister` to genuine first run (no members + no enabled vault).*
   Never checks whether an OWNER already exists; unconditionally creates a new OWNER, sets `currentMemberId`, and **overwrites the vault password**. Reachable because `account:sendOtp` (`ipcHandlers.js:6635`) returns the OTP to the caller (`devCode`) when no SMTP is configured (the default).
   **Fix:** refuse registration when an OWNER exists (require owner/super auth to add owners); never overwrite an existing vault here.
 
