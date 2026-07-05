@@ -78,5 +78,12 @@ browser.runtime.onMessage.addListener(function (msg) {
       .then(function () { return { ok: true }; })
       .catch(function () { return { ok: false }; });
   }
+  if (msg.type === 'secret') {
+    // On-demand single-password fetch for the in-page fill (see sg-bridge.js). The
+    // bridge returns 404 (→ call() rejects) when the id isn't offered for this url.
+    return call('/sg-autofill/secret?id=' + encodeURIComponent(msg.id || '') + '&url=' + encodeURIComponent(msg.url || ''), { method: 'GET' })
+      .then(function (r) { return (r && r.ok && r.password != null) ? { password: r.password } : null; })
+      .catch(function () { return null; });
+  }
   return undefined;
 });

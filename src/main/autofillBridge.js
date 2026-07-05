@@ -30,10 +30,12 @@ let server = null;
 let runningPort = null;
 let listForUrlFn = null;   // (url) => Promise<{ personas: [...] } | [...]>
 let markUsedFn = null;     // (id, url) => Promise<any>
+let getSecretFn = null;    // (id, url) => Promise<{ password } | null>  (origin-scoped)
 
 function configure(deps = {}) {
   if (typeof deps.listForUrl === 'function') listForUrlFn = deps.listForUrl;
   if (typeof deps.markUsed === 'function') markUsedFn = deps.markUsed;
+  if (typeof deps.getSecret === 'function') getSecretFn = deps.getSecret;
 }
 
 function sendJson(res, status, obj) {
@@ -85,6 +87,25 @@ async function handleRequest(req, res) {
         return sendJson(res, 200, { ok: true, personas });
       } catch (e) {
         return sendJson(res, 200, { ok: false, personas: [] });
+      }
+    }
+
+    // Resolve ONE persona's password for on-demand fill. Firefox has no CDP
+    // trusted-typer, so the isolated content-script must set the value itself; it
+    // requests exactly the selected id here (never the whole vault). getSecretFn is
+    // origin-scoped server-side (getPersonaSecretForUrl only resolves a persona
+    // OFFERED for `url`), so a stray token holder can't dump passwords by id.
+    if (req.method === 'GET' && url.pathname === '/sg-autofill/secret') {
+      if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+      if (typeof getSecretFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
+      const id = url.searchParams.get('id') || '';
+      const target = url.searchParams.get('url') || '';
+      try {
+        const s = await getSecretFn(id, target);
+        if (!s || s.password == null || s.password === '') return sendJson(res, 404, { ok: false });
+        return sendJson(res, 200, { ok: true, password: String(s.password) });
+      } catch (e) {
+        return sendJson(res, 404, { ok: false });
       }
     }
 
