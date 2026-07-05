@@ -291,6 +291,11 @@ export const softglazeApi = {
     deleteMacro: (id) => getSoftglazeApi().automation.deleteMacro(id),
     startWarmer: (payload) => getSoftglazeApi().automation.startWarmer(payload),
     stopWarmer: (payload) => getSoftglazeApi().automation.stopWarmer(payload),
+    // Re-attach to a warm-up still running in the main process after navigating away.
+    // Exposed by the preload bridge; without this line the Automation page's re-attach
+    // guard (typeof listActiveWarmers !== 'function') silently no-ops, so the Stop
+    // button and console logs vanish when you leave and return to the page.
+    listActiveWarmers: () => getSoftglazeApi().automation.listActiveWarmers(),
     getHistory: () => getSoftglazeApi().automation.getHistory(),
     runMacro: (payload) => getSoftglazeApi().automation.runMacro(payload),
     controlMacro: (payload) => getSoftglazeApi().automation.controlMacro(payload),
