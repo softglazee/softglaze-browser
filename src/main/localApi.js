@@ -67,6 +67,17 @@ async function handleRequest(req, res) {
     const url = new URL(req.url, `http://${HOST}:${runningPort || DEFAULT_PORT}`);
     const parts = url.pathname.split('/').filter(Boolean); // e.g. ['api','v1','profiles','12','start']
 
+    // DNS-rebinding guard: only serve requests whose Host header targets our loopback
+    // endpoint. A malicious page that resolves its own domain to 127.0.0.1 reaches this
+    // server but sends its OWN Host (evil.com:port); rejecting on Host mismatch blocks the
+    // cross-origin/rebinding path (and stops the unauthenticated /health probe from
+    // fingerprinting the app for arbitrary web pages).
+    const reqHost = String(req.headers.host || '').toLowerCase();
+    const apiPort = runningPort || DEFAULT_PORT;
+    if (!new Set([`127.0.0.1:${apiPort}`, `localhost:${apiPort}`, `[::1]:${apiPort}`]).has(reqHost)) {
+      return sendJson(res, 403, { error: 'Forbidden', message: 'Invalid Host header.' });
+    }
+
     // Health probe — unauthenticated, so scripts can detect the server is up.
     if (req.method === 'GET' && url.pathname === '/api/v1/health') {
       return sendJson(res, 200, { ok: true, service: 'Softglaze Local API', version: 'v1' });

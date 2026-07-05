@@ -131,19 +131,24 @@ function startAuthRelay(proxy) {
     const authHeader = 'Basic ' + Buffer.from(`${proxy.username || ''}:${proxy.password || ''}`).toString('base64');
     const upstreamHost = proxy.host;
     const upstreamPort = Number(proxy.port);
+    const open = new Set(); // live tunnel sockets — destroyed on close() so none leak
+    const track = (sock) => { if (!sock) return; open.add(sock); sock.once('close', () => open.delete(sock)); };
 
     const server = http.createServer((req, res) => {
       const opts = { host: upstreamHost, port: upstreamPort, method: req.method, path: req.url,
         headers: { ...req.headers, 'Proxy-Authorization': authHeader } };
       const fwd = http.request(opts, (r) => { res.writeHead(r.statusCode || 502, r.headers); r.pipe(res); });
+      fwd.setTimeout(30000, () => { try { fwd.destroy(); } catch (e) {} }); // no unbounded upstream stall
       fwd.on('error', () => { try { res.writeHead(502); res.end(); } catch (e) {} });
       req.pipe(fwd);
     });
     server.on('connect', (req, clientSocket, head) => {
       // Tunnel HTTPS through the upstream proxy with auth.
+      track(clientSocket);
       const upstream = net.connect(upstreamPort, upstreamHost, () => {
         upstream.write(`CONNECT ${req.url} HTTP/1.1\r\nHost: ${req.url}\r\nProxy-Authorization: ${authHeader}\r\n\r\n`);
         upstream.once('data', (chunk) => {
+          upstream.setTimeout(0); // tunnel established — long-lived, so drop the connect timeout
           // Pass the upstream's CONNECT response straight back, then splice.
           clientSocket.write(chunk);
           if (head && head.length) upstream.write(head);
@@ -151,11 +156,20 @@ function startAuthRelay(proxy) {
           clientSocket.pipe(upstream);
         });
       });
+      track(upstream);
+      upstream.setTimeout(30000, () => { try { upstream.destroy(); } catch (e) {} }); // bound the connect/handshake
       upstream.on('error', () => clientSocket.destroy());
       clientSocket.on('error', () => upstream.destroy());
     });
     server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve({ port: server.address().port, close: () => { try { server.close(); } catch (e) {} } }));
+    server.listen(0, '127.0.0.1', () => resolve({
+      port: server.address().port,
+      close: () => {
+        try { server.close(); } catch (e) {}
+        for (const s of open) { try { s.destroy(); } catch (e) {} } // reap in-flight tunnels
+        open.clear();
+      }
+    }));
   });
 }
 
