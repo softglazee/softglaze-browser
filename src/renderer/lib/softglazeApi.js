@@ -1,7 +1,21 @@
+// audit: this used to THROW synchronously when the preload API was missing. Every
+// wrapper below is `() => getSoftglazeApi().x.y()`, so the throw happened while the
+// call expression was being evaluated — BEFORE a promise existed — which meant the
+// per-call `.catch()` guards all over the renderer (and Promise.all(...catch()))
+// never fired, and an uncaught error escaped into React render/effects. Instead,
+// return a stub whose every leaf call resolves to a REJECTED promise, so failures
+// are catchable exactly like a normal async IPC error.
+function apiUnavailableError() {
+  return new Error('SoftGlaze preload API is unavailable. Check preload.js, contextIsolation, and main.js configuration.');
+}
+
+const UNAVAILABLE_STUB = new Proxy(function () {}, {
+  get() { return UNAVAILABLE_STUB; },
+  apply() { return Promise.reject(apiUnavailableError()); }
+});
+
 function getSoftglazeApi() {
-  if (!window.softglaze) {
-    throw new Error('SoftGlaze preload API is unavailable. Check preload.js, contextIsolation, and main.js configuration.');
-  }
+  if (!window.softglaze) return UNAVAILABLE_STUB;
   return window.softglaze;
 }
 

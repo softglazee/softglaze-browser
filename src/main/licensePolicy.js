@@ -45,10 +45,19 @@ function computeLicenseState({ type, trialEndsAt, now, graceDays = 3 } = {}) {
   let daysLeftGrace = null;
 
   if (ends == null) {
-    // No expiry recorded — a paid licence is active, anything else is treated as a
-    // fresh trial with unknown remaining time (the DB layer always sets trialEndsAt,
-    // so this is only a defensive fallback).
-    state = isPaidType ? 'paid' : 'trialing';
+    // No expiry recorded. audit: a non-paid licence here previously became an
+    // UNLIMITED 'trialing' state that never reached grace/ban — nulling this one
+    // column granted a perpetual trial. Fail closed: a paid licence with no expiry
+    // is a valid lifetime licence, but a missing trial boundary is treated as
+    // expired (the DB layer always sets trialEndsAt, so this only fires on a
+    // wiped/tampered column).
+    if (isPaidType) {
+      state = 'paid';
+    } else {
+      state = 'banned';
+      daysLeftTrial = 0;
+      daysLeftGrace = 0;
+    }
   } else if (nowMs <= ends) {
     state = isPaidType ? 'paid' : 'trialing';
     if (!isPaidType) daysLeftTrial = ceilDays(ends - nowMs);
