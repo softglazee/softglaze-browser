@@ -132,12 +132,35 @@ function effectivePermissions(member) {
     actions[a.key] = (a.key in storedActions) ? (Boolean(storedActions[a.key]) && rankAllows) : rankAllows;
   }
   if (!stored || typeof stored !== 'object') return { ...def, actions };
-  return {
+  const merged = {
     ...def,
     ...stored,
     features: { ...def.features, ...(stored.features || {}) },
     actions
   };
+  // CLAMP: a stored (or tampered) permissionsJson may RESTRICT within the role but must
+  // never ESCALATE beyond the role default. Numeric limits are capped to the role default
+  // (a lower stored restriction is honored, -1 = unlimited); create-flags are ANDed with
+  // the default so a stored `true` can never enable a role the member couldn't otherwise
+  // create. Without this, editing permissionsJson granted arbitrary quota / child-role rights.
+  for (const k of ['maxProfiles', 'maxProxies', 'maxBrowsers', 'maxAdmins', 'maxManagers', 'maxOperators']) {
+    merged[k] = clampLimit(merged[k], def[k]);
+  }
+  for (const k of ['canCreateAdmins', 'canCreateManagers', 'canCreateOperators']) {
+    merged[k] = Boolean(def[k]) && Boolean(merged[k]);
+  }
+  return merged;
+}
+
+// Clamp a stored numeric limit against the role default. -1 (unlimited) role defaults
+// honor a lower stored restriction but stay unlimited otherwise; finite defaults are a
+// hard ceiling that a stored value (including a stored -1/"unlimited") cannot exceed.
+function clampLimit(storedVal, defVal) {
+  const s = Number(storedVal);
+  const hasStored = Number.isFinite(s);
+  if (defVal === -1) return (hasStored && s >= 0) ? s : -1;
+  if (!hasStored || s < 0) return defVal;
+  return Math.min(s, defVal);
 }
 
 // The flag that gates creating a particular child role.

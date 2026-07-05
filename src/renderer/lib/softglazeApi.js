@@ -250,7 +250,15 @@ export const softglazeApi = {
     status: () => getSoftglazeApi().vault.status(),
     setPassword: (payload) => getSoftglazeApi().vault.setPassword(payload),
     unlock: (password, remember) => getSoftglazeApi().vault.unlock(password, remember),
-    recover: (recoveryCode, password) => getSoftglazeApi().vault.recover(recoveryCode, password),
+    // audit: the preload/IPC surface has no `recover` channel, so calling this threw
+    // a synchronous TypeError (bypassing every .catch()). Fail soft with a rejected
+    // promise until a VAULT_RECOVER channel exists, so callers can handle it.
+    recover: (recoveryCode, password) => {
+      const api = getSoftglazeApi();
+      return (api && api.vault && typeof api.vault.recover === 'function')
+        ? api.vault.recover(recoveryCode, password)
+        : Promise.reject(new Error('Vault recovery is not available in this build.'));
+    },
     lock: () => getSoftglazeApi().vault.lock(),
     disable: (password) => getSoftglazeApi().vault.disable(password),
     setAutoLock: (minutes) => getSoftglazeApi().vault.setAutoLock(minutes)

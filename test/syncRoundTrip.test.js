@@ -71,12 +71,13 @@ test('decideProfileSync resolves push/pull/noop/conflict correctly', () => {
   assert.equal(decideProfileSync({ localUpdatedAt: 100, remoteMeta: { updatedAt: 200 }, lastSync: { syncedAt: 100 } }).action, 'pull');
   // neither changed -> noop
   assert.equal(decideProfileSync({ localUpdatedAt: 100, remoteMeta: { updatedAt: 100 }, lastSync: { syncedAt: 100 } }).action, 'noop');
-  // both changed -> conflict, LWW picks the newer side
+  // both changed -> conflict, NOT auto-resolved (wall-clock LWW could clobber good data)
   const c = decideProfileSync({ localUpdatedAt: 300, remoteMeta: { updatedAt: 250 }, lastSync: { syncedAt: 100 } });
   assert.equal(c.action, 'conflict');
-  assert.equal(c.resolution, 'push'); // local (300) newer than remote (250)
+  assert.equal(c.resolution, null);
   const c2 = decideProfileSync({ localUpdatedAt: 250, remoteMeta: { updatedAt: 300 }, lastSync: { syncedAt: 100 } });
-  assert.equal(c2.resolution, 'pull'); // remote newer
+  assert.equal(c2.action, 'conflict');
+  assert.equal(c2.resolution, null);
 });
 
 test('RestBucketTransport put/get round-trips over HTTP; missing key -> null', async () => {

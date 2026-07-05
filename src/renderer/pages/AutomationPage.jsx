@@ -652,7 +652,11 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
     softglazeApi.automation.runMacro({ macroId: macro.id, profileId, continueOnError: true })
       .catch((e) => { if (live) { setErr(e.message || t('runModal.errors.run')); setPhase('done'); } });
     return () => { live = false; try { off && off(); } catch (e) { /* ignore */ } };
-  }, [macro.id, profileId, profileName, t]);
+    // Depend ONLY on the run identity. Including `t`/`profileName` meant a mid-run language
+    // switch re-ran this effect and started a SECOND concurrent macro run. Log strings use
+    // the closure's `t` (cosmetic if the language changes mid-run).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [macro.id, profileId]);
 
   async function control(action) {
     if (!runId) return;
@@ -828,6 +832,10 @@ function ParallelPanel() {
         closeWhenDone: true,
         dataToken: dataBinding ? dataBinding.token : undefined
       });
+      // audit: `running` is normally cleared by the terminal 'done' progress frame.
+      // If that single at-most-once frame is dropped, the spinner would stick forever.
+      // The run has resolved here, so backstop it — idempotent if the frame arrives.
+      setTimeout(() => setRunning(false), 1500);
     } catch (e) {
       setErr(e.message || t('parallel.errors.startRun'));
       setRunning(false);

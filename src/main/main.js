@@ -46,8 +46,22 @@ let isCleaningUp = false;
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
 });
+// Circuit breaker (audit: a blanket swallow keeps a CORRUPTED process alive). A single
+// stray CDP/puppeteer rejection must NOT kill the app (its child browsers die with it), so
+// we still swallow one-offs — but a process throwing REPEATEDLY is genuinely broken, so
+// after a burst we quit CLEANLY (closing sessions) instead of limping along in a bad state.
+let uncaughtCount = 0;
+let uncaughtWindowStart = 0;
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err);
+  if (isCleaningUp) return; // teardown legitimately throws — don't trip the breaker
+  const now = Date.now();
+  if (now - uncaughtWindowStart > 10000) { uncaughtWindowStart = now; uncaughtCount = 0; }
+  uncaughtCount += 1;
+  if (uncaughtCount >= 8) {
+    console.error('[uncaughtException] repeated exceptions in <10s — the main process appears corrupted; quitting cleanly.');
+    try { app.quit(); } catch (e) { try { process.exit(1); } catch (e2) {} }
+  }
 });
 
 // --- ORPHANED PROCESS CLEANUP ---

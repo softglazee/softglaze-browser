@@ -102,6 +102,28 @@ function fmtLimit(used, max) {
   return `${used || 0} / ${max}`;
 }
 
+// A single numeric-limit field. Hoisted to MODULE scope: when it was defined inside
+// PermissionEditor's render, every keystroke created a new component type, so React
+// remounted the <input> and it lost focus after one digit.
+function NumLimit({ k, label, value, granter, set, t }) {
+  const max = granter ? granter[k] : -1;
+  const unlimited = value[k] === -1;
+  const gUnlimited = max === -1 || max == null;
+  return (
+    <div>
+      <label className="block text-[11px] text-muted-foreground mb-1">{label}{!gUnlimited && <span className="text-muted-dark"> {t('perms.max', { max })}</span>}</label>
+      <div className="flex items-center gap-2">
+        <input type="number" min={0} disabled={unlimited} value={unlimited ? '' : (value[k] ?? 0)} onChange={(e) => set({ [k]: Math.max(0, Number(e.target.value) || 0) })} placeholder={unlimited ? '∞' : '0'} className="w-full h-9 bg-input-background border border-border rounded-lg px-2.5 text-[12.5px] text-foreground outline-none focus:border-primary disabled:opacity-50" />
+        {gUnlimited && (
+          <label className="flex items-center gap-1 text-[10.5px] text-muted-foreground cursor-pointer shrink-0">
+            <input type="checkbox" checked={unlimited} onChange={(e) => set({ [k]: e.target.checked ? -1 : 0 })} className="accent-blue-500" />∞
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MembersPage() {
   const { t } = useTranslation('members');
   const [members, setMembers] = useState([]);
@@ -904,25 +926,6 @@ function PermissionEditor({ role, value, onChange, granter }) {
     g.items.push(a);
   }
 
-  const NumLimit = ({ k, label }) => {
-    const max = granter ? granter[k] : -1;
-    const unlimited = value[k] === -1;
-    const gUnlimited = max === -1 || max == null;
-    return (
-      <div>
-        <label className="block text-[11px] text-muted-foreground mb-1">{label}{!gUnlimited && <span className="text-muted-dark"> {t('perms.max', { max })}</span>}</label>
-        <div className="flex items-center gap-2">
-          <input type="number" min={0} disabled={unlimited} value={unlimited ? '' : (value[k] ?? 0)} onChange={(e) => set({ [k]: Math.max(0, Number(e.target.value) || 0) })} placeholder={unlimited ? '∞' : '0'} className="w-full h-9 bg-input-background border border-border rounded-lg px-2.5 text-[12.5px] text-foreground outline-none focus:border-primary disabled:opacity-50" />
-          {gUnlimited && (
-            <label className="flex items-center gap-1 text-[10.5px] text-muted-foreground cursor-pointer shrink-0">
-              <input type="checkbox" checked={unlimited} onChange={(e) => set({ [k]: e.target.checked ? -1 : 0 })} className="accent-blue-500" />∞
-            </label>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="rounded-xl border border-border bg-elevated/50 p-4 space-y-4">
       <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><span className="text-[12px] font-semibold text-foreground">{t('perms.title')}</span></div>
@@ -930,9 +933,9 @@ function PermissionEditor({ role, value, onChange, granter }) {
       <div>
         <label className={labelCls}>{t('perms.resourceLimits')}</label>
         <div className="grid grid-cols-3 gap-2">
-          <NumLimit k="maxProfiles" label={t('labels.profiles')} />
-          <NumLimit k="maxProxies" label={t('labels.proxies')} />
-          <NumLimit k="maxBrowsers" label={t('labels.browsers')} />
+          <NumLimit k="maxProfiles" label={t('labels.profiles')} value={value} granter={granter} set={set} t={t} />
+          <NumLimit k="maxProxies" label={t('labels.proxies')} value={value} granter={granter} set={set} t={t} />
+          <NumLimit k="maxBrowsers" label={t('labels.browsers')} value={value} granter={granter} set={set} t={t} />
         </div>
       </div>
 
@@ -940,7 +943,7 @@ function PermissionEditor({ role, value, onChange, granter }) {
         <div>
           <label className={labelCls}>{t('perms.subMemberCaps')}</label>
           <div className="grid grid-cols-3 gap-2">
-            {(CHILD_CAPS[role] || []).map(([k]) => <NumLimit key={k} k={k} label={t(`caps.${k}`)} />)}
+            {(CHILD_CAPS[role] || []).map(([k]) => <NumLimit key={k} k={k} label={t(`caps.${k}`)} value={value} granter={granter} set={set} t={t} />)}
           </div>
           <div className="mt-2 space-y-1.5">
             {(CREATE_FLAGS[role] || []).map(([flag]) => {

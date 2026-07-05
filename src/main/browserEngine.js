@@ -140,14 +140,40 @@ async function attachPersonaAutofill(targetPage) {
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
       let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
+      // audit C2 bypass: the page supplies both the selector AND the personaId, so a
+      // hostile page could aim a password fill at its own hidden input and read the
+      // value back — defeating "the plaintext only reaches the field the user is
+      // filling". Two HARD gates guard the secret path, resolved once per plan:
+      //   (1) the page must have had a genuine user gesture (userActivation), and
+      //   (2) the personaId must be one actually OFFERED for THIS committed origin
+      //       (present in listForUrl(pageUrl())) — never an arbitrary/guessed id.
+      // Non-secret fields are unaffected. An empty allow-set → no password resolves.
+      let allowedSecretIds = null;
+      const ensureAllowedSecretIds = async () => {
+        if (allowedSecretIds) return allowedSecretIds;
+        allowedSecretIds = new Set();
+        let gestured = false;
+        try { gestured = await targetPage.evaluate(() => { try { return !!(navigator.userActivation && navigator.userActivation.hasBeenActive); } catch (e) { return false; } }); } catch (e) { gestured = false; }
+        if (!gestured) return allowedSecretIds;
+        if (typeof personaBridge.listForUrl !== 'function') return allowedSecretIds;
+        try {
+          const r = await personaBridge.listForUrl(pageUrl());
+          const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+          for (const p of list) if (p && p.id != null) allowedSecretIds.add(String(p.id));
+        } catch (e) { /* empty set → refuse every secret */ }
+        return allowedSecretIds;
+      };
       for (const item of items) {
         const sel = item && item.sel;
         if (!sel) continue;
         let value;
         if (item.kind === 'password') {
-          // Password value NEVER comes from the page — resolve it server-side by id.
+          // Password value NEVER comes from the page — resolve it server-side by id,
+          // but only when gesture-gated AND offered for this origin (see above).
           const pid = item.personaId != null ? String(item.personaId) : '';
           if (!pid || typeof personaBridge.getSecret !== 'function') continue;
+          const allowed = await ensureAllowedSecretIds();
+          if (!allowed.has(pid)) continue;
           if (!secretCache.has(pid)) {
             try { const s = await personaBridge.getSecret(pid); secretCache.set(pid, (s && s.password != null) ? String(s.password) : ''); }
             catch (e) { secretCache.set(pid, ''); }
@@ -652,17 +678,39 @@ function fingerprintScript(fp) {
         return new OrigDTF(locales, opts);
       }, 'DateTimeFormat');
       WrappedDTF.prototype = OrigDTF.prototype;
+      // Real Chrome: Intl.DateTimeFormat.prototype.constructor === Intl.DateTimeFormat.
+      // Point the shared prototype's constructor at the wrapper so that identity holds.
+      try { Object.defineProperty(OrigDTF.prototype, 'constructor', { value: WrappedDTF, configurable: true, writable: true }); } catch (e) {}
       WrappedDTF.supportedLocalesOf = markNative(OrigDTF.supportedLocalesOf.bind(OrigDTF), 'supportedLocalesOf');
       const origResolved = OrigDTF.prototype.resolvedOptions;
+      // The host's REAL zone, captured before wrapping — lets us tell an IMPLICIT
+      // (defaulted-to-host) formatter from one built with an explicit timeZone.
+      let HOST_TZ = '';
+      try { HOST_TZ = origResolved.call(new OrigDTF()).timeZone; } catch (e) {}
       OrigDTF.prototype.resolvedOptions = markNative(function () {
         const r = origResolved.apply(this, arguments);
-        try { r.timeZone = TZ; } catch (e) {}
+        // Only rewrite when the formatter resolved to the HOST zone (i.e. no explicit
+        // timeZone was given). Never clobber an explicitly-constructed zone such as
+        // new Intl.DateTimeFormat('en',{timeZone:'UTC'}) — reporting the proxy zone
+        // there is a self-contradiction (format() in UTC vs resolvedOptions() in the
+        // proxy zone) that detectors read directly, and it breaks legitimate date code.
+        try { if (r && HOST_TZ && r.timeZone === HOST_TZ) r.timeZone = TZ; } catch (e) {}
         return r;
       }, 'resolvedOptions');
       Intl.DateTimeFormat = WrappedDTF;
       // Date string methods that embed the zone name/offset (whoer reads these).
-      const localized = (date, opts) => {
-        try { return new OrigDTF('en-US', Object.assign({ timeZone: TZ }, opts)).format(date); } catch (e) { return ''; }
+      // Reproduce V8's EXACT Date.prototype.toString format on Windows:
+      //   "Sun Jul 05 2026 12:00:00 GMT-0700 (Pacific Daylight Time)"
+      // built from formatToParts (space-separated, NO commas) with the trailing
+      // long zone name — the previous Intl.format() output was comma-delimited and
+      // dropped the "(Long Zone Name)" suffix, a Date-string tell the spoof itself
+      // introduced.
+      const longZoneName = (date) => {
+        try {
+          const parts = new OrigDTF('en-US', { timeZone: TZ, timeZoneName: 'long' }).formatToParts(date);
+          const z = parts.find((x) => x.type === 'timeZoneName');
+          return z ? z.value : '';
+        } catch (e) { return ''; }
       };
       Date.prototype.toString = markNative(function () {
         if (Number.isNaN(this.getTime())) return 'Invalid Date';
@@ -671,8 +719,15 @@ function fingerprintScript(fp) {
         const abs = Math.abs(off);
         const hh = String(Math.floor(abs / 60)).padStart(2, '0');
         const mm = String(abs % 60).padStart(2, '0');
-        const base = localized(this, { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        return `${base} GMT${sign}${hh}${mm}`;
+        const P = {};
+        try {
+          new OrigDTF('en-US', { timeZone: TZ, weekday: 'short', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+            .formatToParts(this).forEach((x) => { if (x.type !== 'literal') P[x.type] = x.value; });
+        } catch (e) {}
+        const hourStr = (P.hour === '24') ? '00' : (P.hour || '00'); // V8 renders midnight as 00, not 24
+        const core = `${P.weekday} ${P.month} ${P.day} ${P.year} ${hourStr}:${P.minute}:${P.second}`;
+        const zone = longZoneName(this);
+        return `${core} GMT${sign}${hh}${mm}${zone ? ' (' + zone + ')' : ''}`;
       }, 'toString');
     } catch (e) {}
   }
@@ -741,8 +796,12 @@ function fingerprintScript(fp) {
       };
       try {
         Wrapped.prototype = Native.prototype;
-        Object.defineProperty(Wrapped, 'name', { value: Native.name, configurable: true });
-        Wrapped.toString = function () { return Native.toString(); };
+        // Route through the module's native-mask machinery (name + _patched) rather
+        // than an OWN toString: CreepJS probes Function.prototype.toString.call(Worker)
+        // — which the patched _fnToString serves as "[native code]" only for _patched
+        // members — and real Chrome's Worker has no own toString property.
+        markNative(Wrapped, Native.name);
+        try { Object.defineProperty(Native.prototype, 'constructor', { value: Wrapped, configurable: true, writable: true }); } catch (e) {}
       } catch (e) {}
       return Wrapped;
     };
@@ -846,13 +905,26 @@ function fingerprintScript(fp) {
     // audio fingerprint is a tell, same as canvas).
     const aseed = (fp.seed >>> 0) || 1;
     const origGetChannelData = AudioBuffer.prototype.getChannelData;
+    // Track which channel arrays we've already perturbed. getChannelData returns the
+    // SAME live Float32Array for a given channel on every call, so perturbing in
+    // place on EVERY call (the old behavior) applied the delta cumulatively and made
+    // consecutive reads of the same channel differ — an "unstable audio fingerprint"
+    // tell (the exact instability the canvas path restores against). Perturb each
+    // channel array ONCE; later reads return the identical, stable values, and the
+    // live buffer's write-through semantics are preserved (we still return it).
+    const _perturbedAudio = new WeakSet();
     AudioBuffer.prototype.getChannelData = markNative(function getChannelData() {
       const buf = origGetChannelData.apply(this, arguments);
-      const limit = Math.min(buf.length, 600);
-      for (let i = 0; i < limit; i += 1) {
-        const u = ((aseed ^ ((i + 1) * 40503)) >>> 0) / 4294967296;
-        buf[i] = buf[i] + (u - 0.5) * 1e-7;
-      }
+      try {
+        if (buf && buf.length && !_perturbedAudio.has(buf)) {
+          const limit = Math.min(buf.length, 600);
+          for (let i = 0; i < limit; i += 1) {
+            const u = ((aseed ^ ((i + 1) * 40503)) >>> 0) / 4294967296;
+            buf[i] = buf[i] + (u - 0.5) * 1e-7;
+          }
+          _perturbedAudio.add(buf);
+        }
+      } catch (e) {}
       return buf;
     }, 'getChannelData');
   }
@@ -1024,6 +1096,13 @@ function fingerprintScript(fp) {
           async createOffer(...a) { const o = await super.createOffer(...a); if (o && o.sdp) try { o.sdp = sanitizeSdp(o.sdp); } catch (e) {} return o; }
           async createAnswer(...a) { const o = await super.createAnswer(...a); if (o && o.sdp) try { o.sdp = sanitizeSdp(o.sdp); } catch (e) {} return o; }
         }
+        // Native-mask the wrapper: as a bare ES class, RTCPeerConnection.name was
+        // "ProtectedRTC" and .toString() dumped the class source — a one-read spoofer
+        // tell on every proxied profile. markNative fixes .name + routes toString
+        // through _fnToString ("[native code]"); realign the constructor's own
+        // [[Prototype]] to the native's (EventTarget) so it isn't the shadowed native.
+        markNative(ProtectedRTC, 'RTCPeerConnection');
+        try { Object.setPrototypeOf(ProtectedRTC, Object.getPrototypeOf(Native)); } catch (e) {}
         window.RTCPeerConnection = ProtectedRTC;
         if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = ProtectedRTC;
       } catch (e) { /* leave native in place if wrapping fails */ }
@@ -1095,13 +1174,23 @@ function fingerprintScript(fp) {
       // which is the moment real Chrome starts exposing labels + concrete ids.
       let granted = false;
       const md = navigator.mediaDevices;
+      // audit: place the overrides on MediaDevices.prototype (non-enumerable) — NOT
+      // as own instance data properties on navigator.mediaDevices. The old instance
+      // assignment surfaced in Object.getOwnPropertyNames(navigator.mediaDevices) and
+      // hasOwnProperty('enumerateDevices'), which real Chrome never does (these live
+      // only on the prototype) — an own-vs-prototype spoofer tell.
+      const mdProto = Object.getPrototypeOf(md) || md;
+      const defineOnMd = (name, fn) => {
+        try { Object.defineProperty(mdProto, name, { value: fn, configurable: true, writable: true, enumerable: false }); }
+        catch (e) { try { md[name] = fn; } catch (e2) {} }
+      };
       if (typeof md.getUserMedia === 'function') {
         const origGUM = md.getUserMedia.bind(md);
-        navigator.mediaDevices.getUserMedia = markNative(function getUserMedia() {
+        defineOnMd('getUserMedia', markNative(function getUserMedia() {
           let p;
           try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
           try { return p.then((stream) => { granted = true; return stream; }); } catch (e) { return p; }
-        }, 'getUserMedia');
+        }, 'getUserMedia'));
       }
 
       const build = () => {
@@ -1129,14 +1218,14 @@ function fingerprintScript(fp) {
         return rows;
       };
 
-      navigator.mediaDevices.enumerateDevices = markNative(function enumerateDevices() {
+      defineOnMd('enumerateDevices', markNative(function enumerateDevices() {
         try {
           return Promise.resolve(build().map((d) => ({
             kind: d.kind, deviceId: d.deviceId, groupId: d.groupId, label: d.label,
             toJSON() { return { kind: this.kind, deviceId: this.deviceId, groupId: this.groupId, label: this.label }; }
           })));
         } catch (e) { return Promise.resolve([]); }
-      }, 'enumerateDevices');
+      }, 'enumerateDevices'));
     } catch (e) { /* never break the page over device spoofing */ }
   }
 
@@ -1223,46 +1312,11 @@ function fingerprintScript(fp) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Proxy auth extension
-// ---------------------------------------------------------------------------
-async function createProxyAuthExtension(userDataDir, proxy) {
-  if (!proxy || !proxy.username || !proxy.password) return null;
-  const extensionDir = path.join(userDataDir, 'proxy-auth-extension');
-  await fs.mkdir(extensionDir, { recursive: true });
-
-  const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
-  const manifest = {
-    version: '1.0.0',
-    manifest_version: 2,
-    name: 'SoftGlaze Proxy Auth',
-    permissions: ['proxy', 'tabs', 'unlimitedStorage', 'storage', '<all_urls>', 'webRequest', 'webRequestBlocking'],
-    background: { scripts: ['background.js'] },
-    minimum_chrome_version: '22.0.0'
-  };
-
-  // Escape every value via JSON.stringify so a credential containing quotes,
-  // backslashes, or newlines cannot break out of the string literal (or inject
-  // arbitrary JS) into the generated extension script.
-  const backgroundJs = `
-    var config = {
-        mode: "fixed_servers",
-        rules: {
-          singleProxy: { scheme: ${JSON.stringify(scheme)}, host: ${JSON.stringify(String(proxy.host))}, port: ${Number.parseInt(proxy.port, 10)} },
-          bypassList: ["localhost", "127.0.0.1"]
-        }
-      };
-    chrome.proxy.settings.set({ value: config, scope: "regular" }, function () {});
-    function callbackFn(details) {
-        return { authCredentials: { username: ${JSON.stringify(String(proxy.username))}, password: ${JSON.stringify(String(proxy.password))} } };
-    }
-    chrome.webRequest.onAuthRequired.addListener(callbackFn, { urls: ["<all_urls>"] }, ['blocking']);
-  `;
-
-  await fs.writeFile(path.join(extensionDir, 'manifest.json'), JSON.stringify(manifest));
-  await fs.writeFile(path.join(extensionDir, 'background.js'), backgroundJs);
-  return extensionDir;
-}
+// audit: the old createProxyAuthExtension() was removed here — it wrote the proxy
+// username/password in PLAINTEXT into a generated background.js inside the profile
+// dir. It was dead code (never called or exported). Authenticated proxies are
+// handled without touching disk: HTTP via page.authenticate() and SOCKS5 via the
+// in-memory local socksRelay (socksRelay.js).
 
 // ---------------------------------------------------------------------------
 // Managed policy file. Expresses the dev-tools / extension-lock settings as a
@@ -2955,8 +3009,16 @@ async function closeBrowserWithTimeout(session, timeoutMs = 8000) {
   const outcome = await Promise.race([closed, timeout]);
   if (timer) clearTimeout(timer);
   if (outcome !== 'closed') {
-    try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
-    if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
+    // audit: SIGKILL on only the parent Chrome PID orphans its renderer/GPU/utility
+    // children on Windows (no process groups), leaving them holding the profile's
+    // userDataDir lock + memory until the next launch. Use taskkill /T (tree kill).
+    if (process.platform === 'win32' && pid) {
+      try { require('node:child_process').spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true }); }
+      catch (e) { try { process.kill(pid, 'SIGKILL'); } catch (e2) { /* already gone */ } }
+    } else {
+      try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+      if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
+    }
   }
   // Tear down the SOCKS relay too (idempotent — the 'disconnected' handler may
   // also close it; double-close is safe). Guards the force-kill path where the

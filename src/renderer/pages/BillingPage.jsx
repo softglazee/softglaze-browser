@@ -121,6 +121,10 @@ export default function BillingPage() {
       setPayFor(null);
       setCheckout({ ...c, planName: c.planName || plan.name });
       try { window.open(c.url, '_blank'); } catch (e) { /* user can click the link */ }
+      // audit: clear any prior poll before starting a new one — a second checkout
+      // (or a different plan) would otherwise orphan interval #1, which keeps polling
+      // and calling load() forever.
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       // Desktop apps can't receive webhooks — poll for completion.
       pollRef.current = setInterval(async () => {
         try {

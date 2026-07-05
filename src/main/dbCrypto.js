@@ -25,13 +25,36 @@ const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 
-const MAGIC = Buffer.from('SGDB1');
+const MAGIC = Buffer.from('SGDB1');  // KDF v1: Node-default scrypt (what originally shipped)
+const MAGIC2 = Buffer.from('SGDB2'); // KDF v2: scrypt N=2^17 (OWASP minimum) — same layout
 const SALT_LEN = 16;
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const KEY_LEN = 32;
 const HEADER_LEN = MAGIC.length + SALT_LEN + IV_LEN; // salt + iv live in the clear header
 const MIN_LEN = HEADER_LEN + TAG_LEN; // smallest possible valid file (empty ciphertext)
+
+// KDF profiles keyed by header version. The KDF version is SELF-DESCRIBING via the
+// 5-byte magic (SGDB1→v1, SGDB2→v2), so a file always decrypts with the exact cost
+// it was written with — existing SGDB1 databases are never re-keyed behind the
+// user's back and keep opening. v1 deliberately equals Node's scrypt defaults
+// (N=16384,r=8,p=1) so an explicit v1 derive produces the SAME key the original
+// param-less call did (the key depends only on password/salt/N/r/p/keylen, not
+// maxmem). v2 raises N to 2^17; that needs ~134 MB, above Node's 32 MB default
+// maxmem, so maxmem is lifted for v2. New databases and password changes use v2.
+const LEGACY_VERSION = 1;
+const CURRENT_VERSION = 2;
+const KDF = {
+  1: { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 },
+  2: { N: 131072, r: 8, p: 1, maxmem: 288 * 1024 * 1024 }
+};
+function magicForVersion(version) { return version === 2 ? MAGIC2 : MAGIC; }
+function versionForMagic(headerBuf) {
+  const m = headerBuf.subarray(0, MAGIC.length);
+  if (m.equals(MAGIC)) return 1;
+  if (m.equals(MAGIC2)) return 2;
+  return 0; // unknown
+}
 
 // SQLite files always begin with this exact 16-byte signature: the ASCII text
 // "SQLite format 3" (15 bytes) followed by a NUL terminator. Defined as explicit
@@ -48,37 +71,43 @@ function newSalt() {
   return crypto.randomBytes(SALT_LEN);
 }
 
-// Derive the 32-byte AES key from a password + salt. scrypt parameters match the
-// rest of the codebase (Node default cost), keeping behaviour consistent.
-async function deriveKey(password, salt) {
+// Derive the 32-byte AES key from a password + salt using the KDF profile for the
+// given header version (default = legacy/v1 so old call sites keep the exact prior
+// behaviour). The caller reads the version from the .enc header (readHeader) so the
+// derive always matches how the file was written.
+async function deriveKey(password, salt, version = LEGACY_VERSION) {
   if (!Buffer.isBuffer(salt) || salt.length !== SALT_LEN) {
     throw new Error('deriveKey requires a 16-byte salt buffer.');
   }
-  return scrypt(String(password), salt, KEY_LEN);
+  const p = KDF[version] || KDF[LEGACY_VERSION];
+  return scrypt(String(password), salt, KEY_LEN, { N: p.N, r: p.r, p: p.p, maxmem: p.maxmem });
 }
 
-// Read just the salt out of an existing .enc header. Lets the unlock path derive
-// the key from the password without decrypting first, and keeps the .enc the
-// authoritative source of its own salt (resilient to a lost sidecar).
-async function readHeaderSalt(encPath) {
+// Read the KDF version + salt out of an existing .enc header. Keeps the .enc the
+// authoritative, self-describing source of both (resilient to a lost sidecar).
+async function readHeader(encPath) {
   const fh = await fsp.open(encPath, 'r');
   try {
     const buf = Buffer.alloc(HEADER_LEN);
     const { bytesRead } = await fh.read(buf, 0, HEADER_LEN, 0);
-    if (bytesRead < HEADER_LEN || !buf.subarray(0, MAGIC.length).equals(MAGIC)) {
-      throw new Error('Not a valid Softglaze encrypted database (bad header).');
-    }
-    return Buffer.from(buf.subarray(MAGIC.length, MAGIC.length + SALT_LEN));
+    const version = bytesRead >= HEADER_LEN ? versionForMagic(buf) : 0;
+    if (!version) throw new Error('Not a valid Softglaze encrypted database (bad header).');
+    return { version, salt: Buffer.from(buf.subarray(MAGIC.length, MAGIC.length + SALT_LEN)) };
   } finally {
     await fh.close();
   }
+}
+
+// Back-compat convenience: just the salt (unlock derives the version separately).
+async function readHeaderSalt(encPath) {
+  return (await readHeader(encPath)).salt;
 }
 
 // Encrypt plainPath → encPath with an already-derived key and the salt that key
 // was derived from (re-used so the held session key keeps matching across
 // re-encryptions). Writes atomically via a temp file + rename so an interrupted
 // write can never leave a truncated .enc in place of a good one.
-async function encryptDbFile(plainPath, encPath, key, salt) {
+async function encryptDbFile(plainPath, encPath, key, salt, version = LEGACY_VERSION) {
   if (!Buffer.isBuffer(key) || key.length !== KEY_LEN) throw new Error('encryptDbFile requires a 32-byte key.');
   if (!Buffer.isBuffer(salt) || salt.length !== SALT_LEN) throw new Error('encryptDbFile requires a 16-byte salt.');
   const data = await fsp.readFile(plainPath);
@@ -86,7 +115,9 @@ async function encryptDbFile(plainPath, encPath, key, salt) {
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([cipher.update(data), cipher.final()]);
   const tag = cipher.getAuthTag();
-  const out = Buffer.concat([MAGIC, salt, iv, ciphertext, tag]);
+  // The header magic records the KDF version (so the file is self-describing); the
+  // byte layout after the 5-byte magic is identical for v1 and v2.
+  const out = Buffer.concat([magicForVersion(version), salt, iv, ciphertext, tag]);
   const tmp = `${encPath}.tmp-${crypto.randomBytes(6).toString('hex')}`;
   await fsp.writeFile(tmp, out);
   await fsp.rename(tmp, encPath);
@@ -99,7 +130,7 @@ async function encryptDbFile(plainPath, encPath, key, salt) {
 async function decryptDbFile(encPath, plainPath, key) {
   if (!Buffer.isBuffer(key) || key.length !== KEY_LEN) throw new Error('decryptDbFile requires a 32-byte key.');
   const buf = await fsp.readFile(encPath);
-  if (buf.length < MIN_LEN || !buf.subarray(0, MAGIC.length).equals(MAGIC)) {
+  if (buf.length < MIN_LEN || !versionForMagic(buf)) { // accept SGDB1 or SGDB2 — identical layout
     throw new Error('Not a valid Softglaze encrypted database (bad header).');
   }
   let off = MAGIC.length + SALT_LEN; // skip magic+salt (salt was used for key derivation by the caller)
@@ -171,13 +202,17 @@ async function secureUnlink(filePath) {
 
 module.exports = {
   MAGIC,
+  MAGIC2,
   SALT_LEN,
   IV_LEN,
   TAG_LEN,
   KEY_LEN,
+  LEGACY_VERSION,
+  CURRENT_VERSION,
   SQLITE_MAGIC,
   newSalt,
   deriveKey,
+  readHeader,
   readHeaderSalt,
   encryptDbFile,
   decryptDbFile,

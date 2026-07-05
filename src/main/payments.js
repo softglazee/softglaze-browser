@@ -260,7 +260,9 @@ async function paypalGetStatus(cfg, ref) {
   // The buyer approved in their browser → capture the funds now.
   if (order.status === 'APPROVED') {
     const cap = await httpsRequest('POST', `${paypalBase(cfg)}/v2/checkout/orders/${encodeURIComponent(id)}/capture`, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: {}
+      // PayPal-Request-Id makes the capture idempotent — this runs inside a poll loop, so a
+      // retry must not double-charge / double-capture the same order.
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': `cap-${String(id)}` }, body: {}
     });
     if (cap.json && cap.json.status) order = cap.json;
   }

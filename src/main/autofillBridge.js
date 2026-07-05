@@ -30,10 +30,12 @@ let server = null;
 let runningPort = null;
 let listForUrlFn = null;   // (url) => Promise<{ personas: [...] } | [...]>
 let markUsedFn = null;     // (id, url) => Promise<any>
+let getSecretFn = null;    // (id, url) => Promise<{ password } | null>  (origin-scoped)
 
 function configure(deps = {}) {
   if (typeof deps.listForUrl === 'function') listForUrlFn = deps.listForUrl;
   if (typeof deps.markUsed === 'function') markUsedFn = deps.markUsed;
+  if (typeof deps.getSecret === 'function') getSecretFn = deps.getSecret;
 }
 
 function sendJson(res, status, obj) {
@@ -53,9 +55,14 @@ function authed(req) {
 function readBody(req) {
   return new Promise((resolve) => {
     let data = '';
-    req.on('data', (c) => { data += c; if (data.length > 1e6) req.destroy(); });
-    req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { resolve({}); } });
-    req.on('error', () => resolve({}));
+    let done = false;
+    const finish = (val) => { if (!done) { done = true; resolve(val); } };
+    req.on('data', (c) => { data += c; if (data.length > 1e6) { try { req.destroy(); } catch (e) {} finish({}); } });
+    req.on('end', () => { try { finish(data ? JSON.parse(data) : {}); } catch (e) { finish({}); } });
+    req.on('error', () => finish({}));
+    // A client abort OR our own req.destroy() (the size-cap path) emits 'close', not 'error'
+    // — without this the promise would hang forever and the await never returns.
+    req.on('close', () => finish({}));
   });
 }
 
@@ -80,6 +87,25 @@ async function handleRequest(req, res) {
         return sendJson(res, 200, { ok: true, personas });
       } catch (e) {
         return sendJson(res, 200, { ok: false, personas: [] });
+      }
+    }
+
+    // Resolve ONE persona's password for on-demand fill. Firefox has no CDP
+    // trusted-typer, so the isolated content-script must set the value itself; it
+    // requests exactly the selected id here (never the whole vault). getSecretFn is
+    // origin-scoped server-side (getPersonaSecretForUrl only resolves a persona
+    // OFFERED for `url`), so a stray token holder can't dump passwords by id.
+    if (req.method === 'GET' && url.pathname === '/sg-autofill/secret') {
+      if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+      if (typeof getSecretFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
+      const id = url.searchParams.get('id') || '';
+      const target = url.searchParams.get('url') || '';
+      try {
+        const s = await getSecretFn(id, target);
+        if (!s || s.password == null || s.password === '') return sendJson(res, 404, { ok: false });
+        return sendJson(res, 200, { ok: true, password: String(s.password) });
+      } catch (e) {
+        return sendJson(res, 404, { ok: false });
       }
     }
 

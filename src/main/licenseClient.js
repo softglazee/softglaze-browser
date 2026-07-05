@@ -37,8 +37,13 @@ function verifyLease(token, opts = {}) {
   try { payload = JSON.parse(fromB64url(payloadB64).toString('utf8')); }
   catch (_) { return null; }
 
-  // Bind to this tenant (when the build is tenant-scoped).
-  if (cfg.tenantId && payload.tenant && payload.tenant !== cfg.tenantId) return null;
+  // Bind to this tenant (when the build is tenant-scoped). audit: the old check
+  // also required payload.tenant to be present, so a tenant-LESS lease bypassed
+  // binding entirely and would activate under any tenant-scoped build (given a
+  // shared signing key). In a tenant-scoped build now REQUIRE a matching tenant
+  // claim; legitimately-issued leases for that tenant already carry it. The base
+  // build (no cfg.tenantId) stays unbound.
+  if (cfg.tenantId && payload.tenant !== cfg.tenantId) return null;
   const nowSec = Math.floor((opts.nowMs || Date.now()) / 1000);
   if (!payload.exp || payload.exp < nowSec) return null; // expired
 

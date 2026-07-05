@@ -140,7 +140,7 @@ public class SgWin {
 }
 "@
 $target=[uint32]${pid}
-$ico='${icoPath.replace(/\\/g, '\\\\')}'
+$ico='${String(icoPath).replace(/'/g, "''")}'
 $small=[SgWin]::LoadImage([IntPtr]::Zero,$ico,1,16,16,0x00000010)
 $big=[SgWin]::LoadImage([IntPtr]::Zero,$ico,1,32,32,0x00000010)
 $cb=[SgWin+EnumWindowsProc]{ param($h,$l)
