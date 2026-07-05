@@ -6,7 +6,7 @@
 
 **~95 verified issues.** This is a working checklist — tick items as they're fixed.
 
-> **Status (branch `fix/top5-systemic-audit`, 2026-07-05):** the 5 systemic themes below **plus C1** are addressed. Fixed: **C1** account-registration takeover (first-run-only guard on OTP send + register); **C2** persona/autofill bridge (origin-bound, passwords no longer sent to page JS, fill plan capped); the **single-instance lock**; a **permission-enforcement pass** (delete/purge, clone/from-template, batchAddProxies, syncVendorPool, rotateProxyIp + SSRF guard, getProxyProviderCreds, systemHumanType, persona-vault handlers, export scoping, switchMember/superAdminSetup auth); **fail-open → fail-closed** (rbacPolicy unknown-kind + combined creds, licensePolicy null-expiry, secretStore seal, softglazeApi sync-throw, Gate vault-status, DbGate); and **browser-lifecycle** hardening (launch try/catch, session dedupe, close timeout + force-kill, surfaced injection failures). Verified: 90/90 tests pass + frontend builds clean. **Not yet done** (follow-ups): **C3** updater signing, download SHA-256 pinning, `xlsx` upgrade, SOCKS5-auth relay, fingerprint version-pin mismatch, and the remaining 🟡/🔵 items.
+> **Status (branch `fix/top5-systemic-audit`, 2026-07-05):** the 5 systemic themes below **plus C1** are addressed. Fixed: **C1** account-registration takeover (first-run-only guard on OTP send + register); **C2** persona/autofill bridge (origin-bound, passwords no longer sent to page JS, fill plan capped); the **single-instance lock**; a **permission-enforcement pass** (delete/purge, clone/from-template, batchAddProxies, syncVendorPool, rotateProxyIp + SSRF guard, getProxyProviderCreds, systemHumanType, persona-vault handlers, export scoping, switchMember/superAdminSetup auth); **fail-open → fail-closed** (rbacPolicy unknown-kind + combined creds, licensePolicy null-expiry, secretStore seal, softglazeApi sync-throw, Gate vault-status, DbGate); and **browser-lifecycle** hardening (launch try/catch, session dedupe, close timeout + force-kill, surfaced injection failures). Also fixed: **C3** updater (https-only feed + Authenticode-gated) and **download integrity** (https + vendor-host allowlist on browser/Firefox/CRX downloads; Firefox SHA256SUMS verification; CRX size cap) — plus the related 🔵 http-scheme findings for `apiBaseUrl`/`updateFeedUrl`. Verified: 90/90 tests pass + frontend builds clean. **Not yet done** (follow-ups): `xlsx` upgrade, SOCKS5-auth relay, fingerprint version-pin mismatch, and the remaining 🟡/🔵 items.
 
 ## Verified-correct (not bugs — do not "fix" these)
 - Core crypto: AES-256-GCM with a random 12-byte IV per encryption, scrypt KDF, GCM tag verified on decrypt; Ed25519 lease verification. All correct.
@@ -34,7 +34,7 @@
   `page.exposeFunction('__sgPersonaList', …)` binds into the page's **main world**; any script can call `window.__sgPersonaList('https://x'+Math.random())`. Backend trusts the page-supplied URL and `serializePersona` (`ipcHandlers.js:4848`) returns `password` in cleartext. Persona IPC handlers (`ipcHandlers.js:4867-4940`) have no authorization, and the same secret leaks over the loopback bridge guarded only by a **hardcoded token shipped in the .xpi** (`src/main/autofillBridge.js:27`).
   **Fix:** derive origin from `page.url()` server-side (ignore page-supplied URL); never send `password` in the list payload (fetch it only on explicit fill of one id); require a user gesture; gate persona handlers behind `vault.manage`.
 
-- [ ] **C3 · Auto-updater = silent remote code execution** — `src/main/updater.js:51-79` + `src/main/tenantConfig.js:23`
+- [x] **C3 · Auto-updater = silent remote code execution** — `src/main/updater.js:51-79` + `src/main/tenantConfig.js:23` — *FIXED: tenantConfig drops non-https feed/api URLs; updater refuses non-https feeds and hard-disables unless the running build is Authenticode-signed.*
   `resolveFeed()` passes any `updateFeedUrl` (no scheme check) to `setFeedURL` with `autoDownload` + `autoInstallOnAppQuit`. Over `http://`, or on the unsigned builds this project ships, no Authenticode signature is verified → MITM/feed control = malicious installer auto-installed on next quit.
   **Fix:** refuse non-`https` feeds; hard-disable the updater unless the build is packaged *and* code-signed; verify a signature over `latest.yml`.
 
@@ -58,7 +58,7 @@
   **Fix:** `app.requestSingleInstanceLock()`; `app.quit()`/focus existing window on the second instance *before* orphan cleanup runs.
 - [ ] **Launch failure orphans Chrome forever** — `src/main/browserEngine.js:2003-2405`. No try/finally between `puppeteer.launch()` and `activeSessions.set()`; if `browser.pages()`/`newPage()` throws, the browser is never stored and never closed. Wrap in `try { … } catch { await browser.close().catch(()=>{}); throw }`.
 - [ ] **`applyToPage` swallows *all* injection errors** — `src/main/browserEngine.js:2203-2302`. If UA/timezone/fingerprint/proxy-auth injection throws, launch still returns success while the page runs the **real identity**. Surface injection failures instead of unconditionally swallowing.
-- [ ] **Downloaded browsers/extensions executed with no signature/checksum** — `src/main/firefoxEngine.js:483`, `src/main/browserDownloader.js:176`, CRX `src/main/extensionManager.js:143`. Size-check only (skipped when no Content-Length), redirects followed to arbitrary hosts → MITM/mirror compromise = RCE. Pin & verify SHA-256.
+- [x] **Downloaded browsers/extensions executed with no signature/checksum** — `src/main/firefoxEngine.js:483`, `src/main/browserDownloader.js:176`, CRX `src/main/extensionManager.js:143` — *FIXED: new `downloadGuard` enforces https + a vendor-host allowlist on the URL and every redirect (all three paths); Firefox additionally verifies the installer against Mozilla's SHA256SUMS; CRX gains a 128 MB size cap.*
 
 ### Renderer (daily-use breakage)
 - [ ] **Editing any proxy overwrites its password with the mask** — `src/renderer/pages/ProxyPoolPage.jsx:439/448`. `openEdit` prefills `'••••••••'`; `handleSaveProxy` sends it verbatim → any edit breaks proxy auth. Apply the `pass || undefined` guard used by the email settings beside it.
@@ -132,7 +132,7 @@
 
 ## 🔵 LOW
 
-- [ ] License transport permits `http://` for register/checkout/redeem — `src/main/licenseClient.js:60`; same unvalidated schemes in `src/main/tenantConfig.js:18`.
+- [x] License transport permits `http://` for register/checkout/redeem — `src/main/licenseClient.js:60`; same unvalidated schemes in `src/main/tenantConfig.js:18` — *FIXED at the source: tenantConfig now rejects non-https `apiBaseUrl` (http allowed only for localhost dev), so the client never receives an http base URL.*
 - [ ] Tenant binding skipped when lease omits `tenant` — `src/main/licenseClient.js:41`.
 - [ ] "Remember me" stores the raw vault password in a user-reversible DPAPI blob — `src/main/rememberStore.js`.
 - [ ] Migration idempotency swallows *all* "already exists" errors → silent schema drift recorded as applied — `src/main/database.js:409`.
