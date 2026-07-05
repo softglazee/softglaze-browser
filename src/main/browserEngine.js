@@ -521,27 +521,21 @@ function fingerprintScript(fp) {
   } catch (e) {
     if (window.__sgz) return; window.__sgz = 1;
   }
-  try {
-    // Real Chrome exposes navigator.webdriver === false (the property EXISTS and is
-    // false). The old value here was `undefined`, which is itself an automation
-    // tell because no real browser returns undefined. Match real Chrome: false.
-    Object.defineProperty(navigator, 'webdriver', { get: () => false, configurable: true });
-  } catch (e) {}
-
-  const define = (obj, prop, value) => {
-    try { Object.defineProperty(obj, prop, { get: () => value, configurable: true }); } catch (e) {}
-  };
-
   // Native-toString masking. Detectors (browserscan flags "Canvas Tampering") test
   // whether overridden methods still report "[native code]" from .toString(). Make
-  // every function we patch — and toString itself — look native.
+  // every function we patch — and toString itself — look native, with the right .name.
   const _patched = new WeakSet();
   const _origFnToString = Function.prototype.toString;
-  const _fnToString = function () {
+  const _fnToString = function toString() {
     if (_patched.has(this)) return 'function ' + (this.name || '') + '() { [native code] }';
     return _origFnToString.call(this);
   };
   try {
+    // Real Chrome: Function.prototype.toString.name === 'toString' and its OWN
+    // toString() reports [native code]. Pin the name explicitly — otherwise it reports
+    // the internal helper name (previously "_fnToString"), a global automation tell
+    // that fires on every page and every proxy.
+    try { Object.defineProperty(_fnToString, 'name', { value: 'toString', configurable: true }); } catch (e) {}
     Object.defineProperty(Function.prototype, 'toString', { value: _fnToString, configurable: true, writable: true });
     _patched.add(_fnToString);
   } catch (e) {}
@@ -550,6 +544,32 @@ function fingerprintScript(fp) {
     try { _patched.add(fn); } catch (e) {}
     return fn;
   };
+
+  // Define a spoofed accessor the way real Chrome exposes it: ON THE PROTOTYPE (so
+  // navigator/screen.hasOwnProperty(prop) stays false, as in a real browser) with a
+  // getter that itself reports [native code] and carries the correct "get <prop>"
+  // name. Placing these on the instance (the old behavior) leaked the entire spoofed
+  // field list via Object.getOwnPropertyNames(navigator) + a "() => value" getter
+  // source — both classic navigator-tampering signatures. Falls back to an instance
+  // define when the property isn't on the prototype (e.g. window.doNotTrack).
+  const define = (obj, prop, value) => {
+    try {
+      const proto = Object.getPrototypeOf(obj);
+      const onProto = proto && Object.getOwnPropertyDescriptor(proto, prop);
+      const target = onProto ? proto : obj;
+      const existing = onProto || Object.getOwnPropertyDescriptor(obj, prop);
+      const getter = markNative(function () { return value; }, 'get ' + prop);
+      Object.defineProperty(target, prop, { get: getter, configurable: true, enumerable: existing ? existing.enumerable : true });
+    } catch (e) {
+      try { Object.defineProperty(obj, prop, { get: () => value, configurable: true }); } catch (e2) {}
+    }
+  };
+
+  try {
+    // navigator.webdriver === false, exposed on Navigator.prototype (the property
+    // EXISTS and is false). undefined — or an own instance prop — is itself a tell.
+    define(navigator, 'webdriver', false);
+  } catch (e) {}
 
   if (fp.langs && fp.langs.length) {
     define(navigator, 'languages', Object.freeze(fp.langs.slice()));
@@ -610,30 +630,30 @@ function fingerprintScript(fp) {
       };
       // getTimezoneOffset → the proxy zone's offset (minutes, UTC-relative sign).
       const origGetOffset = Date.prototype.getTimezoneOffset;
-      Date.prototype.getTimezoneOffset = function () {
+      Date.prototype.getTimezoneOffset = markNative(function () {
         const v = offsetFor(this);
         return Number.isFinite(v) ? v : origGetOffset.call(this);
-      };
+      }, 'getTimezoneOffset');
       // Intl.DateTimeFormat → default unspecified timeZone to TZ and report it.
-      const WrappedDTF = function (locales, options) {
+      const WrappedDTF = markNative(function (locales, options) {
         const opts = Object.assign({}, options);
         if (!opts.timeZone) opts.timeZone = TZ;
         return new OrigDTF(locales, opts);
-      };
+      }, 'DateTimeFormat');
       WrappedDTF.prototype = OrigDTF.prototype;
-      WrappedDTF.supportedLocalesOf = OrigDTF.supportedLocalesOf.bind(OrigDTF);
+      WrappedDTF.supportedLocalesOf = markNative(OrigDTF.supportedLocalesOf.bind(OrigDTF), 'supportedLocalesOf');
       const origResolved = OrigDTF.prototype.resolvedOptions;
-      OrigDTF.prototype.resolvedOptions = function () {
+      OrigDTF.prototype.resolvedOptions = markNative(function () {
         const r = origResolved.apply(this, arguments);
         try { r.timeZone = TZ; } catch (e) {}
         return r;
-      };
+      }, 'resolvedOptions');
       Intl.DateTimeFormat = WrappedDTF;
       // Date string methods that embed the zone name/offset (whoer reads these).
       const localized = (date, opts) => {
         try { return new OrigDTF('en-US', Object.assign({ timeZone: TZ }, opts)).format(date); } catch (e) { return ''; }
       };
-      Date.prototype.toString = function () {
+      Date.prototype.toString = markNative(function () {
         if (Number.isNaN(this.getTime())) return 'Invalid Date';
         const off = offsetFor(this);
         const sign = off <= 0 ? '+' : '-';
@@ -642,7 +662,7 @@ function fingerprintScript(fp) {
         const mm = String(abs % 60).padStart(2, '0');
         const base = localized(this, { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         return `${base} GMT${sign}${hh}${mm}`;
-      };
+      }, 'toString');
     } catch (e) {}
   }
 
@@ -1025,10 +1045,10 @@ function fingerprintScript(fp) {
     try {
       const proto = Object.getPrototypeOf(window.speechSynthesis) || window.speechSynthesis;
       const orig = proto.getVoices;
-      proto.getVoices = function () {
+      proto.getVoices = markNative(function () {
         const real = (function () { try { return orig.apply(this, arguments); } catch (e) { return []; } })();
         return real && real.length ? real : fakeVoices.map((v) => Object.assign({}, v));
-      };
+      }, 'getVoices');
     } catch (e) {}
   }
 
@@ -1115,7 +1135,7 @@ function fingerprintScript(fp) {
   if (fp.fontsNoise) {
     const fontJitter = (v) => (typeof v === 'number' ? v + (rnd() - 0.5) * 0.02 : v);
     const origMeasure = CanvasRenderingContext2D.prototype.measureText;
-    CanvasRenderingContext2D.prototype.measureText = function () {
+    CanvasRenderingContext2D.prototype.measureText = markNative(function () {
       const m = origMeasure.apply(this, arguments);
       try {
         return new Proxy(m, {
@@ -1126,14 +1146,14 @@ function fingerprintScript(fp) {
           }
         });
       } catch (e) { return m; }
-    };
+    }, 'measureText');
 
     // Mirror the jitter onto OffscreenCanvas (used inside Web Workers), closing the
     // worker-thread font-probing gap the main-thread CanvasRenderingContext2D
     // override above does not cover.
     if (window.OffscreenCanvasRenderingContext2D && OffscreenCanvasRenderingContext2D.prototype.measureText) {
       const origMeasureOff = OffscreenCanvasRenderingContext2D.prototype.measureText;
-      OffscreenCanvasRenderingContext2D.prototype.measureText = function () {
+      OffscreenCanvasRenderingContext2D.prototype.measureText = markNative(function () {
         const m = origMeasureOff.apply(this, arguments);
         try {
           return new Proxy(m, {
@@ -1144,7 +1164,7 @@ function fingerprintScript(fp) {
             }
           });
         } catch (e) { return m; }
-      };
+      }, 'measureText');
     }
   }
 
@@ -1165,23 +1185,23 @@ function fingerprintScript(fp) {
     };
     const origFetch = window.fetch;
     if (origFetch) {
-      window.fetch = function (input) {
+      window.fetch = markNative(function (input) {
         const url = typeof input === 'string' ? input : (input && input.url);
         if (url && isPrivate(url)) return Promise.reject(new TypeError('Failed to fetch'));
         return origFetch.apply(this, arguments);
-      };
+      }, 'fetch');
     }
     const origOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url) {
+    XMLHttpRequest.prototype.open = markNative(function (method, url) {
       if (url && isPrivate(url)) throw new DOMException('Network error', 'NetworkError');
       return origOpen.apply(this, arguments);
-    };
+    }, 'open');
     const OrigWS = window.WebSocket;
     if (OrigWS) {
-      const PatchedWS = function (url, protocols) {
+      const PatchedWS = markNative(function (url, protocols) {
         if (url && isPrivate(url)) throw new DOMException('Insecure WebSocket blocked', 'SecurityError');
         return protocols === undefined ? new OrigWS(url) : new OrigWS(url, protocols);
-      };
+      }, 'WebSocket');
       PatchedWS.prototype = OrigWS.prototype;
       try {
         PatchedWS.CONNECTING = OrigWS.CONNECTING; PatchedWS.OPEN = OrigWS.OPEN;
@@ -2267,25 +2287,18 @@ async function launchProfileSession(options = {}) {
   const manualLat = profile.locationType === 'Custom' ? Number.parseFloat(profile.locationLat) : NaN;
   const manualLng = profile.locationType === 'Custom' ? Number.parseFloat(profile.locationLng) : NaN;
 
-  // Fallback geo: if the pre-launch (Node) lookup didn't resolve — e.g. a SOCKS
-  // proxy, which the http module can't speak — resolve it in-page now so timezone
-  // and geolocation can still be applied via CDP. Authenticate first so an
-  // authenticated proxy doesn't answer 407 (which would null the lookup).
-  if (geoMatchEnabled && !geo && resolvedProxy && profile.timezoneType !== 'Real') {
-    if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
-    geo = await lookupProxyGeo(page);
-    if (!timezoneId && geo && geo.timezone) timezoneId = geo.timezone;
-  }
-
-  const geoLat = Number.isFinite(manualLat) ? manualLat : (geo && Number.isFinite(geo.lat) ? geo.lat : null);
-  const geoLng = Number.isFinite(manualLng) ? manualLng : (geo && Number.isFinite(geo.lon) ? geo.lon : null);
-
-  // navigator.languages is delivered by the injection extension (fpConfig.langs,
-  // built before launch). Keep the Accept-Language HEADER consistent with it so
-  // headers and JS never disagree (a mismatch is itself a detection signal).
+  // Compute the UA / Client-Hints / Accept-Language / mobile identity NOW and hand it
+  // to the early auto-attach handler BEFORE the geo lookup below. None of it depends on
+  // geo, and the in-page SOCKS geo lookup can block for several seconds — a tab opened
+  // during that window would otherwise attach with the fingerprint script but NO CDP
+  // UA/CH override, leaking the REAL Chrome UA on its first request (a header/JS split
+  // and exactly the kind of new-tab inconsistency that trips bot detection). Timezone +
+  // geolocation, which DO depend on the lookup, are handed over afterward.
+  // navigator.languages is delivered by the injection extension (fpConfig.langs, built
+  // before launch); keep the Accept-Language HEADER consistent with it so headers and JS
+  // never disagree (a mismatch is itself a detection signal).
   const acceptLanguage = localeToAcceptLanguage(fpConfig.langs[0] || 'en-US');
   const dnt = fpConfig.dnt; // reused for the DNT request header in applyToPage
-
   const ua = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
 
   // Mobile (Android) profiles: the UA + Client-Hints are already Android (via
@@ -2304,16 +2317,29 @@ async function launchProfileSession(options = {}) {
     maxTouchPoints: 5
   } : null;
 
-  // Hand the computed identity to the early auto-attach handler (declared above)
-  // so it can spoof a new tab's first byte. Assigning onto the existing object
-  // keeps the handler's lazy reads valid without reordering the launch flow.
   fpLate.ua = ua;
   fpLate.acceptLanguage = acceptLanguage;
+  fpLate.mobileMetrics = mobileMetrics;
+
+  // Fallback geo: if the pre-launch (Node) lookup didn't resolve — e.g. a SOCKS
+  // proxy, which the http module can't speak — resolve it in-page now so timezone
+  // and geolocation can still be applied via CDP. Authenticate first so an
+  // authenticated proxy doesn't answer 407 (which would null the lookup).
+  if (geoMatchEnabled && !geo && resolvedProxy && profile.timezoneType !== 'Real') {
+    if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
+    geo = await lookupProxyGeo(page);
+    if (!timezoneId && geo && geo.timezone) timezoneId = geo.timezone;
+  }
+
+  const geoLat = Number.isFinite(manualLat) ? manualLat : (geo && Number.isFinite(geo.lat) ? geo.lat : null);
+  const geoLng = Number.isFinite(manualLng) ? manualLng : (geo && Number.isFinite(geo.lon) ? geo.lon : null);
+
+  // Timezone + geolocation depend on the lookup above, so hand them to the auto-attach
+  // handler now (new tabs opened after this point get the full identity).
   fpLate.timezoneId = timezoneId;
   fpLate.geoLat = geoLat;
   fpLate.geoLng = geoLng;
   fpLate.geoAcc = toInt(profile.locationAcc, 100);
-  fpLate.mobileMetrics = mobileMetrics;
 
   // Apply the full fingerprint to a single page. Used for the first tab AND for
   // every tab/popup opened later, so new windows are never left un-spoofed
@@ -3353,6 +3379,10 @@ module.exports = {
   // Pure helper exported for regression tests: maps a proxy type to its --proxy-server
   // scheme (asserts SOCKS4 → socks4://, not http://).
   buildProxyServerArgument,
+  // Exported for regression tests: the in-page fingerprint/anti-leak script. Tests run
+  // it in a vm sandbox to assert overrides don't leak (toString/name integrity, spoofed
+  // navigator props on the prototype rather than the instance).
+  fingerprintScript,
   configurePersonaBridge,
   launchProfileSession,
   closeProfileSession,
