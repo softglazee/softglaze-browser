@@ -324,8 +324,14 @@ function resolveInside(baseDir, childSegment) {
 function parseProxyString(rawProxyString) {
   const raw = String(rawProxyString || '').trim();
   if (!raw) return null;
-  const type = /^socks/i.test(raw) ? 'SOCKS5' : 'HTTP';
-  const working = raw.replace(/^(http|https|socks5|socks):\/\//i, '');
+  // Classify by scheme: socks4/socks4a → SOCKS4, socks5/bare socks → SOCKS5, else HTTP.
+  // SOCKS4 vs SOCKS5 is not cosmetic — Chromium speaks a different wire protocol for
+  // each and SOCKS4 has no username/password auth, so mislabeling one as the other
+  // breaks the connection. The prefix (INCLUDING socks4://, which the old regex missed
+  // and left in — mangling host:port) is stripped for every scheme before parsing.
+  const scheme = (raw.match(/^(socks4a?|socks5|socks|https?):\/\//i) || [])[1] || '';
+  const type = /^socks4/i.test(scheme) ? 'SOCKS4' : (/^socks/i.test(scheme) ? 'SOCKS5' : 'HTTP');
+  const working = raw.replace(/^(socks4a?|socks5|socks|https?):\/\//i, '');
   const parts = working.split(':');
   if (parts.length >= 4) {
     return { type, host: parts[0].trim(), port: Number.parseInt(parts[1].trim(), 10), username: parts[2].trim(), password: parts.slice(3).join(':').trim() };
@@ -356,7 +362,11 @@ function parseProxyInput(input) {
 
 function buildProxyServerArgument(proxy) {
   if (!proxy) return null;
-  const protocol = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  // Chromium accepts socks5://, socks4:// and http:// proxy schemes natively. Emitting
+  // the WRONG scheme (e.g. http:// for a SOCKS proxy) makes every request fail, so map
+  // the type exactly rather than collapsing everything non-socks5 to http.
+  const t = String(proxy.type).toLowerCase();
+  const protocol = t === 'socks5' ? 'socks5' : (t === 'socks4' ? 'socks4' : 'http');
   return `${protocol}://${proxy.host}:${proxy.port}`;
 }
 
@@ -2044,8 +2054,10 @@ async function launchProfileSession(options = {}) {
   // silently fails on every request. Route it through a local no-auth SOCKS5 relay
   // that injects the credentials upstream, and point Chromium at the relay. HTTP(S)
   // proxies keep using page.authenticate below (which works for their 407). (audit)
-  const proxyIsSocks = resolvedProxy && String(resolvedProxy.type).toLowerCase() === 'socks5';
-  const socksNeedsAuth = proxyIsSocks && Boolean(resolvedProxy.username || resolvedProxy.password);
+  const proxyTypeLc = resolvedProxy ? String(resolvedProxy.type).toLowerCase() : '';
+  const proxyIsSocks = proxyTypeLc.startsWith('socks'); // socks4 OR socks5 — neither answers HTTP 407
+  const proxyIsSocks5 = proxyTypeLc === 'socks5';       // only socks5 carries user/pass auth (via the relay)
+  const socksNeedsAuth = proxyIsSocks5 && Boolean(resolvedProxy.username || resolvedProxy.password);
   let socksRelay = null;
   let proxyForArg = resolvedProxy;
   if (socksNeedsAuth) {
@@ -3338,6 +3350,9 @@ function listSessionPids() {
 module.exports = {
   DEFAULT_PROFILE_ROOT,
   parseProxyInput,
+  // Pure helper exported for regression tests: maps a proxy type to its --proxy-server
+  // scheme (asserts SOCKS4 → socks4://, not http://).
+  buildProxyServerArgument,
   configurePersonaBridge,
   launchProfileSession,
   closeProfileSession,

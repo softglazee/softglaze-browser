@@ -311,7 +311,7 @@ const CHANNELS = Object.freeze({
   UPDATER_CHECK: 'updater:check'
 });
 
-const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5']);
+const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5', 'SOCKS4']);
 const VALID_SYSTEM_PROXY_BEHAVIORS = new Set(['DIRECT', 'PROFILE_PROXY', 'SYSTEM_PROXY']);
 
 let registered = false;
@@ -403,8 +403,11 @@ function parsePort(value) {
 }
 
 function parseProxyType(value) {
-  const normalized = String(value || 'HTTP').trim().toUpperCase().replace(/^HTTPS$/, 'HTTP').replace(/^SOCKS$/, 'SOCKS5');
-  if (!VALID_PROXY_TYPES.has(normalized)) throw new Error('Proxy type must be HTTP or SOCKS5.');
+  const normalized = String(value || 'HTTP').trim().toUpperCase()
+    .replace(/^HTTPS$/, 'HTTP')
+    .replace(/^SOCKS4A$/, 'SOCKS4')
+    .replace(/^SOCKS$/, 'SOCKS5');
+  if (!VALID_PROXY_TYPES.has(normalized)) throw new Error('Proxy type must be HTTP, SOCKS5, or SOCKS4.');
   return normalized;
 }
 
@@ -1660,7 +1663,8 @@ async function testProxyConnectivity(proxy) {
     return { success: false, error: 'Proxy agent module unavailable. Run "npm install" with the app closed.' };
   }
 
-  const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  const proxyTypeLc = String(proxy.type).toLowerCase();
+  const scheme = proxyTypeLc === 'socks5' ? 'socks5' : (proxyTypeLc === 'socks4' ? 'socks4' : 'http');
   const auth = proxy.username
     ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@`
     : '';
