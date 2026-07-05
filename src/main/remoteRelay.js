@@ -20,17 +20,24 @@
 // ---------------------------------------------------------------------------
 const { EventEmitter } = require('node:events');
 
-const SECRET_KEYS = new Set(['password', 'username', 'token', 'apiKey', 'secretKey', 'cookies', 'pass']);
+// Case-insensitive SUBSTRING match on key names. The old exact, case-sensitive Set missed
+// Cookie/Set-Cookie/Authorization headers, sessionToken/sid, and any capitalized variant —
+// all of which would have streamed to the portal. Any key that looks credential/session/
+// cookie/auth-bearing is redacted.
+const SECRET_KEY_RE = /pass|secret|token|api[_-]?key|auth|cookie|session|credential|bearer|private|otp|2fa|passphrase/i;
+// Binary/image frames (screenshots) can render credentials/PII; never stream raw image data.
+const IMAGE_KEY_RE = /^(image|screenshot|thumbnail|jpe?g|png|dataurl|framedata|snapshot)$/i;
 
-// Recursively strip known secret-bearing keys from any outbound payload so a live
-// audit stream can never carry raw credentials/cookies to the portal.
+// Recursively strip secret-bearing keys and raw images from any outbound payload so a live
+// audit stream can never carry raw credentials/cookies/screenshots to the portal.
 function sanitizeFrame(value, depth = 0) {
   if (depth > 6 || value == null) return value;
   if (Array.isArray(value)) return value.map((v) => sanitizeFrame(v, depth + 1));
   if (typeof value === 'object') {
     const out = {};
     for (const [k, v] of Object.entries(value)) {
-      if (SECRET_KEYS.has(k)) { out[k] = '••••'; continue; }
+      if (SECRET_KEY_RE.test(k)) { out[k] = '••••'; continue; }
+      if (IMAGE_KEY_RE.test(k) && typeof v === 'string' && v.length > 256) { out[k] = `[redacted ${v.length}B image]`; continue; }
       out[k] = sanitizeFrame(v, depth + 1);
     }
     return out;

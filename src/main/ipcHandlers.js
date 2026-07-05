@@ -536,7 +536,16 @@ async function rotateProxyIp(payload) {
   try {
     res = await axios.get(rotationUrl, {
       timeout: 20000,
-      maxRedirects: 5,
+      maxRedirects: 3,
+      // audit SSRF: the initial-URL guard alone let a 302 Location:
+      // http://169.254.169.254/... (cloud metadata) or a LAN/loopback service be
+      // chased and its body returned. Re-run the public-URL guard on EVERY hop.
+      beforeRedirect: (options) => {
+        const proto = options.protocol || 'https:';
+        const hostPart = options.hostname || options.host || '';
+        const port = (options.port && !String(hostPart).includes(':')) ? `:${options.port}` : '';
+        assertPublicHttpUrl(`${proto}//${hostPart}${port}${options.path || ''}`, 'rotation redirect');
+      },
       validateStatus: () => true,
       headers: { 'User-Agent': 'Softglaze/RotationBot' }
     });
@@ -600,6 +609,10 @@ async function cookieRobot(payload) {
   await assertCanAccessProfile(profileId);
   const urls = Array.isArray(input.targetUrls) ? input.targetUrls.map((u) => String(u || '').trim()).filter(Boolean) : [];
   if (!urls.length) throw new Error('Provide at least one target URL for the cookie robot.');
+  // audit: only http(s) targets — otherwise a file:// URL drives the profile to local files.
+  for (const u of urls) {
+    if (!/^https?:\/\//i.test(u)) throw new Error('Cookie Robot targets must be http(s) URLs.');
+  }
 
   const profile = await getPrisma().profile.findUnique({ where: { id: profileId } });
   if (!profile) throw new Error('Profile not found.');
@@ -968,6 +981,7 @@ async function bulkDeleteProxies(payload) {
 async function getProxyRotation(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id); // rotation config is per-profile — gate on profile access
   const all = (await readSetting('proxyRotation', {})) || {};
   const cfg = all[id] || { enabled: false, mode: 'round-robin', proxyIds: [] };
   const proxies = (await getPrisma().proxy.findMany({
@@ -985,12 +999,23 @@ async function getProxyRotation(payload) {
 }
 
 async function setProxyRotation(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const id = parseId(input.id);
+  await assertCanAccessProfile(id); // rotation config is per-profile — gate on profile access
   const enabled = Boolean(input.enabled);
   const mode = input.mode === 'random' ? 'random' : 'round-robin';
   const proxyIds = Array.isArray(input.proxyIds) ? input.proxyIds.map((v) => parseId(v)) : [];
   if (enabled && proxyIds.length === 0) throw new Error('Select at least one proxy for the rotation pool.');
+  // Only allow proxies the caller can actually access into the rotation pool (no binding a
+  // profile to another member's proxies).
+  if (proxyIds.length) {
+    const accessible = await getPrisma().proxy.findMany({
+      where: await scopedProxyWhere({ id: { in: proxyIds } }), select: { id: true }
+    });
+    const okSet = new Set(accessible.map((p) => p.id));
+    if (proxyIds.some((pid) => !okSet.has(pid))) throw new Error('One or more selected proxies are not accessible to you.');
+  }
   const all = (await readSetting('proxyRotation', {})) || {};
   all[id] = { enabled, mode, proxyIds };
   await writeSetting('proxyRotation', all);
@@ -1139,6 +1164,15 @@ async function batchAddProxies(payload) {
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
+    // audit: enforce the quota PER ROW — it was checked once before this unbounded
+    // loop, so a member at 5/10 could paste 10k lines and blow past maxProxies. Once
+    // the limit is hit, mark the remaining lines skipped and stop (bounded work).
+    try {
+      await assertWithinLimit('proxies');
+    } catch (quotaErr) {
+      for (let j = index; j < lines.length; j += 1) result.skipped.push({ line: j + 1, reason: 'QUOTA', message: 'Proxy limit reached.' });
+      break;
+    }
     try {
       const parsed = parseColonProxyLine(line, fallbackType);
       const existing = await db.proxy.findFirst({
@@ -2368,10 +2402,20 @@ async function saveProfileAsTemplate(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  // audit: this had NO ownership/permission gate (unlike cloneProfile and every
+  // other profile handler), so an Operator could template a victim profile they
+  // couldn't access and round-trip it into one they own. Gate it like a clone.
+  await requirePermission('profiles.create');
+  await assertCanAccessProfile(id);
   const name = requiredString(input.name, 'Template name');
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
   const fields = pickCloneableFields(src);
+  // audit: a Template is workspace-global, so it must never carry live secrets —
+  // strip the 2FA seed and platform-account credentials (createProfileFromTemplate
+  // re-stamps ownership anyway). Cloning keeps them; templating does not.
+  delete fields.twoFactorSeed;
+  delete fields.platformAccounts;
   const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields) } });
   return serializeTemplate(created);
 }
@@ -4483,6 +4527,7 @@ async function persistProxyHealth(db, id, result) {
 async function getProxyHealthHistory(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id, 'id');
+  await assertCanAccessProxy(id); // don't leak another member's proxy latency/geo history
   const limit = Math.min(500, Math.max(10, Number(input.limit) || 200));
   const events = await getPrisma().proxyHealthEvent
     .findMany({ where: { proxyId: id }, orderBy: { ts: 'desc' }, take: limit })
@@ -4973,6 +5018,17 @@ async function getAllPersonas() {
   return { personas: rows.map(serializePersona) };
 }
 
+// Password-free projection for the autofill bridge / URL-availability path. The
+// plaintext password (audit C2) must NEVER leave the main process in a list
+// payload — it is resolved one persona at a time, server-side and origin-scoped,
+// by getPersonaSecretById at fill time. Keeps the non-secret fields the widget
+// fills plus a `hasPassword` flag so the widget knows whether to request the secret.
+function toPublicPersona(p) {
+  if (!p || typeof p !== 'object') return p;
+  const { password, ...rest } = p;
+  return { ...rest, hasPassword: Boolean(password) };
+}
+
 // Return only personas whose usedOnUrls does NOT already contain this host.
 async function getAvailablePersonasForUrl(payload) {
   const input = requireObject(payload);
@@ -4980,7 +5036,25 @@ async function getAvailablePersonasForUrl(payload) {
   if (!host) throw new Error('A valid URL or hostname is required.');
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
   const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).includes(host));
-  return { hostname: host, personas: available.map(serializePersona) };
+  // audit C2: never ship the plaintext password in a list payload — strip it here
+  // so the Chromium bridge, the Firefox loopback bridge, AND the renderer channel
+  // are all password-free at the source.
+  return { hostname: host, personas: available.map((p) => toPublicPersona(serializePersona(p))) };
+}
+
+// Origin-scoped secret resolution for the autofill bridges (audit C2 bypass): a
+// page/widget may only obtain a persona's password if that persona is actually
+// OFFERED for the committed origin (i.e. present in getAvailablePersonasForUrl),
+// never for an arbitrary or guessed id. Returns { password } or null.
+async function getPersonaSecretForUrl(id, url) {
+  const pid = optionalString(id);
+  if (!pid) return null;
+  let avail;
+  try { avail = await getAvailablePersonasForUrl({ url }); }
+  catch (e) { return null; }
+  const offered = (avail && Array.isArray(avail.personas) ? avail.personas : []).some((p) => String(p.id) === pid);
+  if (!offered) return null; // not offered for this origin — refuse to resolve
+  return getPersonaSecretById(pid);
 }
 
 // Server-side ONLY: resolve a persona's plaintext password by id for the trusted
@@ -6090,6 +6164,15 @@ async function superAdminSetup(payload) {
     if (actor && actor.role !== 'OWNER' && actor.role !== 'SUPER_ADMIN') {
       const err = new Error('Only the workspace Owner can set up the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
     }
+    if (!actor) {
+      // Pre-login claim: only a genuine first run (no members yet) may proceed. If members
+      // already exist the workspace is set up — an unauthenticated caller must NOT be able
+      // to seize Super Admin; require the Owner to sign in first.
+      const memberCount = await getPrisma().member.count().catch(() => 0);
+      if (memberCount > 0) {
+        const err = new Error('This workspace is already set up — sign in as the Owner to configure the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
+      }
+    }
   }
   const identifier = (optionalString(input.identifier) || permissions.DEFAULT_SUPER_ADMIN_IDENTIFIER).toLowerCase();
   const password = String(input.password || '');
@@ -7063,7 +7146,9 @@ async function readCloudSyncConfig() {
     namespace: c.namespace || 'softglaze',
     sealedToken: c.sealedToken || '',
     passphraseSalt: c.passphraseSalt || null,
-    passphraseVerifier: c.passphraseVerifier || null
+    passphraseVerifier: c.passphraseVerifier || null,
+    // Random per-workspace salt for the E2E master key (audit: NOT the namespace).
+    workspaceSalt: c.workspaceSalt || null
   };
 }
 
@@ -7082,9 +7167,17 @@ async function unlockCloudSync(passphrase) {
   const token = secretStore.open(c.sealedToken);
   const transport = syncTransport.createTransport({ baseUrl: c.baseUrl, token });
   const engine = new CloudSyncEngine({ transport, namespace: c.namespace });
-  // The key-derivation salt is the shared namespace, so two installs that agree on
-  // (passphrase, namespace) derive the SAME key and converge.
-  await engine.deriveMasterKey(String(passphrase), c.namespace);
+  // Derive the E2E master key from a RANDOM per-workspace salt (audit: never the
+  // public namespace/bucket name). A legacy config predating this carries no salt —
+  // mint one now and persist it; the transport is not yet wired, so there is no
+  // prior ciphertext to invalidate. (When the transport ships, this salt should be
+  // uploaded to the bucket so a second device converges on the same key.)
+  let workspaceSalt = c.workspaceSalt;
+  if (!workspaceSalt) {
+    workspaceSalt = crypto.randomBytes(16).toString('base64');
+    try { await writeSetting('cloudSync', { ...c, workspaceSalt }); } catch (e) { /* best-effort persist */ }
+  }
+  await engine.deriveMasterKey(String(passphrase), Buffer.from(workspaceSalt, 'base64'));
   cloudSyncEngine = engine;
   cloudSyncUnlocked = true;
   cloudSyncLastError = null;
@@ -7098,6 +7191,11 @@ async function syncConfigure(payload) {
 
   const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
   const namespace = (input.namespace !== undefined ? String(input.namespace || '').trim() : prev.namespace) || 'softglaze';
+  // audit: the namespace is interpolated into the bucket object key — keep it to a
+  // single safe path segment so it can never escape its prefix (see syncTransport._url).
+  if (!/^[A-Za-z0-9._-]+$/.test(namespace) || namespace === '.' || namespace === '..') {
+    throw new Error('Namespace may only contain letters, numbers, dot, underscore, and hyphen — no path separators.');
+  }
   let sealedToken = prev.sealedToken;
   if (input.token !== undefined && input.token !== '') sealedToken = secretStore.seal(String(input.token).trim());
 
@@ -7116,7 +7214,10 @@ async function syncConfigure(payload) {
   if (enabled && !baseUrl) throw new Error('Enter the sync endpoint URL before enabling sync.');
   if (enabled && !passphraseVerifier) throw new Error('Set a sync passphrase before enabling sync.');
 
-  await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier });
+  // Random per-workspace salt for the E2E master key (audit: not the namespace).
+  // Generated once and preserved thereafter so the derived key stays stable.
+  const workspaceSalt = prev.workspaceSalt || crypto.randomBytes(16).toString('base64');
+  await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier, workspaceSalt });
 
   // Re-key invalidates a previously-derived session key.
   cloudSyncEngine = null;
@@ -7754,7 +7855,8 @@ async function refreshBackendLease() {
       await writeSetting('backendLease', null).catch(() => {}); // no active license server-side
       return null;
     }
-    const ent = licenseClient.verifyLease(res.lease);
+    const { effectiveNow } = await clampLicenseNow();
+    const ent = licenseClient.verifyLease(res.lease, { nowMs: effectiveNow });
     if (!ent) return null;
     await writeSetting('backendLease', secretStore.seal(JSON.stringify({
       token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, fetchedAt: Date.now()
@@ -7771,7 +7873,13 @@ async function getBackendEntitlement() {
   if (!sealed) return null;
   let cached;
   try { cached = JSON.parse(secretStore.open(sealed)); } catch (_) { return null; }
-  const ent = licenseClient.verifyLease(cached.token);
+  // audit: verify the cached lease against the tamper-CLAMPED clock, not the raw
+  // system clock. Otherwise a cancelled subscriber can roll the OS clock back inside
+  // the cached lease's validity window and keep state:'paid' indefinitely offline.
+  // The clamp only ever raises the floor of "now", so a legitimately-online user
+  // (real clock, refreshed lease) is never locked out — only rollback is neutralized.
+  const { effectiveNow } = await clampLicenseNow();
+  const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow });
   if (!ent) return null;
   return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
 }
@@ -7862,6 +7970,16 @@ async function redeemPurchaseCode(payload) {
     const ent = await refreshBackendLease();
     if (!ent) throw new Error('Code accepted, but no active license yet — try again in a moment.');
     return licenseViewFromLease(ent);
+  }
+  // audit (HIGH): the base build's offline codes self-verify against a secret that
+  // ships in the binary, so they are inherently forgeable — any owner can compute a
+  // fresh valid code and stack paid months. There is NO offline fix (a symmetric
+  // secret must ship); the secure path is the tenant build's Ed25519 server lease
+  // (the tenantConfig().enabled branch above, where redeem routes to the backend). A
+  // base build sold to customers can set SOFTGLAZE_STRICT_LICENSE=1 to refuse offline
+  // code redemption entirely and rely on the backend / Super-Admin grants instead.
+  if (String(process.env.SOFTGLAZE_STRICT_LICENSE || '') === '1') {
+    const e = new Error('Offline purchase codes are disabled in this build.'); e.code = 'OFFLINE_CODES_DISABLED'; throw e;
   }
   const v = payments.verifyPurchaseCode(code);
   if (!v.valid) throw new Error('That purchase code is not valid.');
@@ -8208,14 +8326,21 @@ async function pollCheckout(payload) {
   const { provider, def } = await loadCheckoutProvider(input.provider || pending.provider);
   if (def.kind !== 'automated' || !provider) return { status: 'manual', paid: false };
   const cfg = await openProviderConfig(def.id);
-  const ref = input.uuid ? { uuid: input.uuid } : { orderId: requiredString(input.orderId, 'orderId') };
+  // Check the status of the order WE created in startCheckout (server-stashed in
+  // pendingCheckout) — NEVER a renderer-supplied id. audit: the old fallback to
+  // input.uuid / input.orderId let one co-tenant owner (no pending of their own)
+  // poll another owner's unpolled paid order on the same merchant account and be
+  // granted the term. There is no legitimate flow that reaches a paid grant without
+  // a preceding server-stashed startCheckout, so require one.
+  if (!pending.uuid && !pending.orderId) return { status: 'pending', paid: false };
+  const ref = pending.uuid ? { uuid: pending.uuid } : { orderId: pending.orderId };
   const st = await provider.getStatus(cfg, ref);
   if (!st.paid) return { status: st.status, paid: false };
 
   // Idempotency: a paid order is applied EXACTLY once. The renderer polls every few
   // seconds, so without this guard each poll after success would stack another month.
   // Gate on the order id via a small processed-orders ledger.
-  const orderKey = String(pending.orderId || input.orderId || input.uuid || '').trim();
+  const orderKey = String(pending.orderId || pending.uuid || '').trim();
   const processedRaw = (await readSetting('processedCheckouts', [])) || [];
   const processedList = Array.isArray(processedRaw) ? processedRaw : [];
   if (orderKey && processedList.includes(orderKey)) {
@@ -8713,6 +8838,13 @@ async function launchProfileById(id, startUrl, opts = {}) {
 // `launched` is true only when THIS call opened the browser (so the caller knows
 // whether it owns the session's lifecycle and should close it when done).
 async function ensureProfileSession(profileId) {
+  // audit: gate access to the target profile HERE, before returning OR launching a
+  // session. The macro/recording/warmer handlers only enforced access via the launch
+  // path, but the already-open-session shortcut (and sessions surviving switchMember)
+  // let a lower member drive macros/keystrokes/navigation inside another member's
+  // AUTHENTICATED running session. Every automation handler routes through this, so a
+  // single check closes the whole class — exactly what systemHumanType was patched for.
+  await assertCanAccessProfile(parseId(profileId));
   const pid = String(profileId);
   const open = listActiveSessions().find((s) => String(s.sessionId) === pid);
   if (open) return { sessionId: String(open.sessionId), launched: false };
@@ -8915,6 +9047,9 @@ async function runParallelMacroHandler(payload, event) {
   const macroId = parseId(input.macroId);
   const profileIds = parseIdArray(input.profileIds);
   if (profileIds.length === 0) throw new Error('Select at least one profile for the parallel run.');
+  // audit: verify access to EVERY target profile — the parallel path reuses
+  // already-open sessions and otherwise never hits the launch-time access check.
+  for (const pid of profileIds) await assertCanAccessProfile(pid);
   const concurrency = Math.max(1, Math.min(10, Number.parseInt(input.concurrency, 10) || 3));
   const continueOnError = input.continueOnError !== false;
   const closeWhenDone = input.closeWhenDone !== false;
@@ -9108,9 +9243,15 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 }
 
 async function startWarmer(payload, event) {
+  // audit: startWarmer alone among the automation handlers had NO permission gate,
+  // so a member whose automation.run capability was revoked could still drive it —
+  // and no per-profile access check, so it could warm (drive) another member's
+  // already-open authenticated session. Add both, like its peers.
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const ids = parseIdArray(input.profileIds);
   if (!ids.length) throw new Error('Select at least one profile to warm up.');
+  for (const pid of ids) await assertCanAccessProfile(pid);
   let sites = normalizeWarmSites(input.sites);
   if (!sites.length) sites = defaultWarmSites();
   const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen), headless: Boolean(input.headless) };
@@ -9402,8 +9543,19 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PERSONA_IMPORT_BATCH, importPersonas);
   registerHandler(CHANNELS.PERSONA_CREATE_MANUAL, createPersonaManual);
   registerHandler(CHANNELS.PERSONA_GET_ALL, getAllPersonas);
-  registerHandler(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, getAvailablePersonasForUrl);
-  registerHandler(CHANNELS.PERSONA_MARK_USED, markPersonaUsed);
+  // audit: these two persona helpers were ungated on the renderer channel (a
+  // non-owner member could enumerate the vault by iterating hostnames / poison
+  // usedOnUrls). Gate the *channels* behind vault.manage; the autofill bridges
+  // below intentionally call the raw functions (password-free + origin-scoped) so
+  // in-session autofill still works for any member without vault.manage.
+  registerHandler(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, async (payload) => {
+    await requirePermission('vault.manage');
+    return getAvailablePersonasForUrl(payload);
+  });
+  registerHandler(CHANNELS.PERSONA_MARK_USED, async (payload) => {
+    await requirePermission('vault.manage');
+    return markPersonaUsed(payload);
+  });
   registerHandler(CHANNELS.PERSONA_CLEAR_USED, clearPersonaUsed);
   registerHandler(CHANNELS.PERSONA_DELETE, deletePersonas);
   registerHandler(CHANNELS.PERSONA_UPDATE, updatePersona);
@@ -9438,7 +9590,11 @@ function registerIpcHandlers() {
   // Loopback-only, started best-effort so a busy port never breaks boot.
   autofillBridge.configure({
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
-    markUsed: (id, url) => markPersonaUsed({ id, url })
+    markUsed: (id, url) => markPersonaUsed({ id, url }),
+    // Firefox has no CDP trusted-typer, so the isolated content-script fills the
+    // password itself — but only for a persona OFFERED on the committed origin
+    // (audit C2), resolved one id at a time via the loopback /secret endpoint.
+    getSecret: (id, url) => getPersonaSecretForUrl(id, url)
   });
   autofillBridge.start().catch(() => {});
 

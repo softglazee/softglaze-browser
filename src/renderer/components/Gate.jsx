@@ -253,6 +253,9 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
   const [sel, setSel] = useState(() => (methods[0] ? methods[0].id : null));
   const [reference, setReference] = useState('');
   const [done, setDone] = useState(false);
+  // Methods load async; if none existed at mount, select the first once they arrive so the
+  // pay button actually renders (otherwise a banned user sees no way to pay).
+  useEffect(() => { if (sel == null && methods[0]) setSel(methods[0].id); }, [methods]);
   const cur = methods.find((m) => m.id === sel) || null;
 
   if (!methods.length) {
@@ -462,6 +465,7 @@ export default function Gate({ children }) {
   }
 
   async function verifyAndCreate(code) {
+    if (busy) return; // OtpInput.onComplete can fire alongside the button — guard the double register
     const c = (code || otp).replace(/\D/g, '');
     if (c.length !== 6) return setErr(t('errors.enter6Digit'));
     setErr(''); setBusy(true);
@@ -582,15 +586,25 @@ export default function Gate({ children }) {
     catch (e) { setErr(e.message || t('errors.invalidPurchaseCode')); setBusy(false); }
   }
 
+  const pollRef = useRef(null);
+  function stopPoll() { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }
+  // audit: the purchase-poll interval was a bare local — never cancelled on unmount
+  // or sign-out. A poll that returned `paid` after the user signed out would call
+  // setPhase('licensing') -> 'ready' and re-enter the app with NO current member.
+  // Store it in a ref, clear on unmount, and never re-enter once it's been stopped.
+  useEffect(() => () => stopPoll(), []);
+
   function pollPurchase(inv) {
+    stopPoll(); // never run two polls at once (e.g. a second checkout)
     let tries = 0;
-    const timer = setInterval(async () => {
+    pollRef.current = setInterval(async () => {
       tries += 1;
       try {
         const r = await softglazeApi.payments.pollCheckout({ uuid: inv.uuid, orderId: inv.orderId });
-        if (r && r.paid) { clearInterval(timer); setBusy(false); setPhase('licensing'); return; }
+        // If the poll was stopped mid-flight (unmount / sign-out), do NOT re-enter.
+        if (r && r.paid && pollRef.current) { stopPoll(); setBusy(false); setPhase('licensing'); return; }
       } catch (e) { /* keep polling */ }
-      if (tries > 120) { clearInterval(timer); setBusy(false); } // ~10-minute cap
+      if (tries > 120) { stopPoll(); setBusy(false); } // ~10-minute cap
     }, 5000);
   }
 
@@ -623,6 +637,7 @@ export default function Gate({ children }) {
   }
 
   async function signOut() {
+    stopPoll(); // don't let an in-flight purchase poll re-enter the app after logout
     try { await softglazeApi.members.logout(); } catch (e) { /* ignore */ }
     setLicense(null); setPhase('loading'); evaluate();
   }
