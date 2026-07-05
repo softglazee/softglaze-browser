@@ -19,6 +19,10 @@ const http = require('node:http');
 const { URL } = require('node:url');
 
 const DEFAULT_TIMEOUT_MS = 20000;
+// Hard ceiling on a single response body. The sync envelope is an encrypted blob whose
+// real size is bounded by the workspace data; capping it stops a hostile/broken server
+// from streaming unbounded bytes into memory (OOM).
+const MAX_RESPONSE_BYTES = 512 * 1024 * 1024;
 
 class RestBucketTransport {
   constructor(options = {}) {
@@ -39,6 +43,13 @@ class RestBucketTransport {
     return new Promise((resolve, reject) => {
       let u;
       try { u = new URL(this._url(key)); } catch (e) { return reject(new Error('Invalid sync endpoint URL.')); }
+      // Never send the bucket Bearer token in cleartext over http:// (except to a local dev
+      // endpoint) — it would be sniffable end-to-end and grants full read/write of the store.
+      const host = String(u.hostname || '').replace(/^\[|\]$/g, '');
+      const isLocal = host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' || host === 'localhost';
+      if (u.protocol === 'http:' && this.token && !isLocal) {
+        return reject(new Error('Refusing to send the sync auth token over an unencrypted http:// endpoint — use https.'));
+      }
       const lib = u.protocol === 'http:' ? http : https;
       const headers = { 'Content-Type': 'application/octet-stream' };
       if (this.token) headers.Authorization = `Bearer ${this.token}`;
@@ -46,11 +57,26 @@ class RestBucketTransport {
 
       const req = lib.request(u, { method, headers, timeout: this.timeoutMs }, (res) => {
         const chunks = [];
-        res.on('data', (c) => chunks.push(c));
+        let total = 0;
+        let overflowed = false;
+        res.on('data', (c) => {
+          if (overflowed) return;
+          total += c.length;
+          if (total > MAX_RESPONSE_BYTES) {
+            overflowed = true;
+            req.destroy();
+            return reject(new Error('Sync response exceeded the maximum allowed size.'));
+          }
+          chunks.push(c);
+        });
         res.on('end', () => {
+          if (overflowed) return;
           const status = res.statusCode || 0;
           const buf = Buffer.concat(chunks);
-          if (status === 404) return resolve({ status, body: null });
+          // 404 = "no such object" ONLY for a read. A PUT that 404s is a real failure (bad
+          // path / server error) and must NOT be reported as success, or the upload
+          // silently no-ops and the data is lost.
+          if (status === 404 && method === 'GET') return resolve({ status, body: null });
           if (status >= 200 && status < 300) return resolve({ status, body: buf });
           reject(new Error(`Sync server responded ${status}${buf.length ? `: ${buf.toString('utf8').slice(0, 200)}` : ''}`));
         });
