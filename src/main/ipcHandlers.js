@@ -7833,7 +7833,8 @@ async function refreshBackendLease() {
       await writeSetting('backendLease', null).catch(() => {}); // no active license server-side
       return null;
     }
-    const ent = licenseClient.verifyLease(res.lease);
+    const { effectiveNow } = await clampLicenseNow();
+    const ent = licenseClient.verifyLease(res.lease, { nowMs: effectiveNow });
     if (!ent) return null;
     await writeSetting('backendLease', secretStore.seal(JSON.stringify({
       token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, fetchedAt: Date.now()
@@ -7850,7 +7851,13 @@ async function getBackendEntitlement() {
   if (!sealed) return null;
   let cached;
   try { cached = JSON.parse(secretStore.open(sealed)); } catch (_) { return null; }
-  const ent = licenseClient.verifyLease(cached.token);
+  // audit: verify the cached lease against the tamper-CLAMPED clock, not the raw
+  // system clock. Otherwise a cancelled subscriber can roll the OS clock back inside
+  // the cached lease's validity window and keep state:'paid' indefinitely offline.
+  // The clamp only ever raises the floor of "now", so a legitimately-online user
+  // (real clock, refreshed lease) is never locked out — only rollback is neutralized.
+  const { effectiveNow } = await clampLicenseNow();
+  const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow });
   if (!ent) return null;
   return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
 }
@@ -7941,6 +7948,16 @@ async function redeemPurchaseCode(payload) {
     const ent = await refreshBackendLease();
     if (!ent) throw new Error('Code accepted, but no active license yet — try again in a moment.');
     return licenseViewFromLease(ent);
+  }
+  // audit (HIGH): the base build's offline codes self-verify against a secret that
+  // ships in the binary, so they are inherently forgeable — any owner can compute a
+  // fresh valid code and stack paid months. There is NO offline fix (a symmetric
+  // secret must ship); the secure path is the tenant build's Ed25519 server lease
+  // (the tenantConfig().enabled branch above, where redeem routes to the backend). A
+  // base build sold to customers can set SOFTGLAZE_STRICT_LICENSE=1 to refuse offline
+  // code redemption entirely and rely on the backend / Super-Admin grants instead.
+  if (String(process.env.SOFTGLAZE_STRICT_LICENSE || '') === '1') {
+    const e = new Error('Offline purchase codes are disabled in this build.'); e.code = 'OFFLINE_CODES_DISABLED'; throw e;
   }
   const v = payments.verifyPurchaseCode(code);
   if (!v.valid) throw new Error('That purchase code is not valid.');
@@ -8288,20 +8305,20 @@ async function pollCheckout(payload) {
   if (def.kind !== 'automated' || !provider) return { status: 'manual', paid: false };
   const cfg = await openProviderConfig(def.id);
   // Check the status of the order WE created in startCheckout (server-stashed in
-  // pendingCheckout) — NOT a renderer-supplied id. Otherwise a caller could point the poll
-  // at any already-paid invoice on the same merchant account and be granted the term.
-  // Fall back to the supplied ref only for a legacy order with no stashed pending.
-  const ref = pending.uuid ? { uuid: pending.uuid }
-    : pending.orderId ? { orderId: pending.orderId }
-    : input.uuid ? { uuid: input.uuid }
-    : { orderId: requiredString(input.orderId, 'orderId') };
+  // pendingCheckout) — NEVER a renderer-supplied id. audit: the old fallback to
+  // input.uuid / input.orderId let one co-tenant owner (no pending of their own)
+  // poll another owner's unpolled paid order on the same merchant account and be
+  // granted the term. There is no legitimate flow that reaches a paid grant without
+  // a preceding server-stashed startCheckout, so require one.
+  if (!pending.uuid && !pending.orderId) return { status: 'pending', paid: false };
+  const ref = pending.uuid ? { uuid: pending.uuid } : { orderId: pending.orderId };
   const st = await provider.getStatus(cfg, ref);
   if (!st.paid) return { status: st.status, paid: false };
 
   // Idempotency: a paid order is applied EXACTLY once. The renderer polls every few
   // seconds, so without this guard each poll after success would stack another month.
   // Gate on the order id via a small processed-orders ledger.
-  const orderKey = String(pending.orderId || input.orderId || input.uuid || '').trim();
+  const orderKey = String(pending.orderId || pending.uuid || '').trim();
   const processedRaw = (await readSetting('processedCheckouts', [])) || [];
   const processedList = Array.isArray(processedRaw) ? processedRaw : [];
   if (orderKey && processedList.includes(orderKey)) {
