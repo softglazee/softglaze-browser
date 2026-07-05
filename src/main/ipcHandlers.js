@@ -8230,7 +8230,14 @@ async function pollCheckout(payload) {
   const { provider, def } = await loadCheckoutProvider(input.provider || pending.provider);
   if (def.kind !== 'automated' || !provider) return { status: 'manual', paid: false };
   const cfg = await openProviderConfig(def.id);
-  const ref = input.uuid ? { uuid: input.uuid } : { orderId: requiredString(input.orderId, 'orderId') };
+  // Check the status of the order WE created in startCheckout (server-stashed in
+  // pendingCheckout) — NOT a renderer-supplied id. Otherwise a caller could point the poll
+  // at any already-paid invoice on the same merchant account and be granted the term.
+  // Fall back to the supplied ref only for a legacy order with no stashed pending.
+  const ref = pending.uuid ? { uuid: pending.uuid }
+    : pending.orderId ? { orderId: pending.orderId }
+    : input.uuid ? { uuid: input.uuid }
+    : { orderId: requiredString(input.orderId, 'orderId') };
   const st = await provider.getStatus(cfg, ref);
   if (!st.paid) return { status: st.status, paid: false };
 
