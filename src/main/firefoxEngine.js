@@ -311,7 +311,15 @@ async function launchFirefoxProfile(options = {}) {
     acceptLanguages,
     autofill: autofillInstalled
   });
-  await fsp.writeFile(path.join(userDataDir, 'user.js'), userJs);
+  // audit: from relay creation until the exit handlers are wired, a throw here leaves
+  // the relay (an open authenticated local proxy) listening forever. Close it on any
+  // failure of the two realistic throw points (user.js write, spawn) before re-throwing.
+  try {
+    await fsp.writeFile(path.join(userDataDir, 'user.js'), userJs);
+  } catch (e) {
+    if (relay) { try { relay.close(); } catch (_) {} }
+    throw e;
+  }
 
   const env = { ...process.env };
   if (timezoneId) env.TZ = timezoneId; // Firefox honors TZ for Date/Intl on all platforms
@@ -338,7 +346,13 @@ async function launchFirefoxProfile(options = {}) {
 
   // stdio:'ignore' — nothing reads Firefox's stdout/stderr, and an undrained pipe can
   // fill its buffer and stall the child on Windows.
-  const proc = spawn(ff, args, { env, detached: false, windowsHide: false, stdio: 'ignore' });
+  let proc;
+  try {
+    proc = spawn(ff, args, { env, detached: false, windowsHide: false, stdio: 'ignore' });
+  } catch (e) {
+    if (relay) { try { relay.close(); } catch (_) {} } // don't leak the relay on a spawn failure
+    throw e;
+  }
   const sessionId = String(profileId || crypto.randomUUID());
   const session = { proc, relay, userDataDir, title: title || `Profile ${sessionId}`, proxyLabel, createdAt: new Date(), engine: 'firefox' };
   ffSessions.set(sessionId, session);

@@ -292,9 +292,28 @@ function rowLooksEmpty(row) {
 // audit: parseWorkbookFile had NO row cap (unlike parseDataRows), so a huge/hostile
 // sheet built an unbounded items array and froze the main thread. Cap it.
 const MAX_IMPORT_ROWS = 5000;
+const MAX_IMPORT_FILE_BYTES = 25 * 1024 * 1024; // 25 MB on-disk cap for an import file
+
+// audit: XLSX.readFile + sheet_to_json materialize the ENTIRE declared sheet before
+// any row cap applies, so a small hostile .xlsx declaring millions of rows OOMs the
+// main thread. Bound the on-disk size up front, and pass `sheetRows` so the parse
+// itself reads only up to the cap (SheetJS stops at that row) instead of expanding
+// the whole range into memory.
+function assertImportFileSane(filePath) {
+  try {
+    const st = require('node:fs').statSync(filePath);
+    if (st && st.size > MAX_IMPORT_FILE_BYTES) {
+      throw new Error('Softglaze importer: that file is too large to import (max 25 MB).');
+    }
+  } catch (e) {
+    if (e && /too large/.test(String(e.message))) throw e; // re-throw our own cap error
+    // stat failure (missing/locked) surfaces later in readFile — don't mask it here.
+  }
+}
 
 function parseWorkbookFile(filePath) {
-  const workbook = XLSX.readFile(filePath, { cellDates: false, raw: false });
+  assertImportFileSane(filePath);
+  const workbook = XLSX.readFile(filePath, { cellDates: false, raw: false, sheetRows: MAX_IMPORT_ROWS + 5 });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error('Softglaze importer: the workbook contains no sheets.');
 
@@ -481,7 +500,8 @@ function parseWorkbookFile(filePath) {
 const MAX_DATA_ROWS = 1000;
 
 function parseDataRows(filePath) {
-  const workbook = XLSX.readFile(filePath, { cellDates: false, raw: false });
+  assertImportFileSane(filePath);
+  const workbook = XLSX.readFile(filePath, { cellDates: false, raw: false, sheetRows: MAX_DATA_ROWS + 5 });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error('The spreadsheet contains no sheets.');
 
