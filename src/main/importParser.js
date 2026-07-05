@@ -74,20 +74,26 @@ const HEADER_ALIASES = Object.freeze({
   country: ['country', 'country/region', 'region', 'geo', 'location', 'proxy country', 'target country']
 });
 
-// Phrases that mark the template's instruction / note rows (between the header
-// and the first real data row), so we never import them as profiles.
-const INSTRUCTION_HINTS = [
-  'please enter', 'please refer', 'open the browser', 'fill in', 'optional',
-  'support cookies', 'note:', 'note ', 'the data is entered', 'example', 'for example',
-  'country code', 'type:noproxy', 'use system proxy', 'it is required', 'multiple urls',
-  'ua information', 'purchased', 'purchasing', 'enter the correct', 'do not need to'
+// Multi-word instruction PHRASES that mark a template's note/instruction rows
+// (which only sit ABOVE the first real data row). audit: the old list matched bare
+// single words like "example"/"note "/"optional"/"purchased", so legitimate
+// profiles titled e.g. "Example Corp" or "Notes Account" were silently dropped.
+// These phrases are unambiguous instruction fragments that never occur in a real
+// profile title, and detection is additionally gap-limited to the pre-data rows
+// (see parseWorkbookFile) so nothing below the first data row can be lost.
+const INSTRUCTION_PHRASES = [
+  'please enter', 'please refer', 'please fill', 'please note', 'open the browser',
+  'fill in the', 'the data is entered', 'for example', 'e.g.', 'it is required',
+  'do not need to', 'do not fill', 'enter the correct', 'multiple urls',
+  'country code', 'use system proxy', 'type:noproxy', 'refer to the',
+  'this is an example', 'ua information'
 ];
 
 function looksLikeInstructionRow(row, titleIndex) {
   const title = getCell(row, titleIndex);
-  if (!title) return true; // blank title = note/spacer row
+  if (!title) return true; // blank title = spacer/note row
   const t = title.toLowerCase();
-  return INSTRUCTION_HINTS.some((p) => t.includes(p));
+  return INSTRUCTION_PHRASES.some((p) => t.includes(p));
 }
 
 function findColumnIndex(headers, aliases) {
@@ -194,7 +200,12 @@ function normalizeBrowserBrand(value) {
 }
 
 function parseResolution(value) {
-  const m = /(\d{3,5})\s*[x×*by ]+\s*(\d{3,5})/i.exec(String(value || ''));
+  // audit: the previous regex had three adjacent whitespace-matching groups
+  // (\s* [x×*by ]+ \s*) → polynomial backtracking (ReDoS) on a cell like
+  // "100" + " ".repeat(50000). Bound the input AND use a single, bounded
+  // separator character class so there is no overlapping/unbounded matching.
+  const s = String(value || '').slice(0, 64);
+  const m = /(\d{3,5})[\sx×*by]{1,8}(\d{3,5})/i.exec(s);
   if (!m) return null;
   return { w: m[1], h: m[2] };
 }
@@ -278,6 +289,10 @@ function rowLooksEmpty(row) {
   return row.every((cell) => cellText(cell) === '');
 }
 
+// audit: parseWorkbookFile had NO row cap (unlike parseDataRows), so a huge/hostile
+// sheet built an unbounded items array and froze the main thread. Cap it.
+const MAX_IMPORT_ROWS = 5000;
+
 function parseWorkbookFile(filePath) {
   const workbook = XLSX.readFile(filePath, { cellDates: false, raw: false });
   const sheetName = workbook.SheetNames[0];
@@ -344,13 +359,23 @@ function parseWorkbookFile(filePath) {
 
   const items = [];
   const errors = [];
+  const skipped = []; // instruction/note rows we deliberately skipped (surfaced to the UI)
+  let sawData = false;
+  let truncated = false;
 
   for (let rowIndex = headerRowIndex + 1; rowIndex < rows.length; rowIndex += 1) {
+    if (items.length >= MAX_IMPORT_ROWS) { truncated = true; break; }
     const row = rows[rowIndex] || [];
     if (rowLooksEmpty(row)) continue;
-    // Skip the template's instruction / note rows that sit between the header and
-    // the first real data row (so they aren't imported as bogus profiles).
-    if (looksLikeInstructionRow(row, columns.title)) continue;
+    // Instruction/note rows only sit ABOVE the first real data row. Once one profile
+    // has been imported, stop treating rows as instructions so a legitimate profile
+    // titled "Example Corp" / "Notes Account" is never silently dropped (audit).
+    if (!sawData && looksLikeInstructionRow(row, columns.title)) {
+      const skippedTitle = getCell(row, columns.title);
+      if (skippedTitle) skipped.push({ row: rowIndex + 1, title: skippedTitle });
+      continue;
+    }
+    sawData = true;
 
     try {
       const title = getCell(row, columns.title) || `Imported Profile ${rowIndex + 1}`;
@@ -440,7 +465,10 @@ function parseWorkbookFile(filePath) {
     headerRow: headerRowIndex + 1,
     totalRows: items.length + errors.length,
     items,
-    errors
+    errors,
+    skipped,   // instruction/note rows skipped above the first data row
+    truncated, // true if the sheet exceeded MAX_IMPORT_ROWS and was cut
+    maxRows: MAX_IMPORT_ROWS
   };
 }
 
@@ -468,8 +496,15 @@ function parseDataRows(filePath) {
   for (let i = 1; i < matrix.length && rows.length < MAX_DATA_ROWS; i += 1) {
     const row = matrix[i] || [];
     if (rowLooksEmpty(row)) continue;
-    const obj = {};
-    rawHeaders.forEach((header, idx) => { if (header) obj[header] = cellText(row[idx]); });
+    // audit: keys come from user-controlled header cells, so a header named
+    // "__proto__"/"constructor"/"prototype" could pollute Object.prototype. Build
+    // on a null-prototype object AND skip those keys defensively.
+    const obj = Object.create(null);
+    rawHeaders.forEach((header, idx) => {
+      if (header && header !== '__proto__' && header !== 'constructor' && header !== 'prototype') {
+        obj[header] = cellText(row[idx]);
+      }
+    });
     rows.push(obj);
   }
 
