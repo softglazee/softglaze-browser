@@ -295,7 +295,7 @@ app.whenReady().then(async () => {
   }
   configureSessionSecurity();
 
-  const { registerIpcHandlers, attemptRememberedUnlock } = require('./ipcHandlers');
+  const { registerIpcHandlers, attemptRememberedUnlock, whenSessionReady } = require('./ipcHandlers');
   registerIpcHandlers();
 
   // "Keep me signed in on this device": if the user opted in last time, replay the
@@ -307,6 +307,19 @@ app.whenReady().then(async () => {
     await attemptRememberedUnlock();
   } catch (e) {
     console.warn('[Startup] remembered auto-login failed:', e && e.message);
+  }
+
+  // Block window creation until the persisted member session + vault-lock state are
+  // restored. registerIpcHandlers() kicks that restore off fire-and-forget; without
+  // this await the renderer's first members.current() answers from a still-null
+  // currentMemberId (it short-circuits with no DB read) and strands a returning user
+  // on the member picker EVERY launch — the exact "keep me signed in doesn't stick"
+  // symptom on a vault-off / unencrypted install. Best-effort: on the encrypted path
+  // the restore runs later in db:unlock, so this resolves immediately.
+  try {
+    await whenSessionReady();
+  } catch (e) {
+    console.warn('[Startup] session restore wait failed:', e && e.message);
   }
 
   // Wire the app:// file server before the window loads its URL.
