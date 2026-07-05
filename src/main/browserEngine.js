@@ -1954,6 +1954,18 @@ async function launchProfileSession(options = {}) {
   // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
   // extension is written with the NTP override ONLY when launching CfT.
   const chosenBrowser = chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
+  if (!chosenBrowser) {
+    // No system Chrome AND no downloaded Chrome-for-Testing build. Packaged builds don't
+    // bundle a Chromium, so puppeteer would otherwise throw a cryptic "Could not find
+    // Chrome" — exactly what a brand-new device hits. Only fall through to puppeteer's own
+    // bundled Chromium when it genuinely exists (dev installs); else give a clear, actionable
+    // error instead of the raw puppeteer one.
+    let bundled = '';
+    try { bundled = puppeteer.executablePath(); } catch (e) { bundled = ''; }
+    if (!bundled || !fsSync.existsSync(bundled)) {
+      throw new Error('No Chrome or Chromium was found on this device. Open the Browsers page and download a browser version (or install Google Chrome) before launching Chrome profiles.');
+    }
+  }
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, { ntpOverride: usingCft });
 
@@ -3397,6 +3409,8 @@ module.exports = {
   // it in a vm sandbox to assert overrides don't leak (toString/name integrity, spoofed
   // navigator props on the prototype rather than the instance).
   fingerprintScript,
+  // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
+  generateStartPage,
   configurePersonaBridge,
   launchProfileSession,
   closeProfileSession,

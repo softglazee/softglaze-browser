@@ -13,6 +13,7 @@ const https = require('node:https');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
+const { pathToFileURL } = require('node:url');
 const { parseProxyInput } = require('./browserEngine');
 const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
 // `app` is a string path (not the API object) when required outside Electron, so
@@ -181,6 +182,21 @@ function buildUserJs(opts) {
   // keeps running). Honored from prefs on subsequent launches.
   pref('browser.launcherProcess.enabled', false);
 
+  // Full first-run / onboarding suppression, so a brand-new profile opens straight to the
+  // start page instead of the multi-step "first time user setup" (about:welcome, the
+  // import wizard, the What's-New panel, the DoH first-run, the upgrade dialog).
+  pref('browser.aboutwelcome.enabled', false);
+  pref('browser.startup.firstrunSkipsHomepage', true);
+  pref('trailhead.firstrun.didSeeAboutWelcome', true);
+  pref('datareporting.policy.firstRunURL', '');
+  pref('doh-rollout.doneFirstRun', true);
+  pref('browser.messaging-system.whatsNewPanel.enabled', false);
+  pref('browser.migrate.automigrate.enabled', false);
+  pref('browser.migrate.chrome.enabled', false);
+  pref('browser.startup.upgradeDialog.enabled', false);
+  pref('startup.homepage_override_url', '');
+  pref('browser.startup.homepage', 'about:blank');
+
   // Anti-leak: turn OFF WebRTC and geolocation so the real IP/location can't escape.
   pref('media.peerconnection.enabled', false);
   pref('media.navigator.enabled', false);
@@ -286,8 +302,25 @@ async function launchFirefoxProfile(options = {}) {
   const env = { ...process.env };
   if (timezoneId) env.TZ = timezoneId; // Firefox honors TZ for Date/Intl on all platforms
 
-  const args = ['-profile', userDataDir, '-no-remote', '-new-instance', '--no-first-run'];
-  if (startUrl && startUrl !== 'about:blank') args.push('-url', startUrl);
+  // Open the SoftGlaze start page (proxy IP / geo card + quick links) — the same page the
+  // Chrome engine shows — unless the caller passed a concrete URL. Generated INTO the
+  // profile dir and passed as a proper file:// URL (Firefox needs the file:///C:/… form).
+  let openUrl = (startUrl && startUrl !== 'about:blank') ? startUrl : null;
+  if (!openUrl) {
+    try {
+      const { generateStartPage } = require('./browserEngine');
+      await generateStartPage(userDataDir, { title: title || `Profile ${profileId}`, profileId: profileId != null ? profileId : 'TEMP-ID', proxyLabel, geo: null });
+      openUrl = pathToFileURL(path.join(userDataDir, 'start.html')).href;
+    } catch (e) { openUrl = null; /* fall back to the homepage prefs */ }
+  }
+
+  // -wait-for-browser: keep THIS process alive until the real browser exits. Without it the
+  // initial firefox.exe hands off to the actual browser and returns immediately, so the
+  // tracked process died right after launch — the session was dropped from the registry (no
+  // Stop button in the UI) while Firefox kept running. --no-first-run is a CHROME flag;
+  // Firefox's first-run is suppressed via prefs (buildUserJs) instead.
+  const args = ['-profile', userDataDir, '-no-remote', '-new-instance', '-wait-for-browser'];
+  if (openUrl) args.push('-url', openUrl);
 
   // stdio:'ignore' — nothing reads Firefox's stdout/stderr, and an undrained pipe can
   // fill its buffer and stall the child on Windows.
@@ -318,12 +351,24 @@ async function launchFirefoxProfile(options = {}) {
   return { sessionId, userDataDir, engine: 'firefox' };
 }
 
+// Kill the tracked process AND its children. With -wait-for-browser the process we hold is
+// the parent of the real browser; a plain proc.kill() would end the waiter but leave the
+// browser window open (and the profile locked). taskkill /T reaps the whole tree on Windows.
+function killProcessTree(proc) {
+  if (!proc || !proc.pid) return;
+  if (process.platform === 'win32') {
+    try { spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); return; }
+    catch (e) { /* fall through to a plain kill */ }
+  }
+  try { proc.kill(); } catch (e) { /* ignore */ }
+}
+
 async function closeFirefoxSession(sessionId) {
   const id = String(sessionId || '').trim();
   const session = ffSessions.get(id);
   if (!session) return { closed: false };
   ffIntentionalClose.add(id); // deliberate close — the exit must not be read as a crash
-  try { session.proc.kill(); } catch (e) { /* ignore */ }
+  killProcessTree(session.proc);
   if (session.relay) session.relay.close();
   ffSessions.delete(id);
   return { closed: true };
