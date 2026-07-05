@@ -48,17 +48,26 @@ function seal(plain) {
   }
 }
 
-// Decrypt a stored value. Fail-safe: non-sealed values and any decryption
-// failure return the input unchanged.
+// Decrypt a stored value.
+//  - A value that was never sealed (legitimate pre-existing plaintext) passes
+//    through unchanged — that path must stay lossless.
+//  - A SEALED value we cannot open (OS encryption unavailable, or decrypt throws
+//    because the DPAPI key changed / %APPDATA% was copied to another user or
+//    machine) now fails CLOSED: it returns '' ("treat as absent"), never the
+//    literal enc:v1:… blob. audit: returning the sealed blob handed callers a
+//    garbage credential — a proxy dialled with ciphertext-as-password (silent auth
+//    failure → possible real-IP exposure for an anti-detect browser) and the sync
+//    Bearer token became junk — and made "is a secret configured?" checks pass on
+//    an unusable value. seal() already fails closed; open() is now symmetric.
 function open(value) {
   if (!isSealed(value)) return value;
-  if (!isAvailable()) return value;
+  if (!isAvailable()) { console.error('[secretStore] open: safeStorage unavailable for a sealed value; treating as absent'); return ''; }
   try {
     const buf = Buffer.from(value.slice(PREFIX.length), 'base64');
     return safeStorage.decryptString(buf);
   } catch (e) {
-    console.error('[secretStore] open failed:', e.message);
-    return value;
+    console.error('[secretStore] open failed (returning empty, not the sealed blob):', e.message);
+    return '';
   }
 }
 

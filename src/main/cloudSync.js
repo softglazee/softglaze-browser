@@ -31,11 +31,19 @@ class CloudSyncEngine {
   }
 
   // Derive (and cache for the session) a 32-byte master key from the user's
-  // password. The salt is the user's workspace salt so the key is stable across
-  // devices for the same account, yet never leaves as plaintext.
+  // password + an explicit high-entropy per-workspace salt supplied by the caller.
+  // audit: this previously fell back to the CONSTANT public bucket namespace
+  // ('softglaze') as the salt, so a single precomputed scrypt dictionary attacked
+  // every default-namespace user at once and two users with the same passphrase
+  // derived the SAME key. The salt is now REQUIRED — fail closed rather than use a
+  // guessable constant. (The caller stores a random per-workspace salt and, for
+  // cross-device convergence, shares it via the bucket when the transport ships.)
   async deriveMasterKey(password, workspaceSalt) {
     if (!password) throw new Error('A master password is required to derive the sync key.');
-    const salt = Buffer.isBuffer(workspaceSalt) ? workspaceSalt : Buffer.from(String(workspaceSalt || 'softglaze'), 'utf8');
+    if (workspaceSalt === undefined || workspaceSalt === null || workspaceSalt === '') {
+      throw new Error('A workspace salt is required to derive the sync key.');
+    }
+    const salt = Buffer.isBuffer(workspaceSalt) ? workspaceSalt : Buffer.from(String(workspaceSalt), 'utf8');
     this._masterKey = await scrypt(String(password), salt, 32);
     return true;
   }

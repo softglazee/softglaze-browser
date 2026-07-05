@@ -33,10 +33,18 @@ class RestBucketTransport {
   }
 
   // Encode each path segment but keep the '/' separators (keys look like
-  // "namespace/profile.sgz-env").
+  // "namespace/profile.sgz-env"). audit: encodeURIComponent does NOT encode dots,
+  // so a '..' segment survived and new URL(baseUrl + '/ns/../../x') normalized it,
+  // escaping the namespace prefix (cross-namespace read/write on the bucket). Reject
+  // any '.'/'..' segment and assert the resolved URL still sits under baseUrl.
   _url(key) {
-    const safe = String(key).split('/').map(encodeURIComponent).join('/');
-    return `${this.baseUrl}/${safe}`;
+    const segments = String(key).split('/');
+    for (const seg of segments) {
+      if (seg === '.' || seg === '..') throw new Error('Invalid sync key (path traversal).');
+    }
+    const url = `${this.baseUrl}/${segments.map(encodeURIComponent).join('/')}`;
+    if (url !== this.baseUrl && !url.startsWith(this.baseUrl + '/')) throw new Error('Invalid sync key.');
+    return url;
   }
 
   _request(method, key, body) {

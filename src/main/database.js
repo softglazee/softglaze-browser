@@ -13,7 +13,7 @@ let runtime = null;
 // `softglaze.sqlite.enc`; a plaintext working file (`softglaze.sqlite`) only exists
 // while `unlocked` (decrypted at boot, re-encrypted + shredded at quit). The AES
 // key + its salt are held in memory only for the unlocked session.
-const dbEnc = { enabled: false, unlocked: false, key: null, salt: null };
+const dbEnc = { enabled: false, unlocked: false, key: null, salt: null, version: dbCrypto.LEGACY_VERSION };
 // Set during an enable/disable migration so getPrisma() refuses to (re)open the
 // file mid-operation and create an inconsistent or empty database.
 let migrating = false;
@@ -162,8 +162,8 @@ async function unlockEncryptedDb(password) {
     err.code = 'DB_MISSING';
     throw err;
   }
-  const salt = await dbCrypto.readHeaderSalt(encPath);
-  const key = await dbCrypto.deriveKey(password, salt);
+  const { version, salt } = await dbCrypto.readHeader(encPath);
+  const key = await dbCrypto.deriveKey(password, salt, version);
 
   // A plaintext working file present alongside the .enc can only be a crash
   // leftover (a clean quit shreds it) — and it is the NEWEST copy. Keep it, but
@@ -190,6 +190,7 @@ async function unlockEncryptedDb(password) {
   dbEnc.unlocked = true;
   dbEnc.key = key;
   dbEnc.salt = salt;
+  dbEnc.version = version;
   return getDbEncryptionInfo();
 }
 
@@ -201,7 +202,9 @@ async function relockEncryptedDb() {
   const { dbPath, encPath } = runtime;
   await checkpointAndDisconnect();
   if (fs.existsSync(dbPath)) {
-    await dbCrypto.encryptDbFile(dbPath, encPath, dbEnc.key, dbEnc.salt);
+    // Re-encrypt with the version the file was opened as (no forced in-place
+    // re-key — the held key was derived with that version's cost).
+    await dbCrypto.encryptDbFile(dbPath, encPath, dbEnc.key, dbEnc.salt, dbEnc.version || dbCrypto.LEGACY_VERSION);
     await dbCrypto.secureUnlink(dbPath);
   }
   dbEnc.unlocked = false;
@@ -215,8 +218,8 @@ async function relockEncryptedDb() {
 // user understands that a lost password is unrecoverable.
 async function enableDbEncryption(password) {
   if (dbEnc.enabled) return getDbEncryptionInfo();
-  if (!password || String(password).length < 4) {
-    throw new Error('A password of at least 4 characters is required to enable database encryption.');
+  if (!password || String(password).length < 8) {
+    throw new Error('A password of at least 8 characters is required to enable database encryption.');
   }
   const { dbPath, encPath } = runtime;
   if (!fs.existsSync(dbPath)) throw new Error('No database file was found to encrypt.');
@@ -229,8 +232,9 @@ async function enableDbEncryption(password) {
     fs.copyFileSync(dbPath, backupPath); // safety net while we work
 
     const salt = dbCrypto.newSalt();
-    const key = await dbCrypto.deriveKey(password, salt);
-    await dbCrypto.encryptDbFile(dbPath, encPath, key, salt);
+    const version = dbCrypto.CURRENT_VERSION; // new databases use the strong (v2) KDF
+    const key = await dbCrypto.deriveKey(password, salt, version);
+    await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
 
     // Prove the encrypted copy decrypts back bit-for-bit before we trust it.
     const verifyTmp = `${dbPath}.verify-${stamp}`;
@@ -242,11 +246,12 @@ async function enableDbEncryption(password) {
       throw new Error('Encryption verification failed — the database was left unchanged.');
     }
 
-    writeSidecar({ enabled: true, version: 1 });
+    writeSidecar({ enabled: true, version });
     dbEnc.enabled = true;
     dbEnc.unlocked = true;
     dbEnc.key = key;
     dbEnc.salt = salt;
+    dbEnc.version = version;
     // Encryption verified — the plaintext safety backup is no longer needed (and
     // keeping it would defeat the purpose).
     await dbCrypto.secureUnlink(backupPath);
@@ -273,8 +278,8 @@ async function disableDbEncryption(password) {
 
   // Authenticate the password against the at-rest ciphertext.
   if (fs.existsSync(encPath)) {
-    const salt = await dbCrypto.readHeaderSalt(encPath);
-    const key = await dbCrypto.deriveKey(password, salt);
+    const { version, salt } = await dbCrypto.readHeader(encPath);
+    const key = await dbCrypto.deriveKey(password, salt, version);
     const verifyTmp = `${dbPath}.verify-disable`;
     try {
       await dbCrypto.decryptDbFile(encPath, verifyTmp, key);
@@ -304,10 +309,15 @@ async function rekeyEncryptedDb(newPassword) {
   const { dbPath, encPath } = runtime;
   if (!fs.existsSync(dbPath)) return;
   const salt = dbCrypto.newSalt();
-  const key = await dbCrypto.deriveKey(newPassword, salt);
-  await dbCrypto.encryptDbFile(dbPath, encPath, key, salt);
+  // A password change is a natural re-key point — upgrade to the strong (v2) KDF,
+  // so existing users migrate off the legacy cost the next time they change it.
+  const version = dbCrypto.CURRENT_VERSION;
+  const key = await dbCrypto.deriveKey(newPassword, salt, version);
+  await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
   dbEnc.key = key;
   dbEnc.salt = salt;
+  dbEnc.version = version;
+  try { writeSidecar({ enabled: true, version }); } catch (e) { /* sidecar is advisory; the .enc header is authoritative */ }
 }
 
 // ---------------------------------------------------------------------------
@@ -411,16 +421,25 @@ async function applyMigrations(db) {
             try {
               await tx.$executeRawUnsafe(statement + ';');
             } catch (e) {
-              // Idempotent DDL tolerance: a column/table/index that already exists
-              // is the desired end state, not an error. This happens because the
-              // schema was grown with `prisma db push` during development — the live
-              // table already has columns a backfill migration also adds. SQLite
-              // can't express "ADD COLUMN IF NOT EXISTS", so we swallow exactly these
-              // and re-throw everything else (real errors still stop the run). The
-              // "duplicate column"/"already exists" errors don't abort the SQLite
-              // transaction, so the remaining statements still apply.
+              // Idempotent DDL tolerance — NARROW (audit). A statement that is silently
+              // skipped while the migration is still recorded as "applied" is how a
+              // table-rebuild (CREATE new_X → INSERT SELECT → DROP X → RENAME) can
+              // drop real rows: if the CREATE is swallowed, the later DROP/RENAME run
+              // against stale state and the loss is never retried. So tolerate ONLY the
+              // two genuinely idempotent, non-destructive cases `prisma db push` drift
+              // produces:
+              //   • "duplicate column name" on ALTER TABLE ... ADD COLUMN (SQLite has
+              //     no ADD COLUMN IF NOT EXISTS), and
+              //   • "already exists" on CREATE INDEX / TRIGGER (re-create is a no-op).
+              // Everything else — crucially "already exists" on CREATE TABLE — is a HARD
+              // failure: throwing rolls back the whole $transaction, so the migration is
+              // NOT recorded (and is retried next boot) rather than committing a
+              // half-applied schema or a data-losing rebuild.
               const msg = String((e && e.message) || e).toLowerCase();
-              if (msg.includes('duplicate column name') || msg.includes('already exists')) {
+              const stmt = String(statement || '').trim().toLowerCase();
+              const dupColumnOnAddColumn = msg.includes('duplicate column name') && /^alter\s+table\b[\s\S]*\badd\s+column\b/.test(stmt);
+              const idxOrTriggerExists = msg.includes('already exists') && /^create\s+(unique\s+)?(index|trigger)\b/.test(stmt);
+              if (dupColumnOnAddColumn || idxOrTriggerExists) {
                 continue;
               }
               throw e;
