@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Wand2, Bot, Flame, History, Plus, Loader2, Play, Pause, Square, X, Search,
   Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical, Pencil, MousePointer2,
-  Layers, FileSpreadsheet, XCircle, AlertTriangle, Save
+  Layers, FileSpreadsheet, XCircle, AlertTriangle, Save, Copy, Download, Check, Eraser
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -114,7 +114,15 @@ const LEVEL_COLOR = {
 
 export default function AutomationPage() {
   const { t } = useTranslation('automation');
-  const [tab, setTab] = useState('macros');
+  // Remember the active sub-tab across navigation + restarts, so returning to this
+  // page (e.g. after checking a profile) lands you back on the Cookie Warmer where a
+  // run may still be streaming — instead of resetting to My Macros and hiding the
+  // Stop button / live console.
+  const [tab, setTab] = useState(() => {
+    try { const s = localStorage.getItem('sg.automation.tab'); return TABS.some((x) => x.key === s) ? s : 'macros'; }
+    catch (e) { return 'macros'; }
+  });
+  useEffect(() => { try { localStorage.setItem('sg.automation.tab', tab); } catch (e) { /* ignore */ } }, [tab]);
 
   return (
     <div className="flex flex-col h-full pb-10">
@@ -671,6 +679,16 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
     error: <XCircle className="w-3.5 h-3.5 text-red-400" />
   };
 
+  // Live step counter for this single-profile run + Copy/Export/Clear for the log.
+  const macroCounts = (() => {
+    const total = steps.length;
+    let done = 0, active = 0;
+    for (const s of statuses) { if (s === 'ok' || s === 'error') done += 1; else if (s === 'running') active += 1; }
+    return { total, done, active, remaining: Math.max(0, total - done - active) };
+  })();
+  const fmtMacroLine = (l) => l.msg || '';
+  const clearLog = () => setLog([]);
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4" onMouseDown={phase === 'done' ? onClose : undefined}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('runModal.ariaLabel', { name: macro.name })} tabIndex={-1} className="w-full max-w-2xl rounded-2xl bg-card border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]" onMouseDown={(e) => e.stopPropagation()}>
@@ -698,6 +716,10 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
             ))}
           </div>
 
+          <div className="flex items-center justify-between gap-2">
+            <RunCounter total={macroCounts.total} running={macroCounts.active} done={macroCounts.done} remaining={macroCounts.remaining} t={t} />
+            <ConsoleToolbar logs={log} onClear={clearLog} format={fmtMacroLine} filename="softglaze-macro.log" t={t} />
+          </div>
           <div ref={logRef} className="rounded-lg border border-border bg-[#0b0f17] p-2.5 font-mono text-[11px] max-h-40 overflow-y-auto">
             {log.length === 0 ? <p className="text-muted-foreground/60">{t('runModal.starting')}</p> : log.map((l, i) => (
               <div key={i} className={LEVEL_COLOR[l.level] || 'text-foreground/90'}>{l.msg}</div>
@@ -847,6 +869,21 @@ function ParallelPanel() {
     return p ? p.title : t('parallel.profileFallback', { id });
   };
 
+  // Plain-text form of one console line, for Copy / Export.
+  const fmtParLine = (l) => `${ts(l.ts)} [${(l.state || 'info').toUpperCase()}] ${l.profileId != null ? `${l.profileName || profileName(l.profileId)}: ` : ''}${l.message || l.error || (l.ran != null && l.total != null ? `${l.ran}/${l.total} steps` : l.state || '')}`;
+  const clearLogs = () => setLogs([]);
+  // Live counter derived from the per-profile status map (queued/launching/running/passed/failed).
+  const parCounts = (() => {
+    const total = selected.size;
+    let done = 0, active = 0;
+    for (const p of selectedProfiles) {
+      const s = (statuses[p.id] && statuses[p.id].state) || 'queued';
+      if (s === 'passed' || s === 'failed') done += 1;
+      else if (s === 'running' || s === 'launching') active += 1;
+    }
+    return { total, done, active, remaining: Math.max(0, total - done - active) };
+  })();
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
       {/* Controls */}
@@ -956,6 +993,11 @@ function ParallelPanel() {
               </span>
             )}
           </div>
+          {(running || summary) && (
+            <div className="px-1 mb-2">
+              <RunCounter total={parCounts.total} running={parCounts.active} done={parCounts.done} remaining={parCounts.remaining} t={t} />
+            </div>
+          )}
           {selectedProfiles.length === 0 ? (
             <p className="text-[12px] text-muted-foreground/60 px-1 py-3">{t('parallel.watchHint')}</p>
           ) : (
@@ -994,7 +1036,10 @@ function ParallelPanel() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
             </span>
             <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('parallel.runConsole')}</span>
-            {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('parallel.live')}</span>}
+            <div className="ml-auto flex items-center gap-2">
+              {running && <span className="text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('parallel.live')}</span>}
+              <ConsoleToolbar logs={logs} onClear={clearLogs} format={fmtParLine} filename="softglaze-parallel.log" t={t} />
+            </div>
           </div>
           <div ref={logRef} className="flex-1 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed max-h-[300px]">
             {logs.length === 0 ? (
@@ -1031,6 +1076,7 @@ function WarmerPanel() {
   const [running, setRunning] = useState(false);
   const [runId, setRunId] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [counts, setCounts] = useState(null); // { total, done, active, remaining, concurrency }
   const [err, setErr] = useState('');
   const logRef = useRef(null);
 
@@ -1102,6 +1148,12 @@ function WarmerPanel() {
       setRunning(true);
       setRunId(r.runId);
       if (Array.isArray(r.logs) && r.logs.length) setLogs(r.logs.slice(-300));
+      // Restore the live counter so "X done · Y running · Z queued" survives navigation.
+      setCounts({
+        total: r.total || 0, done: r.done || 0, active: r.active || 0,
+        remaining: r.remaining != null ? r.remaining : Math.max(0, (r.total || 0) - (r.done || 0) - (r.active || 0)),
+        concurrency: r.concurrency
+      });
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -1111,6 +1163,7 @@ function WarmerPanel() {
     const off = softglazeApi.automation.onWarmerProgress((data) => {
       if (!data) return;
       setLogs((prev) => [...prev.slice(-300), data]);
+      if (data.counts) setCounts(data.counts); // live total/done/running/queued
       if (data.done) setRunning(false);
     });
     return () => { try { off && off(); } catch (e) { /* ignore */ } };
@@ -1244,8 +1297,10 @@ function WarmerPanel() {
     const ids = [...selected];
     if (ids.length === 0) { setErr(t('warmer.errors.selectProfile')); return; }
     if (sites.length === 0) { setErr(t('warmer.errors.addSite')); return; }
+    const width = queueMode ? 1 : Math.max(2, Math.min(16, Number(parallelCount) || 3));
     setRunning(true);
     setLogs([]);
+    setCounts({ total: ids.length, done: 0, active: 0, remaining: ids.length, concurrency: width });
     try {
       const payload = {
         profileIds: ids,
@@ -1254,7 +1309,7 @@ function WarmerPanel() {
         headless: hidden,
         // Queue mode = one browser at a time (default). This is what keeps a 100-profile
         // warm-up from launching 100 browsers at once and crashing the app.
-        concurrency: queueMode ? 1 : Math.max(2, Math.min(16, Number(parallelCount) || 3)),
+        concurrency: width,
         sites: sites.map((s) => ({ url: s.url, label: s.label, seconds: Number(s.seconds) || 30, clickMode: s.clickMode || 'none' }))
       };
       const res = await softglazeApi.automation.startWarmer(payload);
@@ -1274,6 +1329,11 @@ function WarmerPanel() {
     const p = profiles.find((x) => Number(x.id) === Number(id));
     return p ? p.title : t('warmer.profileFallback', { id });
   };
+
+  // Plain-text form of one console line, for Copy / Export.
+  const fmtWarmLine = (l) => `${ts(l.ts)} [${l.level || 'INFO'}] ${l.profileId != null ? `${profileName(l.profileId)}: ` : ''}${l.message || ''}`;
+  const clearLogs = () => setLogs([]);
+  const mode = counts ? (counts.concurrency === 1 ? t('warmer.modeQueue', 'Queue · one at a time') : t('warmer.modeBulk', { defaultValue: 'Bulk · {{n}} at a time', n: counts.concurrency })) : '';
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
@@ -1470,28 +1530,53 @@ function WarmerPanel() {
         {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
       </div>
 
-      {/* Live console */}
-      <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-w-0 min-h-[360px] max-h-[75vh]">
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-elevated/30">
-          <span className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
-          </span>
-          <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('warmer.warmupConsole')}</span>
-          {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('warmer.live')}</span>}
-        </div>
-        <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed">
-          {logs.length === 0 ? (
-            <p className="text-muted-foreground/60">{t('warmer.consoleIdle')}</p>
-          ) : logs.map((l, i) => (
-            <div key={i} className="whitespace-pre-wrap break-all">
-              <span className="text-muted-foreground/50">{ts(l.ts)} </span>
-              <span className={LEVEL_COLOR[l.level] || 'text-foreground'}>[{l.level || 'INFO'}]</span>{' '}
-              {l.profileId != null && <span className="text-violet-300">{profileName(l.profileId)}: </span>}
-              <span className="text-foreground/90">{l.message}</span>
+      {/* Live counter + console */}
+      <div className="flex flex-col gap-3 min-w-0">
+        {/* Run progress counter — stays visible (and restores on re-attach) so the
+            operator always sees how many profiles are done / running / queued. */}
+        {(running || counts) && (
+          <div className="rounded-xl border border-border bg-card px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11.5px] font-semibold text-muted-foreground">{t('warmer.progressTitle', 'Warm-up progress')}</span>
+              {running && <span className="text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('warmer.live')}</span>}
             </div>
-          ))}
+            <RunCounter
+              total={counts ? counts.total : 0}
+              running={counts ? counts.active : 0}
+              done={counts ? counts.done : 0}
+              remaining={counts ? counts.remaining : null}
+              mode={mode}
+              t={t}
+            />
+          </div>
+        )}
+
+        {/* Live console */}
+        <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-w-0 min-h-[360px] max-h-[75vh]">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-elevated/30">
+            <span className="flex gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+            </span>
+            <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('warmer.warmupConsole')}</span>
+            <div className="ml-auto flex items-center gap-2">
+              {running && <span className="text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('warmer.live')}</span>}
+              <ConsoleToolbar logs={logs} onClear={clearLogs} format={fmtWarmLine} filename="softglaze-warmup.log" t={t} />
+            </div>
+          </div>
+          <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed">
+            {logs.length === 0 ? (
+              <p className="text-muted-foreground/60">{t('warmer.consoleIdle')}</p>
+            ) : logs.map((l, i) => (
+              <div key={i} className="whitespace-pre-wrap break-all">
+                <span className="text-muted-foreground/50">{ts(l.ts)} </span>
+                <span className={LEVEL_COLOR[l.level] || 'text-foreground'}>[{l.level || 'INFO'}]</span>{' '}
+                {l.profileId != null && <span className="text-violet-300">{profileName(l.profileId)}: </span>}
+                <span className="text-foreground/90">{l.message}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1620,6 +1705,78 @@ function describeHistoryEntry(h, t) {
     detail: h.minutes ? t('history.minutes', { count: h.minutes }) : (h.sites ? t('history.sites', { count: h.sites }) : ''), status: key, when: h.finishedAt || h.startedAt,
     ...statusStyle(key)
   };
+}
+
+// ---------------------------------------------------------------------------
+// Shared: live run counter + console toolbar (reused by Warmer / Parallel / Macros)
+// ---------------------------------------------------------------------------
+
+// Compact chip row: total / running / done / queued, plus the run mode. Shown above
+// each live console so the operator always sees how many profiles are left.
+function RunCounter({ total = 0, running = 0, done = 0, remaining = null, mode = '', t }) {
+  const rem = remaining != null ? remaining : Math.max(0, total - done - running);
+  const tr = (k, d) => (t ? t(k, d) : d);
+  const chip = (label, value, cls) => (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${cls}`}>
+      <span className="tabular-nums">{value}</span>
+      <span className="font-medium opacity-80">{label}</span>
+    </span>
+  );
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {chip(tr('counter.total', 'total'), total, 'bg-secondary text-muted-foreground')}
+      {chip(tr('counter.running', 'running'), running, 'bg-amber-500/12 text-amber-400')}
+      {chip(tr('counter.done', 'done'), done, 'bg-emerald-500/12 text-emerald-400')}
+      {chip(tr('counter.queued', 'queued'), rem, 'bg-sky-500/12 text-sky-400')}
+      {mode ? <span className="text-[10.5px] text-muted-foreground ml-0.5">· {mode}</span> : null}
+    </div>
+  );
+}
+
+// Copy / Export / Clear controls for a live console. `format(line)` turns one log
+// entry into a plain-text row; `filename` names the downloaded log.
+function ConsoleToolbar({ logs, onClear, format, filename = 'console.log', t }) {
+  const [copied, setCopied] = useState(false);
+  const tr = (k, d) => (t ? t(k, d) : d);
+  const has = Array.isArray(logs) && logs.length > 0;
+  const toText = () => (Array.isArray(logs) ? logs : []).map((l) => { try { return format(l); } catch (e) { return ''; } }).join('\n');
+
+  async function copy() {
+    if (!has) return;
+    const text = toText();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+      else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+      setCopied(true); setTimeout(() => setCopied(false), 1200);
+    } catch (e) { /* clipboard blocked — ignore */ }
+  }
+
+  function exportFile() {
+    if (!has) return;
+    try {
+      const blob = new Blob([toText() + '\n'], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { /* ignore */ }
+  }
+
+  const btn = 'inline-flex items-center gap-1 h-6 px-1.5 rounded-md border border-border/70 text-[10.5px] text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors';
+  return (
+    <div className="flex items-center gap-1">
+      <button onClick={copy} disabled={!has} title={tr('console.copy', 'Copy log')} className={btn}>
+        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />} {copied ? tr('console.copied', 'Copied') : tr('console.copy', 'Copy')}
+      </button>
+      <button onClick={exportFile} disabled={!has} title={tr('console.export', 'Export log')} className={btn}>
+        <Download className="w-3 h-3" /> {tr('console.export', 'Export')}
+      </button>
+      <button onClick={onClear} disabled={!has} title={tr('console.clear', 'Clear console')} className={btn}>
+        <Eraser className="w-3 h-3" /> {tr('console.clear', 'Clear')}
+      </button>
+    </div>
+  );
 }
 
 // --- helpers ---
