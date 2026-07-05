@@ -275,6 +275,9 @@
     "profileFallback": "Perfil {{id}}",
     "warmupConsole": "Consola de calentamiento",
     "live": "en vivo",
+    "progressTitle": "Progreso del calentamiento",
+    "modeQueue": "Cola · uno a la vez",
+    "modeBulk": "Lote · {{n}} a la vez",
     "consoleIdle": "[ inactivo ] Selecciona perfiles, establece una duración e inicia el calentamiento para ver el progreso en vivo.",
     "errors": {
       "selectProfile": "Selecciona al menos un perfil para calentar.",
@@ -283,6 +286,18 @@
       "stopWarmup": "No se pudo detener el calentamiento.",
       "importFile": "No se pudo leer ese archivo."
     }
+  },
+  "counter": {
+    "total": "total",
+    "running": "en curso",
+    "done": "hechos",
+    "queued": "en cola"
+  },
+  "console": {
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "export": "Exportar",
+    "clear": "Limpiar"
   },
   "history": {
     "emptyTitle": "Aún no se ha ejecutado ninguna tarea",

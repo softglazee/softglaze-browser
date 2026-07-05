@@ -2995,7 +2995,7 @@ async function deleteProfile(payload) {
   // (cookies/cache) is KEPT by default so the profile can be restored, but the
   // user can opt to wipe it now via the delete dialog.
   const removeLocalData = Boolean(input.removeLocalData);
-  await closeProfileSession(String(id)).catch(() => {});
+  await closeAnySession(id).catch(() => {});
   await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
   if (removeLocalData) {
     await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true }).catch(() => {});
@@ -3027,7 +3027,7 @@ async function purgeProfile(payload) {
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
-  await closeProfileSession(String(id)).catch(() => {});
+  await closeAnySession(id).catch(() => {});
   await db.profile.delete({ where: { id } });
 
   if (removeLocalData) {
@@ -3047,7 +3047,7 @@ async function bulkDeleteProfiles(payload) {
   const result = { trashed: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
   for (const id of allowed) {
     try {
-      await closeProfileSession(String(id)).catch(() => {});
+      await closeAnySession(id).catch(() => {});
       await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
       await logActivity(db, id, 'delete', 'moved to Trash (bulk)');
       result.trashed.push(id);
@@ -3087,7 +3087,7 @@ async function bulkPurgeProfiles(payload) {
     try {
       const existing = await db.profile.findUnique({ where: { id } });
       if (!existing) { result.errors.push({ id, message: 'Profile not found.' }); continue; }
-      await closeProfileSession(String(id)).catch(() => {});
+      await closeAnySession(id).catch(() => {});
       await db.profile.delete({ where: { id } });
       if (removeLocalData) {
         await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true });
@@ -3160,7 +3160,7 @@ async function bulkCloseSessions(payload) {
   const result = { closed: [], errors: [] };
   for (const id of ids) {
     try {
-      const r = await closeProfileSession(String(id));
+      const r = await closeAnySession(id); // engine-aware: closes Firefox sessions too
       if (r.closed) result.closed.push(id);
     } catch (error) {
       result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
@@ -3798,13 +3798,22 @@ async function launchProfile(payload) {
   }
 }
 
+// Close a session by id REGARDLESS of engine. Chrome and Firefox each key their
+// sessions by the profile id, so any caller that only has an id (the Profiles-page
+// Stop button / bulk close, delete + purge, warmer teardown) must route through here
+// — calling closeProfileSession() directly silently no-ops on a Firefox session,
+// leaving the real Firefox window open (the reported "Stop does nothing" bug).
+async function closeAnySession(sessionId) {
+  const id = String(sessionId);
+  return firefoxEngine.isFirefoxSession(id)
+    ? firefoxEngine.closeFirefoxSession(id)
+    : closeProfileSession(id);
+}
+
 async function closeSession(payload) {
   const input = requireObject(payload);
   const sessionId = requiredString(input.sessionId, 'sessionId');
-  // Firefox sessions live in their own engine.
-  const result = firefoxEngine.isFirefoxSession(sessionId)
-    ? await firefoxEngine.closeFirefoxSession(sessionId)
-    : await closeProfileSession(sessionId);
+  const result = await closeAnySession(sessionId);
   reconcileProfileLocks(); // release any lock whose session just ended
   return result;
 }
@@ -9222,7 +9231,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
   // graceful browser.close() FLUSHES cookies + cache to the profile's userDataDir,
   // so a later, separate normal launch of this profile reuses the warmed session.
   const didClose = !opts.keepOpen && run && run.launched.has(sessionId);
-  if (didClose) await closeProfileSession(sessionId).catch(() => {});
+  if (didClose) await closeAnySession(sessionId).catch(() => {}); // engine-aware (Firefox too)
 
   // On-disk footprint proof — cookies + cache now persisted in the profile folder.
   // Only meaningful once flushed (i.e. after a close), so we skip it for keep-open runs.
@@ -9266,14 +9275,26 @@ async function startWarmer(payload, event) {
     id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null,
     // Metadata + a rolling log buffer so a renderer that navigated away and came back can
     // re-attach to (and stop) the still-running job instead of orphaning it.
-    profileIds: ids, total: ids.length, done: 0, concurrency,
+    // `active` = profiles warming RIGHT NOW; total/done drive the live progress counter.
+    profileIds: ids, total: ids.length, done: 0, active: new Set(), concurrency,
     loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: []
   };
   warmerRuns.set(runId, run);
 
+  // Every progress frame carries a `counts` snapshot (total / done / active / remaining)
+  // so the panel can render a live "X done · Y running · Z queued" counter and restore
+  // it on re-attach. Kept in its OWN key so it never clobbers the terminal `done:true`.
   const send = (data) => {
-    try { run.logs.push(data); if (run.logs.length > 300) run.logs.splice(0, run.logs.length - 300); } catch (e) {}
-    try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, data); } catch (e) { /* renderer gone */ }
+    const enriched = {
+      ...data,
+      counts: {
+        total: run.total, done: run.done, active: run.active.size,
+        remaining: Math.max(0, run.total - run.done - run.active.size),
+        concurrency: run.concurrency
+      }
+    };
+    try { run.logs.push(enriched); if (run.logs.length > 300) run.logs.splice(0, run.logs.length - 300); } catch (e) {}
+    try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, enriched); } catch (e) { /* renderer gone */ }
   };
   run.send = send;
   const emit = (profileId, level, message) => send({ runId, profileId, level, message, ts: Date.now() });
@@ -9291,9 +9312,10 @@ async function startWarmer(payload, event) {
       while (!run.aborted) {
         const i = cursor; cursor += 1;
         if (i >= ids.length) break;
+        run.active.add(String(ids[i])); // now warming — reflected in the live counter
         try { await warmOneProfile(ids[i], sites, opts, emit, run); }
         catch (e) { emit(ids[i], 'ERROR', e && e.message ? e.message : 'Warm-up failed.'); }
-        run.done += 1;
+        finally { run.active.delete(String(ids[i])); run.done += 1; }
       }
     };
     const width = Math.min(concurrency, ids.length);
@@ -9313,7 +9335,9 @@ async function startWarmer(payload, event) {
 // plus its recent log buffer so the console can be restored.
 function listActiveWarmers() {
   return [...warmerRuns.values()].map((r) => ({
-    runId: r.id, total: r.total, done: r.done, concurrency: r.concurrency,
+    runId: r.id, total: r.total, done: r.done, active: r.active ? r.active.size : 0,
+    remaining: Math.max(0, r.total - r.done - (r.active ? r.active.size : 0)),
+    concurrency: r.concurrency,
     loop: r.loop, headless: r.headless, sites: r.sitesCount, startedAt: r.startedAt,
     aborted: r.aborted, logs: Array.isArray(r.logs) ? r.logs.slice(-300) : []
   }));
@@ -9331,7 +9355,7 @@ async function stopWarmer(payload) {
     run.aborted = true;
     if (run.send) { try { run.send({ runId: run.id, level: 'WARN', message: force ? 'Force-stopping — closing sessions…' : 'Stopping after the current step…', ts: Date.now() }); } catch (e) { /* renderer gone */ } }
     if (force) {
-      for (const sid of run.launched) await closeProfileSession(sid).catch(() => {});
+      for (const sid of run.launched) await closeAnySession(sid).catch(() => {}); // engine-aware (Firefox too)
     }
   }
   return { stopped: true, force, runs: targets.length };
