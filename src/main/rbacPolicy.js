@@ -32,7 +32,11 @@ function rankOf(role) {
 // Can this role read the raw value of `kind`?
 function canReadRaw(role, kind) {
   const need = RAW_VALUE_MIN_RANK[kind];
-  if (!need) return true; // unknown kind ⇒ not classified as sensitive
+  // audit: an unrecognized `kind` (typo at a call site, or a newly-added secret
+  // kind someone forgot to register) previously defaulted to ALLOW, handing raw
+  // secrets to an Operator. Fail closed — an unknown kind is treated as maximally
+  // sensitive and denied to everyone below Owner.
+  if (!need) return rankOf(role) >= ROLE_RANK.OWNER;
   return rankOf(role) >= need;
 }
 
@@ -48,6 +52,12 @@ function redactForRole(role, kind, record) {
       // Connectivity stays usable in the UI; the secrets are blanked.
       if ('username' in out) out.username = out.username ? REDACTED : '';
       if ('password' in out) out.password = out.password ? REDACTED : '';
+      // audit: also blank COMBINED credential strings — a proxy is often carried
+      // as `host:port:user:pass` (proxyRaw / url / connectionString), which the
+      // per-field masking above would leak straight through.
+      for (const f of ['proxyRaw', 'url', 'connectionString']) {
+        if (out[f]) out[f] = REDACTED;
+      }
       out.hasUsername = Boolean(record.username);
       out.hasPassword = Boolean(record.password);
       break;
@@ -62,6 +72,11 @@ function redactForRole(role, kind, record) {
       out.cookieCount = Array.isArray(record.cookies) ? record.cookies.length : (record.cookieCount || 0);
       break;
     default:
+      // Unknown/unclassified sensitive kind (see canReadRaw fail-closed): blank the
+      // common secret-bearing fields defensively rather than passing them through.
+      for (const f of ['username', 'password', 'token', 'apiKey', 'secretKey', 'apiToken', 'proxyRaw', 'url', 'connectionString', 'cookies', 'value']) {
+        if (f in out && out[f]) out[f] = REDACTED;
+      }
       break;
   }
   return out;
