@@ -79,21 +79,49 @@ function configurePersonaBridge(deps) {
 // (both for future navigations and the currently-loaded document). Safe to call
 // once per page — exposeFunction throws if a name is already bound, which we
 // swallow. Chromium-only: this whole module is the puppeteer/CDP launch path.
+// Hardening (audit C2): exposeFunction binds into the page's MAIN world, so ANY
+// script on ANY page can call these — not just our widget. Three defenses:
+//   1. Origin is taken from the REAL committed page URL (targetPage.url()), never
+//      from a page-supplied argument, so a hostile page can't pass a random host
+//      to dump personas it hasn't "used" yet.
+//   2. Passwords are NEVER sent into page context: the list payload omits the
+//      password (only `hasPassword` is exposed), and password fields are filled
+//      server-side by persona id via the fill plan — the plaintext only ever
+//      reaches the DOM field the user is filling, exactly like a password manager.
+//   3. The fill plan is bounded (item count + a total typed-character budget) so a
+//      page can't tie up the CDP keyboard for hours with a giant value.
+const PERSONA_FILL_MAX_ITEMS = 40;
+const PERSONA_FILL_MAX_VALUE_LEN = 256;   // per page-supplied field value
+const PERSONA_FILL_MAX_TOTAL_CHARS = 4000; // whole-plan typing budget
+
+// Strip secrets from a persona before it is handed to page JS. Keeps the
+// non-secret fields the widget needs to fill (name/email/address/…) but replaces
+// the password with a boolean so the page can never read it in bulk.
+function toPublicPersona(p) {
+  if (!p || typeof p !== 'object') return null;
+  const { password, ...rest } = p;
+  return { ...rest, hasPassword: Boolean(password) };
+}
+
 async function attachPersonaAutofill(targetPage) {
   if (!personaBridge || !targetPage) return;
   // Respect the global Smart Autofill toggle (fail-open if the check throws).
   if (personaBridge.isEnabled) { try { if (!(await personaBridge.isEnabled())) return; } catch (e) { /* default on */ } }
+  // The real committed origin of THIS page — the single source of truth for which
+  // host personas are scoped to. Falls back to '' (bridge then returns nothing).
+  const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
   try {
-    await targetPage.exposeFunction('__sgPersonaList', async (url) => {
+    await targetPage.exposeFunction('__sgPersonaList', async () => {
       try {
-        const r = await personaBridge.listForUrl(String(url || ''));
-        return (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+        const r = await personaBridge.listForUrl(pageUrl());
+        const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+        return list.map(toPublicPersona).filter(Boolean);
       } catch (e) { return []; }
     });
   } catch (e) { /* already exposed on this page */ }
   try {
-    await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id, url) => {
-      try { await personaBridge.markUsed(String(id || ''), String(url || '')); return { ok: true }; }
+    await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id) => {
+      try { await personaBridge.markUsed(String(id || ''), pageUrl()); return { ok: true }; }
       catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
     });
   } catch (e) { /* already exposed on this page */ }
@@ -101,15 +129,32 @@ async function attachPersonaAutofill(targetPage) {
     // CDP "trusted" typing: the in-page widget stamps each matched field and hands
     // us a fill plan; we type it here with REAL keyboard events (isTrusted:true) and
     // human-like random delays — defeating isTrusted-based bot checks. Selects are
-    // set via the native picker. The widget falls back to in-page typing if this
-    // bridge is absent (e.g. Firefox).
+    // set via the native picker. Password items carry NO value — only a personaId —
+    // and the plaintext is resolved server-side (see defense #2 above).
     await targetPage.exposeFunction('__sgPersonaFillPlan', async (plan) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
+      const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
+      const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
-      for (const item of plan) {
+      let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
+      for (const item of items) {
         const sel = item && item.sel;
-        const value = item && item.value != null ? String(item.value) : '';
         if (!sel) continue;
+        let value;
+        if (item.kind === 'password') {
+          // Password value NEVER comes from the page — resolve it server-side by id.
+          const pid = item.personaId != null ? String(item.personaId) : '';
+          if (!pid || typeof personaBridge.getSecret !== 'function') continue;
+          if (!secretCache.has(pid)) {
+            try { const s = await personaBridge.getSecret(pid); secretCache.set(pid, (s && s.password != null) ? String(s.password) : ''); }
+            catch (e) { secretCache.set(pid, ''); }
+          }
+          value = secretCache.get(pid);
+          if (!value) continue;
+        } else {
+          value = item.value != null ? String(item.value) : '';
+          if (value.length > PERSONA_FILL_MAX_VALUE_LEN) value = value.slice(0, PERSONA_FILL_MAX_VALUE_LEN);
+        }
         try {
           if (item.kind === 'select') {
             await targetPage.select(sel, value).catch(() => {});
@@ -119,9 +164,11 @@ async function attachPersonaAutofill(targetPage) {
           const el = await targetPage.$(sel);
           if (!el) continue;
           await el.click({ clickCount: 3 }).catch(() => {}); // focus + select any existing text (first keystroke overwrites)
-          for (const ch of value) {
+          const typed = charBudget > 0 ? value.slice(0, charBudget) : '';
+          for (const ch of typed) {
             await targetPage.keyboard.type(ch, { delay: 50 + Math.floor(Math.random() * 100) });
           }
+          charBudget -= typed.length;
           await el.evaluate((node) => { try { node.dispatchEvent(new Event('change', { bubbles: true })); if (node.blur) node.blur(); } catch (e) {} }).catch(() => {});
           await el.dispose().catch(() => {});
           filled += 1;
@@ -1795,6 +1842,19 @@ async function launchProfileSession(options = {}) {
     geoMatchEnabled = true
   } = options;
 
+  // Dedupe (audit: double-launch orphans Chrome). A profile has exactly ONE
+  // session (sessionId === String(profileId)). A rapid double-launch — a
+  // double-click, or the same profileId appearing twice in a batch — would
+  // otherwise open a SECOND Chrome on the same userDataDir (singleton-lock
+  // conflict) and overwrite the activeSessions entry, leaving the first browser
+  // unreachable and unclosable. Return the running session instead of relaunching.
+  if (profileId != null) {
+    const existing = activeSessions.get(String(profileId));
+    if (existing) {
+      return { sessionId: String(profileId), userDataDir: existing.userDataDir, wsEndpoint: existing.wsEndpoint, alreadyRunning: true };
+    }
+  }
+
   const resolvedProxy = parseProxyInput(options.proxy || options.proxyInfoString);
   const proxyLabel = resolvedProxy ? `${resolvedProxy.type} ${resolvedProxy.host}:${resolvedProxy.port}` : 'Direct (No Proxy)';
 
@@ -2002,6 +2062,15 @@ async function launchProfileSession(options = {}) {
 
   const browser = await puppeteer.launch(launchOptions);
 
+  // Guard the ENTIRE post-launch setup (audit: launch-failure orphans Chrome).
+  // Until the session is registered in activeSessions (and its 'disconnected'
+  // cleanup wired), this browser is tracked NOWHERE else — so any throw here
+  // (browser.version()/pages()/newPage() and generateStartPage are the classic
+  // offenders) would leave a live Chrome running forever with no handle to close
+  // it. On failure, tear it down and rethrow.
+  let sessionRegistered = false;
+  try {
+
   // CRITICAL: stop puppeteer-extra-stealth from auto-injecting its ~11 evasions
   // into EVERY new tab. On the transient New Tab Page (chrome://new-tab-page),
   // the target's CDP session closes before injection finishes, so each evasion
@@ -2200,6 +2269,10 @@ async function launchProfileSession(options = {}) {
   // every tab/popup opened later, so new windows are never left un-spoofed
   // (leaking the real UA / timezone / devices). Idempotent per page.
   const appliedPages = new WeakSet();
+  // audit: applyToPage previously swallowed ALL injection errors, so a profile
+  // could report "launched" while running with the REAL identity. Track whether
+  // the identity setup on the primary tab actually completed and surface it.
+  let injectionDegraded = false;
   const applyToPage = async (targetPage, isNewTab = false) => {
     if (!targetPage || appliedPages.has(targetPage)) return;
     // Never touch browser-internal pages (New Tab Page, settings, devtools). There
@@ -2298,10 +2371,21 @@ async function launchProfileSession(options = {}) {
       // Smart Autofill — expose the persona bridge + inject the in-page widget on
       // this tab and its future navigations (no-op unless the bridge is configured).
       await attachPersonaAutofill(targetPage);
-    } catch (e) { /* best-effort per page — never block the launch */ }
+    } catch (e) {
+      // Per-page best-effort — never block the launch — but no longer SILENT:
+      // record that this tab's identity setup did not fully complete so the
+      // caller/UI can warn instead of implying protection that isn't there.
+      if (!isNewTab) injectionDegraded = true;
+      console.error('[SG][fingerprint] injection error on', (isNewTab ? 'new tab' : 'primary tab'),
+        'for profile', profileId, title || '', '—', (e && e.message) || e);
+    }
   };
 
   await applyToPage(page);
+  if (injectionDegraded) {
+    console.error('[SG][fingerprint] WARNING: profile', (title || profileId),
+      'launched WITHOUT full fingerprint masking — the real UA/timezone/devices may be exposed.');
+  }
 
   // NEW tabs/popups: the CDP auto-attach above already injects the full JS
   // fingerprint (cores/RAM/GPU/screen/WebRTC/etc.) before any page script runs in
@@ -2388,8 +2472,10 @@ async function launchProfileSession(options = {}) {
     pid: sessionPid,
     title: title || `Profile ${sessionId}`,
     proxyLabel,
+    injectionOk: !injectionDegraded,
     createdAt: new Date()
   });
+  sessionRegistered = true;
   browser.on('disconnected', () => {
     activeSessions.delete(sessionId);
     // Classify the disconnect: app shutdown and explicit user-close are clean;
@@ -2399,9 +2485,17 @@ async function launchProfileSession(options = {}) {
     else if (intentionalClose.has(sessionId)) { reason = 'user'; intentionalClose.delete(sessionId); }
     emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
   });
+
+  } catch (launchErr) {
+    // Post-launch setup failed before the session was registered. Close the
+    // now-orphaned browser (best-effort) and rethrow so the caller reports failure.
+    if (!sessionRegistered) { try { await browser.close(); } catch (e) { /* already gone */ } }
+    throw launchErr;
+  }
+
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
 
-  return { sessionId, userDataDir, wsEndpoint };
+  return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded };
 }
 
 // Drive an already-open session's primary page to a URL. Used by the Pro
@@ -2738,21 +2832,41 @@ function stopSyncGroup(masterSessionId) {
   return { stopped: true };
 }
 
+// Close a browser but NEVER hang the caller (audit: close() had no timeout and
+// never force-killed). A wedged Chrome can leave close() pending forever, which
+// would block app quit. Race close() against a timeout; if it doesn't finish,
+// SIGKILL the tracked OS process so the app can still exit cleanly.
+async function closeBrowserWithTimeout(session, timeoutMs = 8000) {
+  if (!session || !session.browser) return;
+  const browser = session.browser;
+  let pid = session.pid || null;
+  if (!pid) { try { const p = browser.process(); pid = p ? p.pid : null; } catch (e) { pid = null; } }
+  let timer = null;
+  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), timeoutMs); });
+  const closed = browser.close().then(() => 'closed', () => 'error');
+  const outcome = await Promise.race([closed, timeout]);
+  if (timer) clearTimeout(timer);
+  if (outcome !== 'closed') {
+    try { const p = browser.process(); if (p && !p.killed) p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+    if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
+  }
+}
+
 async function closeProfileSession(sessionId) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
   if (!session) return { closed: false };
   intentionalClose.add(id); // deliberate close — the disconnect must not be read as a crash
-  try { await session.browser.close(); } catch (e) {}
+  await closeBrowserWithTimeout(session);
   activeSessions.delete(id);
   return { closed: true };
 }
 
 async function closeAllProfileSessions() {
   shuttingDown = true; // app is quitting — these closes are not crashes; SessionState rows stay 'running' for restore
-  for (const session of activeSessions.values()) {
-    try { await session.browser.close(); } catch (e) {}
-  }
+  // Close every session concurrently, each with its own timeout+force-kill, so one
+  // wedged Chrome can't stall the whole quit sequence behind the others.
+  await Promise.all(Array.from(activeSessions.values()).map((s) => closeBrowserWithTimeout(s)));
   activeSessions.clear();
 }
 

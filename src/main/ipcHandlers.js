@@ -419,6 +419,29 @@ function sanitizeDataDirName(value) {
   return base || `profile-${crypto.randomUUID()}`;
 }
 
+// Reject internal / loopback / link-local targets for a main-process outbound
+// request whose URL came from the renderer (audit: SSRF via rotateProxyIp). This
+// is a best-effort string check that blocks the obvious internal hosts; a
+// determined DNS-rebind can still resolve a public name to a private IP, so
+// callers should also keep request timeouts tight.
+function assertPublicHttpUrl(rawUrl, label = 'URL') {
+  let u;
+  try { u = new URL(String(rawUrl)); } catch (e) { throw new Error(`The ${label} is not a valid URL.`); }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error(`The ${label} must be an http(s) URL.`);
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  const isPrivate =
+    host === 'localhost' || host === '0.0.0.0' || host === '::1' || host === '::' ||
+    /\.local$/.test(host) ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    /^(fc|fd)[0-9a-f]{2}:/.test(host) || // unique-local IPv6
+    /^fe80:/.test(host);                 // link-local IPv6
+  if (isPrivate) throw new Error(`The ${label} may not point at an internal or loopback address.`);
+}
+
 function buildProxyInfoString(proxy) {
   if (!proxy) return null;
   const username = optionalString(proxy.username);
@@ -481,8 +504,13 @@ function serializeProxy(proxy) {
 // missing link, malformed URL, or network failure all return/throw cleanly and
 // never touch the live proxy credentials.
 async function rotateProxyIp(payload) {
+  // audit: had NO authorization and fired a main-process axios.get() at a
+  // renderer-supplied URL (SSRF). Require the manage permission, verify the caller
+  // can access THIS proxy, and reject internal/loopback rotation targets.
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.proxyId);
+  await assertCanAccessProxy(id);
   const db = getPrisma();
   const proxy = await db.proxy.findUnique({ where: { id } });
   if (!proxy) throw new Error('Proxy not found.');
@@ -496,6 +524,7 @@ async function rotateProxyIp(payload) {
   }
   if (!rotationUrl) throw new Error('No IP rotation link is configured for this proxy.');
   if (!/^https?:\/\//i.test(rotationUrl)) throw new Error('The rotation link must be an http(s) URL.');
+  assertPublicHttpUrl(rotationUrl, 'rotation link');
 
   const axios = require('axios');
   const startedAt = Date.now();
@@ -1091,8 +1120,13 @@ async function pickRotationProxy(db, profileId) {
 }
 
 async function batchAddProxies(payload) {
+  // audit: bulk proxy import bypassed the manage gate + quota and created rows
+  // with no owner (invisible to non-super members). Match createProxy's gating.
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
+  await assertWithinLimit('proxies');
+  const proxyStampId = ownerStampId();
   const raw = requiredString(input.raw, 'Raw proxy batch');
   const fallbackType = parseProxyType(input.type || 'HTTP');
   const namePrefix = optionalString(input.namePrefix);
@@ -1119,7 +1153,8 @@ async function batchAddProxies(payload) {
           host: parsed.host,
           port: parsed.port,
           username: parsed.username,
-          password: parsed.password
+          password: parsed.password,
+          ownerMemberId: proxyStampId
         }
       });
       result.created.push(serializeProxy(created));
@@ -1461,6 +1496,7 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
 });
 
 async function syncVendorPool(payload) {
+  await requirePermission('proxies.manage'); // audit: vendor sync creates proxies + makes vendor calls, was ungated
   const input = requireObject(payload);
   const vendorKey = requiredString(input.provider, 'Provider').toLowerCase();
   if (!PROXY_VENDORS[vendorKey]) throw new Error('Unknown proxy provider.');
@@ -2283,8 +2319,12 @@ async function reconcileReferences(db, fields) {
 }
 
 async function cloneProfile(payload) {
+  // audit: this created a profile directly, skipping the create-permission and
+  // quota gates that createProfile enforces. Apply the same gates here.
+  await requirePermission('profiles.create');
   const input = requireObject(payload);
   const db = getPrisma();
+  await assertWithinLimit('profiles');
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
   const reroll = Boolean(input.reroll);
@@ -2302,7 +2342,11 @@ async function cloneProfile(payload) {
   // Preserve the source's device class on reroll so a mobile profile stays mobile.
   const isMobile = src.deviceClass === 'mobile';
   const fingerprint = reroll ? generateFingerprint({ deviceClass: src.deviceClass }) : {};
-  const data = { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac() };
+  // Stamp ownership to the current member (audit: the clone previously inherited
+  // the source's ownerMemberId/assignedMemberId, so cloning a shared profile
+  // produced a copy owned by someone else).
+  const cloneStampId = ownerStampId();
+  const data = { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac(), ownerMemberId: cloneStampId, assignedMemberId: cloneStampId };
   // Desktop machine names are randomized per copy; a mobile profile keeps its device
   // model (e.g. Pixel 7) so the UA / Client-Hints model stays coherent.
   if (!isMobile) data.deviceName = randomDeviceName();
@@ -2337,8 +2381,11 @@ async function deleteTemplate(payload) {
 }
 
 async function createProfileFromTemplate(payload) {
+  // audit: created a profile directly, bypassing create-permission + quota.
+  await requirePermission('profiles.create');
   const input = requireObject(payload);
   const db = getPrisma();
+  await assertWithinLimit('profiles');
   const templateId = parseId(input.templateId, 'templateId');
   const tpl = await db.template.findUnique({ where: { id: templateId } });
   if (!tpl) throw new Error('Template not found.');
@@ -2355,7 +2402,9 @@ async function createProfileFromTemplate(payload) {
   // A mobile template keeps its device model (e.g. Pixel 7) so the UA / Client-Hints
   // model stays coherent; desktop profiles get a randomized machine name per profile.
   const isMobile = fields.deviceClass === 'mobile';
-  const data = { ...fields, title, dataDirName, macAddress: randomMac() };
+  // Stamp ownership to the current member (templates carry no owner).
+  const tplStampId = ownerStampId();
+  const data = { ...fields, title, dataDirName, macAddress: randomMac(), ownerMemberId: tplStampId, assignedMemberId: tplStampId };
   if (!isMobile) data.deviceName = randomDeviceName();
   const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return serializeProfile(created);
@@ -2880,6 +2929,7 @@ async function updateProfile(payload) {
 }
 
 async function deleteProfile(payload) {
+  await requirePermission('profiles.delete'); // audit: was scope-only, no rank gate
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -2914,6 +2964,7 @@ async function restoreProfile(payload) {
 }
 
 async function purgeProfile(payload) {
+  await requirePermission('profiles.purge'); // audit: irreversible delete, was ungated
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -2934,6 +2985,7 @@ async function purgeProfile(payload) {
 }
 
 async function bulkDeleteProfiles(payload) {
+  await requirePermission('profiles.delete'); // audit: was scope-only, no rank gate
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
@@ -2970,6 +3022,7 @@ async function bulkRestoreProfiles(payload) {
 }
 
 async function bulkPurgeProfiles(payload) {
+  await requirePermission('profiles.purge'); // audit: irreversible delete, was ungated
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
@@ -4240,8 +4293,12 @@ const EXPORT_COLUMNS = [
 
 async function gatherExport() {
   const db = getPrisma();
+  // audit: this exported EVERY profile's raw proxy/account secrets regardless of
+  // the caller's subtree, bypassing tenant isolation. Scope to the member's own
+  // visible profiles (Super Admin / single-user stay unrestricted).
+  const where = await scopedProfileWhere({ deletedAt: null });
   const profiles = await db.profile.findMany({
-    where: { deletedAt: null },
+    where,
     include: { proxy: true, group: true },
     orderBy: { createdAt: 'asc' }
   });
@@ -4631,6 +4688,10 @@ async function readProxyProviderCredMap() {
 }
 
 async function getProxyProviderCreds(payload) {
+  // audit: returned DECRYPTED vendor API tokens/passwords to any member. These are
+  // workspace-level provider credentials — gate to Owner / Super Admin, matching
+  // the write path below.
+  await requireOwnerOrSuper('view proxy provider credentials');
   const input = requireObject(payload);
   const provider = requiredString(input.provider, 'provider').toLowerCase();
   const map = await readProxyProviderCredMap();
@@ -4644,6 +4705,7 @@ async function getProxyProviderCreds(payload) {
 }
 
 async function saveProxyProviderCreds(payload) {
+  await requireOwnerOrSuper('change proxy provider credentials');
   const input = requireObject(payload);
   const provider = requiredString(input.provider, 'provider').toLowerCase();
   const map = await readProxyProviderCredMap();
@@ -4865,6 +4927,7 @@ function serializePersona(p) {
 // Bulk-insert an already-mapped array of personas (the Excel/CSV reading and
 // column-mapping happen in the renderer; this handler just persists the result).
 async function importPersonas(payload) {
+  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
   const input = requireObject(payload);
   const list = Array.isArray(input.personas) ? input.personas : [];
   if (list.length === 0) throw new Error('No personas were provided to import.');
@@ -4875,12 +4938,14 @@ async function importPersonas(payload) {
 }
 
 async function createPersonaManual(payload) {
+  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
   const data = sanitizePersonaInput(payload);
   const created = await getPrisma().personaData.create({ data });
   return serializePersona(created);
 }
 
 async function getAllPersonas() {
+  await requirePermission('vault.manage'); // audit: returns plaintext passwords; owner-only
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
   return { personas: rows.map(serializePersona) };
 }
@@ -4893,6 +4958,17 @@ async function getAvailablePersonasForUrl(payload) {
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
   const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).includes(host));
   return { hostname: host, personas: available.map(serializePersona) };
+}
+
+// Server-side ONLY: resolve a persona's plaintext password by id for the trusted
+// CDP autofill bridge. Never exposed as an IPC channel and never returned to the
+// renderer or page — the value is typed into the target field in the main process
+// (audit C2: passwords must not cross into page JS via the list payload).
+async function getPersonaSecretById(id) {
+  const pid = optionalString(id);
+  if (!pid) return null;
+  const row = await getPrisma().personaData.findUnique({ where: { id: pid } });
+  return row ? { password: row.password || '' } : null;
 }
 
 // Append a domain to a persona's usedOnUrls (deduped) so it stops being offered there.
@@ -4913,6 +4989,7 @@ async function markPersonaUsed(payload) {
 // Reset usedOnUrls to "[]" for specific personas ({ ids }) or all ({ all: true }),
 // making them available on every domain again.
 async function clearPersonaUsed(payload) {
+  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
   const input = requireObject(payload);
   const db = getPrisma();
   if (input.all === true) {
@@ -4927,6 +5004,7 @@ async function clearPersonaUsed(payload) {
 
 // Delete specific personas ({ ids }) or clear the whole vault ({ all: true }).
 async function deletePersonas(payload) {
+  await requirePermission('vault.manage'); // audit: could wipe the whole vault ungated
   const input = requireObject(payload);
   const db = getPrisma();
   if (input.all === true) {
@@ -4953,6 +5031,7 @@ function sanitizePersonaPatch(raw) {
 }
 
 async function updatePersona(payload) {
+  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
   const input = requireObject(payload);
   const id = requiredString(input.id, 'Persona id');
   const data = sanitizePersonaPatch(input);
@@ -5931,6 +6010,18 @@ async function switchMember(payload) {
         const err = new Error('Enter this member’s password to switch into their account.'); err.code = 'NEED_PASSWORD'; throw err;
       }
     }
+  } else if (!actor) {
+    // audit: with NO active actor (post-logout, or the member picker after a vault
+    // unlock) the whole block above was skipped, so anyone could assume a
+    // password-protected identity (e.g. OWNER) with only an optional PIN. If the
+    // target has a login password, require it — password-less members still switch
+    // freely so the normal boot/picker flow is unchanged.
+    if (m.passwordHash) {
+      const pw = String(input.password || '');
+      if (!verifySecret(pw, m.passwordSalt, m.passwordHash)) {
+        const err = new Error('Enter this member’s password to sign in.'); err.code = 'NEED_PASSWORD'; throw err;
+      }
+    }
   }
 
   // Per-member PIN (a secondary lock) is still honored for everyone.
@@ -5966,6 +6057,15 @@ async function superAdminSetup(payload) {
   if (existing) {
     if (!verifySecret(String(input.currentPassword || ''), existing.salt, existing.hash)) {
       const err = new Error('Enter your current Super Admin password to change it.'); err.code = 'BAD_CREDS'; throw err;
+    }
+  } else {
+    // First-run claim (no Super Admin set yet). audit: a lower-privileged member
+    // who is already signed in could seize the top role here. Allow the claim only
+    // when no member is active (genuine first run / pre-login) or the active member
+    // is the Owner.
+    const actor = await getActiveMember();
+    if (actor && actor.role !== 'OWNER' && actor.role !== 'SUPER_ADMIN') {
+      const err = new Error('Only the workspace Owner can set up the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
     }
   }
   const identifier = (optionalString(input.identifier) || permissions.DEFAULT_SUPER_ADMIN_IDENTIFIER).toLowerCase();
@@ -9098,6 +9198,9 @@ async function getProfile2faToken(payload) {
 async function systemHumanType(payload) {
   const input = requireObject(payload);
   const sessionId = requiredString(input.sessionId, 'sessionId');
+  // audit: this drove keystrokes into ANY session id with no access check. Session
+  // ids equal profile ids, so verify the caller may access that profile first.
+  if (/^\d+$/.test(sessionId)) await assertCanAccessProfile(Number.parseInt(sessionId, 10));
   const text = String(input.text == null ? '' : input.text);
   return humanType(sessionId, text, { minDelay: input.minDelay, maxDelay: input.maxDelay });
 }
@@ -9242,6 +9345,9 @@ function registerIpcHandlers() {
   configurePersonaBridge({
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
     markUsed: (id, url) => markPersonaUsed({ id, url }),
+    // Resolve a persona's plaintext password server-side by id (audit C2): the
+    // password is typed via the trusted CDP bridge and never crosses into page JS.
+    getSecret: (id) => getPersonaSecretById(id),
     // Gate injection on the global Smart Autofill toggle (default on; fail-open).
     isEnabled: async () => { try { const g = await getGlobalSettings(); return g?.smartAutofill?.enabled !== false; } catch (e) { return true; } }
   });

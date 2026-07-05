@@ -242,7 +242,30 @@ function configureSessionSecurity() {
   session.defaultSession.setDevicePermissionHandler(() => false);
 }
 
+// --- SINGLE-INSTANCE LOCK ---
+// Only ONE SoftGlaze instance may own the workspace at a time. This is critical,
+// not cosmetic: startup runs killOrphanedBrowsers(), whose command-line scan
+// taskkills EVERY Chrome referencing softglaze_profiles. A second instance would
+// therefore kill the FIRST instance's live profile sessions mid-use — the classic
+// "the browser closes by itself" report. If we can't get the lock, quit before
+// whenReady runs any cleanup; if we hold it, a second launch just focuses us.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(async () => {
+  // Second instance lost the lock and is quitting — do NO cleanup/launch work
+  // (guards against whenReady racing app.quit() above).
+  if (!hasSingleInstanceLock) return;
   // Always clean up orphaned processes before starting
   killOrphanedBrowsers();
 

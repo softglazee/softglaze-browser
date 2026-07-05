@@ -281,10 +281,13 @@ function personaAutofillMain() {
         });
         if (nameEl) matches.push({ el: nameEl, value: [p.firstName, p.lastName].filter(Boolean).join(' '), kind: 'text' });
       }
-      // Passwords: fill EVERY password field (covers "confirm password").
-      if (p.password) {
+      // Passwords: fill EVERY password field (covers "confirm password"). The
+      // plaintext is NEVER shipped to page JS (audit C2) — the list payload only
+      // tells us `hasPassword`, and the backend types the real value server-side
+      // by persona id via the trusted CDP bridge. Kind 'password' carries no value.
+      if (p.hasPassword) {
         var pws = all.filter(function (e) { return (e.type || '').toLowerCase() === 'password' && used.indexOf(e) < 0; });
-        for (var k = 0; k < pws.length; k++) { used.push(pws[k]); matches.push({ el: pws[k], value: String(p.password), kind: 'text' }); }
+        for (var k = 0; k < pws.length; k++) { used.push(pws[k]); matches.push({ el: pws[k], kind: 'password', personaId: p.id }); }
       }
 
       // 2) Fill. Prefer CDP trusted typing when the host exposes the bridge
@@ -295,7 +298,11 @@ function personaAutofillMain() {
       if (trusted && matches.length) {
         var plan = matches.map(function (m, idx) {
           try { m.el.setAttribute('data-sgfill', String(idx)); } catch (e) {}
-          return { sel: '[data-sgfill="' + idx + '"]', value: m.value, kind: m.kind };
+          var it = { sel: '[data-sgfill="' + idx + '"]', kind: m.kind };
+          // Password items carry only the persona id; the backend resolves the
+          // plaintext server-side. All other kinds carry their (non-secret) value.
+          if (m.kind === 'password') it.personaId = m.personaId; else it.value = m.value;
+          return it;
         });
         try {
           var r = await window.__sgPersonaFillPlan(plan);
@@ -304,12 +311,17 @@ function personaAutofillMain() {
         matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} });
       }
       if (!trusted) {
+        // Fallback in-page typing (bridge absent/errored). Password fields can't be
+        // filled here because the plaintext never entered the page — skip them.
+        var skippedSecret = false;
         for (var j = 0; j < matches.length; j++) {
           var m = matches[j];
+          if (m.kind === 'password') { skippedSecret = true; continue; }
           if (m.kind === 'select') setSelect(m.el, m.value); else await typeInto(m.el, m.value);
           filled++;
           await delay(100 + rand(0, 140));
         }
+        if (skippedSecret && !filled) { toast('Autofill bridge unavailable — could not fill password on this page.'); }
       }
       footer.hidden = false;
       toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '. Review, then mark as used.') : 'No matching fields found on this page.');
