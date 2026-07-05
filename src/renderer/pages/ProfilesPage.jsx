@@ -358,7 +358,8 @@ const initialProfileData = {
   browserSettings: {
     matchTimezone: true, allowChromeSignIn: false, offerTranslate: false, disableDevTools: false, disableExtInstall: false,
     enableVirtualCamera: false, enableMobileSim: false, startupAction: 'lastPage', onlyOpenWithProxy: false,
-    onlyOpenExtLoaded: false, checkCountryMatch: false, secureAccess: false, disableVideos: false, disableImagesLimit: '0'
+    onlyOpenExtLoaded: false, checkCountryMatch: false, secureAccess: false, disableVideos: false, disableImagesLimit: '0',
+    loadExtensions: false
   },
   randomFingerprint: false,
 };
@@ -540,6 +541,7 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [launchQueue, setLaunchQueue] = useState(false); // true = launch selected one-by-one (queue)
   const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
@@ -769,6 +771,10 @@ export default function ProfilesPage() {
       platformAccounts: profile.platformAccounts || [],
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
       proxyType: profile.proxyType || 'HTTP',
+      // Merge saved per-profile browser settings over the defaults so newly added keys
+      // (e.g. loadExtensions) always have a boolean value — keeping their checkboxes
+      // controlled and letting the flag round-trip on save.
+      browserSettings: { ...initialProfileData.browserSettings, ...(profile.browserSettings || {}) },
       // Pre-select the linked saved proxy so editing shows it (and re-saving keeps
       // PROFILE_PROXY instead of silently reverting to DIRECT).
       proxySetting: profile.proxyId ? 'Saved Proxies' : 'Custom',
@@ -940,7 +946,9 @@ export default function ProfilesPage() {
   async function handleBulkLaunch() {
     if (selectedIds.size === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkLaunch([...selectedIds]); await refreshSessions(); }
+    // Queue mode → concurrency 1 (one-by-one). Otherwise the main process uses the
+    // configured launch-concurrency cap (launch several at once).
+    try { await softglazeApi.profiles.bulkLaunch([...selectedIds], launchQueue ? { concurrency: 1 } : undefined); await refreshSessions(); }
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); setLaunchProgress(null); }
   }
@@ -1676,6 +1684,7 @@ export default function ProfilesPage() {
                           <CustomCheckbox label={t('advanced.offerTranslate')} checked={pd.browserSettings.offerTranslate} onChange={v => updateNestedPd('browserSettings', 'offerTranslate', v)} />
                           <CustomCheckbox label={t('advanced.disableDevTools')} checked={pd.browserSettings.disableDevTools} onChange={v => updateNestedPd('browserSettings', 'disableDevTools', v)} />
                           <CustomCheckbox label={t('advanced.disableExtInstall')} checked={pd.browserSettings.disableExtInstall} onChange={v => updateNestedPd('browserSettings', 'disableExtInstall', v)} />
+                          <CustomCheckbox label={t('advanced.loadExtensions', 'Load SoftGlaze extensions (uses Chrome-for-Testing)')} checked={pd.browserSettings.loadExtensions} onChange={v => updateNestedPd('browserSettings', 'loadExtensions', v)} />
                           <CustomCheckbox label={t('advanced.enableVirtualCamera')} checked={pd.browserSettings.enableVirtualCamera} onChange={v => updateNestedPd('browserSettings', 'enableVirtualCamera', v)} />
                           <CustomCheckbox label={t('advanced.enableMobileSim')} checked={pd.browserSettings.enableMobileSim} onChange={v => updateNestedPd('browserSettings', 'enableMobileSim', v)} />
 
@@ -1899,7 +1908,10 @@ export default function ProfilesPage() {
               {t('bulk.launching', { done: launchProgress.done, total: launchProgress.total })}
             </span>
           )}
-          <div className="flex gap-2 ml-auto">
+          <div className="flex items-center gap-2 ml-auto">
+            <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 cursor-pointer select-none" title={t('bulk.queueTitle', 'Launch the selected profiles one at a time (a queue) instead of several at once.')}>
+              <input type="checkbox" checked={launchQueue} onChange={(e) => setLaunchQueue(e.target.checked)} disabled={bulkBusy} className="accent-primary" /> {t('bulk.queue', 'Queue')}
+            </label>
             <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</Button>
             <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
