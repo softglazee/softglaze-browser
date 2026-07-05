@@ -402,23 +402,34 @@ function osTokens(os) {
 
 function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
   const os = osTokens(profile.os);
-  // Per-profile reported version: when the profile pins a concrete browserVersion
-  // (the fingerprint generator assigns one per profile so every UA is unique), we
-  // report THAT major/full in the UA string + Client-Hints. When it's blank/'Auto'
-  // (legacy profiles, mobile) we fall back to the real launched binary's version for
-  // maximum UA/TLS coherence. UA reduction freezes the UA to "Chrome/<major>.0.0.0",
-  // so the major is what differentiates two profiles' User-Agents.
+  // COHERENCE GUARD (anti-detect critical). The reported Chrome major MUST equal the
+  // major of the binary we actually launched. TLS ClientHello (JA3/JA4), the HTTP/2
+  // SETTINGS frame, and JS-engine feature detection all come from the REAL binary and
+  // cannot be spoofed — so a UA / Client-Hints major that disagrees with them is a hard,
+  // deterministic bot signal. The fingerprint generator pins a per-profile
+  // browserVersion drawn from a fixed pool; on a machine whose real Chrome has
+  // auto-updated PAST that pool, honoring the pin would advertise e.g. Chrome 149 over a
+  // real-150+ handshake — the exact mismatch this guard closes.
+  //
+  // So whenever we can read the launched binary's version (the normal case) we report
+  // THAT major AND full version — every layer then agrees. The profile's pin is used
+  // only as a best-guess fallback when browser.version() is unreadable (essentially
+  // never after a successful launch). Build/patch digits are not observable on the wire,
+  // so reporting the binary's real full version is both coherent and safe. Two profiles
+  // on the same real Chrome build therefore share a UA — which is exactly what two real
+  // Chrome users do; a fake-unique major that contradicts the TLS is far more detectable.
   const pinned = String(profile.browserVersion || '').trim();
   const pinnedFull = /^\d+\.\d+\.\d+\.\d+$/.test(pinned) ? pinned : '';
   const pinnedMajor = (pinned && pinned.toLowerCase() !== 'auto')
     ? Number.parseInt((pinned.match(/\d+/) || [])[0] || '', 10)
     : NaN;
-  const usePinned = Number.isFinite(pinnedMajor) && pinnedMajor > 0;
-  const major = usePinned ? pinnedMajor : realMajor;
-  const fullVersion = pinnedFull
-    ? pinnedFull
-    : (usePinned ? `${pinnedMajor}.0.0.0`
-      : (realFullVersion && /^\d+\.\d/.test(realFullVersion) ? realFullVersion : `${major}.0.0.0`));
+  const binaryVersionKnown = /^\d+\.\d/.test(String(realFullVersion || ''));
+  const major = binaryVersionKnown
+    ? realMajor
+    : ((Number.isFinite(pinnedMajor) && pinnedMajor > 0) ? pinnedMajor : realMajor);
+  const fullVersion = binaryVersionKnown
+    ? realFullVersion
+    : (pinnedFull || `${major}.0.0.0`);
 
   // Chromium-family identity layer. Edge/Brave/Opera/Vivaldi/Yandex share Chrome's
   // engine, so we keep the REAL Chromium major everywhere (Chrome/<M>, "Chromium"
@@ -3351,6 +3362,10 @@ module.exports = {
   importStoredCookies,
   listAvailableBrowsers,
   resolveBrowserExecutable,
+  // Pure helper exported for regression tests: builds the reported UA + Client-Hints
+  // bundle. Tests assert the coherence guard clamps the reported major to the launched
+  // binary (guarding against the "reported 149 vs real 150+" TLS mismatch).
+  buildUserAgentBundle,
   // Debug hook (used by test harnesses) — returns the live puppeteer Browser.
   __browserFor: (sessionId) => {
     const s = activeSessions.get(String(sessionId));
