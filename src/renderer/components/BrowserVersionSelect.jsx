@@ -134,7 +134,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
 
           {items.map((it) => {
             const d = it.download;
-            const busy = d && ['downloading', 'extracting', 'installing', 'queued'].includes(d.state);
+            const busy = d && ['downloading', 'extracting', 'installing', 'verifying', 'queued'].includes(d.state);
             const halted = d && (d.state === 'paused' || d.state === 'interrupted');
             const failed = d && d.state === 'error';
             const label = `${isFirefox ? 'Firefox' : 'Chrome'} ${it.major}`;
@@ -166,7 +166,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
                       <span className="block h-full bg-primary transition-all duration-300" style={{ width: `${d.percent || 0}%` }} />
                     </span>
                     <span className="text-[10px] text-muted tabular-nums w-9 text-right">
-                      {d.state === 'installing' || d.state === 'extracting' ? t('versionSelect.statusInstalling') : d.state === 'queued' ? t('versionSelect.statusQueued') : `${d.percent || 0}%`}
+                      {d.state === 'installing' || d.state === 'extracting' || d.state === 'verifying' ? t('versionSelect.statusInstalling') : d.state === 'queued' ? t('versionSelect.statusQueued') : `${d.percent || 0}%`}
                     </span>
                   </span>
                 ) : (
