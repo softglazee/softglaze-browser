@@ -44,8 +44,13 @@ function normalizeDesktopOs(os) {
   return null;
 }
 
-// Resolve the reported Chrome version: honor an explicit pin (full version or a bare
-// major like "142"), otherwise pick one at random from the recent-stable pool.
+// Resolve the profile's *preferred* Chrome version: honor an explicit pin (full version
+// or a bare major like "142"), otherwise pick one at random from the recent-stable pool.
+// NOTE: this is a preference/display value only. At launch the engine's coherence guard
+// (buildUserAgentBundle) overrides the reported major/full with the ACTUAL launched
+// binary's version whenever it differs, so the wire identity always matches the real
+// TLS/JA4 — this pin is used verbatim only when a matching binary is launched (e.g. a
+// Chrome-for-Testing build of the pinned version) or when the binary version is unreadable.
 function pickChromeVersion(pinned) {
   const p = String(pinned || '').trim();
   if (p && p.toLowerCase() !== 'auto') {
@@ -118,11 +123,14 @@ const LINUX_GPU = [
   ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 6600 (RADV NAVI23), OpenGL 4.6)']
 ];
 
-// Recent Chrome stable full versions. Distributed across a batch so each profile's
-// reported User-Agent major differs (UA reduction freezes minor/build/patch to .0.0.0
-// in the UA string, so the MAJOR is what makes a UA unique; full versions feed the
-// Sec-CH-UA-Full-Version-List client hint). The launch engine reads profile.browserVersion
-// and reports THIS version instead of the binary's, so two profiles never share a UA.
+// Recent Chrome stable full versions, one per major. A profile is pinned one of these
+// as its *preferred* reported version (a batch can distribute them for a plausible
+// display spread). This is NOT the final wire identity: the launch engine's coherence
+// guard reports the ACTUALLY-launched binary's major/full version instead whenever they
+// differ, because a UA major that disagrees with the real TLS/JA4 handshake is a hard
+// bot signal. So keeping this pool current is only cosmetic (it affects the stored/
+// displayed version and the Chrome-for-Testing fallback target) — a stale pool degrades
+// safely to "report the real binary", never to an incoherent mismatch. Bump periodically.
 const CHROME_VERSIONS = [
   '140.0.7339.208', '141.0.7390.108', '142.0.7444.176', '143.0.7499.96',
   '144.0.7559.133', '145.0.7612.88', '146.0.7673.55', '147.0.7728.144',

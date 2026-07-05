@@ -16,6 +16,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
 // `app` is a string path (not the API object) when required outside Electron
 // (e.g. unit tests), so `app && app.isPackaged` is a safe runtime guard.
 const { app } = require('electron');
@@ -104,10 +105,17 @@ async function initResumableState() {
 function httpsGet(url, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
-    const req = https.get(url, { headers: { 'User-Agent': 'SoftGlaze' } }, (res) => {
+    // audit: https-only + vendor-host allowlist on the URL and every redirect.
+    let target;
+    try { target = assertAllowedDownloadUrl(url, HOSTS.chrome, 'Chrome download'); }
+    catch (e) { return reject(e); }
+    const req = https.get(target, { headers: { 'User-Agent': 'SoftGlaze' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
-        return httpsGet(res.headers.location, redirects + 1).then(resolve, reject);
+        let next;
+        try { next = resolveRedirect(res.headers.location, target, HOSTS.chrome, 'Chrome download'); }
+        catch (e) { return reject(e); }
+        return httpsGet(next, redirects + 1).then(resolve, reject);
       }
       resolve(res);
     });
@@ -157,10 +165,17 @@ async function listDownloadableVersions() {
 function rawGet(url, headers, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
-    const req = https.get(url, { headers: Object.assign({ 'User-Agent': 'SoftGlaze' }, headers) }, (res) => {
+    // audit: https-only + vendor-host allowlist on the URL and every redirect.
+    let target;
+    try { target = assertAllowedDownloadUrl(url, HOSTS.chrome, 'Chrome download'); }
+    catch (e) { return reject(e); }
+    const req = https.get(target, { headers: Object.assign({ 'User-Agent': 'SoftGlaze' }, headers) }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
-        return rawGet(res.headers.location, headers, redirects + 1).then(resolve, reject);
+        let next;
+        try { next = resolveRedirect(res.headers.location, target, HOSTS.chrome, 'Chrome download'); }
+        catch (e) { return reject(e); }
+        return rawGet(next, headers, redirects + 1).then(resolve, reject);
       }
       resolve({ res, req });
     });

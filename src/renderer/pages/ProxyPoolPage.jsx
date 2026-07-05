@@ -1092,7 +1092,7 @@ export default function ProxyPoolPage() {
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <Badge variant={proxy.type === 'SOCKS5' ? 'amber' : 'blue'}>{proxy.type}</Badge>
+                        <Badge variant={String(proxy.type || '').startsWith('SOCKS') ? 'amber' : 'blue'}>{proxy.type}</Badge>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-1.5">
@@ -1216,6 +1216,7 @@ export default function ProxyPoolPage() {
                   <CustomSelect value={proxyForm.type} onChange={(event) => updateProxyForm('type', event.target.value)}>
                     <option value="HTTP">HTTP</option>
                     <option value="SOCKS5">SOCKS5</option>
+                    <option value="SOCKS4">SOCKS4</option>
                   </CustomSelect>
                 </Field>
               </div>
@@ -1259,6 +1260,7 @@ export default function ProxyPoolPage() {
                 <CustomSelect value={batchType} onChange={(event) => setBatchType(event.target.value)}>
                   <option value="HTTP">HTTP</option>
                   <option value="SOCKS5">SOCKS5</option>
+                  <option value="SOCKS4">SOCKS4</option>
                 </CustomSelect>
               </Field>
               <Field label={t('batch.proxyLines')}>
