@@ -2699,6 +2699,14 @@ async function launchProfileSession(options = {}) {
     emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
   });
 
+  // Success — emit 'launched' and return the session handle from INSIDE the guard try,
+  // where sessionId / wsEndpoint / sessionPid / injectionDegraded are in scope. They are
+  // block-scoped (const/let) to this try, so emitting + returning AFTER the catch threw
+  // `ReferenceError: sessionId is not defined` and failed EVERY launch — after the
+  // browser had already opened, leaving a half-set-up session (browserEngine.js:2713).
+  emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
+  return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded };
+
   } catch (launchErr) {
     // Post-launch setup failed before the session was registered. Close the
     // now-orphaned browser + SOCKS relay (best-effort) and rethrow so the caller
@@ -2709,10 +2717,6 @@ async function launchProfileSession(options = {}) {
     }
     throw launchErr;
   }
-
-  emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
-
-  return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded };
 }
 
 // Drive an already-open session's primary page to a URL. Used by the Pro
