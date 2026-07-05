@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
@@ -623,7 +623,9 @@ export default function ProfilesPage() {
     : FIREFOX_VERSIONS;
   const filteredUAGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(pd.os));
 
+  const loadSeq = useRef(0);
   const loadData = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     try {
       const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
@@ -635,6 +637,9 @@ export default function ProfilesPage() {
         softglazeApi.profiles.getLocks().catch(() => ({})),
         softglazeApi.proxyGroups.list().catch(() => [])
       ]);
+      // audit: ignore a stale response — a slow broad search ("a") could resolve after
+      // a fast narrow one ("ab") and overwrite the correct list.
+      if (seq !== loadSeq.current) return;
       setProfiles(profs);
       setGroups(grps);
       setAllTags(tgs);
@@ -642,11 +647,17 @@ export default function ProfilesPage() {
       setProxyGroups(Array.isArray(pgs) ? pgs : []);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    } catch (err) { if (seq === loadSeq.current) setError(err.message); }
+    finally { if (seq === loadSeq.current) setLoading(false); }
   }, [search]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // audit: debounce the search-driven reload (each keystroke fired 7 IPC calls with no
+  // debounce). Direct loadData() calls after mutations stay immediate; only this
+  // search-dependency effect waits ~200ms, and the loadSeq guard above drops stragglers.
+  useEffect(() => {
+    const h = setTimeout(() => { loadData(); }, 200);
+    return () => clearTimeout(h);
+  }, [loadData]);
 
   // Learn the real machine's core count once so generated profiles never spoof to
   // the exact host value (which would look like a hardware leak — see HOST_CORES).
@@ -1261,7 +1272,7 @@ export default function ProfilesPage() {
                         <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.type')}</label>
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-wrap gap-3">
-                            <CustomSelect value={pd.proxyType} onChange={e => updatePd('proxyType', e.target.value)} className="w-[140px]"><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="Socks5">Socks5</option><option value="Local">Local</option></CustomSelect>
+                            <CustomSelect value={pd.proxyType} onChange={e => updatePd('proxyType', e.target.value)} className="w-[140px]"><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="SOCKS5">SOCKS5</option><option value="SOCKS4">SOCKS4</option><option value="Local">Local</option></CustomSelect>
                             <CustomSelect value={pd.ipChecker} onChange={e => updatePd('ipChecker', e.target.value)} className="w-[180px]"><option value="IP2Location">IP2Location</option><option value="IPinfo">IPinfo</option></CustomSelect>
                             <Button variant="secondary" onClick={handleCheckProxy} disabled={checkingProxy} className="gap-2">
                               {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? t('proxy.checking') : t('proxy.checkNetwork')}
@@ -1361,11 +1372,11 @@ export default function ProfilesPage() {
                       {pd.platformAccounts.length === 0 && <div className="text-sm text-muted italic p-6 border border-dashed border-border rounded text-center bg-surface">{t('platform.noCredentials')}</div>}
                       {pd.platformAccounts.map((acc, idx) => (
                         <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-background p-4 rounded border border-border shadow-sm">
-                          <CustomSelect value={acc.platform} onChange={e => { const a = [...pd.platformAccounts]; a[idx].platform = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:w-[160px] shrink-0">
+                          <CustomSelect value={acc.platform} onChange={e => { const a = [...pd.platformAccounts]; a[idx] = { ...a[idx], platform: e.target.value }; updatePd('platformAccounts', a); }} className="w-full sm:w-[160px] shrink-0">
                             {['Facebook', 'Instagram', 'Twitter / X', 'Amazon', 'Google', 'TikTok', 'LinkedIn', 'Other'].map(opt => <option key={opt} value={opt}>{opt === 'Other' ? t('platform.platformOther') : opt}</option>)}
                           </CustomSelect>
-                          <input type="text" placeholder={t('platform.usernamePlaceholder')} value={acc.username} onChange={e => { const a = [...pd.platformAccounts]; a[idx].username = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
-                          <input type="password" placeholder={t('platform.passwordPlaceholder')} value={acc.password} onChange={e => { const a = [...pd.platformAccounts]; a[idx].password = e.target.value; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                          <input type="text" placeholder={t('platform.usernamePlaceholder')} value={acc.username} onChange={e => { const a = [...pd.platformAccounts]; a[idx] = { ...a[idx], username: e.target.value }; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
+                          <input type="password" placeholder={t('platform.passwordPlaceholder')} value={acc.password} onChange={e => { const a = [...pd.platformAccounts]; a[idx] = { ...a[idx], password: e.target.value }; updatePd('platformAccounts', a); }} className="w-full sm:flex-1 bg-surface border border-border rounded px-3 py-2 text-foreground outline-none focus:border-primary text-sm" />
                           <button type="button" onClick={() => { const a = [...pd.platformAccounts]; a.splice(idx, 1); updatePd('platformAccounts', a); }} className="p-2 text-muted hover:text-red-400 bg-surface rounded border border-transparent hover:border-red-500/30 transition"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}

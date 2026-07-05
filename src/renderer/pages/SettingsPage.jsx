@@ -455,6 +455,26 @@ function mergeLocal(base, patch) {
 // main-process settings store. The "Applied at launch" badge marks the controls
 // the browser engine actually honors today; the rest are stored preferences.
 // ---------------------------------------------------------------------------
+// audit: this panel reads deeply-nested settings (s.security.twoStep.enabled,
+// s.website.blockAccess.mode, s.ipSetting.autoConfig.*, …) after only an `if (!s)`
+// guard, so a settings payload missing any top-level group threw a TypeError that —
+// before the ErrorBoundary — blanked the whole app. Normalize incoming settings so
+// every group/sub-group the render touches always exists (missing leaves read as
+// undefined, which is harmless for a checkbox/select).
+function withGlobalDefaults(cfg) {
+  const c = cfg || {};
+  return {
+    ...c,
+    security: { loginIpAllowlist: {}, twoStep: {}, ...(c.security || {}) },
+    multiDevice: { ...(c.multiDevice || {}) },
+    website: { blockAccess: {}, ...(c.website || {}) },
+    platform: { ...(c.platform || {}) },
+    ipSetting: { autoConfig: {}, ...(c.ipSetting || {}) },
+    dataSync: { ...(c.dataSync || {}) },
+    captcha: { ...(c.captcha || {}) }
+  };
+}
+
 function GlobalPreferences() {
   const { t: tx } = useTranslation('settingsExtra');
   const [s, setS] = useState(null);
@@ -464,7 +484,7 @@ function GlobalPreferences() {
 
   useEffect(() => {
     softglazeApi.settings.getGlobal()
-      .then((cfg) => setS(cfg))
+      .then((cfg) => setS(withGlobalDefaults(cfg)))
       .catch((e) => setErr(e.message || tx('errors.loadGlobal')))
       .finally(() => setLoading(false));
   }, []);
@@ -475,7 +495,7 @@ function GlobalPreferences() {
     setSaving(true);
     setErr('');
     softglazeApi.settings.setGlobal(patch)
-      .then((next) => setS(next))
+      .then((next) => setS(withGlobalDefaults(next)))
       .catch((e) => setErr(e.message || tx('errors.saveSetting')))
       .finally(() => setSaving(false));
   }, []);

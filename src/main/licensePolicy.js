@@ -90,12 +90,21 @@ function computeLicenseState({ type, trialEndsAt, now, graceDays = 3 } = {}) {
 // "now" never goes below the last seen time (minus a small tolerance for legit
 // drift/NTP corrections). Returns the effective now to compute state with, the new
 // lastSeenAt to persist, and whether tampering was detected.
-function clampNow({ now, lastSeenAt, toleranceMs = DAY_MS } = {}) {
+function clampNow({ now, lastSeenAt, toleranceMs = DAY_MS, maxAdvanceMs = 90 * DAY_MS } = {}) {
   const nowMs = toMs(now) ?? 0;
   const seen = toMs(lastSeenAt);
   const tampered = seen != null && nowMs < seen - toleranceMs;
   const effectiveNow = seen != null ? Math.max(nowMs, seen) : nowMs;
-  return { effectiveNow, lastSeenAt: Math.max(nowMs, seen ?? nowMs), tampered };
+  // audit: cap how far the PERSISTED floor may advance in one step. Previously any
+  // forward jump was stored verbatim, so a transient clock spike (BIOS/NTP glitch to
+  // e.g. 2030) became a permanent lastSeenAt floor that then evaluated a genuinely
+  // valid paid/trial licence as expired forever — auto-banning a paying customer who
+  // had to manually clear the setting. A jump beyond maxAdvanceMs (90d — well past
+  // any realistic gap between app opens, well short of a year-scale clock glitch) is
+  // capped; the floor still catches up in later opens, and rollback is still held.
+  const nextSeen = seen == null ? nowMs
+    : (nowMs <= seen ? seen : Math.min(nowMs, seen + maxAdvanceMs));
+  return { effectiveNow, lastSeenAt: nextSeen, tampered };
 }
 
 module.exports = { computeLicenseState, clampNow, toMs, DAY_MS };
