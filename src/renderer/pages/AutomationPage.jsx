@@ -840,9 +840,9 @@ function ParallelPanel() {
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-4">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
       {/* Controls */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 min-w-0">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Layers className="w-5 h-5 text-indigo-400" /></span>
           <div>
@@ -1034,6 +1034,8 @@ function WarmerPanel() {
   const [loop, setLoop] = useState(false);
   const [keepOpen, setKeepOpen] = useState(false);
   const [hidden, setHidden] = useState(true); // default ON — warm without opening visible windows
+  const [queueMode, setQueueMode] = useState(true); // default ON — warm one profile at a time (a queue)
+  const [parallelCount, setParallelCount] = useState(3); // profiles at a time when queue is OFF
   const [bulkText, setBulkText] = useState('');
   const [showBulk, setShowBulk] = useState(false);
   const [pasteIds, setPasteIds] = useState('');
@@ -1062,6 +1064,8 @@ function WarmerPanel() {
       if (typeof w.loop === 'boolean') setLoop(w.loop);
       if (typeof w.keepOpen === 'boolean') setKeepOpen(w.keepOpen);
       if (typeof w.hidden === 'boolean') setHidden(w.hidden);
+      if (typeof w.queueMode === 'boolean') setQueueMode(w.queueMode);
+      if (Number.isFinite(Number(w.parallelCount))) setParallelCount(Math.max(2, Math.min(16, Number(w.parallelCount))));
       if (Array.isArray(w.lists)) setSavedLists(w.lists);
     }).catch(() => {}).finally(() => { hydratedRef.current = true; });
     return () => { alive = false; };
@@ -1072,10 +1076,27 @@ function WarmerPanel() {
     if (!hydratedRef.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      softglazeApi.settings.setGlobal({ warmer: { sites, loop, keepOpen, hidden } }).catch(() => {});
+      softglazeApi.settings.setGlobal({ warmer: { sites, loop, keepOpen, hidden, queueMode, parallelCount } }).catch(() => {});
     }, 600);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [sites, loop, keepOpen, hidden]);
+  }, [sites, loop, keepOpen, hidden, queueMode, parallelCount]);
+
+  // Re-attach to a warm-up still running in the main process (e.g. the user navigated
+  // away and came back). Without this the panel looks idle while the launched browsers
+  // keep running — and there'd be no runId to Stop them. Runs once on mount.
+  useEffect(() => {
+    let alive = true;
+    const list = softglazeApi.automation.listActiveWarmers;
+    if (typeof list !== 'function') return undefined;
+    list().then((runs) => {
+      if (!alive || !Array.isArray(runs) || !runs.length) return;
+      const r = runs[0];
+      setRunning(true);
+      setRunId(r.runId);
+      if (Array.isArray(r.logs) && r.logs.length) setLogs(r.logs.slice(-300));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // Subscribe to live warm-up progress for the whole panel lifetime.
   useEffect(() => {
@@ -1223,6 +1244,9 @@ function WarmerPanel() {
         loop,
         keepOpen,
         headless: hidden,
+        // Queue mode = one browser at a time (default). This is what keeps a 100-profile
+        // warm-up from launching 100 browsers at once and crashing the app.
+        concurrency: queueMode ? 1 : Math.max(2, Math.min(16, Number(parallelCount) || 3)),
         sites: sites.map((s) => ({ url: s.url, label: s.label, seconds: Number(s.seconds) || 30, clickMode: s.clickMode || 'none' }))
       };
       const res = await softglazeApi.automation.startWarmer(payload);
@@ -1244,9 +1268,9 @@ function WarmerPanel() {
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-4">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
       {/* Controls */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 min-w-0">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-orange-500/12 border border-orange-500/20"><Flame className="w-5 h-5 text-orange-400" /></span>
           <div>
@@ -1362,6 +1386,15 @@ function WarmerPanel() {
             <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer" title={t('warmer.hiddenTitle')}>
               <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} className="accent-orange-500" /> {t('warmer.hidden')}
             </label>
+            <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer" title={t('warmer.queueTitle', 'Warm one profile at a time (a strict queue): launch a browser, let it finish and close, then the next. Prevents opening every selected browser at once, which can exhaust RAM/CPU and crash the app.')}>
+              <input type="checkbox" checked={queueMode} onChange={(e) => setQueueMode(e.target.checked)} className="accent-orange-500" /> {t('warmer.queueMode', 'Run one at a time (queue)')}
+            </label>
+            {!queueMode && (
+              <label className="flex items-center gap-1.5 text-[12px] text-muted-foreground" title={t('warmer.parallelTitle', 'How many profiles to warm simultaneously. Higher = faster but heavier on RAM/CPU.')}>
+                {t('warmer.parallelLabel', 'At a time:')}
+                <input type="number" min={2} max={16} value={parallelCount} onChange={(e) => setParallelCount(Math.max(2, Math.min(16, Number(e.target.value) || 2)))} className="w-14 h-7 bg-input-background border border-border rounded-md px-1.5 text-[12px] text-foreground outline-none focus:border-primary" />
+              </label>
+            )}
           </div>
           <p className="text-[10.5px] text-muted-foreground/80">{t('warmer.cookieNote')}</p>
         </div>
@@ -1430,7 +1463,7 @@ function WarmerPanel() {
       </div>
 
       {/* Live console */}
-      <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-h-[360px]">
+      <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-w-0 min-h-[360px] max-h-[75vh]">
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-elevated/30">
           <span className="flex gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
@@ -1440,11 +1473,11 @@ function WarmerPanel() {
           <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('warmer.warmupConsole')}</span>
           {running && <span className="ml-auto text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('warmer.live')}</span>}
         </div>
-        <div ref={logRef} className="flex-1 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed">
+        <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto p-3 font-mono text-[11.5px] leading-relaxed">
           {logs.length === 0 ? (
             <p className="text-muted-foreground/60">{t('warmer.consoleIdle')}</p>
           ) : logs.map((l, i) => (
-            <div key={i} className="whitespace-pre-wrap break-words">
+            <div key={i} className="whitespace-pre-wrap break-all">
               <span className="text-muted-foreground/50">{ts(l.ts)} </span>
               <span className={LEVEL_COLOR[l.level] || 'text-foreground'}>[{l.level || 'INFO'}]</span>{' '}
               {l.profileId != null && <span className="text-violet-300">{profileName(l.profileId)}: </span>}
