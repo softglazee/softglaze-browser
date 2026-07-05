@@ -175,6 +175,12 @@ function buildUserJs(opts) {
   pref('browser.newtabpage.enabled', false);
   pref('browser.newtab.url', 'about:blank');
 
+  // Windows: disable the launcher/stub process so the process we spawn IS the real
+  // browser. With the launcher on, the first firefox.exe hands off and exits right after
+  // startup, and that exit is misread as a crash (the tracked PID dies while Firefox
+  // keeps running). Honored from prefs on subsequent launches.
+  pref('browser.launcherProcess.enabled', false);
+
   // Anti-leak: turn OFF WebRTC and geolocation so the real IP/location can't escape.
   pref('media.peerconnection.enabled', false);
   pref('media.navigator.enabled', false);
@@ -283,12 +289,20 @@ async function launchFirefoxProfile(options = {}) {
   const args = ['-profile', userDataDir, '-no-remote', '-new-instance', '--no-first-run'];
   if (startUrl && startUrl !== 'about:blank') args.push('-url', startUrl);
 
-  const proc = spawn(ff, args, { env, detached: false, windowsHide: false });
+  // stdio:'ignore' — nothing reads Firefox's stdout/stderr, and an undrained pipe can
+  // fill its buffer and stall the child on Windows.
+  const proc = spawn(ff, args, { env, detached: false, windowsHide: false, stdio: 'ignore' });
   const sessionId = String(profileId || crypto.randomUUID());
   const session = { proc, relay, userDataDir, title: title || `Profile ${sessionId}`, proxyLabel, createdAt: new Date(), engine: 'firefox' };
   ffSessions.set(sessionId, session);
 
+  let ffSettled = false;
   const onGone = () => {
+    // 'exit' and 'error' can BOTH fire for one process — run teardown (and emit the
+    // session event) exactly once, or a single close is reported as two and can drive a
+    // spurious crash-recovery relaunch.
+    if (ffSettled) return;
+    ffSettled = true;
     if (session.relay) session.relay.close();
     ffSessions.delete(sessionId);
     let reason = 'crash';
