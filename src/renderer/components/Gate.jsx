@@ -253,6 +253,9 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
   const [sel, setSel] = useState(() => (methods[0] ? methods[0].id : null));
   const [reference, setReference] = useState('');
   const [done, setDone] = useState(false);
+  // Methods load async; if none existed at mount, select the first once they arrive so the
+  // pay button actually renders (otherwise a banned user sees no way to pay).
+  useEffect(() => { if (sel == null && methods[0]) setSel(methods[0].id); }, [methods]);
   const cur = methods.find((m) => m.id === sel) || null;
 
   if (!methods.length) {
@@ -462,6 +465,7 @@ export default function Gate({ children }) {
   }
 
   async function verifyAndCreate(code) {
+    if (busy) return; // OtpInput.onComplete can fire alongside the button — guard the double register
     const c = (code || otp).replace(/\D/g, '');
     if (c.length !== 6) return setErr(t('errors.enter6Digit'));
     setErr(''); setBusy(true);
