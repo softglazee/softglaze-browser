@@ -434,16 +434,24 @@ function assertPublicHttpUrl(rawUrl, label = 'URL') {
   try { u = new URL(String(rawUrl)); } catch (e) { throw new Error(`The ${label} is not a valid URL.`); }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error(`The ${label} must be an http(s) URL.`);
   const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  const isPrivate =
-    host === 'localhost' || host === '0.0.0.0' || host === '::1' || host === '::' ||
-    /\.local$/.test(host) ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-    /^(fc|fd)[0-9a-f]{2}:/.test(host) || // unique-local IPv6
-    /^fe80:/.test(host);                 // link-local IPv6
+  
+  let isPrivate = false;
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.localhost') || host === '::1' || host === '::') {
+    isPrivate = true;
+  } else {
+    // Strictly extract IPv4 octets
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+    if (m) {
+      const a = +m[1], b = +m[2];
+      if (a === 0 || a === 10 || a === 127) isPrivate = true;
+      else if (a === 169 && b === 254) isPrivate = true;
+      else if (a === 172 && b >= 16 && b <= 31) isPrivate = true;
+      else if (a === 192 && b === 168) isPrivate = true;
+    } else if (/^(fc|fd|fe80)/.test(host)) {
+      isPrivate = true; // Link-local IPv6
+    }
+  }
+
   if (isPrivate) throw new Error(`The ${label} may not point at an internal or loopback address.`);
 }
 
@@ -1951,8 +1959,15 @@ async function runProxyCheckStream(payload, event) {
   }
   const total = proxies.length;
   const runId = `pcheck-${Date.now()}`;
-  const send = (data) => { try { event.sender.send(CHANNELS.PROXY_CHECK_PROGRESS, { runId, ts: Date.now(), ...data }); } catch (e) { /* renderer gone */ } };
-  if (!total) { send({ level: 'WARN', message: 'No proxies to check.', done: 0, total: 0, percent: 100, ok: 0, fail: 0, finished: true }); return { started: true, runId, total: 0 }; }
+  let lastSend = 0;
+  const send = (data, force = false) => {
+    const now = Date.now();
+    if (!force && now - lastSend < 50) return; // Max 20 frames per second
+    lastSend = now;
+    try { event.sender.send(CHANNELS.PROXY_CHECK_PROGRESS, { runId, ts: now, ...data }); } catch (e) { /* renderer gone */ } 
+  };
+  
+  if (!total) { send({ level: 'WARN', message: 'No proxies to check.', done: 0, total: 0, percent: 100, ok: 0, fail: 0, finished: true }, true); return { started: true, runId, total: 0 }; }
 
   const run = { aborted: false };
   proxyCheckRuns.set(runId, run);
@@ -1984,8 +1999,8 @@ async function runProxyCheckStream(payload, event) {
   (async () => {
     await Promise.all(Array.from({ length: Math.min(cap, total) }, () => worker()));
     try { await autoGroupProxies({ level: 'country', onlyUngrouped: true }); } catch (e) { /* ignore */ }
-    const totalMs = Date.now() - startedAt;
-    send({ level: run.aborted ? 'WARN' : 'SUCCESS', message: run.aborted ? `Stopped · ${done}/${total} checked · ${ok} healthy, ${fail} failed` : `Finished · ${ok} healthy, ${fail} failed · ${(totalMs / 1000).toFixed(1)}s`, done, total, ok, fail, percent: Math.round((done / total) * 100), finished: true, totalMs });
+const totalMs = Date.now() - startedAt;
+    send({ level: run.aborted ? 'WARN' : 'SUCCESS', message: run.aborted ? `Stopped · ${done}/${total} checked · ${ok} healthy, ${fail} failed` : `Finished · ${ok} healthy, ${fail} failed · ${(totalMs / 1000).toFixed(1)}s`, done, total, ok, fail, percent: Math.round((done / total) * 100), finished: true, totalMs }, true); // Pass true to force the final emit
     proxyCheckRuns.delete(runId);
   })();
   return { started: true, runId, total };
@@ -3113,21 +3128,26 @@ function emitBulkLaunchProgress(data) {
     }
   } catch (e) { /* ignore */ }
 }
-
+function waitForSessionClose(sessionId) {
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      // listAllSessions() gets all active Chrome & Firefox sessions
+      const isOpen = listAllSessions().some((s) => String(s.sessionId) === String(sessionId));
+      if (!isOpen) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 1000);
+  });
+}
 async function bulkLaunchProfiles(payload) {
   const input = requireObject(payload);
   const ids = parseIdArray(input.ids);
   const result = { launched: [], errors: [] };
   if (ids.length === 0) return result;
 
-  // Bounded-PARALLEL launch (was a serial for-loop). Chromium spawns are heavy, so
-  // cap how many start at once (configurable; default 5). A shared cursor feeds the
-  // worker pool; each profile is independent so a failure is isolated to that id.
   const settings = await getGlobalSettings().catch(() => ({}));
   const settingCap = Math.max(1, Number((settings.performance && settings.performance.launchConcurrency) || 5));
-  // A per-launch override lets the Profiles page offer "Queue (one-by-one)" vs "All at
-  // once" without touching the global setting: queue passes concurrency 1, so a worker
-  // pool of width 1 launches each profile only after the previous one is up.
   const cap = input.concurrency != null
     ? Math.max(1, Math.min(32, Number.parseInt(input.concurrency, 10) || settingCap))
     : settingCap;
@@ -3137,14 +3157,25 @@ async function bulkLaunchProfiles(payload) {
   let cursor = 0;
   emitBulkLaunchProgress({ phase: 'start', total, done });
 
+  // Detect if we are in Queue Mode (concurrency = 1)
+  const isQueueMode = cap === 1;
+
   const worker = async () => {
     while (cursor < ids.length) {
-      const id = ids[cursor++]; // ++ is atomic between awaits (single-threaded JS)
+      const id = ids[cursor++]; 
       try {
         const session = await launchProfile({ id });
         result.launched.push({ id, sessionId: session.sessionId });
+        
+        // Push progress to the UI immediately that it launched successfully
+        emitBulkLaunchProgress({ phase: 'launched', id, total, done: done + 1, ok: true });
+
+        // NEW LOGIC: If in queue mode, halt this worker until the session is closed by the user
+        if (isQueueMode) {
+          await waitForSessionClose(session.sessionId);
+        }
+
         done += 1;
-        emitBulkLaunchProgress({ phase: 'launched', id, total, done, ok: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         result.errors.push({ id, message });
@@ -3153,9 +3184,21 @@ async function bulkLaunchProfiles(payload) {
       }
     }
   };
-  await Promise.all(Array.from({ length: width }, () => worker()));
-  emitBulkLaunchProgress({ phase: 'done', total, done });
-  return result;
+
+  if (isQueueMode) {
+    // If we are waiting for user interaction, do NOT await Promise.all() here. 
+    // Otherwise the IPC call hangs and the UI loading spinner spins forever.
+    // Fire the worker pool in the background and resolve immediately.
+    Promise.all(Array.from({ length: width }, () => worker())).then(() => {
+      emitBulkLaunchProgress({ phase: 'done', total, done });
+    });
+    return { message: "Queue started in background.", launched: [], errors: [] };
+  } else {
+    // Normal concurrent launch: await all browser startups
+    await Promise.all(Array.from({ length: width }, () => worker()));
+    emitBulkLaunchProgress({ phase: 'done', total, done });
+    return result;
+  }
 }
 
 async function bulkCloseSessions(payload) {
