@@ -45,6 +45,14 @@ let isCleaningUp = false;
 // closes by itself" when opening a new tab). Log and keep running instead.
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
+  try {
+    if (!isDev) {
+      const logPath = path.join(app.getPath('userData'), 'crash-reports.log');
+      const time = new Date().toISOString();
+      const msg = reason instanceof Error ? reason.stack : String(reason);
+      fs.appendFileSync(logPath, `[${time}] [Unhandled Rejection] ${msg}\n`);
+    }
+  } catch (e) { /* ignore log failure */ }
 });
 // Circuit breaker (audit: a blanket swallow keeps a CORRUPTED process alive). A single
 // stray CDP/puppeteer rejection must NOT kill the app (its child browsers die with it), so
@@ -75,7 +83,7 @@ process.on('uncaughtException', (err) => {
 // root, regardless of whether it was ever tracked. The scan only matches Softglaze
 // profile processes, so the user's personal Chrome is never touched, and it runs
 // before any profile of THIS instance launches, so it can't kill a live session.
-function killOrphanedBrowsers() {
+async function killOrphanedBrowsers() {
   const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
   if (fs.existsSync(PID_FILE)) {
     try {
@@ -84,37 +92,38 @@ function killOrphanedBrowsers() {
         console.log(`[Startup] Found ${pids.length} tracked browser process(es). Cleaning up...`);
         pids.forEach(pid => { try { process.kill(pid, 9); } catch (e) { /* already gone */ } });
       }
-      fs.unlinkSync(PID_FILE); // Clear the file after cleanup
+      fs.unlinkSync(PID_FILE);
     } catch (e) {
       console.error('[Startup] Failed to cleanup tracked processes', e);
     }
   }
-  killOrphanedBrowsersByCommandLine();
+  await killOrphanedBrowsersByCommandLine();
 }
 
-// Force-kill any Chrome whose command line references our per-profile data dir
-// (the path always contains "softglaze_profiles"). Catches the untracked orphans
-// the PID file misses. Windows-only; a no-op (and harmless) elsewhere.
 function killOrphanedBrowsersByCommandLine() {
-  if (process.platform !== 'win32') return;
-  try {
-    const { execFileSync } = require('node:child_process');
+  if (process.platform !== 'win32') return Promise.resolve();
+  
+  return new Promise((resolve) => {
+    const { execFile } = require('node:child_process');
     const ps = "Get-CimInstance Win32_Process -Filter \"name='chrome.exe'\" | "
       + "Where-Object { $_.CommandLine -match 'softglaze_profiles' } | "
       + "Select-Object -ExpandProperty ProcessId";
-    const out = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps],
-      { encoding: 'utf8', timeout: 12000, windowsHide: true });
-    const pids = [...new Set(out.split(/\r?\n/).map((s) => parseInt(s.trim(), 10))
-      .filter((n) => Number.isInteger(n) && n > 0))];
-    if (!pids.length) return;
-    console.log(`[Startup] Found ${pids.length} stale Softglaze profile process(es) by command line. Cleaning up...`);
-    const args = [];
-    pids.forEach((pid) => { args.push('/PID', String(pid)); });
-    args.push('/T', '/F');
-    try { execFileSync('taskkill', args, { timeout: 15000, windowsHide: true, stdio: 'ignore' }); } catch (e) { /* some PIDs may already be gone */ }
-  } catch (e) {
-    console.error('[Startup] Command-line orphan scan failed', e);
-  }
+    
+    // Asynchronous non-blocking execution
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 12000, windowsHide: true }, (err, stdout) => {
+      if (err || !stdout) return resolve();
+      
+      const pids = [...new Set(stdout.split(/\r?\n/).map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isInteger(n) && n > 0))];
+      if (!pids.length) return resolve();
+      
+      console.log(`[Startup] Found ${pids.length} stale Softglaze profile process(es) by command line. Cleaning up...`);
+      const args = [];
+      pids.forEach((pid) => { args.push('/PID', String(pid)); });
+      args.push('/T', '/F');
+      
+      execFile('taskkill', args, { timeout: 15000, windowsHide: true }, () => resolve());
+    });
+  });
 }
 // --------------------------------
 
@@ -267,13 +276,16 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  } else {
+    // Recreate the window if the app was running in the background with no open windows
+    createMainWindow(); 
+  }
+});
 }
 
 app.whenReady().then(async () => {
@@ -281,7 +293,7 @@ app.whenReady().then(async () => {
   // (guards against whenReady racing app.quit() above).
   if (!hasSingleInstanceLock) return;
   // Always clean up orphaned processes before starting
-  killOrphanedBrowsers();
+await killOrphanedBrowsers(); // <--- Make sure this has await
 
   configureDatabaseEnv();
   // When at-rest encryption is on, the DB file is ciphertext and cannot be opened
@@ -357,32 +369,32 @@ app.on('before-quit', async (event) => {
   event.preventDefault();
   isCleaningUp = true;
 
-  try {
-    const { shutdownIpcHandlers } = require('./ipcHandlers');
-    await shutdownIpcHandlers(); // stops schedulers/API/sessions and disconnects Prisma
-  } catch (err) {
-    console.error('[before-quit] IPC shutdown failed', err);
-  }
+  const cleanupTasks = async () => {
+    try {
+      const { shutdownIpcHandlers } = require('./ipcHandlers');
+      await shutdownIpcHandlers(); // stops schedulers/API/sessions and disconnects Prisma
+    } catch (err) {
+      console.error('[before-quit] IPC shutdown failed', err);
+    }
 
-  try {
-    // Belt-and-suspenders: guarantee the DB handle is closed even if the step
-    // above bailed before reaching its own disconnect. disconnectPrisma is
-    // idempotent (no-ops once the client is null), so a double call is safe.
-    const { disconnectPrisma } = require('./database');
-    await disconnectPrisma();
-  } catch (err) {
-    console.error('[before-quit] Prisma disconnect failed', err);
-  }
+    try {
+      const { disconnectPrisma } = require('./database');
+      await disconnectPrisma();
+    } catch (err) {
+      console.error('[before-quit] Prisma disconnect failed', err);
+    }
 
-  try {
-    // If at-rest encryption is on and the DB was unlocked this session, fold the
-    // working file back into ciphertext and shred the plaintext, so nothing
-    // readable is left on disk once the app exits. No-op when encryption is off or
-    // the DB was never unlocked.
-    await relockEncryptedDb();
-  } catch (err) {
-    console.error('[before-quit] DB re-encryption failed', err);
-  }
+    try {
+      await relockEncryptedDb();
+    } catch (err) {
+      console.error('[before-quit] DB re-encryption failed', err);
+    }
+  };
+
+  // Add a 5-second timeout safety net. If cleanup hangs, force close anyway.
+  const timeout = new Promise((resolve) => setTimeout(resolve, 5000));
+  
+  await Promise.race([cleanupTasks(), timeout]);
 
   app.quit();
 });
