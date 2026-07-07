@@ -814,48 +814,25 @@ function fingerprintScript(fp) {
   let s = fp.seed >>> 0;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 
-  if (fp.noise.canvas) {
-    // DETERMINISTIC per-pixel offset from the seed. The previous implementation
-    // used a running PRNG, so the canvas hash changed on EVERY read — browserscan
-    // flagged that as "Canvas UNSTABLE / Tampering". A stable, seed-derived offset
-    // keeps the hash constant per profile (so it reads like a real device) while
-    // still being unique across profiles. Only mid-range pixels are nudged ±1 so
-    // the image is visually identical.
+if (fp.noise.canvas) {
     const cseed = (fp.seed >>> 0) || 1;
-    const perturb = (data) => {
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] === 0) continue; // skip fully transparent
-        const n = (((cseed ^ ((i + 1) * 2654435761)) >>> 0) % 3) - 1; // -1/0/1, stable
-        if (data[i] > 1 && data[i] < 254) data[i] = (data[i] + n) & 0xFF;
-      }
-    };
-    const origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
-    CanvasRenderingContext2D.prototype.getImageData = markNative(function getImageData() {
-      const img = origGetImageData.apply(this, arguments);
-      perturb(img.data);
-      return img;
-    }, 'getImageData');
-    const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-    HTMLCanvasElement.prototype.toDataURL = markNative(function toDataURL() {
-      try {
-        const ctx = this.getContext('2d');
-        if (ctx && this.width && this.height) {
-          const img = origGetImageData.call(ctx, 0, 0, this.width, this.height);
-          const original = new Uint8ClampedArray(img.data); // keep a pristine copy
-          perturb(img.data);
-          ctx.putImageData(img, 0, 0);
-          const url = origToDataURL.apply(this, arguments);
-          // RESTORE the pristine pixels. Without this, every toDataURL call would
-          // perturb already-perturbed pixels and the hash would drift on each read
-          // (browserscan flags that as "Canvas UNSTABLE / tampering"). Restoring
-          // makes repeated reads return an identical, stable hash.
-          img.data.set(original);
-          ctx.putImageData(img, 0, 0);
-          return url;
+    // Calculate an invisible scale factor (e.g., 1.0000123) based on the seed
+    const shift = 1 + (((cseed % 1000) / 10000000) * (cseed % 2 === 0 ? 1 : -1));
+
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = markNative(function getContext(type, attrs) {
+      const ctx = origGetContext.apply(this, arguments);
+      if (ctx && (type === '2d' || type === 'webgl' || type === 'webgl2')) {
+        // Only apply it once per context to avoid infinite zooming
+        if (!ctx.__sgzSpoofed) {
+          ctx.__sgzSpoofed = true;
+          if (type === '2d') {
+            try { ctx.scale(shift, shift); } catch (e) {}
+          }
         }
-      } catch (e) {}
-      return origToDataURL.apply(this, arguments);
-    }, 'toDataURL');
+      }
+      return ctx;
+    }, 'getContext');
   }
 
   const patchGL = (proto) => {
@@ -1038,6 +1015,7 @@ function fingerprintScript(fp) {
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
           if (/^a=candidate:/.test(line) && leaks(line) && !PROXY_IP) continue; // drop leaking candidate
+          if (/^a=candidate:.*\.local\s/.test(line)) continue;
           out.push(PROXY_IP ? sanitize(line) : line);
         }
         return out.join('\r\n');
@@ -1050,6 +1028,7 @@ function fingerprintScript(fp) {
       // Returns the event to deliver, or null to DROP it (leak + no proxy IP).
       const processEvent = (event) => {
         if (!event || !event.candidate || !event.candidate.candidate) return event; // end-of-gathering sentinel
+        if (/\.local\s/.test(event.candidate.candidate)) return null;
         if (!leaks(event.candidate.candidate)) return event; // mDNS/private/proxy-only — safe
         if (!PROXY_IP) return null; // can't make it safe → drop
         try {
@@ -1570,8 +1549,12 @@ async function httpJson(url, init) {
 }
 
 // Submit a token job to 2captcha and poll until solved. Returns the token string.
+// Submit a token job to 2captcha and poll until solved. Returns the token string.
 async function solveWith2captcha(apiKey, job) {
-  const method = job.type === 'hcaptcha' ? 'hcaptcha' : 'userrecaptcha';
+  let method = 'userrecaptcha';
+  if (job.type === 'hcaptcha') method = 'hcaptcha';
+  else if (job.type === 'turnstile') method = 'turnstile'; // ADDED TURNSTILE
+
   const inParams = new URLSearchParams({
     key: apiKey, json: '1', method, sitekey: job.sitekey, pageurl: job.pageurl
   });
@@ -1588,8 +1571,12 @@ async function solveWith2captcha(apiKey, job) {
 }
 
 // anti-captcha JSON task API (createTask → getTaskResult).
+// anti-captcha JSON task API (createTask → getTaskResult).
 async function solveWithAnticaptcha(apiKey, job) {
-  const taskType = job.type === 'hcaptcha' ? 'HCaptchaTaskProxyless' : 'RecaptchaV2TaskProxyless';
+  let taskType = 'RecaptchaV2TaskProxyless';
+  if (job.type === 'hcaptcha') taskType = 'HCaptchaTaskProxyless';
+  else if (job.type === 'turnstile') taskType = 'TurnstileTaskProxyless'; // ADDED TURNSTILE
+
   const create = await httpJson('https://api.anti-captcha.com/createTask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1632,16 +1619,22 @@ function attachCaptchaSolver(page, cfg) {
       found = await page.evaluate(() => {
         const out = [];
         const push = (type, sitekey) => { if (sitekey) out.push({ type, sitekey }); };
-        document.querySelectorAll('.g-recaptcha[data-sitekey],[data-sitekey]').forEach((el) => {
+document.querySelectorAll('.g-recaptcha[data-sitekey],[data-sitekey],.cf-turnstile').forEach((el) => {
           const k = el.getAttribute('data-sitekey');
           const isH = el.classList.contains('h-captcha');
-          push(isH ? 'hcaptcha' : 'recaptcha', k);
+          const isCF = el.classList.contains('cf-turnstile');
+          if (isCF) push('turnstile', k);
+          else push(isH ? 'hcaptcha' : 'recaptcha', k);
         });
         document.querySelectorAll('iframe[src*="/recaptcha/"]').forEach((f) => {
           const m = /[?&]k=([^&]+)/.exec(f.src || ''); if (m) push('recaptcha', decodeURIComponent(m[1]));
         });
         document.querySelectorAll('iframe[src*="hcaptcha.com"]').forEach((f) => {
           const m = /[?&]sitekey=([^&]+)/.exec(f.src || ''); if (m) push('hcaptcha', decodeURIComponent(m[1]));
+        });
+        // Turnstile can also be loaded via cloudflare challenges iframe
+        document.querySelectorAll('iframe[src*="challenges.cloudflare.com"]').forEach((f) => {
+          const m = /[?&]sitekey=([^&]+)/.exec(f.src || ''); if (m) push('turnstile', decodeURIComponent(m[1]));
         });
         return out;
       });
@@ -1665,6 +1658,8 @@ function attachCaptchaSolver(page, cfg) {
           fill('textarea[name="g-recaptcha-response"]');
           fill('textarea[name="h-captcha-response"]');
           fill('textarea#h-captcha-response');
+          fill('[name="cf-turnstile-response"]'); // CLOUDFLARE INJECTION
+          fill('[name="g-recaptcha-response"]');
           // Best-effort: invoke any registered reCAPTCHA callback so the host
           // form reacts as if the user had solved it interactively.
           try {
@@ -1703,38 +1698,64 @@ function attachCaptchaSolver(page, cfg) {
 function lookupProxyGeoNode(proxy) {
   return new Promise((resolve) => {
     if (!proxy || !proxy.host || !proxy.port) return resolve(null);
-    const scheme = String(proxy.type || '').toLowerCase();
-    if (scheme.startsWith('socks')) return resolve(null); // http module can't do SOCKS
-    const targetUrl = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
-    const headers = {
-      Host: 'ip-api.com',
-      'User-Agent': 'Mozilla/5.0',
-      Accept: 'application/json',
-      Connection: 'close'
-    };
-    if (proxy.username || proxy.password) {
-      const token = Buffer.from(`${proxy.username || ''}:${proxy.password || ''}`).toString('base64');
-      headers['Proxy-Authorization'] = `Basic ${token}`;
+    
+    let ProxyAgent;
+    try {
+      ({ ProxyAgent } = require('proxy-agent'));
+    } catch (e) {
+      const scheme = String(proxy.type || '').toLowerCase();
+      if (scheme.startsWith('socks')) return resolve(null);
     }
-    let settled = false;
-    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-    const req = http.request(
-      { host: proxy.host, port: Number(proxy.port), method: 'GET', path: targetUrl, headers },
-      (res) => {
+
+    const targetUrl = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
+    const schemeLc = String(proxy.type || '').toLowerCase();
+    
+    // Use proxy-agent to correctly route SOCKS5 / SOCKS4 / HTTP requests
+    if (ProxyAgent) {
+      const scheme = schemeLc === 'socks5' ? 'socks5' : (schemeLc === 'socks4' ? 'socks4' : 'http');
+      const auth = proxy.username ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
+      const proxyUrl = `${scheme}://${auth}${proxy.host}:${proxy.port}`;
+      
+      const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
+      let settled = false;
+      const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+      
+      const req = http.get(targetUrl, { 
+        agent, 
+        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }
+      }, (res) => {
         let data = '';
         res.on('data', (c) => { data += c; });
         res.on('end', () => {
           try { const j = JSON.parse(data); done(j && j.status === 'success' ? j : null); }
           catch (e) { done(null); }
         });
-      }
-    );
+      });
+      
+      req.on('error', () => done(null));
+      req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
+      return;
+    }
+
+    // --- FALLBACK IF PROXY-AGENT IS MISSING ---
+    if (schemeLc.startsWith('socks')) return resolve(null);
+    const headers = { Host: 'ip-api.com', 'User-Agent': 'Mozilla/5.0', Accept: 'application/json', Connection: 'close' };
+    if (proxy.username || proxy.password) {
+      const token = Buffer.from(`${proxy.username || ''}:${proxy.password || ''}`).toString('base64');
+      headers['Proxy-Authorization'] = `Basic ${token}`;
+    }
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const req = http.request({ host: proxy.host, port: Number(proxy.port), method: 'GET', path: targetUrl, headers }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => { try { const j = JSON.parse(data); done(j && j.status === 'success' ? j : null); } catch (e) { done(null); } });
+    });
     req.on('error', () => done(null));
     req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
     req.end();
   });
 }
-
 // In-memory geo cache. Bulk/parallel launches frequently reuse the same few
 // proxies (pools); without caching, every launch re-hits ip-api.com THROUGH the
 // proxy — slow and easily rate-limited (the free tier allows ~45 req/min). Cache
@@ -2057,6 +2078,14 @@ async function launchProfileSession(options = {}) {
     `--disable-extensions-except=${extensionArg}`,
     `--load-extension=${extensionArg}`
   ];
+  if (profile.canvasNoise !== false || profile.webglImageNoise !== false) {
+    const angleBackends = ['d3d11', 'd3d9', 'gl', 'vulkan'];
+    const chosenAngle = angleBackends[seed % angleBackends.length];
+    args.push(`--use-angle=${chosenAngle}`);
+    if (chosenAngle === 'gl') {
+      args.push('--use-gl=angle');
+    }
+  }
 
   // Force the ENTIRE locale stack (ICU default locale → Intl.DateTimeFormat /
   // NumberFormat / Collator, and Accept-Language) to match navigator.language.
