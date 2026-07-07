@@ -47,7 +47,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^42.4.0",
+    "electron": "^42.6.1",
     "electron-builder": "^24.13.3",
     "png2icons": "^2.0.1",
     "prisma": "^6.19.3",
