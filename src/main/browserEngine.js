@@ -323,20 +323,32 @@ function trackPid(pid) {
   try {
     let pids = [];
     if (fsSync.existsSync(PID_FILE)) {
-      pids = JSON.parse(fsSync.readFileSync(PID_FILE, 'utf8'));
+      const content = fsSync.readFileSync(PID_FILE, 'utf8').trim();
+      if (content) pids = JSON.parse(content);
     }
+    if (!Array.isArray(pids)) pids = []; // Fallback if JSON is an object instead of an array
+    
     if (!pids.includes(pid)) pids.push(pid);
     fsSync.writeFileSync(PID_FILE, JSON.stringify(pids));
-  } catch (e) { console.error('[PID Tracker] Failed to track PID', e); }
+  } catch (e) { 
+    console.error('[PID Tracker] Failed to track PID', e.message); 
+  }
 }
 
 function untrackPid(pid) {
   try {
     if (!fsSync.existsSync(PID_FILE)) return;
-    let pids = JSON.parse(fsSync.readFileSync(PID_FILE, 'utf8'));
+    const content = fsSync.readFileSync(PID_FILE, 'utf8').trim();
+    if (!content) return; // Skip if file is empty
+    
+    let pids = JSON.parse(content);
+    if (!Array.isArray(pids)) return;
+    
     pids = pids.filter(p => p !== pid);
     fsSync.writeFileSync(PID_FILE, JSON.stringify(pids));
-  } catch (e) { console.error('[PID Tracker] Failed to untrack PID', e); }
+  } catch (e) { 
+    console.error('[PID Tracker] Failed to untrack PID', e.message); 
+  }
 }
 // ----------------------------------------
 

@@ -87,14 +87,17 @@ async function killOrphanedBrowsers() {
   const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
   if (fs.existsSync(PID_FILE)) {
     try {
-      const pids = JSON.parse(fs.readFileSync(PID_FILE, 'utf8'));
-      if (pids.length) {
+      const content = fs.readFileSync(PID_FILE, 'utf8').trim();
+      const pids = content ? JSON.parse(content) : []; // Safely parse or default to empty array
+      
+      if (Array.isArray(pids) && pids.length) {
         console.log(`[Startup] Found ${pids.length} tracked browser process(es). Cleaning up...`);
         pids.forEach(pid => { try { process.kill(pid, 9); } catch (e) { /* already gone */ } });
       }
-      fs.unlinkSync(PID_FILE);
+      fs.unlinkSync(PID_FILE); // Clear the file after cleanup
     } catch (e) {
-      console.error('[Startup] Failed to cleanup tracked processes', e);
+      console.error('[Startup] Failed to parse PID file. Resetting it.', e.message);
+      try { fs.unlinkSync(PID_FILE); } catch(err) {} // Delete corrupted file
     }
   }
   await killOrphanedBrowsersByCommandLine();
@@ -315,23 +318,18 @@ await killOrphanedBrowsers(); // <--- Make sure this has await
   // gates open without a prompt. Handles both at-rest-encrypted DB (decrypts it) and
   // the workspace vault. Best-effort: a stale credential self-clears and the user
   // just sees a normal login once. Runs at process start only (not on manual lock).
+try {
+    await whenSessionReady();
+  } catch (e) {
+    console.warn('[Startup] session restore wait failed:', e && e.message);
+  }
+
+  // 2nd: "Keep me signed in on this device". Now that the session is restored (and 
+  // potentially locked), we replay the DPAPI-sealed credential to securely unlock it.
   try {
     await attemptRememberedUnlock();
   } catch (e) {
     console.warn('[Startup] remembered auto-login failed:', e && e.message);
-  }
-
-  // Block window creation until the persisted member session + vault-lock state are
-  // restored. registerIpcHandlers() kicks that restore off fire-and-forget; without
-  // this await the renderer's first members.current() answers from a still-null
-  // currentMemberId (it short-circuits with no DB read) and strands a returning user
-  // on the member picker EVERY launch — the exact "keep me signed in doesn't stick"
-  // symptom on a vault-off / unencrypted install. Best-effort: on the encrypted path
-  // the restore runs later in db:unlock, so this resolves immediately.
-  try {
-    await whenSessionReady();
-  } catch (e) {
-    console.warn('[Startup] session restore wait failed:', e && e.message);
   }
 
   // Wire the app:// file server before the window loads its URL.
