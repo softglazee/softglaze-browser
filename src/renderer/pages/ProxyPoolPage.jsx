@@ -1152,8 +1152,8 @@ export default function ProxyPoolPage() {
         </div>
       )}
 
-      <Card className="bg-surface border-border flex flex-col shadow-xl flex-1 min-h-0 rounded">
-        <CardContent className="p-0 overflow-auto flex-1 min-h-0 rounded">
+      <Card className="bg-surface border-border flex flex-col shadow-xl flex-1 rounded">
+        <CardContent className="p-0 overflow-auto flex-1 rounded">
           {loading ? (
             <div className="p-12 text-sm text-muted text-center flex flex-col items-center gap-3">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />

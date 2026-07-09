@@ -827,26 +827,11 @@ function fingerprintScript(fp) {
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 
 if (fp.noise.canvas) {
-    const cseed = (fp.seed >>> 0) || 1;
-    // Calculate an invisible scale factor (e.g., 1.0000123) based on the seed
-    const shift = 1 + (((cseed % 1000) / 10000000) * (cseed % 2 === 0 ? 1 : -1));
-
-    const origGetContext = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = markNative(function getContext(type, attrs) {
-      const ctx = origGetContext.apply(this, arguments);
-      if (ctx && (type === '2d' || type === 'webgl' || type === 'webgl2')) {
-        // Only apply it once per context to avoid infinite zooming
-        if (!ctx.__sgzSpoofed) {
-          ctx.__sgzSpoofed = true;
-          if (type === '2d') {
-            try { ctx.scale(shift, shift); } catch (e) {}
-          }
-        }
-      }
-      return ctx;
-    }, 'getContext');
+    // Intentionally left blank in JS.
+    // Canvas and WebGL uniqueness is now handled natively via Chromium's 
+    // --use-angle and --use-gl backend rendering flags at launch.
+    // JS tampering is easily detected by Pixelscan, so we rely entirely on native hardware rendering.
   }
-
   const patchGL = (proto) => {
     if (!proto) return;
     const orig = proto.getParameter;
@@ -1719,9 +1704,27 @@ function lookupProxyGeoNode(proxy) {
       if (scheme.startsWith('socks')) return resolve(null);
     }
 
-    const targetUrl = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
+    const targetUrl = 'https://ipinfo.io/json'; // Using HTTPS to prevent proxy blocking
     const schemeLc = String(proxy.type || '').toLowerCase();
     
+    // Map ipinfo.io response to the expected legacy ip-api format for the app
+    const mapResponse = (j) => {
+      if (j && j.ip) {
+        return {
+          status: 'success',
+          query: j.ip,
+          countryCode: j.country,
+          timezone: j.timezone,
+          city: j.city,
+          regionName: j.region,
+          isp: j.org,
+          lat: j.loc ? parseFloat(j.loc.split(',')[0]) : null,
+          lon: j.loc ? parseFloat(j.loc.split(',')[1]) : null
+        };
+      }
+      return null;
+    };
+
     // Use proxy-agent to correctly route SOCKS5 / SOCKS4 / HTTP requests
     if (ProxyAgent) {
       const scheme = schemeLc === 'socks5' ? 'socks5' : (schemeLc === 'socks4' ? 'socks4' : 'http');
@@ -1732,15 +1735,18 @@ function lookupProxyGeoNode(proxy) {
       let settled = false;
       const done = (v) => { if (!settled) { settled = true; resolve(v); } };
       
-      const req = http.get(targetUrl, { 
+      // Use node:https since targetUrl is https://
+      const req = require('node:https').get(targetUrl, { 
         agent, 
         headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }
       }, (res) => {
         let data = '';
         res.on('data', (c) => { data += c; });
         res.on('end', () => {
-          try { const j = JSON.parse(data); done(j && j.status === 'success' ? j : null); }
-          catch (e) { done(null); }
+          try { 
+            const j = JSON.parse(data); 
+            done(mapResponse(j)); 
+          } catch (e) { done(null); }
         });
       });
       
@@ -1751,28 +1757,36 @@ function lookupProxyGeoNode(proxy) {
 
     // --- FALLBACK IF PROXY-AGENT IS MISSING ---
     if (schemeLc.startsWith('socks')) return resolve(null);
+    
+    const fallbackUrl = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
     const headers = { Host: 'ip-api.com', 'User-Agent': 'Mozilla/5.0', Accept: 'application/json', Connection: 'close' };
+    
     if (proxy.username || proxy.password) {
       const token = Buffer.from(`${proxy.username || ''}:${proxy.password || ''}`).toString('base64');
       headers['Proxy-Authorization'] = `Basic ${token}`;
     }
+    
     let settled = false;
     const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-    const req = http.request({ host: proxy.host, port: Number(proxy.port), method: 'GET', path: targetUrl, headers }, (res) => {
+    
+    const req = require('node:http').request({ host: proxy.host, port: Number(proxy.port), method: 'GET', path: fallbackUrl, headers }, (res) => {
       let data = '';
       res.on('data', (c) => { data += c; });
-      res.on('end', () => { try { const j = JSON.parse(data); done(j && j.status === 'success' ? j : null); } catch (e) { done(null); } });
+      res.on('end', () => { 
+        try { const j = JSON.parse(data); done(j && j.status === 'success' ? j : null); } 
+        catch (e) { done(null); } 
+      });
     });
+    
     req.on('error', () => done(null));
     req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
     req.end();
   });
 }
+
 // In-memory geo cache. Bulk/parallel launches frequently reuse the same few
-// proxies (pools); without caching, every launch re-hits ip-api.com THROUGH the
-// proxy — slow and easily rate-limited (the free tier allows ~45 req/min). Cache
-// successful lookups for a TTL and dedupe concurrent in-flight requests so N
-// simultaneous launches on one proxy make exactly ONE network call.
+// proxies (pools); without caching, every launch re-hits the API THROUGH the
+// proxy — slow and easily rate-limited. Cache successful lookups for a TTL.
 const GEO_NODE_CACHE_TTL_MS = 10 * 60 * 1000;
 const geoNodeCache = new Map();    // key -> { value, at }
 const geoNodeInflight = new Map(); // key -> Promise<value|null>
@@ -1796,28 +1810,6 @@ async function lookupProxyGeoNodeCached(proxy) {
   geoNodeInflight.set(key, inflight);
   try { return await inflight; }
   finally { geoNodeInflight.delete(key); }
-}
-
-// ---------------------------------------------------------------------------
-// Geo lookup through the active proxy (runs inside the page so it routes via
-// the proxy). Returns { countryCode, timezone, lat, lon } or null.
-// ---------------------------------------------------------------------------
-async function lookupProxyGeo(page) {
-  const evaluation = page.evaluate(async () => {
-    try {
-      const res = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query', { cache: 'no-store' });
-      const json = await res.json();
-      return json && json.status === 'success' ? json : null;
-    } catch (e) {
-      return null;
-    }
-  });
-  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), GEO_LOOKUP_TIMEOUT_MS));
-  try {
-    return await Promise.race([evaluation, timeout]);
-  } catch (e) {
-    return null;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2325,87 +2317,82 @@ async function launchProfileSession(options = {}) {
   // for the very first page (which applyToPage covers directly).
   const fpLate = {};
   try {
-    const rootCdp = await browser.target().createCDPSession();
+const rootCdp = await browser.target().createCDPSession();
     rootCdp.on('Target.attachedToTarget', async (ev) => {
       const info = ev.targetInfo || {};
       const isPageish = info.type === 'page' || info.type === 'iframe';
       const isWorker = /worker/i.test(info.type || '');
-      // Register the fingerprint init script on the PAUSED target and apply the CDP
-      // Emulation extras. The whole new-tab fingerprint rides on this script landing
-      // BEFORE the target resumes and commits its first document — so, unlike before,
-      // the addScript is NOT a swallowed best-effort call: a failure makes inject()
-      // report false and we retry (below) before resuming. Previously a single
-      // transient addScript failure silently resumed an un-spoofed tab, which is the
-      // reported "+ tab leaks real GPU/RAM/WebRTC" bug. A scriptAdded latch means a
-      // retry triggered by a failed EXTRA never double-registers the script.
+      
       let scriptAdded = false;
+
+      // Use raw Target.sendMessageToTarget to bypass any Puppeteer internal connection bugs
+      const sendMsg = async (method, params = {}) => {
+        try {
+          await rootCdp.send('Target.sendMessageToTarget', {
+            sessionId: ev.sessionId,
+            message: JSON.stringify({ id: Math.floor(Math.random() * 100000), method, params })
+          });
+        } catch (e) {
+          // suppress transient target loss
+        }
+      };
+
       const inject = async () => {
-        let sess = null;
-        try { sess = rootCdp.connection().session(ev.sessionId); } catch (e) {}
-        if (!sess) return false; // puppeteer hasn't surfaced the flattened session yet
         try {
           if (isPageish) {
             if (!scriptAdded) {
-              // NOT .catch()'d: a throw means the script did not register, so inject()
-              // fails and the loop retries it before the target is allowed to run.
-              await sess.send('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource });
+              await sendMsg('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource });
               scriptAdded = true;
             }
-            // Best-effort CDP identity extras (cores, UA + Client-Hints, timezone,
-            // mobile metrics, geo) applied while still PAUSED so the first request
-            // carries the spoofed identity. Emulation-domain only; request-interception
-            // / proxy-auth stay deferred to applyToPage (doing those on the NTP crashed
-            // the browser). A failure here does NOT un-spoof GPU/RAM/WebRTC (that is the
-            // JS script, already in), so it must not block the resume.
-            if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+            if (fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
             if (fpLate.ua) {
-              await sess.send('Emulation.setUserAgentOverride', {
+              await sendMsg('Emulation.setUserAgentOverride', {
                 userAgent: fpLate.ua.userAgent,
                 acceptLanguage: fpLate.acceptLanguage,
                 platform: fpLate.ua.navPlatform,
                 userAgentMetadata: fpLate.ua.userAgentMetadata
-              }).catch(() => {});
+              });
             }
-            if (fpLate.timezoneId) await sess.send('Emulation.setTimezoneOverride', { timezoneId: fpLate.timezoneId }).catch(() => {});
+            if (fpLate.timezoneId) await sendMsg('Emulation.setTimezoneOverride', { timezoneId: fpLate.timezoneId });
             if (fpLate.mobileMetrics) {
               const m = fpLate.mobileMetrics;
-              await sess.send('Emulation.setDeviceMetricsOverride', { width: m.width, height: m.height, deviceScaleFactor: m.deviceScaleFactor, mobile: true, screenWidth: m.width, screenHeight: m.height }).catch(() => {});
-              await sess.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints }).catch(() => {});
-              await sess.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' }).catch(() => {});
+              await sendMsg('Emulation.setDeviceMetricsOverride', { width: m.width, height: m.height, deviceScaleFactor: m.deviceScaleFactor, mobile: true, screenWidth: m.width, screenHeight: m.height });
+              await sendMsg('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints });
+              await sendMsg('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
             }
             if (fpLate.geoLat != null && fpLate.geoLng != null) {
-              await sess.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
-              await sess.send('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc }).catch(() => {});
+              await sendMsg('Browser.grantPermissions', { permissions: ['geolocation'] });
+              await sendMsg('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc });
             }
             return true;
           }
           if (isWorker) {
-            if (fpConfig.cores) await sess.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+            if (fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
             return true;
           }
-          return true; // 'other'/'browser' target — nothing to inject; just needs a resume.
+          return true; // 'other'/'browser' target
         } catch (e) {
-          return false; // e.g. addScript raced a target detach — retry on the next tick.
+          return false;
         }
       };
+
       const resume = async () => {
-        let sess = null;
-        try { sess = rootCdp.connection().session(ev.sessionId); } catch (e) {}
-        if (sess) { try { await sess.send('Runtime.runIfWaitingForDebugger').catch(() => {}); } catch (e) {} }
+        await sendMsg('Runtime.runIfWaitingForDebugger');
       };
-      // Land the injection BEFORE resuming. Retry briefly (25ms × 20 ≈ 0.5s cap) while
-      // the target is held at the waitForDebuggerOnStart pause — this both waits for
-      // puppeteer to surface the flattened session AND re-tries a transient addScript.
-      // Then ALWAYS resume so a tab can never hang at about:blank, even if injection
-      // ultimately failed — and, in that case, LOG it (this path was silent before, so
-      // an un-spoofed new tab looked identical to a healthy one).
+
       let injected = await inject();
-      for (let i = 0; i < 20 && !injected; i += 1) { await sleep(25); injected = await inject(); }
+      for (let i = 0; i < 20 && !injected; i += 1) { 
+        await new Promise(r => setTimeout(r, 25)); 
+        injected = await inject(); 
+      }
+      
       if (isPageish && !injected) {
         console.error('[SG][fingerprint] new-tab injection FAILED — this tab may expose the REAL GPU/RAM/WebRTC. profile',
           profileId, title || '', '— target', info.url || info.targetId || info.type);
       }
-      await resume();
+      
+      // ALWAYS RESUME the target, even if injection failed, so the tab never hangs at about:blank
+      await resume(); 
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
   } catch (e) { /* fall back to per-page evaluateOnNewDocument in applyToPage */ }
