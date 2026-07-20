@@ -2918,6 +2918,14 @@ const rootCdp = await browser.target().createCDPSession();
   let startUrl = 'about:blank';
   if (startupMode === 'detection') {
     startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo });
+  } else if (usingCft) {
+    // CfT and the anti-detect engine (Ungoogled-Chromium) have no usable blank/NTP:
+    // about:blank renders as a dark VOID in OS dark-mode, and Ungoogled's own new tab
+    // is a bare "Web Store" icon — both read as "the browser launched blank / broken"
+    // (exactly the report we got). Point the first tab at chrome://newtab, which the
+    // extension redirects to our functional New Tab Page (search box + check links).
+    // Real Chrome (usingCft === false) keeps about:blank — its blank page is fine.
+    startUrl = 'chrome://newtab';
   }
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
 
