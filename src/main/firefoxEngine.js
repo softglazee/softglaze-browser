@@ -268,6 +268,18 @@ function buildUserJs(opts) {
   return lines.join('\n') + '\n';
 }
 
+// Map a proxy-geo result (from browserEngine.lookupProxyGeoNodeCached) to a Firefox
+// intl.accept_languages value (e.g. "de-DE,de,en"). Returns null when the country is
+// unknown so the caller leaves the locale untouched.
+function ipLocaleFromGeo(geo) {
+  if (!geo || !geo.countryCode) return null;
+  let COUNTRY_LOCALE;
+  try { ({ COUNTRY_LOCALE } = require('./browserEngine')); } catch (e) { return null; }
+  const loc = COUNTRY_LOCALE[geo.countryCode];
+  if (!loc) return null;
+  return Array.from(new Set([loc, loc.split('-')[0], 'en'])).join(',');
+}
+
 async function launchFirefoxProfile(options = {}) {
   const {
     profileId, title, dataDirName, profileRoot, profile = {}, startUrl = 'about:blank'
@@ -312,11 +324,27 @@ async function launchFirefoxProfile(options = {}) {
     }
   }
 
-  const acceptLanguages = profile.languageCustom && profile.languageType === 'Custom'
+  // Bind timezone + locale to the PROXY EXIT (parity with the Chrome engine). Firefox
+  // previously left both on the HOST unless the user picked "Custom", so a proxied
+  // profile on the default "Based on IP" leaked the host timezone/locale while exiting
+  // in another country — a direct IP-vs-JS mismatch every scanner flags. Look the geo up
+  // THROUGH the real upstream proxy (which carries the creds + real exit), cached so
+  // repeat launches of the same proxy don't re-hit the network.
+  const tzCustom = profile.timezoneType === 'Custom' && profile.timezoneCustom;
+  const langCustom = profile.languageType === 'Custom' && profile.languageCustom;
+  let proxyGeo = null;
+  if (proxy && (!tzCustom || !langCustom)) {
+    try {
+      const { lookupProxyGeoNodeCached } = require('./browserEngine');
+      proxyGeo = await lookupProxyGeoNodeCached(proxy);
+    } catch (e) { proxyGeo = null; }
+  }
+  const acceptLanguages = langCustom
     ? String(profile.languageCustom).split(';')[0].trim()
-    : null;
-  const timezoneId = profile.timezoneType === 'Custom' && profile.timezoneCustom
-    ? String(profile.timezoneCustom).trim() : null;
+    : ipLocaleFromGeo(proxyGeo);
+  const timezoneId = tzCustom
+    ? String(profile.timezoneCustom).trim()
+    : (proxyGeo && proxyGeo.timezone ? String(proxyGeo.timezone).trim() : null);
 
   // Smart Autofill — install the WebExtension into the profile (and only enable
   // the supporting prefs if it actually landed). Gated by the caller's setting;
@@ -453,10 +481,12 @@ async function closeAllFirefoxSessions() {
   for (const id of Array.from(ffSessions.keys())) await closeFirefoxSession(id);
 }
 
-// --- On-demand Firefox download + silent install -------------------------------
-// We pull the FULL offline installer from Mozilla's release archive and run it
-// silently (`/S /D=<dir>`) into /firefox/<version>, so the launcher can resolve a
-// version-matched binary. Pure Node + the OS installer — no new npm dependency.
+// --- On-demand Firefox download + PORTABLE extract -----------------------------
+// We pull the FULL offline installer from Mozilla's release archive and, instead of
+// RUNNING it (which would register Firefox system-wide in Windows), EXTRACT its
+// payload into /firefox/<version> so the launcher can resolve a version-matched
+// binary. Pure Node + Windows' built-in bsdtar — no new npm dependency, and NO
+// system footprint (mirrors the portable Chrome-for-Testing unzip).
 
 const FF_HISTORY = 'https://product-details.mozilla.org/1.0/firefox_history_major_releases.json';
 const FF_STATE_FILE = path.join(FIREFOX_ROOT, '.download-state.json');
@@ -468,8 +498,8 @@ let ffCatalogAt = 0;
 let ffLastPersist = 0;
 
 // Stable partial-download path (NOT keyed by PID, so it survives an app restart
-// and can be resumed). NSIS doesn't care about the extension, so we run the
-// installer straight from the .part file.
+// and can be resumed). bsdtar sniffs the archive by content, not extension, so we
+// extract straight from the .part file.
 function ffPartialPath(major) { return path.join(FIREFOX_ROOT, `_download-ff-${major}.part`); }
 
 function ffPersistState(force) {
@@ -689,12 +719,28 @@ async function ffDownloadToFile(url, dest, onProgress, registerAbort) {
   return { received, total };
 }
 
-// Firefox's NSIS installer: /S = silent, /D=<dir> must be the LAST arg, unquoted.
-function runFirefoxInstaller(exe, dir) {
+// Portable extraction — NO Windows install. The Mozilla "Firefox Setup <v>.exe" is a
+// 7-Zip SFX whose payload lives under a top-level `core/` folder. Running the NSIS
+// installer (even silent /S /D=) registers Firefox system-wide: HKLM/HKCU keys, an
+// Add/Remove-Programs entry PER version, the Mozilla Maintenance Service, and the
+// default-browser-agent scheduled task — exactly the footprint we must avoid. Instead
+// we extract the payload with Windows' built-in bsdtar (System32\tar.exe, libarchive
+// — ships on Win10 17063+/Win11, no new dependency), flattening `core/` so
+// firefox.exe lands directly at <dir>/firefox.exe (the layout resolveFirefoxBinary /
+// isFirefoxVersionInstalled expect). Result: a self-contained /firefox/<major> tree
+// with zero system footprint, exactly like the unzipped Chrome-for-Testing build.
+function extractFirefoxPortable(part, dir) {
   return new Promise((resolve, reject) => {
-    const ps = spawn(exe, ['/S', `/D=${dir}`], { windowsHide: true });
+    const tarExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
+    // --strip-components=1 core : take ONLY the installer's core/ tree and drop the
+    // leading "core/" path segment, so we get <dir>/firefox.exe not <dir>/core/firefox.exe.
+    const ps = spawn(tarExe, ['-xf', part, '-C', dir, '--strip-components=1', 'core'], { windowsHide: true });
+    let err = '';
+    if (ps.stderr) ps.stderr.on('data', (d) => { err += d.toString(); });
     ps.on('error', reject);
-    ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error('Firefox installer exited ' + code))));
+    ps.on('close', (code) => (code === 0
+      ? resolve()
+      : reject(new Error('Firefox extract failed: ' + (err.slice(0, 300) || `exit ${code}`)))));
   });
 }
 
@@ -755,13 +801,13 @@ function startFirefoxDownload(version) {
       entry.state = 'installing';
       entry.percent = 88;
       ffPersistState(true);
-      // Ensure the version dir exists before the NSIS installer writes into it
-      // (mirrors the Chrome path; harmless if /D= would create it anyway).
+      // Portable extract into /firefox/<major> — NO system install (see
+      // extractFirefoxPortable). bsdtar needs the -C target to exist first.
       await fsp.mkdir(firefoxInstallDir(major), { recursive: true });
-      await runFirefoxInstaller(part, firefoxInstallDir(major));
+      await extractFirefoxPortable(part, firefoxInstallDir(major));
       await fsp.unlink(part).catch(() => {});
 
-      if (!isFirefoxVersionInstalled(major)) throw Object.assign(new Error('Installed but firefox.exe was not found.'), { fatal: true });
+      if (!isFirefoxVersionInstalled(major)) throw Object.assign(new Error('Extracted but firefox.exe was not found.'), { fatal: true });
       entry.percent = 100;
       entry.state = 'done';
       ffAborters.delete(major);

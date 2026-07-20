@@ -70,9 +70,12 @@ const WIN_RES = [
   '1280x720', '1680x1050', '1920x1200', '3840x2160', '2560x1080', '1360x768',
   '1280x1024', '3440x1440', '1280x800', '2256x1504'
 ];
+// macOS LOGICAL (CSS-point) resolutions. A real Retina Mac reports logical points
+// (with devicePixelRatio 2), NOT the physical panel size — 3024x1964 / 2880x1800 as
+// screen.width is impossible at DPR 1 and absurd at DPR 2, an instant tell. The engine
+// pairs these with DPR 2 for macOS profiles so screen dims + DPR stay consistent.
 const MAC_RES = [
-  '2560x1440', '1680x1050', '1440x900', '1920x1080', '3024x1964', '2880x1800',
-  '1512x982', '1728x1117', '2056x1329', '1470x956', '1280x800', '2560x1600'
+  '1440x900', '1470x956', '1512x982', '1680x1050', '1728x1117', '1280x800', '2056x1329', '1512x945'
 ];
 const LINUX_RES = [
   '1920x1080', '1366x768', '2560x1440', '1600x900', '1680x1050', '1280x1024',
@@ -368,8 +371,19 @@ function generateFingerprint(opts = {}) {
   // its own coherent generator so desktop GPU/screen pools never leak into it.
   if (opts && opts.deviceClass === 'mobile') return generateMobileFingerprint();
 
-  // OS can be forced by the caller (batch with a chosen OS); otherwise weighted-random.
-  const os = normalizeDesktopOs(opts && opts.os) || weighted([['Windows', 65], ['macOS', 25], ['Linux', 10]]);
+  // OS selection (coherence-first). An explicitly-chosen OS is honored; an explicit
+  // "Random"/"Mixed"/"Cross" request (or opts.allowCrossOs) mints a weighted cross-OS
+  // spread; and the DEFAULT (blank/Auto) is the REAL HOST OS. Rationale: a string-only
+  // OS spoof over the real binary + host is always betrayed by the host's fonts, canvas
+  // raster and WebGL render output — so a Windows box claiming macOS/Linux fails every
+  // scanner. Cross-OS variety is therefore now an explicit opt-in, not the silent
+  // default that made ~35% of generated profiles fundamentally incoherent.
+  const HOST_OS = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows';
+  const rawOs = String((opts && opts.os) || '').trim().toLowerCase();
+  const wantsCrossOs = (opts && opts.allowCrossOs === true)
+    || rawOs === 'random' || rawOs === 'mixed' || rawOs === 'cross';
+  const os = normalizeDesktopOs(opts && opts.os)
+    || (wantsCrossOs ? weighted([['Windows', 65], ['macOS', 25], ['Linux', 10]]) : HOST_OS);
 
   let osVersion;
   let res;
@@ -417,7 +431,13 @@ function generateFingerprint(opts = {}) {
     resolutionW: resW,
     resolutionH: resH,
 
-    webglMetadata: 'Custom',
+    // "Real": the engine reports the TRUE host GPU on the main thread, dedicated
+    // workers AND the service worker — no main-vs-worker mismatch. A fake desktop GPU
+    // string only swaps two getParameter() values while the real render output +
+    // extension list + MAX_* params keep exposing the host GPU, a contradiction every
+    // scanner scores. webglVendor/Renderer are retained for the picker display and the
+    // device↔GPU coherence check, but are NOT injected unless the user picks Custom.
+    webglMetadata: 'Real',
     webglVendor: gpu[0],
     webglRenderer: gpu[1],
     webgpu: 'Based on WebGL',
