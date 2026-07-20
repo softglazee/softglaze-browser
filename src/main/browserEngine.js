@@ -2369,8 +2369,15 @@ const rootCdp = await browser.target().createCDPSession();
       // which open as new tabs). Sending on the child session lets a genuine failure
       // reject so inject() truthfully returns false and the retry/log path works.
       const child = conn ? conn.session(ev.sessionId) : null;
+      // Bound EVERY child CDP call so a single stalled command (e.g. a browser-domain
+      // command that a page session answers slowly, or a target mid-teardown) can never
+      // block the resume below — a new tab must never hang at about:blank. A timed-out
+      // call rejects; inject() catches it and the resume still fires.
+      const withTimeout = (p, ms) => Promise.race([
+        p, new Promise((_, rej) => setTimeout(() => rej(new Error('cdp call timed out')), ms))
+      ]);
       const sendMsg = (method, params = {}) => (child
-        ? child.send(method, params)
+        ? withTimeout(child.send(method, params), 4000)
         : Promise.reject(new Error('no flat child CDP session for ' + ev.sessionId)));
 
       const inject = async () => {
@@ -2412,11 +2419,15 @@ const rootCdp = await browser.target().createCDPSession();
         }
       };
 
+      let resumed = false;
       const resume = async () => {
+        if (resumed) return; // idempotent: the guard timer AND the final call may both fire
+        resumed = true;
         // waitForDebuggerOnStart pauses every new target — it MUST be resumed or the
-        // tab hangs at about:blank. Normal path: resume on the flat child session.
+        // tab hangs at about:blank. Normal path: resume on the flat child session
+        // (time-bounded so even a stalled resume can't wedge the tab).
         try {
-          if (child) { await child.send('Runtime.runIfWaitingForDebugger'); return; }
+          if (child) { await withTimeout(child.send('Runtime.runIfWaitingForDebugger'), 4000); return; }
         } catch (e) { /* fall through to a best-effort resume below */ }
         // No flat child session (target detached before we saw it, or a rare
         // non-routable type): best-effort legacy resume so the target can never
@@ -2429,19 +2440,30 @@ const rootCdp = await browser.target().createCDPSession();
         } catch (e2) { /* target already gone */ }
       };
 
-      let injected = await inject();
-      for (let i = 0; i < 20 && !injected; i += 1) { 
-        await new Promise(r => setTimeout(r, 25)); 
-        injected = await inject(); 
-      }
-      
+      // GUARANTEE the target resumes even if inject() stalls: arm a resume on a short
+      // timer BEFORE awaiting injection. Node's timer fires independently of the
+      // pending inject() await, so a window.open()/target=_blank tab can never hang at
+      // about:blank waiting on a slow/stuck CDP call. The init script + overrides are
+      // sent first and normally finish in <100ms (clearTimeout below cancels this);
+      // the timer only fires in the degenerate stall case, un-pausing the tab anyway.
+      const resumeGuard = setTimeout(() => { resume().catch(() => {}); }, 1500);
+      let injected = false;
+      try {
+        injected = await inject();
+        for (let i = 0; i < 20 && !injected && child; i += 1) {
+          await new Promise(r => setTimeout(r, 25));
+          injected = await inject();
+        }
+      } catch (e) { /* inject self-catches; guard the loop too so resume always runs */ }
+      clearTimeout(resumeGuard);
+
       if (isPageish && !injected) {
         console.error('[SG][fingerprint] new-tab injection FAILED — this tab may expose the REAL GPU/RAM/WebRTC. profile',
           profileId, title || '', '— target', info.url || info.targetId || info.type);
       }
-      
-      // ALWAYS RESUME the target, even if injection failed, so the tab never hangs at about:blank
-      await resume(); 
+
+      // ALWAYS resume (idempotent via `resumed`), even if injection failed, so the tab never hangs.
+      await resume();
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
   } catch (e) { /* fall back to per-page evaluateOnNewDocument in applyToPage */ }
