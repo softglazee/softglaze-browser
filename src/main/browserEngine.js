@@ -2053,17 +2053,35 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
       world: 'MAIN'
     }]
   };
-  // Override the New Tab Page ONLY for Chrome-for-Testing. CfT's built-in
-  // chrome://newtab CRASHES the whole browser (access violation 0xC0000005) when
-  // opened on recent builds (151+) — its remote NTP/realbox/signin code is broken
-  // in CfT — so clicking "+" killed the session. Pointing the NTP at a local page
-  // sidesteps the crash. Real Chrome's NTP works fine, so we DON'T override it
-  // there (the override would needlessly trip Chrome's "changed by extension"
-  // consent bubble). overriding is gated on opts.ntpOverride.
+  // Override the New Tab Page for browsers whose built-in NTP is unusable:
+  //   • Chrome-for-Testing — its remote NTP/realbox/signin code CRASHES the whole
+  //     browser (access violation 0xC0000005) on recent builds, so clicking "+"
+  //     killed the session.
+  //   • fingerprint-chromium (Ungoogled) — ships NO Google NTP at all; a new tab is
+  //     a near-empty dark page with only a "Web Store" icon (no search box), which
+  //     users reasonably read as "the browser is broken / blank black screen".
+  // Real Chrome's NTP works fine, so we DON'T override it there (the override would
+  // needlessly trip Chrome's "changed by extension" consent bubble). Gated on
+  // opts.ntpOverride. The replacement is a self-contained, functional NTP: a search
+  // box (Google search or direct-URL navigation) plus the profile-check quick links.
   if (opts.ntpOverride) {
     manifest.chrome_url_overrides = { newtab: 'newtab.html' };
-    const newtabHtml = '<!doctype html><html><head><meta charset="utf-8"><title>New Tab</title>'
-      + '<style>html,body{margin:0;height:100%;background:#1f2430}</style></head><body></body></html>';
+    const newtabHtml = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>New Tab</title>
+<style>:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:radial-gradient(1200px 600px at 50% -12%,#13233b 0%,#0b0f17 60%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#e5e7eb}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.5px;color:#93c5fd;font-size:15px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:#38bdf8}
+form{width:min(560px,92vw)}
+input{width:100%;padding:15px 20px;font-size:16px;border-radius:14px;border:1px solid #26344b;background:#0f1623;color:#f1f5f9;outline:none;box-shadow:0 10px 30px -12px rgba(0,0,0,.6);transition:border-color .15s}
+input:focus{border-color:#38bdf8}
+.links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:560px}
+.links a{background:#111827;padding:8px 14px;border-radius:9px;text-decoration:none;color:#cbd5e1;font-weight:600;font-size:12.5px;border:1px solid #1f2937;transition:border-color .15s,color .15s}
+.links a:hover{border-color:#38bdf8;color:#fff}</style></head>
+<body><div class="brand"><span class="dot"></span> SOFTGLAZE BROWSER</div>
+<form id="f"><input id="q" type="text" placeholder="Search Google or type a URL" autofocus autocomplete="off" spellcheck="false"></form>
+<div class="links"><a href="https://browserleaks.com/">BrowserLeaks</a><a href="https://browserscan.net/">BrowserScan</a><a href="https://pixelscan.net/">Pixelscan</a><a href="https://whoer.net/">Whoer</a><a href="https://abrahamjuliot.github.io/creepjs/">CreepJS</a></div>
+<script>(function(){var f=document.getElementById('f'),q=document.getElementById('q');f.addEventListener('submit',function(e){e.preventDefault();var v=(q.value||'').trim();if(!v)return;var direct=/^https?:\\/\\//i.test(v),host=/^[^\\s]+\\.[a-z]{2,}(\\/|$|\\?|:)/i.test(v)&&!/\\s/.test(v);location.href=direct?v:(host?'https://'+v:'https://www.google.com/search?q='+encodeURIComponent(v));});try{q.focus();}catch(_){}})();</script>
+</body></html>`;
     await fs.writeFile(path.join(extDir, 'newtab.html'), newtabHtml);
   }
   await fs.writeFile(path.join(extDir, 'manifest.json'), JSON.stringify(manifest));
