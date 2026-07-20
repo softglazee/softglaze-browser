@@ -403,7 +403,7 @@ export default function Gate({ children }) {
 
   // login / pick
   const [loginPass, setLoginPass] = useState('');
-  const [remember, setRemember] = useState(false); // "keep me signed in" (default off)
+  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON — stay signed in unless the user opts out; the credential is DPAPI-sealed to this Windows account and cleared on opt-out / sign-out)
   const [forgot, setForgot] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');

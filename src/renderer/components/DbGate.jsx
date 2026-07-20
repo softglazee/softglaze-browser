@@ -14,7 +14,7 @@ export default function DbGate({ children }) {
   const { t } = useTranslation('gate');
   const [phase, setPhase] = useState('loading'); // loading | unlock | ready
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false); // "keep me signed in" (default off)
+  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON — DPAPI-sealed workspace key; cleared on opt-out)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [corrupted, setCorrupted] = useState(false);
