@@ -705,6 +705,12 @@ function GlobalPreferences() {
           onChange={(v) => apply({ browser: { disableDevtools: v } })}
         />
         <ToggleRow
+          title={tx('browser.minimizeCdpFootprint.title', 'Minimize CDP footprint (experimental — anti-CAPTCHA)')}
+          description={tx('browser.minimizeCdpFootprint.desc', 'Drops the persistent CDP Runtime.enable — the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles.')}
+          checked={!!s.browser.minimizeCdpFootprint}
+          onChange={(v) => apply({ browser: { minimizeCdpFootprint: v } })}
+        />
+        <ToggleRow
           title={tx('browser.lockExtensions.title')}
           description={tx('browser.lockExtensions.desc')}
           checked={s.browser.lockExtensions}
