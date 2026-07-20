@@ -347,6 +347,61 @@ function chooseBrowserBinary(profile, opts = {}) {
   return cft ? { ...cft, isReal: false } : null;
 }
 
+// --- FINGERPRINT-CHROMIUM (native anti-detect engine, opt-in) ------------------
+// adryfish/fingerprint-chromium is a source-patched Ungoogled-Chromium that spoofs
+// the fingerprint NATIVELY (canvas / webgl / audio / UA / platform / timezone) from
+// a seed + flags — no JS injection, no CDP overrides, no first-load race. It also
+// natively hides navigator.webdriver + the HeadlessChrome UA AND blocks the WebRTC
+// real-IP leak (all proven in the Phase-0 head-to-head). We drive it through the
+// SAME puppeteer path as stock Chrome but pass native flags and SKIP our JS layer
+// (fpConfig.nativeEngine) so the two identities can't contradict each other.
+// Default OFF; binary resolved from a managed dir, so nothing changes until opt-in.
+const FP_CHROMIUM_ROOT = path.join(path.dirname(DOWNLOAD_CHROME_ROOT), 'fp-chromium');
+function resolveAntidetectBinary() {
+  // Packaged (userData/../fp-chromium) first, then the dev checkout's <repo>/fp-chromium.
+  const roots = [FP_CHROMIUM_ROOT, path.resolve(__dirname, '../../fp-chromium')];
+  for (const root of roots) {
+    try {
+      const direct = path.join(root, 'chrome.exe');
+      if (fsSync.existsSync(direct)) return direct;
+      // The GitHub release extracts to a single versioned subdir (…_windows_x64/chrome.exe).
+      for (const ent of fsSync.readdirSync(root, { withFileTypes: true })) {
+        if (!ent.isDirectory()) continue;
+        const nested = path.join(root, ent.name, 'chrome.exe');
+        if (fsSync.existsSync(nested)) return nested;
+      }
+    } catch (e) { /* root missing — try the next */ }
+  }
+  return null;
+}
+
+// Map a profile's generated identity onto fingerprint-chromium's native flags. Only
+// the coherently-mappable axes are passed (seed / platform / brand / cores / locale
+// / timezone); the binary derives everything else (canvas, webgl, audio, exact UA)
+// from the seed, guaranteeing internal coherence. WebRTC real-IP leak is blocked
+// natively via --disable-non-proxied-udp whenever a proxy is in play.
+function buildAntidetectFlags(profile, fpConfig, seed, timezoneId, hasProxy) {
+  const flags = [`--fingerprint=${(seed >>> 0) || 1}`];
+  const os = String(profile.os || '').toLowerCase();
+  flags.push(`--fingerprint-platform=${os.includes('mac') ? 'macos' : os.includes('linux') ? 'linux' : 'windows'}`);
+  // fingerprint-chromium accepts Chrome / Edge / Opera / Vivaldi; anything else → Chrome.
+  const rawBrand = String(profile.browserBrand || profile.browser || 'Chrome');
+  const brand = /edge/i.test(rawBrand) ? 'Edge' : /opera/i.test(rawBrand) ? 'Opera'
+    : /vivaldi/i.test(rawBrand) ? 'Vivaldi' : 'Chrome';
+  flags.push(`--fingerprint-brand=${brand}`);
+  const cores = Number(fpConfig && fpConfig.cores) || Number(profile.cpuCores) || 0;
+  if (cores > 0) flags.push(`--fingerprint-hardware-concurrency=${cores}`);
+  const langs = (fpConfig && Array.isArray(fpConfig.langs) && fpConfig.langs.length) ? fpConfig.langs : null;
+  if (langs) {
+    // --lang may also be emitted by the shared arg-builder with the same value; a
+    // duplicate is harmless (Chromium honors the last, identical, occurrence).
+    flags.push(`--lang=${langs[0]}`, `--accept-lang=${langs.join(',')}`);
+  }
+  if (timezoneId) flags.push(`--timezone=${timezoneId}`);
+  if (hasProxy) flags.push('--disable-non-proxied-udp');
+  return flags;
+}
+
 // --- PID TRACKING FOR ORPHAN CLEANUP ---
 const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
 
@@ -590,6 +645,11 @@ function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
 // the same fingerprint on every launch (consistency beats randomness).
 // ---------------------------------------------------------------------------
 function fingerprintScript(fp) {
+  // Native anti-detect engine (fingerprint-chromium) spoofs the fingerprint at the
+  // binary level from launch flags. When it's driving, this JS layer must NOT run: a
+  // second, differently-derived spoof would CONTRADICT the native one (canvas / UA /
+  // platform disagreeing across layers is itself a detection signal). Bail immediately.
+  if (fp && fp.nativeEngine) return;
   // Idempotency: this script can land via BOTH puppeteer's evaluateOnNewDocument
   // AND the CDP auto-attach path (which guarantees it runs before the first
   // document of new tabs/popups). Running twice would double-wrap the Worker
@@ -2089,7 +2149,21 @@ async function launchProfileSession(options = {}) {
   const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId });
   // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
   // extension is written with the NTP override ONLY when launching CfT.
-  const chosenBrowser = chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
+  // Anti-detect engine (opt-in, default OFF via browserSettings.antidetectEngine):
+  // when on AND the fingerprint-chromium binary is present, launch on it and let it
+  // spoof natively; we then skip our JS/CDP fingerprint layer (fpConfig.nativeEngine)
+  // so the two identities don't fight. Binary missing → fall back to stock Chrome +
+  // injection, so the profile still launches when it isn't installed.
+  let usingAntidetect = false;
+  let antidetectExe = null;
+  if (browserSettings.antidetectEngine === true) {
+    antidetectExe = resolveAntidetectBinary();
+    if (antidetectExe) { usingAntidetect = true; fpConfig.nativeEngine = true; }
+    else console.warn('[SG] antidetectEngine ON but fingerprint-chromium binary not found — using stock Chrome.');
+  }
+  const chosenBrowser = usingAntidetect
+    ? { exePath: antidetectExe, version: '', major: 0, isReal: false, antidetect: true }
+    : chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
   if (!chosenBrowser) {
     // No system Chrome AND no downloaded Chrome-for-Testing build. Packaged builds don't
     // bundle a Chromium, so puppeteer would otherwise throw a cryptic "Could not find
@@ -2168,6 +2242,15 @@ async function launchProfileSession(options = {}) {
   // proxied srflx (proxy IP) or nothing is exposed. The real IP can never escape.
   if (resolvedProxy && webrtcMode !== 'Real') {
     args.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
+  }
+
+  // Anti-detect engine: append fingerprint-chromium's native spoofing flags. They
+  // REPLACE our JS/CDP fingerprint layer (skipped via fpConfig.nativeEngine): the
+  // binary derives a coherent identity (canvas/webgl/audio/exact-UA) from --fingerprint,
+  // reports the mapped platform/brand/cores/locale, sets the timezone, and blocks the
+  // WebRTC real-IP leak — all natively, so there's no injection race for a site to spot.
+  if (usingAntidetect) {
+    args.push(...buildAntidetectFlags(profile, fpConfig, seed, timezoneId, Boolean(resolvedProxy)));
   }
 
   // Chromium collapses repeated --enable-features / --disable-features switches to
@@ -2417,6 +2500,11 @@ const rootCdp = await browser.target().createCDPSession();
       const inject = async () => {
         try {
           if (isPageish) {
+            // Native engine spoofs UA / timezone / cores / device-metrics + the whole
+            // fingerprint itself via launch flags; skip the JS inject + CDP overrides on
+            // new tabs too (a CDP UA fighting the native Sec-CH-UA is a tell). Geolocation
+            // below isn't native, so it still applies to popups.
+            if (!fpConfig.nativeEngine) {
             if (!scriptAdded) {
               await sendMsg('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource });
               scriptAdded = true;
@@ -2437,6 +2525,7 @@ const rootCdp = await browser.target().createCDPSession();
               await sendMsg('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints });
               await sendMsg('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
             }
+            } // end !nativeEngine — native flags cover UA/timezone/cores/device-metrics
             if (fpLate.geoLat != null && fpLate.geoLng != null) {
               await sendMsg('Browser.grantPermissions', { permissions: ['geolocation'] });
               await sendMsg('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc });
@@ -2444,7 +2533,8 @@ const rootCdp = await browser.target().createCDPSession();
             return true;
           }
           if (isWorker) {
-            if (fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
+            // Native engine already reports the spoofed core count to workers.
+            if (!fpConfig.nativeEngine && fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
             return true;
           }
           return true; // 'other'/'browser' target
@@ -2651,6 +2741,11 @@ const rootCdp = await browser.target().createCDPSession();
       // Proxy auth for HTTP(S) proxies — version-agnostic, no MV2 extension.
       if (proxyCreds) await targetPage.authenticate(proxyCreds).catch(() => {});
       const cdp = await targetPage.target().createCDPSession();
+      // Native engine spoofs UA / timezone / cores / device-metrics itself from launch
+      // flags; re-applying them over CDP would fight the native identity (a CDP UA that
+      // disagrees with the native Sec-CH-UA headers is a tell). Skip them when native —
+      // geolocation / DNT / request-filtering below aren't native, so they still run.
+      if (!fpConfig.nativeEngine) {
       await cdp.send('Emulation.setUserAgentOverride', {
         userAgent: ua.userAgent,
         acceptLanguage,
@@ -2677,6 +2772,7 @@ const rootCdp = await browser.target().createCDPSession();
       // workers it spawns, even before their script runs (no JS-injection race).
       // Belt-and-suspenders with the in-page navigator override + worker prelude.
       if (fpConfig.cores) await cdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+      } // end !nativeEngine — native flags already set UA/timezone/cores/device-metrics
       if (geoLat !== null && geoLng !== null) {
         await cdp.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
         await cdp.send('Emulation.setGeolocationOverride', {
@@ -2752,7 +2848,8 @@ const rootCdp = await browser.target().createCDPSession();
     if (targetType === 'service_worker' || targetType === 'shared_worker' || targetType === 'worker') {
       try {
         const wcdp = await target.createCDPSession();
-        if (fpConfig.cores) await wcdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+        // Native engine already reports the spoofed core count inside workers.
+        if (!fpConfig.nativeEngine && fpConfig.cores) await wcdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
       } catch (e) { /* worker target may close immediately */ }
       return;
     }

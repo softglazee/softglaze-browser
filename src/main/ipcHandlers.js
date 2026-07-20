@@ -4877,7 +4877,15 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     // persistent CDP Runtime.enable — the #1 Cloudflare/anti-bot automation tell. Default
     // OFF. TRADE-OFF while ON: persona autofill, start-page check-links, and sync mirror
     // stop working (they need the CDP binding). See browserEngine getRuntimeFixPuppeteer.
-    minimizeCdpFootprint: false
+    minimizeCdpFootprint: false,
+    // OPT-IN native anti-detect engine: launch profiles on fingerprint-chromium
+    // (source-patched Ungoogled-Chromium) instead of stock Chrome. It spoofs the
+    // fingerprint at the binary level (canvas/webgl/audio/UA/platform/timezone) and
+    // natively hides navigator.webdriver + the HeadlessChrome UA AND blocks the
+    // WebRTC real-IP leak — no JS-injection race. Requires the fingerprint-chromium
+    // binary to be present (Browsers page / managed dir); falls back to stock Chrome
+    // when absent. Default OFF. See browserEngine resolveAntidetectBinary.
+    antidetectEngine: false
   },
   onStartup: {
     mode: 'detection', // detection | last | blank

@@ -8,6 +8,7 @@ softglaze_profiles/
 .DS_Store
 chrome/
 firefox/
+fp-chromium/
 # local dev test artifacts
 dev-test.log
 dev-test.err.log

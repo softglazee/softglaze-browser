@@ -711,6 +711,12 @@ function GlobalPreferences() {
           onChange={(v) => apply({ browser: { minimizeCdpFootprint: v } })}
         />
         <ToggleRow
+          title={tx('browser.antidetectEngine.title', 'Native anti-detect engine (fingerprint-chromium)')}
+          description={tx('browser.antidetectEngine.desc', 'Launch Chrome profiles on fingerprint-chromium — a source-patched Chromium that spoofs the fingerprint (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively — no JS-injection race for sites to catch. Requires the fingerprint-chromium binary in the app’s browser folder; falls back to stock Chrome when it isn’t present. Off by default; turn on and relaunch profiles.')}
+          checked={!!s.browser.antidetectEngine}
+          onChange={(v) => apply({ browser: { antidetectEngine: v } })}
+        />
+        <ToggleRow
           title={tx('browser.lockExtensions.title')}
           description={tx('browser.lockExtensions.desc')}
           checked={s.browser.lockExtensions}
