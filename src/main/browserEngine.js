@@ -85,6 +85,21 @@ function getRuntimeFixPuppeteer() {
   return engine;
 }
 
+// Anti-detect (fingerprint-chromium) engine driver: a puppeteer-extra instance with NO
+// stealth plugin. fingerprint-chromium already hides navigator.webdriver + the
+// HeadlessChrome UA and spoofs canvas/webgl/audio/UA NATIVELY, so the stealth evasions
+// are redundant AND self-defeating — their patch patterns are themselves fingerprintable
+// (CreepJS was reporting "60% stealth" on this engine). A clean instance drives the
+// browser without adding that tell. Persona autofill / exposeFunction still work: those
+// need only the CDP Runtime domain, which stock puppeteer keeps enabled.
+let _nativeEngine = null;
+function getNativeEngine() {
+  if (_nativeEngine) return _nativeEngine;
+  const { addExtra } = require('puppeteer-extra');
+  _nativeEngine = addExtra(require('puppeteer-core'));
+  return _nativeEngine;
+}
+
 const DEFAULT_PROFILE_ROOT = path.resolve(process.cwd(), 'softglaze_profiles');
 const DEFAULT_WINDOW_SIZE = { width: 1280, height: 720 };
 const GEO_LOOKUP_TIMEOUT_MS = 8000;
@@ -2159,26 +2174,34 @@ async function launchProfileSession(options = {}) {
   // workers, no injection race) and bake the proxy IP + locale into the extension.
   const manualTz = profile.timezoneType === 'Custom' && profile.timezoneCustom
     ? String(profile.timezoneCustom).trim() : null;
-  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real' ? await lookupProxyGeoNodeCached(resolvedProxy) : null;
+
+  // Decide the anti-detect engine BEFORE the geo lookup: fingerprint-chromium bakes the
+  // timezone as a LAUNCH flag (--timezone) and cannot correct it afterward, so its geo
+  // must be resolved FRESH (uncached). A stale-cached exit — e.g. a sticky proxy session
+  // that has since rotated to a different city — would otherwise leave the browser on a
+  // timezone that doesn't match the live proxy IP, the single loudest CAPTCHA tell (we
+  // saw Pacific/Honolulu on a Wisconsin exit). Stock Chrome keeps the 10-min cache: it
+  // applies the timezone per-page via CDP AFTER the in-page geo lookup, so it self-corrects.
+  let usingAntidetect = false;
+  let antidetectExe = null;
+  if (browserSettings.antidetectEngine === true) {
+    antidetectExe = resolveAntidetectBinary();
+    if (antidetectExe) usingAntidetect = true;
+    else console.warn('[SG] antidetectEngine ON but fingerprint-chromium binary not found — using stock Chrome.');
+  }
+
+  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real'
+    ? await (usingAntidetect ? lookupProxyGeoNode(resolvedProxy) : lookupProxyGeoNodeCached(resolvedProxy))
+    : null;
   let timezoneId = manualTz || (geo && geo.timezone) || null;
 
   // Build the fingerprint config (geo-aware) and bake it into a MAIN-world
   // content-script extension BEFORE launch — this is the reliable injection path.
   const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId });
-  // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
-  // extension is written with the NTP override ONLY when launching CfT.
-  // Anti-detect engine (opt-in, default OFF via browserSettings.antidetectEngine):
-  // when on AND the fingerprint-chromium binary is present, launch on it and let it
-  // spoof natively; we then skip our JS/CDP fingerprint layer (fpConfig.nativeEngine)
-  // so the two identities don't fight. Binary missing → fall back to stock Chrome +
-  // injection, so the profile still launches when it isn't installed.
-  let usingAntidetect = false;
-  let antidetectExe = null;
-  if (browserSettings.antidetectEngine === true) {
-    antidetectExe = resolveAntidetectBinary();
-    if (antidetectExe) { usingAntidetect = true; fpConfig.nativeEngine = true; }
-    else console.warn('[SG] antidetectEngine ON but fingerprint-chromium binary not found — using stock Chrome.');
-  }
+  if (usingAntidetect) fpConfig.nativeEngine = true;
+  // Binary: fingerprint-chromium when the anti-detect engine is active (its native spoof
+  // replaces our JS/CDP layer via fpConfig.nativeEngine), else real Chrome / CfT. The
+  // extension below is written with the NTP override ONLY when it's NOT real Chrome.
   const chosenBrowser = usingAntidetect
     ? { exePath: antidetectExe, version: '', major: 0, isReal: false, antidetect: true }
     : chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
@@ -2425,7 +2448,9 @@ async function launchProfileSession(options = {}) {
 
   // Engine: stock puppeteer by default; the opt-in rebrowser engine (persistent
   // Runtime.enable dropped) when "minimize CDP footprint" is on for this launch.
-  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer() : puppeteer;
+  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer()
+    : usingAntidetect ? getNativeEngine()
+    : puppeteer;
   let browser;
   try {
     browser = await engine.launch(launchOptions);
