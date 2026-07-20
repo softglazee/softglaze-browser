@@ -469,6 +469,7 @@ function deriveProvider(proxy) {
   if (proxy.provider) return String(proxy.provider).toLowerCase();
   const n = String(proxy.name || '').toLowerCase();
   if (n.startsWith('apify')) return 'apify';
+  if (n.startsWith('anyip')) return 'anyip';
   if (n.startsWith('shopsocks5')) return 'shopsocks5';
   if (n.startsWith('smartproxy.org') || n.startsWith('smartproxyorg')) return 'smartproxyorg';
   if (n.startsWith('bright')) return 'brightdata';
@@ -1229,7 +1230,7 @@ const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
-  apify: 'Apify', smartproxyorg: 'Smartproxy.org'
+  apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP'
 });
 
 // Plausible rotating gateways used to shape the simulated rows. Replace with the
@@ -1248,7 +1249,8 @@ const VENDOR_GATEWAYS = Object.freeze({
   tisocks: { host: 'gate.tisocks.net', port: 1080, type: 'SOCKS5' },
   shopsocks5: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' },
   apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' },
-  smartproxyorg: { host: 'gate.smartproxy.io', port: 7000, type: 'HTTP' }
+  smartproxyorg: { host: 'gate.smartproxy.io', port: 7000, type: 'HTTP' },
+  anyip: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }
 });
 
 // SIMULATION STUB: stand-in for "call the vendor API with the customer token and
@@ -1453,6 +1455,49 @@ async function fetchSmartproxyOrgPool({ username, password, country, state, city
   return rows;
 }
 
+// --- anyip.io: type/country/sesstime/session encoded in the username ---------
+// anyip.io uses ONE gateway (portal.anyip.io:1080 by default; 443 also serves both
+// HTTP and SOCKS5, and an account may be assigned a custom port — so host/port are
+// overridable from the UI). Everything else is encoded into the proxy username as a
+// comma-delimited list of underscore-keyed flags on the base username:
+//   type_<residential|mobile>, country_<XX>, sesstime_<minutes> (1..10080),
+//   session_<name>  (sticky; omit for rotating).
+// Example: user_ABCD,type_residential,country_US,sesstime_60,session_ab12cd34
+// A fixed session name pins ONE sticky IP (count collapses to 1); a blank session
+// mints `count` distinct rotating IPs. Authed with the account username + password.
+async function fetchAnyIpPool({ username, password, country, session, count, host, port, life, poolType }) {
+  const user = String(username || '').trim();
+  const pw = String(password || '');
+  if (!user) throw new Error('AnyIP: a proxy username is required.');
+  if (!pw) throw new Error('AnyIP: a proxy password is required.');
+  const cc = normCountryCode(country);
+  // Default to the documented gateway; honor an explicit override (custom port).
+  const gwHost = String(host || '').trim() || 'portal.anyip.io';
+  const gwPort = Number.parseInt(String(port), 10) || 1080;
+  const fixedSession = String(session || '').trim().replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+  // sesstime = minutes to keep the same exit IP (anyip allows 1..10080). Blank/0 =
+  // rotate a fresh IP per request. (The shared UI dropdown tops out at 1440; the
+  // adapter accepts the full range if a larger value is ever passed.)
+  const lifeMin = Math.min(10080, Math.max(0, Number.parseInt(String(life), 10) || 0));
+  const ptype = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
+  const n = fixedSession ? 1 : clampPoolCount(count);
+  const rows = [];
+  for (let i = 1; i <= n; i += 1) {
+    // Comma-delimited flags, each an underscore key_value (NOTE: differs from
+    // Smartproxy.org, which joins with "_" and keys with "-").
+    const parts = [user, `type_${ptype}`];
+    if (cc) parts.push(`country_${cc}`);
+    if (lifeMin) parts.push(`sesstime_${lifeMin}`);
+    parts.push(`session_${fixedSession || randSession()}`);
+    rows.push({
+      type: 'HTTP', host: gwHost, port: gwPort,
+      username: parts.join(','), password: pw,
+      label: `AnyIP • ${ptype === 'mobile' ? 'Mobile' : 'Res'} • ${cc || 'Global'} • #${i}`, country: cc || null
+    });
+  }
+  return rows;
+}
+
 // --- ShopSocks5: REAL list pull via the documented account API ---------------
 // POST form-urlencoded to /socks/{premium|list|daily} on shopsocks5.com, authed by
 // user_name + api_token (BOTH required — token alone fails with "User or Api Token
@@ -1547,7 +1592,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   smartproxy: fetchSmartproxyPool,
   apify: fetchApifyPool,
   smartproxyorg: fetchSmartproxyOrgPool,
-  shopsocks5: fetchShopSocks5Pool
+  shopsocks5: fetchShopSocks5Pool,
+  anyip: fetchAnyIpPool
 });
 
 async function syncVendorPool(payload) {
@@ -1583,7 +1629,9 @@ async function syncVendorPool(payload) {
       port: input.port,
       // ShopSocks5 plan endpoint (premium|list|daily) + proxy type (proxy_sock_5|proxy_https).
       plan: optionalString(input.plan),
-      proxyType: optionalString(input.proxyType)
+      proxyType: optionalString(input.proxyType),
+      // anyip.io: residential vs mobile pool selector (encoded as type_<poolType>).
+      poolType: optionalString(input.poolType)
     });
   } else {
     // SIMULATION fallback for not-yet-wired providers (token-driven).
@@ -2757,7 +2805,10 @@ async function batchGenerateProfiles(payload) {
   const count = Math.max(1, Math.min(500, Number.parseInt(String(input.count), 10) || 1));
   const prefix = (optionalString(input.prefix) || optionalString(input.baseName) || 'Profile').slice(0, 60);
   const startIndex = Math.max(0, Number.parseInt(String(input.startIndex), 10) || 1);
-  const os = optionalString(input.os) || 'Random';
+  // Coherence-first: an unspecified OS falls through to the REAL HOST OS (the
+  // generator's default). The batch still honors an explicit OS pick, and an explicit
+  // "Random" still mints a cross-OS spread for users who deliberately want variety.
+  const os = optionalString(input.os) || '';
   const deviceClass = input.deviceClass === 'mobile' ? 'mobile' : 'desktop';
   const randomFp = input.randomFingerprint !== false; // default ON (the whole point)
   const distributeVersions = randomFp && input.distributeVersions !== false && deviceClass !== 'mobile';
