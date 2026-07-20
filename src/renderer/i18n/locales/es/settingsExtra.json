@@ -165,6 +165,10 @@
       "title": "Desactivar las herramientas de desarrollo del navegador",
       "desc": "Escribe un archivo de política gestionada DeveloperToolsAvailability en cada perfil. Chromium lo aplica una vez que el archivo se registra en la ubicación de políticas gestionadas del sistema operativo (no se aplica automáticamente a toda la máquina)."
     },
+    "minimizeCdpFootprint": {
+      "title": "Minimizar la huella de CDP (experimental — anti-CAPTCHA)",
+      "desc": "Elimina el Runtime.enable persistente de CDP, la principal señal de automatización que detectan Cloudflare/Turnstile. CONTRAPARTIDA mientras está activo: el autorrelleno de personas, los enlaces de comprobación de la página de inicio y el espejo de sesiones sincronizadas dejan de funcionar (necesitan el binding de CDP). Desactivado por defecto; actívalo para comparar si reduce los CAPTCHA y luego relanza los perfiles."
+    },
     "lockExtensions": {
       "title": "Desactivar la instalación/eliminación de extensiones",
       "desc": "Escribe un archivo de política gestionada ExtensionInstallBlocklist por perfil (la extensión de autenticación de proxy no se ve afectada). Se aplica una vez registrado en la ubicación de políticas gestionadas del sistema operativo."
