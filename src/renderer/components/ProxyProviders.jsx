@@ -38,7 +38,7 @@ export const PROVIDERS = [
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
-  { key: 'anyip', name: 'AnyIP', initials: 'AI', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true, life: true, gateway: true, poolType: true } }
+  { key: 'anyip', name: 'AnyIP', initials: 'AI', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } }
 ];
 
 // Country list for the geo-targeted providers (Apify / Smartproxy.org / ShopSocks5).
@@ -62,7 +62,7 @@ const GEO_HINTS = {
   apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings.',
   smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
   shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER — token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
-  anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Enter your anyip username + password; a blank session with “Different each time” mints rotating IPs, while a fixed session name pins a single IP. Override the gateway host/port if your dashboard shows a custom port.'
+  anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port.'
 };
 
 export default function ProxyProviders({ onSynced }) {
@@ -76,7 +76,7 @@ export default function ProxyProviders({ onSynced }) {
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential' });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '' });
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -93,7 +93,7 @@ export default function ProxyProviders({ onSynced }) {
 
   // Re-prime the workspace whenever the active provider changes.
   useEffect(() => {
-    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential' });
+    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '' });
     setCheckResult(null);
     setSyncResult(null);
     setErr('');
@@ -197,8 +197,15 @@ export default function ProxyProviders({ onSynced }) {
     const g = provider.geoSync || {};
     const creds = g.creds || [];
     if (creds.includes('token') && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
-    if (creds.includes('username') && !form.username.trim()) { setErr(t('proxyProviders.errors.enterProxyUsername')); return; }
-    if (creds.includes('password') && !form.password) { setErr(t('proxyProviders.errors.enterProxyPassword')); return; }
+    if (g.apiKey) {
+      // anyip: accept EITHER direct proxy Username + Password OR an API key + Team ID.
+      const hasCreds = form.username.trim() && form.password;
+      const hasApi = form.token.trim() && form.teamId.trim();
+      if (!hasCreds && !hasApi) { setErr(t('proxyProviders.errors.anyipCredsOrApi', 'Enter your proxy Username + Password, or an API key + Team ID to auto-provision.')); return; }
+    } else {
+      if (creds.includes('username') && !form.username.trim()) { setErr(t('proxyProviders.errors.enterProxyUsername')); return; }
+      if (creds.includes('password') && !form.password) { setErr(t('proxyProviders.errors.enterProxyPassword')); return; }
+    }
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
@@ -217,7 +224,8 @@ export default function ProxyProviders({ onSynced }) {
         port: form.port,
         plan: form.plan,
         proxyType: form.proxyType,
-        poolType: form.poolType
+        poolType: form.poolType,
+        teamId: form.teamId.trim()
       });
       setSyncResult(r);
       persistCreds();
@@ -356,10 +364,26 @@ export default function ProxyProviders({ onSynced }) {
                   </div>
                 )}
 
+                {provider.geoSync.apiKey && (
+                  <div className="rounded-lg border border-border bg-card/40 p-3.5 space-y-3">
+                    <p className="text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.geo.anyipApiNote', 'Two ways to connect: paste your proxy Username + Password below (anyip dashboard → Get Proxy Details), OR enter an API key + Team ID here to auto-provision a proxy account. The API key is NOT the proxy password.')}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiKeyOptLabel', 'API key')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
+                        <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.anyipApiKeyPlaceholder', 'anyip API key')} autoComplete="off" />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.teamIdLabel', 'Team ID')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
+                        <input value={form.teamId} onChange={(e) => set('teamId', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.teamIdPlaceholder', 'your anyip team id')} autoComplete="off" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {provider.geoSync.creds.includes('username') && (
                   <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : t('proxyProviders.geo.usernameSubLabel')}</label>
-                    <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : 'username'} autoComplete="off" />
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.geoSync.apiKey ? t('proxyProviders.geo.anyipUserLabel', 'Proxy username (user_…)') : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : t('proxyProviders.geo.usernameSubLabel'))}</label>
+                    <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : 'username')} autoComplete="off" />
                   </div>
                 )}
 

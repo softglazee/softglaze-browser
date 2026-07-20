@@ -1464,12 +1464,60 @@ async function fetchSmartproxyOrgPool({ username, password, country, state, city
 //   session_<name>  (sticky; omit for rotating).
 // Example: user_ABCD,type_residential,country_US,sesstime_60,session_ab12cd34
 // A fixed session name pins ONE sticky IP (count collapses to 1); a blank session
-// mints `count` distinct rotating IPs. Authed with the account username + password.
-async function fetchAnyIpPool({ username, password, country, session, count, host, port, life, poolType }) {
-  const user = String(username || '').trim();
-  const pw = String(password || '');
-  if (!user) throw new Error('AnyIP: a proxy username is required.');
-  if (!pw) throw new Error('AnyIP: a proxy password is required.');
+// mints `count` distinct rotating IPs.
+//
+// Credentials arrive one of two ways:
+//   1. DIRECT — the user pastes the proxy Username (user_…) + Password from the anyip
+//      dashboard ("Get Proxy Details" / Proxy List Generator). NOTE: the API key is
+//      NOT the proxy password (they are distinct values).
+//   2. AUTO-PROVISION — the user supplies an API key + Team ID and we POST a new proxy
+//      account to anyip's REST API. The create endpoint REQUIRES us to supply
+//      plain_password (read endpoints never return it), so we generate the credentials,
+//      register them, and then hold the working user:pass. One pull provisions one
+//      account and mints N sticky-session rows from it.
+
+// POST a new anyip proxy account via the REST API; returns { username, password }. The
+// password is the one WE supply on create (retrievable no other way).
+async function anyipProvisionAccount(apiKey, teamId) {
+  const key = String(apiKey || '').trim();
+  const team = String(teamId || '').trim();
+  if (!key) throw new Error('AnyIP: an API key is required to auto-provision a proxy account.');
+  if (!team) throw new Error('AnyIP: your Team ID is required for API provisioning (anyip dashboard → Team / Settings, or the dashboard URL).');
+  const nodeCrypto = require('node:crypto');
+  const suffix = nodeCrypto.randomBytes(4).toString('hex');
+  const genUser = `sg${suffix}`;                                   // >= 6 chars, alnum
+  const plainPassword = ('sg' + nodeCrypto.randomBytes(6).toString('hex')).slice(0, 16); // >= 6 alnum
+  const url = `https://api.anyip.io/api/teams/${encodeURIComponent(team)}/proxy_accounts`;
+  let text;
+  try {
+    text = await httpRequestText(url, {
+      method: 'POST',
+      headers: { 'api-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ username: genUser, plain_password: plainPassword, description: 'SoftGlaze auto-provisioned', enabled: true }),
+      timeoutMs: 20000
+    });
+  } catch (e) {
+    throw new Error(`AnyIP provisioning failed: ${e.message} — verify the API key and Team ID (dashboard → Settings).`);
+  }
+  // The create endpoint echoes the account (id, username, hash, …). We already know the
+  // password (we supplied it); prefer the API's returned username if present.
+  let acct = null;
+  try { acct = JSON.parse(text); } catch (e) { acct = null; }
+  const finalUser = (acct && typeof acct.username === 'string' && acct.username) ? acct.username : genUser;
+  return { username: finalUser, password: plainPassword };
+}
+
+async function fetchAnyIpPool({ username, password, country, session, count, host, port, life, poolType, token, teamId }) {
+  let user = String(username || '').trim();
+  let pw = String(password || '');
+  // AUTO-PROVISION path: no direct creds, but an API key + Team ID were supplied.
+  if ((!user || !pw) && String(token || '').trim() && String(teamId || '').trim()) {
+    const prov = await anyipProvisionAccount(token, teamId);
+    user = prov.username;
+    pw = prov.password;
+  }
+  if (!user) throw new Error('AnyIP: enter your proxy Username (user_…) + Password from the dashboard, or an API key + Team ID to auto-provision.');
+  if (!pw) throw new Error('AnyIP: a proxy password is required (or supply an API key + Team ID to auto-provision one).');
   const cc = normCountryCode(country);
   // Default to the documented gateway; honor an explicit override (custom port).
   const gwHost = String(host || '').trim() || 'portal.anyip.io';
@@ -1630,8 +1678,10 @@ async function syncVendorPool(payload) {
       // ShopSocks5 plan endpoint (premium|list|daily) + proxy type (proxy_sock_5|proxy_https).
       plan: optionalString(input.plan),
       proxyType: optionalString(input.proxyType),
-      // anyip.io: residential vs mobile pool selector (encoded as type_<poolType>).
-      poolType: optionalString(input.poolType)
+      // anyip.io: residential vs mobile pool selector (encoded as type_<poolType>) +
+      // optional REST auto-provision (API key = input.token, Team ID = input.teamId).
+      poolType: optionalString(input.poolType),
+      teamId: optionalString(input.teamId)
     });
   } else {
     // SIMULATION fallback for not-yet-wired providers (token-driven).

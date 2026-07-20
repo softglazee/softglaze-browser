@@ -64,6 +64,12 @@
       "poolTypeLabel": "Tipo de grupo",
       "poolResidential": "Residencial",
       "poolMobile": "Móvil",
+      "apiKeyOptLabel": "Clave API",
+      "teamIdLabel": "ID de equipo",
+      "teamIdPlaceholder": "tu team id de anyip",
+      "anyipUserLabel": "Usuario del proxy (user_…)",
+      "anyipApiKeyPlaceholder": "clave API de anyip",
+      "anyipApiNote": "Dos formas de conectar: pega tu Usuario + Contraseña del proxy abajo (panel de anyip → Get Proxy Details), O introduce una clave API + ID de equipo aquí para aprovisionar una cuenta automáticamente. La clave API NO es la contraseña del proxy.",
       "apifyPasswordLabel": "Contraseña del proxy de {{provider}}",
       "proxyPasswordLabel": "Contraseña del proxy",
       "apiTokenLabel": "Token de API",
@@ -195,7 +201,7 @@
       "apify": "Apify residential enruta a través de una sola pasarela (proxy.apify.com:8000); el país y una sesión fija se codifican en el usuario. Cada extracción genera esa cantidad de IP residenciales fijas que puedes asignar a perfiles. Usa la contraseña de Apify Console → Proxy → ajustes HTTP.",
       "smartproxyorg": "Smartproxy.org (ISP de larga duración) enruta a través de isp.smartproxy.net:3100 e incorpora el área (país) + estado/ciudad opcionales + una duración/sesión fija en el usuario del proxy. Introduce el usuario de tu subcuenta (smart-…) y su contraseña. \"Mantener la misma IP\" define cuánto tiempo permanece fija una IP de salida (de 5 min hasta 24 h); déjalo en \"Diferente cada vez\" con una sesión en blanco para generar varias IP rotativas. Si tu panel muestra un host:port diferente, sobrescríbelo abajo.",
       "shopsocks5": "ShopSocks5 extrae tu lista SOCKS5 (o HTTPS) adquirida mediante su API, filtrada por el país/estado/ciudad elegidos. La API se autentica con el usuario/correo de tu cuenta + el token de API JUNTOS — el token solo devuelve “User or Api Token incorrect”. Elige el Plan que coincida con tu suscripción (Premium / Lista / Diario).",
-      "anyip": "anyip.io se enruta por una única pasarela (portal.anyip.io:1080) y codifica el tipo (Residencial/Móvil), el país, un nombre de sesión fija opcional y una duración en el usuario del proxy. Introduce tu usuario + contraseña de anyip; una sesión en blanco con “IP diferente cada vez” genera IP rotativas, mientras que un nombre de sesión fija mantiene una sola IP. Sobrescribe la pasarela si tu panel muestra un puerto personalizado."
+      "anyip": "anyip.io se enruta por una única pasarela (portal.anyip.io:1080) y codifica el tipo (Residencial/Móvil), el país, un nombre de sesión fija opcional y una duración en el usuario del proxy. Conecta pegando tu Usuario (user_…) + Contraseña del proxy desde el panel, O introduciendo una clave API + ID de equipo para aprovisionar una cuenta automáticamente. Una sesión en blanco con “IP diferente cada vez” genera IP rotativas; un nombre de sesión fija mantiene una sola IP. Sobrescribe la pasarela si tu panel muestra un puerto personalizado."
     }
   }
 }
