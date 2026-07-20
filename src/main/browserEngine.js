@@ -48,11 +48,42 @@ function ensureChromiumForceInstall(extId) {
 // languages). Running both produces the inconsistent values detectors flag
 // (e.g. CreepJS seeing "Intel Iris" from stealth AND our AMD GPU). Disable the
 // overlapping evasions so OUR per-profile values are the single source of truth.
-const stealth = StealthPlugin();
-['user-agent-override', 'navigator.hardwareConcurrency', 'navigator.languages', 'webgl.vendor'].forEach((e) => {
-  try { stealth.enabledEvasions.delete(e); } catch (err) {}
-});
-puppeteer.use(stealth);
+// Build a stealth plugin with the overlapping evasions stripped (our per-profile values
+// are the single source of truth). A FRESH instance is required per puppeteer engine —
+// a plugin instance cannot be shared across two PuppeteerExtra instances.
+function makeStealth() {
+  const s = StealthPlugin();
+  ['user-agent-override', 'navigator.hardwareConcurrency', 'navigator.languages', 'webgl.vendor']
+    .forEach((e) => { try { s.enabledEvasions.delete(e); } catch (err) {} });
+  return s;
+}
+puppeteer.use(makeStealth());
+
+// OPT-IN "minimize CDP footprint" engine (default OFF; browserSettings.minimizeCdpFootprint).
+// Stock puppeteer keeps the CDP Runtime domain ENABLED for the whole session — the #1
+// Cloudflare/anti-bot automation tell (a page-side getter detects it), which no stealth
+// evasion covers. rebrowser-puppeteer-core in enableDisable mode avoids the PERSISTENT
+// Runtime.enable (it enables only transiently, per navigation, to acquire the main-world
+// execution context), removing that tell while keeping page.evaluate working.
+// TRADE-OFF (verified): page->node bindings (page.exposeFunction) REQUIRE the persistent
+// Runtime.enable — a binding does not survive Runtime.disable — so with this engine the
+// exposeFunction features (persona autofill, start-page check-links / __sgzOpenTab, and
+// synchronized-session mirroring) do NOT work. It is therefore an opt-in probe to A/B
+// whether the leak fix beats a real CAPTCHA, not the default. Required lazily so a
+// stock-engine launch never loads the dependency.
+let _runtimeFixPuppeteer = null;
+function getRuntimeFixPuppeteer() {
+  if (_runtimeFixPuppeteer) return _runtimeFixPuppeteer;
+  // rebrowser reads this from process.env at runtime. enableDisable is the only mode
+  // that keeps main-world page.evaluate working (addBinding is unwired in 22.15.0;
+  // alwaysIsolated loses the main world).
+  if (!process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE) process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE = 'enableDisable';
+  const { addExtra } = require('puppeteer-extra');
+  const engine = addExtra(require('rebrowser-puppeteer-core'));
+  engine.use(makeStealth());
+  _runtimeFixPuppeteer = engine;
+  return engine;
+}
 
 const DEFAULT_PROFILE_ROOT = path.resolve(process.cwd(), 'softglaze_profiles');
 const DEFAULT_WINDOW_SIZE = { width: 1280, height: 720 };
@@ -2291,9 +2322,12 @@ async function launchProfileSession(options = {}) {
   // fix for the real-timezone leak (proxy in the US but JS reporting Asia/Karachi).
   if (timezoneId) launchOptions.env = { ...process.env, TZ: timezoneId };
 
+  // Engine: stock puppeteer by default; the opt-in rebrowser engine (persistent
+  // Runtime.enable dropped) when "minimize CDP footprint" is on for this launch.
+  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer() : puppeteer;
   let browser;
   try {
-    browser = await puppeteer.launch(launchOptions);
+    browser = await engine.launch(launchOptions);
   } catch (launchErr) {
     // Launch itself failed — the SOCKS relay (if any) would otherwise leak.
     if (socksRelay) { try { socksRelay.close(); } catch (e) {} }

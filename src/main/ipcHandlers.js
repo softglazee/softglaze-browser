@@ -4872,7 +4872,12 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     secureAccess: false,
     disableVideos: false,
     disableImages: false,
-    imageMinKb: 10
+    imageMinKb: 10,
+    // OPT-IN probe: switch the Chromium engine to rebrowser (enableDisable) to drop the
+    // persistent CDP Runtime.enable — the #1 Cloudflare/anti-bot automation tell. Default
+    // OFF. TRADE-OFF while ON: persona autofill, start-page check-links, and sync mirror
+    // stop working (they need the CDP binding). See browserEngine getRuntimeFixPuppeteer.
+    minimizeCdpFootprint: false
   },
   onStartup: {
     mode: 'detection', // detection | last | blank
