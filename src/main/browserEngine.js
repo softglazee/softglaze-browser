@@ -652,11 +652,26 @@ function fingerprintScript(fp) {
   if (fp.screenW && fp.screenH) {
     define(screen, 'width', fp.screenW);
     define(screen, 'height', fp.screenH);
-    // Real Windows reserves ~48px for the taskbar, so availHeight < height. Making
-    // availHeight === height (the old behavior) is itself a spoofing tell.
+    // Reserve the OS task/menu bar so availHeight < height (availHeight === height is
+    // itself a spoofing tell) — and do it PER-OS, not always the Windows taskbar:
+    //  • Windows: ~48px taskbar at the BOTTOM (availTop 0).
+    //  • macOS:   ~25px menu bar at the TOP (availTop ≈ 25) — a Windows-style availTop 0
+    //    on a "macOS" profile is an OS mismatch.
+    //  • Linux (GNOME): ~32px top bar.
+    var _navp = String(fp.navPlatform || '');
+    var _isMac = _navp.indexOf('Mac') !== -1;
+    var _isLin = _navp.indexOf('Linux') !== -1;
+    var _reserve = _isMac ? 25 : (_isLin ? 32 : 48);
     define(screen, 'availWidth', fp.screenW);
-    define(screen, 'availHeight', Math.max(0, fp.screenH - 48));
-    try { define(screen, 'availLeft', 0); define(screen, 'availTop', 0); } catch (e) {}
+    define(screen, 'availHeight', Math.max(0, fp.screenH - _reserve));
+    try {
+      define(screen, 'availLeft', 0);
+      define(screen, 'availTop', _isMac ? 25 : 0);
+      // colorDepth/pixelDepth are 24 on virtually every real display; pin them so an
+      // uncontrolled host value can't vary (and pair the two, which real browsers do).
+      define(screen, 'colorDepth', 24);
+      define(screen, 'pixelDepth', 24);
+    } catch (e) {}
   }
 
   // ---- Timezone spoof ------------------------------------------------------
@@ -769,23 +784,33 @@ function fingerprintScript(fp) {
       timezone: fp.timezone || undefined
     };
     // Prelude executed at the TOP of every worker realm. self-contained literal.
-    var prelude = '(function(){var o=' + JSON.stringify(workerData) + ';' +
-      'var d=function(p,v){if(v===undefined||v===null)return;try{Object.defineProperty(navigator,p,{get:function(){return v;},configurable:true});}catch(e){}};' +
+    var prelude = '(function(){' +
+      // Native-code mask INSIDE the worker realm (parity with the main thread). Without
+      // it, a worker probe reads getParameter.toString() / getTimezoneOffset.toString()
+      // as raw JS source and flags the patch; and the navigator overrides below are
+      // placed on the PROTOTYPE (not the instance) so hasOwnProperty stays false.
+      'var _o=Function.prototype.toString,_p=new WeakSet();' +
+      'var _t=function toString(){return _p.has(this)?"function "+(this.name||"")+"() { [native code] }":_o.call(this);};' +
+      'try{Object.defineProperty(_t,"name",{value:"toString"});}catch(e){}' +
+      'try{Object.defineProperty(Function.prototype,"toString",{value:_t,configurable:true,writable:true});}catch(e){}_p.add(_t);' +
+      'var mk=function(f,n){try{if(n)Object.defineProperty(f,"name",{value:n});}catch(e){}_p.add(f);return f;};' +
+      'var o=' + JSON.stringify(workerData) + ';' +
+      'var d=function(p,v){if(v===undefined||v===null)return;var pr=Object.getPrototypeOf(navigator)||navigator;try{Object.defineProperty(pr,p,{get:mk(function(){return v;},"get "+p),configurable:true});}catch(e){}};' +
       'd("hardwareConcurrency",o.hardwareConcurrency);d("deviceMemory",o.deviceMemory);' +
       'd("languages",o.languages);d("language",o.language);d("platform",o.platform);' +
-      'try{var pg=function(proto){if(!proto)return;var g=proto.getParameter;proto.getParameter=function(p){' +
+      'try{var pg=function(proto){if(!proto)return;var g=proto.getParameter;proto.getParameter=mk(function(p){' +
       'if(o.webglVendor&&p===37445)return o.webglVendor;if(o.webglRenderer&&p===37446)return o.webglRenderer;' +
-      'return g.apply(this,arguments);};};' +
+      'return g.apply(this,arguments);},"getParameter");};' +
       'if(typeof WebGLRenderingContext!=="undefined")pg(WebGLRenderingContext.prototype);' +
       'if(typeof WebGL2RenderingContext!=="undefined")pg(WebGL2RenderingContext.prototype);}catch(e){}' +
       'try{if(o.timezone){var TZ=o.timezone,ODTF=Intl.DateTimeFormat,' +
       'pf=new ODTF("en-US",{timeZone:TZ,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}),' +
       'ofs=function(d){try{var pp={};pf.formatToParts(d).forEach(function(x){if(x.type!=="literal")pp[x.type]=x.value;});' +
       'var u=Date.UTC(+pp.year,+pp.month-1,+pp.day,+pp.hour,+pp.minute,+pp.second);return Math.round((d.getTime()-u)/60000);}catch(e){return 0;}};' +
-      'Date.prototype.getTimezoneOffset=function(){return ofs(this);};' +
+      'Date.prototype.getTimezoneOffset=mk(function(){return ofs(this);},"getTimezoneOffset");' +
       'var WD=function(l,op){op=Object.assign({},op);if(!op.timeZone)op.timeZone=TZ;return new ODTF(l,op);};' +
       'WD.prototype=ODTF.prototype;WD.supportedLocalesOf=ODTF.supportedLocalesOf.bind(ODTF);' +
-      'var orz=ODTF.prototype.resolvedOptions;ODTF.prototype.resolvedOptions=function(){var r=orz.apply(this,arguments);try{r.timeZone=TZ;}catch(e){}return r;};' +
+      'var orz=ODTF.prototype.resolvedOptions;ODTF.prototype.resolvedOptions=mk(function(){var r=orz.apply(this,arguments);try{r.timeZone=TZ;}catch(e){}return r;},"resolvedOptions");' +
       'Intl.DateTimeFormat=WD;}}catch(e){}' +
       '})();';
 
@@ -2318,6 +2343,9 @@ async function launchProfileSession(options = {}) {
   const fpLate = {};
   try {
 const rootCdp = await browser.target().createCDPSession();
+    // puppeteer's Connection (shared by every flat child session). We address each
+    // auto-attached child target through its REAL CDPSession on this connection.
+    const conn = rootCdp.connection();
     rootCdp.on('Target.attachedToTarget', async (ev) => {
       const info = ev.targetInfo || {};
       const isPageish = info.type === 'page' || info.type === 'iframe';
@@ -2325,17 +2353,25 @@ const rootCdp = await browser.target().createCDPSession();
       
       let scriptAdded = false;
 
-      // Use raw Target.sendMessageToTarget to bypass any Puppeteer internal connection bugs
-      const sendMsg = async (method, params = {}) => {
-        try {
-          await rootCdp.send('Target.sendMessageToTarget', {
-            sessionId: ev.sessionId,
-            message: JSON.stringify({ id: Math.floor(Math.random() * 100000), method, params })
-          });
-        } catch (e) {
-          // suppress transient target loss
-        }
-      };
+      // Flat auto-attach (flatten:true) means puppeteer's Connection has ALREADY
+      // created and stored a real child CDPSession for this target by the time this
+      // event fires (Connection.onMessage stores it before dispatching the event),
+      // so conn.session(ev.sessionId) resolves it here. Talk to the child DIRECTLY.
+      //
+      // The previous implementation sent through the deprecated
+      // Target.sendMessageToTarget wrapper, which does NOT route to a flat-attached
+      // session, AND swallowed every error — so inject() below always "succeeded"
+      // (its try/catch never saw a throw), the retry loop + failure log were dead
+      // code, and the fingerprint init script + UA-CH/timezone/geolocation overrides
+      // never actually landed on new tabs. Those tabs painted with the REAL
+      // GPU/canvas/screen/UA-CH, which Cloudflare Turnstile flags => a challenge on
+      // every "+"-tab (and the "unsolvable" challenge on start-page check-links,
+      // which open as new tabs). Sending on the child session lets a genuine failure
+      // reject so inject() truthfully returns false and the retry/log path works.
+      const child = conn ? conn.session(ev.sessionId) : null;
+      const sendMsg = (method, params = {}) => (child
+        ? child.send(method, params)
+        : Promise.reject(new Error('no flat child CDP session for ' + ev.sessionId)));
 
       const inject = async () => {
         try {
@@ -2377,7 +2413,20 @@ const rootCdp = await browser.target().createCDPSession();
       };
 
       const resume = async () => {
-        await sendMsg('Runtime.runIfWaitingForDebugger');
+        // waitForDebuggerOnStart pauses every new target — it MUST be resumed or the
+        // tab hangs at about:blank. Normal path: resume on the flat child session.
+        try {
+          if (child) { await child.send('Runtime.runIfWaitingForDebugger'); return; }
+        } catch (e) { /* fall through to a best-effort resume below */ }
+        // No flat child session (target detached before we saw it, or a rare
+        // non-routable type): best-effort legacy resume so the target can never
+        // hang. Failure here just means the target is already gone.
+        try {
+          await rootCdp.send('Target.sendMessageToTarget', {
+            sessionId: ev.sessionId,
+            message: JSON.stringify({ id: Math.floor(Math.random() * 1e6), method: 'Runtime.runIfWaitingForDebugger', params: {} })
+          });
+        } catch (e2) { /* target already gone */ }
       };
 
       let injected = await inject();
@@ -3565,6 +3614,10 @@ module.exports = {
   fingerprintScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
   generateStartPage,
+  // Reused by the Firefox engine to bind timezone/locale to the proxy exit IP (parity
+  // with the Chrome engine): maps the proxy's geo → IANA timezone + a country locale.
+  lookupProxyGeoNodeCached,
+  COUNTRY_LOCALE,
   configurePersonaBridge,
   launchProfileSession,
   closeProfileSession,
