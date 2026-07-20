@@ -39,6 +39,7 @@
     "react-dom": "^19.2.7",
     "react-i18next": "^15.7.4",
     "react-router-dom": "^7.17.0",
+    "rebrowser-puppeteer-core": "^22.15.0",
     "tailwind-merge": "^3.6.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
