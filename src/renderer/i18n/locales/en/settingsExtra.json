@@ -165,6 +165,10 @@
       "title": "Disable Browser Developer Tools",
       "desc": "Writes a DeveloperToolsAvailability managed-policy file into each profile. Chromium enforces it once the file is registered in the OS managed-policy location (not applied machine-wide automatically)."
     },
+    "minimizeCdpFootprint": {
+      "title": "Minimize CDP footprint (experimental — anti-CAPTCHA)",
+      "desc": "Drops the persistent CDP Runtime.enable — the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles."
+    },
     "lockExtensions": {
       "title": "Disable installing/removing extensions",
       "desc": "Writes an ExtensionInstallBlocklist managed-policy file per profile (the proxy-auth extension is unaffected). Enforced once registered in the OS managed-policy location."
