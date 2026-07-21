@@ -2605,6 +2605,13 @@ const rootCdp = await browser.target().createCDPSession();
               await sendMsg('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
             }
             } // end !nativeEngine — native flags cover UA/timezone/cores/device-metrics
+            // Native engine has NO screen flag, so it leaks the REAL monitor (linking every
+            // profile on the machine). Spoof screen.* to the profile's resolution:
+            // deviceScaleFactor:0 keeps the real dpr + rendering, width/height:0 leaves the
+            // viewport untouched (verified). Applies to new tabs too, before first paint.
+            if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
+              await sendMsg('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: fpConfig.screenW, screenHeight: fpConfig.screenH });
+            }
             if (fpLate.geoLat != null && fpLate.geoLng != null) {
               await sendMsg('Browser.grantPermissions', { permissions: ['geolocation'] });
               await sendMsg('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc });
@@ -2852,6 +2859,12 @@ const rootCdp = await browser.target().createCDPSession();
       // Belt-and-suspenders with the in-page navigator override + worker prelude.
       if (fpConfig.cores) await cdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
       } // end !nativeEngine — native flags already set UA/timezone/cores/device-metrics
+      // Native engine: spoof screen.* to the profile resolution (fingerprint-chromium has no
+      // screen flag → it would leak the real monitor across all profiles). deviceScaleFactor:0
+      // preserves the real dpr + rendering; width/height:0 leaves the viewport intact.
+      if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: fpConfig.screenW, screenHeight: fpConfig.screenH }).catch(() => {});
+      }
       if (geoLat !== null && geoLng !== null) {
         await cdp.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
         await cdp.send('Emulation.setGeolocationOverride', {
