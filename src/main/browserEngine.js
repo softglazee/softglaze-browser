@@ -3001,7 +3001,9 @@ const rootCdp = await browser.target().createCDPSession();
     // Real Chrome (usingCft === false) keeps about:blank — its blank page is fine.
     startUrl = 'chrome://newtab';
   }
-  await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+  // DIAGNOSTIC: pins down the exact launch state when a profile shows a blank/black tab.
+  console.log(`[SG][launch] antidetect=${usingAntidetect} cft=${usingCft} realChrome=${Boolean(chosenBrowser && chosenBrowser.isReal)} minCdp=${browserSettings.minimizeCdpFootprint === true} mode=${startupMode} startUrl=${startUrl} binary=${String((chosenBrowser && chosenBrowser.exePath) || '').split(/[\\/]/).pop()}`);
+  await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch((e) => { console.log('[SG][launch] startUrl navigation failed:', e && e.message); });
 
   const sessionId = String(profileId || crypto.randomUUID());
   // The CDP/WebDriver debugging endpoint — handed to the local REST API so users
