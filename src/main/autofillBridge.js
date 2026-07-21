@@ -31,11 +31,27 @@ let runningPort = null;
 let listForUrlFn = null;   // (url) => Promise<{ personas: [...] } | [...]>
 let markUsedFn = null;     // (id, url) => Promise<any>
 let getSecretFn = null;    // (id, url) => Promise<{ password } | null>  (origin-scoped)
+// () => boolean — true ONLY while a Firefox profile is actually running. HARDENING (audit):
+// autofill is Firefox-only and only meaningful while Firefox is open, yet the static token +
+// "every persona offered for unknown hosts" meant a local process could dump personas 24/7.
+// Gating the data endpoints on a live Firefox session shrinks that window to when Firefox is
+// actually up. (Residual, documented: during an active session a token-holder can still over-
+// read; the full fix is a per-launch token via managed-storage/native-messaging, blocked today
+// by the signed .xpi — a separate project.)
+let sessionActiveFn = null;
 
 function configure(deps = {}) {
   if (typeof deps.listForUrl === 'function') listForUrlFn = deps.listForUrl;
   if (typeof deps.markUsed === 'function') markUsedFn = deps.markUsed;
   if (typeof deps.getSecret === 'function') getSecretFn = deps.getSecret;
+  if (typeof deps.sessionActive === 'function') sessionActiveFn = deps.sessionActive;
+}
+
+// Data endpoints (list/secret/mark-used) are served ONLY while a Firefox session is live.
+// Fail-closed on any error in the check. /ping is exempt (harmless discovery probe).
+function sessionActive() {
+  if (typeof sessionActiveFn !== 'function') return true; // not wired → preserve old behavior
+  try { return sessionActiveFn() === true; } catch (e) { return false; }
 }
 
 function sendJson(res, status, obj) {
@@ -79,6 +95,7 @@ async function handleRequest(req, res) {
 
     if (req.method === 'GET' && url.pathname === '/sg-autofill/list') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+      if (!sessionActive()) return sendJson(res, 503, { error: 'No active session' });
       if (typeof listForUrlFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
       const target = url.searchParams.get('url') || '';
       try {
@@ -97,6 +114,7 @@ async function handleRequest(req, res) {
     // OFFERED for `url`), so a stray token holder can't dump passwords by id.
     if (req.method === 'GET' && url.pathname === '/sg-autofill/secret') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+      if (!sessionActive()) return sendJson(res, 503, { error: 'No active session' });
       if (typeof getSecretFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
       const id = url.searchParams.get('id') || '';
       const target = url.searchParams.get('url') || '';
@@ -111,6 +129,7 @@ async function handleRequest(req, res) {
 
     if (req.method === 'POST' && url.pathname === '/sg-autofill/mark-used') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
+      if (!sessionActive()) return sendJson(res, 503, { error: 'No active session' });
       if (typeof markUsedFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
       const body = await readBody(req);
       try {

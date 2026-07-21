@@ -9902,7 +9902,11 @@ function registerIpcHandlers() {
     // Firefox has no CDP trusted-typer, so the isolated content-script fills the
     // password itself — but only for a persona OFFERED on the committed origin
     // (audit C2), resolved one id at a time via the loopback /secret endpoint.
-    getSecret: (id, url) => getPersonaSecretForUrl(id, url)
+    getSecret: (id, url) => getPersonaSecretForUrl(id, url),
+    // HARDENING (audit): serve autofill data ONLY while a Firefox profile is actually
+    // running — the bridge is Firefox-only and useless otherwise, so this stops it being a
+    // standing 24/7 loopback attack surface for a local process to dump personas.
+    sessionActive: () => firefoxEngine.listFirefoxSessions().length > 0
   });
   autofillBridge.start().catch(() => {});
 
