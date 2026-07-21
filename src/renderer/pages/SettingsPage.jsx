@@ -563,7 +563,9 @@ function GlobalPreferences() {
 
       {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{err}</div>}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      {/* All settings in one balanced 2-column masonry (was 6-in-grid + 8-stacked-full-width).
+          break-inside-avoid keeps each card whole; mb-4 spaces them; single column on mobile. */}
+      <div className="columns-1 xl:columns-2 xl:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
         {/* Account Security */}
         <SettingsSection icon={ShieldCheck} accent="#3b82f6" title={tx('security.title')} description={tx('security.description')}>
           <ToggleRow
@@ -715,10 +717,9 @@ function GlobalPreferences() {
             <ToggleRow key={key} title={label} checked={s.dataSync[key]} onChange={(v) => apply({ dataSync: { [key]: v } })} />
           ))}
         </SettingsSection>
-      </div>
 
-      {/* Browser Settings — full width */}
-      <SettingsSection icon={SlidersHorizontal} accent="#f97316" title={tx('browser.title')} description={tx('browser.description')}>
+        {/* Browser Settings */}
+        <SettingsSection icon={SlidersHorizontal} accent="#f97316" title={tx('browser.title')} description={tx('browser.description')}>
         <ToggleRow
           title={tx('browser.geoMatch.title')}
           description={tx('browser.geoMatch.desc')}
@@ -1018,6 +1019,7 @@ function GlobalPreferences() {
           onChange={(v) => apply({ captcha: { solveHcaptcha: v } })}
         />
       </SettingsSection>
+      </div>
     </div>
   );
 }
