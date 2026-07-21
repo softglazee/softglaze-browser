@@ -294,6 +294,7 @@ const initialProfileData = {
   proxySetting: 'Custom',
   proxyType: 'HTTP',
   enableQuic: false,
+  antidetectEngine: false,
   ipChecker: 'IP2Location',
   proxyHost: '',
   proxyPort: '',
@@ -1173,6 +1174,36 @@ export default function ProfilesPage() {
                         <p className="mt-2 text-xs text-muted">
                           {t('general.identityHelpPre')}<span className="text-foreground">{t('general.identityHelpEmph')}</span>{t('general.identityHelpPost')}
                         </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {pd.browserCore === 'SunBrowser' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
+                      <label className="text-left lg:text-right text-muted font-medium mt-2">{t('general.engine', 'Engine')}</label>
+                      <div className="w-full">
+                        <div className="flex items-start gap-3 bg-background border border-border rounded px-4 py-3.5">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={pd.antidetectEngine === true}
+                            onClick={() => updatePd('antidetectEngine', !pd.antidetectEngine)}
+                            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 mt-0.5"
+                            style={{ background: pd.antidetectEngine ? '#06b6d4' : 'var(--switch-background, #3f3f46)' }}
+                            title="Toggle the native anti-detect engine for this profile"
+                          >
+                            <span
+                              className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.antidetectEngine ? 'translate-x-5' : 'translate-x-1'}`}
+                              style={{ height: 18, width: 18 }}
+                            />
+                          </button>
+                          <div className="min-w-0">
+                            <span className="text-sm font-medium text-foreground">{t('general.antidetectLabel', 'Anti-detect engine (fingerprint-chromium)')}</span>
+                            <p className="text-xs text-muted mt-1 leading-relaxed">
+                              {t('general.antidetectHelp', 'Launch this profile on the native anti-detect Chromium — spoofs canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.')}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

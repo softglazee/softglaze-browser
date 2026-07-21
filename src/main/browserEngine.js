@@ -2242,10 +2242,13 @@ async function launchProfileSession(options = {}) {
   // applies the timezone per-page via CDP AFTER the in-page geo lookup, so it self-corrects.
   let usingAntidetect = false;
   let antidetectExe = null;
-  if (browserSettings.antidetectEngine === true) {
+  // Anti-detect engine is enabled EITHER globally (Settings toggle) OR per-profile
+  // (the profile's own antidetectEngine field) — per-profile lets some profiles use it
+  // while others stay on standard Chrome.
+  if (browserSettings.antidetectEngine === true || profile.antidetectEngine === true) {
     antidetectExe = resolveAntidetectBinary();
     if (antidetectExe) usingAntidetect = true;
-    else console.warn('[SG] antidetectEngine ON but fingerprint-chromium binary not found — using stock Chrome.');
+    else console.warn('[SG] anti-detect engine requested but fingerprint-chromium binary not found — using stock Chrome.');
   }
 
   let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real'

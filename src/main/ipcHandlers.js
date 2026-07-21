@@ -748,7 +748,9 @@ function extractFingerprintData(input) {
     // HTTP/3 (QUIC) opt-in — default false (max stealth). Explicit boolean so an
     // older payload without the field saves as disabled rather than null.
     enableQuic: input.enableQuic === true,
-    
+    // Per-profile anti-detect engine (fingerprint-chromium) opt-in — explicit boolean.
+    antidetectEngine: input.antidetectEngine === true,
+
     advancedExt: input.advancedExt,
     advancedSync: input.advancedSync,
     syncItemsJson: input.syncItems ? JSON.stringify(input.syncItems) : null,
