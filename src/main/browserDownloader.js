@@ -133,7 +133,11 @@ async function fetchJson(url, allowedHosts = HOSTS.chrome, label = 'Chrome downl
 }
 
 function chromeTargetDir(version) {
-  return path.join(CHROME_ROOT, `win64-${version}`);
+  // audit (path traversal): a version is digits + dots ONLY. Strip separators / letters /
+  // '..' so a crafted, renderer-supplied version string (e.g. '..\\..\\Users\\x') can't
+  // escape CHROME_ROOT when this path is recursively rm'd on the download-error cleanup.
+  const safe = String(version || '').replace(/[^0-9.]/g, '');
+  return path.join(CHROME_ROOT, `win64-${safe}`);
 }
 
 function isInstalled(version) {

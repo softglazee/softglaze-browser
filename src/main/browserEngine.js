@@ -1943,6 +1943,26 @@ async function lookupProxyGeoNodeCached(proxy) {
   finally { geoNodeInflight.delete(key); }
 }
 
+// In-page geo fallback. The Node-side lookup (lookupProxyGeoNode) can't tunnel a SOCKS
+// proxy without proxy-agent and times out on slow/blocked proxies, returning null. When
+// that happens we resolve the exit location through the BROWSER's own proxied connection:
+// navigate the tab to a geo API and parse the JSON. NEVER throws.
+// AUDIT/CRITICAL FIX: this function did not exist — the call site (the fallback in
+// launchProfileSession) referenced a missing `lookupProxyGeo`, throwing ReferenceError
+// inside the launch guard, which closed the freshly-opened browser and FAILED every
+// proxied launch whose pre-launch lookup returned null (slow/blocked/rate-limited proxy).
+async function lookupProxyGeo(page) {
+  if (!page) return null;
+  const url = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: GEO_LOOKUP_TIMEOUT_MS });
+    const txt = await page.evaluate(() => (document.body ? document.body.innerText : '')).catch(() => '');
+    const j = JSON.parse(txt);
+    if (j && j.status === 'success') return j;
+  } catch (e) { /* proxy dead / non-JSON / timeout — geo stays null, launch continues */ }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Fingerprint config + injection extension
 //
