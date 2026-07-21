@@ -2106,6 +2106,39 @@ input:focus{border-color:#38bdf8}
   return extDir;
 }
 
+// Ungoogled-Chromium (the anti-detect engine) ships with NO default search engine, so a
+// bare term typed in the address bar is treated as a hostname ("google" → https://google/,
+// which errors). Seed Google as the default search provider in the profile's Preferences
+// BEFORE launch. default_search_provider_data is a REGULAR (not MAC-protected) pref, so
+// Chromium keeps it — verified: the value survives a launch and drives the omnibox. Only
+// set it when none exists, so a user's later manual choice is never overridden. Best-effort:
+// the New Tab page search box works regardless. Chrome / CfT already have Google built in.
+async function ensureNativeDefaultSearch(userDataDir) {
+  try {
+    const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
+    let prefs = {};
+    try { prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8')); } catch (e) { prefs = {}; }
+    const existing = prefs.default_search_provider_data && prefs.default_search_provider_data.template_url_data;
+    if (existing && existing.url) return; // respect an existing / user-chosen default
+    prefs.default_search_provider_data = {
+      template_url_data: {
+        short_name: 'Google',
+        keyword: 'google.com',
+        url: 'https://www.google.com/search?q={searchTerms}',
+        suggestions_url: 'https://www.google.com/complete/search?output=chrome&q={searchTerms}',
+        favicon_url: 'https://www.google.com/favicon.ico',
+        safe_for_autoreplace: false,
+        is_active: 1,
+        prepopulate_id: 1,
+        date_created: '13300000000000000',
+        last_modified: '13300000000000000'
+      }
+    };
+    await fs.mkdir(path.dirname(prefsPath), { recursive: true });
+    await fs.writeFile(prefsPath, JSON.stringify(prefs));
+  } catch (e) { /* best-effort — the New Tab search box still works */ }
+}
+
 // ---------------------------------------------------------------------------
 // Launch
 // ---------------------------------------------------------------------------
@@ -2219,6 +2252,9 @@ async function launchProfileSession(options = {}) {
   }
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, { ntpOverride: usingCft });
+  // Seed a working address-bar default search engine for the anti-detect engine (Ungoogled
+  // ships none). Before launch so Chromium reads it at startup.
+  if (usingAntidetect) await ensureNativeDefaultSearch(userDataDir);
 
   // Merge the fingerprint "Core" extension with any globally-enabled team
   // extensions (installed via the Extensions page) into a single comma-separated
