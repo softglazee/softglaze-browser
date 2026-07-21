@@ -10,6 +10,8 @@ const CHANNELS = Object.freeze({
   BROWSER_DOWNLOAD_STATUS: 'browser:download-status',
   BROWSER_DOWNLOAD_PAUSE: 'browser:download-pause',
   BROWSER_DOWNLOAD_RESUME: 'browser:download-resume',
+  ANTIDETECT_ENGINE_STATUS: 'browser:antidetect-status',
+  ANTIDETECT_ENGINE_DOWNLOAD: 'browser:antidetect-download',
   BROWSER_FIREFOX_STATUS: 'browser:firefox-status',
   BROWSER_FIREFOX_LIST: 'browser:firefox-list',
   BROWSER_FIREFOX_DOWNLOAD: 'browser:firefox-download',
@@ -277,7 +279,9 @@ const api = Object.freeze({
     firefoxDownload: (version) => invoke(CHANNELS.BROWSER_FIREFOX_DOWNLOAD, { version }),
     firefoxDownloadStatus: () => invoke(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_STATUS),
     firefoxPauseDownload: (version) => invoke(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_PAUSE, { version }),
-    firefoxResumeDownload: (version) => invoke(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_RESUME, { version })
+    firefoxResumeDownload: (version) => invoke(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_RESUME, { version }),
+    antidetectEngineStatus: () => invoke(CHANNELS.ANTIDETECT_ENGINE_STATUS),
+    antidetectEngineDownload: () => invoke(CHANNELS.ANTIDETECT_ENGINE_DOWNLOAD)
   }),
   dashboard: Object.freeze({
     getStats: () => invoke(CHANNELS.DASHBOARD_GET_STATS)

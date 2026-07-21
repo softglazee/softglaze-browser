@@ -436,9 +436,13 @@ export default function Gate({ children }) {
       setMembers(ms); setAccount(acct);
       if (acct?.email) setEmail(acct.email);
       if (vs && vs.locked) { setPhase('login'); return; }
+      // An already signed-in member/super skips the gate. Check this BEFORE the empty-list
+      // 'register' branch: the SUPER_ADMIN (currentMemberId -1) is NOT in members.list(),
+      // so with zero regular members a remembered super session would otherwise be dumped
+      // on the register screen every boot instead of proceeding into the app.
+      if (cur) { setPhase('licensing'); return; }
       if (ms.length === 0) { setPhase('register'); setStep('details'); return; }
-      if (!cur) { setPhase('pick'); return; }
-      setPhase('licensing');
+      setPhase('pick');
     } catch (e) {
       // audit: fail closed to the login screen rather than dropping into the app.
       setPhase('login');

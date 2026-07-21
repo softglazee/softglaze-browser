@@ -36,7 +36,9 @@ export const softglazeApi = {
     firefoxDownload: (version) => getSoftglazeApi().browsers.firefoxDownload(version),
     firefoxDownloadStatus: () => getSoftglazeApi().browsers.firefoxDownloadStatus(),
     firefoxPauseDownload: (version) => getSoftglazeApi().browsers.firefoxPauseDownload(version),
-    firefoxResumeDownload: (version) => getSoftglazeApi().browsers.firefoxResumeDownload(version)
+    firefoxResumeDownload: (version) => getSoftglazeApi().browsers.firefoxResumeDownload(version),
+    antidetectEngineStatus: () => getSoftglazeApi().browsers.antidetectEngineStatus(),
+    antidetectEngineDownload: () => getSoftglazeApi().browsers.antidetectEngineDownload()
   },
   dashboard: { getStats: () => getSoftglazeApi().dashboard.getStats() },
   proxies: {

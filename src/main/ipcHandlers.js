@@ -70,6 +70,8 @@ const CHANNELS = Object.freeze({
   BROWSER_DOWNLOAD_STATUS: 'browser:download-status',
   BROWSER_DOWNLOAD_PAUSE: 'browser:download-pause',
   BROWSER_DOWNLOAD_RESUME: 'browser:download-resume',
+  ANTIDETECT_ENGINE_STATUS: 'browser:antidetect-status',
+  ANTIDETECT_ENGINE_DOWNLOAD: 'browser:antidetect-download',
   BROWSER_FIREFOX_STATUS: 'browser:firefox-status',
   BROWSER_FIREFOX_LIST: 'browser:firefox-list',
   BROWSER_FIREFOX_DOWNLOAD: 'browser:firefox-download',
@@ -777,7 +779,18 @@ async function ensureUniqueDataDirName(db, desiredName, excludeProfileId = null)
   let candidate = base;
   for (let i = 0; i < 25; i += 1) {
     const existing = await db.profile.findUnique({ where: { dataDirName: candidate }, select: { id: true } });
-    if (!existing || existing.id === excludeProfileId) return candidate;
+    if (existing) {
+      // Name owned by the profile being edited → keep it. Owned by another → try next.
+      if (existing.id === excludeProfileId) return candidate;
+    } else {
+      // No DB row for this name. Reject it anyway if a leftover on-disk directory exists
+      // (an orphaned profile dir a prior purge left behind, or a wipe that failed) — a NEW
+      // profile must never INHERIT a stale dir's cookies/cache/logins. This was the
+      // "deleted data reappears on new profiles" bug: the old dir was reused verbatim.
+      let orphanOnDisk = false;
+      try { await fs.access(resolveProfileDataDir(candidate)); orphanOnDisk = true; } catch (e) { orphanOnDisk = false; }
+      if (!orphanOnDisk) return candidate;
+    }
     candidate = `${base}-${crypto.randomBytes(3).toString('hex')}`;
   }
   return `${base}-${crypto.randomUUID()}`;
@@ -791,6 +804,26 @@ function resolveProfileDataDir(dataDirName) {
     throw new Error('Profile directory resolved outside the profile root.');
   }
   return target;
+}
+
+// Robustly remove a profile's on-disk data dir. On Windows, Chrome's child processes
+// (renderer / gpu / crashpad_handler) and OS handle-release lag keep the userDataDir
+// locked for a beat AFTER the session's browser.close() returns, so a plain fs.rm throws
+// EBUSY / EPERM / ENOTEMPTY and — when the caller swallowed it — left the cache on disk
+// while reporting success (the "cache won't delete" bug). maxRetries + retryDelay is
+// Node's built-in mitigation for exactly this; a longer second pass covers a stubborn
+// lock. Returns true only when the directory is actually gone afterward.
+async function removeProfileDataDir(dataDirName) {
+  if (!dataDirName) return true;
+  let dir;
+  try { dir = resolveProfileDataDir(dataDirName); } catch (e) { return false; }
+  try {
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
+  } catch (e) {
+    await new Promise((r) => setTimeout(r, 800)); // let a stubborn Chrome-child lock release
+    try { await fs.rm(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 400 }); } catch (e2) { /* report via the check below */ }
+  }
+  try { await fs.access(dir); return false; } catch (e) { return true; } // access throws ⇒ dir is gone
 }
 
 // Recursively sum the on-disk size (bytes + file count) of a profile data dir,
@@ -3117,12 +3150,11 @@ async function deleteProfile(payload) {
   const removeLocalData = Boolean(input.removeLocalData);
   await closeAnySession(id).catch(() => {});
   await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
-  if (removeLocalData) {
-    await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true }).catch(() => {});
-  }
+  let wipeFailed = false;
+  if (removeLocalData) wipeFailed = !(await removeProfileDataDir(existing.dataDirName));
 
-  await logActivity(db, id, 'delete', `moved "${existing.title}" to Trash${removeLocalData ? ' + wiped local data' : ''}`);
-  return { trashed: true, id, removedLocalData: removeLocalData };
+  await logActivity(db, id, 'delete', `moved "${existing.title}" to Trash${removeLocalData ? (wipeFailed ? ' (local-data wipe FAILED)' : ' + wiped local data') : ''}`);
+  return { trashed: true, id, removedLocalData: removeLocalData && !wipeFailed, wipeFailed };
 }
 
 async function restoreProfile(payload) {
@@ -3148,14 +3180,15 @@ async function purgeProfile(payload) {
   if (!existing) throw new Error('Profile not found.');
 
   await closeAnySession(id).catch(() => {});
+  // Permanent delete ALWAYS wipes the on-disk data (cookies/cache/logins) — keeping it
+  // after "delete permanently" is surprising and orphaned dirs then reappeared on new
+  // same-named profiles. Wipe FIRST, then drop the DB row, so a failed wipe can't leave
+  // an orphan the app has lost the record of (the disk-check in ensureUniqueDataDirName
+  // is the belt-and-suspenders for the wipe-failed case).
+  const wipedOk = await removeProfileDataDir(existing.dataDirName);
   await db.profile.delete({ where: { id } });
 
-  if (removeLocalData) {
-    const dataDir = resolveProfileDataDir(existing.dataDirName);
-    await fs.rm(dataDir, { recursive: true, force: true });
-  }
-
-  return { purged: true, id, removedLocalData: removeLocalData };
+  return { purged: true, id, removedLocalData: wipedOk, wipeFailed: !wipedOk };
 }
 
 async function bulkDeleteProfiles(payload) {
@@ -3208,10 +3241,9 @@ async function bulkPurgeProfiles(payload) {
       const existing = await db.profile.findUnique({ where: { id } });
       if (!existing) { result.errors.push({ id, message: 'Profile not found.' }); continue; }
       await closeAnySession(id).catch(() => {});
+      // Permanent delete always wipes on-disk data; wipe before dropping the row (see purgeProfile).
+      await removeProfileDataDir(existing.dataDirName);
       await db.profile.delete({ where: { id } });
-      if (removeLocalData) {
-        await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true });
-      }
       result.purged.push(id);
     } catch (error) {
       result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
@@ -5459,6 +5491,17 @@ async function resumeBrowserDownload(payload) {
   return { started: true, version: entry.version, state: entry.state };
 }
 
+// Native anti-detect engine (fingerprint-chromium) — install status + one-shot download.
+// Needed for the PACKAGED build: dev resolves the binary from the repo, but the installer
+// ships without it, so the user fetches it once from here.
+async function antidetectEngineStatus() {
+  return browserDownloader.getFpChromiumStatus();
+}
+
+async function downloadAntidetectEngine() {
+  return browserDownloader.startFpChromiumDownload();
+}
+
 async function firefoxStatus() {
   const binary = firefoxEngine.findFirefoxBinary();
   return { installed: Boolean(binary), path: binary || null };
@@ -6815,12 +6858,17 @@ async function attemptRememberedUnlock() {
       if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
       return { attempted: true, unlocked: !vaultLocked };
     }
-    if (blob.kind === 'super') {
-      await superLogin({ identifier: blob.identifier, password: blob.password });
-      return { attempted: true, unlocked: true };
-    }
-    if (blob.kind === 'member') {
-      await memberLogin({ identifier: blob.identifier, password: blob.password });
+    if (blob.kind === 'super' || blob.kind === 'member') {
+      // If at-rest encryption is ON and the DB is still locked, ONLY the vault password
+      // opens it. A super/member login here would call getPrisma() on the locked DB,
+      // throw, and — via the catch below — WIPE the remembered blob, so the user is
+      // prompted at the DbGate AND re-prompted every boot after. Defer instead: leave the
+      // credential sealed and let the DbGate unlock via the vault password.
+      if (database.isDbEncryptionEnabled() && !database.isDbUnlocked()) {
+        return { attempted: true, unlocked: false, deferredEncryptedDb: true };
+      }
+      if (blob.kind === 'super') await superLogin({ identifier: blob.identifier, password: blob.password });
+      else await memberLogin({ identifier: blob.identifier, password: blob.password });
       return { attempted: true, unlocked: true };
     }
     return { attempted: true, unlocked: false };
@@ -9703,6 +9751,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.BROWSER_DOWNLOAD_STATUS, browserDownloadStatus);
   registerHandler(CHANNELS.BROWSER_DOWNLOAD_PAUSE, pauseBrowserDownload);
   registerHandler(CHANNELS.BROWSER_DOWNLOAD_RESUME, resumeBrowserDownload);
+  registerHandler(CHANNELS.ANTIDETECT_ENGINE_STATUS, antidetectEngineStatus);
+  registerHandler(CHANNELS.ANTIDETECT_ENGINE_DOWNLOAD, downloadAntidetectEngine);
   registerHandler(CHANNELS.BROWSER_FIREFOX_STATUS, firefoxStatus);
   registerHandler(CHANNELS.BROWSER_FIREFOX_LIST, firefoxListDownloadable);
   registerHandler(CHANNELS.BROWSER_FIREFOX_DOWNLOAD, downloadFirefox);

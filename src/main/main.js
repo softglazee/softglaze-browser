@@ -207,6 +207,21 @@ function createMainWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    // Take OS keyboard focus explicitly. On a FRESH install the slow first-run DB
+    // migration delays this show() past Windows' brief post-launch foreground-grant
+    // window, so the window appeared UNFOCUSED — the auth form's autofocused field showed
+    // a caret but keystrokes went to whatever had focus before ("login fields don't work
+    // on first launch"). A plain focus() can be refused once that grant lapses, so on
+    // Windows toggle always-on-top to force the window to the foreground, then focus the
+    // web contents so the autofocused input actually receives keys.
+    if (process.platform === 'win32') {
+      mainWindow.setAlwaysOnTop(true);
+      mainWindow.focus();
+      mainWindow.setAlwaysOnTop(false);
+    } else {
+      mainWindow.focus();
+    }
+    try { mainWindow.webContents.focus(); } catch (e) { /* focus is best-effort */ }
     if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
   });
 
