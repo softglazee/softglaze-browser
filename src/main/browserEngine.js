@@ -233,8 +233,12 @@ async function attachPersonaAutofill(targetPage) {
         }
         try {
           if (item.kind === 'select') {
-            await targetPage.select(sel, value).catch(() => {});
-            filled += 1;
+            // page.select returns the option values it ACTUALLY applied ([] when none of
+            // the <option>s match, e.g. persona 'United States' vs option value 'US'). Only
+            // count it as filled when something matched — otherwise the widget reports
+            // "Filled N fields" for a dropdown it left untouched.
+            const applied = await targetPage.select(sel, value).catch(() => []);
+            if (Array.isArray(applied) && applied.length) filled += 1;
             continue;
           }
           const el = await targetPage.$(sel);
@@ -916,7 +920,8 @@ function fingerprintScript(fp) {
       'Date.prototype.getTimezoneOffset=mk(function(){return ofs(this);},"getTimezoneOffset");' +
       'var WD=function(l,op){op=Object.assign({},op);if(!op.timeZone)op.timeZone=TZ;return new ODTF(l,op);};' +
       'WD.prototype=ODTF.prototype;WD.supportedLocalesOf=ODTF.supportedLocalesOf.bind(ODTF);' +
-      'var orz=ODTF.prototype.resolvedOptions;ODTF.prototype.resolvedOptions=mk(function(){var r=orz.apply(this,arguments);try{r.timeZone=TZ;}catch(e){}return r;},"resolvedOptions");' +
+      'var orz=ODTF.prototype.resolvedOptions;var HZ="";try{HZ=orz.call(new ODTF()).timeZone;}catch(e){}' +
+      'ODTF.prototype.resolvedOptions=mk(function(){var r=orz.apply(this,arguments);try{if(r&&HZ&&r.timeZone===HZ)r.timeZone=TZ;}catch(e){}return r;},"resolvedOptions");' +
       'Intl.DateTimeFormat=WD;}}catch(e){}' +
       '})();';
 

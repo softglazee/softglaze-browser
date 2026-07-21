@@ -232,10 +232,16 @@ const WEBGL_VENDORS = [
   "Google Inc. (NVIDIA)",
   "Google Inc. (Intel)",
   "Google Inc. (AMD)",
-  "Apple Inc."
+  "Apple Inc.",
+  "Google Inc. (ARM)"
 ];
 
 const WEBGL_RENDERERS = {
+  "Google Inc. (ARM)": [
+    "ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)",
+    "ANGLE (ARM, Mali-G78 MP20, OpenGL ES 3.2)",
+    "ANGLE (ARM, Mali-G57 MC2, OpenGL ES 3.2)"
+  ],
   "Google Inc. (NVIDIA)": [
     "ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 Direct3D11 vs_5_0 ps_5_0, D3D11)",
     "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)",
@@ -1263,7 +1269,7 @@ export default function ProfilesPage() {
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium">{t('proxy.setting')}</label>
-                    <ButtonTabs value={pd.proxySetting} onChange={v => { updatePd('proxySetting', v); setProxyResult(null); setError(''); }} options={['Custom', 'Saved Proxies', 'Rotating Proxy']} />
+                    <ButtonTabs value={pd.proxySetting} onChange={v => { updatePd('proxySetting', v); setProxyResult(null); setError(''); }} options={['Custom', 'Saved Proxies']} />
                   </div>
 
                   {pd.proxySetting === 'Custom' && (

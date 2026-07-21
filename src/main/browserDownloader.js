@@ -290,6 +290,10 @@ function startDownload(versionOrMajor) {
       const zip = path.join(dir, '_download.zip');
       entry.dest = zip;
 
+      // A Pause during the 'queued' window (while the catalog was being fetched) had no
+      // in-flight request to abort, so honor it HERE before flipping to 'downloading' —
+      // otherwise the pause is silently overwritten and the download runs to completion.
+      if (paused.has(entry.version)) { entry.state = 'paused'; persistState(true); return; }
       entry.state = 'downloading';
       persistState(true);
       const { received, total } = await downloadToFile(found.url, zip, (rec, tot) => {
