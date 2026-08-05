@@ -2,6 +2,13 @@
   "name": "softglaze-browser",
   "version": "1.0.0",
   "description": "Secure Local-First Anti-Detect Browser for LeadGen and Gaming",
+  "license": "BUSL-1.1",
+  "author": "Azhar Ali (SoftGlaze) <https://softglaze.com>",
+  "homepage": "https://softglaze.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/softglazee/softglaze-browser.git"
+  },
   "main": "src/main/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",

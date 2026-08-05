@@ -167,14 +167,22 @@ Import flow:
 
 ## Browser launch behavior
 
-When launching a profile, Puppeteer opens Chromium with:
+When launching a profile, the engine opens Chromium (or a real installed
+Chrome, if configured) with:
 
-- Dedicated `userDataDir` per profile.
-- Optional proxy server argument.
-- Optional proxy authentication through `page.authenticate`.
-- Standard window size of `1280x720`.
+- A dedicated `userDataDir` per profile.
+- An optional proxy server argument, with authentication through
+  `page.authenticate`.
+- A window size defaulting to `1280x720` and configurable per profile.
+- A per-profile user agent built by `buildUserAgentBundle()`, kept consistent
+  with the Chrome major version actually launched, together with matching
+  `userAgentMetadata` so the `Sec-CH-UA-*` Client Hints headers agree with it.
+- Per-profile GPU, RAM, WebRTC and screen values applied over CDP.
 
-No manual user-agent override is applied.
+The stealth plugin's `user-agent-override`, `navigator.hardwareConcurrency`,
+`navigator.languages` and `webgl.vendor` evasions are deliberately disabled so
+they cannot contradict the per-profile values, which are the single source of
+truth.
 
 ## Security model
 
@@ -188,3 +196,21 @@ No manual user-agent override is applied.
 ## Important note about Chromium download
 
 Installing Puppeteer downloads a compatible Chrome for Testing browser binary by default. This can be a large download. To use a system Chrome/Chromium instead, configure Puppeteer environment variables and pass an executable path in the backend before packaging.
+
+## License
+
+SoftGlaze Browser is source-available under the
+[Business Source License 1.1](LICENSE).
+
+- **Non-production use is free.** Evaluation, development, testing and personal
+  experimentation are permitted, including copying and modifying the source.
+- **Production or commercial use requires a commercial licence** from SoftGlaze.
+- You may not offer it to third parties as a hosted or managed service,
+  redistribute it as a competing product, resell it, or remove or circumvent
+  the licensing mechanism.
+- On **1 January 2030** this version converts automatically to the
+  **Apache License 2.0**.
+
+For commercial licensing, see [softglaze.com](https://softglaze.com).
+
+Copyright (c) 2026 Azhar Ali (SoftGlaze).
