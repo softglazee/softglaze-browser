@@ -1,8 +1,13 @@
 # SoftGlaze Browser
 
-SoftGlaze Browser is a local-first Electron + React desktop app for managing local browser profiles, reusable proxies, and spreadsheet-based profile imports.
+SoftGlaze Browser is a local-first Electron + React desktop app for managing
+isolated browser profiles, reusable proxies, and spreadsheet-based profile
+imports. Each profile runs in its own data directory with its own proxy and its
+own browser fingerprint, so several accounts can be worked in parallel without
+sharing cookies, storage, or device characteristics.
 
-This package intentionally does **not** include stealth plugins, fingerprint spoofing, driver-masking, or anti-detect evasion code. It provides legitimate local profile isolation, proxy routing, and profile management.
+All data stays on the machine. There is no hosted backend and no profile
+syncing to a remote server.
 
 ## Stack
 
@@ -10,17 +15,47 @@ This package intentionally does **not** include stealth plugins, fingerprint spo
 - React renderer via Vite
 - Tailwind CSS v4 with Shadcn-style local UI primitives
 - SQLite through Prisma ORM
-- Puppeteer for launching local profile windows
+- `puppeteer-extra` with the stealth plugin for launching profile windows
+- `rebrowser-puppeteer-core` in `enableDisable` runtime-fix mode
 - SheetJS `xlsx` for Excel/CSV parsing
 
 ## Features
 
+**Profiles and isolation**
+
 - Local browser profile management with per-profile data directories
-- Reusable proxy pool with health checking and background re-checks
-- Spreadsheet (`.xlsx` / `.xls` / `.csv`) batch import with preview-before-commit
+- Per-profile fingerprint values for GPU, RAM, WebRTC and screen, applied as the
+  single source of truth (the overlapping stealth-plugin evasions are disabled
+  so the two layers cannot disagree)
+- Coherence guard: the reported Chrome major version is kept consistent with the
+  browser actually launched
+- Optional use of a real installed Chrome binary instead of bundled Chromium
 - Profile grouping, tagging, bulk operations, trash/restore
+
+**Networking**
+
+- Reusable proxy pool with health checking and background re-checks
+- HTTP/3 (QUIC) disabled by default when a profile is proxied, so UDP cannot
+  bypass the proxy
+- Optional local-network-access blocking
+
+**Import and workflow**
+
+- Spreadsheet (`.xlsx` / `.xls` / `.csv`) batch import with preview-before-commit
+- Profile import from other platforms via their APIs
+- Managed browser extensions, with uBlock Origin (MV3) available per profile
 - Team members with role-based access control
 - Localized interface (English and Spanish)
+
+## Intended use
+
+Profile isolation of this kind is used for legitimate multi-account work such as
+agency and client account management, ad-account separation, QA across device
+profiles, and privacy-motivated browsing separation.
+
+You are responsible for complying with the terms of service of any site you use
+it with. Do not use it to evade a ban, misrepresent identity, commit fraud, or
+break the rules of a platform you have agreed to.
 
 ## Requirements
 
