@@ -25,5 +25,3 @@ build/*
 !build/afterPack.js
 !build/installer.nsh
 out/
-.aidesigner/*
-!.aidesigner/.gitkeep
