@@ -1438,6 +1438,16 @@ async function generateStartPage(userDataDir, profileData) {
     : '';
   const seedIsp = geo && geo.isp ? escapeHtml(geo.isp) : '';
   const seedJson = JSON.stringify({ ip: seedIp, loc: seedLoc, isp: seedIsp });
+  // Custom start-page links configured globally (Start Links page), rendered into
+  // the same .nav-links strip as the built-in checks so they inherit the
+  // __sgzOpenTab new-tab-through-proxy behavior. http/https only; label + href escaped.
+  const customLinks = Array.isArray(profileData.startPageLinks) ? profileData.startPageLinks : [];
+  const customLinksHtml = customLinks.map((l) => {
+    const url = String((l && l.url) || '').trim();
+    if (!/^https?:\/\//i.test(url)) return '';
+    const label = escapeHtml((l && l.label) || url);
+    return `\n  <a href="${escapeHtml(url)}">${label}</a>`;
+  }).join('');
   // Test links open in NEW tabs. The targetcreated handler applies the full
   // fingerprint (evaluateOnNewDocument runs FIRST, before any await) to every new
   // tab/popup, so opening checks in a fresh tab is now safe and convenient.
@@ -1486,7 +1496,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   <a href="https://browserleaks.com/">BrowserLeaks</a>
   <a href="https://whoer.net/">Whoer.net</a>
   <a href="https://pixelscan.net/">Pixelscan</a>
-  <a href="https://abrahamjuliot.github.io/creepjs/">CreepJS</a>
+  <a href="https://abrahamjuliot.github.io/creepjs/">CreepJS</a>${customLinksHtml}
 </div>
 <div class="grid">
   <div class="card"><h3>Profile</h3>
@@ -2033,7 +2043,9 @@ async function launchProfileSession(options = {}) {
     // Geo auto-match (timezone/locale/WebRTC derived from the proxy exit) is ON by
     // default. A global Settings toggle can disable it; when off we skip the geo
     // lookup entirely so only the profile's manual values apply.
-    geoMatchEnabled = true
+    geoMatchEnabled = true,
+    // Global custom start-page links (Start Links page), rendered on the detection start page.
+    startPageLinks = []
   } = options;
 
   // Dedupe (audit: double-launch orphans Chrome). A profile has exactly ONE
@@ -2802,7 +2814,7 @@ const rootCdp = await browser.target().createCDPSession();
   const startupMode = browserSettings.mode || 'detection';
   let startUrl = 'about:blank';
   if (startupMode === 'detection') {
-    startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo });
+    startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo, startPageLinks });
   }
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
 

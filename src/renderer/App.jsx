@@ -13,6 +13,7 @@ import BrowsersPage from '@/pages/BrowsersPage.jsx';
 import TrashPage from '@/pages/TrashPage.jsx';
 import MembersPage from '@/pages/MembersPage.jsx';
 import AccountSettingsPage from '@/pages/AccountSettingsPage.jsx';
+import StartLinksPage from '@/pages/StartLinksPage.jsx';
 
 // Heavy pages are code-split into their own chunks so they don't bloat the
 // initial bundle; each loads on first navigation behind the <Suspense> fallback.
@@ -42,6 +43,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/start-links" element={<StartLinksPage />} />
                 <Route path="/profiles" element={<ProfilesPage />} />
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/proxies" element={<ProxyPoolPage />} />
