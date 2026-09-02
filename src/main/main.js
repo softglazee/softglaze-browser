@@ -373,6 +373,7 @@ try {
     const extMgr = require('./extensionManager');
     extMgr.seedRecommendedExtensions()
       .then(() => extMgr.reconcileRecommendedExtensions())
+      .then(() => extMgr.optOutThirdPartyExtensions())
       .catch((e) => console.warn('[ext-seed] recommended extension seed/reconcile failed:', e && e.message));
   }
 

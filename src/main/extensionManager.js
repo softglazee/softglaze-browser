@@ -41,6 +41,10 @@ const SEED_FLAG = 'recommendedExtensionsSeeded_v3'; // v3: swapped uBlock + Swit
 // runs ONCE to force-enable those, then locks — so a user's later manual disable is
 // respected. Bump the suffix to re-run the reconcile after changing the defaults again.
 const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v2'; // v2: re-run after the MV3 uBlock/SwitchyOmega swap
+// One-time: the third-party recommended extensions became OPT-IN (enable:false). Flip any
+// that a previous build force-enabled (isGlobal:true) back OFF once, so they stop loading
+// into every profile. Gated so a user's deliberate later re-enable is never undone.
+const OPT_OUT_FLAG = 'recommendedThirdPartyOptOut_v1';
 
 // The SoftGlaze first-party extension — always injected into every profile and
 // (best-effort) force-installed from the Web Store so active users are counted.
@@ -294,6 +298,27 @@ async function reconcileRecommendedExtensions() {
   return { enabled };
 }
 
+// One-time opt-out: turn OFF any now-opt-in third-party recommended extension that an
+// earlier build had force-enabled, so it stops loading into every profile. Idempotent,
+// gated by OPT_OUT_FLAG (a later deliberate re-enable by the user is never undone).
+async function optOutThirdPartyExtensions() {
+  const db = getPrisma();
+  const flag = await db.setting.findUnique({ where: { key: OPT_OUT_FLAG } }).catch(() => null);
+  if (flag && flag.value === 'true') return { skipped: true };
+  const optOutIds = RECOMMENDED_EXTENSIONS.filter((r) => !r.enable).map((r) => r.chromeId);
+  let disabled = 0;
+  try {
+    const res = await db.extension.updateMany({ where: { chromeId: { in: optOutIds }, isGlobal: true }, data: { isGlobal: false } });
+    disabled = (res && res.count) || 0;
+  } catch (e) {
+    console.warn(`[ext-optout] failed: ${(e && e.message) || e}`);
+    return { failed: true };
+  }
+  await db.setting.upsert({ where: { key: OPT_OUT_FLAG }, create: { key: OPT_OUT_FLAG, value: 'true' }, update: { value: 'true' } }).catch(() => {});
+  if (disabled) console.log(`[ext-optout] set ${disabled} third-party recommended extension(s) to opt-in`);
+  return { disabled };
+}
+
 // All currently-global extension folders that still exist on disk. Passed to the
 // browser engine at launch and merged into --load-extension. Missing folders are
 // skipped (an extension can be deleted off disk without breaking a launch).
@@ -332,6 +357,7 @@ module.exports = {
   installById,
   seedRecommendedExtensions,
   reconcileRecommendedExtensions,
+  optOutThirdPartyExtensions,
   resolveGlobalExtensionDirs,
   removeExtensionFiles
 };
