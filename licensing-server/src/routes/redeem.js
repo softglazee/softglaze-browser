@@ -22,6 +22,16 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!rec) return res.status(404).json({ error: 'Invalid code.' });
   if (rec.redeemedAt) return res.status(409).json({ error: 'This code has already been redeemed.' });
 
+  // audit: claim the code ATOMICALLY before granting anything. The find/check above
+  // plus the mark-redeemed at the end used to be three separate statements, so N
+  // concurrent posts of one code all passed the check and minted N licenses. updateMany
+  // with `redeemedAt: null` in the WHERE lets exactly one request win.
+  const claim = await prisma.licenseCode.updateMany({
+    where: { id: rec.id, redeemedAt: null },
+    data: { redeemedAt: new Date(), redeemedBy: String(installId || account || 'unknown') }
+  });
+  if (claim.count !== 1) return res.status(409).json({ error: 'This code has already been redeemed.' });
+
   const now = Date.now();
   const or = [installId ? { installId: String(installId) } : null, account ? { account: String(account) } : null].filter(Boolean);
   const existing = await prisma.license.findFirst({ where: { tenantId: tenant.id, OR: or }, orderBy: { updatedAt: 'desc' } });
@@ -34,7 +44,7 @@ router.post('/', asyncHandler(async (req, res) => {
   } else {
     await prisma.license.create({ data: { tenantId: tenant.id, account: account || null, installId: installId || null, tier: rec.tier, status: 'active', currentPeriodEnd } });
   }
-  await prisma.licenseCode.update({ where: { id: rec.id }, data: { redeemedAt: new Date(), redeemedBy: String(installId || account || 'unknown') } });
+  // (the code was already claimed atomically above)
 
   res.json({ ok: true, tier: rec.tier, months: rec.months });
 }));

@@ -593,6 +593,8 @@ export default function ProfilesPage() {
     if (filterStatus === 'running') list = list.filter((p) => runningIds.has(p.id));
     else if (filterStatus === 'proxied') list = list.filter((p) => !!p.proxyId);
     else if (filterStatus === 'direct') list = list.filter((p) => !p.proxyId);
+    else if (filterStatus === 'used') list = list.filter((p) => (p.launchCount > 0 || p.lastUsedAt));
+    else if (filterStatus === 'unused') list = list.filter((p) => !(p.launchCount > 0 || p.lastUsedAt));
     return list;
   }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
 
@@ -602,6 +604,17 @@ export default function ProfilesPage() {
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filteredProfiles.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const pagedProfiles = pageSize === Infinity ? filteredProfiles : filteredProfiles.slice((safePage - 1) * pageSize, safePage * pageSize);
+  // audit: drop selected ids no longer in the filtered list (after a filter/search
+  // change or a delete) so a later bulk action can't hit invisible rows. Returns the
+  // same Set ref when nothing changed, so it can't loop.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const live = new Set(filteredProfiles.map((p) => p.id));
+      const next = new Set([...prev].filter((id) => live.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredProfiles]);
   useEffect(() => { setPage(1); }, [filterGroup, filterTag, filterProxy, filterStatus, pageSize]);
 
   // Real, derived counts for the header subtitle + stat cards (no mock data).
@@ -920,7 +933,12 @@ export default function ProfilesPage() {
         proxyId: savedProxyId,                 // explicit: links the saved proxy (null clears it)
         systemProxyBehavior: usingProxy ? 'PROFILE_PROXY' : 'DIRECT',
         tagManagement: 0,
-        dataDirName: pd.name,
+        // Only set the on-disk data-dir name when CREATING. On edit, sending it
+        // makes updateProfile rewrite dataDirName when the title changes, but no
+        // code renames the folder — so the next launch mkdir's a fresh empty dir
+        // and every cookie / saved login / localStorage for the profile is lost
+        // (and the fingerprint seed shifts). Renaming must change only the title.
+        ...(isEditing ? {} : { dataDirName: pd.name }),
         userAgent: finalUA
       };
       
@@ -957,7 +975,17 @@ export default function ProfilesPage() {
     });
   }
   function toggleSelectAll() {
-    setSelectedIds((prev) => (prev.size === filteredProfiles.length ? new Set() : new Set(filteredProfiles.map((p) => p.id))));
+    // audit: select only the VISIBLE page, not the entire filtered set. A header
+    // checkbox above 25 rows that selected all 800 filtered profiles meant bulk
+    // Delete / Tag / Reassign silently hit rows the user never saw.
+    setSelectedIds((prev) => {
+      const pageIds = pagedProfiles.map((p) => p.id);
+      const allOnPage = pageIds.length > 0 && pageIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allOnPage) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
   }
   function clearSelection() { setSelectedIds(new Set()); }
 
@@ -1994,6 +2022,8 @@ export default function ProfilesPage() {
 
         <CustomSelect value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto">
           <option value="all">{t('filters.anyStatus')}</option>
+          <option value="used">{t('filters.used', { defaultValue: 'Used' })}</option>
+          <option value="unused">{t('filters.unused', { defaultValue: 'Unused' })}</option>
           <option value="running">{t('filters.running')}</option>
           <option value="proxied">{t('filters.hasProxy')}</option>
           <option value="direct">{t('filters.noProxy')}</option>
@@ -2023,8 +2053,8 @@ export default function ProfilesPage() {
               <thead className="bg-elevated text-muted-foreground text-[10px] uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10">
                 <tr>
                   <th className="px-5 py-4 w-12 text-center">
-                    <button type="button" onClick={toggleSelectAll} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length ? 'bg-primary border-primary' : 'bg-input-background border-border hover:border-border-strong'}`}>
-                      {filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length && <span className="w-2 h-2 bg-white rounded-sm" />}
+                    <button type="button" onClick={toggleSelectAll} className={`w-4 h-4 mx-auto rounded border flex items-center justify-center transition ${pagedProfiles.length > 0 && pagedProfiles.every((p) => selectedIds.has(p.id)) ? 'bg-primary border-primary' : 'bg-input-background border-border hover:border-border-strong'}`}>
+                      {pagedProfiles.length > 0 && pagedProfiles.every((p) => selectedIds.has(p.id)) && <span className="w-2 h-2 bg-white rounded-sm" />}
                     </button>
                   </th>
                   <th className="px-5 py-4">{t('table.name')}</th>
@@ -2069,6 +2099,14 @@ export default function ProfilesPage() {
                           </span>
                         )}
                         <span className="truncate max-w-[200px]">{p.title}</span>
+                        {(p.launchCount > 0 || p.lastUsedAt) && (
+                          <span
+                            title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.used', { defaultValue: 'Used' })}
+                            className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/12 text-emerald-400 border border-emerald-500/25"
+                          >
+                            ✓ {t('row.used', { defaultValue: 'Used' })}
+                          </span>
+                        )}
                         {(p.deviceClass === 'mobile' || /android/i.test(p.os || '')) && (
                           <span
                             title={t('row.mobileTitle')}

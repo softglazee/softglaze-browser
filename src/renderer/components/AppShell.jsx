@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, Lock, Check, ChevronsUpDown, Sun, Moon,
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
-  LogOut, UserCog, CreditCard
+  LogOut, UserCog, CreditCard, Link2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -45,6 +45,7 @@ const SECTIONS = [
     labelKey: 'nav.sectionWorkspace',
     items: [
       { path: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, featureKey: 'dashboard' },
+      { path: '/start-links', labelKey: 'nav.startLinks', icon: Link2 },
       { path: '/profiles', labelKey: 'nav.profiles', icon: Fingerprint, badgeKey: 'profiles', featureKey: 'profiles' },
       { path: '/groups', labelKey: 'nav.groups', icon: Layers, featureKey: 'groups' },
       { path: '/proxies', labelKey: 'nav.proxies', icon: Globe, featureKey: 'proxies' },

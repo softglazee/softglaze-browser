@@ -12,15 +12,20 @@ const { issueLease } = require('../lease');
 const router = express.Router();
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { tenantId, installId, account } = req.body || {};
+  const { tenantId, installId } = req.body || {};
   if (!tenantId) return res.status(400).json({ error: 'tenantId is required.' });
-  if (!installId && !account) return res.status(400).json({ error: 'installId or account is required.' });
+  // audit C6: issue a signed lease ONLY for a known installId. tenantId is baked into
+  // every shipped binary (public) and `account` is a guessable email, so resolving a
+  // lease by `account` let anyone POST a customer's email and receive a valid signed
+  // lease with their tier/period-end. installId is created at /v1/register and is the
+  // per-install credential. Account-scoped recovery must use an authenticated/emailed
+  // flow, never this unauthenticated route.
+  if (!installId) return res.status(400).json({ error: 'installId is required.' });
 
   const tenant = await prisma.tenant.findUnique({ where: { id: String(tenantId) } });
   if (!tenant || tenant.status !== 'active') return res.status(404).json({ error: 'Unknown tenant.' });
 
-  const or = [installId ? { installId: String(installId) } : null, account ? { account: String(account) } : null].filter(Boolean);
-  const lic = await prisma.license.findFirst({ where: { tenantId: tenant.id, OR: or }, orderBy: { updatedAt: 'desc' } });
+  const lic = await prisma.license.findFirst({ where: { tenantId: tenant.id, installId: String(installId) }, orderBy: { updatedAt: 'desc' } });
 
   const now = Date.now();
   const active = lic && lic.status === 'active' && lic.currentPeriodEnd && new Date(lic.currentPeriodEnd).getTime() > now;

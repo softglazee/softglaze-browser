@@ -520,6 +520,48 @@ function withGlobalDefaults(cfg) {
   };
 }
 
+// Custom links shown on every profile's start page (next to the built-in check
+// links). Global setting; each row is { label, url }. Edited locally and persisted
+// on the Save button — NOT per-keystroke — so rapid typing can't race the global
+// settings write. http(s) validation/escaping happens server-side in generateStartPage.
+function StartPageLinksSection({ value, onSave }) {
+  const toItems = (v) => (Array.isArray(v) ? v : []).map((l) => ({ label: (l && l.label) || '', url: (l && l.url) || '' }));
+  const [items, setItems] = useState(() => toItems(value));
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { setItems(toItems(value)); }, [JSON.stringify(value || [])]);
+  const add = () => setItems((prev) => [...prev, { label: '', url: '' }]);
+  const removeAt = (i) => setItems((prev) => prev.filter((_, idx) => idx !== i));
+  const update = (i, key, val) => setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [key]: val } : it)));
+  const save = () => {
+    const clean = items
+      .map((it) => ({ label: String(it.label || '').trim().slice(0, 60), url: String(it.url || '').trim() }))
+      .filter((it) => it.url);
+    onSave(clean);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+  const inputCls = 'bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
+  return (
+    <SettingsSection icon={Globe2} accent="#8b5cf6" title="Start page links" description="Custom links shown on every profile's start page, next to the built-in check-links. Each opens in a new tab through the profile's proxy.">
+      <div className="space-y-2 py-2">
+        {items.length === 0 && <p className="text-xs text-muted-foreground">No custom links yet.</p>}
+        {items.map((it, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <input className={`${inputCls} w-40`} placeholder="Label" value={it.label} onChange={(e) => update(i, 'label', e.target.value)} />
+            <input className={`${inputCls} flex-1 min-w-[200px]`} placeholder="https://example.com" value={it.url} onChange={(e) => update(i, 'url', e.target.value)} />
+            <button type="button" onClick={() => removeAt(i)} className="shrink-0 w-8 h-8 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10" title="Remove">✕</button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2 pt-1">
+          <Button variant="ghost" size="sm" onClick={add}>+ Add link</Button>
+          <Button variant="primary" size="sm" onClick={save}>Save links</Button>
+          {saved && <span className="text-xs text-emerald-500 inline-flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Saved</span>}
+        </div>
+      </div>
+    </SettingsSection>
+  );
+}
+
 function GlobalPreferences() {
   const { t: tx } = useTranslation('settingsExtra');
   const [s, setS] = useState(null);

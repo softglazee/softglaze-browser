@@ -1212,10 +1212,15 @@ if (fp.noise.canvas) {
         // Native-mask the wrapper: as a bare ES class, RTCPeerConnection.name was
         // "ProtectedRTC" and .toString() dumped the class source — a one-read spoofer
         // tell on every proxied profile. markNative fixes .name + routes toString
-        // through _fnToString ("[native code]"); realign the constructor's own
-        // [[Prototype]] to the native's (EventTarget) so it isn't the shadowed native.
+        // through _fnToString ("[native code]").
         markNative(ProtectedRTC, 'RTCPeerConnection');
-        try { Object.setPrototypeOf(ProtectedRTC, Object.getPrototypeOf(Native)); } catch (e) {}
+        // NOTE: do NOT setPrototypeOf(ProtectedRTC, Object.getPrototypeOf(Native)).
+        // `super(...)` in a derived class resolves its parent from the class's CURRENT
+        // [[Prototype]] at call time — repointing it to EventTarget made every
+        // `new RTCPeerConnection()` construct a bare EventTarget, so createOffer/
+        // setLocalDescription threw "Illegal invocation" on EVERY proxied profile
+        // (default WebRTC mode = Forward). A subclass keeping its natural superclass
+        // prototype is normal and not a meaningful tell; a broken RTCPeerConnection is.
         window.RTCPeerConnection = ProtectedRTC;
         if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = ProtectedRTC;
       } catch (e) { /* leave native in place if wrapping fails */ }
@@ -1518,6 +1523,20 @@ async function generateStartPage(userDataDir, profileData) {
     : '';
   const seedIsp = geo && geo.isp ? escapeHtml(geo.isp) : '';
   const seedJson = JSON.stringify({ ip: seedIp, loc: seedLoc, isp: seedIsp });
+  // Custom start-page links (managed globally in Settings → shown on every profile's
+  // start page next to the built-in check-links). Only http(s) is allowed; labels and
+  // URLs are HTML-escaped. The nav-links click handler below routes each through
+  // __sgzOpenTab (new tab + proxy auth) exactly like the built-in links, so they open
+  // properly on a normal left click instead of stalling.
+  const customLinks = Array.isArray(profileData.links) ? profileData.links : [];
+  const customLinksHtml = customLinks.map((l) => {
+    let url = String((l && l.url) || '').trim();
+    if (!url) return '';
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = 'https://' + url;
+    if (!/^https?:\/\//i.test(url)) return '';
+    const label = escapeHtml(String((l && l.label) || url).slice(0, 60));
+    return `\n  <a href="${escapeHtml(url)}">${label}</a>`;
+  }).join('');
   // Test links open in NEW tabs. The targetcreated handler applies the full
   // fingerprint (evaluateOnNewDocument runs FIRST, before any await) to every new
   // tab/popup, so opening checks in a fresh tab is now safe and convenient.
@@ -1566,7 +1585,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   <a href="https://browserleaks.com/">BrowserLeaks</a>
   <a href="https://whoer.net/">Whoer.net</a>
   <a href="https://pixelscan.net/">Pixelscan</a>
-  <a href="https://abrahamjuliot.github.io/creepjs/">CreepJS</a>
+  <a href="https://abrahamjuliot.github.io/creepjs/">CreepJS</a>${customLinksHtml}
 </div>
 <div class="grid">
   <div class="card"><h3>Profile</h3>
@@ -2126,7 +2145,12 @@ input:focus{border-color:#38bdf8}
   }
   await fs.writeFile(path.join(extDir, 'manifest.json'), JSON.stringify(manifest));
   // Self-contained: serialize the function and invoke it with the baked config.
-  const source = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)});`;
+  // On the native engine the full layer must NOT run (fingerprintScript bails on
+  // fp.nativeEngine anyway, so shipping it there wrote 43 KB of dead script). Ship the
+  // gap filler instead: it covers only speech voices and enumerateDevices, the two axes
+  // fingerprint-chromium leaves untouched, so the layers can never contradict.
+  const fn = fpConfig && fpConfig.nativeEngine ? nativeGapScript : fingerprintScript;
+  const source = `(${fn.toString()})(${JSON.stringify(fpConfig)});`;
   await fs.writeFile(path.join(extDir, 'fp.js'), source);
   return extDir;
 }
@@ -2138,30 +2162,173 @@ input:focus{border-color:#38bdf8}
 // Chromium keeps it — verified: the value survives a launch and drives the omnibox. Only
 // set it when none exists, so a user's later manual choice is never overridden. Best-effort:
 // the New Tab page search box works regardless. Chrome / CfT already have Google built in.
-async function ensureNativeDefaultSearch(userDataDir) {
+//
+// Do Not Track rides along in the same write. fingerprint-chromium has no --do-not-track flag
+// and the JS layer is skipped there, so a profile asking for DNT silently shipped
+// navigator.doNotTrack === null (verified against 148.0.7778.215). enable_do_not_track
+// is a REGULAR (not MAC-protected) pref, so seeding it pre-launch sticks — the same
+// mechanism as the default search provider above. Done in ONE read/modify/write with
+// that seed because both target Default/Preferences; two passes would clobber.
+async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
   try {
     const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
     let prefs = {};
     try { prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8')); } catch (e) { prefs = {}; }
+
     const existing = prefs.default_search_provider_data && prefs.default_search_provider_data.template_url_data;
-    if (existing && existing.url) return; // respect an existing / user-chosen default
-    prefs.default_search_provider_data = {
-      template_url_data: {
-        short_name: 'Google',
-        keyword: 'google.com',
-        url: 'https://www.google.com/search?q={searchTerms}',
-        suggestions_url: 'https://www.google.com/complete/search?output=chrome&q={searchTerms}',
-        favicon_url: 'https://www.google.com/favicon.ico',
-        safe_for_autoreplace: false,
-        is_active: 1,
-        prepopulate_id: 1,
-        date_created: '13300000000000000',
-        last_modified: '13300000000000000'
-      }
-    };
+    if (!(existing && existing.url)) {
+      prefs.default_search_provider_data = {
+        template_url_data: {
+          short_name: 'Google',
+          keyword: 'google.com',
+          url: 'https://www.google.com/search?q={searchTerms}',
+          suggestions_url: 'https://www.google.com/complete/search?output=chrome&q={searchTerms}',
+          favicon_url: 'https://www.google.com/favicon.ico',
+          safe_for_autoreplace: false,
+          is_active: 1,
+          prepopulate_id: 1,
+          date_created: '13300000000000000',
+          last_modified: '13300000000000000'
+        }
+      };
+    }
+    // Only touch DNT when the profile states a preference. null means "leave alone",
+    // which matches stock Chrome's default of not sending the header at all.
+    if (fpConfig && (fpConfig.dnt === '1' || fpConfig.dnt === '0')) {
+      prefs.enable_do_not_track = fpConfig.dnt === '1';
+    }
+
     await fs.mkdir(path.dirname(prefsPath), { recursive: true });
     await fs.writeFile(prefsPath, JSON.stringify(prefs));
   } catch (e) { /* best-effort — the New Tab search box still works */ }
+}
+
+// ---------------------------------------------------------------------------
+// Native-engine gap filler
+// ---------------------------------------------------------------------------
+// fingerprintScript bails immediately when fp.nativeEngine is set, because a second
+// JS-derived spoof would CONTRADICT the binary's native one. That is correct for every
+// axis the binary actually covers (canvas / webgl / audio / UA / platform / cores /
+// timezone / language), and the launcher separately covers screen via CDP.
+//
+// It leaves two axes uncovered. Both verified against fingerprint-chromium 148:
+//   • speechSynthesis.getVoices() returns 0, after waiting on voiceschanged. Real
+//     desktop Chrome on Windows always exposes at least the Microsoft SAPI voices, so
+//     an empty list is itself a signal. Ungoogled strips the voice integration at
+//     build time and no flag restores it.
+//   • enumerateDevices() reports the host's real devices, so every profile on one
+//     machine shares them, and it disagreed with the CfT path (2 devices vs 3).
+//
+// This fills ONLY those two and touches nothing the native engine owns, so the layers
+// cannot disagree. There is no CDP command for enumerateDevices, hence a JS shim.
+function nativeGapScript(fp) {
+  try {
+    if (Object.getOwnPropertyDescriptor(window, '__sgn')) return;
+    Object.defineProperty(window, '__sgn', { value: 1, enumerable: false, configurable: false, writable: false });
+  } catch (e) {
+    if (window.__sgn) return; window.__sgn = 1;
+  }
+
+  // Patched functions must still report as native, or the override is the giveaway.
+  const markNative = (fn, name) => {
+    try {
+      Object.defineProperty(fn, 'name', { value: name, configurable: true });
+      Object.defineProperty(fn, 'toString', {
+        value: function () { return 'function ' + name + '() { [native code] }'; },
+        configurable: true, writable: true
+      });
+    } catch (e) {}
+    return fn;
+  };
+
+  if (fp && fp.speechVoices && window.speechSynthesis) {
+    const primary = (fp.langs && fp.langs[0]) || 'en-US';
+    const base = String(primary).split('-')[0];
+    const fake = [
+      { voiceURI: 'Google US English', name: 'Google US English', lang: 'en-US', localService: false, default: true },
+      { voiceURI: 'Google UK English Female', name: 'Google UK English Female', lang: 'en-GB', localService: false, default: false },
+      { voiceURI: 'Microsoft Natural', name: 'Microsoft Natural (' + base + ')', lang: primary, localService: true, default: false }
+    ];
+    try {
+      const proto = Object.getPrototypeOf(window.speechSynthesis) || window.speechSynthesis;
+      const orig = proto.getVoices;
+      proto.getVoices = markNative(function () {
+        const real = (function () { try { return orig.apply(this, arguments); } catch (e) { return []; } })();
+        return real && real.length ? real : fake.map((v) => Object.assign({}, v));
+      }, 'getVoices');
+    } catch (e) {}
+  }
+
+  // Mirrors the enumerateDevices block in fingerprintScript exactly, including the
+  // pre-grant vs post-grant shapes. fp.mediaSet is generateMediaDevices()'s output:
+  // { os, isWindows, mic, spk, cam, hasCamera } — LABELS, not counts.
+  if (fp && fp.mediaDevices && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+    try {
+      const set = fp.mediaSet || {};
+      const isWin = !!set.isWindows;
+      const micLabel = set.mic || 'Microphone';
+      const spkLabel = set.spk || 'Speakers';
+      const camLabel = set.cam || 'Integrated Camera';
+      // 64-hex persistent id from the profile seed (stable across launches).
+      const mkId = (n) => {
+        let h = ((fp.seed >>> 0) ^ (n * 2654435761)) >>> 0;
+        let out = '';
+        for (let i = 0; i < 64; i += 1) { h = (h * 1664525 + 1013904223) >>> 0; out += (h & 15).toString(16); }
+        return out;
+      };
+      const gMicIn = mkId(11), gSpkOut = mkId(12), gCam = mkId(13);
+      const micId = mkId(1), camId = mkId(2), spkId = mkId(3);
+
+      let granted = false;
+      const md = navigator.mediaDevices;
+      // On the PROTOTYPE and non-enumerable: an own instance property would surface in
+      // Object.getOwnPropertyNames(navigator.mediaDevices), which real Chrome never does.
+      const mdProto = Object.getPrototypeOf(md) || md;
+      const defineOnMd = (name, fn) => {
+        try { Object.defineProperty(mdProto, name, { value: fn, configurable: true, writable: true, enumerable: false }); }
+        catch (e) { try { md[name] = fn; } catch (e2) {} }
+      };
+      if (typeof md.getUserMedia === 'function') {
+        const origGUM = md.getUserMedia.bind(md);
+        defineOnMd('getUserMedia', markNative(function getUserMedia() {
+          let p;
+          try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
+          try { return p.then((stream) => { granted = true; return stream; }); } catch (e) { return p; }
+        }, 'getUserMedia'));
+      }
+
+      const build = () => {
+        const rows = [];
+        const audioIn = (deviceId, label) => rows.push({ kind: 'audioinput', deviceId, groupId: gMicIn, label });
+        const audioOut = (deviceId, label) => rows.push({ kind: 'audiooutput', deviceId, groupId: gSpkOut, label });
+        if (granted) {
+          audioIn('default', 'Default - ' + micLabel);
+          if (isWin) audioIn('communications', 'Communications - ' + micLabel);
+          audioIn(micId, micLabel);
+          rows.push({ kind: 'videoinput', deviceId: camId, groupId: gCam, label: camLabel });
+          audioOut('default', 'Default - ' + spkLabel);
+          if (isWin) audioOut('communications', 'Communications - ' + spkLabel);
+          audioOut(spkId, spkLabel);
+        } else {
+          // Pre-grant: one endpoint per kind, empty deviceId + label, stable groupId —
+          // precisely what real Chrome exposes before a permission grant.
+          audioIn('', '');
+          rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
+          audioOut('', '');
+        }
+        return rows;
+      };
+
+      defineOnMd('enumerateDevices', markNative(function enumerateDevices() {
+        try {
+          return Promise.resolve(build().map((d) => ({
+            kind: d.kind, deviceId: d.deviceId, groupId: d.groupId, label: d.label,
+            toJSON() { return { kind: this.kind, deviceId: this.deviceId, groupId: this.groupId, label: this.label }; }
+          })));
+        } catch (e) { return Promise.resolve([]); }
+      }, 'enumerateDevices'));
+    } catch (e) { /* never break the page over device spoofing */ }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2177,6 +2344,7 @@ async function launchProfileSession(options = {}) {
     profile = {},
     browserSettings = {},
     captcha = null,
+    startPageLinks = [], // custom links shown on the detection start page (global setting)
     globalExtensionDirs = [],
     // Per-profile opt-in: load SoftGlaze/team extensions (prefers Chrome-for-Testing so
     // --load-extension actually mounts them). Off = prefer real Chrome (stealthier).
@@ -2281,8 +2449,10 @@ async function launchProfileSession(options = {}) {
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, { ntpOverride: usingCft });
   // Seed a working address-bar default search engine for the anti-detect engine (Ungoogled
-  // ships none). Before launch so Chromium reads it at startup.
-  if (usingAntidetect) await ensureNativeDefaultSearch(userDataDir);
+  // ships none) AND the profile's Do Not Track choice, which has no native flag and would
+  // otherwise be dropped. Both land in Default/Preferences in one write, before launch so
+  // Chromium reads them at startup.
+  if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
 
   // Merge the fingerprint "Core" extension with any globally-enabled team
   // extensions (installed via the Extensions page) into a single comma-separated
@@ -2318,12 +2488,15 @@ async function launchProfileSession(options = {}) {
     `--load-extension=${extensionArg}`
   ];
   if (profile.canvasNoise !== false || profile.webglImageNoise !== false) {
-    const angleBackends = ['d3d11', 'd3d9', 'gl', 'vulkan'];
-    const chosenAngle = angleBackends[seed % angleBackends.length];
-    args.push(`--use-angle=${chosenAngle}`);
-    if (chosenAngle === 'gl') {
-      args.push('--use-gl=angle');
-    }
+    // GPU backend: pin ANGLE to Chrome's REAL Windows default (d3d11) instead of
+    // randomizing across [d3d11,d3d9,gl,vulkan] by seed. The randomization gave
+    // ~3/4 of profiles a broken/implausible backend — d3d9 drops WebGL2 entirely,
+    // '--use-angle=gl --use-gl=angle' commonly degrades to SwiftShader, and vulkan
+    // is a rounding-error share of real Chrome — which BLACK-SCREENED many profiles
+    // at launch AND made them MORE fingerprintable (the reported "some profiles open
+    // as a black screen" bug). Per-profile GPU variety is already carried by the
+    // readback (readPixels) perturbation, not by swapping the driver backend.
+    if (process.platform === 'win32') args.push('--use-angle=d3d11');
   }
 
   // Force the ENTIRE locale stack (ICU default locale → Intl.DateTimeFormat /
@@ -3019,7 +3192,7 @@ const rootCdp = await browser.target().createCDPSession();
   const startupMode = browserSettings.mode || 'detection';
   let startUrl = 'about:blank';
   if (startupMode === 'detection') {
-    startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo });
+    startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo, links: startPageLinks });
   } else if (usingCft) {
     // CfT and the anti-detect engine (Ungoogled-Chromium) have no usable blank/NTP:
     // about:blank renders as a dark VOID in OS dark-mode, and Ungoogled's own new tab
@@ -3032,6 +3205,28 @@ const rootCdp = await browser.target().createCDPSession();
   // DIAGNOSTIC: pins down the exact launch state when a profile shows a blank/black tab.
   console.log(`[SG][launch] antidetect=${usingAntidetect} cft=${usingCft} realChrome=${Boolean(chosenBrowser && chosenBrowser.isReal)} minCdp=${browserSettings.minimizeCdpFootprint === true} mode=${startupMode} startUrl=${startUrl} binary=${String((chosenBrowser && chosenBrowser.exePath) || '').split(/[\\/]/).pop()}`);
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch((e) => { console.log('[SG][launch] startUrl navigation failed:', e && e.message); });
+
+  // Open the profile's configured startup URLs (set at creation or via batch import
+  // and stored as `startupUrls`). These were previously saved but NEVER opened at
+  // launch — the browser only ever showed the detection start page, so batch-created
+  // "open these links" configs were silently ignored. Each opens in its OWN tab with
+  // proxy auth attached BEFORE navigation (same sequencing as __sgzOpenTab) so an
+  // authenticated proxy can't stall the tab on a 407. Fully best-effort.
+  try {
+    const startupList = String((profile && profile.startupUrls) || '')
+      .split(/[\r\n,\s]+/)
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .map((u) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(u) ? u : `https://${u}`))
+      .filter((u) => /^https?:/i.test(u));
+    for (const url of startupList) {
+      try {
+        const sp = await browser.newPage();
+        if (proxyCreds) await sp.authenticate(proxyCreds).catch(() => {});
+        await sp.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      } catch (e) { /* one bad startup URL must not break the launch */ }
+    }
+  } catch (e) { /* never let startup-URL opening tear down the session */ }
 
   const sessionId = String(profileId || crypto.randomUUID());
   // The CDP/WebDriver debugging endpoint — handed to the local REST API so users
@@ -3895,6 +4090,10 @@ module.exports = {
   // it in a vm sandbox to assert overrides don't leak (toString/name integrity, spoofed
   // navigator props on the prototype rather than the instance).
   fingerprintScript,
+  // Exported for the same reason: the minimal layer shipped INSTEAD of fingerprintScript
+  // when the native anti-detect engine is driving. Covers only speech voices and
+  // enumerateDevices, the two axes fingerprint-chromium leaves untouched.
+  nativeGapScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
   generateStartPage,
   // Reused by the Firefox engine to bind timezone/locale to the proxy exit IP (parity

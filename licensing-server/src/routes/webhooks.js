@@ -24,10 +24,17 @@ async function tenantAndSecrets(tenantId, provider) {
 // Idempotency guard: true => first time (proceed), false => replay (skip).
 async function firstTime(tenantId, provider, eventId, type) {
   if (!eventId) return true;
-  const seen = await prisma.webhookEvent.findUnique({ where: { id: String(eventId) } }).catch(() => null);
-  if (seen) return false;
-  await prisma.webhookEvent.create({ data: { id: String(eventId), tenantId, provider, type: type || '' } }).catch(() => {});
-  return true;
+  // audit: CREATE-first so the primary-key constraint arbitrates atomically. The old
+  // find-then-create was a race (two concurrent deliveries of one event both saw null
+  // and both provisioned — doubling the paid term), and it swallowed the create error
+  // so a persistent DB failure silently disabled replay protection while returning 200.
+  try {
+    await prisma.webhookEvent.create({ data: { id: String(eventId), tenantId, provider, type: type || '' } });
+    return true;
+  } catch (e) {
+    if (e && e.code === 'P2002') return false; // unique violation => already seen (replay)
+    throw e;
+  }
 }
 
 // --- Stripe (raw body for signature verification) ---------------------------
@@ -61,7 +68,11 @@ router.post('/stripe/:tenantId', express.raw({ type: '*/*' }), async (req, res) 
           periodEnd: new Date(Date.now() + months * 30 * DAY) // provisional until invoice.paid
         });
         if (payment) await prisma.payment.update({ where: { id: payment.id }, data: { status: 'paid' } }).catch(() => {});
-      } else {
+      } else if (s.payment_status === 'paid' || s.payment_status === 'no_payment_required') {
+        // audit: only provision a one-off purchase once the session is actually PAID.
+        // Delayed-notification methods (SEPA/Bacs/Boleto/OXXO) complete the Checkout
+        // Session with payment_status 'unpaid' and settle (or fail) later, so granting
+        // on completion alone handed out paid terms for money that never arrived.
         await provisionFromPaymentRef(tenant, s.id, {
           account: md.account || (s.customer_details && s.customer_details.email) || null,
           installId: md.installId || s.client_reference_id || null,
@@ -106,9 +117,15 @@ router.post('/paypal/:tenantId', express.json({ type: '*/*', limit: '256kb' }), 
     if (!(await firstTime(tenant.id, 'paypal', event.id, event.event_type))) return res.json({ received: true, duplicate: true });
     const resource = event.resource || {};
     if (event.event_type === 'CHECKOUT.ORDER.APPROVED') {
+      // audit: ORDER.APPROVED fires when the payer approves — BEFORE any money moves.
+      // The capture result was discarded and the license granted unconditionally, so a
+      // declining/failing instrument still got a paid term. Provision only when the
+      // capture actually reports COMPLETED; PAYMENT.CAPTURE.COMPLETED remains the fallback.
       const orderId = resource.id;
-      await paypalProvider.captureOrder({ secrets, orderId }).catch(() => {}); // capture, then provision
-      await provisionFromPaymentRef(tenant, orderId);
+      let cap = null;
+      try { cap = await paypalProvider.captureOrder({ secrets, orderId }); } catch (e) { cap = null; }
+      const status = cap && (cap.status || (cap.result && cap.result.status));
+      if (status === 'COMPLETED') await provisionFromPaymentRef(tenant, orderId);
     } else if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
       const orderId = resource.supplementary_data && resource.supplementary_data.related_ids && resource.supplementary_data.related_ids.order_id;
       if (orderId) await provisionFromPaymentRef(tenant, orderId);

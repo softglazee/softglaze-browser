@@ -8,7 +8,11 @@ const { rateLimit } = require('./middleware/rateLimit');
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1); // honor X-Forwarded-For behind a reverse proxy (req.ip)
+// audit: only trust X-Forwarded-For when actually behind a reverse proxy (set
+// TRUST_PROXY_HOPS). Unconditionally trusting one hop let a client connecting directly
+// to the published port spoof X-Forwarded-For and land in a fresh rate-limit bucket per
+// request, nullifying the only abuse control on /v1/register|checkout|license|redeem.
+app.set('trust proxy', process.env.TRUST_PROXY_HOPS ? Number(process.env.TRUST_PROXY_HOPS) : false);
 
 app.get('/health', (req, res) => res.json({ ok: true, service: 'softglaze-licensing', time: new Date().toISOString() }));
 

@@ -86,9 +86,17 @@ class CloudSyncEngine {
     if (!envelope || envelope.v !== 1) throw new Error('Unrecognized sync envelope.');
     const salt = Buffer.from(envelope.salt, 'base64');
     const iv = Buffer.from(envelope.iv, 'base64');
+    const tag = Buffer.from(envelope.tag, 'base64');
+    // audit: a GCM tag is 16 bytes and IV/salt are fixed length. Node otherwise accepts
+    // 4/8/12..16-byte tags and arbitrary-length IVs, so a hostile bucket could ship a
+    // 4-byte tag and drop forgery from 2^128 to 2^32. Reject anything off-spec BEFORE
+    // decrypting, and pin authTagLength.
+    if (tag.length !== 16 || iv.length !== IV_LEN || salt.length !== PBKDF_SALT_LEN) {
+      throw new Error('Unrecognized sync envelope.');
+    }
     const subKey = crypto.hkdfSync('sha256', this._masterKey, salt, Buffer.from('sgz-sync'), 32);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(subKey), iv);
-    decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'));
+    const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(subKey), iv, { authTagLength: 16 });
+    decipher.setAuthTag(tag);
     const out = Buffer.concat([decipher.update(Buffer.from(envelope.data, 'base64')), decipher.final()]);
     return JSON.parse(out.toString('utf8'));
   }

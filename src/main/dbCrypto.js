@@ -183,20 +183,36 @@ function looksLikeSqlite(filePath) {
 // it removes the obvious plaintext copy and is better than a plain unlink. Never
 // throws — a failure here must not block the lifecycle.
 async function secureUnlink(filePath) {
+  // The random overwrite is best-effort, but the DELETE must ALWAYS run. Previously
+  // both lived in one try/catch: on Windows fsp.open(...,'r+') throws EBUSY/EPERM
+  // whenever AV/indexer/another instance holds the handle, and that swallowed error
+  // skipped the unlink too — leaving the full plaintext DB on disk beside the
+  // ciphertext (at-rest encryption defeated). Overwrite and delete are now separate.
   try {
     const stat = await fsp.stat(filePath);
     if (stat.isFile() && stat.size > 0) {
       const fh = await fsp.open(filePath, 'r+');
       try {
-        await fh.write(crypto.randomBytes(stat.size), 0, stat.size, 0);
+        // Overwrite in bounded chunks so a multi-GB DB doesn't allocate its whole
+        // size in RAM (and randomBytes can't throw on an oversized single request).
+        const CHUNK = 1 << 20; // 1 MiB
+        for (let offset = 0; offset < stat.size; offset += CHUNK) {
+          const len = Math.min(CHUNK, stat.size - offset);
+          await fh.write(crypto.randomBytes(len), 0, len, offset);
+        }
         await fh.sync();
       } finally {
         await fh.close();
       }
     }
+  } catch (e) {
+    // Could not overwrite (busy/locked). Still remove the plaintext below rather
+    // than leave it on disk.
+  }
+  try {
     await fsp.unlink(filePath);
   } catch (e) {
-    // File already gone or locked — nothing more we can safely do.
+    // Already gone, or genuinely locked — nothing more we can safely do.
   }
 }
 

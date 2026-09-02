@@ -96,6 +96,10 @@ export default function BrowsersPage() {
   const [loading, setLoading] = useState(true);
   const [ffLoading, setFfLoading] = useState(true);
   const [err, setErr] = useState('');
+  // Collapse the long version lists to just what's relevant (installed / downloading),
+  // with a Show-all toggle — instead of always rendering every downloadable version.
+  const [showAllChrome, setShowAllChrome] = useState(false);
+  const [showAllFirefox, setShowAllFirefox] = useState(false);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -203,6 +207,13 @@ export default function BrowsersPage() {
 
   const chromeInstalled = items.filter((i) => i.installed).length;
   const ffInstalled = ffItems.filter((i) => i.installed).length;
+
+  // Collapsed view: installed + in-progress downloads (fall back to the latest few so
+  // there's always something to act on). Expanded view: the whole list.
+  const COLLAPSE_N = 3;
+  const relevantOnly = (list) => list.filter((it) => it.installed || (it.download && it.download.state && it.download.state !== 'done'));
+  const visibleChrome = showAllChrome ? items : (relevantOnly(items).length ? relevantOnly(items) : items.slice(0, COLLAPSE_N));
+  const visibleFirefox = showAllFirefox ? ffItems : (relevantOnly(ffItems).length ? relevantOnly(ffItems) : ffItems.slice(0, COLLAPSE_N));
   const ffAvailable = ffItems.length - ffInstalled;
   // The system-detected Firefox counts as ready even if not a versioned install.
   const ffReady = ffInstalled + (firefox?.installed ? 1 : 0);
@@ -307,7 +318,7 @@ export default function BrowsersPage() {
             </div>
           ) : ffItems.length === 0 ? (
             <div className="text-center py-10 text-sm text-muted-foreground">{t('firefox.empty')}</div>
-          ) : ffItems.map((it) => (
+          ) : visibleFirefox.map((it) => (
             <VersionRow
               key={it.major}
               label={t('row.versionLabel', { brand: 'Firefox', major: it.major })}
@@ -320,6 +331,11 @@ export default function BrowsersPage() {
               onResume={() => resumeFirefox(it.major)}
             />
           ))}
+          {!ffLoading && (ffItems.length > visibleFirefox.length || showAllFirefox) && (
+            <button type="button" onClick={() => setShowAllFirefox((v) => !v)} className="w-full text-center text-xs font-semibold text-primary hover:opacity-80 py-2">
+              {showAllFirefox ? 'Show less' : ('Show all ' + ffItems.length + ' versions')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -345,7 +361,7 @@ export default function BrowsersPage() {
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-10 text-sm text-muted-foreground">{t('chrome.empty')}</div>
-          ) : items.map((it) => (
+          ) : visibleChrome.map((it) => (
             <VersionRow
               key={it.version}
               label={t('row.versionLabel', { brand: 'Chrome', major: it.major })}
@@ -358,6 +374,11 @@ export default function BrowsersPage() {
               onResume={() => resumeChrome(it.version)}
             />
           ))}
+          {!loading && (items.length > visibleChrome.length || showAllChrome) && (
+            <button type="button" onClick={() => setShowAllChrome((v) => !v)} className="w-full text-center text-xs font-semibold text-primary hover:opacity-80 py-2">
+              {showAllChrome ? 'Show less' : ('Show all ' + items.length + ' versions')}
+            </button>
+          )}
         </div>
       </div>
     </div>

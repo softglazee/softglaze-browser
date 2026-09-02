@@ -440,7 +440,7 @@ export default function Gate({ children }) {
       // 'register' branch: the SUPER_ADMIN (currentMemberId -1) is NOT in members.list(),
       // so with zero regular members a remembered super session would otherwise be dumped
       // on the register screen every boot instead of proceeding into the app.
-      if (cur) { setPhase('licensing'); return; }
+      if (cur) { setBusy(false); setPhase('licensing'); return; }
       if (ms.length === 0) { setPhase('register'); setStep('details'); return; }
       setPhase('pick');
     } catch (e) {
@@ -525,7 +525,7 @@ export default function Gate({ children }) {
       const cur = await softglazeApi.members.current().catch(() => null);
       setLoginPass('');
       if (!cur && list.length) { setPhase('pick'); setBusy(false); return; }
-      setPhase('licensing');
+      setBusy(false); setPhase('licensing');
     } catch (e) { setErr(e.message || t('errors.incorrectPassword')); setBusy(false); }
   }
 
@@ -533,7 +533,7 @@ export default function Gate({ children }) {
     setErr('');
     if (m.hasPin && pinFor !== m.id) { setPinFor(m.id); setPin(''); return; }
     setBusy(true);
-    try { await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined); setPhase('licensing'); }
+    try { await softglazeApi.members.switch(m.id, m.hasPin ? pin : undefined); setBusy(false); setPhase('licensing'); }
     catch (e) { setErr(e.message || t('errors.couldNotSignIn')); setBusy(false); }
   }
 
@@ -542,7 +542,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.superLogin(superId.trim(), superPass, remember);
       setSuperPass('');
-      setPhase('licensing');
+      setBusy(false); setPhase('licensing');
     } catch (e) {
       if (e.code === 'SUPER_SETUP_REQUIRED') { setSuperNeedsSetup(true); setErr(t('errors.superSetupRequired')); setBusy(false); return; }
       setErr(e.message || t('errors.invalidSuperCredentials')); setBusy(false);
@@ -558,7 +558,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.superSetup({ identifier: superId.trim() || 'superadmin', password: superPass });
       setSuperPass(''); setSuperPass2('');
-      setPhase('licensing');
+      setBusy(false); setPhase('licensing');
     } catch (e) { setErr(e.message || t('errors.couldNotCreateSuper')); setBusy(false); }
   }
 
@@ -570,7 +570,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.acceptInvite({ code: inviteCode.trim(), name: inviteName.trim() || undefined, password: invitePass });
       setInvitePass('');
-      setPhase('licensing');
+      setBusy(false); setPhase('licensing');
     } catch (e) { setErr(e.message || t('errors.couldNotRedeemInvite')); setBusy(false); }
   }
 
@@ -581,7 +581,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.members.login(memberIdf.trim(), memberPass, remember);
       setMemberPass('');
-      setPhase('licensing');
+      setBusy(false); setPhase('licensing');
     } catch (e) { setErr(e.message || t('errors.couldNotSignIn')); setBusy(false); }
   }
 
@@ -602,13 +602,13 @@ export default function Gate({ children }) {
     return () => { live = false; };
   }, [phase]);
 
-  function startTrial() { setErr(''); setPhase('licensing'); } // trial already created at registration
+  function startTrial() { setErr(''); setBusy(false); setPhase('licensing'); } // trial already created at registration
 
   async function redeemPlan() {
     setErr('');
     if (!planCode.trim()) return setErr(t('errors.enterPurchaseCode'));
     setBusy(true);
-    try { await softglazeApi.license.redeem(planCode.trim()); setPlanCode(''); setBusy(false); setPhase('licensing'); }
+    try { await softglazeApi.license.redeem(planCode.trim()); setPlanCode(''); setBusy(false); setBusy(false); setPhase('licensing'); }
     catch (e) { setErr(e.message || t('errors.invalidPurchaseCode')); setBusy(false); }
   }
 
@@ -628,7 +628,7 @@ export default function Gate({ children }) {
       try {
         const r = await softglazeApi.payments.pollCheckout({ uuid: inv.uuid, orderId: inv.orderId });
         // If the poll was stopped mid-flight (unmount / sign-out), do NOT re-enter.
-        if (r && r.paid && pollRef.current) { stopPoll(); setBusy(false); setPhase('licensing'); return; }
+        if (r && r.paid && pollRef.current) { stopPoll(); setBusy(false); setBusy(false); setPhase('licensing'); return; }
       } catch (e) { /* keep polling */ }
       if (tries > 120) { stopPoll(); setBusy(false); } // ~10-minute cap
     }, 5000);
@@ -664,6 +664,7 @@ export default function Gate({ children }) {
 
   async function signOut() {
     stopPoll(); // don't let an in-flight purchase poll re-enter the app after logout
+    setBusy(false); // audit: clear busy so the returned-to login screen isn't permanently disabled
     try { await softglazeApi.members.logout(); } catch (e) { /* ignore */ }
     setLicense(null); setPhase('loading'); evaluate();
   }

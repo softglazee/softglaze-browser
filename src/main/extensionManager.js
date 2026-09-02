@@ -54,10 +54,15 @@ const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 //     Softglaze's native per-profile proxy).
 const RECOMMENDED_EXTENSIONS = [
   { chromeId: SOFTGLAZE_RECORDER_ID, name: 'SoftGlaze Screen Recorder', enable: true },
-  { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: true },
-  { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: true },
-  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: true }, // MV3 successor (Chrome is disabling the MV2 build); content blockers alter page/network behavior (anti-detect tradeoff)
-  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: true } // MV3 successor; can override Softglaze's native per-profile proxy
+  // Opt-in: the third-party extensions below are NO LONGER force-installed into every
+  // profile. They are offered as recommendations on the Extensions page and installed
+  // only when the user chooses. Rationale: SwitchyOmega can override SoftGlaze's own
+  // per-profile proxy (an IP-leak risk), and silently auto-installing third-party code
+  // into every anti-detect profile is a supply-chain concern.
+  { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: false },
+  { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: false },
+  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: false },
+  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: false }
 ];
 
 function extensionsRoot() {
@@ -233,8 +238,13 @@ async function seedRecommendedExtensions() {
   const flag = await db.setting.findUnique({ where: { key: SEED_FLAG } }).catch(() => null);
   if (flag && flag.value === 'true') return { skipped: true };
 
+  // Only AUTO-install the extensions that ship enabled-by-default (SoftGlaze's own
+  // recorder). The opt-in third-party ones are downloaded only when the user installs
+  // them from the Extensions page — so nothing third-party is fetched or force-loaded
+  // at startup (this also stops the transient "uBlock package empty/truncated" log).
+  const toSeed = RECOMMENDED_EXTENSIONS.filter((r) => r.enable);
   let installed = 0, present = 0, failed = 0;
-  for (const rec of RECOMMENDED_EXTENSIONS) {
+  for (const rec of toSeed) {
     try {
       const existing = await db.extension.findUnique({ where: { chromeId: rec.chromeId } });
       if (existing) { present++; continue; }
@@ -247,7 +257,7 @@ async function seedRecommendedExtensions() {
     }
   }
 
-  if (installed + present === RECOMMENDED_EXTENSIONS.length) {
+  if (installed + present === toSeed.length) {
     await db.setting.upsert({ where: { key: SEED_FLAG }, create: { key: SEED_FLAG, value: 'true' }, update: { value: 'true' } }).catch(() => {});
   }
   if (installed || failed) console.log(`[ext-seed] done — ${installed} installed, ${present} present, ${failed} failed`);

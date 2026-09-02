@@ -1,6 +1,7 @@
 ﻿node_modules/
 dist/
 dist_installer/
+.claude/
 .env
 softglaze.sqlite
 softglaze.sqlite-journal
@@ -9,6 +10,10 @@ softglaze_profiles/
 chrome/
 firefox/
 fp-chromium/
+# AdsPower SunBrowser kernel archive (9.68 GB). Reference copy only: those builds refuse
+# to launch outside AdsPower, so they are not a usable engine here. Same class as the
+# three above; electron-builder's files allowlist already keeps it out of installers.
+sunbrowser/
 # local dev test artifacts
 dev-test.log
 dev-test.err.log

@@ -254,7 +254,15 @@ function createMainWindow() {
     }
     let current = null;
     try { current = new URL(mainWindow.webContents.getURL()); } catch { current = null; }
-    if (current && current.origin === target.origin) return; // allow in-app nav
+    // audit: never compare `.origin` — app:/file:/data: and every custom scheme all
+    // serialize their origin to the string "null", so in a production app:// build EVERY
+    // opaque-origin target (file:, data:, an OS scheme like search-ms:) compared equal to
+    // the app and was allowed to navigate the shell (which carries the preload/IPC surface).
+    // Compare protocol + host explicitly, and only for the schemes the shell is ever served on.
+    if (current && target.protocol === current.protocol && target.host === current.host
+        && (target.protocol === 'app:' || target.protocol === 'http:' || target.protocol === 'https:')) {
+      return; // allow same-origin in-app navigation
+    }
 
     event.preventDefault();
     if (['http:', 'https:', 'mailto:'].includes(target.protocol)) {
@@ -281,6 +289,10 @@ function createMainWindow() {
 function configureSessionSecurity() {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   session.defaultSession.setDevicePermissionHandler(() => false);
+  // audit: also deny the SYNCHRONOUS permission-check path (media-device enumeration,
+  // clipboard reads) which does not raise a prompt — otherwise Electron's permissive
+  // default leaves a hole in the deny-everything posture the two handlers above set.
+  session.defaultSession.setPermissionCheckHandler(() => false);
 }
 
 // --- SINGLE-INSTANCE LOCK ---

@@ -322,6 +322,11 @@ let registered = false;
 let proxySchedulerTimer = null;
 let memoryGuardTimer = null;
 let currentMemberId = null;
+// audit C1: true once ANY member has been active this app-session. Distinguishes the
+// legit boot / member-picker (no member active yet) from a post-logout state, so a
+// logged-out renderer can't silently assume a credential-less OWNER/ADMIN — see the
+// !actor branch in switchMember.
+let sessionHadActiveMember = false;
 // Cached capability of the active member, refreshed by getActiveMember(). Used by the
 // (synchronous) proxy serializer to decide credential redaction without an async hop.
 // Single-user mode (no member) is treated as owner → full reveal.
@@ -647,6 +652,19 @@ async function cookieRobot(payload) {
   return { ok: true, sessionId, visited: result.visited, errors: result.errors };
 }
 
+// audit: proxyInfoString is the raw `host:port:user:pass` (or url form). serializeProfile
+// spreads the whole row, so it bypassed the credential redaction serializeProxy applies.
+// Mask it for members without proxies.reveal (owner / single-user keep it in full; the
+// launch path reads the DB row directly, not this, so masking never affects a launch).
+function maskProxyInfoString(s) {
+  const str = String(s || '');
+  if (!str) return str;
+  if (/:\/\//.test(str)) return str.replace(/(:\/\/)[^@/]*@/, '$1' + '••••@');
+  const parts = str.split(':');
+  if (parts.length >= 4) return parts[0] + ':' + parts[1] + ':••••:••••';
+  return str;
+}
+
 function serializeProfile(profile) {
   // Safe JSON Parsing for React Arrays/Objects
   let platformAccounts = [];
@@ -679,7 +697,8 @@ function serializeProfile(profile) {
       : null,
     createdAt: profile.createdAt instanceof Date ? profile.createdAt.toISOString() : profile.createdAt,
     updatedAt: profile.updatedAt instanceof Date ? profile.updatedAt.toISOString() : profile.updatedAt,
-    proxy: serializeProxy(profile.proxy)
+    proxy: serializeProxy(profile.proxy),
+    proxyInfoString: currentMemberCanRevealProxy ? profile.proxyInfoString : maskProxyInfoString(profile.proxyInfoString)
   };
 }
 
@@ -1095,6 +1114,7 @@ async function getProxyPolicy() {
 }
 
 async function setProxyPolicy(payload) {
+  await requirePermission('proxies.manage'); // audit: was ungated (disable rotation workspace-wide)
   const input = requireObject(payload);
   const cur = (await readSetting('proxyPolicy', {})) || {};
   const next = {
@@ -1903,6 +1923,7 @@ async function testProxyConnectivity(proxy) {
 
 // Accepts { id } (a saved proxy), { raw, type }, or { host, port, username, password, type }.
 async function checkProxy(payload) {
+  await requirePermission('proxies.manage'); // audit: was ungated (main-process port-scan / SSRF oracle)
   const input = requireObject(payload);
   let proxy = null;
   let savedId = null;
@@ -2579,6 +2600,7 @@ async function listTemplates() {
 }
 
 async function deleteTemplate(payload) {
+  await requirePermission('profiles.create'); // audit: was ungated (any member wiped shared templates)
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -3338,7 +3360,9 @@ async function bulkLaunchProfiles(payload) {
 
 async function bulkCloseSessions(payload) {
   const input = requireObject(payload);
-  const ids = parseIdArray(input.ids);
+  // audit: was ungated — scope to the caller's accessible profiles only.
+  const { allowed } = await partitionAccessibleProfileIds(parseIdArray(input.ids));
+  const ids = allowed;
   const result = { closed: [], errors: [] };
   for (const id of ids) {
     try {
@@ -3710,6 +3734,7 @@ function autoGroupColor(name) {
 // proxies without a known country are skipped. `onlyUngrouped` (used by the auto-run
 // after Test All) leaves manually-grouped proxies untouched.
 async function autoGroupProxies(payload) {
+  await requirePermission('proxies.manage'); // audit: was ungated
   const input = requireObject(payload || {});
   const level = ['country', 'state', 'city'].includes(String(input.level)) ? String(input.level) : 'country';
   const onlyUngrouped = input.onlyUngrouped === true;
@@ -3965,6 +3990,7 @@ async function launchProfile(payload) {
       profile, // full fingerprint config applied at launch
       browserSettings,
       captcha: globalSettings.captcha,
+      startPageLinks: Array.isArray(globalSettings.startPageLinks) ? globalSettings.startPageLinks : [],
       globalExtensionDirs,
       loadExtensions,
       geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
@@ -3995,6 +4021,9 @@ async function closeAnySession(sessionId) {
 async function closeSession(payload) {
   const input = requireObject(payload);
   const sessionId = requiredString(input.sessionId, 'sessionId');
+  // audit: was ungated — a member could kill another member's running session. Session
+  // ids equal profile ids, so scope by profile access.
+  if (/^\d+$/.test(sessionId)) await assertCanAccessProfile(Number.parseInt(sessionId, 10));
   const result = await closeAnySession(sessionId);
   reconcileProfileLocks(); // release any lock whose session just ended
   return result;
@@ -4131,7 +4160,12 @@ async function runSessionRestore(payload) {
     return { dismissed: true };
   }
   if (!ids.length) return { launched: 0, errors: [] };
-  const res = await bulkLaunchProfiles({ ids }); // respects the Phase A concurrency cap
+  // Restore opens sessions ONE AT A TIME (queue mode). Previously it called
+  // bulkLaunchProfiles with no concurrency, so it used the global launch-concurrency
+  // (default 5) and, restoring a large prior session (e.g. 40 profiles), spawned
+  // dozens of Chromium instances almost simultaneously — hanging the machine and
+  // ignoring the queue. Sequential restore respects the queue and never floods.
+  const res = await bulkLaunchProfiles({ ids, concurrency: 1 });
   return { launched: res.launched.length, errors: res.errors };
 }
 
@@ -4249,6 +4283,7 @@ function countryMatches(want, proxyCountry) {
 }
 
 async function commitProfileImport(payload, event) {
+  await requirePermission('profiles.create'); // audit: was ungated (quota + cross-tenant proxy + data-loss)
   const input = requireObject(payload);
   const token = requiredString(input.token, 'Import token');
   const autoBind = Boolean(input.autoBindByCountry);
@@ -4829,6 +4864,7 @@ async function runProxyHealthSweepConcurrent(limit = 8) {
 // "Test all" action — concurrent health check of every proxy. No secrets are
 // returned (only a count summary), so it is safe for any role.
 async function testAllProxies() {
+  await requirePermission('proxies.manage'); // audit: was ungated (cross-tenant proxy health writes)
   const summary = await runProxyHealthSweepConcurrent(8);
   // Freshly-checked proxies now carry geo — auto-bucket the UNGROUPED ones by
   // country (never disturbs manually-grouped proxies). Best-effort, non-fatal.
@@ -4990,6 +5026,7 @@ async function getGlobalSettings() {
 }
 
 async function setGlobalSettings(payload) {
+  await requireOwnerOrSuper('change workspace settings'); // audit: was ungated (audit-log wipe, captcha key, security toggles)
   const input = requireObject(payload);
   const current = await getGlobalSettings();
   const next = deepMergeSettings(current, input);
@@ -5719,9 +5756,13 @@ async function getActiveMember() {
 // until a team is configured. Once a member is active, gated actions require a sufficient role.
 async function requirePermission(action) {
   const need = PERMISSIONS[action];
-  if (!need) return;
+  // Fail CLOSED on an unregistered action (typo, or a new capability wired to a
+  // handler but never added to the catalog). Previously `if (!need) return;` silently
+  // GRANTED access — the same fail-open bug rbacPolicy.canReadRaw was fixed for. All
+  // real actions have minRank >= 1, so `== null` only catches unknown keys.
+  if (need == null) { const err = new Error('Unknown permission: ' + action); err.code = 'FORBIDDEN'; throw err; }
   const member = await getActiveMember();
-  if (!member) return;
+  if (!member) return; // single-user mode (no active member) — allowed until a team exists
   if (member.status === 'suspended' || member.status === 'banned') {
     throw new Error(member.status === 'banned' ? 'This account is banned.' : 'This member is suspended.');
   }
@@ -6016,6 +6057,7 @@ async function memberLogin(payload) {
 // (logging out is not the same as locking the workspace).
 async function memberLogout() {
   await logAudit('member.logout'); // log while currentMemberId is still the departing member
+  sessionHadActiveMember = true; // audit C1: a member WAS active — a later switch must re-auth
   currentMemberId = null;
   await writeSetting('currentMemberId', null).catch(() => {});
   // Signing out is an explicit "this isn't my session" — forget any remembered
@@ -6385,6 +6427,19 @@ async function switchMember(payload) {
       if (!verifySecret(pw, m.passwordSalt, m.passwordHash)) {
         const err = new Error('Enter this member’s password to sign in.'); err.code = 'NEED_PASSWORD'; throw err;
       }
+    } else if (sessionHadActiveMember && permissions.rankOf(m.role) >= permissions.rankOf('ADMIN')) {
+      // audit C1: a credential-less privileged identity (e.g. a legacy OWNER whose
+      // password lives only in Setting['vault']) must NOT be assumable after a logout.
+      // Require the workspace vault password. On a fresh boot (no member active yet)
+      // this branch is skipped, so first-pick-after-unlock is unchanged. If no vault
+      // password exists there is no workspace secret to verify, so we fall through.
+      const vault = await readVault();
+      if (vault && vault.enabled && vault.hash) {
+        const pw = String(input.password || '');
+        if (!verifySecret(pw, vault.salt, vault.hash)) {
+          const err = new Error('Enter the workspace password to sign in as this member.'); err.code = 'NEED_PASSWORD'; throw err;
+        }
+      }
     }
   }
 
@@ -6393,6 +6448,7 @@ async function switchMember(payload) {
     const err = new Error('Incorrect PIN.'); err.code = 'BAD_PIN'; throw err;
   }
   currentMemberId = id;
+  sessionHadActiveMember = true;
   await writeSetting('currentMemberId', id).catch(() => {});
   await db.member.update({ where: { id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   return serializeMember(m, { isCurrent: true });
@@ -7081,7 +7137,7 @@ async function getEmailConfig() {
 }
 
 async function setEmailConfig(payload) {
-  await requirePermission('members.manage');
+  await requireOwnerOrSuper('change email settings'); // audit: was members.manage — an ADMIN could repoint the OTP relay to steal owner account-change codes
   const input = requireObject(payload);
   const prev = (await readSetting('smtp', {})) || {};
   const next = {
@@ -8363,6 +8419,7 @@ async function resetLicense(payload) {
 // is explicitly local-first; durable enforcement needs the backend). Tier + length
 // come from the catalog's trial plan (defaults: enterprise, 7 days).
 async function startTrial(payload) {
+  await requirePurchaser('start the free trial'); // audit: was ungated (any member reset license to full trial)
   const input = (payload && typeof payload === 'object') ? payload : {};
   const me = await getActiveMember();
   const isSuper = Boolean(me && me.role === 'SUPER_ADMIN');
@@ -9028,6 +9085,7 @@ async function getMacros() {
 }
 
 async function saveMacro(payload) {
+  await requirePermission('automation.run'); // audit: was ungated (overwrite any macro's steps)
   const input = requireObject(payload);
   const db = getPrisma();
   const name = requiredString(input.name, 'Macro name');
@@ -9195,6 +9253,7 @@ async function runMacroOnProfile(payload, event) {
 
 // Pause / resume / stop a running macro by runId.
 async function controlMacro(payload) {
+  await requirePermission('automation.run'); // audit: was ungated
   const input = requireObject(payload);
   const runId = String(input.runId || '');
   const action = String(input.action || '').toLowerCase();
@@ -9216,9 +9275,11 @@ async function startMacroRecordingOnProfile(payload) {
 }
 
 async function stopMacroRecordingOnProfile(payload) {
+  await requirePermission('automation.run'); // audit: was ungated
   const input = requireObject(payload);
   const profileId = parseId(input.profileId);
   const sessionId = String(input.sessionId || profileId);
+  if (/^\d+$/.test(sessionId)) await assertCanAccessProfile(Number.parseInt(sessionId, 10)); // audit: recorded steps carry typed secrets
   const res = await stopMacroRecording(sessionId);
   const steps = Array.isArray(res.steps) ? res.steps : [];
   // Optionally persist the captured steps straight into a new macro.
@@ -9274,6 +9335,7 @@ async function getMacroSchedule() {
 }
 
 async function setMacroSchedule(payload) {
+  await requirePermission('automation.run'); // audit: was ungated (confused-deputy scheduler)
   const input = requireObject(payload);
   const enabled = Boolean(input.enabled);
   const everyMinutes = Math.max(1, Number.parseInt(input.everyMinutes, 10) || 60);
@@ -9627,6 +9689,7 @@ function listActiveWarmers() {
 // Stop a running warm-up. `force` also closes the sessions this run launched.
 // With no runId, stops every active run.
 async function stopWarmer(payload) {
+  await requirePermission('automation.run'); // audit: was ungated
   const input = (payload && typeof payload === 'object') ? payload : {};
   const force = Boolean(input.force);
   const runId = input.runId ? String(input.runId) : null;
@@ -10093,7 +10156,10 @@ function registerIpcHandlers() {
         os: p.os || null,
         browserVersion: p.browserVersion || null,
         userAgent: p.userAgent || null,
-        proxy: p.proxyInfoString ? String(p.proxyInfoString).replace(/:[^:@]*@/, ':••••@') : null,
+        // audit: the old regex only matched URL-form creds; the app's canonical
+        // `host:port:user:pass` form has no '@' so the password leaked verbatim over
+        // the local API. maskProxyInfoString handles both forms.
+        proxy: p.proxyInfoString ? maskProxyInfoString(p.proxyInfoString) : null,
         groupId: p.groupId || null,
         lastUsedAt: p.lastUsedAt instanceof Date ? p.lastUsedAt.toISOString() : (p.lastUsedAt || null)
       }));

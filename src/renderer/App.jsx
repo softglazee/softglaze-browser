@@ -6,6 +6,7 @@ import DbGate from '@/components/DbGate.jsx';
 import ErrorBoundary from '@/components/ErrorBoundary.jsx';
 import Gate from '@/components/Gate.jsx';
 import DashboardPage from '@/pages/DashboardPage.jsx';
+import StartLinksPage from '@/pages/StartLinksPage.jsx';
 import ProxyPoolPage from '@/pages/ProxyPoolPage.jsx';
 import GroupsPage from '@/pages/GroupsPage.jsx';
 import ExtensionsPage from '@/pages/ExtensionsPage.jsx';
@@ -42,6 +43,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/start-links" element={<StartLinksPage />} />
                 <Route path="/profiles" element={<ProfilesPage />} />
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/proxies" element={<ProxyPoolPage />} />

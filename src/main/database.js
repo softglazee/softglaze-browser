@@ -67,7 +67,14 @@ function configureDatabaseEnv() {
 
   // Learn the at-rest encryption state from the sidecar. If encrypted, the DB
   // starts locked — getPrisma() will refuse until unlockEncryptedDb() succeeds.
-  dbEnc.enabled = Boolean(readSidecar().enabled);
+  //
+  // The sidecar is a plaintext flag and readSidecar() fails OPEN ({enabled:false})
+  // on any read/parse error. If it is lost or corrupted while the ciphertext still
+  // exists, treating the DB as unencrypted makes SQLite create a fresh EMPTY
+  // softglaze.sqlite, which the crash-leftover branch then re-encrypts over the good
+  // .enc — unrecoverable data loss. So the presence of the .enc file is authoritative:
+  // if it exists, the workspace is encrypted and must start locked.
+  dbEnc.enabled = Boolean(readSidecar().enabled) || fs.existsSync(runtime.encPath);
   if (dbEnc.enabled) dbEnc.unlocked = false;
 
   return runtime;
@@ -305,19 +312,31 @@ async function disableDbEncryption(password) {
 // changes while encryption is on, so "the vault password unlocks the DB" stays
 // true). The live working file is untouched; only the .enc + held key change.
 async function rekeyEncryptedDb(newPassword) {
-  if (!dbEnc.enabled || !dbEnc.unlocked) return;
+  // audit: this runs AFTER the caller has already committed the new vault password. A
+  // silent early-return would leave the .enc keyed to the OLD password → permanent
+  // lockout, so THROW instead (the caller can then roll the password change back).
+  // Checkpoint the WAL and disconnect first so the .enc snapshot includes every
+  // committed transaction — encrypting the live WAL-mode DB could miss committed rows
+  // or capture a torn page.
+  if (!dbEnc.enabled || !dbEnc.unlocked) throw new Error('Cannot re-key: the database is not unlocked.');
   const { dbPath, encPath } = runtime;
-  if (!fs.existsSync(dbPath)) return;
-  const salt = dbCrypto.newSalt();
-  // A password change is a natural re-key point — upgrade to the strong (v2) KDF,
-  // so existing users migrate off the legacy cost the next time they change it.
-  const version = dbCrypto.CURRENT_VERSION;
-  const key = await dbCrypto.deriveKey(newPassword, salt, version);
-  await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
-  dbEnc.key = key;
-  dbEnc.salt = salt;
-  dbEnc.version = version;
-  try { writeSidecar({ enabled: true, version }); } catch (e) { /* sidecar is advisory; the .enc header is authoritative */ }
+  migrating = true;
+  try {
+    await checkpointAndDisconnect();
+    if (!fs.existsSync(dbPath)) throw new Error('Cannot re-key: the working database file is missing.');
+    const salt = dbCrypto.newSalt();
+    // A password change is a natural re-key point — upgrade to the strong (v2) KDF,
+    // so existing users migrate off the legacy cost the next time they change it.
+    const version = dbCrypto.CURRENT_VERSION;
+    const key = await dbCrypto.deriveKey(newPassword, salt, version);
+    await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
+    dbEnc.key = key;
+    dbEnc.salt = salt;
+    dbEnc.version = version;
+    try { writeSidecar({ enabled: true, version }); } catch (e) { /* sidecar is advisory; the .enc header is authoritative */ }
+  } finally {
+    migrating = false;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -245,49 +245,82 @@ function UpdateBanner() {
 
 // Offers to restore the profiles that were open when the app last exited or crashed.
 // Pull model (like the update banner) — robust to mount timing.
+// Once the user restores OR dismisses this session, do NOT nag again on every Dashboard
+// remount. Navigating away and back was re-showing the banner (with everything re-checked)
+// because the component remounts and re-fetches. Module-scoped so it survives the
+// unmount/remount within one app run.
+let restoreHandledThisSession = false;
 function RestoreBanner() {
   const { t } = useTranslation();
   const [profiles, setProfiles] = useState(null);
+  const [selected, setSelected] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     let live = true;
-    if (!softglazeApi.sessions.restoreGet) return undefined;
+    if (restoreHandledThisSession || !softglazeApi.sessions.restoreGet) return undefined;
     softglazeApi.sessions.restoreGet()
-      .then((r) => { if (live) setProfiles((r && r.profiles) || []); })
+      .then((r) => { if (live) { const list = (r && r.profiles) || []; setProfiles(list); setSelected(new Set(list.map((p) => p.id))); } })
       .catch(() => {});
     return () => { live = false; };
   }, []);
 
   if (hidden || !profiles || profiles.length === 0) return null;
 
+  const toggle = (id) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allChecked = selected.size === profiles.length;
+  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(profiles.map((p) => p.id)));
+
   async function restore() {
-    setBusy(true);
-    try { await softglazeApi.sessions.restoreRun({ action: 'restore', ids: profiles.map((p) => p.id) }); } catch (e) { /* ignore */ }
-    setHidden(true);
+    // Restore ONLY the profiles the user ticked (default: all checked). Prevents
+    // reopening a whole 40-profile session when only a few are wanted. Only hide the
+    // banner on SUCCESS so a failed restore stays recoverable.
+    const ids = [...selected];
+    if (!ids.length) { setErr('Select at least one profile to restore.'); return; }
+    setBusy(true); setErr('');
+    try { await softglazeApi.sessions.restoreRun({ action: 'restore', ids }); restoreHandledThisSession = true; setHidden(true); }
+    catch (e) { setErr((e && e.message) || 'Restore failed.'); setBusy(false); }
   }
   async function dismiss() {
-    setBusy(true);
-    try { await softglazeApi.sessions.restoreRun({ action: 'dismiss' }); } catch (e) { /* ignore */ }
-    setHidden(true);
+    setBusy(true); setErr('');
+    try { await softglazeApi.sessions.restoreRun({ action: 'dismiss' }); restoreHandledThisSession = true; setHidden(true); }
+    catch (e) { setErr((e && e.message) || 'Could not dismiss.'); setBusy(false); }
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border px-4 py-3 animate-fade-up" style={{ background: 'color-mix(in srgb, var(--primary) 10%, var(--card))', borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)' }}>
-      <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)' }}>
-        <RefreshCw className="w-4 h-4 text-primary" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-foreground">{t('dashboard.restoreTitle')}</p>
-        <p className="text-[11.5px] text-muted-foreground">{t('dashboard.restoreDesc', { count: profiles.length })}</p>
+    <div className="rounded-xl border px-4 py-3 animate-fade-up" style={{ background: 'color-mix(in srgb, var(--primary) 10%, var(--card))', borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)' }}>
+      <div className="flex items-center gap-3">
+        <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)' }}>
+          <RefreshCw className="w-4 h-4 text-primary" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-foreground">{t('dashboard.restoreTitle')}</p>
+          <p className="text-[11.5px] text-muted-foreground">{t('dashboard.restoreDesc', { count: profiles.length })}</p>
+        </div>
+        <button onClick={dismiss} disabled={busy} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title={t('shell.dismiss')}>
+          <X className="w-4 h-4" />
+        </button>
       </div>
-      <Button variant="primary" size="sm" onClick={restore} disabled={busy}>
-        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} {t('dashboard.restore')}
-      </Button>
-      <button onClick={dismiss} disabled={busy} className="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" title={t('shell.dismiss')}>
-        <X className="w-4 h-4" />
-      </button>
+      <label className="flex items-center gap-2 mt-2 text-[11.5px] text-muted-foreground cursor-pointer select-none">
+        <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{ accentColor: 'var(--primary)' }} />
+        {allChecked ? 'Deselect all' : 'Select all'}
+      </label>
+      <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-border/60 divide-y divide-border/40">
+        {profiles.map((p) => (
+          <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-foreground cursor-pointer hover:bg-secondary/40 select-none">
+            <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} style={{ accentColor: 'var(--primary)' }} />
+            <span className="truncate">{p.title || `#${p.id}`}</span>
+          </label>
+        ))}
+      </div>
+      {err && <p className="text-[11px] text-red-500 mt-1.5">{err}</p>}
+      <div className="flex items-center justify-end mt-2">
+        <Button variant="primary" size="sm" onClick={restore} disabled={busy || selected.size === 0}>
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} {t('dashboard.restore')} ({selected.size})
+        </Button>
+      </div>
     </div>
   );
 }
