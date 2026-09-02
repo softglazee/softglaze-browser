@@ -22,6 +22,15 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!rec) return res.status(404).json({ error: 'Invalid code.' });
   if (rec.redeemedAt) return res.status(409).json({ error: 'This code has already been redeemed.' });
 
+  // Atomically claim the code: only the first concurrent request whose WHERE still sees
+  // redeemedAt:null wins. Closes the check-then-act race where two requests both pass the
+  // check above and both redeem the same single-use code.
+  const claim = await prisma.licenseCode.updateMany({
+    where: { id: rec.id, redeemedAt: null },
+    data: { redeemedAt: new Date(), redeemedBy: String(installId || account || 'unknown') }
+  });
+  if (claim.count === 0) return res.status(409).json({ error: 'This code has already been redeemed.' });
+
   const now = Date.now();
   const or = [installId ? { installId: String(installId) } : null, account ? { account: String(account) } : null].filter(Boolean);
   const existing = await prisma.license.findFirst({ where: { tenantId: tenant.id, OR: or }, orderBy: { updatedAt: 'desc' } });
@@ -34,7 +43,7 @@ router.post('/', asyncHandler(async (req, res) => {
   } else {
     await prisma.license.create({ data: { tenantId: tenant.id, account: account || null, installId: installId || null, tier: rec.tier, status: 'active', currentPeriodEnd } });
   }
-  await prisma.licenseCode.update({ where: { id: rec.id }, data: { redeemedAt: new Date(), redeemedBy: String(installId || account || 'unknown') } });
+  // (the code was already marked redeemed by the atomic claim above)
 
   res.json({ ok: true, tier: rec.tier, months: rec.months });
 }));
