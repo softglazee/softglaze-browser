@@ -124,6 +124,7 @@ const CHANNELS = Object.freeze({
   PROFILE_ACCESS_REVOKE: 'profile:access-revoke',
   PROFILE_ACCESS_LIST: 'profile:access-list',
   PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress', // main -> renderer stream
+  PROFILE_BULK_LAUNCH_CONTROL: 'profile:bulk-launch-control', // renderer -> main (pause/resume/stop the queue)
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
@@ -3229,12 +3230,34 @@ function emitBulkLaunchProgress(data) {
     }
   } catch (e) { /* ignore */ }
 }
+// Live control state for an in-flight bulk launch (queue). The Profiles page can
+// pause (hold before the next profile), resume, or stop (abort the rest) a running
+// queue. Single queue at a time — a fresh bulkLaunchProfiles resets this.
+let bulkLaunchState = { active: false, paused: false, aborted: false };
+
+// Pause/resume/stop the running bulk-launch queue. Fail-safe: unknown actions and
+// no-active-queue are no-ops that just report state back.
+async function controlBulkLaunch(payload) {
+  const input = requireObject(payload);
+  const action = String(input.action || '').toLowerCase();
+  if (action === 'pause') bulkLaunchState.paused = true;
+  else if (action === 'resume') bulkLaunchState.paused = false;
+  else if (action === 'stop' || action === 'end' || action === 'abort') {
+    bulkLaunchState.aborted = true;
+    bulkLaunchState.paused = false;
+  }
+  emitBulkLaunchProgress({ phase: 'control', active: bulkLaunchState.active, paused: bulkLaunchState.paused, aborted: bulkLaunchState.aborted });
+  return { ...bulkLaunchState };
+}
+
 function waitForSessionClose(sessionId) {
   return new Promise((resolve) => {
     const interval = setInterval(() => {
       // listAllSessions() gets all active Chrome & Firefox sessions
       const isOpen = listAllSessions().some((s) => String(s.sessionId) === String(sessionId));
-      if (!isOpen) {
+      // Stop waiting if the user aborted the queue — otherwise a stopped queue
+      // would hang here until the profile is manually closed.
+      if (!isOpen || bulkLaunchState.aborted) {
         clearInterval(interval);
         resolve();
       }
@@ -3256,6 +3279,8 @@ async function bulkLaunchProfiles(payload) {
   const width = Math.min(cap, total);
   let done = 0;
   let cursor = 0;
+  // Reset queue control state for this run so pause/resume/stop apply to it.
+  bulkLaunchState = { active: true, paused: false, aborted: false };
   emitBulkLaunchProgress({ phase: 'start', total, done });
 
   // Detect if we are in Queue Mode (concurrency = 1)
@@ -3263,7 +3288,14 @@ async function bulkLaunchProfiles(payload) {
 
   const worker = async () => {
     while (cursor < ids.length) {
-      const id = ids[cursor++]; 
+      // Stop: abort the rest of the queue.
+      if (bulkLaunchState.aborted) break;
+      // Pause: hold before starting the next profile (already-open ones stay open).
+      while (bulkLaunchState.paused && !bulkLaunchState.aborted) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      if (bulkLaunchState.aborted) break;
+      const id = ids[cursor++];
       try {
         const session = await launchProfile({ id });
         result.launched.push({ id, sessionId: session.sessionId });
@@ -3291,13 +3323,17 @@ async function bulkLaunchProfiles(payload) {
     // Otherwise the IPC call hangs and the UI loading spinner spins forever.
     // Fire the worker pool in the background and resolve immediately.
     Promise.all(Array.from({ length: width }, () => worker())).then(() => {
-      emitBulkLaunchProgress({ phase: 'done', total, done });
+      const aborted = bulkLaunchState.aborted;
+      bulkLaunchState.active = false;
+      emitBulkLaunchProgress({ phase: 'done', total, done, aborted });
     });
     return { message: "Queue started in background.", launched: [], errors: [] };
   } else {
     // Normal concurrent launch: await all browser startups
     await Promise.all(Array.from({ length: width }, () => worker()));
-    emitBulkLaunchProgress({ phase: 'done', total, done });
+    const aborted = bulkLaunchState.aborted;
+    bulkLaunchState.active = false;
+    emitBulkLaunchProgress({ phase: 'done', total, done, aborted });
     return result;
   }
 }
@@ -3933,7 +3969,8 @@ async function launchProfile(payload) {
       captcha: globalSettings.captcha,
       globalExtensionDirs,
       loadExtensions,
-      geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false)
+      geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false),
+      startPageLinks: Array.isArray(globalSettings.startPageLinks) ? globalSettings.startPageLinks : []
     });
 
     acquireProfileLock(id, session.sessionId, launcher);
@@ -9747,6 +9784,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_RESTORE, bulkRestoreProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_LAUNCH_CONTROL, controlBulkLaunch);
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
   registerHandler(CHANNELS.PROFILE_BULK_ASSIGN_PROXY, bulkAssignProxies);
   registerHandler(CHANNELS.PROFILE_ACCESS_GRANT, grantProfileAccess);
