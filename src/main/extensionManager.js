@@ -54,10 +54,14 @@ const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 //     Softglaze's native per-profile proxy).
 const RECOMMENDED_EXTENSIONS = [
   { chromeId: SOFTGLAZE_RECORDER_ID, name: 'SoftGlaze Screen Recorder', enable: true },
-  { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: true },
-  { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: true },
-  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: true }, // MV3 successor (Chrome is disabling the MV2 build); content blockers alter page/network behavior (anti-detect tradeoff)
-  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: true } // MV3 successor; can override Softglaze's native per-profile proxy
+  // Third-party helpers are OPT-IN: seeded but not globally enabled, so they show up on
+  // the Extensions page for the user to switch on rather than altering every profile by
+  // default. Content blockers / SwitchyOmega change page + network behavior (an
+  // anti-detect tradeoff) and SwitchyOmega can override the native per-profile proxy.
+  { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: false },
+  { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: false },
+  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: false }, // MV3 successor (Chrome is disabling the MV2 build)
+  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: false } // MV3 successor; can override Softglaze's native per-profile proxy
 ];
 
 function extensionsRoot() {

@@ -25,3 +25,8 @@ build/*
 !build/afterPack.js
 !build/installer.nsh
 out/
+
+# Local/large engine data — reference copies, never shipped or committed.
+.claude/
+fp-chromium/
+sunbrowser/

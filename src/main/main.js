@@ -266,6 +266,10 @@ function createMainWindow() {
 function configureSessionSecurity() {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   session.defaultSession.setDevicePermissionHandler(() => false);
+  // Synchronous permission checks (getUserMedia gating, persistent-storage, etc.) go
+  // through a separate hook. The app-shell window needs none of them, so deny by default
+  // to match the request/device handlers above.
+  session.defaultSession.setPermissionCheckHandler(() => false);
 }
 
 // --- SINGLE-INSTANCE LOCK ---
