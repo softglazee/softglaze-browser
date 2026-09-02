@@ -126,6 +126,7 @@ const CHANNELS = Object.freeze({
   PROFILE_ACCESS_REVOKE: 'profile:access-revoke',
   PROFILE_ACCESS_LIST: 'profile:access-list',
   PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress', // main -> renderer stream
+  PROFILE_BULK_LAUNCH_CONTROL: 'profile:bulk-launch-control', // pause/resume/stop the queue
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
@@ -3285,12 +3286,29 @@ function emitBulkLaunchProgress(data) {
     }
   } catch (e) { /* ignore */ }
 }
+// Live control for the bulk/queue launch (only one runs at a time). The worker loop in
+// bulkLaunchProfiles checks these flags between launches so the queue can be paused,
+// resumed, or stopped (stopping leaves whatever is already open running).
+let bulkLaunchState = { active: false, paused: false, aborted: false };
+function controlBulkLaunch(payload) {
+  const input = requireObject(payload);
+  const action = String(input.action || '').toLowerCase();
+  if (!bulkLaunchState.active) return { ok: false, reason: 'no-active-launch' };
+  if (action === 'pause') bulkLaunchState.paused = true;
+  else if (action === 'resume') bulkLaunchState.paused = false;
+  else if (action === 'stop' || action === 'end' || action === 'cancel') { bulkLaunchState.aborted = true; bulkLaunchState.paused = false; }
+  else return { ok: false, reason: 'unknown-action' };
+  emitBulkLaunchProgress({ phase: 'control', paused: bulkLaunchState.paused, aborted: bulkLaunchState.aborted });
+  return { ok: true, paused: bulkLaunchState.paused, aborted: bulkLaunchState.aborted };
+}
+
 function waitForSessionClose(sessionId) {
   return new Promise((resolve) => {
     const interval = setInterval(() => {
-      // listAllSessions() gets all active Chrome & Firefox sessions
+      // listAllSessions() gets all active Chrome & Firefox sessions. Also bail out if the
+      // queue was stopped, so "stop" doesn't hang waiting for the current profile to close.
       const isOpen = listAllSessions().some((s) => String(s.sessionId) === String(sessionId));
-      if (!isOpen) {
+      if (!isOpen || bulkLaunchState.aborted) {
         clearInterval(interval);
         resolve();
       }
@@ -3313,13 +3331,18 @@ async function bulkLaunchProfiles(payload) {
   let done = 0;
   let cursor = 0;
   emitBulkLaunchProgress({ phase: 'start', total, done });
+  bulkLaunchState = { active: true, paused: false, aborted: false };
 
   // Detect if we are in Queue Mode (concurrency = 1)
   const isQueueMode = cap === 1;
 
   const worker = async () => {
     while (cursor < ids.length) {
-      const id = ids[cursor++]; 
+      if (bulkLaunchState.aborted) break;
+      // Pause gate: hold here (without consuming an id) until resumed or stopped.
+      while (bulkLaunchState.paused && !bulkLaunchState.aborted) { await new Promise((r) => setTimeout(r, 300)); }
+      if (bulkLaunchState.aborted) break;
+      const id = ids[cursor++];
       try {
         const session = await launchProfile({ id });
         result.launched.push({ id, sessionId: session.sessionId });
@@ -3347,13 +3370,17 @@ async function bulkLaunchProfiles(payload) {
     // Otherwise the IPC call hangs and the UI loading spinner spins forever.
     // Fire the worker pool in the background and resolve immediately.
     Promise.all(Array.from({ length: width }, () => worker())).then(() => {
-      emitBulkLaunchProgress({ phase: 'done', total, done });
+      const aborted = bulkLaunchState.aborted;
+      bulkLaunchState.active = false;
+      emitBulkLaunchProgress({ phase: 'done', total, done, aborted });
     });
     return { message: "Queue started in background.", launched: [], errors: [] };
   } else {
     // Normal concurrent launch: await all browser startups
     await Promise.all(Array.from({ length: width }, () => worker()));
-    emitBulkLaunchProgress({ phase: 'done', total, done });
+    const aborted = bulkLaunchState.aborted;
+    bulkLaunchState.active = false;
+    emitBulkLaunchProgress({ phase: 'done', total, done, aborted });
     return result;
   }
 }
@@ -8202,7 +8229,7 @@ async function refreshBackendLease() {
       return null;
     }
     const { effectiveNow } = await clampLicenseNow();
-    const ent = licenseClient.verifyLease(res.lease, { nowMs: effectiveNow });
+    const ent = licenseClient.verifyLease(res.lease, { nowMs: effectiveNow, installId });
     if (!ent) return null;
     await writeSetting('backendLease', secretStore.seal(JSON.stringify({
       token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, fetchedAt: Date.now()
@@ -8225,7 +8252,8 @@ async function getBackendEntitlement() {
   // The clamp only ever raises the floor of "now", so a legitimately-online user
   // (real clock, refreshed lease) is never locked out — only rollback is neutralized.
   const { effectiveNow } = await clampLicenseNow();
-  const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow });
+  const installId = await readSetting('backendInstallId', null);
+  const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow, installId });
   if (!ent) return null;
   return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
 }
@@ -8680,6 +8708,13 @@ async function pollCheckout(payload) {
   // granted the term. There is no legitimate flow that reaches a paid grant without
   // a preceding server-stashed startCheckout, so require one.
   if (!pending.uuid && !pending.orderId) return { status: 'pending', paid: false };
+  // audit: the pending checkout is owner-scoped — only the owner who STARTED it may
+  // consume it. Without this, a co-tenant owner (no pending of their own) could poll
+  // and absorb another owner's paid order on the shared merchant account.
+  const pollingOwnerId = await resolveLicenseOwnerId();
+  if (pending.ownerId != null && Number(pending.ownerId) !== Number(pollingOwnerId)) {
+    return { status: 'pending', paid: false };
+  }
   const ref = pending.uuid ? { uuid: pending.uuid } : { orderId: pending.orderId };
   const st = await provider.getStatus(cfg, ref);
   if (!st.paid) return { status: st.status, paid: false };
@@ -9870,6 +9905,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_RESTORE, bulkRestoreProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
+  registerHandler(CHANNELS.PROFILE_BULK_LAUNCH_CONTROL, controlBulkLaunch);
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
   registerHandler(CHANNELS.PROFILE_BULK_ASSIGN_PROXY, bulkAssignProxies);
   registerHandler(CHANNELS.PROFILE_ACCESS_GRANT, grantProfileAccess);

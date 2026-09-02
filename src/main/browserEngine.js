@@ -160,6 +160,23 @@ async function attachPersonaAutofill(targetPage) {
   // The real committed origin of THIS page — the single source of truth for which
   // host personas are scoped to. Falls back to '' (bridge then returns nothing).
   const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
+  // audit C3: single-use fill token for the password path. Issued by __sgPersonaBeginFill
+  // ONLY under a TRANSIENT user gesture (navigator.userActivation.isActive, ~5s) and
+  // consumed by the next fill plan — replacing the sticky hasBeenActive flag that one
+  // unrelated earlier click set for the whole document lifetime (which let a page drain
+  // every persona's password after a single click). Now a page needs a FRESH real gesture
+  // per password.
+  let fillNonce = null, fillNonceAt = 0;
+  try {
+    await targetPage.exposeFunction('__sgPersonaBeginFill', async () => {
+      let active = false;
+      try { active = await targetPage.evaluate(() => { try { return !!(navigator.userActivation && navigator.userActivation.isActive); } catch (e) { return false; } }); } catch (e) { active = false; }
+      if (!active) return { token: null };
+      fillNonce = crypto.randomUUID();
+      fillNonceAt = Date.now();
+      return { token: fillNonce };
+    });
+  } catch (e) { /* already exposed on this page */ }
   try {
     await targetPage.exposeFunction('__sgPersonaList', async () => {
       try {
@@ -181,7 +198,7 @@ async function attachPersonaAutofill(targetPage) {
     // human-like random delays — defeating isTrusted-based bot checks. Selects are
     // set via the native picker. Password items carry NO value — only a personaId —
     // and the plaintext is resolved server-side (see defense #2 above).
-    await targetPage.exposeFunction('__sgPersonaFillPlan', async (plan) => {
+    await targetPage.exposeFunction('__sgPersonaFillPlan', async (plan, nonce) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
       const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
@@ -199,9 +216,11 @@ async function attachPersonaAutofill(targetPage) {
       const ensureAllowedSecretIds = async () => {
         if (allowedSecretIds) return allowedSecretIds;
         allowedSecretIds = new Set();
-        let gestured = false;
-        try { gestured = await targetPage.evaluate(() => { try { return !!(navigator.userActivation && navigator.userActivation.hasBeenActive); } catch (e) { return false; } }); } catch (e) { gestured = false; }
-        if (!gestured) return allowedSecretIds;
+        // audit C3: require the single-use fill token issued by __sgPersonaBeginFill under
+        // a TRANSIENT gesture, and CONSUME it — not the sticky hasBeenActive flag.
+        const tokenOk = !!(nonce && fillNonce && String(nonce) === String(fillNonce) && (Date.now() - fillNonceAt) < 8000);
+        fillNonce = null; // single-use: consume whether or not it matched
+        if (!tokenOk) return allowedSecretIds;
         if (typeof personaBridge.listForUrl !== 'function') return allowedSecretIds;
         try {
           const r = await personaBridge.listForUrl(pageUrl());
@@ -2620,6 +2639,13 @@ async function launchProfileSession(options = {}) {
   // OR HTTP (startHttpAuthRelay). Both expose { port, close }, so the session teardown
   // that calls socksRelay.close() tears down either kind. (Named socksRelay historically.)
   let socksRelay = null;
+  let httpRelayActive = false;
+  // audit H-NET1: per-launch secret so ONLY this browser can use the HTTP relay's injected
+  // upstream credentials (another local process is rejected with 407). Chromium supplies it
+  // through its normal proxy-auth (page.authenticate) — validated end-to-end for both HTTP
+  // and HTTPS CONNECT against real Chromium. SOCKS5 has no client-auth in Chromium, so the
+  // SOCKS relay keeps only its loopback guard.
+  const relaySecret = crypto.randomBytes(24).toString('hex');
   let proxyForArg = resolvedProxy;
   if (socksNeedsAuth) {
     try {
@@ -2630,7 +2656,8 @@ async function launchProfileSession(options = {}) {
     proxyForArg = { type: 'SOCKS5', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
   } else if (httpNeedsAuth) {
     try {
-      socksRelay = await startHttpAuthRelay(resolvedProxy);
+      socksRelay = await startHttpAuthRelay({ ...resolvedProxy, clientSecret: relaySecret });
+      httpRelayActive = true;
       proxyForArg = { type: 'HTTP', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
     } catch (e) {
       // Relay failed to START — degrade gracefully to the previous per-page
@@ -2651,9 +2678,16 @@ async function launchProfileSession(options = {}) {
   // With a relay in front, Chromium points at an auth-free local proxy, so per-page
   // authenticate() is unnecessary (and never fires). Only fall back to it when no relay
   // is active for an authenticated HTTP(S) proxy.
-  const proxyCreds = (resolvedProxy && !proxyIsSocks && !socksRelay && (resolvedProxy.username || resolvedProxy.password))
-    ? { username: resolvedProxy.username || '', password: resolvedProxy.password || '' }
-    : null;
+  // When the HTTP relay is active, Chromium authenticates TO THE RELAY with the per-launch
+  // secret (the relay injects the real upstream creds itself). page.authenticate answers
+  // the relay's 407 on every tab incl. new ones, and the bare request only ever reaches the
+  // LOCAL relay — so the anti-bot-detection guarantee still holds. Fallback (no relay) uses
+  // the real upstream creds as before.
+  const proxyCreds = httpRelayActive
+    ? { username: 'sg', password: relaySecret }
+    : (resolvedProxy && !proxyIsSocks && !socksRelay && (resolvedProxy.username || resolvedProxy.password))
+      ? { username: resolvedProxy.username || '', password: resolvedProxy.password || '' }
+      : null;
 
   // Use the binary chosen up front: a pinned CfT version if installed, else real
   // system Chrome (preferred — no NTP crash, no "Testing" icon), else newest CfT,

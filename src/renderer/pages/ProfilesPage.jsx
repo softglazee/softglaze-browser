@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
+import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Pause, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -550,6 +550,7 @@ export default function ProfilesPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [launchQueue, setLaunchQueue] = useState(false); // true = launch selected one-by-one (queue)
   const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
+  const [launchPaused, setLaunchPaused] = useState(false); // true while a queue launch is paused
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
@@ -710,9 +711,10 @@ export default function ProfilesPage() {
     if (!softglazeApi.profiles.onBulkLaunchProgress) return undefined;
     const off = softglazeApi.profiles.onBulkLaunchProgress((p) => {
       if (!p) return;
-      if (p.phase === 'start') { setLaunchProgress({ done: 0, total: p.total }); return; }
+      if (p.phase === 'start') { setLaunchProgress({ done: 0, total: p.total }); setLaunchPaused(false); return; }
       if (p.phase === 'launched') { setLaunchProgress({ done: p.done, total: p.total }); refreshSessions(); return; }
-      if (p.phase === 'done') { setLaunchProgress(null); refreshSessions(); }
+      if (p.phase === 'control') { setLaunchPaused(Boolean(p.paused)); return; }
+      if (p.phase === 'done') { setLaunchProgress(null); setLaunchPaused(false); refreshSessions(); }
     });
     return off;
   }, [refreshSessions]);
@@ -996,8 +998,15 @@ export default function ProfilesPage() {
     // configured launch-concurrency cap (launch several at once).
     try { await softglazeApi.profiles.bulkLaunch([...selectedIds], launchQueue ? { concurrency: 1 } : undefined); await refreshSessions(); }
     catch (err) { setError(err.message); }
-    finally { setBulkBusy(false); setLaunchProgress(null); }
+    // NOTE: in Queue mode bulkLaunch returns immediately (the queue runs in the
+    // background), so DON'T clear launchProgress here — the progress stream clears it on
+    // 'done'. Only drop the busy flag.
+    finally { setBulkBusy(false); }
   }
+  // Pause / resume / stop the running queue launch (main-process worker checks these).
+  const pauseQueue = () => softglazeApi.profiles.bulkLaunchControl('pause').catch(() => {});
+  const resumeQueue = () => softglazeApi.profiles.bulkLaunchControl('resume').catch(() => {});
+  const stopQueue = () => softglazeApi.profiles.bulkLaunchControl('stop').catch(() => {});
   async function handleBulkClose(ids) {
     // Called two ways: from the bulk bar (no arg → use selection) and from a
     // single row's Stop button (handleBulkClose([id])). Honor an explicit list.
@@ -1980,9 +1989,21 @@ export default function ProfilesPage() {
           <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>
           {launchProgress && (
             <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-              {t('bulk.launching', { done: launchProgress.done, total: launchProgress.total })}
+              {launchPaused ? <Pause className="w-3.5 h-3.5 text-amber-400" /> : <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+              {launchPaused
+                ? `${t('bulk.paused', { defaultValue: 'Paused' })} · ${launchProgress.done}/${launchProgress.total}`
+                : t('bulk.launching', { done: launchProgress.done, total: launchProgress.total })}
             </span>
+          )}
+          {launchProgress && (
+            <div className="flex items-center gap-1.5">
+              {launchPaused ? (
+                <Button size="sm" variant="secondary" onClick={resumeQueue} title={t('bulk.resumeTitle', { defaultValue: 'Resume the queue' })}><Play className="w-3.5 h-3.5 mr-1" /> {t('bulk.resume', { defaultValue: 'Resume' })}</Button>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={pauseQueue} title={t('bulk.pauseTitle', { defaultValue: 'Pause after the current profile' })}><Pause className="w-3.5 h-3.5 mr-1" /> {t('bulk.pause', { defaultValue: 'Pause' })}</Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={stopQueue} className="text-red-400 hover:text-red-300" title={t('bulk.stopQueueTitle', { defaultValue: 'Stop launching more (leaves open profiles running)' })}><Square className="w-3.5 h-3.5 mr-1" /> {t('bulk.stopQueue', { defaultValue: 'Stop queue' })}</Button>
+            </div>
           )}
           <div className="flex items-center gap-2 ml-auto">
             <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 cursor-pointer select-none" title={t('bulk.queueTitle', 'Launch the selected profiles one at a time (a queue) instead of several at once.')}>

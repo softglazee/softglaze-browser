@@ -51,6 +51,14 @@ function startSocksAuthRelay({ host, port, username, password }) {
     const open = new Set(); // every live socket, destroyed on close()
 
     const server = net.createServer((client) => {
+      // Defense-in-depth: the server binds to 127.0.0.1, but reject non-loopback peers
+      // explicitly too so a future bind-address change can't silently expose this
+      // auth-injecting relay to the network. (NOTE: this does NOT stop another LOCAL
+      // process from using the relay — that needs a per-launch client handshake or PID
+      // check, deferred because it risks the new-tab proxy-auth flow and needs live
+      // proxy testing.)
+      const _ra = client.remoteAddress;
+      if (_ra && _ra !== '127.0.0.1' && _ra !== '::1' && _ra !== '::ffff:127.0.0.1') { try { client.destroy(); } catch (e) {} return; }
       open.add(client);
       client.once('close', () => open.delete(client));
       client.on('error', () => { try { client.destroy(); } catch (e) {} });

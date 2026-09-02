@@ -379,8 +379,13 @@
           if (m.kind === 'password') it.personaId = m.personaId; else it.value = m.value;
           return it;
         });
+        // audit C3: fetch a single-use fill token first. This runs inside the trusted
+        // widget click, so the transient user gesture is still active and the token is
+        // issued; it authorizes exactly one password fill on the server side.
+        var _fillToken = null;
+        try { if (typeof window.__sgPersonaBeginFill === 'function') { var _g = await window.__sgPersonaBeginFill(); _fillToken = _g && _g.token; } } catch (e) {}
         try {
-          var r = await window.__sgPersonaFillPlan(plan);
+          var r = await window.__sgPersonaFillPlan(plan, _fillToken);
           filled = (r && typeof r.filled === 'number') ? r.filled : matches.length;
         } catch (e) { trusted = false; }
         matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} try { filledEls.add(m.el); } catch (e) {} });
@@ -417,28 +422,40 @@
         if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable — could not fill the password on this page.'); }
       }
       if (!opts.onlyEmpty) {
-        footer.hidden = false;
-        toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '. Review, then mark as used.') : 'No matching fields found on this page.');
+        toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.') : 'No matching fields found on this page.');
+        // Auto mark-used: once the requested fields are filled, mark this identity as
+        // used on this site so it isn't offered here again (it moves to "reuse"). If the
+        // mark bridge is unavailable, fall back to showing the manual "mark used" button.
+        if (filled > 0) {
+          var _marked = await markSelectedUsed(true);
+          if (!_marked) footer.hidden = false;
+        } else {
+          footer.hidden = false;
+        }
       } else if (filled) {
         toast('Filled ' + filled + ' more field' + (filled === 1 ? '' : 's') + ' on this step.');
       }
     }
 
     // --- mark used -----------------------------------------------------------
+    async function markSelectedUsed(silent) {
+      if (!selected || typeof window.__sgPersonaMarkUsed !== 'function') { if (!silent) toast('Autofill bridge unavailable.'); return false; }
+      var id = selected.id, host = location.hostname;
+      try {
+        await window.__sgPersonaMarkUsed(id, location.href);
+        toast(silent ? ('Identity used on ' + host + ' — moved to Reuse.') : ('Marked as used on ' + host));
+        personas = personas.filter(function (x) { return x.id !== id; });
+        selected = null;
+        footer.hidden = true;
+        renderList();
+        return true;
+      } catch (e) { if (!silent) toast('Could not save — try again.'); return false; }
+    }
     markBtn.addEventListener('click', async function (e) {
       if (!e.isTrusted) return; // audit C2: ignore page-scripted clicks
       if (!selected) return;
       markBtn.disabled = true;
-      try {
-        await window.__sgPersonaMarkUsed(selected.id, location.href);
-        toast('Marked as used on ' + location.hostname);
-        personas = personas.filter(function (x) { return x.id !== selected.id; });
-        selected = null;
-        footer.hidden = true;
-        renderList();
-      } catch (e) {
-        toast('Could not save — try again.');
-      }
+      await markSelectedUsed(false);
       markBtn.disabled = false;
     });
   } catch (e) { /* never break the host page */ }

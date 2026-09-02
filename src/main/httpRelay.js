@@ -21,11 +21,20 @@
 const net = require('node:net');
 const http = require('node:http');
 
-function startHttpAuthRelay({ host, port, username, password }) {
+function startHttpAuthRelay({ host, port, username, password, clientSecret }) {
   return new Promise((resolve, reject) => {
     const upstreamHost = String(host);
     const upstreamPort = Number(port);
     const authHeader = 'Basic ' + Buffer.from(`${username || ''}:${password || ''}`, 'utf8').toString('base64');
+    // audit H-NET1: when a per-launch clientSecret is set, require Chromium to
+    // authenticate to THIS relay (validated against every request/CONNECT) so another
+    // local process can't use the relay's injected upstream credentials. Chromium
+    // provides it via the browser's own proxy-auth (page.authenticate) flow, so this
+    // does NOT reach the real upstream as a bare request — the relay always injects
+    // upstream auth, preserving the anti-bot-detection guarantee. Verified end-to-end
+    // against real Chromium (relay-test.js).
+    const expectedClientAuth = clientSecret ? ('Basic ' + Buffer.from(`sg:${clientSecret}`, 'utf8').toString('base64')) : null;
+    const clientAuthOk = (h) => !expectedClientAuth || h === expectedClientAuth;
     const open = new Set(); // every live socket, destroyed on close()
 
     const track = (s) => {
@@ -36,17 +45,36 @@ function startHttpAuthRelay({ host, port, username, password }) {
 
     const server = http.createServer();
     // Track every inbound client socket (covers both plain-HTTP requests and CONNECT).
-    server.on('connection', (socket) => track(socket));
+    // Defense-in-depth: reject non-loopback peers explicitly (the server binds to
+    // 127.0.0.1, but this guards a future bind-address change). This does NOT stop
+    // another LOCAL process from using the relay — that needs a per-launch client
+    // handshake, deferred because it risks the new-tab proxy-auth flow and needs live
+    // proxy testing.
+    server.on('connection', (socket) => {
+      const ra = socket.remoteAddress;
+      if (ra && ra !== '127.0.0.1' && ra !== '::1' && ra !== '::ffff:127.0.0.1') { try { socket.destroy(); } catch (e) {} return; }
+      track(socket);
+    });
 
     // Plain HTTP: Chromium sends the absolute-form URI (GET http://site/… HTTP/1.1) to
     // the proxy. Forward it verbatim to the upstream with Proxy-Authorization added.
     server.on('request', (creq, cres) => {
+      if (!clientAuthOk(creq.headers['proxy-authorization'])) {
+        try { cres.writeHead(407, { 'proxy-authenticate': 'Basic realm="SoftGlaze"', 'content-length': 0 }); } catch (e) {}
+        try { cres.end(); } catch (e) {}
+        return;
+      }
+      // Strip the client's Proxy-Authorization (our relay secret) and inject the
+      // upstream's — never forward the relay secret upstream.
+      const fwdHeaders = { ...creq.headers };
+      delete fwdHeaders['proxy-authorization'];
+      fwdHeaders['Proxy-Authorization'] = authHeader;
       const upstreamReq = http.request({
         host: upstreamHost,
         port: upstreamPort,
         method: creq.method,
         path: creq.url, // absolute URI — the upstream proxy resolves it
-        headers: { ...creq.headers, 'Proxy-Authorization': authHeader }
+        headers: fwdHeaders
       });
       upstreamReq.on('socket', (s) => track(s));
       upstreamReq.on('error', () => {
@@ -65,6 +93,11 @@ function startHttpAuthRelay({ host, port, username, password }) {
     // issue our own CONNECT with Proxy-Authorization, and on its 2xx reply splice the two.
     server.on('connect', (creq, clientSocket, head) => {
       clientSocket.on('error', () => { try { clientSocket.destroy(); } catch (e) {} });
+      if (!clientAuthOk(creq.headers['proxy-authorization'])) {
+        try { clientSocket.write('HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm="SoftGlaze"\r\nContent-Length: 0\r\n\r\n'); } catch (e) {}
+        try { clientSocket.destroy(); } catch (e) {}
+        return;
+      }
       const upstream = net.connect(upstreamPort, upstreamHost);
       track(upstream);
       upstream.setTimeout(20000, () => { try { upstream.destroy(); } catch (e) {} });

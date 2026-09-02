@@ -44,6 +44,11 @@ function verifyLease(token, opts = {}) {
   // claim; legitimately-issued leases for that tenant already carry it. The base
   // build (no cfg.tenantId) stays unbound.
   if (cfg.tenantId && payload.tenant !== cfg.tenantId) return null;
+  // audit: bind the lease to THIS install. The lease carries `sub` (the installId it
+  // was issued to); when the caller supplies its own installId, reject a lease whose
+  // `sub` doesn't match — so a paid lease token copied to another machine (same-tenant
+  // seat sharing) is refused. A lease with no `sub` (legacy) stays unbound.
+  if (payload.sub && opts.installId && String(payload.sub) !== String(opts.installId)) return null;
   const nowSec = Math.floor((opts.nowMs || Date.now()) / 1000);
   if (!payload.exp || payload.exp < nowSec) return null; // expired
 
@@ -75,7 +80,8 @@ function postJson(pathName, body) {
   return new Promise((resolve, reject) => {
     const req = lib.request(options, (res) => {
       let data = '';
-      res.on('data', (c) => { data += c; });
+      let received = 0;
+      res.on('data', (c) => { received += c.length; if (received > 1000000) { req.destroy(new Error('Licensing backend response too large.')); return; } data += c; });
       res.on('end', () => {
         let json = {};
         try { json = data ? JSON.parse(data) : {}; } catch (_) { json = {}; }
