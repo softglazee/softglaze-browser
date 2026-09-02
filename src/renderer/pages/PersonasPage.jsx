@@ -496,7 +496,7 @@ export default function PersonasPage() {
                         <td className="px-5 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">—</span>}</td>
                         <td className="px-5 py-4">
                           {p.usedCount > 0
-                            ? <Badge variant="amber" title={p.usedOnUrls?.join(', ')}>{t('table.sitesUsed', { count: p.usedCount })}</Badge>
+                            ? <Badge variant="green" title={p.usedOnUrls?.join(', ')}>{t('table.reuse', { defaultValue: '♻ Reuse · {{count}}', count: p.usedCount })}</Badge>
                             : <span className="text-xs text-muted-foreground">{t('table.never')}</span>}
                         </td>
                         <td className="px-5 py-4 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>

@@ -343,26 +343,43 @@ function personaAutofillMain() {
         }
         if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable — could not fill the password on this page.'); }
       }
-      footer.hidden = false;
-      toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '. Review, then mark as used.') : 'No matching fields found on this page.');
+      if (filled > 0) {
+        // Auto-mark the identity as used once its fields are in — the user asked not to
+        // have to click "mark used" after every fill. Falls back to the manual footer
+        // button if the save fails, so nothing is ever silently lost.
+        var label = 'Filled ' + filled + ' field' + (filled === 1 ? '' : 's');
+        var marked = await markSelectedUsed(true);
+        toast(marked ? (label + ' · marked used') : (label + '. Review, then mark as used.'));
+        if (!marked) footer.hidden = false;
+      } else {
+        footer.hidden = false;
+        toast('No matching fields found on this page.');
+      }
     }
 
     // --- mark used -----------------------------------------------------------
-    markBtn.addEventListener('click', async function () {
-      if (!selected) return;
+    // Marks the last-filled identity as used on this host. Called automatically after a
+    // successful fill, and by the footer button as a fallback. silent=true suppresses the
+    // toast for the automatic path. Returns true on success.
+    async function markSelectedUsed(silent) {
+      if (!selected) return false;
       markBtn.disabled = true;
       try {
         await window.__sgPersonaMarkUsed(selected.id, location.href);
-        toast('Marked as used on ' + location.hostname);
+        if (!silent) toast('Marked as used on ' + location.hostname);
         personas = personas.filter(function (x) { return x.id !== selected.id; });
         selected = null;
         footer.hidden = true;
         renderList();
+        markBtn.disabled = false;
+        return true;
       } catch (e) {
-        toast('Could not save — try again.');
+        if (!silent) toast('Could not save — try again.');
+        markBtn.disabled = false;
+        return false;
       }
-      markBtn.disabled = false;
-    });
+    }
+    markBtn.addEventListener('click', function () { markSelectedUsed(false); });
   } catch (e) { /* never break the host page */ }
 }
 

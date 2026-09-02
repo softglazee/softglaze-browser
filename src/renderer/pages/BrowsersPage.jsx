@@ -95,6 +95,8 @@ export default function BrowsersPage() {
   const [loading, setLoading] = useState(true);
   const [ffLoading, setFfLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [showAllChrome, setShowAllChrome] = useState(false);
+  const [showAllFirefox, setShowAllFirefox] = useState(false);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -195,6 +197,22 @@ export default function BrowsersPage() {
   // The system-detected Firefox counts as ready even if not a versioned install.
   const ffReady = ffInstalled + (firefox?.installed ? 1 : 0);
 
+  // Show/hide: by default surface only the "relevant" versions (installed or
+  // downloading) plus the few latest, so the list isn't an overwhelming wall of
+  // every major. "Show all" reveals the rest. Original order is preserved.
+  const RELEVANT_LIMIT = 6;
+  const relevantOnly = (list) => {
+    const anchored = list.filter((it) => it.installed || (it.download && it.download.state));
+    let pad = Math.max(0, RELEVANT_LIMIT - anchored.length);
+    return list.filter((it) => {
+      if (it.installed || (it.download && it.download.state)) return true;
+      if (pad > 0) { pad -= 1; return true; }
+      return false;
+    });
+  };
+  const visibleChrome = showAllChrome ? items : relevantOnly(items);
+  const visibleFirefox = showAllFirefox ? ffItems : relevantOnly(ffItems);
+
   return (
     <div className="space-y-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -246,7 +264,7 @@ export default function BrowsersPage() {
             </div>
           ) : ffItems.length === 0 ? (
             <div className="text-center py-10 text-sm text-muted-foreground">{t('firefox.empty')}</div>
-          ) : ffItems.map((it) => (
+          ) : visibleFirefox.map((it) => (
             <VersionRow
               key={it.major}
               label={t('row.versionLabel', { brand: 'Firefox', major: it.major })}
@@ -259,6 +277,18 @@ export default function BrowsersPage() {
               onResume={() => resumeFirefox(it.major)}
             />
           ))}
+          {!ffLoading && ffItems.length > visibleFirefox.length && !showAllFirefox && (
+            <button type="button" onClick={() => setShowAllFirefox(true)}
+              className="w-full text-center py-2 text-[12px] font-medium text-amber-500 hover:text-amber-400 hover:bg-amber-500/5 rounded-lg transition">
+              {t('browsers.showAll', { defaultValue: 'Show all {{n}} versions', n: ffItems.length })}
+            </button>
+          )}
+          {!ffLoading && showAllFirefox && ffItems.length > RELEVANT_LIMIT && (
+            <button type="button" onClick={() => setShowAllFirefox(false)}
+              className="w-full text-center py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition">
+              {t('browsers.showLess', { defaultValue: 'Show less' })}
+            </button>
+          )}
         </div>
       </div>
 
@@ -284,7 +314,7 @@ export default function BrowsersPage() {
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-10 text-sm text-muted-foreground">{t('chrome.empty')}</div>
-          ) : items.map((it) => (
+          ) : visibleChrome.map((it) => (
             <VersionRow
               key={it.version}
               label={t('row.versionLabel', { brand: 'Chrome', major: it.major })}
@@ -297,6 +327,18 @@ export default function BrowsersPage() {
               onResume={() => resumeChrome(it.version)}
             />
           ))}
+          {!loading && items.length > visibleChrome.length && !showAllChrome && (
+            <button type="button" onClick={() => setShowAllChrome(true)}
+              className="w-full text-center py-2 text-[12px] font-medium text-primary hover:text-primary/80 hover:bg-primary/5 rounded-lg transition">
+              {t('browsers.showAll', { defaultValue: 'Show all {{n}} versions', n: items.length })}
+            </button>
+          )}
+          {!loading && showAllChrome && items.length > RELEVANT_LIMIT && (
+            <button type="button" onClick={() => setShowAllChrome(false)}
+              className="w-full text-center py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition">
+              {t('browsers.showLess', { defaultValue: 'Show less' })}
+            </button>
+          )}
         </div>
       </div>
     </div>

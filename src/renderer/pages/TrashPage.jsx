@@ -37,6 +37,8 @@ export default function TrashPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [removeLocalData, setRemoveLocalData] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   const loadTrash = useCallback(async () => {
     setLoading(true);
@@ -58,7 +60,17 @@ export default function TrashPage() {
     return trashItems.filter((item) => (item.title || '').toLowerCase().includes(q));
   }, [trashItems, search]);
 
-  const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
+  // Paginate the (already filtered) trash so long lists stay usable.
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const pagedItems = useMemo(
+    () => filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredItems, page]
+  );
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  // Select-all is scoped to the current page (matches what the user can see).
+  const allSelected = pagedItems.length > 0 && pagedItems.every((i) => selectedIds.has(i.id));
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
@@ -68,7 +80,13 @@ export default function TrashPage() {
     });
   };
   const toggleSelectAll = () => {
-    setSelectedIds((prev) => (prev.size === filteredItems.length ? new Set() : new Set(filteredItems.map((i) => i.id))));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const pageIds = pagedItems.map((i) => i.id);
+      if (pageIds.every((id) => next.has(id))) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
   };
   const clearSelection = () => setSelectedIds(new Set());
 
@@ -207,7 +225,7 @@ export default function TrashPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredItems.map((item) => (
+                    pagedItems.map((item) => (
                       <tr key={item.id} className="border-b border-border hover:bg-secondary transition bg-card">
                         <td className="px-5 py-4"><Checkbox checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} /></td>
                         <td className="px-5 py-4">
@@ -252,6 +270,29 @@ export default function TrashPage() {
               </table>
             )}
           </div>
+          {!loading && filteredItems.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-border text-[13px] text-muted-foreground">
+              <span>
+                {t('pager.showing', {
+                  defaultValue: 'Showing {{from}}–{{to}} of {{total}}',
+                  from: (page - 1) * PAGE_SIZE + 1,
+                  to: Math.min(page * PAGE_SIZE, filteredItems.length),
+                  total: filteredItems.length
+                })}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="bg-secondary hover:bg-secondary text-foreground border border-border disabled:opacity-40">
+                  {t('pager.prev', { defaultValue: 'Prev' })}
+                </Button>
+                <span className="tabular-nums">{page} / {totalPages}</span>
+                <Button size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="bg-secondary hover:bg-secondary text-foreground border border-border disabled:opacity-40">
+                  {t('pager.next', { defaultValue: 'Next' })}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </>
