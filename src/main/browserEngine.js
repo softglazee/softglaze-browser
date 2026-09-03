@@ -1381,10 +1381,15 @@ if (fp.noise.canvas) {
         // Native-mask the wrapper: as a bare ES class, RTCPeerConnection.name was
         // "ProtectedRTC" and .toString() dumped the class source — a one-read spoofer
         // tell on every proxied profile. markNative fixes .name + routes toString
-        // through _fnToString ("[native code]"); realign the constructor's own
-        // [[Prototype]] to the native's (EventTarget) so it isn't the shadowed native.
+        // through _fnToString ("[native code]").
         markNative(ProtectedRTC, 'RTCPeerConnection');
-        try { Object.setPrototypeOf(ProtectedRTC, Object.getPrototypeOf(Native)); } catch (e) {}
+        // NOTE: do NOT setPrototypeOf(ProtectedRTC, Object.getPrototypeOf(Native)).
+        // `super(...)` in a derived class resolves its parent from the class's CURRENT
+        // [[Prototype]] at call time — repointing it to EventTarget made every
+        // `new RTCPeerConnection()` construct a bare EventTarget, so createOffer/
+        // setLocalDescription threw "Illegal invocation" on EVERY proxied profile
+        // (default WebRTC mode = Forward). A subclass keeping its natural superclass
+        // prototype is normal and not a meaningful tell; a broken RTCPeerConnection is.
         window.RTCPeerConnection = ProtectedRTC;
         if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = ProtectedRTC;
       } catch (e) { /* leave native in place if wrapping fails */ }
@@ -2028,6 +2033,26 @@ document.querySelectorAll('.g-recaptcha[data-sitekey],[data-sitekey],.cf-turnsti
 // module speaks the HTTP CONNECT-less GET-via-proxy form); SOCKS falls back to the
 // in-page lookup. Returns the ip-api JSON or null.
 // ---------------------------------------------------------------------------
+// Fallback geo lookup, IN-PAGE. The pre-launch Node lookup can't speak SOCKS and can
+// be blocked or rate-limited, in which case it returns null. When that happens we
+// resolve the exit location through the BROWSER's own proxied connection: navigate the
+// tab to a geo API and parse the JSON. NEVER throws.
+// AUDIT/CRITICAL FIX: this function did not exist — the call site (the fallback in
+// launchProfileSession) referenced a missing `lookupProxyGeo`, throwing ReferenceError
+// inside the launch guard, which closed the freshly-opened browser and FAILED every
+// proxied launch whose pre-launch lookup returned null (slow/blocked/rate-limited proxy).
+async function lookupProxyGeo(page) {
+  if (!page) return null;
+  const url = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: GEO_LOOKUP_TIMEOUT_MS });
+    const txt = await page.evaluate(() => (document.body ? document.body.innerText : '')).catch(() => '');
+    const j = JSON.parse(txt);
+    if (j && j.status === 'success') return j;
+  } catch (e) { /* proxy dead / non-JSON / timeout — geo stays null, launch continues */ }
+  return null;
+}
+
 function lookupProxyGeoNode(proxy) {
   return new Promise((resolve) => {
     if (!proxy || !proxy.host || !proxy.port) return resolve(null);
