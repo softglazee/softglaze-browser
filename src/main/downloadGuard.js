@@ -49,7 +49,11 @@ function resolveRedirect(location, baseUrl, allowedHosts, label = 'download') {
 const HOSTS = {
   chrome: ['googlechromelabs.github.io', 'storage.googleapis.com', 'commondatastorage.googleapis.com', 'edgedl.me.gvt1.com'],
   firefox: ['mozilla.org', 'mozilla.net'],
-  crx: ['google.com', 'googleusercontent.com', 'gvt1.com']
+  crx: ['google.com', 'googleusercontent.com', 'gvt1.com'],
+  // fingerprint-chromium (adryfish) native anti-detect engine, hosted on GitHub
+  // Releases. The API returns an asset URL on github.com which 302-redirects to
+  // *.githubusercontent.com — both must be allowlisted or the redirect is rejected.
+  fpchromium: ['api.github.com', 'github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com', 'codeload.github.com']
 };
 
 module.exports = { hostAllowed, assertAllowedDownloadUrl, resolveRedirect, HOSTS };

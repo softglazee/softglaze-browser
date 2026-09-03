@@ -102,20 +102,20 @@ async function initResumableState() {
   }
 }
 
-function httpsGet(url, redirects = 0) {
+function httpsGet(url, allowedHosts = HOSTS.chrome, label = 'Chrome download', redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
     // audit: https-only + vendor-host allowlist on the URL and every redirect.
     let target;
-    try { target = assertAllowedDownloadUrl(url, HOSTS.chrome, 'Chrome download'); }
+    try { target = assertAllowedDownloadUrl(url, allowedHosts, label); }
     catch (e) { return reject(e); }
     const req = https.get(target, { headers: { 'User-Agent': 'SoftGlaze' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         let next;
-        try { next = resolveRedirect(res.headers.location, target, HOSTS.chrome, 'Chrome download'); }
+        try { next = resolveRedirect(res.headers.location, target, allowedHosts, label); }
         catch (e) { return reject(e); }
-        return httpsGet(next, redirects + 1).then(resolve, reject);
+        return httpsGet(next, allowedHosts, label, redirects + 1).then(resolve, reject);
       }
       resolve(res);
     });
@@ -124,9 +124,9 @@ function httpsGet(url, redirects = 0) {
   });
 }
 
-async function fetchJson(url) {
-  const res = await httpsGet(url);
-  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode} fetching version list`);
+async function fetchJson(url, allowedHosts = HOSTS.chrome, label = 'Chrome download') {
+  const res = await httpsGet(url, allowedHosts, label);
+  if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode} fetching ${label} metadata`);
   let data = '';
   for await (const chunk of res) data += chunk;
   return JSON.parse(data);
@@ -162,20 +162,20 @@ async function listDownloadableVersions() {
 
 // GET that carries custom headers (Range) AND follows redirects preserving them.
 // Resolves with the FINAL { res, req } so the caller can abort the live request.
-function rawGet(url, headers, redirects = 0) {
+function rawGet(url, headers, allowedHosts = HOSTS.chrome, label = 'Chrome download', redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
     // audit: https-only + vendor-host allowlist on the URL and every redirect.
     let target;
-    try { target = assertAllowedDownloadUrl(url, HOSTS.chrome, 'Chrome download'); }
+    try { target = assertAllowedDownloadUrl(url, allowedHosts, label); }
     catch (e) { return reject(e); }
     const req = https.get(target, { headers: Object.assign({ 'User-Agent': 'SoftGlaze' }, headers) }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         let next;
-        try { next = resolveRedirect(res.headers.location, target, HOSTS.chrome, 'Chrome download'); }
+        try { next = resolveRedirect(res.headers.location, target, allowedHosts, label); }
         catch (e) { return reject(e); }
-        return rawGet(next, headers, redirects + 1).then(resolve, reject);
+        return rawGet(next, headers, allowedHosts, label, redirects + 1).then(resolve, reject);
       }
       resolve({ res, req });
     });
@@ -188,14 +188,14 @@ function rawGet(url, headers, redirects = 0) {
 // continue from that offset (Range). Falls back to a clean restart if the server
 // ignores Range (responds 200). `registerAbort` receives an abort fn for pause.
 // Resolves with { received, total }.
-async function downloadToFile(url, dest, onProgress, registerAbort) {
+async function downloadToFile(url, dest, onProgress, registerAbort, allowedHosts = HOSTS.chrome, label = 'Chrome download') {
   let startByte = 0;
   try { startByte = (await fsp.stat(dest)).size; } catch (e) { startByte = 0; }
 
   const headers = {};
   if (startByte > 0) headers.Range = `bytes=${startByte}-`;
 
-  const { res, req } = await rawGet(url, headers);
+  const { res, req } = await rawGet(url, headers, allowedHosts, label);
   if (registerAbort) registerAbort(() => { try { req.destroy(new Error('aborted')); } catch (e) {} });
 
   let received = startByte;
@@ -393,6 +393,84 @@ async function reconcileStrayZips() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// fingerprint-chromium (native anti-detect engine) — one-shot GitHub download.
+// Lands in FP_CHROMIUM_ROOT (sibling of CHROME_ROOT: userData/fp-chromium when
+// packaged, <repo>/fp-chromium in dev, matching browserEngine.resolveAntidetectBinary).
+// The release zip extracts to a versioned subdir (ungoogled-chromium_<v>_windows_x64/
+// chrome.exe), which the launcher's resolver already looks one level deep for.
+// ---------------------------------------------------------------------------
+const FP_CHROMIUM_ROOT = path.join(path.dirname(CHROME_ROOT), 'fp-chromium');
+const FP_CHROMIUM_REPO = 'adryfish/fingerprint-chromium';
+// Pinned to the empirically-validated build (coherent platform/UA/GPU, no WebRTC leak).
+// Bump deliberately after re-validating a newer release rather than tracking "latest".
+const FP_CHROMIUM_VERSION = '148.0.7778.215';
+
+// version -> chrome.exe present anywhere one level under the root (or at the root).
+function fpChromiumInstalled() {
+  try {
+    if (fs.existsSync(path.join(FP_CHROMIUM_ROOT, 'chrome.exe'))) return true;
+    for (const ent of fs.readdirSync(FP_CHROMIUM_ROOT, { withFileTypes: true })) {
+      if (ent.isDirectory() && fs.existsSync(path.join(FP_CHROMIUM_ROOT, ent.name, 'chrome.exe'))) return true;
+    }
+  } catch (e) { /* root missing = not installed */ }
+  return false;
+}
+
+// Resolve the exact windows_x64 asset URL for the pinned tag via the GitHub API
+// (handles the per-release build suffix, e.g. ..._148.0.7778.215-1.1_windows_x64.zip).
+async function resolveFpChromiumAsset() {
+  const api = `https://api.github.com/repos/${FP_CHROMIUM_REPO}/releases/tags/${FP_CHROMIUM_VERSION}`;
+  const rel = await fetchJson(api, HOSTS.fpchromium, 'fingerprint-chromium release');
+  const assets = (rel && rel.assets) || [];
+  const asset = assets.find((a) => /windows_x64\.zip$/i.test(a.name || '') && !/debug|symbol|sha/i.test(a.name || ''));
+  if (!asset || !asset.browser_download_url) {
+    throw Object.assign(new Error(`No windows_x64 asset in fingerprint-chromium ${FP_CHROMIUM_VERSION}.`), { fatal: true });
+  }
+  return { version: FP_CHROMIUM_VERSION, url: asset.browser_download_url, name: asset.name };
+}
+
+// state: idle | resolving | downloading | extracting | done | error
+let fpStatus = { state: 'idle', percent: 0, error: null, receivedBytes: 0, totalBytes: 0 };
+let fpInflight = null;
+
+function getFpChromiumStatus() {
+  return { ...fpStatus, installed: fpChromiumInstalled(), version: FP_CHROMIUM_VERSION };
+}
+
+// Kick off (or return the in-flight) fingerprint-chromium install. Idempotent: a no-op
+// when already installed or already downloading. ~180 MB; extracts via Expand-Archive.
+function startFpChromiumDownload() {
+  if (fpChromiumInstalled()) { fpStatus = { state: 'done', percent: 100, error: null, receivedBytes: 0, totalBytes: 0 }; return getFpChromiumStatus(); }
+  if (fpInflight) return getFpChromiumStatus();
+  fpStatus = { state: 'resolving', percent: 0, error: null, receivedBytes: 0, totalBytes: 0 };
+  fpInflight = (async () => {
+    try {
+      const { url } = await resolveFpChromiumAsset();
+      await fsp.mkdir(FP_CHROMIUM_ROOT, { recursive: true });
+      const zip = path.join(FP_CHROMIUM_ROOT, '_fp-download.zip');
+      fpStatus.state = 'downloading';
+      const { received, total } = await downloadToFile(url, zip, (rec, tot) => {
+        fpStatus.receivedBytes = rec;
+        fpStatus.totalBytes = tot || fpStatus.totalBytes;
+        fpStatus.percent = tot ? Math.min(90, Math.round((rec / tot) * 90)) : fpStatus.percent;
+      }, null, HOSTS.fpchromium, 'fingerprint-chromium download');
+      if (total && received < total) throw new Error('Connection interrupted before completion.');
+      fpStatus.state = 'extracting';
+      fpStatus.percent = 92;
+      await extractZip(zip, FP_CHROMIUM_ROOT);
+      await fsp.unlink(zip).catch(() => {});
+      if (!fpChromiumInstalled()) throw Object.assign(new Error('Extracted but chrome.exe not found.'), { fatal: true });
+      fpStatus.state = 'done';
+      fpStatus.percent = 100;
+    } catch (e) {
+      fpStatus.state = 'error';
+      fpStatus.error = e instanceof Error ? e.message : String(e);
+    } finally { fpInflight = null; }
+  })();
+  return getFpChromiumStatus();
+}
+
 module.exports = {
   listDownloadableVersions,
   startDownload,
@@ -402,5 +480,9 @@ module.exports = {
   isInstalled,
   reconcileStrayZips,
   initResumableState,
-  CHROME_ROOT
+  CHROME_ROOT,
+  FP_CHROMIUM_ROOT,
+  fpChromiumInstalled,
+  startFpChromiumDownload,
+  getFpChromiumStatus
 };

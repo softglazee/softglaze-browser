@@ -346,6 +346,51 @@ function Toggle({ checked, onChange, disabled }) {
   );
 }
 
+// Install status + one-shot downloader for the native anti-detect engine
+// (fingerprint-chromium). In dev the binary is resolved from the repo so this shows
+// "installed"; in the packaged build the user fetches it once from here (~180 MB).
+function AntidetectEngineInstaller() {
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
+    try { setStatus(await softglazeApi.browsers.antidetectEngineStatus()); } catch (e) { /* ignore */ }
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  const inFlight = status && ['resolving', 'downloading', 'extracting'].includes(status.state);
+  useEffect(() => {
+    if (!inFlight) return undefined;
+    const t = setInterval(refresh, 1000);
+    return () => clearInterval(t);
+  }, [inFlight, refresh]);
+  const start = useCallback(async () => {
+    setBusy(true);
+    try { await softglazeApi.browsers.antidetectEngineDownload(); await refresh(); } catch (e) { /* surfaced via status */ } finally { setBusy(false); }
+  }, [refresh]);
+
+  if (!status) return null;
+  if (status.installed) {
+    return <div className="px-4 pb-3 -mt-1 text-xs text-emerald-400">Engine installed ✓ — fingerprint-chromium {status.version}</div>;
+  }
+  const pct = status.percent || 0;
+  return (
+    <div className="px-4 pb-3 -mt-1 flex items-center gap-3 text-xs text-slate-400">
+      {inFlight ? (
+        <span className="inline-flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />{status.state === 'extracting' ? 'Installing engine… extracting' : `Downloading engine… ${pct}%`}</span>
+      ) : status.state === 'error' ? (
+        <>
+          <span className="text-rose-400">Download failed: {status.error || 'unknown error'}</span>
+          <button onClick={start} disabled={busy} className="px-3 py-1 rounded border border-sky-500/40 bg-sky-600/20 text-sky-300 hover:bg-sky-600/30 disabled:opacity-50">Retry</button>
+        </>
+      ) : (
+        <>
+          <span>Engine not installed — the toggle above needs it.</span>
+          <button onClick={start} disabled={busy} className="px-3 py-1 rounded border border-sky-500/40 bg-sky-600/20 text-sky-300 hover:bg-sky-600/30 disabled:opacity-50">Download engine (~180 MB)</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ToggleRow({ title, description, checked, onChange, disabled, wired, children }) {
   const { t: tx } = useTranslation('settingsExtra');
   return (
@@ -674,6 +719,13 @@ function GlobalPreferences() {
 
       {/* Browser Settings — full width */}
       <SettingsSection icon={SlidersHorizontal} accent="#f97316" title={tx('browser.title')} description={tx('browser.description')}>
+        <ToggleRow
+          title={tx('browser.antidetectEngine.title', 'Native anti-detect engine (fingerprint-chromium)')}
+          description={tx('browser.antidetectEngine.desc', 'Launch Chrome profiles on fingerprint-chromium — a source-patched Chromium that spoofs the fingerprint (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively, with no JS-injection race for sites to catch. Requires the fingerprint-chromium binary; falls back to stock Chrome when it is not present. This engine drops the CDP binding the page-to-app bridge used to rely on, so SoftGlaze routes those calls over a binding-free channel instead — Data Vault autofill, the macro recorder, start-page links and session mirroring all work on it. Off by default — turn on and relaunch profiles.')}
+          checked={!!s.browser.antidetectEngine}
+          onChange={(v) => apply({ browser: { antidetectEngine: v } })}
+        />
+        <AntidetectEngineInstaller />
         <ToggleRow
           title={tx('browser.geoMatch.title')}
           description={tx('browser.geoMatch.desc')}

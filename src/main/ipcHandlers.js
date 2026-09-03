@@ -25,6 +25,7 @@ const {
   runCookieRobot,
   warmInteract,
   runMacro,
+  normalizeMacroSteps,
   startMacroRecording,
   stopMacroRecording,
   humanType,
@@ -70,6 +71,8 @@ const CHANNELS = Object.freeze({
   BROWSER_DOWNLOAD_STATUS: 'browser:download-status',
   BROWSER_DOWNLOAD_PAUSE: 'browser:download-pause',
   BROWSER_DOWNLOAD_RESUME: 'browser:download-resume',
+  ANTIDETECT_ENGINE_STATUS: 'browser:antidetect-status',
+  ANTIDETECT_ENGINE_DOWNLOAD: 'browser:antidetect-download',
   BROWSER_FIREFOX_STATUS: 'browser:firefox-status',
   BROWSER_FIREFOX_LIST: 'browser:firefox-list',
   BROWSER_FIREFOX_DOWNLOAD: 'browser:firefox-download',
@@ -747,6 +750,8 @@ function extractFingerprintData(input) {
     // HTTP/3 (QUIC) opt-in — default false (max stealth). Explicit boolean so an
     // older payload without the field saves as disabled rather than null.
     enableQuic: input.enableQuic === true,
+    // Per-profile anti-detect engine (fingerprint-chromium) opt-in — explicit boolean.
+    antidetectEngine: input.antidetectEngine === true,
     
     advancedExt: input.advancedExt,
     advancedSync: input.advancedSync,
@@ -4914,7 +4919,13 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     // persistent CDP Runtime.enable — the #1 Cloudflare/anti-bot automation tell. Default
     // OFF. TRADE-OFF while ON: persona autofill, start-page check-links, and sync mirror
     // stop working (they need the CDP binding). See browserEngine getRuntimeFixPuppeteer.
-    minimizeCdpFootprint: false
+    minimizeCdpFootprint: false,
+    // Native anti-detect engine (fingerprint-chromium): spoofs the fingerprint at the
+    // binary level from launch flags and natively blocks the WebRTC real-IP leak — no
+    // JS-injection race. Requires the fingerprint-chromium binary (Browsers page /
+    // managed dir); falls back to stock Chrome when absent. Default OFF.
+    // See browserEngine resolveAntidetectBinary.
+    antidetectEngine: false
   },
   onStartup: {
     mode: 'detection', // detection | last | blank
@@ -5486,6 +5497,17 @@ async function resumeBrowserDownload(payload) {
   const version = requiredString(input.version, 'version');
   const entry = browserDownloader.resumeDownload(version);
   return { started: true, version: entry.version, state: entry.state };
+}
+
+// Anti-detect engine (fingerprint-chromium) status + one-shot fetch.
+// Needed for the PACKAGED build: dev resolves the binary from the repo, but the installer
+// ships without it, so the user fetches it once from here.
+async function antidetectEngineStatus() {
+  return browserDownloader.getFpChromiumStatus();
+}
+
+async function downloadAntidetectEngine() {
+  return browserDownloader.startFpChromiumDownload();
 }
 
 async function firefoxStatus() {
@@ -9012,8 +9034,15 @@ async function saveMacro(payload) {
   const name = requiredString(input.name, 'Macro name');
   const description = optionalString(input.description);
   let steps = input.steps !== undefined ? input.steps : [];
-  if (typeof steps === 'string') { try { steps = JSON.parse(steps); } catch (e) { steps = []; } }
-  const stepsJson = JSON.stringify(Array.isArray(steps) ? steps : []);
+  if (typeof steps === 'string') {
+    // A malformed steps blob used to be swallowed into [] — saving a macro that
+    // silently lost every step. Surface it instead.
+    try { steps = JSON.parse(steps); } catch (e) { throw new Error('Macro steps are not valid JSON.'); }
+  }
+  // Validate + canonicalise against the engine's schema. Throws a "Step N (type): …"
+  // message the editor shows inline, so a bad step is caught here rather than
+  // failing mid-run across every profile in a parallel batch.
+  const stepsJson = JSON.stringify(normalizeMacroSteps(Array.isArray(steps) ? steps : []));
   if (input.id) {
     const id = parseId(input.id);
     const updated = await db.macro.update({ where: { id }, data: { name, description, stepsJson } });
@@ -9199,7 +9228,16 @@ async function stopMacroRecordingOnProfile(payload) {
   const profileId = parseId(input.profileId);
   const sessionId = String(input.sessionId || profileId);
   const res = await stopMacroRecording(sessionId);
-  const steps = Array.isArray(res.steps) ? res.steps : [];
+  const captured = Array.isArray(res.steps) ? res.steps : [];
+  // Canonicalise what the recorder captured, but LENIENTLY: a recording cannot be
+  // re-taken after the fact, so one unusable step must not throw away the whole
+  // session. Bad steps are dropped and counted instead.
+  const steps = [];
+  let dropped = 0;
+  for (const raw of captured) {
+    try { steps.push(normalizeMacroSteps([raw])[0]); }
+    catch (e) { dropped += 1; }
+  }
   // Optionally persist the captured steps straight into a new macro.
   const name = optionalString(input.saveAs);
   let saved = null;
@@ -9209,7 +9247,7 @@ async function stopMacroRecordingOnProfile(payload) {
     });
     saved = serializeMacro(created);
   }
-  return { steps, count: steps.length, saved };
+  return { steps, count: steps.length, dropped, saved };
 }
 
 // --- Macro scheduler (mirrors the proxy health-sweep timer) ----------------
@@ -9732,6 +9770,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.BROWSER_DOWNLOAD_STATUS, browserDownloadStatus);
   registerHandler(CHANNELS.BROWSER_DOWNLOAD_PAUSE, pauseBrowserDownload);
   registerHandler(CHANNELS.BROWSER_DOWNLOAD_RESUME, resumeBrowserDownload);
+  registerHandler(CHANNELS.ANTIDETECT_ENGINE_STATUS, antidetectEngineStatus);
+  registerHandler(CHANNELS.ANTIDETECT_ENGINE_DOWNLOAD, downloadAntidetectEngine);
   registerHandler(CHANNELS.BROWSER_FIREFOX_STATUS, firefoxStatus);
   registerHandler(CHANNELS.BROWSER_FIREFOX_LIST, firefoxListDownloadable);
   registerHandler(CHANNELS.BROWSER_FIREFOX_DOWNLOAD, downloadFirefox);

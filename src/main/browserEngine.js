@@ -16,6 +16,7 @@ const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
 // Smart Autofill (Identity Data Vault) — source of the in-page widget injected
 // into every launched page. No deps; just returns a self-contained IIFE string.
 const { buildAutofillBootstrap } = require('./personaAutofill');
+const { attachPageBridge } = require('./pageBridge');
 const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
 // Local SOCKS5 auth-injecting relay — Chromium can't authenticate to a SOCKS5
 // proxy, so an authenticated one is routed through this instead (audit).
@@ -85,6 +86,22 @@ function getRuntimeFixPuppeteer() {
   return engine;
 }
 
+
+// Anti-detect (fingerprint-chromium) engine driver: a puppeteer-extra instance with NO
+// stealth plugin. fingerprint-chromium already hides navigator.webdriver + the
+// HeadlessChrome UA and spoofs canvas/webgl/audio/UA NATIVELY, so the stealth evasions
+// are redundant AND self-defeating — their patch patterns are themselves fingerprintable
+// (CreepJS was reporting "60% stealth" on this engine). A clean instance drives the
+// browser without adding that tell. Persona autofill / exposeFunction still work: those
+// need only the CDP Runtime domain, which stock puppeteer keeps enabled.
+let _nativeEngine = null;
+function getNativeEngine() {
+  if (_nativeEngine) return _nativeEngine;
+  const { addExtra } = require('puppeteer-extra');
+  _nativeEngine = addExtra(require('puppeteer-core'));
+  return _nativeEngine;
+}
+
 const DEFAULT_PROFILE_ROOT = path.resolve(process.cwd(), 'softglaze_profiles');
 const DEFAULT_WINDOW_SIZE = { width: 1280, height: 720 };
 const GEO_LOOKUP_TIMEOUT_MS = 8000;
@@ -145,28 +162,27 @@ async function attachPersonaAutofill(targetPage) {
   // The real committed origin of THIS page — the single source of truth for which
   // host personas are scoped to. Falls back to '' (bridge then returns nothing).
   const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
-  try {
-    await targetPage.exposeFunction('__sgPersonaList', async () => {
+  // Each handler is defined ONCE and registered on BOTH transports (native binding
+  // + the CDP-binding-free RPC), so the two paths can never drift apart.
+  const hPersonaList = async () => {
+
       try {
         const r = await personaBridge.listForUrl(pageUrl());
         const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
         return list.map(toPublicPersona).filter(Boolean);
       } catch (e) { return []; }
-    });
-  } catch (e) { /* already exposed on this page */ }
-  try {
-    await targetPage.exposeFunction('__sgPersonaMarkUsed', async (id) => {
+  };
+  const hPersonaMarkUsed = async (id) => {
+
       try { await personaBridge.markUsed(String(id || ''), pageUrl()); return { ok: true }; }
       catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
-    });
-  } catch (e) { /* already exposed on this page */ }
-  try {
+  };
     // CDP "trusted" typing: the in-page widget stamps each matched field and hands
     // us a fill plan; we type it here with REAL keyboard events (isTrusted:true) and
     // human-like random delays — defeating isTrusted-based bot checks. Selects are
     // set via the native picker. Password items carry NO value — only a personaId —
     // and the plaintext is resolved server-side (see defense #2 above).
-    await targetPage.exposeFunction('__sgPersonaFillPlan', async (plan) => {
+  const hPersonaFillPlan = async (plan) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
       const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
@@ -236,8 +252,21 @@ async function attachPersonaAutofill(targetPage) {
         } catch (e) { /* skip one field, keep going */ }
       }
       return { ok: true, filled };
-    });
-  } catch (e) { /* already exposed on this page */ }
+  };
+
+  const personaHandlers = {
+    __sgPersonaList: hPersonaList,
+    __sgPersonaMarkUsed: hPersonaMarkUsed,
+    __sgPersonaFillPlan: hPersonaFillPlan
+  };
+  // Native binding: the fast path, and the only one stock Chrome ever needs.
+  for (const [name, fn] of Object.entries(personaHandlers)) {
+    try { await targetPage.exposeFunction(name, fn); } catch (e) { /* already exposed */ }
+  }
+  // RPC over intercepted sentinel requests: the path that still works on the
+  // native anti-detect engine, where the binding dies on the first navigation.
+  try { await attachPageBridge(targetPage, personaHandlers); } catch (e) { /* bridge optional */ }
+
   try { await targetPage.evaluateOnNewDocument(PERSONA_AUTOFILL_SOURCE); } catch (e) {}
   try { await targetPage.evaluate(PERSONA_AUTOFILL_SOURCE); } catch (e) {}
 }
@@ -345,6 +374,61 @@ function chooseBrowserBinary(profile, opts = {}) {
   if (real) return real;
   const cft = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
   return cft ? { ...cft, isReal: false } : null;
+}
+
+// --- FINGERPRINT-CHROMIUM (native anti-detect engine, opt-in) ------------------
+// adryfish/fingerprint-chromium is a source-patched Ungoogled-Chromium that spoofs
+// the fingerprint NATIVELY (canvas / webgl / audio / UA / platform / timezone) from
+// a seed + flags — no JS injection, no CDP overrides, no first-load race. It also
+// natively hides navigator.webdriver + the HeadlessChrome UA AND blocks the WebRTC
+// real-IP leak. We drive it through the SAME puppeteer path as stock Chrome but pass
+// native flags and SKIP our JS layer (fpConfig.nativeEngine) so the two identities
+// cannot contradict each other.
+// Default OFF; binary resolved from a managed dir, so nothing changes until opt-in.
+const FP_CHROMIUM_ROOT = path.join(path.dirname(DOWNLOAD_CHROME_ROOT), 'fp-chromium');
+function resolveAntidetectBinary() {
+  // Packaged (userData/../fp-chromium) first, then the dev checkout's <repo>/fp-chromium.
+  const roots = [FP_CHROMIUM_ROOT, path.resolve(__dirname, '../../fp-chromium')];
+  for (const root of roots) {
+    try {
+      const direct = path.join(root, 'chrome.exe');
+      if (fsSync.existsSync(direct)) return direct;
+      // The GitHub release extracts to a single versioned subdir (…_windows_x64/chrome.exe).
+      for (const ent of fsSync.readdirSync(root, { withFileTypes: true })) {
+        if (!ent.isDirectory()) continue;
+        const nested = path.join(root, ent.name, 'chrome.exe');
+        if (fsSync.existsSync(nested)) return nested;
+      }
+    } catch (e) { /* root missing — try the next */ }
+  }
+  return null;
+}
+
+// Map a profile's generated identity onto fingerprint-chromium's native flags. Only
+// the coherently-mappable axes are passed (seed / platform / brand / cores / locale
+// / timezone); the binary derives everything else (canvas, webgl, audio, exact UA)
+// from the seed, guaranteeing internal coherence. WebRTC real-IP leak is blocked
+// natively via --disable-non-proxied-udp whenever a proxy is in play.
+function buildAntidetectFlags(profile, fpConfig, seed, timezoneId, hasProxy) {
+  const flags = [`--fingerprint=${(seed >>> 0) || 1}`];
+  const os = String(profile.os || '').toLowerCase();
+  flags.push(`--fingerprint-platform=${os.includes('mac') ? 'macos' : os.includes('linux') ? 'linux' : 'windows'}`);
+  // fingerprint-chromium accepts Chrome / Edge / Opera / Vivaldi; anything else → Chrome.
+  const rawBrand = String(profile.browserBrand || profile.browser || 'Chrome');
+  const brand = /edge/i.test(rawBrand) ? 'Edge' : /opera/i.test(rawBrand) ? 'Opera'
+    : /vivaldi/i.test(rawBrand) ? 'Vivaldi' : 'Chrome';
+  flags.push(`--fingerprint-brand=${brand}`);
+  const cores = Number(fpConfig && fpConfig.cores) || Number(profile.cpuCores) || 0;
+  if (cores > 0) flags.push(`--fingerprint-hardware-concurrency=${cores}`);
+  const langs = (fpConfig && Array.isArray(fpConfig.langs) && fpConfig.langs.length) ? fpConfig.langs : null;
+  if (langs) {
+    // --lang may also be emitted by the shared arg-builder with the same value; a
+    // duplicate is harmless (Chromium honors the last, identical, occurrence).
+    flags.push(`--lang=${langs[0]}`, `--accept-lang=${langs.join(',')}`);
+  }
+  if (timezoneId) flags.push(`--timezone=${timezoneId}`);
+  if (hasProxy) flags.push('--disable-non-proxied-udp');
+  return flags;
 }
 
 // --- PID TRACKING FOR ORPHAN CLEANUP ---
@@ -589,7 +673,172 @@ function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
 // single serializable config object. Noise is seeded so the same profile yields
 // the same fingerprint on every launch (consistency beats randomness).
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Native-engine gap filler
+// ---------------------------------------------------------------------------
+// fingerprintScript bails immediately when fp.nativeEngine is set, because a second
+// JS-derived spoof would CONTRADICT the binary native one. That is correct for every
+// axis the binary actually covers (canvas / webgl / audio / UA / platform / cores /
+// timezone / language), and the launcher separately covers screen via CDP.
+//
+// It leaves two axes uncovered, both verified against fingerprint-chromium 148:
+//   • speechSynthesis.getVoices() returns 0 — real desktop Chrome on Windows always
+//     exposes at least the Microsoft SAPI voices, so an empty list is itself a signal.
+//   • enumerateDevices() reports the host real devices, so every profile on one
+//     machine shares them.
+// This fills ONLY those two and touches nothing the native engine owns.
+function nativeGapScript(fp) {
+  try {
+    if (Object.getOwnPropertyDescriptor(window, '__sgn')) return;
+    Object.defineProperty(window, '__sgn', { value: 1, enumerable: false, configurable: false, writable: false });
+  } catch (e) {
+    if (window.__sgn) return; window.__sgn = 1;
+  }
+
+  // Patched functions must still report as native, or the override is the giveaway.
+  const markNative = (fn, name) => {
+    try {
+      Object.defineProperty(fn, 'name', { value: name, configurable: true });
+      Object.defineProperty(fn, 'toString', {
+        value: function () { return 'function ' + name + '() { [native code] }'; },
+        configurable: true, writable: true
+      });
+    } catch (e) {}
+    return fn;
+  };
+
+  if (fp && fp.speechVoices && window.speechSynthesis) {
+    const primary = (fp.langs && fp.langs[0]) || 'en-US';
+    const base = String(primary).split('-')[0];
+    const fake = [
+      { voiceURI: 'Google US English', name: 'Google US English', lang: 'en-US', localService: false, default: true },
+      { voiceURI: 'Google UK English Female', name: 'Google UK English Female', lang: 'en-GB', localService: false, default: false },
+      { voiceURI: 'Microsoft Natural', name: 'Microsoft Natural (' + base + ')', lang: primary, localService: true, default: false }
+    ];
+    try {
+      const proto = Object.getPrototypeOf(window.speechSynthesis) || window.speechSynthesis;
+      const orig = proto.getVoices;
+      proto.getVoices = markNative(function () {
+        const real = (function () { try { return orig.apply(this, arguments); } catch (e) { return []; } })();
+        return real && real.length ? real : fake.map((v) => Object.assign({}, v));
+      }, 'getVoices');
+    } catch (e) {}
+  }
+
+  // Mirrors the enumerateDevices block in fingerprintScript exactly, including the
+  // pre-grant vs post-grant shapes. fp.mediaSet is generateMediaDevices()'s output:
+  // { os, isWindows, mic, spk, cam, hasCamera } — LABELS, not counts.
+  if (fp && fp.mediaDevices && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+    try {
+      const set = fp.mediaSet || {};
+      const isWin = !!set.isWindows;
+      const micLabel = set.mic || 'Microphone';
+      const spkLabel = set.spk || 'Speakers';
+      const camLabel = set.cam || 'Integrated Camera';
+      // 64-hex persistent id from the profile seed (stable across launches).
+      const mkId = (n) => {
+        let h = ((fp.seed >>> 0) ^ (n * 2654435761)) >>> 0;
+        let out = '';
+        for (let i = 0; i < 64; i += 1) { h = (h * 1664525 + 1013904223) >>> 0; out += (h & 15).toString(16); }
+        return out;
+      };
+      const gMicIn = mkId(11), gSpkOut = mkId(12), gCam = mkId(13);
+      const micId = mkId(1), camId = mkId(2), spkId = mkId(3);
+
+      let granted = false;
+      const md = navigator.mediaDevices;
+      // On the PROTOTYPE and non-enumerable: an own instance property would surface in
+      // Object.getOwnPropertyNames(navigator.mediaDevices), which real Chrome never does.
+      const mdProto = Object.getPrototypeOf(md) || md;
+      const defineOnMd = (name, fn) => {
+        try { Object.defineProperty(mdProto, name, { value: fn, configurable: true, writable: true, enumerable: false }); }
+        catch (e) { try { md[name] = fn; } catch (e2) {} }
+      };
+      if (typeof md.getUserMedia === 'function') {
+        const origGUM = md.getUserMedia.bind(md);
+        defineOnMd('getUserMedia', markNative(function getUserMedia() {
+          let p;
+          try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
+          try { return p.then((stream) => { granted = true; return stream; }); } catch (e) { return p; }
+        }, 'getUserMedia'));
+      }
+
+      const build = () => {
+        const rows = [];
+        const audioIn = (deviceId, label) => rows.push({ kind: 'audioinput', deviceId, groupId: gMicIn, label });
+        const audioOut = (deviceId, label) => rows.push({ kind: 'audiooutput', deviceId, groupId: gSpkOut, label });
+        if (granted) {
+          audioIn('default', 'Default - ' + micLabel);
+          if (isWin) audioIn('communications', 'Communications - ' + micLabel);
+          audioIn(micId, micLabel);
+          rows.push({ kind: 'videoinput', deviceId: camId, groupId: gCam, label: camLabel });
+          audioOut('default', 'Default - ' + spkLabel);
+          if (isWin) audioOut('communications', 'Communications - ' + spkLabel);
+          audioOut(spkId, spkLabel);
+        } else {
+          // Pre-grant: one endpoint per kind, empty deviceId + label, stable groupId —
+          // precisely what real Chrome exposes before a permission grant.
+          audioIn('', '');
+          rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
+          audioOut('', '');
+        }
+        return rows;
+      };
+
+      defineOnMd('enumerateDevices', markNative(function enumerateDevices() {
+        try {
+          return Promise.resolve(build().map((d) => ({
+            kind: d.kind, deviceId: d.deviceId, groupId: d.groupId, label: d.label,
+            toJSON() { return { kind: this.kind, deviceId: this.deviceId, groupId: this.groupId, label: this.label }; }
+          })));
+        } catch (e) { return Promise.resolve([]); }
+      }, 'enumerateDevices'));
+    } catch (e) { /* never break the page over device spoofing */ }
+  }
+}
+
+// Seed a native-engine profile with a default search provider (Ungoogled ships none,
+// so the address bar would not search) and the profile Do-Not-Track preference.
+async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
+  try {
+    const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
+    let prefs = {};
+    try { prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8')); } catch (e) { prefs = {}; }
+
+    const existing = prefs.default_search_provider_data && prefs.default_search_provider_data.template_url_data;
+    if (!(existing && existing.url)) {
+      prefs.default_search_provider_data = {
+        template_url_data: {
+          short_name: 'Google',
+          keyword: 'google.com',
+          url: 'https://www.google.com/search?q={searchTerms}',
+          suggestions_url: 'https://www.google.com/complete/search?output=chrome&q={searchTerms}',
+          favicon_url: 'https://www.google.com/favicon.ico',
+          safe_for_autoreplace: false,
+          is_active: 1,
+          prepopulate_id: 1,
+          date_created: '13300000000000000',
+          last_modified: '13300000000000000'
+        }
+      };
+    }
+    // Only touch DNT when the profile states a preference. null means "leave alone",
+    // which matches stock Chrome's default of not sending the header at all.
+    if (fpConfig && (fpConfig.dnt === '1' || fpConfig.dnt === '0')) {
+      prefs.enable_do_not_track = fpConfig.dnt === '1';
+    }
+
+    await fs.mkdir(path.dirname(prefsPath), { recursive: true });
+    await fs.writeFile(prefsPath, JSON.stringify(prefs));
+  } catch (e) { /* best-effort — the New Tab search box still works */ }
+}
+
 function fingerprintScript(fp) {
+  // Native anti-detect engine (fingerprint-chromium) spoofs the fingerprint at the
+  // binary level from launch flags. When it is driving, this JS layer must NOT run: a
+  // second, differently-derived spoof would CONTRADICT the native one (canvas / UA /
+  // platform disagreeing across layers is itself a detection signal). Bail immediately.
+  if (fp && fp.nativeEngine) return;
   // Idempotency: this script can land via BOTH puppeteer's evaluateOnNewDocument
   // AND the CDP auto-attach path (which guarantees it runs before the first
   // document of new tabs/popups). Running twice would double-wrap the Worker
@@ -1578,13 +1827,34 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   });
   // Open each check link in a NEW tab via the main process, which attaches proxy
   // auth BEFORE navigating — so an authenticated proxy doesn't stall the new tab
-  // on a 407 (the reason target="_blank" tabs hung at about:blank). Falls back to
-  // a normal same-tab navigation if the bridge isn't available.
+  // on a 407 (the reason target="_blank" tabs hung at about:blank).
+  //
+  // The bridge is NOT always usable: fingerprint-chromium (the native anti-detect
+  // engine) strips CDP Runtime bindings, so window.__sgzOpenTab is DEFINED by
+  // puppeteer's wrapper but throws "globalThis[(prefix + name)] is not a function"
+  // the moment it is called. The old code preventDefault()-ed FIRST and swallowed
+  // that throw, so on that engine every check link did nothing at all. Now the
+  // throw is caught and we fall back to a real new tab, then to same-tab nav.
   try{
     var navAs=document.querySelectorAll('.nav-links a');
     for(var i=0;i<navAs.length;i++){
       navAs[i].addEventListener('click',function(e){
-        if(window.__sgzOpenTab){e.preventDefault();try{window.__sgzOpenTab(this.href);}catch(_){}}
+        var href=this.href;
+        if(!href){return;}
+        var openFallback=function(){
+          try{ if(window.open(href,'_blank')){return true;} }catch(_){}
+          try{ location.href=href; return true; }catch(_){}
+          return false;
+        };
+        if(typeof window.__sgBridge!=='function'){return;} // no bridge — default navigation
+        try{
+          var p=window.__sgBridge('__sgzOpenTab',href);
+          e.preventDefault();
+          if(p&&typeof p.catch==='function'){p.catch(function(){openFallback();});}
+        }catch(_){
+          e.preventDefault();
+          openFallback();
+        }
       });
     }
   }catch(e){}
@@ -2018,7 +2288,11 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
   }
   await fs.writeFile(path.join(extDir, 'manifest.json'), JSON.stringify(manifest));
   // Self-contained: serialize the function and invoke it with the baked config.
-  const source = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)});`;
+  // Under the native engine fingerprintScript bails on its own, so shipping it there
+  // would write ~43 KB of dead script into every profile. Ship the small gap filler
+  // instead — it covers ONLY the two axes fingerprint-chromium leaves uncovered.
+  const fn = fpConfig && fpConfig.nativeEngine ? nativeGapScript : fingerprintScript;
+  const source = `(${fn.toString()})(${JSON.stringify(fpConfig)});`;
   await fs.writeFile(path.join(extDir, 'fp.js'), source);
   return extDir;
 }
@@ -2093,7 +2367,25 @@ async function launchProfileSession(options = {}) {
   // workers, no injection race) and bake the proxy IP + locale into the extension.
   const manualTz = profile.timezoneType === 'Custom' && profile.timezoneCustom
     ? String(profile.timezoneCustom).trim() : null;
-  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real' ? await lookupProxyGeoNodeCached(resolvedProxy) : null;
+  // Decide the anti-detect engine BEFORE the geo lookup: fingerprint-chromium bakes the
+  // timezone as a LAUNCH flag (--timezone) and cannot correct it afterward, so its geo
+  // must be resolved FRESH (uncached). A stale-cached exit — a sticky proxy session that
+  // has since rotated to another city — would leave the browser on a timezone that does
+  // not match the live proxy IP, the loudest CAPTCHA tell there is. Stock Chrome keeps
+  // the cache: it applies timezone per-page via CDP AFTER the lookup, so it self-corrects.
+  let usingAntidetect = false;
+  let antidetectExe = null;
+  // Enabled EITHER globally (Settings toggle) OR per-profile (Profile.antidetectEngine),
+  // so some profiles can use it while others stay on standard Chrome.
+  if (browserSettings.antidetectEngine === true || profile.antidetectEngine === true) {
+    antidetectExe = resolveAntidetectBinary();
+    if (antidetectExe) usingAntidetect = true;
+    else console.warn('[SG] anti-detect engine requested but fingerprint-chromium binary not found — using stock Chrome.');
+  }
+
+  let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real'
+    ? await (usingAntidetect ? lookupProxyGeoNode(resolvedProxy) : lookupProxyGeoNodeCached(resolvedProxy))
+    : null;
   let timezoneId = manualTz || (geo && geo.timezone) || null;
 
   // Build the fingerprint config (geo-aware) and bake it into a MAIN-world
@@ -2101,7 +2393,12 @@ async function launchProfileSession(options = {}) {
   const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId });
   // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
   // extension is written with the NTP override ONLY when launching CfT.
-  const chosenBrowser = chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
+  if (usingAntidetect) fpConfig.nativeEngine = true;
+  // Binary: fingerprint-chromium when the anti-detect engine is active (its native spoof
+  // replaces our JS/CDP layer via fpConfig.nativeEngine), else real Chrome / CfT.
+  const chosenBrowser = usingAntidetect
+    ? { exePath: antidetectExe, version: '', major: 0, isReal: false, antidetect: true }
+    : chooseBrowserBinary(profile, { preferCftForExtensions: loadExtensions });
   if (!chosenBrowser) {
     // No system Chrome AND no downloaded Chrome-for-Testing build. Packaged builds don't
     // bundle a Chromium, so puppeteer would otherwise throw a cryptic "Could not find
@@ -2114,6 +2411,11 @@ async function launchProfileSession(options = {}) {
       throw new Error('No Chrome or Chromium was found on this device. Open the Browsers page and download a browser version (or install Google Chrome) before launching Chrome profiles.');
     }
   }
+  // Seed a working address-bar default search engine for the anti-detect engine (Ungoogled
+  // ships none) AND the profile Do Not Track choice, which has no native flag and would
+  // otherwise be dropped. Both land in Default/Preferences before launch.
+  if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
+
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, { ntpOverride: usingCft });
 
@@ -2151,12 +2453,15 @@ async function launchProfileSession(options = {}) {
     `--load-extension=${extensionArg}`
   ];
   if (profile.canvasNoise !== false || profile.webglImageNoise !== false) {
-    const angleBackends = ['d3d11', 'd3d9', 'gl', 'vulkan'];
-    const chosenAngle = angleBackends[seed % angleBackends.length];
-    args.push(`--use-angle=${chosenAngle}`);
-    if (chosenAngle === 'gl') {
-      args.push('--use-gl=angle');
-    }
+    // GPU backend: pin ANGLE to Chrome's REAL Windows default (d3d11) instead of
+    // randomizing across [d3d11,d3d9,gl,vulkan] by seed. The randomization gave
+    // ~3/4 of profiles a broken/implausible backend — d3d9 drops WebGL2 entirely,
+    // '--use-angle=gl --use-gl=angle' commonly degrades to SwiftShader, and vulkan
+    // is a rounding-error share of real Chrome — which BLACK-SCREENED many profiles
+    // at launch AND made them MORE fingerprintable (the reported "some profiles open
+    // as a black screen" bug). Per-profile GPU variety is already carried by the
+    // readback (readPixels) perturbation, not by swapping the driver backend.
+    if (process.platform === 'win32') args.push('--use-angle=d3d11');
   }
 
   // Force the ENTIRE locale stack (ICU default locale → Intl.DateTimeFormat /
@@ -2180,6 +2485,15 @@ async function launchProfileSession(options = {}) {
   // proxied srflx (proxy IP) or nothing is exposed. The real IP can never escape.
   if (resolvedProxy && webrtcMode !== 'Real') {
     args.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
+  }
+
+  // Anti-detect engine: append fingerprint-chromium native spoofing flags. They REPLACE
+  // our JS/CDP fingerprint layer (skipped via fpConfig.nativeEngine): the binary derives
+  // a coherent identity (canvas/webgl/audio/exact-UA) from --fingerprint, reports the
+  // mapped platform/brand/cores/locale, sets the timezone, and blocks the WebRTC real-IP
+  // leak — all natively, so there is no injection race for a site to spot.
+  if (usingAntidetect) {
+    args.push(...buildAntidetectFlags(profile, fpConfig, seed, timezoneId, Boolean(resolvedProxy)));
   }
 
   // Chromium collapses repeated --enable-features / --disable-features switches to
@@ -2336,7 +2650,9 @@ async function launchProfileSession(options = {}) {
 
   // Engine: stock puppeteer by default; the opt-in rebrowser engine (persistent
   // Runtime.enable dropped) when "minimize CDP footprint" is on for this launch.
-  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer() : puppeteer;
+  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer()
+    : usingAntidetect ? getNativeEngine()
+    : puppeteer;
   let browser;
   try {
     browser = await engine.launch(launchOptions);
@@ -2433,6 +2749,11 @@ const rootCdp = await browser.target().createCDPSession();
               await sendMsg('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource });
               scriptAdded = true;
             }
+            // Native engine spoofs UA / timezone / cores / device-metrics itself from
+            // launch flags; re-applying over CDP would fight the native identity (a CDP UA
+            // disagreeing with the native Sec-CH-UA headers is a tell). Geolocation below
+            // is not native, so it still runs.
+            if (!fpConfig.nativeEngine) {
             if (fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
             if (fpLate.ua) {
               await sendMsg('Emulation.setUserAgentOverride', {
@@ -2449,6 +2770,12 @@ const rootCdp = await browser.target().createCDPSession();
               await sendMsg('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints });
               await sendMsg('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
             }
+            } // end !nativeEngine — native flags already set UA/timezone/cores/device-metrics
+            // Native engine: spoof screen.* to the profile resolution (fingerprint-chromium
+            // has no screen flag, so it would leak the real monitor across every profile).
+            if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
+              await sendMsg('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: fpConfig.screenW, screenHeight: fpConfig.screenH });
+            }
             if (fpLate.geoLat != null && fpLate.geoLng != null) {
               await sendMsg('Browser.grantPermissions', { permissions: ['geolocation'] });
               await sendMsg('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc });
@@ -2456,7 +2783,8 @@ const rootCdp = await browser.target().createCDPSession();
             return true;
           }
           if (isWorker) {
-            if (fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
+            // Native engine already reports the spoofed core count inside workers.
+            if (!fpConfig.nativeEngine && fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
             return true;
           }
           return true; // 'other'/'browser' target
@@ -2663,6 +2991,10 @@ const rootCdp = await browser.target().createCDPSession();
       // Proxy auth for HTTP(S) proxies — version-agnostic, no MV2 extension.
       if (proxyCreds) await targetPage.authenticate(proxyCreds).catch(() => {});
       const cdp = await targetPage.target().createCDPSession();
+      // Native engine spoofs UA / timezone / cores / device-metrics itself from launch
+      // flags; re-applying them over CDP would fight the native identity. Skip them when
+      // native — geolocation / DNT / request-filtering below are not native, so they run.
+      if (!fpConfig.nativeEngine) {
       await cdp.send('Emulation.setUserAgentOverride', {
         userAgent: ua.userAgent,
         acceptLanguage,
@@ -2689,6 +3021,13 @@ const rootCdp = await browser.target().createCDPSession();
       // workers it spawns, even before their script runs (no JS-injection race).
       // Belt-and-suspenders with the in-page navigator override + worker prelude.
       if (fpConfig.cores) await cdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+      } // end !nativeEngine — native flags already set UA/timezone/cores/device-metrics
+      // Native engine: spoof screen.* to the profile resolution (fingerprint-chromium has
+      // no screen flag, so it would leak the real monitor across all profiles).
+      // deviceScaleFactor:0 preserves the real dpr; width/height:0 leaves the viewport intact.
+      if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: fpConfig.screenW, screenHeight: fpConfig.screenH }).catch(() => {});
+      }
       if (geoLat !== null && geoLng !== null) {
         await cdp.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
         await cdp.send('Emulation.setGeolocationOverride', {
@@ -2764,7 +3103,8 @@ const rootCdp = await browser.target().createCDPSession();
     if (targetType === 'service_worker' || targetType === 'shared_worker' || targetType === 'worker') {
       try {
         const wcdp = await target.createCDPSession();
-        if (fpConfig.cores) await wcdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+        // Native engine already reports the spoofed core count inside workers.
+        if (!fpConfig.nativeEngine && fpConfig.cores) await wcdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
       } catch (e) { /* worker target may close immediately */ }
       return;
     }
@@ -2797,8 +3137,7 @@ const rootCdp = await browser.target().createCDPSession();
   // never stalls the tab on a 407 (a window.open/target=_blank popup navigates the
   // instant it opens, racing per-tab auth — this sequences auth-then-goto). Exposed
   // before the start page loads so window.__sgzOpenTab exists when it runs.
-  try {
-    await page.exposeFunction('__sgzOpenTab', async (url) => {
+  const hOpenTab = async (url) => {
       try {
         if (typeof url !== 'string' || !/^https?:/i.test(url)) return;
         const np = await browser.newPage();
@@ -2806,8 +3145,9 @@ const rootCdp = await browser.target().createCDPSession();
         await np.bringToFront().catch(() => {});
         await np.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
       } catch (e) { /* best-effort — a failed open must never affect the session */ }
-    });
-  } catch (e) { /* already exposed on this page */ }
+  };
+  try { await page.exposeFunction('__sgzOpenTab', hOpenTab); } catch (e) { /* already exposed */ }
+  try { await attachPageBridge(page, { __sgzOpenTab: hOpenTab }); } catch (e) { /* bridge optional */ }
 
   // On-startup mode: 'detection' shows the SoftGlaze IP/fingerprint start page;
   // 'blank' and 'last' skip it (no proxy-detection page) and open about:blank.
@@ -2816,6 +3156,10 @@ const rootCdp = await browser.target().createCDPSession();
   if (startupMode === 'detection') {
     startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo, startPageLinks });
   }
+  // One line stating exactly which engine and binary this launch used — the fastest
+  // way to confirm the anti-detect engine actually engaged rather than silently falling
+  // back to stock Chrome (which happens when the binary is not downloaded yet).
+  console.log(`[SG][launch] antidetect=${usingAntidetect} cft=${usingCft} realChrome=${Boolean(chosenBrowser && chosenBrowser.isReal)} minCdp=${browserSettings.minimizeCdpFootprint === true} binary=${String((chosenBrowser && chosenBrowser.exePath) || '').split(/[\\/]/).pop()}`);
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
 
   const sessionId = String(profileId || crypto.randomUUID());
@@ -3163,11 +3507,20 @@ async function beginSyncGroup(masterSessionId, slaveSessionIds) {
   // Bind a node-side receiver into the Master page, then add capturing listeners
   // at document_start so every navigation re-installs them.
   const BINDING = '__sgSyncDispatch';
+  const hSyncDispatch = (evt) => { mirror(evt).catch(() => {}); return { ok: true }; };
   try {
-    await masterSession.page.exposeFunction(BINDING, (evt) => { mirror(evt).catch(() => {}); }).catch(() => {});
+    await masterSession.page.exposeFunction(BINDING, hSyncDispatch).catch(() => {});
+    // Binding-free channel too: fingerprint-chromium drops the CDP binding on the
+    // first navigation, which silently stopped mirroring on that engine.
+    try { await attachPageBridge(masterSession.page, { [BINDING]: hSyncDispatch }); } catch (e) { /* bridge optional */ }
     await masterSession.page.evaluateOnNewDocument((bindingName) => {
       try {
-        const post = (payload) => { try { if (typeof window[bindingName] === 'function') window[bindingName](payload); } catch (e) {} };
+        const post = (payload) => {
+          try {
+            if (typeof window.__sgBridge === 'function') { window.__sgBridge(bindingName, payload); return; }
+            if (typeof window[bindingName] === 'function') window[bindingName](payload);
+          } catch (e) {}
+        };
         document.addEventListener('click', (e) => post({ k: 'click', x: Math.round(e.clientX), y: Math.round(e.clientY), button: e.button }), true);
         document.addEventListener('keydown', (e) => post({ k: 'key', key: e.key, code: e.code, keyCode: e.keyCode, text: e.key && e.key.length === 1 ? e.key : '' }), true);
         // TODO(foundation): capture 'mousemove' (throttled) and 'scroll' here too.
@@ -3177,7 +3530,12 @@ async function beginSyncGroup(masterSessionId, slaveSessionIds) {
     // future navigations).
     await masterSession.page.evaluate((bindingName) => {
       try {
-        const post = (payload) => { try { if (typeof window[bindingName] === 'function') window[bindingName](payload); } catch (e) {} };
+        const post = (payload) => {
+          try {
+            if (typeof window.__sgBridge === 'function') { window.__sgBridge(bindingName, payload); return; }
+            if (typeof window[bindingName] === 'function') window[bindingName](payload);
+          } catch (e) {}
+        };
         document.addEventListener('click', (e) => post({ k: 'click', x: Math.round(e.clientX), y: Math.round(e.clientY), button: e.button }), true);
         document.addEventListener('keydown', (e) => post({ k: 'key', key: e.key, code: e.code, keyCode: e.keyCode, text: e.key && e.key.length === 1 ? e.key : '' }), true);
       } catch (e) {}
@@ -3416,12 +3774,23 @@ async function importStoredCookies(opts, cookies) {
 // Softglaze Pro — Macro engine (runner + visual recorder).
 //
 // Canonical step shape (serialized into Macro.stepsJson):
-//   { type: 'goto',    url }
-//   { type: 'click',   selector }
-//   { type: 'type',    selector, value }
-//   { type: 'keypress', key }            // e.g. 'Enter'
-//   { type: 'scroll',  steps? }
-//   { type: 'wait',    ms }
+//   { type: 'goto',     url }
+//   { type: 'click',    selector }
+//   { type: 'type',     selector, value }
+//   { type: 'keypress', key }                        // e.g. 'Enter'
+//   { type: 'scroll',   steps? }
+//   { type: 'wait',     ms }
+//   { type: 'move',     selector | x,y }
+//   { type: 'hover',    selector, ms? }
+//   { type: 'select',   selector, value, by? }       // <select> — by: auto|value|label|index
+//   { type: 'waitFor',  selector, state? }           // state: visible|hidden
+//   { type: 'submit',   selector }                   // a form, or any field inside one
+//   { type: 'check',    selector, state? }           // state: checked|unchecked
+//   { type: 'clear',    selector }
+//
+// Every element step also accepts `timeout` (ms) and `optional: true`. An optional
+// step that fails is logged as skipped and does NOT fail the run — that is how
+// "fill this only if the site shows it" is expressed without conditional branching.
 //
 // The runner replays steps against an already-open session's primary page (so the
 // profile's proxy + fingerprint are reused exactly). The recorder attaches DOM
@@ -3430,7 +3799,96 @@ async function importStoredCookies(opts, cookies) {
 // selectors are derived heuristically and SPA in-app navigations may not capture
 // as discrete 'goto' steps — documented, never silently wrong.
 // ---------------------------------------------------------------------------
-const VALID_MACRO_STEPS = new Set(['goto', 'click', 'type', 'keypress', 'scroll', 'wait']);
+
+// Field schema per step type — the single source of truth for validation. The
+// renderer's editor mirrors it, and `normalizeMacroSteps` enforces it at save time
+// so a malformed step can no longer reach the runner and blow up mid-run (an
+// unknown type used to be the ONLY thing that ever rejected a macro, at run time).
+const MACRO_STEP_FIELDS = {
+  goto: { url: 'string', timeout: 'number' },
+  click: { selector: 'string', timeout: 'number' },
+  type: { selector: 'string', value: 'string', timeout: 'number' },
+  keypress: { key: 'string' },
+  scroll: { steps: 'number' },
+  wait: { ms: 'number' },
+  move: { selector: 'string', x: 'number', y: 'number', timeout: 'number' },
+  hover: { selector: 'string', ms: 'number', timeout: 'number' },
+  select: { selector: 'string', value: 'string', by: 'string', timeout: 'number' },
+  waitFor: { selector: 'string', state: 'string', timeout: 'number' },
+  submit: { selector: 'string', timeout: 'number' },
+  check: { selector: 'string', state: 'string', timeout: 'number' },
+  clear: { selector: 'string', timeout: 'number' }
+};
+
+// Closed value sets. `state` means different things per type, so it is type-scoped.
+const MACRO_STEP_ENUMS = {
+  select: { by: ['auto', 'value', 'label', 'index'] },
+  waitFor: { state: ['visible', 'hidden'] },
+  check: { state: ['checked', 'unchecked'] }
+};
+
+const VALID_MACRO_STEPS = new Set(Object.keys(MACRO_STEP_FIELDS));
+
+// Types are matched case-insensitively but stored canonically, so `waitfor`,
+// `WaitFor` and `waitFor` are one step and the runner's switch stays exact-match.
+const MACRO_STEP_BY_LOWER = new Map(Array.from(VALID_MACRO_STEPS).map((t) => [t.toLowerCase(), t]));
+
+// Steps that wait on a selector get 15s. A bare waitFor is usually gating a slow
+// page (a proxied load, a redirect chain), so it gets the longer 30s budget.
+const STEP_TIMEOUT_DEFAULT = 15000;
+const WAIT_FOR_TIMEOUT_DEFAULT = 30000;
+
+function stepTimeout(step, fallback = STEP_TIMEOUT_DEFAULT) {
+  const n = Number(step && step.timeout);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+// Validate + clean an editor/recorder step list into exactly what the runner reads.
+// Pure (no page, no Electron) so ipcHandlers can call it at save time and tests can
+// cover it directly. Throws a 1-based, human-readable message on the first bad step.
+function normalizeMacroSteps(input) {
+  const list = Array.isArray(input) ? input : [];
+  return list.map((raw, i) => {
+    const src = (raw && typeof raw === 'object') ? raw : {};
+    const rawType = String(src.type == null ? '' : src.type).trim();
+    const type = MACRO_STEP_BY_LOWER.get(rawType.toLowerCase());
+    if (!type) throw new Error(`Step ${i + 1}: unknown step type "${rawType || '(empty)'}".`);
+
+    const out = { type };
+    const schema = MACRO_STEP_FIELDS[type];
+    const enums = MACRO_STEP_ENUMS[type] || {};
+    for (const [key, kind] of Object.entries(schema)) {
+      const value = src[key];
+      if (value === undefined || value === null || value === '') continue;
+      if (kind === 'number') {
+        const n = Number(value);
+        if (!Number.isFinite(n)) throw new Error(`Step ${i + 1} (${type}): "${key}" must be a number.`);
+        out[key] = n;
+        continue;
+      }
+      const text = String(value);
+      const allowed = enums[key];
+      if (allowed) {
+        const lower = text.trim().toLowerCase();
+        if (!allowed.includes(lower)) {
+          throw new Error(`Step ${i + 1} (${type}): "${key}" must be one of ${allowed.join(', ')}.`);
+        }
+        out[key] = lower;
+        continue;
+      }
+      out[key] = text;
+    }
+
+    // An element step without a target is useless — catch it at save time rather
+    // than 40 steps into a run against 200 profiles.
+    const needsSelector = Boolean(schema.selector) && !(type === 'move' && out.x != null && out.y != null);
+    if (needsSelector && !out.selector) throw new Error(`Step ${i + 1} (${type}): a CSS selector is required.`);
+    if (type === 'goto' && !out.url) throw new Error(`Step ${i + 1} (goto): a URL is required.`);
+
+    if (src.optional === true || src.optional === 'true') out.optional = true;
+    return out;
+  });
+}
 
 // Center point of an element in viewport coordinates (null if not found/visible).
 async function elementCenter(page, selector) {
@@ -3466,25 +3924,26 @@ async function runMacro(sessionId, steps, opts = {}) {
     if (isAborted()) break;
 
     const step = list[i] || {};
-    const type = String(step.type || '').toLowerCase();
+    const rawType = String(step.type == null ? '' : step.type).trim();
+    const type = MACRO_STEP_BY_LOWER.get(rawType.toLowerCase()) || rawType.toLowerCase();
     if (onStep) onStep({ index: i, total: list.length, type, status: 'running', step });
     try {
       switch (type) {
         case 'goto':
           await page.goto(String(step.url || step.value || 'about:blank'), {
             waitUntil: 'domcontentloaded',
-            timeout: Number(step.timeout) || 30000
+            timeout: stepTimeout(step, 30000)
           });
           break;
         case 'click':
           if (!step.selector) throw new Error('click step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
           { const c = await elementCenter(page, step.selector); if (c) await page.mouse.move(c.x, c.y, { steps: 10 }); }
           await page.click(step.selector, { delay: 30 });
           break;
         case 'type':
           if (!step.selector) throw new Error('type step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
           await page.type(step.selector, String(step.value == null ? '' : step.value), { delay: 40 });
           break;
         case 'keypress':
@@ -3498,7 +3957,7 @@ async function runMacro(sessionId, steps, opts = {}) {
           break;
         case 'move': {
           let pt = null;
-          if (step.selector) { await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 }).catch(() => {}); pt = await elementCenter(page, step.selector); }
+          if (step.selector) { await page.waitForSelector(step.selector, { timeout: stepTimeout(step) }).catch(() => {}); pt = await elementCenter(page, step.selector); }
           else if (step.x != null && step.y != null) pt = { x: Number(step.x), y: Number(step.y) };
           if (!pt) throw new Error('move step needs a valid selector or x/y');
           await page.mouse.move(pt.x, pt.y, { steps: 12 });
@@ -3506,11 +3965,123 @@ async function runMacro(sessionId, steps, opts = {}) {
         }
         case 'hover': {
           if (!step.selector) throw new Error('hover step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: Number(step.timeout) || 15000 });
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
           const pt = await elementCenter(page, step.selector);
           if (!pt) throw new Error('hover target is not visible');
           await page.mouse.move(pt.x, pt.y, { steps: 12 });
           await sleep(Math.max(0, Math.min(60000, Number(step.ms) || 800)));
+          break;
+        }
+        // Native <select>. page.select() only matches on option VALUE, but values
+        // are frequently opaque ids while the label is what the operator actually
+        // sees — so the option is resolved in-page first (value, then visible
+        // label, then numeric index) and the resolved value handed to select(),
+        // which fires the input + change events frameworks listen for.
+        case 'select': {
+          if (!step.selector) throw new Error('select step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          const wanted = String(step.value == null ? '' : step.value);
+          const by = String(step.by || 'auto').toLowerCase();
+          const resolved = await page.$eval(step.selector, (el, want, mode) => {
+            if (!el || el.tagName !== 'SELECT') return { ok: false, reason: 'not-a-select' };
+            const options = Array.from(el.options || []);
+            const norm = (s) => String(s == null ? '' : s).trim().toLowerCase();
+            const target = norm(want);
+            const byValue = () => options.find((o) => norm(o.value) === target);
+            const byLabel = () => options.find((o) => norm(o.textContent) === target || norm(o.label) === target);
+            const byIndex = () => {
+              const n = Number.parseInt(want, 10);
+              return Number.isInteger(n) && n >= 0 && n < options.length ? options[n] : null;
+            };
+            let hit = null;
+            if (mode === 'value') hit = byValue();
+            else if (mode === 'label') hit = byLabel();
+            else if (mode === 'index') hit = byIndex();
+            else hit = byValue() || byLabel() || byIndex();
+            if (!hit) {
+              return {
+                ok: false,
+                reason: 'no-option',
+                available: options.slice(0, 25).map((o) => String(o.textContent || '').trim() || o.value)
+              };
+            }
+            return { ok: true, value: hit.value };
+          }, wanted, by);
+          if (!resolved.ok) {
+            if (resolved.reason === 'not-a-select') {
+              throw new Error(`select: ${step.selector} is not a <select> — use click steps for a custom dropdown`);
+            }
+            const seen = (resolved.available || []).join(' | ') || 'none';
+            throw new Error(`select: no option matching "${wanted}" (options: ${seen})`);
+          }
+          await page.select(step.selector, resolved.value);
+          break;
+        }
+        // Explicit gate for a slow or async page — the missing primitive that forced
+        // every macro to guess a fixed `wait` duration.
+        case 'waitFor': {
+          if (!step.selector) throw new Error('waitFor step requires a selector');
+          const waitOpts = { timeout: stepTimeout(step, WAIT_FOR_TIMEOUT_DEFAULT) };
+          if (String(step.state || 'visible').toLowerCase() === 'hidden') waitOpts.hidden = true;
+          else waitOpts.visible = true;
+          await page.waitForSelector(step.selector, waitOpts);
+          break;
+        }
+        // requestSubmit() fires the submit event AND native validation; the bare
+        // form.submit() skips both, which silently breaks React/validated forms.
+        case 'submit': {
+          if (!step.selector) throw new Error('submit step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          const submitted = await page.$eval(step.selector, (el) => {
+            const form = el.tagName === 'FORM' ? el : (el.form || (el.closest ? el.closest('form') : null));
+            if (!form) return false;
+            if (typeof form.requestSubmit === 'function') form.requestSubmit();
+            else form.submit();
+            return true;
+          });
+          if (!submitted) throw new Error(`submit: no <form> found for ${step.selector}`);
+          break;
+        }
+        // Drives a checkbox/radio to a DEFINITE state. A plain click toggles blindly,
+        // so a re-run (or a box the site pre-ticked) would silently invert it.
+        case 'check': {
+          if (!step.selector) throw new Error('check step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          const want = String(step.state || 'checked').toLowerCase() !== 'unchecked';
+          const info = await page.$eval(step.selector, (el) => (
+            typeof el.checked === 'boolean'
+              ? { checked: el.checked, kind: String(el.type || '').toLowerCase() }
+              : null
+          ));
+          if (!info) throw new Error(`check: ${step.selector} is not a checkbox or radio`);
+          if (info.kind === 'radio' && !want) {
+            throw new Error('check: a radio cannot be unchecked — select the other radio instead');
+          }
+          if (info.checked !== want) {
+            const c = await elementCenter(page, step.selector);
+            if (c) await page.mouse.move(c.x, c.y, { steps: 10 });
+            await page.click(step.selector, { delay: 30 });
+          }
+          break;
+        }
+        // Empty a field before typing. `type` appends at the caret, so re-running a
+        // macro over a pre-filled form used to concatenate onto the old value.
+        case 'clear': {
+          if (!step.selector) throw new Error('clear step requires a selector');
+          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.click(step.selector, { clickCount: 3 }); // select the field's text
+          await page.keyboard.press('Backspace');
+          const left = await page.$eval(step.selector, (el) => String(el.value == null ? '' : el.value));
+          if (left !== '') {
+            // type=number and some masked inputs ignore triple-click selection. Go
+            // through the native value setter so React's onChange still fires.
+            await page.$eval(step.selector, (el) => {
+              const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value');
+              if (desc && desc.set) desc.set.call(el, ''); else el.value = '';
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+          }
           break;
         }
         default:
@@ -3520,6 +4091,14 @@ async function runMacro(sessionId, steps, opts = {}) {
       if (onStep) onStep({ index: i, total: list.length, type, status: 'ok' });
     } catch (e) {
       const msg = (e && e.message) || String(e);
+      // An optional step that fails is a non-event: recorded as skipped, counted as
+      // OK so the run's verdict stays true, and never aborts even without
+      // continueOnError. This is how an optional form field is expressed.
+      if (step.optional) {
+        log.push({ index: i, type, ok: true, skipped: true, error: msg });
+        if (onStep) onStep({ index: i, total: list.length, type, status: 'skipped', error: msg });
+        continue;
+      }
       log.push({ index: i, type, ok: false, error: msg });
       if (onStep) onStep({ index: i, total: list.length, type, status: 'error', error: msg });
       if (!opts.continueOnError) break;
@@ -3573,25 +4152,47 @@ function macroRecorderClientScript() {
       // tab) never follows — the exact reason recorded link-clicks did nothing.
       const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
       if (a && a.href && /^https?:/i.test(a.href)) {
-        if (window.__sgzRecordStep) window.__sgzRecordStep({ type: 'goto', url: a.href });
+        if (window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'goto', url: a.href });
         return;
       }
       const sel = cssPath(e.target);
-      if (sel && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'click', selector: sel });
+      if (sel && window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'click', selector: sel });
     } catch (err) { /* ignore */ }
   }, true);
   document.addEventListener('change', (e) => {
     try {
       const t = e.target;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) {
-        const sel = cssPath(t);
-        if (sel && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'type', selector: sel, value: String(t.value || '') });
+      if (!t || !t.tagName) return;
+      const sel = cssPath(t);
+      if (!sel || !window.__sgBridge) return;
+
+      // A <select> recorded as a 'type' step was replayed with page.type() and did
+      // nothing at all — dropdowns now record as a real 'select' step. Prefer the
+      // visible label: option values are often opaque ids that change per render.
+      if (t.tagName === 'SELECT') {
+        const opt = t.options ? t.options[t.selectedIndex] : null;
+        const label = opt ? String(opt.textContent || '').trim() : '';
+        window.__sgBridge('__sgzRecordStep', label
+          ? { type: 'select', selector: sel, value: label, by: 'label' }
+          : { type: 'select', selector: sel, value: String(t.value || ''), by: 'value' });
+        return;
+      }
+
+      // Checkboxes/radios recorded as 'type' with value "on" — now recorded as a
+      // 'check' step carrying the state they were left in.
+      if (t.tagName === 'INPUT' && (t.type === 'checkbox' || t.type === 'radio')) {
+        window.__sgBridge('__sgzRecordStep', { type: 'check', selector: sel, state: t.checked ? 'checked' : 'unchecked' });
+        return;
+      }
+
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') {
+        window.__sgBridge('__sgzRecordStep', { type: 'type', selector: sel, value: String(t.value || '') });
       }
     } catch (err) { /* ignore */ }
   }, true);
   document.addEventListener('keydown', (e) => {
     try {
-      if (e.key === 'Enter' && window.__sgzRecordStep) window.__sgzRecordStep({ type: 'keypress', key: 'Enter' });
+      if (e.key === 'Enter' && window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'keypress', key: 'Enter' });
     } catch (err) { /* ignore */ }
   }, true);
 }
@@ -3610,12 +4211,15 @@ async function startMacroRecording(sessionId) {
   // Bridge page -> node. exposeFunction persists on the page; if it's already
   // installed (a prior recording on this page), the throw is benign — the bound
   // callback always resolves the CURRENT recorder via macroRecorders.get(id).
-  try {
-    await page.exposeFunction('__sgzRecordStep', (step) => {
-      const cur = macroRecorders.get(id);
-      if (cur && !cur.stopped && step && step.type) cur.steps.push(step);
-    });
-  } catch (e) { /* already exposed on this page */ }
+  const hRecordStep = (step) => {
+    const cur = macroRecorders.get(id);
+    if (cur && !cur.stopped && step && step.type) cur.steps.push(step);
+    return { ok: true };
+  };
+  try { await page.exposeFunction('__sgzRecordStep', hRecordStep); } catch (e) { /* already exposed */ }
+  // Same handler over the binding-free channel, so recording still works on the
+  // native anti-detect engine (where the binding dies on the first navigation).
+  try { await attachPageBridge(page, { __sgzRecordStep: hRecordStep }); } catch (e) { /* bridge optional */ }
 
   const client = `(${macroRecorderClientScript.toString()})()`;
   await page.evaluateOnNewDocument(client).catch(() => {});
@@ -3698,6 +4302,12 @@ module.exports = {
   runCookieRobot,
   warmInteract,
   runMacro,
+  // Macro step contract. normalizeMacroSteps is the save-time validator (ipcHandlers)
+  // and is pure, so tests cover the whole schema without a browser.
+  normalizeMacroSteps,
+  VALID_MACRO_STEPS,
+  MACRO_STEP_FIELDS,
+  MACRO_STEP_ENUMS,
   startMacroRecording,
   stopMacroRecording,
   humanType,

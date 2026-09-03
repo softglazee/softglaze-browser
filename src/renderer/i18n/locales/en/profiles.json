@@ -333,7 +333,9 @@
     "savePresetTitle": "Save the current filters as a preset",
     "savePresetPrompt": "Save the current filters as a preset — name:",
     "profileCount_one": "{{count}} profile",
-    "profileCount_other": "{{count}} profiles"
+    "profileCount_other": "{{count}} profiles",
+    "used": "Used",
+    "unused": "Unused"
   },
   "table": {
     "name": "Name",
@@ -357,7 +359,8 @@
     "proxyStatus": "Proxy",
     "direct": "Direct",
     "viewActivity": "View activity",
-    "neverUsed": "Never used"
+    "neverUsed": "Never used",
+    "used": "Used"
   },
   "actions": {
     "stop": "Stop",

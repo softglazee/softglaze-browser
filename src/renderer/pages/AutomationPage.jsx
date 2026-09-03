@@ -64,7 +64,14 @@ const MACRO_STEP_TYPES = [
   { type: 'scroll', label: 'Scroll', fields: [{ key: 'steps', label: 'Scroll amount', kind: 'number', placeholder: '4' }] },
   { type: 'wait', label: 'Wait', fields: [{ key: 'ms', label: 'Milliseconds', kind: 'number', placeholder: '1000' }] },
   { type: 'move', label: 'Move mouse', fields: [{ key: 'selector', label: 'Selector (or use X/Y)', placeholder: '.target' }, { key: 'x', label: 'X', kind: 'number' }, { key: 'y', label: 'Y', kind: 'number' }] },
-  { type: 'hover', label: 'Hover', fields: [{ key: 'selector', label: 'Selector', placeholder: '.menu' }, { key: 'ms', label: 'Dwell ms', kind: 'number', placeholder: '800' }] }
+  { type: 'hover', label: 'Hover', fields: [{ key: 'selector', label: 'Selector', placeholder: '.menu' }, { key: 'ms', label: 'Dwell ms', kind: 'number', placeholder: '800' }] },
+  // `kind: 'choice'` renders a <select> of fixed options — named "choice" so it does
+  // not read as the macro step type that is itself called 'select'.
+  { type: 'select', label: 'Select dropdown option', fields: [{ key: 'selector', label: 'Selector', placeholder: 'select[name="focus"]' }, { key: 'value', label: 'Option (value, label or index)', placeholder: 'Plumbing' }, { key: 'by', label: 'Match by', kind: 'choice', options: ['auto', 'value', 'label', 'index'] }] },
+  { type: 'waitFor', label: 'Wait for element', fields: [{ key: 'selector', label: 'Selector', placeholder: '.dashboard' }, { key: 'state', label: 'State', kind: 'choice', options: ['visible', 'hidden'] }, { key: 'timeout', label: 'Timeout ms', kind: 'number', placeholder: '30000' }] },
+  { type: 'submit', label: 'Submit form', fields: [{ key: 'selector', label: 'Form or field selector', placeholder: 'form#signup' }] },
+  { type: 'check', label: 'Check / uncheck', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="terms"]' }, { key: 'state', label: 'State', kind: 'choice', options: ['checked', 'unchecked'] }] },
+  { type: 'clear', label: 'Clear field', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="email"]' }] }
 ];
 const STEP_LABEL = Object.fromEntries(MACRO_STEP_TYPES.map((s) => [s.type, s.label]));
 
@@ -73,6 +80,9 @@ function defaultStep(type) {
   if (type === 'scroll') step.steps = 4;
   if (type === 'wait') step.ms = 1000;
   if (type === 'hover') step.ms = 800;
+  if (type === 'select') step.by = 'auto';
+  if (type === 'waitFor') { step.state = 'visible'; step.timeout = 30000; }
+  if (type === 'check') step.state = 'checked';
   return step;
 }
 
@@ -89,11 +99,18 @@ function stepSummary(step, t) {
     case 'wait': return `${step.ms || 0} ms`;
     case 'move': return step.selector || (step.x != null && step.x !== '' ? `${step.x}, ${step.y}` : tr('stepSummary.target', '(target)'));
     case 'hover': return `${step.selector || tr('stepSummary.selectorFallback', '(selector)')} · ${step.ms || 800} ms`;
+    case 'select': return `${step.selector || tr('stepSummary.selectorFallback', '(selector)')} → "${step.value || ''}"`;
+    case 'waitFor': return `${step.selector || tr('stepSummary.noSelector', '(no selector)')} · ${step.state || 'visible'}`;
+    case 'submit': return step.selector || tr('stepSummary.noSelector', '(no selector)');
+    case 'check': return `${step.selector || tr('stepSummary.selectorFallback', '(selector)')} · ${step.state || 'checked'}`;
+    case 'clear': return step.selector || tr('stepSummary.noSelector', '(no selector)');
     default: return '';
   }
 }
 
 // Coerce an editor step into the runner shape (numeric fields → numbers, drop blanks).
+// The main process re-validates with normalizeMacroSteps — this only keeps the
+// payload clean so a blank optional input doesn't reach the engine as "".
 function coerceStep(s) {
   const def = MACRO_STEP_TYPES.find((d) => d.type === s.type);
   const out = { type: s.type };
@@ -102,6 +119,7 @@ function coerceStep(s) {
     if (v === undefined || v === null || v === '') continue;
     out[f.key] = f.kind === 'number' ? Number(v) : v;
   }
+  if (s.optional) out.optional = true;
   return out;
 }
 
@@ -585,6 +603,21 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
                           {def.fields.map((f) => {
                             const fieldLabel = t(`stepFields.${s.type}.${f.key}`);
                             const fieldPlaceholder = f.placeholder ? t(`stepFields.${s.type}.${f.key}Placeholder`) : fieldLabel;
+                            if (f.kind === 'choice') {
+                              return (
+                                <select
+                                  key={f.key}
+                                  value={s[f.key] ?? f.options[0]}
+                                  onChange={(e) => updateStep(i, { [f.key]: e.target.value })}
+                                  title={fieldLabel}
+                                  className="h-7 bg-input-background border border-border rounded px-1.5 text-[12px] text-foreground outline-none focus:border-primary"
+                                >
+                                  {f.options.map((o) => (
+                                    <option key={o} value={o}>{t(`stepFieldOptions.${o}`, { defaultValue: o })}</option>
+                                  ))}
+                                </select>
+                              );
+                            }
                             return (
                               <input
                                 key={f.key}
@@ -598,6 +631,15 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
                             );
                           })}
                         </div>
+                        <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none" title={t('editorModal.optionalHint')}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(s.optional)}
+                            onChange={(e) => updateStep(i, { optional: e.target.checked })}
+                            className="w-3 h-3 accent-primary"
+                          />
+                          {t('editorModal.optional')}
+                        </label>
                       </div>
                       <button onClick={() => removeStep(i)} title={t('editorModal.removeStep')} className="mt-0.5 shrink-0 w-7 h-7 grid place-items-center rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><X className="w-3.5 h-3.5" /></button>
                     </div>
@@ -651,6 +693,8 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
         const stepLabel = t(`stepTypes.${data.type}`, { defaultValue: data.type });
         if (data.status === 'running') setLog((l) => [...l, { level: 'INFO', msg: t('runModal.logStepRunning', { label: stepLabel, summary: stepSummary(data.step || {}, t) }) }]);
         else if (data.status === 'error') setLog((l) => [...l, { level: 'ERROR', msg: t('runModal.logStepError', { label: stepLabel, error: data.error || t('runModal.logStepFailed') }) }]);
+        // An optional step that didn't apply — worth showing, but it is not a failure.
+        else if (data.status === 'skipped') setLog((l) => [...l, { level: 'WARN', msg: t('runModal.logStepSkipped', { label: stepLabel, error: data.error || '' }) }]);
       } else if (data.kind === 'done') {
         setPhase('done');
         setSummary({ ok: data.ok, ran: data.ran, total: data.total, aborted: data.aborted });
