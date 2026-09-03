@@ -238,13 +238,25 @@
       ['username', /user[\s_-]*name|\buser\b|login|handle|nickname/, 'username'],
       ['phone', /phone|mobile|\btel\b|cell/, 'tel'],
       ['dateOfBirth', /birth|\bdob\b/, 'bday'],
+      // MUST precede addressLine1: a "Company address" input that carries
+      // autocomplete="street-address" or a digit 1 would otherwise be claimed by
+      // addressLine1 and receive the persona's HOME street. No autocomplete token —
+      // HTML has none for a company address (the spec expresses it as `organization`
+      // + `street-address` in one section), and borrowing 'street-address' here would
+      // steal every ordinary personal address field.
+      ['companyAddress', /(compan(?:y|ies)|organi[sz]ation|employer|business|firm|office)[\s_-]*(?:street[\s_-]*)?(?:address|addr|street|location)/, ''],
       ['addressLine1', /address[\s_-]*(line)?[\s_-]*1|street|^address$|addr1/, 'address-line1'],
       ['addressLine2', /address[\s_-]*(line)?[\s_-]*2|apt|suite|\bunit\b|addr2/, 'address-line2'],
       ['city', /\bcity\b|town|locality/, 'address-level2'],
       ['state', /\bstate\b|province|region/, 'address-level1'],
       ['zipCode', /\bzip\b|postal|postcode/, 'postal-code'],
       ['country', /country|nation/, 'country'],
-      ['company', /company|organi[sz]ation|employer|business/, 'organization']
+      // Guarded: the old bare /company|.../ matched ANY string containing "company",
+      // so on a form with both "Company name" and "Company address" this rule claimed
+      // whichever came first in DOM order and — because take() consumes one input per
+      // key — the other was never revisited and stayed blank. Refuse address-ish
+      // fields outright; companyAddress above handles those.
+      ['company', /^(?!.*(?:address|street|addr\d|\baddr\b))(?=.*(?:company|organi[sz]ation|employer|business))/, 'organization']
     ];
 
     // A header/site SEARCH box must never receive persona data.
@@ -387,6 +399,7 @@
       //    (Chromium) — real keydown/keyup with isTrusted:true. Otherwise fall back
       //    to in-page synthetic typing (e.g. Firefox, or if the bridge errors).
       var filled = 0;
+      var fillFailed = 0; // fields the backend could not verify — reported, not hidden
       var trusted = (typeof window.__sgPersonaFillPlan === 'function');
       if (trusted && matches.length) {
         var plan = matches.map(function (m, idx) {
@@ -402,11 +415,24 @@
         // issued; it authorizes exactly one password fill on the server side.
         var _fillToken = null;
         try { if (typeof window.__sgPersonaBeginFill === 'function') { var _g = await window.__sgPersonaBeginFill(); _fillToken = _g && _g.token; } } catch (e) {}
+        var failedMap = null; // plan index -> true, for fields that did not take
         try {
           var r = await sgCall('__sgPersonaFillPlan', plan, _fillToken);
           filled = (r && typeof r.filled === 'number') ? r.filled : matches.length;
+          fillFailed = (r && typeof r.failed === 'number') ? r.failed : 0;
+          if (r && Object.prototype.toString.call(r.failedIdx) === '[object Array]') {
+            failedMap = {};
+            for (var fi = 0; fi < r.failedIdx.length; fi++) failedMap[r.failedIdx[fi]] = true;
+          }
         } catch (e) { trusted = false; }
-        matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} try { filledEls.add(m.el); } catch (e) {} });
+        // Only mark a field as done when the backend VERIFIED the value landed in it.
+        // Adding every matched element unconditionally is what stopped the multi-step
+        // observer from ever retrying a field that silently failed to fill.
+        matches.forEach(function (m, idx) {
+          try { m.el.removeAttribute('data-sgfill'); } catch (e) {}
+          if (failedMap && failedMap[idx]) return; // leave it retryable
+          try { filledEls.add(m.el); } catch (e) {}
+        });
       }
       if (!trusted) {
         // Fallback in-page typing (Firefox, or if the CDP bridge errored). On Firefox
@@ -440,11 +466,23 @@
         if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable — could not fill the password on this page.'); }
       }
       if (!opts.onlyEmpty) {
-        toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.') : 'No matching fields found on this page.');
+        // Report the real outcome. A partial fill used to be indistinguishable from a
+        // complete one, so scrolling mid-fill looked like it had worked.
+        if (filled && fillFailed) {
+          toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + ', but ' + fillFailed + ' did not take — click Autofill again to finish.');
+        } else if (filled) {
+          toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.');
+        } else if (fillFailed) {
+          toast('Could not fill this form — nothing was entered. Try again without scrolling.');
+        } else {
+          toast('No matching fields found on this page.');
+        }
         // Auto mark-used: once the requested fields are filled, mark this identity as
         // used on this site so it isn't offered here again (it moves to "reuse"). If the
         // mark bridge is unavailable, fall back to showing the manual "mark used" button.
-        if (filled > 0) {
+        // Only on a CLEAN fill — burning the identity after a partial one left the user
+        // with a half-filled form and no way to be offered that persona again.
+        if (filled > 0 && fillFailed === 0) {
           var _marked = await markSelectedUsed(true);
           if (!_marked) footer.hidden = false;
         } else {
