@@ -20,7 +20,8 @@
     "sign:firefox-ext": "node scripts/build-firefox-ext.mjs && npx --yes web-ext sign --source-dir src/firefox-extension --artifacts-dir build/firefox-ext --channel unlisted --ignore-files README.md",
     "check:deps": "node scripts/check-deps.js",
     "test": "node --test \"test/**/*.test.js\"",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "build:testing": "prisma generate && electron-builder --win --x64 --config electron-builder.testing.js"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

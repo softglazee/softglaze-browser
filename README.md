@@ -107,6 +107,26 @@ Build output is written to:
 dist_installer/
 ```
 
+### Testing build
+
+```bash
+npm run build:testing
+```
+
+Packages the same source under a separate identity so it can be installed alongside a
+production build and tested without disturbing it. Output goes to
+`dist_installer_testing/`.
+
+The testing build installs as **SoftGlaze Browser Testing**, gets its own uninstall
+entry, and — because Electron derives its user-data path from the packaged `name` —
+keeps its database, profile folders and downloaded browsers in
+`%APPDATA%/softglaze-browser-testing`. It cannot read or write the production
+workspace, and there is no flag for the tester to remember. Its update feed is stripped
+so it can never auto-update itself into a production release.
+
+Only identity is overridden (see `electron-builder.testing.js`); everything else is
+inherited from the `build` block in `package.json`, so the two builds cannot drift.
+
 ## Local data locations
 
 The app stores runtime data under Electron's `userData` path:
