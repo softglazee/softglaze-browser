@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MonitorDown, Download, Check, Loader2, RefreshCcw, Cloud, Globe, Flame, HardDrive, Pause, Play, AlertTriangle } from 'lucide-react';
+import { MonitorDown, Download, Check, Loader2, RefreshCcw, Cloud, Globe, Flame, HardDrive, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -92,6 +92,7 @@ export default function BrowsersPage() {
   const [items, setItems] = useState([]);          // Chrome versions
   const [ffItems, setFfItems] = useState([]);      // Firefox versions
   const [firefox, setFirefox] = useState(null);    // Firefox detection status { installed, path }
+  const [antidetect, setAntidetect] = useState(null); // fingerprint-chromium engine status
   const [loading, setLoading] = useState(true);
   const [ffLoading, setFfLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -102,14 +103,16 @@ export default function BrowsersPage() {
   const load = useCallback(async () => {
     setErr('');
     try {
-      const [res, ff, ffList] = await Promise.all([
+      const [res, ff, ad, ffList] = await Promise.all([
         softglazeApi.browsers.listAvailable(),
         softglazeApi.browsers.firefoxStatus().catch(() => ({ installed: false })),
+        softglazeApi.browsers.antidetectEngineStatus().catch(() => null),
         softglazeApi.browsers.firefoxList().catch(() => ({ items: [] }))
       ]);
       if (!mounted.current) return;
       setItems(Array.isArray(res?.items) ? res.items : []);
       setFirefox(ff);
+      setAntidetect(ad);
       setFfItems(Array.isArray(ffList?.items) ? ffList.items : []);
     } catch (e) {
       setErr(e.message || t('errors.catalogUnreachable'));
@@ -124,10 +127,12 @@ export default function BrowsersPage() {
   useEffect(() => {
     const id = setInterval(async () => {
       try {
-        const [chromeRes, ffRes] = await Promise.all([
+        const [chromeRes, ffRes, adRes] = await Promise.all([
           softglazeApi.browsers.downloadStatus().catch(() => ({ downloads: [] })),
-          softglazeApi.browsers.firefoxDownloadStatus().catch(() => ({ downloads: [] }))
+          softglazeApi.browsers.firefoxDownloadStatus().catch(() => ({ downloads: [] })),
+          softglazeApi.browsers.antidetectEngineStatus().catch(() => null)
         ]);
+        if (adRes) setAntidetect(adRes);
         let anyDone = false;
 
         const cList = chromeRes?.downloads || [];
@@ -170,6 +175,13 @@ export default function BrowsersPage() {
     setFfItems((prev) => prev.map((it) => (it.major === major ? { ...it, download: { state: 'queued', percent: 0, major } } : it)));
     try { await softglazeApi.browsers.firefoxDownload(String(major)); }
     catch (e) { setErr(e.message || t('errors.downloadFailed')); }
+  }
+
+  async function startAntidetectDownload() {
+    setErr('');
+    setAntidetect((prev) => ({ ...(prev || {}), installed: false, state: 'resolving', percent: 0 }));
+    try { await softglazeApi.browsers.antidetectEngineDownload(); }
+    catch (e) { setErr(e.message || t('errors.downloadFailed', 'Download failed.')); }
   }
 
   async function pauseChrome(version) {
@@ -234,6 +246,55 @@ export default function BrowsersPage() {
       </div>
 
       {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400">{err}</div>}
+
+      {/* Anti-detect engine (fingerprint-chromium) — the native-spoofing Chromium */}
+      <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
+        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
+          <div className="w-10 h-10 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #06b6d4 12%, transparent)', border: '1px solid color-mix(in srgb, #06b6d4 22%, transparent)' }}>
+            <ShieldCheck className="w-5 h-5 text-cyan-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold text-foreground">Anti-detect engine</h3>
+              {antidetect?.installed
+                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><Check className="w-3 h-3" /> Installed</span>
+                : <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Not installed</span>}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">fingerprint-chromium — spoofs canvas / WebGL / UA / platform / timezone natively, hides webdriver, blocks the WebRTC leak. Turn it on in Settings → Browser.</p>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-elevated border border-border">
+            <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: antidetect?.installed ? 'color-mix(in srgb, #10b981 12%, transparent)' : 'color-mix(in srgb, #06b6d4 12%, transparent)', border: `1px solid ${antidetect?.installed ? 'color-mix(in srgb, #10b981 22%, transparent)' : 'color-mix(in srgb, #06b6d4 22%, transparent)'}` }}>
+              {antidetect?.installed ? <HardDrive className="w-[18px] h-[18px] text-emerald-400" /> : <Cloud className="w-[18px] h-[18px] text-cyan-400" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">fingerprint-chromium</span>
+                <span className="text-[11px] font-mono text-muted-foreground">{antidetect?.version || '148.0.7778.215'}</span>
+              </div>
+              {antidetect && !antidetect.installed && ['resolving', 'downloading', 'extracting'].includes(antidetect.state) && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-card overflow-hidden max-w-[280px]">
+                    <div className="h-full rounded-full transition-all duration-300" style={{ width: `${antidetect.percent || 0}%`, background: 'var(--primary)' }} />
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">{antidetect.state === 'extracting' ? 'installing' : `${antidetect.percent || 0}%`}</span>
+                </div>
+              )}
+              {antidetect?.state === 'error' && <p className="text-[11px] text-red-400 mt-1 truncate">{antidetect.error}</p>}
+            </div>
+            {antidetect?.installed ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0"><Check className="w-3.5 h-3.5" /> {t('row.ready')}</span>
+            ) : antidetect && ['resolving', 'downloading', 'extracting'].includes(antidetect.state) ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {antidetect.state === 'extracting' ? 'Installing' : 'Downloading'}</span>
+            ) : (
+              <button onClick={startAntidetectDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white shadow-lg shrink-0" style={{ background: 'linear-gradient(135deg, #06b6d4, color-mix(in srgb, #06b6d4 70%, #000))', boxShadow: '0 8px 20px -8px #06b6d4' }}>
+                <Download className="w-3.5 h-3.5" /> Download (~180 MB)
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* FlowerBrowser (Firefox) section */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">

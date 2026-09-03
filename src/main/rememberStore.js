@@ -53,16 +53,25 @@ function write(blob) {
 
 // Read + unseal the blob, or null when absent/unreadable. Never throws.
 function read() {
+  const fp = filePath();
   try {
-    const fp = filePath();
-    if (!fs.existsSync(fp)) return null;
+    if (!fs.existsSync(fp)) return null; // no remembered credential — the normal case
+    // OS crypto down THIS boot (rare/transient) — KEEP the blob and retry next launch;
+    // do NOT delete a possibly-good credential over a temporary keychain hiccup.
     if (!isAvailable()) return null;
     const buf = fs.readFileSync(fp);
     const json = safeStorage.decryptString(buf);
     const blob = JSON.parse(json);
     return blob && typeof blob === 'object' && blob.kind ? blob : null;
   } catch (e) {
-    console.error('[rememberStore] read failed:', e && e.message);
+    // The file EXISTS and the keychain IS available, yet it won't decrypt/parse — the blob
+    // is corrupt or was sealed under a different OS crypto context (roaming profile, Windows
+    // account change). It can NEVER work, so delete it and self-heal: otherwise every boot
+    // re-attempts, fails, and shows the gate forever with no way to recover. A fresh login
+    // re-seals a good one. (Distinct from the "absent"/"unavailable" returns above, which
+    // must not delete anything.)
+    console.error('[rememberStore] stored credential is unusable — clearing it to self-heal:', e && e.message);
+    try { fs.unlinkSync(fp); } catch (e2) { /* best-effort */ }
     return null;
   }
 }

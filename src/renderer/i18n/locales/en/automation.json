@@ -23,7 +23,12 @@
     "scroll": "Scroll",
     "wait": "Wait",
     "move": "Move mouse",
-    "hover": "Hover"
+    "hover": "Hover",
+    "select": "Select dropdown option",
+    "waitFor": "Wait for element",
+    "submit": "Submit form",
+    "check": "Check / uncheck",
+    "clear": "Clear field"
   },
   "stepFields": {
     "goto": {
@@ -62,6 +67,33 @@
       "selectorPlaceholder": ".menu",
       "ms": "Dwell ms",
       "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Selector",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Option (value, label or index)",
+      "valuePlaceholder": "Plumbing",
+      "by": "Match by"
+    },
+    "waitFor": {
+      "selector": "Selector",
+      "selectorPlaceholder": ".dashboard",
+      "state": "State",
+      "timeout": "Timeout ms",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Form or field selector",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "State"
+    },
+    "clear": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"email\"]"
     }
   },
   "stepSummary": {
@@ -148,7 +180,9 @@
     "errors": {
       "name": "Give the macro a name.",
       "save": "Could not save macro."
-    }
+    },
+    "optional": "Optional",
+    "optionalHint": "If this step fails, log it and carry on instead of failing the run."
   },
   "runModal": {
     "ariaLabel": "Macro run: {{name}}",
@@ -172,7 +206,8 @@
     "close": "Close",
     "errors": {
       "run": "Could not run macro."
-    }
+    },
+    "logStepSkipped": "skipped {{label}} (optional) - {{error}}"
   },
   "parallel": {
     "states": {
@@ -316,5 +351,15 @@
     "minutes": "{{count}} min",
     "sites_one": "{{count}} site",
     "sites_other": "{{count}} sites"
+  },
+  "stepFieldOptions": {
+    "auto": "Auto",
+    "value": "Value",
+    "label": "Label",
+    "index": "Index",
+    "visible": "Visible",
+    "hidden": "Hidden",
+    "checked": "Checked",
+    "unchecked": "Unchecked"
   }
 }

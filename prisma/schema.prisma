@@ -370,6 +370,12 @@ model Profile {
   // no unproxied-UDP leak). Enable only on trusted UDP-isolating proxies (SOCKS5).
   enableQuic Boolean @default(false)
 
+  // Per-profile native anti-detect engine (fingerprint-chromium). Default false = use
+  // standard Chrome. When true, this Chrome-family profile launches on the anti-detect
+  // engine regardless of the global Settings toggle (the global toggle still applies to
+  // profiles that leave this false).
+  antidetectEngine Boolean @default(false)
+
   // Advanced (extensions / sync / browser settings)
   advancedExt         String?
   advancedSync        String?

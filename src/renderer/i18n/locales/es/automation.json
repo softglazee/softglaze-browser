@@ -23,7 +23,12 @@
     "scroll": "Desplazar",
     "wait": "Esperar",
     "move": "Mover ratón",
-    "hover": "Pasar el cursor"
+    "hover": "Pasar el cursor",
+    "select": "Seleccionar opción de lista",
+    "waitFor": "Esperar elemento",
+    "submit": "Enviar formulario",
+    "check": "Marcar / desmarcar",
+    "clear": "Vaciar campo"
   },
   "stepFields": {
     "goto": {
@@ -62,6 +67,33 @@
       "selectorPlaceholder": ".menu",
       "ms": "ms de permanencia",
       "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Selector",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Opción (valor, etiqueta o índice)",
+      "valuePlaceholder": "Fontanería",
+      "by": "Coincidir por"
+    },
+    "waitFor": {
+      "selector": "Selector",
+      "selectorPlaceholder": ".dashboard",
+      "state": "Estado",
+      "timeout": "Tiempo límite ms",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Selector del formulario o campo",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "Estado"
+    },
+    "clear": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"email\"]"
     }
   },
   "stepSummary": {
@@ -148,7 +180,9 @@
     "errors": {
       "name": "Ponle un nombre a la macro.",
       "save": "No se pudo guardar la macro."
-    }
+    },
+    "optional": "Opcional",
+    "optionalHint": "Si este paso falla, se registra y la ejecución continúa en lugar de fallar."
   },
   "runModal": {
     "ariaLabel": "Ejecución de macro: {{name}}",
@@ -172,7 +206,8 @@
     "close": "Cerrar",
     "errors": {
       "run": "No se pudo ejecutar la macro."
-    }
+    },
+    "logStepSkipped": "omitido {{label}} (opcional) - {{error}}"
   },
   "parallel": {
     "states": {
@@ -316,5 +351,15 @@
     "minutes": "{{count}} min",
     "sites_one": "{{count}} sitio",
     "sites_other": "{{count}} sitios"
+  },
+  "stepFieldOptions": {
+    "auto": "Automático",
+    "value": "Valor",
+    "label": "Etiqueta",
+    "index": "Índice",
+    "visible": "Visible",
+    "hidden": "Oculto",
+    "checked": "Marcado",
+    "unchecked": "Desmarcado"
   }
 }

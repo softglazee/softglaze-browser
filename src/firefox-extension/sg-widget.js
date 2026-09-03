@@ -12,8 +12,28 @@
     var BRAND = '#3DC6DA';
     var personas = [];   // available personas for this host (loaded on open)
     var selected = null; // the persona last filled (for "mark used")
+    var filledEls = new WeakSet(); // fields WE autofilled (multi-step re-runs skip them)
+    var multiStepObserver = null;  // watches for later wizard steps to appear
     var isOpen = false;
     var loading = false;
+
+    // Bridge call. Chromium injects window.__sgBridge (native CDP binding first,
+    // sentinel-fetch RPC fallback for engines like fingerprint-chromium that kill
+    // the binding on navigation). The Firefox extension instead defines the raw
+    // window.__sgPersona* functions and has NO __sgBridge, so fall back to calling
+    // the named function directly there — one widget source, both browsers.
+    function sgCall(name) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      if (typeof window.__sgBridge === 'function') return window.__sgBridge.apply(window, arguments);
+      var fn = window[name];
+      if (typeof fn === 'function') {
+        try { return Promise.resolve(fn.apply(window, args)); } catch (e) { return Promise.reject(e); }
+      }
+      return Promise.reject(new Error('bridge unavailable'));
+    }
+    function sgHas(name) {
+      return typeof window.__sgBridge === 'function' || typeof window[name] === 'function';
+    }
 
     var delay = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var rand = function (min, max) { return Math.floor(min + Math.random() * (max - min)); };
@@ -21,9 +41,13 @@
 
     // --- Shadow-DOM host -----------------------------------------------------
     var host = document.createElement('div');
-    host.id = '__sg-persona-host';
+    // audit C2: a stable id + an OPEN shadow root let page JS do
+    // document.getElementById('__sg-persona-host').shadowRoot and drive the widget's
+    // buttons to exfiltrate the vault (3 lines of script, no user interaction). Use a
+    // random id and a CLOSED root so the page can neither find it reliably nor reach in.
+    host.id = '__sg_' + Math.random().toString(36).slice(2, 10);
     host.style.cssText = 'all:initial;position:fixed;z-index:2147483647;bottom:18px;right:18px;';
-    var root = host.attachShadow({ mode: 'open' });
+    var root = host.attachShadow({ mode: 'closed' });
     root.innerHTML =
       '<style>' +
       ':host{all:initial}' +
@@ -105,7 +129,7 @@
     if (document.body) startObserving(); else document.addEventListener('DOMContentLoaded', startObserving);
 
     // --- open / load ---------------------------------------------------------
-    fab.addEventListener('click', function () { toggle(); });
+    fab.addEventListener('click', function (e) { if (!e.isTrusted) return; toggle(); }); // audit C2: ignore page-scripted clicks
     async function toggle() {
       isOpen = !isOpen;
       panel.hidden = !isOpen;
@@ -115,7 +139,7 @@
       body.innerHTML = '<div class="empty">Loading identities…</div>';
       footer.hidden = true;
       try {
-        var res = await window.__sgPersonaList(location.href);
+        var res = await sgCall('__sgPersonaList', location.href);
         personas = Array.isArray(res) ? res : (res && Array.isArray(res.personas) ? res.personas : []);
       } catch (e) { personas = []; }
       loading = false;
@@ -141,7 +165,7 @@
         em.textContent = p.email || p.username || '';
         btn.appendChild(nm); btn.appendChild(em);
         if (p.label) { var lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = p.label; btn.appendChild(lb); }
-        btn.addEventListener('click', function () { fillWith(p); });
+        btn.addEventListener('click', function (e) { if (!e.isTrusted) return; fillWith(p).then(function () { armMultiStep(p); }); }); // audit C2: only a real user click fills
         body.appendChild(btn);
       });
     }
@@ -223,9 +247,82 @@
       ['company', /company|organi[sz]ation|employer|business/, 'organization']
     ];
 
-    async function fillWith(p) {
+    // A header/site SEARCH box must never receive persona data.
+    function isSearchDecoy(el) {
+      if ((el.type || '').toLowerCase() === 'search') return true;
+      return /\bsearch\b|search[\s_-]*(field|box|query|term)|\bquery\b|(^|[^a-z])term([^a-z]|$)/.test(attrStr(el));
+    }
+    // Would a persona plausibly target this field? Used only to SCORE forms.
+    function isMatchable(el) {
+      var t = (el.type || '').toLowerCase();
+      if (t === 'password' || t === 'email' || t === 'tel') return true;
+      var s = attrStr(el);
+      for (var i = 0; i < PLAN.length; i++) { if (PLAN[i][1].test(s)) return true; }
+      return /full[\s_-]*name|your[\s_-]*name|^name$|\bname\b/.test(s);
+    }
+    // Choose the ONE best target form to fill, so the persona never lands in a header
+    // search box or a footer newsletter/subscribe field (the reported bug where the
+    // name/email went into "Sign up to receive..."). Fillable inputs are grouped by
+    // their owning <form> (form-less inputs share a group for SPA layouts), search
+    // decoys are dropped, and each group is scored by password-presence + how many
+    // fields a persona could match. The richest group wins; if nothing scores we fall
+    // back to every non-decoy field (previous whole-page behavior).
+    function collectTargetFields() {
+      var everything = Array.prototype.slice.call(document.querySelectorAll('input,textarea,select'))
+        .filter(fillable).filter(function (e) { return !isSearchDecoy(e); });
+      if (everything.length < 2) return everything;
+      var groups = [];
+      var byForm = new Map();
+      for (var i = 0; i < everything.length; i++) {
+        var f = everything[i].form || null;
+        var g = byForm.get(f);
+        if (!g) { g = []; byForm.set(f, g); groups.push(g); }
+        g.push(everything[i]);
+      }
+      var best = null, bestScore = -1;
+      for (var k = 0; k < groups.length; k++) {
+        var fields = groups[k], score = 0;
+        for (var j = 0; j < fields.length; j++) {
+          if ((fields[j].type || '').toLowerCase() === 'password') score += 100;
+          if (isMatchable(fields[j])) score += 1;
+        }
+        if (score > bestScore) { bestScore = score; best = fields; }
+      }
+      return (best && bestScore > 0) ? best : everything;
+    }
+    // Multi-step forms (wizards, email-then-password, Ferguson-style 3-step signup):
+    // after the first fill, watch for the NEXT step's fields to appear and fill the
+    // ones still empty. Bounded (3 min), debounced, and only fires when a new matchable
+    // EMPTY field shows up — so it never fights the user or loops on SPA re-renders.
+    function armMultiStep(p) {
+      if (multiStepObserver || !p) return;
+      var pending = false;
+      function newEmptyFieldExists() {
+        var fs = collectTargetFields();
+        for (var i = 0; i < fs.length; i++) {
+          var e = fs[i];
+          if (filledEls.has(e) || e === document.activeElement) continue;
+          if (e.value && String(e.value).length) continue;
+          if (isMatchable(e)) return true;
+        }
+        return false;
+      }
+      var run = debounce(function () {
+        if (pending || !newEmptyFieldExists()) return;
+        pending = true;
+        fillWith(p, { onlyEmpty: true }).catch(function () {}).then(function () { pending = false; });
+      }, 500);
+      try {
+        multiStepObserver = new MutationObserver(run);
+        multiStepObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'aria-hidden'] });
+      } catch (e) { multiStepObserver = null; }
+      setTimeout(function () { if (multiStepObserver) { try { multiStepObserver.disconnect(); } catch (e) {} multiStepObserver = null; } }, 180000);
+    }
+
+    async function fillWith(p, opts) {
+      opts = opts || {};
       selected = p;
-      var all = Array.prototype.slice.call(document.querySelectorAll('input,textarea,select')).filter(fillable);
+      var all = collectTargetFields();
       var used = [];
       function take(pred) {
         for (var i = 0; i < all.length; i++) { if (used.indexOf(all[i]) >= 0) continue; if (pred(all[i])) { used.push(all[i]); return all[i]; } }
@@ -272,6 +369,20 @@
         for (var k = 0; k < pws.length; k++) { used.push(pws[k]); matches.push({ el: pws[k], kind: 'password', personaId: p.id }); }
       }
 
+      // Multi-step re-run: on a later wizard step only fill fields that are still
+      // empty, not currently focused, and not already filled by us — and never
+      // re-issue the password. Stops the observer from re-typing or fighting the user.
+      if (opts.onlyEmpty) {
+        matches = matches.filter(function (m) {
+          if (m.kind === 'password') return false;
+          if (m.el === document.activeElement) return false;
+          if (filledEls.has(m.el)) return false;
+          if (m.kind === 'select') return !m.el.value;
+          return !(m.el.value && String(m.el.value).length);
+        });
+        if (!matches.length) return;
+      }
+
       // 2) Fill. Prefer CDP trusted typing when the host exposes the bridge
       //    (Chromium) — real keydown/keyup with isTrusted:true. Otherwise fall back
       //    to in-page synthetic typing (e.g. Firefox, or if the bridge errors).
@@ -286,11 +397,16 @@
           if (m.kind === 'password') it.personaId = m.personaId; else it.value = m.value;
           return it;
         });
+        // audit C3: fetch a single-use fill token first. This runs inside the trusted
+        // widget click, so the transient user gesture is still active and the token is
+        // issued; it authorizes exactly one password fill on the server side.
+        var _fillToken = null;
+        try { if (typeof window.__sgPersonaBeginFill === 'function') { var _g = await window.__sgPersonaBeginFill(); _fillToken = _g && _g.token; } } catch (e) {}
         try {
-          var r = await window.__sgPersonaFillPlan(plan);
+          var r = await sgCall('__sgPersonaFillPlan', plan, _fillToken);
           filled = (r && typeof r.filled === 'number') ? r.filled : matches.length;
         } catch (e) { trusted = false; }
-        matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} });
+        matches.forEach(function (m) { try { m.el.removeAttribute('data-sgfill'); } catch (e) {} try { filledEls.add(m.el); } catch (e) {} });
       }
       if (!trusted) {
         // Fallback in-page typing (Firefox, or if the CDP bridge errored). On Firefox
@@ -313,52 +429,52 @@
             }
             if (!secretVal) { skippedSecret = true; continue; }
             await typeInto(m.el, secretVal);
-            filled++;
+            filled++; try { filledEls.add(m.el); } catch (e) {}
             await delay(100 + rand(0, 140));
             continue;
           }
           if (m.kind === 'select') setSelect(m.el, m.value); else await typeInto(m.el, m.value);
-          filled++;
+          filled++; try { filledEls.add(m.el); } catch (e) {}
           await delay(100 + rand(0, 140));
         }
         if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable — could not fill the password on this page.'); }
       }
-      if (filled > 0) {
-        // Auto-mark the identity as used once its fields are in — the user asked not to
-        // have to click "mark used" after every fill. Falls back to the manual footer
-        // button if the save fails, so nothing is ever silently lost.
-        var label = 'Filled ' + filled + ' field' + (filled === 1 ? '' : 's');
-        var marked = await markSelectedUsed(true);
-        toast(marked ? (label + ' · marked used') : (label + '. Review, then mark as used.'));
-        if (!marked) footer.hidden = false;
-      } else {
-        footer.hidden = false;
-        toast('No matching fields found on this page.');
+      if (!opts.onlyEmpty) {
+        toast(filled ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.') : 'No matching fields found on this page.');
+        // Auto mark-used: once the requested fields are filled, mark this identity as
+        // used on this site so it isn't offered here again (it moves to "reuse"). If the
+        // mark bridge is unavailable, fall back to showing the manual "mark used" button.
+        if (filled > 0) {
+          var _marked = await markSelectedUsed(true);
+          if (!_marked) footer.hidden = false;
+        } else {
+          footer.hidden = false;
+        }
+      } else if (filled) {
+        toast('Filled ' + filled + ' more field' + (filled === 1 ? '' : 's') + ' on this step.');
       }
     }
 
     // --- mark used -----------------------------------------------------------
-    // Marks the last-filled identity as used on this host. Called automatically after a
-    // successful fill, and by the footer button as a fallback. silent=true suppresses the
-    // toast for the automatic path. Returns true on success.
     async function markSelectedUsed(silent) {
-      if (!selected) return false;
-      markBtn.disabled = true;
+      if (!selected || !sgHas('__sgPersonaMarkUsed')) { if (!silent) toast('Autofill bridge unavailable.'); return false; }
+      var id = selected.id, host = location.hostname;
       try {
-        await window.__sgPersonaMarkUsed(selected.id, location.href);
-        if (!silent) toast('Marked as used on ' + location.hostname);
-        personas = personas.filter(function (x) { return x.id !== selected.id; });
+        await sgCall('__sgPersonaMarkUsed', id, location.href);
+        toast(silent ? ('Identity used on ' + host + ' — moved to Reuse.') : ('Marked as used on ' + host));
+        personas = personas.filter(function (x) { return x.id !== id; });
         selected = null;
         footer.hidden = true;
         renderList();
-        markBtn.disabled = false;
         return true;
-      } catch (e) {
-        if (!silent) toast('Could not save — try again.');
-        markBtn.disabled = false;
-        return false;
-      }
+      } catch (e) { if (!silent) toast('Could not save — try again.'); return false; }
     }
-    markBtn.addEventListener('click', function () { markSelectedUsed(false); });
+    markBtn.addEventListener('click', async function (e) {
+      if (!e.isTrusted) return; // audit C2: ignore page-scripted clicks
+      if (!selected) return;
+      markBtn.disabled = true;
+      await markSelectedUsed(false);
+      markBtn.disabled = false;
+    });
   } catch (e) { /* never break the host page */ }
 })();
