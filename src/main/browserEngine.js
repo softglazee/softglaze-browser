@@ -152,7 +152,13 @@ const PERSONA_FILL_MAX_TOTAL_CHARS = 4000; // whole-plan typing budget
 function toPublicPersona(p) {
   if (!p || typeof p !== 'object') return null;
   const { password, ...rest } = p;
-  return { ...rest, hasPassword: Boolean(password) };
+  // `rest` may ALREADY be the output of ipcHandlers' identically-named strip, in
+  // which case the `password` key is long gone and `Boolean(password)` is false.
+  // Recomputing blind clobbers a correct `hasPassword: true` into `false`, and the
+  // widget then silently never offers a password fill. Preserve an already-computed
+  // flag; keep the strip itself as defence in depth so a raw password can never
+  // reach page JS if the bridge is ever changed to hand one over.
+  return { ...rest, hasPassword: Boolean(password) || Boolean(rest.hasPassword) };
 }
 
 async function attachPersonaAutofill(targetPage) {
@@ -187,6 +193,7 @@ async function attachPersonaAutofill(targetPage) {
       const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
+      let failed = 0; // fields we could not verify — never counted as filled
       let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
       // audit C2 bypass: the page supplies both the selector AND the personaId, so a
       // hostile page could aim a password fill at its own hidden input and read the
@@ -211,47 +218,117 @@ async function attachPersonaAutofill(targetPage) {
         } catch (e) { /* empty set → refuse every secret */ }
         return allowedSecretIds;
       };
-      for (const item of items) {
+      // Plan index is reported back so the widget knows exactly WHICH fields did not
+      // take, and can leave those retryable instead of marking them done.
+      const failedIdx = [];
+      const markFailed = (i) => { failed += 1; failedIdx.push(i); };
+      for (let itemIdx = 0; itemIdx < items.length; itemIdx++) {
+        const item = items[itemIdx];
         const sel = item && item.sel;
-        if (!sel) continue;
+        if (!sel) { markFailed(itemIdx); continue; }
         let value;
         if (item.kind === 'password') {
           // Password value NEVER comes from the page — resolve it server-side by id,
           // but only when gesture-gated AND offered for this origin (see above).
           const pid = item.personaId != null ? String(item.personaId) : '';
-          if (!pid || typeof personaBridge.getSecret !== 'function') continue;
+          // Every refusal below leaves a password field EMPTY, so it must be reported
+          // as failed. Silently `continue`-ing here is what made a blocked password
+          // fill indistinguishable from a successful one.
+          if (!pid || typeof personaBridge.getSecret !== 'function') { markFailed(itemIdx); continue; }
           const allowed = await ensureAllowedSecretIds();
-          if (!allowed.has(pid)) continue;
+          if (!allowed.has(pid)) { markFailed(itemIdx); continue; }
           if (!secretCache.has(pid)) {
             try { const s = await personaBridge.getSecret(pid); secretCache.set(pid, (s && s.password != null) ? String(s.password) : ''); }
             catch (e) { secretCache.set(pid, ''); }
           }
           value = secretCache.get(pid);
-          if (!value) continue;
+          if (!value) { markFailed(itemIdx); continue; }
         } else {
           value = item.value != null ? String(item.value) : '';
           if (value.length > PERSONA_FILL_MAX_VALUE_LEN) value = value.slice(0, PERSONA_FILL_MAX_VALUE_LEN);
         }
         try {
           if (item.kind === 'select') {
-            await targetPage.select(sel, value).catch(() => {});
-            filled += 1;
+            // page.select() resolves the node by selector in the renderer and fires
+            // input+change itself — no geometry, so it is scroll-safe as-is.
+            let selOk = true;
+            await targetPage.select(sel, value).catch(() => { selOk = false; });
+            if (selOk) filled += 1; else markFailed(itemIdx);
             continue;
           }
           const el = await targetPage.$(sel);
-          if (!el) continue;
-          await el.click({ clickCount: 3 }).catch(() => {}); // focus + select any existing text (first keystroke overwrites)
+          if (!el) { markFailed(itemIdx); continue; }
+          // Focus the field the way a human would — a REAL trusted mouse click — but
+          // never at coordinates that may have gone stale.
+          //
+          // Two competing requirements:
+          //  * ANTI-DETECT: a focus event with no preceding mousedown/mouseup is a
+          //    behavioural signal. Bot detectors watch for input that arrives without
+          //    any pointer interaction, so a pure DOM .focus() is cheaper to spot.
+          //  * CORRECTNESS: puppeteer's click() reads getClientRects() (viewport
+          //    relative) and dispatches at those literal pixels several CDP round
+          //    trips later, and page.keyboard has no element target at all — it types
+          //    into whatever currently has focus. Scroll during that window and the
+          //    click lands on a different field, which then receives the whole value.
+          //
+          // Resolution: only take the coordinate path when the element is comfortably
+          // inside the viewport (so click() will not scroll and there is little room
+          // to miss), then VERIFY focus actually landed on the node we aimed at. Any
+          // failure falls back to geometry-free DOM focus, which cannot miss.
+          const inView = await el.evaluate((node) => {
+            try {
+              const r = node.getBoundingClientRect();
+              if (!r.width || !r.height) return false;
+              const vw = window.innerWidth || 0;
+              const vh = window.innerHeight || 0;
+              // Fully in view with a small margin, so a scroll mid-click is unlikely.
+              return r.top >= 8 && r.left >= 0 && r.bottom <= vh - 8 && r.right <= vw;
+            } catch (e) { return false; }
+          }).catch(() => false);
+
+          let focused = false;
+          if (inView) {
+            try {
+              await el.click({ clickCount: 3 }); // trusted mousedown/up + selects existing text
+              focused = await el.evaluate((node) => document.activeElement === node).catch(() => false);
+            } catch (e) { focused = false; } // out of view / occluded / detached
+          }
+          if (!focused) {
+            // Geometry-free fallback. Slightly weaker behaviourally, but it puts the
+            // value in the RIGHT field, which matters more than a missing mouse event.
+            focused = await el.evaluate((node) => {
+              try {
+                node.focus({ preventScroll: true });
+                if (typeof node.select === 'function') { try { node.select(); } catch (e) {} }
+                return document.activeElement === node;
+              } catch (e) { return false; }
+            }).catch(() => false);
+          }
+          // Focus did not land where we aimed — typing now would spray keystrokes into
+          // whatever else has focus. Skip the field and report it instead.
+          if (!focused) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
           const typed = charBudget > 0 ? value.slice(0, charBudget) : '';
+          if (!typed) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
           for (const ch of typed) {
             await targetPage.keyboard.type(ch, { delay: 50 + Math.floor(Math.random() * 100) });
           }
           charBudget -= typed.length;
+          // Confirm the characters actually landed in THIS element before claiming a
+          // fill. Length only — the value itself is never read back, so a password
+          // does not travel out of the page.
+          const landed = await el.evaluate((node, n) => {
+            try {
+              if (typeof node.value === 'string') return node.value.length >= n;
+              if (node.isContentEditable) return String(node.textContent || '').length >= n;
+              return false;
+            } catch (e) { return false; }
+          }, typed.length).catch(() => false);
           await el.evaluate((node) => { try { node.dispatchEvent(new Event('change', { bubbles: true })); if (node.blur) node.blur(); } catch (e) {} }).catch(() => {});
           await el.dispose().catch(() => {});
-          filled += 1;
-        } catch (e) { /* skip one field, keep going */ }
+          if (landed) filled += 1; else markFailed(itemIdx);
+        } catch (e) { markFailed(itemIdx); /* skip one field, keep going */ }
       }
-      return { ok: true, filled };
+      return { ok: true, filled, failed, failedIdx };
   };
 
   const personaHandlers = {
@@ -570,8 +647,23 @@ function localeToAcceptLanguage(locale) {
 function osTokens(os) {
   const value = String(os || 'Windows').toLowerCase();
   if (value.includes('mac')) return { uaPlatform: 'Macintosh; Intel Mac OS X 10_15_7', navPlatform: 'MacIntel', chPlatform: 'macOS', chVersion: '14.0.0' };
-  if (value.includes('linux')) return { uaPlatform: 'X11; Linux x86_64', navPlatform: 'Linux x86_64', chPlatform: 'Linux', chVersion: '' };
+  // iOS BEFORE the linux/android checks — an iOS value must never fall through.
+  //
+  // iOS is not deliverable on this engine: every real iOS browser is WebKit, and we
+  // are running Blink. A profile claiming iOS is betrayed by JS-engine behaviour, CSS
+  // support and the absence of WebKit quirks no matter what strings we set — so there
+  // is no coherent iOS token set to return. It used to hit the final `return` below
+  // and silently produce a WINDOWS DESKTOP identity, which is the worst outcome: the
+  // user believes they have an iPhone profile and every scanner sees Windows desktop.
+  // Android is the closest identity this engine CAN carry coherently (Blink, real
+  // mobile GPU pool, mobile deviceClass), so legacy and imported iOS profiles land
+  // there instead. iOS is no longer offered in the editor.
+  if (value.includes('ios') || value.includes('iphone') || value.includes('ipad')) {
+    console.warn('[SG][fp] profile OS "iOS" is not supported on a Chromium engine (real iOS browsers are WebKit); using an Android mobile identity instead so the profile is at least coherent.');
+    return { uaPlatform: 'Linux; Android 13; Pixel 7', navPlatform: 'Linux armv8l', chPlatform: 'Android', chVersion: '13.0.0' };
+  }
   if (value.includes('android')) return { uaPlatform: 'Linux; Android 13; Pixel 7', navPlatform: 'Linux armv8l', chPlatform: 'Android', chVersion: '13.0.0' };
+  if (value.includes('linux')) return { uaPlatform: 'X11; Linux x86_64', navPlatform: 'Linux x86_64', chPlatform: 'Linux', chVersion: '' };
   return { uaPlatform: 'Windows NT 10.0; Win64; x64', navPlatform: 'Win32', chPlatform: 'Windows', chVersion: '15.0.0' };
 }
 
@@ -797,40 +889,56 @@ function nativeGapScript(fp) {
   }
 }
 
-// Seed a native-engine profile with a default search provider (Ungoogled ships none,
-// so the address bar would not search) and the profile Do-Not-Track preference.
+// Seed a native-engine profile with the Do-Not-Track preference.
+//
+// This function USED to also seed a default search provider here, to work around
+// ungoogled-chromium shipping a fake "No Search" engine whose template is literally
+// `http://{searchTerms}` (so typing `softglaze` navigates to http://softglaze rather
+// than searching). That write was inert and has been removed: measured against
+// ungoogled 148, `default_search_provider_data.template_url_data` is a MAC-protected
+// (tracked) pref that Chromium keeps in `Secure Preferences` under `protection.macs`,
+// so a value planted in the unprotected `Preferences` file is never honoured. Three
+// mechanisms were tested against the real binary with throwaway profile dirs and ALL
+// were rejected:
+//   1. writing it to `Preferences`            -> key absent after launch (this code)
+//   2. seeding `Secure Preferences` with no
+//      protection block on a fresh dir        -> value cleared, Chromium re-MAC'd empty
+//   3. `search_provider_overrides` likewise   -> same, it is tracked too
+// Editing the `keywords` row directly also reverts: Chromium reconciles any row with
+// prepopulate_id != 0 against its builtin table on startup.
+// The remaining known-good mechanism is enterprise policy
+// (DefaultSearchProviderSearchURL), which bypasses MAC enforcement — but it is a
+// user/machine-wide registry change affecting every Chromium-branded browser, and it
+// makes the browser advertise "Managed by your organization", which is itself an
+// anti-detect signal. That trade-off is a product decision, so it is deliberately NOT
+// made here. Leaving dead code that appears to fix it is what let this ship twice.
 async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
   try {
+    // Nothing to write unless the profile states a DNT preference. null means "leave
+    // alone", matching stock Chrome's default of not sending the header at all.
+    if (!(fpConfig && (fpConfig.dnt === '1' || fpConfig.dnt === '0'))) return;
+
     const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
     let prefs = {};
-    try { prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8')); } catch (e) { prefs = {}; }
+    let hadFile = false;
+    try {
+      prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8'));
+      hadFile = true;
+    } catch (e) {
+      // Distinguish "no file yet" (fine, we create one) from "file exists but did not
+      // parse" (a partial write or corruption). Falling back to {} and writing in the
+      // second case overwrote the profile's ENTIRE Chromium preferences with just this
+      // one key — silent, total loss of that profile's settings.
+      if (e && e.code !== 'ENOENT') return;
+      prefs = {};
+    }
+    if (hadFile && (!prefs || typeof prefs !== 'object' || Array.isArray(prefs))) return;
 
-    const existing = prefs.default_search_provider_data && prefs.default_search_provider_data.template_url_data;
-    if (!(existing && existing.url)) {
-      prefs.default_search_provider_data = {
-        template_url_data: {
-          short_name: 'Google',
-          keyword: 'google.com',
-          url: 'https://www.google.com/search?q={searchTerms}',
-          suggestions_url: 'https://www.google.com/complete/search?output=chrome&q={searchTerms}',
-          favicon_url: 'https://www.google.com/favicon.ico',
-          safe_for_autoreplace: false,
-          is_active: 1,
-          prepopulate_id: 1,
-          date_created: '13300000000000000',
-          last_modified: '13300000000000000'
-        }
-      };
-    }
-    // Only touch DNT when the profile states a preference. null means "leave alone",
-    // which matches stock Chrome's default of not sending the header at all.
-    if (fpConfig && (fpConfig.dnt === '1' || fpConfig.dnt === '0')) {
-      prefs.enable_do_not_track = fpConfig.dnt === '1';
-    }
+    prefs.enable_do_not_track = fpConfig.dnt === '1';
 
     await fs.mkdir(path.dirname(prefsPath), { recursive: true });
     await fs.writeFile(prefsPath, JSON.stringify(prefs));
-  } catch (e) { /* best-effort — the New Tab search box still works */ }
+  } catch (e) { /* best-effort — DNT is not worth failing a launch over */ }
 }
 
 function fingerprintScript(fp) {
@@ -2217,8 +2325,59 @@ function buildFingerprintConfig(profile, opts) {
   // "Real" recommendation).
   const isCustomGpu = String(profile.webglMetadata || 'Real').toLowerCase() === 'custom'
     && profile.webglVendor && !/^(real|auto|default|based)/i.test(String(profile.webglVendor));
-  const webglVendor = isCustomGpu ? profile.webglVendor : null;
-  const webglRenderer = isCustomGpu ? (profile.webglRenderer || null) : null;
+
+  // CROSS-OS OVERRIDE (anti-detect critical).
+  //
+  // "Real" is the right default only while the profile claims the OS it is actually
+  // running on. The moment it claims a DIFFERENT one, reporting the true GPU is a hard,
+  // deterministic contradiction: a profile whose navigator.platform is 'MacIntel'
+  // reporting `ANGLE (NVIDIA ... Direct3D11 ...)` is Windows, full stop — every scanner
+  // reads it in one line. That is far worse than the main-thread/service-worker GPU
+  // mismatch the "Real" default exists to avoid.
+  //
+  // So when the claimed OS differs from the host, spoof the GPU regardless of the
+  // toggle, using the coherent per-OS value the generator already stored (MAC_GPU is
+  // Metal/Apple, LINUX_GPU is OpenGL/Mesa, ANDROID_GPU is Mali). Falling back to a
+  // sensible default for that OS when the profile has none.
+  //
+  // NOTE this only removes the single most obvious tell. A cross-OS profile is still
+  // betrayed by host fonts, canvas raster and the real TLS/JS-engine behaviour — see
+  // fingerprintGenerator's OS-selection comment, which is why the GENERATOR defaults to
+  // the host OS. The editor still lets a user pick otherwise; this keeps that choice
+  // from being trivially detectable, it does not make it safe.
+  const HOST_OS_NAME = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows';
+  const claimedOs = (() => {
+    const v = String(profile.os || '').toLowerCase();
+    if (v.includes('mac')) return 'macOS';
+    if (v.includes('android')) return 'Android';
+    if (v.includes('ios') || v.includes('iphone') || v.includes('ipad')) return 'iOS';
+    if (v.includes('linux') || v.includes('ubuntu') || v.includes('debian') || v.includes('fedora') || v.includes('arch') || v.includes('chromeos')) return 'Linux';
+    if (v.includes('win')) return 'Windows';
+    return HOST_OS_NAME; // blank / Auto => the host, which is coherent by definition
+  })();
+  const crossOs = claimedOs !== HOST_OS_NAME;
+
+  const FALLBACK_GPU = {
+    macOS: ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)'],
+    Linux: ['Google Inc. (Intel)', 'ANGLE (Intel, Mesa Intel(R) UHD Graphics 630 (CFL GT2), OpenGL 4.6)'],
+    Android: ['Google Inc. (ARM)', 'ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)'],
+    iOS: ['Apple Inc.', 'ANGLE (Apple, ANGLE Metal Renderer: Apple A16 GPU, Unspecified Version)'],
+    Windows: ['Google Inc. (Intel)', 'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)']
+  };
+  // A stored value is only usable if it is a real string, not the "Auto"/"Real" sentinel.
+  const storedVendor = profile.webglVendor && !/^(real|auto|default|based)/i.test(String(profile.webglVendor))
+    ? profile.webglVendor : null;
+  const storedRenderer = profile.webglRenderer && !/^(real|auto|default|based)/i.test(String(profile.webglRenderer))
+    ? profile.webglRenderer : null;
+
+  let webglVendor = isCustomGpu ? profile.webglVendor : null;
+  let webglRenderer = isCustomGpu ? (profile.webglRenderer || null) : null;
+  if (crossOs && !webglVendor) {
+    const fb = FALLBACK_GPU[claimedOs] || FALLBACK_GPU.Windows;
+    webglVendor = storedVendor || fb[0];
+    webglRenderer = storedRenderer || fb[1];
+    console.log(`[SG][fp] cross-OS profile (claims ${claimedOs} on ${HOST_OS_NAME}) — forcing a coherent GPU instead of the host's: ${webglRenderer}`);
+  }
 
   const dntRaw = String(profile.doNotTrack || '').toLowerCase();
   const dnt = /^(on|enable|enabled|1|true|yes)$/.test(dntRaw) ? '1'
@@ -2344,7 +2503,11 @@ async function launchProfileSession(options = {}) {
     // lookup entirely so only the profile's manual values apply.
     geoMatchEnabled = true,
     // Global custom start-page links (Start Links page), rendered on the detection start page.
-    startPageLinks = []
+    startPageLinks = [],
+    // THIS profile's own saved start links (Profile.startupUrls), opened as real tabs
+    // at launch. Distinct from startPageLinks above, which are global anchors on the
+    // start page that the user still has to click.
+    startupUrls = []
   } = options;
 
   // Dedupe (audit: double-launch orphans Chrome). A profile has exactly ONE
@@ -3186,6 +3349,26 @@ const rootCdp = await browser.target().createCDPSession();
   // back to stock Chrome (which happens when the binary is not downloaded yet).
   console.log(`[SG][launch] antidetect=${usingAntidetect} cft=${usingCft} realChrome=${Boolean(chosenBrowser && chosenBrowser.isReal)} minCdp=${browserSettings.minimizeCdpFootprint === true} binary=${String((chosenBrowser && chosenBrowser.exePath) || '').split(/[\\/]/).pop()}`);
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+
+  // Open this profile's own saved start links. Routed through hOpenTab so proxy auth
+  // is attached BEFORE each navigation — a bare browser.newPage() here would stall
+  // every one of these tabs on a 407 for authenticated proxies.
+  if (Array.isArray(startupUrls) && startupUrls.length) {
+    let rest = startupUrls;
+    // When the detection start page is off, the first tab is a throwaway about:blank —
+    // reuse it for the first link instead of leaving a stray blank tab behind.
+    if (startupMode !== 'detection') {
+      const first = startupUrls[0];
+      if (typeof first === 'string' && /^https?:/i.test(first)) {
+        if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
+        await page.goto(first, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+        rest = startupUrls.slice(1);
+      }
+    }
+    for (const u of rest) await hOpenTab(u);
+    // Leave the user looking at the first tab rather than the last one opened.
+    try { await page.bringToFront(); } catch (e) { /* best-effort */ }
+  }
 
   const sessionId = String(profileId || crypto.randomUUID());
   // The CDP/WebDriver debugging endpoint — handed to the local REST API so users

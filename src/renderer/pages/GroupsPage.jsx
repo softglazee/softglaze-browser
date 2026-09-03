@@ -179,10 +179,20 @@ export default function GroupsPage() {
   };
 
   // --- TAGS ---
-  const commitTags = async (profile, nextTags) => {
+  // Uses the dedicated tags-only handler, NOT profiles.update().
+  //
+  // profiles.update() rebuilds the whole record through extractFingerprintData(),
+  // which turns ABSENT fields into destructive values rather than leaving them alone:
+  // platformAccounts -> null, browserSettingsJson -> null, syncItemsJson -> null,
+  // userAgent -> 'Auto', enableQuic -> false, antidetectEngine -> false. The scrub
+  // that follows only deletes `undefined`, never `null`, so all of that is written.
+  // Sending the partial { id, tags } payload from here therefore erased the profile's
+  // saved platform usernames and passwords and silently switched off its anti-detect
+  // engine every time someone added or removed a single tag chip.
+  const commitTag = async (profile, tag, mode) => {
     setBusy(true); setError('');
     try {
-      await softglazeApi.profiles.update({ id: profile.id, tags: nextTags });
+      await softglazeApi.profiles.tagAssign([profile.id], tag, mode);
       await loadAll();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -193,11 +203,11 @@ export default function GroupsPage() {
     setTagEditFor(null); setTagInput('');
     if (!t) return;
     if ((profile.tags || []).includes(t)) return;
-    await commitTags(profile, [...(profile.tags || []), t]);
+    await commitTag(profile, t, 'add');
   };
 
   const handleRemoveTag = async (profile, tag) => {
-    await commitTags(profile, (profile.tags || []).filter((x) => x !== tag));
+    await commitTag(profile, tag, 'remove');
   };
 
   const removeTagLabel = t('tags.remove');

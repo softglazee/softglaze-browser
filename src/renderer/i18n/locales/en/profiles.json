@@ -113,7 +113,8 @@
     "cookiePlaceholder": "Formats: JSON, Netscape, Name=Value",
     "loadCookies": "Load this profile's saved cookies",
     "remarks": "Remarks / Notes",
-    "remarksPlaceholder": "Optional notes for this profile..."
+    "remarksPlaceholder": "Optional notes for this profile...",
+    "crossOsWarning": "This profile claims {{os}} but runs on {{host}}. Host fonts, canvas raster and the real TLS/JS-engine behaviour still say {{host}}, so scanners can spot the mismatch. Use {{host}} unless you specifically need a cross-OS profile."
   },
   "proxy": {
     "setting": "Proxy setting",
@@ -300,6 +301,10 @@
     "selected": "{{count}} selected",
     "launching": "Launching {{done}}/{{total}}…",
     "launch": "Launch",
+    "queue": "Queue",
+    "queueTitle": "Feed the selected profiles through a queue: keep a fixed number open at a time and start the next one as each is closed.",
+    "queueWidth": "at a time",
+    "queueWidthTitle": "How many profiles stay open at the same time. The next one opens as soon as you close one.",
     "synchronize": "Synchronize",
     "synchronizeTitle": "Launch as Master + Slave mirrored windows (Premium)",
     "close": "Close",

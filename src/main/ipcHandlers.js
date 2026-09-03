@@ -128,6 +128,7 @@ const CHANNELS = Object.freeze({
   PROFILE_ACCESS_LIST: 'profile:access-list',
   PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress', // main -> renderer stream
   PROFILE_BULK_LAUNCH_CONTROL: 'profile:bulk-launch-control', // renderer -> main (pause/resume/stop the queue)
+  PROFILE_BULK_LAUNCH_STATUS: 'profile:bulk-launch-status', // renderer -> main (re-attach to a queue already running)
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
@@ -2845,6 +2846,22 @@ function normalizeStartupUrls(value) {
   return urls.length ? urls.join('\n') : null;
 }
 
+// Sanity cap so a pasted list cannot spawn hundreds of tabs on a single launch.
+const MAX_STARTUP_TABS = 20;
+// Read side of normalizeStartupUrls — splits the stored newline-joined string back
+// into the tabs to open at launch. Kept next to the writer so the two cannot drift.
+// Until this existed, Profile.startupUrls was a WRITE-ONLY column: every creation
+// path (single, batch and CSV import) saved it correctly and no launch path ever
+// read it, so a profile's custom links simply never opened.
+function parseStartupUrls(value) {
+  if (!value) return [];
+  return String(value)
+    .split(/[\r\n]+/)
+    .map((u) => String(u || '').trim())
+    .filter(Boolean)
+    .slice(0, MAX_STARTUP_TABS);
+}
+
 // ---------------------------------------------------------------------------
 // SERVER-SIDE BATCH GENERATOR. Owns the batch-level invariants that per-profile
 // create() calls cannot: (1) a UNIQUE proxy per profile (no proxy on two profiles),
@@ -3065,6 +3082,34 @@ async function updateProfile(payload) {
   if (!existing) throw new Error('Profile not found.');
 
   const data = { ...extractFingerprintData(input) }; // Inject all React payload fields
+
+  // extractFingerprintData is shared with create(), where "absent" legitimately means
+  // "use the default" — so it maps a missing field to a CONCRETE value (null / false /
+  // 'Auto') rather than undefined. On an UPDATE that is destructive: the scrub further
+  // down only deletes `undefined`, so a PARTIAL payload silently overwrites real data.
+  // A caller sending just { id, tags } erased the profile's saved platform usernames
+  // and passwords and switched its anti-detect engine off. On update, absent must mean
+  // UNCHANGED. The full profile editor always sends these, so it is unaffected.
+  const PATCH_SAFE = [
+    ['platformAccounts', 'platformAccounts'],   // saved usernames + passwords
+    ['browserSettingsJson', 'browserSettings'], // per-profile browser settings
+    ['syncItemsJson', 'syncItems'],
+    ['userAgent', 'userAgent'],
+    ['enableQuic', 'enableQuic'],
+    ['antidetectEngine', 'antidetectEngine'],
+    ['randomFingerprint', 'randomFingerprint'],
+    // These are `input.x !== false`, so an absent field forces them back ON and
+    // silently overrides a deliberate per-profile choice to disable that noise.
+    ['canvasNoise', 'canvasNoise'],
+    ['webglImageNoise', 'webglImageNoise'],
+    ['audioContextNoise', 'audioContextNoise'],
+    ['clientRectsNoise', 'clientRectsNoise'],
+    ['speechVoicesNoise', 'speechVoicesNoise']
+  ];
+  for (const [dataKey, inputKey] of PATCH_SAFE) {
+    if (input[inputKey] === undefined) delete data[dataKey];
+  }
+
   if (input.title !== undefined) data.title = requiredString(input.title, 'Profile title');
   if (input.notes !== undefined) data.notes = optionalString(input.notes);
   if (input.systemProxyBehavior !== undefined) data.systemProxyBehavior = validateSystemProxyBehavior(input.systemProxyBehavior);
@@ -3095,9 +3140,23 @@ async function updateProfile(payload) {
     data.proxyInfoString = buildProxyInfoString(proxy);
   }
 
+  // dataDirName is IMMUTABLE once a profile exists. It names the on-disk Chromium
+  // user-data directory AND seeds the fingerprint (browserEngine: seedFromString of
+  // this value drives canvas noise, media-device ids and fonts). Nothing in the app
+  // moves the folder, so changing it silently:
+  //   * abandons the real directory and mkdir's a fresh empty one at the next launch
+  //     — every cookie, logged-in session, saved password and extension state gone
+  //   * re-seeds the fingerprint, so the profile stops looking like the same machine
+  // The profile editor sent `dataDirName: <title>` on every save, so simply RENAMING
+  // a profile destroyed it. (A profile whose dir carries a uniqueness suffix would
+  // even flip on a no-change save, since sanitize(title) never equals "Title-1a2b3c".)
+  // bulkRenameProfiles already gets this right and only touches the display title.
+  // Renaming is a display-name operation: `title` changes, the directory does not.
   if (input.dataDirName !== undefined) {
     const requestedDir = sanitizeDataDirName(input.dataDirName);
-    if (requestedDir !== existing.dataDirName) data.dataDirName = await ensureUniqueDataDirName(db, requestedDir, id);
+    if (requestedDir !== existing.dataDirName) {
+      console.warn(`[SG][profile:update] ignoring dataDirName change for #${id} (${existing.dataDirName} -> ${requestedDir}); the on-disk profile and its fingerprint seed are immutable`);
+    }
   }
 
   // Undefined properties from extractFingerprintData will be ignored by Prisma
@@ -3238,7 +3297,28 @@ function emitBulkLaunchProgress(data) {
 // Live control state for an in-flight bulk launch (queue). The Profiles page can
 // pause (hold before the next profile), resume, or stop (abort the rest) a running
 // queue. Single queue at a time — a fresh bulkLaunchProfiles resets this.
-let bulkLaunchState = { active: false, paused: false, aborted: false };
+// Live state of the Profiles-page bulk launch queue. `total`/`done`/`ids` used to be
+// function-locals of bulkLaunchProfiles, so the main process could not answer "what is
+// running right now?" — and since progress is broadcast-only, a renderer that remounted
+// (user navigated away and back) heard only FUTURE frames and lost the Stop/Pause/Resume
+// controls while the queue kept launching browsers. They live here so the page can
+// re-attach on mount via getBulkLaunchStatus().
+let bulkLaunchState = { runId: null, active: false, paused: false, aborted: false, total: 0, done: 0, ids: [] };
+
+// Snapshot for a renderer re-attaching to a queue already in flight.
+function getBulkLaunchStatus() {
+  return {
+    runId: bulkLaunchState.runId,
+    active: Boolean(bulkLaunchState.active),
+    paused: Boolean(bulkLaunchState.paused),
+    aborted: Boolean(bulkLaunchState.aborted),
+    total: Number(bulkLaunchState.total) || 0,
+    done: Number(bulkLaunchState.done) || 0,
+    width: Number(bulkLaunchState.width) || 1,
+    queue: Boolean(bulkLaunchState.queue),
+    ids: Array.isArray(bulkLaunchState.ids) ? bulkLaunchState.ids.slice() : []
+  };
+}
 
 // Pause/resume/stop the running bulk-launch queue. Fail-safe: unknown actions and
 // no-active-queue are no-ops that just report state back.
@@ -3285,11 +3365,17 @@ async function bulkLaunchProfiles(payload) {
   let done = 0;
   let cursor = 0;
   // Reset queue control state for this run so pause/resume/stop apply to it.
-  bulkLaunchState = { active: true, paused: false, aborted: false };
-  emitBulkLaunchProgress({ phase: 'start', total, done });
+  bulkLaunchState = { runId: crypto.randomUUID(), active: true, paused: false, aborted: false, total, done: 0, ids: ids.slice(), width, queue: false };
+  emitBulkLaunchProgress({ phase: 'start', total, done, width });
 
-  // Detect if we are in Queue Mode (concurrency = 1)
-  const isQueueMode = cap === 1;
+  // Queue mode: each worker holds its slot until the user CLOSES that browser, so
+  // exactly `width` profiles stay open at a time and the next one opens as soon as a
+  // slot frees. This used to be hardcoded to `cap === 1` (strictly one at a time);
+  // the caller can now state the width, e.g. { queue: true, concurrency: 3 } keeps
+  // three open and feeds the rest in as they close. Absent the explicit flag, keep the
+  // historical behaviour where a concurrency of 1 implied a queue.
+  const isQueueMode = input.queue !== undefined ? Boolean(input.queue) : (cap === 1);
+  bulkLaunchState.queue = isQueueMode;
 
   const worker = async () => {
     while (cursor < ids.length) {
@@ -3314,10 +3400,12 @@ async function bulkLaunchProfiles(payload) {
         }
 
         done += 1;
+        bulkLaunchState.done = done;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         result.errors.push({ id, message });
         done += 1;
+        bulkLaunchState.done = done;
         emitBulkLaunchProgress({ phase: 'launched', id, total, done, ok: false, message });
       }
     }
@@ -3913,6 +4001,10 @@ async function launchProfile(payload) {
         proxy: ffProxy,
         proxyInfoString: ffRotated ? null : (useFfProxy ? profile.proxyInfoString : null),
         startUrl: input.startUrl || 'about:blank',
+        // The profile's own custom links. `startUrl` stays the explicit per-launch
+        // override (the warmer and automation pass one); these are the user's saved
+        // links and open as additional tabs.
+        startupUrls: parseStartupUrls(profile.startupUrls),
         profileRoot: ffRoot,
         profile,
         autofillEnabled: ffAutofill
@@ -3967,6 +4059,10 @@ async function launchProfile(payload) {
       proxy: launchProxy,
       proxyInfoString: launchProxyInfo,
       startUrl: input.startUrl || 'about:blank',
+      // The profile's own custom links. `startUrl` stays the explicit per-launch
+      // override (the warmer and automation pass one); these are the user's saved
+      // links and open as additional tabs.
+      startupUrls: parseStartupUrls(profile.startupUrls),
       profileRoot,
       headless: Boolean(input.headless), // hidden warm-ups (Cookie Warmer) launch headless; normal launches stay visible
       profile, // full fingerprint config applied at launch
@@ -5182,7 +5278,7 @@ async function toggleExtensionGlobal(payload) {
 const PERSONA_TEXT_FIELDS = Object.freeze([
   'label', 'firstName', 'lastName', 'email', 'username', 'password', 'phone',
   'dateOfBirth', 'addressLine1', 'addressLine2', 'city', 'state', 'zipCode',
-  'country', 'company'
+  'country', 'company', 'companyAddress'
 ]);
 // Required at the model level (NOT NULL). Coerced to '' if a sparse import row
 // omits them, so a bulk import never aborts on a single missing cell.
@@ -5247,6 +5343,7 @@ function serializePersona(p) {
     zipCode: p.zipCode || null,
     country: p.country || null,
     company: p.company || null,
+    companyAddress: p.companyAddress || null,
     usedOnUrls: used,
     usedCount: used.length,
     createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : (p.createdAt || null),
@@ -9825,6 +9922,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_BULK_PURGE, bulkPurgeProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH, bulkLaunchProfiles);
   registerHandler(CHANNELS.PROFILE_BULK_LAUNCH_CONTROL, controlBulkLaunch);
+  registerHandler(CHANNELS.PROFILE_BULK_LAUNCH_STATUS, async () => getBulkLaunchStatus());
   registerHandler(CHANNELS.PROFILE_BULK_CLOSE, bulkCloseSessions);
   registerHandler(CHANNELS.PROFILE_BULK_ASSIGN_PROXY, bulkAssignProxies);
   registerHandler(CHANNELS.PROFILE_ACCESS_GRANT, grantProfileAccess);

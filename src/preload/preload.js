@@ -67,6 +67,7 @@ const CHANNELS = Object.freeze({
   PROFILE_ACCESS_LIST: 'profile:access-list',
   PROFILE_BULK_LAUNCH_PROGRESS: 'profile:bulk-launch-progress',
   PROFILE_BULK_LAUNCH_CONTROL: 'profile:bulk-launch-control',
+  PROFILE_BULK_LAUNCH_STATUS: 'profile:bulk-launch-status',
   PROFILE_ANALYZE_LEAKS: 'profile:analyze-leaks',
   PROFILE_EXPORT_COOKIES: 'profile:export-cookies',
   PROFILE_IMPORT_COOKIES: 'profile:import-cookies',
@@ -335,6 +336,10 @@ const api = Object.freeze({
     bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
     bulkLaunch: (ids, opts) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids, ...(opts && typeof opts === 'object' ? opts : {}) }),
     bulkLaunchControl: (action) => invoke(CHANNELS.PROFILE_BULK_LAUNCH_CONTROL, { action }),
+    // Re-attach to a bulk queue already running in main (page remounted after the
+    // user navigated away). Progress is broadcast-only, so without this the page
+    // can never rebuild the current state and the queue controls stay hidden.
+    bulkLaunchStatus: () => invoke(CHANNELS.PROFILE_BULK_LAUNCH_STATUS),
     bulkAssignProxy: (payload) => invoke(CHANNELS.PROFILE_BULK_ASSIGN_PROXY, payload),
     tagAssign: (ids, tag, mode) => invoke(CHANNELS.PROFILE_TAG_ASSIGN, { ids, tag, mode }),
     bulkRename: (payload) => invoke(CHANNELS.PROFILE_BULK_RENAME, payload),
@@ -609,5 +614,12 @@ const api = Object.freeze({
     }
   })
 });
+
+// The host OS this copy runs on, as a plain value — no IPC round trip. The profile
+// editor uses it to warn when a profile is given a DIFFERENT OS than the machine: a
+// string-only OS spoof is betrayed by the host's fonts, canvas raster and real
+// TLS/JS-engine behaviour, so cross-OS profiles fail scanners. Same mapping the
+// fingerprint generator uses for its host-OS default.
+api.hostOs = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows';
 
 contextBridge.exposeInMainWorld('softglaze', api);

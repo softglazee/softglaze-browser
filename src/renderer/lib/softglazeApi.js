@@ -86,6 +86,13 @@ export const softglazeApi = {
     bulkPurge: (ids, options) => getSoftglazeApi().profiles.bulkPurge(ids, options),
     bulkLaunch: (ids, opts) => getSoftglazeApi().profiles.bulkLaunch(ids, opts),
     bulkLaunchControl: (action) => getSoftglazeApi().profiles.bulkLaunchControl(action),
+    // Re-attach to a bulk queue already in flight. Tolerates an older preload that
+    // lacks the channel (returns an inactive snapshot) rather than throwing on mount.
+    bulkLaunchStatus: () => {
+      const api = getSoftglazeApi().profiles;
+      if (typeof api.bulkLaunchStatus !== 'function') return Promise.resolve({ active: false });
+      return api.bulkLaunchStatus();
+    },
     bulkAssignProxy: (payload) => getSoftglazeApi().profiles.bulkAssignProxy(payload),
     tagAssign: (ids, tag, mode) => getSoftglazeApi().profiles.tagAssign(ids, tag, mode),
     bulkRename: (payload) => getSoftglazeApi().profiles.bulkRename(payload),

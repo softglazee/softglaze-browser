@@ -481,19 +481,52 @@ function generateFingerprint(opts = {}) {
 // Returns { status: 'pass'|'warn'|'fail', detail }.
 function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
   const renderer = String(webglRenderer || '');
+  const osStr = String(os || '');
   const isMobile = String(deviceClass || '').toLowerCase() === 'mobile'
-    || /android/i.test(String(os || ''));
+    || /android|ios|iphone|ipad/i.test(osStr);
   if (!renderer) return { status: 'warn', detail: 'No WebGL renderer set — GPU coherence not verified.' };
-  const mobileGpu = /mali|adreno|powervr|apple gpu/i.test(renderer);
+  const mobileGpu = /mali|adreno|powervr|apple gpu|apple a\d/i.test(renderer);
   const desktopGpu = /direct3d|d3d11|geforce|nvidia|radeon|\bamd\b|intel|metal renderer|apple m\d|opengl 4/i.test(renderer);
+
+  // OS <-> GRAPHICS-API COHERENCE, checked FIRST because it is the loudest tell.
+  //
+  // A renderer string names the graphics backend, and each OS has exactly one:
+  // Direct3D/D3D11 is Windows-only, Metal is Apple-only, Mesa is Linux-only. So a
+  // profile claiming macOS while reporting `ANGLE (NVIDIA ... Direct3D11 ...)` reads
+  // as Windows in a single line, whatever navigator.platform says. The old check only
+  // compared mobile-vs-desktop and so reported PASS for exactly that case — the most
+  // common way a cross-OS profile gets burned, and invisible in the Leak Check.
+  const api = {
+    d3d: /direct3d|d3d11|\bd3d\b/i.test(renderer),
+    metal: /metal renderer|apple m\d|apple a\d/i.test(renderer),
+    mesa: /mesa/i.test(renderer)
+  };
+  const claims = {
+    windows: /win/i.test(osStr),
+    mac: /mac|os ?x/i.test(osStr),
+    linux: /linux|ubuntu|debian|fedora|arch|chromeos/i.test(osStr)
+  };
+  if (claims.mac && api.d3d) {
+    return { status: 'fail', detail: 'macOS profile reports a Direct3D (Windows-only) GPU — the host OS leaks through. Set WebGL Metadata to Custom with an Apple/Metal renderer, or use the host OS.' };
+  }
+  if (claims.linux && api.d3d) {
+    return { status: 'fail', detail: 'Linux profile reports a Direct3D (Windows-only) GPU — the host OS leaks through. Use a Mesa/OpenGL renderer, or the host OS.' };
+  }
+  if (claims.windows && (api.metal || api.mesa)) {
+    return { status: 'fail', detail: `Windows profile reports a ${api.metal ? 'Metal (Apple-only)' : 'Mesa (Linux-only)'} GPU — an obvious mismatch.` };
+  }
+  if (isMobile && api.d3d) {
+    return { status: 'fail', detail: 'Mobile profile reports a Direct3D (Windows desktop) GPU — an obvious mismatch.' };
+  }
+
   if (isMobile) {
     return mobileGpu
       ? { status: 'pass', detail: 'Mobile profile reports a mobile GPU.' }
-      : { status: 'fail', detail: 'Mobile (Android) profile reports a desktop GPU — an obvious mismatch.' };
+      : { status: 'fail', detail: 'Mobile profile reports a desktop GPU — an obvious mismatch.' };
   }
   return (mobileGpu && !desktopGpu)
     ? { status: 'fail', detail: 'Desktop profile reports a mobile GPU — an obvious mismatch.' }
-    : { status: 'pass', detail: 'Desktop profile reports a desktop GPU.' };
+    : { status: 'pass', detail: 'Desktop profile reports a GPU consistent with its OS.' };
 }
 
 // Stable signature of the user-visible hardware/identity combo. The batch generator

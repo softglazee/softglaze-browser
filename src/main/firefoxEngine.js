@@ -282,7 +282,11 @@ function ipLocaleFromGeo(geo) {
 
 async function launchFirefoxProfile(options = {}) {
   const {
-    profileId, title, dataDirName, profileRoot, profile = {}, startUrl = 'about:blank'
+    profileId, title, dataDirName, profileRoot, profile = {}, startUrl = 'about:blank',
+    // This profile's own saved start links (Profile.startupUrls). Opened as extra
+    // tabs alongside the start page. Was previously never passed at all, so a
+    // profile's custom links never opened on Firefox either.
+    startupUrls = []
   } = options;
 
   const wantVersion = profile.browserVersion || options.browserVersion || 'Auto';
@@ -400,6 +404,11 @@ async function launchFirefoxProfile(options = {}) {
   // Firefox's first-run is suppressed via prefs (buildUserJs) instead.
   const args = ['-profile', userDataDir, '-no-remote', '-new-instance', '-wait-for-browser'];
   if (openUrl) args.push('-url', openUrl);
+  // The profile's own start links. Firefox opens each bare URL argument in its own
+  // tab. Restricted to http(s) so nothing else can be smuggled onto the command line.
+  for (const u of (Array.isArray(startupUrls) ? startupUrls : [])) {
+    if (typeof u === 'string' && /^https?:\/\//i.test(u)) args.push(u);
+  }
 
   // stdio:'ignore' — nothing reads Firefox's stdout/stderr, and an undrained pipe can
   // fill its buffer and stall the child on Windows.

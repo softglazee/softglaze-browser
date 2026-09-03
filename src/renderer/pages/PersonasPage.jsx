@@ -44,6 +44,7 @@ const FIELD_DEFS = [
   { key: 'zipCode', label: 'Zip / Postal', aliases: ['zip', 'zip code', 'zipcode', 'postal code', 'postcode', 'postal'] },
   { key: 'country', label: 'Country', aliases: ['country', 'nation', 'country/region'] },
   { key: 'company', label: 'Company', aliases: ['company', 'organization', 'organisation', 'employer', 'business'] },
+  { key: 'companyAddress', label: 'Company address', aliases: ['company address', 'companyaddress', 'business address', 'office address', 'work address', 'company street', 'organization address', 'organisation address'] },
   { key: 'label', label: 'Batch label', aliases: ['label', 'batch', 'batch label', 'tag', 'group'] }
 ];
 const FIELD_LABEL = Object.fromEntries(FIELD_DEFS.map((f) => [f.key, f.label]));
@@ -53,13 +54,13 @@ const FORM_GROUPS = [
   { title: 'Identity', fields: ['firstName', 'lastName', 'dateOfBirth', 'phone'] },
   { title: 'Account', fields: ['email', 'username', 'password'] },
   { title: 'Address', fields: ['addressLine1', 'addressLine2', 'city', 'state', 'zipCode', 'country'] },
-  { title: 'Meta', fields: ['company', 'label'] }
+  { title: 'Meta', fields: ['company', 'companyAddress', 'label'] }
 ];
 
 const EMPTY_FORM = {
   id: null, label: '', firstName: '', lastName: '', email: '', username: '', password: '',
   phone: '', dateOfBirth: '', addressLine1: '', addressLine2: '', city: '', state: '',
-  zipCode: '', country: '', company: ''
+  zipCode: '', country: '', company: '', companyAddress: ''
 };
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -70,21 +71,31 @@ function autoGuessMapping(headers) {
   const used = new Set();
   const map = {};
   const nh = headers.map(norm);
+  for (const def of FIELD_DEFS) map[def.key] = '';
+  const claim = (def, idx) => { map[def.key] = headers[idx]; used.add(headers[idx]); };
+  // Pass 1 — EXACT alias, for every field, before any fuzzy matching happens.
+  // The two passes used to be interleaved per field, so a field earlier in
+  // FIELD_DEFS could fuzzy-steal a header that a later field matched exactly. The
+  // fuzzy test is bidirectional (`h.includes(na) || na.includes(h)`), so a
+  // "Company address" column was swallowed by addressLine1 — whose 'address' alias
+  // is a substring of it — and the company address silently imported into the
+  // persona's HOME street on every bulk import.
   for (const def of FIELD_DEFS) {
-    let idx = -1;
+    if (map[def.key]) continue;
     for (const a of def.aliases) {
       const na = norm(a);
       const i = nh.findIndex((h, j) => h === na && !used.has(headers[j]));
-      if (i >= 0) { idx = i; break; }
+      if (i >= 0) { claim(def, i); break; }
     }
-    if (idx < 0) {
-      for (const a of def.aliases) {
-        const na = norm(a);
-        const i = nh.findIndex((h, j) => h && !used.has(headers[j]) && (h.includes(na) || na.includes(h)));
-        if (i >= 0) { idx = i; break; }
-      }
+  }
+  // Pass 2 — fuzzy contains, only over headers no exact match already claimed.
+  for (const def of FIELD_DEFS) {
+    if (map[def.key]) continue;
+    for (const a of def.aliases) {
+      const na = norm(a);
+      const i = nh.findIndex((h, j) => h && !used.has(headers[j]) && (h.includes(na) || na.includes(h)));
+      if (i >= 0) { claim(def, i); break; }
     }
-    if (idx >= 0) { map[def.key] = headers[idx]; used.add(headers[idx]); } else { map[def.key] = ''; }
   }
   return map;
 }
@@ -256,7 +267,8 @@ export default function PersonasPage() {
       id: p.id, label: p.label || '', firstName: p.firstName || '', lastName: p.lastName || '',
       email: p.email || '', username: p.username || '', password: p.password || '', phone: p.phone || '',
       dateOfBirth: p.dateOfBirth || '', addressLine1: p.addressLine1 || '', addressLine2: p.addressLine2 || '',
-      city: p.city || '', state: p.state || '', zipCode: p.zipCode || '', country: p.country || '', company: p.company || ''
+      city: p.city || '', state: p.state || '', zipCode: p.zipCode || '', country: p.country || '',
+      company: p.company || '', companyAddress: p.companyAddress || ''
     });
     setFormError('');
     setFormOpen(true);

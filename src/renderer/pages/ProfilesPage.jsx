@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Pause, Square, Activity, Loader2, Download, KeyRound, Combine, Lock } from 'lucide-react';
+import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Pause, Square, Activity, Loader2, Download, KeyRound, Combine, Lock, AlertTriangle } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -144,12 +144,19 @@ const generateRamGb = (cores) => (Number(cores) >= 12 ? pickOne(['16', '32']) : 
 const CHROME_VERSIONS = ['Auto', ...Array.from({ length: 30 }, (_, i) => String(149 - i))];
 const FIREFOX_VERSIONS = ['Auto', ...Array.from({ length: 32 }, (_, i) => String(151 - i))];
 
+// iOS is deliberately NOT offered. Every real iOS browser is WebKit and this engine is
+// Blink, so an iOS profile is betrayed by JS-engine behaviour, CSS support and missing
+// WebKit quirks no matter what strings are set — there is no coherent iOS identity to
+// ship. Worse, the launch path had no iOS branch at all, so picking it silently
+// produced a WINDOWS DESKTOP fingerprint: the user believed they had an iPhone profile
+// while every scanner saw Windows. Android is the mobile identity this engine can
+// actually carry coherently. Existing/imported iOS profiles are mapped to Android at
+// launch (see osTokens in browserEngine.js).
 const OS_PLATFORMS = [
   { id: 'Windows', icon: Monitor, versions: ['All Windows', '11', '10', '8', '7'], logo: '/logos/windows.png' },
   { id: 'macOS', icon: Apple, versions: ['All macOS', '26', '15', '14', '13', '12', '11', '10'], logo: '/logos/macos.png' },
   { id: 'Linux', icon: Terminal, versions: ['All Linux', 'Ubuntu', 'Debian', 'Fedora', 'Arch', 'ChromeOS'], logo: '/logos/linux.png' },
-  { id: 'Android', icon: Smartphone, versions: ['All Android', '15', '14', '13', '12', '11', '10', '9'], logo: '/logos/android.png' },
-  { id: 'iOS', icon: Smartphone, versions: ['All iOS', '26', '18', '17', '16', '15', '14', '13', '12'], logo: '/logos/ios.png' }
+  { id: 'Android', icon: Smartphone, versions: ['All Android', '15', '14', '13', '12', '11', '10', '9'], logo: '/logos/android.png' }
 ];
 
 const USER_AGENT_GROUPS = [
@@ -542,7 +549,11 @@ export default function ProfilesPage() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [launchQueue, setLaunchQueue] = useState(false); // true = launch selected one-by-one (queue)
+  const [launchQueue, setLaunchQueue] = useState(false); // true = feed the selection through a queue
+  // How many profiles the queue keeps open at once. Each slot is held until the user
+  // closes that browser, then the next profile fills it. 1 = the original strict
+  // one-at-a-time behaviour.
+  const [launchQueueWidth, setLaunchQueueWidth] = useState(1);
   const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [launchPaused, setLaunchPaused] = useState(false); // queue paused between profiles
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
@@ -616,6 +627,11 @@ export default function ProfilesPage() {
   const tabs = ['General', 'Proxy', 'Platform', 'Fingerprint', 'Advanced']; 
 
   const currentOsObj = OS_PLATFORMS.find(o => o.id === pd.os) || OS_PLATFORMS[0];
+  // Host OS comes from preload as a plain value (no IPC). Warn when the profile
+  // claims a different OS than the machine it runs on — the generator defaults to
+  // the host for exactly this reason.
+  const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
+  const crossOsWarning = Boolean(pd.os) && pd.os !== hostOs;
   // Prefer the real installed Chrome majors (newest first) for SunBrowser; fall
   // back to the static list when none are detected on disk.
   const installedMajors = useMemo(() => {
@@ -696,11 +712,44 @@ export default function ProfilesPage() {
       if (!p) return;
       if (p.phase === 'start') { setLaunchProgress({ done: 0, total: p.total }); setLaunchPaused(false); return; }
       if (p.phase === 'launched') { setLaunchProgress((prev) => ({ done: p.done, total: p.total, paused: prev ? prev.paused : false })); refreshSessions(); return; }
-      if (p.phase === 'control') { setLaunchPaused(Boolean(p.paused)); setLaunchProgress((prev) => (prev ? { ...prev, paused: Boolean(p.paused) } : prev)); return; }
+      if (p.phase === 'control') {
+        setLaunchPaused(Boolean(p.paused));
+        // Build a fresh object when there is no previous state. Bailing out on
+        // `prev === null` meant a page that had remounted could never recover the
+        // progress badge from a pause/resume frame.
+        setLaunchProgress((prev) => (prev
+          ? { ...prev, paused: Boolean(p.paused) }
+          : { done: Number(p.done) || 0, total: Number(p.total) || 0, paused: Boolean(p.paused) }));
+        return;
+      }
       if (p.phase === 'done') { setLaunchProgress(null); setLaunchPaused(false); refreshSessions(); }
     });
     return off;
   }, [refreshSessions]);
+
+  // Re-attach to a bulk queue still running in the main process (the user navigated
+  // away and came back). Progress is a broadcast-only stream, so a remounted page
+  // hears only FUTURE frames — and in Queue mode the next frame does not arrive until
+  // the current browser is closed. Without this the Stop/Pause/Resume controls vanish
+  // while the queue keeps launching profiles, leaving no way to stop it. Runs on mount.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const st = await softglazeApi.profiles.bulkLaunchStatus();
+        if (!alive || !st || !st.active) return;
+        setLaunchProgress({ done: Number(st.done) || 0, total: Number(st.total) || 0, paused: Boolean(st.paused) });
+        setLaunchPaused(Boolean(st.paused));
+        // Restore the queue settings too, so the controls reflect the run actually in
+        // flight rather than this fresh component's defaults.
+        if (st.queue) { setLaunchQueue(true); setLaunchQueueWidth(Number(st.width) || 1); }
+        // Restore the queued ids too, so the selection-gated bulk bar reappears with
+        // the same profiles the run was started for.
+        if (Array.isArray(st.ids) && st.ids.length) setSelectedIds(new Set(st.ids));
+      } catch (e) { /* no queue running, or an older preload without the channel */ }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   // Load saved filter presets (stored in global Settings).
   useEffect(() => {
@@ -922,8 +971,17 @@ export default function ProfilesPage() {
         userAgent: finalUA
       };
       
-      if (isEditing) await softglazeApi.profiles.update({ id: pd.id, ...payload });
-      else await softglazeApi.profiles.create(payload);
+      if (isEditing) {
+        // Never send dataDirName on an update. It names the on-disk Chromium profile
+        // and seeds the fingerprint, and nothing moves the folder — so passing the
+        // (possibly renamed) title here abandoned the profile's cookies, sessions and
+        // saved logins and re-seeded its fingerprint. The backend now ignores it too;
+        // this keeps a rename from logging a warning on every save. Only `title` moves.
+        const { dataDirName, ...updatePayload } = payload;
+        await softglazeApi.profiles.update({ id: pd.id, ...updatePayload });
+      } else {
+        await softglazeApi.profiles.create(payload);
+      }
       
       closeEditor(); await loadData();
     } catch (err) { setError(err.message); } 
@@ -962,10 +1020,14 @@ export default function ProfilesPage() {
   async function handleBulkLaunch() {
     if (selectedIds.size === 0) return;
     setBulkBusy(true); setError('');
-    // Queue mode → concurrency 1 (one-by-one). Otherwise the main process uses the
-    // configured launch-concurrency cap (launch several at once). Progress is cleared
+    // Queue mode holds `launchQueueWidth` profiles open at a time and opens the next
+    // as each one is closed. Otherwise the main process uses the configured
+    // launch-concurrency cap and opens them all as fast as it can. Progress is cleared
     // by the 'done' event (not here), so a background queue keeps its live counter.
-    try { await softglazeApi.profiles.bulkLaunch([...selectedIds], launchQueue ? { concurrency: 1 } : undefined); await refreshSessions(); }
+    const opts = launchQueue
+      ? { queue: true, concurrency: Math.max(1, Number(launchQueueWidth) || 1) }
+      : undefined;
+    try { await softglazeApi.profiles.bulkLaunch([...selectedIds], opts); await refreshSessions(); }
     catch (err) { setError(err.message); setLaunchProgress(null); setLaunchPaused(false); }
     finally { setBulkBusy(false); }
   }
@@ -1246,6 +1308,27 @@ export default function ProfilesPage() {
                       })}
                     </div>
                   </div>
+
+                  {/* Cross-OS warning. A string-only OS spoof cannot hold up: the host's
+                      fonts, canvas raster, WebGL render output and real TLS/JS-engine
+                      behaviour all come from the actual machine. This is why the
+                      fingerprint generator defaults to the host OS. The GPU is now forced
+                      coherent at launch, but that only removes the loudest tell. */}
+                  {crossOsWarning && (
+                    <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
+                      <div />
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-500">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>
+                          {t('general.crossOsWarning', {
+                            defaultValue: 'This profile claims {{os}} but runs on {{host}}. Host fonts, canvas raster and the real TLS/JS-engine behaviour still say {{host}}, so scanners can spot the mismatch. Use {{host}} unless you specifically need a cross-OS profile.',
+                            os: pd.os,
+                            host: hostOs
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="w-full h-px bg-border"></div>
 
@@ -1959,9 +2042,13 @@ export default function ProfilesPage() {
       </div>
       {error && <div className="mb-5 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
       
-      {selectedIds.size > 0 && (
+      {/* Shown when there is a selection OR a bulk queue is in flight. The queue's
+          Stop/Pause/Resume controls used to be nested inside the selection gate, so a
+          remount (navigate away and back) emptied selectedIds and hid the only way to
+          stop a running queue — even once its progress had been restored. */}
+      {(selectedIds.size > 0 || launchProgress) && (
         <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
-          <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>
+          {selectedIds.size > 0 && <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>}
           {launchProgress && (
             <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
               {launchPaused
@@ -1987,10 +2074,27 @@ export default function ProfilesPage() {
               </button>
             </span>
           )}
+          {selectedIds.size > 0 && (
           <div className="flex items-center gap-2 ml-auto">
-            <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 cursor-pointer select-none" title={t('bulk.queueTitle', 'Launch the selected profiles one at a time (a queue) instead of several at once.')}>
+            <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground cursor-pointer select-none" title={t('bulk.queueTitle', 'Feed the selected profiles through a queue: keep a fixed number open at a time and start the next one as each is closed.')}>
               <input type="checkbox" checked={launchQueue} onChange={(e) => setLaunchQueue(e.target.checked)} disabled={bulkBusy} className="accent-primary" /> {t('bulk.queue', 'Queue')}
             </label>
+            {/* How many the queue keeps open at once. Each slot is held until the user
+                closes that browser, then the next profile fills it. */}
+            {launchQueue && (
+              <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 select-none" title={t('bulk.queueWidthTitle', 'How many profiles stay open at the same time. The next one opens as soon as you close one.')}>
+                <select
+                  value={launchQueueWidth}
+                  onChange={(e) => setLaunchQueueWidth(Number(e.target.value) || 1)}
+                  disabled={bulkBusy}
+                  aria-label={t('bulk.queueWidthTitle', 'How many profiles stay open at the same time.')}
+                  className="bg-card border border-border rounded-md px-1.5 py-0.5 text-[11.5px] text-foreground focus:border-primary outline-none cursor-pointer"
+                >
+                  {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+                {t('bulk.queueWidth', 'at a time')}
+              </label>
+            )}
             <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</Button>
             <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
@@ -2002,6 +2106,7 @@ export default function ProfilesPage() {
             <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</Button>
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>{t('bulk.clear')}</Button>
           </div>
+          )}
         </div>
       )}
       

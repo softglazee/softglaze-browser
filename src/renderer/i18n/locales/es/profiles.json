@@ -113,7 +113,8 @@
     "cookiePlaceholder": "Formatos: JSON, Netscape, Nombre=Valor",
     "loadCookies": "Cargar las cookies guardadas de este perfil",
     "remarks": "Comentarios / Notas",
-    "remarksPlaceholder": "Notas opcionales para este perfil..."
+    "remarksPlaceholder": "Notas opcionales para este perfil...",
+    "crossOsWarning": "Este perfil declara {{os}} pero se ejecuta en {{host}}. Las fuentes del host, el renderizado de canvas y el comportamiento real de TLS/motor JS siguen indicando {{host}}, por lo que los escáneres pueden detectar la discrepancia. Usa {{host}} salvo que necesites un perfil multiplataforma."
   },
   "proxy": {
     "setting": "Configuración del proxy",
@@ -300,6 +301,10 @@
     "selected": "{{count}} seleccionados",
     "launching": "Iniciando {{done}}/{{total}}…",
     "launch": "Iniciar",
+    "queue": "Cola",
+    "queueTitle": "Abre los perfiles seleccionados en cola: mantén un número fijo abiertos a la vez e inicia el siguiente cuando cierres uno.",
+    "queueWidth": "a la vez",
+    "queueWidthTitle": "Cuántos perfiles permanecen abiertos al mismo tiempo. El siguiente se abre en cuanto cierras uno.",
     "synchronize": "Sincronizar",
     "synchronizeTitle": "Iniciar como ventanas reflejadas Maestro + Esclavo (Premium)",
     "close": "Cerrar",

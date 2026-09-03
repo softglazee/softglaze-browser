@@ -273,7 +273,8 @@ model PersonaData {
   state        String?
   zipCode      String?
   country      String?
-  company      String?
+  company        String? // company NAME only
+  companyAddress String? // the company's street address — distinct from addressLine1
   usedOnUrls   String   @default("[]") // JSON array of hostnames already used
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt @default(now())
