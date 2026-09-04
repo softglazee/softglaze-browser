@@ -21,15 +21,11 @@
 const net = require('node:net');
 const http = require('node:http');
 
-function startHttpAuthRelay({ host, port, username, password }, opts = {}) {
-  // How long to wait for the upstream's CONNECT REPLY before giving up. Exposed so
-  // tests can exercise the timeout without waiting the full production value.
-  const replyTimeoutMs = Number(opts.replyTimeoutMs) > 0 ? Number(opts.replyTimeoutMs) : 20000;
+function startHttpAuthRelay({ host, port, username, password }) {
   return new Promise((resolve, reject) => {
     const upstreamHost = String(host);
     const upstreamPort = Number(port);
     const authHeader = 'Basic ' + Buffer.from(`${username || ''}:${password || ''}`, 'utf8').toString('base64');
-    const CRLF = String.fromCharCode(13, 10);
     const open = new Set(); // every live socket, destroyed on close()
 
     const track = (s) => {
@@ -71,20 +67,10 @@ function startHttpAuthRelay({ host, port, username, password }, opts = {}) {
       clientSocket.on('error', () => { try { clientSocket.destroy(); } catch (e) {} });
       const upstream = net.connect(upstreamPort, upstreamHost);
       track(upstream);
-      // The idle timeout must stay armed until the CONNECT REPLY has been read, not
-      // just until the TCP connect completes. Clearing it in the 'connect' handler
-      // (setTimeout(0) below used to run here) left an upstream that accepted the
-      // socket and then never answered hanging FOREVER: the relay held the tunnel
-      // open, the tab waited on a reply that never came, and the request only died
-      // when Chromium's own timer gave up — surfacing as ERR_TIMED_OUT on a proxy
-      // that is otherwise reachable. Failing fast instead lets Chromium retry.
-      upstream.setTimeout(replyTimeoutMs, () => {
-        try { clientSocket.write('HTTP/1.1 504 Gateway Timeout\r\n\r\n'); } catch (e) {}
-        try { upstream.destroy(); } catch (e) {}
-        try { clientSocket.destroy(); } catch (e) {}
-      });
+      upstream.setTimeout(20000, () => { try { upstream.destroy(); } catch (e) {} });
       upstream.on('error', () => { try { clientSocket.destroy(); } catch (e) {} });
       upstream.on('connect', () => {
+        upstream.setTimeout(0);
         upstream.write(
           `CONNECT ${creq.url} HTTP/1.1\r\n` +
           `Host: ${creq.url}\r\n` +
@@ -98,11 +84,7 @@ function startHttpAuthRelay({ host, port, username, password }, opts = {}) {
         ubuf = Buffer.concat([ubuf, chunk]);
         const end = ubuf.indexOf('\r\n\r\n');
         if (end === -1) {
-          if (ubuf.length > 65536) { // runaway header — refuse rather than buffer forever
-            try { clientSocket.write('HTTP/1.1 502 Bad Gateway' + CRLF + CRLF); } catch (e) {}
-            try { upstream.destroy(); } catch (e) {}
-            try { clientSocket.destroy(); } catch (e) {}
-          }
+          if (ubuf.length > 65536) { try { upstream.destroy(); } catch (e) {} } // runaway header
           return;
         }
         upstream.removeListener('data', onData);
@@ -114,9 +96,6 @@ function startHttpAuthRelay({ host, port, username, password }, opts = {}) {
           try { upstream.destroy(); } catch (e) {}
           return;
         }
-        // Tunnel is live — the reply timer has done its job, and long-lived idle
-        // traffic (a websocket, a hanging GET) must not be killed by it.
-        upstream.setTimeout(0);
         try { clientSocket.write('HTTP/1.1 200 Connection established\r\n\r\n'); } catch (e) {}
         const leftover = ubuf.slice(end + 4); // bytes after the reply belong to the tunnel
         if (leftover.length) { try { clientSocket.write(leftover); } catch (e) {} }
