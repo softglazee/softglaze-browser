@@ -182,3 +182,43 @@ test('the fingerprint seed still derives from dataDirName', () => {
   assert.ok(/seedFromString\(safeDirName\)/.test(engine),
     'fingerprint seed is expected to derive from the data-dir name');
 });
+
+// --- AnyIP username builder: never emit a duplicate flag ------------------
+
+test('a pasted full AnyIP username does not produce duplicate session flags', () => {
+  // Operators paste their whole gateway username into the Username field, e.g.
+  // "user_x,sesstime_10080,session_abc". The builder used to append its own flags on
+  // top, emitting session_ TWICE. Which one the gateway honours is undefined —
+  // measured today AnyIP takes the last, so each profile did get its own exit IP, but
+  // one parser change away every identity collapses onto a single shared IP.
+  const src = fs.readFileSync(path.join(ROOT, 'src/main/ipcHandlers.js'), 'utf8');
+  const fn = src.slice(src.indexOf('async function fetchAnyIpPool'));
+  assert.ok(/const userSegs = user\.split\(','\)/.test(fn),
+    'the builder must split flags the operator embedded in the username');
+  assert.ok(/own\.delete\('session'\)/.test(fn),
+    'session must be re-set so it is emitted once, and last');
+  assert.equal(/const parts = \[user, `type_\$\{ptype\}`\]/.test(fn), false,
+    'the old append-onto-raw-username form must not come back');
+});
+
+test('the builder emits each AnyIP flag exactly once', () => {
+  // Mirrors the shipped logic so the invariant is exercised, not just asserted.
+  const build = (user, cc, lifeMin, ptype, sess) => {
+    const segs = user.split(',').map((s) => s.trim()).filter(Boolean);
+    const base = segs.shift() || user;
+    const flags = new Map();
+    for (const s of segs) { const k = s.split('_')[0]; if (k) flags.set(k, s); }
+    const own = new Map(flags);
+    own.set('type', `type_${ptype}`);
+    if (cc) own.set('country', `country_${cc}`);
+    if (lifeMin) own.set('sesstime', `sesstime_${lifeMin}`);
+    own.delete('session');
+    own.set('session', `session_${sess}`);
+    return [base, ...own.values()].join(',');
+  };
+  const out = build('user_4a497e,sesstime_10080,session_shared', 'US', 0, 'residential', 'uniq1');
+  assert.equal((out.match(/session_/g) || []).length, 1, 'exactly one session flag');
+  assert.match(out, /,session_uniq1$/, 'session is last and is the generated one');
+  assert.match(out, /sesstime_10080/, "the operator's own sesstime survives");
+  assert.equal((out.match(/sesstime_/g) || []).length, 1, 'exactly one sesstime flag');
+});

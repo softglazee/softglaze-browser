@@ -1536,14 +1536,37 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   const lifeMin = Math.min(10080, Math.max(0, Number.parseInt(String(life), 10) || 0));
   const ptype = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
   const n = fixedSession ? 1 : clampPoolCount(count);
+  // The Username field commonly gets the operator's WHOLE gateway username pasted
+  // into it — e.g. "user_4a497e,sesstime_10080,session_7fqh2zpcf3" straight off the
+  // AnyIP dashboard. Appending our own flags on top then emits the same key TWICE
+  // ("…,session_7fqh2zpcf3,type_residential,country_US,session_0lcdj93s"), and which
+  // one the gateway honours is undefined. Measured today: AnyIP takes the LAST, so
+  // every profile did get its own exit IP — but it is one parser change away from all
+  // of them silently collapsing onto a single shared IP, which is the worst possible
+  // failure for an anti-detect browser because it correlates every identity at once.
+  // So: keep only the bare account id, treat any flag the operator embedded as a
+  // default, and let the explicit options here win. Each key is emitted exactly once.
+  const userSegs = user.split(',').map((s) => s.trim()).filter(Boolean);
+  const baseUser = userSegs.shift() || user;
+  const flags = new Map(); // key -> full "key_value" segment, insertion-ordered
+  for (const seg of userSegs) {
+    const key = seg.split('_')[0];
+    if (key) flags.set(key, seg);
+  }
   const rows = [];
   for (let i = 1; i <= n; i += 1) {
     // Comma-delimited flags, each an underscore key_value (NOTE: differs from
     // Smartproxy.org, which joins with "_" and keys with "-").
-    const parts = [user, `type_${ptype}`];
-    if (cc) parts.push(`country_${cc}`);
-    if (lifeMin) parts.push(`sesstime_${lifeMin}`);
-    parts.push(`session_${fixedSession || randSession()}`);
+    const own = new Map(flags);
+    own.set('type', `type_${ptype}`);
+    if (cc) own.set('country', `country_${cc}`);
+    if (lifeMin) own.set('sesstime', `sesstime_${lifeMin}`);
+    // session goes LAST, matching the layout that is known-good against the live
+    // gateway. Map.set keeps a key's original position, so drop it first to move it
+    // to the end rather than leaving it wherever the operator had pasted it.
+    own.delete('session');
+    own.set('session', `session_${fixedSession || randSession()}`);
+    const parts = [baseUser, ...own.values()];
     rows.push({
       type: 'HTTP', host: gwHost, port: gwPort,
       username: parts.join(','), password: pw,
