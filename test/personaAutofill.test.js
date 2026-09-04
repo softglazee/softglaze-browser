@@ -185,3 +185,25 @@ test('the startupUrls writer and reader round-trip', () => {
   assert.deepEqual(rehome(read(write(['a.com', 'https://b.com']))), ['https://a.com', 'https://b.com']);
   assert.deepEqual(rehome(read(write([]))), []);
 });
+
+// --- 4) trusted-transport detection ---------------------------------------
+
+test('the widget detects a trusted transport via sgHas, not a raw typeof', () => {
+  const src = SRC('main/personaAutofill.js');
+  // sgHas() is true when EITHER the CDP binding or the RPC bridge is present, and
+  // sgCall routes over whichever is alive. A raw `typeof window.__sgPersonaFillPlan`
+  // misses the bridge, so with no binding the widget fell through to the in-page
+  // fallback — which types with synthetic KeyboardEvents (isTrusted:false), a bot
+  // signal. That is exactly the state "Minimize CDP footprint" produces, so the
+  // anti-CAPTCHA setting would have made fills MORE detectable, not less.
+  assert.ok(/var trusted = sgHas\('__sgPersonaFillPlan'\)/.test(src),
+    'trusted-path detection must be bridge-aware');
+  assert.equal(/var trusted = \(typeof window\.__sgPersonaFillPlan === 'function'\)/.test(src), false,
+    'the raw typeof check must not come back');
+});
+
+test('sgHas accepts the RPC bridge as a trusted transport', () => {
+  const src = SRC('main/personaAutofill.js');
+  const fn = extractFunction(src, 'sgHas');
+  assert.match(fn, /__sgBridge/, 'sgHas must treat the RPC bridge as available');
+});

@@ -758,7 +758,7 @@ function GlobalPreferences() {
         />
         <ToggleRow
           title={tx('browser.minimizeCdpFootprint.title', 'Minimize CDP footprint (experimental — anti-CAPTCHA)')}
-          description={tx('browser.minimizeCdpFootprint.desc', 'Drops the persistent CDP Runtime.enable — the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles.')}
+          description={tx('browser.minimizeCdpFootprint.desc', 'Drops the persistent CDP Runtime.enable — the top automation signal Cloudflare/Turnstile detect, which no fingerprint work can hide. Autofill, start-page links, session mirroring and the macro recorder now run over the binding-free page bridge, so they keep working while this is on (they did not before). Turn it on and relaunch a profile if you are getting CAPTCHAs.')}
           checked={!!s.browser.minimizeCdpFootprint}
           onChange={(v) => apply({ browser: { minimizeCdpFootprint: v } })}
         />

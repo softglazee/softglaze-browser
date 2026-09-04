@@ -66,12 +66,23 @@ puppeteer.use(makeStealth());
 // evasion covers. rebrowser-puppeteer-core in enableDisable mode avoids the PERSISTENT
 // Runtime.enable (it enables only transiently, per navigation, to acquire the main-world
 // execution context), removing that tell while keeping page.evaluate working.
-// TRADE-OFF (verified): page->node bindings (page.exposeFunction) REQUIRE the persistent
-// Runtime.enable — a binding does not survive Runtime.disable — so with this engine the
-// exposeFunction features (persona autofill, start-page check-links / __sgzOpenTab, and
-// synchronized-session mirroring) do NOT work. It is therefore an opt-in probe to A/B
-// whether the leak fix beats a real CAPTCHA, not the default. Required lazily so a
-// stock-engine launch never loads the dependency.
+// TRADE-OFF — this note is from 2026-07-20 and is now OUT OF DATE. It said the
+// exposeFunction features (persona autofill, start-page check-links / __sgzOpenTab,
+// synchronized-session mirroring, macro recorder) "do NOT work" with this engine,
+// because page->node bindings need the persistent Runtime.enable. That was true when
+// written. pageBridge.js landed on 2026-09-03 and gives all four of those features a
+// binding-free transport — the page fetches a sentinel URL that main fulfils over the
+// CDP Fetch domain, which enableDisable mode does not touch (it only affects Runtime).
+// attachPageBridge is wired for every one of them, and the bridge's own tests cover the
+// "no binding at all" path. One straggler was fixed alongside this note: the autofill
+// widget decided whether it had a trusted transport with a raw `typeof` on the binding
+// rather than the bridge-aware sgHas(), so it fell back to synthetic isTrusted:false
+// typing whenever the binding was missing — which would have made this very setting
+// INCREASE detectability.
+// So the trade-off should now be gone. It has NOT yet been confirmed against a live
+// CAPTCHA, so it stays opt-in until that A/B is run — but the reason it was off by
+// default no longer applies. Required lazily so a stock-engine launch never loads the
+// dependency.
 let _runtimeFixPuppeteer = null;
 function getRuntimeFixPuppeteer() {
   if (_runtimeFixPuppeteer) return _runtimeFixPuppeteer;

@@ -420,7 +420,17 @@ function personaAutofillMain() {
       //    to in-page synthetic typing (e.g. Firefox, or if the bridge errors).
       var filled = 0;
       var fillFailed = 0; // fields the backend could not verify — reported, not hidden
-      var trusted = (typeof window.__sgPersonaFillPlan === 'function');
+      // Use sgHas, NOT a raw typeof on the binding. sgHas also returns true when only
+      // the RPC bridge is present, and sgCall routes through whichever transport is
+      // alive. A raw typeof check misses the bridge, so whenever the CDP binding is
+      // absent this fell through to the in-page fallback below — which types with
+      // synthetic KeyboardEvents that are ALWAYS isTrusted:false, i.e. a bot signal on
+      // any site that checks. That is precisely the case when "Minimize CDP footprint"
+      // (the anti-CAPTCHA engine) is on, since it never installs the binding at all:
+      // enabling the anti-CAPTCHA setting would silently downgrade autofill to
+      // detectable typing. With sgHas the plan goes over the bridge and the keystrokes
+      // stay real, trusted CDP input.
+      var trusted = sgHas('__sgPersonaFillPlan');
       if (trusted && matches.length) {
         var plan = matches.map(function (m, idx) {
           try { m.el.setAttribute('data-sgfill', String(idx)); } catch (e) {}
