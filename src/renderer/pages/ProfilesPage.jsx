@@ -353,7 +353,7 @@ const initialProfileData = {
   macAddress: generateMac(),
   
   doNotTrack: 'Default',
-  portScanProtection: 'Enable',
+  portScanProtection: 'Close',
   hardwareAcceleration: 'Default',
   disableTls: 'Close',
   launchArgs: '',
@@ -1762,7 +1762,21 @@ export default function ProfilesPage() {
                   </FpRow>
 
                   <FpRow label={t('fp.portScanProtection')}>
-                    <ButtonTabs value={pd.portScanProtection} onChange={v => updatePd('portScanProtection', v)} options={['Enable', 'Close']} />
+                    <div className="flex flex-col gap-1.5">
+                      <ButtonTabs value={pd.portScanProtection} onChange={v => updatePd('portScanProtection', v)} options={['Enable', 'Close']} />
+                      {/* A genuine trade-off, so state it rather than defaulting it on
+                          silently. Enabling this replaces window.fetch,
+                          XMLHttpRequest.prototype.open and window.WebSocket in page JS to
+                          block requests aimed at private IPs. Real sites detect that: a
+                          live console logged "native JS function modified: window.fetch"
+                          on a page that then refused account creation. Now off by default. */}
+                      {/^enable/i.test(String(pd.portScanProtection || '')) && (
+                        <span className="flex items-start gap-1.5 text-[11px] text-amber-500">
+                          <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />
+                          <span>{t('fp.portScanWarning', { defaultValue: 'Replaces window.fetch, XHR.open and WebSocket inside the page. Some sites detect the patched functions and flag the session. Leave this off unless you specifically need local-port protection.' })}</span>
+                        </span>
+                      )}
+                    </div>
                   </FpRow>
 
                   <FpRow label={t('fp.hardwareAcceleration')}>

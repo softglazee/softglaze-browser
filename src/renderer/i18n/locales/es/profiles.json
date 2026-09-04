@@ -215,7 +215,8 @@
     "hardwareAcceleration": "Aceleración por hardware",
     "disableTls": "Desactivar funciones TLS",
     "launchArgs": "Argumentos de inicio",
-    "launchArgsDesc": "Argumentos de inicio sin procesar adicionales de Chromium (p. ej. --disable-notifications)"
+    "launchArgsDesc": "Argumentos de inicio sin procesar adicionales de Chromium (p. ej. --disable-notifications)",
+    "portScanWarning": "Sustituye window.fetch, XHR.open y WebSocket dentro de la página. Algunos sitios detectan las funciones modificadas y marcan la sesión. Déjalo desactivado salvo que necesites protección de puertos locales."
   },
   "advanced": {
     "coreSettings": "Ajustes principales",

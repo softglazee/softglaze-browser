@@ -215,7 +215,8 @@
     "hardwareAcceleration": "Hardware Acceleration",
     "disableTls": "Disable TLS Features",
     "launchArgs": "Launch Args",
-    "launchArgsDesc": "Additional raw Chromium startup arguments (e.g. --disable-notifications)"
+    "launchArgsDesc": "Additional raw Chromium startup arguments (e.g. --disable-notifications)",
+    "portScanWarning": "Replaces window.fetch, XHR.open and WebSocket inside the page. Some sites detect the patched functions and flag the session. Leave this off unless you specifically need local-port protection."
   },
   "advanced": {
     "coreSettings": "Core Settings",

@@ -360,7 +360,7 @@ function generateMobileFingerprint() {
     clientRectsNoise: true,
     speechVoicesNoise: true,
     doNotTrack: 'Default',
-    portScanProtection: 'Enable',
+    portScanProtection: 'Close',
     hardwareAcceleration: 'Default',
     disableTls: 'Close'
   };
@@ -467,7 +467,7 @@ function generateFingerprint(opts = {}) {
     clientRectsNoise: true,
     speechVoicesNoise: true,
     doNotTrack: 'Default',
-    portScanProtection: 'Enable',
+    portScanProtection: 'Close',
     hardwareAcceleration: 'Default',
     disableTls: 'Close'
   };
