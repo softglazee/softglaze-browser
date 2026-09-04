@@ -265,6 +265,17 @@ async function invoke(channel, payload = undefined) {
 }
 
 const api = Object.freeze({
+  // The host OS this copy runs on, as a plain value — no IPC round trip. The profile
+  // editor uses it to warn when a profile is given a DIFFERENT OS than the machine: a
+  // string-only OS spoof is betrayed by the host's fonts, canvas raster and real
+  // TLS/JS-engine behaviour, so cross-OS profiles fail scanners. Same mapping the
+  // fingerprint generator uses for its host-OS default.
+  // MUST live inside this literal: `api` is frozen and the file is strict mode, so
+  // assigning it afterwards throws and kills the whole preload before
+  // contextBridge.exposeInMainWorld ever runs — which takes the entire app down with
+  // "SoftGlaze preload API is unavailable".
+  hostOs: { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows',
+
   system: Object.freeze({
     getInfo: () => invoke(CHANNELS.SYSTEM_GET_INFO),
     listBrowsers: () => invoke(CHANNELS.SYSTEM_LIST_BROWSERS),
@@ -614,12 +625,5 @@ const api = Object.freeze({
     }
   })
 });
-
-// The host OS this copy runs on, as a plain value — no IPC round trip. The profile
-// editor uses it to warn when a profile is given a DIFFERENT OS than the machine: a
-// string-only OS spoof is betrayed by the host's fonts, canvas raster and real
-// TLS/JS-engine behaviour, so cross-OS profiles fail scanners. Same mapping the
-// fingerprint generator uses for its host-OS default.
-api.hostOs = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows';
 
 contextBridge.exposeInMainWorld('softglaze', api);
