@@ -1371,7 +1371,17 @@ async function fetchGatewayVerifiedPool(label, gateway, { username, password }) 
     label: `${label} • ${gateway.host}${probe.ip ? ` • verified ${probe.ip}` : ' • verified'}`
   }];
 }
-function fetchOxylabsPool(creds) { return fetchGatewayVerifiedPool('Oxylabs', VENDOR_GATEWAYS.oxylabs, creds); }
+// Oxylabs is the one configured vendor that documents an address-family selector: the
+// username carries `-ipversion-6` and the gateway stays pr.oxylabs.io:7777. Two caveats
+// straight from their docs, both surfaced in the UI: if the target host publishes no
+// AAAA record Oxylabs silently resolves back to IPv4 (and returns 522 if you disable
+// that auto-resolution), and the feature may need enabling on the account first.
+function fetchOxylabsPool(creds) {
+  const user = String((creds && creds.username) || '').trim();
+  const want6 = String((creds && creds.ipVersion) || '') === '6';
+  const username = (want6 && user && !/-ipversion-\d/.test(user)) ? `${user}-ipversion-6` : user;
+  return fetchGatewayVerifiedPool(want6 ? 'Oxylabs IPv6' : 'Oxylabs', VENDOR_GATEWAYS.oxylabs, { ...creds, username });
+}
 function fetchSmartproxyPool(creds) { return fetchGatewayVerifiedPool('Smartproxy', VENDOR_GATEWAYS.smartproxy, creds); }
 
 // --- Country / session helpers (shared by the country-aware adapters below) --
@@ -1537,13 +1547,13 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   const ptype = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
   const n = fixedSession ? 1 : clampPoolCount(count);
   // The Username field commonly gets the operator's WHOLE gateway username pasted
-  // into it — e.g. "user_4a497e,sesstime_10080,session_7fqh2zpcf3" straight off the
+  // into it, e.g. "user_4a497e,sesstime_10080,session_7fqh2zpcf3" straight off the
   // AnyIP dashboard. Appending our own flags on top then emits the same key TWICE
-  // ("…,session_7fqh2zpcf3,type_residential,country_US,session_0lcdj93s"), and which
-  // one the gateway honours is undefined. Measured today: AnyIP takes the LAST, so
-  // every profile did get its own exit IP — but it is one parser change away from all
-  // of them silently collapsing onto a single shared IP, which is the worst possible
-  // failure for an anti-detect browser because it correlates every identity at once.
+  // ("...,session_7fqh2zpcf3,type_residential,country_US,session_0lcdj93s"), and which
+  // one the gateway honours is undefined. Measured: AnyIP takes the LAST, so every
+  // profile did get its own exit IP, but it is one parser change away from all of them
+  // silently collapsing onto a single shared IP, which is the worst possible failure
+  // for an anti-detect browser because it correlates every identity at once.
   // So: keep only the bare account id, treat any flag the operator embedded as a
   // default, and let the explicit options here win. Each key is emitted exactly once.
   const userSegs = user.split(',').map((s) => s.trim()).filter(Boolean);
@@ -1711,7 +1721,10 @@ async function syncVendorPool(payload) {
       // anyip.io: residential vs mobile pool selector (encoded as type_<poolType>) +
       // optional REST auto-provision (API key = input.token, Team ID = input.teamId).
       poolType: optionalString(input.poolType),
-      teamId: optionalString(input.teamId)
+      teamId: optionalString(input.teamId),
+      // Address family. Only Oxylabs documents a selector for this ('6' -> -ipversion-6);
+      // every other configured vendor ignores it because they publish no IPv6 option.
+      ipVersion: optionalString(input.ipVersion)
     });
   } else {
     // SIMULATION fallback for not-yet-wired providers (token-driven).
@@ -1991,22 +2004,69 @@ async function probeUrl(agent, target) {
 // = flagged. Best-effort: a zone that errors/times out or returns a non-listing
 // sentinel (e.g. Spamhaus's "public resolver blocked" 127.255.255.x) is treated as
 // NOT listed, so we never raise a false positive.
+// v6: whether the zone answers IPv6 (nibble-format) queries at all. Zones that do
+// not are simply skipped for an IPv6 address rather than queried and misread.
 const DNSBL_ZONES = [
-  { zone: 'zen.spamhaus.org', name: 'Spamhaus' },
-  { zone: 'bl.spamcop.net', name: 'SpamCop' },
-  { zone: 'dnsbl.sorbs.net', name: 'SORBS' },
-  { zone: 'b.barracudacentral.org', name: 'Barracuda' }
+  { zone: 'zen.spamhaus.org', name: 'Spamhaus', v6: true },
+  { zone: 'bl.spamcop.net', name: 'SpamCop', v6: false },
+  { zone: 'dnsbl.sorbs.net', name: 'SORBS', v6: true },
+  { zone: 'b.barracudacentral.org', name: 'Barracuda', v6: false }
 ];
+
+// DNSBLs address IPv6 as 32 reversed nibbles, e.g. 2001:db8::1 becomes
+// 1.0.0.0.....8.b.d.0.1.0.0.2 . Returns the 32-char expanded hex, or '' if the input
+// is not a well-formed IPv6 literal.
+function expandIpv6(value) {
+  const raw = String(value || '').trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '').split('%')[0];
+  if (!require('node:net').isIPv6(raw)) return '';
+  // An embedded IPv4 tail (::ffff:203.0.113.7) folds into two hex groups.
+  let rest = raw;
+  const v4 = /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(raw);
+  if (v4) {
+    const o = v4.slice(1).map(Number);
+    if (o.some((n) => n > 255)) return '';
+    rest = raw.slice(0, v4.index)
+      + (((o[0] << 8) | o[1]) >>> 0).toString(16) + ':'
+      + (((o[2] << 8) | o[3]) >>> 0).toString(16);
+  }
+  const halves = rest.split('::');
+  if (halves.length > 2) return '';
+  const left = halves[0] ? halves[0].split(':').filter(Boolean) : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(':').filter(Boolean) : [];
+  let groups;
+  if (halves.length === 2) {
+    const fill = 8 - left.length - right.length;
+    if (fill < 0) return '';
+    groups = left.concat(new Array(fill).fill('0'), right);
+  } else {
+    groups = left;
+  }
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return '';
+  return groups.map((g) => g.padStart(4, '0')).join('');
+}
 function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 }
 async function checkBlacklist(ip) {
+  // IPv4 reverses by octet; IPv6 reverses by nibble. Previously anything that was not
+  // dotted-quad returned checked:false, so every IPv6 proxy silently skipped the only
+  // reputation check the app has.
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || ''));
-  if (!m) return { checked: false, listed: false, sources: [] }; // IPv6 / unknown → skip
-  const rev = `${m[4]}.${m[3]}.${m[2]}.${m[1]}`;
+  let rev = '';
+  let isV6 = false;
+  if (m) {
+    rev = `${m[4]}.${m[3]}.${m[2]}.${m[1]}`;
+  } else {
+    const hex = expandIpv6(ip);
+    if (!hex) return { checked: false, listed: false, sources: [] }; // not an IP we can query
+    rev = hex.split('').reverse().join('.');
+    isV6 = true;
+  }
+  const zones = DNSBL_ZONES.filter((z) => (isV6 ? z.v6 : true));
+  if (!zones.length) return { checked: false, listed: false, sources: [] };
   const dns = require('node:dns').promises;
   const sources = [];
-  await Promise.all(DNSBL_ZONES.map(async ({ zone, name }) => {
+  await Promise.all(zones.map(async ({ zone, name }) => {
     try {
       const a = await withTimeout(dns.resolve4(`${rev}.${zone}`), 4000);
       if (Array.isArray(a) && a.some((addr) => /^127\.0\.0\.\d+$/.test(addr))) sources.push(name);

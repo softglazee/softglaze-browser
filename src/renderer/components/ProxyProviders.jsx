@@ -26,7 +26,7 @@ if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 
 export const PROVIDERS = [
   { key: 'ipfoxy', name: 'IPFoxy', initials: 'IF', color: '#f97316', tokenSync: true, referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: { host: 'gate.ipfoxy.io', port: 6200, type: 'HTTP' } },
   { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 22225, type: 'HTTP' } },
-  { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
+  { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, ipv6: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
   { key: 'smartproxy', name: 'Smartproxy', initials: 'SP', color: '#ff6b35', apiSync: true, referral: 'https://smartproxy.com/?ref=softglaze', gateway: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' } },
   { key: 'lumiproxy', name: 'LumiProxy', initials: 'LP', color: '#22c55e', tokenSync: true, referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: { host: 'gate.lumiproxy.com', port: 8000, type: 'HTTP' } },
   { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', tokenSync: true, referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'gate.proxy302.com', port: 2000, type: 'HTTP' } },
@@ -59,10 +59,10 @@ export const PROXY_COUNTRIES = [
 ];
 
 const GEO_HINTS = {
-  apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings.',
+  apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.',
   smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
   shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER — token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
-  anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port.'
+  anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.'
 };
 
 export default function ProxyProviders({ onSynced }) {
@@ -76,7 +76,7 @@ export default function ProxyProviders({ onSynced }) {
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '' });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -93,7 +93,7 @@ export default function ProxyProviders({ onSynced }) {
 
   // Re-prime the workspace whenever the active provider changes.
   useEffect(() => {
-    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '' });
+    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
     setCheckResult(null);
     setSyncResult(null);
     setErr('');
@@ -180,7 +180,10 @@ export default function ProxyProviders({ onSynced }) {
         username: form.username.trim(),
         password: form.password,
         zone: form.zone.trim(),
-        bdpm: form.bdpm
+        bdpm: form.bdpm,
+        // '6' asks Oxylabs for IPv6 exits (-ipversion-6). Vendors without a documented
+        // selector ignore this rather than receiving an invented flag.
+        ipVersion: provider.ipv6 && form.ipv6 ? '6' : ''
       });
       setSyncResult(r);
       persistCreds();
@@ -559,6 +562,17 @@ export default function ProxyProviders({ onSynced }) {
                     </div>
                   ) : (
                     <p className="text-[11.5px] text-muted-foreground">{t('proxyProviders.apiSync.verifyBefore')}<span className="text-foreground font-medium">{t('proxyProviders.apiSync.verifyCreds')}</span>{t('proxyProviders.apiSync.verifyAfter', { provider: provider.name })}</p>
+                  )}
+                  {provider.ipv6 && (
+                    <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={form.ipv6} onChange={(e) => set('ipv6', e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-500 cursor-pointer" />
+                        <span>
+                          <span className="block text-[12.5px] font-semibold text-foreground">{t('proxyProviders.apiSync.ipv6Label', 'Request IPv6 exits')}</span>
+                          <span className="block text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.apiSync.ipv6Help', 'Appends -ipversion-6 to the username. If the target site publishes no AAAA record, Oxylabs falls back to IPv4 automatically, so an IPv6 pull does not guarantee an IPv6 exit. May need enabling on your Oxylabs account first.')}</span>
+                        </span>
+                      </label>
+                    </div>
                   )}
                   <button onClick={handleApiSync} disabled={syncing} className="mt-3 inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-60 shadow-lg shadow-emerald-500/25">
                     {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} {t('proxyProviders.apiSync.syncViaApi')}
