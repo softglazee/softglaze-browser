@@ -10,6 +10,7 @@ const { execFile } = require('node:child_process');
 const { getPrisma, getRuntimeConfig, disconnectPrisma } = require('./database');
 const {
   parseProxyInput,
+  formatProxyHost,
   launchProfileSession,
   closeProfileSession,
   closeAllProfileSessions,
@@ -1913,7 +1914,7 @@ async function testProxyConnectivity(proxy) {
   const auth = proxy.username
     ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@`
     : '';
-  const proxyUrl = `${scheme}://${auth}${proxy.host}:${proxy.port}`;
+  const proxyUrl = `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}`;
   const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
 
   const started = Date.now();
@@ -2016,7 +2017,7 @@ function buildProxyAgent(proxy) {
   try { ({ ProxyAgent } = require('proxy-agent')); } catch (e) { return null; }
   const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
   const auth = proxy.username ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
-  return new ProxyAgent({ getProxyForUrl: () => `${scheme}://${auth}${proxy.host}:${proxy.port}` });
+  return new ProxyAgent({ getProxyForUrl: () => `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}` });
 }
 
 // Lightweight connectivity probe THROUGH a proxy agent — returns the HTTP status

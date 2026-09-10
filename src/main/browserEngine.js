@@ -574,6 +574,44 @@ function resolveInside(baseDir, childSegment) {
   return resolvedChild;
 }
 
+// Split a host:port tail, tolerating a bracketed IPv6 literal ([2001:db8::1]:8080)
+// whose own colons would otherwise be read as the port separator. Returns null when
+// the port is missing or not a valid TCP port, so callers fail loudly instead of
+// building a proxy with a NaN port.
+// Format a host for use inside a URL authority. An IPv6 literal MUST be bracketed or
+// its own colons are read as the port separator, so an unbracketed one produces a
+// malformed --proxy-server arg / agent URL. IPv4 and hostnames pass through untouched.
+function formatProxyHost(host) {
+  const h = String(host || '').trim();
+  if (!h || h.startsWith('[')) return h;
+  return h.includes(':') ? `[${h}]` : h;
+}
+
+function splitHostPort(tail) {
+  const t = String(tail || '').trim();
+  if (!t) return null;
+  let host, portRaw;
+  const v6 = t.match(/^\[([^\]]+)\](?::(\d+))?$/);
+  if (v6) { host = v6[1]; portRaw = v6[2]; }
+  else {
+    const i = t.lastIndexOf(':');
+    if (i === -1) return null;
+    host = t.slice(0, i);
+    portRaw = t.slice(i + 1);
+  }
+  const port = Number.parseInt(String(portRaw || '').trim(), 10);
+  if (!host.trim() || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return { host: host.trim(), port };
+}
+
+// Percent-decode a userinfo field, but only when it actually looks encoded and the
+// decode succeeds - a pasted password containing a bare '%' must survive untouched.
+function decodeUserinfo(value) {
+  const v = String(value || '').trim();
+  if (!/%[0-9a-fA-F]{2}/.test(v)) return v;
+  try { return decodeURIComponent(v); } catch (e) { return v; }
+}
+
 function parseProxyString(rawProxyString) {
   const raw = String(rawProxyString || '').trim();
   if (!raw) return null;
@@ -585,6 +623,48 @@ function parseProxyString(rawProxyString) {
   const scheme = (raw.match(/^(socks4a?|socks5|socks|https?):\/\//i) || [])[1] || '';
   const type = /^socks4/i.test(scheme) ? 'SOCKS4' : (/^socks/i.test(scheme) ? 'SOCKS5' : 'HTTP');
   const working = raw.replace(/^(socks4a?|socks5|socks|https?):\/\//i, '');
+
+  // userinfo form: user:pass@host:port. This is a DOCUMENTED batch format (README) and
+  // parseColonProxyLine routes any '@' string straight here, but the colon split below
+  // cannot see an '@': it read "user" as the host and the port as the username, then
+  // returned a NaN port WITHOUT throwing, so a silently broken proxy row reached the DB.
+  // Split at the LAST '@' - a host never contains one, a pasted password sometimes does.
+  const at = working.lastIndexOf('@');
+  if (at !== -1) {
+    const userinfo = working.slice(0, at);
+    const sep = userinfo.indexOf(':'); // first colon only; a password may contain more
+    const hp = splitHostPort(working.slice(at + 1));
+    if (!hp) throw new Error('Invalid proxy connection string format.');
+    return {
+      type,
+      host: hp.host,
+      port: hp.port,
+      username: decodeUserinfo(sep === -1 ? userinfo : userinfo.slice(0, sep)) || null,
+      password: sep === -1 ? null : (decodeUserinfo(userinfo.slice(sep + 1)) || null)
+    };
+  }
+
+  // Bracketed IPv6 with no userinfo: [2001:db8::1]:8080[:user[:pass]]. The colon split
+  // below reads '[2001' as the host, so peel the literal before it gets there.
+  if (working.startsWith('[')) {
+    const close = working.indexOf(']');
+    if (close === -1) throw new Error('Invalid proxy connection string format.');
+    const v6host = working.slice(1, close).trim();
+    const rest = working.slice(close + 1).replace(/^:/, '');
+    const seg = rest ? rest.split(':') : [];
+    const v6port = Number.parseInt(String(seg[0] || '').trim(), 10);
+    if (!v6host || !Number.isInteger(v6port) || v6port < 1 || v6port > 65535) {
+      throw new Error('Invalid proxy connection string format.');
+    }
+    return {
+      type,
+      host: v6host,
+      port: v6port,
+      username: String(seg[1] || '').trim() || null,
+      password: seg.slice(2).join(':').trim() || null
+    };
+  }
+
   const parts = working.split(':');
   if (parts.length >= 4) {
     return { type, host: parts[0].trim(), port: Number.parseInt(parts[1].trim(), 10), username: parts[2].trim(), password: parts.slice(3).join(':').trim() };
@@ -620,7 +700,7 @@ function buildProxyServerArgument(proxy) {
   // the type exactly rather than collapsing everything non-socks5 to http.
   const t = String(proxy.type).toLowerCase();
   const protocol = t === 'socks5' ? 'socks5' : (t === 'socks4' ? 'socks4' : 'http');
-  return `${protocol}://${proxy.host}:${proxy.port}`;
+  return `${protocol}://${formatProxyHost(proxy.host)}:${proxy.port}`;
 }
 
 function seedFromString(value) {
@@ -2209,7 +2289,7 @@ function lookupProxyGeoNode(proxy) {
     if (ProxyAgent) {
       const scheme = schemeLc === 'socks5' ? 'socks5' : (schemeLc === 'socks4' ? 'socks4' : 'http');
       const auth = proxy.username ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
-      const proxyUrl = `${scheme}://${auth}${proxy.host}:${proxy.port}`;
+      const proxyUrl = `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}`;
       
       const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
       let settled = false;
@@ -2273,7 +2353,7 @@ const geoNodeInflight = new Map(); // key -> Promise<value|null>
 
 function proxyGeoKey(proxy) {
   if (!proxy || !proxy.host || !proxy.port) return null;
-  return `${String(proxy.type || '').toLowerCase()}://${proxy.host}:${proxy.port}`;
+  return `${String(proxy.type || '').toLowerCase()}://${formatProxyHost(proxy.host)}:${proxy.port}`;
 }
 
 async function lookupProxyGeoNodeCached(proxy) {
@@ -4496,6 +4576,7 @@ function listSessionPids() {
 module.exports = {
   DEFAULT_PROFILE_ROOT,
   parseProxyInput,
+  formatProxyHost,
   // Pure helper exported for regression tests: maps a proxy type to its --proxy-server
   // scheme (asserts SOCKS4 → socks4://, not http://).
   buildProxyServerArgument,
