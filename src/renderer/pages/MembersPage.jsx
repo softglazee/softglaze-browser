@@ -519,8 +519,12 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         onSaved();
       } else {
         await softglazeApi.members.update({ id: member.id, name: name.trim(), email: email.trim() || null, color, ...(member.status === 'banned' ? {} : { status: suspended ? 'suspended' : 'active' }) });
-        await softglazeApi.members.updatePermissions(member.id, perms).catch(() => {});
-        await softglazeApi.members.setInstructions(member.id, instructions.trim()).catch(() => {});
+        // These must NOT swallow their errors. Swallowing them and then calling
+        // onSaved() reported success even when the permission write was rejected, so an
+        // admin could believe a member had been restricted while they kept full access.
+        // The surrounding catch already surfaces the message and clears the busy state.
+        await softglazeApi.members.updatePermissions(member.id, perms);
+        await softglazeApi.members.setInstructions(member.id, instructions.trim());
         onSaved();
       }
     } catch (e) { setErr(e.message || t('errors.saveMember')); setBusy(false); }

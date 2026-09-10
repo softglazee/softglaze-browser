@@ -9380,6 +9380,22 @@ async function _appendWarmerHistoryUnsafe(entry) {
   await writeSetting('automationHistory', next).catch(() => {});
 }
 
+// A warmer/parallel run records `status: 'running'` when it starts and only merges in
+// 'completed'/'stopped' when it finishes. Quitting or crashing mid-run skips that second
+// write, so the row stays "running" forever and the history claims a run is still in
+// flight long after it died. At process start nothing can be in flight by definition, so
+// settle any leftover here. Best-effort, exactly like the other startup reconciles.
+async function reconcileInterruptedAutomationRuns() {
+  const list = (await readSetting('automationHistory', [])) || [];
+  const arr = Array.isArray(list) ? list : [];
+  let changed = false;
+  const next = arr.map((e) => {
+    if (e && e.status === 'running') { changed = true; return { ...e, status: 'interrupted' }; }
+    return e;
+  });
+  if (changed) await writeSetting('automationHistory', next);
+}
+
 async function getAutomationHistory() {
   const list = (await readSetting('automationHistory', [])) || [];
   return Array.isArray(list) ? list : [];
@@ -10054,6 +10070,8 @@ function registerIpcHandlers() {
   browserDownloader.reconcileStrayZips().catch(() => {});
   browserDownloader.initResumableState().catch(() => {});
   firefoxEngine.initFirefoxResumableState().catch(() => {});
+  // Settle any automation run left mid-flight by a crash or a quit (see the function).
+  reconcileInterruptedAutomationRuns().catch(() => {});
   registerHandler(CHANNELS.DASHBOARD_GET_STATS, getDashboardStats);
 
   registerHandler(CHANNELS.PROXY_LIST, listProxies);
