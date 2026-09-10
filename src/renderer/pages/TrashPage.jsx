@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Undo2, AlertTriangle, Search, ArchiveX, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -59,6 +59,22 @@ export default function TrashPage() {
     const q = search.toLowerCase();
     return trashItems.filter((item) => (item.title || '').toLowerCase().includes(q));
   }, [trashItems, search]);
+
+  // When the FILTER changes, drop any selected ids that are no longer visible. Without
+  // this, a "select all" under one filter carries hidden ids into a permanent purge under another
+  // - the "select 5, but act on everything" bug. Keyed on the filter inputs only, so a
+  // background data refresh never clears the selection mid-task.
+  const visibleTrashIdsRef = useRef(null);
+  visibleTrashIdsRef.current = filteredItems;
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set((visibleTrashIdsRef.current || []).map((x) => x.id));
+      const next = new Set();
+      prev.forEach((id) => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [search]);
 
   // Paginate the (already filtered) trash so long lists stay usable.
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));

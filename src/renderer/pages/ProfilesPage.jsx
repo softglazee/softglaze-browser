@@ -604,6 +604,22 @@ export default function ProfilesPage() {
     return list;
   }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
 
+  // When the FILTER changes, drop any selected ids that are no longer visible. Without
+  // this, a "select all" under one filter carries hidden ids into a bulk delete under another
+  // - the "select 5, but act on everything" bug. Keyed on the filter inputs only, so a
+  // background data refresh never clears the selection mid-task.
+  const visibleProfileIdsRef = useRef(null);
+  visibleProfileIdsRef.current = filteredProfiles;
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set((visibleProfileIdsRef.current || []).map((x) => x.id));
+      const next = new Set();
+      prev.forEach((id) => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filterGroup, filterTag, filterProxy, filterStatus]);
+
   // Universal pagination (items-per-page selector via the shared Pager).
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
