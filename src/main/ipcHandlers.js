@@ -504,6 +504,7 @@ function serializeProxy(proxy) {
     profileCount: proxy._count?.profiles ?? undefined,
     profileNames: Array.isArray(proxy.profiles) ? proxy.profiles.map((p) => p.title).filter(Boolean) : undefined,
     lastStatus: proxy.lastStatus || null,
+    lastError: proxy.lastError || null,
     lastLatencyMs: proxy.lastLatencyMs ?? null,
     lastBlacklisted: typeof proxy.lastBlacklisted === 'boolean' ? proxy.lastBlacklisted : null,
     lastCountry: proxy.lastCountry || null,
@@ -1761,6 +1762,44 @@ async function syncVendorPool(payload) {
 // parsed JSON body. Enforces a hard timeout and a small response-size cap.
 // Performs a real HTTP(S) GET through the supplied http.Agent and resolves the
 // parsed JSON body. Enforces a hard timeout, response-size cap, and safe cleanup.
+// Max bytes of a non-2xx body kept for an error message. Proxy gateways answer with
+// a short plain-text reason; anything longer is a page we do not want in a toast.
+const PROXY_ERROR_BODY_LIMIT = 300;
+
+// Names the party that actually returned a non-2xx during a proxy check, and surfaces
+// ITS message. A gateway announces itself with `server:` and/or an `x-*-proxy-error`
+// header, so when one of those is present the failure belongs to the PROXY, not to the
+// IP/geo service we were trying to reach through it. Draining the body unread used to
+// turn Apify's "Monthly usage hard limit exceeded" into a bare "HTTP 403" blamed on the
+// IP service, which sent debugging in entirely the wrong direction.
+// Strip proxy credentials out of a message before it is stored or displayed. Gateway
+// bodies are usually clean, but a transport error can echo the whole proxy URL
+// (`http://user:pass@host:port`), and these messages now get PERSISTED and rendered.
+function scrubProxySecrets(message, proxy) {
+  let out = String(message || '');
+  if (!out) return out;
+  out = out.replace(/\/\/[^/@\s]*:[^/@\s]*@/g, '//***:***@'); // userinfo in any URL
+  for (const secret of [proxy && proxy.password, proxy && proxy.username]) {
+    const v = String(secret || '');
+    if (v.length >= 4) out = out.split(v).join('***');
+  }
+  return out;
+}
+
+function describeGatewayError(status, headers, body) {
+  const h = headers || {};
+  const server = String(h.server || '').trim();
+  const proxyFlag = Object.keys(h).some((k) => /^x-.*proxy-(error|status)$/i.test(k));
+  const reason = String(body || '')
+    .slice(0, PROXY_ERROR_BODY_LIMIT)
+    .replace(/<[^>]*>/g, ' ') // strip markup so a small HTML error page stays readable
+    .replace(/\s+/g, ' ')
+    .trim();
+  const fromProxy = proxyFlag || /proxy/i.test(server);
+  const who = fromProxy ? (server || 'Proxy gateway') : 'IP service';
+  return reason ? `${who} returned HTTP ${status}: ${reason}` : `${who} returned HTTP ${status}.`;
+}
+
 function httpGetJson(url, agent, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     let lib;
@@ -1793,9 +1832,22 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
       (res) => {
         const status = res.statusCode || 0;
         if (status < 200 || status >= 300) {
-          res.resume(); // Consume response data to free memory
-          cleanup();
-          return reject(new Error(`IP service returned HTTP ${status}.`));
+          // Keep a bounded prefix of the body: the gateway puts the actionable reason
+          // (quota, plan, auth) there, and describeGatewayError attributes it correctly.
+          let errBody = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => {
+            if (isDone || errBody.length >= PROXY_ERROR_BODY_LIMIT) return;
+            errBody += chunk;
+          });
+          const finishErr = () => {
+            if (isDone) return;
+            cleanup();
+            reject(new Error(describeGatewayError(status, res.headers, errBody)));
+          };
+          res.on('end', finishErr);
+          res.on('error', finishErr);
+          return;
         }
 
         let body = '';
@@ -1889,7 +1941,7 @@ async function testProxyConnectivity(proxy) {
         15000
       );
       if (data.status && data.status !== 'success') {
-        return { success: false, error: data.message || 'Proxy check failed.', latencyMs: Date.now() - started };
+        return { success: false, error: scrubProxySecrets(data.message || 'Proxy check failed.', proxy), latencyMs: Date.now() - started };
       }
       return {
         success: true,
@@ -1903,8 +1955,13 @@ async function testProxyConnectivity(proxy) {
         latencyMs: Date.now() - started
       };
     } catch (fallbackError) {
-      const message = (fallbackError && fallbackError.message) || (primaryError && primaryError.message) || 'Proxy connection failed.';
-      return { success: false, error: message, latencyMs: Date.now() - started };
+      // Prefer whichever attempt named the gateway: the plain-HTTP fallback surfaces the
+      // gateway's own body, while a failed HTTPS CONNECT usually yields only a generic
+      // tunnel error. Fall back to the primary message when the secondary says nothing.
+      const fb = (fallbackError && fallbackError.message) || '';
+      const pm = (primaryError && primaryError.message) || '';
+      const message = /returned HTTP/.test(fb) ? fb : (fb || pm || 'Proxy connection failed.');
+      return { success: false, error: scrubProxySecrets(message, proxy), latencyMs: Date.now() - started };
     }
   }
 }
@@ -4873,6 +4930,9 @@ function proxyGeoLabel(result) {
 async function persistProxyHealth(db, id, result) {
   const data = {
     lastStatus: result.success ? 'ok' : 'fail',
+    // Keep WHY it failed, not just that it did, so the pool can tell a quota refusal
+    // from a dead exit after a reload. Cleared on success so a stale reason never sticks.
+    lastError: result.success ? null : (String(result.error || '').slice(0, 400) || null),
     lastLatencyMs: typeof result.latencyMs === 'number' ? result.latencyMs : null,
     lastCountry: result.country || null,
     lastRegion: result.region || null,

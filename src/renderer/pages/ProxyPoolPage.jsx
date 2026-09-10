@@ -569,7 +569,7 @@ export default function ProxyPoolPage() {
       setProxies(rows);
       const next = {};
       for (const p of rows) {
-        if (p.lastStatus) next[p.id] = { success: p.lastStatus === 'ok', country: p.lastCountry, latencyMs: p.lastLatencyMs };
+        if (p.lastStatus) next[p.id] = { success: p.lastStatus === 'ok', country: p.lastCountry, latencyMs: p.lastLatencyMs, error: p.lastError || null };
       }
       setCheckResults(next);
     } catch (err) {
@@ -698,7 +698,7 @@ export default function ProxyPoolPage() {
         </span>
       );
     }
-    if (proxy.lastStatus === 'fail') return <span className="text-xs font-medium text-red-400/90">{t('status.failed')}</span>;
+    if (proxy.lastStatus === 'fail') return <span className="text-xs font-medium text-red-400/90" title={proxy.lastError || t('status.failed')}>{t('status.failed')}{proxy.lastError ? `: ${String(proxy.lastError).slice(0, 40)}` : ''}</span>;
     return <span className="text-xs text-muted-dark">—</span>;
   }
 

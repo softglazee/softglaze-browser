@@ -36,6 +36,7 @@ model Proxy {
   lastRegion    String? // verified exit region/state (for auto-grouping)
   lastCity      String? // verified exit city (for auto-grouping)
   lastBlacklisted Boolean? // last DNSBL result: true = on a blocklist, false = clean, null = never checked
+  lastError     String? // why the last check failed (gateway message); null when it passed
   lastCheckedAt DateTime?
 
   ownerMemberId Int? // member who added this proxy (for per-member quotas)
