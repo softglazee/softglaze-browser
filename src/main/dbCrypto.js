@@ -188,15 +188,26 @@ async function secureUnlink(filePath) {
     if (stat.isFile() && stat.size > 0) {
       const fh = await fsp.open(filePath, 'r+');
       try {
-        await fh.write(crypto.randomBytes(stat.size), 0, stat.size, 0);
+        // Overwrite in bounded chunks so a multi-GB DB does not allocate its whole
+        // size in RAM (and randomBytes cannot throw on an oversized single request).
+        const CHUNK = 1 << 20; // 1 MiB
+        for (let offset = 0; offset < stat.size; offset += CHUNK) {
+          const len = Math.min(CHUNK, stat.size - offset);
+          await fh.write(crypto.randomBytes(len), 0, len, offset);
+        }
         await fh.sync();
       } finally {
         await fh.close();
       }
     }
+  } catch (e) {
+    // Overwrite is best-effort (a busy or locked file throws here); the delete
+    // below must still run so plaintext is never left beside the ciphertext.
+  }
+  try {
     await fsp.unlink(filePath);
   } catch (e) {
-    // File already gone or locked — nothing more we can safely do.
+    // Already gone, or genuinely locked. Nothing more we can safely do.
   }
 }
 
