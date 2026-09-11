@@ -65,9 +65,13 @@ function configureDatabaseEnv() {
     databaseUrl: process.env.DATABASE_URL
   };
 
-  // Learn the at-rest encryption state from the sidecar. If encrypted, the DB
-  // starts locked — getPrisma() will refuse until unlockEncryptedDb() succeeds.
-  dbEnc.enabled = Boolean(readSidecar().enabled);
+  // Learn the at-rest encryption state. The plaintext sidecar can be lost or
+  // corrupted (AV, chkdsk, an interrupted rename, a userData copy that misses it),
+  // and readSidecar() fails OPEN. So the ciphertext's own presence is authoritative:
+  // if softglaze.sqlite.enc exists we treat the workspace as encrypted and fail
+  // CLOSED (require unlock) rather than boot a fresh empty DB over the good .enc.
+  // disableDbEncryption shreds the .enc, so this never resurrects a disabled state.
+  dbEnc.enabled = Boolean(readSidecar().enabled) || fs.existsSync(runtime.encPath);
   if (dbEnc.enabled) dbEnc.unlocked = false;
 
   return runtime;
