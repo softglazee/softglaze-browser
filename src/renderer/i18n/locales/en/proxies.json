@@ -269,5 +269,13 @@
     "moveProxies": "Could not move the proxies.",
     "autoGroup": "Auto-group failed. Run Test All first so proxies have a detected country.",
     "deleteProxy": "Failed to delete proxy. Remove linked profiles or change their proxy assignment first."
+  },
+  "proxyProviders": {
+    "kind": {
+      "notConnected": "Not connected yet"
+    },
+    "notConnected": {
+      "body": "{{provider}} is not connected to a live API yet, so there is nothing to pull. Add its proxies manually under Proxies. We have contacted them about a native integration."
+    }
   }
 }

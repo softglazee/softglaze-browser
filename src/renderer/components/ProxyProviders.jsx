@@ -24,17 +24,17 @@ if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 
 // lucide ships no brand logos, so each card uses a branded initials tile.
 // ---------------------------------------------------------------------------
 export const PROVIDERS = [
-  { key: 'ipfoxy', name: 'IPFoxy', initials: 'IF', color: '#f97316', tokenSync: true, referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: { host: 'gate.ipfoxy.io', port: 6200, type: 'HTTP' } },
+  { key: 'ipfoxy', name: 'IPFoxy', unavailable: true, initials: 'IF', color: '#f97316', referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: null },
   { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 22225, type: 'HTTP' } },
   { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, ipv6: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
   { key: 'smartproxy', name: 'Smartproxy', initials: 'SP', color: '#ff6b35', apiSync: true, referral: 'https://smartproxy.com/?ref=softglaze', gateway: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' } },
-  { key: 'lumiproxy', name: 'LumiProxy', initials: 'LP', color: '#22c55e', tokenSync: true, referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: { host: 'gate.lumiproxy.com', port: 8000, type: 'HTTP' } },
-  { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', tokenSync: true, referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'gate.proxy302.com', port: 2000, type: 'HTTP' } },
-  { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', tokenSync: true, referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: { host: 'gate.mangoproxy.com', port: 8000, type: 'HTTP' } },
-  { key: 'kookeey', name: 'kookeey', initials: 'KK', color: '#ec4899', tokenSync: true, referral: 'https://www.kookeey.com/?ref=softglaze', gateway: { host: 'gate.kookeey.com', port: 1000, type: 'HTTP' } },
-  { key: 'luna', name: 'Luna Proxy', initials: 'LN', color: '#8b5cf6', tokenSync: true, referral: 'https://www.lunaproxy.com/?ref=softglaze', gateway: { host: 'gate.lunaproxy.com', port: 12233, type: 'HTTP' } },
-  { key: 'ipburger', name: 'IP Burger', initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: { host: 'gate.ipburger.com', port: 8080, type: 'HTTP' } },
-  { key: 'tisocks', name: 'TiSocks', initials: 'TS', color: '#14b8a6', referral: 'https://tisocks.net/?ref=softglaze', gateway: { host: 'gate.tisocks.net', port: 1080, type: 'SOCKS5' } },
+  { key: 'lumiproxy', name: 'LumiProxy', unavailable: true, initials: 'LP', color: '#22c55e', referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: null },
+  { key: 'proxy302', name: 'Proxy302', unavailable: true, initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: null },
+  { key: 'mangoproxy', name: 'MangoProxy', unavailable: true, initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null },
+  { key: 'kookeey', name: 'kookeey', unavailable: true, initials: 'KK', color: '#ec4899', referral: 'https://www.kookeey.net/?ref=softglaze', gateway: null },
+  { key: 'luna', name: 'Luna Proxy', unavailable: true, initials: 'LN', color: '#8b5cf6', referral: 'https://luna-proxy.com/?ref=softglaze', gateway: null },
+  { key: 'ipburger', name: 'IP Burger', unavailable: true, initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: null },
+  { key: 'tisocks', name: 'TiSocks', unavailable: true, initials: 'TS', color: '#14b8a6', referral: 'https://tisocks.net/?ref=softglaze', gateway: null },
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
@@ -93,7 +93,8 @@ export default function ProxyProviders({ onSynced }) {
 
   // Re-prime the workspace whenever the active provider changes.
   useEffect(() => {
-    setForm({ host: provider.gateway.host, port: String(provider.gateway.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
+    const gw = provider.gateway || { host: '', port: '' };
+    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
     setCheckResult(null);
     setSyncResult(null);
     setErr('');
@@ -145,7 +146,7 @@ export default function ProxyProviders({ onSynced }) {
     setErr(''); setCheckResult(null); setChecking(true);
     try {
       const r = await softglazeApi.proxies.check({
-        type: provider.gateway.type, host: form.host, port: form.port, username: form.username, password: form.password
+        type: (provider.gateway && provider.gateway.type) || 'HTTP', host: form.host, port: form.port, username: form.username, password: form.password
       });
       setCheckResult(r);
     } catch (e) { setErr(e.message || t('proxyProviders.errors.check')); }
@@ -267,7 +268,7 @@ export default function ProxyProviders({ onSynced }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`block text-[12.5px] font-medium truncate ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{p.name}</span>
-                    <span className="block text-[10px] text-muted-foreground/70">{p.tokenSync ? t('proxyProviders.kind.tokenSync') : p.geoSync ? t('proxyProviders.kind.geoPull') : t('proxyProviders.kind.rotatingGateway')}</span>
+                    <span className="block text-[10px] text-muted-foreground/70">{p.unavailable ? t('proxyProviders.kind.notConnected') : p.tokenSync ? t('proxyProviders.kind.tokenSync') : p.geoSync ? t('proxyProviders.kind.geoPull') : t('proxyProviders.kind.rotatingGateway')}</span>
                   </span>
                 </button>
               );
@@ -306,7 +307,13 @@ export default function ProxyProviders({ onSynced }) {
 
           {err && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 flex items-start gap-2"><X className="w-4 h-4 mt-0.5 shrink-0" />{err}</div>}
 
-          {provider.tokenSync ? (
+          {provider.unavailable ? (
+            /* No live adapter for this vendor yet, so there is no form to show. It used
+               to render a sync button that fabricated four unusable proxies. */
+            <div className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-200/90">
+              {t('proxyProviders.notConnected.body', { provider: provider.name })}
+            </div>
+          ) : provider.tokenSync ? (
             /* ---- Token Sync mechanic ---- */
             <div className="space-y-4 max-w-2xl">
               <div>

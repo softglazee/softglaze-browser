@@ -1242,48 +1242,16 @@ const PROXY_VENDORS = Object.freeze({
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP'
 });
 
-// Plausible rotating gateways used to shape the simulated rows. Replace with the
-// real per-vendor endpoints returned by their APIs during full integration.
+// Gateway endpoints for the vendors whose adapters build a URL from this table.
+// Every other entry was removed: they existed only to shape simulated rows, were never
+// verified against the vendor, and six of them did not resolve in DNS at all. Do not add
+// a host here unless the vendor documents it AND it is confirmed to resolve.
 const VENDOR_GATEWAYS = Object.freeze({
-  ipfoxy: { host: 'gate.ipfoxy.io', port: 6200, type: 'HTTP' },
-  brightdata: { host: 'brd.superproxy.io', port: 22225, type: 'HTTP' },
   oxylabs: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' },
   smartproxy: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' },
-  lumiproxy: { host: 'gate.lumiproxy.com', port: 8000, type: 'HTTP' },
-  proxy302: { host: 'gate.proxy302.com', port: 2000, type: 'HTTP' },
-  mangoproxy: { host: 'gate.mangoproxy.com', port: 8000, type: 'HTTP' },
-  kookeey: { host: 'gate.kookeey.com', port: 1000, type: 'HTTP' },
-  luna: { host: 'gate.lunaproxy.com', port: 12233, type: 'HTTP' },
-  ipburger: { host: 'gate.ipburger.com', port: 8080, type: 'HTTP' },
-  tisocks: { host: 'gate.tisocks.net', port: 1080, type: 'SOCKS5' },
-  shopsocks5: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' },
-  apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' },
-  smartproxyorg: { host: 'gate.smartproxy.io', port: 7000, type: 'HTTP' },
-  anyip: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }
+  apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }
 });
 
-// SIMULATION STUB: stand-in for "call the vendor API with the customer token and
-// receive their purchased endpoints". Deterministic so a repeat sync dedups
-// cleanly instead of duplicating rows. Returns normalized proxy rows.
-function simulateVendorProxies(vendorKey, token, opts = {}) {
-  const gw = VENDOR_GATEWAYS[vendorKey];
-  if (!gw) throw new Error('Unknown proxy provider.');
-  const short = String(token).replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'token';
-  const rows = [];
-  for (let i = 1; i <= 4; i += 1) {
-    // Bright Data BDPM uses a distinct session-style username; reflect that here.
-    const sessionTag = (vendorKey === 'brightdata' && opts.bdpm) ? `-bdpm-s${i}` : `-s${i}`;
-    rows.push({
-      type: gw.type,
-      host: gw.host,
-      port: gw.port + i,
-      username: `${vendorKey}-${short}${sessionTag}`,
-      password: `sg-${short}`,
-      label: `${PROXY_VENDORS[vendorKey]} • Synced #${i}`
-    });
-  }
-  return rows;
-}
 
 // Minimal native HTTPS text fetch with custom headers + a hard timeout/size cap.
 // Used for direct vendor REST calls (e.g. Bright Data) where we need a Bearer
@@ -1729,11 +1697,16 @@ async function syncVendorPool(payload) {
       ipVersion: optionalString(input.ipVersion)
     });
   } else {
-    // SIMULATION fallback for not-yet-wired providers (token-driven).
-    const token = requiredString(input.token, 'Proxy token').trim();
-    if (token.length > 50) throw new Error('Proxy token must be 50 characters or fewer.');
-    rows = simulateVendorProxies(vendorKey, token, { bdpm: input.bdpm === true });
-    simulated = true;
+    // No live adapter for this vendor. This used to fall through to a SIMULATION that
+    // invented four rows from a made-up gateway, so the pool filled with proxies that
+    // could never connect. Six of those eight invented gateways did not resolve in DNS
+    // at all (verified against 8.8.8.8 and 1.1.1.1; the list is in
+    // test/vendorGateways.test.js), and a fabricated username pointed at a real host is
+    // worse still, because the row looks plausible. Refuse instead.
+    throw new Error(
+      `${PROXY_VENDORS[vendorKey]} is not connected to a live API yet, so there is nothing to pull. `
+      + 'Add its proxies manually under Proxies, or use a provider marked as connected.'
+    );
   }
 
   const result = { provider: PROXY_VENDORS[vendorKey], simulated, total: rows.length, created: [], skipped: [] };
