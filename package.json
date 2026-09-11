@@ -41,6 +41,7 @@
     "nodemailer": "^6.9.14",
     "proxy-agent": "^6.5.0",
     "puppeteer": "^22.15.0",
+    "puppeteer-core": "^22.15.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "^19.2.7",
