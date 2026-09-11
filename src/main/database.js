@@ -309,19 +309,39 @@ async function disableDbEncryption(password) {
 // changes while encryption is on, so "the vault password unlocks the DB" stays
 // true). The live working file is untouched; only the .enc + held key change.
 async function rekeyEncryptedDb(newPassword) {
-  if (!dbEnc.enabled || !dbEnc.unlocked) return;
+  if (!dbEnc.enabled || !dbEnc.unlocked) {
+    const err = new Error('Cannot re-key: the database is not unlocked.');
+    err.code = 'DB_NOT_UNLOCKED';
+    throw err;
+  }
   const { dbPath, encPath } = runtime;
-  if (!fs.existsSync(dbPath)) return;
-  const salt = dbCrypto.newSalt();
-  // A password change is a natural re-key point — upgrade to the strong (v2) KDF,
-  // so existing users migrate off the legacy cost the next time they change it.
-  const version = dbCrypto.CURRENT_VERSION;
-  const key = await dbCrypto.deriveKey(newPassword, salt, version);
-  await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
-  dbEnc.key = key;
-  dbEnc.salt = salt;
-  dbEnc.version = version;
-  try { writeSidecar({ enabled: true, version }); } catch (e) { /* sidecar is advisory; the .enc header is authoritative */ }
+  if (!fs.existsSync(dbPath)) {
+    const err = new Error('Cannot re-key: the working database file is missing.');
+    err.code = 'DB_MISSING';
+    throw err;
+  }
+  // Fold any WAL-resident commits into the main file, and block concurrent Prisma
+  // access, before reading it. Previously this encrypted the LIVE WAL database, so
+  // rows committed to the -wal file were absent from the new .enc, and a concurrent
+  // write could tear the snapshot. The guards above now throw instead of returning
+  // silently, so a re-key that cannot run fails loudly rather than leaving the .enc
+  // on the old key while the caller commits the new vault password.
+  migrating = true;
+  try {
+    await checkpointAndDisconnect();
+    const salt = dbCrypto.newSalt();
+    // A password change is a natural re-key point: upgrade to the strong (v2) KDF,
+    // so existing users migrate off the legacy cost the next time they change it.
+    const version = dbCrypto.CURRENT_VERSION;
+    const key = await dbCrypto.deriveKey(newPassword, salt, version);
+    await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
+    dbEnc.key = key;
+    dbEnc.salt = salt;
+    dbEnc.version = version;
+    try { writeSidecar({ enabled: true, version }); } catch (e) { /* sidecar is advisory; the .enc header is authoritative */ }
+  } finally {
+    migrating = false;
+  }
 }
 
 // ---------------------------------------------------------------------------

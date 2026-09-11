@@ -7162,13 +7162,17 @@ async function vaultSetPassword(payload) {
   const next = requiredString(input.password, 'Password');
   if (next.length < 4) throw new Error('Password must be at least 4 characters.');
   const { salt, hash } = hashSecret(next);
+  // Re-key the at-rest .enc to the new password BEFORE persisting the new vault
+  // hash. rekeyEncryptedDb throws on failure, so a failed re-key leaves BOTH the
+  // vault hash and the .enc on the OLD password (the old password still unlocks
+  // everything, no lockout). Previously the hash was written first and a swallowed
+  // re-key error left the .enc on the old key while the vault expected the new one,
+  // which locked the user out on the next boot.
+  if (database.isDbEncryptionEnabled()) {
+    await database.rekeyEncryptedDb(next);
+  }
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes ?? v.autoLockMinutes) || 0 });
   vaultLocked = false;
-  // If the DB is encrypted with the (old) vault password, re-key the at-rest copy
-  // to the new one so "the workspace password unlocks the database" stays true.
-  if (database.isDbEncryptionEnabled()) {
-    try { await database.rekeyEncryptedDb(next); } catch (e) { console.error('[vault] DB re-key after password change failed', e); }
-  }
   // Keep "stay signed in" working across a password change: re-seal the remembered
   // vault credential with the new password (otherwise auto-login would fail once and
   // self-clear). Untouched for super/member remember blobs.
