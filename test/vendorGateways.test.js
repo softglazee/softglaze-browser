@@ -119,3 +119,49 @@ test('the UI never dereferences a null gateway', () => {
   assert.doesNotMatch(UI, /provider\.gateway\.port/, 'same for port');
   assert.doesNotMatch(UI, /^\s*type: provider\.gateway\.type/m, 'same for type');
 });
+
+// --- 5) every string this screen renders must actually exist ---------------
+//
+// proxyProviders.notConnected.body shipped as a raw key on screen because it was
+// added to proxies.json while the component loads the cmpSettingsC namespace.
+// proxyProviders.integratedCount had never existed at all. Nothing caught either,
+// because a missing i18next key renders as the key itself rather than throwing.
+//
+// This check is only reliable for a component with exactly ONE useTranslation call,
+// so it asserts that first. A file mixing `t` (defaultNS common) with `tx` (its own
+// namespace) cannot be checked this way without real scope analysis.
+
+test('every translation key used by the proxy providers screen exists in its namespace', () => {
+  const calls = UI.match(/useTranslation\(/g) || [];
+  assert.equal(calls.length, 1,
+    'this check assumes a single namespace; if the component gains a second useTranslation, rewrite it');
+
+  const ns = /useTranslation\(\s*'([^']+)'\s*\)/.exec(UI)[1];
+  assert.equal(ns, 'cmpSettingsC');
+
+  const resolve = (dict, key) => {
+    let cur = dict;
+    for (const part of key.split('.')) {
+      if (!cur || typeof cur !== 'object' || !(part in cur)) return undefined;
+      cur = cur[part];
+    }
+    return typeof cur === 'string' ? cur : undefined;
+  };
+
+  // Keys passed with an explicit defaultValue render that fallback, so they are fine.
+  const used = [];
+  const re = /\bt\(\s*'([A-Za-z0-9_.]+)'\s*(,\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})?\s*\)/g;
+  let m;
+  while ((m = re.exec(UI)) !== null) {
+    if (!(m[2] || '').includes('defaultValue')) used.push(m[1]);
+  }
+  assert.ok(used.length > 20, 'expected to find the screen\'s translation keys');
+
+  for (const locale of ['en', 'es']) {
+    const dict = JSON.parse(fs.readFileSync(
+      path.join(ROOT, 'src', 'renderer', 'i18n', 'locales', locale, `${ns}.json`), 'utf8'));
+    const missing = [...new Set(used)].filter((k) => resolve(dict, k) === undefined);
+    assert.deepEqual(missing, [],
+      `${locale}/${ns}.json is missing keys this screen renders, so they appear on screen as raw text`);
+  }
+});

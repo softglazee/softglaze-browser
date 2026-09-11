@@ -251,7 +251,7 @@ export default function ProxyProviders({ onSynced }) {
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
             <Boxes className="w-4 h-4 text-primary" />
             <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.heading')}</span>
-            <span className="ml-auto text-[10.5px] text-muted-foreground">{t('proxyProviders.integratedCount', { count: PROVIDERS.length })}</span>
+            <span className="ml-auto text-[10.5px] text-muted-foreground">{t('proxyProviders.integratedCount', { connected: PROVIDERS.filter((x) => !x.unavailable).length, total: PROVIDERS.length })}</span>
           </div>
           <div className="overflow-y-auto p-2 grid grid-cols-2 lg:grid-cols-1 gap-1.5">
             {PROVIDERS.map((p) => {

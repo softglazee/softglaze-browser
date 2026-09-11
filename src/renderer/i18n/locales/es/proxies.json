@@ -269,13 +269,5 @@
     "moveProxies": "No se pudieron mover los proxies.",
     "autoGroup": "El agrupamiento automático falló. Ejecuta Probar todo primero para que los proxies tengan un país detectado.",
     "deleteProxy": "No se pudo eliminar el proxy. Quita los perfiles vinculados o cambia su asignación de proxy primero."
-  },
-  "proxyProviders": {
-    "kind": {
-      "notConnected": "Aun no conectado"
-    },
-    "notConnected": {
-      "body": "{{provider}} todavia no esta conectado a una API en vivo, por lo que no hay nada que importar. Anade sus proxies manualmente en Proxies. Ya les hemos escrito para una integracion nativa."
-    }
   }
 }

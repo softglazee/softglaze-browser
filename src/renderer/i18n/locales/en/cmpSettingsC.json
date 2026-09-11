@@ -34,7 +34,8 @@
     "kind": {
       "tokenSync": "Token sync",
       "geoPull": "Geo pull",
-      "rotatingGateway": "Rotating gateway"
+      "rotatingGateway": "Rotating gateway",
+      "notConnected": "Not connected yet"
     },
     "banner": {
       "subtitle": "Premium proxies, synced straight into Softglaze Provider Core.",
@@ -202,6 +203,10 @@
       "smartproxyorg": "Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. \"Keep same IP\" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on \"Different each time\" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.",
       "shopsocks5": "ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER — token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).",
       "anyip": "anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard, OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway if your dashboard shows a custom port."
-    }
+    },
+    "notConnected": {
+      "body": "{{provider}} is not connected to a live API yet, so there is nothing to pull. Add its proxies manually under Proxies. We have contacted them about a native integration."
+    },
+    "integratedCount": "{{connected}} of {{total}} connected"
   }
 }
