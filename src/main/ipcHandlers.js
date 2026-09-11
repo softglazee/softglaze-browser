@@ -976,6 +976,7 @@ async function deleteProxy(payload) {
   const id = parseId(input.id);
   await assertCanAccessProxy(id);
   await db.proxy.delete({ where: { id } });
+  await logAudit('proxy.delete', { detail: { proxyId: id } });
   return { deleted: true, id };
 }
 
@@ -989,6 +990,7 @@ async function bulkDeleteProxies(payload) {
   const { allowed, denied } = await partitionAccessibleProxyIds(ids);
   if (allowed.length === 0) { const e = new Error('You do not have access to the selected proxies.'); e.code = 'FORBIDDEN'; throw e; }
   const result = await getPrisma().proxy.deleteMany({ where: { id: { in: allowed } } });
+  await logAudit('proxy.delete', { detail: { count: result.count, proxyIds: allowed, bulk: true } });
   return { deleted: result.count, ids: allowed, denied };
 }
 
@@ -3363,6 +3365,7 @@ async function purgeProfile(payload) {
     await fs.rm(dataDir, { recursive: true, force: true });
   }
 
+  await logAudit('profile.purge', { profileId: id, detail: { title: existing.title, removedLocalData: removeLocalData } });
   return { purged: true, id, removedLocalData: removeLocalData };
 }
 
@@ -3421,6 +3424,7 @@ async function bulkPurgeProfiles(payload) {
         await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true });
       }
       result.purged.push(id);
+      await logAudit('profile.purge', { profileId: id, detail: { removedLocalData: removeLocalData, bulk: true } });
     } catch (error) {
       result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
     }
@@ -3779,6 +3783,7 @@ async function deleteProxyGroup(payload) {
   // Detach proxies first (keep the proxies; only drop the grouping).
   await db.proxy.updateMany({ where: { proxyGroupId: id }, data: { proxyGroupId: null } });
   await db.proxyGroup.delete({ where: { id } });
+  await logAudit('proxy-group.delete', { detail: { proxyGroupId: id } });
   return { deleted: true, id };
 }
 
