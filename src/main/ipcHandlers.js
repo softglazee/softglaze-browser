@@ -56,7 +56,7 @@ const licensePolicy = require('./licensePolicy');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
-const { CloudSyncEngine } = require('./cloudSync');
+const { CloudSyncEngine, resolveWorkspaceSalt } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
 const secretStore = require('./secretStore');
@@ -7711,15 +7711,16 @@ async function unlockCloudSync(passphrase) {
   const transport = syncTransport.createTransport({ baseUrl: c.baseUrl, token });
   const engine = new CloudSyncEngine({ transport, namespace: c.namespace });
   // Derive the E2E master key from a RANDOM per-workspace salt (audit: never the
-  // public namespace/bucket name). A legacy config predating this carries no salt —
-  // mint one now and persist it; the transport is not yet wired, so there is no
-  // prior ciphertext to invalidate. (When the transport ships, this salt should be
-  // uploaded to the bucket so a second device converges on the same key.)
-  let workspaceSalt = c.workspaceSalt;
-  if (!workspaceSalt) {
-    workspaceSalt = crypto.randomBytes(16).toString('base64');
-    try { await writeSetting('cloudSync', { ...c, workspaceSalt }); } catch (e) { /* best-effort persist */ }
-  }
+  // public namespace/bucket name). The salt must be IDENTICAL on every device or
+  // their ciphertext is mutually unreadable, so a bucket-held salt is authoritative
+  // and ours is uploaded once when the bucket has none. This is best-effort and
+  // falls back to the local salt on a transport error (see resolveWorkspaceSalt).
+  const workspaceSalt = await resolveWorkspaceSalt(
+    transport,
+    c.namespace,
+    c.workspaceSalt,
+    (s) => writeSetting('cloudSync', { ...c, workspaceSalt: s })
+  );
   await engine.deriveMasterKey(String(passphrase), Buffer.from(workspaceSalt, 'base64'));
   cloudSyncEngine = engine;
   cloudSyncUnlocked = true;

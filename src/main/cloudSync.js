@@ -133,4 +133,47 @@ class CloudSyncEngine {
   }
 }
 
-module.exports = { CloudSyncEngine };
+// Cross-device convergence of the E2E key salt (H-CR2). The salt is NOT secret,
+// but every device MUST derive the master key from the SAME salt or their
+// ciphertext is mutually unreadable and one device's push overwrites the other's
+// data. A salt already in the bucket is authoritative; otherwise the local one is
+// published exactly once (a fresh 16-byte base64 salt is minted if none exists).
+// Best-effort: on ANY transport error we fall back to the local salt (minting if
+// needed), so a bucket outage never blocks unlock and convergence simply happens on
+// the next unlock that reaches the bucket. `persist(salt)` stores the chosen salt
+// locally and is invoked only when the salt is (re)selected.
+async function resolveWorkspaceSalt(transport, namespace, localSalt, persist) {
+  const key = `${namespace}/workspace.salt`;
+  const mint = () => crypto.randomBytes(16).toString('base64');
+  const save = async (s) => {
+    if (typeof persist === 'function') { try { await persist(s); } catch (e) { /* best-effort persist */ } }
+  };
+  let salt = localSalt || null;
+  const usable = transport && typeof transport.get === 'function' && typeof transport.put === 'function';
+  if (!usable) {
+    if (!salt) { salt = mint(); await save(salt); }
+    return salt;
+  }
+  try {
+    const remote = await transport.get(key);
+    if (remote) {
+      const remoteSalt = (Buffer.isBuffer(remote) ? remote.toString('utf8') : String(remote)).trim();
+      if (remoteSalt) {
+        if (remoteSalt !== salt) { salt = remoteSalt; await save(salt); }
+        return salt;
+      }
+    }
+    // The bucket has no salt yet: publish ours once so future devices converge.
+    if (!salt) salt = mint();
+    await transport.put(key, Buffer.from(salt, 'utf8'));
+    await save(salt);
+    return salt;
+  } catch (e) {
+    // Bucket unreachable: keep using the local salt (mint if needed), exactly as
+    // before this fix, so unlock still works offline.
+    if (!salt) { salt = mint(); await save(salt); }
+    return salt;
+  }
+}
+
+module.exports = { CloudSyncEngine, resolveWorkspaceSalt };
