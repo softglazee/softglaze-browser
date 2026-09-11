@@ -38,11 +38,11 @@
     "subtitle": "Reassign, swap, or clear the proxies on the selected profiles.",
     "modeLabel": "Action",
     "modes": {
-      "unique": "Unique — one distinct proxy per profile",
-      "pool": "Round-robin — spread a set across profiles",
+      "unique": "Unique - one distinct proxy per profile",
+      "pool": "Round-robin - spread a set across profiles",
       "single": "One proxy for all selected",
-      "shuffle": "Shuffle — swap the proxies they already have",
-      "clear": "Clear — remove proxy (direct)"
+      "shuffle": "Shuffle - swap the proxies they already have",
+      "clear": "Clear - remove proxy (direct)"
     },
     "sourceLabel": "Take proxies from",
     "sources": {
@@ -52,14 +52,14 @@
       "paste": "Paste a list"
     },
     "pickGroup": "Choose a group…",
-    "pastePlaceholder": "host:port:user:pass — one per line",
+    "pastePlaceholder": "host:port:user:pass - one per line",
     "verify": "Verify proxies are live first (slower)",
     "proxyLabel": "Proxy",
     "pickProxy": "Choose a proxy…",
     "shuffleNote": "Each selected profile swaps to another selected profile's proxy. Needs at least two proxied profiles.",
     "clearNote": "Removes the proxy from every selected profile (they connect directly).",
     "apply": "Apply",
-    "limited": "Assigned {{assigned}} — {{skipped}} profile(s) had no proxy left in the source."
+    "limited": "Assigned {{assigned}} - {{skipped}} profile(s) had no proxy left in the source."
   },
   "tabs": {
     "general": "General",
@@ -92,12 +92,12 @@
     "name": "Name",
     "namePlaceholder": "e.g. FB Mailsi 01",
     "browser": "Browser",
-    "installedBuilds_one": "{{count}} real Chrome build installed — the selected version launches the matching binary, so UA, Client-Hints and TLS all genuinely match. \"Auto\" uses the newest installed.",
-    "installedBuilds_other": "{{count}} real Chrome builds installed — the selected version launches the matching binary, so UA, Client-Hints and TLS all genuinely match. \"Auto\" uses the newest installed.",
-    "noBuilds": "No on-disk Chrome builds detected — using the bundled engine. Download a version below to install it.",
+    "installedBuilds_one": "{{count}} real Chrome build installed - the selected version launches the matching binary, so UA, Client-Hints and TLS all genuinely match. \"Auto\" uses the newest installed.",
+    "installedBuilds_other": "{{count}} real Chrome builds installed - the selected version launches the matching binary, so UA, Client-Hints and TLS all genuinely match. \"Auto\" uses the newest installed.",
+    "noBuilds": "No on-disk Chrome builds detected - using the bundled engine. Download a version below to install it.",
     "downloadMore": "Download more versions",
     "identity": "Identity",
-    "identityHelpPre": "Runs the same real Chrome build above, but presents as the chosen Chromium browser — UA token, Sec-CH-UA brands and navigator identity all match, while TLS/JA4 stay genuine (it ",
+    "identityHelpPre": "Runs the same real Chrome build above, but presents as the chosen Chromium browser - UA token, Sec-CH-UA brands and navigator identity all match, while TLS/JA4 stay genuine (it ",
     "identityHelpEmph": "is",
     "identityHelpPost": " Chromium under the hood).",
     "os": "OS",
@@ -132,7 +132,7 @@
     "passPlaceholder": "Proxy Password (Optional)",
     "selectProxy": "Select Proxy",
     "chooseSaved": "-- Choose a saved proxy --",
-    "noSaved": "No saved proxies yet — add them on the Proxy Pool page.",
+    "noSaved": "No saved proxies yet - add them on the Proxy Pool page.",
     "network": "Network",
     "quicDisableTitle": "Disable HTTP/3 (QUIC)",
     "quicEnableTitle": "Enable HTTP/3 (QUIC)",
@@ -152,7 +152,7 @@
     "twoFactor": "2FA Secret",
     "premium": "Premium",
     "twoFactorPlaceholder": "Base32 authenticator seed, e.g. JBSWY3DPEHPK3PXP",
-    "twoFactorHint": "Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes — copy them with one click from the Profiles list (🔑 2FA badge)."
+    "twoFactorHint": "Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes - copy them with one click from the Profiles list (🔑 2FA badge)."
   },
   "fp": {
     "coreIdentity": "Core Identity",
@@ -188,7 +188,7 @@
     "speechVoicesNoise": "SpeechVoices Noise",
     "mediaDevice": "Media Device",
     "webglMetadata": "WebGL Metadata",
-    "webglMetadataDesc": "Real (recommended) reports your true GPU consistently across the page, workers AND service worker — no mismatch. Custom spoofs the GPU string but a service worker still shows the real one, which detectors flag.",
+    "webglMetadataDesc": "Real (recommended) reports your true GPU consistently across the page, workers AND service worker - no mismatch. Custom spoofs the GPU string but a service worker still shows the real one, which detectors flag.",
     "configureGpu": "Configure Custom GPU",
     "autoRandomize": "Auto Randomize",
     "vendor": "Vendor",
@@ -318,7 +318,7 @@
     "share": "Share",
     "shareTitle": "Share with team members",
     "compare": "Compare",
-    "compareTitle": "Compare 2–3 profiles",
+    "compareTitle": "Compare 2-3 profiles",
     "delete": "Delete",
     "clear": "Clear"
   },
@@ -337,7 +337,7 @@
     "savedFilters": "Saved filters…",
     "save": "Save",
     "savePresetTitle": "Save the current filters as a preset",
-    "savePresetPrompt": "Save the current filters as a preset — name:",
+    "savePresetPrompt": "Save the current filters as a preset - name:",
     "profileCount_one": "{{count}} profile",
     "profileCount_other": "{{count}} profiles",
     "used": "Used",
@@ -370,7 +370,7 @@
   },
   "actions": {
     "stop": "Stop",
-    "inUseTitle": "In use by {{member}} — ask them to close it first",
+    "inUseTitle": "In use by {{member}} - ask them to close it first",
     "launch": "Launch",
     "environmentOverview": "Environment Overview",
     "editConfig": "Edit Configuration",

@@ -6,11 +6,11 @@
 // chrome.exe, but we CAN push a per-profile icon onto its top-level window via the
 // Win32 WM_SETICON message (found by PID), which updates the title-bar + taskbar
 // icon for that window. This is best-effort: it runs after the window exists, and
-// some Chrome internal repaints may reset it. No native npm module is used — a
+// some Chrome internal repaints may reset it. No native npm module is used - a
 // short PowerShell P/Invoke does the EnumWindows + LoadImage + SendMessage.
 //
 // The icons are ORIGINAL brand-COLORED marks generated here in code (a rounded
-// square + a centered glyph), NOT the vendors' trademarked logos — same
+// square + a centered glyph), NOT the vendors' trademarked logos - same
 // trademark-safe stance as the proxy-provider and brand marks in the UI.
 const fs = require('node:fs');
 const path = require('node:path');

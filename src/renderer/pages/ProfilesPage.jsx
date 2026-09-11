@@ -128,7 +128,7 @@ const generateDeviceName = () => "DESKTOP-" + Math.random().toString(36).substri
 //
 // HOST_CORES is the real machine's core count (filled once from system info). We
 // EXCLUDE it from the pool so a profile never spoofs to the exact value of the
-// machine it was created on — otherwise the "spoofed" hardwareConcurrency is
+// machine it was created on - otherwise the "spoofed" hardwareConcurrency is
 // indistinguishable from real and looks like a leak (e.g. a 16-core PC getting a
 // 16-core profile). Cross-machine the value is still plausible; locally it's
 // always visibly different.
@@ -146,7 +146,7 @@ const FIREFOX_VERSIONS = ['Auto', ...Array.from({ length: 32 }, (_, i) => String
 
 // iOS is deliberately NOT offered. Every real iOS browser is WebKit and this engine is
 // Blink, so an iOS profile is betrayed by JS-engine behaviour, CSS support and missing
-// WebKit quirks no matter what strings are set — there is no coherent iOS identity to
+// WebKit quirks no matter what strings are set - there is no coherent iOS identity to
 // ship. Worse, the launch path had no iOS branch at all, so picking it silently
 // produced a WINDOWS DESKTOP fingerprint: the user believed they had an iPhone profile
 // while every scanner saw Windows. Android is the mobile identity this engine can
@@ -280,7 +280,7 @@ const initialProfileData = {
   browserVersion: 'Auto',
   os: 'Windows',
   osVersion: 'All Windows',
-  deviceClass: 'desktop', // 'desktop' | 'mobile' (Android) — drives touch + viewport at launch
+  deviceClass: 'desktop', // 'desktop' | 'mobile' (Android) - drives touch + viewport at launch
   uaCategory: 'All',
   userAgent: 'Auto',
   group: 'Ungrouped',
@@ -341,7 +341,7 @@ const initialProfileData = {
   webglRenderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)',
   webgpu: 'Based on WebGL',
   
-  // Spoofed by DEFAULT — never expose the real machine unless the user flips a
+  // Spoofed by DEFAULT - never expose the real machine unless the user flips a
   // field to "Real". Concrete values are randomized per profile in openCreate().
   cpuType: 'Custom',
   cpuCores: '8',
@@ -432,8 +432,8 @@ function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStar
 }
 
 // Bulk proxy (re)assign / swap dialog for the current selection. Draws proxies from
-// the whole pool, a group, only-unassigned, or a pasted list — unique 1:1, round-robin,
-// or one-to-all — and can also shuffle the proxies profiles already have, or clear them.
+// the whole pool, a group, only-unassigned, or a pasted list - unique 1:1, round-robin,
+// or one-to-all - and can also shuffle the proxies profiles already have, or clear them.
 function ProxyReassignModal({ onClose, count, allProxies, proxyGroups, bulkBusy, onApply }) {
   const { t } = useTranslation('profiles');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
@@ -644,7 +644,7 @@ export default function ProfilesPage() {
 
   const currentOsObj = OS_PLATFORMS.find(o => o.id === pd.os) || OS_PLATFORMS[0];
   // Host OS comes from preload as a plain value (no IPC). Warn when the profile
-  // claims a different OS than the machine it runs on — the generator defaults to
+  // claims a different OS than the machine it runs on - the generator defaults to
   // the host for exactly this reason.
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
   const crossOsWarning = Boolean(pd.os) && pd.os !== hostOs;
@@ -673,7 +673,7 @@ export default function ProfilesPage() {
         softglazeApi.profiles.getLocks().catch(() => ({})),
         softglazeApi.proxyGroups.list().catch(() => [])
       ]);
-      // audit: ignore a stale response — a slow broad search ("a") could resolve after
+      // audit: ignore a stale response - a slow broad search ("a") could resolve after
       // a fast narrow one ("ab") and overwrite the correct list.
       if (seq !== loadSeq.current) return;
       setProfiles(profs);
@@ -696,7 +696,7 @@ export default function ProfilesPage() {
   }, [loadData]);
 
   // Learn the real machine's core count once so generated profiles never spoof to
-  // the exact host value (which would look like a hardware leak — see HOST_CORES).
+  // the exact host value (which would look like a hardware leak - see HOST_CORES).
   useEffect(() => {
     softglazeApi.system.getInfo().then((i) => { if (i && i.cpuCount) HOST_CORES = i.cpuCount; }).catch(() => {});
   }, []);
@@ -745,7 +745,7 @@ export default function ProfilesPage() {
 
   // Re-attach to a bulk queue still running in the main process (the user navigated
   // away and came back). Progress is a broadcast-only stream, so a remounted page
-  // hears only FUTURE frames — and in Queue mode the next frame does not arrive until
+  // hears only FUTURE frames - and in Queue mode the next frame does not arrive until
   // the current browser is closed. Without this the Stop/Pause/Resume controls vanish
   // while the queue keeps launching profiles, leaving no way to stop it. Runs on mount.
   useEffect(() => {
@@ -853,7 +853,7 @@ export default function ProfilesPage() {
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
       proxyType: profile.proxyType || 'HTTP',
       // Merge saved per-profile browser settings over the defaults so newly added keys
-      // (e.g. loadExtensions) always have a boolean value — keeping their checkboxes
+      // (e.g. loadExtensions) always have a boolean value - keeping their checkboxes
       // controlled and letting the flag round-trip on save.
       browserSettings: { ...initialProfileData.browserSettings, ...(profile.browserSettings || {}) },
       // Pre-select the linked saved proxy so editing shows it (and re-saving keeps
@@ -892,7 +892,7 @@ export default function ProfilesPage() {
           nextState.webglRenderer = 'ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)';
         } else {
           nextState.deviceClass = 'desktop';
-          // Coming back from a mobile selection — restore a desktop GPU/screen.
+          // Coming back from a mobile selection - restore a desktop GPU/screen.
           if (prev.deviceClass === 'mobile') {
             nextState.resolutionType = 'Random';
             nextState.resolutionW = '1920';
@@ -989,7 +989,7 @@ export default function ProfilesPage() {
       
       if (isEditing) {
         // Never send dataDirName on an update. It names the on-disk Chromium profile
-        // and seeds the fingerprint, and nothing moves the folder — so passing the
+        // and seeds the fingerprint, and nothing moves the folder - so passing the
         // (possibly renamed) title here abandoned the profile's cookies, sessions and
         // saved logins and re-seeded its fingerprint. The backend now ignores it too;
         // this keeps a rename from logging a warning on every save. Only `title` moves.
@@ -1133,7 +1133,7 @@ export default function ProfilesPage() {
     try { await softglazeApi.settings.setGlobal({ profileFilters: next }); } catch (err) { setError(err.message); }
   }
 
-  // Softglaze Premium — fetch the live TOTP for a profile and copy it to the
+  // Softglaze Premium - fetch the live TOTP for a profile and copy it to the
   // clipboard, flashing a "Copied!" tooltip on its badge.
   async function handleCopy2fa(profileId) {
     setError('');
@@ -1145,7 +1145,7 @@ export default function ProfilesPage() {
     } catch (err) { setError(err.message || t('errors.gen2fa')); }
   }
 
-  // Softglaze Premium — launch selected profiles as one Master + Slave windows.
+  // Softglaze Premium - launch selected profiles as one Master + Slave windows.
   async function handleSynchronize() {
     if (selectedIds.size < 2) { setError(t('errors.syncMin')); return; }
     setBulkBusy(true); setError('');
@@ -1290,7 +1290,7 @@ export default function ProfilesPage() {
                           <div className="min-w-0">
                             <span className="text-sm font-medium text-foreground">{t('general.antidetectLabel', 'Anti-detect engine (fingerprint-chromium)')}</span>
                             <p className="text-xs text-muted mt-1 leading-relaxed">
-                              {t('general.antidetectHelp', 'Launch this profile on the native anti-detect Chromium — spoofs canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.')}
+                              {t('general.antidetectHelp', 'Launch this profile on the native anti-detect Chromium - spoofs canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.')}
                             </p>
                           </div>
                         </div>
@@ -1466,7 +1466,7 @@ export default function ProfilesPage() {
                     </div>
                   )}
 
-                  {/* Network — per-profile HTTP/3 (QUIC) toggle */}
+                  {/* Network - per-profile HTTP/3 (QUIC) toggle */}
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.network')}</label>
@@ -1533,7 +1533,7 @@ export default function ProfilesPage() {
 
                   <div className="w-full h-px bg-border"></div>
 
-                  {/* Softglaze Premium — native 2FA vault */}
+                  {/* Softglaze Premium - native 2FA vault */}
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <div className="text-left lg:text-right mt-2">
                       <label htmlFor="pf-platform-2fa" className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('platform.twoFactor')}</label>
@@ -2011,7 +2011,7 @@ export default function ProfilesPage() {
         }
       />
 
-      {/* Tinted glow stat cards — REAL derived counts only */}
+      {/* Tinted glow stat cards - REAL derived counts only */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div
           className="rounded-xl p-4 flex items-center gap-3 animate-fade-up"
@@ -2075,7 +2075,7 @@ export default function ProfilesPage() {
       {/* Shown when there is a selection OR a bulk queue is in flight. The queue's
           Stop/Pause/Resume controls used to be nested inside the selection gate, so a
           remount (navigate away and back) emptied selectedIds and hid the only way to
-          stop a running queue — even once its progress had been restored. */}
+          stop a running queue - even once its progress had been restored. */}
       {(selectedIds.size > 0 || launchProgress) && (
         <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
           {selectedIds.size > 0 && <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>}

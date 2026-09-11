@@ -47,8 +47,8 @@
     "dismiss": "Descartar",
     "trialEndingDays_one": "La prueba gratuita termina en {{count}} día. Suscríbete por $5/mes para continuar.",
     "trialEndingDays_other": "La prueba gratuita termina en {{count}} días. Suscríbete por $5/mes para continuar.",
-    "trialEnded": "Tu prueba gratuita ha terminado — la aplicación sigue funcionando, pero suscríbete ($5/mes) para mantener el soporte.",
-    "subscriptionEnded": "Tu suscripción ha terminado — la aplicación sigue funcionando, pero suscríbete ($5/mes) para mantener el soporte."
+    "trialEnded": "Tu prueba gratuita ha terminado - la aplicación sigue funcionando, pero suscríbete ($5/mes) para mantener el soporte.",
+    "subscriptionEnded": "Tu suscripción ha terminado - la aplicación sigue funcionando, pero suscríbete ($5/mes) para mantener el soporte."
   },
   "roles": {
     "OWNER": "Propietario",
@@ -67,14 +67,14 @@
       "Cada perfil que creas es una nueva puerta que se abre.",
       "Disciplina hoy, dominio mañana.",
       "Las pequeñas acciones constantes se convierten en grandes victorias.",
-      "Mantente alerta — la ventaja vive en los detalles.",
+      "Mantente alerta - la ventaja vive en los detalles.",
       "El enfoque vence al ajetreo. Apunta y luego dispara.",
       "El trabajo silencioso de hoy construye el imperio de mañana.",
       "La precisión es un hábito, no un accidente.",
       "Preséntate, concéntrate y deja que los resultados hablen.",
       "Una sesión más, una victoria más.",
       "La grandeza es solo una serie de días bien llevados.",
-      "Tu yo del futuro te observa — hazlo sentir orgulloso.",
+      "Tu yo del futuro te observa - hazlo sentir orgulloso.",
       "Avanza con intención. Escala con confianza."
     ],
     "overview": "Resumen",

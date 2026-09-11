@@ -1,4 +1,4 @@
-// App internationalization (i18n) — offline, bundled resources.
+// App internationalization (i18n) - offline, bundled resources.
 //
 // Translations ship as JSON imported straight into the Vite bundle (no HTTP
 // backend), so the app stays fully local-first. The selected language is
@@ -13,7 +13,7 @@
 //
 // This module is the single source of truth for the supported-language list and
 // the persistence key; lib/lang.js builds the user-facing setLang/getStoredLang
-// helpers on top of it (one-way dependency — this file imports nothing from there
+// helpers on top of it (one-way dependency - this file imports nothing from there
 // to avoid a cycle). Initialization is synchronous (resources are inlined), so
 // useSuspense is off and no <Suspense> fallback is ever shown for translations.
 import i18n from 'i18next';

@@ -1,6 +1,6 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Smart Autofill — in-page widget for the Identity Data Vault.
+// Smart Autofill - in-page widget for the Identity Data Vault.
 //
 // This module exports the SOURCE of a self-contained bootstrap that runs INSIDE
 // every launched Chromium profile page (injected via puppeteer's
@@ -12,7 +12,7 @@
 //
 // The widget is a Shadow-DOM overlay (so page CSS can't break it and ours can't
 // leak), shows only when a signup/registration form is detected, fills matched
-// fields with human-like typing (random 50–150ms delays, real keydown/keypress/
+// fields with human-like typing (random 50-150ms delays, real keydown/keypress/
 // input/keyup events, React-safe native value setter), and offers a "Mark
 // identity as used on this site" button.
 //
@@ -41,7 +41,7 @@ function personaAutofillMain() {
     // sentinel-fetch RPC fallback for engines like fingerprint-chromium that kill
     // the binding on navigation). The Firefox extension instead defines the raw
     // window.__sgPersona* functions and has NO __sgBridge, so fall back to calling
-    // the named function directly there — one widget source, both browsers.
+    // the named function directly there - one widget source, both browsers.
     function sgCall(name) {
       var args = Array.prototype.slice.call(arguments, 1);
       if (typeof window.__sgBridge === 'function') return window.__sgBridge.apply(window, arguments);
@@ -214,7 +214,7 @@ function personaAutofillMain() {
     }
     // Authoritative React/SPA-safe commit (same mechanism every password
     // manager uses): write through the NATIVE value setter from the prototype
-    // descriptor — not the element instance — so React's controlled-input
+    // descriptor - not the element instance - so React's controlled-input
     // override is bypassed, then fire input + change + blur so React's synthetic
     // event system updates its Virtual DOM. Without this, the framework keeps
     // its internal value tracker out of sync and submits an empty string.
@@ -260,7 +260,7 @@ function personaAutofillMain() {
       ['dateOfBirth', /birth|\bdob\b/, 'bday'],
       // MUST precede addressLine1: a "Company address" input that carries
       // autocomplete="street-address" or a digit 1 would otherwise be claimed by
-      // addressLine1 and receive the persona's HOME street. No autocomplete token —
+      // addressLine1 and receive the persona's HOME street. No autocomplete token -
       // HTML has none for a company address (the spec expresses it as `organization`
       // + `street-address` in one section), and borrowing 'street-address' here would
       // steal every ordinary personal address field.
@@ -273,8 +273,8 @@ function personaAutofillMain() {
       ['country', /country|nation/, 'country'],
       // Guarded: the old bare /company|.../ matched ANY string containing "company",
       // so on a form with both "Company name" and "Company address" this rule claimed
-      // whichever came first in DOM order and — because take() consumes one input per
-      // key — the other was never revisited and stayed blank. Refuse address-ish
+      // whichever came first in DOM order and - because take() consumes one input per
+      // key - the other was never revisited and stayed blank. Refuse address-ish
       // fields outright; companyAddress above handles those.
       ['company', /^(?!.*(?:address|street|addr\d|\baddr\b))(?=.*(?:company|organi[sz]ation|employer|business))/, 'organization']
     ];
@@ -325,7 +325,7 @@ function personaAutofillMain() {
     // Multi-step forms (wizards, email-then-password, Ferguson-style 3-step signup):
     // after the first fill, watch for the NEXT step's fields to appear and fill the
     // ones still empty. Bounded (3 min), debounced, and only fires when a new matchable
-    // EMPTY field shows up — so it never fights the user or loops on SPA re-renders.
+    // EMPTY field shows up - so it never fights the user or loops on SPA re-renders.
     function armMultiStep(p) {
       if (multiStepObserver || !p) return;
       var pending = false;
@@ -360,7 +360,7 @@ function personaAutofillMain() {
         for (var i = 0; i < all.length; i++) { if (used.indexOf(all[i]) >= 0) continue; if (pred(all[i])) { used.push(all[i]); return all[i]; } }
         return null;
       }
-      // 1) Collect the matched (field, value) pairs. Filling happens afterwards —
+      // 1) Collect the matched (field, value) pairs. Filling happens afterwards -
       //    either via CDP "trusted" typing (Chromium bridge) or in-page events.
       var matches = []; // { el, value, kind }
       for (var i = 0; i < PLAN.length; i++) {
@@ -391,7 +391,7 @@ function personaAutofillMain() {
         if (nameEl) matches.push({ el: nameEl, value: [p.firstName, p.lastName].filter(Boolean).join(' '), kind: 'text' });
       }
       // Passwords: fill EVERY password field (covers "confirm password"). The
-      // plaintext is NEVER shipped to page JS in the list payload (audit C2) — the
+      // plaintext is NEVER shipped to page JS in the list payload (audit C2) - the
       // list only tells us `hasPassword`. On Chromium the backend types the real
       // value server-side by persona id via the trusted CDP bridge; on Firefox the
       // ISOLATED content-script fetches it on demand via __sgPersonaGetSecret (see
@@ -402,7 +402,7 @@ function personaAutofillMain() {
       }
 
       // Multi-step re-run: on a later wizard step only fill fields that are still
-      // empty, not currently focused, and not already filled by us — and never
+      // empty, not currently focused, and not already filled by us - and never
       // re-issue the password. Stops the observer from re-typing or fighting the user.
       if (opts.onlyEmpty) {
         matches = matches.filter(function (m) {
@@ -416,14 +416,14 @@ function personaAutofillMain() {
       }
 
       // 2) Fill. Prefer CDP trusted typing when the host exposes the bridge
-      //    (Chromium) — real keydown/keyup with isTrusted:true. Otherwise fall back
+      //    (Chromium) - real keydown/keyup with isTrusted:true. Otherwise fall back
       //    to in-page synthetic typing (e.g. Firefox, or if the bridge errors).
       var filled = 0;
-      var fillFailed = 0; // fields the backend could not verify — reported, not hidden
+      var fillFailed = 0; // fields the backend could not verify - reported, not hidden
       // Use sgHas, NOT a raw typeof on the binding. sgHas also returns true when only
       // the RPC bridge is present, and sgCall routes through whichever transport is
       // alive. A raw typeof check misses the bridge, so whenever the CDP binding is
-      // absent this fell through to the in-page fallback below — which types with
+      // absent this fell through to the in-page fallback below - which types with
       // synthetic KeyboardEvents that are ALWAYS isTrusted:false, i.e. a bot signal on
       // any site that checks. That is precisely the case when "Minimize CDP footprint"
       // (the anti-CAPTCHA engine) is on, since it never installs the binding at all:
@@ -466,8 +466,8 @@ function personaAutofillMain() {
       }
       if (!trusted) {
         // Fallback in-page typing (Firefox, or if the CDP bridge errored). On Firefox
-        // the widget runs in the extension's ISOLATED content-script world — page JS
-        // cannot read these expandos or the typed value beyond the DOM field itself —
+        // the widget runs in the extension's ISOLATED content-script world - page JS
+        // cannot read these expandos or the typed value beyond the DOM field itself -
         // so it fetches ONLY the selected persona's password on demand via
         // __sgPersonaGetSecret (origin-scoped server-side) and types it here. When
         // that bridge is absent (e.g. plain Chromium fallback) password fields are
@@ -493,24 +493,24 @@ function personaAutofillMain() {
           filled++; try { filledEls.add(m.el); } catch (e) {}
           await delay(100 + rand(0, 140));
         }
-        if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable — could not fill the password on this page.'); }
+        if (skippedSecret) { toast(filled ? 'Filled fields, but the password could not be autofilled here.' : 'Autofill unavailable - could not fill the password on this page.'); }
       }
       if (!opts.onlyEmpty) {
         // Report the real outcome. A partial fill used to be indistinguishable from a
         // complete one, so scrolling mid-fill looked like it had worked.
         if (filled && fillFailed) {
-          toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + ', but ' + fillFailed + ' did not take — click Autofill again to finish.');
+          toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + ', but ' + fillFailed + ' did not take - click Autofill again to finish.');
         } else if (filled) {
           toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.');
         } else if (fillFailed) {
-          toast('Could not fill this form — nothing was entered. Try again without scrolling.');
+          toast('Could not fill this form - nothing was entered. Try again without scrolling.');
         } else {
           toast('No matching fields found on this page.');
         }
         // Auto mark-used: once the requested fields are filled, mark this identity as
         // used on this site so it isn't offered here again (it moves to "reuse"). If the
         // mark bridge is unavailable, fall back to showing the manual "mark used" button.
-        // Only on a CLEAN fill — burning the identity after a partial one left the user
+        // Only on a CLEAN fill - burning the identity after a partial one left the user
         // with a half-filled form and no way to be offered that persona again.
         if (filled > 0 && fillFailed === 0) {
           var _marked = await markSelectedUsed(true);
@@ -529,13 +529,13 @@ function personaAutofillMain() {
       var id = selected.id, host = location.hostname;
       try {
         await sgCall('__sgPersonaMarkUsed', id, location.href);
-        toast(silent ? ('Identity used on ' + host + ' — moved to Reuse.') : ('Marked as used on ' + host));
+        toast(silent ? ('Identity used on ' + host + ' - moved to Reuse.') : ('Marked as used on ' + host));
         personas = personas.filter(function (x) { return x.id !== id; });
         selected = null;
         footer.hidden = true;
         renderList();
         return true;
-      } catch (e) { if (!silent) toast('Could not save — try again.'); return false; }
+      } catch (e) { if (!silent) toast('Could not save - try again.'); return false; }
     }
     markBtn.addEventListener('click', async function (e) {
       if (!e.isTrusted) return; // audit C2: ignore page-scripted clicks

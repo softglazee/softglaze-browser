@@ -1,6 +1,6 @@
 'use strict';
 // On-demand Chrome-for-Testing download manager. Lets the app
-// ship WITHOUT bundling every Chrome build — the user downloads the version they
+// ship WITHOUT bundling every Chrome build - the user downloads the version they
 // want and it auto-installs into /chrome/win64-<version>/chrome-win64/chrome.exe,
 // which the launcher already resolves. Pure Node + PowerShell Expand-Archive, no
 // new npm dependency.
@@ -74,7 +74,7 @@ function persistState(force) {
 
 // Called once at boot: any download that was mid-flight when the app died is
 // re-surfaced as "interrupted" (its partial zip is still on disk) so the UI can
-// offer Resume. Nothing is auto-resumed — the user decides.
+// offer Resume. Nothing is auto-resumed - the user decides.
 async function initResumableState() {
   let raw;
   try { raw = await fsp.readFile(STATE_FILE, 'utf8'); } catch (e) { return; }
@@ -210,12 +210,12 @@ async function downloadToFile(url, dest, onProgress, registerAbort, allowedHosts
   let append = false;
 
   if (res.statusCode === 206) {
-    append = true; // server honored Range — append to the partial file
+    append = true; // server honored Range - append to the partial file
     const cr = res.headers['content-range'] || '';
     const m = /\/(\d+)\s*$/.exec(cr);
     total = m ? parseInt(m[1], 10) : startByte + parseInt(res.headers['content-length'] || '0', 10);
   } else if (res.statusCode === 200) {
-    append = false; // server ignored Range (or fresh start) — overwrite from zero
+    append = false; // server ignored Range (or fresh start) - overwrite from zero
     received = 0;
     total = parseInt(res.headers['content-length'] || '0', 10);
   } else if (res.statusCode === 416) {
@@ -311,7 +311,7 @@ function startDownload(versionOrMajor) {
 
       // Integrity gate: if we know the expected size and fell short, the stream was
       // cut (e.g. a silent socket close that still flushed 'finish'). Don't extract a
-      // truncated zip — surface it as resumable.
+      // truncated zip - surface it as resumable.
       if (total && received < total) {
         throw Object.assign(new Error('Connection interrupted before completion.'), { interrupted: true });
       }
@@ -392,7 +392,7 @@ async function reconcileStrayZips() {
     const zipPath = path.join(CHROME_ROOT, name);
     if (isInstalled(version)) { await fsp.unlink(zipPath).catch(() => {}); continue; }
     // A real Chrome-for-Testing zip is ~150-200 MB; anything tiny is a corrupt or
-    // half-finished download — delete it rather than fail to extract every launch.
+    // half-finished download - delete it rather than fail to extract every launch.
     try {
       const st = await fsp.stat(zipPath);
       if (st.size < 30 * 1024 * 1024) { await fsp.unlink(zipPath).catch(() => {}); continue; }
@@ -410,7 +410,7 @@ async function reconcileStrayZips() {
 }
 
 // ---------------------------------------------------------------------------
-// fingerprint-chromium (native anti-detect engine) — one-shot GitHub download.
+// fingerprint-chromium (native anti-detect engine) - one-shot GitHub download.
 // Lands in FP_CHROMIUM_ROOT (sibling of CHROME_ROOT: userData/fp-chromium when
 // packaged, <repo>/fp-chromium in dev, matching browserEngine.resolveAntidetectBinary).
 // The release zip extracts to a versioned subdir (ungoogled-chromium_<v>_windows_x64/

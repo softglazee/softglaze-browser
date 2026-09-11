@@ -11,7 +11,7 @@ import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
 if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
 if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
-// Universal pagination bar: "Showing X–Y of Z" + an Items-per-page selector
+// Universal pagination bar: "Showing X-Y of Z" + an Items-per-page selector
 // (25 / 50 / 100 / All) + Prev/Next. `pageSize` is a finite number, or Infinity
 // for "All"; `onPageSizeChange` is called with a number or Infinity.
 const PAGE_SIZES = [25, 50, 100];

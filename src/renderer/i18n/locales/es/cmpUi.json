@@ -13,15 +13,15 @@
     "resumeFailed": "Error al reanudar.",
     "paused": "En pausa",
     "interrupted": "Interrumpido",
-    "resumeTitle": "{{state}} al {{percent}}% — reanudar",
+    "resumeTitle": "{{state}} al {{percent}}% - reanudar",
     "statusInstalling": "inst",
     "statusQueued": "…",
-    "retryTitle": "Reintentar — {{error}}",
+    "retryTitle": "Reintentar - {{error}}",
     "downloadFailedShort": "error en la descarga",
     "downloadInstallTitle": "Descargar e instalar esta versión"
   },
   "pager": {
-    "showing": "Mostrando {{from}}–{{to}} de {{total}}",
+    "showing": "Mostrando {{from}}-{{to}} de {{total}}",
     "perPage": "Por página",
     "all": "Todas",
     "prev": "Ant.",

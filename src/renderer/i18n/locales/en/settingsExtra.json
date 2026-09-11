@@ -68,17 +68,17 @@
       "methodEmail": "Email",
       "methodSms": "SMS",
       "levelLabel": "Authentication level",
-      "levelLow": "Low — new device or 90+ days since last 2FA",
-      "levelMedium": "Medium (recommended) — new device or 30+ days",
-      "levelHigh": "High — 2FA required for each login"
+      "levelLow": "Low - new device or 90+ days since last 2FA",
+      "levelMedium": "Medium (recommended) - new device or 30+ days",
+      "levelHigh": "High - 2FA required for each login"
     }
   },
   "multiDevice": {
     "title": "Multi-Device Mode",
     "description": "Control whether multiple members can access the same profile simultaneously.",
-    "modeOff": "Off — single member per profile",
-    "modeFull": "Full — all profiles support simultaneous access",
-    "modeSpecified": "Specified — only selected profiles",
+    "modeOff": "Off - single member per profile",
+    "modeFull": "Full - all profiles support simultaneous access",
+    "modeSpecified": "Specified - only selected profiles",
     "hintBefore": "When enabled, multiple members can access the same profile at the same time. In ",
     "hintSpecified": "Specified",
     "hintAfter": " mode, choose the eligible profiles from the Profiles page."
@@ -166,8 +166,8 @@
       "desc": "Writes a DeveloperToolsAvailability managed-policy file into each profile. Chromium enforces it once the file is registered in the OS managed-policy location (not applied machine-wide automatically)."
     },
     "minimizeCdpFootprint": {
-      "title": "Minimize CDP footprint (experimental — anti-CAPTCHA)",
-      "desc": "Drops the persistent CDP Runtime.enable — the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles."
+      "title": "Minimize CDP footprint (experimental - anti-CAPTCHA)",
+      "desc": "Drops the persistent CDP Runtime.enable - the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles."
     },
     "lockExtensions": {
       "title": "Disable installing/removing extensions",
@@ -198,10 +198,10 @@
   },
   "performance": {
     "title": "Performance",
-    "description": "Controls for launching many profiles at once — applied to bulk launches and the running-session ceiling.",
+    "description": "Controls for launching many profiles at once - applied to bulk launches and the running-session ceiling.",
     "parallelLimit": {
       "title": "Parallel launch limit",
-      "desc": "How many profiles spawn at the same time during a bulk launch. Higher is faster but uses more RAM. Recommended 3–8."
+      "desc": "How many profiles spawn at the same time during a bulk launch. Higher is faster but uses more RAM. Recommended 3-8."
     },
     "maxRunning": {
       "title": "Max running profiles",
@@ -222,7 +222,7 @@
     },
     "memoryGuard": {
       "title": "Memory guard",
-      "desc": "When system memory runs low, automatically close the oldest running profiles until memory recovers. Off by default — it will never close a profile unless enabled.",
+      "desc": "When system memory runs low, automatically close the oldest running profiles until memory recovers. Off by default - it will never close a profile unless enabled.",
       "triggerBelow": "Trigger when free RAM below",
       "stopWhenReaches": "stop once free RAM reaches"
     }
@@ -252,10 +252,10 @@
     "checkDefault": "Check whether a newer version of SoftGlaze Browser is available.",
     "notEnabled": "Automatic updates are not enabled in this build.",
     "checking": "Checking for updates…",
-    "available": "Update {{version}} available — downloading in the background…",
+    "available": "Update {{version}} available - downloading in the background…",
     "downloading": "Downloading {{version}}… {{percent}}%",
     "ready": "Update {{version}} is ready to install.",
-    "errorWithReason": "Couldn't check for updates — {{reason}}",
+    "errorWithReason": "Couldn't check for updates - {{reason}}",
     "errorNoReason": "Couldn't check for updates.",
     "upToDate": "You're on the latest version.",
     "installRestart": "Install & restart",
@@ -283,7 +283,7 @@
   },
   "captcha": {
     "title": "Captcha Auto-Solving",
-    "description": "Automatically solve reCAPTCHA v2 and hCaptcha during browsing using a paid third-party solver. This is separate from fingerprinting — a clean fingerprint reduces how often captchas appear, but solving them needs a paid service billed per solve by the provider (not by SoftGlaze).",
+    "description": "Automatically solve reCAPTCHA v2 and hCaptcha during browsing using a paid third-party solver. This is separate from fingerprinting - a clean fingerprint reduces how often captchas appear, but solving them needs a paid service billed per solve by the provider (not by SoftGlaze).",
     "enable": {
       "title": "Enable captcha auto-solving",
       "desc": "When on, launched profiles detect supported captchas and submit them to your solver automatically."
@@ -301,19 +301,19 @@
     "title": "Email (verification codes)",
     "configured": "Configured",
     "offlineMode": "Offline mode",
-    "description": "SMTP for sending OTP codes at registration. Leave blank to run offline — the code is then shown in-app instead of emailed.",
+    "description": "SMTP for sending OTP codes at registration. Leave blank to run offline - the code is then shown in-app instead of emailed.",
     "smtpHost": "SMTP host",
     "port": "Port",
     "encryption": "Encryption",
     "username": "Username",
     "password": "Password",
-    "passwordSavedHint": "(saved — leave blank to keep)",
+    "passwordSavedHint": "(saved - leave blank to keep)",
     "fromName": "From name",
     "saved": "Email settings saved.",
     "saveFailed": "Could not save email settings.",
-    "noSmtpYet": "No SMTP configured yet — save your settings first.",
+    "noSmtpYet": "No SMTP configured yet - save your settings first.",
     "testSent": "Test email sent to {{to}}.",
-    "testFailed": "Test failed — check your settings.",
+    "testFailed": "Test failed - check your settings.",
     "saveButton": "Save email settings",
     "test": "Test"
   },

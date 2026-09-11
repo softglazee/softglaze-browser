@@ -11,14 +11,14 @@ const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGener
 const { applyBrandWindowIcon } = require('./windowIcon');
 // Canonical install root for downloaded Chrome-for-Testing builds. Imported so the
 // binary RESOLVER reads exactly where the DOWNLOADER writes (userData when packaged,
-// project root in dev). No circular dep — browserDownloader needs only node + electron.
+// project root in dev). No circular dep - browserDownloader needs only node + electron.
 const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
-// Smart Autofill (Identity Data Vault) — source of the in-page widget injected
+// Smart Autofill (Identity Data Vault) - source of the in-page widget injected
 // into every launched page. No deps; just returns a self-contained IIFE string.
 const { buildAutofillBootstrap } = require('./personaAutofill');
 const { attachPageBridge } = require('./pageBridge');
 const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
-// Local SOCKS5 auth-injecting relay — Chromium can't authenticate to a SOCKS5
+// Local SOCKS5 auth-injecting relay - Chromium can't authenticate to a SOCKS5
 // proxy, so an authenticated one is routed through this instead (audit).
 const { startSocksAuthRelay } = require('./socksRelay');
 const { startHttpAuthRelay } = require('./httpRelay');
@@ -27,7 +27,7 @@ const { startHttpAuthRelay } = require('./httpRelay');
 // on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
 // --load-extension load remains the guaranteed fallback (and is what loads it in
 // SoftGlaze profiles). Real stable Chrome ignores --load-extension, so the policy
-// path is the only way it would load there — but we scope the policy to the Chromium
+// path is the only way it would load there - but we scope the policy to the Chromium
 // key ONLY and never touch the user's personal Google Chrome.
 const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 let forceInstallWritten = false;
@@ -40,7 +40,7 @@ function ensureChromiumForceInstall(extId) {
     // Per-user (HKCU → no admin) policy read by Chromium / Chrome-for-Testing.
     const key = 'HKCU\\Software\\Policies\\Chromium\\ExtensionInstallForcelist';
     const p = spawn('reg', ['add', key, '/v', '100', '/t', 'REG_SZ', '/d', value, '/f'], { windowsHide: true, stdio: 'ignore' });
-    p.on('error', () => {}); // best-effort — the unpacked inject fallback covers any failure
+    p.on('error', () => {}); // best-effort - the unpacked inject fallback covers any failure
   } catch (e) { /* ignore */ }
 }
 
@@ -50,7 +50,7 @@ function ensureChromiumForceInstall(extId) {
 // (e.g. CreepJS seeing "Intel Iris" from stealth AND our AMD GPU). Disable the
 // overlapping evasions so OUR per-profile values are the single source of truth.
 // Build a stealth plugin with the overlapping evasions stripped (our per-profile values
-// are the single source of truth). A FRESH instance is required per puppeteer engine —
+// are the single source of truth). A FRESH instance is required per puppeteer engine -
 // a plugin instance cannot be shared across two PuppeteerExtra instances.
 function makeStealth() {
   const s = StealthPlugin();
@@ -61,26 +61,26 @@ function makeStealth() {
 puppeteer.use(makeStealth());
 
 // OPT-IN "minimize CDP footprint" engine (default OFF; browserSettings.minimizeCdpFootprint).
-// Stock puppeteer keeps the CDP Runtime domain ENABLED for the whole session — the #1
+// Stock puppeteer keeps the CDP Runtime domain ENABLED for the whole session - the #1
 // Cloudflare/anti-bot automation tell (a page-side getter detects it), which no stealth
 // evasion covers. rebrowser-puppeteer-core in enableDisable mode avoids the PERSISTENT
 // Runtime.enable (it enables only transiently, per navigation, to acquire the main-world
 // execution context), removing that tell while keeping page.evaluate working.
-// TRADE-OFF — this note is from 2026-07-20 and is now OUT OF DATE. It said the
+// TRADE-OFF - this note is from 2026-07-20 and is now OUT OF DATE. It said the
 // exposeFunction features (persona autofill, start-page check-links / __sgzOpenTab,
 // synchronized-session mirroring, macro recorder) "do NOT work" with this engine,
 // because page->node bindings need the persistent Runtime.enable. That was true when
 // written. pageBridge.js landed on 2026-09-03 and gives all four of those features a
-// binding-free transport — the page fetches a sentinel URL that main fulfils over the
+// binding-free transport - the page fetches a sentinel URL that main fulfils over the
 // CDP Fetch domain, which enableDisable mode does not touch (it only affects Runtime).
 // attachPageBridge is wired for every one of them, and the bridge's own tests cover the
 // "no binding at all" path. One straggler was fixed alongside this note: the autofill
 // widget decided whether it had a trusted transport with a raw `typeof` on the binding
 // rather than the bridge-aware sgHas(), so it fell back to synthetic isTrusted:false
-// typing whenever the binding was missing — which would have made this very setting
+// typing whenever the binding was missing - which would have made this very setting
 // INCREASE detectability.
 // So the trade-off should now be gone. It has NOT yet been confirmed against a live
-// CAPTCHA, so it stays opt-in until that A/B is run — but the reason it was off by
+// CAPTCHA, so it stays opt-in until that A/B is run - but the reason it was off by
 // default no longer applies. Required lazily so a stock-engine launch never loads the
 // dependency.
 let _runtimeFixPuppeteer = null;
@@ -101,7 +101,7 @@ function getRuntimeFixPuppeteer() {
 // Anti-detect (fingerprint-chromium) engine driver: a puppeteer-extra instance with NO
 // stealth plugin. fingerprint-chromium already hides navigator.webdriver + the
 // HeadlessChrome UA and spoofs canvas/webgl/audio/UA NATIVELY, so the stealth evasions
-// are redundant AND self-defeating — their patch patterns are themselves fingerprintable
+// are redundant AND self-defeating - their patch patterns are themselves fingerprintable
 // (CreepJS was reporting "60% stealth" on this engine). A clean instance drives the
 // browser without adding that tell. Persona autofill / exposeFunction still work: those
 // need only the CDP Runtime domain, which stock puppeteer keeps enabled.
@@ -129,7 +129,7 @@ let shuttingDown = false;           // app is quitting; closes are not crashes a
 
 // --- Smart Autofill (Identity Data Vault) bridge -------------------------------
 // Wired by ipcHandlers at startup with the persona DB operations, so the
-// page-injected widget can reach Prisma through puppeteer's exposeFunction — no
+// page-injected widget can reach Prisma through puppeteer's exposeFunction - no
 // HTTP server, no auth, in-process. Stays a no-op until configured.
 let personaBridge = null;
 function configurePersonaBridge(deps) {
@@ -140,16 +140,16 @@ function configurePersonaBridge(deps) {
 
 // Expose the two persona bridge functions on a page and inject the autofill widget
 // (both for future navigations and the currently-loaded document). Safe to call
-// once per page — exposeFunction throws if a name is already bound, which we
+// once per page - exposeFunction throws if a name is already bound, which we
 // swallow. Chromium-only: this whole module is the puppeteer/CDP launch path.
 // Hardening (audit C2): exposeFunction binds into the page's MAIN world, so ANY
-// script on ANY page can call these — not just our widget. Three defenses:
+// script on ANY page can call these - not just our widget. Three defenses:
 //   1. Origin is taken from the REAL committed page URL (targetPage.url()), never
 //      from a page-supplied argument, so a hostile page can't pass a random host
 //      to dump personas it hasn't "used" yet.
 //   2. Passwords are NEVER sent into page context: the list payload omits the
 //      password (only `hasPassword` is exposed), and password fields are filled
-//      server-side by persona id via the fill plan — the plaintext only ever
+//      server-side by persona id via the fill plan - the plaintext only ever
 //      reaches the DOM field the user is filling, exactly like a password manager.
 //   3. The fill plan is bounded (item count + a total typed-character budget) so a
 //      page can't tie up the CDP keyboard for hours with a giant value.
@@ -176,7 +176,7 @@ async function attachPersonaAutofill(targetPage) {
   if (!personaBridge || !targetPage) return;
   // Respect the global Smart Autofill toggle (fail-open if the check throws).
   if (personaBridge.isEnabled) { try { if (!(await personaBridge.isEnabled())) return; } catch (e) { /* default on */ } }
-  // The real committed origin of THIS page — the single source of truth for which
+  // The real committed origin of THIS page - the single source of truth for which
   // host personas are scoped to. Falls back to '' (bridge then returns nothing).
   const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
   // Each handler is defined ONCE and registered on BOTH transports (native binding
@@ -196,23 +196,23 @@ async function attachPersonaAutofill(targetPage) {
   };
     // CDP "trusted" typing: the in-page widget stamps each matched field and hands
     // us a fill plan; we type it here with REAL keyboard events (isTrusted:true) and
-    // human-like random delays — defeating isTrusted-based bot checks. Selects are
-    // set via the native picker. Password items carry NO value — only a personaId —
+    // human-like random delays - defeating isTrusted-based bot checks. Selects are
+    // set via the native picker. Password items carry NO value - only a personaId -
     // and the plaintext is resolved server-side (see defense #2 above).
   const hPersonaFillPlan = async (plan) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
       const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
-      let failed = 0; // fields we could not verify — never counted as filled
+      let failed = 0; // fields we could not verify - never counted as filled
       let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
       // audit C2 bypass: the page supplies both the selector AND the personaId, so a
       // hostile page could aim a password fill at its own hidden input and read the
-      // value back — defeating "the plaintext only reaches the field the user is
+      // value back - defeating "the plaintext only reaches the field the user is
       // filling". Two HARD gates guard the secret path, resolved once per plan:
       //   (1) the page must have had a genuine user gesture (userActivation), and
       //   (2) the personaId must be one actually OFFERED for THIS committed origin
-      //       (present in listForUrl(pageUrl())) — never an arbitrary/guessed id.
+      //       (present in listForUrl(pageUrl())) - never an arbitrary/guessed id.
       // Non-secret fields are unaffected. An empty allow-set → no password resolves.
       let allowedSecretIds = null;
       const ensureAllowedSecretIds = async () => {
@@ -239,7 +239,7 @@ async function attachPersonaAutofill(targetPage) {
         if (!sel) { markFailed(itemIdx); continue; }
         let value;
         if (item.kind === 'password') {
-          // Password value NEVER comes from the page — resolve it server-side by id,
+          // Password value NEVER comes from the page - resolve it server-side by id,
           // but only when gesture-gated AND offered for this origin (see above).
           const pid = item.personaId != null ? String(item.personaId) : '';
           // Every refusal below leaves a password field EMPTY, so it must be reported
@@ -261,7 +261,7 @@ async function attachPersonaAutofill(targetPage) {
         try {
           if (item.kind === 'select') {
             // page.select() resolves the node by selector in the renderer and fires
-            // input+change itself — no geometry, so it is scroll-safe as-is.
+            // input+change itself - no geometry, so it is scroll-safe as-is.
             let selOk = true;
             await targetPage.select(sel, value).catch(() => { selOk = false; });
             if (selOk) filled += 1; else markFailed(itemIdx);
@@ -269,7 +269,7 @@ async function attachPersonaAutofill(targetPage) {
           }
           const el = await targetPage.$(sel);
           if (!el) { markFailed(itemIdx); continue; }
-          // Focus the field the way a human would — a REAL trusted mouse click — but
+          // Focus the field the way a human would - a REAL trusted mouse click - but
           // never at coordinates that may have gone stale.
           //
           // Two competing requirements:
@@ -278,7 +278,7 @@ async function attachPersonaAutofill(targetPage) {
           //    any pointer interaction, so a pure DOM .focus() is cheaper to spot.
           //  * CORRECTNESS: puppeteer's click() reads getClientRects() (viewport
           //    relative) and dispatches at those literal pixels several CDP round
-          //    trips later, and page.keyboard has no element target at all — it types
+          //    trips later, and page.keyboard has no element target at all - it types
           //    into whatever currently has focus. Scroll during that window and the
           //    click lands on a different field, which then receives the whole value.
           //
@@ -315,7 +315,7 @@ async function attachPersonaAutofill(targetPage) {
               } catch (e) { return false; }
             }).catch(() => false);
           }
-          // Focus did not land where we aimed — typing now would spray keystrokes into
+          // Focus did not land where we aimed - typing now would spray keystrokes into
           // whatever else has focus. Skip the field and report it instead.
           if (!focused) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
           const typed = charBudget > 0 ? value.slice(0, charBudget) : '';
@@ -325,7 +325,7 @@ async function attachPersonaAutofill(targetPage) {
           }
           charBudget -= typed.length;
           // Confirm the characters actually landed in THIS element before claiming a
-          // fill. Length only — the value itself is never read back, so a password
+          // fill. Length only - the value itself is never read back, so a password
           // does not travel out of the page.
           const landed = await el.evaluate((node, n) => {
             try {
@@ -361,7 +361,7 @@ async function attachPersonaAutofill(targetPage) {
 
 // ---------------------------------------------------------------------------
 // Real Chrome binaries. Profiles launch an ACTUAL Chrome build (Chrome for
-// Testing) whose version matches the profile — so UA, Client-Hints, TLS/JA4 and
+// Testing) whose version matches the profile - so UA, Client-Hints, TLS/JA4 and
 // even Web Worker contexts all natively report the same real version. This is
 // what makes "SunBrowser 149" genuinely present as 149 everywhere, instead of
 // faking the UA on top of a different engine (which detectors catch as a
@@ -398,7 +398,7 @@ function listAvailableBrowsers() {
 function resolveBrowserExecutable(desired) {
   const all = listAvailableBrowsers();
   if (all.length === 0) return null;
-  // Match on the MAJOR only — `desired` may be a bare major ("142") or a full
+  // Match on the MAJOR only - `desired` may be a bare major ("142") or a full
   // version ("142.0.7444.176"); take the first run of digits either way.
   const major = Number.parseInt((String(desired || '').match(/\d+/) || [])[0] || '', 10);
   if (Number.isFinite(major)) {
@@ -444,18 +444,18 @@ function findRealChrome() {
 // preferred whenever it's installed: its New Tab Page is stable (Chrome-for-Testing
 // crashes the whole browser on "+"), it carries no "Testing" icon, and it needs no
 // fragile NTP-override workaround (which Chrome's consent bubble lets the user
-// disable — re-breaking CfT). Only when no real Chrome exists do we fall back to a
+// disable - re-breaking CfT). Only when no real Chrome exists do we fall back to a
 // downloaded CfT build (+ NTP override) by the profile's pinned/auto version.
 function chooseBrowserBinary(profile, opts = {}) {
   // When this profile is set to load SoftGlaze/team extensions, prefer Chrome-for-Testing:
   // real stable Chrome SILENTLY IGNORES --load-extension (a 2025 security change), so the
-  // extensions would never mount there. This is a deliberate per-profile trade-off —
+  // extensions would never mount there. This is a deliberate per-profile trade-off -
   // real Chrome is stealthier (genuine binary, no "Testing" build, no NTP-override
   // workaround), so profiles that DON'T need extensions keep preferring it.
   if (opts.preferCftForExtensions) {
     const cft = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
     if (cft) return { ...cft, isReal: false };
-    // No CfT build installed — fall through to real Chrome so the profile still launches
+    // No CfT build installed - fall through to real Chrome so the profile still launches
     // (the extensions just won't mount; the UI hint tells the user to install a browser).
   }
   const real = findRealChrome();
@@ -467,7 +467,7 @@ function chooseBrowserBinary(profile, opts = {}) {
 // --- FINGERPRINT-CHROMIUM (native anti-detect engine, opt-in) ------------------
 // adryfish/fingerprint-chromium is a source-patched Ungoogled-Chromium that spoofs
 // the fingerprint NATIVELY (canvas / webgl / audio / UA / platform / timezone) from
-// a seed + flags — no JS injection, no CDP overrides, no first-load race. It also
+// a seed + flags - no JS injection, no CDP overrides, no first-load race. It also
 // natively hides navigator.webdriver + the HeadlessChrome UA AND blocks the WebRTC
 // real-IP leak. We drive it through the SAME puppeteer path as stock Chrome but pass
 // native flags and SKIP our JS layer (fpConfig.nativeEngine) so the two identities
@@ -487,7 +487,7 @@ function resolveAntidetectBinary() {
         const nested = path.join(root, ent.name, 'chrome.exe');
         if (fsSync.existsSync(nested)) return nested;
       }
-    } catch (e) { /* root missing — try the next */ }
+    } catch (e) { /* root missing - try the next */ }
   }
   return null;
 }
@@ -616,10 +616,10 @@ function parseProxyString(rawProxyString) {
   const raw = String(rawProxyString || '').trim();
   if (!raw) return null;
   // Classify by scheme: socks4/socks4a → SOCKS4, socks5/bare socks → SOCKS5, else HTTP.
-  // SOCKS4 vs SOCKS5 is not cosmetic — Chromium speaks a different wire protocol for
+  // SOCKS4 vs SOCKS5 is not cosmetic - Chromium speaks a different wire protocol for
   // each and SOCKS4 has no username/password auth, so mislabeling one as the other
   // breaks the connection. The prefix (INCLUDING socks4://, which the old regex missed
-  // and left in — mangling host:port) is stripped for every scheme before parsing.
+  // and left in - mangling host:port) is stripped for every scheme before parsing.
   const scheme = (raw.match(/^(socks4a?|socks5|socks|https?):\/\//i) || [])[1] || '';
   const type = /^socks4/i.test(scheme) ? 'SOCKS4' : (/^socks/i.test(scheme) ? 'SOCKS5' : 'HTTP');
   const working = raw.replace(/^(socks4a?|socks5|socks|https?):\/\//i, '');
@@ -738,11 +738,11 @@ function localeToAcceptLanguage(locale) {
 function osTokens(os) {
   const value = String(os || 'Windows').toLowerCase();
   if (value.includes('mac')) return { uaPlatform: 'Macintosh; Intel Mac OS X 10_15_7', navPlatform: 'MacIntel', chPlatform: 'macOS', chVersion: '14.0.0' };
-  // iOS BEFORE the linux/android checks — an iOS value must never fall through.
+  // iOS BEFORE the linux/android checks - an iOS value must never fall through.
   //
   // iOS is not deliverable on this engine: every real iOS browser is WebKit, and we
   // are running Blink. A profile claiming iOS is betrayed by JS-engine behaviour, CSS
-  // support and the absence of WebKit quirks no matter what strings we set — so there
+  // support and the absence of WebKit quirks no matter what strings we set - so there
   // is no coherent iOS token set to return. It used to hit the final `return` below
   // and silently produce a WINDOWS DESKTOP identity, which is the worst outcome: the
   // user believes they have an iPhone profile and every scanner sees Windows desktop.
@@ -763,18 +763,18 @@ function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
   // COHERENCE GUARD (anti-detect critical). The reported Chrome major MUST equal the
   // major of the binary we actually launched. TLS ClientHello (JA3/JA4), the HTTP/2
   // SETTINGS frame, and JS-engine feature detection all come from the REAL binary and
-  // cannot be spoofed — so a UA / Client-Hints major that disagrees with them is a hard,
+  // cannot be spoofed - so a UA / Client-Hints major that disagrees with them is a hard,
   // deterministic bot signal. The fingerprint generator pins a per-profile
   // browserVersion drawn from a fixed pool; on a machine whose real Chrome has
   // auto-updated PAST that pool, honoring the pin would advertise e.g. Chrome 149 over a
-  // real-150+ handshake — the exact mismatch this guard closes.
+  // real-150+ handshake - the exact mismatch this guard closes.
   //
   // So whenever we can read the launched binary's version (the normal case) we report
-  // THAT major AND full version — every layer then agrees. The profile's pin is used
+  // THAT major AND full version - every layer then agrees. The profile's pin is used
   // only as a best-guess fallback when browser.version() is unreadable (essentially
   // never after a successful launch). Build/patch digits are not observable on the wire,
   // so reporting the binary's real full version is both coherent and safe. Two profiles
-  // on the same real Chrome build therefore share a UA — which is exactly what two real
+  // on the same real Chrome build therefore share a UA - which is exactly what two real
   // Chrome users do; a fake-unique major that contradicts the TLS is far more detectable.
   const pinned = String(profile.browserVersion || '').trim();
   const pinnedFull = /^\d+\.\d+\.\d+\.\d+$/.test(pinned) ? pinned : '';
@@ -826,7 +826,7 @@ function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
   } else if (platform.includes('linux')) {
     platformVersion = ''; // Linux reports an empty platform version
   } else {
-    // Windows: CH encodes the OS in platformVersion — Win11 ⇒ "15.0.0", Win10 ⇒ "10.0.0".
+    // Windows: CH encodes the OS in platformVersion - Win11 ⇒ "15.0.0", Win10 ⇒ "10.0.0".
     platformVersion = /11/.test(verDigits(profile.osVersion, '11')) ? '15.0.0' : '10.0.0';
   }
 
@@ -865,7 +865,7 @@ function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
 // timezone / language), and the launcher separately covers screen via CDP.
 //
 // It leaves two axes uncovered, both verified against fingerprint-chromium 148:
-//   • speechSynthesis.getVoices() returns 0 — real desktop Chrome on Windows always
+//   • speechSynthesis.getVoices() returns 0 - real desktop Chrome on Windows always
 //     exposes at least the Microsoft SAPI voices, so an empty list is itself a signal.
 //   • enumerateDevices() reports the host real devices, so every profile on one
 //     machine shares them.
@@ -910,7 +910,7 @@ function nativeGapScript(fp) {
 
   // Mirrors the enumerateDevices block in fingerprintScript exactly, including the
   // pre-grant vs post-grant shapes. fp.mediaSet is generateMediaDevices()'s output:
-  // { os, isWindows, mic, spk, cam, hasCamera } — LABELS, not counts.
+  // { os, isWindows, mic, spk, cam, hasCamera } - LABELS, not counts.
   if (fp && fp.mediaDevices && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
     try {
       const set = fp.mediaSet || {};
@@ -959,7 +959,7 @@ function nativeGapScript(fp) {
           if (isWin) audioOut('communications', 'Communications - ' + spkLabel);
           audioOut(spkId, spkLabel);
         } else {
-          // Pre-grant: one endpoint per kind, empty deviceId + label, stable groupId —
+          // Pre-grant: one endpoint per kind, empty deviceId + label, stable groupId -
           // precisely what real Chrome exposes before a permission grant.
           audioIn('', '');
           rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
@@ -998,7 +998,7 @@ function nativeGapScript(fp) {
 // Editing the `keywords` row directly also reverts: Chromium reconciles any row with
 // prepopulate_id != 0 against its builtin table on startup.
 // The remaining known-good mechanism is enterprise policy
-// (DefaultSearchProviderSearchURL), which bypasses MAC enforcement — but it is a
+// (DefaultSearchProviderSearchURL), which bypasses MAC enforcement - but it is a
 // user/machine-wide registry change affecting every Chromium-branded browser, and it
 // makes the browser advertise "Managed by your organization", which is itself an
 // anti-detect signal. That trade-off is a product decision, so it is deliberately NOT
@@ -1019,7 +1019,7 @@ async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
       // Distinguish "no file yet" (fine, we create one) from "file exists but did not
       // parse" (a partial write or corruption). Falling back to {} and writing in the
       // second case overwrote the profile's ENTIRE Chromium preferences with just this
-      // one key — silent, total loss of that profile's settings.
+      // one key - silent, total loss of that profile's settings.
       if (e && e.code !== 'ENOENT') return;
       prefs = {};
     }
@@ -1029,7 +1029,7 @@ async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
 
     await fs.mkdir(path.dirname(prefsPath), { recursive: true });
     await fs.writeFile(prefsPath, JSON.stringify(prefs));
-  } catch (e) { /* best-effort — DNT is not worth failing a launch over */ }
+  } catch (e) { /* best-effort - DNT is not worth failing a launch over */ }
 }
 
 function fingerprintScript(fp) {
@@ -1052,7 +1052,7 @@ function fingerprintScript(fp) {
   }
   // Native-toString masking. Detectors (browserscan flags "Canvas Tampering") test
   // whether overridden methods still report "[native code]" from .toString(). Make
-  // every function we patch — and toString itself — look native, with the right .name.
+  // every function we patch - and toString itself - look native, with the right .name.
   const _patched = new WeakSet();
   const _origFnToString = Function.prototype.toString;
   const _fnToString = function toString() {
@@ -1061,7 +1061,7 @@ function fingerprintScript(fp) {
   };
   try {
     // Real Chrome: Function.prototype.toString.name === 'toString' and its OWN
-    // toString() reports [native code]. Pin the name explicitly — otherwise it reports
+    // toString() reports [native code]. Pin the name explicitly - otherwise it reports
     // the internal helper name (previously "_fnToString"), a global automation tell
     // that fires on every page and every proxy.
     try { Object.defineProperty(_fnToString, 'name', { value: 'toString', configurable: true }); } catch (e) {}
@@ -1079,7 +1079,7 @@ function fingerprintScript(fp) {
   // getter that itself reports [native code] and carries the correct "get <prop>"
   // name. Placing these on the instance (the old behavior) leaked the entire spoofed
   // field list via Object.getOwnPropertyNames(navigator) + a "() => value" getter
-  // source — both classic navigator-tampering signatures. Falls back to an instance
+  // source - both classic navigator-tampering signatures. Falls back to an instance
   // define when the property isn't on the prototype (e.g. window.doNotTrack).
   const define = (obj, prop, value) => {
     try {
@@ -1096,7 +1096,7 @@ function fingerprintScript(fp) {
 
   try {
     // navigator.webdriver === false, exposed on Navigator.prototype (the property
-    // EXISTS and is false). undefined — or an own instance prop — is itself a tell.
+    // EXISTS and is false). undefined - or an own instance prop - is itself a tell.
     define(navigator, 'webdriver', false);
   } catch (e) {}
 
@@ -1124,7 +1124,7 @@ function fingerprintScript(fp) {
     if (_inj.indexOf('opr') !== -1 && !window.opr) {
       Object.defineProperty(window, 'opr', { value: { addons: { installExtension: markNative(function installExtension() {}, 'installExtension') } }, configurable: true });
     }
-    // Vivaldi exposes no stable page-level global by default — its identity is the
+    // Vivaldi exposes no stable page-level global by default - its identity is the
     // UA/Client-Hints layer only, so there's nothing extra to inject here.
   } catch (e) {}
 
@@ -1132,9 +1132,9 @@ function fingerprintScript(fp) {
     define(screen, 'width', fp.screenW);
     define(screen, 'height', fp.screenH);
     // Reserve the OS task/menu bar so availHeight < height (availHeight === height is
-    // itself a spoofing tell) — and do it PER-OS, not always the Windows taskbar:
+    // itself a spoofing tell) - and do it PER-OS, not always the Windows taskbar:
     //  • Windows: ~48px taskbar at the BOTTOM (availTop 0).
-    //  • macOS:   ~25px menu bar at the TOP (availTop ≈ 25) — a Windows-style availTop 0
+    //  • macOS:   ~25px menu bar at the TOP (availTop ≈ 25) - a Windows-style availTop 0
     //    on a "macOS" profile is an OS mismatch.
     //  • Linux (GNOME): ~32px top bar.
     var _navp = String(fp.navPlatform || '');
@@ -1156,7 +1156,7 @@ function fingerprintScript(fp) {
   // ---- Timezone spoof ------------------------------------------------------
   // Chrome on Windows ignores the TZ env var and CDP setTimezoneOverride races the
   // first document of new tabs, so the REAL OS timezone leaks in JS (e.g. proxy in
-  // the US but Date/Intl reporting Asia/Karachi) — a glaring mismatch that flips
+  // the US but Date/Intl reporting Asia/Karachi) - a glaring mismatch that flips
   // bot detection on. Override Date/Intl in-page; the document_start extension makes
   // this reliable in every tab. fp.timezone is the proxy's IANA zone.
   if (fp.timezone) {
@@ -1190,7 +1190,7 @@ function fingerprintScript(fp) {
       try { Object.defineProperty(OrigDTF.prototype, 'constructor', { value: WrappedDTF, configurable: true, writable: true }); } catch (e) {}
       WrappedDTF.supportedLocalesOf = markNative(OrigDTF.supportedLocalesOf.bind(OrigDTF), 'supportedLocalesOf');
       const origResolved = OrigDTF.prototype.resolvedOptions;
-      // The host's REAL zone, captured before wrapping — lets us tell an IMPLICIT
+      // The host's REAL zone, captured before wrapping - lets us tell an IMPLICIT
       // (defaulted-to-host) formatter from one built with an explicit timeZone.
       let HOST_TZ = '';
       try { HOST_TZ = origResolved.call(new OrigDTF()).timeZone; } catch (e) {}
@@ -1198,7 +1198,7 @@ function fingerprintScript(fp) {
         const r = origResolved.apply(this, arguments);
         // Only rewrite when the formatter resolved to the HOST zone (i.e. no explicit
         // timeZone was given). Never clobber an explicitly-constructed zone such as
-        // new Intl.DateTimeFormat('en',{timeZone:'UTC'}) — reporting the proxy zone
+        // new Intl.DateTimeFormat('en',{timeZone:'UTC'}) - reporting the proxy zone
         // there is a self-contradiction (format() in UTC vs resolvedOptions() in the
         // proxy zone) that detectors read directly, and it breaks legitimate date code.
         try { if (r && HOST_TZ && r.timeZone === HOST_TZ) r.timeZone = TZ; } catch (e) {}
@@ -1209,7 +1209,7 @@ function fingerprintScript(fp) {
       // Reproduce V8's EXACT Date.prototype.toString format on Windows:
       //   "Sun Jul 05 2026 12:00:00 GMT-0700 (Pacific Daylight Time)"
       // built from formatToParts (space-separated, NO commas) with the trailing
-      // long zone name — the previous Intl.format() output was comma-delimited and
+      // long zone name - the previous Intl.format() output was comma-delimited and
       // dropped the "(Long Zone Name)" suffix, a Date-string tell the spoof itself
       // introduced.
       const longZoneName = (date) => {
@@ -1242,7 +1242,7 @@ function fingerprintScript(fp) {
   // ---- Web Worker spoofing -------------------------------------------------
   // evaluateOnNewDocument only patches the MAIN document. A Worker spins up a
   // fresh JS realm where navigator.hardwareConcurrency / deviceMemory report the
-  // REAL machine — and CreepJS flags the main-vs-worker MISMATCH as a tell.
+  // REAL machine - and CreepJS flags the main-vs-worker MISMATCH as a tell.
   // We close it by wrapping the Worker / SharedWorker constructors so each new
   // worker boots with a prelude that re-applies the same overrides inside its
   // own scope, then loads the site's real worker code.
@@ -1253,12 +1253,12 @@ function fingerprintScript(fp) {
       languages: (fp.langs && fp.langs.length) ? fp.langs.slice() : undefined,
       language: (fp.langs && fp.langs.length) ? fp.langs[0] : undefined,
       platform: fp.navPlatform || undefined,
-      // OffscreenCanvas WebGL lives in the worker realm too — without these the
+      // OffscreenCanvas WebGL lives in the worker realm too - without these the
       // worker reports the REAL GPU while the main thread shows the spoofed one,
       // and CreepJS flags the main-vs-worker GPU MISMATCH.
       webglVendor: (fp.noise && fp.noise.webgl) ? (fp.webglVendor || undefined) : undefined,
       webglRenderer: (fp.noise && fp.noise.webgl) ? (fp.webglRenderer || undefined) : undefined,
-      // The worker realm reads timezone from the OS too — spoof it there as well
+      // The worker realm reads timezone from the OS too - spoof it there as well
       // so the worker's zone matches the main thread / proxy.
       timezone: fp.timezone || undefined
     };
@@ -1315,8 +1315,8 @@ function fingerprintScript(fp) {
         Wrapped.prototype = Native.prototype;
         // Route through the module's native-mask machinery (name + _patched) rather
         // than an OWN toString: CreepJS probes Function.prototype.toString.call(Worker)
-        // — which the patched _fnToString serves as "[native code]" only for _patched
-        // members — and real Chrome's Worker has no own toString property.
+        // - which the patched _fnToString serves as "[native code]" only for _patched
+        // members - and real Chrome's Worker has no own toString property.
         markNative(Wrapped, Native.name);
         try { Object.defineProperty(Native.prototype, 'constructor', { value: Wrapped, configurable: true, writable: true }); } catch (e) {}
       } catch (e) {}
@@ -1349,7 +1349,7 @@ if (fp.noise.canvas) {
     patchGL(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
     patchGL(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
 
-    // Deeper WebGL hardening — perturb the rendered-image READBACK (readPixels),
+    // Deeper WebGL hardening - perturb the rendered-image READBACK (readPixels),
     // the pixel-level surface CreepJS/browserleaks actually hash. The vendor/
     // renderer strings are handled above; this covers the image hash. Deterministic
     // + seed-keyed so the value is STABLE across reads (an unstable WebGL image is a
@@ -1357,7 +1357,7 @@ if (fp.noise.canvas) {
     // so real 3-D output is visually unaffected. We deliberately do NOT spoof
     // arbitrary getParameter limits (MAX_TEXTURE_SIZE, precision formats, …): faking
     // values inconsistent with the reported renderer would create NEW mismatches
-    // detectors hunt for — so the image-hash perturbation is the safe deepening.
+    // detectors hunt for - so the image-hash perturbation is the safe deepening.
     const wseed = (fp.seed >>> 0) || 1;
     const patchReadPixels = (proto) => {
       if (!proto || !proto.readPixels) return;
@@ -1380,14 +1380,14 @@ if (fp.noise.canvas) {
   }
 
   if (fp.noise.audio && window.AudioBuffer) {
-    // Deterministic, seed-derived perturbation (stable across reads — an unstable
+    // Deterministic, seed-derived perturbation (stable across reads - an unstable
     // audio fingerprint is a tell, same as canvas).
     const aseed = (fp.seed >>> 0) || 1;
     const origGetChannelData = AudioBuffer.prototype.getChannelData;
     // Track which channel arrays we've already perturbed. getChannelData returns the
     // SAME live Float32Array for a given channel on every call, so perturbing in
     // place on EVERY call (the old behavior) applied the delta cumulatively and made
-    // consecutive reads of the same channel differ — an "unstable audio fingerprint"
+    // consecutive reads of the same channel differ - an "unstable audio fingerprint"
     // tell (the exact instability the canvas path restores against). Perturb each
     // channel array ONCE; later reads return the identical, stable values, and the
     // live buffer's write-through semantics are preserved (we still return it).
@@ -1408,7 +1408,7 @@ if (fp.noise.canvas) {
     }, 'getChannelData');
   }
 
-  // Deeper audio hardening — the AnalyserNode spectrum (getFloatFrequencyData /
+  // Deeper audio hardening - the AnalyserNode spectrum (getFloatFrequencyData /
   // getByteFrequencyData) is a SEPARATE audio-fingerprint surface from the
   // AudioBuffer.getChannelData path patched above (browserleaks probes both via an
   // OfflineAudioContext). Same deterministic, seed-keyed, tiny perturbation so the
@@ -1467,15 +1467,15 @@ if (fp.noise.canvas) {
   }
 
   // WebRTC leak protection. The real public IP can escape via ICE candidates even
-  // when all HTTP(S) traffic is proxied — a srflx/host candidate carries the raw IP
+  // when all HTTP(S) traffic is proxied - a srflx/host candidate carries the raw IP
   // outside the tunnel (an HTTP proxy can't carry UDP, so Chrome gathers it on the
   // direct interface). This guard sanitizes EVERY path a page can read a candidate
-  // from — onicecandidate, addEventListener('icecandidate'), createOffer/Answer SDP
+  // from - onicecandidate, addEventListener('icecandidate'), createOffer/Answer SDP
   // AND the localDescription / currentLocalDescription / pendingLocalDescription
   // getters (browserleaks/CreepJS read the SDP straight off localDescription after
-  // trickle-ICE, which the old guard never touched — that was the leak). When the
+  // trickle-ICE, which the old guard never touched - that was the leak). When the
   // proxy exit IP is known every public IP is REWRITTEN to it (WebRTC then reports
-  // the proxy IP, matching HTTP — the most natural result); when it's unknown the
+  // the proxy IP, matching HTTP - the most natural result); when it's unknown the
   // leaking candidate is DROPPED entirely. Private/loopback/mDNS candidates pass
   // through unchanged. RTCPeerConnection stays present (less detectable than removal).
   if (fp.webrtcProtect) {
@@ -1530,7 +1530,7 @@ if (fp.noise.canvas) {
       const processEvent = (event) => {
         if (!event || !event.candidate || !event.candidate.candidate) return event; // end-of-gathering sentinel
         if (/\.local\s/.test(event.candidate.candidate)) return null;
-        if (!leaks(event.candidate.candidate)) return event; // mDNS/private/proxy-only — safe
+        if (!leaks(event.candidate.candidate)) return event; // mDNS/private/proxy-only - safe
         if (!PROXY_IP) return null; // can't make it safe → drop
         try {
           const c = event.candidate;
@@ -1554,7 +1554,7 @@ if (fp.noise.canvas) {
               get() { return userHandler; },
               set(h) {
                 // Wire to the NATIVE event so the handler actually fires (the old
-                // setter stored it in a closure and never registered it — a no-op).
+                // setter stored it in a closure and never registered it - a no-op).
                 if (wrapped) { try { proto.removeEventListener.call(this, 'icecandidate', wrapped); } catch (e) {} wrapped = null; }
                 userHandler = (typeof h === 'function') ? h : null;
                 if (userHandler) {
@@ -1578,13 +1578,13 @@ if (fp.noise.canvas) {
           async createAnswer(...a) { const o = await super.createAnswer(...a); if (o && o.sdp) try { o.sdp = sanitizeSdp(o.sdp); } catch (e) {} return o; }
         }
         // Native-mask the wrapper: as a bare ES class, RTCPeerConnection.name was
-        // "ProtectedRTC" and .toString() dumped the class source — a one-read spoofer
+        // "ProtectedRTC" and .toString() dumped the class source - a one-read spoofer
         // tell on every proxied profile. markNative fixes .name + routes toString
         // through _fnToString ("[native code]").
         markNative(ProtectedRTC, 'RTCPeerConnection');
         // NOTE: do NOT setPrototypeOf(ProtectedRTC, Object.getPrototypeOf(Native)).
         // `super(...)` in a derived class resolves its parent from the class's CURRENT
-        // [[Prototype]] at call time — repointing it to EventTarget made every
+        // [[Prototype]] at call time - repointing it to EventTarget made every
         // `new RTCPeerConnection()` construct a bare EventTarget, so createOffer/
         // setLocalDescription threw "Illegal invocation" on EVERY proxied profile
         // (default WebRTC mode = Forward). A subclass keeping its natural superclass
@@ -1595,20 +1595,20 @@ if (fp.noise.canvas) {
     }
   }
 
-  // Do Not Track — '1' / '0' / null (leave native untouched when not configured).
+  // Do Not Track - '1' / '0' / null (leave native untouched when not configured).
   if (fp.dnt === '1' || fp.dnt === '0') {
     define(navigator, 'doNotTrack', fp.dnt);
     try { define(window, 'doNotTrack', fp.dnt); } catch (e) {}
     if (fp.dnt === '1') { try { define(navigator, 'globalPrivacyControl', true); } catch (e) {} }
   }
 
-  // WebGPU — when disabled, hide navigator.gpu so sites can't read the real
+  // WebGPU - when disabled, hide navigator.gpu so sites can't read the real
   // adapter (which would contradict the spoofed WebGL renderer).
   if (fp.webgpuDisabled) {
     try { define(navigator, 'gpu', undefined); } catch (e) {}
   }
 
-  // Speech synthesis voices — return a stable, seeded list localized to the
+  // Speech synthesis voices - return a stable, seeded list localized to the
   // profile language instead of exposing the host machine's installed voices.
   if (fp.speechVoices && window.speechSynthesis) {
     const primary = (fp.langs && fp.langs[0]) || 'en-US';
@@ -1660,11 +1660,11 @@ if (fp.noise.canvas) {
       // which is the moment real Chrome starts exposing labels + concrete ids.
       let granted = false;
       const md = navigator.mediaDevices;
-      // audit: place the overrides on MediaDevices.prototype (non-enumerable) — NOT
+      // audit: place the overrides on MediaDevices.prototype (non-enumerable) - NOT
       // as own instance data properties on navigator.mediaDevices. The old instance
       // assignment surfaced in Object.getOwnPropertyNames(navigator.mediaDevices) and
       // hasOwnProperty('enumerateDevices'), which real Chrome never does (these live
-      // only on the prototype) — an own-vs-prototype spoofer tell.
+      // only on the prototype) - an own-vs-prototype spoofer tell.
       const mdProto = Object.getPrototypeOf(md) || md;
       const defineOnMd = (name, fn) => {
         try { Object.defineProperty(mdProto, name, { value: fn, configurable: true, writable: true, enumerable: false }); }
@@ -1686,7 +1686,7 @@ if (fp.noise.canvas) {
         if (granted) {
           // Full structured list: the Default / Communications pseudo-endpoints
           // (Communications is Windows-only) plus the real endpoints, all with
-          // concrete ids + labels — the shape real Chrome returns post-grant.
+          // concrete ids + labels - the shape real Chrome returns post-grant.
           audioIn('default', 'Default - ' + micLabel);
           if (isWin) audioIn('communications', 'Communications - ' + micLabel);
           audioIn(micId, micLabel);
@@ -1696,7 +1696,7 @@ if (fp.noise.canvas) {
           audioOut(spkId, spkLabel);
         } else {
           // Pre-grant: one endpoint per kind, empty deviceId + label, stable
-          // groupId — precisely what real Chrome exposes before a permission grant.
+          // groupId - precisely what real Chrome exposes before a permission grant.
           audioIn('', '');
           rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
           audioOut('', '');
@@ -1715,7 +1715,7 @@ if (fp.noise.canvas) {
     } catch (e) { /* never break the page over device spoofing */ }
   }
 
-  // Font fingerprint protection — seeded sub-pixel noise on canvas text
+  // Font fingerprint protection - seeded sub-pixel noise on canvas text
   // measurement so width-comparison font enumeration can't reliably probe the
   // installed font set. Noise is tiny (±0.01px) so real layout is unaffected.
   if (fp.fontsNoise) {
@@ -1754,7 +1754,7 @@ if (fp.noise.canvas) {
     }
   }
 
-  // Port-scan protection — reject page-initiated requests to localhost and
+  // Port-scan protection - reject page-initiated requests to localhost and
   // private network ranges so sites can't scan local services to fingerprint.
   if (fp.portScan) {
     const isPrivate = (raw) => {
@@ -1798,7 +1798,7 @@ if (fp.noise.canvas) {
   }
 }
 
-// audit: the old createProxyAuthExtension() was removed here — it wrote the proxy
+// audit: the old createProxyAuthExtension() was removed here - it wrote the proxy
 // username/password in PLAINTEXT into a generated background.js inside the profile
 // dir. It was dead code (never called or exported). Authenticated proxies are
 // handled without touching disk: HTTP via page.authenticate() and SOCKS5 via the
@@ -1905,7 +1905,7 @@ async function generateStartPage(userDataDir, profileData) {
   // fingerprint (evaluateOnNewDocument runs FIRST, before any await) to every new
   // tab/popup, so opening checks in a fresh tab is now safe and convenient.
   const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SoftGlaze — ${title}</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SoftGlaze - ${title}</title>
 <style>
 :root{color-scheme:dark}
 *{box-sizing:border-box}
@@ -1942,7 +1942,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
 <div class="brand"><span class="dot"></span> SOFTGLAZE BROWSER</div>
 <div class="ip-card">
   <div><h1 class="big" id="ip">${seedIp || 'Checking IP…'}</h1><div class="sub" id="loc">${seedLoc || 'Connecting through proxy…'}</div></div>
-  <div class="right"><div id="isp">ISP: ${seedIsp || '—'}</div><div id="proxyState">Proxy: ${proxyLabel}</div></div>
+  <div class="right"><div id="isp">ISP: ${seedIsp || '-'}</div><div id="proxyState">Proxy: ${proxyLabel}</div></div>
 </div>
 <div class="nav-links">
   <a href="https://browserscan.net/">BrowserScan</a>
@@ -1977,7 +1977,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
     <div class="row"><div class="label">WebGL vendor</div><div class="value" id="glv">…</div></div>
   </div>
 </div>
-<div class="foot">All values above are read live from this profile's browser — they reflect what websites see.</div>
+<div class="foot">All values above are read live from this profile's browser - they reflect what websites see.</div>
 </div>
 <script>
 (function(){
@@ -2002,7 +2002,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
     var data=cc.toDataURL(),h=0;for(var i=0;i<data.length;i++){h=(h*31+data.charCodeAt(i))>>>0;}
     $('canvas').textContent=('0000000'+h.toString(16)).slice(-8);
   }catch(e){$('canvas').textContent='n/a';}
-  // WebRTC probe (should show proxy IP or none — never your real IP)
+  // WebRTC probe (should show proxy IP or none - never your real IP)
   try{
     var pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}),ips={};
     pc.onicecandidate=function(e){if(e&&e.candidate&&e.candidate.candidate){var m=/([0-9]{1,3}(?:\\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);if(m)ips[m[1]]=1;}};
@@ -2017,20 +2017,20 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
     if(!d||d.status!=='success')throw new Error('lookup failed');
     setIfReal('ip',d.query);
     setIfReal('loc',[d.country,d.regionName,d.city].filter(Boolean).join(' / '));
-    $('isp').textContent='ISP: '+(d.isp||seed.isp||'—');
+    $('isp').textContent='ISP: '+(d.isp||seed.isp||'-');
   }).catch(function(){
     return fetch('https://ipwho.is/').then(function(r){return r.json();}).then(function(d){
       setIfReal('ip',d.ip);
       setIfReal('loc',[d.country,d.region,d.city].filter(Boolean).join(' / '));
-      $('isp').textContent='ISP: '+((d.connection&&d.connection.isp)||seed.isp||'—');
+      $('isp').textContent='ISP: '+((d.connection&&d.connection.isp)||seed.isp||'-');
     });
   }).catch(function(){
-    // Both live lookups failed — fall back to whatever the proxy resolved at launch.
+    // Both live lookups failed - fall back to whatever the proxy resolved at launch.
     if(seed.ip){setIfReal('ip',seed.ip);setIfReal('loc',seed.loc);}
     else{$('ip').textContent='IP load failed';$('loc').textContent='Check proxy connection';}
   });
   // Open each check link in a NEW tab via the main process, which attaches proxy
-  // auth BEFORE navigating — so an authenticated proxy doesn't stall the new tab
+  // auth BEFORE navigating - so an authenticated proxy doesn't stall the new tab
   // on a 407 (the reason target="_blank" tabs hung at about:blank).
   //
   // The bridge is NOT always usable: fingerprint-chromium (the native anti-detect
@@ -2050,7 +2050,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
           try{ location.href=href; return true; }catch(_){}
           return false;
         };
-        if(typeof window.__sgBridge!=='function'){return;} // no bridge — default navigation
+        if(typeof window.__sgBridge!=='function'){return;} // no bridge - default navigation
         try{
           var p=window.__sgBridge('__sgzOpenTab',href);
           e.preventDefault();
@@ -2075,7 +2075,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
 // captcha appears, but actually SOLVING one requires a paid human/AI solver
 // service. The user supplies their own API key in Settings → it is billed per
 // solve by that provider, not by SoftGlaze. We only cover reCAPTCHA v2 and
-// hCaptcha (the token-grant types) — image/coordinate captchas are out of scope.
+// hCaptcha (the token-grant types) - image/coordinate captchas are out of scope.
 // ---------------------------------------------------------------------------
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -2236,7 +2236,7 @@ document.querySelectorAll('.g-recaptcha[data-sitekey],[data-sitekey],.cf-turnsti
 // be blocked or rate-limited, in which case it returns null. When that happens we
 // resolve the exit location through the BROWSER's own proxied connection: navigate the
 // tab to a geo API and parse the JSON. NEVER throws.
-// AUDIT/CRITICAL FIX: this function did not exist — the call site (the fallback in
+// AUDIT/CRITICAL FIX: this function did not exist - the call site (the fallback in
 // launchProfileSession) referenced a missing `lookupProxyGeo`, throwing ReferenceError
 // inside the launch guard, which closed the freshly-opened browser and FAILED every
 // proxied launch whose pre-launch lookup returned null (slow/blocked/rate-limited proxy).
@@ -2248,7 +2248,7 @@ async function lookupProxyGeo(page) {
     const txt = await page.evaluate(() => (document.body ? document.body.innerText : '')).catch(() => '');
     const j = JSON.parse(txt);
     if (j && j.status === 'success') return j;
-  } catch (e) { /* proxy dead / non-JSON / timeout — geo stays null, launch continues */ }
+  } catch (e) { /* proxy dead / non-JSON / timeout - geo stays null, launch continues */ }
   return null;
 }
 
@@ -2346,7 +2346,7 @@ function lookupProxyGeoNode(proxy) {
 
 // In-memory geo cache. Bulk/parallel launches frequently reuse the same few
 // proxies (pools); without caching, every launch re-hits the API THROUGH the
-// proxy — slow and easily rate-limited. Cache successful lookups for a TTL.
+// proxy - slow and easily rate-limited. Cache successful lookups for a TTL.
 const GEO_NODE_CACHE_TTL_MS = 10 * 60 * 1000;
 const geoNodeCache = new Map();    // key -> { value, at }
 const geoNodeInflight = new Map(); // key -> Promise<value|null>
@@ -2377,7 +2377,7 @@ async function lookupProxyGeoNodeCached(proxy) {
 //
 // The JS fingerprint is delivered as a Manifest V3 content script running in the
 // page's MAIN world at document_start. Chrome GUARANTEES such a script runs
-// before any page script in EVERY tab, popup and iframe — which CDP / puppeteer
+// before any page script in EVERY tab, popup and iframe - which CDP / puppeteer
 // injection does NOT (it races the first document of new tabs, which is what made
 // opened-in-new-tab check sites leak the real cores/RAM/GPU and the real WebRTC
 // IP while the first tab stayed clean). Verified on Chrome 151: a new tab reads
@@ -2404,13 +2404,13 @@ function buildFingerprintConfig(profile, opts) {
   // WebGL GPU strings. Spoofing vendor/renderer on the MAIN thread but not inside a
   // service worker (a separate script we can't inject) creates the main-vs-worker
   // GPU MISMATCH that CreepJS flags (main "Intel" vs worker "AMD"). So by DEFAULT we
-  // report the REAL GPU everywhere — consistent across main thread, dedicated
+  // report the REAL GPU everywhere - consistent across main thread, dedicated
   // workers AND the service worker. A consistent real GPU is far less suspicious
   // than a mismatch, and per-profile uniqueness still comes from canvas/audio noise.
   // A custom vendor/renderer is only honored when the user EXPLICITLY sets one
   // (anything other than empty / Auto / Real / Default), accepting the SW caveat.
   // Honor the editor's "WebGL Metadata: Real | Custom" toggle. "Real" (the default)
-  // means DON'T spoof — report the true GPU everywhere. Only "Custom" with an
+  // means DON'T spoof - report the true GPU everywhere. Only "Custom" with an
   // explicit, non-Auto vendor spoofs the string (and only on the main thread +
   // dedicated workers; the service worker still shows the real GPU, hence the
   // "Real" recommendation).
@@ -2422,7 +2422,7 @@ function buildFingerprintConfig(profile, opts) {
   // "Real" is the right default only while the profile claims the OS it is actually
   // running on. The moment it claims a DIFFERENT one, reporting the true GPU is a hard,
   // deterministic contradiction: a profile whose navigator.platform is 'MacIntel'
-  // reporting `ANGLE (NVIDIA ... Direct3D11 ...)` is Windows, full stop — every scanner
+  // reporting `ANGLE (NVIDIA ... Direct3D11 ...)` is Windows, full stop - every scanner
   // reads it in one line. That is far worse than the main-thread/service-worker GPU
   // mismatch the "Real" default exists to avoid.
   //
@@ -2432,7 +2432,7 @@ function buildFingerprintConfig(profile, opts) {
   // sensible default for that OS when the profile has none.
   //
   // NOTE this only removes the single most obvious tell. A cross-OS profile is still
-  // betrayed by host fonts, canvas raster and the real TLS/JS-engine behaviour — see
+  // betrayed by host fonts, canvas raster and the real TLS/JS-engine behaviour - see
   // fingerprintGenerator's OS-selection comment, which is why the GENERATOR defaults to
   // the host OS. The editor still lets a user pick otherwise; this keeps that choice
   // from being trivially detectable, it does not make it safe.
@@ -2467,14 +2467,14 @@ function buildFingerprintConfig(profile, opts) {
     const fb = FALLBACK_GPU[claimedOs] || FALLBACK_GPU.Windows;
     webglVendor = storedVendor || fb[0];
     webglRenderer = storedRenderer || fb[1];
-    console.log(`[SG][fp] cross-OS profile (claims ${claimedOs} on ${HOST_OS_NAME}) — forcing a coherent GPU instead of the host's: ${webglRenderer}`);
+    console.log(`[SG][fp] cross-OS profile (claims ${claimedOs} on ${HOST_OS_NAME}) - forcing a coherent GPU instead of the host's: ${webglRenderer}`);
   }
 
   const dntRaw = String(profile.doNotTrack || '').toLowerCase();
   const dnt = /^(on|enable|enabled|1|true|yes)$/.test(dntRaw) ? '1'
     : (/^(off|disable|disabled|0|false|no)$/.test(dntRaw) ? '0' : null);
 
-  // CPU cores + RAM are SPOOFED BY DEFAULT — the real machine is never leaked to a
+  // CPU cores + RAM are SPOOFED BY DEFAULT - the real machine is never leaked to a
   // page unless the user explicitly picks "Real". A blank/missing value still
   // spoofs (deterministic per-profile pick from the seed, so it's stable across
   // launches but unique per profile). navigator.deviceMemory is spec-capped at 8 in
@@ -2497,7 +2497,7 @@ function buildFingerprintConfig(profile, opts) {
     brandInject: brandIdent.inject,
     timezone: timezone || null,
     navPlatform: osTok.navPlatform,
-    // null ⇒ no override (report the real value) — only when the user picks "Real".
+    // null ⇒ no override (report the real value) - only when the user picks "Real".
     cores: realCpu ? null : spoofCores,
     mem: realRam ? null : deviceMemory,
     screenW: resW,
@@ -2507,7 +2507,7 @@ function buildFingerprintConfig(profile, opts) {
     webrtcMode,
     // On whenever a proxy is used and the mode isn't the explicit pass-through.
     // With the proxy exit IP known (pre-launch geo), WebRTC candidates are
-    // REWRITTEN to it so WebRTC reports the proxy IP — matching the HTTP IP — which
+    // REWRITTEN to it so WebRTC reports the proxy IP - matching the HTTP IP - which
     // is far more natural than a "disabled" WebRTC. If the IP is unknown, the
     // in-page guard falls back to DROP mode (real IP still hidden).
     webrtcProtect: Boolean(hasProxy) && webrtcMode !== 'Real' && webrtcMode !== 'Disabled',
@@ -2550,8 +2550,8 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
   };
   // Override the New Tab Page ONLY for Chrome-for-Testing. CfT's built-in
   // chrome://newtab CRASHES the whole browser (access violation 0xC0000005) when
-  // opened on recent builds (151+) — its remote NTP/realbox/signin code is broken
-  // in CfT — so clicking "+" killed the session. Pointing the NTP at a local page
+  // opened on recent builds (151+) - its remote NTP/realbox/signin code is broken
+  // in CfT - so clicking "+" killed the session. Pointing the NTP at a local page
   // sidesteps the crash. Real Chrome's NTP works fine, so we DON'T override it
   // there (the override would needlessly trip Chrome's "changed by extension"
   // consent bubble). overriding is gated on opts.ntpOverride.
@@ -2565,7 +2565,7 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
   // Self-contained: serialize the function and invoke it with the baked config.
   // Under the native engine fingerprintScript bails on its own, so shipping it there
   // would write ~43 KB of dead script into every profile. Ship the small gap filler
-  // instead — it covers ONLY the two axes fingerprint-chromium leaves uncovered.
+  // instead - it covers ONLY the two axes fingerprint-chromium leaves uncovered.
   const fn = fpConfig && fpConfig.nativeEngine ? nativeGapScript : fingerprintScript;
   const source = `(${fn.toString()})(${JSON.stringify(fpConfig)});`;
   await fs.writeFile(path.join(extDir, 'fp.js'), source);
@@ -2602,8 +2602,8 @@ async function launchProfileSession(options = {}) {
   } = options;
 
   // Dedupe (audit: double-launch orphans Chrome). A profile has exactly ONE
-  // session (sessionId === String(profileId)). A rapid double-launch — a
-  // double-click, or the same profileId appearing twice in a batch — would
+  // session (sessionId === String(profileId)). A rapid double-launch - a
+  // double-click, or the same profileId appearing twice in a batch - would
   // otherwise open a SECOND Chrome on the same userDataDir (singleton-lock
   // conflict) and overwrite the activeSessions entry, leaving the first browser
   // unreachable and unclosable. Return the running session instead of relaunching.
@@ -2648,8 +2648,8 @@ async function launchProfileSession(options = {}) {
     ? String(profile.timezoneCustom).trim() : null;
   // Decide the anti-detect engine BEFORE the geo lookup: fingerprint-chromium bakes the
   // timezone as a LAUNCH flag (--timezone) and cannot correct it afterward, so its geo
-  // must be resolved FRESH (uncached). A stale-cached exit — a sticky proxy session that
-  // has since rotated to another city — would leave the browser on a timezone that does
+  // must be resolved FRESH (uncached). A stale-cached exit - a sticky proxy session that
+  // has since rotated to another city - would leave the browser on a timezone that does
   // not match the live proxy IP, the loudest CAPTCHA tell there is. Stock Chrome keeps
   // the cache: it applies timezone per-page via CDP AFTER the lookup, so it self-corrects.
   let usingAntidetect = false;
@@ -2659,7 +2659,7 @@ async function launchProfileSession(options = {}) {
   if (browserSettings.antidetectEngine === true || profile.antidetectEngine === true) {
     antidetectExe = resolveAntidetectBinary();
     if (antidetectExe) usingAntidetect = true;
-    else console.warn('[SG] anti-detect engine requested but fingerprint-chromium binary not found — using stock Chrome.');
+    else console.warn('[SG] anti-detect engine requested but fingerprint-chromium binary not found - using stock Chrome.');
   }
 
   let geo = geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real'
@@ -2668,7 +2668,7 @@ async function launchProfileSession(options = {}) {
   let timezoneId = manualTz || (geo && geo.timezone) || null;
 
   // Build the fingerprint config (geo-aware) and bake it into a MAIN-world
-  // content-script extension BEFORE launch — this is the reliable injection path.
+  // content-script extension BEFORE launch - this is the reliable injection path.
   const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId });
   // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
   // extension is written with the NTP override ONLY when launching CfT.
@@ -2681,7 +2681,7 @@ async function launchProfileSession(options = {}) {
   if (!chosenBrowser) {
     // No system Chrome AND no downloaded Chrome-for-Testing build. Packaged builds don't
     // bundle a Chromium, so puppeteer would otherwise throw a cryptic "Could not find
-    // Chrome" — exactly what a brand-new device hits. Only fall through to puppeteer's own
+    // Chrome" - exactly what a brand-new device hits. Only fall through to puppeteer's own
     // bundled Chromium when it genuinely exists (dev installs); else give a clear, actionable
     // error instead of the raw puppeteer one.
     let bundled = '';
@@ -2725,7 +2725,7 @@ async function launchProfileSession(options = {}) {
     // Suppress Chrome's "Disable developer mode extensions" warning that otherwise
     // pops up for our --load-extension fingerprint extension (the "Core" notice the
     // user saw), plus the unsupported-flag and NTP-override consent bubbles. It is a
-    // process-level switch only — NOT page-observable (navigator.webdriver stays
+    // process-level switch only - NOT page-observable (navigator.webdriver stays
     // false, verified), so it doesn't weaken the in-page stealth surface.
     '--test-type',
     `--disable-extensions-except=${extensionArg}`,
@@ -2734,9 +2734,9 @@ async function launchProfileSession(options = {}) {
   if (profile.canvasNoise !== false || profile.webglImageNoise !== false) {
     // GPU backend: pin ANGLE to Chrome's REAL Windows default (d3d11) instead of
     // randomizing across [d3d11,d3d9,gl,vulkan] by seed. The randomization gave
-    // ~3/4 of profiles a broken/implausible backend — d3d9 drops WebGL2 entirely,
+    // ~3/4 of profiles a broken/implausible backend - d3d9 drops WebGL2 entirely,
     // '--use-angle=gl --use-gl=angle' commonly degrades to SwiftShader, and vulkan
-    // is a rounding-error share of real Chrome — which BLACK-SCREENED many profiles
+    // is a rounding-error share of real Chrome - which BLACK-SCREENED many profiles
     // at launch AND made them MORE fingerprintable (the reported "some profiles open
     // as a black screen" bug). Per-profile GPU variety is already carried by the
     // readback (readPixels) perturbation, not by swapping the driver backend.
@@ -2746,19 +2746,19 @@ async function launchProfileSession(options = {}) {
   // Force the ENTIRE locale stack (ICU default locale → Intl.DateTimeFormat /
   // NumberFormat / Collator, and Accept-Language) to match navigator.language.
   // Without this, Chrome's ICU defaults to en-US while we spoof navigator to e.g.
-  // en-GB — Intl.resolvedOptions().locale = "en-US" is a classic mismatch tell
+  // en-GB - Intl.resolvedOptions().locale = "en-US" is a classic mismatch tell
   // (CreepJS flags "American English" vs en-GB). --lang drives it natively.
   const primaryLocale = (fpConfig.langs && fpConfig.langs[0]) || null;
   if (primaryLocale) args.push(`--lang=${primaryLocale}`);
 
   // WebRTC IP handling. When we know the proxy exit IP, let candidates gather so
   // the in-page protection can REWRITE them to the proxy IP (WebRTC then reports
-  // the proxy IP, matching HTTP — the most natural result). When we DON'T know it,
+  // the proxy IP, matching HTTP - the most natural result). When we DON'T know it,
   // block non-proxied UDP so the real IP can never escape (drop mode).
   //
   // CRITICAL: we now ALWAYS block non-proxied UDP whenever a proxy is set (not just
   // when the IP is unknown). Previously, knowing the proxy IP we let host candidates
-  // gather so the in-page code could rewrite them — but Chrome's mDNS host candidate
+  // gather so the in-page code could rewrite them - but Chrome's mDNS host candidate
   // (xxxx.local) still leaked: CreepJS resolves the .local name to the REAL IP. Drop
   // mode prevents the real-IP host candidate from ever being gathered, so only the
   // proxied srflx (proxy IP) or nothing is exposed. The real IP can never escape.
@@ -2770,7 +2770,7 @@ async function launchProfileSession(options = {}) {
   // our JS/CDP fingerprint layer (skipped via fpConfig.nativeEngine): the binary derives
   // a coherent identity (canvas/webgl/audio/exact-UA) from --fingerprint, reports the
   // mapped platform/brand/cores/locale, sets the timezone, and blocks the WebRTC real-IP
-  // leak — all natively, so there is no injection race for a site to spot.
+  // leak - all natively, so there is no injection race for a site to spot.
   if (usingAntidetect) {
     args.push(...buildAntidetectFlags(profile, fpConfig, seed, timezoneId, Boolean(resolvedProxy)));
   }
@@ -2779,11 +2779,11 @@ async function launchProfileSession(options = {}) {
   // the LAST one (it does NOT merge them), so we accumulate every feature here and
   // emit a single combined switch of each below. Adding them individually would
   // make a later flag silently wipe an earlier one (e.g. HttpsUpgrades vs the
-  // Client-Hint feature) — a real, easy-to-miss bug.
+  // Client-Hint feature) - a real, easy-to-miss bug.
   const enableFeatures = [];
   const disableFeatures = [];
 
-  // Phase 2 — Client Hints. Guarantee the UserAgentClientHint feature is on so
+  // Phase 2 - Client Hints. Guarantee the UserAgentClientHint feature is on so
   // Chrome populates navigator.userAgentData and emits the Sec-CH-UA-* request
   // headers that our CDP userAgentMetadata override (platform / platformVersion /
   // architecture / model / brands) feeds. It's on by default in modern Chrome;
@@ -2814,33 +2814,33 @@ async function launchProfileSession(options = {}) {
       .forEach((token) => { if (!args.includes(token)) args.push(token); });
   }
 
-  // Phase 3 — DNS / network leak hardening. When traffic is proxied, two UDP side
+  // Phase 3 - DNS / network leak hardening. When traffic is proxied, two UDP side
   // channels can still expose the real IP or resolve names outside the tunnel:
   //   • WebRTC UDP → already neutralized above by
   //     --force-webrtc-ip-handling-policy=disable_non_proxied_udp plus the in-page
   //     RTCPeerConnection guard.
   //   • QUIC / HTTP3 (UDP) → an HTTP or SOCKS proxy only tunnels TCP, so a QUIC
-  //     connection bypasses the proxy and resolves/connects DIRECTLY — a real DNS
+  //     connection bypasses the proxy and resolves/connects DIRECTLY - a real DNS
   //     and IP leak. Disabling QUIC forces every request back onto the proxied TCP
   //     path, where Chrome resolves hostnames PROXY-SIDE (HTTP CONNECT and SOCKS5
   //     remote DNS), keeping DNS inside the tunnel.
   //
   // NOTE: we deliberately do NOT use `--host-resolver-rules=MAP * ~NOTFOUND`.
   // That maps EVERY hostname to NOTFOUND, so the browser can no longer resolve
-  // anything — a hard breakage, not a leak fix. Proxy-side resolution + killing
+  // anything - a hard breakage, not a leak fix. Proxy-side resolution + killing
   // the QUIC bypass is the correct, non-destructive way to stop DNS leaks.
   //
   // Per-profile HTTP/3 (QUIC) toggle. Default (enableQuic falsy) = disabled when
   // proxied, for maximum stealth / no unproxied-UDP leak. "High-Speed Trusted
   // Mode" (enableQuic === true) OMITS --disable-quic so Chromium can natively
-  // negotiate HTTP/3 over UDP — only safe on premium proxies (e.g. SOCKS5) that
+  // negotiate HTTP/3 over UDP - only safe on premium proxies (e.g. SOCKS5) that
   // fully tunnel/isolate UDP.
   if (resolvedProxy && profile.enableQuic !== true) {
     args.push('--disable-quic');
   }
 
   // Emit the accumulated feature switches as a SINGLE flag each (see the
-  // accumulation note above — repeated switches clobber rather than merge).
+  // accumulation note above - repeated switches clobber rather than merge).
   if (enableFeatures.length) args.push(`--enable-features=${[...new Set(enableFeatures)].join(',')}`);
   if (disableFeatures.length) args.push(`--disable-features=${[...new Set(disableFeatures)].join(',')}`);
 
@@ -2850,17 +2850,17 @@ async function launchProfileSession(options = {}) {
   // that injects the credentials upstream, and point Chromium at the relay. HTTP(S)
   // proxies keep using page.authenticate below (which works for their 407). (audit)
   const proxyTypeLc = resolvedProxy ? String(resolvedProxy.type).toLowerCase() : '';
-  const proxyIsSocks = proxyTypeLc.startsWith('socks'); // socks4 OR socks5 — neither answers HTTP 407
+  const proxyIsSocks = proxyTypeLc.startsWith('socks'); // socks4 OR socks5 - neither answers HTTP 407
   const proxyIsSocks5 = proxyTypeLc === 'socks5';       // only socks5 carries user/pass auth (via the relay)
   const socksNeedsAuth = proxyIsSocks5 && Boolean(resolvedProxy.username || resolvedProxy.password);
   // HTTP(S) proxies CAN answer page.authenticate()'s 407, but that is applied per-page
-  // and only after a tab exists — so a browser-opened "+" tab fires its FIRST request
+  // and only after a tab exists - so a browser-opened "+" tab fires its FIRST request
   // BEFORE auth is wired, drawing a 407 that stalls the tab and looks suspicious to
   // bot-detection. Give authenticated HTTP(S) proxies the same treatment as SOCKS5: a
   // local no-auth relay that injects the credentials upstream, so Chromium never sees a
   // challenge on ANY tab and the new-tab proxy-auth race disappears.
   const httpNeedsAuth = Boolean(resolvedProxy) && !proxyIsSocks && Boolean(resolvedProxy.username || resolvedProxy.password);
-  // Holds whichever local auth-injecting relay is active — SOCKS5 (startSocksAuthRelay)
+  // Holds whichever local auth-injecting relay is active - SOCKS5 (startSocksAuthRelay)
   // OR HTTP (startHttpAuthRelay). Both expose { port, close }, so the session teardown
   // that calls socksRelay.close() tears down either kind. (Named socksRelay historically.)
   let socksRelay = null;
@@ -2877,10 +2877,10 @@ async function launchProfileSession(options = {}) {
       socksRelay = await startHttpAuthRelay(resolvedProxy);
       proxyForArg = { type: 'HTTP', host: '127.0.0.1', port: socksRelay.port, username: null, password: null };
     } catch (e) {
-      // Relay failed to START — degrade gracefully to the previous per-page
+      // Relay failed to START - degrade gracefully to the previous per-page
       // page.authenticate() path (proxyForArg stays the real proxy; proxyCreds below is
       // set because socksRelay is null) rather than failing the whole launch.
-      console.warn('[SG][proxy] HTTP auth relay failed to start — falling back to page.authenticate:', (e && e.message) || e);
+      console.warn('[SG][proxy] HTTP auth relay failed to start - falling back to page.authenticate:', (e && e.message) || e);
       socksRelay = null;
     }
   }
@@ -2900,9 +2900,9 @@ async function launchProfileSession(options = {}) {
     : null;
 
   // Use the binary chosen up front: a pinned CfT version if installed, else real
-  // system Chrome (preferred — no NTP crash, no "Testing" icon), else newest CfT,
+  // system Chrome (preferred - no NTP crash, no "Testing" icon), else newest CfT,
   // else the bundled Chromium. Real Chrome reports its own genuine version, which
-  // is what UA/Client-Hints derive from — fully consistent.
+  // is what UA/Client-Hints derive from - fully consistent.
   const resolvedBrowser = chosenBrowser;
   // Stealth: strip puppeteer's default '--enable-automation' (it paints the
   // "Chrome is being controlled by automated test software" infobar AND sets
@@ -2922,8 +2922,8 @@ async function launchProfileSession(options = {}) {
   };
   if (resolvedBrowser && resolvedBrowser.exePath) launchOptions.executablePath = resolvedBrowser.exePath;
   // Set the timezone on the Chrome PROCESS via the TZ env var. Chromium honors it
-  // for ICU/Date/Intl in EVERY context — main thread, dedicated workers, AND
-  // service workers — natively, with no injection and no per-tab race. This is the
+  // for ICU/Date/Intl in EVERY context - main thread, dedicated workers, AND
+  // service workers - natively, with no injection and no per-tab race. This is the
   // fix for the real-timezone leak (proxy in the US but JS reporting Asia/Karachi).
   if (timezoneId) launchOptions.env = { ...process.env, TZ: timezoneId };
 
@@ -2936,14 +2936,14 @@ async function launchProfileSession(options = {}) {
   try {
     browser = await engine.launch(launchOptions);
   } catch (launchErr) {
-    // Launch itself failed — the SOCKS relay (if any) would otherwise leak.
+    // Launch itself failed - the SOCKS relay (if any) would otherwise leak.
     if (socksRelay) { try { socksRelay.close(); } catch (e) {} }
     throw launchErr;
   }
 
   // Guard the ENTIRE post-launch setup (audit: launch-failure orphans Chrome).
   // Until the session is registered in activeSessions (and its 'disconnected'
-  // cleanup wired), this browser is tracked NOWHERE else — so any throw here
+  // cleanup wired), this browser is tracked NOWHERE else - so any throw here
   // (browser.version()/pages()/newPage() and generateStartPage are the classic
   // offenders) would leave a live Chrome running forever with no handle to close
   // it. On failure, tear it down and rethrow.
@@ -2952,12 +2952,12 @@ async function launchProfileSession(options = {}) {
 
   // KEEP puppeteer-extra-stealth's onTargetCreated listener so its ~11 evasions
   // (window.chrome, navigator.plugins, navigator.permissions, iframe.contentWindow,
-  // WebGL vendor, etc.) apply to EVERY new tab — not just the first. The custom CDP
+  // WebGL vendor, etc.) apply to EVERY new tab - not just the first. The custom CDP
   // auto-attach below only spoofs GPU/RAM/WebRTC/screen; with stealth stripped from new
   // tabs, Google's BotGuard saw a missing window.chrome and threw the /sorry CAPTCHA on
-  // a "+"-tab search. The known cost of leaving it on — stealth injecting into a
+  // a "+"-tab search. The known cost of leaving it on - stealth injecting into a
   // transient New Tab Page whose CDP session closes mid-write throws
-  // `TargetCloseError (Page.addScriptToEvaluateOnNewDocument)` — is a rejected promise
+  // `TargetCloseError (Page.addScriptToEvaluateOnNewDocument)` - is a rejected promise
   // caught by the global unhandledRejection handler in main.js (one-offs are swallowed;
   // the app is not torn down), so we no longer removeAllListeners('targetcreated').
 
@@ -2978,7 +2978,7 @@ async function launchProfileSession(options = {}) {
   const fpInjectSource = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)});`;
   // Fingerprint values the early auto-attach handler needs to fully spoof NEW
   // tabs BEFORE their first byte. Declared here (so the handler closes over it)
-  // but POPULATED later, once ua/timezone/geo/mobile are computed — reading the
+  // but POPULATED later, once ua/timezone/geo/mobile are computed - reading the
   // object lazily avoids a temporal-dead-zone error and keeps it a harmless no-op
   // for the very first page (which applyToPage covers directly).
   const fpLate = {};
@@ -3001,7 +3001,7 @@ const rootCdp = await browser.target().createCDPSession();
       //
       // The previous implementation sent through the deprecated
       // Target.sendMessageToTarget wrapper, which does NOT route to a flat-attached
-      // session, AND swallowed every error — so inject() below always "succeeded"
+      // session, AND swallowed every error - so inject() below always "succeeded"
       // (its try/catch never saw a throw), the retry loop + failure log were dead
       // code, and the fingerprint init script + UA-CH/timezone/geolocation overrides
       // never actually landed on new tabs. Those tabs painted with the REAL
@@ -3012,7 +3012,7 @@ const rootCdp = await browser.target().createCDPSession();
       const child = conn ? conn.session(ev.sessionId) : null;
       // Bound EVERY child CDP call so a single stalled command (e.g. a browser-domain
       // command that a page session answers slowly, or a target mid-teardown) can never
-      // block the resume below — a new tab must never hang at about:blank. A timed-out
+      // block the resume below - a new tab must never hang at about:blank. A timed-out
       // call rejects; inject() catches it and the resume still fires.
       const withTimeout = (p, ms) => Promise.race([
         p, new Promise((_, rej) => setTimeout(() => rej(new Error('cdp call timed out')), ms))
@@ -3049,7 +3049,7 @@ const rootCdp = await browser.target().createCDPSession();
               await sendMsg('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints });
               await sendMsg('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
             }
-            } // end !nativeEngine — native flags already set UA/timezone/cores/device-metrics
+            } // end !nativeEngine - native flags already set UA/timezone/cores/device-metrics
             // Native engine: spoof screen.* to the profile resolution (fingerprint-chromium
             // has no screen flag, so it would leak the real monitor across every profile).
             if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
@@ -3076,7 +3076,7 @@ const rootCdp = await browser.target().createCDPSession();
       const resume = async () => {
         if (resumed) return; // idempotent: the guard timer AND the final call may both fire
         resumed = true;
-        // waitForDebuggerOnStart pauses every new target — it MUST be resumed or the
+        // waitForDebuggerOnStart pauses every new target - it MUST be resumed or the
         // tab hangs at about:blank. Normal path: resume on the flat child session
         // (time-bounded so even a stalled resume can't wedge the tab).
         try {
@@ -3111,8 +3111,8 @@ const rootCdp = await browser.target().createCDPSession();
       clearTimeout(resumeGuard);
 
       if (isPageish && !injected) {
-        console.error('[SG][fingerprint] new-tab injection FAILED — this tab may expose the REAL GPU/RAM/WebRTC. profile',
-          profileId, title || '', '— target', info.url || info.targetId || info.type);
+        console.error('[SG][fingerprint] new-tab injection FAILED - this tab may expose the REAL GPU/RAM/WebRTC. profile',
+          profileId, title || '', '- target', info.url || info.targetId || info.type);
       }
 
       // ALWAYS resume (idempotent via `resumed`), even if injection failed, so the tab never hangs.
@@ -3136,12 +3136,12 @@ const rootCdp = await browser.target().createCDPSession();
           const s = String(d);
           // Known-harmless Chrome stderr that ALWAYS appears and is not a crash:
           //  • google_apis/gcm registration (PHONE_REGISTRATION_ERROR / DEPRECATED_ENDPOINT)
-          //    — Chrome's push-messaging signup, irrelevant to an automated profile.
-          //  • new_tab_ui.cc "incorrect profile type" — Chrome declining to serve its
+          //    - Chrome's push-messaging signup, irrelevant to an automated profile.
+          //  • new_tab_ui.cc "incorrect profile type" - Chrome declining to serve its
           //    WebUI new-tab page in this profile context; the tab still opens, no crash.
-          //  • device_event_log / bluetooth_adapter — BT adapter probing on a machine
+          //  • device_event_log / bluetooth_adapter - BT adapter probing on a machine
           //    without one. None of these touch the page or the fingerprint, so we drop
-          //    them — otherwise they bury a genuine crash line under recurring noise.
+          //    them - otherwise they bury a genuine crash line under recurring noise.
           if (/registration_request\.cc|gcm[\\/]engine|DEPRECATED_ENDPOINT|PHONE_REGISTRATION_ERROR|new_tab_ui\.cc|device_event_log|bluetooth_adapter|Getting Default Adapter/i.test(s)) {
             return;
           }
@@ -3152,15 +3152,15 @@ const rootCdp = await browser.target().createCDPSession();
       }
     } catch (e) {}
     browserProcess.once('exit', (code, signal) => {
-      console.error(`[SG][chrome-exit] pid=${pid} code=${code} signal=${signal} — the profile browser process ended.`);
+      console.error(`[SG][chrome-exit] pid=${pid} code=${code} signal=${signal} - the profile browser process ended.`);
     });
     browser.on('disconnected', () => {
-      console.error(`[SG][browser-disconnected] pid=${pid} — puppeteer lost the connection (browser gone).`);
+      console.error(`[SG][browser-disconnected] pid=${pid} - puppeteer lost the connection (browser gone).`);
       untrackPid(pid);
     });
     // Best-effort window icon. For a Chromium-BRAND profile (Edge/Brave/…) always
     // paint the brand colour. For a plain Chrome identity, only override the icon
-    // on Chrome-for-Testing (to hide its "Testing" badge) — real Chrome already
+    // on Chrome-for-Testing (to hide its "Testing" badge) - real Chrome already
     // shows the genuine Chrome icon, which we must not clobber. Off-Windows: no-op.
     const brandIsChrome = !/edge|brave|opera|opr|vivaldi|yandex/i.test(String(profile.browserBrand || ''));
     if (!brandIsChrome || usingCft) {
@@ -3181,7 +3181,7 @@ const rootCdp = await browser.target().createCDPSession();
 
   // Compute the UA / Client-Hints / Accept-Language / mobile identity NOW and hand it
   // to the early auto-attach handler BEFORE the geo lookup below. None of it depends on
-  // geo, and the in-page SOCKS geo lookup can block for several seconds — a tab opened
+  // geo, and the in-page SOCKS geo lookup can block for several seconds - a tab opened
   // during that window would otherwise attach with the fingerprint script but NO CDP
   // UA/CH override, leaking the REAL Chrome UA on its first request (a header/JS split
   // and exactly the kind of new-tab inconsistency that trips bot detection). Timezone +
@@ -3213,8 +3213,8 @@ const rootCdp = await browser.target().createCDPSession();
   fpLate.acceptLanguage = acceptLanguage;
   fpLate.mobileMetrics = mobileMetrics;
 
-  // Fallback geo: if the pre-launch (Node) lookup didn't resolve — e.g. a SOCKS
-  // proxy, which the http module can't speak — resolve it in-page now so timezone
+  // Fallback geo: if the pre-launch (Node) lookup didn't resolve - e.g. a SOCKS
+  // proxy, which the http module can't speak - resolve it in-page now so timezone
   // and geolocation can still be applied via CDP. Authenticate first so an
   // authenticated proxy doesn't answer 407 (which would null the lookup).
   if (geoMatchEnabled && !geo && resolvedProxy && profile.timezoneType !== 'Real') {
@@ -3244,8 +3244,8 @@ const rootCdp = await browser.target().createCDPSession();
   const applyToPage = async (targetPage, isNewTab = false) => {
     if (!targetPage || appliedPages.has(targetPage)) return;
     // Never touch browser-internal pages (New Tab Page, settings, devtools). There
-    // is nothing to spoof there, and running proxy-auth / CDP work on the NTP —
-    // which fetches Google content through the proxy — was crashing the browser
+    // is nothing to spoof there, and running proxy-auth / CDP work on the NTP -
+    // which fetches Google content through the proxy - was crashing the browser
     // when a new tab was opened. We re-run on the real navigation (see below).
     let pageUrl = '';
     try { pageUrl = targetPage.url(); } catch (e) {}
@@ -3263,16 +3263,16 @@ const rootCdp = await browser.target().createCDPSession();
     try {
       // MOST timing-sensitive FIRST: a target="_blank" popup begins navigating
       // the instant it's created, so the init script must be registered before
-      // any other awaits — otherwise the popup's first document commits with the
+      // any other awaits - otherwise the popup's first document commits with the
       // REAL navigator (this was the new-tab fingerprint leak). Verified: with
       // evaluateOnNewDocument called before navigation, the override applies.
       await targetPage.evaluateOnNewDocument(fingerprintScript, fpConfig).catch(() => {});
-      // Proxy auth for HTTP(S) proxies — version-agnostic, no MV2 extension.
+      // Proxy auth for HTTP(S) proxies - version-agnostic, no MV2 extension.
       if (proxyCreds) await targetPage.authenticate(proxyCreds).catch(() => {});
       const cdp = await targetPage.target().createCDPSession();
       // Native engine spoofs UA / timezone / cores / device-metrics itself from launch
       // flags; re-applying them over CDP would fight the native identity. Skip them when
-      // native — geolocation / DNT / request-filtering below are not native, so they run.
+      // native - geolocation / DNT / request-filtering below are not native, so they run.
       if (!fpConfig.nativeEngine) {
       await cdp.send('Emulation.setUserAgentOverride', {
         userAgent: ua.userAgent,
@@ -3281,7 +3281,7 @@ const rootCdp = await browser.target().createCDPSession();
         userAgentMetadata: ua.userAgentMetadata
       }).catch(() => {});
       if (timezoneId) await cdp.send('Emulation.setTimezoneOverride', { timezoneId }).catch(() => {});
-      // Mobile device metrics + touch — makes the Android UA coherent with a real
+      // Mobile device metrics + touch - makes the Android UA coherent with a real
       // phone: high-DPR viewport, screen size, and a working touchscreen
       // (navigator.maxTouchPoints > 0 + ontouchstart). Desktop profiles skip this.
       if (mobileMetrics) {
@@ -3296,11 +3296,11 @@ const rootCdp = await browser.target().createCDPSession();
         await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: mobileMetrics.maxTouchPoints }).catch(() => {});
         await cdp.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' }).catch(() => {});
       }
-      // Native cores override — applies to the page AND the dedicated/shared
+      // Native cores override - applies to the page AND the dedicated/shared
       // workers it spawns, even before their script runs (no JS-injection race).
       // Belt-and-suspenders with the in-page navigator override + worker prelude.
       if (fpConfig.cores) await cdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
-      } // end !nativeEngine — native flags already set UA/timezone/cores/device-metrics
+      } // end !nativeEngine - native flags already set UA/timezone/cores/device-metrics
       // Native engine: spoof screen.* to the profile resolution (fingerprint-chromium has
       // no screen flag, so it would leak the real monitor across all profiles).
       // deviceScaleFactor:0 preserves the real dpr; width/height:0 leaves the viewport intact.
@@ -3319,7 +3319,7 @@ const rootCdp = await browser.target().createCDPSession();
       if (dnt === '1') await targetPage.setExtraHTTPHeaders({ DNT: '1', 'Sec-GPC': '1' }).catch(() => {});
       // Captcha auto-solver (paid 2captcha/anti-captcha; user-supplied API key).
       try { attachCaptchaSolver(targetPage, captcha); } catch (e) {}
-      // Unified request filter — covers three global settings at once so we only
+      // Unified request filter - covers three global settings at once so we only
       // enable interception (and one handler) when something actually needs it:
       //   • browser.disableVideos        → abort media (saves proxy traffic)
       //   • website.localNetworkAccess   → block LAN/loopback probing (anti-leak)
@@ -3347,30 +3347,30 @@ const rootCdp = await browser.target().createCDPSession();
           }
         });
       }
-      // Smart Autofill — expose the persona bridge + inject the in-page widget on
+      // Smart Autofill - expose the persona bridge + inject the in-page widget on
       // this tab and its future navigations (no-op unless the bridge is configured).
       await attachPersonaAutofill(targetPage);
     } catch (e) {
-      // Per-page best-effort — never block the launch — but no longer SILENT:
+      // Per-page best-effort - never block the launch - but no longer SILENT:
       // record that this tab's identity setup did not fully complete so the
       // caller/UI can warn instead of implying protection that isn't there.
       if (!isNewTab) injectionDegraded = true;
       console.error('[SG][fingerprint] injection error on', (isNewTab ? 'new tab' : 'primary tab'),
-        'for profile', profileId, title || '', '—', (e && e.message) || e);
+        'for profile', profileId, title || '', '-', (e && e.message) || e);
     }
   };
 
   await applyToPage(page);
   if (injectionDegraded) {
     console.error('[SG][fingerprint] WARNING: profile', (title || profileId),
-      'launched WITHOUT full fingerprint masking — the real UA/timezone/devices may be exposed.');
+      'launched WITHOUT full fingerprint masking - the real UA/timezone/devices may be exposed.');
   }
 
   // NEW tabs/popups: the CDP auto-attach above already injects the full JS
   // fingerprint (cores/RAM/GPU/screen/WebRTC/etc.) before any page script runs in
   // every tab and iframe. This handler only adds the things that injection can't:
   // proxy auth, the UA/timezone/geo CDP overrides, request interception, DNT
-  // header, captcha — applied once the tab navigates to a real page.
+  // header, captcha - applied once the tab navigates to a real page.
   browser.on('targetcreated', async (target) => {
    try {
     const targetType = target.type();
@@ -3391,7 +3391,7 @@ const rootCdp = await browser.target().createCDPSession();
     try {
       const newPage = await target.page();
       if (!newPage) return;
-      // Proxy auth FIRST — before applyToPage's blank-tab early-return and before
+      // Proxy auth FIRST - before applyToPage's blank-tab early-return and before
       // the tab navigates. A new tab's very first request hits the proxy and gets a
       // 407; with an authenticated proxy that 407 never resolves into a
       // 'framenavigated' event, so deferring auth to applyToPage left such tabs
@@ -3414,7 +3414,7 @@ const rootCdp = await browser.target().createCDPSession();
   // Bridge for the start page's check links: open each in a NEW tab from the main
   // process, attaching proxy auth BEFORE the navigation so an authenticated proxy
   // never stalls the tab on a 407 (a window.open/target=_blank popup navigates the
-  // instant it opens, racing per-tab auth — this sequences auth-then-goto). Exposed
+  // instant it opens, racing per-tab auth - this sequences auth-then-goto). Exposed
   // before the start page loads so window.__sgzOpenTab exists when it runs.
   const hOpenTab = async (url) => {
       try {
@@ -3423,7 +3423,7 @@ const rootCdp = await browser.target().createCDPSession();
         if (proxyCreds) await np.authenticate(proxyCreds).catch(() => {});
         await np.bringToFront().catch(() => {});
         await np.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
-      } catch (e) { /* best-effort — a failed open must never affect the session */ }
+      } catch (e) { /* best-effort - a failed open must never affect the session */ }
   };
   try { await page.exposeFunction('__sgzOpenTab', hOpenTab); } catch (e) { /* already exposed */ }
   try { await attachPageBridge(page, { __sgzOpenTab: hOpenTab }); } catch (e) { /* bridge optional */ }
@@ -3435,18 +3435,18 @@ const rootCdp = await browser.target().createCDPSession();
   if (startupMode === 'detection') {
     startUrl = await generateStartPage(userDataDir, { title, profileId: profileId || 'TEMP-ID', proxyLabel, geo, startPageLinks });
   }
-  // One line stating exactly which engine and binary this launch used — the fastest
+  // One line stating exactly which engine and binary this launch used - the fastest
   // way to confirm the anti-detect engine actually engaged rather than silently falling
   // back to stock Chrome (which happens when the binary is not downloaded yet).
   console.log(`[SG][launch] antidetect=${usingAntidetect} cft=${usingCft} realChrome=${Boolean(chosenBrowser && chosenBrowser.isReal)} minCdp=${browserSettings.minimizeCdpFootprint === true} binary=${String((chosenBrowser && chosenBrowser.exePath) || '').split(/[\\/]/).pop()}`);
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
 
   // Open this profile's own saved start links. Routed through hOpenTab so proxy auth
-  // is attached BEFORE each navigation — a bare browser.newPage() here would stall
+  // is attached BEFORE each navigation - a bare browser.newPage() here would stall
   // every one of these tabs on a 407 for authenticated proxies.
   if (Array.isArray(startupUrls) && startupUrls.length) {
     let rest = startupUrls;
-    // When the detection start page is off, the first tab is a throwaway about:blank —
+    // When the detection start page is off, the first tab is a throwaway about:blank -
     // reuse it for the first link instead of leaving a stray blank tab behind.
     if (startupMode !== 'detection') {
       const first = startupUrls[0];
@@ -3462,7 +3462,7 @@ const rootCdp = await browser.target().createCDPSession();
   }
 
   const sessionId = String(profileId || crypto.randomUUID());
-  // The CDP/WebDriver debugging endpoint — handed to the local REST API so users
+  // The CDP/WebDriver debugging endpoint - handed to the local REST API so users
   // can attach external Playwright/Puppeteer/Selenium scripts to this container.
   let wsEndpoint = null;
   try { wsEndpoint = browser.wsEndpoint(); } catch (e) { wsEndpoint = null; }
@@ -3477,7 +3477,7 @@ const rootCdp = await browser.target().createCDPSession();
     title: title || `Profile ${sessionId}`,
     proxyLabel,
     injectionOk: !injectionDegraded,
-    socksRelay, // local SOCKS5 auth relay (or null) — closed when the session ends
+    socksRelay, // local SOCKS5 auth relay (or null) - closed when the session ends
     createdAt: new Date()
   });
   sessionRegistered = true;
@@ -3492,10 +3492,10 @@ const rootCdp = await browser.target().createCDPSession();
     emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
   });
 
-  // Success — emit 'launched' and return the session handle from INSIDE the guard try,
+  // Success - emit 'launched' and return the session handle from INSIDE the guard try,
   // where sessionId / wsEndpoint / sessionPid / injectionDegraded are in scope. They are
   // block-scoped (const/let) to this try, so emitting + returning AFTER the catch threw
-  // `ReferenceError: sessionId is not defined` and failed EVERY launch — after the
+  // `ReferenceError: sessionId is not defined` and failed EVERY launch - after the
   // browser had already opened, leaving a half-set-up session (browserEngine.js:2713).
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
   return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded };
@@ -3514,7 +3514,7 @@ const rootCdp = await browser.target().createCDPSession();
 
 // Drive an already-open session's primary page to a URL. Used by the Pro
 // Cookie Warmer to accumulate cookies/history by visiting real sites. Returns
-// true on a successful navigation, false otherwise — never throws (a dead tab or
+// true on a successful navigation, false otherwise - never throws (a dead tab or
 // a slow site must not crash the warmer or the main process).
 async function navigateSession(sessionId, url, options = {}) {
   const id = String(sessionId || '').trim();
@@ -3532,13 +3532,13 @@ async function navigateSession(sessionId, url, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Softglaze Pro — Cookie Robot / Session Warmer.
+// Softglaze Pro - Cookie Robot / Session Warmer.
 //
 // Drives a profile session through a list of real sites to build organic cookies
 // + history: navigate → dismiss the cookie-consent dialog → human-like scrolling
 // → random dwell. Operates on an already-running session (the caller decides
 // whether to launch one first, so the profile's proxy + fingerprint are reused
-// exactly as a real launch). Fully best-effort — a dead tab or slow site is
+// exactly as a real launch). Fully best-effort - a dead tab or slow site is
 // logged into `errors`, never thrown.
 // ---------------------------------------------------------------------------
 async function dismissCookieConsent(page) {
@@ -3613,7 +3613,7 @@ async function runCookieRobot(sessionId, targetUrls = [], opts = {}) {
   return result;
 }
 
-// Click a few random visible interactive elements (links/buttons) — best-effort
+// Click a few random visible interactive elements (links/buttons) - best-effort
 // "browsing noise" for cookie warming. Never throws; stops early if the page
 // navigates away. Returns the number of clicks performed.
 async function randomClicks(page, count = 2) {
@@ -3635,7 +3635,7 @@ async function randomClicks(page, count = 2) {
       if (!did) break;
       clicked += 1;
       await sleep(600 + Math.floor(Math.random() * 1400));
-    } catch (e) { break; } // page likely navigated — stop clicking
+    } catch (e) { break; } // page likely navigated - stop clicking
   }
   return clicked;
 }
@@ -3678,11 +3678,11 @@ async function warmInteract(sessionId, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Softglaze Premium — Stealth "Human Paste" typing engine.
+// Softglaze Premium - Stealth "Human Paste" typing engine.
 //
 // Anti-fraud systems flag credentials that appear instantly (a paste). This
 // types a string into the session's focused element ONE KEY AT A TIME via CDP
-// Input.dispatchKeyEvent, with a randomized 40–150 ms gap between keys, so the
+// Input.dispatchKeyEvent, with a randomized 40-150 ms gap between keys, so the
 // keystroke cadence looks human. Fully best-effort: a failed key is skipped and
 // it never throws into the caller.
 // ---------------------------------------------------------------------------
@@ -3727,10 +3727,10 @@ async function humanType(sessionId, text, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Softglaze Premium — "Synchronizer" (multi-window mirroring) FOUNDATION.
+// Softglaze Premium - "Synchronizer" (multi-window mirroring) FOUNDATION.
 //
 // One Master profile drives N Slave profiles: input performed in the Master is
-// replayed into every Slave. This is the architecture scaffold — launch +
+// replayed into every Slave. This is the architecture scaffold - launch +
 // grouping + CDP plumbing + a basic click/keystroke mirror are wired; the
 // higher-fidelity pieces (pointer-move streaming, scroll sync, coordinate
 // normalization across differing viewports, and Page.captureScreenshot-based
@@ -3799,7 +3799,7 @@ async function beginSyncGroup(masterSessionId, slaveSessionIds) {
           await slave.cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...props });
         }
         // TODO(foundation): handle 'mousemove' (throttled streaming) and 'scroll'.
-      } catch (e) { /* a slave may have navigated/closed — ignore and continue */ }
+      } catch (e) { /* a slave may have navigated/closed - ignore and continue */ }
     }
   };
 
@@ -3886,7 +3886,7 @@ async function closeBrowserWithTimeout(session, timeoutMs = 8000) {
       if (pid) { try { process.kill(pid, 'SIGKILL'); } catch (e) { /* already gone */ } }
     }
   }
-  // Tear down the SOCKS relay too (idempotent — the 'disconnected' handler may
+  // Tear down the SOCKS relay too (idempotent - the 'disconnected' handler may
   // also close it; double-close is safe). Guards the force-kill path where the
   // disconnect event might not fire.
   if (session.socksRelay) { try { session.socksRelay.close(); } catch (e) {} }
@@ -3896,14 +3896,14 @@ async function closeProfileSession(sessionId) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
   if (!session) return { closed: false };
-  intentionalClose.add(id); // deliberate close — the disconnect must not be read as a crash
+  intentionalClose.add(id); // deliberate close - the disconnect must not be read as a crash
   await closeBrowserWithTimeout(session);
   activeSessions.delete(id);
   return { closed: true };
 }
 
 async function closeAllProfileSessions() {
-  shuttingDown = true; // app is quitting — these closes are not crashes; SessionState rows stay 'running' for restore
+  shuttingDown = true; // app is quitting - these closes are not crashes; SessionState rows stay 'running' for restore
   // Close every session concurrently, each with its own timeout+force-kill, so one
   // wedged Chrome can't stall the whole quit sequence behind the others.
   await Promise.all(Array.from(activeSessions.values()).map((s) => closeBrowserWithTimeout(s)));
@@ -4070,7 +4070,7 @@ async function importStoredCookies(opts, cookies) {
 }
 
 // ---------------------------------------------------------------------------
-// Softglaze Pro — Macro engine (runner + visual recorder).
+// Softglaze Pro - Macro engine (runner + visual recorder).
 //
 // Canonical step shape (serialized into Macro.stepsJson):
 //   { type: 'goto',     url }
@@ -4081,14 +4081,14 @@ async function importStoredCookies(opts, cookies) {
 //   { type: 'wait',     ms }
 //   { type: 'move',     selector | x,y }
 //   { type: 'hover',    selector, ms? }
-//   { type: 'select',   selector, value, by? }       // <select> — by: auto|value|label|index
+//   { type: 'select',   selector, value, by? }       // <select> - by: auto|value|label|index
 //   { type: 'waitFor',  selector, state? }           // state: visible|hidden
 //   { type: 'submit',   selector }                   // a form, or any field inside one
 //   { type: 'check',    selector, state? }           // state: checked|unchecked
 //   { type: 'clear',    selector }
 //
 // Every element step also accepts `timeout` (ms) and `optional: true`. An optional
-// step that fails is logged as skipped and does NOT fail the run — that is how
+// step that fails is logged as skipped and does NOT fail the run - that is how
 // "fill this only if the site shows it" is expressed without conditional branching.
 //
 // The runner replays steps against an already-open session's primary page (so the
@@ -4096,10 +4096,10 @@ async function importStoredCookies(opts, cookies) {
 // listeners to the live page and serializes interactions into the SAME shape, so
 // recorded macros round-trip straight back through the runner. Best-effort:
 // selectors are derived heuristically and SPA in-app navigations may not capture
-// as discrete 'goto' steps — documented, never silently wrong.
+// as discrete 'goto' steps - documented, never silently wrong.
 // ---------------------------------------------------------------------------
 
-// Field schema per step type — the single source of truth for validation. The
+// Field schema per step type - the single source of truth for validation. The
 // renderer's editor mirrors it, and `normalizeMacroSteps` enforces it at save time
 // so a malformed step can no longer reach the runner and blow up mid-run (an
 // unknown type used to be the ONLY thing that ever rejected a macro, at run time).
@@ -4178,7 +4178,7 @@ function normalizeMacroSteps(input) {
       out[key] = text;
     }
 
-    // An element step without a target is useless — catch it at save time rather
+    // An element step without a target is useless - catch it at save time rather
     // than 40 steps into a run against 200 profiles.
     const needsSelector = Boolean(schema.selector) && !(type === 'move' && out.x != null && out.y != null);
     if (needsSelector && !out.selector) throw new Error(`Step ${i + 1} (${type}): a CSS selector is required.`);
@@ -4199,15 +4199,15 @@ async function elementCenter(page, selector) {
 }
 
 // Run a macro's steps in a live session. opts:
-//   continueOnError — keep going past a failed step.
-//   control { paused, aborted } — external flags for pause/resume/stop (mutated by
+//   continueOnError - keep going past a failed step.
+//   control { paused, aborted } - external flags for pause/resume/stop (mutated by
 //     the caller), checked between steps so a long run is interruptible.
-//   onStep(event) — progress callback: { index, total, type, status, step?, error? }.
+//   onStep(event) - progress callback: { index, total, type, status, step?, error? }.
 // Backward-compatible: callers that pass neither control nor onStep behave as before.
 async function runMacro(sessionId, steps, opts = {}) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
-  if (!session || !session.page) throw new Error('No active session for that profile — launch it first.');
+  if (!session || !session.page) throw new Error('No active session for that profile - launch it first.');
   const page = session.page;
   const list = Array.isArray(steps) ? steps : [];
   const log = [];
@@ -4273,7 +4273,7 @@ async function runMacro(sessionId, steps, opts = {}) {
         }
         // Native <select>. page.select() only matches on option VALUE, but values
         // are frequently opaque ids while the label is what the operator actually
-        // sees — so the option is resolved in-page first (value, then visible
+        // sees - so the option is resolved in-page first (value, then visible
         // label, then numeric index) and the resolved value handed to select(),
         // which fires the input + change events frameworks listen for.
         case 'select': {
@@ -4308,7 +4308,7 @@ async function runMacro(sessionId, steps, opts = {}) {
           }, wanted, by);
           if (!resolved.ok) {
             if (resolved.reason === 'not-a-select') {
-              throw new Error(`select: ${step.selector} is not a <select> — use click steps for a custom dropdown`);
+              throw new Error(`select: ${step.selector} is not a <select> - use click steps for a custom dropdown`);
             }
             const seen = (resolved.available || []).join(' | ') || 'none';
             throw new Error(`select: no option matching "${wanted}" (options: ${seen})`);
@@ -4316,7 +4316,7 @@ async function runMacro(sessionId, steps, opts = {}) {
           await page.select(step.selector, resolved.value);
           break;
         }
-        // Explicit gate for a slow or async page — the missing primitive that forced
+        // Explicit gate for a slow or async page - the missing primitive that forced
         // every macro to guess a fixed `wait` duration.
         case 'waitFor': {
           if (!step.selector) throw new Error('waitFor step requires a selector');
@@ -4354,7 +4354,7 @@ async function runMacro(sessionId, steps, opts = {}) {
           ));
           if (!info) throw new Error(`check: ${step.selector} is not a checkbox or radio`);
           if (info.kind === 'radio' && !want) {
-            throw new Error('check: a radio cannot be unchecked — select the other radio instead');
+            throw new Error('check: a radio cannot be unchecked - select the other radio instead');
           }
           if (info.checked !== want) {
             const c = await elementCenter(page, step.selector);
@@ -4425,7 +4425,7 @@ function macroRecorderClientScript() {
     while (node && node.nodeType === 1 && parts.length < 5) {
       if (node.id) { parts.unshift('#' + CSS.escape(node.id)); break; }
       let sel = node.nodeName.toLowerCase();
-      // Prefer a stable attribute over a positional :nth-of-type when present —
+      // Prefer a stable attribute over a positional :nth-of-type when present -
       // far more robust to replay than "div > div:nth-of-type(3) > a".
       let stable = '';
       for (const attr of ['data-testid', 'name', 'aria-label', 'placeholder']) {
@@ -4448,7 +4448,7 @@ function macroRecorderClientScript() {
       // A click on a link (or inside one) is most reliably replayed as a
       // navigation: capture the resolved href as a 'goto'. A target="_blank" link
       // would otherwise open a NEW tab that the runner (which drives the primary
-      // tab) never follows — the exact reason recorded link-clicks did nothing.
+      // tab) never follows - the exact reason recorded link-clicks did nothing.
       const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
       if (a && a.href && /^https?:/i.test(a.href)) {
         if (window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'goto', url: a.href });
@@ -4466,7 +4466,7 @@ function macroRecorderClientScript() {
       if (!sel || !window.__sgBridge) return;
 
       // A <select> recorded as a 'type' step was replayed with page.type() and did
-      // nothing at all — dropdowns now record as a real 'select' step. Prefer the
+      // nothing at all - dropdowns now record as a real 'select' step. Prefer the
       // visible label: option values are often opaque ids that change per render.
       if (t.tagName === 'SELECT') {
         const opt = t.options ? t.options[t.selectedIndex] : null;
@@ -4477,7 +4477,7 @@ function macroRecorderClientScript() {
         return;
       }
 
-      // Checkboxes/radios recorded as 'type' with value "on" — now recorded as a
+      // Checkboxes/radios recorded as 'type' with value "on" - now recorded as a
       // 'check' step carrying the state they were left in.
       if (t.tagName === 'INPUT' && (t.type === 'checkbox' || t.type === 'radio')) {
         window.__sgBridge('__sgzRecordStep', { type: 'check', selector: sel, state: t.checked ? 'checked' : 'unchecked' });
@@ -4499,7 +4499,7 @@ function macroRecorderClientScript() {
 async function startMacroRecording(sessionId) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
-  if (!session || !session.page) throw new Error('No active session for that profile — launch it first.');
+  if (!session || !session.page) throw new Error('No active session for that profile - launch it first.');
   const existing = macroRecorders.get(id);
   if (existing && !existing.stopped) return { recording: true, already: true };
 
@@ -4508,7 +4508,7 @@ async function startMacroRecording(sessionId) {
   macroRecorders.set(id, rec);
 
   // Bridge page -> node. exposeFunction persists on the page; if it's already
-  // installed (a prior recording on this page), the throw is benign — the bound
+  // installed (a prior recording on this page), the throw is benign - the bound
   // callback always resolves the CURRENT recorder via macroRecorders.get(id).
   const hRecordStep = (step) => {
     const cur = macroRecorders.get(id);
@@ -4624,7 +4624,7 @@ module.exports = {
   // bundle. Tests assert the coherence guard clamps the reported major to the launched
   // binary (guarding against the "reported 149 vs real 150+" TLS mismatch).
   buildUserAgentBundle,
-  // Debug hook (used by test harnesses) — returns the live puppeteer Browser.
+  // Debug hook (used by test harnesses) - returns the live puppeteer Browser.
   __browserFor: (sessionId) => {
     const s = activeSessions.get(String(sessionId));
     return s ? s.browser : null;

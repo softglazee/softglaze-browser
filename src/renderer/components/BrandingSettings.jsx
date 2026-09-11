@@ -7,7 +7,7 @@ import Switch from '@/components/ui/Switch.jsx';
 
 // Default mirrors GLOBAL_SETTINGS_DEFAULTS.branding.footerText in the main process.
 // [label](url) renders as an anchor showing the label; {year} → current year.
-const DEFAULT_FOOTER = '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)';
+const DEFAULT_FOOTER = '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)';
 
 function Card({ icon: Icon, accent = '#3b82f6', title, description, children }) {
   return (
@@ -99,7 +99,7 @@ export default function BrandingSettings() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      {/* App footer — Super Admin editable */}
+      {/* App footer - Super Admin editable */}
       <Card icon={Palette} accent="#8b5cf6" title={t('branding.footerCardTitle')} description={t('branding.footerCardDesc')}>
         {isSuper ? (
           <div className="space-y-3">
@@ -136,7 +136,7 @@ export default function BrandingSettings() {
         )}
       </Card>
 
-      {/* Stay signed in — per device */}
+      {/* Stay signed in - per device */}
       <Card icon={ShieldCheck} accent="#10b981" title={t('branding.staySignedInTitle')} description={t('branding.staySignedInDesc')}>
         {!remember.available ? (
           <p className="text-[12.5px] text-muted-foreground flex items-center gap-2"><Info className="w-4 h-4" /> {t('branding.osEncryptionUnavailable')}</p>
@@ -156,7 +156,7 @@ export default function BrandingSettings() {
         )}
       </Card>
 
-      {/* Smart Autofill — workspace toggle (Owner / Super Admin) */}
+      {/* Smart Autofill - workspace toggle (Owner / Super Admin) */}
       <Card icon={Wand2} accent="#6366f1" title={t('branding.autofillTitle')} description={t('branding.autofillDesc')}>
         <div className="flex items-center justify-between gap-3">
           <span className="text-[12.5px] text-muted-foreground">{autofill ? t('branding.autofillEnabled') : t('branding.autofillDisabled')}</span>

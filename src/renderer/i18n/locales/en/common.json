@@ -47,8 +47,8 @@
     "dismiss": "Dismiss",
     "trialEndingDays_one": "Free trial ends in {{count}} day. Subscribe for $5/month to keep going.",
     "trialEndingDays_other": "Free trial ends in {{count}} days. Subscribe for $5/month to keep going.",
-    "trialEnded": "Your free trial has ended — the app keeps working, but please subscribe ($5/mo) to keep it supported.",
-    "subscriptionEnded": "Your subscription has ended — the app keeps working, but please subscribe ($5/mo) to keep it supported."
+    "trialEnded": "Your free trial has ended - the app keeps working, but please subscribe ($5/mo) to keep it supported.",
+    "subscriptionEnded": "Your subscription has ended - the app keeps working, but please subscribe ($5/mo) to keep it supported."
   },
   "roles": {
     "OWNER": "Owner",
@@ -67,14 +67,14 @@
       "Every profile you craft is a new door opening.",
       "Discipline today, dominance tomorrow.",
       "Small consistent actions compound into outsized wins.",
-      "Stay sharp — the edge lives in the details.",
+      "Stay sharp - the edge lives in the details.",
       "Focus beats hustle. Aim, then fire.",
       "The quiet work you do now builds the empire later.",
       "Precision is a habit, not an accident.",
       "Show up, dial in, and let the results do the talking.",
       "One more session, one more win.",
       "Greatness is just a series of well-run days.",
-      "Your future self is watching — make them proud.",
+      "Your future self is watching - make them proud.",
       "Move with intention. Scale with confidence."
     ],
     "overview": "Overview",

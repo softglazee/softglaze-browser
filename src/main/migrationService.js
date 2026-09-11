@@ -91,7 +91,7 @@ async function httpJson(url, options = {}) {
 
 // ---- Platform adapters: each returns an array of RAW competitor profiles ----
 
-// Dolphin{anty} — cloud. GET /browser_profiles (paginated), Bearer token.
+// Dolphin{anty} - cloud. GET /browser_profiles (paginated), Bearer token.
 async function fetchDolphinProfiles(token) {
   const out = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -106,7 +106,7 @@ async function fetchDolphinProfiles(token) {
   return out;
 }
 
-// GoLogin — cloud. GET /browser/v2, Bearer token.
+// GoLogin - cloud. GET /browser/v2, Bearer token.
 async function fetchGoLoginProfiles(token) {
   const json = await httpJson('https://api.gologin.com/browser/v2', {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
@@ -114,7 +114,7 @@ async function fetchGoLoginProfiles(token) {
   return (json && (json.profiles || json.data)) || (Array.isArray(json) ? json : []);
 }
 
-// Multilogin — cloud. Endpoint/shape vary by plan; read defensively and let a
+// Multilogin - cloud. Endpoint/shape vary by plan; read defensively and let a
 // rejected token surface as a clear error.
 async function fetchMultiloginProfiles(token) {
   const json = await httpJson('https://api.multilogin.com/profile/list', {
@@ -123,7 +123,7 @@ async function fetchMultiloginProfiles(token) {
   return (json && (json.data || json.profiles)) || (Array.isArray(json) ? json : []);
 }
 
-// AdsPower — LOCAL loopback API. The app must be running with the Local API on.
+// AdsPower - LOCAL loopback API. The app must be running with the Local API on.
 async function fetchAdsPowerProfiles(token) {
   const base = 'http://local.adspower.net:50325';
   const out = [];
@@ -141,7 +141,7 @@ async function fetchAdsPowerProfiles(token) {
   return out;
 }
 
-// ixBrowser — LOCAL loopback API. POST profile-list.
+// ixBrowser - LOCAL loopback API. POST profile-list.
 async function fetchIxBrowserProfiles(token) {
   const out = [];
   for (let page = 1; page <= MAX_PAGES; page++) {

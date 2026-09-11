@@ -49,7 +49,7 @@ function normalizeDesktopOs(os) {
 // NOTE: this is a preference/display value only. At launch the engine's coherence guard
 // (buildUserAgentBundle) overrides the reported major/full with the ACTUAL launched
 // binary's version whenever it differs, so the wire identity always matches the real
-// TLS/JA4 — this pin is used verbatim only when a matching binary is launched (e.g. a
+// TLS/JA4 - this pin is used verbatim only when a matching binary is launched (e.g. a
 // Chrome-for-Testing build of the pinned version) or when the binary version is unreadable.
 function pickChromeVersion(pinned) {
   const p = String(pinned || '').trim();
@@ -71,7 +71,7 @@ const WIN_RES = [
   '1280x1024', '3440x1440', '1280x800', '2256x1504'
 ];
 // macOS LOGICAL (CSS-point) resolutions. A real Retina Mac reports logical points
-// (with devicePixelRatio 2), NOT the physical panel size — 3024x1964 / 2880x1800 as
+// (with devicePixelRatio 2), NOT the physical panel size - 3024x1964 / 2880x1800 as
 // screen.width is impossible at DPR 1 and absurd at DPR 2, an instant tell. The engine
 // pairs these with DPR 2 for macOS profiles so screen dims + DPR stay consistent.
 const MAC_RES = [
@@ -132,7 +132,7 @@ const LINUX_GPU = [
 // guard reports the ACTUALLY-launched binary's major/full version instead whenever they
 // differ, because a UA major that disagrees with the real TLS/JA4 handshake is a hard
 // bot signal. So keeping this pool current is only cosmetic (it affects the stored/
-// displayed version and the Chrome-for-Testing fallback target) — a stale pool degrades
+// displayed version and the Chrome-for-Testing fallback target) - a stale pool degrades
 // safely to "report the real binary", never to an incoherent mismatch. Bump periodically.
 const CHROME_VERSIONS = [
   '140.0.7339.208', '141.0.7390.108', '142.0.7444.176', '143.0.7499.96',
@@ -152,8 +152,8 @@ const ANDROID_RES = '412x915'; // CSS logical viewport of a Pixel 7 (physical 10
 
 // ---------------------------------------------------------------------------
 // Media-device label pools, per OS. enumerateDevices() consistency is a real
-// detection surface: a profile that reports 0 devices — or labels that don't fit
-// the spoofed OS — gets flagged. These are plausible, real-world endpoint names
+// detection surface: a profile that reports 0 devices - or labels that don't fit
+// the spoofed OS - gets flagged. These are plausible, real-world endpoint names
 // (Realtek/Intel audio + common laptop webcams on Windows, the Built-in family on
 // macOS, ALSA/UVC names on Linux). The concrete deviceId/groupId HASHES are
 // derived per-profile in the launch engine from the profile seed, so they stay
@@ -184,7 +184,7 @@ const MEDIA_LABELS = {
 // list, navigator.vendor and a couple of vendor JS globals. The underlying
 // Chromium MAJOR (and therefore TLS / JA4 / HTTP2 and the "Chromium" + "Chrome/M"
 // tokens) ALWAYS comes from the real launched binary, so nothing the vendor token
-// adds contradicts the wire fingerprint — exactly how the real vendor browsers
+// adds contradicts the wire fingerprint - exactly how the real vendor browsers
 // look. The vendor DISPLAY versions are approximate maps off the Chromium major
 // (the only cosmetic value here); keep them centralized for easy bumping.
 // ---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ function buildBrandIdentity(brand, chromiumMajor, chromiumFull) {
     }
     case 'Vivaldi': {
       // Modern Vivaldi presents an otherwise-stock Chrome identity (its UA token is
-      // off by default) and does NOT add itself to Sec-CH-UA — so it looks like
+      // off by default) and does NOT add itself to Sec-CH-UA - so it looks like
       // Chrome on the wire, which is exactly what we reproduce.
       return {
         id, vendor: 'Google Inc.', uaInfix: '', uaSuffix: '',
@@ -345,7 +345,7 @@ function generateMobileFingerprint() {
     macAddressType: 'Custom',
     macAddress: randMac(),
 
-    // Bound to the proxy at launch — intentionally not hardcoded here.
+    // Bound to the proxy at launch - intentionally not hardcoded here.
     timezoneType: 'Based on IP',
     locationType: 'Based on IP',
     languageType: 'Based on IP',
@@ -367,7 +367,7 @@ function generateMobileFingerprint() {
 }
 
 function generateFingerprint(opts = {}) {
-  // Mobile is a distinct device class (Android), not just another OS — route it to
+  // Mobile is a distinct device class (Android), not just another OS - route it to
   // its own coherent generator so desktop GPU/screen pools never leak into it.
   if (opts && opts.deviceClass === 'mobile') return generateMobileFingerprint();
 
@@ -375,7 +375,7 @@ function generateFingerprint(opts = {}) {
   // "Random"/"Mixed"/"Cross" request (or opts.allowCrossOs) mints a weighted cross-OS
   // spread; and the DEFAULT (blank/Auto) is the REAL HOST OS. Rationale: a string-only
   // OS spoof over the real binary + host is always betrayed by the host's fonts, canvas
-  // raster and WebGL render output — so a Windows box claiming macOS/Linux fails every
+  // raster and WebGL render output - so a Windows box claiming macOS/Linux fails every
   // scanner. Cross-OS variety is therefore now an explicit opt-in, not the silent
   // default that made ~35% of generated profiles fundamentally incoherent.
   const HOST_OS = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows';
@@ -432,7 +432,7 @@ function generateFingerprint(opts = {}) {
     resolutionH: resH,
 
     // "Real": the engine reports the TRUE host GPU on the main thread, dedicated
-    // workers AND the service worker — no main-vs-worker mismatch. A fake desktop GPU
+    // workers AND the service worker - no main-vs-worker mismatch. A fake desktop GPU
     // string only swaps two getParameter() values while the real render output +
     // extension list + MAX_* params keep exposing the host GPU, a contradiction every
     // scanner scores. webglVendor/Renderer are retained for the picker display and the
@@ -452,7 +452,7 @@ function generateFingerprint(opts = {}) {
     macAddressType: 'Custom',
     macAddress: randMac(),
 
-    // Bound to the proxy at launch — intentionally not hardcoded here.
+    // Bound to the proxy at launch - intentionally not hardcoded here.
     timezoneType: 'Based on IP',
     locationType: 'Based on IP',
     languageType: 'Based on IP',
@@ -484,7 +484,7 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
   const osStr = String(os || '');
   const isMobile = String(deviceClass || '').toLowerCase() === 'mobile'
     || /android|ios|iphone|ipad/i.test(osStr);
-  if (!renderer) return { status: 'warn', detail: 'No WebGL renderer set — GPU coherence not verified.' };
+  if (!renderer) return { status: 'warn', detail: 'No WebGL renderer set - GPU coherence not verified.' };
   const mobileGpu = /mali|adreno|powervr|apple gpu|apple a\d/i.test(renderer);
   const desktopGpu = /direct3d|d3d11|geforce|nvidia|radeon|\bamd\b|intel|metal renderer|apple m\d|opengl 4/i.test(renderer);
 
@@ -494,7 +494,7 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
   // Direct3D/D3D11 is Windows-only, Metal is Apple-only, Mesa is Linux-only. So a
   // profile claiming macOS while reporting `ANGLE (NVIDIA ... Direct3D11 ...)` reads
   // as Windows in a single line, whatever navigator.platform says. The old check only
-  // compared mobile-vs-desktop and so reported PASS for exactly that case — the most
+  // compared mobile-vs-desktop and so reported PASS for exactly that case - the most
   // common way a cross-OS profile gets burned, and invisible in the Leak Check.
   const api = {
     d3d: /direct3d|d3d11|\bd3d\b/i.test(renderer),
@@ -507,32 +507,32 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
     linux: /linux|ubuntu|debian|fedora|arch|chromeos/i.test(osStr)
   };
   if (claims.mac && api.d3d) {
-    return { status: 'fail', detail: 'macOS profile reports a Direct3D (Windows-only) GPU — the host OS leaks through. Set WebGL Metadata to Custom with an Apple/Metal renderer, or use the host OS.' };
+    return { status: 'fail', detail: 'macOS profile reports a Direct3D (Windows-only) GPU - the host OS leaks through. Set WebGL Metadata to Custom with an Apple/Metal renderer, or use the host OS.' };
   }
   if (claims.linux && api.d3d) {
-    return { status: 'fail', detail: 'Linux profile reports a Direct3D (Windows-only) GPU — the host OS leaks through. Use a Mesa/OpenGL renderer, or the host OS.' };
+    return { status: 'fail', detail: 'Linux profile reports a Direct3D (Windows-only) GPU - the host OS leaks through. Use a Mesa/OpenGL renderer, or the host OS.' };
   }
   if (claims.windows && (api.metal || api.mesa)) {
-    return { status: 'fail', detail: `Windows profile reports a ${api.metal ? 'Metal (Apple-only)' : 'Mesa (Linux-only)'} GPU — an obvious mismatch.` };
+    return { status: 'fail', detail: `Windows profile reports a ${api.metal ? 'Metal (Apple-only)' : 'Mesa (Linux-only)'} GPU - an obvious mismatch.` };
   }
   if (isMobile && api.d3d) {
-    return { status: 'fail', detail: 'Mobile profile reports a Direct3D (Windows desktop) GPU — an obvious mismatch.' };
+    return { status: 'fail', detail: 'Mobile profile reports a Direct3D (Windows desktop) GPU - an obvious mismatch.' };
   }
 
   if (isMobile) {
     return mobileGpu
       ? { status: 'pass', detail: 'Mobile profile reports a mobile GPU.' }
-      : { status: 'fail', detail: 'Mobile profile reports a desktop GPU — an obvious mismatch.' };
+      : { status: 'fail', detail: 'Mobile profile reports a desktop GPU - an obvious mismatch.' };
   }
   return (mobileGpu && !desktopGpu)
-    ? { status: 'fail', detail: 'Desktop profile reports a mobile GPU — an obvious mismatch.' }
+    ? { status: 'fail', detail: 'Desktop profile reports a mobile GPU - an obvious mismatch.' }
     : { status: 'pass', detail: 'Desktop profile reports a GPU consistent with its OS.' };
 }
 
 // Stable signature of the user-visible hardware/identity combo. The batch generator
 // uses it to guarantee no two profiles in a run share the same GPU + screen + CPU +
 // RAM + reported UA-major tuple (deviceName / MAC / canvas seed are random-unique on
-// their own, so they're intentionally excluded — this keeps the VISIBLE traits distinct).
+// their own, so they're intentionally excluded - this keeps the VISIBLE traits distinct).
 function fingerprintSignature(fp) {
   if (!fp) return '';
   const major = String(fp.browserVersion || '').split('.')[0] || '';

@@ -96,7 +96,7 @@ function WelcomeBanner() {
         ]);
         if (!live) return;
         setWho({ name: firstNameOf(member, account), role: member ? member.role : '' });
-      } catch (e) { /* ignore — fall back to a generic greeting */ }
+      } catch (e) { /* ignore - fall back to a generic greeting */ }
     })();
     return () => { live = false; };
   }, []);
@@ -158,7 +158,7 @@ function WelcomeBanner() {
 // state on mount (so it appears even if the event fired before this page mounted).
 // Only visible once an update is available/downloading/downloaded.
 // i18n note: this banner and ResilienceToasts below are intentionally NOT yet
-// localized in the G3 pilot — they are event-driven (rarely on screen) and build
+// localized in the G3 pilot - they are event-driven (rarely on screen) and build
 // their copy from nested conditionals/concatenation; they'll be migrated in a
 // later i18n pass where the strings can be restructured into clean t() keys.
 function UpdateBanner() {
@@ -244,7 +244,7 @@ function UpdateBanner() {
 }
 
 // Offers to restore the profiles that were open when the app last exited or crashed.
-// Pull model (like the update banner) — robust to mount timing.
+// Pull model (like the update banner) - robust to mount timing.
 function RestoreBanner() {
   const { t } = useTranslation();
   const [profiles, setProfiles] = useState(null);
@@ -305,11 +305,11 @@ function ResilienceToasts() {
     const offs = [];
     if (softglazeApi.sessions.onCrash) offs.push(softglazeApi.sessions.onCrash((d) => {
       if (!d) return;
-      add('crash', `${d.title || 'A profile'} stopped unexpectedly${d.restarted ? ' — restarting…' : ''}.`);
+      add('crash', `${d.title || 'A profile'} stopped unexpectedly${d.restarted ? ' - restarting…' : ''}.`);
     }));
     if (softglazeApi.sessions.onMemoryPressure) offs.push(softglazeApi.sessions.onMemoryPressure((d) => {
       if (!d) return;
-      add('memory', `Low memory — closed ${d.closed} profile${d.closed === 1 ? '' : 's'} (free ${d.freePct}%).`);
+      add('memory', `Low memory - closed ${d.closed} profile${d.closed === 1 ? '' : 's'} (free ${d.freePct}%).`);
     }));
     return () => offs.forEach((off) => { if (typeof off === 'function') off(); });
   }, []);
@@ -507,8 +507,8 @@ export default function DashboardPage() {
         <ChartCard title={t('dashboard.systemResources')} subtitle={sysInfo ? sysInfo.cpuModel : t('dashboard.realTimeMetrics')} icon={Cpu} iconColor="#f59e0b">
           <div className="space-y-3">
             {[
-              { label: t('dashboard.resMemory'), icon: Server, val: sysInfo ? `${fmtGB(sysInfo.memUsed)} / ${fmtGB(sysInfo.memTotal)} GB` : '—', color: '#8b5cf6' },
-              { label: t('dashboard.resCpuCores'), icon: Cpu, val: sysInfo ? t('dashboard.resCpuCoresVal', { count: sysInfo.cpuCount }) : '—', color: '#3b82f6' },
+              { label: t('dashboard.resMemory'), icon: Server, val: sysInfo ? `${fmtGB(sysInfo.memUsed)} / ${fmtGB(sysInfo.memTotal)} GB` : '-', color: '#8b5cf6' },
+              { label: t('dashboard.resCpuCores'), icon: Cpu, val: sysInfo ? t('dashboard.resCpuCoresVal', { count: sysInfo.cpuCount }) : '-', color: '#3b82f6' },
               { label: t('dashboard.resActiveSessions'), icon: Play, val: t('dashboard.resRunningVal', { count: stats.activeSessions }), color: '#10b981' },
               { label: t('dashboard.resProfiles'), icon: HardDrive, val: t('dashboard.resStoredVal', { count: stats.totalProfiles }), color: '#f59e0b' }
             ].map((r) => (

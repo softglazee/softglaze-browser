@@ -63,7 +63,7 @@ export default function BillingPage() {
       ]);
       setMe(cur); setLicense(lic); setPlansInfo(plans); setSeats(seatUsage); setBackend(backendInfo);
       setMethods(methodList && Array.isArray(methodList.methods) ? methodList.methods : []);
-    } catch (e) { /* ignore — best-effort */ }
+    } catch (e) { /* ignore - best-effort */ }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -121,11 +121,11 @@ export default function BillingPage() {
       setPayFor(null);
       setCheckout({ ...c, planName: c.planName || plan.name });
       try { window.open(c.url, '_blank'); } catch (e) { /* user can click the link */ }
-      // audit: clear any prior poll before starting a new one — a second checkout
+      // audit: clear any prior poll before starting a new one - a second checkout
       // (or a different plan) would otherwise orphan interval #1, which keeps polling
       // and calling load() forever.
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      // Desktop apps can't receive webhooks — poll for completion.
+      // Desktop apps can't receive webhooks - poll for completion.
       pollRef.current = setInterval(async () => {
         try {
           const r = await softglazeApi.payments.pollCheckout({ uuid: c.uuid, orderId: c.orderId, provider: method.id });
@@ -341,7 +341,7 @@ export default function BillingPage() {
       {msg && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{msg}</p>}
       {err && <p className="text-[12px] text-red-400">{err}</p>}
 
-      {/* Super-Admin console — plan editor + subscribers + assign */}
+      {/* Super-Admin console - plan editor + subscribers + assign */}
       {me?.role === 'SUPER_ADMIN' && <PlanManager onChange={load} />}
       {me?.role === 'SUPER_ADMIN' && <SubscribersSection />}
 
@@ -438,7 +438,7 @@ export default function BillingPage() {
   );
 }
 
-// Invoices — auto-captured payment receipts + manual entries. Owners see their own
+// Invoices - auto-captured payment receipts + manual entries. Owners see their own
 // tree's invoices read-only; the Super Admin sees all and can add/edit/delete.
 function InvoicesSection() {
   const { t } = useTranslation('billing');
@@ -499,12 +499,12 @@ function InvoicesSection() {
             <tbody className="divide-y divide-border/60">
               {invoices.map((inv) => (
                 <tr key={inv.id} className="text-foreground/90">
-                  <td className="py-2 pr-3 whitespace-nowrap">{inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString() : '—'}</td>
-                  {canEdit && <td className="py-2 pr-3">{inv.ownerName || (inv.ownerMemberId != null ? `#${inv.ownerMemberId}` : '—')}</td>}
+                  <td className="py-2 pr-3 whitespace-nowrap">{inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString() : '-'}</td>
+                  {canEdit && <td className="py-2 pr-3">{inv.ownerName || (inv.ownerMemberId != null ? `#${inv.ownerMemberId}` : '-')}</td>}
                   <td className="py-2 pr-3 whitespace-nowrap">{money(inv.amount, inv.currency)}</td>
-                  <td className="py-2 pr-3 capitalize">{inv.provider || '—'}{inv.source === 'manual' ? ` · ${t('invoices.manualSuffix')}` : ''}</td>
+                  <td className="py-2 pr-3 capitalize">{inv.provider || '-'}{inv.source === 'manual' ? ` · ${t('invoices.manualSuffix')}` : ''}</td>
                   <td className="py-2 pr-3"><span className={`capitalize ${statusCls(inv.status)}`}>{inv.status}</span></td>
-                  <td className="py-2 pr-3 font-mono text-[11px] text-muted-foreground truncate max-w-[140px]">{inv.reference || '—'}</td>
+                  <td className="py-2 pr-3 font-mono text-[11px] text-muted-foreground truncate max-w-[140px]">{inv.reference || '-'}</td>
                   {canEdit && (
                     <td className="py-2 text-right whitespace-nowrap">
                       <button onClick={() => setEditing(inv)} title={t('common.edit')} className="text-muted-foreground hover:text-foreground p-1"><Pencil className="w-3.5 h-3.5" /></button>
@@ -580,7 +580,7 @@ function InvoiceForm({ invoice, onClose, onSaved }) {
           </div>
           <div><label className={labelCls}>{t('invoiceForm.tier')}</label>
             <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value)}>
-              <option value="">—</option><option value="pro">pro</option><option value="enterprise">enterprise</option>
+              <option value="">-</option><option value="pro">pro</option><option value="enterprise">enterprise</option>
             </select>
           </div>
           <div><label className={labelCls}>{t('invoiceForm.months')}</label><input className={inputCls} value={months} onChange={(e) => setMonths(e.target.value)} placeholder="1" /></div>
@@ -786,7 +786,7 @@ function SubscribersSection() {
   if (!rows) return null;
 
   const stateTone = (r) => r.isBanned ? 'text-red-400' : r.isGrace ? 'text-amber-400' : r.isPaid ? 'text-emerald-400' : r.isTrial ? 'text-blue-400' : 'text-muted-foreground';
-  const stateLabel = (r) => r.isBanned ? t('subscribers.state.ended') : r.isGrace ? t('subscribers.state.grace') : r.isPaid ? t('subscribers.state.active') : r.isTrial ? t('subscribers.state.trial') : (r.state || '—');
+  const stateLabel = (r) => r.isBanned ? t('subscribers.state.ended') : r.isGrace ? t('subscribers.state.grace') : r.isPaid ? t('subscribers.state.active') : r.isTrial ? t('subscribers.state.trial') : (r.state || '-');
 
   return (
     <div className="rounded-xl bg-card border border-border p-5">
@@ -827,10 +827,10 @@ function SubscribersSection() {
                     <div className="font-medium text-foreground">{r.ownerName}</div>
                     {r.ownerEmail && <div className="text-[11px] text-muted-foreground">{r.ownerEmail}</div>}
                   </td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.joinedAt ? new Date(r.joinedAt).toLocaleDateString() : '—'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.joinedAt ? new Date(r.joinedAt).toLocaleDateString() : '-'}</td>
                   <td className="py-2 pr-3 whitespace-nowrap"><span className="capitalize">{r.planName || r.tier}</span>{!r.isPaid && r.isTrial ? <span className="text-[10px] text-blue-400"> · {t('subscribers.trialSuffix')}</span> : ''}</td>
                   <td className="py-2 pr-3"><span className={`font-semibold ${stateTone(r)}`}>{stateLabel(r)}</span>{r.isPaid && r.daysLeft != null ? '' : (r.daysLeft != null ? <span className="text-muted-foreground"> · {t('subscribers.daysLeftShort', { days: r.daysLeft })}</span> : '')}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.endsAt ? new Date(r.endsAt).toLocaleDateString() : '—'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.endsAt ? new Date(r.endsAt).toLocaleDateString() : '-'}</td>
                   <td className="py-2 pr-3 whitespace-nowrap">{r.teamSize}</td>
                   <td className="py-2 text-right whitespace-nowrap">
                     <button onClick={() => setAssigning(r)} title={t('subscribers.assignTitle')} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" /> {t('subscribers.assign')}</button>
@@ -904,7 +904,7 @@ function AssignForm({ owner, owners, plans, onClose, onDone }) {
           <div>
             <label className={labelCls}>{t('assignForm.plan')}</label>
             <select className={inputCls} value={planId} onChange={(e) => setPlanId(e.target.value)}>
-              {plans.map((p) => <option key={p.id} value={p.id}>{p.name} — {money(p.amount, p.currency)} / {p.period} ({p.tier})</option>)}
+              {plans.map((p) => <option key={p.id} value={p.id}>{p.name} - {money(p.amount, p.currency)} / {p.period} ({p.tier})</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -1,4 +1,4 @@
-// Display-language preference — the user-facing surface over the i18n instance.
+// Display-language preference - the user-facing surface over the i18n instance.
 // Mirrors lib/theme.js: read the persisted choice, and on change persist it,
 // update <html lang> for accessibility, and switch the live i18next language so
 // every component using useTranslation re-renders instantly (no reload).

@@ -1,6 +1,6 @@
 // audit: this used to THROW synchronously when the preload API was missing. Every
 // wrapper below is `() => getSoftglazeApi().x.y()`, so the throw happened while the
-// call expression was being evaluated — BEFORE a promise existed — which meant the
+// call expression was being evaluated - BEFORE a promise existed - which meant the
 // per-call `.catch()` guards all over the renderer (and Promise.all(...catch()))
 // never fired, and an uncaught error escaped into React render/effects. Instead,
 // return a stub whose every leaf call resolves to a REJECTED promise, so failures
@@ -61,7 +61,7 @@ export const softglazeApi = {
     testAll: () => getSoftglazeApi().proxies.testAll(),
     autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level),
     healthHistory: (id) => getSoftglazeApi().proxies.healthHistory(id),
-    // Recent checks grouped per proxy — powers the Proxy Pool history-cards row.
+    // Recent checks grouped per proxy - powers the Proxy Pool history-cards row.
     recentHealth: (opts) => getSoftglazeApi().proxies.recentHealth(opts)
   },
   proxyGroups: {

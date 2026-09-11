@@ -12,7 +12,7 @@ function buildUa(p) {
   else if (os.includes('linux')) platform = 'X11; Linux x86_64';
   else if (os.includes('android')) platform = 'Linux; Android 13; Pixel 7';
   // The launch engine uses the REAL Chrome binary matching browserVersion, so the
-  // version shown here must follow browserVersion — NOT any stale stored userAgent
+  // version shown here must follow browserVersion - NOT any stale stored userAgent
   // string (which the engine ignores). Prefer browserVersion; fall back to an
   // explicit custom UA only when no numeric version is set.
   // Chromium-family identity token, mirroring the launch engine. The Chromium
@@ -38,7 +38,7 @@ function Row({ label, value, mono, accent }) {
   return (
     <div className="flex gap-3 py-2 border-b border-border/50 last:border-b-0 text-sm">
       <div className="w-40 shrink-0 text-muted">{label}</div>
-      <div className={`flex-1 break-all ${accent || 'text-foreground'} ${mono ? 'font-mono text-xs' : 'font-medium'}`}>{value ?? '—'}</div>
+      <div className={`flex-1 break-all ${accent || 'text-foreground'} ${mono ? 'font-mono text-xs' : 'font-medium'}`}>{value ?? '-'}</div>
     </div>
   );
 }

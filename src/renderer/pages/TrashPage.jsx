@@ -290,7 +290,7 @@ export default function TrashPage() {
             <div className="flex items-center justify-between px-5 py-3 border-t border-border text-[13px] text-muted-foreground">
               <span>
                 {t('pager.showing', {
-                  defaultValue: 'Showing {{from}}–{{to}} of {{total}}',
+                  defaultValue: 'Showing {{from}}-{{to}} of {{total}}',
                   from: (page - 1) * PAGE_SIZE + 1,
                   to: Math.min(page * PAGE_SIZE, filteredItems.length),
                   total: filteredItems.length

@@ -26,7 +26,7 @@ export function useDialog({ onClose, closeOnEscape = true } = {}) {
         .filter((el) => el.offsetParent !== null || el.getClientRects().length > 0);
     };
 
-    // Move focus in — but respect an input that already auto-focused on mount.
+    // Move focus in - but respect an input that already auto-focused on mount.
     if (node && !node.contains(document.activeElement)) {
       const f = focusables();
       (f[0] || node).focus({ preventScroll: true });

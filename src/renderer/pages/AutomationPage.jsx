@@ -54,7 +54,7 @@ function normalizeSavedSite(s) {
   };
 }
 
-// Macro step types — the single source of truth for the editor's add-menu and the
+// Macro step types - the single source of truth for the editor's add-menu and the
 // per-step field inputs. Mirrors what the engine's runMacro understands.
 const MACRO_STEP_TYPES = [
   { type: 'goto', label: 'Go to URL', fields: [{ key: 'url', label: 'URL', placeholder: 'https://example.com' }] },
@@ -65,7 +65,7 @@ const MACRO_STEP_TYPES = [
   { type: 'wait', label: 'Wait', fields: [{ key: 'ms', label: 'Milliseconds', kind: 'number', placeholder: '1000' }] },
   { type: 'move', label: 'Move mouse', fields: [{ key: 'selector', label: 'Selector (or use X/Y)', placeholder: '.target' }, { key: 'x', label: 'X', kind: 'number' }, { key: 'y', label: 'Y', kind: 'number' }] },
   { type: 'hover', label: 'Hover', fields: [{ key: 'selector', label: 'Selector', placeholder: '.menu' }, { key: 'ms', label: 'Dwell ms', kind: 'number', placeholder: '800' }] },
-  // `kind: 'choice'` renders a <select> of fixed options — named "choice" so it does
+  // `kind: 'choice'` renders a <select> of fixed options - named "choice" so it does
   // not read as the macro step type that is itself called 'select'.
   { type: 'select', label: 'Select dropdown option', fields: [{ key: 'selector', label: 'Selector', placeholder: 'select[name="focus"]' }, { key: 'value', label: 'Option (value, label or index)', placeholder: 'Plumbing' }, { key: 'by', label: 'Match by', kind: 'choice', options: ['auto', 'value', 'label', 'index'] }] },
   { type: 'waitFor', label: 'Wait for element', fields: [{ key: 'selector', label: 'Selector', placeholder: '.dashboard' }, { key: 'state', label: 'State', kind: 'choice', options: ['visible', 'hidden'] }, { key: 'timeout', label: 'Timeout ms', kind: 'number', placeholder: '30000' }] },
@@ -109,7 +109,7 @@ function stepSummary(step, t) {
 }
 
 // Coerce an editor step into the runner shape (numeric fields → numbers, drop blanks).
-// The main process re-validates with normalizeMacroSteps — this only keeps the
+// The main process re-validates with normalizeMacroSteps - this only keeps the
 // payload clean so a blank optional input doesn't reach the engine as "".
 function coerceStep(s) {
   const def = MACRO_STEP_TYPES.find((d) => d.type === s.type);
@@ -134,7 +134,7 @@ export default function AutomationPage() {
   const { t } = useTranslation('automation');
   // Remember the active sub-tab across navigation + restarts, so returning to this
   // page (e.g. after checking a profile) lands you back on the Cookie Warmer where a
-  // run may still be streaming — instead of resetting to My Macros and hiding the
+  // run may still be streaming - instead of resetting to My Macros and hiding the
   // Stop button / live console.
   const [tab, setTab] = useState(() => {
     try { const s = localStorage.getItem('sg.automation.tab'); return TABS.some((x) => x.key === s) ? s : 'macros'; }
@@ -189,7 +189,7 @@ function MacrosPanel() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [recording, setRecording] = useState(null); // { profileId, sessionId }
   const [busyRec, setBusyRec] = useState(false);
-  const [saveRec, setSaveRec] = useState(null); // { profileId, sessionId } — pending stop-and-save
+  const [saveRec, setSaveRec] = useState(null); // { profileId, sessionId } - pending stop-and-save
   const [recName, setRecName] = useState(() => t('saveRecording.placeholder'));
 
   const load = useCallback(async () => {
@@ -206,7 +206,7 @@ function MacrosPanel() {
       const rows = Array.isArray(data) ? data : (data && (data.profiles || data.rows)) || [];
       setProfiles(rows);
       setTargetProfile((cur) => (cur || (rows.length ? String(rows[0].id) : '')));
-    } catch (e) { /* non-fatal — the selector just stays empty */ }
+    } catch (e) { /* non-fatal - the selector just stays empty */ }
   }, []);
 
   useEffect(() => { load(); loadProfiles(); }, [load, loadProfiles]);
@@ -400,7 +400,7 @@ function SaveRecordingModal({ recName, setRecName, busyRec, onClose, onFinish })
   );
 }
 
-// Macro scheduler — pick a macro + target profiles + interval and persist the
+// Macro scheduler - pick a macro + target profiles + interval and persist the
 // timed run (Setting.macroSchedule). The main process fires it on its own timer.
 function ScheduleModal({ macros, profiles, onClose }) {
   const { t } = useTranslation('automation');
@@ -503,7 +503,7 @@ function ScheduleModal({ macros, profiles, onClose }) {
   );
 }
 
-// Visual macro editor — add/edit/remove steps with native drag-to-reorder.
+// Visual macro editor - add/edit/remove steps with native drag-to-reorder.
 // Used for both Create and Edit (preloads the macro's steps when given one).
 function MacroEditorModal({ macro, onClose, onSaved }) {
   const { t } = useTranslation('automation');
@@ -663,7 +663,7 @@ function MacroEditorModal({ macro, onClose, onSaved }) {
   );
 }
 
-// Live macro run — streams per-step progress, highlights the current step, and
+// Live macro run - streams per-step progress, highlights the current step, and
 // offers Pause / Resume / Stop while it runs.
 function MacroRunModal({ macro, profileId, profileName, onClose }) {
   const { t } = useTranslation('automation');
@@ -693,7 +693,7 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
         const stepLabel = t(`stepTypes.${data.type}`, { defaultValue: data.type });
         if (data.status === 'running') setLog((l) => [...l, { level: 'INFO', msg: t('runModal.logStepRunning', { label: stepLabel, summary: stepSummary(data.step || {}, t) }) }]);
         else if (data.status === 'error') setLog((l) => [...l, { level: 'ERROR', msg: t('runModal.logStepError', { label: stepLabel, error: data.error || t('runModal.logStepFailed') }) }]);
-        // An optional step that didn't apply — worth showing, but it is not a failure.
+        // An optional step that didn't apply - worth showing, but it is not a failure.
         else if (data.status === 'skipped') setLog((l) => [...l, { level: 'WARN', msg: t('runModal.logStepSkipped', { label: stepLabel, error: data.error || '' }) }]);
       } else if (data.kind === 'done') {
         setPhase('done');
@@ -801,7 +801,7 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
 }
 
 // ---------------------------------------------------------------------------
-// Parallel Runs — run one macro across many profiles with a live, redacted
+// Parallel Runs - run one macro across many profiles with a live, redacted
 // per-profile status stream (frames arrive via the relay → run-progress channel).
 // ---------------------------------------------------------------------------
 const PAR_STATE = {
@@ -900,7 +900,7 @@ function ParallelPanel() {
       });
       // audit: `running` is normally cleared by the terminal 'done' progress frame.
       // If that single at-most-once frame is dropped, the spinner would stick forever.
-      // The run has resolved here, so backstop it — idempotent if the frame arrives.
+      // The run has resolved here, so backstop it - idempotent if the frame arrives.
       setTimeout(() => setRunning(false), 1500);
     } catch (e) {
       setErr(e.message || t('parallel.errors.startRun'));
@@ -1131,8 +1131,8 @@ function WarmerPanel() {
   const [customUrl, setCustomUrl] = useState('');
   const [loop, setLoop] = useState(false);
   const [keepOpen, setKeepOpen] = useState(false);
-  const [hidden, setHidden] = useState(true); // default ON — warm without opening visible windows
-  const [queueMode, setQueueMode] = useState(true); // default ON — warm one profile at a time (a queue)
+  const [hidden, setHidden] = useState(true); // default ON - warm without opening visible windows
+  const [queueMode, setQueueMode] = useState(true); // default ON - warm one profile at a time (a queue)
   const [parallelCount, setParallelCount] = useState(3); // profiles at a time when queue is OFF
   const [bulkText, setBulkText] = useState('');
   const [showBulk, setShowBulk] = useState(false);
@@ -1181,7 +1181,7 @@ function WarmerPanel() {
 
   // Re-attach to a warm-up still running in the main process (e.g. the user navigated
   // away and came back). Without this the panel looks idle while the launched browsers
-  // keep running — and there'd be no runId to Stop them. Runs once on mount.
+  // keep running - and there'd be no runId to Stop them. Runs once on mount.
   useEffect(() => {
     let alive = true;
     const list = softglazeApi.automation.listActiveWarmers;
@@ -1403,7 +1403,7 @@ function WarmerPanel() {
             </select>
             <button onClick={addPreset} disabled={!presetPick} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
-          {/* Add a custom URL — the seconds + behaviour here apply to every link you add */}
+          {/* Add a custom URL - the seconds + behaviour here apply to every link you add */}
           <div className="flex items-center gap-2">
             <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder={t('warmer.customPlaceholder')} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
             <input type="number" min={3} max={600} value={addSeconds} onChange={(e) => setAddSeconds(Math.max(3, Math.min(600, Number(e.target.value) || 30)))} title={t('warmer.addSecondsTitle')} className="w-14 h-8 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
@@ -1432,7 +1432,7 @@ function WarmerPanel() {
             </div>
           )}
 
-          {/* Reusable saved link lists — persisted for future use */}
+          {/* Reusable saved link lists - persisted for future use */}
           <div className="flex flex-wrap items-center gap-1.5">
             <button onClick={saveCurrentList} disabled={!sites.length} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Save className="w-3.5 h-3.5" /> {t('warmer.saveList')}</button>
             {savedLists.map((l) => (
@@ -1443,7 +1443,7 @@ function WarmerPanel() {
             ))}
           </div>
 
-          {/* Site-row bulk edit toolbar — select rows, then set time/behaviour or delete */}
+          {/* Site-row bulk edit toolbar - select rows, then set time/behaviour or delete */}
           {sites.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-[11px]">
               <label className="flex items-center gap-1.5 text-muted-foreground cursor-pointer">
@@ -1464,7 +1464,7 @@ function WarmerPanel() {
             </div>
           )}
 
-          {/* Configured sites — per-site dwell time + behaviour */}
+          {/* Configured sites - per-site dwell time + behaviour */}
           <div className="rounded-lg border border-border bg-elevated/40 divide-y divide-border/60 max-h-[240px] overflow-y-auto">
             {sites.length === 0 ? (
               <div className="px-3 py-5 text-center text-[12px] text-muted-foreground">{t('warmer.noSites')}</div>
@@ -1535,7 +1535,7 @@ function WarmerPanel() {
             </div>
           </div>
 
-          {/* Bulk selection — all/none/invert + add a whole group or tag at once */}
+          {/* Bulk selection - all/none/invert + add a whole group or tag at once */}
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
             <button onClick={selectAll} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.selectAll')}</button>
             <button onClick={selectNone} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.selectNone')}</button>
@@ -1576,7 +1576,7 @@ function WarmerPanel() {
 
       {/* Live counter + console */}
       <div className="flex flex-col gap-3 min-w-0">
-        {/* Run progress counter — stays visible (and restores on re-attach) so the
+        {/* Run progress counter - stays visible (and restores on re-attach) so the
             operator always sees how many profiles are done / running / queued. */}
         {(running || counts) && (
           <div className="rounded-xl border border-border bg-card px-4 py-3">
@@ -1630,7 +1630,7 @@ function WarmerPanel() {
 // ---------------------------------------------------------------------------
 // Task History
 // ---------------------------------------------------------------------------
-// Collapse history rows that share a runId — older saves may hold two entries per
+// Collapse history rows that share a runId - older saves may hold two entries per
 // run (a 'running' start + a 'completed'/'stopped' finish). Keep the first
 // occurrence (most recent, already updated) so each run renders as one row.
 function dedupeHistory(rows) {
@@ -1792,7 +1792,7 @@ function ConsoleToolbar({ logs, onClear, format, filename = 'console.log', t }) 
       if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
       else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
       setCopied(true); setTimeout(() => setCopied(false), 1200);
-    } catch (e) { /* clipboard blocked — ignore */ }
+    } catch (e) { /* clipboard blocked - ignore */ }
   }
 
   function exportFile() {
@@ -1825,8 +1825,8 @@ function ConsoleToolbar({ logs, onClear, format, filename = 'console.log', t }) 
 
 // --- helpers ---
 function fmt(value) {
-  if (!value) return '—';
-  try { return new Date(value).toLocaleString(); } catch (e) { return '—'; }
+  if (!value) return '-';
+  try { return new Date(value).toLocaleString(); } catch (e) { return '-'; }
 }
 function ts(value) {
   try { return new Date(value || Date.now()).toLocaleTimeString(); } catch (e) { return ''; }

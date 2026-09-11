@@ -132,7 +132,7 @@ export default function ExtensionsPage() {
         </div>
       </div>
 
-      {/* STAT ROW — real derived counts */}
+      {/* STAT ROW - real derived counts */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: t('stats.total'), value: totalCount, icon: Package, color: '#3b82f6' },

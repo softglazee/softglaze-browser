@@ -48,7 +48,7 @@
   },
   "autoBind": {
     "label": "Vincular proxies automáticamente por país",
-    "descPrefix": "— para las filas sin su propio proxy, asigna un proxy guardado cuyo país verificado coincida con la columna",
+    "descPrefix": "- para las filas sin su propio proxy, asigna un proxy guardado cuyo país verificado coincida con la columna",
     "descSuffix": "de la fila (rotación equilibrada entre las coincidencias)."
   },
   "commitButton_one": "Confirmar {{count}} perfil",

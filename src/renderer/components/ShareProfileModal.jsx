@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 
-// Phase F2 — shared profile pools. Bulk-share the selected profiles with a team
+// Phase F2 - shared profile pools. Bulk-share the selected profiles with a team
 // member at a chosen access level, or revoke that member's access. The backend
 // enforces that the actor may only share profiles they can edit and only with
 // members they manage; this UI is a thin, fail-safe front for that.

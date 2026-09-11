@@ -1,5 +1,5 @@
 // Dependency-free SVG chart kit, styled to the SoftGlaze Figma design.
-// No recharts/d3 — pure SVG so it ships with zero install and themes via the
+// No recharts/d3 - pure SVG so it ships with zero install and themes via the
 // CSS variables (--chart-1..5, --border, --muted-foreground, --foreground).
 import { useId } from 'react';
 

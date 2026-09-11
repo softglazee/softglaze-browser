@@ -5,7 +5,7 @@ const os = require('node:os');
 const { app, BrowserWindow, shell, session, protocol } = require('electron');
 
 // The production renderer is an ES-module bundle. Chromium refuses to load
-// `type="module"` scripts over file:// (the null origin fails CORS) — that leaves a
+// `type="module"` scripts over file:// (the null origin fails CORS) - that leaves a
 // blank window. So instead of loadFile(file://) we serve dist/ over a custom,
 // privileged scheme `app://` (standard + secure + corsEnabled), where modules load
 // normally and CSP 'self' still scopes everything to the app origin. This MUST be
@@ -40,7 +40,7 @@ let mainWindow = null;
 let isCleaningUp = false;
 
 // CRITICAL safety net: without these, ANY unhandled promise rejection or stray
-// exception in the main process tears down Electron — and because the launched
+// exception in the main process tears down Electron - and because the launched
 // profile browsers are puppeteer child processes, they die with it ("the browser
 // closes by itself" when opening a new tab). Log and keep running instead.
 process.on('unhandledRejection', (reason) => {
@@ -56,18 +56,18 @@ process.on('unhandledRejection', (reason) => {
 });
 // Circuit breaker (audit: a blanket swallow keeps a CORRUPTED process alive). A single
 // stray CDP/puppeteer rejection must NOT kill the app (its child browsers die with it), so
-// we still swallow one-offs — but a process throwing REPEATEDLY is genuinely broken, so
+// we still swallow one-offs - but a process throwing REPEATEDLY is genuinely broken, so
 // after a burst we quit CLEANLY (closing sessions) instead of limping along in a bad state.
 let uncaughtCount = 0;
 let uncaughtWindowStart = 0;
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err);
-  if (isCleaningUp) return; // teardown legitimately throws — don't trip the breaker
+  if (isCleaningUp) return; // teardown legitimately throws - don't trip the breaker
   const now = Date.now();
   if (now - uncaughtWindowStart > 10000) { uncaughtWindowStart = now; uncaughtCount = 0; }
   uncaughtCount += 1;
   if (uncaughtCount >= 8) {
-    console.error('[uncaughtException] repeated exceptions in <10s — the main process appears corrupted; quitting cleanly.');
+    console.error('[uncaughtException] repeated exceptions in <10s - the main process appears corrupted; quitting cleanly.');
     try { app.quit(); } catch (e) { try { process.exit(1); } catch (e2) {} }
   }
 });
@@ -75,7 +75,7 @@ process.on('uncaughtException', (err) => {
 // --- ORPHANED PROCESS CLEANUP ---
 // Stale profile windows are a real trap: when the app is killed (e.g. Ctrl+C in
 // dev) the launched Chrome windows survive, but puppeteer's 'disconnected' handler
-// removes their PIDs from the tracking file during teardown — so they become
+// removes their PIDs from the tracking file during teardown - so they become
 // UNTRACKED orphans that the PID-file cleanup can never find. They keep running the
 // OLD fingerprint injection, and re-testing one looks like "the fix didn't work".
 // We therefore clean up in TWO ways on startup: the PID file (fast path) AND a
@@ -234,7 +234,7 @@ function createMainWindow() {
     try {
       target = new URL(targetUrl);
     } catch {
-      event.preventDefault(); // malformed target — never navigate the shell to it
+      event.preventDefault(); // malformed target - never navigate the shell to it
       return;
     }
     let current = null;
@@ -276,7 +276,7 @@ function configureSessionSecurity() {
 // Only ONE SoftGlaze instance may own the workspace at a time. This is critical,
 // not cosmetic: startup runs killOrphanedBrowsers(), whose command-line scan
 // taskkills EVERY Chrome referencing softglaze_profiles. A second instance would
-// therefore kill the FIRST instance's live profile sessions mid-use — the classic
+// therefore kill the FIRST instance's live profile sessions mid-use - the classic
 // "the browser closes by itself" report. If we can't get the lock, quit before
 // whenReady runs any cleanup; if we hold it, a second launch just focuses us.
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -296,7 +296,7 @@ app.on('second-instance', () => {
 }
 
 app.whenReady().then(async () => {
-  // Second instance lost the lock and is quitting — do NO cleanup/launch work
+  // Second instance lost the lock and is quitting - do NO cleanup/launch work
   // (guards against whenReady racing app.quit() above).
   if (!hasSingleInstanceLock) return;
   // Always clean up orphaned processes before starting
@@ -310,7 +310,7 @@ await killOrphanedBrowsers(); // <--- Make sure this has await
   if (!isDbEncryptionEnabled()) {
     await bootstrapDatabase();
   } else {
-    console.log('[Startup] Database is encrypted — deferring open until unlocked.');
+    console.log('[Startup] Database is encrypted - deferring open until unlocked.');
   }
   configureSessionSecurity();
 
@@ -318,7 +318,7 @@ await killOrphanedBrowsers(); // <--- Make sure this has await
   registerIpcHandlers();
 
   // "Keep me signed in on this device": if the user opted in last time, replay the
-  // DPAPI-sealed credential now — before the window loads — so the unlock/login
+  // DPAPI-sealed credential now - before the window loads - so the unlock/login
   // gates open without a prompt. Handles both at-rest-encrypted DB (decrypts it) and
   // the workspace vault. Best-effort: a stale credential self-clears and the user
   // just sees a normal login once. Runs at process start only (not on manual lock).
@@ -363,11 +363,11 @@ app.on('window-all-closed', () => {
 });
 
 // Graceful shutdown handshake. Electron does NOT await async `before-quit`
-// listeners — the app would exit mid-flush, risking a corrupt SQLite file. So on
+// listeners - the app would exit mid-flush, risking a corrupt SQLite file. So on
 // the first pass we cancel the quit, run cleanup to completion, then re-issue the
 // quit (the `isCleaningUp` guard lets the second pass straight through).
 app.on('before-quit', async (event) => {
-  if (isCleaningUp) return; // second pass — allow the real quit
+  if (isCleaningUp) return; // second pass - allow the real quit
   event.preventDefault();
   isCleaningUp = true;
 

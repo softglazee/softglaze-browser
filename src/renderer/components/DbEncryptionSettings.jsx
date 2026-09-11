@@ -77,7 +77,7 @@ export default function DbEncryptionSettings() {
         </span>
       </div>
 
-      {/* Honest scope statement — never overclaim */}
+      {/* Honest scope statement - never overclaim */}
       <div className="mt-4 px-3 py-2.5 rounded-lg bg-elevated border border-border text-[12px] text-muted-foreground leading-relaxed">
         {t('dbEncryption.scopeBefore')} <span className="text-foreground">{t('dbEncryption.scopeRunningUnlocked')}</span>{t('dbEncryption.scopeAfter')}
       </div>

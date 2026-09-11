@@ -45,8 +45,8 @@
   "deleteFiltered": {
     "tooltip": "Eliminar todos los proxies que coincidan con el filtro actual",
     "button": "Eliminar todos los {{scope}} ({{count}})",
-    "confirm_one": "¿Eliminar {{count}} proxy {{scope}}? Esto no se puede deshacer — los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
-    "confirm_other": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer — los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
+    "confirm_one": "¿Eliminar {{count}} proxy {{scope}}? Esto no se puede deshacer - los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
+    "confirm_other": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer - los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
     "scope": {
       "all": "totales",
       "filtered": "filtrados",
@@ -65,7 +65,7 @@
     "renameRecolor": "Renombrar / cambiar color",
     "deleteGroup": "Eliminar grupo",
     "newGroup": "Nuevo grupo",
-    "deleteConfirm": "¿Eliminar el grupo \"{{name}}\"? Los proxies permanecen en el grupo — solo dejan de estar agrupados."
+    "deleteConfirm": "¿Eliminar el grupo \"{{name}}\"? Los proxies permanecen en el grupo - solo dejan de estar agrupados."
   },
   "autoGroup": {
     "granularityTooltip": "Granularidad del agrupamiento automático",
@@ -99,7 +99,7 @@
     "count": "{{count}} seleccionados",
     "checkSelected": "Verificar seleccionados",
     "moveToGroup": "Mover al grupo",
-    "noGroupsYet": "Aún no hay grupos — crea uno primero.",
+    "noGroupsYet": "Aún no hay grupos - crea uno primero.",
     "removeFromGroup": "Quitar del grupo",
     "deleteSelected": "Eliminar seleccionados",
     "clear": "Limpiar",

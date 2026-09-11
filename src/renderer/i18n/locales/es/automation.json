@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "Funciones de Softglaze Pro",
     "title": "Automatización",
-    "description": "Macros sin código, calentamiento de cookies con IA y un registro de cada tarea en segundo plano."
+    "description": "Macros sin código, calentamiento automático de cookies y un registro de cada tarea en segundo plano."
   },
   "tabs": {
     "macros": "Mis macros",
@@ -190,7 +190,7 @@
     "starting": "Iniciando…",
     "logStarted": "Se inició \"{{name}}\" · {{total}} paso(s) en {{profile}}",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} — {{error}}",
+    "logStepError": "✕ {{label}} - {{error}}",
     "logStepFailed": "falló",
     "logStopped": "Detenido.",
     "logFinished": "Finalizado: {{ran}}/{{total}} paso(s).",
@@ -228,7 +228,7 @@
     "dataHint": "Opcional: vincula una hoja de cálculo (fila → perfil, en orden)",
     "clearDataBinding": "Borrar vinculación de datos",
     "bindData": "Vincular datos",
-    "columnsPrefix": "Columnas: {{columns}} — usa",
+    "columnsPrefix": "Columnas: {{columns}} - usa",
     "columnsSuffix": "en los pasos de la macro.",
     "profilesLabel": "Perfiles ({{count}} seleccionados)",
     "selectAll": "Seleccionar todo",
@@ -259,7 +259,7 @@
     }
   },
   "warmer": {
-    "title": "Calentador de cookies con IA",
+    "title": "Calentador de cookies",
     "subtitle": "Genera cookies e historial orgánicos navegando por sitios reales.",
     "sitesLabel": "Sitios a visitar ({{count}})",
     "addSuggested": "Añade un sitio sugerido…",
@@ -344,10 +344,10 @@
       "status": "Estado",
       "when": "Cuándo"
     },
-    "emptyDetail": "—",
+    "emptyDetail": "-",
     "parallelRun": "Ejecución paralela",
     "macroRun": "Ejecución de macro",
-    "cookieWarmup": "Calentamiento de cookies con IA",
+    "cookieWarmup": "Calentamiento de cookies",
     "minutes": "{{count}} min",
     "sites_one": "{{count}} sitio",
     "sites_other": "{{count}} sitios"

@@ -156,7 +156,7 @@ export default function StartLinksPage() {
               <ClipboardList className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Bulk add</h3>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">Paste multiple URLs — one per line. Each gets a label from its domain automatically; edit any label in the list. Duplicates and non-http(s) lines are skipped.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">Paste multiple URLs - one per line. Each gets a label from its domain automatically; edit any label in the list. Duplicates and non-http(s) lines are skipped.</p>
             <textarea
               className={`${inputCls} w-full h-44 font-mono text-xs resize-y leading-relaxed`}
               placeholder={"whoer.net\nbrowserleaks.com\nhttps://pixelscan.net"}

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 // Pre-Gate database unlock. When at-rest encryption is on, the database file is
-// ciphertext at boot and nothing else in the app can read it — so this screen runs
+// ciphertext at boot and nothing else in the app can read it - so this screen runs
 // BEFORE <Gate>, collects the workspace password, and asks main to decrypt + open
 // the database. Once unlocked it renders its children (the normal Gate flow). When
 // encryption is off (the default) it is a transparent pass-through.
@@ -14,7 +14,7 @@ export default function DbGate({ children }) {
   const { t } = useTranslation('gate');
   const [phase, setPhase] = useState('loading'); // loading | unlock | ready
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON — DPAPI-sealed workspace key; cleared on opt-out)
+  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON - DPAPI-sealed workspace key; cleared on opt-out)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [corrupted, setCorrupted] = useState(false);

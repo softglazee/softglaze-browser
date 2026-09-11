@@ -14,11 +14,11 @@
     "before": "Installed extensions are unpacked locally and mounted into each profile via Chromium's",
     "middle": "at launch. They apply on the",
     "nextLaunch": "next launch",
-    "after": "of every profile where the extension is enabled. Some hardened stable-Chrome builds restrict unpacked extensions — Softglaze's bundled engine loads them reliably."
+    "after": "of every profile where the extension is enabled. Some hardened stable-Chrome builds restrict unpacked extensions - Softglaze's bundled engine loads them reliably."
   },
   "importer": {
     "title": "Import to Team",
-    "description": "Paste a Chrome Web Store URL or its 32-character ID — Softglaze downloads and unpacks the real package.",
+    "description": "Paste a Chrome Web Store URL or its 32-character ID - Softglaze downloads and unpacks the real package.",
     "inputPlaceholder": "https://chromewebstore.google.com/detail/…  or  cjpalhdlnbpafiamejdnhcphjbkeiagm",
     "submit": "Import to Team"
   },

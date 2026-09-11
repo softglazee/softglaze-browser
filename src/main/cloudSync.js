@@ -1,15 +1,15 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — End-to-End Encrypted Cloud Sync Engine  (FOUNDATION)
+// Softglaze Enterprise - End-to-End Encrypted Cloud Sync Engine  (FOUNDATION)
 //
 // Zero-knowledge boundary: profile state (cookies, localStorage, fingerprint
 // config) is serialized and encrypted LOCALLY with a key derived from the user's
 // master password BEFORE any byte leaves the device. The remote bucket only ever
-// stores opaque ciphertext + a salt/iv envelope — it can never read the contents.
+// stores opaque ciphertext + a salt/iv envelope - it can never read the contents.
 //
 // What is real here: the crypto envelope + serialization (so the security
 // boundary is concrete and testable). What is stubbed: the remote transport
-// (`pushEnvelope`/`pullEnvelope`) — wire these to your bucket/API when the cloud
+// (`pushEnvelope`/`pullEnvelope`) - wire these to your bucket/API when the cloud
 // tier ships. Every method is defensive and never throws raw transport errors at
 // the caller.
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ class CloudSyncEngine {
   // audit: this previously fell back to the CONSTANT public bucket namespace
   // ('softglaze') as the salt, so a single precomputed scrypt dictionary attacked
   // every default-namespace user at once and two users with the same passphrase
-  // derived the SAME key. The salt is now REQUIRED — fail closed rather than use a
+  // derived the SAME key. The salt is now REQUIRED - fail closed rather than use a
   // guessable constant. (The caller stores a random per-workspace salt and, for
   // cross-device convergence, shares it via the bucket when the transport ships.)
   async deriveMasterKey(password, workspaceSalt) {
@@ -49,7 +49,7 @@ class CloudSyncEngine {
   }
 
   // Serialize the syncable surface of a profile into a single plain object. This
-  // is the canonical shape that gets encrypted — keep it explicit so we never
+  // is the canonical shape that gets encrypted - keep it explicit so we never
   // accidentally ship a field we didn't mean to.
   static serializeProfileState({ cookies = [], localStorage = {}, fingerprint = {} } = {}) {
     return {
@@ -63,7 +63,7 @@ class CloudSyncEngine {
   // Encrypt an arbitrary JSON-serializable payload with the session master key.
   // Output is a self-describing envelope: { v, salt, iv, tag, data } (all base64).
   encryptPayload(payload) {
-    if (!this._masterKey) throw new Error('Master key not derived — call deriveMasterKey() first.');
+    if (!this._masterKey) throw new Error('Master key not derived - call deriveMasterKey() first.');
     // Per-payload salt mixed into a sub-key so reused master keys never reuse a keystream.
     const salt = crypto.randomBytes(PBKDF_SALT_LEN);
     const iv = crypto.randomBytes(IV_LEN);
@@ -80,9 +80,9 @@ class CloudSyncEngine {
     };
   }
 
-  // Inverse of encryptPayload — decrypts an envelope back to the original object.
+  // Inverse of encryptPayload - decrypts an envelope back to the original object.
   decryptPayload(envelope) {
-    if (!this._masterKey) throw new Error('Master key not derived — call deriveMasterKey() first.');
+    if (!this._masterKey) throw new Error('Master key not derived - call deriveMasterKey() first.');
     if (!envelope || envelope.v !== 1) throw new Error('Unrecognized sync envelope.');
     const salt = Buffer.from(envelope.salt, 'base64');
     const iv = Buffer.from(envelope.iv, 'base64');
@@ -102,7 +102,7 @@ class CloudSyncEngine {
   }
 
   // Push a profile's encrypted state to the remote bucket. Encryption happens
-  // here, locally, BEFORE the transport sees anything — the bucket only stores the
+  // here, locally, BEFORE the transport sees anything - the bucket only stores the
   // opaque envelope. Returns { ok, skipped? , error? }.
   async pushProfileState(profileId, state) {
     try {

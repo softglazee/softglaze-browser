@@ -7,7 +7,7 @@
 // start-page new-tab links, synchronized-session mirroring) used to ride on
 // puppeteer's `page.exposeFunction`, which is built on `Runtime.addBinding`.
 //
-// fingerprint-chromium — the native anti-detect engine — breaks that. Measured on
+// fingerprint-chromium - the native anti-detect engine - breaks that. Measured on
 // build 148.0.7778.215:
 //   • the binding works in the FIRST execution context, then dies on the next
 //     navigation (even to about:blank),
@@ -21,12 +21,12 @@
 //
 // TRANSPORT
 // The page fetches a sentinel https URL and the main process fulfils it over CDP's
-// Fetch domain — verified working on BOTH stock Chrome and fingerprint-chromium.
+// Fetch domain - verified working on BOTH stock Chrome and fingerprint-chromium.
 //   • Host is under `.invalid` (RFC 6761): it can never resolve publicly, so if
 //     interception ever fails the request dies locally instead of leaking payload.
 //   • The path carries a per-session random token, and Fetch.enable is scoped to
 //     that exact prefix. A visited site cannot probe for the bridge (an untokened
-//     URL is never paused, so it just fails DNS) — otherwise the bridge itself
+//     URL is never paused, so it just fails DNS) - otherwise the bridge itself
 //     would fingerprint the profile as SoftGlaze.
 //   • Only the sentinel prefix is paused, so ordinary page traffic is untouched.
 //
@@ -53,11 +53,11 @@ function newToken() {
 function bridgeClientScript(endpoint) {
   if (window.__sgBridge) return;
   var ENDPOINT = endpoint;
-  // Varargs, so this is a drop-in for the exposeFunction bindings it replaces —
+  // Varargs, so this is a drop-in for the exposeFunction bindings it replaces -
   // __sgPersonaMarkUsed(id, url) and __sgPersonaFillPlan(plan, token) both take two.
   var call = function (name) {
     var args = Array.prototype.slice.call(arguments, 1);
-    // 1. Native binding first — present and working on stock Chrome.
+    // 1. Native binding first - present and working on stock Chrome.
     var fn = window[name];
     if (typeof fn === 'function') {
       try {
@@ -65,7 +65,7 @@ function bridgeClientScript(endpoint) {
         // A broken binding throws synchronously; reaching here means it took the
         // call. Normalise to a promise so both paths look identical to callers.
         return Promise.resolve(p);
-      } catch (e) { /* binding dead on this engine — fall through to RPC */ }
+      } catch (e) { /* binding dead on this engine - fall through to RPC */ }
     }
     // 2. RPC fallback over the intercepted sentinel URL.
     try {
@@ -103,7 +103,7 @@ function bridgeClientScript(endpoint) {
 const bridges = new WeakMap();
 
 // Attach the RPC channel to one page.
-//   handlers : { name: async (...args) => result }  — the same functions passed to
+//   handlers : { name: async (...args) => result }  - the same functions passed to
 //              exposeFunction, so the two transports cannot drift apart.
 // Returns { endpoint, dispose }. Never throws: a page that cannot host the bridge
 // must still load.
@@ -155,7 +155,7 @@ async function attachPageBridge(page, handlers) {
     try {
       const url = String((event.request && event.request.url) || '');
       if (!url.startsWith(endpoint + '/')) {
-        // Not ours — hand it straight back rather than hanging the request.
+        // Not ours - hand it straight back rather than hanging the request.
         try { await cdp.send('Fetch.continueRequest', { requestId }); } catch (e) { /* ignore */ }
         return;
       }

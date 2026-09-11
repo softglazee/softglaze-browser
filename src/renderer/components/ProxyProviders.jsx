@@ -15,7 +15,7 @@ if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 
 if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
 // ---------------------------------------------------------------------------
-// Softglaze Provider Core — integrated proxy-vendor marketplace.
+// Softglaze Provider Core - integrated proxy-vendor marketplace.
 //
 // A static catalog of partner vendors. `referral` links out through our platform
 // (replace the ?ref=softglaze placeholder with each partner's real affiliate URL
@@ -38,11 +38,11 @@ export const PROVIDERS = [
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
-  { key: 'anyip', name: 'AnyIP', initials: 'AI', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } }
+  { key: 'anyip', name: 'AnyIP', initials: 'AN', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } }
 ];
 
 // Country list for the geo-targeted providers (Apify / Smartproxy.org / ShopSocks5).
-// Values are ISO 3166-1 alpha-2 codes — the format Apify (country-XX) and
+// Values are ISO 3166-1 alpha-2 codes - the format Apify (country-XX) and
 // Smartproxy.org (area-XX) expect; ShopSocks5 receives it as its country filter.
 export const PROXY_COUNTRIES = [
   ['', 'Any / Random'],
@@ -61,7 +61,7 @@ export const PROXY_COUNTRIES = [
 const GEO_HINTS = {
   apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.',
   smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
-  shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER — token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
+  shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
   anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.'
 };
 
@@ -125,7 +125,7 @@ export default function ProxyProviders({ onSynced }) {
           }));
         })
         .catch(() => {});
-    } catch (e) { /* older build without the creds API — ignore */ }
+    } catch (e) { /* older build without the creds API - ignore */ }
     return () => { live = false; };
   }, [provider]);
 
@@ -266,7 +266,7 @@ export default function ProxyProviders({ onSynced }) {
   return (
     <Card className="bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden">
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] flex-1 min-h-0">
-        {/* LEFT — provider grid */}
+        {/* LEFT - provider grid */}
         <div className="border-b lg:border-b-0 lg:border-r border-border bg-card/40 flex flex-col min-h-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
             <Boxes className="w-4 h-4 text-primary" />
@@ -296,7 +296,7 @@ export default function ProxyProviders({ onSynced }) {
           </div>
         </div>
 
-        {/* RIGHT — dynamic configuration workspace */}
+        {/* RIGHT - dynamic configuration workspace */}
         <div className="overflow-y-auto p-5 min-h-0">
           {/* Promo banner */}
           <div className="rounded-xl p-5 mb-5 relative overflow-hidden" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${provider.color} 22%, var(--card)), var(--card))`, border: `1px solid color-mix(in srgb, ${provider.color} 30%, transparent)` }}>
@@ -643,7 +643,6 @@ export default function ProxyProviders({ onSynced }) {
                 <div className="text-emerald-400">{t('proxyProviders.result.added', { count: syncResult.created?.length ?? 0 })}</div>
                 <div className="text-amber-400">{t('proxyProviders.result.existing', { count: syncResult.skipped?.length ?? 0 })}</div>
               </div>
-              {syncResult.simulated && <p className="mt-2 text-[11px] text-amber-400/90">{t('proxyProviders.result.simulation')}</p>}
             </div>
           )}
         </div>

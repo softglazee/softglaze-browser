@@ -6,7 +6,7 @@ import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2,
 const CHECK_LEVEL_COLOR = { INFO: 'text-sky-300', SUCCESS: 'text-emerald-400', WARN: 'text-amber-400', ERROR: 'text-red-400' };
 const GRADE_COLOR = { A: 'text-emerald-400', B: 'text-lime-400', C: 'text-amber-400', D: 'text-orange-400', F: 'text-red-400' };
 function fmtDuration(ms) {
-  if (ms == null) return '—';
+  if (ms == null) return '-';
   const s = Math.max(0, Math.round(ms / 1000));
   return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
 }
@@ -161,7 +161,7 @@ export default function ProxyPoolPage() {
   const [autoGroupLevel, setAutoGroupLevel] = useState('country');
   const [autoGrouping, setAutoGrouping] = useState(false);
   const [autoGroupMsg, setAutoGroupMsg] = useState('');
-  // Phase D — proxy intelligence: latency sort, rotation tuning, scheduler, geo, history.
+  // Phase D - proxy intelligence: latency sort, rotation tuning, scheduler, geo, history.
   const [sortBy, setSortBy] = useState('default'); // 'default' | 'fastest' | 'slowest'
   const [policyDetail, setPolicyDetail] = useState({ failoverMaxLatencyMs: 0, latencyTopN: 3 });
   const [scheduler, setScheduler] = useState({ enabled: false, minutes: 30 });
@@ -178,7 +178,7 @@ export default function ProxyPoolPage() {
     try {
       const rows = await softglazeApi.proxies.recentHealth({ perProxy: 10, maxProxies: 40 });
       setHealthCards(Array.isArray(rows) ? rows : []);
-    } catch (e) { /* non-fatal — cards just stay as they were */ }
+    } catch (e) { /* non-fatal - cards just stay as they were */ }
   }, []);
 
   useEffect(() => {
@@ -256,7 +256,7 @@ export default function ProxyPoolPage() {
     return { fast, slow };
   }, [proxies, checkResults]);
 
-  // Proxies that have NEVER been checked — no live result and no persisted health. These
+  // Proxies that have NEVER been checked - no live result and no persisted health. These
   // are what a fresh import adds; because the health/speed/blacklist filters treat them
   // as 'unknown' (excluded), they "disappear" the moment such a filter is active until
   // they're checked. The "Check new" button (below) checks exactly this set so imports
@@ -276,7 +276,7 @@ export default function ProxyPoolPage() {
 
   // When the FILTER changes, drop any selected ids that are no longer visible. Without
   // this, a "select all" under one filter carries hidden ids into a delete under another
-  // — the "select 5, but delete everything" bug. Keyed on the filter inputs only (not
+  // - the "select 5, but delete everything" bug. Keyed on the filter inputs only (not
   // checkResults) so a live health check never clears the selection mid-run.
   useEffect(() => {
     setSelectedIds((prev) => {
@@ -316,7 +316,7 @@ export default function ProxyPoolPage() {
 
   const loadGroups = useCallback(async () => {
     try { const g = await softglazeApi.proxyGroups.list(); setGroups(Array.isArray(g) ? g : []); }
-    catch (e) { /* groups are optional UI sugar — never block the pool */ }
+    catch (e) { /* groups are optional UI sugar - never block the pool */ }
   }, []);
 
   const loadProxies = useCallback(async () => {
@@ -369,7 +369,7 @@ export default function ProxyPoolPage() {
   }
 
   async function handleBulkDelete() {
-    // Only delete selected proxies that are ACTUALLY visible under the current filter —
+    // Only delete selected proxies that are ACTUALLY visible under the current filter -
     // never hidden ones carried over from a prior select-all (defense-in-depth on top of
     // the filter-change prune effect above).
     const visible = new Set(filteredProxies.map((p) => p.id));
@@ -454,7 +454,7 @@ export default function ProxyPoolPage() {
   // Auto-scroll the checker log to the newest line.
   useEffect(() => { if (checkLogRef.current) checkLogRef.current.scrollTop = checkLogRef.current.scrollHeight; }, [checkRun && checkRun.logs && checkRun.logs.length]);
 
-  // Auto-close the checker console shortly after the final check finishes — the
+  // Auto-close the checker console shortly after the final check finishes - the
   // per-proxy results persist to health history, so nothing is lost. A running or
   // freshly-started run cancels the pending close.
   useEffect(() => {
@@ -499,7 +499,7 @@ export default function ProxyPoolPage() {
     setSaving(true);
     setError('');
     try {
-      // Don't send the masked placeholder back on save — that would overwrite the real
+      // Don't send the masked placeholder back on save - that would overwrite the real
       // stored password with the bullets and break the proxy's auth on any unrelated edit.
       const payload = { name: proxyForm.name, type: proxyForm.type, host: proxyForm.host, port: proxyForm.port, username: proxyForm.username, password: proxyForm.password === '••••••••' ? undefined : proxyForm.password };
       if (isEditing) await softglazeApi.proxies.update({ id: proxyForm.id, ...payload });
@@ -549,7 +549,7 @@ export default function ProxyPoolPage() {
   }
 
   // Deep-check ONLY the never-checked proxies (freshly imported ones). Lets imports gain
-  // health so the health/speed filters include them — without the full-pool re-check the
+  // health so the health/speed filters include them - without the full-pool re-check the
   // user previously needed just to make filtering work.
   async function handleCheckNew() {
     if (uncheckedIds.length === 0) return;
@@ -687,8 +687,8 @@ export default function ProxyPoolPage() {
       }
       return <span className="text-xs font-medium text-red-400" title={r.error || t('status.failed')}>{t('status.failed')}{r.error ? `: ${String(r.error).slice(0, 40)}` : ''}</span>;
     }
-    // No fresh check this session — fall back to the persisted snapshot so a
-    // previously-checked proxy still shows its last known result instead of "—".
+    // No fresh check this session - fall back to the persisted snapshot so a
+    // previously-checked proxy still shows its last known result instead of "-".
     if (proxy.lastStatus === 'ok') {
       const ms = typeof proxy.lastLatencyMs === 'number' ? proxy.lastLatencyMs : null;
       return (
@@ -699,7 +699,7 @@ export default function ProxyPoolPage() {
       );
     }
     if (proxy.lastStatus === 'fail') return <span className="text-xs font-medium text-red-400/90" title={proxy.lastError || t('status.failed')}>{t('status.failed')}{proxy.lastError ? `: ${String(proxy.lastError).slice(0, 40)}` : ''}</span>;
-    return <span className="text-xs text-muted-dark">—</span>;
+    return <span className="text-xs text-muted-dark">-</span>;
   }
 
   // Compact table badges: proxy speed bucket and blocklist state (fresh check wins
@@ -707,7 +707,7 @@ export default function ProxyPoolPage() {
   // scanned at a glance without opening the checker.
   function renderSpeedCell(proxy) {
     const s = speedOf(proxy, checkResults);
-    if (s === 'unknown') return <span className="text-muted-dark text-xs">—</span>;
+    if (s === 'unknown') return <span className="text-muted-dark text-xs">-</span>;
     const r = checkResults[proxy.id];
     const live = r ? (typeof r.avgMs === 'number' ? r.avgMs : (typeof r.latencyMs === 'number' ? r.latencyMs : null)) : null;
     const ms = live != null ? live : (typeof proxy.lastLatencyMs === 'number' ? proxy.lastLatencyMs : null);
@@ -722,7 +722,7 @@ export default function ProxyPoolPage() {
   }
   function renderBlacklistCell(proxy) {
     const b = blacklistOf(proxy, checkResults);
-    if (b === 'unknown') return <span className="text-muted-dark text-xs">—</span>;
+    if (b === 'unknown') return <span className="text-muted-dark text-xs">-</span>;
     const listed = b === 'blacklisted';
     return (
       <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${listed ? 'bg-amber-500/12 text-amber-400' : 'bg-emerald-500/12 text-emerald-400'}`}>
@@ -830,7 +830,7 @@ export default function ProxyPoolPage() {
         }
       />
 
-      {/* LIVE CHECKER — inline, ABOVE the Custom / Integrations tabs (was a floating
+      {/* LIVE CHECKER - inline, ABOVE the Custom / Integrations tabs (was a floating
           bottom-right card). Auto-closes ~5s after the run finishes; per-proxy results
           persist to each proxy's health history for cross-verification. */}
       {checkRun && (
@@ -890,7 +890,7 @@ export default function ProxyPoolPage() {
         ))}
       </div>
 
-      {/* STATS ROW — real counts + proxy-type donut (custom view only) */}
+      {/* STATS ROW - real counts + proxy-type donut (custom view only) */}
       {view === 'custom' && (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -911,7 +911,7 @@ export default function ProxyPoolPage() {
       {view === 'providers' && <ProxyProviders onSynced={loadProxies} />}
 
       {view === 'custom' && (<>
-      {/* PROXY HISTORY CARDS — each recently-checked proxy's last N results as pass/fail
+      {/* PROXY HISTORY CARDS - each recently-checked proxy's last N results as pass/fail
           pips, kept for cross-verification. An amber card = "verified before, failed on a
           later check". Click a card to open the full latency/status history. */}
       {healthCards.length > 0 && (
@@ -956,7 +956,7 @@ export default function ProxyPoolPage() {
                   <div className="flex items-center justify-between text-[10.5px]">
                     <span className="text-emerald-400">{c.okCount}✓</span>
                     <span className="text-red-400">{c.failCount}✕</span>
-                    <span className="text-muted-foreground">{c.lastLatencyMs != null ? `${c.lastLatencyMs}ms` : '—'}</span>
+                    <span className="text-muted-foreground">{c.lastLatencyMs != null ? `${c.lastLatencyMs}ms` : '-'}</span>
                   </div>
                   {c.regressed && (
                     <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-amber-400">
@@ -978,7 +978,7 @@ export default function ProxyPoolPage() {
             placeholder={t('search.placeholder')}
           />
         </div>
-        {/* Blocklist filter — clean vs blacklisted (from the DNSBL check) */}
+        {/* Blocklist filter - clean vs blacklisted (from the DNSBL check) */}
         <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[12px]">
           {[
             { key: 'all', label: t('blacklistFilter.all') },
@@ -996,7 +996,7 @@ export default function ProxyPoolPage() {
             </button>
           ))}
         </div>
-        {/* Speed filter — fast vs slow, by measured latency */}
+        {/* Speed filter - fast vs slow, by measured latency */}
         <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[12px]">
           {[
             { key: 'all', label: t('speedFilter.all'), icon: null },
@@ -1022,7 +1022,7 @@ export default function ProxyPoolPage() {
         )}
       </div>
 
-      {/* CATEGORY / GROUP BAR — filter the pool, manage groups, drag rows here to assign */}
+      {/* CATEGORY / GROUP BAR - filter the pool, manage groups, drag rows here to assign */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button className={chipCls('all')} onClick={() => setActiveGroup('all')}>
           <Boxes className="w-3.5 h-3.5" /> {t('filters.all')} <span className="opacity-60">{proxies.length}</span>
@@ -1236,13 +1236,13 @@ export default function ProxyPoolPage() {
                           </button>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-muted">{proxy.username || '—'}</td>
+                      <td className="px-5 py-4 text-muted">{proxy.username || '-'}</td>
                       <td className="px-5 py-4">
                         {proxy.groupName ? (
                           <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
                             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: proxy.groupColor || '#3b82f6' }} /> {proxy.groupName}
                           </span>
-                        ) : <span className="text-muted-dark">—</span>}
+                        ) : <span className="text-muted-dark">-</span>}
                       </td>
                       <td className="px-5 py-4">
                         {(() => {
@@ -1256,7 +1256,7 @@ export default function ProxyPoolPage() {
                             );
                           }
                           if (count > 0) return <span className="text-foreground text-xs">{t('table.profileCount', { count })}</span>;
-                          return <span className="text-muted-dark">—</span>;
+                          return <span className="text-muted-dark">-</span>;
                         })()}
                       </td>
                       <td className="px-5 py-4 text-muted text-xs">{formatDateTime(proxy.createdAt)}</td>

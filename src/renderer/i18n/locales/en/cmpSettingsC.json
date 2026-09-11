@@ -94,7 +94,7 @@
       "gatewayHostLabel": "Gateway host",
       "portLabel": "Port",
       "gatewayHint": "Pre-filled for the Long-Acting ISP plan (isp.smartproxy.net:3100). If your smartproxy.org dashboard → Proxy Setup shows a different host:port, paste it here to override.",
-      "apiUrlLabel": "API URL — required, from your dashboard",
+      "apiUrlLabel": "API URL - required, from your dashboard",
       "apiUrlHintBefore": "Paste the URL from your ShopSocks5 dashboard → SOCKS5 API guide. It already contains your token. Put ",
       "apiUrlHintAfter": " where the country code belongs to filter by the selection above.",
       "pullProxies": "Pull proxies"
@@ -110,7 +110,7 @@
       "checkProxy": "Check Proxy",
       "ok": "OK",
       "failed": "Failed",
-      "tip": "Tip: a rotating gateway uses the same host:port for every session — your username/password (or sticky-session token) selects the exit IP.",
+      "tip": "Tip: a rotating gateway uses the same host:port for every session - your username/password (or sticky-session token) selects the exit IP.",
       "saveCreds": "Save credentials",
       "credsSaved": "Saved"
     },
@@ -204,14 +204,14 @@
     "geoHints": {
       "apify": "Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings.",
       "smartproxyorg": "Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. \"Keep same IP\" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on \"Different each time\" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.",
-      "shopsocks5": "ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER — token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).",
+      "shopsocks5": "ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).",
       "anyip": "anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard, OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway if your dashboard shows a custom port."
     },
     "notConnected": {
-      "body": "{{provider}} has no automatic pull yet, so enter the details from your {{provider}} dashboard below. We have written to them about a native integration.",
+      "body": "{{provider}} does not support automatic pull yet. Enter the gateway details from your {{provider}} dashboard below to add its proxies manually.",
       "apiKeyLabel": "API key or token",
       "apiKeyPlaceholder": "Paste your {{provider}} API key",
-      "apiKeyHint": "Stored encrypted on this machine so it is ready the day the integration lands."
+      "apiKeyHint": "Stored encrypted on this machine, ready for a direct connector."
     },
     "integratedCount": "{{connected}} of {{total}} connected"
   }

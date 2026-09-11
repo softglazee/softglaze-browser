@@ -32,7 +32,7 @@ export default function BatchImportPage() {
   // Auto-scroll the terminal log to the newest line.
   useEffect(() => { logEndRef.current?.scrollIntoView({ block: 'end' }); }, [importLog]);
 
-  // --- QUICK GENERATE (shared modal — identical to the Profiles page) ---
+  // --- QUICK GENERATE (shared modal - identical to the Profiles page) ---
   const [showQuickGen, setShowQuickGen] = useState(false);
   const [savedProxies, setSavedProxies] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -320,7 +320,7 @@ export default function BatchImportPage() {
                     </div>
 
                     {importing ? (
-                      /* STATE: Live processing — progress bar + scrolling terminal log */
+                      /* STATE: Live processing - progress bar + scrolling terminal log */
                       <div className="flex-1 flex flex-col p-4 gap-3 min-h-0">
                         <div>
                           <div className="flex justify-between text-[12px] text-muted-foreground mb-1.5">
@@ -361,7 +361,7 @@ export default function BatchImportPage() {
                                 <tr key={i} className="border-b border-border hover:bg-secondary">
                                   <td className="px-4 py-2 text-muted-foreground">{item.row}</td>
                                   <td className="px-4 py-2 text-foreground font-medium">{item.title}</td>
-                                  <td className="px-4 py-2 text-muted-foreground">{item.group || '—'}</td>
+                                  <td className="px-4 py-2 text-muted-foreground">{item.group || '-'}</td>
                                   <td className="px-4 py-2 text-muted-foreground">{item.proxyMethod}</td>
                                   <td className="px-4 py-2 text-muted-foreground">{item.dataDirName || t('table.auto')}</td>
                                 </tr>

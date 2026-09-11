@@ -50,7 +50,7 @@ const FEATURES = [
   ['batchImport', 'Batch import'], ['trash', 'Trash'], ['members', 'Members'], ['settings', 'Settings']
 ];
 
-// Role ranks (mirror of permissions.js) — used to show only the action toggles a
+// Role ranks (mirror of permissions.js) - used to show only the action toggles a
 // member's role can actually perform.
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
 
@@ -354,7 +354,7 @@ function SuperAdminLicensePanel() {
                 <div className="text-[11.5px] text-muted-foreground mt-1">
                   {lic.isTrial && t('license.detail.trial', { count: lic.daysLeftTrial })}
                   {lic.isGrace && t('license.detail.grace', { count: lic.daysLeftGrace })}
-                  {lic.isPaid && t('license.detail.paid', { date: lic.endsAt ? new Date(lic.endsAt).toLocaleDateString() : '—' })}
+                  {lic.isPaid && t('license.detail.paid', { date: lic.endsAt ? new Date(lic.endsAt).toLocaleDateString() : '-' })}
                   {lic.isBanned && (r.banReason || t('status.banned'))}
                   {lic.clockTamper && <span className="ml-2 text-amber-400">{t('license.detail.clockAnomaly')}</span>}
                 </div>
@@ -383,7 +383,7 @@ function SuperAdminLicensePanel() {
 }
 
 // Full per-owner license editor: set type/tier/exact expiry, grant a chosen plan,
-// start the free trial or terminate — every action re-enforced in main.
+// start the free trial or terminate - every action re-enforced in main.
 function LicenseEditModal({ row, plans, onClose, onSaved }) {
   const { t } = useTranslation('members');
   const lic = row.license || {};
@@ -489,7 +489,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
   const [showDelete, setShowDelete] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
 
-  // Change account status (suspend / ban / unban) — re-enforced in main. Owners can
+  // Change account status (suspend / ban / unban) - re-enforced in main. Owners can
   // only be blocked/unblocked by the Super Admin (the backend enforces this).
   async function changeStatus(status, reason) {
     setStatusBusy(true); setErr('');
@@ -625,7 +625,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
           </div>
         )}
 
-        {/* Allocation rollup — how much of this member's quota is handed to their team */}
+        {/* Allocation rollup - how much of this member's quota is handed to their team */}
         {!isNew && member.allocation && member.allocation.childCount > 0 && (
           <div className="rounded-xl border border-border bg-elevated/40 p-3 space-y-1.5">
             <div className="flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-primary" /><span className="text-[12px] font-semibold text-foreground">{t('alloc.heading', { count: member.allocation.childCount })}</span></div>
@@ -634,7 +634,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
           </div>
         )}
 
-        {/* Permissions + limits — editable for sub-members, and for OWNERs when a Super Admin is editing */}
+        {/* Permissions + limits - editable for sub-members, and for OWNERs when a Super Admin is editing */}
         {(isNew ? allowed.length > 0 : (member.role !== 'OWNER' || me?.role === 'SUPER_ADMIN')) && (
           <div className="space-y-2">
             <PermissionEditor role={isNew ? role : member.role} value={perms} onChange={setPerms} granter={granter} />
@@ -1032,7 +1032,7 @@ const ACTION_COLORS = {
   'permissions changed': '#f59e0b', 'status changed': '#f59e0b',
   'signed in': '#10b981', 'signed out': '#94a3b8', 'invite accepted': '#06b6d4'
 };
-// Structured audit detail is stored as compact JSON (logAudit) — render it as a
+// Structured audit detail is stored as compact JSON (logAudit) - render it as a
 // readable "key: value · key: value" line; legacy free-text detail passes through.
 function humanizeDetail(detail) {
   if (!detail) return '';

@@ -4,7 +4,7 @@ const { app } = require('electron');
 const { tenantConfig } = require('./tenantConfig');
 
 // Auto-update via electron-updater. SAFE BY DEFAULT: it stays fully inert unless an
-// update feed is explicitly configured — so a build NEVER auto-pulls from a default
+// update feed is explicitly configured - so a build NEVER auto-pulls from a default
 // or seller-owned feed.
 //
 //   • Tenant (white-label) builds: a buyer-owned `updateFeedUrl` is baked into the
@@ -16,7 +16,7 @@ const { tenantConfig } = require('./tenantConfig');
 //
 // On `update-available` / `download-progress` / `update-downloaded` we push an
 // `updater:event` to the renderer, which shows an in-app banner on the Dashboard
-// ("New update available — Click to install"). `autoInstallOnAppQuit` stays on as a
+// ("New update available - Click to install"). `autoInstallOnAppQuit` stays on as a
 // silent fallback if the user never clicks. quitAndInstall is driven from the
 // banner via the `updater:install` IPC.
 //
@@ -54,7 +54,7 @@ function resolveFeed() {
     // Defense-in-depth: refuse anything that isn't https (an http feed can be
     // MITM'd to serve a malicious installer). tenantConfig already drops http, so
     // this only fires if that ever changes.
-    if (!/^https:\/\//i.test(url)) { console.error('[updater] refusing non-https update feed — auto-update disabled.'); return null; }
+    if (!/^https:\/\//i.test(url)) { console.error('[updater] refusing non-https update feed - auto-update disabled.'); return null; }
     return { kind: 'generic', url };
   }
   if (process.env.SG_ENABLE_GITHUB_UPDATES === '1') return { kind: 'baked' };
@@ -93,12 +93,12 @@ function initAutoUpdater(mainWindow) {
 
   // Hard gate (audit C3): never auto-update an unsigned build.
   if (!isSignedBuild()) {
-    console.warn('[updater] build is not code-signed — auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');
+    console.warn('[updater] build is not code-signed - auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');
     return;
   }
 
   const feed = resolveFeed();
-  if (!feed) { console.log('[updater] no update feed configured — auto-update disabled.'); return; }
+  if (!feed) { console.log('[updater] no update feed configured - auto-update disabled.'); return; }
 
   let autoUpdater;
   try {
@@ -136,7 +136,7 @@ function initAutoUpdater(mainWindow) {
   autoUpdater.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
 }
 
-// Current known updater state — so the banner can render correctly even if the
+// Current known updater state - so the banner can render correctly even if the
 // Dashboard mounts AFTER the event already fired.
 function getState() { return { ...lastState, active: Boolean(autoUpdaterRef) }; }
 

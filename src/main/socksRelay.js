@@ -2,7 +2,7 @@
 // ---------------------------------------------------------------------------
 // Local SOCKS5 auth-injecting relay.
 //
-// audit: Chromium has NO SOCKS proxy-authentication support — `--proxy-server=
+// audit: Chromium has NO SOCKS proxy-authentication support - `--proxy-server=
 // socks5://…` carries no credentials and puppeteer's page.authenticate() only
 // answers HTTP 407 challenges, so an authenticated SOCKS5 proxy silently fails to
 // connect (every request errors, nothing surfaced to the user).
@@ -11,7 +11,7 @@
 // forwards each CONNECT to the upstream SOCKS5 proxy using username/password auth.
 // Chromium then points --proxy-server at socks5://127.0.0.1:<port> (auth-free), and
 // the target hostname is forwarded verbatim so DNS still resolves proxy-side
-// (remote DNS — no leak). Only CONNECT is supported (all Chromium needs).
+// (remote DNS - no leak). Only CONNECT is supported (all Chromium needs).
 // ---------------------------------------------------------------------------
 const net = require('node:net');
 

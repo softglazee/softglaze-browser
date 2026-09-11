@@ -45,8 +45,8 @@
   "deleteFiltered": {
     "tooltip": "Delete every proxy matching the current filter",
     "button": "Delete all {{scope}} ({{count}})",
-    "confirm_one": "Delete all {{count}} {{scope}} proxy? This cannot be undone — linked profiles keep working with their proxy assignment cleared.",
-    "confirm_other": "Delete all {{count}} {{scope}} proxies? This cannot be undone — linked profiles keep working with their proxy assignment cleared.",
+    "confirm_one": "Delete all {{count}} {{scope}} proxy? This cannot be undone - linked profiles keep working with their proxy assignment cleared.",
+    "confirm_other": "Delete all {{count}} {{scope}} proxies? This cannot be undone - linked profiles keep working with their proxy assignment cleared.",
     "scope": {
       "all": "all",
       "filtered": "filtered",
@@ -65,7 +65,7 @@
     "renameRecolor": "Rename / recolor",
     "deleteGroup": "Delete group",
     "newGroup": "New group",
-    "deleteConfirm": "Delete group \"{{name}}\"? The proxies stay in the pool — they just become ungrouped."
+    "deleteConfirm": "Delete group \"{{name}}\"? The proxies stay in the pool - they just become ungrouped."
   },
   "autoGroup": {
     "granularityTooltip": "Auto-group granularity",
@@ -99,7 +99,7 @@
     "count": "{{count}} selected",
     "checkSelected": "Check selected",
     "moveToGroup": "Move to group",
-    "noGroupsYet": "No groups yet — create one first.",
+    "noGroupsYet": "No groups yet - create one first.",
     "removeFromGroup": "Remove from group",
     "deleteSelected": "Delete selected",
     "clear": "Clear",

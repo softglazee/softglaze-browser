@@ -4,7 +4,7 @@
     "title": "Manage Cookies",
     "tabExport": "Export",
     "tabImport": "Import",
-    "runningHint": "The profile must be running — cookies are read from and written to its live browser session.",
+    "runningHint": "The profile must be running - cookies are read from and written to its live browser session.",
     "exportButton": "Export from live session",
     "copyClipboard": "Copy to Clipboard",
     "copied": "Copied!",
@@ -93,7 +93,7 @@
     "coresValue_one": "{{count}} core",
     "coresValue_other": "{{count}} cores",
     "gbValue": "{{gb}} GB",
-    "deviceMemoryValue": "{{gb}} GB — what sites see (Chrome caps navigator.deviceMemory at 8)",
+    "deviceMemoryValue": "{{gb}} GB - what sites see (Chrome caps navigator.deviceMemory at 8)",
     "footerValues": "Values reflect the profile configuration.",
     "footerEngineNote": "User-Agent “‹engine›” means the version follows the bundled Chromium for fingerprint consistency."
   },

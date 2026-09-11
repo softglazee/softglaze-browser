@@ -96,7 +96,7 @@ export default function MigrationSettings() {
       {err && <div className="mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
 
       <div className="mt-4 space-y-5">
-        {/* Step 1 — source platform */}
+        {/* Step 1 - source platform */}
         <div className="rounded-xl border border-border bg-elevated/50 p-4">
           <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('migration.sourcePlatform')}</span>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -134,7 +134,7 @@ export default function MigrationSettings() {
           </div>
         )}
 
-        {/* Step 2 — token + start */}
+        {/* Step 2 - token + start */}
         <div className="rounded-xl border border-border bg-elevated/50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <KeyRound className="w-4 h-4 text-muted-foreground" />
@@ -172,7 +172,7 @@ export default function MigrationSettings() {
           </p>
         </div>
 
-        {/* Step 3 — live progress / log */}
+        {/* Step 3 - live progress / log */}
         {(log.length > 0 || running) && (
           <div>
             <div className="flex items-center justify-between mb-1.5">

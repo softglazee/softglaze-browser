@@ -48,7 +48,7 @@
   },
   "autoBind": {
     "label": "Auto-bind proxies by country",
-    "descPrefix": "— for rows without their own proxy, assign a saved proxy whose health-checked country matches the row's",
+    "descPrefix": "- for rows without their own proxy, assign a saved proxy whose health-checked country matches the row's",
     "descSuffix": "column (round-robin across matches)."
   },
   "commitButton_one": "Commit {{count}} Profile",
@@ -64,7 +64,7 @@
   },
   "quick": {
     "engineTitle": "Sequential Generation Engine",
-    "description": "Spin up multiple profiles instantly without a spreadsheet — unique fingerprints, sequential names, a target group (create one inline), and proxy assignment from a specific group or provider. Uses the exact same engine as the Profiles page.",
+    "description": "Spin up multiple profiles instantly without a spreadsheet - unique fingerprints, sequential names, a target group (create one inline), and proxy assignment from a specific group or provider. Uses the exact same engine as the Profiles page.",
     "openButton": "Open Quick Generate"
   },
   "errors": {

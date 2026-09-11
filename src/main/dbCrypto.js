@@ -1,20 +1,20 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze — at-rest database encryption primitives (Phase 6, Option A)
+// Softglaze - at-rest database encryption primitives (Phase 6, Option A)
 //
 // These functions wrap the whole SQLite file in an AES-256-GCM envelope so that,
 // when the app is closed or locked, only ciphertext (`softglaze.sqlite.enc`)
 // exists on disk. The plaintext working file Prisma reads is only present while
 // the app is unlocked. This is honest "encryption at rest" for the realistic
 // threat (stolen laptop / disk image / file copied while the app is closed); it
-// is NOT runtime memory protection — see DbEncryptionSettings.jsx for the wording
+// is NOT runtime memory protection - see DbEncryptionSettings.jsx for the wording
 // shown to users.
 //
 // This module is intentionally free of Electron/Prisma deps so it can be unit
 // tested directly (test/dbCrypto.test.js), the same seam pattern as
 // profileArchive.js / cloudSync.js.
 //
-// On-disk format (header is clear-text; the salt is NOT secret — it only seasons
+// On-disk format (header is clear-text; the salt is NOT secret - it only seasons
 // the scrypt KDF, and embedding it keeps the .enc self-describing so a backup is
 // recoverable from the password alone even if the metadata sidecar is lost):
 //   [ "SGDB1" (5 bytes) ][ salt (16) ][ iv (12) ][ ciphertext … ][ authTag (16) ]
@@ -26,7 +26,7 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 
 const MAGIC = Buffer.from('SGDB1');  // KDF v1: Node-default scrypt (what originally shipped)
-const MAGIC2 = Buffer.from('SGDB2'); // KDF v2: scrypt N=2^17 (OWASP minimum) — same layout
+const MAGIC2 = Buffer.from('SGDB2'); // KDF v2: scrypt N=2^17 (OWASP minimum) - same layout
 const SALT_LEN = 16;
 const IV_LEN = 12;
 const TAG_LEN = 16;
@@ -36,7 +36,7 @@ const MIN_LEN = HEADER_LEN + TAG_LEN; // smallest possible valid file (empty cip
 
 // KDF profiles keyed by header version. The KDF version is SELF-DESCRIBING via the
 // 5-byte magic (SGDB1→v1, SGDB2→v2), so a file always decrypts with the exact cost
-// it was written with — existing SGDB1 databases are never re-keyed behind the
+// it was written with - existing SGDB1 databases are never re-keyed behind the
 // user's back and keep opening. v1 deliberately equals Node's scrypt defaults
 // (N=16384,r=8,p=1) so an explicit v1 derive produces the SAME key the original
 // param-less call did (the key depends only on password/salt/N/r/p/keylen, not
@@ -124,13 +124,13 @@ async function encryptDbFile(plainPath, encPath, key, salt, version = LEGACY_VER
 }
 
 // Decrypt encPath → plainPath using an already-derived key. Throws if the GCM tag
-// does not verify (wrong key or tampered/corrupted file) — so a successful return
+// does not verify (wrong key or tampered/corrupted file) - so a successful return
 // is itself the integrity guarantee: the plaintext is bit-identical to what was
 // encrypted. Written via temp + rename for the same atomicity reason as above.
 async function decryptDbFile(encPath, plainPath, key) {
   if (!Buffer.isBuffer(key) || key.length !== KEY_LEN) throw new Error('decryptDbFile requires a 32-byte key.');
   const buf = await fsp.readFile(encPath);
-  if (buf.length < MIN_LEN || !versionForMagic(buf)) { // accept SGDB1 or SGDB2 — identical layout
+  if (buf.length < MIN_LEN || !versionForMagic(buf)) { // accept SGDB1 or SGDB2 - identical layout
     throw new Error('Not a valid Softglaze encrypted database (bad header).');
   }
   let off = MAGIC.length + SALT_LEN; // skip magic+salt (salt was used for key derivation by the caller)
@@ -143,7 +143,7 @@ async function decryptDbFile(encPath, plainPath, key) {
   try {
     plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch (e) {
-    const err = new Error('Could not decrypt the database — wrong password or the file is corrupted.');
+    const err = new Error('Could not decrypt the database - wrong password or the file is corrupted.');
     err.code = 'DB_DECRYPT_FAILED';
     throw err;
   }
@@ -181,7 +181,7 @@ function looksLikeSqlite(filePath) {
 // Best-effort secure delete: overwrite the file's bytes with random data once,
 // then unlink. On SSDs/journaled filesystems this is not a guaranteed wipe, but
 // it removes the obvious plaintext copy and is better than a plain unlink. Never
-// throws — a failure here must not block the lifecycle.
+// throws - a failure here must not block the lifecycle.
 async function secureUnlink(filePath) {
   try {
     const stat = await fsp.stat(filePath);

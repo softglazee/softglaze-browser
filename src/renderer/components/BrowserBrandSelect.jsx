@@ -5,7 +5,7 @@
 // navigator globals). It's shown only when the core is SunBrowser (Chrome).
 //
 // The marks below are ORIGINAL stylized glyphs (currentColor), NOT the vendors'
-// trademarked logos — same trademark-safe approach as the proxy provider marks.
+// trademarked logos - same trademark-safe approach as the proxy provider marks.
 
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/index.js';

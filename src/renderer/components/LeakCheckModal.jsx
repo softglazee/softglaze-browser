@@ -161,13 +161,13 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
                 
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mt-6 mb-2">{t('leakCheck.rawData')}</h4>
                 <div className="rounded border border-border bg-background p-4 text-xs font-mono text-muted-foreground space-y-2 shadow-inner">
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">exit ip:</span> <span className="text-primary">{live.exit?.ip || '—'}{live.exit?.country ? ` (${live.exit.country})` : ''}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">exit ip:</span> <span className="text-primary">{live.exit?.ip || '-'}{live.exit?.country ? ` (${live.exit.country})` : ''}</span></div>
                   <div className="flex gap-2"><span className="text-muted w-20 shrink-0">webrtc:</span> <span className="text-foreground">{live.webrtcIps.length ? live.webrtcIps.join(', ') : t('leakCheck.none')}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">timezone:</span> <span className="text-foreground">{live.env?.timezone || '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">languages:</span> <span className="text-foreground">{(live.env?.languages || []).join(', ') || '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">ua:</span> <span className="text-foreground break-all">{live.env?.userAgent || '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">cores/mem:</span> <span className="text-foreground">{live.env?.hardwareConcurrency ?? '—'} / {live.env?.deviceMemory ?? '—'}</span></div>
-                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">screen:</span> <span className="text-foreground">{live.env?.screen ? `${live.env.screen.width}x${live.env.screen.height}` : '—'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">timezone:</span> <span className="text-foreground">{live.env?.timezone || '-'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">languages:</span> <span className="text-foreground">{(live.env?.languages || []).join(', ') || '-'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">ua:</span> <span className="text-foreground break-all">{live.env?.userAgent || '-'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">cores/mem:</span> <span className="text-foreground">{live.env?.hardwareConcurrency ?? '-'} / {live.env?.deviceMemory ?? '-'}</span></div>
+                  <div className="flex gap-2"><span className="text-muted w-20 shrink-0">screen:</span> <span className="text-foreground">{live.env?.screen ? `${live.env.screen.width}x${live.env.screen.height}` : '-'}</span></div>
                 </div>
               </div>
             )}

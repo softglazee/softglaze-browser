@@ -31,7 +31,7 @@ function isSealed(value) {
 }
 
 // Encrypt a plaintext string for storage. Returns the value unchanged when it is
-// empty or already sealed. audit: FAILS CLOSED — if OS encryption is unavailable
+// empty or already sealed. audit: FAILS CLOSED - if OS encryption is unavailable
 // or encryption throws, it raises instead of returning plaintext, so a real secret
 // is never silently written to the database in the clear.
 function seal(plain) {
@@ -50,14 +50,14 @@ function seal(plain) {
 
 // Decrypt a stored value.
 //  - A value that was never sealed (legitimate pre-existing plaintext) passes
-//    through unchanged — that path must stay lossless.
+//    through unchanged - that path must stay lossless.
 //  - A SEALED value we cannot open (OS encryption unavailable, or decrypt throws
 //    because the DPAPI key changed / %APPDATA% was copied to another user or
 //    machine) now fails CLOSED: it returns '' ("treat as absent"), never the
 //    literal enc:v1:… blob. audit: returning the sealed blob handed callers a
-//    garbage credential — a proxy dialled with ciphertext-as-password (silent auth
+//    garbage credential - a proxy dialled with ciphertext-as-password (silent auth
 //    failure → possible real-IP exposure for an anti-detect browser) and the sync
-//    Bearer token became junk — and made "is a secret configured?" checks pass on
+//    Bearer token became junk - and made "is a secret configured?" checks pass on
 //    an unusable value. seal() already fails closed; open() is now symmetric.
 function open(value) {
   if (!isSealed(value)) return value;

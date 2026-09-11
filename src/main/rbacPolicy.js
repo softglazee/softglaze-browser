@@ -1,12 +1,12 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — RBAC Policy Layer (credential-redaction middleware)
+// Softglaze Enterprise - RBAC Policy Layer (credential-redaction middleware)
 //
 // The app already enforces role RANK gating (see permissions.js / requirePermission
 // in ipcHandlers). This module adds the COMPLEMENTARY policy layer the Enterprise
 // tier needs: a strict, centralized redaction policy so an OPERATOR can USE a
 // resource (launch a profile through its proxy) but can NEVER read the raw secret
-// values behind it — proxy credentials, token strings, or cookie dumps.
+// values behind it - proxy credentials, token strings, or cookie dumps.
 //
 // Wire `redactForRole(role, kind, record)` into any serializer that returns
 // secret-bearing data to the renderer. It is pure + defensive (unknown role ⇒
@@ -34,14 +34,14 @@ function canReadRaw(role, kind) {
   const need = RAW_VALUE_MIN_RANK[kind];
   // audit: an unrecognized `kind` (typo at a call site, or a newly-added secret
   // kind someone forgot to register) previously defaulted to ALLOW, handing raw
-  // secrets to an Operator. Fail closed — an unknown kind is treated as maximally
+  // secrets to an Operator. Fail closed - an unknown kind is treated as maximally
   // sensitive and denied to everyone below Owner.
   if (!need) return rankOf(role) >= ROLE_RANK.OWNER;
   return rankOf(role) >= need;
 }
 
 // Redact a record for a role. Returns a SHALLOW COPY with sensitive fields masked
-// when the role lacks clearance — the raw object is never mutated.
+// when the role lacks clearance - the raw object is never mutated.
 function redactForRole(role, kind, record) {
   if (!record || typeof record !== 'object') return record;
   if (canReadRaw(role, kind)) return record;
@@ -52,7 +52,7 @@ function redactForRole(role, kind, record) {
       // Connectivity stays usable in the UI; the secrets are blanked.
       if ('username' in out) out.username = out.username ? REDACTED : '';
       if ('password' in out) out.password = out.password ? REDACTED : '';
-      // audit: also blank COMBINED credential strings — a proxy is often carried
+      // audit: also blank COMBINED credential strings - a proxy is often carried
       // as `host:port:user:pass` (proxyRaw / url / connectionString), which the
       // per-field masking above would leak straight through.
       for (const f of ['proxyRaw', 'url', 'connectionString']) {
@@ -83,7 +83,7 @@ function redactForRole(role, kind, record) {
 }
 
 // Hard guard for export-style actions (cookie dump download, raw proxy reveal).
-// Throws FORBIDDEN when the role is below clearance — call this in the handler
+// Throws FORBIDDEN when the role is below clearance - call this in the handler
 // BEFORE assembling any raw payload.
 function assertCanReveal(role, kind) {
   if (!canReadRaw(role, kind)) {

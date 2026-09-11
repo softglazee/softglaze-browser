@@ -1,6 +1,6 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Pro — Encrypted Profile Archive (.sgz)
+// Softglaze Pro - Encrypted Profile Archive (.sgz)
 //
 // Packages a profile's userDataDir cache + a config manifest into a single ZIP,
 // streamed through AES-256-GCM into a portable, password-protected `.sgz` file.
@@ -86,7 +86,7 @@ async function exportProfileArchive({ userDataDir, config = {}, password, outPat
   });
 }
 
-// Inverse of the header layout — decrypts a `.sgz` back to its raw ZIP buffer.
+// Inverse of the header layout - decrypts a `.sgz` back to its raw ZIP buffer.
 // Provided so the matching importer (and tests) can round-trip without guessing
 // the framing. Throws on a wrong password / tampered file (GCM tag mismatch).
 async function decryptArchive(filePath, password) {
@@ -105,22 +105,22 @@ async function decryptArchive(filePath, password) {
   try {
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch (e) {
-    throw new Error('Could not decrypt — wrong password or the archive is corrupted.');
+    throw new Error('Could not decrypt - wrong password or the archive is corrupted.');
   }
 }
 
 // ---------------------------------------------------------------------------
-// Softglaze Pro — Workspace backup/restore (Phase 6)
+// Softglaze Pro - Workspace backup/restore (Phase 6)
 //
 // A workspace backup bundles the whole SQLite database file plus a snapshot of
-// the Setting rows into one passphrase-encrypted file — so an operator can move
+// the Setting rows into one passphrase-encrypted file - so an operator can move
 // or recover their entire workspace, not just a single profile's cache. It is a
 // sibling of the .sgz profile archive and reuses the same crypto (scrypt +
 // AES-256-GCM), with its own magic so the two can't be confused.
 //
 // Unlike the profile archive (which streams a multi-GB cache directory), a
 // workspace payload is small (a DB + settings), so it is built as a single
-// self-contained, in-memory envelope — no ZIP, no archiver/extract-zip
+// self-contained, in-memory envelope - no ZIP, no archiver/extract-zip
 // dependency, fully unit-testable:
 //
 //   plaintext = JSON.stringify({ format:'sgzw1', kind:'workspace', exportedAt,
@@ -129,7 +129,7 @@ async function decryptArchive(filePath, password) {
 //
 // restoreWorkspaceArchive() verifies the GCM tag (decipher.final throws on a
 // wrong password / tampered file) and returns the decoded payload BEFORE the
-// caller touches any live file — so a bad backup can never overwrite a good DB.
+// caller touches any live file - so a bad backup can never overwrite a good DB.
 // ---------------------------------------------------------------------------
 const WS_MAGIC = Buffer.from('SGZW1');
 
@@ -182,7 +182,7 @@ async function restoreWorkspaceArchive(filePath, password) {
   try {
     plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch (e) {
-    throw new Error('Could not decrypt — wrong password or the backup is corrupted.');
+    throw new Error('Could not decrypt - wrong password or the backup is corrupted.');
   }
   let payload;
   try {

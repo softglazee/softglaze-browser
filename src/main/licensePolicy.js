@@ -1,6 +1,6 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze — license lifecycle state machine (Phase 8). Pure + dependency-free
+// Softglaze - license lifecycle state machine (Phase 8). Pure + dependency-free
 // so it can be unit-tested directly (test/licensePolicy.test.js), the same seam
 // pattern as teamPolicy.js / syncPolicy.js. The Electron/DB side (ipcHandlers.js)
 // feeds it raw values and acts on the result (persisting the owner ban state,
@@ -8,13 +8,13 @@
 //
 // States, evaluated against the license's `trialEndsAt` boundary (which the paid
 // flow also advances, so a lapsed paid licence falls through the same grace→ban):
-//   paid      — type 'paid' and now <= ends
-//   trialing  — type 'trial' and now <= ends
-//   grace     — now within `graceDays` after ends (app works, but nags)
-//   banned    — past ends + graceDays (and not paid)
+//   paid      - type 'paid' and now <= ends
+//   trialing  - type 'trial' and now <= ends
+//   grace     - now within `graceDays` after ends (app works, but nags)
+//   banned    - past ends + graceDays (and not paid)
 //
 // HONEST CAVEAT: this is local-first and therefore bypassable (editing the SQLite
-// file or the system clock). It's the UX + best-effort gate, not unbreakable DRM —
+// file or the system clock). It's the UX + best-effort gate, not unbreakable DRM -
 // real enforcement needs a signed, server-time licensing backend.
 // ---------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ function ceilDays(ms) {
 }
 
 // Compute the current license state. `now` is supplied (and should already be the
-// tamper-clamped value — see clampNow) so this stays pure and deterministic.
+// tamper-clamped value - see clampNow) so this stays pure and deterministic.
 function computeLicenseState({ type, trialEndsAt, now, graceDays = 3 } = {}) {
   const ends = toMs(trialEndsAt);
   const nowMs = toMs(now) ?? 0;
@@ -46,7 +46,7 @@ function computeLicenseState({ type, trialEndsAt, now, graceDays = 3 } = {}) {
 
   if (ends == null) {
     // No expiry recorded. audit: a non-paid licence here previously became an
-    // UNLIMITED 'trialing' state that never reached grace/ban — nulling this one
+    // UNLIMITED 'trialing' state that never reached grace/ban - nulling this one
     // column granted a perpetual trial. Fail closed: a paid licence with no expiry
     // is a valid lifetime licence, but a missing trial boundary is treated as
     // expired (the DB layer always sets trialEndsAt, so this only fires on a
@@ -98,8 +98,8 @@ function clampNow({ now, lastSeenAt, toleranceMs = DAY_MS, maxAdvanceMs = 90 * D
   // audit: cap how far the PERSISTED floor may advance in one step. Previously any
   // forward jump was stored verbatim, so a transient clock spike (BIOS/NTP glitch to
   // e.g. 2030) became a permanent lastSeenAt floor that then evaluated a genuinely
-  // valid paid/trial licence as expired forever — auto-banning a paying customer who
-  // had to manually clear the setting. A jump beyond maxAdvanceMs (90d — well past
+  // valid paid/trial licence as expired forever - auto-banning a paying customer who
+  // had to manually clear the setting. A jump beyond maxAdvanceMs (90d - well past
   // any realistic gap between app opens, well short of a year-scale clock glitch) is
   // capped; the floor still catches up in later opens, and rollback is still held.
   const nextSeen = seen == null ? nowMs

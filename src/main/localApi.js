@@ -1,10 +1,10 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Pro — Local Developer REST API
+// Softglaze Pro - Local Developer REST API
 //
 // A tiny, loopback-only HTTP server that lets power users drive Softglaze
 // programmatically (CI, scripts, orchestration). It is OFF by default and only
-// ever binds to 127.0.0.1 — it is never exposed on the network.
+// ever binds to 127.0.0.1 - it is never exposed on the network.
 //
 // Auth: every protected route requires `Authorization: Bearer sg_…`. We store
 // only the SHA-256 hash of each token (see the ApiToken model), so the request
@@ -48,7 +48,7 @@ function sendJson(res, status, obj) {
 }
 
 // Resolve a Bearer token to its ApiToken row, or null. Best-effort updates
-// lastUsedAt (fire-and-forget — auth must not wait on the write).
+// lastUsedAt (fire-and-forget - auth must not wait on the write).
 async function verifyBearer(req) {
   const auth = String(req.headers['authorization'] || '').trim();
   const m = /^Bearer\s+(.+)$/i.exec(auth);
@@ -78,12 +78,12 @@ async function handleRequest(req, res) {
       return sendJson(res, 403, { error: 'Forbidden', message: 'Invalid Host header.' });
     }
 
-    // Health probe — unauthenticated, so scripts can detect the server is up.
+    // Health probe - unauthenticated, so scripts can detect the server is up.
     if (req.method === 'GET' && url.pathname === '/api/v1/health') {
       return sendJson(res, 200, { ok: true, service: 'Softglaze Local API', version: 'v1' });
     }
 
-    // GET /api/v1/profiles  — list current profile configurations (Bearer auth).
+    // GET /api/v1/profiles  - list current profile configurations (Bearer auth).
     if (req.method === 'GET' && url.pathname === '/api/v1/profiles') {
       const token = await verifyBearer(req);
       if (!token) return sendJson(res, 401, { error: 'Unauthorized', message: 'A valid Bearer API token is required.' });
@@ -95,7 +95,7 @@ async function handleRequest(req, res) {
       }
     }
 
-    // POST /api/v1/profiles/:id/start  — launch a profile by id (Bearer auth).
+    // POST /api/v1/profiles/:id/start  - launch a profile by id (Bearer auth).
     // Returns the WebDriver/CDP `wsEndpoint` so callers can attach Playwright,
     // Puppeteer, or a CDP-speaking Selenium driver directly to the container.
     if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'v1' && parts[2] === 'profiles' && parts[4] === 'start') {
@@ -180,7 +180,7 @@ async function startIfEnabled() {
   try {
     const cfg = (await readConfigFn()) || {};
     if (cfg.enabled) await start(cfg.port);
-  } catch (e) { /* port busy / config unreadable — stay down */ }
+  } catch (e) { /* port busy / config unreadable - stay down */ }
 }
 
 module.exports = {

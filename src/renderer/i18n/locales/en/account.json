@@ -5,7 +5,7 @@
     "description": "Manage your profile picture, name, email, and password."
   },
   "notice": {
-    "superAdmin": "This is a Super-Admin / source-owner session — there's no editable member record to change here."
+    "superAdmin": "This is a Super-Admin / source-owner session - there's no editable member record to change here."
   },
   "fields": {
     "fullName": "Full name",
@@ -20,7 +20,7 @@
   "avatar": {
     "alt": "avatar",
     "changeTitle": "Change picture",
-    "newSelected": "New picture selected — save to apply.",
+    "newSelected": "New picture selected - save to apply.",
     "notImage": "Please choose an image file.",
     "tooLarge": "That image is larger than 2 MB. Pick a smaller one.",
     "readFailed": "Could not read that image."
@@ -52,7 +52,7 @@
     "title": "Confirm it's you",
     "codeSentTo": "Code sent to {{email}}",
     "codeLabel": "6-digit code",
-    "devMode": "Dev mode — no email configured. Your code is",
+    "devMode": "Dev mode - no email configured. Your code is",
     "apply": "Verify & apply",
     "resend": "Resend",
     "enterCode": "Enter the 6-digit code.",

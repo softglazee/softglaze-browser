@@ -86,7 +86,7 @@ async function cryptomusGetStatus(cfg, ref) {
   return { status, isFinal: Boolean(r.is_final), paid: status === 'paid' || status === 'paid_over', raw: r };
 }
 
-// Lightweight credential check — list services is a cheap signed call that fails
+// Lightweight credential check - list services is a cheap signed call that fails
 // fast on a bad merchant/key pair.
 async function cryptomusValidate(cfg) {
   try {
@@ -98,7 +98,7 @@ async function cryptomusValidate(cfg) {
 }
 
 // Verify a webhook body (for a future hosted backend). PHP escapes slashes in
-// json_encode; JS does not — so we match by escaping "/" before hashing.
+// json_encode; JS does not - so we match by escaping "/" before hashing.
 function cryptomusVerifyWebhook(cfg, payload) {
   if (!payload || typeof payload !== 'object') return false;
   const received = payload.sign;
@@ -140,7 +140,7 @@ function httpsRequest(method, url, { headers = {}, body = null } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Stripe — hosted Checkout Sessions. The secret key (sk_…) lives on the source
+// Stripe - hosted Checkout Sessions. The secret key (sk_…) lives on the source
 // owner's machine; we create a one-time payment session and poll its
 // payment_status. Stripe uses bracketed form-encoding, not JSON.
 // ---------------------------------------------------------------------------
@@ -213,7 +213,7 @@ async function stripeValidate(cfg) {
 }
 
 // ---------------------------------------------------------------------------
-// PayPal — Orders v2. OAuth client-credentials → create order → buyer approves
+// PayPal - Orders v2. OAuth client-credentials → create order → buyer approves
 // in the browser → we capture on poll. `env` selects live vs sandbox hosts.
 // ---------------------------------------------------------------------------
 function paypalBase(cfg) {
@@ -260,7 +260,7 @@ async function paypalGetStatus(cfg, ref) {
   // The buyer approved in their browser → capture the funds now.
   if (order.status === 'APPROVED') {
     const cap = await httpsRequest('POST', `${paypalBase(cfg)}/v2/checkout/orders/${encodeURIComponent(id)}/capture`, {
-      // PayPal-Request-Id makes the capture idempotent — this runs inside a poll loop, so a
+      // PayPal-Request-Id makes the capture idempotent - this runs inside a poll loop, so a
       // retry must not double-charge / double-capture the same order.
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': `cap-${String(id)}` }, body: {}
     });
@@ -276,13 +276,13 @@ async function paypalValidate(cfg) {
 }
 
 // ---------------------------------------------------------------------------
-// Self-verifying purchase codes — BASE / STANDALONE BUILD ONLY.
+// Self-verifying purchase codes - BASE / STANDALONE BUILD ONLY.
 //
 // A code carries its own short HMAC, validated OFFLINE with a shipped secret.
 // This is inherently best-effort: the secret ships in the binary, so a base build
 // can't make it un-forgeable (that's a property of any fully-offline activation).
 //
-// Tenant-provisioned (licensing-backend) builds DO NOT use this path at all —
+// Tenant-provisioned (licensing-backend) builds DO NOT use this path at all -
 // when tenantConfig().enabled is true, redeem/checkout route to the backend and
 // entitlement comes from a server-signed Ed25519 lease (licenseClient.verifyLease),
 // where the private key never ships. So for production/sold builds, ship a
@@ -312,7 +312,7 @@ function verifyPurchaseCode(code) {
 }
 
 // Runtime adapters. `automated` providers implement createInvoice/getStatus/
-// validate (hosted checkout + poll). `manual` providers have no API — the buyer
+// validate (hosted checkout + poll). `manual` providers have no API - the buyer
 // pays out-of-band and a Super Admin approves the payment in-app.
 const PROVIDERS = {
   cryptomus: { id: 'cryptomus', kind: 'automated', createInvoice: cryptomusCreateInvoice, getStatus: cryptomusGetStatus, validate: cryptomusValidate, verifyWebhook: cryptomusVerifyWebhook },
@@ -322,7 +322,7 @@ const PROVIDERS = {
   manual: { id: 'manual', kind: 'manual' }
 };
 
-// Provider metadata — the single source of truth for the Settings config UI and
+// Provider metadata - the single source of truth for the Settings config UI and
 // for which fields are secret (sealed at rest). `kind: 'manual'` means there is
 // no automated checkout API; Wise has no merchant-checkout API for this use case,
 // so it is offered as a guided bank-transfer with Super-Admin approval.

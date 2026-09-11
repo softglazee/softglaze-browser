@@ -1,14 +1,14 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — Cloud sync transport (REST object-store CLIENT).
+// Softglaze Enterprise - Cloud sync transport (REST object-store CLIENT).
 //
 // Talks to an EXTERNAL, SEPARATE server service that you host yourself: a thin
 // object store that accepts PUT/GET of opaque blobs by key, authorized with a
 // Bearer token. This client only ever sends/receives the already-encrypted sync
-// envelope produced by CloudSyncEngine — the server stores opaque ciphertext and
+// envelope produced by CloudSyncEngine - the server stores opaque ciphertext and
 // can never read it (zero-knowledge).
 //
-// Server contract (host this separately — it is NOT part of this app):
+// Server contract (host this separately - it is NOT part of this app):
 //   PUT {baseUrl}/{key}  Authorization: Bearer <token>  body = opaque bytes  -> 2xx
 //   GET {baseUrl}/{key}  Authorization: Bearer <token>                       -> 200 + bytes | 404
 //
@@ -52,11 +52,11 @@ class RestBucketTransport {
       let u;
       try { u = new URL(this._url(key)); } catch (e) { return reject(new Error('Invalid sync endpoint URL.')); }
       // Never send the bucket Bearer token in cleartext over http:// (except to a local dev
-      // endpoint) — it would be sniffable end-to-end and grants full read/write of the store.
+      // endpoint) - it would be sniffable end-to-end and grants full read/write of the store.
       const host = String(u.hostname || '').replace(/^\[|\]$/g, '');
       const isLocal = host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' || host === 'localhost';
       if (u.protocol === 'http:' && this.token && !isLocal) {
-        return reject(new Error('Refusing to send the sync auth token over an unencrypted http:// endpoint — use https.'));
+        return reject(new Error('Refusing to send the sync auth token over an unencrypted http:// endpoint - use https.'));
       }
       const lib = u.protocol === 'http:' ? http : https;
       const headers = { 'Content-Type': 'application/octet-stream' };

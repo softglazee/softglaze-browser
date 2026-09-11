@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component {
         <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-12 text-center">
           <div className="text-lg font-semibold">Something went wrong on this page.</div>
           <div className="max-w-md text-sm opacity-70">
-            The rest of the app is still running — try again, or open another page from the sidebar.
+            The rest of the app is still running - try again, or open another page from the sidebar.
           </div>
           <div className="max-w-md break-all text-xs opacity-50">{msg}</div>
           <button

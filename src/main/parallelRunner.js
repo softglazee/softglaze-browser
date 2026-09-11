@@ -1,17 +1,17 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — Parallel Macro Runner (pure orchestration)
+// Softglaze Enterprise - Parallel Macro Runner (pure orchestration)
 //
 // Runs ONE macro across MANY profiles with a hard concurrency cap, streaming a
 // REDACTED live status of each profile's run. Every side-effect (launch / run /
 // close / emit) is injected, so:
 //   • this module is unit-testable without Electron or a real browser, and
-//   • the live stream can never accidentally carry credentials — frame payloads
+//   • the live stream can never accidentally carry credentials - frame payloads
 //     are built from a strict whitelist of safe fields and the caller additionally
 //     routes them through the relay's `sanitizeFrame` (defense-in-depth).
 //
 // It reuses the existing primitives via `deps` (launchProfileSession/runMacro/
-// closeProfileSession in production) — it does NOT reimplement launching, the
+// closeProfileSession in production) - it does NOT reimplement launching, the
 // macro engine, history, or an event bus. The relay framing carries progress.
 // ---------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ function firstError(res) {
 
 // Substitute {{key}} placeholders in a macro's `url` / `value` fields from a data
 // row. Header names may contain spaces, so the key is everything between the
-// braces (trimmed). Returns a shallow copy per step — the originals are never
+// braces (trimmed). Returns a shallow copy per step - the originals are never
 // mutated (the same macro object is reused across rows).
 function applyVariables(steps, vars) {
   const list = Array.isArray(steps) ? steps : [];

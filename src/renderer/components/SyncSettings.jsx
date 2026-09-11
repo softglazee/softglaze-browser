@@ -104,7 +104,7 @@ export default function SyncSettings() {
       {/* Status line */}
       {status?.configured && (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
-          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statEndpoint')}</div><div className="text-foreground truncate font-mono">{status.endpointHost || '—'}</div></div>
+          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statEndpoint')}</div><div className="text-foreground truncate font-mono">{status.endpointHost || '-'}</div></div>
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statPending')}</div><div className="text-foreground">{t('sync.pendingProfiles', { count: status.pendingCount })}</div></div>
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statLastSynced')}</div><div className="text-foreground">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : t('sync.never')}</div></div>
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statNamespace')}</div><div className="text-foreground truncate font-mono">{status.namespace}</div></div>

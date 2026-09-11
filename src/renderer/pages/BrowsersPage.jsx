@@ -247,7 +247,7 @@ export default function BrowsersPage() {
 
       {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400">{err}</div>}
 
-      {/* Anti-detect engine (fingerprint-chromium) — the native-spoofing Chromium */}
+      {/* Anti-detect engine (fingerprint-chromium) - the native-spoofing Chromium */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
           <div className="w-10 h-10 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #06b6d4 12%, transparent)', border: '1px solid color-mix(in srgb, #06b6d4 22%, transparent)' }}>
@@ -260,7 +260,7 @@ export default function BrowsersPage() {
                 ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><Check className="w-3 h-3" /> Installed</span>
                 : <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Not installed</span>}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">fingerprint-chromium — spoofs canvas / WebGL / UA / platform / timezone natively, hides webdriver, blocks the WebRTC leak. Turn it on in Settings → Browser.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">fingerprint-chromium - spoofs canvas / WebGL / UA / platform / timezone natively, hides webdriver, blocks the WebRTC leak. Turn it on in Settings → Browser.</p>
           </div>
         </div>
         <div className="p-4">

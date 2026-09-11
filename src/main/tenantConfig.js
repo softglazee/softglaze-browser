@@ -4,7 +4,7 @@
 // The per-tenant build pipeline overwrites tenant.config.json with the merchant's
 // values (from `provision-tenant.js`). The BASE build ships empty values, which
 // means `enabled` is false and the app keeps its existing local trial/license
-// behavior — the licensing backend is simply inactive.
+// behavior - the licensing backend is simply inactive.
 //
 // Env vars override the file (handy for dev/testing without rebaking):
 //   SG_TENANT_ID, SG_API_BASE_URL, SG_TENANT_PUBLIC_KEY
@@ -23,7 +23,7 @@ function sanitizeSecureUrl(raw, label) {
   const host = u.hostname.toLowerCase();
   const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
   if (u.protocol === 'https:' || (u.protocol === 'http:' && isLocal)) return s;
-  console.warn(`[tenantConfig] ignoring non-https ${label} ("${u.protocol}//…") — secrets must not travel in cleartext.`);
+  console.warn(`[tenantConfig] ignoring non-https ${label} ("${u.protocol}//…") - secrets must not travel in cleartext.`);
   return '';
 }
 

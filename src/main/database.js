@@ -24,7 +24,7 @@ function normalizeSqliteFileUrl(filePath) {
 
 // --- encryption metadata sidecar (plaintext, non-secret: just a flag) ----------
 // Stored OUTSIDE the database so boot can learn "is the DB encrypted?" before
-// opening Prisma. It holds no password material — the .enc is self-authenticating
+// opening Prisma. It holds no password material - the .enc is self-authenticating
 // via its GCM tag, so there is nothing secret to keep here.
 function readSidecar() {
   try {
@@ -90,7 +90,7 @@ function getPrisma() {
   }
 
   // Never open (and thereby auto-create) the SQLite file while it is encrypted and
-  // locked, or mid-migration — that would spawn an empty plaintext DB beside the
+  // locked, or mid-migration - that would spawn an empty plaintext DB beside the
   // real ciphertext.
   if (dbEnc.enabled && !dbEnc.unlocked) {
     const err = new Error('The database is locked.');
@@ -98,7 +98,7 @@ function getPrisma() {
     throw err;
   }
   if (migrating) {
-    const err = new Error('The database is busy — an encryption change is in progress.');
+    const err = new Error('The database is busy - an encryption change is in progress.');
     err.code = 'DATABASE_BUSY';
     throw err;
   }
@@ -134,7 +134,7 @@ function getDbEncryptionInfo() {
 // sidecars keeps the encrypted envelope to just the main file.
 async function checkpointAndDisconnect() {
   if (prisma) {
-    try { await prisma.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);'); } catch (e) { /* not in WAL mode — fine */ }
+    try { await prisma.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);'); } catch (e) { /* not in WAL mode - fine */ }
   }
   await disconnectPrisma();
   if (runtime) {
@@ -148,7 +148,7 @@ function unlockError(e) {
   // The .enc is self-authenticating: a GCM failure means the password is wrong or
   // the file is corrupted. We can't distinguish the two, so we say both and let
   // the UI offer "try again" and "restore from backup".
-  const err = new Error('Incorrect password — or the database file is corrupted. If you are sure the password is right, restore from a backup.');
+  const err = new Error('Incorrect password - or the database file is corrupted. If you are sure the password is right, restore from a backup.');
   err.code = 'DB_UNLOCK_FAILED';
   err.cause = e;
   return err;
@@ -170,7 +170,7 @@ async function unlockEncryptedDb(password) {
   const key = await dbCrypto.deriveKey(password, salt, version);
 
   // A plaintext working file present alongside the .enc can only be a crash
-  // leftover (a clean quit shreds it) — and it is the NEWEST copy. Keep it, but
+  // leftover (a clean quit shreds it) - and it is the NEWEST copy. Keep it, but
   // still authenticate the password by decrypting the .enc into a throwaway temp
   // so a wrong password can't be accepted and later re-encrypt with a bad key.
   const leftover = fs.existsSync(dbPath) && dbCrypto.looksLikeSqlite(dbPath);
@@ -207,7 +207,7 @@ async function relockEncryptedDb() {
   await checkpointAndDisconnect();
   if (fs.existsSync(dbPath)) {
     // Re-encrypt with the version the file was opened as (no forced in-place
-    // re-key — the held key was derived with that version's cost).
+    // re-key - the held key was derived with that version's cost).
     await dbCrypto.encryptDbFile(dbPath, encPath, dbEnc.key, dbEnc.salt, dbEnc.version || dbCrypto.LEGACY_VERSION);
     await dbCrypto.secureUnlink(dbPath);
   }
@@ -247,7 +247,7 @@ async function enableDbEncryption(password) {
     await dbCrypto.secureUnlink(verifyTmp);
     if (!lossless) {
       await dbCrypto.secureUnlink(encPath);
-      throw new Error('Encryption verification failed — the database was left unchanged.');
+      throw new Error('Encryption verification failed - the database was left unchanged.');
     }
 
     writeSidecar({ enabled: true, version });
@@ -256,7 +256,7 @@ async function enableDbEncryption(password) {
     dbEnc.key = key;
     dbEnc.salt = salt;
     dbEnc.version = version;
-    // Encryption verified — the plaintext safety backup is no longer needed (and
+    // Encryption verified - the plaintext safety backup is no longer needed (and
     // keeping it would defeat the purpose).
     await dbCrypto.secureUnlink(backupPath);
     return getDbEncryptionInfo();
@@ -272,12 +272,12 @@ async function enableDbEncryption(password) {
 // Reverse of enable. The live working file is ALREADY plaintext and current, so
 // disabling just stops encrypting at rest: verify the password against the .enc,
 // clear the sidecar, and shred the ciphertext. We never decrypt the (older) .enc
-// over the (newer) working file — that would lose this session's changes.
+// over the (newer) working file - that would lose this session's changes.
 async function disableDbEncryption(password) {
   if (!dbEnc.enabled) return getDbEncryptionInfo();
   const { dbPath, encPath } = runtime;
   if (!fs.existsSync(dbPath) || !dbCrypto.looksLikeSqlite(dbPath)) {
-    throw new Error('The working database is not available — cannot safely disable encryption right now.');
+    throw new Error('The working database is not available - cannot safely disable encryption right now.');
   }
 
   // Authenticate the password against the at-rest ciphertext.
@@ -350,7 +350,7 @@ async function rekeyEncryptedDb(newPassword) {
 // Split a migration SQL blob into individual statements. Quote-aware: a ';'
 // inside a '...' string literal does NOT end a statement (SQLite escapes an inner
 // quote by doubling it: ''). Comment lines are stripped by the caller before this.
-// NOTE: trigger bodies (CREATE TRIGGER ... BEGIN ...; ...; END) are not handled —
+// NOTE: trigger bodies (CREATE TRIGGER ... BEGIN ...; ...; END) are not handled -
 // author such a migration as a single statement, or split it manually.
 function splitSqlStatements(sql) {
   const out = [];
@@ -430,7 +430,7 @@ async function applyMigrations(db) {
       if (fs.existsSync(sqlPath)) {
         const sqlContent = fs.readFileSync(sqlPath, 'utf8');
 
-        // Strip full-line SQL comments first — a comment-bearing statement makes
+        // Strip full-line SQL comments first - a comment-bearing statement makes
         // the SQLite driver throw SQLITE_MISUSE (code 21). Then split into single
         // statements (the driver executes one statement per call).
         const cleaned = sqlContent
@@ -445,7 +445,7 @@ async function applyMigrations(db) {
             try {
               await tx.$executeRawUnsafe(statement + ';');
             } catch (e) {
-              // Idempotent DDL tolerance — NARROW (audit). A statement that is silently
+              // Idempotent DDL tolerance - NARROW (audit). A statement that is silently
               // skipped while the migration is still recorded as "applied" is how a
               // table-rebuild (CREATE new_X → INSERT SELECT → DROP X → RENAME) can
               // drop real rows: if the CREATE is swallowed, the later DROP/RENAME run
@@ -455,7 +455,7 @@ async function applyMigrations(db) {
               //   • "duplicate column name" on ALTER TABLE ... ADD COLUMN (SQLite has
               //     no ADD COLUMN IF NOT EXISTS), and
               //   • "already exists" on CREATE INDEX / TRIGGER (re-create is a no-op).
-              // Everything else — crucially "already exists" on CREATE TABLE — is a HARD
+              // Everything else - crucially "already exists" on CREATE TABLE - is a HARD
               // failure: throwing rolls back the whole $transaction, so the migration is
               // NOT recorded (and is retried next boot) rather than committing a
               // half-applied schema or a data-losing rebuild.
@@ -505,7 +505,7 @@ module.exports = {
   getPrisma,
   bootstrapDatabase,
   disconnectPrisma,
-  // Phase 6 — at-rest encryption lifecycle
+  // Phase 6 - at-rest encryption lifecycle
   isDbEncryptionEnabled,
   isDbUnlocked,
   getDbEncryptionInfo,

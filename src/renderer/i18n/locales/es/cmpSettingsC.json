@@ -94,7 +94,7 @@
       "gatewayHostLabel": "Host de la pasarela",
       "portLabel": "Puerto",
       "gatewayHint": "Predefinido para el plan ISP de larga duración (isp.smartproxy.net:3100). Si tu panel de smartproxy.org → Proxy Setup muestra un host:port diferente, pégalo aquí para sobrescribirlo.",
-      "apiUrlLabel": "URL de API — obligatoria, desde tu panel",
+      "apiUrlLabel": "URL de API - obligatoria, desde tu panel",
       "apiUrlHintBefore": "Pega la URL desde tu panel de ShopSocks5 → guía de la API SOCKS5. Ya contiene tu token. Coloca ",
       "apiUrlHintAfter": " donde corresponde el código de país para filtrar por la selección de arriba.",
       "pullProxies": "Extraer proxies"
@@ -110,7 +110,7 @@
       "checkProxy": "Comprobar proxy",
       "ok": "OK",
       "failed": "Error",
-      "tip": "Consejo: una pasarela rotativa usa el mismo host:port en cada sesión — tu usuario/contraseña (o token de sesión fija) selecciona la IP de salida.",
+      "tip": "Consejo: una pasarela rotativa usa el mismo host:port en cada sesión - tu usuario/contraseña (o token de sesión fija) selecciona la IP de salida.",
       "saveCreds": "Guardar credenciales",
       "credsSaved": "Guardado"
     },
@@ -204,14 +204,14 @@
     "geoHints": {
       "apify": "Apify residential enruta a través de una sola pasarela (proxy.apify.com:8000); el país y una sesión fija se codifican en el usuario. Cada extracción genera esa cantidad de IP residenciales fijas que puedes asignar a perfiles. Usa la contraseña de Apify Console → Proxy → ajustes HTTP.",
       "smartproxyorg": "Smartproxy.org (ISP de larga duración) enruta a través de isp.smartproxy.net:3100 e incorpora el área (país) + estado/ciudad opcionales + una duración/sesión fija en el usuario del proxy. Introduce el usuario de tu subcuenta (smart-…) y su contraseña. \"Mantener la misma IP\" define cuánto tiempo permanece fija una IP de salida (de 5 min hasta 24 h); déjalo en \"Diferente cada vez\" con una sesión en blanco para generar varias IP rotativas. Si tu panel muestra un host:port diferente, sobrescríbelo abajo.",
-      "shopsocks5": "ShopSocks5 extrae tu lista SOCKS5 (o HTTPS) adquirida mediante su API, filtrada por el país/estado/ciudad elegidos. La API se autentica con el usuario/correo de tu cuenta + el token de API JUNTOS — el token solo devuelve “User or Api Token incorrect”. Elige el Plan que coincida con tu suscripción (Premium / Lista / Diario).",
+      "shopsocks5": "ShopSocks5 extrae tu lista SOCKS5 (o HTTPS) adquirida mediante su API, filtrada por el país/estado/ciudad elegidos. La API se autentica con el usuario/correo de tu cuenta + el token de API JUNTOS - el token solo devuelve “User or Api Token incorrect”. Elige el Plan que coincida con tu suscripción (Premium / Lista / Diario).",
       "anyip": "anyip.io se enruta por una única pasarela (portal.anyip.io:1080) y codifica el tipo (Residencial/Móvil), el país, un nombre de sesión fija opcional y una duración en el usuario del proxy. Conecta pegando tu Usuario (user_…) + Contraseña del proxy desde el panel, O introduciendo una clave API + ID de equipo para aprovisionar una cuenta automáticamente. Una sesión en blanco con “IP diferente cada vez” genera IP rotativas; un nombre de sesión fija mantiene una sola IP. Sobrescribe la pasarela si tu panel muestra un puerto personalizado."
     },
     "notConnected": {
-      "body": "{{provider}} todavia no tiene importacion automatica, asi que introduce los datos de tu panel de {{provider}} aqui abajo. Ya les hemos escrito para una integracion nativa.",
+      "body": "{{provider}} todavía no admite importación automática. Introduce los datos de tu panel de {{provider}} aquí abajo para añadir sus proxies manualmente.",
       "apiKeyLabel": "Clave API o token",
       "apiKeyPlaceholder": "Pega tu clave API de {{provider}}",
-      "apiKeyHint": "Se guarda cifrada en este equipo para que este lista cuando llegue la integracion."
+      "apiKeyHint": "Se guarda cifrada en este equipo, lista para un conector directo."
     },
     "integratedCount": "{{connected}} de {{total}} conectados"
   }

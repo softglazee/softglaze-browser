@@ -50,13 +50,13 @@
       "title": "Welcome to SoftGlaze",
       "subtitle": "A quick 3-step setup gets you to your first profile. You can skip any step.",
       "getStarted": "Get started",
-      "stepEmail": "Email (SMTP) — optional, for OTP codes",
-      "stepProxy": "Your first proxy — optional",
+      "stepEmail": "Email (SMTP) - optional, for OTP codes",
+      "stepProxy": "Your first proxy - optional",
       "stepProfile": "Your first browser profile"
     },
     "smtp": {
       "title": "Email (SMTP)",
-      "subtitle": "Optional — lets the app send verification codes. You can set this later in Settings.",
+      "subtitle": "Optional - lets the app send verification codes. You can set this later in Settings.",
       "host": "SMTP host",
       "hostPlaceholder": "smtp.example.com",
       "port": "Port",
@@ -68,7 +68,7 @@
     },
     "proxy": {
       "title": "Add your first proxy",
-      "subtitle": "Optional — give each identity its own network. You can add more in the Proxy pool.",
+      "subtitle": "Optional - give each identity its own network. You can add more in the Proxy pool.",
       "type": "Type",
       "host": "Host",
       "hostPlaceholder": "1.2.3.4",
@@ -89,7 +89,7 @@
       "deviceType": "Device type",
       "desktop": "Desktop",
       "mobile": "Mobile (Android)",
-      "mobileNote": "Android is emulated on the desktop engine — coherent UA, touch, screen & GPU, but not a real device.",
+      "mobileNote": "Android is emulated on the desktop engine - coherent UA, touch, screen & GPU, but not a real device.",
       "proxyAttached": "Your new proxy will be attached to this profile."
     }
   }

@@ -4,7 +4,7 @@
     "title": "Gestionar cookies",
     "tabExport": "Exportar",
     "tabImport": "Importar",
-    "runningHint": "El perfil debe estar en ejecución — las cookies se leen y escriben en su sesión de navegador activa.",
+    "runningHint": "El perfil debe estar en ejecución - las cookies se leen y escriben en su sesión de navegador activa.",
     "exportButton": "Exportar desde la sesión activa",
     "copyClipboard": "Copiar al portapapeles",
     "copied": "¡Copiado!",
@@ -93,7 +93,7 @@
     "coresValue_one": "{{count}} núcleo",
     "coresValue_other": "{{count}} núcleos",
     "gbValue": "{{gb}} GB",
-    "deviceMemoryValue": "{{gb}} GB — lo que ven los sitios (Chrome limita navigator.deviceMemory a 8)",
+    "deviceMemoryValue": "{{gb}} GB - lo que ven los sitios (Chrome limita navigator.deviceMemory a 8)",
     "footerValues": "Los valores reflejan la configuración del perfil.",
     "footerEngineNote": "User-Agent “‹engine›” significa que la versión sigue el Chromium incluido para mantener la coherencia de la huella digital."
   },

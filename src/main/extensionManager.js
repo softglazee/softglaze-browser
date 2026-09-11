@@ -23,7 +23,7 @@ const MAX_CRX_BYTES = 128 * 1024 * 1024;
 // missing optional package degrades CRX install instead of bricking app startup
 // (extensionManager is required at boot by ipcHandlers).
 
-// Chrome Web Store IDs are exactly 32 chars from the alphabet a–p (a base-16
+// Chrome Web Store IDs are exactly 32 chars from the alphabet a-p (a base-16
 // encoding of the public-key hash).
 const CHROME_ID_RE = /^[a-p]{32}$/;
 
@@ -38,11 +38,11 @@ const SEED_FLAG = 'recommendedExtensionsSeeded_v3'; // v3: swapped uBlock + Swit
 // FIRST install and never revisits it, so a recommended extension that was installed
 // while its default was `enable:false` (historically uBlock, then SwitchyOmega) stays
 // dormant even after the default is flipped to `enable:true`. reconcileRecommendedExtensions()
-// runs ONCE to force-enable those, then locks — so a user's later manual disable is
+// runs ONCE to force-enable those, then locks - so a user's later manual disable is
 // respected. Bump the suffix to re-run the reconcile after changing the defaults again.
 const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v2'; // v2: re-run after the MV3 uBlock/SwitchyOmega swap
 
-// The SoftGlaze first-party extension — always injected into every profile and
+// The SoftGlaze first-party extension - always injected into every profile and
 // (best-effort) force-installed from the Web Store so active users are counted.
 const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 
@@ -91,7 +91,7 @@ function downloadUrlFor(id) {
 function crxToZip(buf) {
   const PK = Buffer.from([0x50, 0x4b, 0x03, 0x04]); // local file header "PK\x03\x04"
   if (buf.length < 16 || buf.toString('ascii', 0, 4) !== 'Cr24') {
-    // Not a CRX wrapper — maybe the CDN already handed us a plain ZIP.
+    // Not a CRX wrapper - maybe the CDN already handed us a plain ZIP.
     const at = buf.indexOf(PK);
     if (at >= 0) return buf.subarray(at);
     throw new Error('Downloaded file is not a valid CRX or ZIP package.');
@@ -230,7 +230,7 @@ async function installById(chromeId, { isGlobal = true, nameFallback = null } = 
 
 // One-time, best-effort install of the recommended team extensions. Idempotent:
 // already-present extensions are skipped, and the run only locks (sets the seed
-// flag) once the full set is in place — so an offline first launch simply retries
+// flag) once the full set is in place - so an offline first launch simply retries
 // on the next boot instead of permanently skipping the seed.
 async function seedRecommendedExtensions() {
   const db = getPrisma();
@@ -254,7 +254,7 @@ async function seedRecommendedExtensions() {
   if (installed + present === RECOMMENDED_EXTENSIONS.length) {
     await db.setting.upsert({ where: { key: SEED_FLAG }, create: { key: SEED_FLAG, value: 'true' }, update: { value: 'true' } }).catch(() => {});
   }
-  if (installed || failed) console.log(`[ext-seed] done — ${installed} installed, ${present} present, ${failed} failed`);
+  if (installed || failed) console.log(`[ext-seed] done - ${installed} installed, ${present} present, ${failed} failed`);
   return { installed, present, failed };
 }
 
@@ -271,7 +271,7 @@ async function reconcileRecommendedExtensions() {
   const wantIds = RECOMMENDED_EXTENSIONS.filter((r) => r.enable).map((r) => r.chromeId);
   let enabled = 0;
   try {
-    // Flip only the recommended rows that are currently OFF — never touches an already
+    // Flip only the recommended rows that are currently OFF - never touches an already
     // -global row, and never touches a non-recommended extension the user installed.
     const res = await db.extension.updateMany({
       where: { chromeId: { in: wantIds }, isGlobal: false },
@@ -279,7 +279,7 @@ async function reconcileRecommendedExtensions() {
     });
     enabled = (res && res.count) || 0;
   } catch (e) {
-    // DB not ready / transient error — leave the flag unset so the next launch retries.
+    // DB not ready / transient error - leave the flag unset so the next launch retries.
     console.warn(`[ext-reconcile] failed: ${(e && e.message) || e}`);
     return { failed: true };
   }

@@ -50,13 +50,13 @@
       "title": "Bienvenido a SoftGlaze",
       "subtitle": "Una configuración rápida de 3 pasos te lleva a tu primer perfil. Puedes omitir cualquier paso.",
       "getStarted": "Empezar",
-      "stepEmail": "Correo electrónico (SMTP) — opcional, para códigos OTP",
-      "stepProxy": "Tu primer proxy — opcional",
+      "stepEmail": "Correo electrónico (SMTP) - opcional, para códigos OTP",
+      "stepProxy": "Tu primer proxy - opcional",
       "stepProfile": "Tu primer perfil de navegador"
     },
     "smtp": {
       "title": "Correo electrónico (SMTP)",
-      "subtitle": "Opcional — permite que la aplicación envíe códigos de verificación. Puedes configurarlo más tarde en Configuración.",
+      "subtitle": "Opcional - permite que la aplicación envíe códigos de verificación. Puedes configurarlo más tarde en Configuración.",
       "host": "Servidor SMTP",
       "hostPlaceholder": "smtp.example.com",
       "port": "Puerto",
@@ -68,7 +68,7 @@
     },
     "proxy": {
       "title": "Añade tu primer proxy",
-      "subtitle": "Opcional — da a cada identidad su propia red. Puedes añadir más en el grupo de proxies.",
+      "subtitle": "Opcional - da a cada identidad su propia red. Puedes añadir más en el grupo de proxies.",
       "type": "Tipo",
       "host": "Servidor",
       "hostPlaceholder": "1.2.3.4",
@@ -89,7 +89,7 @@
       "deviceType": "Tipo de dispositivo",
       "desktop": "Escritorio",
       "mobile": "Móvil (Android)",
-      "mobileNote": "Android se emula en el motor de escritorio — UA, táctil, pantalla y GPU coherentes, pero no es un dispositivo real.",
+      "mobileNote": "Android se emula en el motor de escritorio - UA, táctil, pantalla y GPU coherentes, pero no es un dispositivo real.",
       "proxyAttached": "Tu nuevo proxy se asociará a este perfil."
     }
   }

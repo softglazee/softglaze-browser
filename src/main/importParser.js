@@ -118,7 +118,7 @@ function detectHeaderRowIndex(rows) {
   const maxScan = Math.min(rows.length, 30);
 
   // Scan from the VERY FIRST row. Some spreadsheet templates put the column
-  // titles on row 1 with instruction rows below them and data starting on row 4 —
+  // titles on row 1 with instruction rows below them and data starting on row 4 -
   // the old code started at row 3 and treated a data row as the header, which is
   // exactly why "Could not detect a profile title column" was thrown.
   let best = -1, bestScore = 0;
@@ -307,7 +307,7 @@ function assertImportFileSane(filePath) {
     }
   } catch (e) {
     if (e && /too large/.test(String(e.message))) throw e; // re-throw our own cap error
-    // stat failure (missing/locked) surfaces later in readFile — don't mask it here.
+    // stat failure (missing/locked) surfaces later in readFile - don't mask it here.
   }
 }
 

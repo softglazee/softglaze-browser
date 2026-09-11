@@ -1,12 +1,12 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — Cloud sync conflict policy (PURE).
+// Softglaze Enterprise - Cloud sync conflict policy (PURE).
 //
 // Decides, per profile, whether to push (local -> remote), pull (remote ->
 // local), do nothing, or flag a conflict. Resolution is last-write-wins by
 // updatedAt, but a genuine divergence (both sides changed since the last sync)
 // is reported as `conflict` so the UI can surface it instead of silently
-// clobbering the loser. No Electron / DB / transport — unit-testable in isolation
+// clobbering the loser. No Electron / DB / transport - unit-testable in isolation
 // (same seam as teamPolicy / parallelRunner / syncTransport).
 // ---------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ function toMs(value) {
 //
 // Returns { action: 'push'|'pull'|'noop'|'conflict', resolution: 'push'|'pull'|null, reason }.
 // `resolution` is the concrete operation to perform (LWW winner) for the unambiguous
-// cases. For a genuine conflict (both sides changed) resolution is null — the caller must
+// cases. For a genuine conflict (both sides changed) resolution is null - the caller must
 // resolve it explicitly rather than trust a wall-clock winner.
 function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   const local = toMs(localUpdatedAt);
@@ -34,7 +34,7 @@ function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   // Nothing remote yet -> first upload.
   if (remote == null) return { action: 'push', resolution: 'push', reason: 'remote-absent' };
 
-  // Prefer the monotonic `rev` for remote change detection — it is immune to clock
+  // Prefer the monotonic `rev` for remote change detection - it is immune to clock
   // skew. With wall-clock only, a device whose clock lags could write a remote
   // updatedAt <= our syncedAt; we'd read remoteChanged=false and, if we also
   // changed, silently push over its genuine change (the conflict never even fires).

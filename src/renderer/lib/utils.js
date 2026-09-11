@@ -6,7 +6,7 @@ export function cn(...inputs) {
 }
 
 export function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   try {
     return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
   } catch {
@@ -14,7 +14,7 @@ export function formatDateTime(value) {
   }
 }
 
-export function safeText(value, fallback = '—') {
+export function safeText(value, fallback = '-') {
   if (value === null || value === undefined || value === '') return fallback;
   return String(value);
 }

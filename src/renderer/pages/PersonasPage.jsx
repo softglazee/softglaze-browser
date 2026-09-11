@@ -49,7 +49,7 @@ const FIELD_DEFS = [
 ];
 const FIELD_LABEL = Object.fromEntries(FIELD_DEFS.map((f) => [f.key, f.label]));
 
-// Form layout — fields grouped into sections (mirrors the schema's natural shape).
+// Form layout - fields grouped into sections (mirrors the schema's natural shape).
 const FORM_GROUPS = [
   { title: 'Identity', fields: ['firstName', 'lastName', 'dateOfBirth', 'phone'] },
   { title: 'Account', fields: ['email', 'username', 'password'] },
@@ -73,12 +73,12 @@ function autoGuessMapping(headers) {
   const nh = headers.map(norm);
   for (const def of FIELD_DEFS) map[def.key] = '';
   const claim = (def, idx) => { map[def.key] = headers[idx]; used.add(headers[idx]); };
-  // Pass 1 — EXACT alias, for every field, before any fuzzy matching happens.
+  // Pass 1 - EXACT alias, for every field, before any fuzzy matching happens.
   // The two passes used to be interleaved per field, so a field earlier in
   // FIELD_DEFS could fuzzy-steal a header that a later field matched exactly. The
   // fuzzy test is bidirectional (`h.includes(na) || na.includes(h)`), so a
-  // "Company address" column was swallowed by addressLine1 — whose 'address' alias
-  // is a substring of it — and the company address silently imported into the
+  // "Company address" column was swallowed by addressLine1 - whose 'address' alias
+  // is a substring of it - and the company address silently imported into the
   // persona's HOME street on every bulk import.
   for (const def of FIELD_DEFS) {
     if (map[def.key]) continue;
@@ -88,7 +88,7 @@ function autoGuessMapping(headers) {
       if (i >= 0) { claim(def, i); break; }
     }
   }
-  // Pass 2 — fuzzy contains, only over headers no exact match already claimed.
+  // Pass 2 - fuzzy contains, only over headers no exact match already claimed.
   for (const def of FIELD_DEFS) {
     if (map[def.key]) continue;
     for (const a of def.aliases) {
@@ -164,7 +164,7 @@ function addressOf(p) {
 function PasswordCell({ value }) {
   const { t } = useTranslation('personas');
   const [show, setShow] = useState(false);
-  if (!value) return <span className="text-muted-dark">—</span>;
+  if (!value) return <span className="text-muted-dark">-</span>;
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="font-mono text-[12px] text-muted-foreground">{show ? value : '••••••••'}</span>
@@ -487,7 +487,7 @@ export default function PersonasPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {paged.map((p) => {
-                    const name = [p.firstName, p.lastName].filter(Boolean).join(' ') || '—';
+                    const name = [p.firstName, p.lastName].filter(Boolean).join(' ') || '-';
                     return (
                       <tr key={p.id} className={`group/row transition-colors ${selectedIds.has(p.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
                         <td className="px-5 py-4">
@@ -500,12 +500,12 @@ export default function PersonasPage() {
                           />
                         </td>
                         <td className="px-5 py-4 font-medium text-foreground">{name}</td>
-                        <td className="px-5 py-4 text-muted-foreground">{p.email || '—'}</td>
-                        <td className="px-5 py-4 text-muted-foreground">{p.username || '—'}</td>
+                        <td className="px-5 py-4 text-muted-foreground">{p.email || '-'}</td>
+                        <td className="px-5 py-4 text-muted-foreground">{p.username || '-'}</td>
                         <td className="px-5 py-4"><PasswordCell value={p.password} /></td>
-                        <td className="px-5 py-4 text-muted-foreground">{p.phone || '—'}</td>
-                        <td className="px-5 py-4 text-muted-foreground max-w-[240px] truncate" title={addressOf(p)}>{addressOf(p) || '—'}</td>
-                        <td className="px-5 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">—</span>}</td>
+                        <td className="px-5 py-4 text-muted-foreground">{p.phone || '-'}</td>
+                        <td className="px-5 py-4 text-muted-foreground max-w-[240px] truncate" title={addressOf(p)}>{addressOf(p) || '-'}</td>
+                        <td className="px-5 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">-</span>}</td>
                         <td className="px-5 py-4">
                           {p.usedCount > 0
                             ? <Badge variant="green" title={p.usedOnUrls?.join(', ')}>{t('table.reuse', { defaultValue: '♻ Reuse · {{count}}', count: p.usedCount })}</Badge>

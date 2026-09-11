@@ -66,7 +66,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     return assignUnique ? 'unique' : 'pool';
   }
 
-  // Inline "create group" — create it immediately, select it, and hide the input.
+  // Inline "create group" - create it immediately, select it, and hide the input.
   // Falls back to the deferred create-on-generate path if onCreateGroup isn't given.
   async function saveNewGroup() {
     const name = newGroupName.trim();
@@ -107,7 +107,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
         },
         (done, total) => setProgress({ done, total })
       );
-      // Surface the result — especially the "capped at N proxies" notice — instead of
+      // Surface the result - especially the "capped at N proxies" notice - instead of
       // silently closing, so the user knows exactly how many profiles were created.
       if (r && (r.proxyLimited || (Array.isArray(r.errors) && r.errors.length))) {
         setResult(r); setBusy(false);
@@ -216,7 +216,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           {proxyMode === 'pool' && (
             <div className="space-y-2">
               <label className={labelCls}>{t('quickGenerate.quality')}</label>
-              {/* Speed — narrow the pool to fast / slow proxies before assigning */}
+              {/* Speed - narrow the pool to fast / slow proxies before assigning */}
               <div className="flex items-center gap-2">
                 <span className="w-16 shrink-0 text-[11px] text-muted-dark">{t('quickGenerate.qSpeed')}</span>
                 <div className="flex-1 flex items-center gap-1 rounded-lg border border-border bg-background p-1">
@@ -232,7 +232,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
                   ))}
                 </div>
               </div>
-              {/* Blocklist — clean vs flagged (from the DNSBL health check) */}
+              {/* Blocklist - clean vs flagged (from the DNSBL health check) */}
               <div className="flex items-center gap-2">
                 <span className="w-16 shrink-0 text-[11px] text-muted-dark">{t('quickGenerate.qBlocklist')}</span>
                 <div className="flex-1 flex items-center gap-1 rounded-lg border border-border bg-background p-1">

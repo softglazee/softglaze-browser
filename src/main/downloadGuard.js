@@ -7,7 +7,7 @@
 // We cannot pin a per-version SHA-256 for vendor builds whose hashes change on
 // every release and are not published in a consumable, pinned form. So the
 // integrity story is transport-based and strict:
-//   • https ONLY — reject http (no TLS-stripping downgrade), and
+//   • https ONLY - reject http (no TLS-stripping downgrade), and
 //   • the connection AND every redirect must stay on an allowlisted VENDOR host.
 // TLS then authenticates every byte as genuinely from the real vendor origin, and
 // a compromised mirror / redirect substitution / MITM cannot point us at attacker
@@ -52,7 +52,7 @@ const HOSTS = {
   crx: ['google.com', 'googleusercontent.com', 'gvt1.com'],
   // fingerprint-chromium (adryfish) native anti-detect engine, hosted on GitHub
   // Releases. The API returns an asset URL on github.com which 302-redirects to
-  // *.githubusercontent.com — both must be allowlisted or the redirect is rejected.
+  // *.githubusercontent.com - both must be allowlisted or the redirect is rejected.
   fpchromium: ['api.github.com', 'github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com', 'codeload.github.com']
 };
 

@@ -305,7 +305,7 @@ function SectionCard({ icon: Icon, accent = '#3b82f6', title, description, child
 
 // App display-language picker. Persists via lib/lang.js (localStorage + <html lang>)
 // and switches the live i18next language, so the whole UI re-renders instantly with
-// no reload — the same model as the theme toggle.
+// no reload - the same model as the theme toggle.
 function LanguageSection() {
   const { t } = useTranslation();
   const [lang, setLangState] = useState(getStoredLang());
@@ -369,7 +369,7 @@ function AntidetectEngineInstaller() {
 
   if (!status) return null;
   if (status.installed) {
-    return <div className="px-4 pb-3 -mt-1 text-xs text-emerald-400">Engine installed ✓ — fingerprint-chromium {status.version}</div>;
+    return <div className="px-4 pb-3 -mt-1 text-xs text-emerald-400">Engine installed ✓ - fingerprint-chromium {status.version}</div>;
   }
   const pct = status.percent || 0;
   return (
@@ -383,7 +383,7 @@ function AntidetectEngineInstaller() {
         </>
       ) : (
         <>
-          <span>Engine not installed — the toggle above needs it.</span>
+          <span>Engine not installed - the toggle above needs it.</span>
           <button onClick={start} disabled={busy} className="px-3 py-1 rounded border border-sky-500/40 bg-sky-600/20 text-sky-300 hover:bg-sky-600/30 disabled:opacity-50">Download engine (~180 MB)</button>
         </>
       )}
@@ -502,8 +502,8 @@ function mergeLocal(base, patch) {
 // ---------------------------------------------------------------------------
 // audit: this panel reads deeply-nested settings (s.security.twoStep.enabled,
 // s.website.blockAccess.mode, s.ipSetting.autoConfig.*, …) after only an `if (!s)`
-// guard, so a settings payload missing any top-level group threw a TypeError that —
-// before the ErrorBoundary — blanked the whole app. Normalize incoming settings so
+// guard, so a settings payload missing any top-level group threw a TypeError that -
+// before the ErrorBoundary - blanked the whole app. Normalize incoming settings so
 // every group/sub-group the render touches always exists (missing leaves read as
 // undefined, which is harmless for a checkbox/select).
 function withGlobalDefaults(cfg) {
@@ -717,11 +717,11 @@ function GlobalPreferences() {
         </SettingsSection>
       </div>
 
-      {/* Browser Settings — full width */}
+      {/* Browser Settings - full width */}
       <SettingsSection icon={SlidersHorizontal} accent="#f97316" title={tx('browser.title')} description={tx('browser.description')}>
         <ToggleRow
           title={tx('browser.antidetectEngine.title', 'Native anti-detect engine (fingerprint-chromium)')}
-          description={tx('browser.antidetectEngine.desc', 'Launch Chrome profiles on fingerprint-chromium — a source-patched Chromium that spoofs the fingerprint (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively, with no JS-injection race for sites to catch. Requires the fingerprint-chromium binary; falls back to stock Chrome when it is not present. This engine drops the CDP binding the page-to-app bridge used to rely on, so SoftGlaze routes those calls over a binding-free channel instead — Data Vault autofill, the macro recorder, start-page links and session mirroring all work on it. Off by default — turn on and relaunch profiles.')}
+          description={tx('browser.antidetectEngine.desc', 'Launch Chrome profiles on fingerprint-chromium - a source-patched Chromium that spoofs the fingerprint (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively, with no JS-injection race for sites to catch. Requires the fingerprint-chromium binary; falls back to stock Chrome when it is not present. This engine drops the CDP binding the page-to-app bridge used to rely on, so SoftGlaze routes those calls over a binding-free channel instead - Data Vault autofill, the macro recorder, start-page links and session mirroring all work on it. Off by default - turn on and relaunch profiles.')}
           checked={!!s.browser.antidetectEngine}
           onChange={(v) => apply({ browser: { antidetectEngine: v } })}
         />
@@ -757,8 +757,8 @@ function GlobalPreferences() {
           onChange={(v) => apply({ browser: { disableDevtools: v } })}
         />
         <ToggleRow
-          title={tx('browser.minimizeCdpFootprint.title', 'Minimize CDP footprint (experimental — anti-CAPTCHA)')}
-          description={tx('browser.minimizeCdpFootprint.desc', 'Drops the persistent CDP Runtime.enable — the top automation signal Cloudflare/Turnstile detect, which no fingerprint work can hide. Autofill, start-page links, session mirroring and the macro recorder now run over the binding-free page bridge, so they keep working while this is on (they did not before). Turn it on and relaunch a profile if you are getting CAPTCHAs.')}
+          title={tx('browser.minimizeCdpFootprint.title', 'Minimize CDP footprint (experimental - anti-CAPTCHA)')}
+          description={tx('browser.minimizeCdpFootprint.desc', 'Drops the persistent CDP Runtime.enable - the top automation signal Cloudflare/Turnstile detect, which no fingerprint work can hide. Autofill, start-page links, session mirroring and the macro recorder now run over the binding-free page bridge, so they keep working while this is on (they did not before). Turn it on and relaunch a profile if you are getting CAPTCHAs.')}
           checked={!!s.browser.minimizeCdpFootprint}
           onChange={(v) => apply({ browser: { minimizeCdpFootprint: v } })}
         />
@@ -817,7 +817,7 @@ function GlobalPreferences() {
         </ToggleRow>
       </SettingsSection>
 
-      {/* Performance — bulk-launch concurrency + running ceiling */}
+      {/* Performance - bulk-launch concurrency + running ceiling */}
       <SettingsSection icon={SlidersHorizontal} accent="#22c55e" title={tx('performance.title')} description={tx('performance.description')}>
         <div className="flex items-center justify-between gap-4 py-3 border-b border-border/60">
           <div>
@@ -845,7 +845,7 @@ function GlobalPreferences() {
         </div>
       </SettingsSection>
 
-      {/* Reliability — session restore, crash recovery, memory guard */}
+      {/* Reliability - session restore, crash recovery, memory guard */}
       <SettingsSection icon={SlidersHorizontal} accent="#0ea5e9" title={tx('reliability.title')} description={tx('reliability.description')}>
         <ToggleRow
           title={tx('reliability.restoreSession.title')}
@@ -904,7 +904,7 @@ function GlobalPreferences() {
         </ToggleRow>
       </SettingsSection>
 
-      {/* Smart Autofill — Identity Data Vault widget injected into launched profiles */}
+      {/* Smart Autofill - Identity Data Vault widget injected into launched profiles */}
       <SettingsSection icon={Zap} accent="#3DC6DA" title={tx('smartAutofill.title')} description={tx('smartAutofill.description')}>
         <ToggleRow
           title={tx('smartAutofill.enable.title')}
@@ -921,7 +921,7 @@ function GlobalPreferences() {
         />
       </SettingsSection>
 
-      {/* Audit log — team activity retention */}
+      {/* Audit log - team activity retention */}
       <SettingsSection icon={ShieldCheck} accent="#f59e0b" title={tx('audit.title')} description={tx('audit.description')}>
         <div className="flex items-center justify-between gap-4 py-3">
           <div>
@@ -940,10 +940,10 @@ function GlobalPreferences() {
         </div>
       </SettingsSection>
 
-      {/* Updates — manual check + all updater states */}
+      {/* Updates - manual check + all updater states */}
       <UpdatesSection />
 
-      {/* On Startup — full width */}
+      {/* On Startup - full width */}
       <SettingsSection icon={Power} accent="#ef4444" title={tx('onStartup.title')} description={tx('onStartup.description')}>
         <div className="py-3">
           <div className="flex items-center gap-2 flex-wrap">
@@ -977,7 +977,7 @@ function GlobalPreferences() {
         />
       </SettingsSection>
 
-      {/* Captcha solver — full width */}
+      {/* Captcha solver - full width */}
       <SettingsSection icon={KeyRound} accent="#10b981" title={tx('captcha.title')} description={tx('captcha.description')}>
         <ToggleRow
           wired
@@ -1151,7 +1151,7 @@ function InfoRow({ label, value }) {
         {label}
       </dt>
       <dd className="break-all rounded-lg border border-border bg-input-background px-4 py-2.5 font-mono text-xs text-foreground">
-        {value || '—'}
+        {value || '-'}
       </dd>
     </div>
   );

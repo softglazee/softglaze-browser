@@ -11,12 +11,12 @@ import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
-// Shared primary CTA — gradient fill, soft glow, and a subtle lift on hover. Used by
+// Shared primary CTA - gradient fill, soft glow, and a subtle lift on hover. Used by
 // every "continue / sign in / create" button so the whole flow feels of a piece.
 const primaryBtn = 'mt-6 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200 hover:shadow-[0_10px_28px_-8px_rgba(59,130,246,0.65)] hover:-translate-y-px active:translate-y-0';
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-// Ambient aurora used behind the form column — two slow-floating blobs for depth.
+// Ambient aurora used behind the form column - two slow-floating blobs for depth.
 function AuthAura() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -38,13 +38,13 @@ function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
   );
 }
 
-// "Keep me signed in on this device" — opt-in (default off). When ticked, the
+// "Keep me signed in on this device" - opt-in (default off). When ticked, the
 // login secret is sealed with the OS keychain (DPAPI) and replayed at the next app
 // start, so the password isn't asked for again. See rememberStore.js (main).
 function RememberToggle({ checked, onChange }) {
   const { t } = useTranslation('gate');
   // Surface the silent failure mode: rememberStore REFUSES to persist a login secret
-  // unless the OS keychain (DPAPI/Keychain/libsecret) is available — a login credential
+  // unless the OS keychain (DPAPI/Keychain/libsecret) is available - a login credential
   // must never hit disk in the clear. When it's unavailable, "keep me signed in" can't
   // work and the user would otherwise just be re-prompted every launch with no reason.
   const [available, setAvailable] = useState(true);
@@ -114,7 +114,7 @@ function OtpInput({ value, onChange, onComplete }) {
   );
 }
 
-// Slides for the left carousel — self-contained (gradient + icon graphic), so the
+// Slides for the left carousel - self-contained (gradient + icon graphic), so the
 // screen needs no bundled photography and works fully offline. Each maps to a
 // gate.brand.slides.<key> {title, body} i18n pair.
 const SLIDES = [
@@ -124,7 +124,7 @@ const SLIDES = [
   { key: 'automation', Icon: Zap, from: '#7c2d12', via: '#241006', accent: '#f59e0b' }
 ];
 
-// Left brand panel — an auto-rotating carousel that mirrors the reference layout
+// Left brand panel - an auto-rotating carousel that mirrors the reference layout
 // (big graphic, bold caption bottom-left, dot indicators). Manual dots too.
 function CarouselPanel() {
   const { t } = useTranslation('gate');
@@ -160,7 +160,7 @@ function CarouselPanel() {
         </div>
       </div>
 
-      {/* Center graphic — concentric rings + a glassy icon tile */}
+      {/* Center graphic - concentric rings + a glassy icon tile */}
       <div className="relative flex-1 grid place-items-center px-10">
         <div className="relative grid place-items-center">
           <div aria-hidden className="absolute w-60 h-60 rounded-full border animate-aurora" style={{ borderColor: `${slide.accent}3a` }} />
@@ -339,7 +339,7 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
 }
 
 // Full-screen blocking gate when the owner tree is banned (trial + grace lapsed).
-// No workspace access — only renew / redeem / contact / sign out.
+// No workspace access - only renew / redeem / contact / sign out.
 function BannedScreen({ account, license, methods, planCode, setPlanCode, busy, err, onRedeem, onAutomated, onManual, onSignOut }) {
   const { t } = useTranslation('gate');
   const adminBlocked = Boolean(license?.adminBlocked);
@@ -403,7 +403,7 @@ export default function Gate({ children }) {
 
   // login / pick
   const [loginPass, setLoginPass] = useState('');
-  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON — stay signed in unless the user opts out; the credential is DPAPI-sealed to this Windows account and cleared on opt-out / sign-out)
+  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON - stay signed in unless the user opts out; the credential is DPAPI-sealed to this Windows account and cleared on opt-out / sign-out)
   const [forgot, setForgot] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
@@ -425,7 +425,7 @@ export default function Gate({ children }) {
     try {
       const [vs, acct, cur, list] = await Promise.all([
         // audit: FAIL CLOSED. An unreadable vault status must be treated as LOCKED
-        // (show the unlock/login screen), never as unlocked — otherwise a transient
+        // (show the unlock/login screen), never as unlocked - otherwise a transient
         // read error would drop the user straight past the auth gate.
         softglazeApi.vault.status().catch(() => ({ enabled: true, locked: true })),
         softglazeApi.account.get().catch(() => null),
@@ -491,7 +491,7 @@ export default function Gate({ children }) {
   }
 
   async function verifyAndCreate(code) {
-    if (busy) return; // OtpInput.onComplete can fire alongside the button — guard the double register
+    if (busy) return; // OtpInput.onComplete can fire alongside the button - guard the double register
     const c = (code || otp).replace(/\D/g, '');
     if (c.length !== 6) return setErr(t('errors.enter6Digit'));
     setErr(''); setBusy(true);
@@ -614,7 +614,7 @@ export default function Gate({ children }) {
 
   const pollRef = useRef(null);
   function stopPoll() { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }
-  // audit: the purchase-poll interval was a bare local — never cancelled on unmount
+  // audit: the purchase-poll interval was a bare local - never cancelled on unmount
   // or sign-out. A poll that returned `paid` after the user signed out would call
   // setPhase('licensing') -> 'ready' and re-enter the app with NO current member.
   // Store it in a ref, clear on unmount, and never re-enter once it's been stopped.
@@ -715,7 +715,7 @@ export default function Gate({ children }) {
           <div className="w-full max-w-[420px] animate-fade-up">
             <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
 
-          {/* REGISTER — details */}
+          {/* REGISTER - details */}
           {phase === 'register' && step === 'details' && (
             <>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('register.title')}</h1>
@@ -745,7 +745,7 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* REGISTER — verify */}
+          {/* REGISTER - verify */}
           {phase === 'register' && step === 'verify' && (
             <>
               <button onClick={() => { setStep('details'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('common.back')}</button>
@@ -768,7 +768,7 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* PLAN — choose how to start (after account creation) */}
+          {/* PLAN - choose how to start (after account creation) */}
           {phase === 'plan' && (
             <>
               <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Sparkles className="w-5 h-5" /></div>

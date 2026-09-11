@@ -1,7 +1,7 @@
 'use strict';
 // Role hierarchy + permission/limit model for the team system.
 //
-//   SUPER_ADMIN  (the source owner — one, hardcoded, no registration)
+//   SUPER_ADMIN  (the source owner - one, hardcoded, no registration)
 //     └─ OWNER   (buys a licence / runs a free trial; top of an org tree)
 //          └─ ADMIN
 //               └─ MANAGER
@@ -38,10 +38,10 @@ function allFeaturesOn() {
 
 function rankOf(role) { return ROLE_RANK[String(role || '').toUpperCase()] || 0; }
 
-// Per-action capability catalog. Each action has a role-rank BASELINE — the rank at
+// Per-action capability catalog. Each action has a role-rank BASELINE - the rank at
 // or above which the role may perform it by default. On top of the baseline a parent
 // can REVOKE an action for an individual member (restrict-only: an override can never
-// escalate above the role baseline). Baselines preserve existing behavior — actions
+// escalate above the role baseline). Baselines preserve existing behavior - actions
 // that were previously ungated are rank 1 (everyone), so nothing changes until an
 // admin explicitly revokes. `proxies.reveal` is MANAGER+ to match the raw-credential
 // redaction policy (rbacPolicy.js). requirePermission() reads ACTION_MIN_RANK.
@@ -194,10 +194,10 @@ function childCapFor(parentPerms, targetRole) {
 }
 
 // ---------------------------------------------------------------------------
-// Super Admin — the source-owner account. Logs in WITHOUT registration and
+// Super Admin - the source-owner account. Logs in WITHOUT registration and
 // always bypasses role/limit/trial gating. The credential is per-install: it is
 // set on first run and stored hashed in Setting['superAdminAuth'] (see
-// ipcHandlers superLogin / superAdminSetup) — there is NO shared/hardcoded
+// ipcHandlers superLogin / superAdminSetup) - there is NO shared/hardcoded
 // password in the shipped binary.
 // ---------------------------------------------------------------------------
 const SUPER_ADMIN_ID = -1;
@@ -216,7 +216,7 @@ const SUPER_ADMIN = Object.freeze({
 function isSuperAdminId(id) { return Number(id) === SUPER_ADMIN_ID; }
 
 // ---------------------------------------------------------------------------
-// Visibility — the set of member ids a viewer is allowed to see.
+// Visibility - the set of member ids a viewer is allowed to see.
 //   SUPER_ADMIN / OWNER : their whole subtree (everyone under them).
 //   ADMIN               : self + own descendants.
 //   MANAGER             : self + own descendants + parent admin.

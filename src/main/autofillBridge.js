@@ -1,12 +1,12 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// SoftGlaze Smart Autofill — loopback bridge for the Firefox WebExtension.
+// SoftGlaze Smart Autofill - loopback bridge for the Firefox WebExtension.
 //
 // Firefox profiles launch raw (no CDP / no puppeteer exposeFunction), so the
 // in-page autofill widget cannot reach Electron the way the Chromium build does.
 // Instead the Firefox extension's background script talks to THIS tiny HTTP server
 // over loopback to read available personas and mark them used. (Chromium keeps
-// using the exposeFunction bridge in browserEngine — this is Firefox-only.)
+// using the exposeFunction bridge in browserEngine - this is Firefox-only.)
 //
 // Design mirrors localApi.js: 127.0.0.1 only, never bound to the network. The
 // actual persona logic lives in ipcHandlers; it is injected via configure() to
@@ -16,7 +16,7 @@
 // web page can't read responses cross-origin. A static shared secret
 // (X-SG-Autofill-Token) blocks casual other-local-apps. A signed .xpi is a fixed
 // artifact, so a per-launch token can't be injected without breaking the
-// signature — the static secret is the deliberate trade-off, and the data is the
+// signature - the static secret is the deliberate trade-off, and the data is the
 // user's own demo personas, not high-value secrets.
 // ---------------------------------------------------------------------------
 const http = require('node:http');
@@ -61,7 +61,7 @@ function readBody(req) {
     req.on('end', () => { try { finish(data ? JSON.parse(data) : {}); } catch (e) { finish({}); } });
     req.on('error', () => finish({}));
     // A client abort OR our own req.destroy() (the size-cap path) emits 'close', not 'error'
-    // — without this the promise would hang forever and the await never returns.
+    // - without this the promise would hang forever and the await never returns.
     req.on('close', () => finish({}));
   });
 }
@@ -70,7 +70,7 @@ async function handleRequest(req, res) {
   try {
     const url = new URL(req.url, `http://${HOST}:${runningPort || PORT_RANGE[0]}`);
 
-    // Discovery probe — unauthenticated body is harmless (just a service tag), but
+    // Discovery probe - unauthenticated body is harmless (just a service tag), but
     // we still require the token so only our extension treats a port as "ours".
     if (req.method === 'GET' && url.pathname === '/sg-autofill/ping') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
@@ -128,7 +128,7 @@ async function handleRequest(req, res) {
 }
 
 // Bind the first free port in the range. Resolves silently (never throws) so a
-// failed bind can't break app startup — autofill just stays unavailable.
+// failed bind can't break app startup - autofill just stays unavailable.
 function listenOnRange(idx = 0) {
   return new Promise((resolve) => {
     if (idx >= PORT_RANGE.length) { resolve(null); return; }

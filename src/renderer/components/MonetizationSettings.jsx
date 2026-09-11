@@ -6,10 +6,10 @@ import IpProvidersSettings from '@/components/IpProvidersSettings.jsx';
 import { PROVIDERS, ProviderLogo } from '@/components/ProxyProviders.jsx';
 
 // ---------------------------------------------------------------------------
-// Monetization — a single Owner/Super-Admin home for the app's revenue wiring.
-//   1. Affiliate & Referral Links — the partner URLs the marketplace "Purchase"
+// Monetization - a single Owner/Super-Admin home for the app's revenue wiring.
+//   1. Affiliate & Referral Links - the partner URLs the marketplace "Purchase"
 //      buttons (Proxy pool → Providers) link out to.
-//   2. Reseller API credentials — the relocated IP-provider master keys (the
+//   2. Reseller API credentials - the relocated IP-provider master keys (the
 //      vendors the operator resells), which self-gate to the Super Admin.
 // New monetization methods drop straight into this section.
 // ---------------------------------------------------------------------------

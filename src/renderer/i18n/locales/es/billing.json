@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Facturación y planes",
-    "description": "Gestiona tu suscripción, compara planes y mejora tu plan — todo en un solo lugar."
+    "description": "Gestiona tu suscripción, compara planes y mejora tu plan - todo en un solo lugar."
   },
   "status": {
     "loading": "Cargando…",
@@ -22,7 +22,7 @@
   "backend": {
     "licensedVerified": "Con licencia y verificado",
     "renews": "se renueva el {{date}}",
-    "noLicense": "Licencia activa — aún no hay una licencia de pago para esta instalación."
+    "noLicense": "Licencia activa - aún no hay una licencia de pago para esta instalación."
   },
   "current": {
     "title": "Plan actual",
@@ -31,8 +31,8 @@
     "freeTrial": "prueba gratuita"
   },
   "grace": {
-    "message_one": "Tu {{kind}} ha finalizado — queda {{count}} día de gracia. Renueva abajo para no perder el acceso.",
-    "message_other": "Tu {{kind}} ha finalizado — quedan {{count}} días de gracia. Renueva abajo para no perder el acceso.",
+    "message_one": "Tu {{kind}} ha finalizado - queda {{count}} día de gracia. Renueva abajo para no perder el acceso.",
+    "message_other": "Tu {{kind}} ha finalizado - quedan {{count}} días de gracia. Renueva abajo para no perder el acceso.",
     "kindTrial": "prueba gratuita",
     "kindSubscription": "suscripción"
   },
@@ -40,8 +40,8 @@
     "message": "Tu suscripción ha finalizado y el lanzamiento de perfiles está bloqueado. Suscríbete o introduce un código de compra para restaurar el acceso."
   },
   "trialRemaining": {
-    "message_one": "Prueba gratuita — queda {{count}} día.",
-    "message_other": "Prueba gratuita — quedan {{count}} días."
+    "message_one": "Prueba gratuita - queda {{count}} día.",
+    "message_other": "Prueba gratuita - quedan {{count}} días."
   },
   "seats": {
     "label": "Asientos del equipo",
@@ -49,7 +49,7 @@
     "upgradeToAddMore": "· mejora tu plan para añadir más"
   },
   "exempt": {
-    "note": "Eres el propietario del código — estás exento del sistema de suscripción. Todas las funciones están incluidas."
+    "note": "Eres el propietario del código - estás exento del sistema de suscripción. Todas las funciones están incluidas."
   },
   "checkout": {
     "waiting": "Esperando tu pago…",
@@ -75,7 +75,7 @@
   },
   "trial": {
     "started": "Tu prueba gratuita con acceso completo está activa. ¡Disfrútala!",
-    "startedWithDays": "Tu prueba gratuita está activa — {{days}} días de acceso completo. ¡Disfrútala!",
+    "startedWithDays": "Tu prueba gratuita está activa - {{days}} días de acceso completo. ¡Disfrútala!",
     "errors": {
       "failed": "No se pudo iniciar la prueba."
     }
@@ -83,16 +83,16 @@
   "redeem": {
     "label": "¿Tienes un código de compra?",
     "apply": "Aplicar",
-    "success": "Código de compra aplicado — ¡gracias!",
+    "success": "Código de compra aplicado - ¡gracias!",
     "errors": {
       "empty": "Introduce tu código de compra.",
       "failed": "No se pudo aplicar ese código."
     }
   },
   "pay": {
-    "received": "Pago recibido — ¡tu plan ya está activo!",
+    "received": "Pago recibido - ¡tu plan ya está activo!",
     "errors": {
-      "noMethods": "Aún no hay métodos de pago habilitados — contacta con tu administrador.",
+      "noMethods": "Aún no hay métodos de pago habilitados - contacta con tu administrador.",
       "checkoutFailed": "No se pudo iniciar el pago.",
       "submitFailed": "No se pudo enviar tu pago."
     }
@@ -105,7 +105,7 @@
     "openPayLink": "Abrir enlace de pago",
     "referencePlaceholder": "Referencia de pago / ID de transacción",
     "notePlaceholder": "Nota (opcional)",
-    "submitForApproval": "He pagado — enviar para aprobación",
+    "submitForApproval": "He pagado - enviar para aprobación",
     "manualActivationNote": "Tu plan se activa una vez que un administrador confirma el pago."
   },
   "admin": {
@@ -113,7 +113,7 @@
   },
   "invoices": {
     "title": "Facturas",
-    "subtitleAdmin": "Todos los pagos de todos los propietarios — capturados automáticamente + manuales.",
+    "subtitleAdmin": "Todos los pagos de todos los propietarios - capturados automáticamente + manuales.",
     "subtitleUser": "Tus recibos de pago.",
     "add": "Añadir",
     "empty": "Aún no hay facturas.",
@@ -240,8 +240,8 @@
     "grantNoteFree": "Registrado como una concesión de $0.",
     "fallbackAccount": "cuenta",
     "fallbackPlan": "plan",
-    "success_one": "Se asignó {{plan}} a {{name}} — {{count}} mes.",
-    "success_other": "Se asignó {{plan}} a {{name}} — {{count}} meses.",
+    "success_one": "Se asignó {{plan}} a {{name}} - {{count}} mes.",
+    "success_other": "Se asignó {{plan}} a {{name}} - {{count}} meses.",
     "errors": {
       "chooseAccount": "Elige una cuenta.",
       "choosePlan": "Elige un plan.",

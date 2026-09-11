@@ -1,11 +1,11 @@
 'use strict';
 // Client side of the SoftGlaze licensing backend. Two concerns:
 //
-//   1) verifyLease(token) — OFFLINE Ed25519 verification of a backend-signed lease
+//   1) verifyLease(token) - OFFLINE Ed25519 verification of a backend-signed lease
 //      using the baked tenant public key. This is the trust boundary: tier/exp are
 //      believed only if the signature checks out. Returns the entitlement or null.
 //
-//   2) api.* — thin HTTPS calls to the backend (register / checkout / license /
+//   2) api.* - thin HTTPS calls to the backend (register / checkout / license /
 //      redeem). Inactive unless a tenant config is baked (tenantConfig().enabled).
 //
 // No new dependencies: Node's crypto.verify does Ed25519; node:https/http for I/O.

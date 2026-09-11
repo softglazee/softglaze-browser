@@ -41,7 +41,7 @@ export default function BillingSettings() {
 
   if (loading) return null;
   const role = me?.role;
-  // The Super Admin is the source owner — exempt from the trial/subscription
+  // The Super Admin is the source owner - exempt from the trial/subscription
   // system, so they never see the Subscription card (only the gateway config).
   const showSubscription = role === 'OWNER' || !me;
   const showGateway = role === 'SUPER_ADMIN';
@@ -57,7 +57,7 @@ export default function BillingSettings() {
 }
 
 // Compact subscription summary for the Settings page. The full plan comparison,
-// checkout and redeem flow now live on the dedicated Billing page (/billing) —
+// checkout and redeem flow now live on the dedicated Billing page (/billing) -
 // this card shows status at a glance and links there.
 function SubscriptionCard({ license, seats }) {
   const navigate = useNavigate();
@@ -114,7 +114,7 @@ function SubscriptionCard({ license, seats }) {
 
 // Super-Admin payment-method configuration. Renders one editable block per
 // provider (Cryptomus / Stripe / PayPal / Wise / Manual), driven by the metadata
-// the main process returns — so adding a provider in payments.js surfaces here
+// the main process returns - so adding a provider in payments.js surfaces here
 // automatically. Secret values are never sent back to the renderer.
 function PaymentGatewayCard() {
   const { t } = useTranslation('cmpSettingsA');
@@ -176,8 +176,8 @@ function ProviderConfig({ provider, onSaved }) {
 
   const setField = (key, val) => setValues((prev) => ({ ...prev, [key]: val }));
 
-  // Toggle enabled instantly (auto-save). Sends only { id, enabled } — the backend
-  // keeps the stored API keys when `values` is omitted — and reverts on failure.
+  // Toggle enabled instantly (auto-save). Sends only { id, enabled } - the backend
+  // keeps the stored API keys when `values` is omitted - and reverts on failure.
   async function toggleEnabled(next) {
     setEnabled(next); setErr(''); setMsg(''); setBusy('toggle');
     try {
@@ -333,7 +333,7 @@ function ManualPaymentsCard() {
           <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-elevated/40 px-3 py-2.5">
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] text-foreground truncate">
-                {m.ownerName || t('billing.manual.ownerFallback', { id: m.ownerId ?? '—' })} · <span className="capitalize">{m.tier}</span> · {m.providerLabel || m.provider}
+                {m.ownerName || t('billing.manual.ownerFallback', { id: m.ownerId ?? '-' })} · <span className="capitalize">{m.tier}</span> · {m.providerLabel || m.provider}
               </div>
               <div className="text-[11px] text-muted-foreground truncate">
                 {m.amount ? `${m.currency || ''} ${m.amount}` : ''}{m.reference ? ` · ${t('billing.manual.refPrefix')} ${m.reference}` : ''}{m.note ? ` · ${m.note}` : ''}

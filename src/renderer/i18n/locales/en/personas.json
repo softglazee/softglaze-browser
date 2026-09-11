@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "Identities",
     "title": "Data Vault",
-    "description": "A reusable vault of demo identities for the Smart Autofill engine. Add them manually or import a spreadsheet; each one remembers the sites it has already been used on.",
+    "description": "A reusable vault of identities for the Smart Autofill engine. Add them manually or import a spreadsheet; each one remembers the sites it has already been used on.",
     "refresh": "Refresh",
     "import": "Import Excel/CSV",
     "addManually": "Add manually"
@@ -101,7 +101,7 @@
     "chooseSpreadsheet": "Choose a spreadsheet",
     "colIdentityField": "Identity field",
     "colYourColumn": "Your column",
-    "skipOption": "— skip —",
+    "skipOption": "- skip -",
     "mappedCount_one": "{{count}} field mapped. Rows with no name/email/username are skipped.",
     "mappedCount_other": "{{count}} fields mapped. Rows with no name/email/username are skipped.",
     "done": "Done",
@@ -121,7 +121,7 @@
     "errors": {
       "noRows": "That file has no readable header row or data rows.",
       "readFile": "Could not read that file.",
-      "nothingMapped": "No rows to import — map at least one of First name / Last name / Email / Username.",
+      "nothingMapped": "No rows to import - map at least one of First name / Last name / Email / Username.",
       "failed": "Import failed."
     }
   },

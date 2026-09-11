@@ -16,7 +16,7 @@ import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
 if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
 if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
-// Global Ctrl/Cmd-K command palette. No new dependency — a window keydown listener,
+// Global Ctrl/Cmd-K command palette. No new dependency - a window keydown listener,
 // the existing router, and the existing list APIs. Jumps to any page and searches
 // profiles / proxies / members. Mounted once in AppShell so it's available app-wide.
 // `labelKey` is resolved to a translated display name at render time (module scope
@@ -36,7 +36,7 @@ const NAV = [
   { path: '/settings', labelKey: 'palette.nav.settings', icon: Settings }
 ];
 
-// The list APIs may return a bare array or a paginated envelope — normalize both.
+// The list APIs may return a bare array or a paginated envelope - normalize both.
 function asArray(res) {
   if (Array.isArray(res)) return res;
   if (res && typeof res === 'object') return res.items || res.profiles || res.proxies || res.members || res.rows || res.data || [];

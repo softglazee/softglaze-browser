@@ -1,16 +1,16 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — Live Workspace Shadowing / Remote Management Relay
+// Softglaze Enterprise - Live Workspace Shadowing / Remote Management Relay
 //                        (PROTOCOL FOUNDATION)
 //
 // Establishes the secure WebSocket relay pipeline that streams a live status log
 // (and, later, downscaled visual frames) of an active automation container back
-// to a manager portal for remote performance audits — without ever exposing the
+// to a manager portal for remote performance audits - without ever exposing the
 // container's raw cookies/credentials over the wire.
 //
 // What is real here: the relay registry, the framing/serialization of audit
 // events, subscription fan-out, and a redaction hook so secrets never stream.
-// What is stubbed: the concrete WebSocket server/transport (`attachTransport`) —
+// What is stubbed: the concrete WebSocket server/transport (`attachTransport`) -
 // drop in `ws`/socket.io (or Electron's net) when the cloud portal ships.
 //
 // Frame shape (JSON, one per message):
@@ -21,7 +21,7 @@
 const { EventEmitter } = require('node:events');
 
 // Case-insensitive SUBSTRING match on key names. The old exact, case-sensitive Set missed
-// Cookie/Set-Cookie/Authorization headers, sessionToken/sid, and any capitalized variant —
+// Cookie/Set-Cookie/Authorization headers, sessionToken/sid, and any capitalized variant -
 // all of which would have streamed to the portal. Any key that looks credential/session/
 // cookie/auth-bearing is redacted.
 const SECRET_KEY_RE = /pass|secret|token|api[_-]?key|auth|cookie|session|credential|bearer|private|otp|2fa|passphrase/i;
@@ -93,7 +93,7 @@ class RemoteRelay extends EventEmitter {
       if (subs) for (const fn of subs) { try { fn(frame); } catch (_) { /* one bad subscriber must not break the rest */ } }
 
       if (this.transport && typeof this.transport.broadcast === 'function') {
-        try { this.transport.broadcast(sid, frame); } catch (_) { /* transport down — keep local stream alive */ }
+        try { this.transport.broadcast(sid, frame); } catch (_) { /* transport down - keep local stream alive */ }
       }
       this.emit('frame', frame);
     } catch (_) { /* auditing must never destabilize the session it observes */ }
@@ -106,5 +106,5 @@ class RemoteRelay extends EventEmitter {
   visual(sessionId, jpegBase64, dims) { this.emitFrame(sessionId, 'frame', { image: jpegBase64, dims }); }
 }
 
-// Singleton — there is one relay per app process.
+// Singleton - there is one relay per app process.
 module.exports = { RemoteRelay, relay: new RemoteRelay(), sanitizeFrame };

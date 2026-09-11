@@ -1,11 +1,11 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Premium — native TOTP (RFC 6238) generator.
+// Softglaze Premium - native TOTP (RFC 6238) generator.
 //
 // Implemented with node:crypto only (no otplib dependency) so the 2FA vault has
 // zero install footprint and is fully self-contained. Verified against the
 // official RFC 6238 SHA-1 test vectors (see the test at the bottom of the repo's
-// verification run). Swap to otplib later if desired — the public surface
+// verification run). Swap to otplib later if desired - the public surface
 // (generateTotp / totpToken) stays the same.
 // ---------------------------------------------------------------------------
 const crypto = require('node:crypto');

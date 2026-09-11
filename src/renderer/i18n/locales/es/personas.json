@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "Identidades",
     "title": "Bóveda de datos",
-    "description": "Una bóveda reutilizable de identidades de demostración para el motor de Autocompletado Inteligente. Añádelas manualmente o importa una hoja de cálculo; cada una recuerda los sitios en los que ya se ha utilizado.",
+    "description": "Una bóveda reutilizable de identidades para el motor de Autocompletado Inteligente. Añádelas manualmente o importa una hoja de cálculo; cada una recuerda los sitios en los que ya se ha utilizado.",
     "refresh": "Actualizar",
     "import": "Importar Excel/CSV",
     "addManually": "Añadir manualmente"
@@ -101,7 +101,7 @@
     "chooseSpreadsheet": "Elige una hoja de cálculo",
     "colIdentityField": "Campo de identidad",
     "colYourColumn": "Tu columna",
-    "skipOption": "— omitir —",
+    "skipOption": "- omitir -",
     "mappedCount_one": "{{count}} campo asignado. Se omiten las filas sin nombre/correo/usuario.",
     "mappedCount_other": "{{count}} campos asignados. Se omiten las filas sin nombre/correo/usuario.",
     "done": "Listo",
@@ -121,7 +121,7 @@
     "errors": {
       "noRows": "Ese archivo no tiene una fila de encabezados ni filas de datos legibles.",
       "readFile": "No se pudo leer ese archivo.",
-      "nothingMapped": "No hay filas para importar — asigna al menos uno de Nombre / Apellidos / Correo / Usuario.",
+      "nothingMapped": "No hay filas para importar - asigna al menos uno de Nombre / Apellidos / Correo / Usuario.",
       "failed": "Falló la importación."
     }
   },

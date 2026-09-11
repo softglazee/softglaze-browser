@@ -166,7 +166,7 @@
       "desc": "Escribe un archivo de política gestionada DeveloperToolsAvailability en cada perfil. Chromium lo aplica una vez que el archivo se registra en la ubicación de políticas gestionadas del sistema operativo (no se aplica automáticamente a toda la máquina)."
     },
     "minimizeCdpFootprint": {
-      "title": "Minimizar la huella de CDP (experimental — anti-CAPTCHA)",
+      "title": "Minimizar la huella de CDP (experimental - anti-CAPTCHA)",
       "desc": "Elimina el Runtime.enable persistente de CDP, la principal señal de automatización que detectan Cloudflare/Turnstile. CONTRAPARTIDA mientras está activo: el autorrelleno de personas, los enlaces de comprobación de la página de inicio y el espejo de sesiones sincronizadas dejan de funcionar (necesitan el binding de CDP). Desactivado por defecto; actívalo para comparar si reduce los CAPTCHA y luego relanza los perfiles."
     },
     "lockExtensions": {
@@ -201,7 +201,7 @@
     "description": "Controles para iniciar muchos perfiles a la vez: se aplican a los inicios masivos y al límite de sesiones en ejecución.",
     "parallelLimit": {
       "title": "Límite de inicio en paralelo",
-      "desc": "Cuántos perfiles se inician al mismo tiempo durante un inicio masivo. Más alto es más rápido pero usa más RAM. Recomendado 3–8."
+      "desc": "Cuántos perfiles se inician al mismo tiempo durante un inicio masivo. Más alto es más rápido pero usa más RAM. Recomendado 3-8."
     },
     "maxRunning": {
       "title": "Máximo de perfiles en ejecución",

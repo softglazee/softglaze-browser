@@ -3,7 +3,7 @@
 // Local HTTP(S) proxy auth-injecting relay (sibling of socksRelay.js).
 //
 // Chromium CAN answer an authenticated HTTP proxy's 407 via puppeteer's
-// page.authenticate() — but that handler is registered PER PAGE and only after a
+// page.authenticate() - but that handler is registered PER PAGE and only after a
 // tab object exists. A browser-opened "+" tab (or a window.open / target=_blank
 // popup) fires its FIRST request through the upstream proxy BEFORE authenticate()
 // is wired, so the upstream answers 407: the tab stalls and the bare, unauthenticated
@@ -14,8 +14,8 @@
 // proxy. Chromium points --proxy-server at http://127.0.0.1:<port> (auth-free), so it
 // never sees a challenge on ANY tab and the new-tab proxy-auth race is gone.
 //
-// Handles CONNECT tunnels (HTTPS / any TLS — the common case) and plain-HTTP
-// absolute-URI forwarding. Returns { port, close } — the same shape as socksRelay,
+// Handles CONNECT tunnels (HTTPS / any TLS - the common case) and plain-HTTP
+// absolute-URI forwarding. Returns { port, close } - the same shape as socksRelay,
 // so the browserEngine session teardown closes either kind identically.
 // ---------------------------------------------------------------------------
 const net = require('node:net');
@@ -45,7 +45,7 @@ function startHttpAuthRelay({ host, port, username, password }) {
         host: upstreamHost,
         port: upstreamPort,
         method: creq.method,
-        path: creq.url, // absolute URI — the upstream proxy resolves it
+        path: creq.url, // absolute URI - the upstream proxy resolves it
         headers: { ...creq.headers, 'Proxy-Authorization': authHeader }
       });
       upstreamReq.on('socket', (s) => track(s));

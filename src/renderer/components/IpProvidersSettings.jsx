@@ -44,7 +44,7 @@ export default function IpProvidersSettings() {
   }, []);
   useEffect(() => { if (me?.role === 'SUPER_ADMIN') load(); }, [me, load]);
 
-  // Super Admin only — invisible to owners and everyone else.
+  // Super Admin only - invisible to owners and everyone else.
   if (me === undefined) return null;
   if (me?.role !== 'SUPER_ADMIN') return null;
 

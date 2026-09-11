@@ -15,13 +15,13 @@ if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', '
 
 // First-run setup. Reuses the existing SMTP / proxy / profile flows behind a few
 // guided steps. Shown only on a genuinely fresh workspace (no profiles yet) and
-// only until completed/skipped — the "done" flag lives in global settings, so
+// only until completed/skipped - the "done" flag lives in global settings, so
 // there's no new IPC and no migration. Every step is skippable; nothing is faked.
 const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary';
 const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5';
 
 // Defined at module scope (not inside the component) so it isn't a new component
-// type on every render — otherwise the inputs would remount and lose focus on each
+// type on every render - otherwise the inputs would remount and lose focus on each
 // keystroke.
 function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, onSkip, err, msg }) {
   const { t } = useTranslation('cmpOverlays');
@@ -188,7 +188,7 @@ export default function OnboardingWizard() {
     );
   }
 
-  // step 3 — first profile
+  // step 3 - first profile
   return (
     <WizardShell icon={Fingerprint} title={t('wizard.profile.title')} subtitle={t('wizard.profile.subtitle')}
       onBack={() => setStep(2)} onSkip={finish} err={err} msg={msg}

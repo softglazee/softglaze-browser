@@ -1,9 +1,9 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Softglaze Enterprise — Team-at-scale policy helpers (PURE).
+// Softglaze Enterprise - Team-at-scale policy helpers (PURE).
 //
 // Seat math, audit-log CSV serialization, and the profile-lock conflict rule.
-// No Electron, no DB, no globals — every input is passed in — so this is
+// No Electron, no DB, no globals - every input is passed in - so this is
 // unit-testable in isolation (same seam pattern as parallelRunner/importParser).
 // ipcHandlers.js injects the live members/license/session data.
 // ---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ function activityToCsv(rows) {
 // --- Profile locks ---------------------------------------------------------
 // Does an existing lock block `requesterMemberId` from launching? It blocks only
 // when the lock is (a) held by a DIFFERENT member AND (b) still live (its session
-// is in `liveSessionIds`). A stale lock — whose browser session has gone away —
+// is in `liveSessionIds`). A stale lock - whose browser session has gone away -
 // never blocks (it'll be reaped by reconciliation).
 function lockBlocks(existing, requesterMemberId, liveSessionIds) {
   if (!existing) return false;
