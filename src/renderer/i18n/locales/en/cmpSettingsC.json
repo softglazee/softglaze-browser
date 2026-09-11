@@ -110,7 +110,9 @@
       "checkProxy": "Check Proxy",
       "ok": "OK",
       "failed": "Failed",
-      "tip": "Tip: a rotating gateway uses the same host:port for every session — your username/password (or sticky-session token) selects the exit IP."
+      "tip": "Tip: a rotating gateway uses the same host:port for every session — your username/password (or sticky-session token) selects the exit IP.",
+      "saveCreds": "Save credentials",
+      "credsSaved": "Saved"
     },
     "apiSync": {
       "badge": "Live",
@@ -143,7 +145,8 @@
       "enterApiToken": "Enter your API token.",
       "enterProxyUsername": "Enter the proxy username.",
       "enterProxyPassword": "Enter the proxy password.",
-      "pull": "Could not pull proxies."
+      "pull": "Could not pull proxies.",
+      "saveCreds": "Could not save the credentials."
     },
     "countries": {
       "any": "Any / Random",
@@ -205,7 +208,10 @@
       "anyip": "anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard, OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway if your dashboard shows a custom port."
     },
     "notConnected": {
-      "body": "{{provider}} is not connected to a live API yet, so there is nothing to pull. Add its proxies manually under Proxies. We have contacted them about a native integration."
+      "body": "{{provider}} has no automatic pull yet, so enter the details from your {{provider}} dashboard below. We have written to them about a native integration.",
+      "apiKeyLabel": "API key or token",
+      "apiKeyPlaceholder": "Paste your {{provider}} API key",
+      "apiKeyHint": "Stored encrypted on this machine so it is ready the day the integration lands."
     },
     "integratedCount": "{{connected}} of {{total}} connected"
   }

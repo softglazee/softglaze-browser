@@ -110,7 +110,9 @@
       "checkProxy": "Comprobar proxy",
       "ok": "OK",
       "failed": "Error",
-      "tip": "Consejo: una pasarela rotativa usa el mismo host:port en cada sesión — tu usuario/contraseña (o token de sesión fija) selecciona la IP de salida."
+      "tip": "Consejo: una pasarela rotativa usa el mismo host:port en cada sesión — tu usuario/contraseña (o token de sesión fija) selecciona la IP de salida.",
+      "saveCreds": "Guardar credenciales",
+      "credsSaved": "Guardado"
     },
     "apiSync": {
       "badge": "En vivo",
@@ -143,7 +145,8 @@
       "enterApiToken": "Introduce tu token de API.",
       "enterProxyUsername": "Introduce el usuario del proxy.",
       "enterProxyPassword": "Introduce la contraseña del proxy.",
-      "pull": "No se pudieron extraer los proxies."
+      "pull": "No se pudieron extraer los proxies.",
+      "saveCreds": "No se pudieron guardar las credenciales."
     },
     "countries": {
       "any": "Cualquiera / Aleatorio",
@@ -205,7 +208,10 @@
       "anyip": "anyip.io se enruta por una única pasarela (portal.anyip.io:1080) y codifica el tipo (Residencial/Móvil), el país, un nombre de sesión fija opcional y una duración en el usuario del proxy. Conecta pegando tu Usuario (user_…) + Contraseña del proxy desde el panel, O introduciendo una clave API + ID de equipo para aprovisionar una cuenta automáticamente. Una sesión en blanco con “IP diferente cada vez” genera IP rotativas; un nombre de sesión fija mantiene una sola IP. Sobrescribe la pasarela si tu panel muestra un puerto personalizado."
     },
     "notConnected": {
-      "body": "{{provider}} todavia no esta conectado a una API en vivo, por lo que no hay nada que importar. Anade sus proxies manualmente en Proxies. Ya les hemos escrito para una integracion nativa."
+      "body": "{{provider}} todavia no tiene importacion automatica, asi que introduce los datos de tu panel de {{provider}} aqui abajo. Ya les hemos escrito para una integracion nativa.",
+      "apiKeyLabel": "Clave API o token",
+      "apiKeyPlaceholder": "Pega tu clave API de {{provider}}",
+      "apiKeyHint": "Se guarda cifrada en este equipo para que este lista cuando llegue la integracion."
     },
     "integratedCount": "{{connected}} de {{total}} conectados"
   }

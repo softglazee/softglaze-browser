@@ -82,6 +82,8 @@ export default function ProxyProviders({ onSynced }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
   const [err, setErr] = useState('');
+  const [savingCreds, setSavingCreds] = useState(false);
+  const [credsSaved, setCredsSaved] = useState(false);
 
   // Pull the Owner-configured affiliate links once (best-effort; falls back to
   // built-in referral URLs if unavailable).
@@ -96,6 +98,7 @@ export default function ProxyProviders({ onSynced }) {
     const gw = provider.gateway || { host: '', port: '' };
     setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
     setCheckResult(null);
+    setCredsSaved(false);
     setSyncResult(null);
     setErr('');
   }, [provider]);
@@ -142,6 +145,23 @@ export default function ProxyProviders({ onSynced }) {
     } catch (e) { /* ignore */ }
   }
 
+  // Persist what the operator typed, without needing a pull to hang it off. persistCreds
+  // was only ever called from the three sync paths, so anyone using the manual form had
+  // no way to save an API key at all.
+  async function handleSaveCreds() {
+    setSavingCreds(true); setErr('');
+    try {
+      await softglazeApi.proxies.saveProviderCreds({
+        provider: provider.key,
+        username: form.username, password: form.password, token: form.token,
+        apiToken: form.apiToken, zone: form.zone, plan: form.plan,
+        host: form.host, port: form.port
+      });
+      setCredsSaved(true);
+      setTimeout(() => setCredsSaved(false), 2500);
+    } catch (e) { setErr(e.message || t('proxyProviders.errors.saveCreds')); }
+    finally { setSavingCreds(false); }
+  }
   async function handleCheck() {
     setErr(''); setCheckResult(null); setChecking(true);
     try {
@@ -307,13 +327,7 @@ export default function ProxyProviders({ onSynced }) {
 
           {err && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 flex items-start gap-2"><X className="w-4 h-4 mt-0.5 shrink-0" />{err}</div>}
 
-          {provider.unavailable ? (
-            /* No live adapter for this vendor yet, so there is no form to show. It used
-               to render a sync button that fabricated four unusable proxies. */
-            <div className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-200/90">
-              {t('proxyProviders.notConnected.body', { provider: provider.name })}
-            </div>
-          ) : provider.tokenSync ? (
+          {provider.tokenSync ? (
             /* ---- Token Sync mechanic ---- */
             <div className="space-y-4 max-w-2xl">
               <div>
@@ -503,6 +517,33 @@ export default function ProxyProviders({ onSynced }) {
           ) : (
             /* ---- Rotating engine configuration form ---- */
             <div className="space-y-4 max-w-2xl">
+              {/* No automatic pull for this vendor yet. Say so, then let the operator
+                  enter the real details their dashboard gives them. Storing the API key
+                  here means it is already in place the day the connector lands. */}
+              {provider.unavailable && (
+                <>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[12.5px] text-amber-200/90">
+                    {t('proxyProviders.notConnected.body', { provider: provider.name })}
+                  </div>
+                  <div>
+                    <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <KeyRound className="w-3.5 h-3.5 text-violet-400" />
+                      {t('proxyProviders.notConnected.apiKeyLabel')}
+                      <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={form.token}
+                      onChange={(e) => set('token', e.target.value)}
+                      className={inputCls + ' font-mono'}
+                      placeholder={t('proxyProviders.notConnected.apiKeyPlaceholder', { provider: provider.name })}
+                      autoComplete="off"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">{t('proxyProviders.notConnected.apiKeyHint')}</p>
+                  </div>
+                </>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-4">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.rotating.hostPortLabel')}</label>
@@ -533,6 +574,10 @@ export default function ProxyProviders({ onSynced }) {
               )}
 
               <div className="flex items-center gap-3 flex-wrap">
+                <button onClick={handleSaveCreds} disabled={savingCreds} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
+                  {savingCreds ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('proxyProviders.rotating.saveCreds')}
+                </button>
+                {credsSaved && <span className="text-[12.5px] font-medium text-emerald-400">{t('proxyProviders.rotating.credsSaved')}</span>}
                 <button onClick={handleCheck} disabled={checking} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
                   {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {t('proxyProviders.rotating.checkProxy')}
                 </button>
