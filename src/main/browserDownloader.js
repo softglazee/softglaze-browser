@@ -132,6 +132,13 @@ async function fetchJson(url, allowedHosts = HOSTS.chrome, label = 'Chrome downl
   return JSON.parse(data);
 }
 
+// A download key must be a plain Chrome version (major, or dotted up to 4 parts).
+// It is later interpolated into a filesystem path that gets recursively removed on
+// a fatal error, so anything containing '/' or '..' must never get that far.
+function isValidVersionKey(key) {
+  return /^\d+(\.\d+){0,3}$/.test(String(key));
+}
+
 function chromeTargetDir(version) {
   return path.join(CHROME_ROOT, `win64-${version}`);
 }
@@ -252,6 +259,11 @@ function extractZip(zipPath, destDir) {
 // Kick off (or RESUME) a background download+install. Returns the progress entry.
 function startDownload(versionOrMajor) {
   const key = String(versionOrMajor);
+  // DL-1: reject a non-version key before any fs/network work, so a crafted value
+  // like '../../..' can never reach chromeTargetDir() / fsp.rm().
+  if (!isValidVersionKey(key)) {
+    return { version: key, major: parseInt(key, 10) || 0, percent: 0, state: 'error', error: 'Invalid Chrome version.', receivedBytes: 0, totalBytes: 0, url: '', dest: '' };
+  }
   const active = downloads.get(key);
   if (active && (active.state === 'downloading' || active.state === 'extracting')) return active;
 
@@ -266,6 +278,7 @@ function startDownload(versionOrMajor) {
   downloads.set(entry.version, entry);
 
   (async () => {
+    let reachedExtraction = false;
     try {
       const list = await listDownloadableVersions();
       const found = list.find((x) => x.version === entry.version || String(x.major) === entry.version);
@@ -303,6 +316,7 @@ function startDownload(versionOrMajor) {
         throw Object.assign(new Error('Connection interrupted before completion.'), { interrupted: true });
       }
 
+      reachedExtraction = true;
       entry.state = 'extracting';
       entry.percent = 92;
       persistState(true);
@@ -330,7 +344,9 @@ function startDownload(versionOrMajor) {
       // Fatal / corrupt: clear the half-install so it can't shadow a real one.
       entry.state = 'error';
       entry.error = e instanceof Error ? e.message : String(e);
-      try { if (entry.version && !isInstalled(entry.version)) await fsp.rm(chromeTargetDir(entry.version), { recursive: true, force: true }); } catch (_) {}
+      // Only clear a half-extracted install; never delete a resumable partial that
+      // failed at the catalogue/download stage (that is what resume exists for).
+      try { if (reachedExtraction && entry.version && !isInstalled(entry.version)) await fsp.rm(chromeTargetDir(entry.version), { recursive: true, force: true }); } catch (_) {}
       persistState(true);
     }
   })();
@@ -473,6 +489,7 @@ function startFpChromiumDownload() {
 
 module.exports = {
   listDownloadableVersions,
+  isValidVersionKey,
   startDownload,
   pauseDownload,
   resumeDownload,
