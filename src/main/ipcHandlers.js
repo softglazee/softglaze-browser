@@ -1241,7 +1241,7 @@ const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
-  apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP'
+  apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -1252,6 +1252,10 @@ const VENDOR_GATEWAYS = Object.freeze({
   oxylabs: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' },
   smartproxy: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' },
   apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }
+  // NOTE: DataImpulse is deliberately NOT listed here. Its adapter never builds a URL
+  // from this table: GET /api/list returns the real host and port for every row, and
+  // that is what gets stored. Adding a hardcoded gateway would reintroduce exactly the
+  // unverified-host problem the other entries were removed for.
 });
 
 
@@ -1645,6 +1649,111 @@ async function fetchShopSocks5Pool({ token, username, country, count, state, cit
   return rows.slice(0, 200);
 }
 
+// --- DataImpulse: REAL list extraction over Basic Auth -----------------------
+// gw.dataimpulse.com:777 is a documented REST API behind HTTP Basic Auth. Unlike the
+// gateway-only vendors above there IS a list to pull: GET /api/list returns one proxy
+// per line in the shape `login:password@hostname:port`, already rendered, with country
+// and session targeting applied server-side. That is a direct match for the pool, so we
+// store exactly what the API returns instead of assembling a username ourselves.
+//
+// PRODUCTS: a DataImpulse account can hold several plans (Residential, Residential
+// Premium, Mobile, Datacenter), and each plan carries its OWN login and password. So the
+// product is chosen by WHICH credentials are entered, not by a request parameter. `plan`
+// is therefore a label only: it names the rows so four products do not collide in the
+// pool. Do not turn it into an API parameter without checking the vendor documents one.
+const DI_API = 'https://gw.dataimpulse.com:777/api';
+const DI_PRODUCTS = Object.freeze({
+  residential: 'Residential', residential_premium: 'Residential Premium',
+  mobile: 'Mobile', datacenter: 'Datacenter'
+});
+async function fetchDataImpulsePool({ username, password, country, state, city, count, life, plan, poolType, proxyType }) {
+  const user = String(username || '').trim();
+  const pw = String(password || '');
+  if (!user) throw new Error('DataImpulse: the plan login is required (dashboard, open the product, proxy credentials).');
+  if (!pw) throw new Error('DataImpulse: the plan password is required.');
+
+  const headers = { Authorization: `Basic ${Buffer.from(`${user}:${pw}`).toString('base64')}` };
+
+  // Verify against /api/stats BEFORE pulling. A wrong login then surfaces as a clean
+  // auth error instead of an empty pool, and an exhausted plan is named as such rather
+  // than minting rows that die on first use. Same "verify, then persist" rule the
+  // gateway vendors follow; this one just has a real endpoint to verify against.
+  let stats = null;
+  try {
+    stats = JSON.parse(await httpRequestText(`${DI_API}/stats`, { headers }));
+  } catch (e) {
+    throw new Error(`DataImpulse credential check failed: ${e.message}`);
+  }
+  if (stats && stats.status && String(stats.status).toLowerCase() !== 'ok') {
+    throw new Error(`DataImpulse credential check failed: ${stats.message || 'the gateway rejected these credentials.'}`);
+  }
+  const left = Number(stats && stats.traffic_left);
+  if (Number.isFinite(left) && left <= 0) {
+    throw new Error('DataImpulse: this plan has no traffic left, so anything pulled from it would fail on first use.');
+  }
+
+  const cc = normCountryCode(country);
+  const n = clampPoolCount(count, 5, 200);
+  const sticky = String(poolType || '').toLowerCase() === 'sticky';
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const ttl = Number.parseInt(String(life), 10);
+  const product = DI_PRODUCTS[String(plan || '').toLowerCase()] || DI_PRODUCTS.residential;
+
+  const qs = new URLSearchParams();
+  qs.set('quantity', String(n));
+  qs.set('type', sticky ? 'sticky' : 'rotating');
+  qs.set('protocol', socks ? 'socks5' : 'http');
+  // The API takes lower-case ISO country codes ("us"), and omitting it means global.
+  if (cc) qs.set('countries', cc.toLowerCase());
+  // states and cities are documented as comma-separated lists. Pass them through as
+  // typed; the vendor resolves them, and an unknown value comes back as an empty list
+  // rather than a wrong exit, which the "no usable proxies" guard below reports.
+  const st = String(state || '').trim();
+  const ct = String(city || '').trim();
+  if (st) qs.set('states', st);
+  if (ct) qs.set('cities', ct);
+  // session_ttl is minutes and only means anything for sticky sessions.
+  if (sticky && Number.isFinite(ttl) && ttl > 0) qs.set('session_ttl', String(ttl));
+
+  let text;
+  try {
+    text = await httpRequestText(`${DI_API}/list?${qs.toString()}`, { headers });
+  } catch (e) {
+    throw new Error(`DataImpulse list error: ${e.message}`);
+  }
+
+  const rows = [];
+  for (const raw of String(text).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('{')) continue; // a JSON body here means an error, not a list
+    // Split at the LAST '@' and the FIRST ':' of the credential half. A password may
+    // legitimately contain '@' or ':', and splitting naively is exactly the bug that
+    // once parsed user:pass@host:port into host="user" with a NaN port.
+    const at = line.lastIndexOf('@');
+    if (at < 0) continue;
+    const cred = line.slice(0, at);
+    const endpoint = line.slice(at + 1);
+    const c = cred.indexOf(':');
+    const rowUser = c >= 0 ? cred.slice(0, c) : cred;
+    const rowPass = c >= 0 ? cred.slice(c + 1) : '';
+    const h = endpoint.lastIndexOf(':');
+    if (h < 0) continue;
+    const host = endpoint.slice(0, h).trim();
+    const port = Number.parseInt(endpoint.slice(h + 1), 10);
+    if (!host || !Number.isFinite(port)) continue;
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username: rowUser, password: rowPass,
+      label: `DataImpulse • ${product} • ${cc || 'Global'} • ${sticky ? 'sticky' : 'rotating'} • #${rows.length + 1}`,
+      country: cc || null
+    });
+  }
+  if (!rows.length) {
+    throw new Error('DataImpulse returned no usable proxies. Try a different country, or check the plan still has traffic.');
+  }
+  return rows;
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -1653,7 +1762,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   apify: fetchApifyPool,
   smartproxyorg: fetchSmartproxyOrgPool,
   shopsocks5: fetchShopSocks5Pool,
-  anyip: fetchAnyIpPool
+  anyip: fetchAnyIpPool,
+  dataimpulse: fetchDataImpulsePool
 });
 
 async function syncVendorPool(payload) {

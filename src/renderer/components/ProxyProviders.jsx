@@ -38,7 +38,11 @@ export const PROVIDERS = [
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
-  { key: 'anyip', name: 'AnyIP', initials: 'AN', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } }
+  { key: 'anyip', name: 'AnyIP', initials: 'AN', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } },
+  // DataImpulse is a real list pull: GET /api/list returns rendered login:password@host:port
+  // rows, so `geo` (state/city), `count` and `life` (session_ttl) all map to documented
+  // query parameters rather than to an invented username grammar.
+  { key: 'dataimpulse', name: 'DataImpulse', initials: 'DI', color: '#a3e635', referral: 'https://dataimpulse.com/?ref=softglaze', gateway: { host: 'gw.dataimpulse.com', port: 823, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, di: true } }
 ];
 
 // Country list for the geo-targeted providers (Apify / Smartproxy.org / ShopSocks5).
@@ -96,7 +100,11 @@ export default function ProxyProviders({ onSynced }) {
   // Re-prime the workspace whenever the active provider changes.
   useEffect(() => {
     const gw = provider.gateway || { host: '', port: '' };
-    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
+    // DataImpulse labels these three selects with its own vocabulary (product /
+    // rotating-sticky / http-socks5), so it needs defaults that its own <option>
+    // values actually carry. Sharing one default set renders blank selects.
+    const di = provider.key === 'dataimpulse';
+    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'rotating' : 'residential', teamId: '', ipv6: false });
     setCheckResult(null);
     setCredsSaved(false);
     setSyncResult(null);
@@ -385,6 +393,38 @@ export default function ProxyProviders({ onSynced }) {
                       <option value="residential">{t('proxyProviders.geo.poolResidential')}</option>
                       <option value="mobile">{t('proxyProviders.geo.poolMobile')}</option>
                     </select>
+                  </div>
+                )}
+
+                {provider.geoSync.di && (
+                  <div className="rounded-lg border border-border bg-card/40 p-3.5 space-y-3">
+                    <p className="text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.geo.diNote', 'Each DataImpulse product has its own login and password, so the product is chosen by the credentials you enter below. Pick the matching name here and the pulled proxies are labelled with it, which keeps several products apart in the pool.')}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diProductLabel', 'Product')}</label>
+                        <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
+                          <option value="residential">{t('proxyProviders.geo.diResidential', 'Residential')}</option>
+                          <option value="residential_premium">{t('proxyProviders.geo.diResidentialPremium', 'Residential Premium')}</option>
+                          <option value="mobile">{t('proxyProviders.geo.diMobile', 'Mobile')}</option>
+                          <option value="datacenter">{t('proxyProviders.geo.diDatacenter', 'Datacenter')}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diSessionLabel', 'Session')}</label>
+                        <select value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
+                          <option value="rotating">{t('proxyProviders.geo.diRotating', 'Rotating, a new exit IP per request')}</option>
+                          <option value="sticky">{t('proxyProviders.geo.diSticky', 'Sticky, hold the exit IP')}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diProtocolLabel', 'Protocol')}</label>
+                        <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+                          <option value="http">HTTP</option>
+                          <option value="socks5">SOCKS5</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{t('proxyProviders.geo.diTtlNote', 'Sticky lifetime below is sent as session_ttl in minutes and only applies when Session is set to Sticky.')}</p>
                   </div>
                 )}
 
