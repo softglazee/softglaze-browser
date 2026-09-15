@@ -1,7 +1,7 @@
 {
   "name": "softglaze-browser",
   "version": "1.0.0",
-  "description": "Secure Local-First Anti-Detect Browser for LeadGen and Gaming",
+  "description": "Local-first desktop app for isolated browser profiles, each with its own fingerprint, proxy and storage",
   "license": "BUSL-1.1",
   "author": "Azhar Ali (SoftGlaze) <https://softglaze.com>",
   "homepage": "https://softglaze.com",

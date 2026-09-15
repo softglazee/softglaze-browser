@@ -12,24 +12,24 @@
     "bullets": {
       "fingerprints": "Huellas digitales únicas y consistentes por perfil",
       "proxy": "Un proxy dedicado para cada identidad",
-      "localFirst": "Local primero - tus datos nunca salen de este dispositivo"
+      "localFirst": "Local primero - tu espacio de trabajo se guarda en este dispositivo"
     },
     "heroLine1": "Ejecuta cientos de identidades.",
-    "heroLine2": "Sin dejar rastro.",
+    "heroLine2": "Cada una, por separado.",
     "heroBody": "Un navegador anti-detect que prioriza lo local. Cada perfil obtiene una huella digital única y consistente y su propia identidad de red.",
     "footer": "© {{year}} SoftGlaze · Espacio de trabajo local",
     "trust": {
       "local": "Local primero",
-      "encrypted": "Bóveda cifrada",
+      "encrypted": "Bloqueo del espacio",
       "private": "Sin telemetría"
     },
     "slides": {
       "security": {
         "title": "Seguridad de datos robusta",
-        "body": "El almacenamiento local con una bóveda cifrada mantiene los datos sensibles en tu dispositivo - nada se sincroniza en la nube."
+        "body": "Tu espacio de trabajo se guarda en este dispositivo, y las semillas 2FA y las claves de proveedores se sellan con el llavero del sistema. Nada se sincroniza a menos que conectes tu propio servidor."
       },
       "fingerprint": {
-        "title": "Huellas indetectables",
+        "title": "Huellas consistentes",
         "body": "Cada perfil incluye una huella única y consistente: canvas, WebGL, fuentes, audio y hardware."
       },
       "proxy": {

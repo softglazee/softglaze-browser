@@ -47,8 +47,8 @@
     "dismiss": "Dismiss",
     "trialEndingDays_one": "Free trial ends in {{count}} day. Subscribe for $5/month to keep going.",
     "trialEndingDays_other": "Free trial ends in {{count}} days. Subscribe for $5/month to keep going.",
-    "trialEnded": "Your free trial has ended - the app keeps working, but please subscribe ($5/mo) to keep it supported.",
-    "subscriptionEnded": "Your subscription has ended - the app keeps working, but please subscribe ($5/mo) to keep it supported."
+    "trialEnded": "Your free trial has ended. Subscribe ($5/month) before the grace period runs out, or the app will lock until you do. Your profiles and data stay on this device.",
+    "subscriptionEnded": "Your subscription has ended. Renew ($5/month) before the grace period runs out, or the app will lock until you do. Your profiles and data stay on this device."
   },
   "roles": {
     "OWNER": "Owner",

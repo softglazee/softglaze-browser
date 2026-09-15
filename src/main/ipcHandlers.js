@@ -8722,14 +8722,14 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
     currency: PLAN.currency,
     months: 1,
     period: 'month',
-    tagline: 'For teams - sync, full-disk encryption, seats & audit.',
+    tagline: 'For teams - seats, audit export, database encryption and self-hosted sync.',
     highlight: true,
     features: Object.freeze([
       'Everything in Pro, plus:',
-      'Unlimited parallel runner + live run console',
+      'Parallel runner (up to 10 profiles at once) + live run console',
       'Team seats, profile lock & handoff',
       'Audit-log export (CSV / JSON)',
-      'End-to-end encrypted cloud sync',
+      'End-to-end encrypted sync to a server you host',
       'Full at-rest database encryption',
       'Priority support'
     ])

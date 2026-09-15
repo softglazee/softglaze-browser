@@ -12,24 +12,24 @@
     "bullets": {
       "fingerprints": "Unique, consistent fingerprints per profile",
       "proxy": "A dedicated proxy for every identity",
-      "localFirst": "Local-first - your data never leaves this device"
+      "localFirst": "Local-first - your workspace is stored on this device"
     },
     "heroLine1": "Run hundreds of identities.",
-    "heroLine2": "Leave zero trace.",
+    "heroLine2": "Keep every one separate.",
     "heroBody": "A local-first anti-detect browser. Every profile gets a unique, consistent fingerprint and its own network identity.",
     "footer": "© {{year}} SoftGlaze · Local workspace",
     "trust": {
       "local": "Local-first",
-      "encrypted": "Encrypted vault",
+      "encrypted": "Workspace lock",
       "private": "Zero telemetry"
     },
     "slides": {
       "security": {
         "title": "Robust data security",
-        "body": "Local-first storage with an encrypted vault keeps sensitive data on your device - nothing is synced to a cloud."
+        "body": "Your workspace is stored on this device, and 2FA seeds and provider keys are sealed with your system keychain. Nothing syncs unless you connect your own server."
       },
       "fingerprint": {
-        "title": "Undetectable fingerprints",
+        "title": "Consistent fingerprints",
         "body": "Every profile ships a unique, consistent fingerprint: canvas, WebGL, fonts, audio, and hardware."
       },
       "proxy": {

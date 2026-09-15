@@ -61,7 +61,7 @@ break the rules of a platform you have agreed to.
 
 - Node.js 20.19.0 or newer
 - npm 10 or newer
-- Windows, macOS, or Linux
+- Windows, macOS, or Linux for development. Packaged installers are currently built for Windows (x64) only.
 
 ## Install
 
@@ -166,7 +166,7 @@ The batch importer supports `.xlsx`, `.xls`, and `.csv` files.
 
 Expected behavior:
 
-- Scans for the header row starting around row 4.
+- Finds the header row by matching column names in the first 30 rows, so title or instruction rows above it are fine.
 - Detects profile title/name columns.
 - Maps proxy methods:
   - `Custom` or `2` → profile proxy
