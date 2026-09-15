@@ -48,8 +48,18 @@ function sendJson(res, status, obj) {
   } catch (e) { try { res.end(); } catch (_) {} }
 }
 
+// DNS-rebinding guard (audit T2-2), matching localApi.js: only serve requests whose Host
+// header targets our loopback bind. Without it a page on evil.com whose DNS was rebound to
+// 127.0.0.1 could reach the bridge; the extension always sends Host 127.0.0.1:<port>, so
+// this never rejects a legitimate call.
+function hostAllowed(req) {
+  const host = String(req.headers.host || '').toLowerCase();
+  const port = runningPort || PORT_RANGE[0];
+  return host === `127.0.0.1:${port}` || host === `localhost:${port}` || host === `[::1]:${port}`;
+}
+
 function authed(req) {
-  return String(req.headers['x-sg-autofill-token'] || '') === TOKEN;
+  return hostAllowed(req) && String(req.headers['x-sg-autofill-token'] || '') === TOKEN;
 }
 
 function readBody(req) {
