@@ -412,8 +412,8 @@ export default function ProxyProviders({ onSynced }) {
                       <div>
                         <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diSessionLabel', 'Session')}</label>
                         <select value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
-                          <option value="rotating">{t('proxyProviders.geo.diRotating', 'Rotating, a new exit IP per request')}</option>
-                          <option value="sticky">{t('proxyProviders.geo.diSticky', 'Sticky, hold the exit IP')}</option>
+                          <option value="rotating">{t('proxyProviders.geo.diRotating', 'Rotating')}</option>
+                          <option value="sticky">{t('proxyProviders.geo.diSticky', 'Sticky')}</option>
                         </select>
                       </div>
                       <div>
@@ -424,7 +424,7 @@ export default function ProxyProviders({ onSynced }) {
                         </select>
                       </div>
                     </div>
-                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{t('proxyProviders.geo.diTtlNote', 'Sticky lifetime below is sent as session_ttl in minutes and only applies when Session is set to Sticky.')}</p>
+                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{t('proxyProviders.geo.diTtlNote', 'Rotating is a single shared endpoint whose exit IP changes on every request, so it adds one proxy and How many is ignored. Sticky adds one endpoint per proxy, each holding its own exit IP, and the Sticky lifetime below is sent as session_ttl in minutes.')}</p>
                   </div>
                 )}
 

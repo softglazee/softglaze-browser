@@ -1699,8 +1699,17 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   const ttl = Number.parseInt(String(life), 10);
   const product = DI_PRODUCTS[String(plan || '').toLowerCase()] || DI_PRODUCTS.residential;
 
+  // A ROTATING pull returns the SAME endpoint N times. The exit IP changes per REQUEST,
+  // not per row: DataImpulse's own documented example response is three identical lines.
+  // Asking for five would mint five copies of one proxy, which is the "rows that look
+  // distinct and are not" problem this file exists to avoid, so ask for one and let the
+  // label say it rotates. That also matches fetchGatewayVerifiedPool, which returns
+  // exactly one row for the other rotating gateways (Oxylabs, Smartproxy).
+  // STICKY is the opposite: each row is its own session pinned to its own port, so a
+  // pool of N distinct exit IPs is exactly what a user wants and we ask for N.
+  const want = sticky ? n : 1;
   const qs = new URLSearchParams();
-  qs.set('quantity', String(n));
+  qs.set('quantity', String(want));
   qs.set('type', sticky ? 'sticky' : 'rotating');
   qs.set('protocol', socks ? 'socks5' : 'http');
   // The API takes lower-case ISO country codes ("us"), and omitting it means global.
@@ -1723,6 +1732,7 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   }
 
   const rows = [];
+  const seen = new Set();
   for (const raw of String(text).split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('{')) continue; // a JSON body here means an error, not a list
@@ -1741,15 +1751,28 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
     const host = endpoint.slice(0, h).trim();
     const port = Number.parseInt(endpoint.slice(h + 1), 10);
     if (!host || !Number.isFinite(port)) continue;
+    // Collapse repeats on the identity the pool itself dedupes on. Without this a
+    // rotating pull reports "Returned: 5, Added: 1, Existing: 4", which reads like a
+    // failure when it is really one endpoint listed five times.
+    const key = `${host}:${port}:${rowUser}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username: rowUser, password: rowPass,
-      label: `DataImpulse • ${product} • ${cc || 'Global'} • ${sticky ? 'sticky' : 'rotating'} • #${rows.length + 1}`,
+      label: sticky
+        ? `DataImpulse • ${product} • ${cc || 'Global'} • sticky • #${rows.length + 1}`
+        : `DataImpulse • ${product} • ${cc || 'Global'} • rotating gateway`,
       country: cc || null
     });
   }
   if (!rows.length) {
     throw new Error('DataImpulse returned no usable proxies. Try a different country, or check the plan still has traffic.');
+  }
+  if (sticky && rows.length < n) {
+    // Not an error: the vendor caps what it can pin for this filter. Say so in the label
+    // of the first row rather than silently handing back fewer than asked for.
+    rows[0].label += ` (${rows.length} of ${n} available)`;
   }
   return rows;
 }

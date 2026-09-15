@@ -87,6 +87,27 @@ test('documented query parameters are sent, and session_ttl only when sticky', (
     'session_ttl is meaningless for a rotating pull and must be gated on sticky');
 });
 
+test('a rotating pull asks for ONE endpoint, not N copies of the same one', () => {
+  // Measured against the live API on 15 Sep 2026: quantity=5 with type=rotating returned
+  // five IDENTICAL lines, so the pool deduped them and reported "Returned: 5, Added: 1,
+  // Existing: 4". DataImpulse's own documented example response is three identical lines
+  // too. A rotating gateway is ONE endpoint whose exit IP changes per request, which is
+  // exactly how fetchGatewayVerifiedPool treats Oxylabs and Smartproxy.
+  const body = adapterBody();
+  assert.match(body, /const want = sticky \? n : 1/,
+    'rotating must request a single endpoint; asking for N mints N copies of one proxy');
+  assert.match(body, /qs\.set\('quantity', String\(want\)\)/,
+    'the quantity sent must be the adjusted value, not the raw requested count');
+});
+
+test('repeated endpoints are collapsed before they reach the pool', () => {
+  const body = adapterBody();
+  assert.match(body, /seen\.has\(key\)/,
+    'duplicate host:port:username rows must be dropped in the adapter');
+  assert.match(body, /\$\{host\}:\$\{port\}:\$\{rowUser\}/,
+    'the dedupe key must match the identity the pool itself dedupes on');
+});
+
 test('rows are typed from the protocol that was actually requested', () => {
   const body = adapterBody();
   assert.match(body, /socks\s*\?\s*'SOCKS5'\s*:\s*'HTTP'/,
