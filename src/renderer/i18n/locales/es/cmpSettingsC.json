@@ -247,7 +247,7 @@
       "shopsocks5": "ShopSocks5 extrae tu lista SOCKS5 (o HTTPS) adquirida mediante su API, filtrada por el país/estado/ciudad elegidos. La API se autentica con el usuario/correo de tu cuenta + el token de API JUNTOS - el token solo devuelve “User or Api Token incorrect”. Elige el Plan que coincida con tu suscripción (Premium / Lista / Diario).",
       "anyip": "anyip.io se enruta por una única pasarela (portal.anyip.io:1080) y codifica el tipo (Residencial/Móvil), el país, un nombre de sesión fija opcional y una duración en el usuario del proxy. Conecta pegando tu Usuario (user_…) + Contraseña del proxy desde el panel, O introduciendo una clave API + ID de equipo para aprovisionar una cuenta automáticamente. Una sesión en blanco con “IP diferente cada vez” genera IP rotativas; un nombre de sesión fija mantiene una sola IP. Sobrescribe la pasarela si tu panel muestra un puerto personalizado.",
       "dataimpulse": "Cada extracción añade proxies nuevos. Los proxies fijos usan sus propios puertos, así que pedir 5 cuando el pool ya tiene 5 con la misma configuración añade los 5 puertos siguientes en lugar de devolver los mismos. Usa el usuario y la contraseña de un producto de DataImpulse, que aparecen en la página de ese producto en el panel.",
-      "proxyseller": "Una lista residencial de Proxy-Seller es un usuario con hasta 1000 puertos, y cada puerto es una IP de salida distinta. Cada extracción con Lista nueva crea en tu cuenta una lista llamada SoftGlaze más la ubicación y la hora, para que puedas verla y borrarla en el panel. El tráfico se descuenta de tu paquete residencial."
+      "proxyseller": "Residencial es un paquete de tráfico: cada extracción con Lista nueva crea en tu cuenta una lista llamada SoftGlaze más la ubicación y la hora, con hasta 1000 puertos, y cada puerto es una IP de salida distinta. IPv6, IPv4, ISP y Móvil se venden por IP: la extracción añade las direcciones que ya tienes, cada una en su propio puerto, sin crear nada."
     },
     "notConnected": {
       "body": "{{provider}} todavía no admite importación automática. Introduce los datos de tu panel de {{provider}} aquí abajo para añadir sus proxies manualmente.",
@@ -262,7 +262,6 @@
       "keyLabel": "Clave API de Proxy-Seller",
       "keyPlaceholder": "Pega la clave de Panel, API",
       "keyHint": "La clave está en tu panel de Proxy-Seller, en la sección API. Si la limitaste a ciertas direcciones IP, añade también la IP de este equipo. Se guarda cifrada en este equipo.",
-      "sourceTitle": "Lista residencial",
       "sourceNew": "Lista nueva",
       "sourceExisting": "Lista existente",
       "savedList": "Lista guardada",
@@ -287,7 +286,20 @@
       "pullList": "Añadir proxies de esta lista",
       "createList": "Crear lista y añadir {{count}} proxies",
       "createList_one": "Crear lista y añadir {{count}} proxy",
-      "createList_other": "Crear lista y añadir {{count}} proxies"
+      "createList_other": "Crear lista y añadir {{count}} proxies",
+      "whatTitle": "Qué obtener",
+      "productLabel": "Producto",
+      "orderLabel": "Pedido",
+      "allOrders": "Todos los pedidos ({{count}} IP)",
+      "allOrders_one": "Todos los pedidos ({{count}} IP)",
+      "allOrders_other": "Todos los pedidos ({{count}} IP)",
+      "checkForOrders": "Todos los pedidos (comprueba la cuenta para ver cuántas)",
+      "orderHint": "Añade todas las IP activas del pedido, cada una en su propio puerto. Si vuelves a obtenerlo, solo se añaden las IP que el pool aún no tiene.",
+      "ipv6Note": "Las salidas IPv6 solo pueden acceder a sitios web que tengan dirección IPv6. Antes de asignarlas a perfiles, comprueba que los sitios que usas admiten IPv6, o puede que una página no cargue a través de ellas.",
+      "addOrderCount": "Añadir {{count}} proxies {{product}}",
+      "addOrderCount_one": "Añadir {{count}} proxy {{product}}",
+      "addOrderCount_other": "Añadir {{count}} proxies {{product}}",
+      "addOrder": "Añadir proxies {{product}}"
     },
     "account": {
       "leftOf": "Quedan {{left}} de {{total}}",
@@ -297,7 +309,11 @@
       "lists_one": "{{count}} lista guardada",
       "lists_other": "{{count}} listas guardadas",
       "checkPlan": "Comprobar plan",
-      "checkAccount": "Comprobar cuenta"
+      "checkAccount": "Comprobar cuenta",
+      "noResidential": "Esta cuenta no tiene paquete residencial.",
+      "productActive": "{{count}} {{product}} activas",
+      "productActive_one": "{{count}} {{product}} activa",
+      "productActive_other": "{{count}} {{product}} activas"
     }
   }
 }

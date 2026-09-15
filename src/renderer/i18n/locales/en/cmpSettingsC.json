@@ -247,7 +247,7 @@
       "shopsocks5": "ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).",
       "anyip": "anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard, OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway if your dashboard shows a custom port.",
       "dataimpulse": "Every pull adds new proxies. Sticky proxies sit on their own ports, so asking for 5 when the pool already holds 5 with the same settings adds the next 5 ports instead of returning the same ones. Use the login and password of one DataImpulse product, shown on that product page in the dashboard.",
-      "proxyseller": "A Proxy-Seller residential list is one login with up to 1000 ports, and each port is its own exit IP. Every New list pull creates a list on your account named SoftGlaze plus the location and time, so you can see and delete it in the dashboard. Traffic comes out of your residential package."
+      "proxyseller": "Residential is a traffic package: each New list pull creates a list on your account named SoftGlaze plus the location and time, with up to 1000 ports, and each port is its own exit IP. IPv6, IPv4, ISP and Mobile are sold per IP: the pull adds the addresses you already own, each on its own port, and needs nothing created."
     },
     "notConnected": {
       "body": "{{provider}} does not support automatic pull yet. Enter the gateway details from your {{provider}} dashboard below to add its proxies manually.",
@@ -262,7 +262,6 @@
       "keyLabel": "Proxy-Seller API key",
       "keyPlaceholder": "Paste the key from Dashboard, API",
       "keyHint": "The key is in your Proxy-Seller dashboard under API. If you limited it to certain IP addresses, add this computer's IP there as well. It is stored encrypted on this machine.",
-      "sourceTitle": "Residential list",
       "sourceNew": "New list",
       "sourceExisting": "Existing list",
       "savedList": "Saved list",
@@ -287,7 +286,20 @@
       "pullList": "Add proxies from this list",
       "createList": "Create list and add {{count}} proxies",
       "createList_one": "Create list and add {{count}} proxy",
-      "createList_other": "Create list and add {{count}} proxies"
+      "createList_other": "Create list and add {{count}} proxies",
+      "whatTitle": "What to pull",
+      "productLabel": "Product",
+      "orderLabel": "Order",
+      "allOrders": "All orders ({{count}} IPs)",
+      "allOrders_one": "All orders ({{count}} IP)",
+      "allOrders_other": "All orders ({{count}} IPs)",
+      "checkForOrders": "All orders (Check account to see counts)",
+      "orderHint": "Adds every active IP in the order, each on its own port. Pulling again only adds IPs the pool does not have yet.",
+      "ipv6Note": "IPv6 exits can only reach websites that have an IPv6 address. Before assigning these to profiles, check that the sites you use support IPv6, or a page may fail to load through them.",
+      "addOrderCount": "Add {{count}} {{product}} proxies",
+      "addOrderCount_one": "Add {{count}} {{product}} proxy",
+      "addOrderCount_other": "Add {{count}} {{product}} proxies",
+      "addOrder": "Add {{product}} proxies"
     },
     "account": {
       "leftOf": "{{left}} left of {{total}}",
@@ -297,7 +309,11 @@
       "lists_one": "{{count}} saved list",
       "lists_other": "{{count}} saved lists",
       "checkPlan": "Check plan",
-      "checkAccount": "Check account"
+      "checkAccount": "Check account",
+      "noResidential": "No residential package on this account.",
+      "productActive": "{{count}} active {{product}}",
+      "productActive_one": "{{count}} active {{product}}",
+      "productActive_other": "{{count}} active {{product}}"
     }
   }
 }

@@ -130,7 +130,94 @@ function proxySellerGeoView(db, country) {
     }));
 }
 
+// Dual-stack geo lookup used when ipinfo.io and ip-api.com cannot be reached through a
+// proxy. Neither of those publishes an AAAA record (checked 15 Sep 2026), so an IPv6-only
+// exit cannot reach them at all and a healthy IPv6 proxy used to look dead. get.geojs.io
+// answers on both families. Response fields verified live: ip, country_code, region,
+// city, timezone, latitude, longitude, organization_name.
+const GEOJS_URL = 'https://get.geojs.io/v1/ip/geo.json';
+function normalizeGeoJs(j) {
+  if (!j || typeof j !== 'object' || !j.ip) return null;
+  const num = (v) => { const n = Number.parseFloat(v); return Number.isFinite(n) ? n : null; };
+  return {
+    ip: String(j.ip),
+    country: j.country_code ? String(j.country_code) : null,
+    region: j.region ? String(j.region) : null,
+    city: j.city ? String(j.city) : null,
+    isp: j.organization_name ? String(j.organization_name) : (j.organization ? String(j.organization) : null),
+    timezone: j.timezone ? String(j.timezone) : null,
+    lat: num(j.latitude),
+    lon: num(j.longitude)
+  };
+}
+
+// Proxy-Seller products that are sold per IP (an order of N addresses), as opposed to the
+// residential traffic package. All of them list through GET proxy/list/{type}.
+const PROXY_SELLER_ORDER_TYPES = Object.freeze({
+  ipv6: 'IPv6', ipv4: 'IPv4', isp: 'ISP', mobile: 'Mobile', mix: 'IPv4 Mix', mix_isp: 'ISP Mix'
+});
+
+// Map proxy/list/{type} items to pool rows. Each item is one purchased address with its own
+// HTTP and SOCKS5 port on the entry host. Inactive or expired items are skipped, because a
+// row that can never connect is worse than no row.
+function proxySellerOrderRows(items, { socks = false, label = 'Proxy-Seller' } = {}) {
+  const out = [];
+  const seen = new Set();
+  for (const it of Array.isArray(items) ? items : []) {
+    if (!it || typeof it !== 'object') continue;
+    const status = String(it.status_type || '').toUpperCase();
+    if (status && status !== 'ACTIVE') continue;
+    const host = String(it.ip_only || it.ip || '').trim();
+    const port = Number.parseInt(String(socks ? it.port_socks : it.port_http), 10);
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const username = it.login ? String(it.login) : null;
+    const key = `${host}:${port}:${username || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const where = it.country_alpha3 ? String(it.country_alpha3) : (it.country ? String(it.country) : 'Global');
+    out.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username,
+      password: it.password != null && it.password !== '' ? String(it.password) : null,
+      label: `${label} • ${where} • port ${port}`,
+      orderId: it.order_id != null ? String(it.order_id) : null,
+      expires: it.date_end ? String(it.date_end) : null
+    });
+  }
+  return out;
+}
+
+// Summarise GET proxy/list (all types) into what the panel shows: per product, how many
+// addresses are active, in which countries, which orders, and the earliest expiry.
+function summarizeProxySellerOrders(data) {
+  const out = [];
+  for (const [key, label] of Object.entries(PROXY_SELLER_ORDER_TYPES)) {
+    const items = data && Array.isArray(data[key]) ? data[key] : [];
+    if (!items.length) continue;
+    const active = items.filter((it) => !it.status_type || String(it.status_type).toUpperCase() === 'ACTIVE');
+    const orders = new Map();
+    for (const it of active) {
+      const id = it.order_id != null ? String(it.order_id) : '';
+      if (!id) continue;
+      const o = orders.get(id) || { id, number: it.order_number ? String(it.order_number) : id, count: 0, country: it.country_alpha3 ? String(it.country_alpha3) : '', expires: it.date_end ? String(it.date_end) : '' };
+      o.count += 1;
+      orders.set(id, o);
+    }
+    const countries = [...new Set(active.map((it) => it.country_alpha3).filter(Boolean).map(String))];
+    // date_end is d.m.Y, so sort on Y m d to get the earliest.
+    const sortKey = (s) => { const m = /^(\d{2})\.(\d{2})\.(\d{4})/.exec(s); return m ? `${m[3]}${m[2]}${m[1]}` : s; };
+    const ends = active.map((it) => it.date_end).filter(Boolean).map(String).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    out.push({ key, label, total: items.length, active: active.length, countries, expires: ends[0] || null, orders: [...orders.values()] });
+  }
+  return out;
+}
+
 module.exports = {
+  GEOJS_URL,
+  normalizeGeoJs,
+  PROXY_SELLER_ORDER_TYPES,
+  proxySellerOrderRows,
+  summarizeProxySellerOrders,
   parseLoginLine,
   parseLoginList,
   csvFilter,

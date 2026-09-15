@@ -22,6 +22,7 @@ const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
 // proxy, so an authenticated one is routed through this instead (audit).
 const { startSocksAuthRelay } = require('./socksRelay');
 const { startHttpAuthRelay } = require('./httpRelay');
+const { GEOJS_URL, normalizeGeoJs } = require('./proxyVendorUtils');
 
 // SoftGlaze first-party extension (Chrome Web Store ID). Best-effort force-install
 // on Chromium / Chrome-for-Testing so the store counts active users; the unpacked
@@ -2248,7 +2249,14 @@ async function lookupProxyGeo(page) {
     const txt = await page.evaluate(() => (document.body ? document.body.innerText : '')).catch(() => '');
     const j = JSON.parse(txt);
     if (j && j.status === 'success') return j;
-  } catch (e) { /* proxy dead / non-JSON / timeout - geo stays null, launch continues */ }
+  } catch (e) { /* proxy dead / non-JSON / timeout - try the dual-stack service below */ }
+  // ip-api.com has no AAAA record, so an IPv6-only exit cannot reach it. get.geojs.io can.
+  try {
+    await page.goto(GEOJS_URL, { waitUntil: 'domcontentloaded', timeout: GEO_LOOKUP_TIMEOUT_MS });
+    const txt = await page.evaluate(() => (document.body ? document.body.innerText : '')).catch(() => '');
+    const g = normalizeGeoJs(JSON.parse(txt));
+    if (g) return { status: 'success', query: g.ip, countryCode: g.country, timezone: g.timezone, city: g.city, regionName: g.region, isp: g.isp, lat: g.lat, lon: g.lon };
+  } catch (e) { /* geo stays null, launch continues */ }
   return null;
 }
 
@@ -2292,26 +2300,35 @@ function lookupProxyGeoNode(proxy) {
       const proxyUrl = `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}`;
       
       const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
-      let settled = false;
-      const done = (v) => { if (!settled) { settled = true; resolve(v); } };
-      
-      // Use node:https since targetUrl is https://
-      const req = require('node:https').get(targetUrl, { 
-        agent, 
-        headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }
-      }, (res) => {
-        let data = '';
-        res.on('data', (c) => { data += c; });
-        res.on('end', () => {
-          try { 
-            const j = JSON.parse(data); 
-            done(mapResponse(j)); 
-          } catch (e) { done(null); }
+
+      // One HTTPS GET through the proxy, mapped to the ip-api shape. Resolves null on any
+      // failure so the caller can try the next service.
+      const attempt = (url, map) => new Promise((settle) => {
+        let settled = false;
+        const done = (v) => { if (!settled) { settled = true; settle(v); } };
+        const req = require('node:https').get(url, {
+          agent,
+          headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }
+        }, (res) => {
+          let data = '';
+          res.on('data', (c) => { data += c; });
+          res.on('end', () => {
+            try { done(map(JSON.parse(data))); } catch (e) { done(null); }
+          });
         });
+        req.on('error', () => done(null));
+        req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
       });
-      
-      req.on('error', () => done(null));
-      req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
+
+      // ipinfo.io has no AAAA record, so an IPv6-only exit cannot reach it and the profile
+      // would launch with no geo, which breaks timezone matching. Retry on get.geojs.io,
+      // which answers over IPv4 and IPv6.
+      attempt(targetUrl, mapResponse)
+        .then((geo) => geo || attempt(GEOJS_URL, (j) => {
+          const g = normalizeGeoJs(j);
+          return g ? { status: 'success', query: g.ip, countryCode: g.country, timezone: g.timezone, city: g.city, regionName: g.region, isp: g.isp, lat: g.lat, lon: g.lon } : null;
+        }))
+        .then(resolve, () => resolve(null));
       return;
     }
 

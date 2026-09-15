@@ -63,7 +63,10 @@ const secretStore = require('./secretStore');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
-const { parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView } = require('./proxyVendorUtils');
+const {
+  parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
+  GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders
+} = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -1897,8 +1900,35 @@ function psRotationLabel(rotation) {
   return 'rotation unknown';
 }
 
-async function fetchProxySellerPool({ token, country, state, city, count, poolType, life, proxyType, listId }) {
+// IPv6, IPv4, ISP, Mobile and the Mix products are sold per IP: an order holds N addresses,
+// each with its own HTTP and SOCKS5 port on the entry host. There is nothing to create, so
+// the pull downloads what the account already owns from GET proxy/list/{type}, optionally
+// one order. Measured on his dashboard 15 Sep 2026: 200 IPv6 addresses, USA, all behind one
+// IPv4 entry host on separate ports, login authentication.
+async function fetchProxySellerOrderPool(key, { product, proxyType, orderId }) {
+  const label = PROXY_SELLER_ORDER_TYPES[product];
+  const qs = new URLSearchParams();
+  const oid = String(orderId || '').trim();
+  if (/^[A-Za-z0-9_-]{1,40}$/.test(oid)) qs.set('orderId', oid);
+  const query = qs.toString();
+  const data = await psCall(key, 'GET', `proxy/list/${product}${query ? `?${query}` : ''}`, `${label} list`);
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const rows = proxySellerOrderRows(data && data.items, { socks, label: `Proxy-Seller • ${label}` });
+  if (!rows.length) {
+    throw new Error(`Proxy-Seller: this account has no active ${label} proxies${oid ? ' in that order' : ''}.`);
+  }
+  return rows.slice(0, 5000).map((r) => ({
+    type: r.type, host: r.host, port: r.port, username: r.username, password: r.password,
+    label: r.label, country: null
+  }));
+}
+
+async function fetchProxySellerPool({ token, country, state, city, count, poolType, life, proxyType, listId, plan, orderId }) {
   const key = psKey(token);
+  const product = String(plan || 'residential').toLowerCase();
+  if (PROXY_SELLER_ORDER_TYPES[product]) {
+    return fetchProxySellerOrderPool(key, { product, proxyType, orderId });
+  }
   const pkg = await psPackage(key);
   if (pkg.is_active === false) throw new Error('Proxy-Seller: the residential package on this account is not active.');
   const left = Number(pkg.traffic_left);
@@ -1996,15 +2026,28 @@ async function psGeoDatabase(key) {
 
 async function lookupProxySeller({ token, country, groupby }) {
   const key = psKey(token);
-  const pkg = await psPackage(key);
-  const listData = await psCall(key, 'GET', 'resident/lists', 'list lookup');
+  // Per-IP products (IPv6 and friends) come from one call covering every type. It also
+  // proves the key works, so an account with no residential package still gets a view.
+  const all = await psCall(key, 'GET', 'proxy/list', 'proxy list');
+  const products = summarizeProxySellerOrders(all);
+  // The residential package is optional: "Tarif not found" just means there is none.
+  let pkg = null;
+  let listData = null;
+  try {
+    pkg = await psPackage(key);
+    listData = await psCall(key, 'GET', 'resident/lists', 'list lookup');
+  } catch (e) {
+    if (!/no active residential package/i.test(String(e && e.message))) throw e;
+  }
   const out = {
     provider: 'proxyseller',
-    totalBytes: Number(pkg.traffic_limit) || 0,
-    usedBytes: Number(pkg.traffic_usage) || 0,
-    leftBytes: Number(pkg.traffic_left) || 0,
-    expiresAt: pkg.expired_at ? String(pkg.expired_at) : null,
-    active: pkg.is_active !== false,
+    residential: Boolean(pkg),
+    products,
+    totalBytes: pkg ? Number(pkg.traffic_limit) || 0 : 0,
+    usedBytes: pkg ? Number(pkg.traffic_usage) || 0 : 0,
+    leftBytes: pkg ? Number(pkg.traffic_left) || 0 : 0,
+    expiresAt: pkg && pkg.expired_at ? String(pkg.expired_at) : null,
+    active: pkg ? pkg.is_active !== false : false,
     lists: (Array.isArray(listData && listData.items) ? listData.items : []).map((it) => ({
       id: Number(it.id),
       title: String(it.title || `List ${it.id}`),
@@ -2105,6 +2148,8 @@ async function syncVendorPool(payload) {
       excludeAsns: optionalString(input.excludeAsns),
       // Proxy-Seller: pull an existing residential list by id instead of creating one.
       listId: optionalString(input.listId),
+      // Proxy-Seller per-IP products (IPv6 and friends): limit the pull to one order.
+      orderId: optionalString(input.orderId),
       // Ports already in the pool for one plan login (the bare login, or the login plus
       // DataImpulse's "__" targeting suffix). DataImpulse hands out sticky ports
       // deterministically, so it needs this to add NEW proxies instead of returning the
@@ -2349,6 +2394,18 @@ async function testProxyConnectivity(proxy) {
         latencyMs: Date.now() - started
       };
     } catch (fallbackError) {
+      // Last resort: a dual-stack service. ipinfo.io and ip-api.com publish no AAAA record,
+      // so an IPv6-only exit (Proxy-Seller IPv6, for one) cannot reach either and a healthy
+      // proxy was reported dead. get.geojs.io answers on IPv4 and IPv6.
+      try {
+        const geo = normalizeGeoJs(await httpGetJson(GEOJS_URL, agent, 15000));
+        if (geo) {
+          return {
+            success: true, ip: geo.ip, country: geo.country, region: geo.region, city: geo.city,
+            zip: null, isp: geo.isp, timezone: geo.timezone, latencyMs: Date.now() - started
+          };
+        }
+      } catch (e) { /* fall through to the most informative earlier error */ }
       // Prefer whichever attempt named the gateway: the plain-HTTP fallback surfaces the
       // gateway's own body, while a failed HTTPS CONNECT usually yields only a generic
       // tunnel error. Fall back to the primary message when the secondary says nothing.

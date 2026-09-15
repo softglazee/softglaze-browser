@@ -79,6 +79,36 @@ test('the download asks for the protocol that was chosen and rows are typed from
   assert.match(body, /parseLoginList\(text\)/);
 });
 
+test('IPv6 and the other per-IP products pull from existing orders, not the residential package', () => {
+  const body = fnBody('fetchProxySellerPool');
+  const branchAt = body.indexOf('PROXY_SELLER_ORDER_TYPES[product]');
+  const pkgAt = body.indexOf('await psPackage(key)');
+  assert.ok(branchAt > -1, 'the adapter must branch on the per-IP product types');
+  assert.ok(branchAt < pkgAt, 'per-IP products must not require a residential package');
+  const orders = fnBody('fetchProxySellerOrderPool');
+  assert.match(orders, /proxy\/list\/\$\{product\}/, 'per-IP proxies come from GET proxy/list/{type}');
+  assert.match(orders, /proxySellerOrderRows\(/);
+  assert.ok(!/resident\/list\/add/.test(orders), 'nothing is created for a per-IP product');
+});
+
+test('an account with no residential package still gets a lookup', () => {
+  const body = fnBody('lookupProxySeller');
+  assert.match(body, /psCall\(key, 'GET', 'proxy\/list', 'proxy list'\)/);
+  assert.match(body, /no active residential package/i, 'a missing package must not fail the whole lookup');
+  assert.match(body, /summarizeProxySellerOrders\(all\)/);
+});
+
+test('a healthy IPv6-only proxy is not reported dead by the health check', () => {
+  // ipinfo.io and ip-api.com publish no AAAA record (checked 15 Sep 2026), so an IPv6 exit
+  // cannot reach either. The check and the launch geo lookup must fall back to a dual-stack service.
+  const check = fnBody('testProxyConnectivity');
+  assert.match(check, /httpGetJson\(GEOJS_URL, agent, 15000\)/);
+  const engine = fs.readFileSync(path.join(ROOT, 'src', 'main', 'browserEngine.js'), 'utf8');
+  assert.match(engine, /require\('\.\/proxyVendorUtils'\)/);
+  assert.match(engine, /attempt\(GEOJS_URL,/, 'lookupProxyGeoNode must retry on the dual-stack service');
+  assert.match(engine, /page\.goto\(GEOJS_URL,/, 'lookupProxyGeo must retry on the dual-stack service');
+});
+
 test('the lookup channel is gated and wired on both sides', () => {
   assert.match(fnBody('vendorLookup'), /await requirePermission\('proxies\.manage'\)/);
   assert.match(IPC, /registerHandler\(CHANNELS\.PROXY_VENDOR_LOOKUP, vendorLookup\)/);

@@ -52,6 +52,12 @@ export const PROVIDERS = [
 // Sticky lifetimes DataImpulse accepts as session_ttl (minutes). Blank keeps the vendor
 // default, which their docs give as 30 minutes.
 const DI_TTL_OPTIONS = ['5', '10', '15', '30', '60', '120'];
+// Proxy-Seller products. Residential is a traffic package pulled as lists; the rest are
+// sold per IP and pulled from the orders already on the account.
+const PS_PRODUCTS = [
+  ['residential', 'Residential'], ['ipv6', 'IPv6'], ['ipv4', 'IPv4'], ['isp', 'ISP'],
+  ['mobile', 'Mobile'], ['mix', 'IPv4 Mix'], ['mix_isp', 'ISP Mix']
+];
 // Proxy-Seller "rotate every N seconds" presets (the API accepts 1 to 3600).
 const PS_INTERVAL_OPTIONS = ['60', '300', '600', '1800', '3600'];
 
@@ -97,7 +103,7 @@ export default function ProxyProviders({ onSynced }) {
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new' });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '' });
   // Read-only account view (traffic left, saved lists, live locations) for the vendors
   // that expose one. Cleared whenever the provider changes.
   const [account, setAccount] = useState(null);
@@ -128,7 +134,7 @@ export default function ProxyProviders({ onSynced }) {
     // Proxy-Seller shares the protocol and session vocabulary. Sticky is the default for
     // both because an anti-detect profile needs an exit IP that stays put.
     const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller';
-    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new' });
+    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '' });
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });
@@ -265,7 +271,7 @@ export default function ProxyProviders({ onSynced }) {
       if (creds.includes('username') && !form.username.trim()) { setErr(t('proxyProviders.errors.enterProxyUsername')); return; }
       if (creds.includes('password') && !form.password) { setErr(t('proxyProviders.errors.enterProxyPassword')); return; }
     }
-    const fromList = g.ps && form.source === 'existing';
+    const fromList = g.ps && form.plan === 'residential' && form.source === 'existing';
     if (fromList && !form.listId) { setErr(t('proxyProviders.ps.pickList', 'Pick one of your saved lists, or switch to New list.')); return; }
     setSyncing(true);
     try {
@@ -278,6 +284,7 @@ export default function ProxyProviders({ onSynced }) {
         excludeCountries: form.excludeCountries.trim(),
         excludeAsns: form.excludeAsns.trim(),
         listId: fromList ? form.listId : '',
+        orderId: g.ps && form.plan !== 'residential' ? form.orderId : '',
         token: form.token.trim(),
         username: form.username.trim(),
         password: form.password,
@@ -346,15 +353,29 @@ export default function ProxyProviders({ onSynced }) {
 
   // Plan traffic line shared by the DataImpulse and Proxy-Seller panels.
   const renderAccount = () => (account && account.provider === provider.key ? (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-[12px]">
-      <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400">
-        <Gauge className="w-3.5 h-3.5" />
-        {account.totalBytes > 0
-          ? t('proxyProviders.account.leftOf', { left: formatBytes(account.leftBytes), total: formatBytes(account.totalBytes), defaultValue: '{{left}} left of {{total}}' })
-          : t('proxyProviders.account.left', { left: formatBytes(account.leftBytes), defaultValue: '{{left}} left' })}
-      </span>
-      {account.expiresAt && <span className="text-muted-foreground">{t('proxyProviders.account.expires', { date: account.expiresAt, defaultValue: 'Expires {{date}}' })}</span>}
-      {Array.isArray(account.lists) && <span className="text-muted-foreground">{t('proxyProviders.account.lists', { count: account.lists.length, defaultValue: '{{count}} saved lists' })}</span>}
+    <div className="space-y-1.5">
+      {account.residential !== false && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-[12px]">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400">
+            <Gauge className="w-3.5 h-3.5" />
+            {account.totalBytes > 0
+              ? t('proxyProviders.account.leftOf', { left: formatBytes(account.leftBytes), total: formatBytes(account.totalBytes), defaultValue: '{{left}} left of {{total}}' })
+              : t('proxyProviders.account.left', { left: formatBytes(account.leftBytes), defaultValue: '{{left}} left' })}
+          </span>
+          {account.expiresAt && <span className="text-muted-foreground">{t('proxyProviders.account.expires', { date: account.expiresAt, defaultValue: 'Expires {{date}}' })}</span>}
+          {Array.isArray(account.lists) && <span className="text-muted-foreground">{t('proxyProviders.account.lists', { count: account.lists.length, defaultValue: '{{count}} saved lists' })}</span>}
+        </div>
+      )}
+      {account.residential === false && (
+        <div className="rounded-lg border border-border bg-background/40 px-3 py-2 text-[12px] text-muted-foreground">{t('proxyProviders.account.noResidential', 'No residential package on this account.')}</div>
+      )}
+      {Array.isArray(account.products) && account.products.map((p) => (
+        <div key={p.key} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-[12px]">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400"><Layers className="w-3.5 h-3.5" /> {t('proxyProviders.account.productActive', { count: p.active, product: p.label, defaultValue: '{{count}} active {{product}}' })}</span>
+          {p.countries.length > 0 && <span className="text-muted-foreground">{p.countries.join(', ')}</span>}
+          {p.expires && <span className="text-muted-foreground">{t('proxyProviders.account.expires', { date: p.expires, defaultValue: 'Expires {{date}}' })}</span>}
+        </div>
+      ))}
     </div>
   ) : null);
 
@@ -496,6 +517,12 @@ export default function ProxyProviders({ onSynced }) {
     const cities = regionHit ? regionHit.cities : [];
     const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key, c.label]) : PROXY_COUNTRIES.filter(([code]) => code);
     const mode = form.poolType === 'interval' ? 'interval' : form.poolType === 'rotating' ? 'rotating' : 'sticky';
+    const residential = form.plan === 'residential';
+    const products = account && account.provider === 'proxyseller' && Array.isArray(account.products) ? account.products : [];
+    const productInfo = products.find((p) => p.key === form.plan) || null;
+    const orderInfo = productInfo && form.orderId ? productInfo.orders.find((o) => o.id === form.orderId) : null;
+    const orderCount = orderInfo ? orderInfo.count : (productInfo ? productInfo.active : 0);
+    const productLabel = PS_PRODUCTS.find(([k]) => k === form.plan)?.[1] || form.plan;
     return (
       <div className="space-y-4 max-w-2xl">
         <section className={sectionCls}>
@@ -514,7 +541,37 @@ export default function ProxyProviders({ onSynced }) {
         </section>
 
         <section className={sectionCls}>
-          <div className={sectionTitleCls}><Layers className="w-4 h-4 text-sky-400" /> {t('proxyProviders.ps.sourceTitle', 'Residential list')}</div>
+          <div className={sectionTitleCls}><Layers className="w-4 h-4 text-sky-400" /> {t('proxyProviders.ps.whatTitle', 'What to pull')}</div>
+          <div className="sm:max-w-[320px]">
+            <label className={labelCls}>{t('proxyProviders.ps.productLabel', 'Product')}</label>
+            <select value={form.plan} onChange={(e) => { set('plan', e.target.value); set('orderId', ''); }} className={selectCls} style={chevronStyle}>
+              {PS_PRODUCTS.map(([key, label]) => {
+                const p = products.find((x) => x.key === key);
+                return <option key={key} value={key}>{p ? `${label} (${p.active})` : label}</option>;
+              })}
+            </select>
+          </div>
+
+          {!residential && (
+            <>
+              <div>
+                <label className={labelCls}>{t('proxyProviders.ps.orderLabel', 'Order')}</label>
+                <select value={form.orderId} onChange={(e) => set('orderId', e.target.value)} className={selectCls} style={chevronStyle}>
+                  <option value="">{productInfo
+                    ? t('proxyProviders.ps.allOrders', { count: productInfo.active, defaultValue: 'All orders ({{count}} IPs)' })
+                    : t('proxyProviders.ps.checkForOrders', 'All orders (Check account to see counts)')}</option>
+                  {(productInfo ? productInfo.orders : []).map((o) => <option key={o.id} value={o.id}>{`${o.number} · ${o.count} IPs${o.country ? ` · ${o.country}` : ''}${o.expires ? ` · ${o.expires}` : ''}`}</option>)}
+                </select>
+                <p className={hintCls + ' mt-1.5'}>{t('proxyProviders.ps.orderHint', 'Adds every active IP in the order, each on its own port. Pulling again only adds IPs the pool does not have yet.')}</p>
+              </div>
+              {form.plan === 'ipv6' && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200/90">{t('proxyProviders.ps.ipv6Note', 'IPv6 exits can only reach websites that have an IPv6 address. Before assigning these to profiles, check that the sites you use support IPv6, or a page may fail to load through them.')}</p>
+              )}
+            </>
+          )}
+
+          {residential && (
+          <>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => set('source', 'new')} className={segCls(!existing)}>{t('proxyProviders.ps.sourceNew', 'New list')}</button>
             <button type="button" onClick={() => { set('source', 'existing'); if (!lists.length && form.token.trim()) handleLookup(''); }} className={segCls(existing)}>{t('proxyProviders.ps.sourceExisting', 'Existing list')}</button>
@@ -593,6 +650,8 @@ export default function ProxyProviders({ onSynced }) {
               </div>
             </>
           )}
+          </>
+          )}
           <div className="sm:max-w-[200px]">
             <label className={labelCls}>{t('proxyProviders.geo.diProtocolLabel', 'Protocol')}</label>
             <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
@@ -604,10 +663,14 @@ export default function ProxyProviders({ onSynced }) {
 
         <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
           {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-          {existing
-            ? t('proxyProviders.ps.pullList', 'Add proxies from this list')
-            : t('proxyProviders.ps.createList', { count: pullCount, defaultValue: 'Create list and add {{count}} proxies' })}
-          {!existing && form.country ? ` · ${form.country}` : ''}
+          {!residential
+            ? (orderCount
+              ? t('proxyProviders.ps.addOrderCount', { count: orderCount, product: productLabel, defaultValue: 'Add {{count}} {{product}} proxies' })
+              : t('proxyProviders.ps.addOrder', { product: productLabel, defaultValue: 'Add {{product}} proxies' }))
+            : existing
+              ? t('proxyProviders.ps.pullList', 'Add proxies from this list')
+              : t('proxyProviders.ps.createList', { count: pullCount, defaultValue: 'Create list and add {{count}} proxies' })}
+          {residential && !existing && form.country ? ` · ${form.country}` : ''}
         </button>
         <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{t('proxyProviders.geoHints.proxyseller', 'A Proxy-Seller residential list is one login with up to 1000 ports, and each port is its own exit IP. Every New list pull creates a list on your account named SoftGlaze plus the location and time, so you can see and delete it in the dashboard. Traffic comes out of your residential package.')}</p>
       </div>
