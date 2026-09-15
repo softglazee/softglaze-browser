@@ -63,6 +63,7 @@ const secretStore = require('./secretStore');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
+const { SECRET_MASK, maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
@@ -663,9 +664,14 @@ async function cookieRobot(payload) {
 }
 
 function serializeProfile(profile) {
+  // audit T2-1: the row used to be spread as-is, handing every member cleartext platform
+  // passwords, the raw proxyInfoString and the 2FA seed. See profileRedaction.js.
+  const reveal = currentMemberCanRevealProxy;
+  const safe = redactProfileRow(profile, { reveal });
+
   // Safe JSON Parsing for React Arrays/Objects
   let platformAccounts = [];
-  try { platformAccounts = profile.platformAccounts ? JSON.parse(profile.platformAccounts) : []; } catch (e) {}
+  try { platformAccounts = redactPlatformAccounts(profile.platformAccounts ? JSON.parse(profile.platformAccounts) : [], reveal); } catch (e) {}
 
   let syncItems = {};
   try { syncItems = profile.syncItemsJson ? JSON.parse(profile.syncItemsJson) : {}; } catch (e) {}
@@ -677,7 +683,7 @@ function serializeProfile(profile) {
   try { tags = profile.tags ? JSON.parse(profile.tags) : []; if (!Array.isArray(tags)) tags = []; } catch (e) { tags = []; }
 
   return {
-    ...profile,
+    ...safe,
     platformAccounts,
     syncItems,
     browserSettings,
@@ -3506,7 +3512,9 @@ async function listTrash() {
 
 async function createProfile(payload) {
   await requirePermission('profiles.create');
-  const input = requireObject(payload);
+  // A new profile has nothing stored, so any mask in the payload (for example an editor
+  // opened from an existing profile) becomes empty instead of being saved as dots (T2-1).
+  const input = restoreMaskedSecrets(requireObject(payload), null);
   const db = getPrisma();
   await assertWithinLimit('profiles');
   const title = requiredString(input.title, 'Profile title');
@@ -3863,12 +3871,15 @@ async function batchGenerateProfiles(payload) {
 
 async function updateProfile(payload) {
   await requirePermission('profiles.edit');
-  const input = requireObject(payload);
+  let input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
   await assertCanAccessProfile(id, { requireEdit: true });
   const existing = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!existing) throw new Error('Profile not found.');
+  // The editor echoes back the masked secrets it was given (T2-1). A mask means "keep what
+  // is stored", so saving never overwrites a real password or 2FA seed with dots.
+  input = restoreMaskedSecrets(input, existing);
 
   const data = { ...extractFingerprintData(input) }; // Inject all React payload fields
 
@@ -11024,7 +11035,9 @@ function registerIpcHandlers() {
         os: p.os || null,
         browserVersion: p.browserVersion || null,
         userAgent: p.userAgent || null,
-        proxy: p.proxyInfoString ? String(p.proxyInfoString).replace(/:[^:@]*@/, ':••••@') : null,
+        // proxyInfoString is host:port:user:pass. The old regex only masked user:pass@host,
+        // so it matched nothing and the password went out in the clear (T2-1).
+        proxy: p.proxyInfoString ? maskProxyInfoString(p.proxyInfoString, null) : null,
         groupId: p.groupId || null,
         lastUsedAt: p.lastUsedAt instanceof Date ? p.lastUsedAt.toISOString() : (p.lastUsedAt || null)
       }));
