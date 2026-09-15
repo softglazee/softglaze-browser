@@ -86,6 +86,9 @@
       "src/main/**/*",
       "src/preload/**/*",
       "prisma/**/*",
+      "!prisma/**/*.sqlite",
+      "!prisma/**/*.sqlite-journal",
+      "!prisma/**/*.sqlite.*",
       "node_modules/**/*",
       "node_modules/.prisma/**/*",
       "package.json"
