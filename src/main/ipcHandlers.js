@@ -9956,13 +9956,45 @@ function serializeMacro(m) {
   };
 }
 
+// --- Macro ownership (audit T2-5) ---------------------------------------------------
+// Macros were global and ungated: any member could read every recorded login macro (a
+// recorded step keeps the typed value, passwords included), rewrite someone else's, or
+// delete the workspace's macros. Now they follow the proxy model: a member sees macros
+// owned inside their visible subtree. Macros from before ownership existed (and the
+// seeded starters) have no owner and stay visible to owners and admins only, so nothing
+// an owner already had disappears. Single-user mode and the super admin are unrestricted.
+async function macroScope() {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return null;
+  const all = await getPrisma().member.findMany();
+  return { member, visible: permissions.visibleMemberIds(all, member) };
+}
+
+function macroVisible(scope, row) {
+  if (!scope || !row) return Boolean(row);
+  if (row.ownerMemberId != null) return scope.visible.has(row.ownerMemberId);
+  return permissions.rankOf(scope.member.role) >= permissions.ROLE_RANK.ADMIN;
+}
+
+async function loadAccessibleMacro(id) {
+  const row = await getPrisma().macro.findUnique({ where: { id } });
+  if (!row) throw new Error('Macro not found.');
+  if (!macroVisible(await macroScope(), row)) {
+    const e = new Error('You do not have access to this macro.'); e.code = 'FORBIDDEN'; throw e;
+  }
+  return row;
+}
+
 async function getMacros() {
+  await requirePermission('automation.run');
   const db = getPrisma();
+  const scope = await macroScope();
   const rows = await db.macro.findMany({ orderBy: { updatedAt: 'desc' } });
-  return rows.map(serializeMacro);
+  return rows.filter((r) => macroVisible(scope, r)).map(serializeMacro);
 }
 
 async function saveMacro(payload) {
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const db = getPrisma();
   const name = requiredString(input.name, 'Macro name');
@@ -9979,16 +10011,21 @@ async function saveMacro(payload) {
   const stepsJson = JSON.stringify(normalizeMacroSteps(Array.isArray(steps) ? steps : []));
   if (input.id) {
     const id = parseId(input.id);
+    await loadAccessibleMacro(id);
     const updated = await db.macro.update({ where: { id }, data: { name, description, stepsJson } });
     return serializeMacro(updated);
   }
-  const created = await db.macro.create({ data: { name, description, stepsJson } });
+  const created = await db.macro.create({ data: { name, description, stepsJson, ownerMemberId: ownerStampId() } });
   return serializeMacro(created);
 }
 
 async function deleteMacro(payload) {
+  await requirePermission('automation.run');
   const id = parseId(requireObject(payload).id);
-  await getPrisma().macro.delete({ where: { id } }).catch(() => {});
+  await loadAccessibleMacro(id);
+  // This used to swallow every delete error and report success whatever happened.
+  await getPrisma().macro.delete({ where: { id } });
+  await logAudit('macro.deleted', { detail: { macroId: id } });
   return { deleted: true };
 }
 
@@ -10193,7 +10230,7 @@ async function stopMacroRecordingOnProfile(payload) {
   let saved = null;
   if (name) {
     const created = await getPrisma().macro.create({
-      data: { name, description: optionalString(input.description) || 'Recorded macro', stepsJson: JSON.stringify(steps) }
+      data: { name, description: optionalString(input.description) || 'Recorded macro', stepsJson: JSON.stringify(steps), ownerMemberId: ownerStampId() }
     });
     saved = serializeMacro(created);
   }

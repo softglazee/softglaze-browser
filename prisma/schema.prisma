@@ -219,10 +219,14 @@ model Macro {
   name        String
   description String?
   stepsJson   String   @default("[]") // JSON array of the visual workflow steps
+  // Member who created it. Null for macros from before ownership existed and for the
+  // seeded starters; those stay visible to owners and admins only (audit T2-5).
+  ownerMemberId Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt @default(now())
 
   @@index([updatedAt])
+  @@index([ownerMemberId])
 }
 
 // --- Softglaze Pro: Local Developer API tokens ---
