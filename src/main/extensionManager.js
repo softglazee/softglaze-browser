@@ -42,8 +42,8 @@ const SEED_FLAG = 'recommendedExtensionsSeeded_v3'; // v3: swapped uBlock + Swit
 // respected. Bump the suffix to re-run the reconcile after changing the defaults again.
 const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v2'; // v2: re-run after the MV3 uBlock/SwitchyOmega swap
 
-// The SoftGlaze first-party extension - always injected into every profile and
-// (best-effort) force-installed from the Web Store so active users are counted.
+// The SoftGlaze first-party extension. Loaded unpacked (--load-extension) into the
+// profiles SoftGlaze launches, and nowhere else.
 const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 
 // Curated set auto-installed on first run. IDs are verified to download from the

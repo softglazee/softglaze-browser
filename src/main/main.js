@@ -348,6 +348,10 @@ try {
   // extension is present for it to flip.
   {
     const extMgr = require('./extensionManager');
+    // Earlier builds force-installed the recorder into every Chromium on the machine
+    // through a per-user registry policy. Remove any value they left (Windows only).
+    require('./policyCleanup').removeLegacyExtensionForcelist({ extensionId: extMgr.SOFTGLAZE_RECORDER_ID })
+      .catch((e) => console.warn('[policy-cleanup] failed:', e && e.message));
     // Independent of the seed chain so a seed failure can't skip it: delete any
     // extension earlier builds seeded but no longer should (runs once).
     extMgr.removeRetiredExtensions()
