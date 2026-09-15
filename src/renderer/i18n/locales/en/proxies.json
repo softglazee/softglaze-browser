@@ -132,7 +132,9 @@
     "editProxy": "Edit proxy",
     "deleteProxy": "Delete proxy",
     "copyEndpoint": "Copy host:port",
-    "check": "Check"
+    "check": "Check",
+    "rotateIp": "Rotate IP",
+    "rotateIpTitle": "Get a new exit IP on this proxy"
   },
   "status": {
     "checking": "Checking…",
@@ -268,6 +270,8 @@
     "deleteGroup": "Could not delete the group.",
     "moveProxies": "Could not move the proxies.",
     "autoGroup": "Auto-group failed. Run Test All first so proxies have a detected country.",
-    "deleteProxy": "Failed to delete proxy. Remove linked profiles or change their proxy assignment first."
+    "deleteProxy": "Failed to delete proxy. Remove linked profiles or change their proxy assignment first.",
+    "rotate": "Could not rotate the IP.",
+    "rotateStatus": "The rotation request returned HTTP {{status}}."
   }
 }

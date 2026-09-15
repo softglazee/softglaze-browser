@@ -14,7 +14,7 @@ function fmtDuration(ms) {
 import EmptyState from '@/components/EmptyState.jsx';
 import ProxyProviders from '@/components/ProxyProviders.jsx';
 import { Donut, Legend, AreaChart } from '@/components/charts/Charts.jsx';
-import { Clock, BarChart3, History } from 'lucide-react';
+import { Clock, BarChart3, History, RotateCw } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -133,6 +133,7 @@ export default function ProxyPoolPage() {
   const [error, setError] = useState('');
   const [checkResults, setCheckResults] = useState({});
   const [checkingId, setCheckingId] = useState(null);
+  const [rotatingId, setRotatingId] = useState(null);
   const [checkingAll, setCheckingAll] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [copiedId, setCopiedId] = useState(null);
@@ -540,6 +541,24 @@ export default function ProxyPoolPage() {
       setCheckResults((prev) => ({ ...prev, [proxy.id]: { success: false, error: err.message } }));
     } finally {
       setCheckingId(null);
+    }
+  }
+
+  // Ask the vendor for a fresh exit IP on this proxy (DataImpulse sticky sessions, or any
+  // proxy with a rotation link), then re-check it so the new IP shows straight away.
+  async function handleRotate(proxy) {
+    setRotatingId(proxy.id);
+    setError('');
+    try {
+      const r = await softglazeApi.proxies.rotateIp({ id: proxy.id });
+      if (r && r.ok === false) throw new Error(t('errors.rotateStatus', { status: r.status, defaultValue: 'The rotation request returned HTTP {{status}}.' }));
+      // Give the vendor a moment to hand the port a new session before checking it.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await handleCheck(proxy);
+    } catch (err) {
+      setError(err.message || t('errors.rotate', 'Could not rotate the IP.'));
+    } finally {
+      setRotatingId(null);
     }
   }
 
@@ -1210,6 +1229,11 @@ export default function ProxyPoolPage() {
                             <button type="button" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
                               {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                             </button>
+                            {proxy.canRotate && (
+                              <button type="button" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id} title={t('rowActions.rotateIp', 'Rotate IP')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
+                                {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
                             <button type="button" onClick={() => openHistory(proxy)} title={t('rowActions.healthHistory')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground">
                               <History className="h-3.5 w-3.5" />
                             </button>
@@ -1264,7 +1288,12 @@ export default function ProxyPoolPage() {
                       <td className="px-5 py-4">{renderBlacklistCell(proxy)}</td>
                       <td className="px-5 py-4">{renderStatus(proxy)}</td>
                       <td className="px-5 py-4">
-                        <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
+                        <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id || rotatingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
+                          {proxy.canRotate && (
+                            <Button size="sm" variant="secondary" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id || checkingId === proxy.id} title={t('rowActions.rotateIpTitle', 'Get a new exit IP on this proxy')} className="px-3">
+                              {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5 mr-1" />} {t('rowActions.rotateIp', 'Rotate IP')}
+                            </Button>
+                          )}
                           <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="px-3">
                             {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 mr-1" />} {t('rowActions.check')}
                           </Button>

@@ -502,6 +502,8 @@ function serializeProxy(proxy) {
     hasPassword: Boolean(proxy.password),
     rotationUrl: proxy.rotationUrl || null,
     hasRotationUrl: Boolean(proxy.rotationUrl),
+    // The pool shows a Rotate IP action only where a rotation can actually happen.
+    canRotate: Boolean(proxy.rotationUrl) || isDataImpulseSticky(proxy),
     provider: deriveProvider(proxy),
     proxyGroupId: proxy.proxyGroupId ?? null,
     groupName: proxy.proxyGroup ? proxy.proxyGroup.name : null,
@@ -548,6 +550,8 @@ async function rotateProxyIp(payload) {
   } else {
     rotationUrl = String(proxy.rotationUrl || '').trim();
   }
+  // DataImpulse sticky proxies need no link: their API resets the session on the port.
+  if (!rotationUrl && isDataImpulseSticky(proxy)) return rotateDataImpulseSticky(proxy);
   if (!rotationUrl) throw new Error('No IP rotation link is configured for this proxy.');
   if (!/^https?:\/\//i.test(rotationUrl)) throw new Error('The rotation link must be an http(s) URL.');
   assertPublicHttpUrl(rotationUrl, 'rotation link');
@@ -1814,6 +1818,39 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   return rows;
 }
 
+// DataImpulse sticky proxies sit on ports 10000 and up under one plan login (rotating is
+// port 823; both measured live 15 Sep 2026). GET /api/rotate_ip?port=N with Basic Auth for
+// the plan login resets that port's sticky session, so the same proxy row gets a fresh exit
+// IP without pulling a new one. Their docs set a 30 second minimum between resets of one
+// session. The stored username carries targeting after "__", the plan login is before it.
+function isDataImpulseSticky(proxy) {
+  return Boolean(proxy)
+    && String(proxy.provider || '').toLowerCase() === 'dataimpulse'
+    && /(^|\.)dataimpulse\.com$/i.test(String(proxy.host || ''))
+    && Number(proxy.port) >= 10000
+    && Boolean(proxy.username) && Boolean(proxy.password);
+}
+
+async function rotateDataImpulseSticky(proxy) {
+  const headers = diAuthHeaders(String(proxy.username).split('__')[0], proxy.password);
+  const started = Date.now();
+  let body = null;
+  try {
+    body = JSON.parse(await httpRequestText(`${DI_API}/rotate_ip?port=${encodeURIComponent(String(proxy.port))}`, { headers }));
+  } catch (e) {
+    // Measured live 15 Sep 2026: a reset inside the window comes back as HTTP 500 with
+    // {"status":"error","message":"IP rotation interval must be greater than 30 seconds"}.
+    // A new sticky session (for example after its lifetime expires) starts that window too.
+    const vendor = /"message"\s*:\s*"([^"]+)"/.exec(String((e && e.message) || ''));
+    if (vendor) throw new Error(`DataImpulse: ${vendor[1]}. Wait 30 seconds after the last change on this proxy, then try again.`);
+    throw new Error(`DataImpulse rotation failed: ${scrubProxySecrets(e.message, proxy)}`);
+  }
+  if (!body || String(body.status || '').toLowerCase() !== 'ok') {
+    throw new Error(`DataImpulse refused the rotation: ${(body && body.message) || 'no reason given'}. One port can be reset at most once every 30 seconds.`);
+  }
+  return { ok: true, status: 200, latencyMs: Date.now() - started, response: String(body.message || 'ok'), provider: 'dataimpulse' };
+}
+
 // Plan stats plus a live geo breakdown for the provider panel. groupby is one of the
 // documented values; the pool counts come from /api/pool_stats_with_parameters.
 const DI_GROUPBY = new Set(['country', 'state', 'city', 'asn', 'zip']);
@@ -1919,7 +1956,7 @@ async function fetchProxySellerOrderPool(key, { product, proxyType, orderId }) {
   }
   return rows.slice(0, 5000).map((r) => ({
     type: r.type, host: r.host, port: r.port, username: r.username, password: r.password,
-    label: r.label, country: null
+    label: r.label, country: null, rotationUrl: r.rotationUrl
   }));
 }
 
@@ -2187,6 +2224,8 @@ async function syncVendorPool(payload) {
         username: row.username, password: row.password, ownerMemberId: ownerStampId(),
         // Origin tag so the pool can auto-group "by provider" (apify / shopsocks5 / …).
         provider: vendorKey,
+        // A vendor-supplied reboot link (Proxy-Seller mobile) powers the pool's Rotate IP.
+        ...(row.rotationUrl ? { rotationUrl: row.rotationUrl } : {}),
         // Record the targeted country up front so the pool shows it before any
         // health-check runs (a later checkProxy() refines it from the live exit IP).
         ...(row.country ? { lastCountry: row.country } : {})

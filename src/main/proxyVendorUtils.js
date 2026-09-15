@@ -181,7 +181,10 @@ function proxySellerOrderRows(items, { socks = false, label = 'Proxy-Seller' } =
       password: it.password != null && it.password !== '' ? String(it.password) : null,
       label: `${label} • ${where} • port ${port}`,
       orderId: it.order_id != null ? String(it.order_id) : null,
-      expires: it.date_end ? String(it.date_end) : null
+      expires: it.date_end ? String(it.date_end) : null,
+      // Mobile items carry a reboot link that changes the IP; the docs example shows "#"
+      // for products without one, so only a real http(s) URL counts.
+      rotationUrl: /^https?:\/\//i.test(String(it.link_reboot || '')) ? String(it.link_reboot) : null
     });
   }
   return out;

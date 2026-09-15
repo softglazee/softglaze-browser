@@ -132,7 +132,9 @@
     "editProxy": "Editar proxy",
     "deleteProxy": "Eliminar proxy",
     "copyEndpoint": "Copiar host:port",
-    "check": "Verificar"
+    "check": "Verificar",
+    "rotateIp": "Rotar IP",
+    "rotateIpTitle": "Obtener una nueva IP de salida en este proxy"
   },
   "status": {
     "checking": "Verificando…",
@@ -268,6 +270,8 @@
     "deleteGroup": "No se pudo eliminar el grupo.",
     "moveProxies": "No se pudieron mover los proxies.",
     "autoGroup": "El agrupamiento automático falló. Ejecuta Probar todo primero para que los proxies tengan un país detectado.",
-    "deleteProxy": "No se pudo eliminar el proxy. Quita los perfiles vinculados o cambia su asignación de proxy primero."
+    "deleteProxy": "No se pudo eliminar el proxy. Quita los perfiles vinculados o cambia su asignación de proxy primero.",
+    "rotate": "No se pudo rotar la IP.",
+    "rotateStatus": "La solicitud de rotación devolvió HTTP {{status}}."
   }
 }
