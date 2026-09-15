@@ -1,16 +1,24 @@
 # One-command local stack: Postgres + the licensing server.
-#   MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))") \
+#   export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
+#   export POSTGRES_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
 #   docker compose up --build
 # The server syncs the schema (prisma db push) on start, then listens on :8787.
+#
+# Security (audit T2-7): Postgres holds licences and sealed payment-provider secrets.
+# It used to publish 5432 on every interface with the password "softglaze", so running
+# this stack on a public-IP host put the database on the internet with trivial creds.
+# The server reaches it over the compose network, so the port is bound to loopback only
+# (for local psql), and the password must come from the environment. Use a hex password:
+# it goes into DATABASE_URL unescaped, and hex needs no URL encoding.
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: softglaze
-      POSTGRES_PASSWORD: softglaze
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (random hex) in your shell before compose up}"
       POSTGRES_DB: softglaze_licensing
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +33,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://softglaze:softglaze@db:5432/softglaze_licensing?schema=public"
+      DATABASE_URL: "postgresql://softglaze:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/softglaze_licensing?schema=public"
       MASTER_KEY: "${MASTER_KEY:?set MASTER_KEY (32-byte base64) in your shell before compose up}"
       PORT: "8787"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8787}"

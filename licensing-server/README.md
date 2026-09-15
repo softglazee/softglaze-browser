@@ -45,8 +45,12 @@ npm run dev                     # or: npm start
 ```bash
 cd licensing-server
 export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
+export POSTGRES_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
 docker compose up --build        # syncs the schema (prisma db push) then serves :8787
 ```
+Postgres is bound to `127.0.0.1` only and has no default password. Keep both values in
+a safe place: `MASTER_KEY` unseals the stored provider secrets, and the database volume
+only opens with the password it was created with.
 Smoke-test a running server (no local DB needed):
 ```bash
 BASE=http://localhost:8787 node scripts/smoke.js            # /health
