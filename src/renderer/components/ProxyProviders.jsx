@@ -424,7 +424,7 @@ export default function ProxyProviders({ onSynced }) {
                         </select>
                       </div>
                     </div>
-                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{t('proxyProviders.geo.diTtlNote', 'Rotating is a single shared endpoint whose exit IP changes on every request, so it adds one proxy and How many is ignored. Sticky adds one endpoint per proxy, each holding its own exit IP, and the Sticky lifetime below is sent as session_ttl in minutes.')}</p>
+                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{t('proxyProviders.geo.diTtlNote', 'Rotating is a single shared endpoint whose exit IP changes on every request, so it adds one proxy and How many is ignored. Sticky gives one endpoint per proxy on sequential ports from 10000, each holding its own exit IP. How many is a TOTAL, not an amount to add: pulling 5 twice returns the same 5, so raise the number to get more. Sticky lifetime below is sent as session_ttl in minutes.')}</p>
                   </div>
                 )}
 
