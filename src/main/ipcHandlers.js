@@ -598,6 +598,9 @@ async function exportProfileArchive(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.profileId);
   await assertCanAccessProfile(id);
+  // The archive is the whole user-data directory: every cookie and saved login, which is
+  // strictly more than a cookie dump, so it takes the same clearance (T2-3).
+  await assertCanRevealKind('cookieDump');
   const password = requiredString(input.password, 'Encryption password');
   const db = getPrisma();
   const profile = await db.profile.findUnique({ where: { id } });
@@ -624,6 +627,7 @@ async function exportProfileArchive(payload) {
     }
   };
   const res = await profileArchive.exportProfileArchive({ userDataDir, config, password, outPath: save.filePath });
+  await logAudit('profile.archive_exported', { profileId: id, detail: { bytes: res.plainBytes } });
   return { ok: true, path: save.filePath, bytes: res.plainBytes };
 }
 
@@ -3146,10 +3150,31 @@ async function offlineProfileOpts(id) {
   return { userDataDir, executablePath: resolved && resolved.exePath ? resolved.exePath : undefined };
 }
 
+// Export-style reveals (cookie dumps, profile archives, live 2FA codes) are gated by role
+// on top of profile access, using rbacPolicy's RAW_VALUE_MIN_RANK. Profile access alone let
+// an operator with use-level sharing walk off with a logged-in session (audit T2-3, T2-4).
+// Single-user mode (no active member) and the super admin pass, as everywhere else.
+const REVEAL_LABELS = Object.freeze({
+  cookieDump: 'export cookies or archives',
+  twoFactorCode: 'read 2FA codes'
+});
+async function assertCanRevealKind(kind) {
+  const member = await getActiveMember();
+  if (!member) return;
+  try {
+    rbacPolicy.assertCanReveal(member.role, kind);
+  } catch (e) {
+    const err = new Error(`Your role cannot ${REVEAL_LABELS[kind] || `reveal ${kind}`}. Ask an owner or admin.`);
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+}
+
 async function exportProfileCookies(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
+  await assertCanRevealKind('cookieDump');
   const format = (optionalString(input.format) || 'json').toLowerCase();
   let cookies = await exportSessionCookies(String(id));
   if (cookies === null) {
@@ -3158,6 +3183,7 @@ async function exportProfileCookies(payload) {
     if (cookies === null) throw new Error('Could not read this profile\'s stored cookies. Try launching it once.');
   }
   const content = format === 'netscape' ? cookiesToNetscape(cookies) : JSON.stringify(cookies, null, 2);
+  await logAudit('profile.cookies_exported', { profileId: id, detail: { format, count: cookies.length } });
   return { format, count: cookies.length, content, health: cookieHealth(cookies) };
 }
 
@@ -10653,14 +10679,19 @@ async function getProfile2faToken(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
+  // A live code is a login credential: role-gated and audited (T2-4).
+  await assertCanRevealKind('twoFactorCode');
   const profile = await getPrisma().profile.findUnique({ where: { id }, select: { twoFactorSeed: true } });
   if (!profile) throw new Error('Profile not found.');
   if (!profile.twoFactorSeed) throw new Error('This profile has no 2FA secret saved.');
+  let token;
   try {
-    return totp.totpToken(secretStore.open(profile.twoFactorSeed)); // open() is fail-safe for legacy plaintext seeds
+    token = totp.totpToken(secretStore.open(profile.twoFactorSeed)); // open() is fail-safe for legacy plaintext seeds
   } catch (e) {
     throw new Error('The saved 2FA secret is not valid base32.');
   }
+  await logAudit('profile.2fa_code_read', { profileId: id });
+  return token;
 }
 
 async function systemHumanType(payload) {

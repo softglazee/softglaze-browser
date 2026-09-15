@@ -20,7 +20,8 @@ const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 
 const RAW_VALUE_MIN_RANK = {
   proxyCredentials: ROLE_RANK.MANAGER, // host:port may show; user/pass never to Operator
   tokenString: ROLE_RANK.ADMIN,        // API/integration tokens
-  cookieDump: ROLE_RANK.MANAGER        // raw cookie JSON exports
+  cookieDump: ROLE_RANK.MANAGER,       // raw cookie JSON exports and full profile archives
+  twoFactorCode: ROLE_RANK.MANAGER     // live TOTP codes minted from a profile's 2FA seed
 };
 
 const REDACTED = '••••••••';
