@@ -233,4 +233,4 @@ SoftGlaze Browser is source-available under the
 
 For commercial licensing, see [softglaze.com](https://softglaze.com).
 
-Copyright (c) 2026 Azhar Ali (SoftGlaze).
+Copyright (c) 2026 SoftGlaze LLC, a New Mexico limited liability company.

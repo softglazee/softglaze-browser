@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Local-first desktop app for isolated browser profiles, each with its own fingerprint, proxy and storage",
   "license": "BUSL-1.1",
-  "author": "Azhar Ali (SoftGlaze) <https://softglaze.com>",
+  "author": "SoftGlaze LLC <https://softglaze.com>",
   "homepage": "https://softglaze.com",
   "repository": {
     "type": "git",
@@ -67,7 +67,7 @@
   "build": {
     "appId": "com.softglaze.browser",
     "productName": "SoftGlaze Browser",
-    "copyright": "Copyright © 2026 SoftGlaze",
+    "copyright": "Copyright © 2026 SoftGlaze LLC",
     "electronLanguages": [
       "en-US"
     ],
