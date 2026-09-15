@@ -65,7 +65,10 @@ model Install {
   id         String    @id @default(cuid())
   tenantId   String
   machineId  String
-  account    String? // optional owner/email identity
+  account    String? // optional owner/email identity, as claimed by the client (never a credential)
+  // SHA-256 of the per-install secret issued once at /v1/register. Required by /v1/license
+  // and /v1/redeem, so neither a machineId nor an email can obtain a lease (audit T2-6).
+  secretHash String?
   createdAt  DateTime  @default(now())
   lastSeenAt DateTime?
 

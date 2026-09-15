@@ -32,12 +32,19 @@ function req(method, path, body) {
   const tenantId = process.argv[2];
   if (!tenantId) { console.log('Pass a tenantId to also exercise /v1/register + /v1/license.'); return; }
 
-  const reg = await req('POST', '/v1/register', { tenantId, machineId: 'smoke-machine' });
-  console.log('POST /v1/register →', reg.status, JSON.stringify(reg.json));
+  // A fresh machine id each run: a known machine needs its install secret to re-register.
+  const machineId = `smoke-${Date.now()}`;
+  const reg = await req('POST', '/v1/register', { tenantId, machineId });
   const installId = reg.json && reg.json.installId;
-  if (installId) {
-    const lic = await req('POST', '/v1/license', { tenantId, installId });
+  const installSecret = reg.json && reg.json.installSecret;
+  console.log('POST /v1/register →', reg.status, JSON.stringify({ ...reg.json, installSecret: installSecret ? '(issued)' : undefined }));
+  if (installId && installSecret) {
+    const lic = await req('POST', '/v1/license', { tenantId, installId, installSecret });
     console.log('POST /v1/license →', lic.status, JSON.stringify(lic.json));
+    const bad = await req('POST', '/v1/license', { tenantId, installId, installSecret: 'wrong' });
+    console.log('POST /v1/license (wrong secret, expect 401) →', bad.status);
+    const again = await req('POST', '/v1/register', { tenantId, machineId });
+    console.log('POST /v1/register (same machine, no secret, expect 403) →', again.status);
   }
   console.log('\nSmoke OK.');
 })().catch((e) => { console.error(e && e.message ? e.message : e); process.exit(1); });

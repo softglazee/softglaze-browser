@@ -9057,15 +9057,32 @@ async function getMachineId() {
   return id;
 }
 
+// The licensing server returns a per-install secret exactly once, at first registration, and
+// requires it for license and redeem (audit T2-6). It is kept sealed next to the install id.
+// Returns { installId, installSecret } or null.
 async function ensureBackendInstall() {
-  let installId = await readSetting('backendInstallId', null);
-  if (installId) return installId;
-  const machineId = await getMachineId();
+  const installId = await readSetting('backendInstallId', null);
+  const sealed = await readSetting('backendInstallSecret', null);
+  const installSecret = sealed ? secretStore.open(sealed) : '';
+  if (installId && installSecret) return { installId, installSecret };
+
   const owner = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } }).catch(() => null);
-  const res = await licenseClient.api.register(machineId, owner && owner.email ? owner.email : null);
-  installId = res && res.installId ? res.installId : null;
-  if (installId) await writeSetting('backendInstallId', installId);
-  return installId;
+  const account = owner && owner.email ? owner.email : null;
+  let res;
+  try {
+    res = await licenseClient.api.register(await getMachineId(), account);
+  } catch (e) {
+    // The server already holds a secret for this machine id and we do not (an install
+    // registered before secrets existed, or a lost setting). Knowing the id is no longer
+    // proof, so start a fresh identity rather than stay locked out.
+    if (!/already registered/i.test(String(e && e.message))) throw e;
+    await writeSetting('machineId', crypto.randomUUID());
+    res = await licenseClient.api.register(await getMachineId(), account);
+  }
+  if (!res || !res.installId || !res.installSecret) return null;
+  await writeSetting('backendInstallId', res.installId);
+  await writeSetting('backendInstallSecret', secretStore.seal(String(res.installSecret)));
+  return { installId: res.installId, installSecret: String(res.installSecret) };
 }
 
 // Fetch + verify + cache the signed lease. Best-effort (network); returns the
@@ -9073,9 +9090,9 @@ async function ensureBackendInstall() {
 async function refreshBackendLease() {
   if (!tenantConfig().enabled) return null;
   try {
-    const installId = await ensureBackendInstall();
-    if (!installId) return null;
-    const res = await licenseClient.api.license({ installId });
+    const install = await ensureBackendInstall();
+    if (!install) return null;
+    const res = await licenseClient.api.license({ installId: install.installId, installSecret: install.installSecret });
     if (!res || !res.lease) {
       await writeSetting('backendLease', null).catch(() => {}); // no active license server-side
       return null;
@@ -9190,8 +9207,9 @@ async function redeemPurchaseCode(payload) {
   const input = requireObject(payload);
   const code = requiredString(input.code, 'Purchase code');
   if (tenantConfig().enabled) {
-    const installId = await ensureBackendInstall();
-    await licenseClient.api.redeem({ code: code.trim().toUpperCase(), installId });
+    const install = await ensureBackendInstall();
+    if (!install) throw new Error('Could not register this install with the licensing server.');
+    await licenseClient.api.redeem({ code: code.trim().toUpperCase(), installId: install.installId, installSecret: install.installSecret });
     const ent = await refreshBackendLease();
     if (!ent) throw new Error('Code accepted, but no active license yet - try again in a moment.');
     return licenseViewFromLease(ent);
@@ -9523,8 +9541,9 @@ async function startCheckout(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   if (tenantConfig().enabled) {
     const plan = await findPlanOrThrow(input.planId);
-    const installId = await ensureBackendInstall();
-    const r = await licenseClient.api.checkout({ planKey: plan.id, installId, provider: input.provider });
+    const install = await ensureBackendInstall();
+    if (!install) throw new Error('Could not register this install with the licensing server.');
+    const r = await licenseClient.api.checkout({ planKey: plan.id, installId: install.installId, provider: input.provider });
     return { url: r.url, ref: r.ref, provider: r.provider || 'stripe', planId: plan.id, planName: plan.name, backend: true };
   }
   const plan = await findPlanOrThrow(input.planId);

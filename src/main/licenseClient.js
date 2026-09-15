@@ -90,11 +90,13 @@ function postJson(pathName, body) {
   });
 }
 
+// The licensing server issues a per-install secret at first registration and requires it
+// for license and redeem (audit T2-6). An email is never a credential.
 const api = {
-  register: (machineId, account) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account }),
+  register: (machineId, account, installSecret) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account, installSecret }),
   checkout: ({ planKey, installId, account, provider }) => postJson('/v1/checkout', { tenantId: tenantConfig().tenantId, planKey, installId, account, provider }),
-  license: ({ installId, account }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, account }),
-  redeem: ({ code, installId, account }) => postJson('/v1/redeem', { tenantId: tenantConfig().tenantId, code, installId, account })
+  license: ({ installId, installSecret }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret }),
+  redeem: ({ code, installId, installSecret }) => postJson('/v1/redeem', { tenantId: tenantConfig().tenantId, code, installId, installSecret })
 };
 
 module.exports = { verifyLease, api, postJson };

@@ -95,11 +95,16 @@ curl -XPOST $BASE/v1/tenant/codes -H "Authorization: Bearer $TENANT_KEY" \
 `amount` is in **minor units** (cents): `500` = $5.00.
 
 ## Client (desktop) flow
-1. `POST /v1/register {tenantId, machineId}` → `{installId}` (once per machine).
+1. `POST /v1/register {tenantId, machineId}` → `{installId, installSecret}` (once per
+   machine). The secret is returned only on first registration; the server keeps its
+   SHA-256. Re-registering a known machine requires `installSecret`, otherwise 403.
 2. Buy: `POST /v1/checkout {tenantId, planKey, installId}` → `{url}` → open in browser.
-3. Stripe → `POST /v1/webhooks/stripe/:tenantId` (verified) → license provisioned.
-4. `POST /v1/license {tenantId, installId}` → `{lease}` (signed). The app verifies the
-   lease with the baked public key, caches it (sealed), and re-checks within 7 days.
+3. Stripe → `POST /v1/webhooks/stripe/:tenantId` (verified) → license provisioned for that
+   installId. An email in checkout is recorded but never selects or moves a licence.
+4. `POST /v1/license {tenantId, installId, installSecret}` → `{lease}` (signed). A wrong or
+   missing secret is 401. The app verifies the lease with the baked public key, caches it
+   (sealed), and re-checks within 7 days.
+5. `POST /v1/redeem {tenantId, code, installId, installSecret}` applies a code to that install.
 
 ## Endpoints
 | Method | Path | Auth | Purpose |
