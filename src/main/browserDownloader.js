@@ -12,6 +12,7 @@
 // request resumes the stream from the exact byte it stopped at (no restart from
 // 0%). Pause/Resume use the same machinery.
 const https = require('node:https');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
@@ -421,6 +422,57 @@ const FP_CHROMIUM_REPO = 'adryfish/fingerprint-chromium';
 // Pinned to the empirically-validated build (coherent platform/UA/GPU, no WebRTC leak).
 // Bump deliberately after re-validating a newer release rather than tracking "latest".
 const FP_CHROMIUM_VERSION = '148.0.7778.215';
+// The exact release asset for that tag, pinned by name, size and SHA-256. A release
+// tag on GitHub can have its assets replaced after publication, so the tag alone does
+// not identify the binary. The digest is the one GitHub reports for the asset; a
+// download that does not hash to it is deleted and never extracted or run.
+// Bumping FP_CHROMIUM_VERSION means re-validating the build and updating all three.
+const FP_CHROMIUM_ASSET = Object.freeze({
+  name: 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip',
+  size: 189767686,
+  sha256: '9ef3f471b7a6641b4224532522b29141ce3746e27d55788d88e2fd951f362579'
+});
+
+// SHA-256 of a file on disk, streamed.
+function sha256File(file) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = fs.createReadStream(file);
+    stream.on('error', reject);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
+}
+
+// Pick the pinned asset out of a GitHub release payload. Fatal when it is missing, or
+// when GitHub reports a different size or digest than the pinned one (the asset was
+// replaced), so nothing is downloaded at all in that case.
+function pickFpChromiumAsset(release, pinned = FP_CHROMIUM_ASSET) {
+  const assets = (release && release.assets) || [];
+  const asset = assets.find((a) => a && a.name === pinned.name);
+  if (!asset || !asset.browser_download_url) {
+    throw Object.assign(new Error(`fingerprint-chromium ${FP_CHROMIUM_VERSION} no longer has the asset ${pinned.name}.`), { fatal: true });
+  }
+  const reported = String(asset.digest || '').toLowerCase().replace(/^sha256:/, '');
+  if ((reported && reported !== pinned.sha256) || (asset.size != null && Number(asset.size) !== pinned.size)) {
+    throw Object.assign(new Error(`fingerprint-chromium ${pinned.name} on GitHub does not match the pinned build (size or SHA-256 changed). Refusing to download it.`), { fatal: true });
+  }
+  return { version: FP_CHROMIUM_VERSION, url: asset.browser_download_url, name: asset.name };
+}
+
+// Verify a downloaded archive against the pinned size and SHA-256. Resolves true, or
+// rejects with a fatal error.
+async function verifyFpChromiumArchive(file, pinned = FP_CHROMIUM_ASSET) {
+  const { size } = await fsp.stat(file);
+  if (size !== pinned.size) {
+    throw Object.assign(new Error(`fingerprint-chromium download is ${size} bytes, expected ${pinned.size}.`), { fatal: true });
+  }
+  const actual = await sha256File(file);
+  if (actual !== pinned.sha256) {
+    throw Object.assign(new Error('fingerprint-chromium download failed SHA-256 verification. Refusing to install it.'), { fatal: true });
+  }
+  return true;
+}
 
 // version -> chrome.exe present anywhere one level under the root (or at the root).
 function fpChromiumInstalled() {
@@ -433,20 +485,14 @@ function fpChromiumInstalled() {
   return false;
 }
 
-// Resolve the exact windows_x64 asset URL for the pinned tag via the GitHub API
-// (handles the per-release build suffix, e.g. ..._148.0.7778.215-1.1_windows_x64.zip).
+// Resolve the pinned windows_x64 asset URL for the pinned tag via the GitHub API.
 async function resolveFpChromiumAsset() {
   const api = `https://api.github.com/repos/${FP_CHROMIUM_REPO}/releases/tags/${FP_CHROMIUM_VERSION}`;
   const rel = await fetchJson(api, HOSTS.fpchromium, 'fingerprint-chromium release');
-  const assets = (rel && rel.assets) || [];
-  const asset = assets.find((a) => /windows_x64\.zip$/i.test(a.name || '') && !/debug|symbol|sha/i.test(a.name || ''));
-  if (!asset || !asset.browser_download_url) {
-    throw Object.assign(new Error(`No windows_x64 asset in fingerprint-chromium ${FP_CHROMIUM_VERSION}.`), { fatal: true });
-  }
-  return { version: FP_CHROMIUM_VERSION, url: asset.browser_download_url, name: asset.name };
+  return pickFpChromiumAsset(rel);
 }
 
-// state: idle | resolving | downloading | extracting | done | error
+// state: idle | resolving | downloading | verifying | extracting | done | error
 let fpStatus = { state: 'idle', percent: 0, error: null, receivedBytes: 0, totalBytes: 0 };
 let fpInflight = null;
 
@@ -472,6 +518,15 @@ function startFpChromiumDownload() {
         fpStatus.percent = tot ? Math.min(90, Math.round((rec / tot) * 90)) : fpStatus.percent;
       }, null, HOSTS.fpchromium, 'fingerprint-chromium download');
       if (total && received < total) throw new Error('Connection interrupted before completion.');
+      fpStatus.state = 'verifying';
+      try {
+        await verifyFpChromiumArchive(zip);
+      } catch (verifyErr) {
+        // Never keep a mismatched archive: the next attempt must start from zero,
+        // not resume on top of bad bytes.
+        await fsp.unlink(zip).catch(() => {});
+        throw verifyErr;
+      }
       fpStatus.state = 'extracting';
       fpStatus.percent = 92;
       await extractZip(zip, FP_CHROMIUM_ROOT);
@@ -501,5 +556,9 @@ module.exports = {
   FP_CHROMIUM_ROOT,
   fpChromiumInstalled,
   startFpChromiumDownload,
-  getFpChromiumStatus
+  getFpChromiumStatus,
+  FP_CHROMIUM_ASSET,
+  pickFpChromiumAsset,
+  verifyFpChromiumArchive,
+  sha256File
 };

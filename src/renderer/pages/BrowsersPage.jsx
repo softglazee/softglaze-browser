@@ -273,20 +273,20 @@ export default function BrowsersPage() {
                 <span className="text-sm font-semibold text-foreground">fingerprint-chromium</span>
                 <span className="text-[11px] font-mono text-muted-foreground">{antidetect?.version || '148.0.7778.215'}</span>
               </div>
-              {antidetect && !antidetect.installed && ['resolving', 'downloading', 'extracting'].includes(antidetect.state) && (
+              {antidetect && !antidetect.installed && ['resolving', 'downloading', 'verifying', 'extracting'].includes(antidetect.state) && (
                 <div className="mt-1.5 flex items-center gap-2">
                   <div className="flex-1 h-1.5 rounded-full bg-card overflow-hidden max-w-[280px]">
                     <div className="h-full rounded-full transition-all duration-300" style={{ width: `${antidetect.percent || 0}%`, background: 'var(--primary)' }} />
                   </div>
-                  <span className="text-[11px] text-muted-foreground">{antidetect.state === 'extracting' ? 'installing' : `${antidetect.percent || 0}%`}</span>
+                  <span className="text-[11px] text-muted-foreground">{antidetect.state === 'extracting' ? 'installing' : antidetect.state === 'verifying' ? 'verifying' : `${antidetect.percent || 0}%`}</span>
                 </div>
               )}
               {antidetect?.state === 'error' && <p className="text-[11px] text-red-400 mt-1 truncate">{antidetect.error}</p>}
             </div>
             {antidetect?.installed ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0"><Check className="w-3.5 h-3.5" /> {t('row.ready')}</span>
-            ) : antidetect && ['resolving', 'downloading', 'extracting'].includes(antidetect.state) ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {antidetect.state === 'extracting' ? 'Installing' : 'Downloading'}</span>
+            ) : antidetect && ['resolving', 'downloading', 'verifying', 'extracting'].includes(antidetect.state) ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {antidetect.state === 'extracting' ? 'Installing' : antidetect.state === 'verifying' ? 'Verifying' : 'Downloading'}</span>
             ) : (
               <button onClick={startAntidetectDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white shadow-lg shrink-0" style={{ background: 'linear-gradient(135deg, #06b6d4, color-mix(in srgb, #06b6d4 70%, #000))', boxShadow: '0 8px 20px -8px #06b6d4' }}>
                 <Download className="w-3.5 h-3.5" /> Download (~180 MB)

@@ -356,7 +356,7 @@ function AntidetectEngineInstaller() {
     try { setStatus(await softglazeApi.browsers.antidetectEngineStatus()); } catch (e) { /* ignore */ }
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
-  const inFlight = status && ['resolving', 'downloading', 'extracting'].includes(status.state);
+  const inFlight = status && ['resolving', 'downloading', 'verifying', 'extracting'].includes(status.state);
   useEffect(() => {
     if (!inFlight) return undefined;
     const t = setInterval(refresh, 1000);
@@ -375,7 +375,7 @@ function AntidetectEngineInstaller() {
   return (
     <div className="px-4 pb-3 -mt-1 flex items-center gap-3 text-xs text-slate-400">
       {inFlight ? (
-        <span className="inline-flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />{status.state === 'extracting' ? 'Installing engine… extracting' : `Downloading engine… ${pct}%`}</span>
+        <span className="inline-flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />{status.state === 'extracting' ? 'Installing engine… extracting' : status.state === 'verifying' ? 'Verifying download…' : `Downloading engine… ${pct}%`}</span>
       ) : status.state === 'error' ? (
         <>
           <span className="text-rose-400">Download failed: {status.error || 'unknown error'}</span>
