@@ -65,7 +65,8 @@ const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
-  GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders
+  GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
+  parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1251,7 +1252,7 @@ const PROXY_VENDORS = Object.freeze({
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
-  proxyseller: 'Proxy-Seller'
+  proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -2102,9 +2103,133 @@ async function lookupProxySeller({ token, country, groupby }) {
   return out;
 }
 
+// --- IPRoyal residential over the documented API ---------------------------------------
+// resi-api.iproyal.com/v1, Bearer token from Dashboard, Settings, API. The OpenAPI spec is
+// served at https://resi-api.iproyal.com/docs. POST /access/generate-proxy-list returns a JSON
+// array of ready proxy lines for either a sub-user hash or the proxy username + password.
+// Targeting AND the sticky session live in the PASSWORD (…_country-us_session-ab12cd34_
+// lifetime-30m), so sticky rows share host, port and username and differ only by password.
+// Random rotation appends nothing, so every line is the same endpoint: ask for one.
+const IPR_API = 'https://resi-api.iproyal.com/v1';
+const IPR_MAX_COUNT = 500;
+
+async function iprCall(token, method, pathAndQuery, what, body) {
+  const t = String(token || '').trim();
+  if (!t) throw new Error('IPRoyal: the API token is required (Dashboard, Settings, API).');
+  let text;
+  try {
+    text = await httpRequestText(`${IPR_API}${pathAndQuery}`, {
+      method,
+      headers: { Authorization: `Bearer ${t}`, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: 30000,
+      maxBytes: 20_000_000
+    });
+  } catch (e) {
+    const raw = String((e && e.message) || 'request failed');
+    throw new Error(`IPRoyal ${what}: ${ipRoyalErrorMessage(raw) || raw.split(t).join('***')}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`IPRoyal ${what}: the API did not return JSON.`);
+  }
+}
+
+async function fetchIpRoyalPool({ token, username, password, subuserHash, country, state, city, count, poolType, life, proxyType }) {
+  const me = await iprCall(token, 'GET', '/residential/me', 'account check');
+  const gb = Number(me && me.available_traffic);
+  if (Number.isFinite(gb) && gb <= 0) {
+    throw new Error('IPRoyal: this account has no residential traffic left, so anything pulled from it would fail on first use.');
+  }
+  const sticky = String(poolType || '').toLowerCase() === 'sticky';
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const nodes = await iprCall(token, 'GET', '/access/entry-nodes', 'entry nodes');
+  const port = pickIpRoyalPort(nodes, socks);
+  if (!port) throw new Error(`IPRoyal: the account lists no ${socks ? 'SOCKS5' : 'HTTP'} entry port.`);
+
+  const n = clampPoolCount(count, 5, IPR_MAX_COUNT);
+  const lifetime = ipRoyalLifetime(life);
+  const body = {
+    format: '{hostname}:{port}:{username}:{password}',
+    rotation: sticky ? 'sticky' : 'random',
+    port: port.name,
+    proxy_count: sticky ? n : 1
+  };
+  if (sticky) body.lifetime = lifetime;
+  const location = ipRoyalLocation({ country, state, city });
+  if (location) body.location = location;
+  const hash = String(subuserHash || '').trim();
+  if (/^[A-Za-z0-9]{26}$/.test(hash)) {
+    body.subuser_hash = hash;
+  } else {
+    const user = String(username || '').trim();
+    const pw = String(password || '');
+    if (!user || !pw) throw new Error('IPRoyal: pick a sub-user, or enter the proxy username and password from the dashboard.');
+    body.username = user;
+    body.password = pw;
+  }
+
+  const lines = await iprCall(token, 'POST', '/access/generate-proxy-list', 'proxy list', body);
+  const cc = normCountryCode(country);
+  const rows = [];
+  const seen = new Set();
+  for (const line of Array.isArray(lines) ? lines : []) {
+    const r = parseIpRoyalLine(line);
+    if (!r) continue;
+    const key = `${r.host}:${r.port}:${r.username}:${r.password}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: r.host, port: r.port, username: r.username, password: r.password,
+      label: sticky
+        ? `IPRoyal • Residential • ${cc || 'Global'} • sticky ${lifetime}${r.session ? ` • ${r.session}` : ''}`
+        : `IPRoyal • Residential • ${cc || 'Global'} • rotating gateway`,
+      country: cc || null,
+      // Sticky rows differ only by password, so the pool must compare it when deduping.
+      dedupeOnPassword: true
+    });
+  }
+  if (!rows.length) throw new Error('IPRoyal returned no usable proxies. Try another location, or check the account still has traffic.');
+  return rows;
+}
+
+let iprCountriesCache = { key: '', at: 0, data: null };
+async function lookupIpRoyal({ token, country, groupby }) {
+  const me = await iprCall(token, 'GET', '/residential/me', 'account check');
+  const subs = await iprCall(token, 'GET', '/residential-subusers?page=1&per_page=100', 'sub-user list');
+  const gb = Number(me && me.available_traffic) || 0;
+  const out = {
+    provider: 'iproyal',
+    leftBytes: Math.round(gb * 1024 ** 3),
+    totalBytes: 0,
+    subusersCount: Number(me && me.subusers_count) || 0,
+    // Hash, name and balance only: the sub-user password never needs to reach the renderer,
+    // because the generate call accepts the hash instead.
+    subusers: (subs && Array.isArray(subs.data) ? subs.data : [])
+      .filter((s) => s && /^[A-Za-z0-9]{26}$/.test(String(s.hash || '')))
+      .map((s) => ({ hash: String(s.hash), username: String(s.username || ''), trafficGb: Number(s.traffic_available) || 0, shared: s.is_using_shared_traffic === true })),
+    geo: [],
+    cities: []
+  };
+  const by = String(groupby || '').toLowerCase();
+  if (by === 'country' || by === 'region') {
+    const cacheKey = require('node:crypto').createHash('sha256').update(String(token)).digest('hex');
+    if (!(iprCountriesCache.data && iprCountriesCache.key === cacheKey && Date.now() - iprCountriesCache.at < 60 * 60 * 1000)) {
+      iprCountriesCache = { key: cacheKey, at: Date.now(), data: await iprCall(token, 'GET', '/access/countries', 'location list') };
+    }
+    const view = ipRoyalCountriesView(iprCountriesCache.data, by === 'region' ? country : '');
+    out.geo = by === 'region' ? view.states : view.countries;
+    out.cities = by === 'region' ? view.cities : [];
+  }
+  return out;
+}
+
 const VENDOR_LOOKUPS = Object.freeze({
   dataimpulse: lookupDataImpulse,
-  proxyseller: lookupProxySeller
+  proxyseller: lookupProxySeller,
+  iproyal: lookupIpRoyal
 });
 
 // Read-only account view for the provider panel: plan traffic, saved lists and the
@@ -2134,7 +2259,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   shopsocks5: fetchShopSocks5Pool,
   anyip: fetchAnyIpPool,
   dataimpulse: fetchDataImpulsePool,
-  proxyseller: fetchProxySellerPool
+  proxyseller: fetchProxySellerPool,
+  iproyal: fetchIpRoyalPool
 });
 
 async function syncVendorPool(payload) {
@@ -2187,6 +2313,8 @@ async function syncVendorPool(payload) {
       listId: optionalString(input.listId),
       // Proxy-Seller per-IP products (IPv6 and friends): limit the pull to one order.
       orderId: optionalString(input.orderId),
+      // IPRoyal: authenticate the generated list with a sub-user hash instead of a password.
+      subuserHash: optionalString(input.subuserHash),
       // Ports already in the pool for one plan login (the bare login, or the login plus
       // DataImpulse's "__" targeting suffix). DataImpulse hands out sticky ports
       // deterministically, so it needs this to add NEW proxies instead of returning the
@@ -2214,7 +2342,9 @@ async function syncVendorPool(payload) {
   const result = { provider: PROXY_VENDORS[vendorKey], simulated, total: rows.length, created: [], skipped: [] };
   for (const row of rows) {
     const existing = await db.proxy.findFirst({
-      where: { type: row.type, host: row.host, port: row.port, username: row.username },
+      // IPRoyal sticky rows share host, port and username and differ only in the password,
+      // where the session id lives. Without it every row after the first reads as existing.
+      where: { type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { password: row.password } : {}) },
       select: { id: true }
     });
     if (existing) { result.skipped.push(row.label); continue; }

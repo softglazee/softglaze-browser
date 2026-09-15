@@ -247,7 +247,8 @@
       "shopsocks5": "ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).",
       "anyip": "anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard, OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway if your dashboard shows a custom port.",
       "dataimpulse": "Every pull adds new proxies. Sticky proxies sit on their own ports, so asking for 5 when the pool already holds 5 with the same settings adds the next 5 ports instead of returning the same ones. Use the login and password of one DataImpulse product, shown on that product page in the dashboard.",
-      "proxyseller": "Residential is a traffic package: each New list pull creates a list on your account named SoftGlaze plus the location and time, with up to 1000 ports, and each port is its own exit IP. IPv6, IPv4, ISP and Mobile are sold per IP: the pull adds the addresses you already own, each on its own port, and needs nothing created."
+      "proxyseller": "Residential is a traffic package: each New list pull creates a list on your account named SoftGlaze plus the location and time, with up to 1000 ports, and each port is its own exit IP. IPv6, IPv4, ISP and Mobile are sold per IP: the pull adds the addresses you already own, each on its own port, and needs nothing created.",
+      "iproyal": "IPRoyal builds each proxy for you: the location and a sticky session go into the password, on its gateway geo.iproyal.com. Sticky proxies share one host and port, and each keeps its own exit IP for the lifetime you pick. Traffic comes out of your residential balance or the chosen sub-user."
     },
     "notConnected": {
       "body": "{{provider}} does not support automatic pull yet. Enter the gateway details from your {{provider}} dashboard below to add its proxies manually.",
@@ -313,7 +314,29 @@
       "noResidential": "No residential package on this account.",
       "productActive": "{{count}} active {{product}}",
       "productActive_one": "{{count}} active {{product}}",
-      "productActive_other": "{{count}} active {{product}}"
+      "productActive_other": "{{count}} active {{product}}",
+      "subusers": "{{count}} sub-users",
+      "subusers_one": "{{count}} sub-user",
+      "subusers_other": "{{count}} sub-users"
+    },
+    "ipr": {
+      "keyTitle": "API token",
+      "keyLabel": "IPRoyal API token",
+      "keyPlaceholder": "Paste the token from Dashboard, Settings, API",
+      "keyHint": "The token is in the IPRoyal dashboard under Settings, API. It is stored encrypted on this machine.",
+      "credsTitle": "Proxy credentials",
+      "subuserLabel": "Sub-user",
+      "useOwnCreds": "Use a proxy username and password instead",
+      "subuserHint": "A sub-user draws traffic from its own balance. Its password stays on IPRoyal; the app only sends its id.",
+      "noSubusers": "Check account to list your sub-users, or enter the proxy username and password below.",
+      "usernameLabel": "Proxy username",
+      "stickyHelp": "Each proxy gets its own session and keeps its exit IP for the time you pick below. Every pull adds new sessions.",
+      "lifetimeDefault": "Default (24 hours)",
+      "lifetimeHours": "{{count}} hours",
+      "lifetimeHours_one": "{{count}} hour",
+      "lifetimeHours_other": "{{count}} hours",
+      "loadStates": "Load states and cities",
+      "geoHint": "The lists come from your IPRoyal account, so they only show locations your plan can use."
     }
   }
 }

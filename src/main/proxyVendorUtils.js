@@ -215,7 +215,96 @@ function summarizeProxySellerOrders(data) {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------
+// IPRoyal residential (resi-api.iproyal.com/v1, OpenAPI spec served at /docs).
+// ---------------------------------------------------------------------------------------
+
+// Parse one line of POST /access/generate-proxy-list requested in the
+// {hostname}:{port}:{username}:{password} format. Hostnames and usernames carry no ':' and
+// the password carries the targeting and sticky session (…_country-us_session-xxxx_lifetime-30m),
+// so split on the first three colons and keep the rest as the password.
+function parseIpRoyalLine(raw) {
+  const line = String(raw || '').trim();
+  const parts = line.split(':');
+  if (parts.length < 4) return null;
+  const host = parts[0].trim();
+  const portText = parts[1].trim();
+  const username = parts[2];
+  const password = parts.slice(3).join(':');
+  if (!host || !/^\d{1,5}$/.test(portText) || !username || !password) return null;
+  const port = Number.parseInt(portText, 10);
+  if (port < 1 || port > 65535) return null;
+  const session = /_session-([A-Za-z0-9]+)/.exec(password);
+  return { host, port, username, password, session: session ? session[1] : null };
+}
+
+// Sticky lifetime as the spec defines it: "{n}s" or "{n}m" with n 1-59, or "{n}h" with n 1-168.
+const IPROYAL_LIFETIME = /^(?:(?:[1-9]|[1-5]\d)[sm]|(?:[1-9]|[1-9]\d|1[0-5]\d|16[0-8])h)$/;
+function ipRoyalLifetime(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return IPROYAL_LIFETIME.test(v) ? v : '24h';
+}
+
+// Location string for the generate call, e.g. "_country-us_state-iowa_city-desmoines". Codes come
+// from GET /access/countries; anything that is not a plain code is dropped rather than sent.
+function ipRoyalLocation({ country, state, city } = {}) {
+  const code = (v) => String(v || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const cc = code(country);
+  if (!/^[a-z]{2}$/.test(cc)) return '';
+  let out = `_country-${cc}`;
+  const st = code(state);
+  if (st) out += `_state-${st}`;
+  const ct = code(city);
+  if (ct) out += `_city-${ct}`;
+  return out;
+}
+
+// Pick the named port for the protocol from GET /access/entry-nodes. The port NAME is what the
+// generate call takes ("http", "socks5"), not the number.
+function pickIpRoyalPort(nodes, socks) {
+  const list = Array.isArray(nodes) ? nodes : [];
+  const want = socks ? /socks/i : /^https?$/i;
+  for (const node of list) {
+    for (const p of (node && Array.isArray(node.ports) ? node.ports : [])) {
+      if (p && p.name && want.test(String(p.name))) return { name: String(p.name), port: Number(p.port) || null, dns: node.dns ? String(node.dns) : null };
+    }
+  }
+  return null;
+}
+
+// Country list, or one country's states (each with its cities) and top-level cities.
+function ipRoyalCountriesView(data, country) {
+  const countries = data && Array.isArray(data.countries) ? data.countries : [];
+  const opts = (group) => (group && Array.isArray(group.options) ? group.options : [])
+    .filter((o) => o && o.code)
+    .map((o) => ({ key: String(o.code), label: String(o.name || o.code) }));
+  const cc = String(country || '').trim().toLowerCase();
+  if (!cc) return { countries: countries.filter((c) => c && c.code).map((c) => ({ key: String(c.code), label: String(c.name || c.code) })) };
+  const hit = countries.find((c) => c && String(c.code).toLowerCase() === cc);
+  if (!hit) return { states: [], cities: [] };
+  const states = (hit.states && Array.isArray(hit.states.options) ? hit.states.options : [])
+    .filter((s) => s && s.code)
+    .map((s) => ({ key: String(s.code), label: String(s.name || s.code), cities: opts(s.cities) }));
+  return { states, cities: opts(hit.cities) };
+}
+
+// IPRoyal errors are {"error":{"code","message"}}; 422 adds detailed_messages. The transport
+// helper puts the start of the body in its message, so pull the vendor message out of that.
+function ipRoyalErrorMessage(text) {
+  const s = String(text || '');
+  if (/HTTP 401\b/.test(s)) return 'the API token was rejected. Copy it again from the IPRoyal dashboard, Settings, API.';
+  if (/HTTP 429\b/.test(s)) return 'the API rate limit was reached. Wait a minute and try again.';
+  const m = /"message"\s*:\s*"([^"]+)"/.exec(s);
+  return m ? m[1] : null;
+}
+
 module.exports = {
+  parseIpRoyalLine,
+  ipRoyalLifetime,
+  ipRoyalLocation,
+  pickIpRoyalPort,
+  ipRoyalCountriesView,
+  ipRoyalErrorMessage,
   GEOJS_URL,
   normalizeGeoJs,
   PROXY_SELLER_ORDER_TYPES,

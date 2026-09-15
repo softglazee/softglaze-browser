@@ -247,7 +247,8 @@
       "shopsocks5": "ShopSocks5 extrae tu lista SOCKS5 (o HTTPS) adquirida mediante su API, filtrada por el país/estado/ciudad elegidos. La API se autentica con el usuario/correo de tu cuenta + el token de API JUNTOS - el token solo devuelve “User or Api Token incorrect”. Elige el Plan que coincida con tu suscripción (Premium / Lista / Diario).",
       "anyip": "anyip.io se enruta por una única pasarela (portal.anyip.io:1080) y codifica el tipo (Residencial/Móvil), el país, un nombre de sesión fija opcional y una duración en el usuario del proxy. Conecta pegando tu Usuario (user_…) + Contraseña del proxy desde el panel, O introduciendo una clave API + ID de equipo para aprovisionar una cuenta automáticamente. Una sesión en blanco con “IP diferente cada vez” genera IP rotativas; un nombre de sesión fija mantiene una sola IP. Sobrescribe la pasarela si tu panel muestra un puerto personalizado.",
       "dataimpulse": "Cada extracción añade proxies nuevos. Los proxies fijos usan sus propios puertos, así que pedir 5 cuando el pool ya tiene 5 con la misma configuración añade los 5 puertos siguientes en lugar de devolver los mismos. Usa el usuario y la contraseña de un producto de DataImpulse, que aparecen en la página de ese producto en el panel.",
-      "proxyseller": "Residencial es un paquete de tráfico: cada extracción con Lista nueva crea en tu cuenta una lista llamada SoftGlaze más la ubicación y la hora, con hasta 1000 puertos, y cada puerto es una IP de salida distinta. IPv6, IPv4, ISP y Móvil se venden por IP: la extracción añade las direcciones que ya tienes, cada una en su propio puerto, sin crear nada."
+      "proxyseller": "Residencial es un paquete de tráfico: cada extracción con Lista nueva crea en tu cuenta una lista llamada SoftGlaze más la ubicación y la hora, con hasta 1000 puertos, y cada puerto es una IP de salida distinta. IPv6, IPv4, ISP y Móvil se venden por IP: la extracción añade las direcciones que ya tienes, cada una en su propio puerto, sin crear nada.",
+      "iproyal": "IPRoyal crea cada proxy por ti: la ubicación y una sesión fija van en la contraseña, en su gateway geo.iproyal.com. Los proxies fijos comparten host y puerto, y cada uno mantiene su propia IP de salida durante el tiempo que elijas. El tráfico se descuenta de tu saldo residencial o del subusuario elegido."
     },
     "notConnected": {
       "body": "{{provider}} todavía no admite importación automática. Introduce los datos de tu panel de {{provider}} aquí abajo para añadir sus proxies manualmente.",
@@ -313,7 +314,29 @@
       "noResidential": "Esta cuenta no tiene paquete residencial.",
       "productActive": "{{count}} {{product}} activas",
       "productActive_one": "{{count}} {{product}} activa",
-      "productActive_other": "{{count}} {{product}} activas"
+      "productActive_other": "{{count}} {{product}} activas",
+      "subusers": "{{count}} subusuarios",
+      "subusers_one": "{{count}} subusuario",
+      "subusers_other": "{{count}} subusuarios"
+    },
+    "ipr": {
+      "keyTitle": "Token de API",
+      "keyLabel": "Token de API de IPRoyal",
+      "keyPlaceholder": "Pega el token de Panel, Ajustes, API",
+      "keyHint": "El token está en el panel de IPRoyal, en Ajustes, API. Se guarda cifrado en este equipo.",
+      "credsTitle": "Credenciales del proxy",
+      "subuserLabel": "Subusuario",
+      "useOwnCreds": "Usar un usuario y contraseña de proxy",
+      "subuserHint": "Un subusuario consume tráfico de su propio saldo. Su contraseña se queda en IPRoyal; la app solo envía su identificador.",
+      "noSubusers": "Comprueba la cuenta para ver tus subusuarios, o introduce abajo el usuario y la contraseña del proxy.",
+      "usernameLabel": "Usuario del proxy",
+      "stickyHelp": "Cada proxy recibe su propia sesión y mantiene su IP de salida durante el tiempo que elijas abajo. Cada extracción añade sesiones nuevas.",
+      "lifetimeDefault": "Por defecto (24 horas)",
+      "lifetimeHours": "{{count}} horas",
+      "lifetimeHours_one": "{{count}} hora",
+      "lifetimeHours_other": "{{count}} horas",
+      "loadStates": "Cargar estados y ciudades",
+      "geoHint": "Las listas vienen de tu cuenta de IPRoyal, así que solo muestran ubicaciones que tu plan puede usar."
     }
   }
 }

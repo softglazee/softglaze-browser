@@ -46,8 +46,14 @@ export const PROVIDERS = [
   { key: 'dataimpulse', name: 'DataImpulse', initials: 'DI', color: '#a3e635', referral: 'https://dataimpulse.com/?ref=softglaze', gateway: { host: 'gw.dataimpulse.com', port: 823, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, di: true } },
   // Proxy-Seller residential: the API key creates a list (geo + rotation + N ports, each
   // port its own exit IP) and downloads it, or downloads a list made in the dashboard.
-  { key: 'proxyseller', name: 'Proxy-Seller', initials: 'PS', color: '#22c55e', referral: 'https://proxy-seller.com/personal/api/', gateway: null, geoSync: { creds: ['token'], count: true, ps: true } }
+  { key: 'proxyseller', name: 'Proxy-Seller', initials: 'PS', color: '#22c55e', referral: 'https://proxy-seller.com/personal/api/', gateway: null, geoSync: { creds: ['token'], count: true, ps: true } },
+  // IPRoyal residential: an API token generates ready proxy lines for a sub-user (or the
+  // proxy username + password), with country/state/city and sticky lifetime in the password.
+  { key: 'iproyal', name: 'IPRoyal', initials: 'IR', color: '#f59e0b', referral: 'https://dashboard.iproyal.com/', gateway: null, geoSync: { creds: ['token'], count: true, ipr: true } }
 ];
+
+// IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
+const IPR_LIFETIME_OPTIONS = [['10m', 10, 'minutes'], ['30m', 30, 'minutes'], ['1h', 1, 'hours'], ['6h', 6, 'hours'], ['24h', 24, 'hours'], ['72h', 72, 'hours'], ['168h', 168, 'hours']];
 
 // Sticky lifetimes DataImpulse accepts as session_ttl (minutes). Blank keeps the vendor
 // default, which their docs give as 30 minutes.
@@ -103,7 +109,7 @@ export default function ProxyProviders({ onSynced }) {
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '' });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
   // Read-only account view (traffic left, saved lists, live locations) for the vendors
   // that expose one. Cleared whenever the provider changes.
   const [account, setAccount] = useState(null);
@@ -133,8 +139,8 @@ export default function ProxyProviders({ onSynced }) {
     // values actually carry. Sharing one default set renders blank selects.
     // Proxy-Seller shares the protocol and session vocabulary. Sticky is the default for
     // both because an anti-detect profile needs an exit IP that stays put.
-    const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller';
-    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '' });
+    const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller' || provider.key === 'iproyal';
+    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });
@@ -285,6 +291,7 @@ export default function ProxyProviders({ onSynced }) {
         excludeAsns: form.excludeAsns.trim(),
         listId: fromList ? form.listId : '',
         orderId: g.ps && form.plan !== 'residential' ? form.orderId : '',
+        subuserHash: g.ipr ? form.subuserHash : '',
         token: form.token.trim(),
         username: form.username.trim(),
         password: form.password,
@@ -313,7 +320,7 @@ export default function ProxyProviders({ onSynced }) {
   async function handleLookup(groupby = '') {
     setErr('');
     const g = provider.geoSync || {};
-    if (g.ps && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
+    if ((g.ps || g.ipr) && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
     if (g.di && (!form.username.trim() || !form.password)) { setErr(t('proxyProviders.geo.diNeedCreds', 'Enter the plan login and password first.')); return; }
     if ((groupby === 'state' || groupby === 'city' || groupby === 'region') && !form.country) {
       setErr(t('proxyProviders.geo.pickCountryFirst', 'Pick a country first.'));
@@ -330,7 +337,14 @@ export default function ProxyProviders({ onSynced }) {
         groupby
       });
       setAccount(r);
-      if (groupby) setGeoOptions((o) => ({ ...o, [groupby]: Array.isArray(r.geo) ? r.geo : [] }));
+      if (groupby) {
+        setGeoOptions((o) => ({
+          ...o,
+          [groupby]: Array.isArray(r.geo) ? r.geo : [],
+          // IPRoyal's region lookup also returns the country's cities that sit outside a state.
+          ...(groupby === 'region' && Array.isArray(r.cities) ? { city: r.cities } : {})
+        }));
+      }
       persistCreds();
     } catch (e) { setErr(e.message || t('proxyProviders.errors.lookup', 'Could not reach the provider account.')); }
     finally { setLookingUp(''); }
@@ -677,6 +691,142 @@ export default function ProxyProviders({ onSynced }) {
     );
   };
 
+  // ---- IPRoyal residential: token, credentials, what to add, where ----
+  const renderIpRoyal = () => {
+    const sticky = form.poolType === 'sticky';
+    const isIpr = account && account.provider === 'iproyal';
+    const subusers = isIpr && Array.isArray(account.subusers) ? account.subusers : [];
+    const useSub = Boolean(form.subuserHash);
+    const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key.toUpperCase(), c.label]) : PROXY_COUNTRIES.filter(([code]) => code);
+    const states = geoOptions.region;
+    const stateHit = states.find((s) => s.key === form.state);
+    const cities = stateHit ? stateHit.cities : geoOptions.city;
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><KeyRound className="w-4 h-4 text-violet-400" /> {t('proxyProviders.ipr.keyTitle', 'API token')}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-end">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.ipr.keyLabel', 'IPRoyal API token')}</label>
+              <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.ipr.keyPlaceholder', 'Paste the token from Dashboard, Settings, API')} autoComplete="off" />
+            </div>
+            <button type="button" onClick={() => handleLookup('')} disabled={Boolean(lookingUp)} className={secondaryBtnCls}>
+              {spin('account') || <Gauge className="w-4 h-4" />} {t('proxyProviders.account.checkAccount', 'Check account')}
+            </button>
+          </div>
+          <p className={hintCls}>{t('proxyProviders.ipr.keyHint', 'The token is in the IPRoyal dashboard under Settings, API. It is stored encrypted on this machine.')}</p>
+          {renderAccount()}
+          {isIpr && <p className={hintCls}>{t('proxyProviders.account.subusers', { count: account.subusersCount, defaultValue: '{{count}} sub-users' })}</p>}
+        </section>
+
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><ShieldCheck className="w-4 h-4 text-emerald-400" /> {t('proxyProviders.ipr.credsTitle', 'Proxy credentials')}</div>
+          <div>
+            <label className={labelCls}>{t('proxyProviders.ipr.subuserLabel', 'Sub-user')}</label>
+            <select value={form.subuserHash} onChange={(e) => set('subuserHash', e.target.value)} className={selectCls} style={chevronStyle}>
+              <option value="">{t('proxyProviders.ipr.useOwnCreds', 'Use a proxy username and password instead')}</option>
+              {subusers.map((s) => <option key={s.hash} value={s.hash}>{`${s.username} · ${s.trafficGb.toFixed(2)} GB${s.shared ? ' (shared)' : ''}`}</option>)}
+            </select>
+            <p className={hintCls + ' mt-1.5'}>{subusers.length
+              ? t('proxyProviders.ipr.subuserHint', 'A sub-user draws traffic from its own balance. Its password stays on IPRoyal; the app only sends its id.')
+              : t('proxyProviders.ipr.noSubusers', 'Check account to list your sub-users, or enter the proxy username and password below.')}</p>
+          </div>
+          {!useSub && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>{t('proxyProviders.ipr.usernameLabel', 'Proxy username')}</label>
+                <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder="username" autoComplete="off" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('proxyProviders.geo.proxyPasswordLabel')}</label>
+                <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><Layers className="w-4 h-4 text-sky-400" /> {t('proxyProviders.geo.diWhatTitle', 'What to add')}</div>
+          <div>
+            <label className={labelCls}>{t('proxyProviders.geo.diSessionLabel', 'Session')}</label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => set('poolType', 'sticky')} className={segCls(sticky)}>{t('proxyProviders.geo.diSticky', 'Sticky')}</button>
+              <button type="button" onClick={() => set('poolType', 'rotating')} className={segCls(!sticky)}>{t('proxyProviders.geo.diRotating', 'Rotating')}</button>
+            </div>
+            <p className={hintCls + ' mt-1.5'}>{sticky
+              ? t('proxyProviders.ipr.stickyHelp', 'Each proxy gets its own session and keeps its exit IP for the time you pick below. Every pull adds new sessions.')
+              : t('proxyProviders.geo.diRotatingHelp', 'One shared endpoint whose exit IP changes on every request. It adds a single proxy, so it suits scraping rather than logged-in profiles.')}</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diAddLabel', 'How many to add')}</label>
+              <input inputMode="numeric" value={sticky ? form.count : '1'} disabled={!sticky} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono disabled:opacity-60'} placeholder="5" />
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diTtlLabel', 'Keep each IP for')}</label>
+              <select value={form.life} disabled={!sticky} onChange={(e) => set('life', e.target.value)} className={selectCls + ' disabled:opacity-60'} style={chevronStyle}>
+                <option value="">{t('proxyProviders.ipr.lifetimeDefault', 'Default (24 hours)')}</option>
+                {IPR_LIFETIME_OPTIONS.map(([value, n, unit]) => (
+                  <option key={value} value={value}>{unit === 'hours'
+                    ? t('proxyProviders.ipr.lifetimeHours', { count: n, defaultValue: '{{count}} hours' })
+                    : t('proxyProviders.geo.diTtlMinutes', { count: n, defaultValue: '{{count}} minutes' })}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diProtocolLabel', 'Protocol')}</label>
+              <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+                <option value="http">HTTP</option>
+                <option value="socks5">SOCKS5</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><MapPin className="w-4 h-4 text-sky-400" /> {t('proxyProviders.geo.locationTitle', 'Location')}</div>
+          <div className="sm:max-w-[320px]">
+            <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
+            <select value={form.country} onChange={(e) => { set('country', e.target.value); set('state', ''); set('city', ''); setGeoOptions((o) => ({ ...o, region: [], city: [] })); }} className={selectCls} style={chevronStyle}>
+              <option value="">{t('proxyProviders.countries.any')}</option>
+              {countries.map(([code, name]) => <option key={code} value={code}>{`${name} (${code})`}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.stateLabel')} {optMarker}</label>
+              <select value={form.state} disabled={!states.length} onChange={(e) => { set('state', e.target.value); set('city', ''); }} className={selectCls + ' disabled:opacity-60'} style={chevronStyle}>
+                <option value="">{t('proxyProviders.geo.anyState', 'Any state')}</option>
+                {states.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.cityLabel')} {optMarker}</label>
+              <select value={form.city} disabled={!cities.length} onChange={(e) => set('city', e.target.value)} className={selectCls + ' disabled:opacity-60'} style={chevronStyle}>
+                <option value="">{t('proxyProviders.geo.anyCity', 'Any city')}</option>
+                {cities.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => handleLookup('country')} disabled={Boolean(lookingUp) || !form.token.trim()} className={secondaryBtnCls}>{spin('country') || <Globe2 className="w-4 h-4" />} {t('proxyProviders.ps.loadCountries', 'Load all countries')}</button>
+            <button type="button" onClick={() => handleLookup('region')} disabled={Boolean(lookingUp) || !form.country || !form.token.trim()} className={secondaryBtnCls}>{spin('region') || <MapPin className="w-4 h-4" />} {t('proxyProviders.ipr.loadStates', 'Load states and cities')}</button>
+          </div>
+          <p className={hintCls}>{t('proxyProviders.ipr.geoHint', 'The lists come from your IPRoyal account, so they only show locations your plan can use.')}</p>
+        </section>
+
+        <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
+          {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {sticky
+            ? t('proxyProviders.geo.diAddSticky', { count: pullCount, defaultValue: 'Add {{count}} sticky proxies' })
+            : t('proxyProviders.geo.diAddRotating', 'Add rotating gateway')}
+          {form.country ? ` · ${form.country}` : ''}
+        </button>
+        <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{t('proxyProviders.geoHints.iproyal', 'IPRoyal builds each proxy for you: the location and a sticky session go into the password, on its gateway geo.iproyal.com. Sticky proxies share one host and port, and each keeps its own exit IP for the lifetime you pick. Traffic comes out of your residential balance or the chosen sub-user.')}</p>
+      </div>
+    );
+  };
+
   return (
     <Card className="bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden">
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] flex-1 min-h-0">
@@ -772,6 +922,8 @@ export default function ProxyProviders({ onSynced }) {
             renderDataImpulse()
           ) : provider.geoSync && provider.geoSync.ps ? (
             renderProxySeller()
+          ) : provider.geoSync && provider.geoSync.ipr ? (
+            renderIpRoyal()
           ) : provider.geoSync ? (
             /* ---- Geo-targeted pull (Apify / Smartproxy.org / ShopSocks5 / AnyIP) ---- */
             <div className="space-y-4 max-w-2xl">
@@ -1114,6 +1266,8 @@ export function ProviderLogo({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="5.5" /><circle cx="12" cy="12" r="9" /></svg>);
     case 'dataimpulse': // pulse line
       return (<svg {...line}><path d="M3 12h4l2.5-6 5 12 2.5-6H21" /></svg>);
+    case 'iproyal': // crown
+      return (<svg {...line}><path d="M4 17l-1-9 5 4 4-7 4 7 5-4-1 9z" /><path d="M5 20h14" /></svg>);
     case 'proxyseller': // stacked list rows
       return (<svg {...line}><rect x="4" y="4.5" width="16" height="4" rx="1.2" /><rect x="4" y="10" width="16" height="4" rx="1.2" /><rect x="4" y="15.5" width="16" height="4" rx="1.2" /></svg>);
     default:
