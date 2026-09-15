@@ -15,10 +15,10 @@ if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi'
 // On-demand version picker: each version row carries its own download/install
 // control. Installed versions show "Ready" (no download icon); missing ones show a
 // download button that streams a progress bar inline and flips to "Ready" on finish.
-// Works for both SunBrowser (Chrome-for-Testing) and FlowerBrowser (Firefox).
+// Works for both engines: Chromium (Chrome-for-Testing builds) and Firefox.
 export default function BrowserVersionSelect({ core, value, onChange }) {
   const { t } = useTranslation('cmpUi');
-  const isFirefox = core === 'FlowerBrowser';
+  const isFirefox = core === 'Firefox';
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);

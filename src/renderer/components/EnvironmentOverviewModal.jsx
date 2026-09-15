@@ -86,7 +86,7 @@ export default function EnvironmentOverviewModal({ profile, onClose }) {
 
         <div className="flex-1 overflow-y-auto p-5 grid gap-4 md:grid-cols-2">
           <Section icon={Globe} title={t('envOverview.sectionBrowser')}>
-            <Row label={t('envOverview.rowBrowser')} value={`${p.browserCore || 'Chrome'}${p.browserVersion ? ` ${p.browserVersion}` : ''}`} />
+            <Row label={t('envOverview.rowBrowser')} value={`${p.browserCore || 'Chromium'}${p.browserVersion ? ` ${p.browserVersion}` : ''}`} />
             {p.browserBrand && /^(edge|brave|opera|vivaldi|yandex)/i.test(String(p.browserBrand)) && (
               <Row label={t('envOverview.rowIdentity')} value={t('envOverview.presentsAs', { brand: p.browserBrand })} />
             )}

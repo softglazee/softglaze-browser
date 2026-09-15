@@ -275,7 +275,7 @@ const WEBGL_RENDERERS = {
 const initialProfileData = {
   id: null,
   name: '',
-  browserCore: 'SunBrowser',
+  browserCore: 'Chromium',
   browserBrand: 'Chrome',
   browserVersion: 'Auto',
   os: 'Windows',
@@ -648,13 +648,13 @@ export default function ProfilesPage() {
   // the host for exactly this reason.
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
   const crossOsWarning = Boolean(pd.os) && pd.os !== hostOs;
-  // Prefer the real installed Chrome majors (newest first) for SunBrowser; fall
+  // Prefer the real installed Chrome majors (newest first) for Chromium; fall
   // back to the static list when none are detected on disk.
   const installedMajors = useMemo(() => {
     const set = new Set(installedBrowsers.map((b) => String(b.major)));
     return ['Auto', ...Array.from(set).sort((a, b) => Number(b) - Number(a))];
   }, [installedBrowsers]);
-  const browserVersionsList = pd.browserCore === 'SunBrowser'
+  const browserVersionsList = pd.browserCore === 'Chromium'
     ? (installedMajors.length > 1 ? installedMajors : CHROME_VERSIONS)
     : FIREFOX_VERSIONS;
   const filteredUAGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(pd.os));
@@ -1225,10 +1225,10 @@ export default function ProfilesPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium">{t('general.browser')}</label>
                     <div className="flex flex-wrap gap-4">
-                      {['SunBrowser', 'FlowerBrowser'].map(core => (
+                      {['Chromium', 'Firefox'].map(core => (
                         <div key={core} className={`flex items-center rounded border transition shadow-sm ${pd.browserCore === core ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-muted'}`}>
                           <button onClick={() => updatePd('browserCore', core)} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground">
-                            <div className={`w-4 h-4 rounded-full ${core === 'SunBrowser' ? 'bg-blue-500' : 'bg-orange-500'}`}></div>
+                            <div className={`w-4 h-4 rounded-full ${core === 'Chromium' ? 'bg-blue-500' : 'bg-orange-500'}`}></div>
                             {core}
                           </button>
                           <div className="w-px h-6 bg-border"></div>
@@ -1241,7 +1241,7 @@ export default function ProfilesPage() {
                       ))}
                     </div>
                   </div>
-                  {pd.browserCore === 'SunBrowser' && (
+                  {pd.browserCore === 'Chromium' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
                       <span />
                       <div>
@@ -1256,7 +1256,7 @@ export default function ProfilesPage() {
                       </div>
                     </div>
                   )}
-                  {pd.browserCore === 'SunBrowser' && (
+                  {pd.browserCore === 'Chromium' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
                       <label className="text-left lg:text-right text-muted font-medium pt-2">{t('general.identity')}</label>
                       <div>
@@ -1268,7 +1268,7 @@ export default function ProfilesPage() {
                     </div>
                   )}
 
-                  {pd.browserCore === 'SunBrowser' && (
+                  {pd.browserCore === 'Chromium' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                       <label className="text-left lg:text-right text-muted font-medium mt-2">{t('general.engine', 'Engine')}</label>
                       <div className="w-full">

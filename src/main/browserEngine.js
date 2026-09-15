@@ -364,7 +364,7 @@ async function attachPersonaAutofill(targetPage) {
 // Real Chrome binaries. Profiles launch an ACTUAL Chrome build (Chrome for
 // Testing) whose version matches the profile - so UA, Client-Hints, TLS/JA4 and
 // even Web Worker contexts all natively report the same real version. This is
-// what makes "SunBrowser 149" genuinely present as 149 everywhere, instead of
+// what makes a "Chromium 149" profile genuinely present as 149 everywhere, instead of
 // faking the UA on top of a different engine (which detectors catch as a
 // mismatch). Layout on disk: <root>/chrome/win64-<version>/chrome-win64/chrome.exe
 // ---------------------------------------------------------------------------

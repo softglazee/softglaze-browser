@@ -296,7 +296,7 @@ export default function BrowsersPage() {
         </div>
       </div>
 
-      {/* FlowerBrowser (Firefox) section */}
+      {/* Firefox engine section */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
         <div className="flex items-start gap-3 px-5 py-4 border-b border-border">
           <div className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 24%, transparent)' }}>
@@ -353,7 +353,7 @@ export default function BrowsersPage() {
         </div>
       </div>
 
-      {/* SunBrowser (Chrome) section */}
+      {/* Chromium engine section */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
           <div className="w-10 h-10 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #3b82f6 12%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 22%, transparent)' }}>
@@ -361,20 +361,20 @@ export default function BrowsersPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold text-foreground">{t('chrome.heading')}</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('chromium.heading')}</h3>
               <span className="text-[11px] text-muted-foreground">{t('counts.installedAvailable', { installed: chromeInstalled, available: Math.max(0, items.length - chromeInstalled) })}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{t('chrome.subtitle')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('chromium.subtitle')}</p>
           </div>
         </div>
         <div className="p-4 space-y-2 max-h-[44vh] overflow-y-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="text-sm">{t('chrome.fetching')}</span>
+              <span className="text-sm">{t('chromium.fetching')}</span>
             </div>
           ) : items.length === 0 ? (
-            <div className="text-center py-10 text-sm text-muted-foreground">{t('chrome.empty')}</div>
+            <div className="text-center py-10 text-sm text-muted-foreground">{t('chromium.empty')}</div>
           ) : visibleChrome.map((it) => (
             <VersionRow
               key={it.version}

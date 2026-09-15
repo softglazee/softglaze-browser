@@ -39,9 +39,11 @@ function extractFunction(source, name) {
 }
 
 // Evaluate the real extractFingerprintData with a stubbed secretStore (only reached
-// when twoFactorSeed is supplied, which these tests never do).
+// when twoFactorSeed is supplied, which these tests never do) and the real engine-name
+// normaliser it calls for browserCore.
 function loadExtract() {
-  const ctx = { module: {}, secretStore: { seal: (x) => `sealed:${x}` } };
+  const { toStoredBrowserCore } = require('../src/main/importParser');
+  const ctx = { module: {}, secretStore: { seal: (x) => `sealed:${x}` }, toStoredBrowserCore };
   vm.createContext(ctx);
   vm.runInContext(
     `${extractFunction(SRC('main/ipcHandlers.js'), 'extractFingerprintData')}

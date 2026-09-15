@@ -291,7 +291,7 @@ async function launchFirefoxProfile(options = {}) {
 
   const wantVersion = profile.browserVersion || options.browserVersion || 'Auto';
   const ff = resolveFirefoxBinary(wantVersion);
-  if (!ff) throw new Error('Firefox is not installed. Download a FlowerBrowser version from the browser selector (or install Firefox on this machine) to launch this profile.');
+  if (!ff) throw new Error('Firefox is not installed. Download a Firefox version from the browser selector (or install Firefox on this machine) to launch this profile.');
 
   const root = path.resolve(profileRoot || path.resolve(process.cwd(), 'softglaze_profiles'));
   const safe = String(dataDirName || title || `ff-${profileId || crypto.randomUUID()}`).replace(/[^a-zA-Z0-9._-]/g, '_');

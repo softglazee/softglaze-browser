@@ -178,12 +178,31 @@ function normalizeOs(value) {
   return null;
 }
 
+// Engine identifiers stored in Profile.browserCore.
+const BROWSER_CORE = Object.freeze({ CHROMIUM: 'Chromium', FIREFOX: 'Firefox' });
+
+// Legacy engine names, accepted on INPUT ONLY: spreadsheets written for other
+// tools, exports and sync payloads from builds before the rename. This file is the
+// only place they appear. They are never stored, exported or shown in the UI.
+const LEGACY_FIREFOX_CORE_NAMES = Object.freeze(['flowerbrowser', 'flower']);
+const LEGACY_CHROMIUM_CORE_NAMES = Object.freeze(['sunbrowser', 'sun']);
+
+// Map any engine name to its canonical identifier, or null when unrecognised.
 function normalizeBrowserCore(value) {
   const t = normalizeHeader(value);
   if (!t) return null;
-  if (t.includes('fire') || t.includes('flower') || t.includes('gecko')) return 'FlowerBrowser';
-  if (t.includes('chrom') || t.includes('sun') || t.includes('blink')) return 'SunBrowser';
+  if (t.includes('fire') || t.includes('gecko') || LEGACY_FIREFOX_CORE_NAMES.some((n) => t.includes(n))) return BROWSER_CORE.FIREFOX;
+  if (t.includes('chrom') || t.includes('blink') || LEGACY_CHROMIUM_CORE_NAMES.some((n) => t.includes(n))) return BROWSER_CORE.CHROMIUM;
   return null;
+}
+
+// The value to persist for an incoming engine name. The launcher routes every
+// non-Firefox profile to Chromium, so anything unrecognised is stored as Chromium.
+// undefined / null / '' pass through unchanged so "field not provided" keeps its
+// meaning on partial updates.
+function toStoredBrowserCore(value) {
+  if (value === undefined || value === null || value === '') return value;
+  return normalizeBrowserCore(value) || BROWSER_CORE.CHROMIUM;
 }
 
 // Chromium-family identity (Chrome | Edge | Brave | Opera | Vivaldi | Yandex).
@@ -540,5 +559,8 @@ module.exports = {
   parseWorkbookFile,
   parseDataRows,
   parseBooleanInt,
-  parseSystemProxyBehavior
+  parseSystemProxyBehavior,
+  BROWSER_CORE,
+  normalizeBrowserCore,
+  toStoredBrowserCore
 };

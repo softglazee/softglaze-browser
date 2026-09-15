@@ -318,7 +318,7 @@ function generateMediaDevices(os, seed) {
 function generateMobileFingerprint() {
   const [resW, resH] = ANDROID_RES.split('x');
   return {
-    browserCore: 'Chrome',
+    browserCore: 'Chromium',
     browserBrand: 'Chrome',
     browserVersion: '',
     os: 'Android',
@@ -419,7 +419,7 @@ function generateFingerprint(opts = {}) {
   const browserVersion = pickChromeVersion(opts && opts.browserVersion);
 
   return {
-    browserCore: 'Chrome',
+    browserCore: 'Chromium',
     browserBrand: 'Chrome',
     browserVersion,
     os,

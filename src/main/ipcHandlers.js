@@ -45,7 +45,7 @@ const totp = require('./totp');
 const permissions = require('./permissions');
 const rbacPolicy = require('./rbacPolicy');
 const payments = require('./payments');
-const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior } = require('./importParser');
+const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior, BROWSER_CORE, normalizeBrowserCore, toStoredBrowserCore } = require('./importParser');
 const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSignature, CHROME_VERSIONS } = require('./fingerprintGenerator');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
@@ -711,7 +711,7 @@ function serializeProfile(profile) {
 // Maps incoming React Payload to Prisma Schema keys
 function extractFingerprintData(input) {
   return {
-    browserCore: input.browserCore,
+    browserCore: toStoredBrowserCore(input.browserCore),
     browserBrand: input.browserBrand === undefined ? undefined : (normalizeBrand(input.browserBrand) || 'Chrome'),
     browserVersion: input.browserVersion,
     os: input.os,
@@ -3404,6 +3404,7 @@ async function createProfileFromTemplate(payload) {
   // Stamp ownership to the current member (templates carry no owner).
   const tplStampId = ownerStampId();
   const data = { ...fields, title, dataDirName, macAddress: randomMac(), ownerMemberId: tplStampId, assignedMemberId: tplStampId };
+  if ('browserCore' in data) data.browserCore = toStoredBrowserCore(data.browserCore);
   if (!isMobile) data.deviceName = randomDeviceName();
   const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return serializeProfile(created);
@@ -4810,10 +4811,10 @@ async function launchProfile(payload) {
   // upgraded to a real session lock on success.
   reserveProfileLock(id, launcher);
   try {
-    // FlowerBrowser = real Firefox. It's a different engine (no CDP/MV3), so route to
-    // the Firefox launcher which configures a dedicated profile via user.js prefs
+    // The Firefox engine is real Firefox. It's a different engine (no CDP/MV3), so route
+    // to the Firefox launcher which configures a dedicated profile via user.js prefs
     // (proxy + auth relay, UA, locale, timezone, WebRTC off).
-    const isFirefox = /flower|firefox/i.test(String(profile.browserCore || ''));
+    const isFirefox = normalizeBrowserCore(profile.browserCore) === BROWSER_CORE.FIREFOX;
     if (isFirefox) {
       const { profileRoot: ffRoot } = getRuntimeConfig();
       const useFfProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
@@ -8531,6 +8532,8 @@ async function applyRemoteToProfile(db, profile, remoteState) {
   const fp = (remoteState && remoteState.fingerprint) || {};
   const data = {};
   for (const k of SYNC_SCALAR_FIELDS) if (fp[k] !== undefined) data[k] = fp[k];
+  // A payload pushed by a build from before the engine rename may carry a legacy name.
+  if (data.browserCore !== undefined) data.browserCore = toStoredBrowserCore(data.browserCore);
   if (typeof fp.title === 'string' && fp.title) data.title = fp.title;
   if (Array.isArray(fp.platformAccounts)) data.platformAccounts = JSON.stringify(fp.platformAccounts);
   if (Array.isArray(fp.tags)) data.tags = JSON.stringify(fp.tags);

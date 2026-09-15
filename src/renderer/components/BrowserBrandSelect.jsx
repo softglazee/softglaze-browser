@@ -2,7 +2,7 @@
 //
 // Edge / Brave / Opera / Vivaldi / Yandex all run Softglaze's real Chrome engine;
 // this control only chooses the *presented identity* (UA token, Sec-CH-UA brands,
-// navigator globals). It's shown only when the core is SunBrowser (Chrome).
+// navigator globals). It's shown only when the engine is Chromium.
 //
 // The marks below are ORIGINAL stylized glyphs (currentColor), NOT the vendors'
 // trademarked logos - same trademark-safe approach as the proxy provider marks.

@@ -15,16 +15,16 @@
     "installedAvailable": "· {{installed}} installed · {{available}} available"
   },
   "firefox": {
-    "heading": "FlowerBrowser (Firefox engine)",
+    "heading": "Firefox",
     "ready": "Ready",
     "notDetected": "Not detected",
-    "detectedDesc": "Ready. Detected at {{path}}. Profiles set to FlowerBrowser launch real Firefox with proxy, UA, locale, timezone and WebRTC off.",
-    "notDetectedDesc": "No system Firefox detected. Download a version below - it installs into the app and FlowerBrowser profiles will launch real Firefox with proxy, UA, locale, timezone and WebRTC off.",
+    "detectedDesc": "Ready. Detected at {{path}}. Firefox profiles launch real Firefox with proxy, UA, locale, timezone and WebRTC off.",
+    "notDetectedDesc": "No system Firefox detected. Download a version below - it installs into the app and Firefox profiles will launch real Firefox with proxy, UA, locale, timezone and WebRTC off.",
     "fetching": "Fetching the Firefox release catalog…",
     "empty": "No Firefox versions available (are you offline?)."
   },
-  "chrome": {
-    "heading": "SunBrowser (Chrome for Testing)",
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
     "subtitle": "Real builds - UA, Client-Hints, TLS and workers all genuinely match the version.",
     "fetching": "Fetching the Chrome-for-Testing catalog…",
     "empty": "No versions available (are you offline?)."
