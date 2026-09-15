@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Boxes, ExternalLink, KeyRound, Loader2, Check, Activity, RefreshCw, ShieldCheck, Zap, X, Globe2
+  Boxes, ExternalLink, KeyRound, Loader2, Check, Activity, RefreshCw, ShieldCheck, Zap, X, Globe2,
+  Plus, Gauge, MapPin, SlidersHorizontal, Layers
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import i18n from '@/i18n/index.js';
@@ -42,8 +43,24 @@ export const PROVIDERS = [
   // DataImpulse is a real list pull: GET /api/list returns rendered login:password@host:port
   // rows, so `geo` (state/city), `count` and `life` (session_ttl) all map to documented
   // query parameters rather than to an invented username grammar.
-  { key: 'dataimpulse', name: 'DataImpulse', initials: 'DI', color: '#a3e635', referral: 'https://dataimpulse.com/?ref=softglaze', gateway: { host: 'gw.dataimpulse.com', port: 823, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, di: true } }
+  { key: 'dataimpulse', name: 'DataImpulse', initials: 'DI', color: '#a3e635', referral: 'https://dataimpulse.com/?ref=softglaze', gateway: { host: 'gw.dataimpulse.com', port: 823, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, di: true } },
+  // Proxy-Seller residential: the API key creates a list (geo + rotation + N ports, each
+  // port its own exit IP) and downloads it, or downloads a list made in the dashboard.
+  { key: 'proxyseller', name: 'Proxy-Seller', initials: 'PS', color: '#22c55e', referral: 'https://proxy-seller.com/personal/api/', gateway: null, geoSync: { creds: ['token'], count: true, ps: true } }
 ];
+
+// Sticky lifetimes DataImpulse accepts as session_ttl (minutes). Blank keeps the vendor
+// default, which their docs give as 30 minutes.
+const DI_TTL_OPTIONS = ['5', '10', '15', '30', '60', '120'];
+// Proxy-Seller "rotate every N seconds" presets (the API accepts 1 to 3600).
+const PS_INTERVAL_OPTIONS = ['60', '300', '600', '1800', '3600'];
+
+function formatBytes(n) {
+  const v = Number(n) || 0;
+  if (v >= 1024 ** 3) return `${(v / 1024 ** 3).toFixed(2)} GB`;
+  if (v >= 1024 ** 2) return `${(v / 1024 ** 2).toFixed(1)} MB`;
+  return `${Math.round(v / 1024)} KB`;
+}
 
 // Country list for the geo-targeted providers (Apify / Smartproxy.org / ShopSocks5).
 // Values are ISO 3166-1 alpha-2 codes - the format Apify (country-XX) and
@@ -80,7 +97,12 @@ export default function ProxyProviders({ onSynced }) {
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new' });
+  // Read-only account view (traffic left, saved lists, live locations) for the vendors
+  // that expose one. Cleared whenever the provider changes.
+  const [account, setAccount] = useState(null);
+  const [lookingUp, setLookingUp] = useState('');
+  const [geoOptions, setGeoOptions] = useState({ state: [], city: [], region: [], country: [] });
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -103,8 +125,13 @@ export default function ProxyProviders({ onSynced }) {
     // DataImpulse labels these three selects with its own vocabulary (product /
     // rotating-sticky / http-socks5), so it needs defaults that its own <option>
     // values actually carry. Sharing one default set renders blank selects.
-    const di = provider.key === 'dataimpulse';
-    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'rotating' : 'residential', teamId: '', ipv6: false });
+    // Proxy-Seller shares the protocol and session vocabulary. Sticky is the default for
+    // both because an anti-detect profile needs an exit IP that stays put.
+    const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller';
+    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new' });
+    setAccount(null);
+    setLookingUp('');
+    setGeoOptions({ state: [], city: [], region: [], country: [] });
     setCheckResult(null);
     setCredsSaved(false);
     setSyncResult(null);
@@ -238,12 +265,19 @@ export default function ProxyProviders({ onSynced }) {
       if (creds.includes('username') && !form.username.trim()) { setErr(t('proxyProviders.errors.enterProxyUsername')); return; }
       if (creds.includes('password') && !form.password) { setErr(t('proxyProviders.errors.enterProxyPassword')); return; }
     }
+    const fromList = g.ps && form.source === 'existing';
+    if (fromList && !form.listId) { setErr(t('proxyProviders.ps.pickList', 'Pick one of your saved lists, or switch to New list.')); return; }
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
         provider: provider.key,
         country: form.country,
         count: form.count,
+        zip: form.zip.trim(),
+        asn: form.asn.trim(),
+        excludeCountries: form.excludeCountries.trim(),
+        excludeAsns: form.excludeAsns.trim(),
+        listId: fromList ? form.listId : '',
         token: form.token.trim(),
         username: form.username.trim(),
         password: form.password,
@@ -266,10 +300,319 @@ export default function ProxyProviders({ onSynced }) {
     finally { setSyncing(false); }
   }
 
+  // Account view: plan traffic plus, on request, the live locations a pull can target.
+  // groupby 'state' / 'city' (DataImpulse, for the chosen country) or 'country' / 'region'
+  // (Proxy-Seller geo database). Read-only on the vendor side.
+  async function handleLookup(groupby = '') {
+    setErr('');
+    const g = provider.geoSync || {};
+    if (g.ps && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
+    if (g.di && (!form.username.trim() || !form.password)) { setErr(t('proxyProviders.geo.diNeedCreds', 'Enter the plan login and password first.')); return; }
+    if ((groupby === 'state' || groupby === 'city' || groupby === 'region') && !form.country) {
+      setErr(t('proxyProviders.geo.pickCountryFirst', 'Pick a country first.'));
+      return;
+    }
+    setLookingUp(groupby || 'account');
+    try {
+      const r = await softglazeApi.proxies.vendorLookup({
+        provider: provider.key,
+        token: form.token.trim(),
+        username: form.username.trim(),
+        password: form.password,
+        country: form.country,
+        groupby
+      });
+      setAccount(r);
+      if (groupby) setGeoOptions((o) => ({ ...o, [groupby]: Array.isArray(r.geo) ? r.geo : [] }));
+      persistCreds();
+    } catch (e) { setErr(e.message || t('proxyProviders.errors.lookup', 'Could not reach the provider account.')); }
+    finally { setLookingUp(''); }
+  }
+
   const inputCls = 'w-full h-10 bg-background border border-border rounded px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
   // Styled <select>: hide the native arrow, paint an inset chevron (icon not glued to the edge).
   const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
   const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
+  const labelCls = 'mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground';
+  const sectionCls = 'rounded-xl border border-border bg-card/40 p-4 space-y-4';
+  const sectionTitleCls = 'flex items-center gap-2 text-[13px] font-semibold text-foreground';
+  const hintCls = 'text-[11.5px] text-muted-foreground leading-relaxed';
+  const secondaryBtnCls = 'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg text-[12.5px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60';
+  const primaryBtnCls = 'inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-60 shadow-lg shadow-sky-500/25';
+  const segCls = (active) => `flex-1 min-w-[120px] h-10 px-3 rounded-lg text-[12.5px] font-semibold border transition-colors ${active ? 'bg-primary/15 border-primary/40 text-foreground' : 'bg-background border-border text-muted-foreground hover:text-foreground'}`;
+  const optMarker = <span className="normal-case font-normal text-muted-foreground/70">{t('proxyProviders.geo.optionalWord', 'optional')}</span>;
+  const pullCount = Math.max(1, Number.parseInt(form.count, 10) || 5);
+  const spin = (key) => (lookingUp === key ? <Loader2 className="w-4 h-4 animate-spin" /> : null);
+
+  // Plan traffic line shared by the DataImpulse and Proxy-Seller panels.
+  const renderAccount = () => (account && account.provider === provider.key ? (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-[12px]">
+      <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400">
+        <Gauge className="w-3.5 h-3.5" />
+        {account.totalBytes > 0
+          ? t('proxyProviders.account.leftOf', { left: formatBytes(account.leftBytes), total: formatBytes(account.totalBytes), defaultValue: '{{left}} left of {{total}}' })
+          : t('proxyProviders.account.left', { left: formatBytes(account.leftBytes), defaultValue: '{{left}} left' })}
+      </span>
+      {account.expiresAt && <span className="text-muted-foreground">{t('proxyProviders.account.expires', { date: account.expiresAt, defaultValue: 'Expires {{date}}' })}</span>}
+      {Array.isArray(account.lists) && <span className="text-muted-foreground">{t('proxyProviders.account.lists', { count: account.lists.length, defaultValue: '{{count}} saved lists' })}</span>}
+    </div>
+  ) : null);
+
+  // ---- DataImpulse: plan login, what to add, where ----
+  const renderDataImpulse = () => {
+    const sticky = form.poolType === 'sticky';
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><KeyRound className="w-4 h-4 text-violet-400" /> {t('proxyProviders.geo.diPlanTitle', 'Plan credentials')}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diLoginLabel', 'Plan login')}</label>
+              <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder="login" autoComplete="off" />
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.proxyPasswordLabel')}</label>
+              <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-end">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diProductLabel', 'Product')}</label>
+              <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
+                <option value="residential">{t('proxyProviders.geo.diResidential', 'Residential')}</option>
+                <option value="residential_premium">{t('proxyProviders.geo.diResidentialPremium', 'Residential Premium')}</option>
+                <option value="mobile">{t('proxyProviders.geo.diMobile', 'Mobile')}</option>
+                <option value="datacenter">{t('proxyProviders.geo.diDatacenter', 'Datacenter')}</option>
+              </select>
+            </div>
+            <button type="button" onClick={() => handleLookup('')} disabled={Boolean(lookingUp)} className={secondaryBtnCls}>
+              {spin('account') || <Gauge className="w-4 h-4" />} {t('proxyProviders.account.checkPlan', 'Check plan')}
+            </button>
+          </div>
+          <p className={hintCls}>{t('proxyProviders.geo.diNote', 'Each DataImpulse product has its own login and password, so the product is chosen by the credentials you enter above. Pick the matching name here and the pulled proxies are labelled with it, which keeps several products apart in the pool.')}</p>
+          {renderAccount()}
+        </section>
+
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><Layers className="w-4 h-4 text-sky-400" /> {t('proxyProviders.geo.diWhatTitle', 'What to add')}</div>
+          <div>
+            <label className={labelCls}>{t('proxyProviders.geo.diSessionLabel', 'Session')}</label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => set('poolType', 'sticky')} className={segCls(sticky)}>{t('proxyProviders.geo.diSticky', 'Sticky')}</button>
+              <button type="button" onClick={() => set('poolType', 'rotating')} className={segCls(!sticky)}>{t('proxyProviders.geo.diRotating', 'Rotating')}</button>
+            </div>
+            <p className={hintCls + ' mt-1.5'}>{sticky
+              ? t('proxyProviders.geo.diStickyHelp', 'One proxy per profile. Each one keeps its own exit IP for the time you pick below.')
+              : t('proxyProviders.geo.diRotatingHelp', 'One shared endpoint whose exit IP changes on every request. It adds a single proxy, so it suits scraping rather than logged-in profiles.')}</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diAddLabel', 'How many to add')}</label>
+              <input inputMode="numeric" value={sticky ? form.count : '1'} disabled={!sticky} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono disabled:opacity-60'} placeholder="5" />
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diTtlLabel', 'Keep each IP for')}</label>
+              <select value={form.life} disabled={!sticky} onChange={(e) => set('life', e.target.value)} className={selectCls + ' disabled:opacity-60'} style={chevronStyle}>
+                <option value="">{t('proxyProviders.geo.diTtlDefault', 'Default (30 minutes)')}</option>
+                {DI_TTL_OPTIONS.map((m) => <option key={m} value={m}>{t('proxyProviders.geo.diTtlMinutes', { count: Number(m), defaultValue: '{{count}} minutes' })}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.diProtocolLabel', 'Protocol')}</label>
+              <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+                <option value="http">HTTP</option>
+                <option value="socks5">SOCKS5</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><MapPin className="w-4 h-4 text-sky-400" /> {t('proxyProviders.geo.locationTitle', 'Location')}</div>
+          <div className="sm:max-w-[320px]">
+            <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
+            <select value={form.country} onChange={(e) => { set('country', e.target.value); set('state', ''); set('city', ''); setGeoOptions((o) => ({ ...o, state: [], city: [] })); }} className={selectCls} style={chevronStyle}>
+              {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}{code ? ` (${code})` : ''}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.stateLabel')} {optMarker}</label>
+              <input list="sg-di-state" value={form.state} onChange={(e) => set('state', e.target.value)} disabled={!form.country} className={inputCls + ' font-mono disabled:opacity-60'} placeholder={t('proxyProviders.geo.anyState', 'Any state')} />
+              <datalist id="sg-di-state">{geoOptions.state.map((o) => <option key={o.key} value={o.key}>{`${o.label} · ${o.count.toLocaleString()} IPs`}</option>)}</datalist>
+            </div>
+            <div>
+              <label className={labelCls}>{t('proxyProviders.geo.cityLabel')} {optMarker}</label>
+              <input list="sg-di-city" value={form.city} onChange={(e) => set('city', e.target.value)} disabled={!form.country} className={inputCls + ' font-mono disabled:opacity-60'} placeholder={t('proxyProviders.geo.anyCity', 'Any city')} />
+              <datalist id="sg-di-city">{geoOptions.city.map((o) => <option key={o.key} value={o.key}>{`${o.label} · ${o.count.toLocaleString()} IPs`}</option>)}</datalist>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => handleLookup('state')} disabled={Boolean(lookingUp) || !form.country} className={secondaryBtnCls}>{spin('state') || <MapPin className="w-4 h-4" />} {t('proxyProviders.geo.loadStates', 'Load states')}</button>
+            <button type="button" onClick={() => handleLookup('city')} disabled={Boolean(lookingUp) || !form.country} className={secondaryBtnCls}>{spin('city') || <MapPin className="w-4 h-4" />} {t('proxyProviders.geo.loadCities', 'Load cities')}</button>
+          </div>
+          <p className={hintCls}>{t('proxyProviders.geo.diLookupHint', 'Loading shows how many live IPs each state or city has, as suggestions in the fields above. Separate several values with commas.')}</p>
+          <details className="rounded-lg border border-border bg-background/40 px-3 py-2.5">
+            <summary className="cursor-pointer select-none text-[12px] font-semibold text-muted-foreground inline-flex items-center gap-1.5"><SlidersHorizontal className="w-3.5 h-3.5" /> {t('proxyProviders.geo.moreFilters', 'More filters')}</summary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+              <div>
+                <label className={labelCls}>{t('proxyProviders.geo.zipLabel', 'ZIP codes')} {optMarker}</label>
+                <input value={form.zip} onChange={(e) => set('zip', e.target.value)} className={inputCls + ' font-mono'} placeholder="10001, 10002" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('proxyProviders.geo.asnLabel', 'ASNs')} {optMarker}</label>
+                <input value={form.asn} onChange={(e) => set('asn', e.target.value)} className={inputCls + ' font-mono'} placeholder="7922, 701" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('proxyProviders.geo.excludeCountriesLabel', 'Exclude countries')} {optMarker}</label>
+                <input value={form.excludeCountries} onChange={(e) => set('excludeCountries', e.target.value)} className={inputCls + ' font-mono'} placeholder="cn, ru" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('proxyProviders.geo.excludeAsnsLabel', 'Exclude ASNs')} {optMarker}</label>
+                <input value={form.excludeAsns} onChange={(e) => set('excludeAsns', e.target.value)} className={inputCls + ' font-mono'} placeholder="16509" />
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
+          {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {sticky
+            ? t('proxyProviders.geo.diAddSticky', { count: pullCount, defaultValue: 'Add {{count}} sticky proxies' })
+            : t('proxyProviders.geo.diAddRotating', 'Add rotating gateway')}
+          {form.country ? ` · ${form.country}` : ''}
+        </button>
+        <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{t('proxyProviders.geoHints.dataimpulse', 'Every pull adds new proxies. Sticky proxies sit on their own ports, so asking for 5 when the pool already holds 5 with the same settings adds the next 5 ports instead of returning the same ones. Use the login and password of one DataImpulse product, shown on that product page in the dashboard.')}</p>
+      </div>
+    );
+  };
+
+  // ---- Proxy-Seller residential: API key, new or saved list, where, rotation ----
+  const renderProxySeller = () => {
+    const lists = account && account.provider === 'proxyseller' && Array.isArray(account.lists) ? account.lists : [];
+    const existing = form.source === 'existing';
+    const regions = geoOptions.region;
+    const regionHit = regions.find((r) => r.key === form.state);
+    const cities = regionHit ? regionHit.cities : [];
+    const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key, c.label]) : PROXY_COUNTRIES.filter(([code]) => code);
+    const mode = form.poolType === 'interval' ? 'interval' : form.poolType === 'rotating' ? 'rotating' : 'sticky';
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><KeyRound className="w-4 h-4 text-violet-400" /> {t('proxyProviders.ps.keyTitle', 'API key')}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-end">
+            <div>
+              <label className={labelCls}>{t('proxyProviders.ps.keyLabel', 'Proxy-Seller API key')}</label>
+              <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.ps.keyPlaceholder', 'Paste the key from Dashboard, API')} autoComplete="off" />
+            </div>
+            <button type="button" onClick={() => handleLookup('')} disabled={Boolean(lookingUp)} className={secondaryBtnCls}>
+              {spin('account') || <Gauge className="w-4 h-4" />} {t('proxyProviders.account.checkAccount', 'Check account')}
+            </button>
+          </div>
+          <p className={hintCls}>{t('proxyProviders.ps.keyHint', 'The key is in your Proxy-Seller dashboard under API. If you limited it to certain IP addresses, add this computer\'s IP there as well. It is stored encrypted on this machine.')}</p>
+          {renderAccount()}
+        </section>
+
+        <section className={sectionCls}>
+          <div className={sectionTitleCls}><Layers className="w-4 h-4 text-sky-400" /> {t('proxyProviders.ps.sourceTitle', 'Residential list')}</div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => set('source', 'new')} className={segCls(!existing)}>{t('proxyProviders.ps.sourceNew', 'New list')}</button>
+            <button type="button" onClick={() => { set('source', 'existing'); if (!lists.length && form.token.trim()) handleLookup(''); }} className={segCls(existing)}>{t('proxyProviders.ps.sourceExisting', 'Existing list')}</button>
+          </div>
+
+          {existing ? (
+            <div>
+              <label className={labelCls}>{t('proxyProviders.ps.savedList', 'Saved list')}</label>
+              <select value={form.listId} onChange={(e) => set('listId', e.target.value)} className={selectCls} style={chevronStyle}>
+                <option value="">{lists.length ? t('proxyProviders.ps.pickListOption', 'Pick a list') : t('proxyProviders.ps.noListsYet', 'Check account to load your lists')}</option>
+                {lists.map((l) => <option key={l.id} value={String(l.id)}>{`${l.title} · ${[l.country, l.region, l.city].filter(Boolean).join(' ') || 'Global'} · ${l.rotation}`}</option>)}
+              </select>
+              <p className={hintCls + ' mt-1.5'}>{t('proxyProviders.ps.existingHint', 'Downloads every port of that list. Pulling the same list again only adds ports the pool does not have yet.')}</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
+                <div>
+                  <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
+                  <select value={form.country} onChange={(e) => { set('country', e.target.value); set('state', ''); set('city', ''); setGeoOptions((o) => ({ ...o, region: [] })); }} className={selectCls} style={chevronStyle}>
+                    <option value="">{t('proxyProviders.countries.any')}</option>
+                    {countries.map(([code, name]) => <option key={code} value={code}>{`${name} (${code})`}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>{t('proxyProviders.geo.howMany')}</label>
+                  <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} className={inputCls + ' font-mono'} placeholder="5" title={t('proxyProviders.ps.portsTitle', 'Ports in the new list, 1 to 1000. Each port is its own exit IP.')} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>{t('proxyProviders.ps.regionLabel', 'Region')} {optMarker}</label>
+                  {regions.length ? (
+                    <select value={form.state} onChange={(e) => { set('state', e.target.value); set('city', ''); }} className={selectCls} style={chevronStyle}>
+                      <option value="">{t('proxyProviders.ps.anyRegion', 'Any region')}</option>
+                      {regions.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                    </select>
+                  ) : (
+                    <input value={form.state} onChange={(e) => set('state', e.target.value)} disabled={!form.country} className={inputCls + ' disabled:opacity-60'} placeholder={t('proxyProviders.ps.anyRegion', 'Any region')} />
+                  )}
+                </div>
+                <div>
+                  <label className={labelCls}>{t('proxyProviders.geo.cityLabel')} {optMarker}</label>
+                  {cities.length ? (
+                    <select value={form.city} onChange={(e) => set('city', e.target.value)} className={selectCls} style={chevronStyle}>
+                      <option value="">{t('proxyProviders.geo.anyCity', 'Any city')}</option>
+                      {cities.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                    </select>
+                  ) : (
+                    <input value={form.city} onChange={(e) => set('city', e.target.value)} disabled={!form.state} className={inputCls + ' disabled:opacity-60'} placeholder={t('proxyProviders.geo.anyCity', 'Any city')} />
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => handleLookup('country')} disabled={Boolean(lookingUp) || !form.token.trim()} className={secondaryBtnCls}>{spin('country') || <Globe2 className="w-4 h-4" />} {t('proxyProviders.ps.loadCountries', 'Load all countries')}</button>
+                <button type="button" onClick={() => handleLookup('region')} disabled={Boolean(lookingUp) || !form.country || !form.token.trim()} className={secondaryBtnCls}>{spin('region') || <MapPin className="w-4 h-4" />} {t('proxyProviders.ps.loadRegions', 'Load regions and cities')}</button>
+              </div>
+              <p className={hintCls}>{t('proxyProviders.ps.geoHint', 'Region and city names are case sensitive, so pick them from the loaded lists rather than typing them.')}</p>
+              <div>
+                <label className={labelCls}>{t('proxyProviders.ps.rotationLabel', 'IP rotation')}</label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => set('poolType', 'sticky')} className={segCls(mode === 'sticky')}>{t('proxyProviders.geo.diSticky', 'Sticky')}</button>
+                  <button type="button" onClick={() => set('poolType', 'rotating')} className={segCls(mode === 'rotating')}>{t('proxyProviders.ps.perRequest', 'Every request')}</button>
+                  <button type="button" onClick={() => { set('poolType', 'interval'); if (!form.life) set('life', '300'); }} className={segCls(mode === 'interval')}>{t('proxyProviders.ps.interval', 'On a timer')}</button>
+                </div>
+                {mode === 'interval' && (
+                  <select value={form.life || '300'} onChange={(e) => set('life', e.target.value)} className={selectCls + ' mt-2 sm:max-w-[240px]'} style={chevronStyle}>
+                    {PS_INTERVAL_OPTIONS.map((s) => <option key={s} value={s}>{t('proxyProviders.ps.everySeconds', { count: Number(s), defaultValue: 'Every {{count}} seconds' })}</option>)}
+                  </select>
+                )}
+                <p className={hintCls + ' mt-1.5'}>{mode === 'sticky'
+                  ? t('proxyProviders.ps.stickyHelp', 'Each port keeps its exit IP for as long as that device stays online. Best for logged-in profiles.')
+                  : mode === 'rotating'
+                    ? t('proxyProviders.ps.perRequestHelp', 'Each port gets a new exit IP on every request. Suits scraping, not logged-in profiles.')
+                    : t('proxyProviders.ps.intervalHelp', 'Each port changes its exit IP on the timer you pick.')}</p>
+              </div>
+            </>
+          )}
+          <div className="sm:max-w-[200px]">
+            <label className={labelCls}>{t('proxyProviders.geo.diProtocolLabel', 'Protocol')}</label>
+            <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+              <option value="http">HTTP</option>
+              <option value="socks5">SOCKS5</option>
+            </select>
+          </div>
+        </section>
+
+        <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
+          {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {existing
+            ? t('proxyProviders.ps.pullList', 'Add proxies from this list')
+            : t('proxyProviders.ps.createList', { count: pullCount, defaultValue: 'Create list and add {{count}} proxies' })}
+          {!existing && form.country ? ` · ${form.country}` : ''}
+        </button>
+        <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{t('proxyProviders.geoHints.proxyseller', 'A Proxy-Seller residential list is one login with up to 1000 ports, and each port is its own exit IP. Every New list pull creates a list on your account named SoftGlaze plus the location and time, so you can see and delete it in the dashboard. Traffic comes out of your residential package.')}</p>
+      </div>
+    );
+  };
 
   return (
     <Card className="bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden">
@@ -362,8 +705,12 @@ export default function ProxyProviders({ onSynced }) {
                 {t('proxyProviders.tokenSync.helpBefore')}<span className="text-foreground font-medium">{t('proxyProviders.tokenSync.sync')}</span>{t('proxyProviders.tokenSync.helpAfter')}
               </p>
             </div>
+          ) : provider.geoSync && provider.geoSync.di ? (
+            renderDataImpulse()
+          ) : provider.geoSync && provider.geoSync.ps ? (
+            renderProxySeller()
           ) : provider.geoSync ? (
-            /* ---- Geo-targeted pull (Apify / Smartproxy.org / ShopSocks5) ---- */
+            /* ---- Geo-targeted pull (Apify / Smartproxy.org / ShopSocks5 / AnyIP) ---- */
             <div className="space-y-4 max-w-2xl">
               <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.06] p-4 space-y-4">
                 <div className="flex items-center gap-2">
@@ -393,38 +740,6 @@ export default function ProxyProviders({ onSynced }) {
                       <option value="residential">{t('proxyProviders.geo.poolResidential')}</option>
                       <option value="mobile">{t('proxyProviders.geo.poolMobile')}</option>
                     </select>
-                  </div>
-                )}
-
-                {provider.geoSync.di && (
-                  <div className="rounded-lg border border-border bg-card/40 p-3.5 space-y-3">
-                    <p className="text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.geo.diNote', 'Each DataImpulse product has its own login and password, so the product is chosen by the credentials you enter below. Pick the matching name here and the pulled proxies are labelled with it, which keeps several products apart in the pool.')}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diProductLabel', 'Product')}</label>
-                        <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
-                          <option value="residential">{t('proxyProviders.geo.diResidential', 'Residential')}</option>
-                          <option value="residential_premium">{t('proxyProviders.geo.diResidentialPremium', 'Residential Premium')}</option>
-                          <option value="mobile">{t('proxyProviders.geo.diMobile', 'Mobile')}</option>
-                          <option value="datacenter">{t('proxyProviders.geo.diDatacenter', 'Datacenter')}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diSessionLabel', 'Session')}</label>
-                        <select value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
-                          <option value="rotating">{t('proxyProviders.geo.diRotating', 'Rotating')}</option>
-                          <option value="sticky">{t('proxyProviders.geo.diSticky', 'Sticky')}</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.diProtocolLabel', 'Protocol')}</label>
-                        <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
-                          <option value="http">HTTP</option>
-                          <option value="socks5">SOCKS5</option>
-                        </select>
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{t('proxyProviders.geo.diTtlNote', 'Rotating is a single shared endpoint whose exit IP changes on every request, so it adds one proxy and How many is ignored. Sticky gives one endpoint per proxy on sequential ports from 10000, each holding its own exit IP. How many is a TOTAL, not an amount to add: pulling 5 twice returns the same 5, so raise the number to get more. Sticky lifetime below is sent as session_ttl in minutes.')}</p>
                   </div>
                 )}
 
@@ -734,6 +1049,10 @@ export function ProviderLogo({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>);
     case 'anyip': // concentric rings
       return (<svg {...line}><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="5.5" /><circle cx="12" cy="12" r="9" /></svg>);
+    case 'dataimpulse': // pulse line
+      return (<svg {...line}><path d="M3 12h4l2.5-6 5 12 2.5-6H21" /></svg>);
+    case 'proxyseller': // stacked list rows
+      return (<svg {...line}><rect x="4" y="4.5" width="16" height="4" rx="1.2" /><rect x="4" y="10" width="16" height="4" rx="1.2" /><rect x="4" y="15.5" width="16" height="4" rx="1.2" /></svg>);
     default:
       return (<svg {...line}><circle cx="12" cy="12" r="7" /></svg>);
   }

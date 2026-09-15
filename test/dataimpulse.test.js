@@ -52,10 +52,13 @@ test('DataImpulse does NOT carry a hardcoded gateway', () => {
 });
 
 test('credentials are verified against /api/stats BEFORE the list is pulled', () => {
+  const stats = /async function diPlanStats\([\s\S]*?\n\}/.exec(IPC);
+  assert.ok(stats, 'diPlanStats must exist');
+  assert.match(stats[0], /\$\{DI_API\}\/stats/, 'diPlanStats must call /api/stats');
   const body = adapterBody();
-  const statsAt = body.indexOf('/stats');
+  const statsAt = body.indexOf('await diPlanStats(');
   const listAt = body.indexOf('/list?');
-  assert.ok(statsAt > -1, 'the adapter must call /api/stats to verify credentials');
+  assert.ok(statsAt > -1, 'the adapter must verify credentials through diPlanStats');
   assert.ok(listAt > -1, 'the adapter must call /api/list to pull proxies');
   assert.ok(statsAt < listAt,
     'the credential check must come first, so a bad login is an auth error not an empty pool');
@@ -68,14 +71,12 @@ test('an exhausted plan is refused rather than minting dead rows', () => {
     'a plan with zero traffic must be reported, not silently pulled from');
 });
 
-test('the line parser splits at the LAST @ and the FIRST : of the credentials', () => {
+test('the list is parsed by the shared parser, not a local split', () => {
+  // The parser itself is exercised for real in proxyVendorUtils.test.js.
   const body = adapterBody();
-  assert.match(body, /lastIndexOf\('@'\)/,
-    "must use lastIndexOf('@'): a proxy password may contain '@'");
+  assert.match(body, /parseLoginList\(text\)/, 'the adapter must parse /api/list with parseLoginList');
   assert.ok(!/\.split\('@'\)/.test(body),
     "split('@') is the bug that produced host=\"user\" and a NaN port");
-  assert.match(body, /lastIndexOf\(':'\)/,
-    "the host:port half must split at the LAST ':' so IPv6 and odd hosts survive");
 });
 
 test('documented query parameters are sent, and session_ttl only when sticky', () => {
@@ -100,12 +101,24 @@ test('a rotating pull asks for ONE endpoint, not N copies of the same one', () =
     'the quantity sent must be the adjusted value, not the raw requested count');
 });
 
-test('repeated endpoints are collapsed before they reach the pool', () => {
+test('a second sticky pull adds NEW ports instead of returning the same ones', () => {
+  // Measured live on 15 Sep 2026: quantity=5 twice returned ports 10000-10004 both times,
+  // so the second pull added nothing. The adapter must ask for have + n and keep only the
+  // ports the pool does not already hold.
   const body = adapterBody();
-  assert.match(body, /seen\.has\(key\)/,
-    'duplicate host:port:username rows must be dropped in the adapter');
-  assert.match(body, /\$\{host\}:\$\{port\}:\$\{rowUser\}/,
-    'the dedupe key must match the identity the pool itself dedupes on');
+  assert.match(body, /existingPorts\(\{ host: first\.host, login: first\.username\.split\('__'\)\[0\] \}\)/,
+    'the lookup must key on the BASE login, so a different country or lifetime never reuses a held port');
+  assert.match(body, /qs\.set\('quantity', String\(have\.size \+ n\)\)/,
+    'the re-pull must ask for what the pool holds plus the new amount');
+  assert.match(body, /filter\(\(r\) => !have\.has\(r\.port\)\)/,
+    'ports already in the pool must be dropped before rows are returned');
+
+  const fn = /async function syncVendorPool\([\s\S]*?\n}\r?\n/.exec(IPC);
+  assert.ok(fn, 'syncVendorPool must exist');
+  assert.match(fn[0], /existingPorts: async \(\{ host, login \}\)/,
+    'syncVendorPool must hand the adapter a lookup of existing ports');
+  assert.match(fn[0], /startsWith: `\$\{login\}__`/,
+    'rows carrying a targeting suffix on the same login must count as held');
 });
 
 test('rows are typed from the protocol that was actually requested', () => {
@@ -130,7 +143,23 @@ test('the DataImpulse selects are seeded with values its own options carry', () 
     'the form reset must know which provider it is priming');
   assert.match(UI, /plan: di \? 'residential' : 'premium'/, 'product must default to residential');
   assert.match(UI, /proxyType: di \? 'http' : 'proxy_sock_5'/, 'protocol must default to http');
-  assert.match(UI, /poolType: di \? 'rotating' : 'residential'/, 'session must default to rotating');
+  // Sticky, because a profile needs an exit IP that stays put and rotating adds one proxy.
+  assert.match(UI, /poolType: di \? 'sticky' : 'residential'/, 'session must default to sticky');
+});
+
+test('the documented extra filters reach /api/list', () => {
+  const body = adapterBody();
+  for (const p of ['zipcodes', 'asns', 'exclude_countries', 'exclude_asns']) {
+    assert.ok(body.includes(`'${p}'`), `the adapter must send the documented ${p} parameter`);
+  }
+});
+
+test('the panel no longer renders a raw geoHints key for DataImpulse', () => {
+  // GEO_HINTS had no dataimpulse entry, so t() fell back to printing the key itself.
+  for (const locale of ['en', 'es']) {
+    const json = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales', locale, 'cmpSettingsC.json'), 'utf8'));
+    assert.ok(json.proxyProviders.geoHints.dataimpulse, `${locale} must carry geoHints.dataimpulse`);
+  }
 });
 
 test('every DataImpulse translation key exists in every locale', () => {

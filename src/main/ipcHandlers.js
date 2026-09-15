@@ -63,6 +63,7 @@ const secretStore = require('./secretStore');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
+const { parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
   SYSTEM_GET_INFO: 'system:get-info',
@@ -93,6 +94,7 @@ const CHANNELS = Object.freeze({
   PROXY_ROTATION_GET: 'proxy:rotation-get',
   PROXY_ROTATION_SET: 'proxy:rotation-set',
   PROXY_SYNC_VENDOR_POOL: 'proxy:sync-vendor-pool',
+  PROXY_VENDOR_LOOKUP: 'proxy:vendor-lookup',
   PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
@@ -1241,7 +1243,8 @@ const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
-  apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse'
+  apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
+  proxyseller: 'Proxy-Seller'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -1280,17 +1283,21 @@ function httpRequestText(url, options = {}) {
       headers: { 'User-Agent': 'Softglaze-ProviderCore/1.0', Accept: '*/*', ...(options.headers || {}) }
     }, (res) => {
       const status = res.statusCode || 0;
-      let data = ''; let size = 0;
+      // options.binary collects raw chunks and resolves a Buffer. Appending chunks to a
+      // string would corrupt a ZIP (Proxy-Seller serves its geo database as one).
+      const chunks = []; let size = 0;
+      const maxBytes = Number(options.maxBytes) || 2_000_000;
       res.on('data', (chunk) => {
         size += chunk.length;
-        if (size > 2_000_000) { res.destroy(); finish(reject, new Error('Vendor response too large.')); return; }
-        data += chunk;
+        if (size > maxBytes) { res.destroy(); finish(reject, new Error('Vendor response too large.')); return; }
+        chunks.push(chunk);
       });
       res.on('end', () => {
+        const buf = Buffer.concat(chunks);
         if (status < 200 || status >= 300) {
-          return finish(reject, Object.assign(new Error(`HTTP ${status} ${String(data).slice(0, 200).trim() || res.statusMessage || ''}`.trim()), { status }));
+          return finish(reject, Object.assign(new Error(`HTTP ${status} ${buf.toString('utf8').slice(0, 200).trim() || res.statusMessage || ''}`.trim()), { status }));
         }
-        finish(resolve, data);
+        finish(resolve, options.binary ? buf : buf.toString('utf8'));
       });
     });
     req.on('error', (e) => finish(reject, e));
@@ -1666,18 +1673,17 @@ const DI_PRODUCTS = Object.freeze({
   residential: 'Residential', residential_premium: 'Residential Premium',
   mobile: 'Mobile', datacenter: 'Datacenter'
 });
-async function fetchDataImpulsePool({ username, password, country, state, city, count, life, plan, poolType, proxyType }) {
+function diAuthHeaders(username, password) {
   const user = String(username || '').trim();
   const pw = String(password || '');
   if (!user) throw new Error('DataImpulse: the plan login is required (dashboard, open the product, proxy credentials).');
   if (!pw) throw new Error('DataImpulse: the plan password is required.');
+  return { Authorization: `Basic ${Buffer.from(`${user}:${pw}`).toString('base64')}` };
+}
 
-  const headers = { Authorization: `Basic ${Buffer.from(`${user}:${pw}`).toString('base64')}` };
-
-  // Verify against /api/stats BEFORE pulling. A wrong login then surfaces as a clean
-  // auth error instead of an empty pool, and an exhausted plan is named as such rather
-  // than minting rows that die on first use. Same "verify, then persist" rule the
-  // gateway vendors follow; this one just has a real endpoint to verify against.
+// GET /api/stats. Doubles as the credential check: a wrong login is an auth error here
+// rather than an empty list later.
+async function diPlanStats(headers) {
   let stats = null;
   try {
     stats = JSON.parse(await httpRequestText(`${DI_API}/stats`, { headers }));
@@ -1687,6 +1693,17 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   if (stats && stats.status && String(stats.status).toLowerCase() !== 'ok') {
     throw new Error(`DataImpulse credential check failed: ${stats.message || 'the gateway rejected these credentials.'}`);
   }
+  return stats || {};
+}
+
+async function fetchDataImpulsePool({ username, password, country, state, city, zip, asn, excludeCountries, excludeAsns, count, life, plan, poolType, proxyType, existingPorts }) {
+  const headers = diAuthHeaders(username, password);
+
+  // Verify against /api/stats BEFORE pulling. A wrong login then surfaces as a clean
+  // auth error instead of an empty pool, and an exhausted plan is named as such rather
+  // than minting rows that die on first use. Same "verify, then persist" rule the
+  // gateway vendors follow; this one just has a real endpoint to verify against.
+  const stats = await diPlanStats(headers);
   const left = Number(stats && stats.traffic_left);
   if (Number.isFinite(left) && left <= 0) {
     throw new Error('DataImpulse: this plan has no traffic left, so anything pulled from it would fail on first use.');
@@ -1696,6 +1713,7 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   const n = clampPoolCount(count, 5, 200);
   const sticky = String(poolType || '').toLowerCase() === 'sticky';
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const rowType = socks ? 'SOCKS5' : 'HTTP';
   const ttl = Number.parseInt(String(life), 10);
   const product = DI_PRODUCTS[String(plan || '').toLowerCase()] || DI_PRODUCTS.residential;
 
@@ -1714,59 +1732,75 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   qs.set('protocol', socks ? 'socks5' : 'http');
   // The API takes lower-case ISO country codes ("us"), and omitting it means global.
   if (cc) qs.set('countries', cc.toLowerCase());
-  // states and cities are documented as comma-separated lists. Pass them through as
-  // typed; the vendor resolves them, and an unknown value comes back as an empty list
-  // rather than a wrong exit, which the "no usable proxies" guard below reports.
-  const st = String(state || '').trim();
-  const ct = String(city || '').trim();
+  // states, cities, zipcodes and asns are documented as comma-separated lists. The
+  // vendor resolves them, and an unknown value comes back as an empty list rather than a
+  // wrong exit, which the "no usable proxies" guard below reports.
+  const st = csvFilter(state, FILTER_PATTERNS.text);
+  const ct = csvFilter(city, FILTER_PATTERNS.text);
+  const zp = csvFilter(zip, FILTER_PATTERNS.zip);
+  const as = asnList(asn);
+  const exCc = csvFilter(excludeCountries, FILTER_PATTERNS.country).toLowerCase();
+  const exAs = asnList(excludeAsns);
   if (st) qs.set('states', st);
   if (ct) qs.set('cities', ct);
+  if (zp) qs.set('zipcodes', zp);
+  if (as) qs.set('asns', as);
+  if (exCc) qs.set('exclude_countries', exCc);
+  if (exAs) qs.set('exclude_asns', exAs);
   // session_ttl is minutes and only means anything for sticky sessions.
   if (sticky && Number.isFinite(ttl) && ttl > 0) qs.set('session_ttl', String(ttl));
 
-  let text;
-  try {
-    text = await httpRequestText(`${DI_API}/list?${qs.toString()}`, { headers });
-  } catch (e) {
-    throw new Error(`DataImpulse list error: ${e.message}`);
+  // parseLoginList collapses repeats on the identity the pool itself dedupes on. Without
+  // that a rotating pull reports "Returned: 5, Added: 1, Existing: 4", which reads like a
+  // failure when it is really one endpoint listed five times.
+  const pullList = async () => {
+    let text;
+    try {
+      text = await httpRequestText(`${DI_API}/list?${qs.toString()}`, { headers });
+    } catch (e) {
+      throw new Error(`DataImpulse list error: ${e.message}`);
+    }
+    return parseLoginList(text);
+  };
+
+  let parsed = await pullList();
+  if (!parsed.length) {
+    throw new Error('DataImpulse returned no usable proxies. Try a different country, or check the plan still has traffic.');
   }
 
-  const rows = [];
-  const seen = new Set();
-  for (const raw of String(text).split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line || line.startsWith('{')) continue; // a JSON body here means an error, not a list
-    // Split at the LAST '@' and the FIRST ':' of the credential half. A password may
-    // legitimately contain '@' or ':', and splitting naively is exactly the bug that
-    // once parsed user:pass@host:port into host="user" with a NaN port.
-    const at = line.lastIndexOf('@');
-    if (at < 0) continue;
-    const cred = line.slice(0, at);
-    const endpoint = line.slice(at + 1);
-    const c = cred.indexOf(':');
-    const rowUser = c >= 0 ? cred.slice(0, c) : cred;
-    const rowPass = c >= 0 ? cred.slice(c + 1) : '';
-    const h = endpoint.lastIndexOf(':');
-    if (h < 0) continue;
-    const host = endpoint.slice(0, h).trim();
-    const port = Number.parseInt(endpoint.slice(h + 1), 10);
-    if (!host || !Number.isFinite(port)) continue;
-    // Collapse repeats on the identity the pool itself dedupes on. Without this a
-    // rotating pull reports "Returned: 5, Added: 1, Existing: 4", which reads like a
-    // failure when it is really one endpoint listed five times.
-    const key = `${host}:${port}:${rowUser}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    rows.push({
-      type: socks ? 'SOCKS5' : 'HTTP',
-      host, port, username: rowUser, password: rowPass,
-      label: sticky
-        ? `DataImpulse • ${product} • ${cc || 'Global'} • sticky • #${rows.length + 1}`
-        : `DataImpulse • ${product} • ${cc || 'Global'} • rotating gateway`,
-      country: cc || null
-    });
+  // STICKY ports are handed out deterministically, 10000 upwards. Measured live on
+  // 15 Sep 2026: pulling 5 twice returned the same 5 ports, so the second pull added
+  // nothing and "How many" behaved like a total. People read it as "give me N more", so
+  // that is what it now means: find every port the pool already holds for this plan
+  // login, ask the vendor for that many on top, and keep only ports not held yet.
+  // The match is on the BASE login (before "__", where DataImpulse appends targeting
+  // such as __cr.us or __sessttl.5), not the full username. A pull with a different
+  // country or lifetime returns ports from 10000 again under a different username, and
+  // if the vendor ties a sticky session to the port, reusing one would put two profiles
+  // on the same exit IP. Skipping a port costs nothing; sharing one correlates identities.
+  let have = new Set();
+  if (sticky && typeof existingPorts === 'function') {
+    const first = parsed[0];
+    have = await existingPorts({ host: first.host, login: first.username.split('__')[0] });
+    if (have.size > 0) {
+      qs.set('quantity', String(have.size + n));
+      parsed = await pullList();
+    }
   }
+
+  const fresh = parsed.filter((r) => !have.has(r.port)).slice(0, want);
+  const rows = fresh.map((r) => ({
+    type: rowType,
+    host: r.host, port: r.port, username: r.username, password: r.password,
+    label: sticky
+      ? `DataImpulse • ${product} • ${cc || 'Global'} • sticky • port ${r.port}`
+      : `DataImpulse • ${product} • ${cc || 'Global'} • rotating gateway`,
+    country: cc || null
+  }));
   if (!rows.length) {
+    if (sticky && have.size) {
+      throw new Error(`DataImpulse has no more sticky ports for these settings. The pool already holds ${have.size}.`);
+    }
     throw new Error('DataImpulse returned no usable proxies. Try a different country, or check the plan still has traffic.');
   }
   if (sticky && rows.length < n) {
@@ -1775,6 +1809,239 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
     rows[0].label += ` (${rows.length} of ${n} available)`;
   }
   return rows;
+}
+
+// Plan stats plus a live geo breakdown for the provider panel. groupby is one of the
+// documented values; the pool counts come from /api/pool_stats_with_parameters.
+const DI_GROUPBY = new Set(['country', 'state', 'city', 'asn', 'zip']);
+async function lookupDataImpulse({ username, password, country, groupby }) {
+  const headers = diAuthHeaders(username, password);
+  const stats = await diPlanStats(headers);
+  const out = {
+    provider: 'dataimpulse',
+    totalBytes: Number(stats.total_traffic) || 0,
+    usedBytes: Number(stats.traffic_used) || 0,
+    leftBytes: Number(stats.traffic_left) || 0,
+    geo: []
+  };
+  const by = String(groupby || '').toLowerCase();
+  if (DI_GROUPBY.has(by)) {
+    const qs = new URLSearchParams({ groupby: by, limit: '500' });
+    const cc = normCountryCode(country);
+    if (cc) qs.set('countries', cc.toLowerCase());
+    let pool = null;
+    try {
+      pool = JSON.parse(await httpRequestText(`${DI_API}/pool_stats_with_parameters?${qs.toString()}`, { headers }));
+    } catch (e) {
+      throw new Error(`DataImpulse location lookup failed: ${e.message}`);
+    }
+    out.geo = (Array.isArray(pool && pool.items) ? pool.items : [])
+      .filter((it) => it && it.key != null)
+      .map((it) => ({ key: String(it.key), label: String(it.label || it.key), count: Number(it.value) || 0 }));
+  }
+  return out;
+}
+
+// --- Proxy-Seller: residential lists over the documented User API ---------------
+// Base https://proxy-seller.com/personal/api/v1/{API_KEY}/. The key sits in the URL PATH,
+// so a request URL must never reach a log line or an error message.
+//
+// A Proxy-Seller residential proxy is a LIST: one login and password, a geo target, a
+// rotation rule and up to 1000 ports, where each port is its own exit IP (their docs:
+// "1.2.3.4:10005 and 1.2.3.4:10006 are different IPs"). So a pull of N proxies creates a
+// list with N ports and then downloads that list, and every pull gets its own login, which
+// means a second pull adds new proxies rather than colliding with the first. A list made
+// in the dashboard can be pulled by id instead. Business errors arrive as HTTP 200 with
+// status "error"; unwrapProxySeller turns them into messages the operator can act on.
+const PS_API = 'https://proxy-seller.com/personal/api/v1';
+const PS_MAX_PORTS = 1000;
+
+function psKey(token) {
+  const key = String(token || '').trim();
+  if (!key) throw new Error('Proxy-Seller: the API key is required (dashboard, API section).');
+  // The key becomes a URL path segment, so refuse anything that would change the path.
+  if (!/^[^\s/?#%\\]{8,200}$/.test(key)) throw new Error('Proxy-Seller: that does not look like an API key. Copy it again from the dashboard, API section.');
+  return key;
+}
+
+async function psRequest(key, method, pathAndQuery, what, { body, binary } = {}) {
+  try {
+    return await httpRequestText(`${PS_API}/${key}/${pathAndQuery}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: '*/*' },
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: 30000,
+      binary,
+      maxBytes: binary ? 8_000_000 : undefined
+    });
+  } catch (e) {
+    throw new Error(`Proxy-Seller ${what}: ${String((e && e.message) || 'request failed').split(key).join('***')}`);
+  }
+}
+
+async function psCall(key, method, pathAndQuery, what, body) {
+  return unwrapProxySeller(await psRequest(key, method, pathAndQuery, what, { body }), what);
+}
+
+async function psPackage(key) {
+  const pkg = await psCall(key, 'GET', 'resident/package', 'package check');
+  if (!pkg || typeof pkg !== 'object') throw new Error('Proxy-Seller: the package check returned nothing.');
+  return pkg;
+}
+
+function psRotationLabel(rotation) {
+  const r = Number(rotation);
+  if (r === -1) return 'sticky';
+  if (r === 0) return 'new IP per request';
+  if (Number.isFinite(r) && r > 0) return `rotates every ${r}s`;
+  return 'rotation unknown';
+}
+
+async function fetchProxySellerPool({ token, country, state, city, count, poolType, life, proxyType, listId }) {
+  const key = psKey(token);
+  const pkg = await psPackage(key);
+  if (pkg.is_active === false) throw new Error('Proxy-Seller: the residential package on this account is not active.');
+  const left = Number(pkg.traffic_left);
+  if (Number.isFinite(left) && left <= 0) {
+    throw new Error('Proxy-Seller: the residential package has no traffic left, so anything pulled from it would fail on first use.');
+  }
+
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  let list = null;
+  const wantedId = Number.parseInt(String(listId || ''), 10);
+  if (Number.isInteger(wantedId) && wantedId > 0) {
+    const data = await psCall(key, 'GET', 'resident/lists', 'list lookup');
+    const items = Array.isArray(data && data.items) ? data.items : [];
+    list = items.find((it) => Number(it && it.id) === wantedId) || null;
+    if (!list) throw new Error('Proxy-Seller: that list is no longer on the account. Reload the lists and pick again.');
+  } else {
+    const cc = normCountryCode(country);
+    const region = cc ? String(state || '').trim().slice(0, 120) : '';
+    const town = region ? String(city || '').trim().slice(0, 120) : '';
+    const geo = {};
+    if (cc) geo.country = cc;
+    if (region) geo.region = region;
+    if (town) geo.city = town;
+    const rotation = proxySellerRotation(poolType, life);
+    const title = `SoftGlaze ${[cc || 'Global', region, town].filter(Boolean).join(' ')} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
+    list = await psCall(key, 'POST', 'resident/list/add', 'list create', {
+      title: title.slice(0, 100),
+      // Blank whitelist = authorise with the list's own login and password, which is what
+      // a profile needs. A whitelist would tie the list to this machine's IP instead.
+      whitelist: '',
+      geo,
+      export: { ports: clampPoolCount(count, 5, PS_MAX_PORTS), ext: 'txt' },
+      rotation
+    });
+    if (!list || !list.id) throw new Error('Proxy-Seller: the list was not created (the API returned no list id).');
+  }
+
+  const qs = new URLSearchParams({
+    ext: '%login%:%password%@%ip%:%port%',
+    proto: socks ? 'socks5' : 'https',
+    listId: String(list.id)
+  });
+  const text = await psRequest(key, 'GET', `proxy/download/resident?${qs.toString()}`, 'download');
+  const parsed = parseLoginList(text);
+  if (!parsed.length) {
+    // A JSON body here is an error envelope, so let it speak before the generic message.
+    if (String(text).trim().startsWith('{')) unwrapProxySeller(text, 'download');
+    throw new Error(`Proxy-Seller returned no proxies for list "${list.title || list.id}". It is saved on your account, so pick it under Existing list and pull again in a minute.`);
+  }
+
+  const geo = (list && list.geo) || {};
+  const cc = normCountryCode(geo.country);
+  const where = [cc || 'Global', geo.city || geo.region].filter(Boolean).join(' ');
+  const rotation = psRotationLabel(list.rotation);
+  return parsed.slice(0, PS_MAX_PORTS).map((r) => ({
+    type: socks ? 'SOCKS5' : 'HTTP',
+    host: r.host, port: r.port, username: r.username, password: r.password,
+    label: `Proxy-Seller • Residential • ${where} • ${rotation} • port ${r.port}`,
+    country: cc || null
+  }));
+}
+
+// The residential geo database is a ZIP holding one JSON file (~300 KB zipped, ~3 MB
+// unzipped). It changes rarely, so keep the parsed copy for a few hours.
+let psGeoCache = { at: 0, data: null };
+async function psGeoDatabase(key) {
+  if (psGeoCache.data && Date.now() - psGeoCache.at < 6 * 60 * 60 * 1000) return psGeoCache.data;
+  const buf = await psRequest(key, 'GET', 'resident/geo', 'location list', { binary: true });
+  const text = buf.toString('utf8').trim();
+  let data;
+  if (text.startsWith('{')) {
+    // An envelope: an error throws here, a success may carry the array as data.
+    data = unwrapProxySeller(text, 'location list');
+  } else if (text.startsWith('[')) {
+    data = JSON.parse(text);
+  } else {
+    const extractZip = require('extract-zip');
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sg-psgeo-'));
+    try {
+      const zipPath = path.join(dir, 'geo.zip');
+      await fs.writeFile(zipPath, buf);
+      const outDir = path.join(dir, 'out');
+      await extractZip(zipPath, { dir: outDir }); // extract-zip needs an absolute dir
+      const files = (await fs.readdir(outDir, { recursive: true })).map(String).filter((f) => f.toLowerCase().endsWith('.json'));
+      if (!files.length) throw new Error('Proxy-Seller location list: the download held no JSON file.');
+      data = JSON.parse(await fs.readFile(path.join(outDir, files[0]), 'utf8'));
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+  if (!Array.isArray(data)) throw new Error('Proxy-Seller location list: unexpected format.');
+  psGeoCache = { at: Date.now(), data };
+  return data;
+}
+
+async function lookupProxySeller({ token, country, groupby }) {
+  const key = psKey(token);
+  const pkg = await psPackage(key);
+  const listData = await psCall(key, 'GET', 'resident/lists', 'list lookup');
+  const out = {
+    provider: 'proxyseller',
+    totalBytes: Number(pkg.traffic_limit) || 0,
+    usedBytes: Number(pkg.traffic_usage) || 0,
+    leftBytes: Number(pkg.traffic_left) || 0,
+    expiresAt: pkg.expired_at ? String(pkg.expired_at) : null,
+    active: pkg.is_active !== false,
+    lists: (Array.isArray(listData && listData.items) ? listData.items : []).map((it) => ({
+      id: Number(it.id),
+      title: String(it.title || `List ${it.id}`),
+      country: it.geo && it.geo.country ? String(it.geo.country) : '',
+      region: it.geo && it.geo.region ? String(it.geo.region) : '',
+      city: it.geo && it.geo.city ? String(it.geo.city) : '',
+      rotation: psRotationLabel(it.rotation)
+    })).filter((l) => Number.isInteger(l.id) && l.id > 0),
+    geo: []
+  };
+  const by = String(groupby || '').toLowerCase();
+  if (by === 'country' || by === 'region') {
+    out.geo = proxySellerGeoView(await psGeoDatabase(key), by === 'region' ? country : '');
+  }
+  return out;
+}
+
+const VENDOR_LOOKUPS = Object.freeze({
+  dataimpulse: lookupDataImpulse,
+  proxyseller: lookupProxySeller
+});
+
+// Read-only account view for the provider panel: plan traffic, saved lists and the
+// locations a pull can target. Never creates anything on the vendor side.
+async function vendorLookup(payload) {
+  await requirePermission('proxies.manage');
+  const input = requireObject(payload);
+  const vendorKey = requiredString(input.provider, 'Provider').toLowerCase();
+  const lookup = VENDOR_LOOKUPS[vendorKey];
+  if (!lookup) throw new Error('This provider has no account lookup.');
+  return lookup({
+    token: optionalString(input.token) || '',
+    username: optionalString(input.username),
+    password: input.password != null ? String(input.password) : '',
+    country: optionalString(input.country),
+    groupby: optionalString(input.groupby)
+  });
 }
 
 // Vendors wired to real calls. Everything else falls back to the simulation.
@@ -1786,7 +2053,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   smartproxyorg: fetchSmartproxyOrgPool,
   shopsocks5: fetchShopSocks5Pool,
   anyip: fetchAnyIpPool,
-  dataimpulse: fetchDataImpulsePool
+  dataimpulse: fetchDataImpulsePool,
+  proxyseller: fetchProxySellerPool
 });
 
 async function syncVendorPool(payload) {
@@ -1829,7 +2097,24 @@ async function syncVendorPool(payload) {
       teamId: optionalString(input.teamId),
       // Address family. Only Oxylabs documents a selector for this ('6' -> -ipversion-6);
       // every other configured vendor ignores it because they publish no IPv6 option.
-      ipVersion: optionalString(input.ipVersion)
+      ipVersion: optionalString(input.ipVersion),
+      // DataImpulse list filters beyond country/state/city (all documented on /api/list).
+      zip: optionalString(input.zip),
+      asn: optionalString(input.asn),
+      excludeCountries: optionalString(input.excludeCountries),
+      excludeAsns: optionalString(input.excludeAsns),
+      // Proxy-Seller: pull an existing residential list by id instead of creating one.
+      listId: optionalString(input.listId),
+      // Ports already in the pool for one plan login (the bare login, or the login plus
+      // DataImpulse's "__" targeting suffix). DataImpulse hands out sticky ports
+      // deterministically, so it needs this to add NEW proxies instead of returning the
+      // ones the pool already holds.
+      existingPorts: async ({ host, login }) => new Set(
+        (await db.proxy.findMany({
+          where: { host, OR: [{ username: login }, { username: { startsWith: `${login}__` } }] },
+          select: { port: true }
+        })).map((r) => r.port)
+      )
     });
   } else {
     // No live adapter for this vendor. This used to fall through to a SIMULATION that
@@ -10200,6 +10485,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_ROTATION_GET, getProxyRotation);
   registerHandler(CHANNELS.PROXY_ROTATION_SET, setProxyRotation);
   registerHandler(CHANNELS.PROXY_SYNC_VENDOR_POOL, syncVendorPool);
+  registerHandler(CHANNELS.PROXY_VENDOR_LOOKUP, vendorLookup);
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_GET, getProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_SET, saveProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);

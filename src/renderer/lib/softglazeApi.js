@@ -52,6 +52,7 @@ export const softglazeApi = {
     getRotation: (profileId) => getSoftglazeApi().proxies.getRotation(profileId),
     setRotation: (payload) => getSoftglazeApi().proxies.setRotation(payload),
     syncVendorPool: (payload) => getSoftglazeApi().proxies.syncVendorPool(payload),
+    vendorLookup: (payload) => getSoftglazeApi().proxies.vendorLookup(payload),
     checkStream: (payload) => getSoftglazeApi().proxies.checkStream(payload),
     stopCheck: (payload) => getSoftglazeApi().proxies.stopCheck(payload),
     onCheckProgress: (cb) => getSoftglazeApi().proxies.onCheckProgress(cb),
