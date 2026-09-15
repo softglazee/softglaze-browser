@@ -58,11 +58,17 @@ const RECOMMENDED_EXTENSIONS = [
   // the Extensions page for the user to switch on rather than altering every profile by
   // default. Content blockers / SwitchyOmega change page + network behavior (an
   // anti-detect tradeoff) and SwitchyOmega can override the native per-profile proxy.
-  { chromeId: 'gcaiimgaiohlnlflkjjmcohobkpbbnfi', name: 'AdsPower Assistant', enable: false },
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: false },
   { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: false }, // MV3 successor (Chrome is disabling the MV2 build)
   { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: false } // MV3 successor; can override Softglaze's native per-profile proxy
 ];
+
+// Extensions earlier builds seeded that must not stay installed. Removed once from
+// existing installs by removeRetiredExtensions(); never re-seeded.
+//   gcaiimgaiohlnlflkjjmcohobkpbbnfi - a third-party vendor's own assistant extension,
+//   which SoftGlaze has no reason to download or list.
+const RETIRED_EXTENSION_IDS = Object.freeze(['gcaiimgaiohlnlflkjjmcohobkpbbnfi']);
+const RETIRED_CLEANUP_FLAG = 'retiredExtensionsRemoved_v1';
 
 function extensionsRoot() {
   return path.join(app.getPath('userData'), 'softglaze_extensions');
@@ -308,17 +314,54 @@ async function resolveGlobalExtensionDirs() {
 
 // Remove an extension's unzipped folder. Guarded so we only ever delete inside
 // our own extensions root, never an arbitrary path from the DB.
-async function removeExtensionFiles(localPath) {
+async function removeExtensionFiles(localPath, extRoot = extensionsRoot()) {
   if (!localPath) return;
-  const root = path.resolve(extensionsRoot());
+  const root = path.resolve(extRoot);
   const resolved = path.resolve(localPath);
   if (resolved === root || !resolved.startsWith(root + path.sep)) return;
   await fs.rm(resolved, { recursive: true, force: true }).catch(() => {});
 }
 
+// One-time removal of RETIRED_EXTENSION_IDS from installs that already downloaded
+// them: the DB row, the unzipped folder (guarded to our extensions root) and any
+// leftover download zip. The flag is set only once every folder is really gone, so
+// a locked file or DB error retries on the next launch. `db` and `root` are
+// injectable for tests.
+async function removeRetiredExtensions({ db = getPrisma(), root = extensionsRoot() } = {}) {
+  const flag = await db.setting.findUnique({ where: { key: RETIRED_CLEANUP_FLAG } }).catch(() => null);
+  if (flag && flag.value === 'true') return { skipped: true };
+
+  let removed = 0;
+  try {
+    for (const chromeId of RETIRED_EXTENSION_IDS) {
+      const row = await db.extension.findUnique({ where: { chromeId } });
+      if (row) {
+        await removeExtensionFiles(row.localPath, root);
+        await db.extension.delete({ where: { chromeId } });
+        removed++;
+      }
+      // An interrupted install can leave the folder or zip behind without a row.
+      const dir = path.join(root, chromeId);
+      await removeExtensionFiles(dir, root);
+      await removeExtensionFiles(path.join(root, `${chromeId}.download.zip`), root);
+      if (fsSync.existsSync(dir)) {
+        throw new Error(`could not delete the files for ${chromeId}`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[ext-retire] failed, will retry next launch: ${(e && e.message) || e}`);
+    return { removed, failed: true };
+  }
+
+  await db.setting.upsert({ where: { key: RETIRED_CLEANUP_FLAG }, create: { key: RETIRED_CLEANUP_FLAG, value: 'true' }, update: { value: 'true' } }).catch(() => {});
+  if (removed) console.log(`[ext-retire] removed ${removed} retired extension(s)`);
+  return { removed };
+}
+
 module.exports = {
   CHROME_ID_RE,
   RECOMMENDED_EXTENSIONS,
+  RETIRED_EXTENSION_IDS,
   SOFTGLAZE_RECORDER_ID,
   extensionsRoot,
   parseChromeId,
@@ -327,5 +370,6 @@ module.exports = {
   seedRecommendedExtensions,
   reconcileRecommendedExtensions,
   resolveGlobalExtensionDirs,
-  removeExtensionFiles
+  removeExtensionFiles,
+  removeRetiredExtensions
 };

@@ -348,6 +348,10 @@ try {
   // extension is present for it to flip.
   {
     const extMgr = require('./extensionManager');
+    // Independent of the seed chain so a seed failure can't skip it: delete any
+    // extension earlier builds seeded but no longer should (runs once).
+    extMgr.removeRetiredExtensions()
+      .catch((e) => console.warn('[ext-retire] retired extension cleanup failed:', e && e.message));
     extMgr.seedRecommendedExtensions()
       .then(() => extMgr.reconcileRecommendedExtensions())
       .catch((e) => console.warn('[ext-seed] recommended extension seed/reconcile failed:', e && e.message));
