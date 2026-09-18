@@ -67,7 +67,9 @@ const { SECRET_MASK, maskProxyInfoString, redactPlatformAccounts, redactProfileR
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
-  parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage
+  parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
+  marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword,
+  parseProxidizePerProxy, proxidizePerGbUsername
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1262,7 +1264,8 @@ const PROXY_VENDORS = Object.freeze({
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
-  proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal'
+  proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
+  froxy: 'Froxy', proxidize: 'Proxidize'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -2236,6 +2239,263 @@ async function lookupIpRoyal({ token, country, groupby }) {
   return out;
 }
 
+// --- MarsProxies residential over the documented API -----------------------------------
+// api.marsproxies.com, Bearer token from Dashboard > Settings > API (unlocks after >=1 GB of
+// residential traffic). POST /v1/residential/access/generate-proxy-list returns a JSON array
+// of "{hostname}:{port}:{username}:{password}" strings. Residential only; ISP/datacenter/mobile
+// have no documented API. Built from the live GitBook + embedded OpenAPI, 2026-09-19. NOT yet
+// live-key tested.
+const MARS_API = 'https://api.marsproxies.com';
+const MARS_GATEWAY = 'ultra.marsproxies.com';
+
+async function marsCall(token, method, pathAndQuery, what, body, raw) {
+  const t = String(token || '').trim();
+  if (!t) throw new Error('MarsProxies: the API token is required (Dashboard, Settings, API).');
+  let text;
+  try {
+    text = await httpRequestText(`${MARS_API}${pathAndQuery}`, {
+      method,
+      headers: { Authorization: `Bearer ${t}`, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: 30000,
+      maxBytes: 20_000_000
+    });
+  } catch (e) {
+    const rawMsg = String((e && e.message) || 'request failed').split(t).join('***');
+    if (/HTTP 401\b/.test(rawMsg)) throw new Error('MarsProxies: the API token was rejected. Copy it again from Dashboard, Settings, API.');
+    if (/HTTP 403\b/.test(rawMsg)) throw new Error('MarsProxies: the residential API is not enabled on this account yet. It unlocks after at least 1 GB of residential traffic is purchased.');
+    if (/HTTP 429\b/.test(rawMsg)) throw new Error('MarsProxies: the API rate limit was reached. Wait a minute and try again.');
+    const m = /"message"\s*:\s*"([^"]+)"/.exec(rawMsg);
+    throw new Error(`MarsProxies ${what}: ${m ? m[1] : rawMsg}`);
+  }
+  if (raw) return text;
+  try { return JSON.parse(text); } catch (e) { throw new Error(`MarsProxies ${what}: the API did not return JSON.`); }
+}
+
+async function fetchMarsProxiesPool({ token, username, password, subuserHash, country, state, city, count, poolType, life, proxyType, host }) {
+  const me = await marsCall(token, 'GET', '/v1/residential/me', 'account check');
+  const gb = Number(me && me.traffic_available);
+  if (Number.isFinite(gb) && gb <= 0) {
+    throw new Error('MarsProxies: this account has no residential traffic left, so anything pulled from it would fail on first use.');
+  }
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  // An anti-detect profile wants a stable exit IP, so default to sticky sessions.
+  const rotating = String(poolType || '').toLowerCase() === 'rotating';
+  const lifetime = ipRoyalLifetime(life); // same {n}s/{n}m/{n}h rule as IPRoyal
+  const n = clampPoolCount(count, 5, 1000);
+  const body = {
+    format: '{hostname}:{port}:{username}:{password}',
+    hostname: String(host || '').trim() || MARS_GATEWAY,
+    port: socks ? 'socks5' : 'http',
+    rotation: rotating ? 'random' : 'sticky',
+    proxy_count: rotating ? 1 : n
+  };
+  if (!rotating) body.lifetime = lifetime;
+  const location = marsProxiesLocation({ country, state, city });
+  if (location) body.location = location;
+  const hash = String(subuserHash || '').trim();
+  if (hash) {
+    body.subuser_hash = hash;
+  } else {
+    const u = String(username || '').trim();
+    const pw = password != null ? String(password) : '';
+    if (u && pw) { body.username = u; body.password = pw; }
+    else {
+      // No sub-user supplied: use the first one on the account.
+      const subs = await marsCall(token, 'GET', '/v1/residential/subusers/', 'sub-users');
+      const items = Array.isArray(subs) ? subs : (subs && Array.isArray(subs.data) ? subs.data : []);
+      const first = items.find((s) => s && (s.hash || (s.username && s.password))) || null;
+      if (first && first.hash) body.subuser_hash = String(first.hash);
+      else if (first) { body.username = String(first.username); body.password = String(first.password); }
+      else throw new Error('MarsProxies: no sub-user on this account. Create one in the dashboard, or enter a proxy username and password.');
+    }
+  }
+  const text = await marsCall(token, 'POST', '/v1/residential/access/generate-proxy-list', 'proxy list', body, true);
+  const parsed = parseMarsProxiesList(text);
+  if (!parsed.length) throw new Error('MarsProxies returned no proxies. Check the token, that the account has residential traffic, and the location.');
+  const cc = normCountryCode(country);
+  return parsed.map((r) => ({
+    type: socks ? 'SOCKS5' : 'HTTP',
+    host: r.host, port: r.port, username: r.username, password: r.password,
+    label: rotating
+      ? `MarsProxies • Residential • ${cc || 'Global'} • rotating gateway`
+      : `MarsProxies • Residential • ${cc || 'Global'} • sticky ${lifetime}`,
+    country: cc || null,
+    dedupeOnPassword: !rotating
+  }));
+}
+
+// --- NodeMaven (gateway gate.nodemaven.com, targeting encoded in the username) ----------
+// No list endpoint: build "<login>-country-..-type-<residential|mobile>-sid-<id>" per proxy
+// against the fixed gateway. Proxy username + password come from the dashboard (Proxy Setup);
+// the account API key is separate and not used here. count sticky sessions get distinct sids.
+// Built from NodeMaven's live docs + published SDK grammar, 2026-09-19. NOT yet live-key tested.
+const NODEMAVEN_GATEWAY = Object.freeze({ host: 'gate.nodemaven.com', http: 8080, socks: 1080 });
+
+function nodeMavenTtlFromMinutes(life) {
+  const m = Number.parseInt(String(life || ''), 10);
+  if (!Number.isFinite(m) || m <= 0) return '';
+  return m % 60 === 0 ? `${m / 60}h` : `${m}m`;
+}
+
+async function fetchNodeMavenPool({ username, password, country, state, city, session, count, poolType, proxyType, life }) {
+  const login = String(username || '').trim();
+  const pass = password != null ? String(password) : '';
+  if (!login || !pass) throw new Error('NodeMaven: enter your proxy username and password (dashboard, Proxy Setup). The account API key is separate and is not used here.');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const host = NODEMAVEN_GATEWAY.host;
+  const port = socks ? NODEMAVEN_GATEWAY.socks : NODEMAVEN_GATEWAY.http;
+  const type = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
+  const cc = normCountryCode(country);
+  const ttl = nodeMavenTtl(nodeMavenTtlFromMinutes(life));
+  const n = clampPoolCount(count, 1, 200);
+  const fixed = String(session || '').trim();
+  const rows = [];
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const sid = fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(6).toString('hex');
+    const user = nodeMavenUsername(login, { country: cc, region: state, city, type, sid, ttl });
+    if (!user) continue;
+    const key = `${host}:${port}:${user}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username: user, password: pass,
+      label: `NodeMaven • ${type === 'mobile' ? 'Mobile' : 'Residential'} • ${cc || 'Global'} • sid ${sid}`,
+      country: cc || null
+    });
+  }
+  if (!rows.length) throw new Error('NodeMaven: could not build any proxies. Check the username and country.');
+  return rows;
+}
+
+// --- Froxy (SOAX reseller; gateway proxy.froxy.com:9000) --------------------------------
+// The management API needs an email/password login, so instead the app takes the Filter login
+// + password from the dashboard (Export Proxy List) and builds rows directly. With a country
+// chosen, targeting rides in the password as "<type>;<cc>;;<region>;<city>" (wifi/mobile/fast);
+// with no country the pasted password is used verbatim. Built from Froxy's connection guide +
+// the SOAX gateway it resells, 2026-09-19. NOT yet live-key tested; confirm the sticky-session
+// delimiter against a live key.
+const FROXY_GATEWAY = Object.freeze({ host: 'proxy.froxy.com', port: 9000 });
+
+async function fetchFroxyPool({ username, password, country, state, city, session, count, poolType, proxyType }) {
+  const login = String(username || '').trim();
+  const pasted = password != null ? String(password) : '';
+  if (!login) throw new Error('Froxy: enter your proxy login (dashboard, Export Proxy List). Pick Residential or Mobile below.');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const host = FROXY_GATEWAY.host;
+  const port = FROXY_GATEWAY.port;
+  const kindLabel = (() => {
+    const p = String(poolType || '').toLowerCase();
+    if (p === 'mobile') return 'Mobile';
+    if (p === 'datacenter' || p === 'fast') return 'Datacenter';
+    return 'Residential';
+  })();
+  const cc = normCountryCode(country);
+  const n = clampPoolCount(count, 1, 100);
+  if (!cc) {
+    // No app-side targeting: use the pasted credentials exactly as the dashboard gives them.
+    if (!pasted) throw new Error('Froxy: enter the proxy password from the dashboard, or pick a country to target.');
+    return [{ type: socks ? 'SOCKS5' : 'HTTP', host, port, username: login, password: pasted, label: `Froxy • ${kindLabel} • gateway`, country: null }];
+  }
+  const rows = [];
+  const seen = new Set();
+  const fixed = String(session || '').trim();
+  for (let i = 0; i < n; i++) {
+    const sid = fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(5).toString('hex');
+    const pw = froxyPassword({ poolType, country: cc, region: state, city, session: sid });
+    const key = `${host}:${port}:${login}:${pw}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username: login, password: pw,
+      label: `Froxy • ${kindLabel} • ${cc} • sticky`,
+      country: cc,
+      dedupeOnPassword: true
+    });
+  }
+  if (!rows.length) throw new Error('Froxy: could not build any proxies.');
+  return rows;
+}
+
+// --- Proxidize (api.proxidize.com/api/v1, Bearer JWT) -----------------------------------
+// Per-Proxy plans: GET /perproxy/proxies/{username} returns ready host:port:user:pass. Per-GB
+// plans: GET /pergb/{mobile|residential}/access-point gives a sub-user whose username carries a
+// sticky "-s-<session>" token, built against the gateway host from Proxy Details (20000 HTTP /
+// 20002 SOCKS5). Built from the live GitBook, 2026-09-19. NOT yet live-key tested.
+const PROXIDIZE_API = 'https://api.proxidize.com/api/v1';
+
+async function proxidizeCall(token, method, pathAndQuery, what, body) {
+  const t = String(token || '').trim();
+  if (!t) throw new Error('Proxidize: the API token is required (app.proxidize.com, Settings, API Token).');
+  let text;
+  try {
+    text = await httpRequestText(`${PROXIDIZE_API}${pathAndQuery}`, {
+      method,
+      headers: { Authorization: `Bearer ${t}`, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: 30000,
+      maxBytes: 20_000_000
+    });
+  } catch (e) {
+    const rawMsg = String((e && e.message) || 'request failed').split(t).join('***');
+    if (/HTTP 401\b/.test(rawMsg)) throw new Error('Proxidize: the API token was rejected. Copy it again from app.proxidize.com, Settings, API Token.');
+    if (/HTTP 429\b/.test(rawMsg)) throw new Error('Proxidize: the API rate limit was reached. Wait a minute and try again.');
+    const m = /"message"\s*:\s*"([^"]+)"/.exec(rawMsg);
+    throw new Error(`Proxidize ${what}: ${m ? m[1] : rawMsg}`);
+  }
+  try { return JSON.parse(text); } catch (e) { throw new Error(`Proxidize ${what}: the API did not return JSON.`); }
+}
+
+async function fetchProxidizePool({ token, username, host, country, state, city, session, count, poolType, proxyType }) {
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const user = String(username || '').trim();
+  if (user) {
+    // Per-Proxy plan: the list already carries ready credentials.
+    const data = await proxidizeCall(token, 'GET', `/perproxy/proxies/${encodeURIComponent(user)}`, 'per-proxy list');
+    const rows = parseProxidizePerProxy(data, { socks });
+    if (!rows.length) throw new Error('Proxidize: no per-proxy proxies found for that username.');
+    return rows.map((r) => ({
+      type: r.type, host: r.host, port: r.port, username: r.username, password: r.password,
+      label: `Proxidize • Mobile • ${r.ip || r.host} • port ${r.port}`,
+      ...(r.rotationUrl ? { rotationUrl: r.rotationUrl } : {})
+    }));
+  }
+  // Per-GB plan (mobile or residential). Needs the gateway host from Proxy Details.
+  const kind = String(poolType || '').toLowerCase() === 'residential' ? 'residential' : 'mobile';
+  await proxidizeCall(token, 'GET', `/pergb/${kind}/user-info`, 'account check');
+  const aps = await proxidizeCall(token, 'GET', `/pergb/${kind}/access-point`, 'access points');
+  const apList = Array.isArray(aps) ? aps : (aps && Array.isArray(aps.data) ? aps.data : []);
+  const ap = apList.find((x) => x && x.username && x.password) || null;
+  if (!ap) throw new Error(`Proxidize: no ${kind} access point on this account. Create one in the dashboard, then pull again.`);
+  const gwHost = String(host || '').trim();
+  if (!gwHost) throw new Error('Proxidize: for a Per-GB plan, put the gateway host from Proxy Details in the Host field. (A Per-Proxy plan needs the per-proxy username instead.)');
+  const port = socks ? 20002 : 20000;
+  const n = clampPoolCount(count, 1, 100);
+  const rows = [];
+  const seen = new Set();
+  const fixed = String(session || '').trim();
+  for (let i = 0; i < n; i++) {
+    const sid = fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(5).toString('hex');
+    // Geo tokens need the exact values from /pergb/.../locations-proxy, so v1 targets by the
+    // access point's dashboard geo and only adds the sticky session here.
+    const uname = proxidizePerGbUsername(String(ap.username), { session: sid });
+    const key = `${gwHost}:${port}:${uname}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: gwHost, port, username: uname, password: String(ap.password),
+      label: `Proxidize • ${kind === 'residential' ? 'Residential' : 'Mobile'} • sticky`,
+      country: null
+    });
+  }
+  if (!rows.length) throw new Error('Proxidize: could not build any per-GB proxies.');
+  return rows;
+}
+
 const VENDOR_LOOKUPS = Object.freeze({
   dataimpulse: lookupDataImpulse,
   proxyseller: lookupProxySeller,
@@ -2270,7 +2530,11 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   anyip: fetchAnyIpPool,
   dataimpulse: fetchDataImpulsePool,
   proxyseller: fetchProxySellerPool,
-  iproyal: fetchIpRoyalPool
+  iproyal: fetchIpRoyalPool,
+  marsproxies: fetchMarsProxiesPool,
+  nodemaven: fetchNodeMavenPool,
+  froxy: fetchFroxyPool,
+  proxidize: fetchProxidizePool
 });
 
 async function syncVendorPool(payload) {
