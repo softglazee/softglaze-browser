@@ -34,7 +34,7 @@ const release = (overrides = {}) => ({
 test('the pin is a concrete asset: exact name, byte size and 64-hex SHA-256', () => {
   // The pin is per-OS now (this asserts THIS platform's pinned asset), so accept any
   // of the three fingerprint-chromium archive kinds rather than only the Windows zip.
-  assert.match(FP_CHROMIUM_ASSET.name, /(_windows_x64\.zip|_macos\.dmg|_x86_64_linux\.tar\.xz)$/);
+  assert.match(FP_CHROMIUM_ASSET.name, /(_windows_x64\.zip|_macos\.dmg|x86_64_linux\.tar\.xz)$/);
   assert.ok(Number.isInteger(FP_CHROMIUM_ASSET.size) && FP_CHROMIUM_ASSET.size > 50 * 1024 * 1024);
   assert.match(FP_CHROMIUM_ASSET.sha256, /^[0-9a-f]{64}$/);
 });
