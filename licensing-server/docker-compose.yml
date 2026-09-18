@@ -1,31 +1,34 @@
-# One-command local stack: Postgres + the licensing server.
+# One-command local stack: MySQL + the licensing server.
 #   export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
-#   export POSTGRES_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
+#   export DB_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
 #   docker compose up --build
 # The server syncs the schema (prisma db push) on start, then listens on :8787.
 #
-# Security (audit T2-7): Postgres holds licences and sealed payment-provider secrets.
-# It used to publish 5432 on every interface with the password "softglaze", so running
-# this stack on a public-IP host put the database on the internet with trivial creds.
-# The server reaches it over the compose network, so the port is bound to loopback only
-# (for local psql), and the password must come from the environment. Use a hex password:
-# it goes into DATABASE_URL unescaped, and hex needs no URL encoding.
+# Production runs on MySQL (the Hostinger deploy has no Postgres), so this schema's
+# Prisma provider is `mysql`; this stack mirrors that locally.
+#
+# Security (audit T2-7): the database holds licences and sealed payment-provider
+# secrets. The server reaches it over the compose network, so the port is bound to
+# loopback only (for a local mysql client), and the password must come from the
+# environment. Use a hex password: it goes into DATABASE_URL unescaped, and hex needs
+# no URL encoding.
 services:
   db:
-    image: postgres:16-alpine
+    image: mysql:8
     environment:
-      POSTGRES_USER: softglaze
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (random hex) in your shell before compose up}"
-      POSTGRES_DB: softglaze_licensing
+      MYSQL_DATABASE: softglaze_licensing
+      MYSQL_USER: softglaze
+      MYSQL_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD (random hex) in your shell before compose up}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD (random hex) in your shell before compose up}"
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:3306:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - dbdata:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U softglaze"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 15
 
   server:
     build: .
@@ -33,14 +36,20 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://softglaze:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/softglaze_licensing?schema=public"
+      DATABASE_URL: "mysql://softglaze:${DB_PASSWORD:?set DB_PASSWORD}@db:3306/softglaze_licensing"
       MASTER_KEY: "${MASTER_KEY:?set MASTER_KEY (32-byte base64) in your shell before compose up}"
       PORT: "8787"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8787}"
       LEASE_DAYS: "7"
     command: sh -c "npx prisma db push --skip-generate --accept-data-loss && node src/server.js"
+    # Loopback only, for the same reason as the database above. This service speaks
+    # plain HTTP and holds the licence-signing keys; it must sit behind a reverse
+    # proxy that terminates TLS, and the proxy reaches it here. Published on
+    # 0.0.0.0 it would be on the internet directly, in front of that proxy — and
+    # the desktop app refuses a non-HTTPS apiBaseUrl anyway (tenantConfig.js
+    # sanitizeSecureUrl), so nothing legitimate needs the wider binding.
     ports:
-      - "8787:8787"
+      - "127.0.0.1:8787:8787"
 
 volumes:
-  pgdata:
+  dbdata:

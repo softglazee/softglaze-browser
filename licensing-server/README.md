@@ -4,9 +4,15 @@ Multi-tenant licensing + payment backend for SoftGlaze Browser. It is the **sour
 of truth** for who has paid and what they're entitled to — the desktop app only
 *verifies* a short-lived, cryptographically-signed lease it cannot forge.
 
-> **Phase 1** (this scaffold): tenant provisioning, **Stripe** test-mode checkout +
-> signature-verified webhook, Ed25519 license leases, backend-issued redeem codes.
-> PayPal/Cryptomus and recurring subscriptions come in later phases.
+> **Status.** Tenant provisioning, hosted checkout and signature-verified webhooks
+> for **Stripe, PayPal and Cryptomus**, Ed25519 license leases, backend-issued redeem
+> codes, per-tenant key rotation and recurring Stripe subscriptions are all
+> implemented and covered by `npm test` (23 unit tests) plus an end-to-end check
+> against a running server (`scripts/e2e-local.js`, 18 checks). What is **not** done
+> is operational: this is not hosted anywhere, no tenant's provider keys are set, and
+> the recurring-subscription path has not been exercised against a live Stripe test
+> account. It also sends no email, so a purchase made anywhere other than inside the
+> app has no way to reach the buyer.
 
 ## Why this exists
 The desktop app alone can't enforce licensing: a shipped signing secret can be
@@ -27,8 +33,10 @@ extracted and a locally-polled "paid" status can be spoofed. This server fixes b
 - **7-day offline leases** — refreshed online; offline grace until expiry.
 
 ## Stack
-Node + Express + Prisma/**Postgres**. Hosting-agnostic (runs on any Node host: a VPS,
-Render/Railway/Fly, etc.). Needs a public HTTPS URL for provider webhooks.
+Node + Express + Prisma/**MySQL**. Hosting-agnostic (runs on any Node host: a VPS,
+Render/Railway/Fly, etc.). Needs a public HTTPS URL for provider webhooks. Production
+runs on the Hostinger account's MySQL (shared hosting has no Postgres), so the schema's
+Prisma provider is `mysql`.
 
 ## Setup
 ```bash
@@ -41,16 +49,42 @@ npm run prisma:migrate          # create the schema (dev)
 npm run dev                     # or: npm start
 ```
 
-### Run with Docker (Postgres + server, one command)
+### Run with Docker (MySQL + server, one command)
 ```bash
 cd licensing-server
 export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
-export POSTGRES_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
+export DB_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
 docker compose up --build        # syncs the schema (prisma db push) then serves :8787
 ```
-Postgres is bound to `127.0.0.1` only and has no default password. Keep both values in
+MySQL is bound to `127.0.0.1` only and has no default password. Keep both values in
 a safe place: `MASTER_KEY` unseals the stored provider secrets, and the database volume
 only opens with the password it was created with.
+### Run it without Docker Compose
+`docker compose up --build` builds a Node image; if that stalls or you would rather
+iterate on the host, run MySQL in a container and the server on the host — the
+schema and everything else are identical:
+```bash
+cp .env.example .env    # then fill MASTER_KEY + DB_PASSWORD (see above)
+docker run -d --name sg-licensing-db   -e MYSQL_USER=softglaze -e MYSQL_PASSWORD="$DB_PASSWORD" -e MYSQL_ROOT_PASSWORD="$DB_PASSWORD"   -e MYSQL_DATABASE=softglaze_licensing -p 127.0.0.1:3306:3306 mysql:8
+npm install
+npx prisma db push --skip-generate --accept-data-loss   # DATABASE_URL must use localhost
+npx prisma generate
+npm start
+```
+Stop and resume later with `docker start sg-licensing-db` — the volume keeps the data.
+
+### End-to-end check (proves both halves agree)
+```bash
+npm run provision -- "SoftGlaze"        # prints the tenant id + API key once
+node scripts/e2e-local.js <tenantId> <tenantApiKey>
+```
+This registers an install, refuses a re-registration without the install secret,
+mints and redeems an activation code, then takes the signed lease and verifies it
+with the **desktop app's own** `licenseClient.verifyLease()` using nothing but the
+public key from `tenants/<id>.config.json` — the file the app build bakes. It also
+confirms a lease edited to claim a higher tier, and a lease checked against another
+tenant's key, both fail. 18 checks; no payment provider needed.
+
 Smoke-test a running server (no local DB needed):
 ```bash
 BASE=http://localhost:8787 node scripts/smoke.js            # /health
@@ -129,19 +163,58 @@ All keys are sealed at rest; configure the webhook URL it returns in the provide
 Public endpoints (`register`/`checkout`/`license`/`redeem`) are rate-limited (120/min/IP,
 in-memory per instance — move to a shared store for multi-instance).
 
+## Going live — the whole sequence
+
+Nothing below is code work; it is the operational half that turning checkout on
+depends on (see `browser-site/06-SITE-TERMS.md` §7).
+
+1. **Host this server** on any Node host, behind a reverse proxy that terminates
+   TLS. Set `DATABASE_URL`, `MASTER_KEY` (from a secret manager, not a file) and
+   `PUBLIC_BASE_URL` to the public HTTPS origin. `MASTER_KEY` unseals every stored
+   provider secret and tenant private key: lose it and every licence stops
+   verifying; leak it and the signing keys are compromised. Back it up separately
+   from the database, and never in the same place.
+   The compose file publishes the server on `127.0.0.1` on purpose — the proxy
+   reaches it there, and nothing should reach it in cleartext from outside.
+2. **Provision the production tenant** on that host:
+   `npm run provision -- "SoftGlaze"`. Store the tenant API key in a password
+   manager; it is shown once and there is no recovery, only rotation.
+3. **Set the payment keys** with `POST /v1/tenant/payment-config`, then point the
+   provider's webhook at the URL that call returns. Stripe's signing secret must be
+   the one for *that* endpoint.
+4. **Create the plan**: `POST /v1/tenant/plans` with
+   `{"key":"pro","name":"Pro","tier":"pro","amount":500,"currency":"USD","months":1,"interval":"month","recurring":true}`.
+   `amount` is in cents, so 500 is the $5/month the site advertises.
+5. **Exercise a real payment** in Stripe test mode, including a renewal. This is the
+   one path that cannot be verified offline.
+6. **Build the installer** from the app repo, which bakes the tenant config:
+   `npm run build:tenant -- licensing-server/tenants/<tenantId>.config.json`.
+   `scripts/check-tenant-baked.js` refuses a build whose config is empty, points at
+   localhost, or carries a private key — so a base build cannot be shipped by
+   accident. A base build is still fine for development:
+   `SG_ALLOW_BASE_BUILD=1 npm run build`.
+7. **Then** flip `commerce.checkoutEnabled` on the site, once there is a real
+   checkout URL to send people to and step 3 is done.
+
+Rotating a tenant's keypair (`POST /v1/tenant/rotate-key`) invalidates every lease
+signed by the old key, so every install has to fetch a new one. Installs that are
+offline keep working until their cached lease expires, then lock — so rotate only
+deliberately, and ship the new public key in a build first.
+
 ## Security notes / TODO before production
 - Put this behind **HTTPS/TLS** (required for Stripe webhooks + the Bearer keys).
 - `MASTER_KEY` should come from a real secret manager, not a flat `.env`, in prod.
-- Add **rate limiting** + request logging on the public endpoints.
+- Add request logging on the public endpoints (rate limiting is in place: 120/min/IP).
 - Add an admin auth layer for any cross-tenant ops.
 - Move the in-memory rate limiter to a shared store (Redis) for multi-instance.
-- **Still TODO (Phase 4 remainder): recurring subscriptions** (Stripe subscription
-  mode + invoice.paid / customer.subscription.deleted) — the current model grants a
-  fixed term per one-time payment. This needs live-Stripe testing.
-
-Done in Phase 4: PayPal + Cryptomus adapters (per-tenant stored keys, per-tenant
-webhook verification), unified Payment-row provisioning + webhook idempotency,
-per-tenant key rotation, and basic rate limiting.
+- **Exercise the recurring-subscription path against a live Stripe test account.**
+  The code handles `checkout.session.completed` in subscription mode, `invoice.paid`
+  (renewal → exact period end) and `customer.subscription.deleted` (→ expired), but
+  that cannot be verified offline, so treat it as untested until it has been.
+- Decide how a buyer who paid outside the app receives their licence. Right now a
+  licence binds to an `installId` and leases are issued only for that install, so
+  the working purchase flow is in-app. A web purchase would need this server to
+  email an activation code, and it has no mail transport.
 
 ## What this does NOT do
 Any client-side license can ultimately be patched out of an open desktop binary.

@@ -10,6 +10,8 @@
     "dev": "node --watch src/server.js",
     "provision": "node scripts/provision-tenant.js",
     "test": "node --test \"test/**/*.test.js\"",
+    "build": "prisma generate",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy"

@@ -8,16 +8,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 model Tenant {
   id               String   @id @default(cuid())
   name             String
-  brandJson        String? // optional white-label branding blob (JSON string)
-  publicKeyPem     String // Ed25519 public key (SPKI PEM) — also baked into the tenant's build
-  privateKeySealed String // Ed25519 private key (PKCS8 PEM), AES-256-GCM sealed with MASTER_KEY
+  brandJson        String? @db.Text // optional white-label branding blob (JSON string)
+  publicKeyPem     String  @db.Text // Ed25519 public key (SPKI PEM) — also baked into the tenant's build
+  privateKeySealed String  @db.Text // Ed25519 private key (PKCS8 PEM), AES-256-GCM sealed with MASTER_KEY
   apiKeyHash       String // sha256 of the tenant-admin API key (shown once at provisioning)
   status           String   @default("active") // active | suspended
   createdAt        DateTime @default(now())
@@ -35,7 +35,7 @@ model TenantPaymentConfig {
   tenantId      String
   provider      String // stripe | paypal | cryptomus
   enabled       Boolean  @default(false)
-  secretsSealed String // AES-256-GCM sealed JSON: { secretKey, webhookSecret, ... }
+  secretsSealed String   @db.Text // AES-256-GCM sealed JSON: { secretKey, webhookSecret, ... }
   updatedAt     DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
