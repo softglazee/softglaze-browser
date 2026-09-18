@@ -298,6 +298,185 @@ function ipRoyalErrorMessage(text) {
   return m ? m[1] : null;
 }
 
+// ---------------------------------------------------------------------------------------
+// Shared: split a bare "host:port" (IPv6-bracket aware). Used by the Proxidize per-proxy
+// parser, whose API returns the endpoint already joined.
+// ---------------------------------------------------------------------------------------
+function parseHostPort(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  const h = s.lastIndexOf(':');
+  if (h < 0) return null;
+  let host = s.slice(0, h).trim();
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
+  const portText = s.slice(h + 1).trim();
+  if (!/^\d{1,5}$/.test(portText)) return null;
+  const port = Number.parseInt(portText, 10);
+  if (!host || port < 1 || port > 65535) return null;
+  return { host, port };
+}
+
+// ---------------------------------------------------------------------------------------
+// MarsProxies residential (api.marsproxies.com, Bearer token). POST
+// /v1/residential/access/generate-proxy-list returns a JSON array of strings, each rendered
+// "{hostname}:{port}:{username}:{password}". Location and the sticky session ride in the
+// generated string, so each line parses exactly like an IPRoyal line. Sticky lifetime uses
+// the same {n}s/{n}m/{n}h rule as IPRoyal (reuse ipRoyalLifetime).
+// ---------------------------------------------------------------------------------------
+
+// Underscore-joined location, e.g. "_country-us_state-texas_city-dallas" or "_region-europe".
+// Codes come from GET /v1/residential/access/countries|regions; a non-plain token is dropped.
+function marsProxiesLocation({ country, state, city, region } = {}) {
+  const tok = (v) => String(v || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const cc = tok(country);
+  if (/^[a-z]{2}$/.test(cc)) {
+    let out = `_country-${cc}`;
+    const st = tok(state);
+    if (st) out += `_state-${st}`;
+    const ct = tok(city);
+    if (ct) out += `_city-${ct}`;
+    return out;
+  }
+  const rg = tok(region);
+  return rg ? `_region-${rg}` : '';
+}
+
+// Parse the JSON string-array from generate-proxy-list into unique endpoints. Reuses
+// parseIpRoyalLine because MarsProxies renders the same "host:port:user:pass" colon form.
+function parseMarsProxiesList(text) {
+  let arr;
+  try { arr = JSON.parse(String(text)); } catch (e) { return []; }
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const line of arr) {
+    const row = parseIpRoyalLine(line);
+    if (!row) continue;
+    const key = `${row.host}:${row.port}:${row.username}:${row.password}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------
+// NodeMaven (gateway gate.nodemaven.com; targeting encoded in the proxy USERNAME, no list
+// endpoint). Build "<login>-country-<cc>-region-<r>-city-<c>-type-<residential|mobile>-sid-
+// <id>-ttl-<t>-filter-<f>". A value containing '-' is truncated by the gateway, so drop it.
+// city requires region beside it; type selects residential vs mobile.
+// ---------------------------------------------------------------------------------------
+const NODEMAVEN_TTL = /^[1-9]\d*[smh]$/;
+function nodeMavenTtl(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return NODEMAVEN_TTL.test(v) ? v : '';
+}
+// country/region/city/isp/type: trimmed, lowercased, spaces -> '_', and rejected outright if
+// it still contains a '-' (which the gateway would truncate on, silently breaking targeting).
+function nodeMavenToken(v) {
+  const s = String(v || '').trim().toLowerCase().replace(/\s+/g, '_');
+  if (!s || s.includes('-')) return '';
+  return s.replace(/[^a-z0-9_]/g, '');
+}
+function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, filter } = {}) {
+  const base = String(login || '').trim();
+  if (!base) return '';
+  const parts = [base];
+  const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  const hasCountry = /^[a-z]{2}$/.test(cc);
+  if (hasCountry) parts.push('country', cc);
+  const rg = nodeMavenToken(region);
+  if (hasCountry && rg) parts.push('region', rg);
+  const ct = nodeMavenToken(city);
+  if (hasCountry && rg && ct) parts.push('city', ct);
+  const ip = nodeMavenToken(isp);
+  if (ip) parts.push('isp', ip);
+  const ty = nodeMavenToken(type);
+  if (ty === 'residential' || ty === 'mobile') parts.push('type', ty);
+  const sd = String(sid || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (sd) parts.push('sid', sd);
+  const tl = nodeMavenTtl(ttl);
+  if (sd && tl) parts.push('ttl', tl);
+  const fl = String(filter || '').trim().toLowerCase();
+  if (/^(low|medium|high)$/.test(fl)) parts.push('filter', fl);
+  return parts.join('-');
+}
+
+// ---------------------------------------------------------------------------------------
+// Froxy (SOAX reseller; gateway proxy.froxy.com:9000). Targeting rides in the PASSWORD as
+// "<type>;<country>;;<region>;<city>" (spaces -> '+'); type is wifi (residential), mobile,
+// or fast (datacenter). The login authenticates. Verified against Froxy's own connection
+// guide; the trailing sticky-session field follows the SOAX convention this gateway inherits
+// (confirm the exact delimiter against a live key before relying on sticky).
+// ---------------------------------------------------------------------------------------
+function froxyType(poolType) {
+  const t = String(poolType || '').trim().toLowerCase();
+  if (t === 'mobile') return 'mobile';
+  if (t === 'fast' || t === 'datacenter') return 'fast';
+  return 'wifi';
+}
+function froxyField(v) {
+  return String(v || '').trim().toLowerCase().replace(/\s+/g, '+').replace(/[^a-z0-9+]/g, '');
+}
+function froxyPassword({ poolType, country, region, city, session } = {}) {
+  const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  const parts = [froxyType(poolType), /^[a-z]{2}$/.test(cc) ? cc : '', '', froxyField(region), froxyField(city)];
+  let pw = parts.join(';');
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (sid) pw += `;sessionid;${sid}`;
+  return pw;
+}
+
+// ---------------------------------------------------------------------------------------
+// Proxidize (api.proxidize.com/api/v1, Bearer token). Per-Proxy plans return ready
+// host:port:user:pass from GET /perproxy/proxies/{username}. Per-GB plans expose a sub-user
+// (access point) whose username carries geo tokens "-co-USA-st-TX-ci-Dallas" and an optional
+// "-s-<session>" sticky token, built against the access point's own gateway host (20000 HTTP,
+// 20002 SOCKS5).
+// ---------------------------------------------------------------------------------------
+function parseProxidizePerProxy(data, { socks = false } = {}) {
+  const list = Array.isArray(data) ? data : (data && Array.isArray(data.data) ? data.data : []);
+  const out = [];
+  const seen = new Set();
+  for (const it of list) {
+    if (!it || typeof it !== 'object') continue;
+    const ep = parseHostPort(it.proxy);
+    if (!ep) continue;
+    const username = it.username != null ? String(it.username) : '';
+    const password = it.password != null ? String(it.password) : '';
+    const key = `${ep.host}:${ep.port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: ep.host, port: ep.port, username, password,
+      rotationUrl: /^https?:\/\//i.test(String(it.rotate_url || '')) ? String(it.rotate_url) : null,
+      ip: it.ip ? String(it.ip) : null,
+      session: it.session_id != null ? String(it.session_id) : null
+    });
+  }
+  return out;
+}
+function proxidizeGeoToken({ country, state, city } = {}) {
+  const tok = (v) => String(v || '').trim().replace(/[^A-Za-z0-9 ]/g, '').replace(/\s+/g, '');
+  let out = '';
+  const co = tok(country);
+  if (co) out += `-co-${co.toUpperCase()}`;
+  const st = tok(state);
+  if (co && st) out += `-st-${st.toUpperCase()}`;
+  const ci = tok(city);
+  if (co && ci) out += `-ci-${ci}`;
+  return out;
+}
+function proxidizePerGbUsername(base, { country, state, city, session } = {}) {
+  const u = String(base || '').trim();
+  if (!u) return '';
+  let out = u + proxidizeGeoToken({ country, state, city });
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (sid) out += `-s-${sid}`;
+  return out;
+}
+
 module.exports = {
   parseIpRoyalLine,
   ipRoyalLifetime,
@@ -317,5 +496,17 @@ module.exports = {
   FILTER_PATTERNS,
   proxySellerRotation,
   unwrapProxySeller,
-  proxySellerGeoView
+  proxySellerGeoView,
+  parseHostPort,
+  marsProxiesLocation,
+  parseMarsProxiesList,
+  nodeMavenTtl,
+  nodeMavenToken,
+  nodeMavenUsername,
+  froxyType,
+  froxyField,
+  froxyPassword,
+  parseProxidizePerProxy,
+  proxidizeGeoToken,
+  proxidizePerGbUsername
 };

@@ -49,7 +49,19 @@ export const PROVIDERS = [
   { key: 'proxyseller', name: 'Proxy-Seller', initials: 'PS', color: '#22c55e', referral: 'https://proxy-seller.com/personal/api/', gateway: null, geoSync: { creds: ['token'], count: true, ps: true } },
   // IPRoyal residential: an API token generates ready proxy lines for a sub-user (or the
   // proxy username + password), with country/state/city and sticky lifetime in the password.
-  { key: 'iproyal', name: 'IPRoyal', initials: 'IR', color: '#f59e0b', referral: 'https://dashboard.iproyal.com/', gateway: null, geoSync: { creds: ['token'], count: true, ipr: true } }
+  { key: 'iproyal', name: 'IPRoyal', initials: 'IR', color: '#f59e0b', referral: 'https://dashboard.iproyal.com/', gateway: null, geoSync: { creds: ['token'], count: true, ipr: true } },
+  // MarsProxies residential: an API token generates a proxy list for a sub-user, sticky by
+  // default (an anti-detect profile wants a stable exit IP). Residential only.
+  { key: 'marsproxies', name: 'MarsProxies', initials: 'MA', color: '#e11d48', referral: 'https://marsproxies.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username', 'password'], count: true, geo: true } },
+  // NodeMaven: no list endpoint; the app builds each proxy against gate.nodemaven.com with the
+  // targeting in the username. Proxy username + password come from the dashboard (Proxy Setup).
+  { key: 'nodemaven', name: 'NodeMaven', initials: 'NM', color: '#6366f1', referral: 'https://nodemaven.com/?ref=softglaze', gateway: { host: 'gate.nodemaven.com', port: 8080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: true, geo: true, life: true } },
+  // Froxy (SOAX reseller): login + password from the dashboard Export Proxy List, targeting in
+  // the password against proxy.froxy.com:9000. wifi = residential, or pick Mobile.
+  { key: 'froxy', name: 'Froxy', initials: 'FX', color: '#7c3aed', referral: 'https://froxy.com/?ref=softglaze', gateway: { host: 'proxy.froxy.com', port: 9000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], geo: true } },
+  // Proxidize: a Bearer token. Per-Proxy plans return ready credentials for a per-proxy
+  // username; Per-GB plans build from an access point against the gateway host from Proxy Details.
+  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], count: true, poolType: true, geo: true, gateway: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
@@ -952,8 +964,10 @@ export default function ProxyProviders({ onSynced }) {
                   <div className="sm:max-w-[260px]">
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.poolTypeLabel')}</label>
                     <select value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
-                      <option value="residential">{t('proxyProviders.geo.poolResidential')}</option>
-                      <option value="mobile">{t('proxyProviders.geo.poolMobile')}</option>
+                      {(Array.isArray(provider.geoSync.poolType)
+                        ? provider.geoSync.poolType
+                        : [['residential', t('proxyProviders.geo.poolResidential')], ['mobile', t('proxyProviders.geo.poolMobile')]]
+                      ).map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
                     </select>
                   </div>
                 )}
