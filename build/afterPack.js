@@ -41,6 +41,38 @@ exports.default = async function afterPack(context) {
     console.log(`[afterPack] Copied ${name} -> ${dest}`);
   }
 
+  // --- Keep only THIS platform's Prisma query engine --------------------------
+  // schema.prisma's binaryTargets generates every OS engine so any CI runner can
+  // produce a build; here we drop the ones this package doesn't need, so a Windows
+  // installer isn't bloated by the mac/linux engines (and vice versa). Only the
+  // native `*query_engine-<target>.node` files are touched — never the wasm/client.
+  try {
+    const clientDir = path.join(destRoot, '.prisma', 'client');
+    const platform = context.electronPlatformName; // 'win32' | 'darwin' | 'linux'
+    const archName = ({ 0: 'ia32', 1: 'x64', 2: 'armv7l', 3: 'arm64', 4: 'universal' })[context.arch] || 'x64';
+    const isEngine = (f) => /^(lib)?query_engine-.*\.node$/.test(f); // native engines only, not query_engine_bg.*
+    const keep = (f) => {
+      if (platform === 'win32') return f.includes('-windows');
+      if (platform === 'linux') return f.includes('-debian') || f.includes('-linux') || f.includes('-rhel') || f.includes('-musl');
+      if (platform === 'darwin') {
+        if (archName === 'arm64') return f.includes('-darwin-arm64');
+        if (archName === 'universal') return f.includes('-darwin'); // both darwin (x64) and darwin-arm64
+        return f === 'libquery_engine-darwin.dylib.node'; // x64 only
+      }
+      return true;
+    };
+    if (fs.existsSync(clientDir)) {
+      const kept = [];
+      for (const f of fs.readdirSync(clientDir)) {
+        if (isEngine(f) && !keep(f)) fs.rmSync(path.join(clientDir, f), { force: true });
+        else if (isEngine(f)) kept.push(f);
+      }
+      console.log(`[afterPack] Prisma engines kept for ${platform}/${archName}: ${kept.join(', ') || '(NONE — check binaryTargets!)'}`);
+    }
+  } catch (e) {
+    console.warn('[afterPack] Prisma engine prune skipped:', e && e.message ? e.message : e);
+  }
+
   // --- Firefox Smart Autofill: bundle the Mozilla-signed extension -------------
   // firefoxEngine installs <resources>/firefox-extension/autofill@softglaze.app.xpi
   // into release-Firefox profiles. `npm run sign:firefox-ext` drops the signed .xpi

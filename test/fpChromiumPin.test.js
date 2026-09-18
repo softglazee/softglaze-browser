@@ -32,7 +32,9 @@ const release = (overrides = {}) => ({
 });
 
 test('the pin is a concrete asset: exact name, byte size and 64-hex SHA-256', () => {
-  assert.match(FP_CHROMIUM_ASSET.name, /_windows_x64\.zip$/);
+  // The pin is per-OS now (this asserts THIS platform's pinned asset), so accept any
+  // of the three fingerprint-chromium archive kinds rather than only the Windows zip.
+  assert.match(FP_CHROMIUM_ASSET.name, /(_windows_x64\.zip|_macos\.dmg|_x86_64_linux\.tar\.xz)$/);
   assert.ok(Number.isInteger(FP_CHROMIUM_ASSET.size) && FP_CHROMIUM_ASSET.size > 50 * 1024 * 1024);
   assert.match(FP_CHROMIUM_ASSET.sha256, /^[0-9a-f]{64}$/);
 });
@@ -70,8 +72,8 @@ test('the download flow verifies before extracting and deletes a mismatched arch
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'browserDownloader.js'), 'utf8');
   const start = src.indexOf('function startFpChromiumDownload(');
   const body = src.slice(start, src.indexOf('\nmodule.exports', start));
-  const verifyAt = body.indexOf('verifyFpChromiumArchive(zip)');
-  const extractAt = body.indexOf('extractZip(zip');
+  const verifyAt = body.indexOf('verifyFpChromiumArchive(archive)');
+  const extractAt = body.indexOf('extractFpChromium(archive');
   assert.ok(verifyAt > 0 && extractAt > verifyAt, 'verification must run before extraction');
-  assert.match(body.slice(verifyAt, extractAt), /unlink\(zip\)/, 'a failed verification must delete the archive');
+  assert.match(body.slice(verifyAt, extractAt), /unlink\(archive\)/, 'a failed verification must delete the archive');
 });

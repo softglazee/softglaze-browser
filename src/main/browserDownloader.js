@@ -16,8 +16,9 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
 const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
+const platform = require('./platform');
+const { extractZipCrossPlatform, extractFpChromium, ensureExecutable } = require('./extractArchive');
 // `app` is a string path (not the API object) when required outside Electron
 // (e.g. unit tests), so `app && app.isPackaged` is a safe runtime guard.
 const { app } = require('electron');
@@ -31,6 +32,9 @@ const CHROME_ROOT = (app && app.isPackaged)
   ? path.join(app.getPath('userData'), 'chrome')
   : path.resolve(__dirname, '../../chrome');
 const STATE_FILE = path.join(CHROME_ROOT, '.download-state.json');
+// The Chrome-for-Testing platform key + on-disk layout for THIS machine
+// (win64 | mac-x64 | mac-arm64 | linux64). Everything below resolves through it.
+const CFT_PLATFORM = platform.cftPlatform();
 
 // version -> { version, major, percent, state, error, receivedBytes, totalBytes, url, dest }
 // state: queued | downloading | extracting | done | error | paused | interrupted
@@ -141,27 +145,32 @@ function isValidVersionKey(key) {
 }
 
 function chromeTargetDir(version) {
-  return path.join(CHROME_ROOT, `win64-${version}`);
+  return path.join(CHROME_ROOT, platform.chromeInstallDirName(version));
+}
+
+// Absolute path of the launchable Chrome binary inside an install dir, for THIS OS.
+function chromeBinaryPath(version) {
+  return path.join(chromeTargetDir(version), platform.chromeBinaryFromInstallDir());
 }
 
 function isInstalled(version) {
-  try { return fs.existsSync(path.join(chromeTargetDir(version), 'chrome-win64', 'chrome.exe')); }
+  try { return fs.existsSync(chromeBinaryPath(version)); }
   catch (e) { return false; }
 }
 
-// Latest Chrome-for-Testing build per major version available for win64.
+// Latest Chrome-for-Testing build per major version available for THIS platform.
 async function listDownloadableVersions() {
   const now = Date.now();
   if (cachedVersions && now - cachedAt < 10 * 60 * 1000) return cachedVersions;
   const json = await fetchJson(CFT_ENDPOINT);
   const byMajor = new Map();
   for (const v of json.versions || []) {
-    const win = ((v.downloads && v.downloads.chrome) || []).find((d) => d.platform === 'win64');
-    if (!win) continue;
+    const dl = ((v.downloads && v.downloads.chrome) || []).find((d) => d.platform === CFT_PLATFORM);
+    if (!dl) continue;
     const major = parseInt(v.version, 10);
     if (!Number.isFinite(major)) continue;
     const prev = byMajor.get(major);
-    if (!prev || cmpVersion(v.version, prev.version) > 0) byMajor.set(major, { version: v.version, major, url: win.url });
+    if (!prev || cmpVersion(v.version, prev.version) > 0) byMajor.set(major, { version: v.version, major, url: dl.url });
   }
   cachedVersions = Array.from(byMajor.values()).sort((a, b) => b.major - a.major);
   cachedAt = now;
@@ -245,16 +254,11 @@ async function downloadToFile(url, dest, onProgress, registerAbort, allowedHosts
   return { received, total };
 }
 
-// Extract a .zip on Windows via PowerShell Expand-Archive (no npm dependency).
+// Cross-platform .zip extraction (Chrome for Testing + fingerprint-chromium).
+// Windows used to shell out to PowerShell Expand-Archive; extractZipCrossPlatform
+// (extract-zip) works identically on win/mac/linux and preserves the unix exec bit.
 function extractZip(zipPath, destDir) {
-  return new Promise((resolve, reject) => {
-    const cmd = `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`;
-    const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { windowsHide: true });
-    let err = '';
-    ps.stderr.on('data', (d) => { err += d.toString(); });
-    ps.on('error', reject);
-    ps.on('close', (code) => (code === 0 ? resolve() : reject(new Error('Extract failed: ' + (err.slice(0, 300) || `exit ${code}`)))));
-  });
+  return extractZipCrossPlatform(zipPath, destDir);
 }
 
 // Kick off (or RESUME) a background download+install. Returns the progress entry.
@@ -283,7 +287,7 @@ function startDownload(versionOrMajor) {
     try {
       const list = await listDownloadableVersions();
       const found = list.find((x) => x.version === entry.version || String(x.major) === entry.version);
-      if (!found) throw Object.assign(new Error(`No downloadable win64 build for "${entry.version}".`), { fatal: true });
+      if (!found) throw Object.assign(new Error(`No downloadable ${CFT_PLATFORM} build for "${entry.version}".`), { fatal: true });
       // Re-key the entry to the exact resolved version.
       if (entry.version !== found.version) {
         downloads.delete(entry.version);
@@ -323,8 +327,9 @@ function startDownload(versionOrMajor) {
       persistState(true);
       await extractZip(zip, dir);
       await fsp.unlink(zip).catch(() => {});
+      ensureExecutable(chromeBinaryPath(found.version)); // no-op on Windows
 
-      if (!isInstalled(found.version)) throw Object.assign(new Error('Extracted but chrome.exe not found.'), { fatal: true });
+      if (!isInstalled(found.version)) throw Object.assign(new Error('Extracted but the Chrome binary was not found.'), { fatal: true });
       entry.percent = 100;
       entry.state = 'done';
       aborters.delete(found.version);
@@ -427,11 +432,20 @@ const FP_CHROMIUM_VERSION = '148.0.7778.215';
 // not identify the binary. The digest is the one GitHub reports for the asset; a
 // download that does not hash to it is deleted and never extracted or run.
 // Bumping FP_CHROMIUM_VERSION means re-validating the build and updating all three.
-const FP_CHROMIUM_ASSET = Object.freeze({
-  name: 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip',
-  size: 189767686,
-  sha256: '9ef3f471b7a6641b4224532522b29141ce3746e27d55788d88e2fd951f362579'
+// The pinned release asset PER platform, by name + size + SHA-256 (the values
+// GitHub reports for adryfish/fingerprint-chromium at this tag). A release tag can
+// have its assets replaced after publication, so the tag alone does not identify the
+// binary; a download that does not match size+digest is deleted, never run. Bumping
+// FP_CHROMIUM_VERSION means re-validating each build and updating these.
+const FP_CHROMIUM_ASSETS = Object.freeze({
+  'win64': { name: 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip', size: 189767686, sha256: '9ef3f471b7a6641b4224532522b29141ce3746e27d55788d88e2fd951f362579' },
+  'mac-x64': { name: 'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg', size: 140187500, sha256: 'b72f091e2e1a7583eed389c4b8e3534ed355e568af8c8bbf8fc30a25e23ca679' },
+  'mac-arm64': { name: 'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg', size: 140187500, sha256: 'b72f091e2e1a7583eed389c4b8e3534ed355e568af8c8bbf8fc30a25e23ca679' },
+  'linux64': { name: 'ungoogled-chromium-148.0.7778.215-1-x86_64_linux.tar.xz', size: 141269020, sha256: '70d239830332e5820aa34dfcb284161cac0429eee25da642830afe04bda717f4' }
 });
+// The asset for THIS machine. The macOS .dmg is shared by both arches (an x64 build
+// runs under Rosetta on Apple Silicon if it is not universal).
+const FP_CHROMIUM_ASSET = FP_CHROMIUM_ASSETS[CFT_PLATFORM] || FP_CHROMIUM_ASSETS['win64'];
 
 // SHA-256 of a file on disk, streamed.
 function sha256File(file) {
@@ -476,13 +490,9 @@ async function verifyFpChromiumArchive(file, pinned = FP_CHROMIUM_ASSET) {
 
 // version -> chrome.exe present anywhere one level under the root (or at the root).
 function fpChromiumInstalled() {
-  try {
-    if (fs.existsSync(path.join(FP_CHROMIUM_ROOT, 'chrome.exe'))) return true;
-    for (const ent of fs.readdirSync(FP_CHROMIUM_ROOT, { withFileTypes: true })) {
-      if (ent.isDirectory() && fs.existsSync(path.join(FP_CHROMIUM_ROOT, ent.name, 'chrome.exe'))) return true;
-    }
-  } catch (e) { /* root missing = not installed */ }
-  return false;
+  // Scans root + one level for the chromium binary, per OS (win chrome.exe, mac
+  // *.app/Contents/MacOS/*, linux chrome/chromium).
+  return !!platform.findFpChromiumBinary(FP_CHROMIUM_ROOT);
 }
 
 // Resolve the pinned windows_x64 asset URL for the pinned tag via the GitHub API.
@@ -510,9 +520,11 @@ function startFpChromiumDownload() {
     try {
       const { url } = await resolveFpChromiumAsset();
       await fsp.mkdir(FP_CHROMIUM_ROOT, { recursive: true });
-      const zip = path.join(FP_CHROMIUM_ROOT, '_fp-download.zip');
+      // Neutral extension: the artifact is a .zip (win), .dmg (mac) or .tar.xz (linux);
+      // extractFpChromium dispatches by platform and each extractor content-sniffs.
+      const archive = path.join(FP_CHROMIUM_ROOT, '_fp-download.part');
       fpStatus.state = 'downloading';
-      const { received, total } = await downloadToFile(url, zip, (rec, tot) => {
+      const { received, total } = await downloadToFile(url, archive, (rec, tot) => {
         fpStatus.receivedBytes = rec;
         fpStatus.totalBytes = tot || fpStatus.totalBytes;
         fpStatus.percent = tot ? Math.min(90, Math.round((rec / tot) * 90)) : fpStatus.percent;
@@ -520,18 +532,20 @@ function startFpChromiumDownload() {
       if (total && received < total) throw new Error('Connection interrupted before completion.');
       fpStatus.state = 'verifying';
       try {
-        await verifyFpChromiumArchive(zip);
+        await verifyFpChromiumArchive(archive);
       } catch (verifyErr) {
         // Never keep a mismatched archive: the next attempt must start from zero,
         // not resume on top of bad bytes.
-        await fsp.unlink(zip).catch(() => {});
+        await fsp.unlink(archive).catch(() => {});
         throw verifyErr;
       }
       fpStatus.state = 'extracting';
       fpStatus.percent = 92;
-      await extractZip(zip, FP_CHROMIUM_ROOT);
-      await fsp.unlink(zip).catch(() => {});
-      if (!fpChromiumInstalled()) throw Object.assign(new Error('Extracted but chrome.exe not found.'), { fatal: true });
+      await extractFpChromium(archive, FP_CHROMIUM_ROOT);
+      await fsp.unlink(archive).catch(() => {});
+      const fpBin = platform.findFpChromiumBinary(FP_CHROMIUM_ROOT);
+      if (!fpBin) throw Object.assign(new Error('Extracted but the fingerprint-chromium binary was not found.'), { fatal: true });
+      ensureExecutable(fpBin); // no-op on Windows
       fpStatus.state = 'done';
       fpStatus.percent = 100;
     } catch (e) {

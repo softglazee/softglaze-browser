@@ -9,6 +9,7 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGenerator');
 const { applyBrandWindowIcon } = require('./windowIcon');
+const platform = require('./platform');
 // Canonical install root for downloaded Chrome-for-Testing builds. Imported so the
 // binary RESOLVER reads exactly where the DOWNLOADER writes (userData when packaged,
 // project root in dev). No circular dep - browserDownloader needs only node + electron.
@@ -360,12 +361,13 @@ function listAvailableBrowsers() {
     try { entries = fsSync.readdirSync(dir, { withFileTypes: true }); } catch (e) { continue; }
     for (const ent of entries) {
       if (!ent.isDirectory()) continue;
-      const m = /^win64-(\d+)\.([\d.]+)$/.exec(ent.name);
+      // CHROME_INSTALL_DIR_RE captures [full, cftToken, major, rest] across all OSes.
+      const m = platform.CHROME_INSTALL_DIR_RE.exec(ent.name);
       if (!m) continue;
-      const exe = path.join(dir, ent.name, 'chrome-win64', 'chrome.exe');
+      const exe = path.join(dir, ent.name, ...platform.chromeBinaryFromInstallDir().split('/'));
       if (!fsSync.existsSync(exe)) continue;
-      const version = `${m[1]}.${m[2]}`;
-      if (!seen.has(version)) seen.set(version, { major: Number(m[1]), version, exePath: exe });
+      const version = `${m[2]}.${m[3]}`;
+      if (!seen.has(version)) seen.set(version, { major: Number(m[2]), version, exePath: exe });
     }
   }
   // newest first
@@ -395,14 +397,9 @@ function resolveBrowserExecutable(desired) {
 // presents a genuine, unremarkable Chrome identity. Returns { exePath, version,
 // major, isReal:true } or null.
 function findRealChrome() {
-  const pf = process.env['ProgramFiles'] || 'C:/Program Files';
-  const pf86 = process.env['ProgramFiles(x86)'] || 'C:/Program Files (x86)';
-  const lad = process.env['LOCALAPPDATA'] || '';
-  const candidates = [
-    path.join(pf, 'Google/Chrome/Application/chrome.exe'),
-    path.join(pf86, 'Google/Chrome/Application/chrome.exe'),
-    lad ? path.join(lad, 'Google/Chrome/Application/chrome.exe') : null
-  ].filter(Boolean);
+  // System Chrome/Chromium install locations for THIS OS (Windows Program Files,
+  // macOS /Applications .app bundles, Linux /usr/bin + snap).
+  const candidates = platform.realChromeCandidates();
   for (const exe of candidates) {
     try {
       if (!fsSync.existsSync(exe)) continue;
@@ -458,16 +455,8 @@ function resolveAntidetectBinary() {
   // Packaged (userData/../fp-chromium) first, then the dev checkout's <repo>/fp-chromium.
   const roots = [FP_CHROMIUM_ROOT, path.resolve(__dirname, '../../fp-chromium')];
   for (const root of roots) {
-    try {
-      const direct = path.join(root, 'chrome.exe');
-      if (fsSync.existsSync(direct)) return direct;
-      // The GitHub release extracts to a single versioned subdir (…_windows_x64/chrome.exe).
-      for (const ent of fsSync.readdirSync(root, { withFileTypes: true })) {
-        if (!ent.isDirectory()) continue;
-        const nested = path.join(root, ent.name, 'chrome.exe');
-        if (fsSync.existsSync(nested)) return nested;
-      }
-    } catch (e) { /* root missing - try the next */ }
+    const bin = platform.findFpChromiumBinary(root); // per-OS scan of root + one level
+    if (bin) return bin;
   }
   return null;
 }

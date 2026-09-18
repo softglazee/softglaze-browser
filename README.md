@@ -9,6 +9,16 @@ sharing cookies, storage, or device characteristics.
 All data stays on the machine. There is no hosted backend and no profile
 syncing to a remote server.
 
+## Download and demo
+
+- **Website:** [browser.softglaze.com](https://browser.softglaze.com)
+- **Try it now:** an [interactive demo](https://browser.softglaze.com/demo) runs in
+  your browser with simulated data, no install required.
+- **Download:** get the installer from the
+  [download page](https://browser.softglaze.com/download).
+
+Runs on **Windows, macOS, and Linux**.
+
 ## Stack
 
 - Electron main process
@@ -61,7 +71,7 @@ break the rules of a platform you have agreed to.
 
 - Node.js 20.19.0 or newer
 - npm 10 or newer
-- Windows, macOS, or Linux for development. Packaged installers are currently built for Windows (x64) only.
+- Windows, macOS, or Linux, for both development and packaged installers
 
 ## Install
 
@@ -106,6 +116,18 @@ Build output is written to:
 ```txt
 dist_installer/
 ```
+
+### Cross-platform installers
+
+`npm run build` produces an installer for whichever OS it runs on:
+
+- **Windows** — NSIS `.exe` (x64)
+- **macOS** — `.dmg`
+- **Linux** — `.AppImage` and `.deb`
+
+The [`Release builds`](.github/workflows/release.yml) GitHub Actions workflow builds
+all three from a single matrix (Windows, macOS and Linux runners) and uploads them as
+artifacts. macOS builds are currently unsigned, pending an Apple Developer certificate.
 
 ### Testing build
 

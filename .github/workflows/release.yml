@@ -1,0 +1,71 @@
+name: Release builds
+
+# Builds installable artifacts for Windows, macOS and Linux from one matrix.
+# Trigger it manually (Actions -> Release builds -> Run workflow) or by pushing a
+# v* tag. It uploads per-OS installers as workflow ARTIFACTS for testing on real
+# hardware; it does NOT publish a public GitHub Release (electron-builder runs with
+# --publish never), and macOS is unsigned for now, so nothing broken or unsigned
+# ships to users automatically. Wire signing + `--publish always` once verified.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    name: ${{ matrix.platform }} build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+          - os: ubuntu-latest
+            platform: linux
+    runs-on: ${{ matrix.os }}
+    env:
+      # The app never launches a real Chrome/Electron during build; skip those
+      # large downloads. A base (unlicensed) build is what CI produces for testing.
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      SG_ALLOW_BASE_BUILD: '1'
+      # No Apple certificate in CI yet: tell electron-builder not to hunt for one,
+      # so the macOS build completes unsigned instead of failing.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build renderer
+        run: npx vite build
+
+      - name: Build bundled Firefox autofill extension
+        run: node scripts/build-firefox-ext.mjs
+
+      - name: Generate Prisma client (this OS's engine)
+        run: npx prisma generate
+
+      - name: Package installers (no publish)
+        run: npx electron-builder --publish never
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: softglaze-${{ matrix.platform }}
+          path: |
+            dist_installer/*.exe
+            dist_installer/*.dmg
+            dist_installer/*.AppImage
+            dist_installer/*.deb
+          if-no-files-found: ignore

@@ -17,6 +17,8 @@ const { pathToFileURL } = require('node:url');
 const { parseProxyInput } = require('./browserEngine');
 const { startSocksAuthRelay } = require('./socksRelay');
 const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
+const platform = require('./platform');
+const { extractFirefox } = require('./extractArchive');
 // `app` is a string path (not the API object) when required outside Electron, so
 // `app && app.isPackaged` is a safe runtime guard.
 const { app } = require('electron');
@@ -28,11 +30,14 @@ const FIREFOX_ROOT = (app && app.isPackaged)
   ? path.join(app.getPath('userData'), 'firefox')
   : path.resolve(__dirname, '../../firefox');
 
+// Absolute path of the launchable firefox binary inside an install dir, per OS
+// (firefox.exe on Windows, Firefox.app/Contents/MacOS/firefox on mac, firefox/firefox on linux).
+function firefoxBinaryInDir(dir) { return path.join(dir, ...platform.firefoxBinaryRel().split('/')); }
+
+// System Firefox locations for THIS OS, then an optional downloaded copy at the root.
 const FIREFOX_CANDIDATES = [
-  path.join(process.env.ProgramFiles || 'C:/Program Files', 'Mozilla Firefox', 'firefox.exe'),
-  path.join(process.env['ProgramFiles(x86)'] || 'C:/Program Files (x86)', 'Mozilla Firefox', 'firefox.exe'),
-  path.join(process.env.LOCALAPPDATA || '', 'Mozilla Firefox', 'firefox.exe'),
-  path.join(FIREFOX_ROOT, 'firefox.exe') // optional downloaded copy
+  ...platform.firefoxSystemCandidates(),
+  firefoxBinaryInDir(FIREFOX_ROOT)
 ].filter(Boolean);
 
 function findFirefoxBinary() {
@@ -47,7 +52,7 @@ function findFirefoxBinary() {
 function firefoxInstallDir(version) { return path.join(FIREFOX_ROOT, String(version)); }
 
 function isFirefoxVersionInstalled(version) {
-  try { return fs.existsSync(path.join(firefoxInstallDir(version), 'firefox.exe')); }
+  try { return fs.existsSync(firefoxBinaryInDir(firefoxInstallDir(version))); }
   catch (e) { return false; }
 }
 
@@ -55,7 +60,7 @@ function isFirefoxVersionInstalled(version) {
 // versioned install, then fall back to whatever Firefox is on the machine.
 function resolveFirefoxBinary(version) {
   if (version && String(version) !== 'Auto') {
-    const p = path.join(firefoxInstallDir(version), 'firefox.exe');
+    const p = firefoxBinaryInDir(firefoxInstallDir(version));
     try { if (fs.existsSync(p)) return p; } catch (e) { /* ignore */ }
   }
   return findFirefoxBinary();
@@ -591,8 +596,8 @@ function ffMajor(v) { return parseInt(String(v), 10); }
 function ffFullVersion(v) { const s = String(v); return /^\d+\.\d/.test(s) ? s : `${ffMajor(v)}.0`; }
 
 function ffInstallerUrl(version) {
-  const full = ffFullVersion(version);
-  return `https://ftp.mozilla.org/pub/firefox/releases/${full}/win64/en-US/Firefox%20Setup%20${full}.exe`;
+  // Per-OS artifact: win64 .exe, mac .dmg, linux-x86_64 .tar.xz.
+  return platform.firefoxInstallerUrl(ffFullVersion(version));
 }
 
 // SHA-256 of a local file (streamed).
@@ -618,7 +623,7 @@ async function ffExpectedInstallerSha(version) {
   if (res.statusCode !== 200) { try { res.resume(); } catch (_) {} return null; }
   let text = '';
   try { for await (const chunk of res) { text += chunk; if (text.length > 5_000_000) break; } } catch (e) { return null; }
-  const wanted = `win64/en-US/Firefox Setup ${full}.exe`;
+  const wanted = platform.firefoxSha256Key(full); // per-OS key in SHA256SUMS
   for (const line of text.split(/\r?\n/)) {
     const m = /^([0-9a-fA-F]{64})\s+(.+)$/.exec(line.trim());
     if (m && m[2] === wanted) return m[1].toLowerCase();
@@ -728,29 +733,17 @@ async function ffDownloadToFile(url, dest, onProgress, registerAbort) {
   return { received, total };
 }
 
-// Portable extraction - NO Windows install. The Mozilla "Firefox Setup <v>.exe" is a
-// 7-Zip SFX whose payload lives under a top-level `core/` folder. Running the NSIS
-// installer (even silent /S /D=) registers Firefox system-wide: HKLM/HKCU keys, an
-// Add/Remove-Programs entry PER version, the Mozilla Maintenance Service, and the
-// default-browser-agent scheduled task - exactly the footprint we must avoid. Instead
-// we extract the payload with Windows' built-in bsdtar (System32\tar.exe, libarchive
-// - ships on Win10 17063+/Win11, no new dependency), flattening `core/` so
-// firefox.exe lands directly at <dir>/firefox.exe (the layout resolveFirefoxBinary /
-// isFirefoxVersionInstalled expect). Result: a self-contained /firefox/<major> tree
-// with zero system footprint, exactly like the unzipped Chrome-for-Testing build.
+// Portable extraction - NO system install, per OS (see extractArchive.extractFirefox):
+//   Windows: the "Firefox Setup <v>.exe" 7-Zip SFX, bsdtar-flattened from core/ so
+//            firefox.exe lands at <dir>/firefox.exe. Running the NSIS installer would
+//            register Firefox system-wide (HKLM/HKCU keys, Add/Remove entry, the
+//            Maintenance Service, the default-browser-agent task) - the footprint we avoid.
+//   macOS:   the .dmg is mounted read-only and Firefox.app is copied out (ditto).
+//   Linux:   the .tar.xz is unpacked to <dir>/firefox/.
+// The resulting layout matches platform.firefoxBinaryRel() that resolveFirefoxBinary /
+// isFirefoxVersionInstalled expect, with zero system footprint.
 function extractFirefoxPortable(part, dir) {
-  return new Promise((resolve, reject) => {
-    const tarExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
-    // --strip-components=1 core : take ONLY the installer's core/ tree and drop the
-    // leading "core/" path segment, so we get <dir>/firefox.exe not <dir>/core/firefox.exe.
-    const ps = spawn(tarExe, ['-xf', part, '-C', dir, '--strip-components=1', 'core'], { windowsHide: true });
-    let err = '';
-    if (ps.stderr) ps.stderr.on('data', (d) => { err += d.toString(); });
-    ps.on('error', reject);
-    ps.on('close', (code) => (code === 0
-      ? resolve()
-      : reject(new Error('Firefox extract failed: ' + (err.slice(0, 300) || `exit ${code}`)))));
-  });
+  return extractFirefox(part, dir);
 }
 
 function startFirefoxDownload(version) {
@@ -816,7 +809,7 @@ function startFirefoxDownload(version) {
       await extractFirefoxPortable(part, firefoxInstallDir(major));
       await fsp.unlink(part).catch(() => {});
 
-      if (!isFirefoxVersionInstalled(major)) throw Object.assign(new Error('Extracted but firefox.exe was not found.'), { fatal: true });
+      if (!isFirefoxVersionInstalled(major)) throw Object.assign(new Error('Extracted but the Firefox binary was not found.'), { fatal: true });
       entry.percent = 100;
       entry.state = 'done';
       ffAborters.delete(major);

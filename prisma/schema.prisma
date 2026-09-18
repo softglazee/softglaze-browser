@@ -1,5 +1,9 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Cross-platform native query engines. `native` covers the build machine; the
+  // rest let each CI runner ship the engines its OS's users need (both mac arches,
+  // and glibc Linux x64). afterPack.js bundles whatever prisma generate produced.
+  binaryTargets = ["native", "darwin", "darwin-arm64", "debian-openssl-3.0.x"]
 }
 
 datasource db {
