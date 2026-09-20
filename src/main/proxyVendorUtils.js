@@ -477,7 +477,62 @@ function proxidizePerGbUsername(base, { country, state, city, session } = {}) {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------
+// Live Proxies (rotating residential, static residential, rotating mobile).
+//
+// What is actually documented publicly is the CREDENTIAL shape, not an endpoint: the help
+// centre's own curl example is
+//   curl -x LV3418547-dc1LU7SsG-33:AL7sj3xus1@172.148.150.38:7383 http://ipinfo.io/
+// i.e. plain `username:password@host:port`, which parseLoginLine already handles (including
+// a password containing '@' or ':'). Plans are downloaded as a list from the dashboard, and
+// the programmatic API is documented inside the dashboard rather than on the public site.
+//
+// So this adapter takes the list URL the user copies out of THEIR dashboard instead of a
+// guessed endpoint. The URL is pinned to liveproxies.io over https so a typo or a pasted
+// third-party link cannot turn the pull into a request to an arbitrary host, and the account
+// access code that Live Proxies embeds in that URL never has to be handled separately.
+const LIVEPROXIES_HOST = /(^|\.)liveproxies\.io$/i;
+function liveProxiesListUrl(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  let u;
+  try { u = new URL(text); } catch (e) { return null; }
+  if (u.protocol !== 'https:') return null;
+  if (!LIVEPROXIES_HOST.test(u.hostname)) return null;
+  return u.toString();
+}
+
+// Map a downloaded Live Proxies list into pool rows. Rotating plans hand out one gateway
+// endpoint that re-rotates per request, so a repeated line is ONE proxy; parseLoginList
+// already dedupes on host/port/username, which is the identity the pool dedupes on too.
+const LIVEPROXIES_PLANS = Object.freeze({
+  residential: 'Residential',
+  static: 'Static residential',
+  mobile: 'Mobile'
+});
+function liveProxiesPlanLabel(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return LIVEPROXIES_PLANS[v] || LIVEPROXIES_PLANS.residential;
+}
+function liveProxiesRows(text, { socks = false, country = '', plan = 'residential' } = {}) {
+  const cc = String(country || '').trim().toUpperCase();
+  const where = /^[A-Z]{2}$/.test(cc) ? cc : '';
+  const kind = liveProxiesPlanLabel(plan);
+  return parseLoginList(text).map((r) => ({
+    type: socks ? 'SOCKS5' : 'HTTP',
+    host: r.host,
+    port: r.port,
+    username: r.username,
+    password: r.password,
+    label: `Live Proxies • ${kind} • ${where || 'Global'}`,
+    country: where || null
+  }));
+}
+
 module.exports = {
+  liveProxiesListUrl,
+  liveProxiesRows,
+  liveProxiesPlanLabel,
   parseIpRoyalLine,
   ipRoyalLifetime,
   ipRoyalLocation,

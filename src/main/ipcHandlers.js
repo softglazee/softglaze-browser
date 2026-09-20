@@ -69,7 +69,8 @@ const {
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword,
-  parseProxidizePerProxy, proxidizePerGbUsername
+  parseProxidizePerProxy, proxidizePerGbUsername,
+  liveProxiesListUrl, liveProxiesRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1265,7 +1266,7 @@ const PROXY_VENDORS = Object.freeze({
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
-  froxy: 'Froxy', proxidize: 'Proxidize'
+  froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -2496,6 +2497,37 @@ async function fetchProxidizePool({ token, username, host, country, state, city,
   return rows;
 }
 
+// --- Live Proxies: pull the plan's own list --------------------------------------------
+// Live Proxies hands each plan a downloadable proxy list (and documents the credential
+// shape as username:password@host:port; see liveProxiesListUrl for why the URL comes from
+// the user's dashboard rather than a hardcoded endpoint). The list URL already carries the
+// account access code, so an optional Bearer token is sent only when the user supplies one.
+async function fetchLiveProxiesPool({ apiUrl, token, country, proxyType, poolType }) {
+  const url = liveProxiesListUrl(apiUrl);
+  if (!url) {
+    throw new Error('Live Proxies: paste the proxy list URL from your dashboard (it must be an https liveproxies.io link).');
+  }
+  const t = String(token || '').trim();
+  let text;
+  try {
+    text = await httpRequestText(url, {
+      method: 'GET',
+      headers: { Accept: 'text/plain, application/json;q=0.9, */*;q=0.8', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+      timeoutMs: 30000,
+      maxBytes: 20_000_000
+    });
+  } catch (e) {
+    const raw = String((e && e.message) || 'request failed');
+    throw new Error(`Live Proxies list: ${t ? raw.split(t).join('***') : raw}`);
+  }
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const rows = liveProxiesRows(text, { socks, country, plan: poolType });
+  if (!rows.length) {
+    throw new Error('Live Proxies returned no usable proxies. Check the plan is active and that the link is the proxy list, not the dashboard page.');
+  }
+  return rows;
+}
+
 const VENDOR_LOOKUPS = Object.freeze({
   dataimpulse: lookupDataImpulse,
   proxyseller: lookupProxySeller,
@@ -2534,7 +2566,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   marsproxies: fetchMarsProxiesPool,
   nodemaven: fetchNodeMavenPool,
   froxy: fetchFroxyPool,
-  proxidize: fetchProxidizePool
+  proxidize: fetchProxidizePool,
+  liveproxies: fetchLiveProxiesPool
 });
 
 async function syncVendorPool(payload) {

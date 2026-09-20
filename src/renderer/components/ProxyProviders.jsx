@@ -61,7 +61,11 @@ export const PROVIDERS = [
   { key: 'froxy', name: 'Froxy', initials: 'FX', color: '#7c3aed', referral: 'https://froxy.com/?ref=softglaze', gateway: { host: 'proxy.froxy.com', port: 9000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], geo: true } },
   // Proxidize: a Bearer token. Per-Proxy plans return ready credentials for a per-proxy
   // username; Per-GB plans build from an access point against the gateway host from Proxy Details.
-  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], count: true, poolType: true, geo: true, gateway: true } }
+  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], count: true, poolType: true, geo: true, gateway: true } },
+  // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
+  // already inside that URL), so the pull takes the link rather than a guessed endpoint.
+  // Credentials come back as username:password@host:port, which the shared parser handles.
+  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: [], apiUrl: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
@@ -104,6 +108,7 @@ export const PROXY_COUNTRIES = [
 ];
 
 const GEO_HINTS = {
+  liveproxies: 'Live Proxies gives each plan its own proxy list link in the dashboard, and your account access code is already inside that link, so nothing else needs entering. Open the dashboard, copy the proxy list URL for the plan you want, and paste it above; the link must be an https liveproxies.io one. Credentials arrive as username:password@host:port. Pick the plan type so the pulled proxies are labelled correctly. A rotating plan is one gateway endpoint that changes exit IP per request, so it imports as a single proxy; a static plan imports one row per IP.',
   apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.',
   smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
   shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
@@ -1280,6 +1285,8 @@ export function ProviderLogo({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="5.5" /><circle cx="12" cy="12" r="9" /></svg>);
     case 'dataimpulse': // pulse line
       return (<svg {...line}><path d="M3 12h4l2.5-6 5 12 2.5-6H21" /></svg>);
+    case 'liveproxies': // live signal waves
+      return (<svg {...line}><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /><path d="M8.5 15.5a5 5 0 0 1 0-7" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M5.8 18.2a9 9 0 0 1 0-12.4" /><path d="M18.2 5.8a9 9 0 0 1 0 12.4" /></svg>);
     case 'iproyal': // crown
       return (<svg {...line}><path d="M4 17l-1-9 5 4 4-7 4 7 5-4-1 9z" /><path d="M5 20h14" /></svg>);
     case 'proxyseller': // stacked list rows
