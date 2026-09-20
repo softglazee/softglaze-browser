@@ -4451,24 +4451,43 @@ function getBulkLaunchStatus() {
 async function controlBulkLaunch(payload) {
   const input = requireObject(payload);
   const action = String(input.action || '').toLowerCase();
+  let closed = [];
   if (action === 'pause') bulkLaunchState.paused = true;
   else if (action === 'resume') bulkLaunchState.paused = false;
   else if (action === 'stop' || action === 'end' || action === 'abort') {
     bulkLaunchState.aborted = true;
     bulkLaunchState.paused = false;
+    // Stop used to only stop launching MORE profiles and left every browser the queue
+    // had already opened running, which reads as "Stop did nothing". Close the sessions
+    // THIS run started. Profiles that were already open before the queue began are not
+    // touched: they are the user's, not the queue's. Pass closeOpened:false to opt out.
+    if (input.closeOpened !== false && Array.isArray(bulkLaunchState.started)) {
+      const started = bulkLaunchState.started.splice(0);
+      for (const s of started) {
+        try {
+          const r = await closeAnySession(s.sessionId);
+          if (r && r.closed) closed.push(s.id);
+        } catch (e) { /* a session that already died is not an error here */ }
+      }
+      if (closed.length) reconcileProfileLocks();
+    }
   }
-  emitBulkLaunchProgress({ phase: 'control', active: bulkLaunchState.active, paused: bulkLaunchState.paused, aborted: bulkLaunchState.aborted });
-  return { ...bulkLaunchState };
+  emitBulkLaunchProgress({ phase: 'control', active: bulkLaunchState.active, paused: bulkLaunchState.paused, aborted: bulkLaunchState.aborted, closed });
+  return { ...bulkLaunchState, closed };
 }
 
-function waitForSessionClose(sessionId) {
+// `state` is the run's OWN state object, not the module-level `bulkLaunchState`.
+// Reading the module-level one here was half of the double-launch bug: once a second
+// run replaced it, the first run's workers started reading the NEW run's flags and
+// could never be told to stop.
+function waitForSessionClose(sessionId, state) {
   return new Promise((resolve) => {
     const interval = setInterval(() => {
       // listAllSessions() gets all active Chrome & Firefox sessions
       const isOpen = listAllSessions().some((s) => String(s.sessionId) === String(sessionId));
       // Stop waiting if the user aborted the queue - otherwise a stopped queue
       // would hang here until the profile is manually closed.
-      if (!isOpen || bulkLaunchState.aborted) {
+      if (!isOpen || (state && state.aborted)) {
         clearInterval(interval);
         resolve();
       }
@@ -4490,8 +4509,18 @@ async function bulkLaunchProfiles(payload) {
   const width = Math.min(cap, total);
   let done = 0;
   let cursor = 0;
-  // Reset queue control state for this run so pause/resume/stop apply to it.
-  bulkLaunchState = { runId: crypto.randomUUID(), active: true, paused: false, aborted: false, total, done: 0, ids: ids.slice(), width, queue: false };
+  // A run in flight MUST be stopped before starting another, or its workers keep
+  // launching alongside the new run's workers and "1 at a time" opens two browsers.
+  // Clicking Launch twice (or launching again before the queue drains) is the ordinary
+  // way to hit this. The previous run's workers hold their OWN state object, so setting
+  // aborted here is visible to them even after bulkLaunchState is replaced below.
+  if (bulkLaunchState && bulkLaunchState.active) {
+    bulkLaunchState.aborted = true;
+    bulkLaunchState.active = false;
+  }
+  // Per-run state. Workers close over THIS object rather than the module-level binding.
+  const state = { runId: crypto.randomUUID(), active: true, paused: false, aborted: false, total, done: 0, ids: ids.slice(), width, queue: false, started: [] };
+  bulkLaunchState = state;
   emitBulkLaunchProgress({ phase: 'start', total, done, width });
 
   // Queue mode: each worker holds its slot until the user CLOSES that browser, so
@@ -4501,37 +4530,40 @@ async function bulkLaunchProfiles(payload) {
   // three open and feeds the rest in as they close. Absent the explicit flag, keep the
   // historical behaviour where a concurrency of 1 implied a queue.
   const isQueueMode = input.queue !== undefined ? Boolean(input.queue) : (cap === 1);
-  bulkLaunchState.queue = isQueueMode;
+  state.queue = isQueueMode;
 
   const worker = async () => {
     while (cursor < ids.length) {
       // Stop: abort the rest of the queue.
-      if (bulkLaunchState.aborted) break;
+      if (state.aborted) break;
       // Pause: hold before starting the next profile (already-open ones stay open).
-      while (bulkLaunchState.paused && !bulkLaunchState.aborted) {
+      while (state.paused && !state.aborted) {
         await new Promise((r) => setTimeout(r, 300));
       }
-      if (bulkLaunchState.aborted) break;
+      if (state.aborted) break;
       const id = ids[cursor++];
       try {
         const session = await launchProfile({ id });
         result.launched.push({ id, sessionId: session.sessionId });
-        
+        // Only sessions this run actually STARTED are ours to close on Stop. A profile
+        // that was already open before the queue began belongs to the user, not to us.
+        if (!session.alreadyRunning) state.started.push({ id, sessionId: session.sessionId });
+
         // Push progress to the UI immediately that it launched successfully
         emitBulkLaunchProgress({ phase: 'launched', id, total, done: done + 1, ok: true });
 
         // NEW LOGIC: If in queue mode, halt this worker until the session is closed by the user
         if (isQueueMode) {
-          await waitForSessionClose(session.sessionId);
+          await waitForSessionClose(session.sessionId, state);
         }
 
         done += 1;
-        bulkLaunchState.done = done;
+        state.done = done;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         result.errors.push({ id, message });
         done += 1;
-        bulkLaunchState.done = done;
+        state.done = done;
         emitBulkLaunchProgress({ phase: 'launched', id, total, done, ok: false, message });
       }
     }
@@ -4542,16 +4574,16 @@ async function bulkLaunchProfiles(payload) {
     // Otherwise the IPC call hangs and the UI loading spinner spins forever.
     // Fire the worker pool in the background and resolve immediately.
     Promise.all(Array.from({ length: width }, () => worker())).then(() => {
-      const aborted = bulkLaunchState.aborted;
-      bulkLaunchState.active = false;
+      const aborted = state.aborted;
+      state.active = false;
       emitBulkLaunchProgress({ phase: 'done', total, done, aborted });
     });
     return { message: "Queue started in background.", launched: [], errors: [] };
   } else {
     // Normal concurrent launch: await all browser startups
     await Promise.all(Array.from({ length: width }, () => worker()));
-    const aborted = bulkLaunchState.aborted;
-    bulkLaunchState.active = false;
+    const aborted = state.aborted;
+    state.active = false;
     emitBulkLaunchProgress({ phase: 'done', total, done, aborted });
     return result;
   }

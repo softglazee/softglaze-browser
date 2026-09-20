@@ -2075,9 +2075,14 @@ export default function ProfilesPage() {
       {/* Shown when there is a selection OR a bulk queue is in flight. The queue's
           Stop/Pause/Resume controls used to be nested inside the selection gate, so a
           remount (navigate away and back) emptied selectedIds and hid the only way to
-          stop a running queue - even once its progress had been restored. */}
+          stop a running queue - even once its progress had been restored.
+
+          flex-wrap matters here: with a selection AND a queue in flight this row carries
+          the count, the progress text, Pause/Stop, the queue width control and ten action
+          buttons. Unwrapped they overflowed the panel and Delete/Clear were clipped off
+          the right edge of the window at ordinary widths. */}
       {(selectedIds.size > 0 || launchProgress) && (
-        <div className="mb-5 flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
+        <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
           {selectedIds.size > 0 && <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>}
           {launchProgress && (
             <span className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
@@ -2105,7 +2110,7 @@ export default function ProfilesPage() {
             </span>
           )}
           {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex flex-wrap items-center justify-end gap-2 ml-auto min-w-0">
             <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground cursor-pointer select-none" title={t('bulk.queueTitle', 'Feed the selected profiles through a queue: keep a fixed number open at a time and start the next one as each is closed.')}>
               <input type="checkbox" checked={launchQueue} onChange={(e) => setLaunchQueue(e.target.checked)} disabled={bulkBusy} className="accent-primary" /> {t('bulk.queue', 'Queue')}
             </label>
