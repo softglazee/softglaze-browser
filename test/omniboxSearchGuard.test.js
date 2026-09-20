@@ -105,6 +105,15 @@ test('the New Tab override stays off for the anti-detect engine', () => {
   // Overriding it made Chromium show "An extension changed your New Tab page -
   // Keep it / Change it back" on every new tab, which is both an annoyance and an
   // anti-detect tell. Only Chrome-for-Testing needs it, because its own NTP crashes.
-  assert.match(SRC, /ntpOverride: usingCft,/, 'the override must be gated to CfT alone');
+  // `usingCft` means "not real Chrome", which is ALSO true of the anti-detect build,
+  // so gating on it turned the override on for fingerprint-chromium and produced the
+  // "changed by the Core extension" prompt. The gate must exclude antidetect explicitly.
+  assert.match(SRC, /ntpOverride: isChromeForTesting/, 'the override must use the precise gate');
+  assert.match(
+    SRC,
+    /const isChromeForTesting = usingCft && !\(chosenBrowser && chosenBrowser\.antidetect\)/,
+    'Chrome-for-Testing must be distinguished from the anti-detect build'
+  );
+  assert.ok(!/ntpOverride: usingCft/.test(SRC), 'the loose gate must not come back');
   assert.ok(!/ntpOverride: usingCft \|\| usingAntidetect/.test(SRC));
 });
