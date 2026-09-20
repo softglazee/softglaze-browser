@@ -1881,8 +1881,15 @@ function omniboxSearchUrl(rawUrl, template) {
   return use.replace('{searchTerms}', encodeURIComponent(typed));
 }
 
+// A tab can pass through the targetcreated handler more than once (a freshly opened tab
+// is blank on the first pass and is re-applied once it navigates somewhere real), so
+// remember which pages are already guarded or they would redirect twice.
+const omniboxGuarded = new WeakSet();
+
 function attachOmniboxSearchGuard(page, template) {
   try {
+    if (!page || omniboxGuarded.has(page)) return;
+    omniboxGuarded.add(page);
     page.on('framenavigated', async (frame) => {
       try {
         if (frame !== page.mainFrame()) return;
@@ -3319,6 +3326,15 @@ const rootCdp = await browser.target().createCDPSession();
     // is nothing to spoof there, and running proxy-auth / CDP work on the NTP -
     // which fetches Google content through the proxy - was crashing the browser
     // when a new tab was opened. We re-run on the real navigation (see below).
+    // The omnibox guard goes on FIRST, before the internal/blank early returns below.
+    // A tab opened with "+" is blank at targetcreated time and returns early, which is
+    // exactly the tab the user then types a search into, so attaching it after those
+    // returns meant new tabs were never guarded (measured: http://softglaze stayed put).
+    // It is safe here because it only registers a framenavigated listener: no CDP work,
+    // no proxy auth and no request interception, which are what made touching a
+    // transient internal tab crash the browser.
+    attachOmniboxSearchGuard(targetPage, browserSettings && browserSettings.searchUrl);
+
     let pageUrl = '';
     try { pageUrl = targetPage.url(); } catch (e) {}
     const isInternal = /^(chrome|chrome-extension|devtools|edge|view-source):/i.test(pageUrl);
@@ -3332,9 +3348,6 @@ const rootCdp = await browser.target().createCDPSession();
     if (isNewTab && (isInternal || isBlank)) return;
     if (isInternal) return;
     appliedPages.add(targetPage);
-    // A tab opened with "+" is where the broken "No Search" template bites most, so the
-    // guard goes on every new tab too, not just the first one.
-    attachOmniboxSearchGuard(targetPage, browserSettings && browserSettings.searchUrl);
     try {
       // MOST timing-sensitive FIRST: a target="_blank" popup begins navigating
       // the instant it's created, so the init script must be registered before
