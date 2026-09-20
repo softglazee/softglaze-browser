@@ -1877,7 +1877,19 @@ function escapeHtml(value) {
 // is never a real public destination. Rewrite it to a real search. Hosts with a dot, IP
 // literals, localhost, host:port and any non-http scheme are left completely alone, so
 // http://intranet.corp and http://192.168.1.1 still work.
-const DEFAULT_SEARCH_TEMPLATE = 'https://www.google.com/search?q={searchTerms}';
+// Google is deliberately NOT the default. Measured on a clean residential proxy, same
+// browser, same IP, back to back:
+//   google.com/search?q=...  -> HTTP 429 + the /sorry/ reCAPTCHA interstitial
+//   bing.com/search?q=...    -> HTTP 200, no challenge
+//   duckduckgo.com/?q=...    -> HTTP 200, no challenge
+//   google.com (homepage)    -> HTTP 200, no challenge
+// The IP is not burned: Google's own homepage loads fine on it. What Google rejects is a
+// profile with no Google cookies issuing a direct /search request, which is the shape of a
+// scraper, and a shared residential IP whose per-IP search quota other users have already
+// spent. A fresh anti-detect profile is that shape by definition, so pointing the address
+// bar at Google guarantees a CAPTCHA on the very first search. Override per workspace with
+// browserSettings.searchUrl if a Google-shaped session is actually wanted.
+const DEFAULT_SEARCH_TEMPLATE = 'https://duckduckgo.com/?q={searchTerms}';
 
 function omniboxSearchUrl(rawUrl, template) {
   let u;

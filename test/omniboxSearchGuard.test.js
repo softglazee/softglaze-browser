@@ -30,20 +30,20 @@ const omniboxSearchUrl = ctx.omniboxSearchUrl;
 
 test('a single-label http host is rewritten to a search', () => {
   const out = omniboxSearchUrl('http://softglaze/');
-  assert.equal(out, 'https://www.google.com/search?q=softglaze');
+  assert.equal(out, 'https://duckduckgo.com/?q=softglaze');
 });
 
 test('what the user typed after the host is preserved', () => {
-  assert.equal(omniboxSearchUrl('http://softglaze/browser'), 'https://www.google.com/search?q=softglaze%2Fbrowser');
+  assert.equal(omniboxSearchUrl('http://softglaze/browser'), 'https://duckduckgo.com/?q=softglaze%2Fbrowser');
 });
 
 test('a custom search template is honoured', () => {
   assert.equal(
-    omniboxSearchUrl('http://softglaze/', 'https://duckduckgo.com/?q={searchTerms}'),
-    'https://duckduckgo.com/?q=softglaze'
+    omniboxSearchUrl('http://softglaze/', 'https://www.bing.com/search?q={searchTerms}'),
+    'https://www.bing.com/search?q=softglaze'
   );
   // A template missing the placeholder must not produce a broken URL.
-  assert.equal(omniboxSearchUrl('http://softglaze/', 'https://example.com/'), 'https://www.google.com/search?q=softglaze');
+  assert.equal(omniboxSearchUrl('http://softglaze/', 'https://example.com/'), 'https://duckduckgo.com/?q=softglaze');
 });
 
 test('real destinations are never hijacked', () => {
@@ -116,4 +116,14 @@ test('the New Tab override stays off for the anti-detect engine', () => {
   );
   assert.ok(!/ntpOverride: usingCft/.test(SRC), 'the loose gate must not come back');
   assert.ok(!/ntpOverride: usingCft \|\| usingAntidetect/.test(SRC));
+});
+
+test('the default engine is not Google', () => {
+  // Measured on a clean residential proxy, same browser and IP, back to back:
+  // google.com/search -> HTTP 429 + /sorry/ reCAPTCHA, while bing and duckduckgo
+  // returned 200 and Google's own homepage returned 200. A fresh profile with no
+  // Google cookies making a direct /search request is the shape Google rejects, so
+  // sending the address bar there guarantees a CAPTCHA on the first search.
+  assert.ok(!/DEFAULT_SEARCH_TEMPLATE = 'https:\/\/www\.google\.com/.test(SRC), 'Google must not be the default');
+  assert.match(SRC, /DEFAULT_SEARCH_TEMPLATE = 'https:\/\/duckduckgo\.com/);
 });
