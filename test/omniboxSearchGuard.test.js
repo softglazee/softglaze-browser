@@ -88,3 +88,23 @@ test('the guard cannot attach twice to one page', () => {
   assert.match(SRC, /omniboxGuarded\.has\(page\)/);
   assert.match(SRC, /omniboxGuarded\.add\(page\)/);
 });
+
+test('the guard acts on the navigation request, not only the committed URL', () => {
+  // http://<word> usually FAILS to resolve through a proxy, so Chromium commits
+  // chrome-error://chromewebdata/ and the typed word is gone from the frame URL.
+  // Reproduced live in a "+" tab: the committed-URL-only version did nothing.
+  const fn = SRC.slice(SRC.indexOf('function attachOmniboxSearchGuard'), SRC.indexOf('async function generateStartPage'));
+  assert.match(fn, /page\.on\('request'/, 'must hook the navigation request');
+  assert.match(fn, /isNavigationRequest\(\)/);
+  assert.match(fn, /req\.frame\(\) !== page\.mainFrame\(\)/, 'sub-frame requests must be ignored');
+  // The prose above mentions interception deliberately, so assert on the CALL.
+  assert.ok(!/\.setRequestInterception\(/.test(fn), 'listening must stay passive, never intercepting');
+});
+
+test('the New Tab override stays off for the anti-detect engine', () => {
+  // Overriding it made Chromium show "An extension changed your New Tab page -
+  // Keep it / Change it back" on every new tab, which is both an annoyance and an
+  // anti-detect tell. Only Chrome-for-Testing needs it, because its own NTP crashes.
+  assert.match(SRC, /ntpOverride: usingCft,/, 'the override must be gated to CfT alone');
+  assert.ok(!/ntpOverride: usingCft \|\| usingAntidetect/.test(SRC));
+});

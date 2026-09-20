@@ -911,7 +911,14 @@ function nativeGapScript(fp) {
         defineOnMd('getUserMedia', markNative(function getUserMedia() {
           let p;
           try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
-          try { return p.then((stream) => { granted = true; return stream; }); } catch (e) { return p; }
+          // Observe on a SEPARATE chain and hand back the ORIGINAL promise. Returning
+          // p.then(...) made every rejection surface as "Uncaught (in promise) ... at
+          // fp.js", putting this injected script's filename into the page's own error
+          // stack, which is a direct tell that an extension is present. The second
+          // handler swallows the rejection on our chain only; the caller still receives
+          // p, so an unhandled rejection is attributed to the site that made the call.
+          try { p.then(() => { granted = true; }, () => {}); } catch (e) { /* ignore */ }
+          return p;
         }, 'getUserMedia'));
       }
 
@@ -1644,7 +1651,14 @@ if (fp.noise.canvas) {
         defineOnMd('getUserMedia', markNative(function getUserMedia() {
           let p;
           try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
-          try { return p.then((stream) => { granted = true; return stream; }); } catch (e) { return p; }
+          // Observe on a SEPARATE chain and hand back the ORIGINAL promise. Returning
+          // p.then(...) made every rejection surface as "Uncaught (in promise) ... at
+          // fp.js", putting this injected script's filename into the page's own error
+          // stack, which is a direct tell that an extension is present. The second
+          // handler swallows the rejection on our chain only; the caller still receives
+          // p, so an unhandled rejection is attributed to the site that made the call.
+          try { p.then(() => { granted = true; }, () => {}); } catch (e) { /* ignore */ }
+          return p;
         }, 'getUserMedia'));
       }
 
@@ -1890,13 +1904,31 @@ function attachOmniboxSearchGuard(page, template) {
   try {
     if (!page || omniboxGuarded.has(page)) return;
     omniboxGuarded.add(page);
-    page.on('framenavigated', async (frame) => {
+    const redirect = async (raw) => {
+      const target = omniboxSearchUrl(raw, template);
+      if (!target) return;
+      await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+    };
+    // Act on the navigation REQUEST, not on the committed URL. When http://<word> fails
+    // to resolve (the usual case through a proxy) Chromium commits an error page, so the
+    // frame's URL afterwards is chrome-error://chromewebdata/ and the word is gone. This
+    // fired correctly only while the proxy happened to answer with a 502 page, which is
+    // why it looked fixed on IPv6 and did nothing on residential. Listening is passive:
+    // no setRequestInterception, so nothing is delayed or modified.
+    page.on('request', (req) => {
+      try {
+        if (!req.isNavigationRequest()) return;
+        if (req.frame() !== page.mainFrame()) return;
+        redirect(req.url());
+      } catch (e) { /* a guard must never break the session */ }
+    });
+    // Backstop for the case where the request event is missed but the failed URL is
+    // still what the frame reports.
+    page.on('framenavigated', (frame) => {
       try {
         if (frame !== page.mainFrame()) return;
-        const target = omniboxSearchUrl(frame.url(), template);
-        if (!target) return;
-        await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-      } catch (e) { /* a guard must never break the session */ }
+        redirect(frame.url());
+      } catch (e) { /* ignore */ }
     });
   } catch (e) { /* best-effort */ }
 }
@@ -2770,12 +2802,15 @@ async function launchProfileSession(options = {}) {
   if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
 
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
-  // Override the New Tab Page for Chrome-for-Testing (whose own NTP crashes) AND for the
-  // anti-detect engine: ungoogled ships chrome://new-tab-page-third-party, which renders
-  // as an empty page with no way to search, because its default engine is the fake
-  // "No Search". Real Chrome keeps its own NTP so we don't trip its consent bubble.
+  // Override the New Tab Page ONLY for Chrome-for-Testing, whose own NTP crashes the
+  // browser. It was briefly extended to the anti-detect engine to replace ungoogled's
+  // empty chrome://new-tab-page-third-party, but that made Chromium show its "An
+  // extension changed your New Tab page - Keep it / Change it back" consent bubble on
+  // every new tab. That prompt is worse than the empty page it replaced, and a browser
+  // advertising an extension-modified setting is itself an anti-detect tell. The omnibox
+  // search guard is what actually made the new tab usable, and it needs no extension.
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, {
-    ntpOverride: usingCft || usingAntidetect,
+    ntpOverride: usingCft,
     searchUrl: browserSettings && browserSettings.searchUrl
   });
 
