@@ -1844,6 +1844,56 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// ---------------------------------------------------------------------------
+// Omnibox search guard.
+//
+// ungoogled-chromium ships a fake default engine called "No Search" whose template is
+// literally `http://{searchTerms}` (verified in a live profile's Web Data: the row with
+// prepopulate_id 1). So typing one word in the address bar navigates to `http://<word>`
+// instead of searching, and through a proxy that surfaces as a gateway 502.
+//
+// The default cannot be fixed by seeding preferences: `default_search_provider_data` is
+// MAC-protected in Secure Preferences and Chromium reverts any planted value (three
+// mechanisms were measured against the binary, see ensureNativeProfilePrefs). Enterprise
+// policy works but is machine-wide and makes the browser advertise "Managed by your
+// organization", which is itself an anti-detect tell.
+//
+// So catch it per profile instead: a committed main-frame navigation to an http:// URL
+// whose host is a SINGLE LABEL (no dot) is exactly what that broken template produces and
+// is never a real public destination. Rewrite it to a real search. Hosts with a dot, IP
+// literals, localhost, host:port and any non-http scheme are left completely alone, so
+// http://intranet.corp and http://192.168.1.1 still work.
+const DEFAULT_SEARCH_TEMPLATE = 'https://www.google.com/search?q={searchTerms}';
+
+function omniboxSearchUrl(rawUrl, template) {
+  let u;
+  try { u = new URL(String(rawUrl || '')); } catch (e) { return null; }
+  if (u.protocol !== 'http:') return null;             // an https single label is deliberate
+  const host = u.hostname;
+  if (!host || host.includes('.')) return null;        // a real domain
+  if (host === 'localhost') return null;               // developer target
+  if (host.startsWith('[') || /^\d+$/.test(host)) return null; // IP literal / numeric
+  if (u.port) return null;                             // host:port is a deliberate target
+  // Everything after the bare host is still part of what was typed, e.g. `foo/bar`.
+  const typed = host + (u.pathname && u.pathname !== '/' ? u.pathname : '') + (u.search || '');
+  const tpl = String(template || '');
+  const use = tpl.includes('{searchTerms}') ? tpl : DEFAULT_SEARCH_TEMPLATE;
+  return use.replace('{searchTerms}', encodeURIComponent(typed));
+}
+
+function attachOmniboxSearchGuard(page, template) {
+  try {
+    page.on('framenavigated', async (frame) => {
+      try {
+        if (frame !== page.mainFrame()) return;
+        const target = omniboxSearchUrl(frame.url(), template);
+        if (!target) return;
+        await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+      } catch (e) { /* a guard must never break the session */ }
+    });
+  } catch (e) { /* best-effort */ }
+}
+
 async function generateStartPage(userDataDir, profileData) {
   const startPagePath = path.join(userDataDir, 'start.html');
   const now = new Date().toLocaleString();
@@ -2542,9 +2592,41 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
   // consent bubble). overriding is gated on opts.ntpOverride.
   if (opts.ntpOverride) {
     manifest.chrome_url_overrides = { newtab: 'newtab.html' };
+    // The override page used to be an empty dark <body>, which reads as a broken blank
+    // tab. Give it a working search box instead: with ungoogled's fake "No Search"
+    // default engine, the address bar turns a single word into http://<word>, so a new
+    // tab had no usable way to search at all. Everything here is LOCAL - no fonts, no
+    // images, no network calls - because anything the NTP fetches goes through the
+    // profile's proxy, which is what crashed sessions when the real NTP was left on.
+    const searchTpl = String(opts.searchUrl || '').includes('{searchTerms}')
+      ? String(opts.searchUrl)
+      : 'https://www.google.com/search?q={searchTerms}';
     const newtabHtml = '<!doctype html><html><head><meta charset="utf-8"><title>New Tab</title>'
-      + '<style>html,body{margin:0;height:100%;background:#1f2430}</style></head><body></body></html>';
+      + '<style>html,body{margin:0;height:100%;background:#1f2430;color:#e5e7eb;'
+      + 'font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}'
+      + '.w{height:100%;display:flex;align-items:center;justify-content:center}'
+      + 'form{width:min(560px,86vw)}'
+      + 'input{width:100%;box-sizing:border-box;padding:14px 18px;border-radius:12px;'
+      + 'border:1px solid #2b3b54;background:#0f1623;color:#f1f5f9;font-size:15px;outline:none}'
+      + 'input:focus{border-color:#38bdf8}'
+      + 'p{margin:14px 2px 0;font-size:12px;color:#7c8aa0}</style></head>'
+      + '<body><div class="w"><form id="f" autocomplete="off">'
+      + '<input id="q" name="q" type="text" placeholder="Search" autofocus>'
+      + '<p>Type to search. A full address still opens directly.</p>'
+      + '</form></div><script src="newtab.js"></script></body></html>';
     await fs.writeFile(path.join(extDir, 'newtab.html'), newtabHtml);
+    // CSP forbids inline script in an extension page, so the handler ships as a file.
+    const newtabJs = 'var TPL=' + JSON.stringify(searchTpl) + ';\n'
+      + 'document.getElementById("f").addEventListener("submit",function(e){\n'
+      + '  e.preventDefault();\n'
+      + '  var v=document.getElementById("q").value.trim();\n'
+      + '  if(!v)return;\n'
+      + '  // A real URL or a dotted host goes straight there; anything else is a search.\n'
+      + '  var direct=/^[a-z][a-z0-9+.-]*:\\/\\//i.test(v)||(/^[^\\s\\/]+\\.[^\\s\\/]{2,}/.test(v)&&!/\\s/.test(v));\n'
+      + '  location.href=direct?(/^[a-z][a-z0-9+.-]*:\\/\\//i.test(v)?v:"https://"+v)\n'
+      + '    :TPL.replace("{searchTerms}",encodeURIComponent(v));\n'
+      + '});\n';
+    await fs.writeFile(path.join(extDir, 'newtab.js'), newtabJs);
   }
   await fs.writeFile(path.join(extDir, 'manifest.json'), JSON.stringify(manifest));
   // Self-contained: serialize the function and invoke it with the baked config.
@@ -2681,7 +2763,14 @@ async function launchProfileSession(options = {}) {
   if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
 
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
-  const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, { ntpOverride: usingCft });
+  // Override the New Tab Page for Chrome-for-Testing (whose own NTP crashes) AND for the
+  // anti-detect engine: ungoogled ships chrome://new-tab-page-third-party, which renders
+  // as an empty page with no way to search, because its default engine is the fake
+  // "No Search". Real Chrome keeps its own NTP so we don't trip its consent bubble.
+  const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, {
+    ntpOverride: usingCft || usingAntidetect,
+    searchUrl: browserSettings && browserSettings.searchUrl
+  });
 
   // Merge the fingerprint "Core" extension with any globally-enabled team
   // extensions (installed via the Extensions page) into a single comma-separated
@@ -3155,6 +3244,9 @@ const rootCdp = await browser.target().createCDPSession();
 
   const pages = await browser.pages();
   const page = pages[0] || await browser.newPage();
+  // Rescue omnibox searches on the first tab (see attachOmniboxSearchGuard). New tabs
+  // get the same treatment in the targetcreated handler below.
+  attachOmniboxSearchGuard(page, browserSettings && browserSettings.searchUrl);
 
   const manualLat = profile.locationType === 'Custom' ? Number.parseFloat(profile.locationLat) : NaN;
   const manualLng = profile.locationType === 'Custom' ? Number.parseFloat(profile.locationLng) : NaN;
@@ -3240,6 +3332,9 @@ const rootCdp = await browser.target().createCDPSession();
     if (isNewTab && (isInternal || isBlank)) return;
     if (isInternal) return;
     appliedPages.add(targetPage);
+    // A tab opened with "+" is where the broken "No Search" template bites most, so the
+    // guard goes on every new tab too, not just the first one.
+    attachOmniboxSearchGuard(targetPage, browserSettings && browserSettings.searchUrl);
     try {
       // MOST timing-sensitive FIRST: a target="_blank" popup begins navigating
       // the instant it's created, so the init script must be registered before
@@ -4566,6 +4661,9 @@ module.exports = {
   fingerprintScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
   generateStartPage,
+  // Exported for unit tests: decides whether a navigation is a broken "No Search"
+  // omnibox query that must be rewritten, or a real destination to leave alone.
+  omniboxSearchUrl,
   // Reused by the Firefox engine to bind timezone/locale to the proxy exit IP (parity
   // with the Chrome engine): maps the proxy's geo → IANA timezone + a country locale.
   lookupProxyGeoNodeCached,
