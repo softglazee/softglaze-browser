@@ -2666,6 +2666,13 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
       + '    :TPL.replace("{searchTerms}",encodeURIComponent(v));\n'
       + '});\n';
     await fs.writeFile(path.join(extDir, 'newtab.js'), newtabJs);
+  } else {
+    // A profile that once had the override keeps the files on disk. Remove them when it
+    // is off so a stale newtab.html can never be picked up again, and so the profile
+    // stops looking like it ships a New Tab replacement.
+    for (const stale of ['newtab.html', 'newtab.js']) {
+      await fs.unlink(path.join(extDir, stale)).catch(() => {});
+    }
   }
   await fs.writeFile(path.join(extDir, 'manifest.json'), JSON.stringify(manifest));
   // Self-contained: serialize the function and invoke it with the baked config.
@@ -2802,15 +2809,18 @@ async function launchProfileSession(options = {}) {
   if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
 
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
-  // Override the New Tab Page ONLY for Chrome-for-Testing, whose own NTP crashes the
-  // browser. It was briefly extended to the anti-detect engine to replace ungoogled's
-  // empty chrome://new-tab-page-third-party, but that made Chromium show its "An
-  // extension changed your New Tab page - Keep it / Change it back" consent bubble on
-  // every new tab. That prompt is worse than the empty page it replaced, and a browser
-  // advertising an extension-modified setting is itself an anti-detect tell. The omnibox
-  // search guard is what actually made the new tab usable, and it needs no extension.
+  // CAREFUL: `usingCft` does NOT mean Chrome-for-Testing. It means "not real Chrome",
+  // which is equally true of the anti-detect build (resolveAntidetectBinary returns
+  // isReal:false, antidetect:true). Gating the New Tab override on it therefore turned
+  // the override on for fingerprint-chromium as well, and Chromium then showed
+  // "Did you mean to change this page? This page was changed by the Core extension"
+  // on every new tab. That prompt is worse than the empty page it replaced, and a
+  // browser advertising an extension-modified setting is itself an anti-detect tell.
+  // Only Chrome-for-Testing genuinely needs the override, because its own NTP crashes.
+  // The omnibox search guard is what makes a new tab usable, and it needs no extension.
+  const isChromeForTesting = usingCft && !(chosenBrowser && chosenBrowser.antidetect);
   const fpExtDir = await writeFingerprintExtension(userDataDir, fpConfig, {
-    ntpOverride: usingCft,
+    ntpOverride: isChromeForTesting,
     searchUrl: browserSettings && browserSettings.searchUrl
   });
 
