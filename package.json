@@ -1,6 +1,6 @@
 {
   "name": "softglaze-browser",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Local-first desktop app for isolated browser profiles, each with its own fingerprint, proxy and storage",
   "license": "BUSL-1.1",
   "author": "SoftGlaze LLC <https://softglaze.com>",

@@ -69,5 +69,22 @@ test('the rewritten target is not itself rewritten (no redirect loop)', () => {
 
 test('the guard is attached to the first tab and to new tabs', () => {
   assert.match(SRC, /const page = pages\[0\][\s\S]{0,260}attachOmniboxSearchGuard\(page/, 'first tab must be guarded');
-  assert.match(SRC, /appliedPages\.add\(targetPage\);[\s\S]{0,260}attachOmniboxSearchGuard\(targetPage/, 'new tabs must be guarded');
+  assert.match(SRC, /attachOmniboxSearchGuard\(targetPage/, 'new tabs must be guarded');
+});
+
+test('new tabs are guarded BEFORE the internal/blank early returns', () => {
+  // A tab opened with "+" is blank at targetcreated time and returns early. Attaching
+  // the guard after that return meant the one tab a user actually types a search into
+  // was never guarded - measured live: http://softglaze stayed on http://softglaze.
+  const attachAt = SRC.indexOf('attachOmniboxSearchGuard(targetPage');
+  const earlyReturn = SRC.indexOf('if (isNewTab && (isInternal || isBlank)) return;');
+  assert.ok(attachAt !== -1 && earlyReturn !== -1, 'both markers must exist');
+  assert.ok(attachAt < earlyReturn, 'the guard must be attached before the blank-tab early return');
+});
+
+test('the guard cannot attach twice to one page', () => {
+  // targetcreated can fire a second pass for the same tab once it navigates somewhere
+  // real; without this the page would redirect twice.
+  assert.match(SRC, /omniboxGuarded\.has\(page\)/);
+  assert.match(SRC, /omniboxGuarded\.add\(page\)/);
 });
