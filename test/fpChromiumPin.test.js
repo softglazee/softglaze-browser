@@ -18,9 +18,18 @@ const {
   sha256File
 } = require('../src/main/browserDownloader');
 
+// A decoy asset for a DIFFERENT platform, proving the picker selects by name rather
+// than taking the first entry. It must never collide with THIS platform's pinned name.
+// Hardcoding the macOS dmg here made the suite fail on macOS alone, where the pinned
+// asset IS that dmg: the picker matched the decoy's size 1 / digest 00 and correctly
+// refused the build. It surfaced the first time the suite ran on a macOS runner.
+const DECOY_ASSET_NAME = FP_CHROMIUM_ASSET.name.endsWith('_macos.dmg')
+  ? 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip'
+  : 'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg';
+
 const release = (overrides = {}) => ({
   assets: [
-    { name: 'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg', size: 1, browser_download_url: 'https://github.com/x/mac', digest: 'sha256:00' },
+    { name: DECOY_ASSET_NAME, size: 1, browser_download_url: 'https://github.com/x/other', digest: 'sha256:00' },
     {
       name: FP_CHROMIUM_ASSET.name,
       size: FP_CHROMIUM_ASSET.size,
@@ -49,8 +58,12 @@ test('pickFpChromiumAsset refuses a replaced asset or a missing one', () => {
   assert.throws(() => pickFpChromiumAsset(release({ digest: `sha256:${'a'.repeat(64)}` })), (e) => e.fatal === true && /does not match/.test(e.message));
   assert.throws(() => pickFpChromiumAsset(release({ size: FP_CHROMIUM_ASSET.size + 1 })), (e) => e.fatal === true);
   assert.throws(() => pickFpChromiumAsset({ assets: [] }), (e) => e.fatal === true && /no longer has the asset/.test(e.message));
-  // A differently named zip (e.g. a new build suffix) is not silently accepted.
-  assert.throws(() => pickFpChromiumAsset(release({ name: 'ungoogled-chromium_148.0.7778.215-1.2_windows_x64.zip' })), (e) => e.fatal === true);
+  // A differently named asset (e.g. a new build suffix) is not silently accepted.
+  // Derived from THIS platform's pinned name so the case is real on every OS rather
+  // than only on Windows.
+  const renamed = FP_CHROMIUM_ASSET.name.replace('-1.1_', '-1.2_').replace('-1-x86_64', '-2-x86_64');
+  assert.notEqual(renamed, FP_CHROMIUM_ASSET.name, 'the rename must actually differ');
+  assert.throws(() => pickFpChromiumAsset(release({ name: renamed })), (e) => e.fatal === true);
 });
 
 test('verifyFpChromiumArchive accepts only a file with the pinned size and digest', async () => {
