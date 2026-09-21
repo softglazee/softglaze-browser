@@ -2,14 +2,25 @@ name: Release builds
 
 # Builds installable artifacts for Windows, macOS and Linux from one matrix.
 # Trigger it manually (Actions -> Release builds -> Run workflow) or by pushing a
-# v* tag. It uploads per-OS installers as workflow ARTIFACTS for testing on real
-# hardware; it does NOT publish a public GitHub Release (electron-builder runs with
-# --publish never), and macOS is unsigned for now, so nothing broken or unsigned
-# ships to users automatically. Wire signing + `--publish always` once verified.
+# v* tag matching package.json, e.g. `git tag v1.0.7 && git push origin v1.0.7`.
+#
+# On a TAG it now also uploads the installers to a GitHub Release, which
+# electron-builder creates as a DRAFT: nothing is public until it is reviewed and
+# published in the Releases UI. A manual run still only produces workflow
+# artifacts, so the Actions tab stays usable for throwaway test builds.
+#
+# macOS is UNSIGNED until an Apple Developer certificate is supplied as the
+# CSC_LINK / CSC_KEY_PASSWORD secrets; Gatekeeper will warn on first open.
+# Every OS also keeps its installers as workflow artifacts, so a rejected upload
+# never costs the build.
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
+
+# electron-builder needs this to create the release and upload assets to it.
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -56,7 +67,16 @@ jobs:
       - name: Generate Prisma client (this OS's engine)
         run: npx prisma generate
 
+      # A tag is a release: publish. Anything else (a manual run) stays a private
+      # test build and only produces the workflow artifacts below.
+      - name: Package installers and publish to the draft release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Package installers (no publish)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: npx electron-builder --publish never
 
       - name: Upload installers
