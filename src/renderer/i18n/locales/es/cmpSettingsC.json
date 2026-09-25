@@ -337,6 +337,35 @@
       "lifetimeHours_other": "{{count}} horas",
       "loadStates": "Cargar estados y ciudades",
       "geoHint": "Las listas vienen de tu cuenta de IPRoyal, así que solo muestran ubicaciones que tu plan puede usar."
+    },
+    "psx": {
+      "product": "Producto",
+      "gateway": "Rutas de Pool Gateway",
+      "dedicated": "Importar puertos dedicados propios",
+      "apiKey": "Clave API de cliente",
+      "dedicatedHelp": "Usa tu propia clave de cliente con account:read y ports:read. Solo importa puertos activos de esa cuenta. No uses claves de personal. No compra, renueva ni rota puertos.",
+      "username": "Usuario base del proxy",
+      "password": "Contraseña del proxy",
+      "credentialsHelp": "Copia las credenciales del proxy desde Pool Gateway. La clave API no es la contraseña del proxy.",
+      "network": "Red",
+      "peer": "Red Peer (residencial y móvil)",
+      "modems": "Módems de operador",
+      "country": "País",
+      "count": "Rutas de perfil a añadir (1–100)",
+      "rotation": "Modo de enrutamiento",
+      "sticky": "Sesión persistente",
+      "ondemand": "Seleccionar al abrir una conexión",
+      "minutes": "Seleccionar después de {{minutes}} minutos",
+      "session": "Prefijo de sesión (opcional)",
+      "sessionPlaceholder": "Vacío crea un prefijo aleatorio nuevo",
+      "sessionHelp": "Letras minúsculas, números y guiones bajos. Cada ruta guarda su propio ID. Reutilizar el prefijo y la configuración omite rutas existentes; dejarlo vacío añade rutas. Asigna una ruta diferente a cada perfil.",
+      "protocol": "Protocolo",
+      "importOwned": "Importar puertos activos propios",
+      "addRoutes": "Añadir rutas configuradas",
+      "limits": "Importar no prueba la conexión. Ejecuta la comprobación de salud y prueba un perfil del navegador. Se necesitan GB y capacidad en el país. El modo estricto rechaza dispositivos no disponibles; una sesión persistente no garantiza una IP fija. La rotación afecta a conexiones nuevas y no garantiza una IP diferente.",
+      "privacy": "Las credenciales usan el almacén protegido del sistema operativo. Activa el cifrado de la base de datos del espacio de trabajo para proteger los proxies importados.",
+      "docs": "Guía de Pool Gateway y rotación",
+      "importedHelp": "Configuración importada. Falta comprobar la conexión, el país y el navegador en vivo. No se ha verificado tráfico ni IPs únicas."
     }
   }
 }

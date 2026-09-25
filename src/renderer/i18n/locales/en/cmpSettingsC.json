@@ -337,6 +337,35 @@
       "lifetimeHours_other": "{{count}} hours",
       "loadStates": "Load states and cities",
       "geoHint": "The lists come from your IPRoyal account, so they only show locations your plan can use."
+    },
+    "psx": {
+      "product": "Product",
+      "gateway": "Pool Gateway routes",
+      "dedicated": "Import owned dedicated ports",
+      "apiKey": "Customer API key",
+      "dedicatedHelp": "Use your own customer key with account:read and ports:read. Imports only active ports already on that account. Never use a staff key. No port is purchased, renewed or rotated.",
+      "username": "Base proxy username",
+      "password": "Proxy password",
+      "credentialsHelp": "Copy the separate proxy credentials from your Pool Gateway dashboard. The API key is not the proxy password.",
+      "network": "Network",
+      "peer": "Peer network (residential and mobile)",
+      "modems": "Carrier modems",
+      "country": "Country",
+      "count": "Profile routes to add (1–100)",
+      "rotation": "Gateway routing mode",
+      "sticky": "Sticky session",
+      "ondemand": "Reselect on new connection",
+      "minutes": "Reselect after {{minutes}} minutes",
+      "session": "Session prefix (optional)",
+      "sessionPlaceholder": "Blank creates a fresh random prefix",
+      "sessionHelp": "Lowercase letters, numbers and underscores. Each route gets its own saved session ID. Reusing the prefix and settings skips existing routes; a blank prefix adds new ones. Assign a separate route to each profile.",
+      "protocol": "Protocol",
+      "importOwned": "Import active owned ports",
+      "addRoutes": "Add configured routes",
+      "limits": "Import is not a connection test. Run the pool health check, then test an actual browser profile. Traffic needs available GB and country stock. Strict failover refuses unavailable endpoints; sticky does not guarantee a fixed carrier IP. Rotation affects new connections and does not guarantee a different IP.",
+      "privacy": "Provider credentials use the existing OS-protected store. Enable workspace database encryption to protect imported proxy records at rest.",
+      "docs": "Pool Gateway setup and rotation guide",
+      "importedHelp": "Configuration imported. Connectivity, country and browser behavior still need a live check. No traffic or unique exit IPs have been verified."
     }
   }
 }
