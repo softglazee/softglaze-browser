@@ -529,7 +529,61 @@ function liveProxiesRows(text, { socks = false, country = '', plan = 'residentia
   }));
 }
 
+// Proxies.sx Pool Gateway uses proxy credentials, never the management API key.
+// Persist these generated usernames on the existing Proxy rows so profile sessions
+// survive restarts. Country/session choices are routing requests, not health proof.
+function proxiesSxGatewayRows({ username, password, country, count, poolType, life, session, proxyType }) {
+  const login = String(username || '').trim();
+  if (!/^psx_[a-f0-9]{24}$/.test(login)) throw new Error('Enter the base proxy username from the Proxies.sx Pool Gateway page, not an API key or a routed username.');
+  if (!password || /[\r\n\0]/.test(password)) throw new Error('Enter a valid proxy password from the Pool Gateway page.');
+  if (/^psx_[a-f0-9]{32}$/.test(password)) throw new Error('Use your separate proxy password, not an API key.');
+  const cc = String(country || 'any').toLowerCase();
+  if (cc !== 'any' && !/^[a-z]{2}$/.test(cc)) throw new Error('Choose a two-letter country code.');
+  if (!['peer', 'mbl'].includes(poolType)) throw new Error('Choose Peer network or Carrier modems.');
+  if (!['sticky', 'ondemand', 'auto5', 'auto10', 'auto20', 'auto60'].includes(life)) throw new Error('Choose a supported rotation mode.');
+  if (!['http', 'socks5'].includes(proxyType)) throw new Error('Choose HTTP or SOCKS5.');
+  const size = Number(count);
+  if (!Number.isInteger(size) || size < 1 || size > 100) throw new Error('Add between 1 and 100 profile routes.');
+  const prefix = String(session || '');
+  if (!/^[a-z0-9_]{1,48}$/.test(prefix)) throw new Error('Use 1–48 lowercase letters, numbers or underscores for the session prefix.');
+  return Array.from({ length: size }, (_, index) => ({
+    type: proxyType === 'socks5' ? 'SOCKS5' : 'HTTP',
+    host: 'gw.proxies.sx', port: proxyType === 'socks5' ? 7001 : 7000,
+    username: `${login}-${poolType}-${cc}-rot-${life}-sid-${prefix}_${index + 1}-failover-strict`,
+    password,
+    label: `Proxies.sx • ${poolType} • ${cc.toUpperCase()} • ${prefix}_${index + 1}`
+  }));
+}
+
+// Import only active account-owned resources. Never create, renew or buy a port.
+function proxiesSxOwnedPortRows(ports, { accountId, proxyType, now = Date.now() }) {
+  if (!Array.isArray(ports)) throw new Error('Proxies.sx returned an invalid port list.');
+  if (!/^[a-f0-9]{24}$/.test(accountId)) throw new Error('Could not verify the Proxies.sx account.');
+  if (!['http', 'socks5'].includes(proxyType)) throw new Error('Choose HTTP or SOCKS5.');
+  const rows = [];
+  for (const port of ports) {
+    if (!port || String(port.customerId || '') !== accountId) throw new Error('Port ownership could not be verified. Use your own customer API key, never a staff key.');
+    if (port.isDeleted || port.isExpired || port.isGracePeriod || !['active', 'expiring_soon'].includes(port.status)) continue;
+    const expiresAt = Number(port.expiresAt || 0);
+    if (!Number.isFinite(expiresAt) || (expiresAt > 0 && expiresAt <= now)) continue;
+    const host = String(port.serverIp || '');
+    const number = Number(proxyType === 'socks5' ? port.socksPort : port.httpPort);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(number) || number < 1 || number > 65535 ||
+        typeof port.proxyLogin !== 'string' || !port.proxyLogin || typeof port.proxyPassword !== 'string' || !port.proxyPassword) {
+      throw new Error('An active Proxies.sx port has incomplete connection details. No ports were imported.');
+    }
+    rows.push({
+      type: proxyType === 'socks5' ? 'SOCKS5' : 'HTTP', host, port: number,
+      username: port.proxyLogin, password: port.proxyPassword,
+      label: `Proxies.sx • Dedicated • ${String(port.name || port._id || port.id)}`
+    });
+  }
+  return rows;
+}
+
 module.exports = {
+  proxiesSxGatewayRows,
+  proxiesSxOwnedPortRows,
   liveProxiesListUrl,
   liveProxiesRows,
   liveProxiesPlanLabel,

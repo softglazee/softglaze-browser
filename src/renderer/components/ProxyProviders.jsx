@@ -62,6 +62,7 @@ export const PROVIDERS = [
   // Proxidize: a Bearer token. Per-Proxy plans return ready credentials for a per-proxy
   // username; Per-GB plans build from an access point against the gateway host from Proxy Details.
   { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], count: true, poolType: true, geo: true, gateway: true } },
+  { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#14b8a6', referral: 'https://client.proxies.sx', gateway: { host: 'gw.proxies.sx', port: 7000, type: 'HTTP' }, geoSync: { creds: [] } },
   // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
   // already inside that URL), so the pull takes the link rather than a guessed endpoint.
   // Credentials come back as username:password@host:port, which the shared parser handles.
@@ -158,6 +159,7 @@ export default function ProxyProviders({ onSynced }) {
     // both because an anti-detect profile needs an exit IP that stays put.
     const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller' || provider.key === 'iproyal';
     setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
+    if (provider.key === 'proxiessx') setForm((f) => ({ ...f, plan: 'gateway', poolType: 'peer', life: 'sticky', proxyType: 'http' }));
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });
@@ -409,6 +411,87 @@ export default function ProxyProviders({ onSynced }) {
       ))}
     </div>
   ) : null);
+
+  const renderProxiesSx = () => {
+    const dedicated = form.plan === 'dedicated';
+    const text = (key) => t(`proxyProviders.psx.${key}`);
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <section className={sectionCls}>
+          <label className={labelCls} htmlFor="psx-product">{text('product')}</label>
+          <select id="psx-product" value={form.plan} disabled={syncing} onChange={(e) => { set('plan', e.target.value); setSyncResult(null); setErr(''); }} className={selectCls} style={chevronStyle}>
+            <option value="gateway">{text('gateway')}</option>
+            <option value="dedicated">{text('dedicated')}</option>
+          </select>
+          {dedicated && (
+            <div>
+              <label className={labelCls} htmlFor="psx-token">{text('apiKey')}</label>
+              <input id="psx-token" type="password" autoComplete="off" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} />
+              <p className={hintCls + ' mt-2'}>{text('dedicatedHelp')}</p>
+            </div>
+          )}
+          {!dedicated && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls} htmlFor="psx-username">{text('username')}</label>
+                  <input id="psx-username" autoComplete="off" value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder="psx_…" />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="psx-password">{text('password')}</label>
+                  <input id="psx-password" type="password" autoComplete="off" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} />
+                </div>
+              </div>
+              <p className={hintCls}>{text('credentialsHelp')}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls} htmlFor="psx-network">{text('network')}</label>
+                  <select id="psx-network" value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
+                    <option value="peer">{text('peer')}</option><option value="mbl">{text('modems')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="psx-country">{text('country')}</label>
+                  <select id="psx-country" value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
+                    {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="psx-count">{text('count')}</label>
+                  <input id="psx-count" type="number" min="1" max="100" value={form.count} onChange={(e) => set('count', e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="psx-rotation">{text('rotation')}</label>
+                  <select id="psx-rotation" value={form.life} onChange={(e) => set('life', e.target.value)} className={selectCls} style={chevronStyle}>
+                    <option value="sticky">{text('sticky')}</option><option value="ondemand">{text('ondemand')}</option>
+                    {[5, 10, 20, 60].map((minutes) => <option key={minutes} value={`auto${minutes}`}>{t('proxyProviders.psx.minutes', { minutes })}</option>)}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelCls} htmlFor="psx-session">{text('session')}</label>
+                  <input id="psx-session" value={form.session} maxLength={48} onChange={(e) => set('session', e.target.value)} autoComplete="off" className={inputCls + ' font-mono'} placeholder={text('sessionPlaceholder')} />
+                  <p className={hintCls + ' mt-2'}>{text('sessionHelp')}</p>
+                </div>
+              </div>
+            </>
+          )}
+          <div>
+            <label className={labelCls} htmlFor="psx-protocol">{text('protocol')}</label>
+            <select id="psx-protocol" value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+              <option value="http">HTTP</option><option value="socks5">SOCKS5</option>
+            </select>
+          </div>
+          <button type="button" onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
+            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {dedicated ? text('importOwned') : text('addRoutes')}
+          </button>
+          <p className={hintCls}>{text('limits')}</p>
+          <p className={hintCls}>{text('privacy')}</p>
+          <a href="https://agents.proxies.sx/pool/" target="_blank" rel="noreferrer" className="text-sm text-primary underline">{text('docs')}</a>
+        </section>
+      </div>
+    );
+  };
 
   // ---- DataImpulse: plan login, what to add, where ----
   const renderDataImpulse = () => {
@@ -862,6 +945,7 @@ export default function ProxyProviders({ onSynced }) {
                   key={p.key}
                   type="button"
                   onClick={() => setSelectedKey(p.key)}
+                  disabled={syncing}
                   className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors border ${active ? 'bg-primary/10 border-primary/30' : 'border-transparent hover:bg-card'}`}
                 >
                   <span className="w-8 h-8 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${p.color} 16%, transparent)`, color: p.color, border: `1px solid color-mix(in srgb, ${p.color} 28%, transparent)` }}>
@@ -908,7 +992,8 @@ export default function ProxyProviders({ onSynced }) {
 
           {err && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 flex items-start gap-2"><X className="w-4 h-4 mt-0.5 shrink-0" />{err}</div>}
 
-          {provider.tokenSync ? (
+          {provider.key === 'proxiessx' && renderProxiesSx()}
+          {provider.key !== 'proxiessx' && (provider.tokenSync ? (
             /* ---- Token Sync mechanic ---- */
             <div className="space-y-4 max-w-2xl">
               <div>
@@ -1221,12 +1306,13 @@ export default function ProxyProviders({ onSynced }) {
                 </div>
               )}
             </div>
-          )}
+          ))}
 
           {/* Sync result */}
           {syncResult && (
             <div className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 max-w-2xl">
               <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-400 mb-1.5"><Check className="w-4 h-4" /> {t('proxyProviders.result.syncedInto', { provider: syncResult.provider })}</div>
+              {provider.key === 'proxiessx' && <p className="text-sm mb-3">{t('proxyProviders.psx.importedHelp')}</p>}
               <div className="grid grid-cols-3 gap-3 text-[12px] font-mono text-muted-foreground">
                 <div>{t('proxyProviders.result.returned', { count: syncResult.total })}</div>
                 <div className="text-emerald-400">{t('proxyProviders.result.added', { count: syncResult.created?.length ?? 0 })}</div>

@@ -70,7 +70,7 @@ const {
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword,
   parseProxidizePerProxy, proxidizePerGbUsername,
-  liveProxiesListUrl, liveProxiesRows
+  liveProxiesListUrl, liveProxiesRows, proxiesSxGatewayRows, proxiesSxOwnedPortRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1266,7 +1266,7 @@ const PROXY_VENDORS = Object.freeze({
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
-  froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies'
+  froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', proxiessx: 'Proxies.sx'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -2528,6 +2528,41 @@ async function fetchLiveProxiesPool({ apiUrl, token, country, proxyType, poolTyp
   return rows;
 }
 
+// The two products have different credentials and behavior. Gateway setup is
+// local configuration; dedicated import is read-only and verifies account ownership.
+async function fetchProxiesSxPool(input) {
+  if (input.plan === 'gateway') {
+    const session = input.session || `sg${crypto.randomBytes(12).toString('hex')}`;
+    return proxiesSxGatewayRows({ ...input, session });
+  }
+  if (input.plan !== 'dedicated') throw new Error('Choose Pool Gateway or owned dedicated ports.');
+  const token = String(input.token || '').trim();
+  if (!/^psx_[a-f0-9]{32}$/.test(token)) throw new Error('Enter your customer API key with account:read and ports:read scopes.');
+  const headers = { 'X-API-Key': token, Accept: 'application/json' };
+  async function read(endpoint) {
+    let text;
+    try {
+      text = await httpRequestText(`https://api.proxies.sx/v1/${endpoint}`, { headers });
+    } catch (error) {
+      // Never echo a vendor response, URL, token or proxy credential into a toast.
+      if (error.status === 401) throw new Error('Proxies.sx rejected the API key. Check it in your customer dashboard.');
+      if (error.status === 403) throw new Error('Proxies.sx denied access. Use your customer key with account:read and ports:read scopes.');
+      if (error.status === 429) throw new Error('Proxies.sx rate limit reached. Wait before trying again.');
+      throw new Error('Could not read Proxies.sx. Check your connection and try again.');
+    }
+    try { return JSON.parse(text); } catch { throw new Error('Proxies.sx returned an invalid response.'); }
+  }
+  // This route only reads the current identity; /account can create missing wallets.
+  // Do not reuse its password as a dedicated-port password or return it to the UI.
+  const identity = await read('account/proxy-password');
+  const match = /^psx_([a-f0-9]{24})$/.exec(String(identity?.proxyUsername || ''));
+  if (!match) throw new Error('Could not verify the Proxies.sx account. Open Pool Gateway in your dashboard first.');
+  const ports = await read('ports');
+  const rows = proxiesSxOwnedPortRows(ports, { accountId: match[1], proxyType: input.proxyType });
+  if (!rows.length) throw new Error('No active owned dedicated ports. This import creates no ports or purchases. Use Pool Gateway, or manage ports in your dashboard.');
+  return rows;
+}
+
 const VENDOR_LOOKUPS = Object.freeze({
   dataimpulse: lookupDataImpulse,
   proxyseller: lookupProxySeller,
@@ -2567,7 +2602,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   nodemaven: fetchNodeMavenPool,
   froxy: fetchFroxyPool,
   proxidize: fetchProxidizePool,
-  liveproxies: fetchLiveProxiesPool
+  liveproxies: fetchLiveProxiesPool,
+  proxiessx: fetchProxiesSxPool
 });
 
 async function syncVendorPool(payload) {
