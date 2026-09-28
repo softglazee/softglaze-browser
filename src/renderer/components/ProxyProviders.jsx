@@ -65,7 +65,16 @@ export const PROVIDERS = [
   // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
   // already inside that URL), so the pull takes the link rather than a guessed endpoint.
   // Credentials come back as username:password@host:port, which the shared parser handles.
-  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: [], apiUrl: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } }
+  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: [], apiUrl: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } },
+  // PacketStream: one residential gateway. Username + proxy password from the dashboard
+  // Network Access page; country + sticky session ride in the password. No state/city.
+  { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true } },
+  // Airproxy: dedicated mobile proxies. The API key lists the proxies already on the account
+  // (GET /api/proxy/list/); location is fixed by the SIM, so no country/count controls.
+  { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'] } },
+  // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
+  // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
+  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, session: true, life: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
@@ -307,7 +316,7 @@ export default function ProxyProviders({ onSynced }) {
         excludeCountries: form.excludeCountries.trim(),
         excludeAsns: form.excludeAsns.trim(),
         listId: fromList ? form.listId : '',
-        orderId: g.ps && form.plan !== 'residential' ? form.orderId : '',
+        orderId: (g.ps && form.plan !== 'residential') || g.planId ? form.orderId : '',
         subuserHash: g.ipr ? form.subuserHash : '',
         token: form.token.trim(),
         username: form.username.trim(),
@@ -1029,6 +1038,12 @@ export default function ProxyProviders({ onSynced }) {
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiTokenLabel')}</label>
                     <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.apiTokenPlaceholder', { provider: provider.name })} autoComplete="off" />
+                  </div>
+                )}
+                {provider.geoSync.planId && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.planIdLabel', 'Plan ID')}</label>
+                    <input value={form.orderId} onChange={(e) => set('orderId', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.planIdPlaceholder', 'Active Plans → Plan ID')} autoComplete="off" />
                   </div>
                 )}
 

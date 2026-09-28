@@ -428,6 +428,98 @@ function froxyPassword({ poolType, country, region, city, session } = {}) {
 }
 
 // ---------------------------------------------------------------------------------------
+// PacketStream: a single residential gateway (proxy.packetstream.io:31112 HTTP / :31113
+// SOCKS5). Country and sticky session are appended to the PASSWORD, e.g.
+// <pass>_country-US_session-ab12cd. No flags = random country + rotating IP. Country codes
+// are 2-letter uppercase. Confirmed against the dashboard Network Access generator 2026-09-27.
+function packetStreamPassword(base, { country, session } = {}) {
+  let pw = base != null ? String(base) : '';
+  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  if (/^[A-Z]{2}$/.test(cc)) pw += `_country-${cc}`;
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (sid) pw += `_session-${sid}`;
+  return pw;
+}
+
+// ---------------------------------------------------------------------------------------
+// Airproxy: dedicated mobile proxies (each its own SIM). GET /api/proxy/list/ returns
+// { proxies: [{ id, ip, port, username, password, isp, in_use_till, ... }], count, success }.
+// HTTP only (no SOCKS port documented). Map active, well-formed entries to pool rows and
+// dedupe on host:port:username. Confirmed against a live account 2026-09-27.
+function airproxyRows(body) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return []; }
+  const list = Array.isArray(data && data.proxies) ? data.proxies : [];
+  const rows = [];
+  const seen = new Set();
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const host = String(p.ip || '').trim();
+    const port = Number(p.port);
+    const username = typeof p.username === 'string' ? p.username : '';
+    const password = typeof p.password === 'string' ? p.password : '';
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const dupe = `${host}:${port}:${username}`;
+    if (seen.has(dupe)) continue;
+    seen.add(dupe);
+    const isp = String(p.isp || '').trim();
+    const id = p.id != null ? String(p.id) : '';
+    rows.push({
+      type: 'HTTP',
+      host, port, username, password,
+      label: `Airproxy • Mobile${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}`,
+      country: null
+    });
+  }
+  return rows;
+}
+
+// ---------------------------------------------------------------------------------------
+// CatProxies: multi-product. The app supports the two ROTATING pools (Standard Residential
+// and Rotating Mobile). Both use one gateway with the targeting appended to the USERNAME and
+// the plan's proxy password unchanged. Grammars confirmed against the live dashboard
+// generator 2026-09-27:
+//   Standard Residential: <base>-type-residential[-country-<cc>][-state-..][-city-..]
+//                          [-lifetime-<min>-session-<id>]      (rotating = no session)
+//   Rotating Mobile:       <base>[-country-<CC>][-city-..][-sid-<id>[-ttl-<n>m]]
+// Country is lowercased for residential, uppercased for mobile (as the dashboard emits).
+function catProxiesResiUsername(base, { country, state, city, session, lifetimeMin } = {}) {
+  let u = `${String(base || '').trim()}-type-residential`;
+  const code = (v) => String(v || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const cc = code(country);
+  if (/^[a-z]{2}$/.test(cc)) u += `-country-${cc}`;
+  const st = /^[a-z]{2}$/.test(cc) ? code(state) : '';
+  if (st) u += `-state-${st}`;
+  const ct = st ? code(city) : '';
+  if (ct) u += `-city-${ct}`;
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  const life = Number(lifetimeMin);
+  if (sid && Number.isInteger(life) && life > 0) u += `-lifetime-${life}-session-${sid}`;
+  return u;
+}
+function catProxiesMobileUsername(base, { country, city, session, ttlMin } = {}) {
+  let u = String(base || '').trim();
+  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  if (/^[A-Z]{2}$/.test(cc)) u += `-country-${cc}`;
+  const ct = /^[A-Z]{2}$/.test(cc) ? String(city || '').trim().toLowerCase().replace(/\s+/g, '+').replace(/[^a-z0-9+]/g, '') : '';
+  if (ct) u += `-city-${ct}`;
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  const ttl = Number(ttlMin);
+  if (sid) u += Number.isInteger(ttl) && ttl > 0 ? `-sid-${sid}-ttl-${ttl}m` : `-sid-${sid}`;
+  return u;
+}
+// Pull { username, password, bandwidthLeft } out of a GET /orders/:id response, tolerating
+// the payload.order.proxy nesting the API documents plus a couple of flatter fallbacks.
+function catProxiesCreds(json) {
+  const order = (json && (json.payload && json.payload.order)) || (json && json.order) || (json && json.payload) || json || {};
+  const proxy = (order && order.proxy) || order || {};
+  const username = typeof proxy.username === 'string' ? proxy.username.trim() : '';
+  const password = typeof proxy.password === 'string' ? proxy.password : '';
+  const bw = Number(proxy.bandwidth_left);
+  return { username, password, bandwidthLeft: Number.isFinite(bw) ? bw : null };
+}
+
+// ---------------------------------------------------------------------------------------
 // Proxidize (api.proxidize.com/api/v1, Bearer token). Per-Proxy plans return ready
 // host:port:user:pass from GET /perproxy/proxies/{username}. Per-GB plans expose a sub-user
 // (access point) whose username carries geo tokens "-co-USA-st-TX-ci-Dallas" and an optional
@@ -561,6 +653,11 @@ module.exports = {
   froxyType,
   froxyField,
   froxyPassword,
+  packetStreamPassword,
+  airproxyRows,
+  catProxiesResiUsername,
+  catProxiesMobileUsername,
+  catProxiesCreds,
   parseProxidizePerProxy,
   proxidizeGeoToken,
   proxidizePerGbUsername
