@@ -621,7 +621,199 @@ function liveProxiesRows(text, { socks = false, country = '', plan = 'residentia
   }));
 }
 
+// Shared: "new york" / "New-York" -> "NewYork" (vendors that want CamelCase place names).
+function camelPlace(value) {
+  return String(value || '').trim().split(/[\s_-]+/).filter(Boolean)
+    .map((w) => w.replace(/[^A-Za-z0-9]/g, ''))
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('');
+}
+
+// ---------------------------------------------------------------------------------------
+// RapidProxy (rotating residential): gateway us.rapidproxy.io:5001, credentials are a
+// dashboard sub-account. Targeting rides in the USERNAME, hyphen-separated:
+//   <sub>-residential-<CC|global>[-state-<State>[-city-<City>]][-session-<id>[-stime-<min>]]
+// Country is 2-letter uppercase (global = anywhere). State and City are CamelCase with no
+// spaces; City is only documented under a State, and both need a country. stime (1-180
+// minutes) only works with a session. Source: rapidproxy.io/proxy examples, 2026-09-29.
+const RAPIDPROXY_MAX_STIME = 180;
+function rapidProxyUsername(base, { country, state, city, session, lifeMin } = {}) {
+  const sub = String(base || '').trim();
+  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  const hasCc = /^[A-Z]{2}$/.test(cc);
+  let user = `${sub}-residential-${hasCc ? cc : 'global'}`;
+  const st = camelPlace(state);
+  if (hasCc && st) {
+    user += `-state-${st}`;
+    const ct = camelPlace(city);
+    if (ct) user += `-city-${ct}`;
+  }
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (sid) {
+    user += `-session-${sid}`;
+    const m = Number(lifeMin);
+    if (Number.isInteger(m) && m > 0) user += `-stime-${Math.min(m, RAPIDPROXY_MAX_STIME)}`;
+  }
+  return user;
+}
+
+// ---------------------------------------------------------------------------------------
+// NOVADA: gateway super.novada.pro:7777 (the dashboard may assign a regional host such as
+// pr-as.novada.pro, so the host is overridable). Auth is a PROXY USER created under
+// Residential Proxies -> Users, not the login email. Targeting rides in the USERNAME:
+//   <user>-zone-<res|isp|mob>[-region-<cc>[-st-<state>][-city-<city>]][-session-<id>-sessTime-<min>]
+// Values are lowercase with no spaces; sessTime is 1-120 minutes. Sources:
+// developer.novada.com location-settings + session-type pages, and the dashboard endpoint
+// generator (...-zone-res-session-<id>-sessTime-5), 2026-09-29.
+const NOVADA_ZONES = Object.freeze({ residential: 'res', isp: 'isp', mobile: 'mob' });
+const NOVADA_MAX_SESSTIME = 120;
+function novadaPlace(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function novadaUsername(base, { poolType, country, state, city, session, lifeMin } = {}) {
+  const zone = NOVADA_ZONES[String(poolType || '').toLowerCase()] || NOVADA_ZONES.residential;
+  let user = `${String(base || '').trim()}-zone-${zone}`;
+  const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  if (/^[a-z]{2}$/.test(cc)) {
+    user += `-region-${cc}`;
+    const st = novadaPlace(state);
+    if (st) user += `-st-${st}`;
+    const ct = novadaPlace(city);
+    if (ct) user += `-city-${ct}`;
+  }
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (sid) {
+    const m = Number(lifeMin);
+    const mins = Number.isInteger(m) && m > 0 ? Math.min(m, NOVADA_MAX_SESSTIME) : 10;
+    user += `-session-${sid}-sessTime-${mins}`;
+  }
+  return user;
+}
+
+// ---------------------------------------------------------------------------------------
+// Proxies.sx pool gateway: gw.proxies.sx, 7000 HTTP / 7001 SOCKS5. Username grammar:
+//   psx_<acct>-<pool>-<cc>[-sid-<id>-rot-sticky]-failover-strict
+// The gateway lowercases the username and splits on "-", so no value may contain a hyphen.
+// pool = mbl (mobile modems) or peer (residential peers); "best"/"any" are never used because
+// they fail over across pools. failover-strict makes an out-of-stock country return an error
+// (E_NO_STOCK_COUNTRY) instead of silently exiting somewhere else, and a country is required.
+// A sticky row pins one session id (sid, [a-z0-9_] 8-64 chars) with rot-sticky; a rotating row
+// has no sid, so each new connection gets a fresh IP. An explicit rotate = a new sid.
+// Source: agents.proxies.sx pool skill + rotation cookbook, 2026-09-29.
+const PROXIESSX_POOLS = Object.freeze({ mobile: 'mbl', residential: 'peer' });
+function proxiesSxSid(prefix, index) {
+  const core = `${String(prefix || '').toLowerCase().replace(/[^a-z0-9_]/g, '')}${index != null ? `_${index}` : ''}`;
+  const sid = core.length >= 8 ? core : `sg_${core}`.padEnd(8, '0');
+  return sid.slice(0, 64);
+}
+function proxiesSxUsername(login, { poolType, country, sid } = {}) {
+  const acct = String(login || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] || PROXIESSX_POOLS.mobile;
+  const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  if (!acct || !/^[a-z]{2}$/.test(cc)) return '';
+  let user = `${acct}-${pool}-${cc}`;
+  const s = String(sid || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (s) user += `-sid-${s}-rot-sticky`;
+  return `${user}-failover-strict`;
+}
+// GET /v1/account/proxy-password. Field names differ between the docs and the reference
+// client, so accept the common shapes and an optional { data: {...} } envelope.
+function proxiesSxProxyCreds(body) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { username: '', password: '' }; }
+  const o = data && typeof data.data === 'object' && data.data ? data.data : (data || {});
+  const pick = (...keys) => { for (const k of keys) { if (typeof o[k] === 'string' && o[k].trim()) return o[k].trim(); } return ''; };
+  return {
+    username: pick('proxyUsername', 'username', 'login', 'proxyLogin'),
+    password: pick('proxyPassword', 'password')
+  };
+}
+
+// ---------------------------------------------------------------------------------------
+// MobileProxy.Space: GET https://mobileproxy.space/api.html?command=get_my_proxy with
+// Authorization: Bearer <token> returns { status: 'ok', list: [Proxy] }. Each dedicated
+// mobile proxy has one login/password and separate HTTP and SOCKS5 ports on proxy_host_ip
+// (or proxy_hostname). Numbers may arrive as strings, so every one is parsed. proxy_exp is
+// kept as the vendor's text (their timezone is Moscow). Errors come back as
+// { status: 'err', message }. Source: github.com/mobileproxy/api-docs openapi.yaml + a live
+// bad-token probe, 2026-09-29.
+function mobileProxySpaceRows(body, { socks = false } = {}) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { error: 'bad-json', rows: [] }; }
+  if (!data || typeof data !== 'object') return { error: 'bad-json', rows: [] };
+  if (data.status && data.status !== 'ok') return { error: String(data.message || data.status), rows: [] };
+  const list = Array.isArray(data.list) ? data.list : [];
+  const rows = [];
+  const seen = new Set();
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const host = String(p.proxy_host_ip || p.proxy_hostname || '').trim();
+    const port = Number.parseInt(String(socks ? p.proxy_socks5_port : p.proxy_http_port), 10);
+    const username = p.proxy_login != null ? String(p.proxy_login) : '';
+    const password = p.proxy_pass != null ? String(p.proxy_pass) : '';
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const geo = String(p.proxy_geo || '').trim();
+    const op = String(p.proxy_operator || '').trim();
+    const exp = String(p.proxy_exp || '').trim();
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `MobileProxy.Space • ${[geo, op].filter(Boolean).join(' • ') || 'Mobile'}${p.proxy_id != null ? ` • #${p.proxy_id}` : ''}${exp ? ` • until ${exp}` : ''}`,
+      country: null
+    });
+  }
+  return { error: '', rows };
+}
+
+// ---------------------------------------------------------------------------------------
+// Proxy-Solutions anti-detect integration: GET https://proxy-solutions.net/api/proxies/
+// {provider_key}?format=object&proto=http|socks&page=N&per_page=200 returns
+// { page, per_page, total_pages, total_proxies, proxies: [{ name, location, country_code,
+// dynamic, proto, ip, port, login, password, expires_at (epoch ms) }] }. Expired entries are
+// skipped. Source: the contract Proxy-Solutions sent SoftGlaze by email, 2026-09-28 (not in
+// their public docs yet, so it is verified against one live key before listing).
+function proxySolutionsPage(body, { now = Date.now() } = {}) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], totalPages: 0 }; }
+  const list = Array.isArray(data && data.proxies) ? data.proxies : [];
+  const rows = [];
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const host = String(p.ip || '').trim();
+    const port = Number.parseInt(String(p.port), 10);
+    const username = p.login != null ? String(p.login) : '';
+    const password = p.password != null ? String(p.password) : '';
+    const exp = Number(p.expires_at);
+    if (Number.isFinite(exp) && exp > 0 && exp <= now) continue;
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const cc = String(p.country_code || '').trim().toUpperCase();
+    const socks = String(p.proto || '').toLowerCase() === 'socks';
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `Proxy-Solutions • ${String(p.name || p.location || cc || 'Proxy').trim()}${p.dynamic ? ' • dynamic' : ''}`,
+      country: /^[A-Z]{2}$/.test(cc) ? cc : null
+    });
+  }
+  const totalPages = Number.parseInt(String(data && data.total_pages), 10);
+  return { rows, totalPages: Number.isInteger(totalPages) && totalPages > 0 ? totalPages : 1 };
+}
+
 module.exports = {
+  mobileProxySpaceRows,
+  proxySolutionsPage,
+  camelPlace,
+  rapidProxyUsername,
+  NOVADA_ZONES,
+  novadaUsername,
+  PROXIESSX_POOLS,
+  proxiesSxSid,
+  proxiesSxUsername,
+  proxiesSxProxyCreds,
   liveProxiesListUrl,
   liveProxiesRows,
   liveProxiesPlanLabel,

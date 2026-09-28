@@ -74,7 +74,20 @@ export const PROVIDERS = [
   { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'] } },
   // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
   // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
-  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, session: true, life: true } }
+  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, session: true, life: true } },
+  // RapidProxy: no management API, so rows are minted on us.rapidproxy.io:5001 from a dashboard
+  // sub-account; country/state/city and a sticky session (up to 180 min) ride in the username.
+  { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, gateway: true } },
+  // NOVADA: a proxy user (not the login email) on super.novada.pro:7777; zone, country, state,
+  // city and a sticky session (up to 120 min) ride in the username. Regional host overridable.
+  { key: 'novada', name: 'NOVADA', initials: 'NV', color: '#2563eb', referral: 'https://dashboard.novada.com/', gateway: { host: 'super.novada.pro', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['isp', 'Rotating ISP'], ['mobile', 'Mobile']], count: true, geo: true, life: true, gateway: true } },
+  // Proxies.sx: the API key reads the gateway login + proxy password; rows pin one pool and
+  // failover-strict so a country without stock fails instead of exiting elsewhere.
+  { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#7c3aed', referral: 'https://client.proxies.sx/', gateway: null, geoSync: { creds: ['token'], poolType: [['mobile', 'Mobile (modems)'], ['residential', 'Residential (peers)']], count: true, session: true } },
+  // MobileProxy.Space: dedicated mobile proxies listed from the account with an API token.
+  { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
+  // Proxy-Solutions: the anti-detect provider key lists every active proxy on the account.
+  { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
