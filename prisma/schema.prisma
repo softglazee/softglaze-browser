@@ -58,7 +58,7 @@ model Proxy {
   @@index([createdAt])
   @@index([ownerMemberId])
   @@index([proxyGroupId])
-  @@unique([type, host, port, username])
+  @@unique([type, host, port, username, password])
 }
 
 // Proxy categories/folders (e.g. "USA Proxies", "UK", "Japan"). A proxy belongs to

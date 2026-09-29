@@ -65,19 +65,19 @@ export const PROVIDERS = [
   // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
   // already inside that URL), so the pull takes the link rather than a guessed endpoint.
   // Credentials come back as username:password@host:port, which the shared parser handles.
-  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: [], apiUrl: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } },
+  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: ['username', 'password'], count: true, session: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } },
   // PacketStream: one residential gateway. Username + proxy password from the dashboard
   // Network Access page; country + sticky session ride in the password. No state/city.
   { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true } },
   // Airproxy: dedicated mobile proxies. The API key lists the proxies already on the account
   // (GET /api/proxy/list/); location is fixed by the SIM, so no country/count controls.
-  { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'] } },
+  { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true } },
   // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
   // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
   { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, session: true, life: true } },
   // RapidProxy: no management API, so rows are minted on us.rapidproxy.io:5001 from a dashboard
   // sub-account; country/state/city and a sticky session (up to 180 min) ride in the username.
-  { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, gateway: true } },
+  { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']], count: true, geo: true, life: true, gateway: true } },
   // NOVADA: a proxy user (not the login email) on super.novada.pro:7777; zone, country, state,
   // city and a sticky session (up to 120 min) ride in the username. Regional host overridable.
   { key: 'novada', name: 'NOVADA', initials: 'NV', color: '#2563eb', referral: 'https://dashboard.novada.com/', gateway: { host: 'super.novada.pro', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['isp', 'Rotating ISP'], ['mobile', 'Mobile']], count: true, geo: true, life: true, gateway: true } },
@@ -85,9 +85,9 @@ export const PROVIDERS = [
   // failover-strict so a country without stock fails instead of exiting elsewhere.
   { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#7c3aed', referral: 'https://client.proxies.sx/', gateway: null, geoSync: { creds: ['token'], poolType: [['mobile', 'Mobile (modems)'], ['residential', 'Residential (peers)']], count: true, session: true } },
   // MobileProxy.Space: dedicated mobile proxies listed from the account with an API token.
-  { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
+  { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], noCountry: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
   // Proxy-Solutions: the anti-detect provider key lists every active proxy on the account.
-  { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } }
+  { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], noCountry: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
@@ -129,8 +129,12 @@ export const PROXY_COUNTRIES = [
   ['BR', 'Brazil'], ['MX', 'Mexico'], ['AR', 'Argentina'], ['CL', 'Chile'], ['CO', 'Colombia'], ['NZ', 'New Zealand']
 ];
 
+// Per-provider form drafts for this app session. Module scope, so they survive the panel
+// unmounting when the user opens another tab, and switching between providers.
+const FORM_DRAFTS = new Map();
+
 const GEO_HINTS = {
-  liveproxies: 'Live Proxies gives each plan its own proxy list link in the dashboard, and your account access code is already inside that link, so nothing else needs entering. Open the dashboard, copy the proxy list URL for the plan you want, and paste it above; the link must be an https liveproxies.io one. Credentials arrive as username:password@host:port. Pick the plan type so the pulled proxies are labelled correctly. A rotating plan is one gateway endpoint that changes exit IP per request, so it imports as a single proxy; a static plan imports one row per IP.',
+  liveproxies: 'Live Proxies builds every proxy on its gateway (b2b.liveproxies.io:7383). Enter the Username (for example LV58712) and Password shown under Proxy Information on the dashboard, and pick a country. How many 1 with no session gives one rotating proxy; more than 1 gives that many sticky proxies, each on its own server with a 60 minute session. A sticky session is digits only.',
   apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.',
   smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
   shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
@@ -179,7 +183,11 @@ export default function ProxyProviders({ onSynced }) {
     // Proxy-Seller shares the protocol and session vocabulary. Sticky is the default for
     // both because an anti-detect profile needs an exit IP that stays put.
     const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller' || provider.key === 'iproyal';
-    setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
+    // Restore what was typed for this provider earlier in the session (switching provider or
+    // leaving the tab used to wipe it, including pasted keys from a pull that had failed).
+    const draft = FORM_DRAFTS.get(provider.key);
+    if (draft) setForm({ ...draft });
+    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });
@@ -197,7 +205,8 @@ export default function ProxyProviders({ onSynced }) {
     try {
       softglazeApi.proxies.getProviderCreds(provider.key)
         .then((c) => {
-          if (!live || !c || !c.found) return;
+          // A session draft holds what the user typed most recently, so it wins over saved creds.
+          if (!live || !c || !c.found || FORM_DRAFTS.has(provider.key)) return;
           setForm((f) => ({
             ...f,
             ...(c.username != null ? { username: c.username } : {}),
@@ -207,7 +216,9 @@ export default function ProxyProviders({ onSynced }) {
             ...(c.zone != null ? { zone: c.zone } : {}),
             ...(c.plan != null ? { plan: c.plan } : {}),
             ...(c.host ? { host: c.host } : {}),
-            ...(c.port != null ? { port: String(c.port) } : {})
+            ...(c.port != null ? { port: String(c.port) } : {}),
+            ...(c.apiUrl != null ? { apiUrl: c.apiUrl } : {}),
+            ...(c.orderId != null ? { orderId: c.orderId } : {})
           }));
         })
         .catch(() => {});
@@ -215,7 +226,11 @@ export default function ProxyProviders({ onSynced }) {
     return () => { live = false; };
   }, [provider]);
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k, v) => setForm((f) => {
+    const next = { ...f, [k]: v };
+    FORM_DRAFTS.set(provider.key, next);
+    return next;
+  });
 
   // Remember the entered credentials for this provider so they're pre-filled next
   // time. Best-effort; secrets are DPAPI-sealed in the main process. Empty fields
@@ -226,7 +241,7 @@ export default function ProxyProviders({ onSynced }) {
         provider: provider.key,
         username: form.username, password: form.password, token: form.token,
         apiToken: form.apiToken, zone: form.zone, plan: form.plan,
-        host: form.host, port: form.port
+        host: form.host, port: form.port, apiUrl: form.apiUrl, orderId: form.orderId
       }).catch(() => {});
     } catch (e) { /* ignore */ }
   }
@@ -241,7 +256,7 @@ export default function ProxyProviders({ onSynced }) {
         provider: provider.key,
         username: form.username, password: form.password, token: form.token,
         apiToken: form.apiToken, zone: form.zone, plan: form.plan,
-        host: form.host, port: form.port
+        host: form.host, port: form.port, apiUrl: form.apiUrl, orderId: form.orderId
       });
       setCredsSaved(true);
       setTimeout(() => setCredsSaved(false), 2500);
@@ -319,6 +334,9 @@ export default function ProxyProviders({ onSynced }) {
     const fromList = g.ps && form.plan === 'residential' && form.source === 'existing';
     if (fromList && !form.listId) { setErr(t('proxyProviders.ps.pickList', 'Pick one of your saved lists, or switch to New list.')); return; }
     setSyncing(true);
+    // Save what was typed as soon as Pull is clicked, not only after a successful pull,
+    // so a failed pull no longer throws the pasted keys away.
+    persistCreds();
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
         provider: provider.key,
@@ -972,6 +990,7 @@ export default function ProxyProviders({ onSynced }) {
                   <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.geo.title')}</span>
                 </div>
 
+                {!provider.geoSync.noCountry && (
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
@@ -986,6 +1005,7 @@ export default function ProxyProviders({ onSynced }) {
                     </div>
                   )}
                 </div>
+                )}
 
                 {provider.geoSync.poolType && (
                   <div className="sm:max-w-[260px]">

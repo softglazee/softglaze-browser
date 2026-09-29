@@ -68,14 +68,15 @@ const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
-  marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword,
+  marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword, froxyBasePassword,
   packetStreamPassword, airproxyRows,
   catProxiesResiUsername, catProxiesMobileUsername, catProxiesCreds,
   rapidProxyUsername, NOVADA_ZONES, novadaUsername,
   PROXIESSX_POOLS, proxiesSxSid, proxiesSxUsername, proxiesSxProxyCreds,
   mobileProxySpaceRows, proxySolutionsPage,
   parseProxidizePerProxy, proxidizePerGbUsername,
-  liveProxiesListUrl, liveProxiesRows
+  liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
+  LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -2403,13 +2404,12 @@ async function fetchNodeMavenPool({ username, password, country, state, city, se
 // delimiter against a live key.
 const FROXY_GATEWAY = Object.freeze({ host: 'proxy.froxy.com', port: 9000 });
 
-async function fetchFroxyPool({ username, password, country, state, city, session, count, poolType, proxyType }) {
+async function fetchFroxyPool({ username, password, country, state, city, count, poolType, proxyType }) {
   const login = String(username || '').trim();
-  const pasted = password != null ? String(password) : '';
-  if (!login) throw new Error('Froxy: enter your proxy login (dashboard, Export Proxy List). Pick Residential or Mobile below.');
+  const base = froxyBasePassword(password);
+  if (!login) throw new Error('Froxy: enter the Login from the subscription page (Manage, Login/Password Access).');
+  if (!base) throw new Error('Froxy: enter the Password from the same page. Only the part before the first ";" is used; the app adds the country.');
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
-  const host = FROXY_GATEWAY.host;
-  const port = FROXY_GATEWAY.port;
   const kindLabel = (() => {
     const p = String(poolType || '').toLowerCase();
     if (p === 'mobile') return 'Mobile';
@@ -2417,30 +2417,18 @@ async function fetchFroxyPool({ username, password, country, state, city, sessio
     return 'Residential';
   })();
   const cc = normCountryCode(country);
-  const n = clampPoolCount(count, 1, 100);
-  if (!cc) {
-    // No app-side targeting: use the pasted credentials exactly as the dashboard gives them.
-    if (!pasted) throw new Error('Froxy: enter the proxy password from the dashboard, or pick a country to target.');
-    return [{ type: socks ? 'SOCKS5' : 'HTTP', host, port, username: login, password: pasted, label: `Froxy • ${kindLabel} • gateway`, country: null }];
-  }
+  const pw = froxyPassword(base, { country: cc, region: state, city });
+  // One row per port: each port 9000-9199 is a separate session (its own exit IP).
+  const n = clampPoolCount(count, 1, 200);
   const rows = [];
-  const seen = new Set();
-  const fixed = String(session || '').trim();
   for (let i = 0; i < n; i++) {
-    const sid = fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(5).toString('hex');
-    const pw = froxyPassword({ poolType, country: cc, region: state, city, session: sid });
-    const key = `${host}:${port}:${login}:${pw}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
-      host, port, username: login, password: pw,
-      label: `Froxy • ${kindLabel} • ${cc} • sticky`,
-      country: cc,
-      dedupeOnPassword: true
+      host: FROXY_GATEWAY.host, port: FROXY_GATEWAY.port + i, username: login, password: pw,
+      label: `Froxy • ${kindLabel} • ${cc || 'Any country'} • port ${FROXY_GATEWAY.port + i}`,
+      country: cc || null
     });
   }
-  if (!rows.length) throw new Error('Froxy: could not build any proxies.');
   return rows;
 }
 
@@ -2462,7 +2450,9 @@ async function fetchPacketStreamPool({ username, password, country, session, cou
   const port = socks ? PACKETSTREAM_GATEWAY.socks : PACKETSTREAM_GATEWAY.http;
   const cc = normCountryCode(country);
   const where = cc || 'Random';
-  const fixed = String(session || '').trim();
+  // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
+  // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
+  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     // Rotating: one gateway row, a fresh IP per request.
     const pw = packetStreamPassword(base, { country: cc });
@@ -2555,7 +2545,9 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   const buildUser = (sid) => product.mobile
     ? catProxiesMobileUsername(username, { country: cc, city, session: sid, ttlMin: lifeMin })
     : catProxiesResiUsername(username, { country: cc, state, city, session: sid, lifetimeMin: resiLife });
-  const fixed = String(session || '').trim();
+  // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
+  // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
+  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     const user = buildUser('');
     return [{ type, host: product.host, port, username: user, password, label: `CatProxies • ${product.kind} • ${where} • rotating`, country: cc || null, dedupeOnPassword: true }];
@@ -2589,7 +2581,9 @@ function gatewayOverride(host, port, def, label) {
 // Mint `count` sticky rows (one session id each) or a single rotating row, for vendors whose
 // targeting lives in the username. buildUser(sid) returns the full username for that session.
 function mintGatewayRows({ type, host, port, password, session, count, buildUser, label }) {
-  const fixed = String(session || '').trim();
+  // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
+  // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
+  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     return [{ type, host, port, username: buildUser(''), password, label: `${label} • rotating`, dedupeOnPassword: true }];
   }
@@ -2614,7 +2608,7 @@ function mintGatewayRows({ type, host, port, password, session, count, buildUser
 // vendor's own examples 2026-09-29; other regional nodes are reachable through the override.
 const RAPIDPROXY_GATEWAY = Object.freeze({ host: 'us.rapidproxy.io', port: 5001 });
 
-async function fetchRapidProxyPool({ username, password, country, state, city, session, life, count, host, port }) {
+async function fetchRapidProxyPool({ username, password, country, state, city, session, life, count, host, port, poolType }) {
   const sub = String(username || '').trim();
   const pw = password != null ? String(password) : '';
   if (!sub || /[\s:@]/.test(sub)) throw new Error('RapidProxy: enter the sub-account username from the dashboard (Residential → sub-accounts).');
@@ -2625,7 +2619,8 @@ async function fetchRapidProxyPool({ username, password, country, state, city, s
   const gw = gatewayOverride(host, port, RAPIDPROXY_GATEWAY, 'RapidProxy');
   const where = cc || 'Global';
   const rows = mintGatewayRows({
-    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    // SOCKS5 runs on the same host:port (dashboard test command, 29 Sep 2026).
+    type: String(poolType || '').toLowerCase() === 'socks5' ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
     buildUser: (sid) => rapidProxyUsername(sub, { country: cc, state, city, session: sid, lifeMin: Number(life) }),
     label: `RapidProxy • ${where}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -2844,7 +2839,10 @@ async function fetchProxidizePool({ token, username, host, country, state, city,
 // shape as username:password@host:port; see liveProxiesListUrl for why the URL comes from
 // the user's dashboard rather than a hardcoded endpoint). The list URL already carries the
 // account access code, so an optional Bearer token is sent only when the user supplies one.
-async function fetchLiveProxiesPool({ apiUrl, token, country, proxyType, poolType }) {
+async function fetchLiveProxiesPool({ apiUrl, token, username, password, country, session, count, proxyType, poolType }) {
+  // Gateway mode (what the dashboard actually offers): username LV<id> + proxy password.
+  if (String(username || '').trim()) return mintLiveProxiesRows({ username, password, country, session, count, proxyType, poolType });
+  // Legacy: a pasted list link, kept for anyone who saved one before this change.
   const url = liveProxiesListUrl(apiUrl);
   if (!url) {
     throw new Error('Live Proxies: paste the proxy list URL from your dashboard (it must be an https liveproxies.io link).');
@@ -2866,6 +2864,45 @@ async function fetchLiveProxiesPool({ apiUrl, token, country, proxyType, poolTyp
   const rows = liveProxiesRows(text, { socks, country, plan: poolType });
   if (!rows.length) {
     throw new Error('Live Proxies returned no usable proxies. Check the plan is active and that the link is the proxy list, not the dashboard page.');
+  }
+  return rows;
+}
+
+// Live Proxies gateway rows, built the way the dashboard's Proxy Generation panel builds them
+// (LIVEPROXIES_GATEWAY). Blank session + How many 1 = one rotating row; otherwise that many
+// sticky rows, each on its own b2b-s<N> server with its own numeric session (60 minutes).
+function mintLiveProxiesRows({ username, password, country, session, count, proxyType, poolType }) {
+  const acct = liveProxiesBaseUser(username);
+  const pw = password != null ? String(password) : '';
+  if (!acct) throw new Error('Live Proxies: enter the username from the dashboard (Proxy Information, for example LV58712).');
+  if (!pw) throw new Error('Live Proxies: enter the proxy password from the dashboard (Proxy Information).');
+  const cc = normCountryCode(country);
+  if (!cc) throw new Error('Live Proxies: pick a country. Every Live Proxies line carries one (for example United States).');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const kind = liveProxiesPlanLabel(poolType);
+  const n = clampPoolCount(count, 1, 100);
+  const typed = String(session || '').replace(/\D/g, '').slice(0, 7);
+  if (!typed && n <= 1) {
+    return [{
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: socks ? LIVEPROXIES_GATEWAY.socksHost : LIVEPROXIES_GATEWAY.http,
+      port: socks ? LIVEPROXIES_GATEWAY.socksPort : LIVEPROXIES_GATEWAY.port,
+      username: liveProxiesUsername(acct, { country: cc }), password: pw,
+      label: `Live Proxies • ${kind} • ${cc} • rotating`, country: cc
+    }];
+  }
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    // Up to 8 digits: a typed session number keeps its digits and adds the index; a blank one
+    // gets a random 6-digit id per row, like the dashboard.
+    const sid = typed ? `${typed}${i + 1}`.slice(0, 8) : String(100000 + crypto.randomInt(0, 900000));
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: socks ? LIVEPROXIES_GATEWAY.socksHost : liveProxiesStickyHost(i + 1),
+      port: socks ? LIVEPROXIES_GATEWAY.socksPort : LIVEPROXIES_GATEWAY.port,
+      username: liveProxiesUsername(acct, { country: cc, sid }), password: pw,
+      label: `Live Proxies • ${kind} • ${cc} • sticky ${sid}`, country: cc
+    });
   }
   return rows;
 }
@@ -6622,8 +6659,9 @@ async function setGlobalSettings(payload) {
 // keyed by provider; secret fields are DPAPI-sealed via secretStore (same pattern
 // as IpProvider). Pre-filled into the Proxy Providers modal on open.
 // ---------------------------------------------------------------------------
-const PROXY_CRED_SECRET_FIELDS = ['password', 'token', 'apiToken'];
-const PROXY_CRED_PLAIN_FIELDS = ['username', 'zone', 'plan', 'host', 'port'];
+// apiUrl is a secret: a Live Proxies list link carries the account access code.
+const PROXY_CRED_SECRET_FIELDS = ['password', 'token', 'apiToken', 'apiUrl'];
+const PROXY_CRED_PLAIN_FIELDS = ['username', 'zone', 'plan', 'host', 'port', 'orderId'];
 
 async function readProxyProviderCredMap() {
   const raw = await readSetting('proxyProviderCreds', {});
