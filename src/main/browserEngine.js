@@ -23,7 +23,21 @@ const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
 // proxy, so an authenticated one is routed through this instead (audit).
 const { startSocksAuthRelay } = require('./socksRelay');
 const { startHttpAuthRelay } = require('./httpRelay');
-const { GEOJS_URL, normalizeGeoJs } = require('./proxyVendorUtils');
+const { GEOJS_URL, normalizeGeoJs, pickGeoConsensus } = require('./proxyVendorUtils');
+
+// A free loopback TCP port, found by binding port 0 and releasing it. Used for Chrome's
+// DevTools port, because an auto-assigned (0) port puts Chrome into automation mode.
+function getFreeLocalPort() {
+  return new Promise((resolve, reject) => {
+    const srv = require('node:net').createServer();
+    srv.unref();
+    srv.on('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
 
 // Stealth hides automation tells, but several of its evasions set the SAME
 // properties we spoof ourselves (UA, WebGL vendor, hardwareConcurrency,
@@ -64,18 +78,32 @@ puppeteer.use(makeStealth());
 // CAPTCHA, so it stays opt-in until that A/B is run - but the reason it was off by
 // default no longer applies. Required lazily so a stock-engine launch never loads the
 // dependency.
-let _runtimeFixPuppeteer = null;
-function getRuntimeFixPuppeteer() {
-  if (_runtimeFixPuppeteer) return _runtimeFixPuppeteer;
+// Two cached variants: with the stealth plugin (headless launches only) and without it
+// (every visible profile). See useStealthFor() below for why visible profiles run clean.
+const _runtimeFixPuppeteer = { stealth: null, clean: null };
+function getRuntimeFixPuppeteer({ stealth = false } = {}) {
+  const slot = stealth ? 'stealth' : 'clean';
+  if (_runtimeFixPuppeteer[slot]) return _runtimeFixPuppeteer[slot];
   // rebrowser reads this from process.env at runtime. enableDisable is the only mode
   // that keeps main-world page.evaluate working (addBinding is unwired in 22.15.0;
   // alwaysIsolated loses the main world).
   if (!process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE) process.env.REBROWSER_PATCHES_RUNTIME_FIX_MODE = 'enableDisable';
   const { addExtra } = require('puppeteer-extra');
   const engine = addExtra(require('rebrowser-puppeteer-core'));
-  engine.use(makeStealth());
-  _runtimeFixPuppeteer = engine;
+  if (stealth) engine.use(makeStealth());
+  _runtimeFixPuppeteer[slot] = engine;
   return engine;
+}
+
+// The stealth evasions were written to disguise HEADLESS Chromium. A visible, genuine
+// browser (real Chrome, Chrome for Testing, fingerprint-chromium) already has the real
+// chrome.*, plugins, permissions and iframe behaviour, so the patches only add detectable
+// fakes. Measured 29 Sep 2026 on Chrome 153, fixed DevTools port, clean home IP: the plugin
+// with zero evasions -> Google results every run; the app's evasion set (with or without
+// iframe.contentWindow, the worst single one) -> Google CAPTCHA every run, and CreepJS read
+// "60% stealth". So only headless launches get the plugin.
+function useStealthFor({ headless }) {
+  return Boolean(headless) && headless !== 'false';
 }
 
 
@@ -656,7 +684,10 @@ function parseProxyInput(input) {
       host: input.host,
       port: Number.parseInt(String(input.port), 10),
       username: input.username || null,
-      password: input.password || null
+      password: input.password || null,
+      // The country the vendor pull targeted (or the last check saw). Only a tie-breaker
+      // for the launch geo lookup when the geo services disagree; never sent anywhere.
+      country: (input.country || input.lastCountry || null)
     };
   }
   return null;
@@ -1031,10 +1062,13 @@ function fingerprintScript(fp) {
   // every function we patch - and toString itself - look native, with the right .name.
   const _patched = new WeakSet();
   const _origFnToString = Function.prototype.toString;
-  const _fnToString = function toString() {
+  // Built as an object METHOD, not a function expression: methods have no .prototype and
+  // throw on `new`, exactly like real built-ins. A plain function has both, which any
+  // detector can test in one line ('prototype' in Function.prototype.toString).
+  const _fnToString = ({ toString() {
     if (_patched.has(this)) return 'function ' + (this.name || '') + '() { [native code] }';
     return _origFnToString.call(this);
-  };
+  } }).toString;
   try {
     // Real Chrome: Function.prototype.toString.name === 'toString' and its OWN
     // toString() reports [native code]. Pin the name explicitly - otherwise it reports
@@ -1063,7 +1097,8 @@ function fingerprintScript(fp) {
       const onProto = proto && Object.getOwnPropertyDescriptor(proto, prop);
       const target = onProto ? proto : obj;
       const existing = onProto || Object.getOwnPropertyDescriptor(obj, prop);
-      const getter = markNative(function () { return value; }, 'get ' + prop);
+      // An accessor-shorthand getter: no .prototype and not constructible, like the native one.
+      const getter = markNative(Object.getOwnPropertyDescriptor({ get [prop]() { return value; } }, prop).get, 'get ' + prop);
       Object.defineProperty(target, prop, { get: getter, configurable: true, enumerable: existing ? existing.enumerable : true });
     } catch (e) {
       try { Object.defineProperty(obj, prop, { get: () => value, configurable: true }); } catch (e2) {}
@@ -1071,9 +1106,11 @@ function fingerprintScript(fp) {
   };
 
   try {
-    // navigator.webdriver === false, exposed on Navigator.prototype (the property
-    // EXISTS and is false). undefined - or an own instance prop - is itself a tell.
-    define(navigator, 'webdriver', false);
+    // Only touch navigator.webdriver when the browser itself reports true. Launched on a
+    // fixed DevTools port, Chrome already reports false natively, and replacing that native
+    // getter is what Google Search detected: this one define() alone produced a CAPTCHA on
+    // every run, and skipping it gave normal results (29 Sep 2026, Chrome 153).
+    if (navigator.webdriver === true) define(navigator, 'webdriver', false);
   } catch (e) {}
 
   if (fp.langs && fp.langs.length) {
@@ -2389,14 +2426,32 @@ function lookupProxyGeoNode(proxy) {
         req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
       });
 
-      // ipinfo.io has no AAAA record, so an IPv6-only exit cannot reach it and the profile
-      // would launch with no geo, which breaks timezone matching. Retry on get.geojs.io,
-      // which answers over IPv4 and IPv6.
-      attempt(targetUrl, mapResponse)
-        .then((geo) => geo || attempt(GEOJS_URL, (j) => {
+      // Same, over plain HTTP (ip-api.com's free tier has no HTTPS).
+      const attemptHttp = (url) => new Promise((settle) => {
+        let settled = false;
+        const done = (v) => { if (!settled) { settled = true; settle(v); } };
+        const req = require('node:http').get(url, { agent, headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' } }, (res) => {
+          let data = '';
+          res.on('data', (c) => { data += c; });
+          res.on('end', () => { try { const j = JSON.parse(data); done(j && j.status === 'success' ? j : null); } catch (e) { done(null); } });
+        });
+        req.on('error', () => done(null));
+        req.setTimeout(8000, () => { try { req.destroy(); } catch (e) {} done(null); });
+      });
+
+      // Ask three geo services in parallel and take the consensus (pickGeoConsensus): a
+      // single database can misplace a leased proxy range in another country, and the
+      // profile's timezone and language follow whatever this returns. geojs answers over
+      // IPv4 and IPv6, so an IPv6-only exit still gets a result when the other two cannot.
+      Promise.all([
+        attempt(targetUrl, mapResponse),
+        attemptHttp('http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query'),
+        attempt(GEOJS_URL, (j) => {
           const g = normalizeGeoJs(j);
           return g ? { status: 'success', query: g.ip, countryCode: g.country, timezone: g.timezone, city: g.city, regionName: g.region, isp: g.isp, lat: g.lat, lon: g.lon } : null;
-        }))
+        })
+      ])
+        .then((answers) => pickGeoConsensus(answers, { countryHint: proxy.country }))
         .then(resolve, () => resolve(null));
       return;
     }
@@ -2439,7 +2494,12 @@ const geoNodeInflight = new Map(); // key -> Promise<value|null>
 
 function proxyGeoKey(proxy) {
   if (!proxy || !proxy.host || !proxy.port) return null;
-  return `${String(proxy.type || '').toLowerCase()}://${formatProxyHost(proxy.host)}:${proxy.port}`;
+  // The username is part of the key: gateway vendors (CatProxies, RapidProxy, NOVADA,
+  // PacketStream...) put the sticky session and country in the username or password on ONE
+  // host:port, so keying on host:port alone handed every session the first one's location.
+  const who = `${proxy.username || ''}\u0000${proxy.password || ''}`;
+  const tag = require('node:crypto').createHash('sha256').update(who).digest('hex').slice(0, 16);
+  return `${String(proxy.type || '').toLowerCase()}://${tag}@${formatProxyHost(proxy.host)}:${proxy.port}`;
 }
 
 async function lookupProxyGeoNodeCached(proxy) {
@@ -3053,6 +3113,13 @@ async function launchProfileSession(options = {}) {
     // timeout ("Network.enable timed out") on slower machines/proxies.
     protocolTimeout: 120000
   };
+  // Launch on a FIXED free DevTools port, never puppeteer's default --remote-debugging-port=0.
+  // Chrome treats an auto-assigned (0) debugging port as automation mode: it sets
+  // navigator.webdriver=true even with --enable-automation stripped, and Google Search then
+  // serves a CAPTCHA to every profile on every IP, including a clean home connection.
+  // Measured 29 Sep 2026 on Chrome 153: port 0 -> webdriver=true + CAPTCHA every run;
+  // a fixed port -> webdriver=false + normal results every run.
+  launchOptions.debuggingPort = await getFreeLocalPort();
   if (resolvedBrowser && resolvedBrowser.exePath) launchOptions.executablePath = resolvedBrowser.exePath;
   // Set the timezone on the Chrome PROCESS via the TZ env var. Chromium honors it
   // for ICU/Date/Intl in EVERY context - main thread, dedicated workers, AND
@@ -3062,9 +3129,12 @@ async function launchProfileSession(options = {}) {
 
   // Engine: stock puppeteer by default; the opt-in rebrowser engine (persistent
   // Runtime.enable dropped) when "minimize CDP footprint" is on for this launch.
-  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer()
-    : usingAntidetect ? getNativeEngine()
-    : puppeteer;
+  // Visible profiles never get the stealth plugin (useStealthFor); that applies to the
+  // minimize-CDP engine too, which used to add it even on the anti-detect build.
+  const stealth = !usingAntidetect && useStealthFor({ headless });
+  const engine = browserSettings.minimizeCdpFootprint === true ? getRuntimeFixPuppeteer({ stealth })
+    : stealth ? puppeteer
+    : getNativeEngine();
   let browser;
   try {
     browser = await engine.launch(launchOptions);
