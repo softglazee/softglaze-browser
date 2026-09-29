@@ -151,6 +151,32 @@ function normalizeGeoJs(j) {
   };
 }
 
+// Pick one geo answer from several services queried through the same proxy. Geo databases
+// disagree on leased proxy ranges: on 29 Sep 2026 ipinfo put 169.128.195.52 in Lisbon while
+// ip-api and geojs both said Albuquerque, US, and trusting ipinfo alone launched a "US" proxy
+// with Portuguese time and language, a loud bot signal. Rule: the country most services agree
+// on wins; a tie goes to the country the user asked the vendor for (hint), then to the order
+// the services were listed in. The winner's own record supplies timezone/city. Each input is
+// the ip-api-shaped object the launch code already uses ({ countryCode, timezone, query, ... }).
+function pickGeoConsensus(results, { countryHint } = {}) {
+  const valid = (Array.isArray(results) ? results : []).filter((r) => r && typeof r === 'object' && /^[A-Z]{2}$/i.test(String(r.countryCode || '')));
+  if (!valid.length) return null;
+  const hint = String(countryHint || '').trim().toUpperCase();
+  const votes = new Map();
+  valid.forEach((r, i) => {
+    const cc = String(r.countryCode).toUpperCase();
+    const v = votes.get(cc) || { n: 0, first: i };
+    v.n += 1;
+    votes.set(cc, v);
+  });
+  const ranked = [...votes.entries()].sort((a, b) => (b[1].n - a[1].n)
+    || ((b[0] === hint) - (a[0] === hint))
+    || (a[1].first - b[1].first));
+  const winner = ranked[0][0];
+  const pick = valid.find((r) => String(r.countryCode).toUpperCase() === winner && r.timezone) || valid.find((r) => String(r.countryCode).toUpperCase() === winner);
+  return { ...pick, countryCode: winner, geoVotes: `${ranked[0][1].n}/${valid.length}` };
+}
+
 // Proxy-Seller products that are sold per IP (an order of N addresses), as opposed to the
 // residential traffic package. All of them list through GET proxy/list/{type}.
 const PROXY_SELLER_ORDER_TYPES = Object.freeze({
@@ -804,6 +830,7 @@ function proxySolutionsPage(body, { now = Date.now() } = {}) {
 }
 
 module.exports = {
+  pickGeoConsensus,
   mobileProxySpaceRows,
   proxySolutionsPage,
   camelPlace,

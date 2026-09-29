@@ -1964,7 +1964,7 @@ function psRotationLabel(rotation) {
 // the pull downloads what the account already owns from GET proxy/list/{type}, optionally
 // one order. Measured on his dashboard 15 Sep 2026: 200 IPv6 addresses, USA, all behind one
 // IPv4 entry host on separate ports, login authentication.
-async function fetchProxySellerOrderPool(key, { product, proxyType, orderId }) {
+async function fetchProxySellerOrderPool(key, { product, proxyType, orderId, count, existingPorts }) {
   const label = PROXY_SELLER_ORDER_TYPES[product];
   const qs = new URLSearchParams();
   const oid = String(orderId || '').trim();
@@ -1976,17 +1976,33 @@ async function fetchProxySellerOrderPool(key, { product, proxyType, orderId }) {
   if (!rows.length) {
     throw new Error(`Proxy-Seller: this account has no active ${label} proxies${oid ? ' in that order' : ''}.`);
   }
-  return rows.slice(0, 5000).map((r) => ({
+  // Honour "how many": an order can hold hundreds of addresses, and a pull of 5 imported all
+  // 200 IPv6 ones (29 Sep 2026). Addresses already in the pool are skipped, so each pull adds
+  // the NEXT ones. A blank count keeps the old behaviour and imports the whole order.
+  let fresh = rows;
+  if (typeof existingPorts === 'function') {
+    const held = new Map();
+    const kept = [];
+    for (const r of rows) {
+      const k = `${r.host}\u0000${r.username}`;
+      if (!held.has(k)) held.set(k, await existingPorts({ host: r.host, login: r.username }).catch(() => new Set()));
+      if (!held.get(k).has(r.port)) kept.push(r);
+    }
+    fresh = kept;
+  }
+  if (!fresh.length) throw new Error(`Proxy-Seller: every ${label} proxy on this account is already in your pool.`);
+  const wanted = count != null && String(count).trim() !== '' ? clampPoolCount(count, 5, 5000) : 5000;
+  return fresh.slice(0, wanted).map((r) => ({
     type: r.type, host: r.host, port: r.port, username: r.username, password: r.password,
     label: r.label, country: null, rotationUrl: r.rotationUrl
   }));
 }
 
-async function fetchProxySellerPool({ token, country, state, city, count, poolType, life, proxyType, listId, plan, orderId }) {
+async function fetchProxySellerPool({ token, country, state, city, count, poolType, life, proxyType, listId, plan, orderId, existingPorts }) {
   const key = psKey(token);
   const product = String(plan || 'residential').toLowerCase();
   if (PROXY_SELLER_ORDER_TYPES[product]) {
-    return fetchProxySellerOrderPool(key, { product, proxyType, orderId });
+    return fetchProxySellerOrderPool(key, { product, proxyType, orderId, count, existingPorts });
   }
   const pkg = await psPackage(key);
   if (pkg.is_active === false) throw new Error('Proxy-Seller: the residential package on this account is not active.');
@@ -3167,21 +3183,24 @@ async function testProxyConnectivity(proxy) {
 
   const started = Date.now();
 
-  // Primary: HTTPS endpoint - works through both HTTP CONNECT tunnels and SOCKS5.
+  // Primary: two HTTPS services raced in parallel - both work through HTTP CONNECT tunnels
+  // and SOCKS5. ipinfo.io has no AAAA record, so an IPv6-only exit (Proxy-Seller IPv6) can
+  // only reach get.geojs.io; asking them one after another made every IPv6 check wait out
+  // ipinfo's timeout first (~31 s per proxy, measured 29 Sep 2026). The first answer wins.
+  const viaIpinfo = httpGetJson('https://ipinfo.io/json', agent, 15000).then((data) => {
+    if (!data || !data.ip) throw new Error('ipinfo.io returned no IP.');
+    return { ip: data.ip, country: data.country || null, region: data.region || null, city: data.city || null, zip: data.postal || null, isp: data.org || null, timezone: data.timezone || null };
+  });
+  const viaGeojs = httpGetJson(GEOJS_URL, agent, 15000).then((raw) => {
+    const geo = normalizeGeoJs(raw);
+    if (!geo) throw new Error('get.geojs.io returned no IP.');
+    return { ip: geo.ip, country: geo.country, region: geo.region, city: geo.city, zip: null, isp: geo.isp, timezone: geo.timezone };
+  });
   try {
-    const data = await httpGetJson('https://ipinfo.io/json', agent, 15000);
-    return {
-      success: true,
-      ip: data.ip || null,
-      country: data.country || null,
-      region: data.region || null,
-      city: data.city || null,
-      zip: data.postal || null,
-      isp: data.org || null,
-      timezone: data.timezone || null,
-      latencyMs: Date.now() - started
-    };
-  } catch (primaryError) {
+    const first = await Promise.any([viaIpinfo, viaGeojs]);
+    return { success: true, ...first, latencyMs: Date.now() - started };
+  } catch (raced) {
+    const primaryError = raced && raced.errors ? raced.errors[0] : raced;
     // Fallback: ip-api over plain HTTP (some proxies block 443 or SNI).
     try {
       const data = await httpGetJson(
@@ -3204,18 +3223,7 @@ async function testProxyConnectivity(proxy) {
         latencyMs: Date.now() - started
       };
     } catch (fallbackError) {
-      // Last resort: a dual-stack service. ipinfo.io and ip-api.com publish no AAAA record,
-      // so an IPv6-only exit (Proxy-Seller IPv6, for one) cannot reach either and a healthy
-      // proxy was reported dead. get.geojs.io answers on IPv4 and IPv6.
-      try {
-        const geo = normalizeGeoJs(await httpGetJson(GEOJS_URL, agent, 15000));
-        if (geo) {
-          return {
-            success: true, ip: geo.ip, country: geo.country, region: geo.region, city: geo.city,
-            zip: null, isp: geo.isp, timezone: geo.timezone, latencyMs: Date.now() - started
-          };
-        }
-      } catch (e) { /* fall through to the most informative earlier error */ }
+      // (The dual-stack geojs service already ran in the primary race above.)
       // Prefer whichever attempt named the gateway: the plain-HTTP fallback surfaces the
       // gateway's own body, while a failed HTTPS CONNECT usually yields only a generic
       // tunnel error. Fall back to the primary message when the secondary says nothing.
@@ -3255,7 +3263,20 @@ async function checkProxy(payload) {
 
   if (!proxy || !proxy.host || !proxy.port) throw new Error('No valid proxy provided to check.');
 
-  const result = await testProxyConnectivity(proxy);
+  let result = await testProxyConnectivity(proxy);
+
+  // A vendor can take a few seconds to activate credentials it has just issued: every
+  // Proxy-Seller residential port answered HTTP 407 right after a pull and worked ~20 s later
+  // (29 Sep 2026). So a saved proxy created in the last 3 minutes that fails with 407 is
+  // retried a few times before it is recorded as dead. Older proxies are not retried.
+  if (savedId !== null && result && !result.success && /\b407\b/.test(String(result.error || ''))) {
+    const row = await getPrisma().proxy.findUnique({ where: { id: savedId }, select: { createdAt: true } });
+    const ageMs = row && row.createdAt ? Date.now() - new Date(row.createdAt).getTime() : Infinity;
+    for (let attempt = 0; attempt < 4 && ageMs + attempt * 8000 < 180000 && !result.success && /\b407\b/.test(String(result.error || '')); attempt++) {
+      await new Promise((r) => setTimeout(r, 8000));
+      result = await testProxyConnectivity(proxy);
+    }
+  }
 
   // Persist health for saved proxies so the pool shows durable status badges.
   if (savedId !== null) {
