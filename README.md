@@ -1,10 +1,11 @@
 # SoftGlaze Browser
 
-SoftGlaze Browser is a local-first Electron + React desktop app for managing
-isolated browser profiles, reusable proxies, and spreadsheet-based profile
-imports. Each profile runs in its own data directory with its own proxy and its
-own browser fingerprint, so several accounts can be worked in parallel without
-sharing cookies, storage, or device characteristics.
+SoftGlaze Browser is an **anti-detect browser**: a local-first Electron + React
+desktop app for managing isolated browser profiles, reusable proxies, and
+spreadsheet-based profile imports. Each profile runs in its own data directory
+with its own proxy and its own browser fingerprint, so several accounts can be
+worked in parallel without sharing cookies, storage, or device characteristics,
+and without sites linking them through the browser they run in.
 
 All data stays on the machine. There is no hosted backend and no profile
 syncing to a remote server.
@@ -30,6 +31,19 @@ Runs on **Windows, macOS, and Linux**.
 - SheetJS `xlsx` for Excel/CSV parsing
 
 ## Features
+
+**Anti-detect engine**
+
+- Runs each profile on a fingerprint-capable Chromium build (fingerprint-chromium),
+  on a real installed Chrome, or on Firefox, chosen per profile
+- Per-profile fingerprint: User-Agent and client hints, GPU (WebGL vendor and
+  renderer), CPU cores, RAM, screen, languages, fonts and media devices
+- Noise on canvas, WebGL image, AudioContext and client rects, so the hashes
+  sites build from them differ per profile and stay stable within one
+- WebRTC handling per profile, so the real IP does not leak past the proxy
+- Timezone and locale taken from the proxy's IP, so they match the exit country
+- Automation tells hidden by a stealth layer, with its overlapping evasions
+  switched off so it can never contradict the profile's own values
 
 **Profiles and isolation**
 

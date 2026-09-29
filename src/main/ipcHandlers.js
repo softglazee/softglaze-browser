@@ -69,6 +69,11 @@ const {
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword,
+  packetStreamPassword, airproxyRows,
+  catProxiesResiUsername, catProxiesMobileUsername, catProxiesCreds,
+  rapidProxyUsername, NOVADA_ZONES, novadaUsername,
+  PROXIESSX_POOLS, proxiesSxSid, proxiesSxUsername, proxiesSxProxyCreds,
+  mobileProxySpaceRows, proxySolutionsPage,
   parseProxidizePerProxy, proxidizePerGbUsername,
   liveProxiesListUrl, liveProxiesRows
 } = require('./proxyVendorUtils');
@@ -1266,7 +1271,9 @@ const PROXY_VENDORS = Object.freeze({
   luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
-  froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies'
+  froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', packetstream: 'PacketStream',
+  airproxy: 'Airproxy', catproxies: 'CatProxies', rapidproxy: 'RapidProxy', novada: 'NOVADA',
+  proxiessx: 'Proxies.sx', mobileproxyspace: 'MobileProxy.Space', proxysolutions: 'Proxy-Solutions'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -2421,6 +2428,325 @@ async function fetchFroxyPool({ username, password, country, state, city, sessio
   return rows;
 }
 
+// --- PacketStream (residential gateway) -------------------------------------------------
+// One gateway, credentials from the dashboard Network Access page: username + proxy password.
+// Country + sticky session ride in the password (packetStreamPassword). No API call - the app
+// mints gateway rows locally, like Froxy. HTTP/HTTPS = 31112, SOCKS5 = 31113. A blank session
+// gives a single rotating row; a session name mints `count` sticky rows so each profile can
+// pin its own exit IP. Confirmed against the dashboard generator 2026-09-27.
+const PACKETSTREAM_GATEWAY = Object.freeze({ host: 'proxy.packetstream.io', http: 31112, socks: 31113 });
+
+async function fetchPacketStreamPool({ username, password, country, session, count, proxyType }) {
+  const login = String(username || '').trim();
+  const base = password != null ? String(password) : '';
+  if (!login) throw new Error('PacketStream: enter your username (dashboard, Network Access).');
+  if (!base) throw new Error('PacketStream: enter your proxy password (dashboard, Network Access, Proxy Password).');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const host = PACKETSTREAM_GATEWAY.host;
+  const port = socks ? PACKETSTREAM_GATEWAY.socks : PACKETSTREAM_GATEWAY.http;
+  const cc = normCountryCode(country);
+  const where = cc || 'Random';
+  const fixed = String(session || '').trim();
+  if (!fixed) {
+    // Rotating: one gateway row, a fresh IP per request.
+    const pw = packetStreamPassword(base, { country: cc });
+    return [{
+      type: socks ? 'SOCKS5' : 'HTTP', host, port, username: login, password: pw,
+      label: `PacketStream • ${where} • rotating`, country: cc || null, dedupeOnPassword: true
+    }];
+  }
+  // Sticky: mint `count` rows, each pinned to its own session id (one exit IP per profile).
+  const n = clampPoolCount(count, 1, 100);
+  const rows = [];
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const sid = n > 1 ? `${fixed}${i + 1}` : fixed;
+    const pw = packetStreamPassword(base, { country: cc, session: sid });
+    const key = `${host}:${port}:${login}:${pw}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP', host, port, username: login, password: pw,
+      label: `PacketStream • ${where} • sticky ${sid}`, country: cc || null, dedupeOnPassword: true
+    });
+  }
+  if (!rows.length) throw new Error('PacketStream: could not build any proxies.');
+  return rows;
+}
+
+// --- Airproxy (dedicated mobile proxies) ------------------------------------------------
+// Read-only list pull: GET https://airproxy.io/api/proxy/list/?key=<KEY> returns the proxies
+// already assigned to the account (each its own SIM), which airproxyRows maps to HTTP rows.
+// The API key goes in the query string (URL-encoded). Rotation exists at
+// /api/proxy/change_ip/?id=&key= but is intentionally NOT wired here so the account key is
+// never persisted in a stored rotation URL. Confirmed against a live account 2026-09-27.
+const AIRPROXY_API = 'https://airproxy.io/api/proxy';
+
+async function fetchAirproxyPool({ token }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('Airproxy: enter your API key (dashboard, API section).');
+  let text;
+  try {
+    text = await httpRequestText(`${AIRPROXY_API}/list/?key=${encodeURIComponent(key)}`, { headers: { Accept: 'application/json' } });
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('Airproxy rejected the API key. Copy it again from the dashboard API section.');
+    throw new Error('Airproxy: could not read the proxy list. Check your connection and try again.');
+  }
+  const rows = airproxyRows(text);
+  if (!rows.length) throw new Error('Airproxy: no active proxies on this account. Confirm a proxy is assigned and the API key is correct.');
+  return rows;
+}
+
+// --- CatProxies (Standard Residential + Rotating Mobile) --------------------------------
+// The cp_ API key + a Plan ID (from the dashboard Active Plans) fetch GET /orders/:id, whose
+// proxy.{username,password} feed one gateway. Targeting rides in the username (see the helpers).
+// US gateways only for now (resi-us / mobile-us, both confirmed live 2026-09-27); EU/ASIA
+// regions exist in the dashboard but their exact hostnames are unconfirmed, so they are not
+// offered yet. Datacenter + Static ISP products are a separate follow-up.
+const CATPROXIES_API = 'https://catproxies.com/api/v1/user';
+const CATPROXIES_PRODUCTS = Object.freeze({
+  residential: { code: 'v2resi', host: 'resi-us.catproxies.com', http: 9000, socks: 11000, mobile: false, kind: 'Residential' },
+  mobile: { code: 'rotatingmobile', host: 'mobile-us.catproxies.com', http: 5000, socks: 5000, mobile: true, kind: 'Mobile' }
+});
+
+async function fetchCatProxiesPool({ token, orderId, poolType, country, state, city, session, life, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!/^cp_[A-Za-z0-9]{8,128}$/.test(key)) throw new Error('CatProxies: enter your API key (dashboard, My Account, API). It starts with cp_.');
+  const product = CATPROXIES_PRODUCTS[String(poolType || '').toLowerCase()] || CATPROXIES_PRODUCTS.residential;
+  const id = String(orderId || '').trim();
+  if (!/^[0-9a-fA-F-]{8,40}$/.test(id)) throw new Error('CatProxies: paste the Plan ID from the dashboard (Active Plans → the plan you want to use).');
+  let json;
+  try {
+    const text = await httpRequestText(`${CATPROXIES_API}/orders/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' } });
+    json = JSON.parse(text);
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('CatProxies rejected the API key. Copy it again from My Account, API.');
+    if (status === 404) throw new Error('CatProxies: no plan with that Plan ID on this account. Check it in Active Plans.');
+    throw new Error('CatProxies: could not read the plan. Check your connection and try again.');
+  }
+  const { username, password, bandwidthLeft } = catProxiesCreds(json);
+  if (!username || !password) throw new Error('CatProxies: that plan returned no proxy credentials. Confirm the Plan ID matches the chosen product and the plan is active.');
+  if (bandwidthLeft === 0) throw new Error('CatProxies: that plan has no bandwidth left, so its proxies would fail on first use.');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const type = socks && !product.mobile ? 'SOCKS5' : 'HTTP'; // mobile gateway is HTTP only
+  const port = socks && !product.mobile ? product.socks : product.http;
+  const cc = normCountryCode(country);
+  const where = cc || 'Worldwide';
+  const lifeMin = Number(life);
+  const resiLife = Number.isInteger(lifeMin) && lifeMin > 0 ? lifeMin : 30;
+  const buildUser = (sid) => product.mobile
+    ? catProxiesMobileUsername(username, { country: cc, city, session: sid, ttlMin: lifeMin })
+    : catProxiesResiUsername(username, { country: cc, state, city, session: sid, lifetimeMin: resiLife });
+  const fixed = String(session || '').trim();
+  if (!fixed) {
+    const user = buildUser('');
+    return [{ type, host: product.host, port, username: user, password, label: `CatProxies • ${product.kind} • ${where} • rotating`, country: cc || null, dedupeOnPassword: true }];
+  }
+  const n = clampPoolCount(count, 1, 100);
+  const rows = [];
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const sid = n > 1 ? `${fixed}${i + 1}` : fixed;
+    const user = buildUser(sid);
+    const dkey = `${product.host}:${port}:${user}`;
+    if (seen.has(dkey)) continue;
+    seen.add(dkey);
+    rows.push({ type, host: product.host, port, username: user, password, label: `CatProxies • ${product.kind} • ${where} • ${sid}`, country: cc || null, dedupeOnPassword: true });
+  }
+  if (!rows.length) throw new Error('CatProxies: could not build any proxies.');
+  return rows;
+}
+
+// Shared by the gateway-minting adapters below: an optional host/port override from the form
+// (vendors hand some accounts a regional or per-plan gateway). Rejects anything that is not a
+// bare hostname and a valid port, so a pasted URL or credential never becomes a host.
+function gatewayOverride(host, port, def, label) {
+  const h = String(host || '').trim();
+  const p = port != null && String(port).trim() !== '' ? Number.parseInt(String(port), 10) : def.port;
+  if (h && !/^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/.test(h)) throw new Error(`${label}: the gateway host must be a hostname like ${def.host}, without http:// or a port.`);
+  if (!Number.isInteger(p) || p < 1 || p > 65535) throw new Error(`${label}: the gateway port must be a number from 1 to 65535.`);
+  return { host: h || def.host, port: p };
+}
+
+// Mint `count` sticky rows (one session id each) or a single rotating row, for vendors whose
+// targeting lives in the username. buildUser(sid) returns the full username for that session.
+function mintGatewayRows({ type, host, port, password, session, count, buildUser, label }) {
+  const fixed = String(session || '').trim();
+  if (!fixed) {
+    return [{ type, host, port, username: buildUser(''), password, label: `${label} • rotating`, dedupeOnPassword: true }];
+  }
+  const n = clampPoolCount(count, 1, 100);
+  const rows = [];
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const sid = n > 1 ? `${fixed}${i + 1}` : fixed;
+    const user = buildUser(sid);
+    const key = `${host}:${port}:${user}`;
+    if (!user || seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ type, host, port, username: user, password, label: `${label} • sticky ${sid}`, dedupeOnPassword: true });
+  }
+  return rows;
+}
+
+// --- RapidProxy (rotating residential) -------------------------------------------------
+// No management API is published, so the app mints gateway rows from a dashboard sub-account
+// (Proxies → Residential → sub-account username + password). Targeting rides in the username
+// (rapidProxyUsername). Default gateway us.rapidproxy.io:5001 (HTTP), confirmed from the
+// vendor's own examples 2026-09-29; other regional nodes are reachable through the override.
+const RAPIDPROXY_GATEWAY = Object.freeze({ host: 'us.rapidproxy.io', port: 5001 });
+
+async function fetchRapidProxyPool({ username, password, country, state, city, session, life, count, host, port }) {
+  const sub = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!sub || /[\s:@]/.test(sub)) throw new Error('RapidProxy: enter the sub-account username from the dashboard (Residential → sub-accounts).');
+  if (!pw) throw new Error('RapidProxy: enter the sub-account password.');
+  const cc = normCountryCode(country);
+  if (String(city || '').trim() && !String(state || '').trim()) throw new Error('RapidProxy: city targeting needs a state as well (for example State California, City LosAngeles).');
+  if (String(state || '').trim() && !cc) throw new Error('RapidProxy: pick a country before a state.');
+  const gw = gatewayOverride(host, port, RAPIDPROXY_GATEWAY, 'RapidProxy');
+  const where = cc || 'Global';
+  const rows = mintGatewayRows({
+    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => rapidProxyUsername(sub, { country: cc, state, city, session: sid, lifeMin: Number(life) }),
+    label: `RapidProxy • ${where}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('RapidProxy: could not build any proxies.');
+  return rows;
+}
+
+// --- NOVADA (residential / rotating ISP / mobile) ----------------------------------------
+// Gateway rows minted from a PROXY USER (Residential Proxies → Users), not the login email.
+// Zone, country, state, city and a sticky session ride in the username (novadaUsername).
+// Default super.novada.pro:7777 (HTTP); the endpoint generator may show a regional host such
+// as pr-as.novada.pro, which the override accepts. Confirmed in the dashboard 2026-09-29.
+const NOVADA_GATEWAY = Object.freeze({ host: 'super.novada.pro', port: 7777 });
+
+async function fetchNovadaPool({ username, password, poolType, country, state, city, session, life, count, host, port }) {
+  const user = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!user || /[\s:@]/.test(user)) throw new Error('NOVADA: enter a proxy user from the dashboard (Residential Proxies → Users → Create Users). Your login email does not work here.');
+  if (/-zone-/i.test(user)) throw new Error('NOVADA: enter only the proxy user name; the app adds -zone- and the targeting itself.');
+  if (!pw) throw new Error('NOVADA: enter that proxy user\'s password.');
+  const cc = normCountryCode(country);
+  const gw = gatewayOverride(host, port, NOVADA_GATEWAY, 'NOVADA');
+  const kind = { res: 'Residential', isp: 'Rotating ISP', mob: 'Mobile' }[NOVADA_ZONES[String(poolType || '').toLowerCase()] || 'res'];
+  const rows = mintGatewayRows({
+    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => novadaUsername(user, { poolType, country: cc, state, city, session: sid, lifeMin: Number(life) }),
+    label: `NOVADA • ${kind} • ${cc || 'Global'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('NOVADA: could not build any proxies.');
+  return rows;
+}
+
+// --- Proxies.sx (pool gateway) -----------------------------------------------------------
+// The API key (X-API-Key) reads the account's gateway username + proxy password from
+// GET /v1/account/proxy-password; the login password never works on the gateway. Rows are
+// minted on gw.proxies.sx:7000 (HTTP; 7001 is SOCKS5). Per the vendor's acceptance checks:
+//  1. A country is required and every row carries failover-strict on a single pool (mbl or
+//     peer), so an out-of-stock country FAILS (E_NO_STOCK_COUNTRY) and never exits elsewhere.
+//  2. "Keep the same IP" and "rotate" are distinct: a sticky row pins its own sid with
+//     rot-sticky; a rotating row has no sid, so every new connection gets a new IP; an explicit
+//     rotate is a new session name. Grammar from agents.proxies.sx, 2026-09-29.
+const PROXIESSX_API = 'https://api.proxies.sx/v1';
+const PROXIESSX_GATEWAY = Object.freeze({ host: 'gw.proxies.sx', http: 7000, socks: 7001 });
+
+async function fetchProxiesSxPool({ token, poolType, country, session, count }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('Proxies.sx: enter your API key (client.proxies.sx → API keys).');
+  const cc = normCountryCode(country);
+  if (!cc) throw new Error('Proxies.sx: pick a country. The pool never picks one for you, so a country with no stock fails instead of exiting somewhere else.');
+  let creds;
+  try {
+    const text = await httpRequestText(`${PROXIESSX_API}/account/proxy-password`, { headers: { 'X-API-Key': key, Accept: 'application/json' } });
+    creds = proxiesSxProxyCreds(text);
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('Proxies.sx rejected the API key, or it lacks the account:read scope. Create a key with account:read and try again.');
+    throw new Error('Proxies.sx: could not read the proxy credentials. Check your connection and try again.');
+  }
+  if (!/^psx_[a-z0-9]+$/i.test(creds.username) || !creds.password) {
+    throw new Error('Proxies.sx: the account has no proxy password yet. Set one in the dashboard (Proxy password), then pull again.');
+  }
+  const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] ? String(poolType).toLowerCase() : 'mobile';
+  const kind = pool === 'mobile' ? 'Mobile' : 'Residential';
+  const rows = mintGatewayRows({
+    type: 'HTTP', host: PROXIESSX_GATEWAY.host, port: PROXIESSX_GATEWAY.http, password: creds.password, session, count,
+    buildUser: (sid) => proxiesSxUsername(creds.username, { poolType: pool, country: cc, sid: sid ? proxiesSxSid(sid) : '' }),
+    label: `Proxies.sx • ${kind} • ${cc}`
+  }).map((r) => ({ ...r, country: cc }));
+  if (!rows.length) throw new Error('Proxies.sx: could not build any proxies.');
+  return rows;
+}
+
+// --- MobileProxy.Space (dedicated mobile proxies) ----------------------------------------
+// Read-only list pull: GET /api.html?command=get_my_proxy with a Bearer token returns every
+// proxy on the account (mobileProxySpaceRows). Rotation is the per-proxy change-IP link in
+// the vendor dashboard; it is not stored here. The API allows one identical request per
+// ~5 s, so a quick second pull gets a clear "wait" message instead of a generic failure.
+const MOBILEPROXYSPACE_API = 'https://mobileproxy.space/api.html';
+
+async function fetchMobileProxySpacePool({ token, poolType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('MobileProxy.Space: enter your API token (personal account → API).');
+  let text;
+  try {
+    text = await httpRequestText(`${MOBILEPROXYSPACE_API}?command=get_my_proxy`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' } });
+  } catch (error) {
+    const status = error && error.status;
+    const msg = String(error && error.message || '');
+    if (/too many/i.test(msg)) throw new Error('MobileProxy.Space: too many requests. Wait a few seconds and pull again.');
+    if (status === 401 || status === 403) throw new Error('MobileProxy.Space rejected the API token. Copy it again from your personal account.');
+    throw new Error('MobileProxy.Space: could not read your proxies. Check your connection and try again.');
+  }
+  const { error, rows } = mobileProxySpaceRows(text, { socks: String(poolType || '').toLowerCase() === 'socks5' });
+  if (error) {
+    if (/too many/i.test(error)) throw new Error('MobileProxy.Space: too many requests. Wait a few seconds and pull again.');
+    if (/authori[sz]ation|token/i.test(error)) throw new Error('MobileProxy.Space rejected the API token. Copy it again from your personal account.');
+    throw new Error(`MobileProxy.Space: ${error.slice(0, 160)}`);
+  }
+  if (!rows.length) throw new Error('MobileProxy.Space: no active proxies on this account yet. Buy or activate one, then pull again.');
+  return rows;
+}
+
+// --- Proxy-Solutions (anti-detect integration endpoint) ----------------------------------
+// GET /api/proxies/{provider_key}?format=object&proto=http|socks, paged (per_page 200). The
+// provider key is issued per account by Proxy-Solutions for anti-detect browsers. Every page
+// is read (capped) so large accounts come through whole; expired proxies are skipped.
+const PROXYSOLUTIONS_API = 'https://proxy-solutions.net/api/proxies';
+
+async function fetchProxySolutionsPool({ token, poolType }) {
+  const key = String(token || '').trim();
+  if (!key || !/^[A-Za-z0-9_-]{6,200}$/.test(key)) throw new Error('Proxy-Solutions: enter the provider key they issued for your account.');
+  const proto = String(poolType || '').toLowerCase() === 'socks5' ? 'socks' : 'http';
+  const rows = [];
+  const seen = new Set();
+  let totalPages = 1;
+  for (let page = 1; page <= Math.min(totalPages, 25); page++) {
+    let text;
+    try {
+      text = await httpRequestText(`${PROXYSOLUTIONS_API}/${encodeURIComponent(key)}?format=object&proto=${proto}&page=${page}&per_page=200`, { headers: { Accept: 'application/json' } });
+    } catch (error) {
+      const status = error && error.status;
+      if (status === 401 || status === 403 || status === 404) throw new Error('Proxy-Solutions did not accept that provider key. Check it with Proxy-Solutions support.');
+      throw new Error('Proxy-Solutions: could not read your proxies. Check your connection and try again.');
+    }
+    const res = proxySolutionsPage(text);
+    totalPages = res.totalPages;
+    for (const r of res.rows) {
+      const k = `${r.host}:${r.port}:${r.username}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push(r);
+    }
+  }
+  if (!rows.length) throw new Error('Proxy-Solutions: no active proxies on this account.');
+  return rows;
+}
+
 // --- Proxidize (api.proxidize.com/api/v1, Bearer JWT) -----------------------------------
 // Per-Proxy plans: GET /perproxy/proxies/{username} returns ready host:port:user:pass. Per-GB
 // plans: GET /pergb/{mobile|residential}/access-point gives a sub-user whose username carries a
@@ -2567,7 +2893,15 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   nodemaven: fetchNodeMavenPool,
   froxy: fetchFroxyPool,
   proxidize: fetchProxidizePool,
-  liveproxies: fetchLiveProxiesPool
+  liveproxies: fetchLiveProxiesPool,
+  packetstream: fetchPacketStreamPool,
+  airproxy: fetchAirproxyPool,
+  catproxies: fetchCatProxiesPool,
+  rapidproxy: fetchRapidProxyPool,
+  novada: fetchNovadaPool,
+  proxiessx: fetchProxiesSxPool,
+  mobileproxyspace: fetchMobileProxySpacePool,
+  proxysolutions: fetchProxySolutionsPool
 });
 
 async function syncVendorPool(payload) {

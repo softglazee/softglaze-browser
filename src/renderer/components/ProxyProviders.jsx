@@ -65,7 +65,29 @@ export const PROVIDERS = [
   // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
   // already inside that URL), so the pull takes the link rather than a guessed endpoint.
   // Credentials come back as username:password@host:port, which the shared parser handles.
-  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: [], apiUrl: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } }
+  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: [], apiUrl: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } },
+  // PacketStream: one residential gateway. Username + proxy password from the dashboard
+  // Network Access page; country + sticky session ride in the password. No state/city.
+  { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true } },
+  // Airproxy: dedicated mobile proxies. The API key lists the proxies already on the account
+  // (GET /api/proxy/list/); location is fixed by the SIM, so no country/count controls.
+  { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'] } },
+  // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
+  // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
+  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, session: true, life: true } },
+  // RapidProxy: no management API, so rows are minted on us.rapidproxy.io:5001 from a dashboard
+  // sub-account; country/state/city and a sticky session (up to 180 min) ride in the username.
+  { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, gateway: true } },
+  // NOVADA: a proxy user (not the login email) on super.novada.pro:7777; zone, country, state,
+  // city and a sticky session (up to 120 min) ride in the username. Regional host overridable.
+  { key: 'novada', name: 'NOVADA', initials: 'NV', color: '#2563eb', referral: 'https://dashboard.novada.com/', gateway: { host: 'super.novada.pro', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['isp', 'Rotating ISP'], ['mobile', 'Mobile']], count: true, geo: true, life: true, gateway: true } },
+  // Proxies.sx: the API key reads the gateway login + proxy password; rows pin one pool and
+  // failover-strict so a country without stock fails instead of exiting elsewhere.
+  { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#7c3aed', referral: 'https://client.proxies.sx/', gateway: null, geoSync: { creds: ['token'], poolType: [['mobile', 'Mobile (modems)'], ['residential', 'Residential (peers)']], count: true, session: true } },
+  // MobileProxy.Space: dedicated mobile proxies listed from the account with an API token.
+  { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
+  // Proxy-Solutions: the anti-detect provider key lists every active proxy on the account.
+  { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
@@ -307,7 +329,7 @@ export default function ProxyProviders({ onSynced }) {
         excludeCountries: form.excludeCountries.trim(),
         excludeAsns: form.excludeAsns.trim(),
         listId: fromList ? form.listId : '',
-        orderId: g.ps && form.plan !== 'residential' ? form.orderId : '',
+        orderId: (g.ps && form.plan !== 'residential') || g.planId ? form.orderId : '',
         subuserHash: g.ipr ? form.subuserHash : '',
         token: form.token.trim(),
         username: form.username.trim(),
@@ -1029,6 +1051,12 @@ export default function ProxyProviders({ onSynced }) {
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiTokenLabel')}</label>
                     <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.apiTokenPlaceholder', { provider: provider.name })} autoComplete="off" />
+                  </div>
+                )}
+                {provider.geoSync.planId && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.planIdLabel', 'Plan ID')}</label>
+                    <input value={form.orderId} onChange={(e) => set('orderId', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.planIdPlaceholder', 'Active Plans → Plan ID')} autoComplete="off" />
                   </div>
                 )}
 
