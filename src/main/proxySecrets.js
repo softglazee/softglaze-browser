@@ -43,11 +43,31 @@ function loadHashKey(db) {
       const row = await db.setting.findUnique({ where: { key: KEY_SETTING } });
       if (row) {
         let opened = '';
-        try { opened = secretStore.open(JSON.parse(row.value)); } catch (e) { opened = ''; }
-        if (typeof opened === 'string' && /^[0-9a-f]{64}$/.test(opened)) return { key: Buffer.from(opened, 'hex'), created: false };
+        let wasPlain = false;
+        try {
+          const parsed = JSON.parse(row.value);
+          // Fallback form written when OS encryption was unavailable (below).
+          if (parsed && typeof parsed.plain === 'string') { opened = parsed.plain; wasPlain = true; }
+          else opened = secretStore.open(parsed);
+        } catch (e) { opened = ''; }
+        if (typeof opened === 'string' && /^[0-9a-f]{64}$/.test(opened)) {
+          // If it was stored unsealed and encryption is back, upgrade it to sealed.
+          if (wasPlain) {
+            try {
+              const v = JSON.stringify(secretStore.seal(opened));
+              await db.setting.update({ where: { key: KEY_SETTING }, data: { value: v } });
+            } catch (e) { /* still no encryption; keep the plain key */ }
+          }
+          return { key: Buffer.from(opened, 'hex'), created: false };
+        }
       }
       const key = crypto.randomBytes(32);
-      const value = JSON.stringify(secretStore.seal(key.toString('hex'))); // throws if OS encryption is unavailable
+      let value;
+      // The HMAC key is not a secret the way a password is - it keys the dedup hash, and
+      // when encryption is unavailable the password itself is kept plaintext too (see the
+      // migration). So fall back to storing the key unsealed rather than failing to hash.
+      try { value = JSON.stringify(secretStore.seal(key.toString('hex'))); }
+      catch (e) { value = JSON.stringify({ plain: key.toString('hex') }); }
       await db.setting.upsert({ where: { key: KEY_SETTING }, update: { value }, create: { key: KEY_SETTING, value } });
       return { key, created: true };
     })();

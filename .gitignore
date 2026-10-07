@@ -31,3 +31,6 @@ out/
 .claude/
 fp-chromium/
 sunbrowser/
+
+# web-ext sign upload id (per-build artifact)
+src/firefox-extension/.amo-upload-uuid
