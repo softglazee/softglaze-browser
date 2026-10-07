@@ -48,7 +48,8 @@
     "editIdentity": "Edit identity",
     "deleteIdentity": "Delete identity",
     "hidePassword": "Hide",
-    "revealPassword": "Reveal"
+    "revealPassword": "Reveal",
+    "reuse": "♻ Reuse · {{count}}"
   },
   "empty": {
     "title": "Your data vault is empty",
@@ -90,7 +91,9 @@
     "cancel": "Cancel",
     "saving": "Saving...",
     "saveChanges": "Save Changes",
-    "addIdentity": "Add Identity"
+    "addIdentity": "Add Identity",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "import": {
     "dialogTitle": "Import identities",

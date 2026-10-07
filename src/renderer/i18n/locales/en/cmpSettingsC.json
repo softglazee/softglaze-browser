@@ -138,7 +138,13 @@
       "asnLabel": "ASNs",
       "excludeCountriesLabel": "Exclude countries",
       "excludeAsnsLabel": "Exclude ASNs",
-      "pickCountryFirst": "Pick a country first."
+      "pickCountryFirst": "Pick a country first.",
+      "protocolLabel": "Protocol",
+      "howManyAll": "All",
+      "howManyListTitle": "How many of the proxies on your account to import. Leave blank for all.",
+      "gatewayHintGeneric": "Pre-filled with the {{provider}} default gateway ({{gateway}}). Change it only if your {{provider}} dashboard gives you a different host or port.",
+      "gatewayHintNone": "Paste the gateway host shown in your {{provider}} dashboard; the port is filled in for you when it is standard.",
+      "howManyCapTitle": "How many proxies to add. Each provider has its own maximum per pull (usually 100)."
     },
     "rotating": {
       "hostPortLabel": "Host : Port (rotating gateway)",
@@ -167,7 +173,9 @@
       "verifyBefore": "Verifies the ",
       "verifyCreds": "username & password",
       "verifyAfter": " above against the {{provider}} gateway with a live request, then adds the working endpoint.",
-      "syncViaApi": "Sync via API"
+      "syncViaApi": "Sync via API",
+      "ipv6Label": "Request IPv6 exits",
+      "ipv6Help": "Appends -ipversion-6 to the username. If the target site publishes no AAAA record, Oxylabs falls back to IPv4 automatically, so an IPv6 pull does not guarantee an IPv6 exit. May need enabling on your Oxylabs account first."
     },
     "result": {
       "syncedInto": "{{provider}} synced into Softglaze Provider Core",
@@ -188,7 +196,8 @@
       "enterProxyPassword": "Enter the proxy password.",
       "pull": "Could not pull proxies.",
       "saveCreds": "Could not save the credentials.",
-      "lookup": "Could not reach the provider account."
+      "lookup": "Could not reach the provider account.",
+      "anyipCredsOrApi": "Enter your proxy Username + Password, or an API key + Team ID to auto-provision."
     },
     "countries": {
       "any": "Any / Random",
@@ -252,13 +261,22 @@
       "proxyseller": "Residential is a traffic package: each New list pull creates a list on your account named SoftGlaze plus the location and time, with up to 1000 ports, and each port is its own exit IP. IPv6, IPv4, ISP and Mobile are sold per IP: the pull adds the addresses you already own, each on its own port, and needs nothing created.",
       "iproyal": "IPRoyal builds each proxy for you: the location and a sticky session go into the password, on its gateway geo.iproyal.com. Sticky proxies share one host and port, and each keeps its own exit IP for the lifetime you pick. Traffic comes out of your residential balance or the chosen sub-user.",
       "packetstream": "PacketStream routes through one gateway (proxy.packetstream.io:31112 HTTP, :31113 SOCKS5). Enter the Username and Proxy Password from the dashboard Network Access page (the password is not your account password). Pick a country to target it, or leave it on any. Leave Sticky session blank for a fresh rotating IP; type a session name to mint that many sticky exit IPs (one per profile). Traffic comes out of your PacketStream balance.",
-      "airproxy": "Airproxy sells dedicated mobile proxies (each its own SIM), so the app just lists what is already on your account. Paste your API key (dashboard, API section) and pull - the country is fixed by the SIM, so there is nothing to target. Each proxy is HTTP. Rotate the IP from the Airproxy dashboard.",
-      "catproxies": "CatProxies uses your API key (My Account → API, starts with cp_) plus the Plan ID of one plan from Active Plans. Pick Standard Residential or Rotating Mobile to match that plan. Choose a country, or leave it Worldwide. Leave Sticky session blank to rotate on each request; type a session name to mint that many sticky IPs (Keep same IP sets how long each holds). Residential is HTTP or SOCKS5; mobile is HTTP. US gateways for now. Traffic comes out of that plan's bandwidth.",
+      "airproxy": "Airproxy sells dedicated mobile proxies (each its own SIM), so the app lists what is already on your account. Paste your API key (dashboard, API section) and pull. How many caps the import (blank = all). The country is fixed by the SIM, so there is nothing to target. Each proxy is HTTP. Rotate the IP from the Airproxy dashboard.",
+      "catproxies": "CatProxies uses your API key (My Account → API Keys, starts with cp_) plus the Plan ID of one plan from Active Plans. Pick Standard Residential or Rotating Mobile to match that plan. Choose a country, or leave it Worldwide; Residential also takes a state and city, Mobile a city. How many above 1 mints that many sticky IPs (Keep same IP sets how long each holds); type a session name to choose their names. Residential is HTTP or SOCKS5; mobile is HTTP only. Traffic comes out of that plan's bandwidth.",
       "rapidproxy": "RapidProxy has no management API, so the app builds the proxies on its gateway (us.rapidproxy.io:5001, HTTP). Enter a sub-account username and password from the dashboard (Residential, sub-accounts; give it a traffic cap above 0). Pick a country or leave it on any; State and City are optional, and City needs a State. Leave Sticky session blank for a new IP on every request; type a session name to mint that many sticky IPs, and Keep same IP sets how long each holds (up to 180 minutes). Change the gateway host if your dashboard shows another server.",
       "novada": "NOVADA builds each proxy on its gateway (super.novada.pro:7777, HTTP). Enter a proxy user created under Residential Proxies, Users (your login email does not work) and its password. Pick Residential, Rotating ISP or Mobile to match your plan, then a country; State and City are optional. Leave Sticky session blank for a new IP on every request; type a session name to mint that many sticky IPs, and Keep same IP sets how long each holds (up to 120 minutes). If the dashboard endpoint generator shows a regional host such as pr-as.novada.pro, enter it as the gateway.",
       "proxiessx": "Proxies.sx uses your API key (it needs the account:read scope) to read your gateway login and proxy password, then builds proxies on gw.proxies.sx:7000. Pick Mobile or Residential and a country; a country is required, and if it has no stock the proxy fails rather than exiting from another country. Leave Sticky session blank for a new IP on each connection; type a session name to mint that many sticky IPs. To rotate a sticky IP, pull again with a new session name. Set a proxy password in the Proxies.sx dashboard first.",
-      "mobileproxyspace": "MobileProxy.Space sells dedicated mobile proxies, so the app lists what is already on your account. Paste your API token from the personal account and choose HTTP or SOCKS5. The country is fixed by each proxy, so there is nothing to target. Change the IP with the proxy's change-IP link in the MobileProxy.Space dashboard. Their API allows one identical request every few seconds, so wait a moment between pulls.",
-      "proxysolutions": "Proxy-Solutions gives anti-detect browsers a provider key that lists every active proxy on your account. Ask Proxy-Solutions support for your provider key, paste it here and choose HTTP or SOCKS5. Expired proxies are skipped, and each proxy keeps the country and name it has in your account."
+      "mobileproxyspace": "MobileProxy.Space sells dedicated mobile proxies, so the app lists what is already on your account. Paste your API token from the personal account and choose HTTP or SOCKS5. How many caps the import (blank = all). The country is fixed by each proxy, so there is nothing to target. Change the IP with the proxy's change-IP link in the MobileProxy.Space dashboard. Their API allows one identical request every few seconds, so wait a moment between pulls.",
+      "proxysolutions": "Proxy-Solutions lists the proxies already on your account. Paste the Integration token from the dashboard, API for developers page (the third box, not the API key above it) and choose HTTP or SOCKS5. Pick a country to import only the proxies in that country, and use How many to cap the import (blank = all). Expired proxies are skipped, and each proxy keeps the country and name it has in your account.",
+      "proxmint": "Proxmint uses a read-only API key (Settings, API keys, starts with pmk_). The app reads your product's gateway and login from it, so nothing else is needed. Pick the product you bought, a country (leave Any for worldwide) and optionally a state or a city; when both are set the city is used. How many above 1 mints that many sticky IPs, each held for the Keep same IP time (1 to 120 minutes); type a session name to choose their names. HTTP uses port 823, SOCKS5 port 824. The key cannot buy anything or change settings.",
+      "databay": "Databay uses a proxy user, not your login email: dashboard, Proxy Users, copy the username and its password. Everything runs on gw.databay.co:8888, which carries HTTP and SOCKS5 on the same port. Pick Residential, Mobile or Datacenter, a country, and on Residential optionally a state or city (the most specific one is used). How many above 1 mints that many sticky IPs held for the Keep same IP time (up to 120 minutes).",
+      "froxy": "Froxy: open your subscription (My Subscriptions, Manage) and copy the Login and Password from Login/Password Access. Pick the Pool type that matches that subscription (Residential, Mobile or Datacenter); each Froxy subscription has its own login, so use the Mobile subscription's login for Mobile. Choose a country and optionally a region or city. Each proxy gets its own port from 9000 upwards, and each port is a separate exit IP. If your subscription uses an IP whitelist, add this computer's IP in the Froxy dashboard or the proxies are refused.",
+      "nodemaven": "NodeMaven builds every proxy on gate.nodemaven.com (8080 HTTP, 1080 SOCKS5). Enter the proxy username and password from the dashboard, Proxy Setup (not the account API key). Pick Residential or Mobile, a country and optionally a state or city. How many above 1 mints that many sticky IPs, each held for the Keep same IP time.",
+      "marsproxies": "MarsProxies uses your API token (Dashboard, Settings, API; it unlocks after 1 GB of residential traffic) to generate a residential proxy list for your sub-user. Enter the token plus the sub-user username and password, pick a country and optionally a state or city. Proxies are sticky by default so each profile keeps its exit IP. Residential only.",
+      "proxidize": "Proxidize uses your API token (app.proxidize.com, Settings, API Token). For a Per-Proxy plan, also enter the proxy username and the app lists that plan's ready proxies. For a Per-GB plan, leave the username empty and paste the gateway host from Proxy Details; the app builds sticky proxies on ports 20000 (HTTP) and 20002 (SOCKS5).",
+      "ipfoxy": "IPFoxy builds every proxy on its rotating residential gateway (gate-us.ipfoxy.io:58688 for the Americas; use gate-sg.ipfoxy.io for Asia-Pacific). Enter the proxy account and password from the dashboard; the app adds customer- if it is missing. Pick a country and optionally a state and city. How many above 1 mints that many sticky IPs, each held for the Keep same IP time. HTTP and SOCKS5 share the same port.",
+      "kookeey": "kookeey: enter the username as your user ID and security policy username joined by a hyphen (for example 123456789-abcdef) and the security policy password. The country, state, city and sticky session go into the password, the way kookeey's docs describe. Leave the country on Any for a global exit. How many above 1 mints that many sticky IPs (8-character sessions), each rotated after the Keep same IP time. Use a regional gateway such as gate-us.kookeey.info if you prefer.",
+      "mangoproxy": "MangoProxy uses your API key to generate ready proxy lines. Enter the key and, optionally, the proxy sub-account username (blank uses the first sub-account on your account). Pick Residential, Residential light, Datacenter or ISP, a country and optionally a state or city, HTTP or SOCKS5, and how many (up to 100). Keep same IP sets the sticky session time (up to 120 minutes)."
     },
     "notConnected": {
       "body": "{{provider}} does not support automatic pull yet. Enter the gateway details from your {{provider}} dashboard below to add its proxies manually.",

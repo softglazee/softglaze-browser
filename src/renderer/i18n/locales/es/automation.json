@@ -132,7 +132,8 @@
     },
     "recordingStarted": "Grabando… interactúa con el navegador abierto y luego pulsa Detener para guardar.",
     "savedNotice": "Se guardó \"{{name}}\" con {{count}} paso(s).",
-    "stoppedNotice": "Grabación detenida: se capturaron {{count}} paso(s) (no guardados)."
+    "stoppedNotice": "Grabación detenida: se capturaron {{count}} paso(s) (no guardados).",
+    "deleteConfirm": "¿Eliminar la macro \"{{name}}\" y todos sus pasos? Esta acción no se puede deshacer."
   },
   "saveRecording": {
     "ariaLabel": "Guardar macro grabada",
@@ -320,7 +321,11 @@
       "startWarmup": "No se pudo iniciar el calentamiento.",
       "stopWarmup": "No se pudo detener el calentamiento.",
       "importFile": "No se pudo leer ese archivo."
-    }
+    },
+    "queueTitle": "Calienta un perfil cada vez (una cola estricta): abre un navegador, deja que termine y se cierre, y luego el siguiente. Evita abrir todos los navegadores seleccionados a la vez, lo que puede agotar la RAM/CPU y bloquear la aplicación.",
+    "queueMode": "Ejecutar de uno en uno (cola)",
+    "parallelTitle": "Cuántos perfiles calentar a la vez. Más = más rápido, pero consume más RAM/CPU.",
+    "parallelLabel": "A la vez:"
   },
   "counter": {
     "total": "total",

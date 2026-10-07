@@ -2,6 +2,41 @@
   "actions": {
     "refresh": "Actualizar"
   },
+  "groups": {
+    "general": "General",
+    "browser": "Navegador",
+    "runtime": "Entorno de ejecución",
+    "security": "Seguridad y equipo",
+    "account": "Cuenta y datos"
+  },
+  "nav": {
+    "billing": "Facturación",
+    "monetization": "Plan y uso",
+    "migration": "Importar y migrar",
+    "workspaceSync": "Sincronización del espacio",
+    "branding": "Marca",
+    "dbEncryption": "Cifrado de base de datos",
+    "workspaceBackup": "Copia del espacio",
+    "developerApi": "API para desarrolladores"
+  },
+  "fingerprint": {
+    "title": "Huella e identidad",
+    "description": "Se aplica a cada perfil al iniciar, salvo que el perfil lo anule."
+  },
+  "behaviour": {
+    "title": "Comportamiento del navegador",
+    "description": "Cómo se comporta el navegador iniciado en el día a día."
+  },
+  "ui": {
+    "searchPlaceholder": "Buscar ajustes",
+    "jumpTo": "Ir a la sección",
+    "noResultsTitle": "Ningún ajuste coincide con «{{term}}»",
+    "noResultsDesc": "Prueba con una palabra más corta, por ejemplo proxy, cámara o inicio de sesión.",
+    "experimental": "Experimental",
+    "savedIdle": "Todos los cambios guardados",
+    "saving": "Guardando cambios…",
+    "saveError": "No se pudieron guardar los cambios"
+  },
   "localRuntime": {
     "title": "Entorno local",
     "description": "Las rutas se resuelven en el proceso principal de Electron.",
@@ -167,6 +202,7 @@
     },
     "minimizeCdpFootprint": {
       "title": "Minimizar la huella de CDP (experimental - anti-CAPTCHA)",
+      "shortTitle": "Minimizar la huella de CDP",
       "desc": "Elimina el Runtime.enable persistente de CDP, la principal señal de automatización que detectan Cloudflare/Turnstile. CONTRAPARTIDA mientras está activo: el autorrelleno de personas, los enlaces de comprobación de la página de inicio y el espejo de sesiones sincronizadas dejan de funcionar (necesitan el binding de CDP). Desactivado por defecto; actívalo para comparar si reduce los CAPTCHA y luego relanza los perfiles."
     },
     "lockExtensions": {
@@ -194,6 +230,10 @@
       "desc": "Bloquea la carga de imágenes para ahorrar tráfico. Nota: la carga de imágenes se desactiva por completo; el umbral en KB de abajo se almacena para un futuro filtrado por solicitud.",
       "skipUnder": "Omitir imágenes de menos de",
       "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "Motor anti-detección nativo (fingerprint-chromium)",
+      "desc": "Inicia los perfiles de Chrome en fingerprint-chromium, un Chromium parcheado en el código fuente que falsea la huella (canvas, WebGL, audio, UA, plataforma, zona horaria) a nivel de binario, oculta navigator.webdriver y el UA HeadlessChrome, y bloquea de forma nativa la fuga de la IP real por WebRTC, sin una carrera de inyección de JS que los sitios puedan detectar. Requiere el binario de fingerprint-chromium; si no está presente, vuelve a Chrome estándar. Este motor elimina el enlace CDP del que dependía el puente entre la página y la aplicación, así que SoftGlaze envía esas llamadas por un canal sin enlace: el autorrelleno del Data Vault, la grabadora de macros, los enlaces de la página de inicio y la duplicación de sesiones funcionan con él. Desactivado por defecto: actívalo y vuelve a iniciar los perfiles."
     }
   },
   "performance": {

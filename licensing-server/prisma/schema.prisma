@@ -69,6 +69,11 @@ model Install {
   // SHA-256 of the per-install secret issued once at /v1/register. Required by /v1/license
   // and /v1/redeem, so neither a machineId nor an email can obtain a lease (audit T2-6).
   secretHash String?
+  // Audit L3: SHA-256 machine hash the install is bound to (trust on first use at register
+  // or the first /v1/license call). A different machine presenting the same install secret
+  // gets 403 machine_mismatch. Cleared by the tenant admin reset or moved by /v1/license/transfer.
+  machineHash    String?
+  machineBoundAt DateTime?
   createdAt  DateTime  @default(now())
   lastSeenAt DateTime?
 
@@ -87,6 +92,9 @@ model License {
   status           String    @default("active") // active | canceled | expired
   currentPeriodEnd DateTime?
   providerRef      String? // subscription / order id
+  // Audit L3: self-service machine transfers, at most 2 per rolling 30-day window.
+  rebindCount       Int       @default(0)
+  rebindWindowStart DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -114,13 +122,17 @@ model Payment {
   @@index([tenantId, providerRef])
 }
 
-// Idempotency / replay guard for inbound provider webhooks.
+// Idempotency / replay guard for inbound provider webhooks. The row is inserted
+// before processing (the primary key is the lock), processedAt is set in the same
+// transaction as provisioning, and a failed attempt deletes its row so the provider's
+// retry is processed again (audit L5).
 model WebhookEvent {
-  id         String   @id // provider event id
-  tenantId   String
-  provider   String
-  type       String
-  receivedAt DateTime @default(now())
+  id          String    @id // provider event id
+  tenantId    String
+  provider    String
+  type        String
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
 }
 
 // Backend-issued activation codes (manual sales / resellers). Replaces the old

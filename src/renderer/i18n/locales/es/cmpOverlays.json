@@ -11,6 +11,7 @@
       "profiles": "Perfiles",
       "groups": "Grupos",
       "proxies": "Grupo de proxies",
+      "proxyProviders": "Proveedores de proxies",
       "browsers": "Navegadores",
       "extensions": "Extensiones",
       "batchImport": "Importación por lotes",

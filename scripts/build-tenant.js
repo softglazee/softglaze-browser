@@ -55,6 +55,9 @@ if (cfg.brand && cfg.brand.appId) overrides.push(`--config.appId=${JSON.stringif
 if (cfg.brand && cfg.brand.winIcon) overrides.push(`--config.win.icon=${JSON.stringify(cfg.brand.winIcon)}`);
 
 try {
+  // Same gate the plain build uses — catches a config that bakes cleanly but points
+  // at a dev server or carries the wrong kind of key.
+  execSync('node scripts/check-tenant-baked.js', { stdio: 'inherit', cwd: path.join(__dirname, '..') });
   execSync('npx prisma generate', { stdio: 'inherit' });
   execSync('npx vite build', { stdio: 'inherit' });
   execSync(`npx electron-builder --win --x64 ${overrides.join(' ')}`.trim(), { stdio: 'inherit' });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Boxes, ExternalLink, KeyRound, Loader2, Check, Activity, RefreshCw, ShieldCheck, Zap, X, Globe2,
@@ -25,18 +25,16 @@ if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 
 // lucide ships no brand logos, so each card uses a branded initials tile.
 // ---------------------------------------------------------------------------
 export const PROVIDERS = [
-  { key: 'ipfoxy', name: 'IPFoxy', unavailable: true, initials: 'IF', color: '#f97316', referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: null },
-  { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 22225, type: 'HTTP' } },
+  { key: 'ipfoxy', name: 'IPFoxy', initials: 'IF', color: '#f97316', referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: { host: 'gate-us.ipfoxy.io', port: 58688, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
+  { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 44445, type: 'HTTP' } },
   { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, ipv6: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
   { key: 'smartproxy', name: 'Smartproxy', initials: 'SP', color: '#ff6b35', apiSync: true, referral: 'https://smartproxy.com/?ref=softglaze', gateway: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' } },
   { key: 'lumiproxy', name: 'LumiProxy', unavailable: true, initials: 'LP', color: '#22c55e', referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: null },
   { key: 'proxy302', name: 'Proxy302', unavailable: true, initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: null },
-  { key: 'mangoproxy', name: 'MangoProxy', unavailable: true, initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null },
-  { key: 'kookeey', name: 'kookeey', unavailable: true, initials: 'KK', color: '#ec4899', referral: 'https://www.kookeey.net/?ref=softglaze', gateway: null },
-  { key: 'luna', name: 'Luna Proxy', unavailable: true, initials: 'LN', color: '#8b5cf6', referral: 'https://luna-proxy.com/?ref=softglaze', gateway: null },
+  { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, noSession: true, life: true, maxLife: 120, proto: true } },
+  { key: 'kookeey', name: 'kookeey', initials: 'KK', color: '#ec4899', referral: 'https://www.kookeey.net/?ref=softglaze', gateway: { host: 'gate.kookeey.info', port: 1000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, gateway: true } },
   { key: 'ipburger', name: 'IP Burger', unavailable: true, initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: null },
-  { key: 'tisocks', name: 'TiSocks', unavailable: true, initials: 'TS', color: '#14b8a6', referral: 'https://tisocks.net/?ref=softglaze', gateway: null },
-  { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, shop: true } },
+  { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, noSession: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
   { key: 'anyip', name: 'AnyIP', initials: 'AN', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } },
@@ -52,42 +50,49 @@ export const PROVIDERS = [
   { key: 'iproyal', name: 'IPRoyal', initials: 'IR', color: '#f59e0b', referral: 'https://dashboard.iproyal.com/', gateway: null, geoSync: { creds: ['token'], count: true, ipr: true } },
   // MarsProxies residential: an API token generates a proxy list for a sub-user, sticky by
   // default (an anti-detect profile wants a stable exit IP). Residential only.
-  { key: 'marsproxies', name: 'MarsProxies', initials: 'MA', color: '#e11d48', referral: 'https://marsproxies.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username', 'password'], count: true, geo: true } },
+  { key: 'marsproxies', name: 'MarsProxies', initials: 'MA', color: '#e11d48', referral: 'https://marsproxies.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username', 'password'], count: true, geo: true, noSession: true, proto: true } },
   // NodeMaven: no list endpoint; the app builds each proxy against gate.nodemaven.com with the
   // targeting in the username. Proxy username + password come from the dashboard (Proxy Setup).
-  { key: 'nodemaven', name: 'NodeMaven', initials: 'NM', color: '#6366f1', referral: 'https://nodemaven.com/?ref=softglaze', gateway: { host: 'gate.nodemaven.com', port: 8080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: true, geo: true, life: true } },
+  { key: 'nodemaven', name: 'NodeMaven', initials: 'NM', color: '#6366f1', referral: 'https://nodemaven.com/?ref=softglaze', gateway: { host: 'gate.nodemaven.com', port: 8080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: true, geo: true, life: true, proto: true } },
   // Froxy (SOAX reseller): login + password from the dashboard Export Proxy List, targeting in
   // the password against proxy.froxy.com:9000. wifi = residential, or pick Mobile.
-  { key: 'froxy', name: 'Froxy', initials: 'FX', color: '#7c3aed', referral: 'https://froxy.com/?ref=softglaze', gateway: { host: 'proxy.froxy.com', port: 9000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], geo: true } },
+  { key: 'froxy', name: 'Froxy', initials: 'FX', color: '#7c3aed', referral: 'https://froxy.com/?ref=softglaze', gateway: { host: 'proxy.froxy.com', port: 9000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], geo: true, noSession: true, proto: true } },
   // Proxidize: a Bearer token. Per-Proxy plans return ready credentials for a per-proxy
   // username; Per-GB plans build from an access point against the gateway host from Proxy Details.
-  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], count: true, poolType: true, geo: true, gateway: true } },
+  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], noCountry: true, count: true, poolType: true, gateway: true, proto: true } },
   // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
   // already inside that URL), so the pull takes the link rather than a guessed endpoint.
   // Credentials come back as username:password@host:port, which the shared parser handles.
-  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: ['username', 'password'], count: true, session: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']] } },
+  { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: ['username', 'password'], count: true, session: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']], proto: true } },
   // PacketStream: one residential gateway. Username + proxy password from the dashboard
   // Network Access page; country + sticky session ride in the password. No state/city.
-  { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true } },
+  { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true, proto: true } },
   // Airproxy: dedicated mobile proxies. The API key lists the proxies already on the account
   // (GET /api/proxy/list/); location is fixed by the SIM, so no country/count controls.
-  { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true } },
+  { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true } },
   // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
   // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
-  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, session: true, life: true } },
+  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, geo: true, session: true, life: true, proto: true } },
   // RapidProxy: no management API, so rows are minted on us.rapidproxy.io:5001 from a dashboard
   // sub-account; country/state/city and a sticky session (up to 180 min) ride in the username.
-  { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']], count: true, geo: true, life: true, gateway: true } },
+  { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']], count: true, geo: true, life: true, maxLife: 180, gateway: true } },
   // NOVADA: a proxy user (not the login email) on super.novada.pro:7777; zone, country, state,
   // city and a sticky session (up to 120 min) ride in the username. Regional host overridable.
-  { key: 'novada', name: 'NOVADA', initials: 'NV', color: '#2563eb', referral: 'https://dashboard.novada.com/', gateway: { host: 'super.novada.pro', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['isp', 'Rotating ISP'], ['mobile', 'Mobile']], count: true, geo: true, life: true, gateway: true } },
+  { key: 'novada', name: 'NOVADA', initials: 'NV', color: '#2563eb', referral: 'https://dashboard.novada.com/', gateway: { host: 'super.novada.pro', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['isp', 'Rotating ISP'], ['mobile', 'Mobile']], count: true, geo: true, life: true, maxLife: 120, gateway: true } },
   // Proxies.sx: the API key reads the gateway login + proxy password; rows pin one pool and
   // failover-strict so a country without stock fails instead of exiting elsewhere.
   { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#7c3aed', referral: 'https://client.proxies.sx/', gateway: null, geoSync: { creds: ['token'], poolType: [['mobile', 'Mobile (modems)'], ['residential', 'Residential (peers)']], count: true, session: true } },
   // MobileProxy.Space: dedicated mobile proxies listed from the account with an API token.
-  { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], noCountry: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
-  // Proxy-Solutions: the anti-detect provider key lists every active proxy on the account.
-  { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], noCountry: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } }
+  { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
+  // Proxy-Solutions: the Integration token (API for developers page, not the API key) lists the
+  // proxies on the account; Country filters that list and How many caps it.
+  { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], count: true, list: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
+  // Proxmint: a read-only pmk_ key returns each product's gateway and login (GET /api/v1/account);
+  // country, state or city and a sticky session (1-120 min) ride in the username. Verified live.
+  { key: 'proxmint', name: 'Proxmint', initials: 'PM', color: '#10b981', referral: 'https://proxmint.com/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential'], ['residential_premium', 'Premium residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true } },
+  // Databay: proxy user + password on gw.databay.co:8888 (HTTP and SOCKS5 on one port); zone,
+  // country, state or city and a sticky session (max 120 min) ride in the username.
+  { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
@@ -141,10 +146,18 @@ const GEO_HINTS = {
   anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.'
 };
 
-export default function ProxyProviders({ onSynced }) {
+// `selectedKey` + `embedded` let the Proxy providers page drive which connector is on screen
+// and render only the connector workspace (it draws its own provider list and header).
+export default function ProxyProviders({ onSynced, selectedKey: controlledKey, embedded = false }) {
   const { t } = useTranslation('cmpSettingsC');
-  const [selectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
+  const [ownSelectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
+  const selectedKey = controlledKey || ownSelectedKey;
   const provider = useMemo(() => PROVIDERS.find((p) => p.key === selectedKey) || PROVIDERS[0], [selectedKey]);
+  // The provider on screen right now. Each pull is tagged with the key it started for;
+  // a result (or error) that lands after the user switched provider is not shown on the
+  // new provider's panel, and does not clear its spinner.
+  const activeKeyRef = useRef(provider.key);
+  activeKeyRef.current = provider.key;
 
   // Affiliate-link overrides set by the Owner/Super Admin in Settings → Monetization.
   // The marketplace "Purchase" / "Visit dashboard" button uses the configured link
@@ -187,13 +200,14 @@ export default function ProxyProviders({ onSynced }) {
     // leaving the tab used to wipe it, including pasted keys from a pull that had failed).
     const draft = FORM_DRAFTS.get(provider.key);
     if (draft) setForm({ ...draft });
-    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
+    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: provider.geoSync && provider.geoSync.list ? '' : '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di || (provider.geoSync && provider.geoSync.proto) ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });
     setCheckResult(null);
     setCredsSaved(false);
     setSyncResult(null);
+    setSyncing(false);
     setErr('');
   }, [provider]);
 
@@ -277,14 +291,16 @@ export default function ProxyProviders({ onSynced }) {
   async function handleSync() {
     setErr(''); setSyncResult(null);
     if (!form.token.trim()) { setErr(t('proxyProviders.errors.enterProviderToken')); return; }
+    const pullKey = provider.key;
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({ provider: provider.key, token: form.token.trim(), bdpm: form.bdpm });
-      setSyncResult(r);
       persistCreds();
-      if (typeof onSynced === 'function') onSynced();
-    } catch (e) { setErr(e.message || t('proxyProviders.errors.sync')); }
-    finally { setSyncing(false); }
+      // The pool changed either way, so the list refreshes even if the provider changed.
+      if (typeof onSynced === 'function') onSynced(r, pullKey);
+      if (activeKeyRef.current === pullKey) setSyncResult(r);
+    } catch (e) { if (activeKeyRef.current === pullKey) setErr(e.message || t('proxyProviders.errors.sync')); }
+    finally { if (activeKeyRef.current === pullKey) setSyncing(false); }
   }
 
   // Live API sync for wired vendors (Bright Data / Oxylabs / Smartproxy). Bright
@@ -294,6 +310,7 @@ export default function ProxyProviders({ onSynced }) {
     setErr(''); setSyncResult(null);
     if (provider.key === 'brightdata' && !form.apiToken.trim()) { setErr(t('proxyProviders.errors.enterBrightDataToken', { provider: 'Bright Data' })); return; }
     if (provider.key !== 'brightdata' && !form.username.trim()) { setErr(t('proxyProviders.errors.enterUsernameFirst')); return; }
+    const pullKey = provider.key;
     setSyncing(true);
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
@@ -307,11 +324,11 @@ export default function ProxyProviders({ onSynced }) {
         // selector ignore this rather than receiving an invented flag.
         ipVersion: provider.ipv6 && form.ipv6 ? '6' : ''
       });
-      setSyncResult(r);
       persistCreds();
-      if (typeof onSynced === 'function') onSynced();
-    } catch (e) { setErr(e.message || t('proxyProviders.errors.liveSync')); }
-    finally { setSyncing(false); }
+      if (typeof onSynced === 'function') onSynced(r, pullKey);
+      if (activeKeyRef.current === pullKey) setSyncResult(r);
+    } catch (e) { if (activeKeyRef.current === pullKey) setErr(e.message || t('proxyProviders.errors.liveSync')); }
+    finally { if (activeKeyRef.current === pullKey) setSyncing(false); }
   }
 
   // Country-targeted pull (Apify / Smartproxy.org / ShopSocks5). Sends the chosen
@@ -333,6 +350,7 @@ export default function ProxyProviders({ onSynced }) {
     }
     const fromList = g.ps && form.plan === 'residential' && form.source === 'existing';
     if (fromList && !form.listId) { setErr(t('proxyProviders.ps.pickList', 'Pick one of your saved lists, or switch to New list.')); return; }
+    const pullKey = provider.key;
     setSyncing(true);
     // Save what was typed as soon as Pull is clicked, not only after a successful pull,
     // so a failed pull no longer throws the pasted keys away.
@@ -364,12 +382,13 @@ export default function ProxyProviders({ onSynced }) {
         poolType: form.poolType,
         teamId: form.teamId.trim()
       });
-      setSyncResult(r);
       persistCreds();
-      if (typeof onSynced === 'function') onSynced();
-    } catch (e) { setErr(e.message || t('proxyProviders.errors.pull')); }
-    finally { setSyncing(false); }
+      if (typeof onSynced === 'function') onSynced(r, pullKey);
+      if (activeKeyRef.current === pullKey) setSyncResult(r);
+    } catch (e) { if (activeKeyRef.current === pullKey) setErr(e.message || t('proxyProviders.errors.pull')); }
+    finally { if (activeKeyRef.current === pullKey) setSyncing(false); }
   }
+
 
   // Account view: plan traffic plus, on request, the live locations a pull can target.
   // groupby 'state' / 'city' (DataImpulse, for the chosen country) or 'country' / 'region'
@@ -636,7 +655,7 @@ export default function ProxyProviders({ onSynced }) {
                 <p className={hintCls + ' mt-1.5'}>{t('proxyProviders.ps.orderHint', 'Adds every active IP in the order, each on its own port. Pulling again only adds IPs the pool does not have yet.')}</p>
               </div>
               {form.plan === 'ipv6' && (
-                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200/90">{t('proxyProviders.ps.ipv6Note', 'IPv6 exits can only reach websites that have an IPv6 address. Before assigning these to profiles, check that the sites you use support IPv6, or a page may fail to load through them.')}</p>
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-[color-mix(in_srgb,var(--color-amber-500)_45%,var(--foreground))]">{t('proxyProviders.ps.ipv6Note', 'IPv6 exits can only reach websites that have an IPv6 address. Before assigning these to profiles, check that the sites you use support IPv6, or a page may fail to load through them.')}</p>
               )}
             </>
           )}
@@ -885,10 +904,10 @@ export default function ProxyProviders({ onSynced }) {
   };
 
   return (
-    <Card className="bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden">
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] flex-1 min-h-0">
+    <Card className={embedded ? '' : 'bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden'}>
+      <div className={embedded ? '' : 'grid grid-cols-1 lg:grid-cols-[300px_1fr] flex-1 min-h-0'}>
         {/* LEFT - provider grid */}
-        <div className="border-b lg:border-b-0 lg:border-r border-border bg-card/40 flex flex-col min-h-0">
+        {!embedded && <div className="border-b lg:border-b-0 lg:border-r border-border bg-card/40 flex flex-col min-h-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
             <Boxes className="w-4 h-4 text-primary" />
             <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.heading')}</span>
@@ -915,12 +934,12 @@ export default function ProxyProviders({ onSynced }) {
               );
             })}
           </div>
-        </div>
+        </div>}
 
         {/* RIGHT - dynamic configuration workspace */}
-        <div className="overflow-y-auto p-5 min-h-0">
-          {/* Promo banner */}
-          <div className="rounded-xl p-5 mb-5 relative overflow-hidden" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${provider.color} 22%, var(--card)), var(--card))`, border: `1px solid color-mix(in srgb, ${provider.color} 30%, transparent)` }}>
+        <div className={embedded ? '' : 'overflow-y-auto p-5 min-h-0'}>
+          {/* Promo banner (the Proxy providers page shows its own header instead) */}
+          {!embedded && <div className="rounded-xl p-5 mb-5 relative overflow-hidden" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${provider.color} 22%, var(--card)), var(--card))`, border: `1px solid color-mix(in srgb, ${provider.color} 30%, transparent)` }}>
             <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20" style={{ background: provider.color, filter: 'blur(36px)' }} />
             <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
@@ -944,7 +963,7 @@ export default function ProxyProviders({ onSynced }) {
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
-          </div>
+          </div>}
 
           {err && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 flex items-start gap-2"><X className="w-4 h-4 mt-0.5 shrink-0" />{err}</div>}
 
@@ -986,7 +1005,7 @@ export default function ProxyProviders({ onSynced }) {
             <div className="space-y-4 max-w-2xl">
               <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.06] p-4 space-y-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">{t('proxyProviders.geo.badge')}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-[color-mix(in_srgb,var(--color-sky-500)_65%,var(--foreground))]">{t('proxyProviders.geo.badge')}</span>
                   <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.geo.title')}</span>
                 </div>
 
@@ -1001,10 +1020,27 @@ export default function ProxyProviders({ onSynced }) {
                   {provider.geoSync.count && (
                     <div>
                       <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.howMany')}</label>
-                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder="5" title={t('proxyProviders.geo.howManyTitle', 'How many proxies to mint (up to 500).')} />
+                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={provider.geoSync.list ? t('proxyProviders.geo.howManyAll', 'All') : '5'} title={provider.geoSync.list ? t('proxyProviders.geo.howManyListTitle') : t('proxyProviders.geo.howManyCapTitle', 'How many proxies to add. Each provider has its own maximum per pull (usually 100).')} />
                     </div>
                   )}
                 </div>
+                )}
+
+                {provider.geoSync.noCountry && provider.geoSync.count && (
+                  <div className="sm:max-w-[160px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.howMany')}</label>
+                    <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.howManyAll', 'All')} title={t('proxyProviders.geo.howManyListTitle', 'How many of the proxies on your account to import. Leave blank for all.')} />
+                  </div>
+                )}
+
+                {provider.geoSync.proto && (
+                  <div className="sm:max-w-[260px]">
+                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.protocolLabel', 'Protocol')}</label>
+                    <select value={form.proxyType === 'socks5' ? 'socks5' : 'http'} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+                      <option value="http">HTTP</option>
+                      <option value="socks5">SOCKS5</option>
+                    </select>
+                  </div>
                 )}
 
                 {provider.geoSync.poolType && (
@@ -1090,10 +1126,12 @@ export default function ProxyProviders({ onSynced }) {
                       <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.cityLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
                       <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls + ' font-mono'} placeholder="NewYork" />
                     </div>
+                    {!provider.geoSync.session && !provider.geoSync.noSession && (
                     <div>
                       <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.stickySessionLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
                       <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.stickySessionPlaceholder')} />
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -1109,14 +1147,10 @@ export default function ProxyProviders({ onSynced }) {
                     <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.keepSameIpLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.timeMarker')}</span></label>
                     <select value={form.life} onChange={(e) => set('life', e.target.value)} className={selectCls} style={chevronStyle}>
                       <option value="">{t('proxyProviders.geo.lifeDifferent')}</option>
-                      <option value="5">{t('proxyProviders.geo.life5')}</option>
-                      <option value="10">{t('proxyProviders.geo.life10')}</option>
-                      <option value="30">{t('proxyProviders.geo.life30')}</option>
-                      <option value="60">{t('proxyProviders.geo.life60')}</option>
-                      <option value="120">{t('proxyProviders.geo.life120')}</option>
-                      <option value="360">{t('proxyProviders.geo.life360')}</option>
-                      <option value="720">{t('proxyProviders.geo.life720')}</option>
-                      <option value="1440">{t('proxyProviders.geo.life1440')}</option>
+                      {/* Only offer lifetimes the vendor accepts (maxLife), so a pick is never silently clamped. */}
+                      {[5, 10, 30, 60, 120, 360, 720, 1440].filter((m) => !provider.geoSync.maxLife || m <= provider.geoSync.maxLife).map((m) => (
+                        <option key={m} value={String(m)}>{t(`proxyProviders.geo.life${m}`)}</option>
+                      ))}
                     </select>
                   </div>
                 )}
@@ -1133,7 +1167,7 @@ export default function ProxyProviders({ onSynced }) {
                         <input value={form.port} onChange={(e) => set('port', e.target.value)} className={inputCls + ' font-mono'} placeholder="3100" />
                       </div>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground/90">{t('proxyProviders.geo.gatewayHint')}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground/90">{provider.key === 'smartproxyorg' ? t('proxyProviders.geo.gatewayHint') : !provider.gateway ? t('proxyProviders.geo.gatewayHintNone', { provider: provider.name }) : t('proxyProviders.geo.gatewayHintGeneric', { provider: provider.name, gateway: [(provider.gateway || {}).host, (provider.gateway || {}).port].filter(Boolean).join(':') })}</p>
                   </div>
                 )}
 
@@ -1159,7 +1193,7 @@ export default function ProxyProviders({ onSynced }) {
                   here means it is already in place the day the connector lands. */}
               {provider.unavailable && (
                 <>
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[12.5px] text-amber-200/90">
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[12.5px] text-[color-mix(in_srgb,var(--color-amber-500)_45%,var(--foreground))]">
                     {t('proxyProviders.notConnected.body', { provider: provider.name })}
                   </div>
                   <div>
@@ -1232,7 +1266,7 @@ export default function ProxyProviders({ onSynced }) {
               {provider.apiSync && (
                 <div className="mt-1 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4">
                   <div className="flex items-center gap-2 mb-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">{t('proxyProviders.apiSync.badge')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-[color-mix(in_srgb,var(--color-emerald-500)_65%,var(--foreground))]">{t('proxyProviders.apiSync.badge')}</span>
                     <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.apiSync.title')}</span>
                   </div>
                   {provider.key === 'brightdata' ? (

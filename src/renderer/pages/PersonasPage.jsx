@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   IdCard, Users, Sparkles, CheckCircle2, Hash, Plus, Upload, RefreshCcw, Search,
@@ -18,6 +18,7 @@ import personasEn from '@/i18n/locales/en/personas.json';
 import personasEs from '@/i18n/locales/es/personas.json';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
+import { intersectSelection } from '@/lib/uiGuards.mjs';
 
 // Register this page's "personas" namespace without touching the central i18n
 // config (which only bundles the "common" namespace). addResourceBundle is a
@@ -185,6 +186,7 @@ export default function PersonasPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [showFormPassword, setShowFormPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Manual add / edit modal
@@ -244,6 +246,26 @@ export default function PersonasPage() {
   const paged = pageSize === Infinity ? filtered : filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { setPage(1); }, [search, usageFilter, pageSize]);
 
+  // When the search or usage filter changes, drop selected ids that are no longer visible,
+  // so "select all" under one filter can never delete or reset rows hidden by the next one.
+  // Keyed on the filter inputs only, so a reload after an edit keeps the selection.
+  const visiblePersonaIdsRef = useRef(null);
+  visiblePersonaIdsRef.current = filtered;
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set((visiblePersonaIdsRef.current || []).map((x) => x.id));
+      const next = new Set();
+      prev.forEach((id) => { if (visible.has(id)) next.add(id); });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [search, usageFilter]);
+
+  // The selected ids still visible right now. Bulk delete / reset act on this only.
+  function visibleSelectedIds() {
+    return intersectSelection(selectedIds, filtered);
+  }
+
   const allSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
 
@@ -261,7 +283,7 @@ export default function PersonasPage() {
   function clearSelection() { setSelectedIds(new Set()); }
 
   // --- Manual add / edit ---
-  function openCreate() { setForm(EMPTY_FORM); setFormError(''); setFormOpen(true); }
+  function openCreate() { setForm(EMPTY_FORM); setFormError(''); setShowFormPassword(false); setFormOpen(true); }
   function openEdit(p) {
     setForm({
       id: p.id, label: p.label || '', firstName: p.firstName || '', lastName: p.lastName || '',
@@ -271,6 +293,7 @@ export default function PersonasPage() {
       company: p.company || '', companyAddress: p.companyAddress || ''
     });
     setFormError('');
+    setShowFormPassword(false);
     setFormOpen(true);
   }
   function updateForm(key, value) { setForm((c) => ({ ...c, [key]: value })); }
@@ -303,7 +326,7 @@ export default function PersonasPage() {
   }
 
   async function handleDeleteSelected() {
-    const ids = Array.from(selectedIds);
+    const ids = visibleSelectedIds();
     if (ids.length === 0) return;
     if (!window.confirm(t('confirm.deleteSelected', { count: ids.length }))) return;
     setBusy(true);
@@ -314,7 +337,7 @@ export default function PersonasPage() {
   }
 
   async function handleResetSelected() {
-    const ids = Array.from(selectedIds);
+    const ids = visibleSelectedIds();
     if (ids.length === 0) return;
     if (!window.confirm(t('confirm.resetSelected', { count: ids.length }))) return;
     setBusy(true);
@@ -552,12 +575,29 @@ export default function PersonasPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     {group.fields.map((key) => (
                       <Field key={key} label={t(`fields.${key}`)} required={CORE_FIELDS.has(key)}>
-                        <Input
-                          value={form[key]}
-                          onChange={(e) => updateForm(key, e.target.value)}
-                          required={CORE_FIELDS.has(key)}
-                          placeholder={t(`fields.${key}`)}
-                        />
+                        {key === 'password' ? (
+                          <div className="relative w-full">
+                            <Input
+                              type={showFormPassword ? 'text' : 'password'}
+                              autoComplete="new-password"
+                              value={form[key]}
+                              onChange={(e) => updateForm(key, e.target.value)}
+                              required={CORE_FIELDS.has(key)}
+                              placeholder={t(`fields.${key}`)}
+                              className="pr-10"
+                            />
+                            <button type="button" onClick={() => setShowFormPassword((v) => !v)} aria-label={showFormPassword ? t('form.hidePassword') : t('form.showPassword')} title={showFormPassword ? t('form.hidePassword') : t('form.showPassword')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground">
+                              {showFormPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        ) : (
+                          <Input
+                            value={form[key]}
+                            onChange={(e) => updateForm(key, e.target.value)}
+                            required={CORE_FIELDS.has(key)}
+                            placeholder={t(`fields.${key}`)}
+                          />
+                        )}
                       </Field>
                     ))}
                   </div>

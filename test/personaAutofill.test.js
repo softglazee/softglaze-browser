@@ -154,6 +154,93 @@ test('companyAddress claims no autocomplete token', () => {
   assert.ok(!token, 'companyAddress must not declare an autocomplete token');
 });
 
+// Field descriptions are normalised (camelCase/snake/kebab -> words) before matching,
+// and NEVER / EXCLUDE veto fields that only look like a persona field. Reported:
+// the vault "worked only on the Ferguson form" - other sites lost Address, Country,
+// State and aria-labelled names, and a hidden honeypot got the username.
+function loadMatcher(rel = 'main/personaAutofill.js') {
+  const src = SRC(rel);
+  const lit = (name, open, close) => {
+    const s = src.indexOf(`var ${name} = ${open}`);
+    assert.notEqual(s, -1, `missing ${name} in ${rel}`);
+    let d = 0;
+    for (let i = src.indexOf(open, s); i < src.length; i++) {
+      if (src[i] === open) d++;
+      else if (src[i] === close && --d === 0) return src.slice(s, i + 1) + ';';
+    }
+    throw new Error(`unbalanced ${name}`);
+  };
+  const NEVER = /var NEVER = (\/.+\/);/.exec(src)[1];
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(`${extractFunction(src, 'normField')}\n${lit('PLAN', '[', ']')}\nvar NEVER = ${NEVER};\n${lit('EXCLUDE', '{', '}')}
+    this.match = function (label) {
+      var d = normField(label);
+      if (NEVER.test(d)) return null;
+      for (var i = 0; i < PLAN.length; i++) {
+        var k = PLAN[i][0];
+        if (EXCLUDE[k] && EXCLUDE[k].test(d)) continue;
+        if (PLAN[i][1].test(d)) return k;
+      }
+      return null;
+    };`, ctx);
+  return ctx.match;
+}
+
+test('labels from many site styles map to the right persona key', () => {
+  const match = loadMatcher();
+  const cases = {
+    firstName: ['firstName', 'billing_first_name', 'Given name', 'fname'],
+    lastName: ['lastName', 'Family name', 'customer-surname'],
+    email: ['emailAddress', 'E-mail', 'user_email'],
+    phone: ['mobileNumber', 'Phone', 'tel'],
+    addressLine1: ['Address', 'streetAddress', 'billing_address_1'],
+    addressLine2: ['Address line 2', 'addressLine2', 'Apt / Suite'],
+    country: ['Country/Region', 'countryCode', 'billing_country'],
+    state: ['State / Province', 'region', 'stateCode'],
+    zipCode: ['postalCode', 'ZIP', 'Post code'],
+    city: ['City', 'townCity']
+  };
+  for (const [key, labels] of Object.entries(cases)) {
+    for (const l of labels) assert.equal(match(l), key, `"${l}" should map to ${key}`);
+  }
+});
+
+test('payment, coupon, captcha, search and OTP fields never receive persona data', () => {
+  const match = loadMatcher();
+  for (const l of ['Card number', 'cc_number', 'CVV', 'Coupon code', 'Promo code', 'captcha', 'Search', 'Verification code', 'otp_code', 'Gift card']) {
+    assert.equal(match(l), null, `"${l}" must not be filled`);
+  }
+});
+
+test('lookalike fields are not claimed by the wrong key', () => {
+  const match = loadMatcher();
+  assert.notEqual(match('Email address'), 'addressLine1');
+  assert.notEqual(match('IP address'), 'addressLine1');
+  assert.notEqual(match('Country/Region'), 'state', 'state must not take a country field');
+  assert.notEqual(match('Confirm email'), 'email', 'confirm email is filled separately');
+  assert.notEqual(match('Country code'), 'phone');
+});
+
+test('the Firefox widget ships the same matcher as the Chromium bootstrap', () => {
+  const a = loadMatcher('main/personaAutofill.js');
+  const b = loadMatcher('firefox-extension/sg-widget.js');
+  for (const l of ['Address', 'Country/Region', 'Card number', 'Given name', 'Confirm email', 'postalCode']) {
+    assert.equal(b(l), a(l), l);
+  }
+});
+
+test('the widget skips invisible honeypots and resolves select options', () => {
+  for (const rel of ['main/personaAutofill.js', 'firefox-extension/sg-widget.js']) {
+    const src = SRC(rel);
+    assert.match(src, /function isReallyVisible\(el\)/, rel);
+    assert.match(src, /return isReallyVisible\(el\);/, rel);
+    assert.match(src, /function resolveOption\(el, val\)/, rel);
+    assert.match(src, /multiStepObserver\.observe\(document\.documentElement, \{ childList: true, subtree: true \}\)/, rel);
+    assert.doesNotMatch(src, /acAttr\.indexOf\(ac\)/, `${rel}: autocomplete must match whole tokens`);
+  }
+});
+
 // --- 3) startup URLs -------------------------------------------------------
 
 // Arrays built inside the vm sandbox carry that realm's Array prototype, which
@@ -202,8 +289,11 @@ test('the widget detects a trusted transport via sgHas, not a raw typeof', () =>
     'the raw typeof check must not come back');
 });
 
-test('sgHas accepts the RPC bridge as a trusted transport', () => {
+test('sgHas accepts the isolated-world rpc as a trusted transport (not a main-world __sgBridge)', () => {
+  // audit E1/E2: the Chromium widget now runs in a private isolated world and is
+  // handed its rpc; the main-world window.__sgBridge must never carry vault calls.
   const src = SRC('main/personaAutofill.js');
   const fn = extractFunction(src, 'sgHas');
-  assert.match(fn, /__sgBridge/, 'sgHas must treat the RPC bridge as available');
+  assert.match(fn, /typeof sgRpc === 'function'/, 'sgHas must treat the isolated rpc as available');
+  assert.doesNotMatch(src, /window\.__sgBridge/, 'the widget must not touch the main-world bridge');
 });

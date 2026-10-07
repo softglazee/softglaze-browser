@@ -3,7 +3,7 @@
 //  - One residential gateway: proxy.packetstream.io:31112 (HTTP/HTTPS), :31113 (SOCKS5).
 //  - Auth = account username + a proxy password (NOT the account password).
 //  - Country + sticky session are appended to the PASSWORD:
-//      <pass>_country-US_session-ab12cd   (2-letter uppercase country; omit = random/rotating).
+//      <pass>_country-UnitedStates_session-ab12cd   (English country name, no spaces; omit = random/rotating).
 //  - No API call: the app mints gateway rows locally (like Froxy). A blank session gives one
 //    rotating row; a session name mints `count` sticky rows so each profile pins its own IP.
 //
@@ -21,8 +21,8 @@ const UI = fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'components', 'Pro
 
 // --- packetStreamPassword --------------------------------------------------------------
 test('packetStreamPassword appends country then session to the base password', () => {
-  assert.equal(U.packetStreamPassword('base', { country: 'US', session: 'ab12' }), 'base_country-US_session-ab12');
-  assert.equal(U.packetStreamPassword('base', { country: 'us' }), 'base_country-US', 'country is upper-cased');
+  assert.equal(U.packetStreamPassword('base', { country: 'US', session: 'ab12' }), 'base_country-UnitedStates_session-ab12');
+  assert.equal(U.packetStreamPassword('base', { country: 'us' }), 'base_country-UnitedStates', 'a lower-case code still maps to the name');
   assert.equal(U.packetStreamPassword('base', { session: 'x1' }), 'base_session-x1', 'session without country');
   assert.equal(U.packetStreamPassword('base', {}), 'base', 'no flags = base password verbatim (random + rotating)');
   assert.equal(U.packetStreamPassword('base'), 'base', 'no options object is safe');
@@ -32,7 +32,17 @@ test('packetStreamPassword rejects malformed country and strips unsafe session c
   assert.equal(U.packetStreamPassword('base', { country: 'USA' }), 'base', 'a non-2-letter country is dropped');
   assert.equal(U.packetStreamPassword('base', { country: '1!' }), 'base', 'junk country is dropped');
   assert.equal(U.packetStreamPassword('base', { session: 'a b-c/d' }), 'base_session-abcd', 'session keeps only alphanumerics');
-  assert.equal(U.packetStreamPassword('', { country: 'US' }), '_country-US', 'empty base still targets');
+  assert.equal(U.packetStreamPassword('', { country: 'US' }), '_country-UnitedStates', 'empty base still targets');
+});
+
+test('packetStreamCountry maps codes to the dashboard names, including the odd ones', () => {
+  assert.equal(U.packetStreamCountry('GB'), 'UnitedKingdom');
+  assert.equal(U.packetStreamCountry('jo'), 'HashemiteKingdomofJordan');
+  assert.equal(U.packetStreamCountry('LT'), 'RepublicofLithuania');
+  assert.equal(U.packetStreamCountry('TR'), 'Turkey');
+  assert.equal(U.packetStreamCountry('RU'), 'Russia');
+  assert.equal(U.packetStreamCountry('ZZ'), '', 'a country PacketStream does not list maps to nothing');
+  assert.equal(U.packetStreamPassword('base', { country: 'ZZ' }), 'base', 'and is never sent');
 });
 
 // --- Wiring: adapter, registry and UI entry must all exist -----------------------------

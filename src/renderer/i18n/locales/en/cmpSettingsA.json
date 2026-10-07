@@ -37,7 +37,8 @@
       "title": "Payment methods",
       "description": "Super Admin only. Enable the methods shown to owners at checkout and store each provider’s keys.",
       "loadError": "Could not load payment settings.",
-      "footnote": "Keys are encrypted at rest on this machine and never leave it. Checkout is poll-based (no webhooks), so cross-install enforcement still needs the licensing backend. Wise & Manual are approved by you under “Pending payments” below."
+      "footnote": "Keys are encrypted at rest on this machine and never leave it. Checkout is poll-based (no webhooks), so cross-install enforcement still needs the licensing backend. Wise & Manual are approved by you under “Pending payments” below.",
+      "retry": "Retry"
     },
     "provider": {
       "kindManual": "Manual",
@@ -113,7 +114,8 @@
       "lastUsed": "last used {{when}}",
       "neverUsed": "never used",
       "never": "never",
-      "revoke": "Revoke"
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the API key \"{{name}}\"? Any script using it stops working immediately. This cannot be undone."
     },
     "server": {
       "title": "Local REST API",

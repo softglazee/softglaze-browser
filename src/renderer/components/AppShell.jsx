@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, Lock, Check, ChevronsUpDown, Sun, Moon,
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
-  LogOut, UserCog, CreditCard, Link2
+  LogOut, UserCog, CreditCard, Link2, Plug
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -12,6 +12,7 @@ import { renderFooterNodes } from '@/lib/footerText.jsx';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
 import CommandPalette from '@/components/CommandPalette.jsx';
 import OnboardingWizard from '@/components/OnboardingWizard.jsx';
+import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 
 function ThemeToggle({ collapsed }) {
   const { t } = useTranslation();
@@ -48,6 +49,7 @@ const SECTIONS = [
       { path: '/start-links', labelKey: 'nav.startLinks', icon: Link2 },
       { path: '/profiles', labelKey: 'nav.profiles', icon: Fingerprint, badgeKey: 'profiles', featureKey: 'profiles' },
       { path: '/groups', labelKey: 'nav.groups', icon: Layers, featureKey: 'groups' },
+      { path: '/proxy-providers', labelKey: 'nav.proxyProviders', icon: Plug, badgeKey: 'providers', featureKey: 'proxies' },
       { path: '/proxies', labelKey: 'nav.proxies', icon: Globe, featureKey: 'proxies' },
       { path: '/browsers', labelKey: 'nav.browsers', icon: MonitorDown, featureKey: 'browsers' },
       { path: '/extensions', labelKey: 'nav.extensions', icon: Puzzle, featureKey: 'extensions' }
@@ -120,7 +122,8 @@ export default function AppShell({ children }) {
   // (covers SUPER_ADMIN and any future role not yet in the locale files).
   const roleLabel = (r) => (r ? t(`roles.${r}`, { defaultValue: ROLE_LABEL[r] || r }) : t('shell.noMember'));
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // Narrow windows start with the icon-only sidebar so pages keep usable width.
+  const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [me, setMe] = useState(null);
   const [members, setMembers] = useState([]);
   const [vault, setVault] = useState({ enabled: false });
@@ -180,6 +183,14 @@ export default function AppShell({ children }) {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = (e) => { if (e.matches) setCollapsed(true); };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
     function onDoc(e) {
       if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); }
     }
@@ -215,7 +226,8 @@ export default function AppShell({ children }) {
   const initials = me?.initials || 'SG';
   const name = me?.name || t('shell.localWorkspace');
   const role = roleLabel(me?.role);
-  const badges = { profiles: counts.profiles ? String(counts.profiles) : '' };
+  // Proxy providers: the number of vendor integrations the app ships.
+  const badges = { profiles: counts.profiles ? String(counts.profiles) : '', providers: String(PROVIDERS.length) };
   const canSee = makeCanSee(me);
 
   return (
@@ -357,7 +369,7 @@ export default function AppShell({ children }) {
             <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground" title={t('shell.dismiss')}><X className="w-4 h-4" /></button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-6">{children}</div>
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>
       <CommandPalette />

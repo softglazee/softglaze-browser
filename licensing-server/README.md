@@ -45,7 +45,7 @@ cp .env.example .env            # fill DATABASE_URL + MASTER_KEY
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # -> MASTER_KEY
 npm install
 npm run prisma:generate
-npm run prisma:migrate          # create the schema (dev)
+npm run prisma:deploy           # apply prisma/migrations (see "Database migrations")
 npm run dev                     # or: npm start
 ```
 
@@ -54,7 +54,7 @@ npm run dev                     # or: npm start
 cd licensing-server
 export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
 export DB_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
-docker compose up --build        # syncs the schema (prisma db push) then serves :8787
+docker compose up --build        # `migrate` applies prisma/migrations, then serves :8787
 ```
 MySQL is bound to `127.0.0.1` only and has no default password. Keep both values in
 a safe place: `MASTER_KEY` unseals the stored provider secrets, and the database volume
@@ -67,11 +67,28 @@ schema and everything else are identical:
 cp .env.example .env    # then fill MASTER_KEY + DB_PASSWORD (see above)
 docker run -d --name sg-licensing-db   -e MYSQL_USER=softglaze -e MYSQL_PASSWORD="$DB_PASSWORD" -e MYSQL_ROOT_PASSWORD="$DB_PASSWORD"   -e MYSQL_DATABASE=softglaze_licensing -p 127.0.0.1:3306:3306 mysql:8
 npm install
-npx prisma db push --skip-generate --accept-data-loss   # DATABASE_URL must use localhost
+npx prisma migrate deploy   # DATABASE_URL must use localhost
 npx prisma generate
 npm start
 ```
 Stop and resume later with `docker start sg-licensing-db` — the volume keeps the data.
+
+### Database migrations
+The schema is versioned in `prisma/migrations` and applied with
+`npx prisma migrate deploy` (`npm run prisma:deploy`); Compose runs it as the one-shot
+`migrate` service before the server starts. Nothing runs `prisma db push
+--accept-data-loss` any more, so a schema change can no longer silently drop data.
+To change the schema: edit `prisma/schema.prisma`, then `npm run prisma:migrate --
+--name <change>` against a dev database and commit the new folder.
+
+**Baselining a database that was created by the old `db push`.** Its tables already
+match `20260916000000_init`, but it has no migration history, so `migrate deploy`
+would try to create them again. Mark the baseline as applied once, then deploy the rest:
+```bash
+npx prisma migrate resolve --applied 20260916000000_init
+npx prisma migrate deploy      # applies 20261007000000_webhook_event_processed onwards
+```
+A fresh, empty database needs only `migrate deploy`.
 
 ### End-to-end check (proves both halves agree)
 ```bash
@@ -94,7 +111,9 @@ BASE=http://localhost:8787 node scripts/smoke.js <tenantId> # + register + licen
 ### Recurring subscriptions (Stripe)
 Mark a plan `recurring: true` (and `interval: "month"|"year"`) and checkout uses
 Stripe **subscription** mode. The webhook handles `checkout.session.completed`
-(initial), `invoice.paid` (renewal → sets the exact period end), and
+(initial), `invoice.paid` (renewal → sets the exact period end; the subscription id
+is read from `invoice.subscription` or `invoice.parent.subscription_details.subscription`,
+whichever the endpoint's API version sends), and
 `customer.subscription.deleted` (→ license expires). One-time plans
 (`recurring: false`) keep the grant-N-months model. **Validate against a live
 Stripe test account** — this path can't be exercised offline.
@@ -135,10 +154,42 @@ curl -XPOST $BASE/v1/tenant/codes -H "Authorization: Bearer $TENANT_KEY" \
 2. Buy: `POST /v1/checkout {tenantId, planKey, installId}` → `{url}` → open in browser.
 3. Stripe → `POST /v1/webhooks/stripe/:tenantId` (verified) → license provisioned for that
    installId. An email in checkout is recorded but never selects or moves a licence.
-4. `POST /v1/license {tenantId, installId, installSecret}` → `{lease}` (signed). A wrong or
-   missing secret is 401. The app verifies the lease with the baked public key, caches it
-   (sealed), and re-checks within 7 days.
+4. `POST /v1/license {tenantId, installId, installSecret, machineHash}` → `{lease}` (signed).
+   A wrong or missing secret is 401. The app verifies the lease with the baked public key,
+   caches it (sealed), and re-checks within 7 days. See **Machine binding** below.
 5. `POST /v1/redeem {tenantId, code, installId, installSecret}` applies a code to that install.
+
+### Machine binding (audit L3)
+An install secret alone could be copied to any number of PCs, so each install is now
+bound to one machine:
+- The desktop sends `machineHash`, a SHA-256 of its OS machine identity (Windows
+  MachineGuid, macOS IOPlatformUUID, Linux machine-id) salted with the tenant id, on
+  `/v1/register` and every `/v1/license`. Raw hardware ids never leave the machine; the
+  server accepts only a 64-char hex hash.
+- Trust on first use: an install with no stored hash (`Install.machineHash`) binds to the
+  first one it sees. A different hash gets **403 `{error:"machine_mismatch"}`** and no
+  lease; a missing hash gets 400 `machine_required`.
+- The lease carries the hash as `mid`; the desktop refuses a lease whose `mid` is not its
+  own. Leases issued before this change have no `mid` and are honoured only until their own
+  expiry (at most `LEASE_DAYS`), then the app fetches a bound one.
+
+Legitimate PC change, two ways:
+- **Merchant reset** (no limit): `POST /v1/tenant/installs/:installId/reset-machine` with the
+  tenant API key clears the binding; the customer's next licence check from the new PC
+  binds to it.
+  ```bash
+  curl -XPOST $BASE/v1/tenant/installs/$INSTALL_ID/reset-machine -H "Authorization: Bearer $TENANT_KEY"
+  ```
+- **Self-service transfer**: `POST /v1/license/transfer {tenantId, installId, installSecret,
+  machineHash, proof}` from the new PC (after the user moves the install id + secret there).
+  The install secret is exactly what gets shared, so it is not enough on its own: `proof`
+  must be a proof of purchase the schema already holds, strongest first: the activation
+  code this install redeemed (`LicenseCode.redeemedBy`), the licence's provider reference
+  (`License.providerRef`: Stripe subscription / order id, PayPal or Cryptomus order id), or
+  the `providerRef` of a paid `Payment` for this install (checkout session / order id).
+  Limited to **2 transfers per licence per rolling 30 days** (`License.rebindCount`,
+  `rebindWindowStart`). Errors: 403 `invalid_proof`, 404 `no_license`, 429
+  `transfer_limit` (with `retryAt`).
 
 ## Endpoints
 | Method | Path | Auth | Purpose |
@@ -147,18 +198,48 @@ curl -XPOST $BASE/v1/tenant/codes -H "Authorization: Bearer $TENANT_KEY" \
 | POST | `/v1/register` | tenant-scoped | register an install |
 | POST | `/v1/checkout` | tenant-scoped | create a hosted payment session |
 | POST | `/v1/webhooks/{stripe,paypal,cryptomus}/:tenantId` | provider signature | provision on payment |
-| POST | `/v1/license` | tenant-scoped | issue a signed lease |
+| POST | `/v1/license` | tenant-scoped | issue a signed lease (machine-bound) |
+| POST | `/v1/license/transfer` | install secret + proof of purchase | move a licence to a new PC (2 per 30 days) |
 | POST | `/v1/redeem` | tenant-scoped | redeem an activation code |
 | POST | `/v1/tenant/payment-config` | tenant API key | set provider keys |
 | POST/GET | `/v1/tenant/plans` | tenant API key | manage plans |
 | POST | `/v1/tenant/codes` | tenant API key | mint activation codes |
 | POST | `/v1/tenant/rotate-key` | tenant API key | rotate the tenant Ed25519 keypair |
+| POST | `/v1/tenant/installs/:installId/reset-machine` | tenant API key | clear an install's machine binding |
 
 ### Provider credentials (`/v1/tenant/payment-config`)
 All keys are sealed at rest; configure the webhook URL it returns in the provider dashboard.
-- **stripe**: `{ secretKey, webhookSecret }`
-- **paypal**: `{ clientId, clientSecret, env: "live"|"sandbox", webhookId }`
-- **cryptomus**: `{ merchantId, apiKey }` (webhook signature is verified offline)
+Each save replaces the provider's whole credential set; every required field must be
+present and non-empty or the call is a 400 (`src/providers/configFields.js`).
+- **stripe**: `{ secretKey, webhookSecret }` (both required)
+- **paypal**: `{ clientId, clientSecret, webhookId, env? }` — `env` is `"live"` (default)
+  or `"sandbox"`
+- **cryptomus**: `{ merchantId, apiKey }` (both required; the webhook signature is
+  verified offline with `apiKey`, and a webhook is rejected while it is empty)
+
+### Webhook behaviour
+- **Idempotent and retry-safe.** The `WebhookEvent` row is inserted before processing
+  (a duplicate delivery hits the primary key and is answered `duplicate: true`).
+  Provisioning and marking the event processed commit in one transaction; a failed
+  attempt deletes its row and returns 500, so the provider's retry is processed.
+- **One grant per payment.** A webhook provisions only the `Payment` recorded at
+  checkout for that provider and ref, and only while it is `pending`; it becomes `paid`
+  in the same transaction. A replayed or second event for a paid order does nothing.
+- **Stripe**: a session is provisioned only when `payment_status` is `paid`; delayed
+  methods are provisioned by `checkout.session.async_payment_succeeded`, and
+  `checkout.session.async_payment_failed` marks the payment `failed`.
+- **Stripe refunds and disputes** (`charge.refunded` when fully refunded,
+  `charge.dispute.created`): the schema has one licence per install with stacked
+  terms, so the conservative action is to take back exactly what that payment bought.
+  A one-time payment becomes `refunded` and its plan term (`months × 30 days`) is cut
+  from the install's licence; if nothing paid remains, the licence ends now as
+  `canceled`. A subscription charge ends the subscription's licence now. Partial
+  refunds leave the licence alone. The charge is matched through the Stripe API
+  (Checkout Session by `payment_intent`, else the invoice's subscription).
+- **PayPal**: `CHECKOUT.ORDER.APPROVED` captures the order (with a `PayPal-Request-Id`
+  derived from the order id, so a retried capture is not a second charge) and
+  provisions only if the capture is `COMPLETED`. A failed capture returns 500 so PayPal
+  retries; a pending capture is provisioned by `PAYMENT.CAPTURE.COMPLETED`.
 
 Public endpoints (`register`/`checkout`/`license`/`redeem`) are rate-limited (120/min/IP,
 in-memory per instance — move to a shared store for multi-instance).

@@ -94,7 +94,7 @@
     "restorePasswordPlaceholder": "Contraseña usada para el archivo de copia de seguridad",
     "confirmRestoreLabel": "Entiendo que esto reemplaza mi espacio de trabajo actual con el contenido de la copia de seguridad.",
     "restoreBtn": "Elegir archivo y restaurar",
-    "footerNote": "Una copia de seguridad captura perfiles, ajustes y credenciales tal como están en la base de datos - no las cachés del navegador en disco. El archivo se verifica antes de que cualquier restauración sobrescriba tus datos actuales, por lo que una contraseña incorrecta o un archivo dañado fallan de forma segura.",
+    "footerNote": "Una copia de seguridad captura perfiles, ajustes y credenciales tal como están en la base de datos - no las cachés del navegador en disco. El archivo se verifica antes de que cualquier restauración sobrescriba tus datos actuales, por lo que una contraseña incorrecta o un archivo dañado fallan de forma segura. Los secretos guardados con el llavero de Windows (semillas 2FA, claves SMTP y de proveedores, token de sincronización) solo se restauran en la misma cuenta de usuario de Windows; en otro usuario o equipo hay que volver a introducirlos.",
     "errPasswordMin": "Elige una contraseña de copia de seguridad de al menos 6 caracteres.",
     "errBackupFailed": "La copia de seguridad falló.",
     "errEnterPassword": "Introduce la contraseña del archivo de copia de seguridad.",
@@ -102,7 +102,9 @@
     "errRestoreFailed": "La restauración falló.",
     "msgSaved_one": "Copia de seguridad guardada en {{path}} ({{kb}} KB, {{count}} ajuste).",
     "msgSaved_other": "Copia de seguridad guardada en {{path}} ({{kb}} KB, {{count}} ajustes).",
-    "msgRestored": "Espacio de trabajo restaurado. Reinicia la aplicación para asegurarte de que todo se recarga correctamente."
+    "msgRestored": "Espacio de trabajo restaurado. Reinicia la aplicación para asegurarte de que todo se recarga correctamente.",
+    "warnSecretsLost_one": "{{count}} secreto guardado no se pudo abrir en este usuario de Windows y debe introducirse de nuevo: {{list}}.",
+    "warnSecretsLost_other": "{{count}} secretos guardados no se pudieron abrir en este usuario de Windows y deben introducirse de nuevo: {{list}}."
   },
   "branding": {
     "loadingCardTitle": "Apariencia y marca",

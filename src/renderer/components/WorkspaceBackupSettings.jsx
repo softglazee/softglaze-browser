@@ -36,7 +36,7 @@ export default function WorkspaceBackupSettings() {
       if (r.cancelled) { setMsg(''); }
       else if (r.ok) {
         setBackupPass('');
-        setMsg(t('workspaceBackup.msgSaved', { path: r.path, kb: (r.dbBytes / 1024).toFixed(0), count: r.settingsCount }));
+        setMsg(t('workspaceBackup.msgSaved', { path: r.path, kb: Number.isFinite(Number(r.dbBytes)) ? (Number(r.dbBytes) / 1024).toFixed(0) : '?', count: r.settingsCount ?? 0 }));
         load();
       }
     } catch (e) { setErr(e.message || t('workspaceBackup.errBackupFailed')); }
@@ -54,6 +54,9 @@ export default function WorkspaceBackupSettings() {
       else if (r.ok) {
         setRestorePass(''); setConfirmRestore(false);
         setMsg(t('workspaceBackup.msgRestored'));
+        // Keychain-sealed secrets only open for the Windows user that saved them.
+        const lost = Array.isArray(r.unreadableSecrets) ? r.unreadableSecrets : [];
+        if (lost.length) setErr(t('workspaceBackup.warnSecretsLost', { count: lost.length, list: lost.slice(0, 8).join(', ') }));
       }
     } catch (e) { setErr(e.message || t('workspaceBackup.errRestoreFailed')); }
     finally { setBusy(''); }

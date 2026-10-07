@@ -66,7 +66,15 @@ function applyVariables(steps, vars) {
 async function runParallelMacro(opts, deps) {
   const o = opts || {};
   const runId = String(o.runId || `par-${0}`);
-  const items = Array.isArray(o.items) ? o.items.slice() : [];
+  // audit E11: one entry per profile. A profile listed twice used to get two
+  // workers racing the same session - and the second's close tore down the first's.
+  const seen = new Set();
+  const items = (Array.isArray(o.items) ? o.items : []).filter((it) => {
+    const k = String(it && it.profileId);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
   const steps = Array.isArray(o.steps) ? o.steps : [];
   const cap = Math.max(1, Math.min(10, Number(o.concurrency) || 1));
   const continueOnError = o.continueOnError !== false;
@@ -104,7 +112,9 @@ async function runParallelMacro(opts, deps) {
         emit(key, 'status', { ...base, state: 'launching' });
         const launchRes = await deps.launch(profileId);
         sessionId = launchRes && launchRes.sessionId ? String(launchRes.sessionId) : sessionId;
-        launched = true;
+        // audit E11: only a session THIS run started is ours to close. A launch that
+        // found the profile already running (the user's own window) must survive.
+        launched = !(launchRes && launchRes.alreadyRunning);
       }
 
       emit(key, 'status', { ...base, state: 'running', total: stepsForRow.length });

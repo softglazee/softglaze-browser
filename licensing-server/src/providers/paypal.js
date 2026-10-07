@@ -34,12 +34,37 @@ async function createCheckout({ secrets, plan, returnUrl, cancelUrl }) {
   return { ref: json.id, url: approve ? approve.href : null };
 }
 
+// Audit L6: capture errors are thrown, never swallowed, so the webhook fails and PayPal
+// retries it. PayPal-Request-Id is derived from the order id, so a retried capture is
+// idempotent at PayPal (it replays the first response instead of charging again). An
+// order that is already captured returns { alreadyCaptured: true }; PAYMENT.CAPTURE.
+// COMPLETED provisions it.
 async function captureOrder({ secrets, orderId }) {
+  if (!orderId) throw new Error('PayPal: capture needs an order id.');
   const t = await token(secrets);
-  const { json } = await httpsRequest('POST', `${base(secrets.env)}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
-    headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' }, body: {}
+  const { status, json } = await httpsRequest('POST', `${base(secrets.env)}/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
+    headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': `sg-capture-${orderId}` }, body: {}
   });
+  const issues = (json && Array.isArray(json.details) ? json.details : []).map((d) => d && d.issue);
+  if (status === 422 && issues.includes('ORDER_ALREADY_CAPTURED')) return { ...(json || {}), alreadyCaptured: true };
+  if (!(status >= 200 && status < 300) || !json) {
+    throw new Error(`PayPal: capture failed (HTTP ${status}${issues.length ? `, ${issues.join(',')}` : ''}).`);
+  }
   return json;
+}
+
+// True only when the capture response holds a COMPLETED capture (a capture can also come
+// back PENDING, e.g. an eCheck or a review hold; that one is provisioned later by
+// PAYMENT.CAPTURE.COMPLETED).
+function isCaptureCompleted(capture) {
+  if (!capture || capture.alreadyCaptured || capture.status !== 'COMPLETED') return false;
+  const units = Array.isArray(capture.purchase_units) ? capture.purchase_units : [];
+  const captures = [];
+  for (const u of units) {
+    const c = u && u.payments && Array.isArray(u.payments.captures) ? u.payments.captures : [];
+    captures.push(...c);
+  }
+  return captures.length > 0 && captures.every((c) => c && c.status === 'COMPLETED');
 }
 
 // Verify an inbound webhook against the tenant's webhookId using PayPal's API.
@@ -61,4 +86,4 @@ async function verifyWebhook({ secrets, headers, event }) {
   return Boolean(json && json.verification_status === 'SUCCESS');
 }
 
-module.exports = { createCheckout, captureOrder, verifyWebhook };
+module.exports = { createCheckout, captureOrder, isCaptureCompleted, verifyWebhook };

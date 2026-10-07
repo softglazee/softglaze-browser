@@ -280,7 +280,9 @@
     },
     "confirm": {
       "terminate": "Terminate {{name}}'s subscription now? Their profiles will lock until you grant access again.",
-      "terminateModal": "Terminate this subscription now? Profiles lock until you grant access again."
+      "terminateModal": "Terminate this subscription now? Profiles lock until you grant access again.",
+      "resetTrial": "Reset {{name}}'s trial? Their trial clock starts over and any current license state is replaced.",
+      "block": "Block {{name}}? They and all their sub-members are signed out and cannot use the app until you unblock them."
     },
     "errors": {
       "load": "Could not load licenses.",

@@ -38,7 +38,11 @@ function redactPlatformAccounts(accounts, reveal) {
   return accounts.map((a) => {
     if (!a || typeof a !== 'object') return a;
     if (reveal) return a;
-    return { ...a, password: a.password ? SECRET_MASK : '' };
+    // The per-account 2FA key (twoFa, from the import template) is as sensitive as the
+    // password: masked the same way (audit S2, 7 Oct).
+    const out = { ...a, password: a.password ? SECRET_MASK : '' };
+    if (a.twoFa !== undefined) out.twoFa = a.twoFa ? SECRET_MASK : '';
+    return out;
   });
 }
 
@@ -70,14 +74,24 @@ function restoreMaskedSecrets(input, existing) {
     if (!Array.isArray(stored)) stored = [];
     const used = new Set();
     out.platformAccounts = out.platformAccounts.map((acc, idx) => {
-      if (!acc || typeof acc !== 'object' || acc.password !== SECRET_MASK) return acc;
+      if (!acc || typeof acc !== 'object') return acc;
+      const maskedPass = acc.password === SECRET_MASK;
+      const maskedTwoFa = acc.twoFa === SECRET_MASK;
+      if (!maskedPass && !maskedTwoFa) return acc;
       // Prefer the same position with the same platform and username, then any unused match.
       const same = (s) => s && typeof s === 'object' && s.platform === acc.platform && s.username === acc.username;
       let hit = same(stored[idx]) && !used.has(idx) ? idx : -1;
       if (hit < 0) hit = stored.findIndex((s, i) => !used.has(i) && same(s));
-      if (hit < 0) return { ...acc, password: '' };
+      const out = { ...acc };
+      if (hit < 0) {
+        if (maskedPass) out.password = '';
+        if (maskedTwoFa) out.twoFa = '';
+        return out;
+      }
       used.add(hit);
-      return { ...acc, password: stored[hit].password || '' };
+      if (maskedPass) out.password = stored[hit].password || '';
+      if (maskedTwoFa) out.twoFa = stored[hit].twoFa || '';
+      return out;
     });
   }
 

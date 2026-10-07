@@ -114,7 +114,10 @@
     "loadCookies": "Cargar las cookies guardadas de este perfil",
     "remarks": "Comentarios / Notas",
     "remarksPlaceholder": "Notas opcionales para este perfil...",
-    "crossOsWarning": "Este perfil declara {{os}} pero se ejecuta en {{host}}. Las fuentes del host, el renderizado de canvas y el comportamiento real de TLS/motor JS siguen indicando {{host}}, por lo que los escáneres pueden detectar la discrepancia. Usa {{host}} salvo que necesites un perfil multiplataforma."
+    "crossOsWarning": "Este perfil declara {{os}} pero se ejecuta en {{host}}. Las fuentes del host, el renderizado de canvas y el comportamiento real de TLS/motor JS siguen indicando {{host}}, por lo que los escáneres pueden detectar la discrepancia. Usa {{host}} salvo que necesites un perfil multiplataforma.",
+    "engine": "Motor",
+    "antidetectLabel": "Motor anti-detección (fingerprint-chromium)",
+    "antidetectHelp": "Inicia este perfil en el Chromium anti-detección nativo: falsea canvas / WebGL / UA / plataforma / zona horaria a nivel de binario, oculta navigator.webdriver y bloquea la fuga de WebRTC. Requiere el motor instalado (página Navegadores). Desactivado = Chrome estándar. El interruptor global de Ajustes sigue aplicándose a los perfiles que lo dejen desactivado."
   },
   "proxy": {
     "setting": "Configuración del proxy",
@@ -137,7 +140,9 @@
     "quicDisableTitle": "Desactivar HTTP/3 (QUIC)",
     "quicEnableTitle": "Activar HTTP/3 (QUIC)",
     "quicLabel": "Activar HTTP/3 (compatibilidad con QUIC)",
-    "quicWarning": "⚠️ Advertencia: Actívalo solo en proxies premium de alta calidad que admitan por completo el aislamiento del seguimiento UDP. Activar QUIC desbloquea las velocidades de HTTP/3 pero puede causar fugas de red en configuraciones deficientes. Por defecto está desactivado (máximo sigilo)."
+    "quicWarning": "⚠️ Advertencia: Actívalo solo en proxies premium de alta calidad que admitan por completo el aislamiento del seguimiento UDP. Activar QUIC desbloquea las velocidades de HTTP/3 pero puede causar fugas de red en configuraciones deficientes. Por defecto está desactivado (máximo sigilo).",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña"
   },
   "platform": {
     "startupTabs": "Pestañas de inicio",
@@ -253,7 +258,8 @@
     "disableImagesOver": "Desactivar la carga de imágenes mayores de",
     "disableImagesUnit": "KB (0 KB significa que no se cargan imágenes)",
     "randomFingerprint": "Huella digital aleatoria",
-    "randomFingerprintDesc": "Se generará una nueva huella digital de forma aleatoria en cada inicio, ignorando algunos ajustes existentes."
+    "randomFingerprintDesc": "Se generará una nueva huella digital de forma aleatoria en cada inicio, ignorando algunos ajustes existentes.",
+    "loadExtensions": "Cargar extensiones de SoftGlaze (usa Chrome-for-Testing)"
   },
   "env": {
     "overview": "Resumen del entorno",
@@ -320,7 +326,11 @@
     "compare": "Comparar",
     "compareTitle": "Comparar 2-3 perfiles",
     "delete": "Eliminar",
-    "clear": "Limpiar"
+    "clear": "Limpiar",
+    "launchPaused": "En pausa · {{done}}/{{total}}",
+    "resume": "Reanudar cola",
+    "pause": "Pausar entre perfiles",
+    "stop": "Detener el resto de la cola"
   },
   "filters": {
     "allGroups": "Todos los grupos",
@@ -341,7 +351,8 @@
     "profileCount_one": "{{count}} perfil",
     "profileCount_other": "{{count}} perfiles",
     "used": "Usado",
-    "unused": "Sin usar"
+    "unused": "Sin usar",
+    "cancel": "Cancelar"
   },
   "table": {
     "name": "Nombre",
@@ -394,5 +405,12 @@
     "syncFailed": "No se pudo iniciar el sincronizador.",
     "proxyHostPort": "Introduce al menos el Host y el Puerto para comprobar.",
     "proxyCheckFailed": "Falló la comprobación del proxy."
+  },
+  "bulkDeleteResult": {
+    "partial": "Se movieron {{trashed}} a la Papelera; {{failed}} no se pudieron eliminar: {{reason}}"
+  },
+  "launchWarnings": {
+    "geo": "{{name}}: no se pudo consultar la ubicación del proxy, así que este navegador usa la zona horaria de este equipo. Vuelve a abrirlo cuando el proxy responda.",
+    "dismiss": "Descartar"
   }
 }

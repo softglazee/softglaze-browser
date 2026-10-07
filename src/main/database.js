@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const { app } = require('electron');
 const { PrismaClient } = require('@prisma/client');
 const dbCrypto = require('./dbCrypto');
+const proxySecrets = require('./proxySecrets');
 
 let prisma = null;
 let runtime = null;
@@ -104,9 +105,11 @@ function getPrisma() {
   }
 
   if (!prisma) {
-    prisma = new PrismaClient({
+    // Proxy passwords are sealed on write and opened on read by this extension
+    // (audit L11); every caller keeps working with plaintext.
+    prisma = proxySecrets.extendClient(new PrismaClient({
       log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error']
-    });
+    }));
   }
 
   return prisma;
@@ -489,10 +492,15 @@ async function bootstrapDatabase() {
   // Run the safe SQL migration reader
   await applyMigrations(db);
 
+  // One-time, idempotent: seal any proxy password still stored in plaintext and fill
+  // its passwordHash (audit L11). Never throws - a failing row is logged and kept.
+  try { await proxySecrets.migrateProxyPasswords(db); } catch (e) { console.error('[DB] proxy password migration skipped:', e && e.message ? e.message : e); }
+
   return true;
 }
 
 async function disconnectPrisma() {
+  proxySecrets.resetHashKeyCache(); // a restored / re-keyed database carries its own hash key
   if (prisma) {
     await prisma.$disconnect();
     prisma = null;

@@ -5,7 +5,8 @@
     "go": "Go"
   },
   "remember": {
-    "label": "Keep me signed in on this device"
+    "label": "Keep me signed in on this device",
+    "unavailable": "This device can't securely store a login (OS encryption is unavailable), so you'll be asked to sign in again next launch."
   },
   "brand": {
     "tagline": "Anti-Detect",
@@ -43,6 +44,7 @@
     }
   },
   "license": {
+    "machineMismatch": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it.",
     "graceMessage_one": "Your subscription has ended - {{count}} day of grace left. Renew to keep access.",
     "graceMessage_other": "Your subscription has ended - {{count}} days of grace left. Renew to keep access.",
     "renew": "Renew",

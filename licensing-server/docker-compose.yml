@@ -2,7 +2,10 @@
 #   export MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
 #   export DB_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")
 #   docker compose up --build
-# The server syncs the schema (prisma db push) on start, then listens on :8787.
+# The one-shot `migrate` service applies prisma/migrations (prisma migrate deploy,
+# audit L12: never `db push --accept-data-loss`), then the server listens on :8787.
+# An existing database created by the old `db push` must be baselined once first;
+# see "Database migrations" in README.md.
 #
 # Production runs on MySQL (the Hostinger deploy has no Postgres), so this schema's
 # Prisma provider is `mysql`; this stack mirrors that locally.
@@ -35,13 +38,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: "mysql://softglaze:${DB_PASSWORD:?set DB_PASSWORD}@db:3306/softglaze_licensing"
       MASTER_KEY: "${MASTER_KEY:?set MASTER_KEY (32-byte base64) in your shell before compose up}"
       PORT: "8787"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8787}"
       LEASE_DAYS: "7"
-    command: sh -c "npx prisma db push --skip-generate --accept-data-loss && node src/server.js"
+    command: ["node", "src/server.js"]
     # Loopback only, for the same reason as the database above. This service speaks
     # plain HTTP and holds the licence-signing keys; it must sit behind a reverse
     # proxy that terminates TLS, and the proxy reaches it here. Published on
@@ -50,6 +55,20 @@ services:
     # sanitizeSecureUrl), so nothing legitimate needs the wider binding.
     ports:
       - "127.0.0.1:8787:8787"
+
+  # Applies pending migrations, then exits. Runs the image's build stage, which has
+  # the prisma CLI (a devDependency the runtime image leaves out).
+  migrate:
+    build:
+      context: .
+      target: build
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "mysql://softglaze:${DB_PASSWORD:?set DB_PASSWORD}@db:3306/softglaze_licensing"
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
 
 volumes:
   dbdata:

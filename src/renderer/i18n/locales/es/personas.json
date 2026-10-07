@@ -48,7 +48,8 @@
     "editIdentity": "Editar identidad",
     "deleteIdentity": "Eliminar identidad",
     "hidePassword": "Ocultar",
-    "revealPassword": "Mostrar"
+    "revealPassword": "Mostrar",
+    "reuse": "♻ Reutilizar · {{count}}"
   },
   "empty": {
     "title": "Tu bóveda de datos está vacía",
@@ -90,7 +91,9 @@
     "cancel": "Cancelar",
     "saving": "Guardando...",
     "saveChanges": "Guardar cambios",
-    "addIdentity": "Añadir identidad"
+    "addIdentity": "Añadir identidad",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña"
   },
   "import": {
     "dialogTitle": "Importar identidades",

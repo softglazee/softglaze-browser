@@ -19,10 +19,15 @@ const UI = fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'components', 'Pro
 const SCHEMA = fs.readFileSync(path.join(ROOT, 'prisma', 'schema.prisma'), 'utf8');
 const MIG = fs.readFileSync(path.join(ROOT, 'prisma', 'migrations', '20260929000000_proxy_unique_with_password', 'migration.sql'), 'utf8');
 
-test('Proxy unique key includes the password (schema + migration agree)', () => {
-  assert.match(SCHEMA, /@@unique\(\[type, host, port, username, password\]\)/);
+// Same intent since 7 Oct (audit L11): rows that differ only by password still coexist,
+// but the password is sealed at rest, so the key uses its keyed hash (passwordHash).
+const MIG_HASH = fs.readFileSync(path.join(ROOT, 'prisma', 'migrations', '20261007000000_proxy_password_hash', 'migration.sql'), 'utf8');
+test('Proxy unique key covers the password via its hash (schema + migrations agree)', () => {
+  assert.match(SCHEMA, /@@unique\(\[type, host, port, username, passwordHash\]\)/);
+  assert.doesNotMatch(SCHEMA, /@@unique\(\[type, host, port, username, password\]\)/);
   assert.match(MIG, /DROP INDEX IF EXISTS "Proxy_type_host_port_username_key"/);
-  assert.match(MIG, /CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_password_key" ON "Proxy"\("type", "host", "port", "username", "password"\)/);
+  assert.match(MIG_HASH, /DROP INDEX IF EXISTS "Proxy_type_host_port_username_password_key"/);
+  assert.match(MIG_HASH, /CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_passwordHash_key" ON "Proxy"\("type", "host", "port", "username", "passwordHash"\)/);
 });
 
 test('Live Proxies usernames match the dashboard generator', () => {
@@ -44,7 +49,7 @@ test('Live Proxies adapter uses gateway mode when a username is given', () => {
 
 test('blank session + How many > 1 mints sticky sessions on the gateway vendors', () => {
   const hits = IPC.match(/const fixed = String\(session \|\| ''\)\.trim\(\) \|\| \(clampPoolCount\(count, 1, 100\) > 1 \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
-  assert.equal(hits.length, 3, 'PacketStream, CatProxies and the shared gateway minter');
+  assert.equal(hits.length, 4, 'PacketStream, CatProxies, kookeey (session in the password) and the shared gateway minter');
 });
 
 test('typed provider fields survive tab/provider switches and failed pulls', () => {
@@ -57,9 +62,36 @@ test('typed provider fields survive tab/provider switches and failed pulls', () 
   assert.match(IPC, /PROXY_CRED_PLAIN_FIELDS = \['username', 'zone', 'plan', 'host', 'port', 'orderId'\]/);
 });
 
-test('list-only providers hide the country picker', () => {
-  for (const key of ['airproxy', 'mobileproxyspace', 'proxysolutions']) {
+test('list-only providers without a country on their rows hide the country picker', () => {
+  for (const key of ['airproxy', 'mobileproxyspace']) {
     assert.match(UI, new RegExp(`key: '${key}'.*noCountry: true`), key);
   }
   assert.match(UI, /\{!provider\.geoSync\.noCountry && \(/);
+});
+
+test('every list-only provider offers How many, and Proxy-Solutions filters by country', () => {
+  for (const key of ['airproxy', 'mobileproxyspace', 'proxysolutions']) {
+    assert.match(UI, new RegExp(`key: '${key}'.*count: true`), key);
+  }
+  assert.doesNotMatch(UI, /key: 'proxysolutions'.*noCountry: true/, 'Proxy-Solutions rows carry a country');
+  assert.match(UI, /provider\.geoSync\.noCountry && provider\.geoSync\.count && \(/, 'How many must render without the country row');
+  for (const fn of ['fetchAirproxyPool', 'fetchMobileProxySpacePool', 'fetchProxySolutionsPool']) {
+    const start = IPC.indexOf(`async function ${fn}(`);
+    const body = IPC.slice(start, IPC.indexOf('\n}\n', start));
+    assert.match(body, /limitListRows\(/, `${fn} must cap the import with How many`);
+  }
+  const ps = IPC.slice(IPC.indexOf('async function fetchProxySolutionsPool('));
+  assert.match(ps.slice(0, 2500), /r\.country === cc/, 'Proxy-Solutions must filter by the chosen country');
+});
+
+test('vendors whose adapters take proxyType show the HTTP/SOCKS5 picker', () => {
+  for (const key of ['packetstream', 'catproxies', 'froxy', 'nodemaven', 'liveproxies', 'marsproxies', 'proxidize']) {
+    assert.match(UI, new RegExp(`key: '${key}'.*proto: true`), key);
+  }
+  assert.match(UI, /provider\.geoSync\.proto && \(/);
+});
+
+test('CatProxies sticky rows use the sticky port range, not the rotating one', () => {
+  assert.match(IPC, /stickyHttp: 10000, stickySocks: 12000/);
+  assert.match(IPC, /port: stickyPort/);
 });

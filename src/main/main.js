@@ -33,7 +33,10 @@ protocol.registerSchemesAsPrivileged([
 
 const { configureDatabaseEnv, bootstrapDatabase, isDbEncryptionEnabled, relockEncryptedDb } = require('./database');
 
-const isDev = process.env.NODE_ENV === 'development';
+// audit S6: a packaged build must never honour NODE_ENV=development (an .env beside the
+// exe or in userData could set it) - that opened DevTools and loaded the renderer from a
+// localhost URL. Dev behaviour needs an unpackaged run.
+const isDev = !app.isPackaged && process.env.NODE_ENV === 'development';
 let mainWindow = null;
 // Guards the graceful-shutdown handshake in `before-quit` (see below) so the
 // async cleanup runs exactly once and the real quit is allowed through after.
