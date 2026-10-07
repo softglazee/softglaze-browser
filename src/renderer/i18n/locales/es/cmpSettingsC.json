@@ -146,6 +146,13 @@
       "gatewayHintNone": "Pega el host del gateway que muestra tu panel de {{provider}}; el puerto se rellena solo cuando es el estándar.",
       "howManyCapTitle": "Cuántos proxies añadir. Cada proveedor tiene su propio máximo por descarga (normalmente 100)."
     },
+    "creds": {
+      "connectionTitle": "Conexión",
+      "targetingTitle": "Segmentación",
+      "save": "Guardar credenciales",
+      "saving": "Guardando…",
+      "saved": "Credenciales guardadas - listo para extraer"
+    },
     "rotating": {
       "hostPortLabel": "Host : Puerto (pasarela rotativa)",
       "hostPlaceholder": "host de la pasarela",
@@ -276,7 +283,10 @@
       "proxidize": "Proxidize usa tu token de API (app.proxidize.com, Settings, API Token). Para un plan Per-Proxy, introduce también el usuario del proxy y la app lista los proxies de ese plan. Para un plan Per-GB, deja el usuario vacío y pega el host del gateway de Proxy Details; la app crea proxies fijos en los puertos 20000 (HTTP) y 20002 (SOCKS5).",
       "ipfoxy": "IPFoxy crea cada proxy en su gateway residencial rotativo (gate-us.ipfoxy.io:58688 para América; usa gate-sg.ipfoxy.io para Asia-Pacífico). Introduce la cuenta de proxy y la contraseña del panel; la app añade customer- si falta. Elige un país y, si quieres, un estado y una ciudad. Cuántos mayor que 1 crea esa cantidad de IP fijas durante el tiempo de Mantener la misma IP. HTTP y SOCKS5 usan el mismo puerto.",
       "kookeey": "kookeey: introduce como usuario tu ID de usuario y el usuario de la política de seguridad unidos por un guion (por ejemplo 123456789-abcdef) y la contraseña de la política de seguridad. El país, estado, ciudad y sesión fija van en la contraseña, como indica la documentación de kookeey. Deja el país en Cualquiera para una salida global. Cuántos mayor que 1 crea esa cantidad de IP fijas (sesiones de 8 caracteres), rotadas tras el tiempo de Mantener la misma IP. Puedes usar un gateway regional como gate-us.kookeey.info.",
-      "mangoproxy": "MangoProxy usa tu clave de API para generar líneas de proxy listas. Introduce la clave y, si quieres, el usuario de la subcuenta de proxy (vacío usa la primera subcuenta de tu cuenta). Elige Residential, Residential light, Datacenter o ISP, un país y, si quieres, un estado o ciudad, HTTP o SOCKS5, y cuántos (hasta 100). Mantener la misma IP define el tiempo de sesión fija (hasta 120 minutos)."
+      "mangoproxy": "MangoProxy usa tu clave de API para generar líneas de proxy listas. Introduce la clave y, si quieres, el usuario de la subcuenta de proxy (vacío usa la primera subcuenta de tu cuenta). Elige Residential, Residential light, Datacenter o ISP, un país y, si quieres, un estado o ciudad, HTTP o SOCKS5, y cuántos (hasta 100). Mantener la misma IP define el tiempo de sesión fija (hasta 120 minutos).",
+      "lumiproxy": "LumiProxy crea cada proxy en su gateway (as.lumiproxy.com:5888, que acepta HTTP y SOCKS5 en el mismo puerto). Introduce el usuario de proxy (panel, Get Proxies, User & Pass Auth, por ejemplo lumi-xxxxxxxx) y su contraseña. Elige un país y, si quieres, un estado o una ciudad. Deja la sesión fija vacía para una IP nueva en cada solicitud; escribe un nombre de sesión para crear esa cantidad de IP fijas, y Mantener la misma IP define cuánto dura cada una (hasta 120 minutos). Si tu panel muestra un nodo regional como us.lumiproxy.com o eu.lumiproxy.com, introdúcelo como gateway.",
+      "ipburger": "IP Burger crea cada proxy en su gateway residencial (residential.ipb.cloud:7777, solo HTTP: su red residencial no tiene SOCKS5). Introduce el usuario de proxy del panel, Proxy Users (empieza por customer-) y la contraseña de ese usuario de proxy, no tu acceso de cuenta. Elige un país y, si quieres, una ciudad o un estado para acotarlo. Deja la sesión fija vacía para una IP nueva en cada solicitud; escribe un nombre de sesión para crear esa cantidad de IP fijas, y Mantener la misma IP define cuánto dura cada una (hasta 30 minutos). Si tu panel muestra otro host como res.ipb.cloud, introdúcelo como gateway.",
+      "proxy302": "Proxy302 importa proxies listos desde su Open API (proxy.proxy302.com:2222). Primero crea una clave de subcuenta de API en el panel de Proxy302 (sección API): introduce el nombre de la clave como usuario y la contraseña de la clave abajo; no son tu email de acceso. Elige un país (o déjalo en Cualquiera), HTTP o SOCKS5, y cuántos proxies añadir (hasta 50). Cada proxy es una sesión nueva de tráfico dinámico que consume tu saldo de Proxy302."
     },
     "notConnected": {
       "body": "{{provider}} todavía no admite importación automática. Introduce los datos de tu panel de {{provider}} aquí abajo para añadir sus proxies manualmente.",

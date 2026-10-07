@@ -285,7 +285,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[216px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[224px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
           <SettingsNav groups={sections.groups} active={active} query={query} setQuery={setQuery} onJump={jumpTo} searchRef={searchRef} />
 
           <div className="min-w-0 max-w-[860px] space-y-8">
@@ -388,14 +388,20 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
         </CustomSelect>
       </label>
 
-      {/* Desktop: full grouped list */}
-      <nav className="hidden lg:block space-y-5" aria-label="Sections">
-        {groups.map((g) => {
+      {/* Desktop: bordered card rail - grouped jump links with dividers, group
+          count badges and a bordered + accent-bar active pill (scroll-spy). */}
+      <nav className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden" aria-label="Sections">
+        {groups.map((g, gi) => {
           const groupHit = !q || g.items.some((it) => all.find((x) => x.id === it.id) && it.label.toLowerCase().includes(q));
           return (
-            <div key={g.id}>
-              <div className="px-2 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{g.label}</div>
-              <ul className="space-y-0.5">
+            <div key={g.id} className={gi > 0 ? 'border-t border-border' : ''}>
+              <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1.5">
+                <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</span>
+                <span className="inline-flex h-4 min-w-[1rem] shrink-0 items-center justify-center rounded-full border border-border bg-secondary px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
+                  {g.items.length}
+                </span>
+              </div>
+              <ul className="px-1.5 pb-2 space-y-0.5">
                 {g.items.map((it) => {
                   const dim = q && !it.label.toLowerCase().includes(q) && !groupHit;
                   const isActive = active === it.id;
@@ -405,12 +411,17 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
                         type="button"
                         onClick={() => onJump(it.id)}
                         aria-current={isActive ? 'true' : undefined}
-                        className={`w-full text-left flex items-center gap-2 h-7 px-2 rounded-md text-[13px] leading-tight truncate transition-colors ${
+                        style={isActive ? {
+                          background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+                          borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)'
+                        } : undefined}
+                        className={`relative w-full text-left flex items-center h-8 pl-3 pr-2 rounded-lg border text-[13px] leading-tight transition-colors ${
                           isActive
-                            ? 'bg-primary/10 text-primary font-medium'
-                            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                            ? 'text-primary font-medium'
+                            : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
                         } ${dim ? 'opacity-40' : ''}`}
                       >
+                        {isActive && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r bg-primary" />}
                         <span className="truncate">{it.label}</span>
                       </button>
                     </li>

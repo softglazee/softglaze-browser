@@ -34,6 +34,8 @@
     "localWorkspace": "Espacio de trabajo local",
     "noMember": "Sin miembro",
     "switchMember": "Cambiar de miembro",
+    "accountMenu": "Menú de cuenta",
+    "close": "Cerrar",
     "noMembersYet": "Aún no hay miembros.",
     "accountSettings": "Configuración de la cuenta",
     "manageMembers": "Gestionar miembros",
@@ -197,7 +199,14 @@
     "chartNewProxiesAria": "Proxies nuevos añadidos cada día en los últimos 7 días.",
     "chartLaunchesAria": "Lanzamientos de ejemplo por día en los últimos 7 días (datos ilustrativos).",
     "chartTypesAria": "Grupo de proxies por tipo de protocolo.",
-    "chartActivityAria": "{{metric}} muestreado durante la sesión actual de la app."
+    "chartActivityAria": "{{metric}} muestreado durante la sesión actual de la app.",
+    "changeGroups": "{{count}} grupos",
+    "changeTypes": "{{count}} tipos",
+    "resCpuCoresVal": "{{count}} núcleos",
+    "resRunningVal": "{{count}} en ejecución",
+    "resStoredVal": "{{count}} almacenados",
+    "restoreDesc": "{{count}} perfiles estaban abiertos la última vez que cerraste SoftGlaze.",
+    "runningCount": "{{count}} en ejecución"
   },
   "settings": {
     "eyebrow": "Aplicación",

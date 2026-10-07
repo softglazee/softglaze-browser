@@ -5,6 +5,7 @@ import {
   Plus, Gauge, MapPin, SlidersHorizontal, Layers
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { getLogo } from '@/lib/providerLogos.js';
 import i18n from '@/i18n/index.js';
 import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
 import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
@@ -29,11 +30,18 @@ export const PROVIDERS = [
   { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 44445, type: 'HTTP' } },
   { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, ipv6: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
   { key: 'smartproxy', name: 'Smartproxy', initials: 'SP', color: '#ff6b35', apiSync: true, referral: 'https://smartproxy.com/?ref=softglaze', gateway: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' } },
-  { key: 'lumiproxy', name: 'LumiProxy', unavailable: true, initials: 'LP', color: '#22c55e', referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: null },
-  { key: 'proxy302', name: 'Proxy302', unavailable: true, initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: null },
+  // LumiProxy: rotating residential, gateway-minted on as.lumiproxy.com:5888 (HTTP+SOCKS5 on
+  // one port). Country/state/city and a sticky session (up to 120 min) ride in the username.
+  { key: 'lumiproxy', name: 'LumiProxy', initials: 'LP', color: '#22c55e', referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: { host: 'as.lumiproxy.com', port: 5888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
+  // Proxy302: real Open API. The API sub-account key (name + password) signs in; Country filters
+  // the pull; each proxy comes back ready on proxy.proxy302.com:2222. No state/city or session.
+  { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'proxy.proxy302.com', port: 2222, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, proto: true } },
   { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, noSession: true, life: true, maxLife: 120, proto: true } },
   { key: 'kookeey', name: 'kookeey', initials: 'KK', color: '#ec4899', referral: 'https://www.kookeey.net/?ref=softglaze', gateway: { host: 'gate.kookeey.info', port: 1000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, gateway: true } },
-  { key: 'ipburger', name: 'IP Burger', unavailable: true, initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: null },
+  // IP Burger: rotating residential, gateway-minted on residential.ipb.cloud:7777 (HTTP only -
+  // no SOCKS5 on their residential network). Country (or one city/state narrowing token) and a
+  // sticky session (up to 30 min) ride in the username.
+  { key: 'ipburger', name: 'IP Burger', initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: { host: 'residential.ipb.cloud', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 30, gateway: true } },
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, noSession: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
@@ -440,6 +448,20 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   const optMarker = <span className="normal-case font-normal text-muted-foreground/70">{t('proxyProviders.geo.optionalWord', 'optional')}</span>;
   const pullCount = Math.max(1, Number.parseInt(form.count, 10) || 5);
   const spin = (key) => (lookingUp === key ? <Loader2 className="w-4 h-4 animate-spin" /> : null);
+  // A vendor shows a sticky-session field when it reads one: either a standalone session
+  // (session: true) or one implied by its geo targeting, unless it explicitly takes none.
+  const showSession = Boolean(provider.geoSync && !provider.geoSync.noSession && (provider.geoSync.session || provider.geoSync.geo));
+  // Shared "Save credentials" action for every connector form. Persists through the same
+  // DPAPI-sealed path a pull uses (never logs the secret) and shows a clear ready-to-pull
+  // confirmation, distinct from the pull spinner.
+  const renderSaveRow = () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <button type="button" onClick={handleSaveCreds} disabled={savingCreds} className={secondaryBtnCls}>
+        {savingCreds ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t('proxyProviders.creds.save', 'Save credentials')}
+      </button>
+      {credsSaved && <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-400"><Check className="w-4 h-4" /> {t('proxyProviders.creds.saved', 'Credentials saved - ready to pull')}</span>}
+    </div>
+  );
 
   // Plan traffic line shared by the DataImpulse and Proxy-Seller panels.
   const renderAccount = () => (account && account.provider === provider.key ? (
@@ -586,6 +608,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           </details>
         </section>
 
+        {renderSaveRow()}
         <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
           {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           {sticky
@@ -751,6 +774,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           </div>
         </section>
 
+        {renderSaveRow()}
         <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
           {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           {!residential
@@ -891,6 +915,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           <p className={hintCls}>{t('proxyProviders.ipr.geoHint', 'The lists come from your IPRoyal account, so they only show locations your plan can use.')}</p>
         </section>
 
+        {renderSaveRow()}
         <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
           {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           {sticky
@@ -990,6 +1015,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                   {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} {t('proxyProviders.tokenSync.sync')}
                 </button>
               </div>
+              {renderSaveRow()}
               <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">
                 {t('proxyProviders.tokenSync.helpBefore')}<span className="text-foreground font-medium">{t('proxyProviders.tokenSync.sync')}</span>{t('proxyProviders.tokenSync.helpAfter')}
               </p>
@@ -1001,87 +1027,59 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           ) : provider.geoSync && provider.geoSync.ipr ? (
             renderIpRoyal()
           ) : provider.geoSync ? (
-            /* ---- Geo-targeted pull (Apify / Smartproxy.org / ShopSocks5 / AnyIP) ---- */
+            /* ---- Geo-targeted pull: one consistent grid for every vendor ---- */
             <div className="space-y-4 max-w-2xl">
-              <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.06] p-4 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-[color-mix(in_srgb,var(--color-sky-500)_65%,var(--foreground))]">{t('proxyProviders.geo.badge')}</span>
-                  <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.geo.title')}</span>
-                </div>
-
-                {!provider.geoSync.noCountry && (
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
-                    <select value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
-                      {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}{code ? ` (${code})` : ''}</option>)}
-                    </select>
-                  </div>
-                  {provider.geoSync.count && (
-                    <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.howMany')}</label>
-                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={provider.geoSync.list ? t('proxyProviders.geo.howManyAll', 'All') : '5'} title={provider.geoSync.list ? t('proxyProviders.geo.howManyListTitle') : t('proxyProviders.geo.howManyCapTitle', 'How many proxies to add. Each provider has its own maximum per pull (usually 100).')} />
-                    </div>
-                  )}
-                </div>
-                )}
-
-                {provider.geoSync.noCountry && provider.geoSync.count && (
-                  <div className="sm:max-w-[160px]">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.howMany')}</label>
-                    <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.howManyAll', 'All')} title={t('proxyProviders.geo.howManyListTitle', 'How many of the proxies on your account to import. Leave blank for all.')} />
-                  </div>
-                )}
-
-                {provider.geoSync.proto && (
-                  <div className="sm:max-w-[260px]">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.protocolLabel', 'Protocol')}</label>
-                    <select value={form.proxyType === 'socks5' ? 'socks5' : 'http'} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
-                      <option value="http">HTTP</option>
-                      <option value="socks5">SOCKS5</option>
-                    </select>
-                  </div>
-                )}
-
-                {provider.geoSync.poolType && (
-                  <div className="sm:max-w-[260px]">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.poolTypeLabel')}</label>
-                    <select value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
-                      {(Array.isArray(provider.geoSync.poolType)
-                        ? provider.geoSync.poolType
-                        : [['residential', t('proxyProviders.geo.poolResidential')], ['mobile', t('proxyProviders.geo.poolMobile')]]
-                      ).map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
-                    </select>
-                  </div>
-                )}
+              {/* Connection: the credentials this vendor needs, in aligned pairs. */}
+              <section className={sectionCls}>
+                <div className={sectionTitleCls}><KeyRound className="w-4 h-4 text-violet-400" /> {t('proxyProviders.creds.connectionTitle', 'Connection')}</div>
 
                 {provider.geoSync.apiKey && (
-                  <div className="rounded-lg border border-border bg-card/40 p-3.5 space-y-3">
+                  <div className="rounded-lg border border-border bg-background/40 p-3.5 space-y-3">
                     <p className="text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.geo.anyipApiNote', 'Two ways to connect: paste your proxy Username + Password below (anyip dashboard → Get Proxy Details), OR enter an API key + Team ID here to auto-provision a proxy account. The API key is NOT the proxy password.')}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiKeyOptLabel', 'API key')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
+                        <label className={labelCls}><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiKeyOptLabel', 'API key')} {optMarker}</label>
                         <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.anyipApiKeyPlaceholder', 'anyip API key')} autoComplete="off" />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.teamIdLabel', 'Team ID')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
+                        <label className={labelCls}>{t('proxyProviders.geo.teamIdLabel', 'Team ID')} {optMarker}</label>
                         <input value={form.teamId} onChange={(e) => set('teamId', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.teamIdPlaceholder', 'your anyip team id')} autoComplete="off" />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {provider.geoSync.creds.includes('username') && (
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.geoSync.apiKey ? t('proxyProviders.geo.anyipUserLabel', 'Proxy username (user_…)') : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : t('proxyProviders.geo.usernameSubLabel'))}</label>
-                    <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : 'username')} autoComplete="off" />
-                  </div>
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {provider.geoSync.creds.includes('username') && (
+                    <div>
+                      <label className={labelCls}>{provider.geoSync.apiKey ? t('proxyProviders.geo.anyipUserLabel', 'Proxy username (user_…)') : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : t('proxyProviders.geo.usernameSubLabel'))}</label>
+                      <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : 'username')} autoComplete="off" />
+                    </div>
+                  )}
+                  {provider.geoSync.creds.includes('password') && (
+                    <div>
+                      <label className={labelCls}>{provider.key === 'apify' ? t('proxyProviders.geo.apifyPasswordLabel', { provider: 'Apify' }) : t('proxyProviders.geo.proxyPasswordLabel')}</label>
+                      <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
+                    </div>
+                  )}
+                  {provider.geoSync.creds.includes('token') && (
+                    <div>
+                      <label className={labelCls}><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiTokenLabel')}</label>
+                      <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.apiTokenPlaceholder', { provider: provider.name })} autoComplete="off" />
+                    </div>
+                  )}
+                  {provider.geoSync.planId && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.planIdLabel', 'Plan ID')}</label>
+                      <input value={form.orderId} onChange={(e) => set('orderId', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.planIdPlaceholder', 'Active Plans → Plan ID')} autoComplete="off" />
+                    </div>
+                  )}
+                </div>
 
                 {provider.geoSync.shop && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.planLabel')}</label>
+                      <label className={labelCls}>{t('proxyProviders.geo.planLabel')}</label>
                       <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
                         <option value="premium">{t('proxyProviders.geo.planPremium')}</option>
                         <option value="list">{t('proxyProviders.geo.planList')}</option>
@@ -1089,7 +1087,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.proxyTypeLabel')}</label>
+                      <label className={labelCls}>{t('proxyProviders.geo.proxyTypeLabel')}</label>
                       <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
                         <option value="proxy_sock_5">SOCKS5</option>
                         <option value="proxy_https">HTTPS</option>
@@ -1097,73 +1095,16 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                     </div>
                   </div>
                 )}
-                {provider.geoSync.creds.includes('password') && (
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{provider.key === 'apify' ? t('proxyProviders.geo.apifyPasswordLabel', { provider: 'Apify' }) : t('proxyProviders.geo.proxyPasswordLabel')}</label>
-                    <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} className={inputCls + ' font-mono'} placeholder="password" autoComplete="off" />
-                  </div>
-                )}
-                {provider.geoSync.creds.includes('token') && (
-                  <div>
-                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiTokenLabel')}</label>
-                    <input type="password" value={form.token} onChange={(e) => set('token', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.apiTokenPlaceholder', { provider: provider.name })} autoComplete="off" />
-                  </div>
-                )}
-                {provider.geoSync.planId && (
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.planIdLabel', 'Plan ID')}</label>
-                    <input value={form.orderId} onChange={(e) => set('orderId', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.planIdPlaceholder', 'Active Plans → Plan ID')} autoComplete="off" />
-                  </div>
-                )}
-
-                {provider.geoSync.geo && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.stateLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
-                      <input value={form.state} onChange={(e) => set('state', e.target.value)} className={inputCls + ' font-mono'} placeholder="California" />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.cityLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
-                      <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls + ' font-mono'} placeholder="NewYork" />
-                    </div>
-                    {!provider.geoSync.session && !provider.geoSync.noSession && (
-                    <div>
-                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.stickySessionLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
-                      <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.stickySessionPlaceholder')} />
-                    </div>
-                    )}
-                  </div>
-                )}
-
-                {provider.geoSync.session && (
-                  <div className="sm:max-w-[260px]">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.stickySessionLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.optMarker')}</span></label>
-                    <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.stickySessionPlaceholder')} />
-                  </div>
-                )}
-
-                {provider.geoSync.life && (
-                  <div className="sm:max-w-[260px]">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.keepSameIpLabel')} <span className="normal-case text-muted-foreground/60">{t('proxyProviders.geo.timeMarker')}</span></label>
-                    <select value={form.life} onChange={(e) => set('life', e.target.value)} className={selectCls} style={chevronStyle}>
-                      <option value="">{t('proxyProviders.geo.lifeDifferent')}</option>
-                      {/* Only offer lifetimes the vendor accepts (maxLife), so a pick is never silently clamped. */}
-                      {[5, 10, 30, 60, 120, 360, 720, 1440].filter((m) => !provider.geoSync.maxLife || m <= provider.geoSync.maxLife).map((m) => (
-                        <option key={m} value={String(m)}>{t(`proxyProviders.geo.life${m}`)}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
 
                 {provider.geoSync.gateway && (
                   <div>
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
                       <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.gatewayHostLabel')}</label>
+                        <label className={labelCls}>{t('proxyProviders.geo.gatewayHostLabel')}</label>
                         <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder="isp.smartproxy.net" />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('proxyProviders.geo.portLabel')}</label>
+                        <label className={labelCls}>{t('proxyProviders.geo.portLabel')}</label>
                         <input value={form.port} onChange={(e) => set('port', e.target.value)} className={inputCls + ' font-mono'} placeholder="3100" />
                       </div>
                     </div>
@@ -1179,10 +1120,89 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                   </div>
                 )}
 
-                <button onClick={handleGeoSync} disabled={syncing} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-60 shadow-lg shadow-sky-500/25">
+                {renderSaveRow()}
+              </section>
+
+              {/* Targeting: location and pull options on one aligned grid. */}
+              <section className={sectionCls}>
+                <div className={sectionTitleCls}><MapPin className="w-4 h-4 text-sky-400" /> {t('proxyProviders.creds.targetingTitle', 'Targeting')}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {!provider.geoSync.noCountry && (
+                    <div>
+                      <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
+                      <select value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
+                        {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}{code ? ` (${code})` : ''}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {provider.geoSync.geo && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.stateLabel')} {optMarker}</label>
+                      <input value={form.state} onChange={(e) => set('state', e.target.value)} className={inputCls + ' font-mono'} placeholder="California" />
+                    </div>
+                  )}
+                  {provider.geoSync.geo && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.cityLabel')} {optMarker}</label>
+                      <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls + ' font-mono'} placeholder="NewYork" />
+                    </div>
+                  )}
+                  {!provider.geoSync.noCountry && provider.geoSync.count && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.howMany')}</label>
+                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={provider.geoSync.list ? t('proxyProviders.geo.howManyAll', 'All') : '5'} title={provider.geoSync.list ? t('proxyProviders.geo.howManyListTitle') : t('proxyProviders.geo.howManyCapTitle', 'How many proxies to add. Each provider has its own maximum per pull (usually 100).')} />
+                    </div>
+                  )}
+                  {provider.geoSync.noCountry && provider.geoSync.count && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.howMany')}</label>
+                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.howManyAll', 'All')} title={t('proxyProviders.geo.howManyListTitle', 'How many of the proxies on your account to import. Leave blank for all.')} />
+                    </div>
+                  )}
+                  {provider.geoSync.proto && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.protocolLabel', 'Protocol')}</label>
+                      <select value={form.proxyType === 'socks5' ? 'socks5' : 'http'} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
+                        <option value="http">HTTP</option>
+                        <option value="socks5">SOCKS5</option>
+                      </select>
+                    </div>
+                  )}
+                  {provider.geoSync.poolType && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.poolTypeLabel')}</label>
+                      <select value={form.poolType} onChange={(e) => set('poolType', e.target.value)} className={selectCls} style={chevronStyle}>
+                        {(Array.isArray(provider.geoSync.poolType)
+                          ? provider.geoSync.poolType
+                          : [['residential', t('proxyProviders.geo.poolResidential')], ['mobile', t('proxyProviders.geo.poolMobile')]]
+                        ).map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {showSession && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.stickySessionLabel')} {optMarker}</label>
+                      <input value={form.session} onChange={(e) => set('session', e.target.value)} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.stickySessionPlaceholder')} />
+                    </div>
+                  )}
+                  {provider.geoSync.life && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.keepSameIpLabel')} <span className="normal-case font-normal text-muted-foreground/70">{t('proxyProviders.geo.timeMarker')}</span></label>
+                      <select value={form.life} onChange={(e) => set('life', e.target.value)} className={selectCls} style={chevronStyle}>
+                        <option value="">{t('proxyProviders.geo.lifeDifferent')}</option>
+                        {/* Only offer lifetimes the vendor accepts (maxLife), so a pick is never silently clamped. */}
+                        {[5, 10, 30, 60, 120, 360, 720, 1440].filter((m) => !provider.geoSync.maxLife || m <= provider.geoSync.maxLife).map((m) => (
+                          <option key={m} value={String(m)}>{t(`proxyProviders.geo.life${m}`)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={handleGeoSync} disabled={syncing} className={primaryBtnCls}>
                   {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe2 className="w-4 h-4" />} {t('proxyProviders.geo.pullProxies')}{form.country ? ` · ${form.country}` : ''}
                 </button>
-              </div>
+              </section>
               <p className="text-[12px] text-muted-foreground leading-relaxed bg-card border border-border rounded-lg px-3.5 py-3">{t(`proxyProviders.geoHints.${provider.key}`, GEO_HINTS[provider.key])}</p>
             </div>
           ) : (
@@ -1246,9 +1266,9 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
 
               <div className="flex items-center gap-3 flex-wrap">
                 <button onClick={handleSaveCreds} disabled={savingCreds} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
-                  {savingCreds ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('proxyProviders.rotating.saveCreds')}
+                  {savingCreds ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('proxyProviders.creds.save', 'Save credentials')}
                 </button>
-                {credsSaved && <span className="text-[12.5px] font-medium text-emerald-400">{t('proxyProviders.rotating.credsSaved')}</span>}
+                {credsSaved && <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-400"><Check className="w-4 h-4" /> {t('proxyProviders.creds.saved', 'Credentials saved - ready to pull')}</span>}
                 <button onClick={handleCheck} disabled={checking} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
                   {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {t('proxyProviders.rotating.checkProxy')}
                 </button>
@@ -1328,10 +1348,19 @@ function Card({ className = '', children }) {
   return <div className={className}>{children}</div>;
 }
 
-// Distinctive, ORIGINAL stylized marks per provider (not the vendors' actual
-// trademarked logos). They inherit the tile's brand color via `currentColor`, so
-// dropping in a real brand SVG later is a one-spot swap per provider.
+// The real vendor logo (bundled under assets/providers/) when we have one; otherwise
+// the stylized fallback mark below. `k` is the provider key, `className` sizes the box.
 export function ProviderLogo({ k, className = 'w-6 h-6' }) {
+  const logo = getLogo(k);
+  if (logo) {
+    return <img src={logo} alt="" aria-hidden="true" className={`${className} object-contain`} loading="lazy" />;
+  }
+  return <ProviderIcon k={k} className={className} />;
+}
+
+// Distinctive, ORIGINAL stylized marks per provider (fallback when no bundled logo).
+// They inherit the tile's brand color via `currentColor`.
+function ProviderIcon({ k, className = 'w-6 h-6' }) {
   const line = { className, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' };
   const solid = { className, viewBox: '0 0 24 24', fill: 'currentColor', stroke: 'none' };
   switch (k) {

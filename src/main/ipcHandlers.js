@@ -81,7 +81,8 @@ const {
   mobileProxySpaceRows, proxySolutionsPage,
   parseProxidizePerProxy, proxidizePerGbUsername,
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
-  LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost
+  LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
+  lumiProxyUsername, ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -2910,6 +2911,114 @@ async function fetchProxmintPool({ token, poolType, country, state, city, sessio
   return rows;
 }
 
+// --- LumiProxy (rotating residential, gateway-minted) -------------------------------------
+// Account login + password from the dashboard (Get Proxies, User & Pass Auth); targeting and
+// the sticky session ride in the username (lumiProxyUsername). Default gateway as.lumiproxy.com
+// :5888 (HTTP and SOCKS5 share the port); country/region nodes like us./eu.lumiproxy.com are
+// reachable through the gateway override.
+const LUMIPROXY_GATEWAY = Object.freeze({ host: 'as.lumiproxy.com', port: 5888 });
+
+async function fetchLumiProxyPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
+  const base = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!base) throw new Error('LumiProxy: enter the proxy username from the dashboard (Get Proxies, User & Pass Auth), e.g. lumi-xxxxxxxx.');
+  if (!pw) throw new Error('LumiProxy: enter the proxy password from the dashboard.');
+  const gw = gatewayOverride(host, port, LUMIPROXY_GATEWAY, 'LumiProxy');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => lumiProxyUsername(base, { country: cc, state, city, session: sid, lifeMin: life }),
+    label: `LumiProxy • Residential • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('LumiProxy: could not build any proxies.');
+  return rows;
+}
+
+// --- IP Burger (rotating residential, gateway-minted) -------------------------------------
+// The proxy user (customer-<id>) + password come from the dashboard, Proxy Users; the country
+// (or one narrowing city/state token) and the sticky session ride in the username
+// (ipBurgerUsername). Gateway residential.ipb.cloud:7777, HTTP only (IPBurger does not offer
+// SOCKS5 on the residential network); res./resi3.ipb.cloud are reachable through the override.
+const IPBURGER_GATEWAY = Object.freeze({ host: 'residential.ipb.cloud', port: 7777 });
+
+async function fetchIpBurgerPool({ username, password, country, state, city, session, life, count, host, port }) {
+  const base = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!base) throw new Error('IP Burger: enter the proxy username from the dashboard (Proxy Users); it starts with customer-.');
+  if (!pw) throw new Error('IP Burger: enter the proxy user password from the dashboard (not your account login).');
+  const gw = gatewayOverride(host, port, IPBURGER_GATEWAY, 'IP Burger');
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => ipBurgerUsername(base, { country: cc, state, city, session: sid, sesstimeMin: life }),
+    label: `IP Burger • Residential • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('IP Burger: could not build any proxies.');
+  return rows;
+}
+
+// --- Proxy302 (dynamic residential, real Open API) ----------------------------------------
+// Sign in with the API sub-account key (name + password from the Proxy302 backend) to get a
+// Bearer-style token, map the chosen country to its numeric id, then ask the dynamic-traffic
+// endpoint for one ready proxy at a time (proxy.proxy302.com:2222). See the helper header in
+// proxyVendorUtils.js for the exact endpoints. Each call yields a distinct session credential,
+// so `count` calls build `count` proxies; a run of duplicates stops the loop early.
+const PROXY302_API = 'https://open.proxy302.com/open_api/v3';
+
+async function fetchProxy302Pool({ username, password, country, count, proxyType }) {
+  const keyName = String(username || '').trim();
+  const keyPass = password != null ? String(password) : '';
+  if (!keyName) throw new Error('Proxy302: enter the API key name from the Proxy302 backend (API, not your login email).');
+  if (!keyPass) throw new Error('Proxy302: enter the API key password from the Proxy302 backend.');
+  let token;
+  try {
+    const text = await httpRequestText(`${PROXY302_API}/user/users/token?username=${encodeURIComponent(keyName)}&password=${encodeURIComponent(keyPass)}`, { headers: { Accept: 'application/json' } });
+    token = proxy302Token(text);
+  } catch (error) {
+    if (error && error.status === 401) throw new Error('Proxy302 rejected the API key. Generate a sub-account key in the backend and paste its name and password.');
+    throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: could not sign in to the API. Check your connection and the key.');
+  }
+  const cc = normCountryCode(country);
+  let countryId = 0;
+  if (cc) {
+    try {
+      const text = await httpRequestText(`${PROXY302_API}/proxy/area/country`, { headers: { Authorization: token, Accept: 'application/json' } });
+      countryId = proxy302CountryId(text, cc);
+    } catch (error) {
+      throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: could not read the country list to resolve the location.');
+    }
+    if (countryId == null) throw new Error(`Proxy302 does not list ${cc} in its country database. Pick another country, or leave it on Any.`);
+  }
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const proto = socks ? 'socks5' : 'http';
+  const n = clampPoolCount(count, 5, 50);
+  const url = `${PROXY302_API}/proxy/api/proxy/dynamic/traffic?s=1&protocol=${proto}&country_id=${countryId}&state_id=0&city_id=0`;
+  const rows = [];
+  const seen = new Set();
+  let dupes = 0;
+  for (let i = 0; i < n && dupes < 3; i += 1) {
+    let text;
+    try {
+      text = await httpRequestText(url, { method: 'POST', headers: { Authorization: token, Accept: 'application/json' } });
+    } catch (error) {
+      if (!rows.length) throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: the proxy request failed. Check the key has API access and traffic left.');
+      break; // keep the proxies already built
+    }
+    let row;
+    try { row = proxy302Row(text, { socks, country: cc }); } catch (error) {
+      if (!rows.length) throw error;
+      break;
+    }
+    if (!row) continue;
+    const key = `${row.host}:${row.port}:${row.username}`;
+    if (seen.has(key)) { dupes += 1; continue; }
+    seen.add(key); rows.push(row); dupes = 0;
+  }
+  if (!rows.length) throw new Error('Proxy302: the API returned no usable proxy. Check the key has traffic and API permission.');
+  return rows;
+}
+
 // --- Databay (residential / mobile / datacenter) -----------------------------------------
 // Gateway-minted: one endpoint, gw.databay.co:8888, carries HTTP and SOCKS5. The proxy user
 // and password come from the Databay dashboard (Proxy Users); zone, location and sticky
@@ -3247,6 +3356,9 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   proxysolutions: fetchProxySolutionsPool,
   proxmint: fetchProxmintPool,
   databay: fetchDatabayPool,
+  lumiproxy: fetchLumiProxyPool,
+  proxy302: fetchProxy302Pool,
+  ipburger: fetchIpBurgerPool,
   ipfoxy: fetchIpfoxyPool,
   kookeey: fetchKookeeyPool,
   mangoproxy: fetchMangoProxyPool

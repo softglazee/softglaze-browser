@@ -13,7 +13,7 @@ function fmtDuration(ms) {
 }
 
 import EmptyState from '@/components/EmptyState.jsx';
-import { Donut, Legend, AreaChart } from '@/components/charts/Charts.jsx';
+import { AreaChart } from '@/components/charts/Charts.jsx';
 import { Clock, BarChart3, History, RotateCw, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
@@ -67,28 +67,67 @@ function speedOf(p, checkResults) {
   return ms <= SPEED_FAST_MAX_MS ? 'fast' : 'slow';
 }
 
-// Figma-style compact stat card (tinted, glow, icon tile). When `onClick` is given
-// it renders as a button and shows an accent ring while `active` (drives the filter).
-function MiniStat({ icon: Icon, label, value, color, onClick, active }) {
-  const { t } = useTranslation('proxies');
+// Short relative-time label for the "Last check" card (accurate, locale-strings via i18n).
+function timeAgo(ms, t) {
+  if (!ms) return null;
+  const diff = Date.now() - ms;
+  if (!isFinite(diff) || diff < 0) return t('stats.justNow');
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return t('stats.justNow');
+  if (mins < 60) return t('stats.minAgo', { n: mins });
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return t('stats.hrAgo', { n: hrs });
+  return t('stats.dayAgo', { n: Math.floor(hrs / 24) });
+}
+
+// Dependency-free inline-SVG segmented bar. Stretches to its container width; a flat muted
+// track shows through when there's no data. Drives the verified/failed/unchecked and
+// protocol splits in the stat cards (no gradients, no glow - just flat token fills).
+function SegBar({ segments }) {
+  const total = segments.reduce((a, s) => a + (s.value > 0 ? s.value : 0), 0);
+  let x = 0;
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'color-mix(in srgb, var(--muted-foreground) 16%, transparent)' }}>
+      {total > 0 && (
+        <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
+          {segments.map((s, i) => {
+            if (!(s.value > 0)) return null;
+            const w = (s.value / total) * 100;
+            const rect = <rect key={i} x={x} y="0" width={w} height="10" fill={s.color} />;
+            x += w;
+            return rect;
+          })}
+        </svg>
+      )}
+    </div>
+  );
+}
+
+// Compact, token-only stat card: label, big number, small sub-detail. Clickable cards
+// render as a focusable <button> that sets the matching table filter; an accent-coloured
+// 1px border marks the active one. No gradients/glow - flat card, 8px radius, mono/tabular
+// numbers. `accent` is an app token (var(--success), var(--chart-1), ...).
+function MiniStat({ icon: Icon, label, value, sub, accent = 'var(--primary)', onClick, active, title }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`rounded-xl p-4 relative overflow-hidden group animate-fade-up text-left w-full ${onClick ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''}`}
-      style={{ background: `color-mix(in srgb, ${color} 8%, var(--card))`, border: `1px solid ${active ? color : `color-mix(in srgb, ${color} 20%, transparent)`}`, boxShadow: active ? `0 0 0 1px ${color}` : undefined }}
+      title={title}
+      aria-pressed={onClick ? Boolean(active) : undefined}
+      className={`w-full min-w-0 rounded-lg border bg-card p-3 text-left transition-colors ${onClick ? 'cursor-pointer hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''}`}
+      style={{ borderColor: active ? accent : 'var(--border)' }}
     >
-      <div className="absolute -top-5 -right-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
-      <div className="relative z-10 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)` }}>
-          <Icon className="w-[18px] h-[18px]" style={{ color }} />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+          <p className="mt-1 font-mono text-[22px] font-semibold leading-none tabular-nums text-foreground">{value}</p>
         </div>
-        <div className="min-w-0">
-          <p className="text-[18px] font-bold text-foreground font-display leading-none">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ` · ${t('stats.filtering')}` : ''}</p>
-        </div>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
+          <Icon className="h-4 w-4" />
+        </span>
       </div>
+      {sub != null && <div className="mt-2 min-w-0 text-[11px] text-muted-foreground">{sub}</div>}
     </Tag>
   );
 }
@@ -770,17 +809,29 @@ export default function ProxyPoolPage() {
   }
 
   // REAL stats derived from the proxy list + any check results. verified/failed use
-  // the same health resolution as the filter so card counts match the filtered rows.
+  // the same health resolution as the filter so card counts match the filtered rows,
+  // and the leftover is the never-checked ('unknown') bucket - all three sum to the total.
   const verifiedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'verified').length;
   const failedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'failed').length;
-  const typeCounts = proxies.reduce((acc, p) => {
-    const t = String(p.type || 'OTHER').toUpperCase();
-    acc[t] = (acc[t] || 0) + 1;
-    return acc;
-  }, {});
-  const TYPE_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
-  const typeDonut = Object.entries(typeCounts).map(([label, value], i) => ({ label, value, color: TYPE_COLORS[i % TYPE_COLORS.length] }));
-  if (typeDonut.length === 0) typeDonut.push({ label: t('stats.noProxies'), value: 1, color: 'var(--elevated)' });
+  const uncheckedCount = Math.max(0, proxies.length - verifiedCount - failedCount);
+  const verifiedPct = proxies.length ? Math.round((verifiedCount / proxies.length) * 100) : 0;
+  // Protocol mix: HTTP vs SOCKS (any SOCKS4/5), everything else counted as "other".
+  const httpCount = proxies.filter((p) => String(p.type || '').toUpperCase().startsWith('HTTP')).length;
+  const socksCount = proxies.filter((p) => String(p.type || '').toUpperCase().startsWith('SOCKS')).length;
+  const otherTypeCount = Math.max(0, proxies.length - httpCount - socksCount);
+  // Distinct verified countries (geoBreakdown keys 'Unknown' for un-located proxies) + the leader.
+  const unknownGeo = t('geo.unknown');
+  const locatedCountries = geoBreakdown.filter((g) => g.country && g.country !== unknownGeo);
+  const countriesCovered = locatedCountries.length;
+  const topCountry = locatedCountries[0] || null;
+  // Freshest check across the whole pool (persisted lastCheckedAt), for the "Last check" card.
+  const lastCheckedMs = proxies.reduce((max, p) => {
+    const ts = p.lastCheckedAt ? new Date(p.lastCheckedAt).getTime() : 0;
+    return ts > max ? ts : max;
+  }, 0);
+  const lastCheckedLabel = lastCheckedMs ? timeAgo(lastCheckedMs, t) : null;
+  const filtersActive = view === 'custom' && statusFilter === 'all' && blacklistFilter === 'all' && speedFilter === 'all' && !search.trim();
+  const mutedTrack = 'color-mix(in srgb, var(--muted-foreground) 32%, transparent)';
 
   return (
     <div className="flex flex-col h-full space-y-4 pb-1">
@@ -905,21 +956,100 @@ export default function ProxyPoolPage() {
       </Link>
       </div>
 
-      {/* STATS ROW - real counts + proxy-type donut (custom view only) */}
-      {view === 'custom' && (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <MiniStat icon={Globe} label={t('stats.totalProxies')} value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
-          <MiniStat icon={Wifi} label={t('stats.proxyTypes')} value={Object.keys(typeCounts).length} color="#3b82f6" />
-          <MiniStat icon={ShieldCheck} label={t('stats.verified')} value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
-          <MiniStat icon={ShieldOff} label={t('stats.nonVerified')} value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
-        </div>
-        <div className="rounded-xl bg-card border border-border p-3 flex items-center gap-3">
-          <Donut data={typeDonut} size={84} thickness={13} centerLabel={proxies.length} centerSub={t('stats.total')} />
-          <div className="flex-1 min-w-0"><Legend data={typeDonut} /></div>
-        </div>
+      {/* STATS ROW - real, accurate pool stats (shown on every view as a pool overview).
+          Clickable cards set the matching table filter and jump to the Custom Proxies view;
+          Countries / Last check open the Groups & countries view where that detail lives.
+          Token colours only, flat 1px borders, inline-SVG split bars - no gradients/glow. */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+        {/* Total + verified/failed/unchecked split */}
+        <MiniStat
+          icon={Boxes}
+          label={t('stats.totalProxies')}
+          value={proxies.length}
+          accent="var(--chart-1)"
+          active={filtersActive}
+          title={t('stats.totalTip')}
+          onClick={() => { setStatusFilter('all'); setBlacklistFilter('all'); setSpeedFilter('all'); setSearch(''); setView('custom'); }}
+          sub={(
+            <div className="space-y-1.5">
+              <SegBar segments={[
+                { value: verifiedCount, color: 'var(--success)' },
+                { value: failedCount, color: 'var(--destructive)' },
+                { value: uncheckedCount, color: mutedTrack }
+              ]} />
+              <span className="block truncate">{t('stats.splitSub', { verified: verifiedCount, unchecked: uncheckedCount })}</span>
+            </div>
+          )}
+        />
+        {/* Verified */}
+        <MiniStat
+          icon={ShieldCheck}
+          label={t('stats.verified')}
+          value={verifiedCount}
+          accent="var(--success)"
+          active={view === 'custom' && statusFilter === 'verified'}
+          title={t('stats.verifiedTip')}
+          onClick={() => { toggleStatusFilter('verified'); setView('custom'); }}
+          sub={(
+            <div className="space-y-1.5">
+              <SegBar segments={[
+                { value: verifiedCount, color: 'var(--success)' },
+                { value: Math.max(0, proxies.length - verifiedCount), color: mutedTrack }
+              ]} />
+              <span className="block truncate">{view === 'custom' && statusFilter === 'verified' ? t('stats.filtering') : t('stats.pctOfPool', { pct: verifiedPct })}</span>
+            </div>
+          )}
+        />
+        {/* Failed */}
+        <MiniStat
+          icon={ShieldOff}
+          label={t('stats.failed')}
+          value={failedCount}
+          accent="var(--destructive)"
+          active={view === 'custom' && statusFilter === 'failed'}
+          title={t('stats.failedTip')}
+          onClick={() => { toggleStatusFilter('failed'); setView('custom'); }}
+          sub={<span className="block truncate">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
+        />
+        {/* Protocol mix (HTTP vs SOCKS) - informational, no type filter exists */}
+        <MiniStat
+          icon={Wifi}
+          label={t('stats.protocols')}
+          value={<span>{httpCount}<span className="text-muted-foreground"> / {socksCount}</span></span>}
+          accent="var(--chart-4)"
+          title={t('stats.protocolsTip')}
+          sub={(
+            <div className="space-y-1.5">
+              <SegBar segments={[
+                { value: httpCount, color: 'var(--chart-1)' },
+                { value: socksCount, color: 'var(--chart-4)' },
+                { value: otherTypeCount, color: mutedTrack }
+              ]} />
+              <span className="block truncate">{t('stats.protocolsSub', { http: httpCount, socks: socksCount })}</span>
+            </div>
+          )}
+        />
+        {/* Countries covered - opens the Groups & countries breakdown */}
+        <MiniStat
+          icon={Globe}
+          label={t('stats.countries')}
+          value={countriesCovered}
+          accent="var(--chart-2)"
+          title={t('stats.countriesTip')}
+          onClick={() => setView('groups')}
+          sub={<span className="block truncate">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
+        />
+        {/* Last check + schedule - opens the automatic health-check settings */}
+        <MiniStat
+          icon={Clock}
+          label={t('stats.lastCheck')}
+          value={lastCheckedLabel || '-'}
+          accent="var(--chart-3)"
+          title={t('stats.lastCheckTip')}
+          onClick={() => setView('groups')}
+          sub={<span className="block truncate">{scheduler.enabled ? t('stats.autoEvery', { n: scheduler.minutes }) : t('stats.autoOff')}</span>}
+        />
       </div>
-      )}
 
       {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
 

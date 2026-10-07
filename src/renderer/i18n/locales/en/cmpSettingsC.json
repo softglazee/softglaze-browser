@@ -146,6 +146,13 @@
       "gatewayHintNone": "Paste the gateway host shown in your {{provider}} dashboard; the port is filled in for you when it is standard.",
       "howManyCapTitle": "How many proxies to add. Each provider has its own maximum per pull (usually 100)."
     },
+    "creds": {
+      "connectionTitle": "Connection",
+      "targetingTitle": "Targeting",
+      "save": "Save credentials",
+      "saving": "Saving…",
+      "saved": "Credentials saved - ready to pull"
+    },
     "rotating": {
       "hostPortLabel": "Host : Port (rotating gateway)",
       "hostPlaceholder": "gateway host",
@@ -276,7 +283,10 @@
       "proxidize": "Proxidize uses your API token (app.proxidize.com, Settings, API Token). For a Per-Proxy plan, also enter the proxy username and the app lists that plan's ready proxies. For a Per-GB plan, leave the username empty and paste the gateway host from Proxy Details; the app builds sticky proxies on ports 20000 (HTTP) and 20002 (SOCKS5).",
       "ipfoxy": "IPFoxy builds every proxy on its rotating residential gateway (gate-us.ipfoxy.io:58688 for the Americas; use gate-sg.ipfoxy.io for Asia-Pacific). Enter the proxy account and password from the dashboard; the app adds customer- if it is missing. Pick a country and optionally a state and city. How many above 1 mints that many sticky IPs, each held for the Keep same IP time. HTTP and SOCKS5 share the same port.",
       "kookeey": "kookeey: enter the username as your user ID and security policy username joined by a hyphen (for example 123456789-abcdef) and the security policy password. The country, state, city and sticky session go into the password, the way kookeey's docs describe. Leave the country on Any for a global exit. How many above 1 mints that many sticky IPs (8-character sessions), each rotated after the Keep same IP time. Use a regional gateway such as gate-us.kookeey.info if you prefer.",
-      "mangoproxy": "MangoProxy uses your API key to generate ready proxy lines. Enter the key and, optionally, the proxy sub-account username (blank uses the first sub-account on your account). Pick Residential, Residential light, Datacenter or ISP, a country and optionally a state or city, HTTP or SOCKS5, and how many (up to 100). Keep same IP sets the sticky session time (up to 120 minutes)."
+      "mangoproxy": "MangoProxy uses your API key to generate ready proxy lines. Enter the key and, optionally, the proxy sub-account username (blank uses the first sub-account on your account). Pick Residential, Residential light, Datacenter or ISP, a country and optionally a state or city, HTTP or SOCKS5, and how many (up to 100). Keep same IP sets the sticky session time (up to 120 minutes).",
+      "lumiproxy": "LumiProxy builds every proxy on its gateway (as.lumiproxy.com:5888, which carries HTTP and SOCKS5 on one port). Enter the proxy username (dashboard, Get Proxies, User & Pass Auth, e.g. lumi-xxxxxxxx) and its password. Pick a country and optionally a state or city. Leave Sticky session blank for a new IP on every request; type a session name to mint that many sticky IPs, and Keep same IP sets how long each holds (up to 120 minutes). If your dashboard shows a regional node such as us.lumiproxy.com or eu.lumiproxy.com, enter it as the gateway.",
+      "ipburger": "IP Burger builds every proxy on its residential gateway (residential.ipb.cloud:7777, HTTP only - their residential network has no SOCKS5). Enter the proxy username from the dashboard, Proxy Users (it starts with customer-) and that proxy user's password, not your account login. Pick a country, and optionally one city or state to narrow it. Leave Sticky session blank for a new IP on every request; type a session name to mint that many sticky IPs, and Keep same IP sets how long each holds (up to 30 minutes). If your dashboard shows another host such as res.ipb.cloud, enter it as the gateway.",
+      "proxy302": "Proxy302 pulls ready proxies from its Open API (proxy.proxy302.com:2222). First create an API sub-account key in the Proxy302 backend (API section): enter the key name as the username and the key password below - these are not your login email. Pick a country (or leave it Any), HTTP or SOCKS5, and how many proxies to add (up to 50). Each proxy is a fresh dynamic-traffic session drawn from your Proxy302 balance."
     },
     "notConnected": {
       "body": "{{provider}} does not support automatic pull yet. Enter the gateway details from your {{provider}} dashboard below to add its proxies manually.",

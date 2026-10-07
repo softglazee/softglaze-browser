@@ -1093,7 +1093,144 @@ function mangoProxyRows(json, { socks = false } = {}) {
   return rows;
 }
 
+// ---------------------------------------------------------------------------------------
+// LumiProxy (gateway-minted residential). The username carries the targeting and the sticky
+// session; the gateway host/port stay fixed (as.lumiproxy.com:5888 by default, country/region
+// nodes such as us./eu. are reachable through the gateway override). Grammar verified against
+// LumiProxy's own docs/blog (lumiproxy.com "How to use lumiproxy", fetched 2026-10-07), whose
+// verbatim sticky example is:
+//   eu.lumiproxy.com:5888:lumi-gdskfh45_area-US_city-Bessemer_life-10_session-u9sBvMSOLO:XXXXXX
+// So flags are underscore-joined after the base login: area-<CC> (country, upper ISO-2),
+// city-<City> (CamelCase), life-<min> (sticky minutes, 1-120) and session-<id>. life/session
+// only appear for a sticky pull. state-<State> follows the identical area-/city- pattern and
+// the dashboard's own country/state/city selector; it is emitted between area and city. The
+// base is "lumi-<id>", whose single hyphen never clashes because the flags split on "_".
+function lumiProxyUsername(base, { country, state, city, session, lifeMin } = {}) {
+  const user = String(base || '').trim();
+  if (!user) return '';
+  const suffix = [];
+  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  if (/^[A-Z]{2}$/.test(cc)) {
+    suffix.push(`area-${cc}`);
+    const st = camelPlace(state);
+    if (st) suffix.push(`state-${st}`);
+    const ct = camelPlace(city);
+    if (ct) suffix.push(`city-${ct}`);
+  }
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '').slice(0, 32);
+  if (sid) {
+    const life = Number.parseInt(String(lifeMin), 10);
+    if (Number.isInteger(life) && life >= 1 && life <= 120) suffix.push(`life-${life}`);
+    suffix.push(`session-${sid}`);
+  }
+  return suffix.length ? `${user}_${suffix.join('_')}` : user;
+}
+
+// ---------------------------------------------------------------------------------------
+// IP Burger (rotating residential, gateway residential.ipb.cloud:7777, HTTP only - their docs
+// state SOCKS5 is not offered on the residential network). The proxy user (customer-<id>) and
+// its password come from the dashboard Proxy Users; everything else rides in the username.
+// Grammar verified against IPBurger's own residential product page (ipburger.com/residential-
+// proxies, fetched 2026-10-07), whose verbatim examples are:
+//   customer-a1b2c3d4e5-cc-US                                        (country-wide, rotating)
+//   customer-a1b2c3d4e5-city-washington-sessid-cFNk-sesstime-30      (city, sticky)
+// So the geo is ONE token - cc-<CC> for the whole country, OR a narrowing city-/state- token
+// used INSTEAD of cc (the examples never combine them; the gateway resolves the city's country
+// itself). sessid-<id> + sesstime-<min> (held minutes, max 30) appear only for a sticky pull.
+function ipBurgerBaseUser(raw) {
+  const s = String(raw || '').trim();
+  const m = s.match(/^customer-([A-Za-z0-9]+)/i);
+  if (m) return `customer-${m[1]}`;
+  const id = s.replace(/[^A-Za-z0-9]/g, '');
+  return id ? `customer-${id}` : '';
+}
+function ipBurgerPlace(v) {
+  return String(v || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+const IPBURGER_MAX_SESSTIME = 30;
+function ipBurgerUsername(base, { country, state, city, session, sesstimeMin } = {}) {
+  const user = ipBurgerBaseUser(base);
+  if (!user) return '';
+  const parts = [user];
+  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  if (/^[A-Z]{2}$/.test(cc)) {
+    const ct = ipBurgerPlace(city);
+    const st = ipBurgerPlace(state);
+    if (ct) parts.push('city', ct);
+    else if (st) parts.push('state', st);
+    else parts.push('cc', cc);
+  }
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '').slice(0, 32);
+  if (sid) {
+    const mins = Math.min(IPBURGER_MAX_SESSTIME, Math.max(1, Number.parseInt(String(sesstimeMin), 10) || IPBURGER_MAX_SESSTIME));
+    parts.push('sessid', sid, 'sesstime', String(mins));
+  }
+  return parts.join('-');
+}
+
+// ---------------------------------------------------------------------------------------
+// Proxy302 (open.proxy302.com Open API v3). A real list API, not a gateway grammar. Flow,
+// verified against the published docs (proxy302.apifox.cn, fetched 2026-10-07):
+//   GET  /user/users/token?username=<keyName>&password=<keyPwd>  -> { code:0, data:{ token } }
+//        the returned token already includes the "Basic " prefix and is sent verbatim as the
+//        Authorization header on every later call. The key is an API sub-account, not the login.
+//   GET  /proxy/area/country                                     -> { code:0, data:{ data:[
+//        { id, name, code } ] } }  maps an ISO-2 code to the numeric country_id.
+//   POST /proxy/api/proxy/dynamic/traffic?s=1&protocol=<http|socks5>&country_id=&state_id=0&
+//        city_id=0                                                -> { code:0, data:{ host:
+//        "proxy.proxy302.com", port:2222, user_name, password, protocol } }  one ready proxy.
+// Every response wraps the payload in { code, msg, data }; code 0 is success, anything else is
+// a business error carried in msg (so the HTTP status alone proves nothing).
+function proxy302Body(text, what) {
+  let body;
+  try { body = JSON.parse(String(text)); } catch (e) { throw new Error(`Proxy302 ${what}: the API did not return JSON.`); }
+  if (body && Number(body.code) === 0) return body.data;
+  const msg = body && body.msg ? String(body.msg) : 'request failed';
+  throw new Error(`Proxy302 ${what}: ${msg}`);
+}
+function proxy302Token(text) {
+  const data = proxy302Body(text, 'sign-in');
+  const token = data && typeof data.token === 'string' ? data.token.trim() : '';
+  if (!token) throw new Error('Proxy302: the sign-in response carried no token. Check the API key name and password in the Proxy302 backend.');
+  return token;
+}
+// Return the numeric country_id for an ISO-2 code, 0 for "any", or null when the vendor does
+// not list that country (so the caller can refuse instead of pulling the wrong location).
+function proxy302CountryId(text, code) {
+  const cc = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return 0;
+  const data = proxy302Body(text, 'country list');
+  const list = Array.isArray(data && data.data) ? data.data : (Array.isArray(data) ? data : []);
+  const hit = list.find((a) => a && String(a.code || '').trim().toUpperCase() === cc);
+  if (!hit) return null;
+  const id = Number(hit.id);
+  return Number.isInteger(id) ? id : null;
+}
+function proxy302Row(text, { socks = false, country = '' } = {}) {
+  const data = proxy302Body(text, 'proxy');
+  const host = String((data && data.host) || '').trim();
+  const port = Number.parseInt(String(data && data.port), 10);
+  const username = data && data.user_name != null ? String(data.user_name) : '';
+  const password = data && data.password != null ? String(data.password) : '';
+  if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username) return null;
+  const cc = String(country || '').trim().toUpperCase();
+  const where = /^[A-Z]{2}$/.test(cc) ? cc : '';
+  return {
+    type: socks ? 'SOCKS5' : 'HTTP',
+    host, port, username, password,
+    label: `Proxy302 • Residential • ${where || 'Worldwide'}`,
+    country: where || null
+  };
+}
+
 module.exports = {
+  lumiProxyUsername,
+  ipBurgerBaseUser,
+  ipBurgerUsername,
+  IPBURGER_MAX_SESSTIME,
+  proxy302Token,
+  proxy302CountryId,
+  proxy302Row,
   rapidProxySid,
   froxyBasePassword,
   LIVEPROXIES_GATEWAY,
