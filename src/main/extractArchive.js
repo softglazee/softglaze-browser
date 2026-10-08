@@ -24,7 +24,25 @@ function run(cmd, args, opts = {}) {
 // binary keeps its executable bit on macOS/Linux; we chmod defensively anyway.
 async function extractZipCrossPlatform(zipPath, destDir) {
   fs.mkdirSync(destDir, { recursive: true });
-  await extractZip(zipPath, { dir: path.resolve(destDir) });
+  const dir = path.resolve(destDir);
+  await extractZip(zipPath, { dir, onEntry: (entry) => assertSafeZipEntry(entry, dir) });
+}
+
+// extract-zip writes symlink entries as-is and does not stop names that resolve outside
+// the target folder. Pass as onEntry: throwing aborts the unzip before the entry is written.
+function assertSafeZipEntry(entry, destDir) {
+  const raw = String((entry && entry.fileName) || '');
+  // A backslash is a path separator on Windows but a legal filename byte on POSIX,
+  // so normalize it before the traversal check: a Windows-targeted "..\evil" must be
+  // refused whatever OS we validate on.
+  const name = raw.replace(/\\/g, '/');
+  const mode = ((Number(entry && entry.externalFileAttributes) || 0) >>> 16) & 0xFFFF;
+  if ((mode & 0o170000) === 0o120000) throw new Error(`Refusing symlink entry "${raw}" in the archive.`);
+  const root = path.resolve(destDir);
+  const rel = path.relative(root, path.resolve(root, name));
+  if (!name || path.isAbsolute(name) || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+    throw new Error(`Refusing entry "${name}" that escapes the archive folder.`);
+  }
 }
 
 // Ensure a downloaded binary is executable on POSIX (no-op on Windows).
@@ -99,6 +117,7 @@ async function extractFpChromium(artifactPath, destDir, platform = process.platf
 module.exports = {
   run,
   extractZipCrossPlatform,
+  assertSafeZipEntry,
   extractTarXz,
   extractDmgApps,
   extractFirefox,

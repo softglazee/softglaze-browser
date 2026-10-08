@@ -29,7 +29,8 @@ model Proxy {
   host      String
   port      Int
   username  String?
-  password  String?
+  password  String? // sealed at rest (secretStore enc:v1:); opened on read by proxySecrets.extendClient
+  passwordHash String? // HMAC-SHA256 of the plaintext password (per-install key); carries the unique key
   rotationUrl String? // optional vendor IP-rotation trigger link (mobile/residential proxies)
   createdAt DateTime  @default(now())
 
@@ -58,7 +59,7 @@ model Proxy {
   @@index([createdAt])
   @@index([ownerMemberId])
   @@index([proxyGroupId])
-  @@unique([type, host, port, username, password])
+  @@unique([type, host, port, username, passwordHash])
 }
 
 // Proxy categories/folders (e.g. "USA Proxies", "UK", "Japan"). A proxy belongs to

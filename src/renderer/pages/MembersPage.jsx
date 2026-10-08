@@ -327,6 +327,16 @@ function SuperAdminLicensePanel() {
     if (!window.confirm(t('license.confirm.terminate', { name: r.ownerName }))) return;
     act(r.ownerId, () => softglazeApi.license.terminate({ ownerId: r.ownerId }));
   }
+  // Reset trial and Block are as disruptive as Terminate (a reset wipes the trial clock,
+  // a block locks the owner and every sub-member out), so they confirm the same way.
+  function resetTrial(r) {
+    if (!window.confirm(t('license.confirm.resetTrial', { name: r.ownerName }))) return;
+    act(r.ownerId, () => softglazeApi.license.reset({ ownerId: r.ownerId }));
+  }
+  function block(r) {
+    if (!window.confirm(t('license.confirm.block', { name: r.ownerName }))) return;
+    act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'banned', reason: 'Blocked by Super Admin.' }));
+  }
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="w-5 h-5 text-muted animate-spin" /></div>;
 
@@ -364,13 +374,14 @@ function SuperAdminLicensePanel() {
               <button onClick={() => act(r.ownerId, () => softglazeApi.license.grant({ ownerId: r.ownerId, months: 1, tier: 'pro' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><CreditCard className="w-3.5 h-3.5" />{t('license.actions.grantMonth')}</button>
               <button onClick={() => act(r.ownerId, () => softglazeApi.license.extend({ ownerId: r.ownerId, days: 7 }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Clock className="w-3.5 h-3.5" />{t('license.actions.extend7')}</button>
               <button onClick={() => act(r.ownerId, () => softglazeApi.license.startTrial({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 hover:bg-blue-500/20 disabled:opacity-60"><Sparkles className="w-3.5 h-3.5" />{t('license.actions.startTrial')}</button>
-              <button onClick={() => act(r.ownerId, () => softglazeApi.license.reset({ ownerId: r.ownerId }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" />{t('license.actions.resetTrial')}</button>
+              <button onClick={() => resetTrial(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" />{t('license.actions.resetTrial')}</button>
               <button onClick={() => setEditing(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-secondary text-foreground border border-border hover:bg-secondary/70 disabled:opacity-60"><Settings2 className="w-3.5 h-3.5" />{t('license.actions.edit')}</button>
               <button onClick={() => terminate(r)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/25 hover:bg-orange-500/20 disabled:opacity-60"><Ban className="w-3.5 h-3.5" />{t('license.actions.terminate')}</button>
               {banned ? (
                 <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'active' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60"><ShieldCheck className="w-3.5 h-3.5" />{t('license.actions.unblock')}</button>
               ) : (
-                <button onClick={() => act(r.ownerId, () => softglazeApi.members.setStatus({ id: r.ownerId, status: 'banned', reason: 'Blocked by Super Admin.' }))} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60"><Lock className="w-3.5 h-3.5" />{t('license.actions.block')}</button>
+                <button onClick={() => block(r)} disabled={busy}
+ className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60"><Lock className="w-3.5 h-3.5" />{t('license.actions.block')}</button>
               )}
               {busy && <Loader2 className="w-4 h-4 animate-spin text-muted" />}
             </div>

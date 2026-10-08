@@ -53,7 +53,10 @@ export default function DeveloperApiSettings() {
     finally { setCreating(false); }
   }
 
-  async function revoke(id) {
+  async function revoke(tok) {
+    // Revoking breaks every script using this key immediately and cannot be undone.
+    if (!window.confirm(t('developerApi.keys.revokeConfirm', { name: tok.name }))) return;
+    const id = tok.id;
     setErr('');
     try { await softglazeApi.developerApi.revokeToken(id); setTokens((list) => list.filter((x) => x.id !== id)); }
     catch (e) { setErr(e.message || t('developerApi.errors.revoke')); }
@@ -150,7 +153,8 @@ export default function DeveloperApiSettings() {
                     <span className="text-[12.5px] font-medium text-foreground truncate block">{tok.name}</span>
                     <span className="text-[10.5px] text-muted-foreground font-mono">{tok.preview} · {tok.lastUsedAt ? t('developerApi.keys.lastUsed', { when: fmt(tok.lastUsedAt, t) }) : t('developerApi.keys.neverUsed')}</span>
                   </div>
-                  <button onClick={() => revoke(tok.id)} title={t('developerApi.keys.revoke')} className="shrink-0 text-muted-foreground hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => revoke(tok)} title=
+{t('developerApi.keys.revoke')} className="shrink-0 text-muted-foreground hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>

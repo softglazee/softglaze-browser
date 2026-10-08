@@ -122,6 +122,7 @@ function PaymentGatewayCard() {
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
+    setErr('');
     try { setConfig(await softglazeApi.payments.getConfig()); }
     catch (e) { setErr(e.message || t('billing.gateway.loadError')); }
   }, [t]);
@@ -140,8 +141,12 @@ function PaymentGatewayCard() {
       {err && <div className="mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
 
       {!config ? (
-        <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /></div>
+        // A failed load used to leave this spinner running forever under the error.
+        err
+          ? <div className="mt-3"><button type="button" onClick={load} className="h-8 px-3 rounded-lg text-[12px] font-semibold border border-border text-foreground hover:bg-secondary">{t('billing.gateway.retry')}</button></div>
+          : <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /></div>
       ) : (
+
         <div className="mt-4 space-y-3">
           {config.providers.map((p) => <ProviderConfig key={p.id} provider={p} onSaved={load} />)}
         </div>

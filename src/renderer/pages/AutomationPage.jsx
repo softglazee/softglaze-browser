@@ -8,6 +8,8 @@ import {
 import PageHeader from '@/components/PageHeader.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import NameDialog from '@/components/NameDialog.jsx';
+import NumberInput from '@/components/ui/NumberInput.jsx';
 import i18n from '@/i18n/index.js';
 import automationEn from '@/i18n/locales/en/automation.json';
 import automationEs from '@/i18n/locales/es/automation.json';
@@ -211,7 +213,10 @@ function MacrosPanel() {
 
   useEffect(() => { load(); loadProfiles(); }, [load, loadProfiles]);
 
-  async function remove(id) {
+  async function remove(m) {
+    // A deleted macro (and its steps) cannot be recovered, so confirm first.
+    if (!window.confirm(t('macros.deleteConfirm', { name: m.name }))) return;
+    const id = m.id;
     setErr('');
     try { await softglazeApi.automation.deleteMacro(id); setMacros((m) => m.filter((x) => x.id !== id)); }
     catch (e) { setErr(e.message || t('macros.errors.deleteMacro')); }
@@ -337,7 +342,8 @@ function MacrosPanel() {
                 <button onClick={() => setEditing(m)} title={t('macros.editSteps')} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-card border border-border text-foreground hover:border-primary">
                   <Pencil className="w-3.5 h-3.5" /> {t('macros.edit')}
                 </button>
-                <button onClick={() => remove(m.id)} title={t('macros.delete')} className="text-muted-foreground hover:text-red-400 transition-colors">
+                <button onClick={() => remove(m)} title={t('macros.delete')}
+ className="text-muted-foreground hover:text-red-400 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -1143,6 +1149,7 @@ function WarmerPanel() {
   const [addBehavior, setAddBehavior] = useState('none');
   // Named, reusable link lists + which site rows are ticked for bulk edit/delete.
   const [savedLists, setSavedLists] = useState([]);
+  const [showListName, setShowListName] = useState(false);
   const [selSites, setSelSites] = useState(() => new Set());
   const hydratedRef = useRef(false); // gate auto-save until the saved plan has loaded
   const saveTimer = useRef(null);
@@ -1254,9 +1261,11 @@ function WarmerPanel() {
     setSavedLists(next);
     softglazeApi.settings.setGlobal({ warmer: { lists: next } }).catch(() => {});
   }
-  function saveCurrentList() {
+  // window.prompt() returns null in Electron, so the list name comes from NameDialog.
+  function saveCurrentList(rawName) {
+    setShowListName(false);
     if (!sites.length) { setErr(t('warmer.errors.addSite')); return; }
-    const name = (window.prompt(t('warmer.saveListPrompt')) || '').trim();
+    const name = String(rawName || '').trim();
     if (!name) return;
     const entry = { id: `wl-${Date.now()}`, name: name.slice(0, 60), sites: sites.map((s) => ({ ...s })) };
     persistLists([...savedLists.filter((l) => l.name !== entry.name), entry]);
@@ -1406,7 +1415,7 @@ function WarmerPanel() {
           {/* Add a custom URL - the seconds + behaviour here apply to every link you add */}
           <div className="flex items-center gap-2">
             <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder={t('warmer.customPlaceholder')} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
-            <input type="number" min={3} max={600} value={addSeconds} onChange={(e) => setAddSeconds(Math.max(3, Math.min(600, Number(e.target.value) || 30)))} title={t('warmer.addSecondsTitle')} className="w-14 h-8 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
+            <NumberInput min={3} max={600} fallback={30} value={addSeconds} onCommit={setAddSeconds} title={t('warmer.addSecondsTitle')} className="w-14 h-8 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
             <select value={addBehavior} onChange={(e) => setAddBehavior(e.target.value)} title={t('warmer.addBehaviorTitle')} className="h-8 shrink-0 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-foreground outline-none focus:border-primary">
               {Object.keys(CLICK_LABELS).map((k) => <option key={k} value={k}>{t(`clickLabels.${k}`)}</option>)}
             </select>
@@ -1434,7 +1443,7 @@ function WarmerPanel() {
 
           {/* Reusable saved link lists - persisted for future use */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <button onClick={saveCurrentList} disabled={!sites.length} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Save className="w-3.5 h-3.5" /> {t('warmer.saveList')}</button>
+            <button onClick={() => { if (!sites.length) { setErr(t('warmer.errors.addSite')); return; } setShowListName(true); }} disabled={!sites.length} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Save className="w-3.5 h-3.5" /> {t('warmer.saveList')}</button>
             {savedLists.map((l) => (
               <span key={l.id} className="inline-flex items-center gap-1 h-7 pl-2 pr-1 rounded-md border border-border bg-elevated/40 text-[11px] text-foreground">
                 <button onClick={() => loadList(l.id)} title={t('warmer.loadListTitle')} className="hover:text-orange-400 max-w-[130px] truncate">{l.name} <span className="text-muted-foreground">({(l.sites || []).length})</span></button>
@@ -1504,7 +1513,8 @@ function WarmerPanel() {
             {!queueMode && (
               <label className="flex items-center gap-1.5 text-[12px] text-muted-foreground" title={t('warmer.parallelTitle', 'How many profiles to warm simultaneously. Higher = faster but heavier on RAM/CPU.')}>
                 {t('warmer.parallelLabel', 'At a time:')}
-                <input type="number" min={2} max={16} value={parallelCount} onChange={(e) => setParallelCount(Math.max(2, Math.min(16, Number(e.target.value) || 2)))} className="w-14 h-7 bg-input-background border border-border rounded-md px-1.5 text-[12px] text-foreground outline-none focus:border-primary" />
+                <NumberInput min={2} max={16} fallback={2} value={parallelCount} onCommit={setParallelCount} className=
+"w-14 h-7 bg-input-background border border-border rounded-md px-1.5 text-[12px] text-foreground outline-none focus:border-primary" />
               </label>
             )}
           </div>
@@ -1623,9 +1633,21 @@ function WarmerPanel() {
           </div>
         </div>
       </div>
+      {showListName && (
+        <NameDialog
+          title={t('warmer.saveList')}
+          label={t('warmer.saveListPrompt')}
+          saveLabel={t('saveRecording.save')}
+          cancelLabel={t('saveRecording.cancel')}
+          maxLength={60}
+          onSave={saveCurrentList}
+          onClose={() => setShowListName(false)}
+        />
+      )}
     </div>
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // Task History

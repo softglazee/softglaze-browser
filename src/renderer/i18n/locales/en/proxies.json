@@ -23,18 +23,44 @@
     "checkAll": "Check All",
     "refresh": "Refresh",
     "batchAdd": "Batch Add",
-    "newProxy": "New Proxy"
+    "newProxy": "New Proxy",
+    "checkNew": "Check new",
+    "checkNewTooltip": "Check only the newly added, never-checked proxies."
   },
   "tabs": {
     "custom": "Custom Proxies",
     "providers": "Proxy Providers",
-    "integrated": "Integrated"
+    "integrated": "Integrated",
+    "history": "Check history",
+    "groups": "Groups & countries"
   },
   "stats": {
     "totalProxies": "Total proxies",
+    "totalTip": "Show the whole pool",
+    "splitSub": "{{verified}} verified · {{unchecked}} unchecked",
     "proxyTypes": "Proxy types",
     "verified": "Verified",
+    "verifiedTip": "Filter the table to verified proxies",
+    "pctOfPool": "{{pct}}% of pool",
+    "failed": "Failed",
+    "failedTip": "Filter the table to failed proxies",
+    "uncheckedSub": "{{count}} not checked yet",
     "nonVerified": "Non-verified",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "Protocol mix across the pool",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "Countries",
+    "countriesTip": "Open the country breakdown",
+    "topCountry": "{{country}} leads · {{count}}",
+    "countriesEmpty": "Run a check to detect locations",
+    "lastCheck": "Last check",
+    "lastCheckTip": "Open automatic health checks",
+    "autoEvery": "Auto-check every {{n}}m",
+    "autoOff": "Auto-check off",
+    "justNow": "just now",
+    "minAgo": "{{n}}m ago",
+    "hrAgo": "{{n}}h ago",
+    "dayAgo": "{{n}}d ago",
     "filtering": "filtering",
     "noProxies": "No proxies",
     "total": "total"
@@ -201,7 +227,8 @@
     "openDetail": "Open full history",
     "regressed": "Verified before, failed later",
     "regressedCount_one": "{{count}} verified then failed",
-    "regressedCount_other": "{{count}} verified then failed"
+    "regressedCount_other": "{{count}} verified then failed",
+    "empty": "No checks yet. Run Check All or Test All on the Proxies page and the results show up here."
   },
   "form": {
     "dialogTitleEdit": "Edit proxy",
@@ -273,5 +300,22 @@
     "deleteProxy": "Failed to delete proxy. Remove linked profiles or change their proxy assignment first.",
     "rotate": "Could not rotate the IP.",
     "rotateStatus": "The rotation request returned HTTP {{status}}."
+  },
+  "groupsPage": {
+    "groupsTitle": "Groups and countries",
+    "openGroup": "Show these proxies",
+    "noGeo": "Run Check All on the Proxies page to detect each proxy's country.",
+    "noProviders": "No provider proxies yet. Pull some from Proxy Providers.",
+    "scheduleTitle": "Automatic health checks"
+  },
+  "filterBar": {
+    "statusTip": "Check status",
+    "statusAll": "Any status",
+    "blocklistAll": "Any blocklist",
+    "speedAll": "Any speed",
+    "groupTip": "Group or country",
+    "groupAll": "All groups",
+    "providerAll": "All providers",
+    "reset": "Reset filters"
   }
 }

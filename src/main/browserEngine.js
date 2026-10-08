@@ -16,9 +16,10 @@ const platform = require('./platform');
 const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
 // Smart Autofill (Identity Data Vault) - source of the in-page widget injected
 // into every launched page. No deps; just returns a self-contained IIFE string.
-const { buildAutofillBootstrap } = require('./personaAutofill');
-const { attachPageBridge } = require('./pageBridge');
-const PERSONA_AUTOFILL_SOURCE = buildAutofillBootstrap();
+const { buildAutofillRunSource } = require('./personaAutofill');
+const { attachPageBridge, attachIsolatedWorld } = require('./pageBridge');
+// A function expression taking the isolated world's rpc - see attachPersonaAutofill.
+const PERSONA_AUTOFILL_RUN_SOURCE = buildAutofillRunSource();
 // Local SOCKS5 auth-injecting relay - Chromium can't authenticate to a SOCKS5
 // proxy, so an authenticated one is routed through this instead (audit).
 const { startSocksAuthRelay } = require('./socksRelay');
@@ -147,12 +148,13 @@ function configurePersonaBridge(deps) {
   }
 }
 
-// Expose the two persona bridge functions on a page and inject the autofill widget
-// (both for future navigations and the currently-loaded document). Safe to call
-// once per page - exposeFunction throws if a name is already bound, which we
-// swallow. Chromium-only: this whole module is the puppeteer/CDP launch path.
-// Hardening (audit C2): exposeFunction binds into the page's MAIN world, so ANY
-// script on ANY page can call these - not just our widget. Three defenses:
+// Run the autofill widget and its persona bridge in a private isolated world on a
+// page (future navigations and the currently-loaded document). Call once per page.
+// Chromium-only: this whole module is the puppeteer/CDP launch path.
+// Hardening (audit C2, then E1): these handlers used to be exposeFunction bindings
+// in the page's MAIN world, callable by ANY script on ANY page. They are now
+// reachable only from the isolated world (see pageBridge.attachIsolatedWorld).
+// The older defenses stay as depth:
 //   1. Origin is taken from the REAL committed page URL (targetPage.url()), never
 //      from a page-supplied argument, so a hostile page can't pass a random host
 //      to dump personas it hasn't "used" yet.
@@ -188,10 +190,16 @@ async function attachPersonaAutofill(targetPage) {
   // The real committed origin of THIS page - the single source of truth for which
   // host personas are scoped to. Falls back to '' (bridge then returns nothing).
   const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
-  // Each handler is defined ONCE and registered on BOTH transports (native binding
-  // + the CDP-binding-free RPC), so the two paths can never drift apart.
+  // Each handler is defined ONCE and served over both isolated-world transports
+  // (world-scoped binding + body-authenticated RPC), so the two can never drift.
+  // audit E3 parity: nothing from the vault while the app is locked / signed out.
+  // Fails closed when the check throws.
+  const vaultOpen = async () => {
+    if (typeof personaBridge.isAvailable !== 'function') return true;
+    try { return (await personaBridge.isAvailable()) === true; } catch (e) { return false; }
+  };
   const hPersonaList = async () => {
-
+      if (!(await vaultOpen())) return [];
       try {
         const r = await personaBridge.listForUrl(pageUrl());
         const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
@@ -199,7 +207,7 @@ async function attachPersonaAutofill(targetPage) {
       } catch (e) { return []; }
   };
   const hPersonaMarkUsed = async (id) => {
-
+      if (!(await vaultOpen())) return { ok: false, error: 'locked' };
       try { await personaBridge.markUsed(String(id || ''), pageUrl()); return { ok: true }; }
       catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
   };
@@ -208,27 +216,39 @@ async function attachPersonaAutofill(targetPage) {
     // human-like random delays - defeating isTrusted-based bot checks. Selects are
     // set via the native picker. Password items carry NO value - only a personaId -
     // and the plaintext is resolved server-side (see defense #2 above).
-  const hPersonaFillPlan = async (plan) => {
+  // `world` is the widget's private isolated world (set below). Every DOM check
+  // that guards a password runs THERE, where page JS cannot patch
+  // getBoundingClientRect/getComputedStyle/navigator.userActivation to lie.
+  let world = null;
+  const hPersonaFillPlan = async (plan, meta) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
+      if (!(await vaultOpen())) return { ok: false, filled: 0 };
       const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
       const secretCache = new Map(); // personaId -> password (fetched once per plan)
       let filled = 0;
       let failed = 0; // fields we could not verify - never counted as filled
       let charBudget = PERSONA_FILL_MAX_TOTAL_CHARS;
-      // audit C2 bypass: the page supplies both the selector AND the personaId, so a
-      // hostile page could aim a password fill at its own hidden input and read the
-      // value back - defeating "the plaintext only reaches the field the user is
-      // filling". Two HARD gates guard the secret path, resolved once per plan:
-      //   (1) the page must have had a genuine user gesture (userActivation), and
+      // audit C2/E1: the plan only ever comes from the widget's isolated world (page
+      // JS cannot reach this handler at all any more), but the secret path keeps its
+      // own HARD gates, resolved at plan START (before any typing burns the window):
+      //   (1) the widget says this fill came from an isTrusted click on its OWN UI
+      //       (meta.gesture - multi-step re-runs never set it), AND the frame has a
+      //       TRANSIENT user activation right now, read from the isolated world.
+      //       The old check read the sticky hasBeenActive from the main world,
+      //       which any earlier click satisfied and a page could redefine.
       //   (2) the personaId must be one actually OFFERED for THIS committed origin
       //       (present in listForUrl(pageUrl())) - never an arbitrary/guessed id.
+      //   (3) each password target is re-validated right before typing (below).
       // Non-secret fields are unaffected. An empty allow-set → no password resolves.
+      const wantsSecret = items.some((it) => it && it.kind === 'password');
+      let gestured = false;
+      if (wantsSecret && meta && meta.gesture === true && world) {
+        try { gestured = (await world.evaluate(personaActivationProbe)) === true; } catch (e) { gestured = false; }
+      }
       let allowedSecretIds = null;
       const ensureAllowedSecretIds = async () => {
         if (allowedSecretIds) return allowedSecretIds;
         allowedSecretIds = new Set();
-        let gestured = false;
-        try { gestured = await targetPage.evaluate(() => { try { return !!(navigator.userActivation && navigator.userActivation.hasBeenActive); } catch (e) { return false; } }); } catch (e) { gestured = false; }
         if (!gestured) return allowedSecretIds;
         if (typeof personaBridge.listForUrl !== 'function') return allowedSecretIds;
         try {
@@ -263,6 +283,13 @@ async function attachPersonaAutofill(targetPage) {
           }
           value = secretCache.get(pid);
           if (!value) { markFailed(itemIdx); continue; }
+          // (3) Re-validate the target from the isolated world right before typing:
+          // exactly one match, a real password input, visible, in the viewport,
+          // opacity > 0 up the tree, >= 2px, not aria-hidden. A hidden #trap the page
+          // re-tagged with our selector fails here and receives nothing.
+          let targetOk = false;
+          try { targetOk = (await world.evaluate(personaPickPasswordTarget, sel, pwSlot)) === true; } catch (e) { targetOk = false; }
+          if (!targetOk) { markFailed(itemIdx); continue; }
         } else {
           value = item.value != null ? String(item.value) : '';
           if (value.length > PERSONA_FILL_MAX_VALUE_LEN) value = value.slice(0, PERSONA_FILL_MAX_VALUE_LEN);
@@ -327,11 +354,22 @@ async function attachPersonaAutofill(targetPage) {
           // Focus did not land where we aimed - typing now would spray keystrokes into
           // whatever else has focus. Skip the field and report it instead.
           if (!focused) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
+          const isSecret = item.kind === 'password';
+          // A password is typed ONLY while focus sits on the exact node validated in
+          // the isolated world - checked before every keystroke, so a page that moves
+          // focus (or swaps the tagged node) mid-fill stops the secret at once.
+          const onTarget = async () => {
+            try { return (await world.evaluate(personaTargetFocused, pwSlot)) === true; } catch (e) { return false; }
+          };
+          if (isSecret && !(await onTarget())) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
           const typed = charBudget > 0 ? value.slice(0, charBudget) : '';
           if (!typed) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
+          let aborted = false;
           for (const ch of typed) {
+            if (isSecret && !(await onTarget())) { aborted = true; break; }
             await targetPage.keyboard.type(ch, { delay: 50 + Math.floor(Math.random() * 100) });
           }
+          if (aborted) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
           charBudget -= typed.length;
           // Confirm the characters actually landed in THIS element before claiming a
           // fill. Length only - the value itself is never read back, so a password
@@ -356,16 +394,47 @@ async function attachPersonaAutofill(targetPage) {
     __sgPersonaMarkUsed: hPersonaMarkUsed,
     __sgPersonaFillPlan: hPersonaFillPlan
   };
-  // Native binding: the fast path, and the only one stock Chrome ever needs.
-  for (const [name, fn] of Object.entries(personaHandlers)) {
-    try { await targetPage.exposeFunction(name, fn); } catch (e) { /* already exposed */ }
-  }
-  // RPC over intercepted sentinel requests: the path that still works on the
-  // native anti-detect engine, where the binding dies on the first navigation.
-  try { await attachPageBridge(targetPage, personaHandlers); } catch (e) { /* bridge optional */ }
+  // audit E1/E2: the widget AND its bridge live in a private CDP isolated world.
+  // Nothing is exposed in the page's main world any more - no __sgPersona*
+  // binding, no __sgBridge, no init flag - so a visited site can neither call the
+  // vault nor detect SoftGlaze through it. If the world cannot be created the page
+  // simply gets no widget: there is deliberately NO main-world fallback.
+  const pwSlot = 's' + crypto.randomBytes(9).toString('hex'); // isolated-world global
+  try { world = await attachIsolatedWorld(targetPage, personaHandlers, PERSONA_AUTOFILL_RUN_SOURCE); } catch (e) { world = null; }
+  if (world && !world.ok) world = null;
+}
 
-  try { await targetPage.evaluateOnNewDocument(PERSONA_AUTOFILL_SOURCE); } catch (e) {}
-  try { await targetPage.evaluate(PERSONA_AUTOFILL_SOURCE); } catch (e) {}
+// Isolated-world probes for the password gate. Serialized and run via
+// world.evaluate, so they must be self-contained.
+function personaActivationProbe() {
+  try { return !!(navigator.userActivation && navigator.userActivation.isActive); } catch (e) { return false; }
+}
+function personaPickPasswordTarget(sel, slot) {
+  try {
+    window[slot] = null;
+    var list = document.querySelectorAll(sel);
+    if (list.length !== 1) return false;
+    var el = list[0];
+    if (String(el.type || '').toLowerCase() !== 'password' || el.disabled || el.readOnly) return false;
+    if (el.closest('[aria-hidden="true"]')) return false;
+    var vw = window.innerWidth || 0, vh = window.innerHeight || 0;
+    var inView = function (r) { return r.bottom > 0 && r.right > 0 && r.top < vh && r.left < vw; };
+    var r = el.getBoundingClientRect();
+    // A real field below the fold is scrolled to (as a person would); a decoy parked
+    // off-screen with absolute positioning stays out of view and is refused.
+    if (!inView(r) && r.width >= 2 && r.height >= 2) { try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) {} r = el.getBoundingClientRect(); }
+    if (r.width < 2 || r.height < 2 || !inView(r)) return false;
+    for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+      var cs = window.getComputedStyle(n);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse' || Number(cs.opacity) === 0) return false;
+    }
+    if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+    window[slot] = el;
+    return true;
+  } catch (e) { return false; }
+}
+function personaTargetFocused(slot) {
+  try { var el = window[slot]; return !!el && el.isConnected && document.activeElement === el; } catch (e) { return false; }
 }
 
 // ---------------------------------------------------------------------------
@@ -698,6 +767,10 @@ function buildProxyServerArgument(proxy) {
   // Chromium accepts socks5://, socks4:// and http:// proxy schemes natively. Emitting
   // the WRONG scheme (e.g. http:// for a SOCKS proxy) makes every request fail, so map
   // the type exactly rather than collapsing everything non-socks5 to http.
+  // DNS (audit E8): only http:// (CONNECT) and socks5:// resolve hostnames on the
+  // PROXY side. Chromium speaks plain SOCKS4, not 4a, so socks4:// resolves every
+  // hostname with the host's own DNS - launchProfileSession refuses that combination
+  // rather than leak; this mapper stays exact for the proxy checker and tests.
   const t = String(proxy.type).toLowerCase();
   const protocol = t === 'socks5' ? 'socks5' : (t === 'socks4' ? 'socks4' : 'http');
   return `${protocol}://${formatProxyHost(proxy.host)}:${proxy.port}`;
@@ -870,12 +943,27 @@ function buildUserAgentBundle(profile, realMajor, realFullVersion, seed) {
 //   • enumerateDevices() reports the host real devices, so every profile on one
 //     machine shares them.
 // This fills ONLY those two and touches nothing the native engine owns.
+// A plain-looking identifier, different on every launch (letter first, 7-12 chars).
+function randomGuardName() {
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const chars = letters + letters.toUpperCase() + '0123456789';
+  const bytes = crypto.randomBytes(13);
+  let out = letters[bytes[0] % 26];
+  const len = 6 + (bytes[1] % 6);
+  for (let i = 0; i < len; i += 1) out += chars[bytes[2 + i] % chars.length];
+  return out;
+}
+
 function nativeGapScript(fp) {
+  // Run-once guard (audit E2): a per-launch random, non-enumerable name handed in by
+  // the launcher (fp.guard), so neither Object.keys / for-in nor a fixed-name probe
+  // like `'__sgn' in window` can single SoftGlaze out.
+  const _guard = (fp && typeof fp.guard === 'string' && fp.guard) || ('_' + Math.random().toString(36).slice(2, 11));
   try {
-    if (Object.getOwnPropertyDescriptor(window, '__sgn')) return;
-    Object.defineProperty(window, '__sgn', { value: 1, enumerable: false, configurable: false, writable: false });
+    if (Object.getOwnPropertyDescriptor(window, _guard)) return;
+    Object.defineProperty(window, _guard, { value: 1, enumerable: false, configurable: false, writable: false });
   } catch (e) {
-    if (window.__sgn) return; window.__sgn = 1;
+    return; // cannot mark this document: skip rather than risk a double patch
   }
 
   // Patched functions must still report as native, or the override is the giveaway.
@@ -1049,13 +1137,15 @@ function fingerprintScript(fp) {
   // AND the CDP auto-attach path (which guarantees it runs before the first
   // document of new tabs/popups). Running twice would double-wrap the Worker
   // constructor, so apply exactly once per document. The marker is a
-  // non-enumerable window property with an obscure name so sites can't trivially
-  // enumerate it.
+  // non-enumerable window property whose name is random PER LAUNCH (fp.guard, set by
+  // the launcher; audit E2), so Object.keys / for-in never list it and no fixed-name
+  // probe (the old `'__sgz' in window`) can detect SoftGlaze.
+  const _guard = (fp && typeof fp.guard === 'string' && fp.guard) || ('_' + Math.random().toString(36).slice(2, 11));
   try {
-    if (Object.getOwnPropertyDescriptor(window, '__sgz')) return;
-    Object.defineProperty(window, '__sgz', { value: 1, enumerable: false, configurable: false, writable: false });
+    if (Object.getOwnPropertyDescriptor(window, _guard)) return;
+    Object.defineProperty(window, _guard, { value: 1, enumerable: false, configurable: false, writable: false });
   } catch (e) {
-    if (window.__sgz) return; window.__sgz = 1;
+    return; // cannot mark this document: skip rather than risk a double patch
   }
   // Native-toString masking. Detectors (browserscan flags "Canvas Tampering") test
   // whether overridden methods still report "[native code]" from .toString(). Make
@@ -2401,7 +2491,9 @@ function lookupProxyGeoNode(proxy) {
 
     // Use proxy-agent to correctly route SOCKS5 / SOCKS4 / HTTP requests
     if (ProxyAgent) {
-      const scheme = schemeLc === 'socks5' ? 'socks5' : (schemeLc === 'socks4' ? 'socks4' : 'http');
+      // socks5h (audit E9): the PROXY resolves the geo services' hostnames. Plain
+      // socks5 made proxy-agent resolve them with the host's own DNS first.
+      const scheme = schemeLc === 'socks5' ? 'socks5h' : (schemeLc === 'socks4' ? 'socks4' : 'http');
       const auth = proxy.username ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
       const proxyUrl = `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}`;
       
@@ -2491,6 +2583,19 @@ function lookupProxyGeoNode(proxy) {
 const GEO_NODE_CACHE_TTL_MS = 10 * 60 * 1000;
 const geoNodeCache = new Map();    // key -> { value, at }
 const geoNodeInflight = new Map(); // key -> Promise<value|null>
+// audit E6: the LAST geo each proxy resolved to, kept without a TTL. When a lookup
+// fails at launch, this is far better than silently leaving the HOST timezone on a
+// proxied profile (an IP-vs-timezone mismatch every scanner flags).
+const geoLastKnown = new Map();    // key -> value
+function rememberProxyGeo(proxy, value) {
+  const key = proxyGeoKey(proxy);
+  if (key && value && value.timezone) geoLastKnown.set(key, value);
+}
+function lastKnownProxyGeo(proxy) {
+  const key = proxyGeoKey(proxy);
+  return key ? (geoLastKnown.get(key) || null) : null;
+}
+const GEO_DEGRADED_WARNING = 'The proxy location could not be looked up, so this profile is using the local computer timezone. Relaunch it once the proxy answers.';
 
 function proxyGeoKey(proxy) {
   if (!proxy || !proxy.host || !proxy.port) return null;
@@ -2510,7 +2615,7 @@ async function lookupProxyGeoNodeCached(proxy) {
   if (geoNodeInflight.has(key)) return geoNodeInflight.get(key);
   const inflight = (async () => {
     const value = await lookupProxyGeoNode(proxy);
-    if (value) geoNodeCache.set(key, { value, at: Date.now() }); // cache successes only; nulls retry next launch
+    if (value) { geoNodeCache.set(key, { value, at: Date.now() }); rememberProxyGeo(proxy, value); } // cache successes only; nulls retry next launch
     return value;
   })();
   geoNodeInflight.set(key, inflight);
@@ -2760,7 +2865,23 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
 // ---------------------------------------------------------------------------
 // Launch
 // ---------------------------------------------------------------------------
-async function launchProfileSession(options = {}) {
+// audit E4: launches still in flight, keyed by profile. The activeSessions check
+// below only sees a session once it is REGISTERED, which happens after the slow
+// part (geo lookup, browser spawn); two calls inside that window each spawned a
+// browser on the same userDataDir. A second call now gets the first one's promise.
+const chromeLaunching = new Map(); // String(profileId) -> Promise<launch result>
+function launchProfileSession(options = {}) {
+  const key = options && options.profileId != null ? String(options.profileId) : null;
+  if (key && !activeSessions.has(key) && chromeLaunching.has(key)) return chromeLaunching.get(key);
+  const p = launchProfileSessionNow(options);
+  if (!key) return p;
+  chromeLaunching.set(key, p);
+  const clear = () => { if (chromeLaunching.get(key) === p) chromeLaunching.delete(key); };
+  p.then(clear, clear);
+  return p;
+}
+
+async function launchProfileSessionNow(options = {}) {
   const {
     profileId,
     title,
@@ -2851,6 +2972,16 @@ async function launchProfileSession(options = {}) {
     ? await (usingAntidetect ? lookupProxyGeoNode(resolvedProxy) : lookupProxyGeoNodeCached(resolvedProxy))
     : null;
   let timezoneId = manualTz || (geo && geo.timezone) || null;
+  // audit E6: geo-match is on for a proxied profile but the lookup failed. Use the
+  // last geo this proxy resolved to (the in-page lookup below may still replace it);
+  // if there is none, the launch reports a geoWarning instead of a silent success.
+  const geoApplies = Boolean(geoMatchEnabled && resolvedProxy && profile.timezoneType !== 'Real');
+  let tzFromLastKnown = false;
+  if (geo) rememberProxyGeo(resolvedProxy, geo);
+  if (geoApplies && !timezoneId) {
+    const lk = lastKnownProxyGeo(resolvedProxy);
+    if (lk && lk.timezone) { timezoneId = lk.timezone; tzFromLastKnown = true; }
+  }
 
   // Build the fingerprint config (geo-aware) and bake it into a MAIN-world
   // content-script extension BEFORE launch - this is the reliable injection path.
@@ -2858,6 +2989,9 @@ async function launchProfileSession(options = {}) {
   // Decide the binary up front (real Chrome vs Chrome-for-Testing) so the
   // extension is written with the NTP override ONLY when launching CfT.
   if (usingAntidetect) fpConfig.nativeEngine = true;
+  // Per-launch random name for the in-page run-once guard (audit E2). Not part of the
+  // fingerprint itself, so the profile's values stay identical across launches.
+  fpConfig.guard = randomGuardName();
   // Binary: fingerprint-chromium when the anti-detect engine is active (its native spoof
   // replaces our JS/CDP layer via fpConfig.nativeEngine), else real Chrome / CfT.
   const chosenBrowser = usingAntidetect
@@ -3015,8 +3149,9 @@ async function launchProfileSession(options = {}) {
   //   • QUIC / HTTP3 (UDP) → an HTTP or SOCKS proxy only tunnels TCP, so a QUIC
   //     connection bypasses the proxy and resolves/connects DIRECTLY - a real DNS
   //     and IP leak. Disabling QUIC forces every request back onto the proxied TCP
-  //     path, where Chrome resolves hostnames PROXY-SIDE (HTTP CONNECT and SOCKS5
-  //     remote DNS), keeping DNS inside the tunnel.
+  //     path, where Chrome resolves hostnames PROXY-SIDE for HTTP CONNECT and
+  //     SOCKS5 (NOT for SOCKS4, which resolves locally - those launches are refused
+  //     above), keeping DNS inside the tunnel.
   //
   // NOTE: we deliberately do NOT use `--host-resolver-rules=MAP * ~NOTFOUND`.
   // That maps EVERY hostname to NOTFOUND, so the browser can no longer resolve
@@ -3046,6 +3181,15 @@ async function launchProfileSession(options = {}) {
   const proxyIsSocks = proxyTypeLc.startsWith('socks'); // socks4 OR socks5 - neither answers HTTP 407
   const proxyIsSocks5 = proxyTypeLc === 'socks5';       // only socks5 carries user/pass auth (via the relay)
   const socksNeedsAuth = proxyIsSocks5 && Boolean(resolvedProxy.username || resolvedProxy.password);
+  // audit E8: Chromium's SOCKS4 client is plain SOCKS4 - it resolves every hostname
+  // locally and sends the IP, so each site visited leaks to the host's DNS resolver.
+  // The local relay (socksRelay.js) only speaks to SOCKS5 upstreams, so it cannot
+  // wrap this. Refuse the launch with the reason rather than leak silently.
+  if (proxyTypeLc === 'socks4') {
+    const e = new Error('This profile uses a SOCKS4 proxy. Chrome cannot send DNS lookups through SOCKS4, so every site you visit would be looked up outside the proxy (a DNS leak). Switch the proxy type to SOCKS5 or HTTP, or open this profile in Firefox.');
+    e.code = 'SOCKS4_DNS_LEAK';
+    throw e;
+  }
   // HTTP(S) proxies CAN answer page.authenticate()'s 407, but that is applied per-page
   // and only after a tab exists - so a browser-opened "+" tab fires its FIRST request
   // BEFORE auth is wired, drawing a 407 that stalls the tab and looks suspicious to
@@ -3426,8 +3570,12 @@ const rootCdp = await browser.target().createCDPSession();
   if (geoMatchEnabled && !geo && resolvedProxy && profile.timezoneType !== 'Real') {
     if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
     geo = await lookupProxyGeo(page);
-    if (!timezoneId && geo && geo.timezone) timezoneId = geo.timezone;
+    if (geo && geo.timezone && (!timezoneId || tzFromLastKnown)) { timezoneId = geo.timezone; tzFromLastKnown = false; }
+    if (geo) rememberProxyGeo(resolvedProxy, geo);
+    else geo = lastKnownProxyGeo(resolvedProxy); // lat/lng from the last good lookup
   }
+  const geoWarning = (geoApplies && !timezoneId) ? GEO_DEGRADED_WARNING : null;
+  if (geoWarning) console.warn('[SG][geo] profile', (title || profileId), '- proxy geo lookup failed and no cached geo; host timezone in use.');
 
   const geoLat = Number.isFinite(manualLat) ? manualLat : (geo && Number.isFinite(geo.lat) ? geo.lat : null);
   const geoLng = Number.isFinite(manualLng) ? manualLng : (geo && Number.isFinite(geo.lon) ? geo.lon : null);
@@ -3640,8 +3788,12 @@ const rootCdp = await browser.target().createCDPSession();
         await np.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
       } catch (e) { /* best-effort - a failed open must never affect the session */ }
   };
-  try { await page.exposeFunction('__sgzOpenTab', hOpenTab); } catch (e) { /* already exposed */ }
-  try { await attachPageBridge(page, { __sgzOpenTab: hOpenTab }); } catch (e) { /* bridge optional */ }
+  // audit E2: no exposeFunction here - its binding wrapper would sit on window of
+  // EVERY later document in this first tab. The bridge helper is installed on the
+  // file:// start page only (fileOnly), so visited sites see no __sgzOpenTab and no
+  // __sgBridge. The start page calls window.__sgBridge('__sgzOpenTab', href), which
+  // goes over the RPC transport on every engine.
+  try { await attachPageBridge(page, { __sgzOpenTab: hOpenTab }, { fileOnly: true }); } catch (e) { /* bridge optional */ }
 
   // On-startup mode: 'detection' shows the SoftGlaze IP/fingerprint start page;
   // 'blank' and 'last' skip it (no proxy-detection page) and open about:blank.
@@ -3692,6 +3844,7 @@ const rootCdp = await browser.target().createCDPSession();
     title: title || `Profile ${sessionId}`,
     proxyLabel,
     injectionOk: !injectionDegraded,
+    geoWarning,
     socksRelay, // local SOCKS5 auth relay (or null) - closed when the session ends
     createdAt: new Date()
   });
@@ -3713,7 +3866,7 @@ const rootCdp = await browser.target().createCDPSession();
   // `ReferenceError: sessionId is not defined` and failed EVERY launch - after the
   // browser had already opened, leaving a half-set-up session (browserEngine.js:2713).
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'chrome', pid: sessionPid });
-  return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded };
+  return { sessionId, userDataDir, wsEndpoint, injectionOk: !injectionDegraded, geoDegraded: Boolean(geoWarning), geoWarning };
 
   } catch (launchErr) {
     // Post-launch setup failed before the session was registered. Close the
@@ -4018,45 +4171,22 @@ async function beginSyncGroup(masterSessionId, slaveSessionIds) {
     }
   };
 
-  // Bind a node-side receiver into the Master page, then add capturing listeners
-  // at document_start so every navigation re-installs them.
-  const BINDING = '__sgSyncDispatch';
+  // Capture the Master's input in a private isolated world (audit E2): its
+  // listeners see every DOM event, but the page's window gets no binding, no
+  // __sgBridge and no capture function. It covers the current document and every
+  // later navigation, and is torn down with the group.
   const hSyncDispatch = (evt) => { mirror(evt).catch(() => {}); return { ok: true }; };
-  try {
-    await masterSession.page.exposeFunction(BINDING, hSyncDispatch).catch(() => {});
-    // Binding-free channel too: fingerprint-chromium drops the CDP binding on the
-    // first navigation, which silently stopped mirroring on that engine.
-    try { await attachPageBridge(masterSession.page, { [BINDING]: hSyncDispatch }); } catch (e) { /* bridge optional */ }
-    await masterSession.page.evaluateOnNewDocument((bindingName) => {
-      try {
-        const post = (payload) => {
-          try {
-            if (typeof window.__sgBridge === 'function') { window.__sgBridge(bindingName, payload); return; }
-            if (typeof window[bindingName] === 'function') window[bindingName](payload);
-          } catch (e) {}
-        };
-        document.addEventListener('click', (e) => post({ k: 'click', x: Math.round(e.clientX), y: Math.round(e.clientY), button: e.button }), true);
-        document.addEventListener('keydown', (e) => post({ k: 'key', key: e.key, code: e.code, keyCode: e.keyCode, text: e.key && e.key.length === 1 ? e.key : '' }), true);
-        // TODO(foundation): capture 'mousemove' (throttled) and 'scroll' here too.
-      } catch (e) {}
-    }, BINDING).catch(() => {});
-    // Apply to the already-open document as well (the init script only covers
-    // future navigations).
-    await masterSession.page.evaluate((bindingName) => {
-      try {
-        const post = (payload) => {
-          try {
-            if (typeof window.__sgBridge === 'function') { window.__sgBridge(bindingName, payload); return; }
-            if (typeof window[bindingName] === 'function') window[bindingName](payload);
-          } catch (e) {}
-        };
-        document.addEventListener('click', (e) => post({ k: 'click', x: Math.round(e.clientX), y: Math.round(e.clientY), button: e.button }), true);
-        document.addEventListener('keydown', (e) => post({ k: 'key', key: e.key, code: e.code, keyCode: e.keyCode, text: e.key && e.key.length === 1 ? e.key : '' }), true);
-      } catch (e) {}
-    }, BINDING).catch(() => {});
-  } catch (e) { /* mirroring is best-effort; the windows still launch */ }
+  let world = null;
+  try { world = await attachIsolatedWorld(masterSession.page, { syncDispatch: hSyncDispatch }, syncCaptureClientScript.toString()); } catch (e) { world = null; }
+  if (world && !world.ok) world = null; // mirroring is best-effort; the windows still launch
 
   const dispose = async () => {
+    if (world) {
+      const w = world;
+      world = null;
+      try { await w.evaluate(() => { window.__syncStopped = true; }); } catch (e) { /* page may be gone */ }
+      try { await w.dispose(); } catch (e) { /* ignore */ }
+    }
     for (const slave of slaves) { try { await slave.cdp.detach(); } catch (e) {} }
   };
   const group = { masterSessionId: String(masterSessionId), slaves, dispose };
@@ -4065,6 +4195,19 @@ async function beginSyncGroup(masterSessionId, slaveSessionIds) {
   // Auto-clean the group when the Master disconnects.
   try { masterSession.browser.on('disconnected', () => { dispose().catch(() => {}); syncGroups.delete(group.masterSessionId); }); } catch (e) {}
   return group;
+}
+
+// Runs in the Master's isolated world (see beginSyncGroup). Self-contained.
+function syncCaptureClientScript(rpc) {
+  var post = function (payload) {
+    if (window.__syncStopped) return;
+    try { Promise.resolve(rpc('syncDispatch', payload)).catch(function () {}); } catch (e) { /* ignore */ }
+  };
+  try {
+    document.addEventListener('click', function (e) { post({ k: 'click', x: Math.round(e.clientX), y: Math.round(e.clientY), button: e.button }); }, true);
+    document.addEventListener('keydown', function (e) { post({ k: 'key', key: e.key, code: e.code, keyCode: e.keyCode, text: e.key && e.key.length === 1 ? e.key : '' }); }, true);
+    // TODO(foundation): capture 'mousemove' (throttled) and 'scroll' here too.
+  } catch (e) { /* ignore */ }
 }
 
 function stopSyncGroup(masterSessionId) {
@@ -4626,12 +4769,17 @@ async function runMacro(sessionId, steps, opts = {}) {
 // recorder by sessionId at call time, so re-recording cleanly re-routes.
 const macroRecorders = new Map(); // sessionId -> { steps, stopped, page, navHandler }
 
-// Injected into the page: derive a stable-ish CSS selector and forward click /
-// input / Enter events to the node bridge. Self-contained (no closure refs) so it
-// survives .toString() serialization.
-function macroRecorderClientScript() {
-  if (window.__sgzRecording) return;
-  window.__sgzRecording = true;
+// Runs in a private CDP isolated world (audit E2): derive a stable-ish CSS selector
+// and forward click / input / Enter events through the world's rpc. Isolated worlds
+// share the DOM (so the listeners see every event) but not the page's JS globals, so
+// a visited site sees no bridge, no binding and no "recording" flag. Self-contained
+// (no closure refs) so it survives .toString() serialization; `window` below is the
+// isolated world's own global.
+function macroRecorderClientScript(rpc) {
+  var send = function (step) {
+    if (window.__recStopped) return;
+    try { Promise.resolve(rpc('recordStep', step)).catch(function () {}); } catch (e) { /* ignore */ }
+  };
   function cssPath(el) {
     if (!(el instanceof Element)) return null;
     if (el.id) return '#' + CSS.escape(el.id);
@@ -4666,11 +4814,11 @@ function macroRecorderClientScript() {
       // tab) never follows - the exact reason recorded link-clicks did nothing.
       const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
       if (a && a.href && /^https?:/i.test(a.href)) {
-        if (window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'goto', url: a.href });
+        send({ type: 'goto', url: a.href });
         return;
       }
       const sel = cssPath(e.target);
-      if (sel && window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'click', selector: sel });
+      if (sel) send({ type: 'click', selector: sel });
     } catch (err) { /* ignore */ }
   }, true);
   document.addEventListener('change', (e) => {
@@ -4678,7 +4826,7 @@ function macroRecorderClientScript() {
       const t = e.target;
       if (!t || !t.tagName) return;
       const sel = cssPath(t);
-      if (!sel || !window.__sgBridge) return;
+      if (!sel) return;
 
       // A <select> recorded as a 'type' step was replayed with page.type() and did
       // nothing at all - dropdowns now record as a real 'select' step. Prefer the
@@ -4686,7 +4834,7 @@ function macroRecorderClientScript() {
       if (t.tagName === 'SELECT') {
         const opt = t.options ? t.options[t.selectedIndex] : null;
         const label = opt ? String(opt.textContent || '').trim() : '';
-        window.__sgBridge('__sgzRecordStep', label
+        send(label
           ? { type: 'select', selector: sel, value: label, by: 'label' }
           : { type: 'select', selector: sel, value: String(t.value || ''), by: 'value' });
         return;
@@ -4695,18 +4843,18 @@ function macroRecorderClientScript() {
       // Checkboxes/radios recorded as 'type' with value "on" - now recorded as a
       // 'check' step carrying the state they were left in.
       if (t.tagName === 'INPUT' && (t.type === 'checkbox' || t.type === 'radio')) {
-        window.__sgBridge('__sgzRecordStep', { type: 'check', selector: sel, state: t.checked ? 'checked' : 'unchecked' });
+        send({ type: 'check', selector: sel, state: t.checked ? 'checked' : 'unchecked' });
         return;
       }
 
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') {
-        window.__sgBridge('__sgzRecordStep', { type: 'type', selector: sel, value: String(t.value || '') });
+        send({ type: 'type', selector: sel, value: String(t.value || '') });
       }
     } catch (err) { /* ignore */ }
   }, true);
   document.addEventListener('keydown', (e) => {
     try {
-      if (e.key === 'Enter' && window.__sgBridge) window.__sgBridge('__sgzRecordStep', { type: 'keypress', key: 'Enter' });
+      if (e.key === 'Enter') send({ type: 'keypress', key: 'Enter' });
     } catch (err) { /* ignore */ }
   }, true);
 }
@@ -4730,14 +4878,17 @@ async function startMacroRecording(sessionId) {
     if (cur && !cur.stopped && step && step.type) cur.steps.push(step);
     return { ok: true };
   };
-  try { await page.exposeFunction('__sgzRecordStep', hRecordStep); } catch (e) { /* already exposed */ }
-  // Same handler over the binding-free channel, so recording still works on the
-  // native anti-detect engine (where the binding dies on the first navigation).
-  try { await attachPageBridge(page, { __sgzRecordStep: hRecordStep }); } catch (e) { /* bridge optional */ }
-
-  const client = `(${macroRecorderClientScript.toString()})()`;
-  await page.evaluateOnNewDocument(client).catch(() => {});
-  await page.evaluate(client).catch(() => {});
+  // audit E2: the recorder and its channel live in a private isolated world for the
+  // duration of the recording only - no exposeFunction wrapper, no __sgBridge and no
+  // flag on the page's window. The world carries both transports (scoped binding and
+  // the secret-keyed sentinel fetch), so it also works on the native engine.
+  let world = null;
+  try { world = await attachIsolatedWorld(page, { recordStep: hRecordStep }, macroRecorderClientScript.toString()); } catch (e) { world = null; }
+  if (!world || !world.ok) {
+    macroRecorders.delete(id);
+    throw new Error('Could not attach the macro recorder to this page.');
+  }
+  rec.world = world;
 
   // Capture top-frame navigations as 'goto' steps (deduped, skipping about:blank).
   const navHandler = (frame) => {
@@ -4761,7 +4912,13 @@ async function stopMacroRecording(sessionId) {
   if (!rec) return { recording: false, steps: [] };
   rec.stopped = true;
   try { if (rec.navHandler && rec.page) rec.page.off('framenavigated', rec.navHandler); } catch (e) { /* ignore */ }
-  try { await rec.page.evaluate(() => { window.__sgzRecording = false; }); } catch (e) { /* page may be gone */ }
+  // Silence the current document's listeners, then drop the world's script, binding
+  // and interception so nothing of the recorder outlives the recording.
+  if (rec.world) {
+    try { await rec.world.evaluate(() => { window.__recStopped = true; }); } catch (e) { /* page may be gone */ }
+    try { await rec.world.dispose(); } catch (e) { /* ignore */ }
+    rec.world = null;
+  }
   return { recording: false, steps: rec.steps };
 }
 
@@ -4799,6 +4956,11 @@ module.exports = {
   // it in a vm sandbox to assert overrides don't leak (toString/name integrity, spoofed
   // navigator props on the prototype rather than the instance).
   fingerprintScript,
+  // exported for tests (audit E2)
+  randomGuardName,
+  nativeGapScript,
+  macroRecorderClientScript,
+  syncCaptureClientScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
   generateStartPage,
   // Exported for unit tests: decides whether a navigation is a broken "No Search"
@@ -4807,6 +4969,10 @@ module.exports = {
   // Reused by the Firefox engine to bind timezone/locale to the proxy exit IP (parity
   // with the Chrome engine): maps the proxy's geo → IANA timezone + a country locale.
   lookupProxyGeoNodeCached,
+  // audit E6: shared with the Firefox engine's geo fallback.
+  lastKnownProxyGeo,
+  rememberProxyGeo,
+  GEO_DEGRADED_WARNING,
   COUNTRY_LOCALE,
   configurePersonaBridge,
   launchProfileSession,
@@ -4843,6 +5009,9 @@ module.exports = {
   // binary (guarding against the "reported 149 vs real 150+" TLS mismatch).
   buildUserAgentBundle,
   // Debug hook (used by test harnesses) - returns the live puppeteer Browser.
+  // Test hook: the isolated-world autofill attach + its password probes.
+  __attachPersonaAutofill: attachPersonaAutofill,
+  __personaPickPasswordTarget: personaPickPasswordTarget,
   __browserFor: (sessionId) => {
     const s = activeSessions.get(String(sessionId));
     return s ? s.browser : null;

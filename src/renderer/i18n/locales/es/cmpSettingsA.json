@@ -37,7 +37,8 @@
       "title": "Métodos de pago",
       "description": "Solo para Súper Administrador. Activa los métodos que se muestran a los propietarios al pagar y guarda las claves de cada proveedor.",
       "loadError": "No se pudo cargar la configuración de pagos.",
-      "footnote": "Las claves se cifran en reposo en esta máquina y nunca la abandonan. El pago se basa en sondeo (sin webhooks), por lo que la verificación entre instalaciones aún necesita el backend de licencias. Wise y Manual los apruebas tú en «Pagos pendientes» más abajo."
+      "footnote": "Las claves se cifran en reposo en esta máquina y nunca la abandonan. El pago se basa en sondeo (sin webhooks), por lo que la verificación entre instalaciones aún necesita el backend de licencias. Wise y Manual los apruebas tú en «Pagos pendientes» más abajo.",
+      "retry": "Reintentar"
     },
     "provider": {
       "kindManual": "Manual",
@@ -113,7 +114,8 @@
       "lastUsed": "último uso {{when}}",
       "neverUsed": "nunca usada",
       "never": "nunca",
-      "revoke": "Revocar"
+      "revoke": "Revocar",
+      "revokeConfirm": "¿Revocar la clave API \"{{name}}\"? Cualquier script que la use dejará de funcionar de inmediato. Esta acción no se puede deshacer."
     },
     "server": {
       "title": "API REST local",

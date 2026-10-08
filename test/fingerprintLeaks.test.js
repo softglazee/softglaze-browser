@@ -43,6 +43,8 @@ function runScriptInSandbox(fp, { webdriver = null } = {}) {
 
 const FP = {
   seed: 12345,
+  // Per-launch run-once guard name (the launcher always sets it; audit E2).
+  guard: 'qT7xk2Lm9',
   langs: ['en-US', 'en'],
   cores: 8,
   mem: 8,
@@ -125,7 +127,7 @@ test('timezone-layer overrides report [native code] with correct names', () => {
 
 test('the script is idempotent (running twice does not double-wrap or throw)', () => {
   const s = runScriptInSandbox(FP);
-  // Re-run in the same context; the __sgz guard must make it a no-op.
+  // Re-run in the same context; the per-launch guard must make it a no-op.
   const src = `(${fingerprintScript.toString()})(${JSON.stringify(FP)});`;
   assert.doesNotThrow(() => vm.runInContext(src, s));
   assert.equal(s.Function.prototype.toString.name, 'toString');

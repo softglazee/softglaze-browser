@@ -38,17 +38,24 @@ export default function StartLinksPage() {
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
   const [dirty, setDirty] = useState(false);
+  // Save stays blocked until a load has succeeded. A failed load used to show an empty
+  // list, and saving it overwrote every stored link with [].
+  const [loadErr, setLoadErr] = useState('');
+  const [loadTick, setLoadTick] = useState(0);
+  // Rows dropped by the last save because their URL was not http(s), as "#n url".
+  const [dropped, setDropped] = useState([]);
 
   const toItems = (v) => (Array.isArray(v) ? v : []).map((l) => ({ label: (l && l.label) || '', url: (l && l.url) || '' }));
 
   useEffect(() => {
     let live = true;
+    setLoading(true); setLoadErr('');
     softglazeApi.settings.getGlobal()
-      .then((cfg) => { if (live) setItems(toItems(cfg && cfg.startPageLinks)); })
-      .catch(() => {})
+      .then((cfg) => { if (live) { setItems(toItems(cfg && cfg.startPageLinks)); setDirty(false); } })
+      .catch((e) => { if (live) setLoadErr((e && e.message) || t('startLinks.loadFailed')); })
       .finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, []);
+  }, [loadTick]);
 
   const markDirty = () => { setDirty(true); setSaved(false); };
   const add = () => { setItems((p) => [...p, { label: '', url: '' }]); markDirty(); };
@@ -80,13 +87,23 @@ export default function StartLinksPage() {
   };
 
   const save = async () => {
-    setSaving(true); setErr(''); setSaved(false);
+    if (loading || loadErr) return;
+    setSaving(true); setErr(''); setSaved(false); setDropped([]);
+    // Rows that have something typed but no usable http(s) URL are dropped; name them
+    // instead of losing them silently. Fully blank rows are just ignored.
+    const bad = [];
+    items.forEach((it, i) => {
+      if (!normalizeUrl(it.url) && (String(it.url || '').trim() || String(it.label || '').trim())) {
+        bad.push(`#${i + 1} ${String(it.url || '').trim() || String(it.label || '').trim()}`);
+      }
+    });
     const clean = items
       .map((it) => ({ label: (String(it.label || '').trim() || labelFromUrl(it.url)).slice(0, 60), url: normalizeUrl(it.url) }))
       .filter((it) => it.url);
     try {
       await softglazeApi.settings.setGlobal({ startPageLinks: clean });
       setItems(clean); setDirty(false);
+      setDropped(bad);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } catch (e) { setErr((e && e.message) || 'Could not save.'); }
     finally { setSaving(false); }
@@ -104,14 +121,27 @@ export default function StartLinksPage() {
         actions={(
           <div className="flex items-center gap-2">
             {saved && <span className="text-xs text-emerald-500 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span>}
-            <Button variant="primary" size="sm" onClick={save} disabled={saving || !dirty}>
+            <Button variant="primary" size="sm" onClick={save} disabled={saving || !dirty || loading || !!loadErr}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />} Save
             </Button>
           </div>
         )}
       />
 
+      {loadErr && (
+        <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <span>{t('startLinks.loadError', { error: loadErr })}</span>
+          <Button variant="secondary" size="sm" onClick={() => setLoadTick((n) => n + 1)}>{t('startLinks.retry')}</Button>
+        </div>
+      )}
+      {dropped.length > 0 && (
+        <div role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+          {t('startLinks.droppedRows', { count: dropped.length, rows: dropped.join(', ') })}
+        </div>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+
         {/* Editable list */}
         <Card className="bg-card border border-border rounded-xl">
           <CardContent className="p-0">

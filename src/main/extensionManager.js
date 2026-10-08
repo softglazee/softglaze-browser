@@ -147,6 +147,32 @@ async function readManifestMeta(dir) {
   return { name: name || null, version };
 }
 
+// audit L13: a hostile package could carry a symlink entry (extract-zip writes it as-is,
+// pointing anywhere on disk) or a name that resolves outside the extension folder. Called
+// from extract-zip's onEntry, before the entry is written; throwing aborts the unzip.
+function assertSafeZipEntry(entry, destDir) {
+  const name = String((entry && entry.fileName) || '');
+  const mode = ((Number(entry && entry.externalFileAttributes) || 0) >>> 16) & 0xFFFF;
+  if ((mode & 0o170000) === 0o120000) throw new Error(`Refusing symlink entry "${name}" in the extension package.`);
+  const root = path.resolve(destDir);
+  const target = path.resolve(root, name);
+  const rel = path.relative(root, target);
+  if (!name || path.isAbsolute(name) || rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+    throw new Error(`Refusing entry "${name}" that escapes the extension folder.`);
+  }
+}
+
+// After extraction: no symlink or junction may exist anywhere under the folder.
+async function assertNoLinksUnder(dir) {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const ent of entries) {
+    const full = path.join(dir, ent.name);
+    const st = await fs.lstat(full);
+    if (st.isSymbolicLink()) throw new Error(`Refusing linked path "${ent.name}" in the extension package.`);
+    if (st.isDirectory()) await assertNoLinksUnder(full);
+  }
+}
+
 // Download a CRX by id, strip its header, and unzip it into a named folder.
 // Returns { localPath, name, version }.
 async function downloadAndExtract(chromeId) {
@@ -198,7 +224,8 @@ async function downloadAndExtract(chromeId) {
   await fs.rm(destDir, { recursive: true, force: true });
   await fs.writeFile(tmpZip, zipBuf);
   try {
-    await extractZip(tmpZip, { dir: destDir }); // extract-zip needs absolute dir
+    await extractZip(tmpZip, { dir: destDir, onEntry: (entry) => assertSafeZipEntry(entry, destDir) }); // extract-zip needs absolute dir
+    await assertNoLinksUnder(destDir);
   } catch (e) {
     await fs.rm(destDir, { recursive: true, force: true }).catch(() => {});
     throw new Error(`Could not unzip the extension package: ${(e && e.message) || e}.`);
@@ -359,6 +386,8 @@ async function removeRetiredExtensions({ db = getPrisma(), root = extensionsRoot
 }
 
 module.exports = {
+  assertSafeZipEntry,
+  assertNoLinksUnder,
   CHROME_ID_RE,
   RECOMMENDED_EXTENSIONS,
   RETIRED_EXTENSION_IDS,

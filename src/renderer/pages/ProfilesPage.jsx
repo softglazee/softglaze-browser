@@ -19,9 +19,11 @@ import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import CompareProfilesModal from '@/components/CompareProfilesModal.jsx';
 import ShareProfileModal from '@/components/ShareProfileModal.jsx';
-import { Pencil, GitCompare, Bookmark, Share2 } from 'lucide-react';
+import { Pencil, GitCompare, Bookmark, Share2, Eye, EyeOff } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import NameDialog from '@/components/NameDialog.jsx';
+import { intersectSelection } from '@/lib/uiGuards.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
@@ -536,6 +538,9 @@ export default function ProfilesPage() {
   const { t } = useTranslation('profiles');
   const [profiles, setProfiles] = useState([]);
   const [search, setSearch] = useState('');
+  // The search the CURRENT `profiles` list was loaded for. Search is server-side, so the
+  // selection prune must run when the new rows arrive, not when the input changes.
+  const [loadedSearch, setLoadedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -545,6 +550,7 @@ export default function ProfilesPage() {
   const [pd, setPd] = useState(initialProfileData);
 
   const [checkingProxy, setCheckingProxy] = useState(false);
+  const [showProxyPass, setShowProxyPass] = useState(false);
   const [proxyResult, setProxyResult] = useState(null);
 
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -556,6 +562,9 @@ export default function ProfilesPage() {
   const [launchQueueWidth, setLaunchQueueWidth] = useState(1);
   const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [launchPaused, setLaunchPaused] = useState(false); // queue paused between profiles
+  // Non-blocking launch warnings (E6): profiles that opened without the proxy's
+  // timezone because the geo lookup failed. { [profileId]: true }
+  const [geoWarnings, setGeoWarnings] = useState({});
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
   const [cookieProfile, setCookieProfile] = useState(null);
@@ -585,6 +594,7 @@ export default function ProfilesPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [compareProfiles, setCompareProfiles] = useState(null); // profiles being compared
   const [filterPresets, setFilterPresets] = useState([]);
+  const [showPresetName, setShowPresetName] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [renamePrefix, setRenamePrefix] = useState('');
   const [renameStart, setRenameStart] = useState(1);
@@ -618,7 +628,14 @@ export default function ProfilesPage() {
       prev.forEach((id) => { if (visible.has(id)) next.add(id); });
       return next.size === prev.size ? prev : next;
     });
-  }, [filterGroup, filterTag, filterProxy, filterStatus]);
+  }, [filterGroup, filterTag, filterProxy, filterStatus, loadedSearch]);
+
+  // The selected ids that are still visible under the current filters + search, in table
+  // order. Every bulk handler acts on this, never on the raw set, so a row hidden by a
+  // filter or a server-side search can never be launched, tagged or deleted by accident.
+  function visibleSelectedIds() {
+    return intersectSelection(selectedIds, filteredProfiles);
+  }
 
   // Universal pagination (items-per-page selector via the shared Pager).
   const [page, setPage] = useState(1);
@@ -677,6 +694,7 @@ export default function ProfilesPage() {
       // a fast narrow one ("ab") and overwrite the correct list.
       if (seq !== loadSeq.current) return;
       setProfiles(profs);
+      setLoadedSearch(search);
       setGroups(grps);
       setAllTags(tgs);
       setAllProxies(pxs);
@@ -727,7 +745,12 @@ export default function ProfilesPage() {
     const off = softglazeApi.profiles.onBulkLaunchProgress((p) => {
       if (!p) return;
       if (p.phase === 'start') { setLaunchProgress({ done: 0, total: p.total }); setLaunchPaused(false); return; }
-      if (p.phase === 'launched') { setLaunchProgress((prev) => ({ done: p.done, total: p.total, paused: prev ? prev.paused : false })); refreshSessions(); return; }
+      if (p.phase === 'launched') {
+        setLaunchProgress((prev) => ({ done: p.done, total: p.total, paused: prev ? prev.paused : false }));
+        if (p.ok && p.geoDegraded && p.id != null) setGeoWarnings((prev) => ({ ...prev, [p.id]: true }));
+        refreshSessions();
+        return;
+      }
       if (p.phase === 'control') {
         setLaunchPaused(Boolean(p.paused));
         // Build a fresh object when there is no previous state. Bailing out on
@@ -1006,7 +1029,13 @@ export default function ProfilesPage() {
 
   async function handleLaunch(profileId) {
     try {
-      await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' });
+      const res = await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' });
+      // The browser opened, but without the proxy's timezone: warn, do not block (E6).
+      setGeoWarnings((prev) => {
+        const next = { ...prev };
+        if (res && res.geoDegraded) next[profileId] = true; else delete next[profileId];
+        return next;
+      });
       // Refresh running state so the row flips to a Stop button immediately.
       await refreshSessions();
     } catch (err) { setError(err.message); }
@@ -1034,7 +1063,8 @@ export default function ProfilesPage() {
   function clearSelection() { setSelectedIds(new Set()); }
 
   async function handleBulkLaunch() {
-    if (selectedIds.size === 0) return;
+    const ids = visibleSelectedIds();
+    if (ids.length === 0) return;
     setBulkBusy(true); setError('');
     // Queue mode holds `launchQueueWidth` profiles open at a time and opens the next
     // as each one is closed. Otherwise the main process uses the configured
@@ -1043,7 +1073,7 @@ export default function ProfilesPage() {
     const opts = launchQueue
       ? { queue: true, concurrency: Math.max(1, Number(launchQueueWidth) || 1) }
       : undefined;
-    try { await softglazeApi.profiles.bulkLaunch([...selectedIds], opts); await refreshSessions(); }
+    try { await softglazeApi.profiles.bulkLaunch(ids, opts); await refreshSessions(); }
     catch (err) { setError(err.message); setLaunchProgress(null); setLaunchPaused(false); }
     finally { setBulkBusy(false); }
   }
@@ -1063,7 +1093,7 @@ export default function ProfilesPage() {
   async function handleBulkClose(ids) {
     // Called two ways: from the bulk bar (no arg → use selection) and from a
     // single row's Stop button (handleBulkClose([id])). Honor an explicit list.
-    const targets = Array.isArray(ids) && ids.length ? ids : [...selectedIds];
+    const targets = Array.isArray(ids) && ids.length ? ids : visibleSelectedIds();
     if (targets.length === 0) return;
     setBulkBusy(true); setError('');
     try {
@@ -1073,37 +1103,51 @@ export default function ProfilesPage() {
     finally { setBulkBusy(false); }
   }
   async function handleBulkDelete() {
-    if (selectedIds.size === 0) return;
-    if (!window.confirm(t('confirm.bulkDelete', { count: selectedIds.size }))) return;
+    const ids = visibleSelectedIds();
+    if (ids.length === 0) return;
+    if (!window.confirm(t('confirm.bulkDelete', { count: ids.length }))) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkDelete([...selectedIds]); clearSelection(); await loadData(); }
+    try {
+      const res = await softglazeApi.profiles.bulkDelete(ids);
+      clearSelection();
+      await loadData();
+      // The main process returns { trashed, errors }; a denied or failed row used to
+      // vanish from the report silently while the user assumed everything was trashed.
+      const errs = (res && Array.isArray(res.errors)) ? res.errors : [];
+      if (errs.length) {
+        const trashed = (res && Array.isArray(res.trashed)) ? res.trashed.length : 0;
+        setError(t('bulkDeleteResult.partial', { trashed, failed: errs.length, reason: (errs[0] && errs[0].message) || '' }));
+      }
+    }
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
 
   async function handleTagAssign(mode) {
     const tag = tagInput.trim();
-    if (!tag || selectedIds.size === 0) return;
+    const ids = visibleSelectedIds();
+    if (!tag || ids.length === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.tagAssign([...selectedIds], tag, mode); setShowTagModal(false); setTagInput(''); await loadData(); }
+    try { await softglazeApi.profiles.tagAssign(ids, tag, mode); setShowTagModal(false); setTagInput(''); await loadData(); }
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
   async function handleBulkRename() {
     const prefix = renamePrefix.trim();
-    if (!prefix || selectedIds.size === 0) return;
-    setBulkBusy(true); setError('');
     // Send ids in the current visible (filtered) order so the numbering matches the table.
-    const orderedIds = filteredProfiles.filter((p) => selectedIds.has(p.id)).map((p) => p.id);
+    const orderedIds = visibleSelectedIds();
+    if (!prefix || orderedIds.length === 0) return;
+    setBulkBusy(true); setError('');
     try { await softglazeApi.profiles.bulkRename({ ids: orderedIds, prefix, start: Number(renameStart) || 1 }); setShowRenameModal(false); await loadData(); }
     catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
   async function handleReassignProxy(payload) {
-    if (selectedIds.size === 0) return;
+    const ids = visibleSelectedIds();
+    if (ids.length === 0) return;
     setBulkBusy(true); setError('');
     try {
-      const res = await softglazeApi.profiles.bulkAssignProxy({ ids: [...selectedIds], ...payload });
+      const res = await softglazeApi.profiles.bulkAssignProxy({ ids, ...payload });
       setShowReassignModal(false);
       await loadData();
       if (res && res.limited && res.skipped > 0) {
@@ -1124,8 +1168,9 @@ export default function ProfilesPage() {
     setFilterStatus(preset.status ?? 'all');
     setSearch(preset.search ?? '');
   }
-  async function saveCurrentPreset() {
-    const name = window.prompt(t('filters.savePresetPrompt'));
+  // window.prompt() returns null in Electron, so the name comes from an in-app dialog.
+  async function saveCurrentPreset(name) {
+    setShowPresetName(false);
     if (!name || !name.trim()) return;
     const preset = { name: name.trim().slice(0, 40), group: filterGroup, tag: filterTag, proxy: filterProxy, status: filterStatus, search };
     const next = [...filterPresets.filter((p) => p.name !== preset.name), preset];
@@ -1147,10 +1192,11 @@ export default function ProfilesPage() {
 
   // Softglaze Premium - launch selected profiles as one Master + Slave windows.
   async function handleSynchronize() {
-    if (selectedIds.size < 2) { setError(t('errors.syncMin')); return; }
+    const ids = visibleSelectedIds();
+    if (ids.length < 2) { setError(t('errors.syncMin')); return; }
     setBulkBusy(true); setError('');
     try {
-      await softglazeApi.profiles.bulkSynchronize([...selectedIds]);
+      await softglazeApi.profiles.bulkSynchronize(ids);
       await refreshSessions();
     } catch (err) { setError(err.message || t('errors.syncFailed')); }
     finally { setBulkBusy(false); }
@@ -1449,7 +1495,12 @@ export default function ProfilesPage() {
                           </div>
                           <div className="flex gap-4">
                             <input type="text" placeholder={t('proxy.userPlaceholder')} value={pd.proxyUser} onChange={e => updatePd('proxyUser', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
-                            <input type="text" placeholder={t('proxy.passPlaceholder')} value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                            <div className="relative w-full flex-1">
+                              <input type={showProxyPass ? 'text' : 'password'} autoComplete="off" placeholder={t('proxy.passPlaceholder')} value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full bg-background border border-border rounded pl-4 pr-10 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                              <button type="button" onClick={() => setShowProxyPass((v) => !v)} aria-label={showProxyPass ? t('proxy.hidePassword') : t('proxy.showPassword')} title={showProxyPass ? t('proxy.hidePassword') : t('proxy.showPassword')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground">
+                                {showProxyPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2071,7 +2122,18 @@ export default function ProfilesPage() {
         </div>
       </div>
       {error && <div className="mb-5 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
-      
+      {Object.keys(geoWarnings).length > 0 && (
+        <div role="status" className="mb-5 flex items-start gap-3 rounded border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
+          <ul className="flex-1 space-y-1">
+            {Object.keys(geoWarnings).map((id) => {
+              const prof = profiles.find((p) => String(p.id) === String(id));
+              return <li key={id}>{t('launchWarnings.geo', { name: (prof && prof.title) || `#${id}` })}</li>;
+            })}
+          </ul>
+          <button type="button" className="shrink-0 text-xs underline hover:no-underline" onClick={() => setGeoWarnings({})}>{t('launchWarnings.dismiss')}</button>
+        </div>
+      )}
+
       {/* Shown when there is a selection OR a bulk queue is in flight. The queue's
           Stop/Pause/Resume controls used to be nested inside the selection gate, so a
           remount (navigate away and back) emptied selectedIds and hid the only way to
@@ -2185,7 +2247,7 @@ export default function ProfilesPage() {
             {filterPresets.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </CustomSelect>
         )}
-        <Button variant="ghost" size="sm" onClick={saveCurrentPreset} title={t('filters.savePresetTitle')}><Bookmark className="w-3.5 h-3.5 mr-1" /> {t('filters.save')}</Button>
+        <Button variant="ghost" size="sm" onClick={() => setShowPresetName(true)} title={t('filters.savePresetTitle')}><Bookmark className="w-3.5 h-3.5 mr-1" /> {t('filters.save')}</Button>
         <span className="ml-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{t('filters.profileCount', { count: filteredProfiles.length })}</span>
       </div>
       
@@ -2447,10 +2509,21 @@ export default function ProfilesPage() {
         />
       )}
       {showShareModal && (
-        <ShareProfileModal profileIds={[...selectedIds]} onClose={() => setShowShareModal(false)} />
+        <ShareProfileModal profileIds={visibleSelectedIds()} onClose={() => setShowShareModal(false)} />
       )}
       {compareProfiles && (
         <CompareProfilesModal profiles={compareProfiles} onClose={() => setCompareProfiles(null)} />
+      )}
+      {showPresetName && (
+        <NameDialog
+          title={t('filters.savePresetTitle')}
+          label={t('filters.savePresetPrompt')}
+          saveLabel={t('filters.save')}
+          cancelLabel={t('filters.cancel')}
+          maxLength={40}
+          onSave={saveCurrentPreset}
+          onClose={() => setShowPresetName(false)}
+        />
       )}
     </>
   );

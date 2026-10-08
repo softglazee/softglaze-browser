@@ -94,7 +94,7 @@
     "restorePasswordPlaceholder": "Password used for the backup file",
     "confirmRestoreLabel": "I understand this replaces my current workspace with the backup's contents.",
     "restoreBtn": "Choose file & restore",
-    "footerNote": "A backup captures profiles, settings and credentials as they are in the database - not the on-disk browser caches. The file is verified before any restore overwrites your current data, so a wrong password or corrupted file fails safely.",
+    "footerNote": "A backup captures profiles, settings and credentials as they are in the database - not the on-disk browser caches. The file is verified before any restore overwrites your current data, so a wrong password or corrupted file fails safely. Saved secrets sealed with the Windows keychain (2FA seeds, SMTP and provider keys, sync token) only restore on the same Windows user account; on another user or machine they must be entered again.",
     "errPasswordMin": "Choose a backup password of at least 6 characters.",
     "errBackupFailed": "Backup failed.",
     "errEnterPassword": "Enter the password for the backup file.",
@@ -102,7 +102,9 @@
     "errRestoreFailed": "Restore failed.",
     "msgSaved_one": "Backup saved to {{path}} ({{kb}} KB, {{count}} setting).",
     "msgSaved_other": "Backup saved to {{path}} ({{kb}} KB, {{count}} settings).",
-    "msgRestored": "Workspace restored. Restart the app to make sure everything reloads cleanly."
+    "msgRestored": "Workspace restored. Restart the app to make sure everything reloads cleanly.",
+    "warnSecretsLost_one": "{{count}} saved secret could not be opened on this Windows user and must be entered again: {{list}}.",
+    "warnSecretsLost_other": "{{count}} saved secrets could not be opened on this Windows user and must be entered again: {{list}}."
   },
   "branding": {
     "loadingCardTitle": "Appearance & Branding",

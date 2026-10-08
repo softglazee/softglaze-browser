@@ -2,13 +2,13 @@
 // ---------------------------------------------------------------------------
 // Smart Autofill - in-page widget for the Identity Data Vault.
 //
-// This module exports the SOURCE of a self-contained bootstrap that runs INSIDE
-// every launched Chromium profile page (injected via puppeteer's
-// evaluateOnNewDocument in browserEngine). The page cannot reach Electron IPC, so
-// it talks to the backend through two functions exposed on `window` by the bridge
-// (browserEngine `exposeFunction`):
-//   • window.__sgPersonaList(url)        -> [persona, …] available for this host
-//   • window.__sgPersonaMarkUsed(id,url) -> { ok }   (appends the domain)
+// This module exports the SOURCE of a self-contained widget. On Chromium it runs in
+// a private CDP isolated world of every launched page (pageBridge.attachIsolatedWorld)
+// and reaches the backend through the rpc it is handed - nothing is exposed on the
+// page's own window (audit E1/E2). On Firefox the same source is the extension's
+// content script and calls the sandbox-only functions sg-bridge.js defines:
+//   • __sgPersonaList(url)        -> [persona, …] available for this host
+//   • __sgPersonaMarkUsed(id,url) -> { ok }   (appends the domain)
 //
 // The widget is a Shadow-DOM overlay (so page CSS can't break it and ours can't
 // leak), shows only when a signup/registration form is detected, fills matched
@@ -20,14 +20,19 @@
 // buildAutofillBootstrap() serializes it to an IIFE string for injection.
 // ---------------------------------------------------------------------------
 
-function personaAutofillMain() {
+// `sgRpc` (Chromium): the rpc function of the private CDP isolated world this
+// widget runs in (pageBridge.attachIsolatedWorld). Absent on Firefox, where the
+// widget runs in the extension's isolated content-script sandbox and calls the
+// window.__sgPersona* functions sg-bridge.js defines in that same sandbox. Either
+// way NOTHING the widget defines is visible to the page's own JS (audit E1/E2).
+function personaAutofillMain(sgRpc) {
   try {
     // Top frame only, real http(s) pages only, once per document.
     if (window.top !== window.self) return;
     if (!/^https?:$/.test(location.protocol)) return;
     if (!location.hostname) return;
     if (window.__sgPersonaInit) return;
-    window.__sgPersonaInit = true;
+    window.__sgPersonaInit = true; // isolated-world expando: invisible to the page
 
     var BRAND = '#3DC6DA';
     var personas = [];   // available personas for this host (loaded on open)
@@ -37,14 +42,14 @@ function personaAutofillMain() {
     var isOpen = false;
     var loading = false;
 
-    // Bridge call. Chromium injects window.__sgBridge (native CDP binding first,
-    // sentinel-fetch RPC fallback for engines like fingerprint-chromium that kill
-    // the binding on navigation). The Firefox extension instead defines the raw
-    // window.__sgPersona* functions and has NO __sgBridge, so fall back to calling
-    // the named function directly there - one widget source, both browsers.
+    // Bridge call. Chromium hands us sgRpc (world-scoped CDP binding first,
+    // body-authenticated sentinel-fetch RPC for engines like fingerprint-chromium
+    // that drop bindings). The Firefox extension instead defines the raw
+    // window.__sgPersona* functions in its content-script sandbox, so call the named
+    // function directly there - one widget source, both browsers.
     function sgCall(name) {
       var args = Array.prototype.slice.call(arguments, 1);
-      if (typeof window.__sgBridge === 'function') return window.__sgBridge.apply(window, arguments);
+      if (typeof sgRpc === 'function') return sgRpc.apply(null, arguments);
       var fn = window[name];
       if (typeof fn === 'function') {
         try { return Promise.resolve(fn.apply(window, args)); } catch (e) { return Promise.reject(e); }
@@ -52,8 +57,11 @@ function personaAutofillMain() {
       return Promise.reject(new Error('bridge unavailable'));
     }
     function sgHas(name) {
-      return typeof window.__sgBridge === 'function' || typeof window[name] === 'function';
+      return typeof sgRpc === 'function' || typeof window[name] === 'function';
     }
+    // Per-document attribute used to hand matched fields to the trusted typer. A
+    // fixed name would be one more SoftGlaze tell in the DOM.
+    var FILL_ATTR = 'data-' + 'k' + Math.random().toString(36).slice(2, 9);
 
     var delay = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
     var rand = function (min, max) { return Math.floor(min + Math.random() * (max - min)); };
@@ -63,9 +71,10 @@ function personaAutofillMain() {
     var host = document.createElement('div');
     // audit C2: a stable id + an OPEN shadow root let page JS do
     // document.getElementById('__sg-persona-host').shadowRoot and drive the widget's
-    // buttons to exfiltrate the vault (3 lines of script, no user interaction). Use a
-    // random id and a CLOSED root so the page can neither find it reliably nor reach in.
-    host.id = '__sg_' + Math.random().toString(36).slice(2, 10);
+    // buttons to exfiltrate the vault (3 lines of script, no user interaction). The
+    // root is CLOSED so the page cannot reach in. audit E2: no id at all, and the host
+    // is only in the DOM while the button is showing (see updateVisibility), so pages
+    // without a signup form never see an extra element.
     host.style.cssText = 'all:initial;position:fixed;z-index:2147483647;bottom:18px;right:18px;';
     var root = host.attachShadow({ mode: 'closed' });
     root.innerHTML =
@@ -111,10 +120,11 @@ function personaAutofillMain() {
     var toastEl = root.querySelector('.toast');
 
     function mount() { if (document.body && !host.isConnected) document.body.appendChild(host); }
-    if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+    function unmount() { try { if (host.isConnected) host.remove(); } catch (e) {} }
 
     var toastTimer = null;
     function toast(msg) {
+      mount();
       toastEl.textContent = msg;
       toastEl.hidden = false;
       clearTimeout(toastTimer);
@@ -140,6 +150,8 @@ function personaAutofillMain() {
       var show = looksLikeSignup();
       fab.hidden = !show;
       if (!show && isOpen) { isOpen = false; panel.hidden = true; }
+      // Mount lazily; drop the host again once nothing of ours is visible.
+      if (show) mount(); else if (toastEl.hidden) unmount();
     }
     var mo = new MutationObserver(debounce(updateVisibility, 450));
     function startObserving() {
@@ -185,7 +197,7 @@ function personaAutofillMain() {
         em.textContent = p.email || p.username || '';
         btn.appendChild(nm); btn.appendChild(em);
         if (p.label) { var lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = p.label; btn.appendChild(lb); }
-        btn.addEventListener('click', function (e) { if (!e.isTrusted) return; fillWith(p).then(function () { armMultiStep(p); }); }); // audit C2: only a real user click fills
+        btn.addEventListener('click', function (e) { if (!e.isTrusted) return; fillWith(p, { gesture: true }).then(function () { armMultiStep(p); }); }); // audit C2/E1: only a real user click fills (and may carry a password)
         body.appendChild(btn);
       });
     }
@@ -196,13 +208,51 @@ function personaAutofillMain() {
       var t = (el.type || '').toLowerCase();
       if (['hidden', 'submit', 'button', 'checkbox', 'radio', 'file', 'image', 'reset', 'range', 'color'].indexOf(t) >= 0) return false;
       if (el.offsetParent === null && (!el.getClientRects || el.getClientRects().length === 0)) return false;
+      return isReallyVisible(el);
+    }
+    // Honeypots and decoys: a field a person cannot see must never be filled - filling one is
+    // how spam filters spot a bot. Off-screen, transparent, zero-size and aria-hidden fields
+    // are skipped.
+    function isReallyVisible(el) {
+      try {
+        var r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return false;
+        if (r.right < 0 || r.bottom < -window.innerHeight * 4 || r.left > (window.innerWidth || 0) + 2000) return false;
+        var cs = window.getComputedStyle(el);
+        if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return false;
+        if (el.closest && el.closest('[aria-hidden="true"]')) return false;
+        if (el.getAttribute('tabindex') === '-1' && /honey|trap|bot|leave[\s_-]*blank/i.test((el.name || '') + ' ' + (el.id || ''))) return false;
+      } catch (e) {}
       return true;
     }
+    // Everything that describes a field, normalised so one set of rules works on every site:
+    // camelCase, snake_case, kebab-case and dots become spaces ("billingZipCode" -> "billing zip
+    // code"), so word boundaries work. The input TYPE is deliberately not mixed in (it used to be
+    // appended, which made anchored rules like "^name$" impossible to match).
     function attrStr(el) {
-      var p = [el.name, el.id, el.getAttribute('placeholder'), el.getAttribute('autocomplete'), el.getAttribute('aria-label'), el.getAttribute('title'), el.type];
+      var p = [el.name, el.id, el.getAttribute('placeholder'), el.getAttribute('autocomplete'), el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('data-testid')];
       try { if (el.labels && el.labels.length) p.push(el.labels[0].textContent); } catch (e) {}
       try { var l = el.closest && el.closest('label'); if (l) p.push(l.textContent); } catch (e) {}
-      return p.filter(Boolean).join(' ').toLowerCase();
+      try {
+        var lb = el.getAttribute('aria-labelledby');
+        if (lb) lb.split(/\s+/).forEach(function (id) { var n = document.getElementById(id); if (n) p.push(n.textContent); });
+      } catch (e) {}
+      try {
+        // Label-less layouts: the nearest short text just before the field.
+        if (!(el.labels && el.labels.length)) {
+          var prev = el.previousElementSibling || (el.parentElement && el.parentElement.previousElementSibling);
+          if (prev && prev.textContent && prev.textContent.trim().length <= 40) p.push(prev.textContent);
+        }
+      } catch (e) {}
+      return normField(p.filter(Boolean).join(' '));
+    }
+    function normField(s) {
+      return String(s || '')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/[_\-.\[\]:*]+/g, ' ')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
     }
     function nativeSet(el, value) {
       try {
@@ -228,10 +278,27 @@ function personaAutofillMain() {
       try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
       try { el.dispatchEvent(new Event('blur', { bubbles: true })); } catch (e) {}
     }
+    var attemptedEls = new WeakSet();
+    function regionName(code) { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(String(code).toUpperCase()) || ''; } catch (e) { return ''; } }
+    function resolveOption(el, val) {
+      var v = String(val || '').trim().toLowerCase(); if (!v) return null;
+      var alt = /^[a-z]{2}$/.test(v) ? regionName(v).toLowerCase() : '';
+      var opts = Array.prototype.slice.call(el.options || []);
+      function txt(o) { return (o.textContent || '').trim().toLowerCase(); }
+      var hit = opts.find(function (o) { return (o.value || '').toLowerCase() === v || txt(o) === v || (alt && txt(o) === alt); })
+        || opts.find(function (o) { var t = txt(o); return t && o.value && (t.indexOf(v) === 0 || (alt && t.indexOf(alt) === 0)); })
+        || opts.find(function (o) { var t = txt(o); return v.length > 3 && t && o.value && t.indexOf(v) >= 0; });
+      return hit ? hit.value : null;
+    }
+    function toIsoDate(v) {
+      var s = String(v || '').trim(); var m;
+      if ((m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+      var d = new Date(s); if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+      return '';
+    }
     function setSelect(el, val) {
-      var v = String(val).toLowerCase(), o, i;
-      for (i = 0; i < el.options.length; i++) { o = el.options[i]; if ((o.value || '').toLowerCase() === v || (o.textContent || '').trim().toLowerCase() === v) { el.value = o.value; el.dispatchEvent(new Event('change', { bubbles: true })); return; } }
-      for (i = 0; i < el.options.length; i++) { o = el.options[i]; if ((o.textContent || '').trim().toLowerCase().indexOf(v) >= 0) { el.value = o.value; el.dispatchEvent(new Event('change', { bubbles: true })); return; } }
+      var ov = resolveOption(el, val); if (ov == null) return;
+      el.value = ov; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
     }
     async function typeInto(el, value) {
       try { el.focus(); el.dispatchEvent(new Event('focus', { bubbles: true })); } catch (e) {}
@@ -250,34 +317,37 @@ function personaAutofillMain() {
       try { el.blur(); } catch (e) {}
     }
 
-    // Ordered match predicates (key, regex on the field's attribute string, extra test).
+    // Ordered match rules (key, rule on the NORMALISED field description, autocomplete token).
+    // Country comes before state so a "Country/Region" field is never handed the state.
     var PLAN = [
-      ['firstName', /first[\s_-]*name|given[\s_-]*name|fname|forename/, 'given-name'],
-      ['lastName', /last[\s_-]*name|surname|family[\s_-]*name|lname/, 'family-name'],
-      ['email', /e[\s_-]*mail/, 'email'],
-      ['username', /user[\s_-]*name|\buser\b|login|handle|nickname/, 'username'],
-      ['phone', /phone|mobile|\btel\b|cell/, 'tel'],
-      ['dateOfBirth', /birth|\bdob\b/, 'bday'],
-      // MUST precede addressLine1: a "Company address" input that carries
-      // autocomplete="street-address" or a digit 1 would otherwise be claimed by
-      // addressLine1 and receive the persona's HOME street. No autocomplete token -
-      // HTML has none for a company address (the spec expresses it as `organization`
-      // + `street-address` in one section), and borrowing 'street-address' here would
-      // steal every ordinary personal address field.
-      ['companyAddress', /(compan(?:y|ies)|organi[sz]ation|employer|business|firm|office)[\s_-]*(?:street[\s_-]*)?(?:address|addr|street|location)/, ''],
-      ['addressLine1', /address[\s_-]*(line)?[\s_-]*1|street|^address$|addr1/, 'address-line1'],
-      ['addressLine2', /address[\s_-]*(line)?[\s_-]*2|apt|suite|\bunit\b|addr2/, 'address-line2'],
-      ['city', /\bcity\b|town|locality/, 'address-level2'],
-      ['state', /\bstate\b|province|region/, 'address-level1'],
-      ['zipCode', /\bzip\b|postal|postcode/, 'postal-code'],
-      ['country', /country|nation/, 'country'],
-      // Guarded: the old bare /company|.../ matched ANY string containing "company",
-      // so on a form with both "Company name" and "Company address" this rule claimed
-      // whichever came first in DOM order and - because take() consumes one input per
-      // key - the other was never revisited and stayed blank. Refuse address-ish
-      // fields outright; companyAddress above handles those.
-      ['company', /^(?!.*(?:address|street|addr\d|\baddr\b))(?=.*(?:company|organi[sz]ation|employer|business))/, 'organization']
+      ['firstName', /\bfirst ?name\b|\bgiven ?name\b|\bfname\b|\bforename\b/, 'given-name'],
+      ['lastName', /\blast ?name\b|\bsurname\b|\bfamily ?name\b|\blname\b/, 'family-name'],
+      ['email', /\be ?mail\b/, 'email'],
+      ['username', /\buser ?name\b|\buser ?id\b|\buser\b|\blogin\b|\bhandle\b|\bnick ?name\b/, 'username'],
+      ['phone', /\bphone\b|\bmobile\b|\btel\b|\btelephone\b|\bcell\b/, 'tel'],
+      ['dateOfBirth', /\bbirth|\bdob\b|\bbirthday\b/, 'bday'],
+      // MUST precede addressLine1 (a "Company address" input would otherwise get the home street).
+      ['companyAddress', /\b(compan(?:y|ies)|organi[sz]ation|employer|business|firm|office) ?(?:street ?)?(?:address|addr|street|location)\b/, ''],
+      ['addressLine1', /\baddress ?(line)? ?1\b|\bstreet\b|\baddr ?1\b|\baddress\b/, 'address-line1'],
+      ['addressLine2', /\baddress ?(line)? ?2\b|\bapt\b|\bapartment\b|\bsuite\b|\bunit\b|\baddr ?2\b/, 'address-line2'],
+      ['city', /\bcity\b|\btown\b|\blocality\b/, 'address-level2'],
+      ['country', /\bcountry\b|\bnation\b/, 'country'],
+      ['state', /\bstate\b|\bprovince\b|\bregion\b|\bcounty\b/, 'address-level1'],
+      ['zipCode', /\bzip\b|\bzip ?code\b|\bpostal\b|\bpost ?code\b|\bpostcode\b/, 'postal-code'],
+      ['company', /^(?!.*\b(?:address|street|addr)\b)(?=.*\b(?:company|organi[sz]ation|employer|business ?name)\b)/, 'organization']
     ];
+    // Fields that must never receive persona data, whatever else they match.
+    var NEVER = /\b(captcha|coupon|promo|voucher|discount|gift ?card|card ?number|cc ?number|cvv|cvc|security ?code|otp|one ?time|verification ?code|search|query|referr?al ?code|invite ?code)\b/;
+    // Per-key exclusions: a rule that matches but describes something else.
+    var EXCLUDE = {
+      email: /\b(confirm|verify|repeat|re ?enter|again)\b/,
+      username: /\bemail\b/,
+      addressLine1: /\b(e ?mail|ip|web|url|line ?2|apt|suite|unit|compan(?:y|ies)|address ?(?:line ?)?2)\b/,
+      addressLine2: /\b(e ?mail)\b/,
+      state: /\bcountry\b/,
+      phone: /\b(country ?code|extension|ext)\b/,
+      company: /\b(name ?on ?card|card ?holder)\b/
+    };
 
     // A header/site SEARCH box must never receive persona data.
     function isSearchDecoy(el) {
@@ -290,7 +360,7 @@ function personaAutofillMain() {
       if (t === 'password' || t === 'email' || t === 'tel') return true;
       var s = attrStr(el);
       for (var i = 0; i < PLAN.length; i++) { if (PLAN[i][1].test(s)) return true; }
-      return /full[\s_-]*name|your[\s_-]*name|^name$|\bname\b/.test(s);
+      return /\bfull ?name\b|\byour ?name\b|\bname\b/.test(s) && !NEVER.test(s);
     }
     // Choose the ONE best target form to fill, so the persona never lands in a header
     // search box or a footer newsletter/subscribe field (the reported bug where the
@@ -322,33 +392,43 @@ function personaAutofillMain() {
       }
       return (best && bestScore > 0) ? best : everything;
     }
-    // Multi-step forms (wizards, email-then-password, Ferguson-style 3-step signup):
-    // after the first fill, watch for the NEXT step's fields to appear and fill the
-    // ones still empty. Bounded (3 min), debounced, and only fires when a new matchable
-    // EMPTY field shows up - so it never fights the user or loops on SPA re-renders.
+    // Multi-step forms (wizards, email-then-password, 3-step signups): after a fill, watch for
+    // the NEXT step's fields and fill the ones still empty. Kept deliberately narrow so it can
+    // never spill into other forms on the page:
+    //  - only DOM additions (childList) are watched, not class/style flips on every re-render;
+    //  - it stops on a route/URL change and after 90 s;
+    //  - each field is attempted at most once (no retry loop on a field that will not take);
+    //  - it never types while the user is typing in another field (no focus stealing).
     function armMultiStep(p) {
       if (multiStepObserver || !p) return;
       var pending = false;
+      var armedPath = location.pathname;
+      function stop() { if (multiStepObserver) { try { multiStepObserver.disconnect(); } catch (e) {} multiStepObserver = null; } }
+      function userIsTyping() {
+        var a = document.activeElement;
+        return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) && !filledEls.has(a));
+      }
       function newEmptyFieldExists() {
         var fs = collectTargetFields();
         for (var i = 0; i < fs.length; i++) {
           var e = fs[i];
-          if (filledEls.has(e) || e === document.activeElement) continue;
+          if (filledEls.has(e) || attemptedEls.has(e) || e === document.activeElement) continue;
           if (e.value && String(e.value).length) continue;
           if (isMatchable(e)) return true;
         }
         return false;
       }
       var run = debounce(function () {
-        if (pending || !newEmptyFieldExists()) return;
+        if (location.pathname !== armedPath) { stop(); return; }
+        if (pending || userIsTyping() || !newEmptyFieldExists()) return;
         pending = true;
         fillWith(p, { onlyEmpty: true }).catch(function () {}).then(function () { pending = false; });
-      }, 500);
+      }, 600);
       try {
         multiStepObserver = new MutationObserver(run);
-        multiStepObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'aria-hidden'] });
+        multiStepObserver.observe(document.documentElement, { childList: true, subtree: true });
       } catch (e) { multiStepObserver = null; }
-      setTimeout(function () { if (multiStepObserver) { try { multiStepObserver.disconnect(); } catch (e) {} multiStepObserver = null; } }, 180000);
+      setTimeout(stop, 90000);
     }
 
     async function fillWith(p, opts) {
@@ -369,15 +449,25 @@ function personaAutofillMain() {
         if (!val) continue;
         var el = take((function (rx, ac, key) {
           return function (e) {
+            var desc = attrStr(e);
+            if (NEVER.test(desc)) return false;
+            var acTokens = (e.getAttribute('autocomplete') || '').toLowerCase().split(/\s+/);
+            if (ac && acTokens.indexOf(ac) >= 0) return true;
+            if (EXCLUDE[key] && EXCLUDE[key].test(desc)) return false;
             if (key === 'email' && (e.type || '').toLowerCase() === 'email') return true;
             if (key === 'phone' && (e.type || '').toLowerCase() === 'tel') return true;
-            var acAttr = (e.getAttribute('autocomplete') || '').toLowerCase();
-            if (ac && acAttr.indexOf(ac) >= 0) return true;
-            return rx.test(attrStr(e));
+            return rx.test(desc);
           };
         })(rx, ac, key));
         if (!el) continue;
         matches.push({ el: el, value: String(val), kind: el.tagName === 'SELECT' ? 'select' : 'text' });
+      }
+      // "Confirm email" / "Re-enter email" fields take the same address.
+      if (p.email) {
+        var conf;
+        while ((conf = take(function (e) { var d = attrStr(e); return !NEVER.test(d) && /\be ?mail\b/.test(d) && EXCLUDE.email.test(d); }))) {
+          matches.push({ el: conf, value: String(p.email), kind: 'text' });
+        }
       }
       // Full-name fallback: a single name field when no first/last was matched.
       if (p.firstName || p.lastName) {
@@ -386,7 +476,7 @@ function personaAutofillMain() {
           var ac = (e.getAttribute('autocomplete') || '').toLowerCase();
           if (ac === 'name') return true;
           var s = attrStr(e);
-          return /full[\s_-]*name|your[\s_-]*name|^name$|\bname\b/.test(s) && !/user|first|last|given|family|sur/.test(s);
+          return /\bfull ?name\b|\byour ?name\b|\bname\b/.test(s) && !/\b(user|first|last|given|family|sur|company|business|organi[sz]ation|card|cardholder|holder|domain|file|display|nick|screen)\b/.test(s) && !NEVER.test(s);
         });
         if (nameEl) matches.push({ el: nameEl, value: [p.firstName, p.lastName].filter(Boolean).join(' '), kind: 'text' });
       }
@@ -415,6 +505,17 @@ function personaAutofillMain() {
         if (!matches.length) return;
       }
 
+      matches.forEach(function (m) { try { attemptedEls.add(m.el); } catch (e) {} });
+      // <input type=date> needs an ISO value set directly; typing a date string into it fails.
+      matches = matches.filter(function (m) {
+        if ((m.el.type || '').toLowerCase() !== 'date' || m.kind === 'password') return true;
+        var iso = toIsoDate(m.value);
+        if (iso) { setReactInputValue(m.el, iso); try { filledEls.add(m.el); } catch (e) {} }
+        return false;
+      });
+      // Native <select>: send the OPTION VALUE that matches (by value, visible text, or a
+      // country/region code), because the trusted path selects by exact value only.
+      matches.forEach(function (m) { if (m.kind === 'select') { var ov = resolveOption(m.el, m.value); if (ov != null) m.value = ov; } });
       // 2) Fill. Prefer CDP trusted typing when the host exposes the bridge
       //    (Chromium) - real keydown/keyup with isTrusted:true. Otherwise fall back
       //    to in-page synthetic typing (e.g. Firefox, or if the bridge errors).
@@ -433,21 +534,20 @@ function personaAutofillMain() {
       var trusted = sgHas('__sgPersonaFillPlan');
       if (trusted && matches.length) {
         var plan = matches.map(function (m, idx) {
-          try { m.el.setAttribute('data-sgfill', String(idx)); } catch (e) {}
-          var it = { sel: '[data-sgfill="' + idx + '"]', kind: m.kind };
+          try { m.el.setAttribute(FILL_ATTR, String(idx)); } catch (e) {}
+          var it = { sel: '[' + FILL_ATTR + '="' + idx + '"]', kind: m.kind };
           // Password items carry only the persona id; the backend resolves the
           // plaintext server-side. All other kinds carry their (non-secret) value.
           if (m.kind === 'password') it.personaId = m.personaId; else it.value = m.value;
           return it;
         });
-        // audit C3: fetch a single-use fill token first. This runs inside the trusted
-        // widget click, so the transient user gesture is still active and the token is
-        // issued; it authorizes exactly one password fill on the server side.
-        var _fillToken = null;
-        try { if (typeof window.__sgPersonaBeginFill === 'function') { var _g = await window.__sgPersonaBeginFill(); _fillToken = _g && _g.token; } } catch (e) {}
+        // audit E1: `gesture` is set ONLY when this fill started from an isTrusted
+        // click on the widget's own row (multi-step re-runs pass onlyEmpty and never
+        // carry a password). The backend also requires a transient user activation,
+        // read from this isolated world, before it releases any password.
         var failedMap = null; // plan index -> true, for fields that did not take
         try {
-          var r = await sgCall('__sgPersonaFillPlan', plan, _fillToken);
+          var r = await sgCall('__sgPersonaFillPlan', plan, { gesture: !opts.onlyEmpty && opts.gesture === true });
           filled = (r && typeof r.filled === 'number') ? r.filled : matches.length;
           fillFailed = (r && typeof r.failed === 'number') ? r.failed : 0;
           if (r && Object.prototype.toString.call(r.failedIdx) === '[object Array]') {
@@ -459,7 +559,7 @@ function personaAutofillMain() {
         // Adding every matched element unconditionally is what stopped the multi-step
         // observer from ever retrying a field that silently failed to fill.
         matches.forEach(function (m, idx) {
-          try { m.el.removeAttribute('data-sgfill'); } catch (e) {}
+          try { m.el.removeAttribute(FILL_ATTR); } catch (e) {}
           if (failedMap && failedMap[idx]) return; // leave it retryable
           try { filledEls.add(m.el); } catch (e) {}
         });
@@ -547,9 +647,16 @@ function personaAutofillMain() {
   } catch (e) { /* never break the host page */ }
 }
 
-// Serialize the bootstrap to an IIFE string for evaluateOnNewDocument injection.
+// Serialize the bootstrap to a self-running IIFE string (Firefox content script:
+// no rpc argument, so the widget uses the sandbox's window.__sgPersona* functions).
 function buildAutofillBootstrap() {
   return '(' + personaAutofillMain.toString() + ')();';
 }
 
-module.exports = { buildAutofillBootstrap };
+// The bare function expression, for Chromium: pageBridge.attachIsolatedWorld runs it
+// inside the private isolated world and passes in that world's rpc.
+function buildAutofillRunSource() {
+  return '(' + personaAutofillMain.toString() + ')';
+}
+
+module.exports = { buildAutofillBootstrap, buildAutofillRunSource };

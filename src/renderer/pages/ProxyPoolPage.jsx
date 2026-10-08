@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput, AlertTriangle, Zap, Turtle } from 'lucide-react';
 
 // Live-checker log level → colour, health grade → colour, and a short duration format.
@@ -12,15 +13,15 @@ function fmtDuration(ms) {
 }
 
 import EmptyState from '@/components/EmptyState.jsx';
-import ProxyProviders from '@/components/ProxyProviders.jsx';
-import { Donut, Legend, AreaChart } from '@/components/charts/Charts.jsx';
-import { Clock, BarChart3, History, RotateCw } from 'lucide-react';
+import { AreaChart } from '@/components/charts/Charts.jsx';
+import { Clock, BarChart3, History, RotateCw, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
+import NumberInput from '@/components/ui/NumberInput.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -66,28 +67,67 @@ function speedOf(p, checkResults) {
   return ms <= SPEED_FAST_MAX_MS ? 'fast' : 'slow';
 }
 
-// Figma-style compact stat card (tinted, glow, icon tile). When `onClick` is given
-// it renders as a button and shows an accent ring while `active` (drives the filter).
-function MiniStat({ icon: Icon, label, value, color, onClick, active }) {
-  const { t } = useTranslation('proxies');
+// Short relative-time label for the "Last check" card (accurate, locale-strings via i18n).
+function timeAgo(ms, t) {
+  if (!ms) return null;
+  const diff = Date.now() - ms;
+  if (!isFinite(diff) || diff < 0) return t('stats.justNow');
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return t('stats.justNow');
+  if (mins < 60) return t('stats.minAgo', { n: mins });
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return t('stats.hrAgo', { n: hrs });
+  return t('stats.dayAgo', { n: Math.floor(hrs / 24) });
+}
+
+// Dependency-free inline-SVG segmented bar. Stretches to its container width; a flat muted
+// track shows through when there's no data. Drives the verified/failed/unchecked and
+// protocol splits in the stat cards (no gradients, no glow - just flat token fills).
+function SegBar({ segments }) {
+  const total = segments.reduce((a, s) => a + (s.value > 0 ? s.value : 0), 0);
+  let x = 0;
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'color-mix(in srgb, var(--muted-foreground) 16%, transparent)' }}>
+      {total > 0 && (
+        <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
+          {segments.map((s, i) => {
+            if (!(s.value > 0)) return null;
+            const w = (s.value / total) * 100;
+            const rect = <rect key={i} x={x} y="0" width={w} height="10" fill={s.color} />;
+            x += w;
+            return rect;
+          })}
+        </svg>
+      )}
+    </div>
+  );
+}
+
+// Compact, token-only stat card: label, big number, small sub-detail. Clickable cards
+// render as a focusable <button> that sets the matching table filter; an accent-coloured
+// 1px border marks the active one. No gradients/glow - flat card, 8px radius, mono/tabular
+// numbers. `accent` is an app token (var(--success), var(--chart-1), ...).
+function MiniStat({ icon: Icon, label, value, sub, accent = 'var(--primary)', onClick, active, title }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`rounded-xl p-4 relative overflow-hidden group animate-fade-up text-left w-full ${onClick ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''}`}
-      style={{ background: `color-mix(in srgb, ${color} 8%, var(--card))`, border: `1px solid ${active ? color : `color-mix(in srgb, ${color} 20%, transparent)`}`, boxShadow: active ? `0 0 0 1px ${color}` : undefined }}
+      title={title}
+      aria-pressed={onClick ? Boolean(active) : undefined}
+      className={`w-full min-w-0 rounded-lg border bg-card p-3 text-left transition-colors ${onClick ? 'cursor-pointer hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''}`}
+      style={{ borderColor: active ? accent : 'var(--border)' }}
     >
-      <div className="absolute -top-5 -right-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
-      <div className="relative z-10 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)` }}>
-          <Icon className="w-[18px] h-[18px]" style={{ color }} />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+          <p className="mt-1 font-mono text-[22px] font-semibold leading-none tabular-nums text-foreground">{value}</p>
         </div>
-        <div className="min-w-0">
-          <p className="text-[18px] font-bold text-foreground font-display leading-none">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-1 truncate">{label}{onClick && active ? ` · ${t('stats.filtering')}` : ''}</p>
-        </div>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
+          <Icon className="h-4 w-4" />
+        </span>
       </div>
+      {sub != null && <div className="mt-2 min-w-0 text-[11px] text-muted-foreground">{sub}</div>}
     </Tag>
   );
 }
@@ -138,7 +178,7 @@ export default function ProxyPoolPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [copiedId, setCopiedId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [view, setView] = useState('custom'); // 'custom' | 'providers'
+  const [view, setView] = useState('custom'); // 'custom' | 'history' | 'groups' (providers moved to /proxy-providers)
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'failed' (driven by the stat cards)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -157,7 +197,6 @@ export default function ProxyPoolPage() {
   const [activeGroup, setActiveGroup] = useState('all');
   const [groupModal, setGroupModal] = useState(null); // { id?, name, color } when creating/editing
   const [assignOpen, setAssignOpen] = useState(false);
-  const [dragOverKey, setDragOverKey] = useState(null);
   // Auto-grouping by verified geo (Country / State / City).
   const [autoGroupLevel, setAutoGroupLevel] = useState('country');
   const [autoGrouping, setAutoGrouping] = useState(false);
@@ -166,13 +205,11 @@ export default function ProxyPoolPage() {
   const [sortBy, setSortBy] = useState('default'); // 'default' | 'fastest' | 'slowest'
   const [policyDetail, setPolicyDetail] = useState({ failoverMaxLatencyMs: 0, latencyTopN: 3 });
   const [scheduler, setScheduler] = useState({ enabled: false, minutes: 30 });
-  const [showGeo, setShowGeo] = useState(false);
   const [historyProxy, setHistoryProxy] = useState(null);
   const [historyData, setHistoryData] = useState(null); // null = loading; [] = none
   // History cards: each recently-checked proxy's last N results as pass/fail pips, so
   // "verified before, failed on a later check" is visible at a glance for cross-verification.
   const [healthCards, setHealthCards] = useState([]);
-  const [showHistoryCards, setShowHistoryCards] = useState(true);
 
   const loadHealthCards = useCallback(async () => {
     if (!softglazeApi.proxies.recentHealth) return;
@@ -292,19 +329,31 @@ export default function ProxyPoolPage() {
   // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
 
+  // The word shown in BOTH the "Delete all <scope>" button and its confirm. They used to
+  // be computed separately, so the confirm said "all" while the blacklist or speed filter
+  // had narrowed the set (or the button said "filtered" while the confirm said "all").
+  function deleteFilteredScopeLabel() {
+    if (statusFilter !== 'all') return t(`deleteFiltered.scope.${statusFilter}`);
+    if (blacklistFilter !== 'all') return t(`blacklistFilter.${blacklistFilter}`);
+    if (speedFilter !== 'all') return t(`speedFilter.${speedFilter}`);
+    if (activeGroup !== 'all') return t('deleteFiltered.scope.filtered');
+    if (search.trim()) return t('deleteFiltered.scope.matching');
+    return t('deleteFiltered.scope.all');
+  }
+
   // Delete every proxy currently matched by the active filter/search.
   async function handleDeleteFiltered() {
     const ids = filteredProxies.map((p) => p.id);
     if (ids.length === 0) return;
-    const scope = statusFilter !== 'all' ? statusFilter : (activeGroup !== 'all' ? 'filtered' : (search.trim() ? 'matching' : 'all'));
-    const scopeLabel = t(`deleteFiltered.scope.${scope}`);
+    const scopeLabel = deleteFilteredScopeLabel();
     if (!window.confirm(t('deleteFiltered.confirm', { count: ids.length, scope: scopeLabel }))) return;
     setBulkDeleting(true);
     setError('');
     try {
       await softglazeApi.proxies.bulkDelete(ids);
       clearSelection();
-      await loadProxies();
+      // Group counts (sidebar chips) change with every delete, so refresh them too.
+      await Promise.all([loadProxies(), loadGroups()]);
     } catch (err) {
       setError(err.message || t('errors.deleteProxies'));
     } finally {
@@ -382,7 +431,7 @@ export default function ProxyPoolPage() {
     try {
       await softglazeApi.proxies.bulkDelete(ids);
       clearSelection();
-      await loadProxies();
+      await Promise.all([loadProxies(), loadGroups()]);
     } catch (err) {
       setError(err.message || t('errors.deleteSelected'));
     } finally {
@@ -447,7 +496,8 @@ export default function ProxyPoolPage() {
         setCheckResults((prev) => ({ ...prev, [data.proxyId]: data.result }));
         applyGeoName(data.proxyId, data.result);
       }
-      if (data.finished) { setCheckingAll(false); if (loadProxiesRef.current) loadProxiesRef.current(); loadHealthCards(); }
+      // A check run can auto-file proxies into geo groups, so refresh the group counts too.
+      if (data.finished) { setCheckingAll(false); if (loadProxiesRef.current) loadProxiesRef.current(); loadGroups(); loadHealthCards(); }
     });
     return () => { try { off && off(); } catch (e) { /* ignore */ } };
   }, []);
@@ -523,7 +573,7 @@ export default function ProxyPoolPage() {
     try {
       const result = await softglazeApi.proxies.batchAdd({ raw: batchRaw, type: batchType });
       setBatchResult(result);
-      await loadProxies();
+      await Promise.all([loadProxies(), loadGroups()]);
     } catch (err) {
       setError(err.message || t('errors.batchAdd'));
     } finally {
@@ -654,26 +704,6 @@ export default function ProxyPoolPage() {
     } catch (err) { setError(err.message || t('errors.moveProxies')); }
   }
 
-  // Drag a proxy row (or, if it's part of the current selection, the whole selection)
-  // onto a group chip to assign it there.
-  function onRowDragStart(e, proxy) {
-    const ids = selectedIds.has(proxy.id) ? Array.from(selectedIds) : [proxy.id];
-    e.dataTransfer.setData('text/plain', JSON.stringify(ids));
-    e.dataTransfer.effectAllowed = 'move';
-  }
-  async function onGroupDrop(e, groupId) {
-    e.preventDefault();
-    setDragOverKey(null);
-    let ids = [];
-    try { ids = JSON.parse(e.dataTransfer.getData('text/plain')) || []; } catch (err) { ids = []; }
-    if (!Array.isArray(ids) || !ids.length) return;
-    try {
-      await softglazeApi.proxyGroups.assign(ids, groupId);
-      clearSelection();
-      await Promise.all([loadGroups(), loadProxies()]);
-    } catch (err) { setError(err.message || t('errors.moveProxies')); }
-  }
-
   // Auto-categorize proxies into Country/State/City groups from their verified geo
   // (set by the proxy health check). Run Test All first so proxies have a country.
   async function handleAutoGroup() {
@@ -772,24 +802,36 @@ export default function ProxyPoolPage() {
     setError('');
     try {
       await softglazeApi.proxies.delete(proxy.id);
-      await loadProxies();
+      await Promise.all([loadProxies(), loadGroups()]);
     } catch (err) {
       setError(err.message || t('errors.deleteProxy'));
     }
   }
 
   // REAL stats derived from the proxy list + any check results. verified/failed use
-  // the same health resolution as the filter so card counts match the filtered rows.
+  // the same health resolution as the filter so card counts match the filtered rows,
+  // and the leftover is the never-checked ('unknown') bucket - all three sum to the total.
   const verifiedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'verified').length;
   const failedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'failed').length;
-  const typeCounts = proxies.reduce((acc, p) => {
-    const t = String(p.type || 'OTHER').toUpperCase();
-    acc[t] = (acc[t] || 0) + 1;
-    return acc;
-  }, {});
-  const TYPE_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
-  const typeDonut = Object.entries(typeCounts).map(([label, value], i) => ({ label, value, color: TYPE_COLORS[i % TYPE_COLORS.length] }));
-  if (typeDonut.length === 0) typeDonut.push({ label: t('stats.noProxies'), value: 1, color: 'var(--elevated)' });
+  const uncheckedCount = Math.max(0, proxies.length - verifiedCount - failedCount);
+  const verifiedPct = proxies.length ? Math.round((verifiedCount / proxies.length) * 100) : 0;
+  // Protocol mix: HTTP vs SOCKS (any SOCKS4/5), everything else counted as "other".
+  const httpCount = proxies.filter((p) => String(p.type || '').toUpperCase().startsWith('HTTP')).length;
+  const socksCount = proxies.filter((p) => String(p.type || '').toUpperCase().startsWith('SOCKS')).length;
+  const otherTypeCount = Math.max(0, proxies.length - httpCount - socksCount);
+  // Distinct verified countries (geoBreakdown keys 'Unknown' for un-located proxies) + the leader.
+  const unknownGeo = t('geo.unknown');
+  const locatedCountries = geoBreakdown.filter((g) => g.country && g.country !== unknownGeo);
+  const countriesCovered = locatedCountries.length;
+  const topCountry = locatedCountries[0] || null;
+  // Freshest check across the whole pool (persisted lastCheckedAt), for the "Last check" card.
+  const lastCheckedMs = proxies.reduce((max, p) => {
+    const ts = p.lastCheckedAt ? new Date(p.lastCheckedAt).getTime() : 0;
+    return ts > max ? ts : max;
+  }, 0);
+  const lastCheckedLabel = lastCheckedMs ? timeAgo(lastCheckedMs, t) : null;
+  const filtersActive = view === 'custom' && statusFilter === 'all' && blacklistFilter === 'all' && speedFilter === 'all' && !search.trim();
+  const mutedTrack = 'color-mix(in srgb, var(--muted-foreground) 32%, transparent)';
 
   return (
     <div className="flex flex-col h-full space-y-4 pb-1">
@@ -814,10 +856,10 @@ export default function ProxyPoolPage() {
                   <option value="latency-optimized">{t('rotation.latencyOptimized')}</option>
                 </select>
                 {proxyPolicy === 'failover' && (
-                  <input type="number" min={0} value={policyDetail.failoverMaxLatencyMs} onChange={(e) => applyPolicyParam({ failoverMaxLatencyMs: Math.max(0, Number(e.target.value) || 0) })} title={t('rotation.failoverMaxTooltip')} placeholder={t('rotation.maxMsPlaceholder')} className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                  <NumberInput min={0} fallback={0} value={policyDetail.failoverMaxLatencyMs} onCommit={(n) => applyPolicyParam({ failoverMaxLatencyMs: n })} title={t('rotation.failoverMaxTooltip')} placeholder={t('rotation.maxMsPlaceholder')} className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
                 )}
                 {proxyPolicy === 'latency-optimized' && (
-                  <input type="number" min={1} value={policyDetail.latencyTopN} onChange={(e) => applyPolicyParam({ latencyTopN: Math.max(1, Number(e.target.value) || 1) })} title={t('rotation.topNTooltip')} placeholder={t('rotation.topNPlaceholder')} className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                  <NumberInput min={1} fallback={1} value={policyDetail.latencyTopN} onCommit={(n) => applyPolicyParam({ latencyTopN: n })} title={t('rotation.topNTooltip')} placeholder={t('rotation.topNPlaceholder')} className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
                 )}
               </div>
               <Button variant="secondary" onClick={handleTestAllFast} disabled={testingAll || proxies.length === 0} title={t('actions.testAllTooltip')}>
@@ -891,11 +933,13 @@ export default function ProxyPoolPage() {
         </div>
       )}
 
-      {/* Dual-view tab partition */}
+      {/* Dual-view tab partition. Vendor connectors live on their own page now. */}
+      <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
         {[
           { key: 'custom', label: t('tabs.custom'), icon: Server },
-          { key: 'providers', label: t('tabs.providers'), icon: Boxes }
+          { key: 'history', label: t('tabs.history', 'Check history'), icon: History },
+          { key: 'groups', label: t('tabs.groups', 'Groups & countries'), icon: Folder }
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -904,44 +948,123 @@ export default function ProxyPoolPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Icon className="w-4 h-4" /> {label}
-            {key === 'providers' && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 uppercase tracking-wide">{t('tabs.integrated')}</span>}
           </button>
         ))}
       </div>
-
-      {/* STATS ROW - real counts + proxy-type donut (custom view only) */}
-      {view === 'custom' && (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <MiniStat icon={Globe} label={t('stats.totalProxies')} value={proxies.length} color="#8b5cf6" onClick={() => setStatusFilter('all')} active={statusFilter === 'all'} />
-          <MiniStat icon={Wifi} label={t('stats.proxyTypes')} value={Object.keys(typeCounts).length} color="#3b82f6" />
-          <MiniStat icon={ShieldCheck} label={t('stats.verified')} value={verifiedCount} color="#10b981" onClick={() => toggleStatusFilter('verified')} active={statusFilter === 'verified'} />
-          <MiniStat icon={ShieldOff} label={t('stats.nonVerified')} value={failedCount} color="#ef4444" onClick={() => toggleStatusFilter('failed')} active={statusFilter === 'failed'} />
-        </div>
-        <div className="rounded-xl bg-card border border-border p-3 flex items-center gap-3">
-          <Donut data={typeDonut} size={84} thickness={13} centerLabel={proxies.length} centerSub={t('stats.total')} />
-          <div className="flex-1 min-w-0"><Legend data={typeDonut} /></div>
-        </div>
+      <Link to="/proxy-providers" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold border border-border bg-card text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors">
+        <Boxes className="w-4 h-4" /> {t('tabs.providers')} <ArrowUpRight className="w-3.5 h-3.5" />
+      </Link>
       </div>
-      )}
+
+      {/* STATS ROW - real, accurate pool stats (shown on every view as a pool overview).
+          Clickable cards set the matching table filter and jump to the Custom Proxies view;
+          Countries / Last check open the Groups & countries view where that detail lives.
+          Token colours only, flat 1px borders, inline-SVG split bars - no gradients/glow. */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+        {/* Total + verified/failed/unchecked split */}
+        <MiniStat
+          icon={Boxes}
+          label={t('stats.totalProxies')}
+          value={proxies.length}
+          accent="var(--chart-1)"
+          active={filtersActive}
+          title={t('stats.totalTip')}
+          onClick={() => { setStatusFilter('all'); setBlacklistFilter('all'); setSpeedFilter('all'); setSearch(''); setView('custom'); }}
+          sub={(
+            <div className="space-y-1.5">
+              <SegBar segments={[
+                { value: verifiedCount, color: 'var(--success)' },
+                { value: failedCount, color: 'var(--destructive)' },
+                { value: uncheckedCount, color: mutedTrack }
+              ]} />
+              <span className="block truncate">{t('stats.splitSub', { verified: verifiedCount, unchecked: uncheckedCount })}</span>
+            </div>
+          )}
+        />
+        {/* Verified */}
+        <MiniStat
+          icon={ShieldCheck}
+          label={t('stats.verified')}
+          value={verifiedCount}
+          accent="var(--success)"
+          active={view === 'custom' && statusFilter === 'verified'}
+          title={t('stats.verifiedTip')}
+          onClick={() => { toggleStatusFilter('verified'); setView('custom'); }}
+          sub={(
+            <div className="space-y-1.5">
+              <SegBar segments={[
+                { value: verifiedCount, color: 'var(--success)' },
+                { value: Math.max(0, proxies.length - verifiedCount), color: mutedTrack }
+              ]} />
+              <span className="block truncate">{view === 'custom' && statusFilter === 'verified' ? t('stats.filtering') : t('stats.pctOfPool', { pct: verifiedPct })}</span>
+            </div>
+          )}
+        />
+        {/* Failed */}
+        <MiniStat
+          icon={ShieldOff}
+          label={t('stats.failed')}
+          value={failedCount}
+          accent="var(--destructive)"
+          active={view === 'custom' && statusFilter === 'failed'}
+          title={t('stats.failedTip')}
+          onClick={() => { toggleStatusFilter('failed'); setView('custom'); }}
+          sub={<span className="block truncate">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
+        />
+        {/* Protocol mix (HTTP vs SOCKS) - informational, no type filter exists */}
+        <MiniStat
+          icon={Wifi}
+          label={t('stats.protocols')}
+          value={<span>{httpCount}<span className="text-muted-foreground"> / {socksCount}</span></span>}
+          accent="var(--chart-4)"
+          title={t('stats.protocolsTip')}
+          sub={(
+            <div className="space-y-1.5">
+              <SegBar segments={[
+                { value: httpCount, color: 'var(--chart-1)' },
+                { value: socksCount, color: 'var(--chart-4)' },
+                { value: otherTypeCount, color: mutedTrack }
+              ]} />
+              <span className="block truncate">{t('stats.protocolsSub', { http: httpCount, socks: socksCount })}</span>
+            </div>
+          )}
+        />
+        {/* Countries covered - opens the Groups & countries breakdown */}
+        <MiniStat
+          icon={Globe}
+          label={t('stats.countries')}
+          value={countriesCovered}
+          accent="var(--chart-2)"
+          title={t('stats.countriesTip')}
+          onClick={() => setView('groups')}
+          sub={<span className="block truncate">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
+        />
+        {/* Last check + schedule - opens the automatic health-check settings */}
+        <MiniStat
+          icon={Clock}
+          label={t('stats.lastCheck')}
+          value={lastCheckedLabel || '-'}
+          accent="var(--chart-3)"
+          title={t('stats.lastCheckTip')}
+          onClick={() => setView('groups')}
+          sub={<span className="block truncate">{scheduler.enabled ? t('stats.autoEvery', { n: scheduler.minutes }) : t('stats.autoOff')}</span>}
+        />
+      </div>
 
       {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      {view === 'providers' && <ProxyProviders onSynced={loadProxies} />}
 
-      {view === 'custom' && (<>
-      {/* PROXY HISTORY CARDS - each recently-checked proxy's last N results as pass/fail
-          pips, kept for cross-verification. An amber card = "verified before, failed on a
-          later check". Click a card to open the full latency/status history. */}
-      {healthCards.length > 0 && (
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1.5 gap-3 flex-wrap">
-            <button onClick={() => setShowHistoryCards((v) => !v)} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground">
-              <History className="w-3.5 h-3.5" />
-              {t('historyCards.title', 'Recent check history')}
-              <span className="text-[10.5px] font-normal text-muted-foreground/70">({healthCards.length})</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showHistoryCards ? '' : '-rotate-90'}`} />
-            </button>
+
+      {/* CHECK HISTORY sub-page: each recently-checked proxy's last N results as pass/fail
+          pips. An amber card = "verified before, failed on a later check". Click a card for the
+          full latency/status history. */}
+      {view === 'history' && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
+              <History className="w-4 h-4" /> {t('historyCards.title', 'Recent check history')}
+              <span className="text-[11px] font-normal text-muted-foreground">({healthCards.length})</span>
+            </div>
             {healthCards.some((c) => c.regressed) && (
               <span className="inline-flex items-center gap-1 text-[11px] text-amber-400">
                 <AlertTriangle className="w-3 h-3" />
@@ -949,14 +1072,16 @@ export default function ProxyPoolPage() {
               </span>
             )}
           </div>
-          {showHistoryCards && (
-            <div className="flex gap-2.5 overflow-x-auto pb-1.5">
+          {healthCards.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">{t('historyCards.empty', 'No checks yet. Run Check All or Test All on the Proxies page and the results show up here.')}</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
               {healthCards.map((c) => (
                 <button
                   key={c.proxyId}
                   onClick={() => openHistory({ id: c.proxyId, name: c.name, host: c.host, port: c.port })}
                   title={t('historyCards.openDetail', 'Open full history')}
-                  className={`shrink-0 w-[190px] text-left rounded-xl border p-3 bg-card hover:border-primary/60 transition-colors ${c.regressed ? 'border-amber-500/45' : 'border-border'}`}
+                  className={`text-left rounded-xl border p-3 bg-card hover:border-primary/60 transition-colors ${c.regressed ? 'border-amber-500/45' : 'border-border'}`}
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.lastStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'}`} />
@@ -988,153 +1113,155 @@ export default function ProxyPoolPage() {
           )}
         </div>
       )}
-      <div className="mb-2 flex items-center gap-3 flex-wrap">
-        <div className="relative max-w-sm flex-1 min-w-[220px]">
-          <Input
-            icon={Search}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('search.placeholder')}
-          />
-        </div>
-        {/* Blocklist filter - clean vs blacklisted (from the DNSBL check) */}
-        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[12px]">
-          {[
-            { key: 'all', label: t('blacklistFilter.all') },
-            { key: 'clean', label: t('blacklistFilter.clean'), n: blCounts.clean },
-            { key: 'blacklisted', label: t('blacklistFilter.blacklisted'), n: blCounts.listed }
-          ].map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              onClick={() => setBlacklistFilter(o.key)}
-              title={o.key === 'blacklisted' ? t('blacklistFilter.blacklistedTip') : (o.key === 'clean' ? t('blacklistFilter.cleanTip') : undefined)}
-              className={`inline-flex items-center gap-1 px-2.5 h-7 rounded-md font-medium transition-colors ${blacklistFilter === o.key ? (o.key === 'blacklisted' ? 'bg-amber-500/15 text-amber-400' : o.key === 'clean' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-secondary text-foreground') : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              {o.key === 'blacklisted' && <AlertTriangle className="h-3 w-3" />}{o.label}{typeof o.n === 'number' ? <span className="opacity-60">{o.n}</span> : null}
-            </button>
-          ))}
-        </div>
-        {/* Speed filter - fast vs slow, by measured latency */}
-        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5 text-[12px]">
-          {[
-            { key: 'all', label: t('speedFilter.all'), icon: null },
-            { key: 'fast', label: t('speedFilter.fast'), n: spdCounts.fast, icon: Zap },
-            { key: 'slow', label: t('speedFilter.slow'), n: spdCounts.slow, icon: Turtle }
-          ].map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              onClick={() => setSpeedFilter(o.key)}
-              title={o.key === 'fast' ? t('speedFilter.fastTip') : (o.key === 'slow' ? t('speedFilter.slowTip') : undefined)}
-              className={`inline-flex items-center gap-1 px-2.5 h-7 rounded-md font-medium transition-colors ${speedFilter === o.key ? (o.key === 'fast' ? 'bg-sky-500/15 text-sky-400' : o.key === 'slow' ? 'bg-orange-500/15 text-orange-400' : 'bg-secondary text-foreground') : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              {o.icon && <o.icon className="h-3 w-3" />}{o.label}{typeof o.n === 'number' ? <span className="opacity-60">{o.n}</span> : null}
-            </button>
-          ))}
-        </div>
-        {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || speedFilter !== 'all' || search.trim()) && filteredProxies.length > 0 && (
-          <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
-            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {t('deleteFiltered.button', { scope: statusFilter !== 'all' ? t(`deleteFiltered.scope.${statusFilter}`) : (blacklistFilter !== 'all' ? t(`blacklistFilter.${blacklistFilter}`) : t('deleteFiltered.scope.filtered')), count: filteredProxies.length })}
-          </Button>
-        )}
-      </div>
 
-      {/* CATEGORY / GROUP BAR - filter the pool, manage groups, drag rows here to assign */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button className={chipCls('all')} onClick={() => setActiveGroup('all')}>
-          <Boxes className="w-3.5 h-3.5" /> {t('filters.all')} <span className="opacity-60">{proxies.length}</span>
-        </button>
-        <button className={chipCls('none')} onClick={() => setActiveGroup('none')}>
-          <Folder className="w-3.5 h-3.5" /> {t('filters.ungrouped')} <span className="opacity-60">{proxies.filter((p) => !p.proxyGroupId).length}</span>
-        </button>
-
-        {groups.map((g) => {
-          const active = String(activeGroup) === String(g.id);
-          const over = dragOverKey === `g${g.id}`;
-          return (
-            <div
-              key={g.id}
-              onClick={() => setActiveGroup(g.id)}
-              onDragOver={(e) => { e.preventDefault(); setDragOverKey(`g${g.id}`); }}
-              onDragLeave={() => setDragOverKey((k) => (k === `g${g.id}` ? null : k))}
-              onDrop={(e) => onGroupDrop(e, g.id)}
-              title={t('groups.chipTooltip')}
-              className={`group/chip inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${over ? 'ring-2 ring-primary border-primary' : active ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} />
-              {g.name} <span className="opacity-60">{g.proxyCount ?? 0}</span>
-              <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
-              <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title={t('groups.deleteGroup')}><X className="w-3 h-3" /></button>
+      {/* GROUPS & COUNTRIES sub-page: manage groups (country groups from Auto-group included),
+          the per-country breakdown, the per-provider breakdown and the auto-check schedule.
+          Clicking a group or provider opens the Proxies page filtered to it. */}
+      {view === 'groups' && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+              <span className="text-sm font-semibold text-foreground">{t('groupsPage.groupsTitle', 'Groups and countries')}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <select value={autoGroupLevel} onChange={(e) => setAutoGroupLevel(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('autoGroup.granularityTooltip')}>
+                  <option value="country">{t('autoGroup.country')}</option>
+                  <option value="state">{t('autoGroup.state')}</option>
+                  <option value="city">{t('autoGroup.city')}</option>
+                </select>
+                <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0} title={t('autoGroup.buttonTooltip')} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
+                  {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} {t('autoGroup.button')}
+                </button>
+                <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors" onClick={() => setGroupModal({ name: '', color: GROUP_COLORS[groups.length % GROUP_COLORS.length] })}>
+                  <FolderPlus className="w-3.5 h-3.5" /> {t('groups.newGroup')}
+                </button>
+              </div>
             </div>
-          );
-        })}
+            {autoGroupMsg && <div className="mb-2 text-[11px] text-emerald-400">{autoGroupMsg}</div>}
+            <div className="flex flex-wrap items-center gap-2">
+              <button className={chipCls('all')} onClick={() => { setActiveGroup('all'); setView('custom'); }}>
+                <Boxes className="w-3.5 h-3.5" /> {t('filters.all')} <span className="opacity-60">{proxies.length}</span>
+              </button>
+              <button className={chipCls('none')} onClick={() => { setActiveGroup('none'); setView('custom'); }}>
+                <Folder className="w-3.5 h-3.5" /> {t('filters.ungrouped')} <span className="opacity-60">{proxies.filter((p) => !p.proxyGroupId).length}</span>
+              </button>
+              {groups.map((g) => (
+                <div
+                  key={g.id}
+                  onClick={() => { setActiveGroup(g.id); setView('custom'); }}
+                  title={t('groupsPage.openGroup', 'Show these proxies')}
+                  className={`group/chip inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(g.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} />
+                  {g.name} <span className="opacity-60">{g.proxyCount ?? 0}</span>
+                  <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title={t('groups.deleteGroup')}><X className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors" onClick={() => setGroupModal({ name: '', color: GROUP_COLORS[groups.length % GROUP_COLORS.length] })}>
-          <FolderPlus className="w-3.5 h-3.5" /> {t('groups.newGroup')}
-        </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-foreground">{t('geo.byCountry')}</span>
+                <span className="text-[11px] text-muted-foreground">{t('geo.summary', { countries: geoBreakdown.length, proxies: proxies.length })}</span>
+              </div>
+              {geoBreakdown.length === 0 ? (
+                <div className="text-[12px] text-muted-foreground">{t('groupsPage.noGeo', 'Run Check All on the Proxies page to detect each proxy\'s country.')}</div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {geoBreakdown.slice(0, 15).map((g) => (
+                    <div key={g.country} className="flex items-center gap-2">
+                      <span className="w-28 shrink-0 text-[12px] text-muted-foreground truncate" title={g.country}>{g.country}</span>
+                      <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${proxies.length ? Math.round((g.count / proxies.length) * 100) : 0}%` }} />
+                      </div>
+                      <span className="w-10 text-right text-[12px] text-foreground tabular-nums">{g.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-        {/* Auto-group by verified geo (run Test All first to populate country/state/city) */}
-        <span className="w-px h-5 bg-border mx-1" />
-        <select value={autoGroupLevel} onChange={(e) => setAutoGroupLevel(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('autoGroup.granularityTooltip')}>
-          <option value="country">{t('autoGroup.country')}</option>
-          <option value="state">{t('autoGroup.state')}</option>
-          <option value="city">{t('autoGroup.city')}</option>
+            <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-4">
+              <div>
+                <div className="text-sm font-semibold text-foreground mb-3">{t('filters.byProvider')}</div>
+                {Object.keys(providerCounts).length === 0 ? (
+                  <div className="text-[12px] text-muted-foreground">{t('groupsPage.noProviders', 'No provider proxies yet. Pull some from Proxy Providers.')}</div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(providerCounts).map(([prov, cnt]) => (
+                      <button key={prov} className={chipCls(`provider:${prov}`)} onClick={() => { setActiveGroup(`provider:${prov}`); setView('custom'); }}>
+                        <Tag className="w-3 h-3" /> {PROVIDER_LABELS[prov] || prov} <span className="opacity-60">{cnt}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="pt-3 border-t border-border">
+                <div className="text-sm font-semibold text-foreground mb-2">{t('groupsPage.scheduleTitle', 'Automatic health checks')}</div>
+                <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title={t('scheduler.tooltip')}>
+                  <input type="checkbox" checked={scheduler.enabled} onChange={(e) => applyScheduler({ ...scheduler, enabled: e.target.checked })} className="accent-primary" />
+                  <Clock className="w-3.5 h-3.5" /> {t('scheduler.autoCheckEvery')}
+                  <NumberInput min={1} fallback={30} value={scheduler.minutes} onCommit={(n) => applyScheduler({ ...scheduler, minutes: n })} className=
+"h-7 w-14 rounded border border-border bg-card px-1.5 text-[12px] text-foreground" /> {t('scheduler.min')}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === 'custom' && (<>
+      {/* FILTER BAR - one row of dropdowns. Groups, history and the country breakdown live on
+          their own sub-pages; a filter chosen there lands here. */}
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
+        <div className="relative max-w-sm flex-1 min-w-[220px]">
+          <Input icon={Search} value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('search.placeholder')} />
+        </div>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('filterBar.statusTip', 'Check status')}>
+          <option value="all">{t('filterBar.statusAll', 'Any status')}</option>
+          <option value="verified">{t('stats.verified')} ({verifiedCount})</option>
+          <option value="failed">{t('stats.nonVerified')} ({failedCount})</option>
         </select>
-        <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0} title={t('autoGroup.buttonTooltip')} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
-          {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} {t('autoGroup.button')}
-        </button>
-        {autoGroupMsg && <span className="text-[11px] text-emerald-400">{autoGroupMsg}</span>}
-
-        <span className="w-px h-5 bg-border mx-1" />
+        <select value={blacklistFilter} onChange={(e) => setBlacklistFilter(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('blacklistFilter.cleanTip')}>
+          <option value="all">{t('filterBar.blocklistAll', 'Any blocklist')}</option>
+          <option value="clean">{t('blacklistFilter.clean')} ({blCounts.clean})</option>
+          <option value="blacklisted">{t('blacklistFilter.blacklisted')} ({blCounts.listed})</option>
+        </select>
+        <select value={speedFilter} onChange={(e) => setSpeedFilter(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('speedFilter.fastTip')}>
+          <option value="all">{t('filterBar.speedAll', 'Any speed')}</option>
+          <option value="fast">{t('speedFilter.fast')} ({spdCounts.fast})</option>
+          <option value="slow">{t('speedFilter.slow')} ({spdCounts.slow})</option>
+        </select>
+        <select value={String(activeGroup).startsWith('provider:') ? 'all' : String(activeGroup)} onChange={(e) => setActiveGroup(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground max-w-[220px]" title={t('filterBar.groupTip', 'Group or country')}>
+          <option value="all">{t('filterBar.groupAll', 'All groups')} ({proxies.length})</option>
+          <option value="none">{t('filters.ungrouped')} ({proxies.filter((p) => !p.proxyGroupId).length})</option>
+          {groups.map((g) => <option key={g.id} value={String(g.id)}>{g.name} ({g.proxyCount ?? 0})</option>)}
+        </select>
+        {Object.keys(providerCounts).length > 0 && (
+          <select value={String(activeGroup).startsWith('provider:') ? String(activeGroup) : ''} onChange={(e) => setActiveGroup(e.target.value || 'all')} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground max-w-[200px]" title={t('filters.byProvider')}>
+            <option value="">{t('filterBar.providerAll', 'All providers')}</option>
+            {Object.entries(providerCounts).map(([prov, cnt]) => <option key={prov} value={`provider:${prov}`}>{PROVIDER_LABELS[prov] || prov} ({cnt})</option>)}
+          </select>
+        )}
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('sort.tooltip')}>
           <option value="default">{t('sort.default')}</option>
           <option value="fastest">{t('sort.fastest')}</option>
           <option value="slowest">{t('sort.slowest')}</option>
         </select>
-        <button onClick={() => setShowGeo((v) => !v)} className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${showGeo ? 'border-primary text-primary' : 'border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary'}`} title={t('geo.toggleTooltip')}>
-          <BarChart3 className="w-3.5 h-3.5" /> {t('geo.button')}
-        </button>
-        <span className="w-px h-5 bg-border mx-1" />
-        <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title={t('scheduler.tooltip')}>
-          <input type="checkbox" checked={scheduler.enabled} onChange={(e) => applyScheduler({ ...scheduler, enabled: e.target.checked })} className="accent-primary" />
-          <Clock className="w-3.5 h-3.5" /> {t('scheduler.autoCheckEvery')}
-          <input type="number" min={1} value={scheduler.minutes} onChange={(e) => applyScheduler({ ...scheduler, minutes: Math.max(1, Number(e.target.value) || 30) })} className="h-7 w-14 rounded border border-border bg-card px-1.5 text-[12px] text-foreground" /> {t('scheduler.min')}
-        </label>
-
-        {Object.keys(providerCounts).length > 0 && (
-          <>
-            <span className="w-px h-5 bg-border mx-1" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-dark mr-1">{t('filters.byProvider')}</span>
-            {Object.entries(providerCounts).map(([prov, cnt]) => (
-              <button key={prov} className={chipCls(`provider:${prov}`)} onClick={() => setActiveGroup(`provider:${prov}`)}>
-                <Tag className="w-3 h-3" /> {PROVIDER_LABELS[prov] || prov} <span className="opacity-60">{cnt}</span>
-              </button>
-            ))}
-          </>
+        {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || speedFilter !== 'all' || search.trim()) && (
+          <button type="button" onClick={() => { setStatusFilter('all'); setActiveGroup('all'); setBlacklistFilter('all'); setSpeedFilter('all'); setSearch(''); }} className="h-8 px-2.5 rounded-lg text-[12px] text-muted-foreground hover:text-foreground border border-transparent hover:border-border">
+            {t('filterBar.reset', 'Reset filters')}
+          </button>
+        )}
+        {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || speedFilter !== 'all' || search.trim()) && filteredProxies.length > 0 && (
+          <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
+            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {t('deleteFiltered.button', { scope: deleteFilteredScopeLabel(), count: filteredProxies.length })}
+          </Button>
         )}
       </div>
-
-      {showGeo && geoBreakdown.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-foreground">{t('geo.byCountry')}</span>
-            <span className="text-[11px] text-muted-foreground">{t('geo.summary', { countries: geoBreakdown.length, proxies: proxies.length })}</span>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {geoBreakdown.slice(0, 12).map((g) => (
-              <div key={g.country} className="flex items-center gap-2">
-                <span className="w-28 shrink-0 text-[12px] text-muted-foreground truncate" title={g.country}>{g.country}</span>
-                <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${proxies.length ? Math.round((g.count / proxies.length) * 100) : 0}%` }} />
-                </div>
-                <span className="w-10 text-right text-[12px] text-foreground tabular-nums">{g.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
@@ -1212,7 +1339,7 @@ export default function ProxyPoolPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {pagedProxies.map((proxy) => (
-                    <tr key={proxy.id} draggable onDragStart={(e) => onRowDragStart(e, proxy)} className={`group/row transition-colors cursor-grab active:cursor-grabbing ${selectedIds.has(proxy.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
+                    <tr key={proxy.id} className={`group/row transition-colors ${selectedIds.has(proxy.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
                       <td className="px-5 py-4">
                         <input
                           type="checkbox"

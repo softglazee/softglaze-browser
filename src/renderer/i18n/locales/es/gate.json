@@ -5,7 +5,8 @@
     "go": "Ir"
   },
   "remember": {
-    "label": "Mantener la sesión iniciada en este dispositivo"
+    "label": "Mantener la sesión iniciada en este dispositivo",
+    "unavailable": "Este dispositivo no puede guardar un inicio de sesión de forma segura (el cifrado del sistema no está disponible), así que se te pedirá que inicies sesión de nuevo en el próximo arranque."
   },
   "brand": {
     "tagline": "Anti-Detect",
@@ -43,6 +44,7 @@
     }
   },
   "license": {
+    "machineMismatch": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca.",
     "graceMessage_one": "Tu suscripción ha terminado - queda {{count}} día de gracia. Renueva para mantener el acceso.",
     "graceMessage_other": "Tu suscripción ha terminado - quedan {{count}} días de gracia. Renueva para mantener el acceso.",
     "renew": "Renovar",

@@ -60,23 +60,29 @@ const { CloudSyncEngine, resolveWorkspaceSalt } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
 const secretStore = require('./secretStore');
+const proxySecrets = require('./proxySecrets');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
+const ownerCert = require('./ownerCert');
+const authGate = require('./authGate');
 const { SECRET_MASK, maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword, froxyBasePassword,
-  packetStreamPassword, airproxyRows,
+  packetStreamPassword, packetStreamCountry, airproxyRows,
+  proxmintUsername, proxmintPickProduct, databayUsername,
+  ipfoxyUsername, kookeeyPassword, mangoProxyRows,
   catProxiesResiUsername, catProxiesMobileUsername, catProxiesCreds,
   rapidProxyUsername, NOVADA_ZONES, novadaUsername,
   PROXIESSX_POOLS, proxiesSxSid, proxiesSxUsername, proxiesSxProxyCreds,
   mobileProxySpaceRows, proxySolutionsPage,
   parseProxidizePerProxy, proxidizePerGbUsername,
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
-  LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost
+  LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
+  lumiProxyUsername, ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -356,9 +362,32 @@ function toIpcError(error) {
   };
 }
 
+// audit S7: the sign-in / vault-lock state that authGate.decide() needs. A stale
+// currentMemberId (the member row is gone) counts as signed out. Any DB error fails
+// closed (memberCount Infinity => only the pre-auth channels are served).
+async function ipcAuthState() {
+  const state = { vaultLocked: Boolean(vaultLocked), signedIn: false, memberCount: 0 };
+  if (state.vaultLocked) return state;
+  try {
+    if (currentMemberId != null) {
+      if (permissions.isSuperAdminId(currentMemberId)) { state.signedIn = true; return state; }
+      const row = await getPrisma().member.findUnique({ where: { id: currentMemberId }, select: { id: true } });
+      if (row) { state.signedIn = true; return state; }
+    }
+    state.memberCount = await getPrisma().member.count();
+  } catch (_) { state.memberCount = Infinity; }
+  return state;
+}
+
 function registerHandler(channel, handler) {
   ipcMain.handle(channel, async (event, payload) => {
     try {
+      // audit S7: sign-out and the vault lock are enforced here, in main, for every
+      // channel outside the login/lock/first-run allowlist (see authGate.js).
+      if (!authGate.isPreAuthChannel(channel)) {
+        const denied = authGate.decide(channel, await ipcAuthState());
+        if (denied) return { ok: false, error: { message: denied.message, code: denied.code } };
+      }
       const data = await handler(payload, event);
       return { ok: true, data };
     } catch (error) {
@@ -447,34 +476,94 @@ function sanitizeDataDirName(value) {
 }
 
 // Reject internal / loopback / link-local targets for a main-process outbound
-// request whose URL came from the renderer (audit: SSRF via rotateProxyIp). This
-// is a best-effort string check that blocks the obvious internal hosts; a
-// determined DNS-rebind can still resolve a public name to a private IP, so
-// callers should also keep request timeouts tight.
-function assertPublicHttpUrl(rawUrl, label = 'URL') {
+// request whose URL came from the renderer (audit: SSRF via rotateProxyIp).
+// audit S8 (7 Oct): the old string check missed CGNAT, IPv4-mapped IPv6 and any public
+// NAME that resolves to a private address. The name is now resolved (every address)
+// and each one checked; publicOnlyLookup() repeats the check at connect time so a
+// DNS rebind between the check and the request cannot slip through either.
+function ipv6Hextets(ip) {
+  let s = String(ip).toLowerCase().replace(/%.*$/, '');
+  const v4 = /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+  if (v4) {
+    const n = v4.slice(1).map(Number);
+    s = s.slice(0, v4.index) + ((n[0] << 8) | n[1]).toString(16) + ':' + ((n[2] << 8) | n[3]).toString(16);
+  }
+  const halves = s.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const fill = halves.length === 2 ? 8 - head.length - tail.length : 0;
+  if (fill < 0) return null;
+  const parts = head.concat(new Array(fill).fill('0'), tail).map((h) => parseInt(h || '0', 16));
+  return parts.length === 8 && parts.every((h) => h >= 0 && h <= 0xffff) ? parts : null;
+}
+
+function isInternalIp(ip) {
+  const net = require('node:net');
+  const s = String(ip || '').trim().replace(/^\[|\]$/g, '');
+  if (net.isIPv4(s)) {
+    const [a, b] = s.split('.').map(Number);
+    return a === 0 || a === 10 || a === 127 || a >= 224 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 100 && b >= 64 && b <= 127); // CGNAT 100.64/10
+  }
+  if (!net.isIPv6(s)) return false;
+  const h = ipv6Hextets(s);
+  if (!h) return true; // unparseable - fail closed
+  if (h.every((x) => x === 0)) return true; // ::
+  if (h.slice(0, 7).every((x) => x === 0) && h[7] === 1) return true; // ::1
+  const v4of = (hi, lo) => `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+  // IPv4-mapped ::ffff:a.b.c.d (dotted or hex), IPv4-compatible ::a.b.c.d, NAT64 64:ff9b::/96.
+  if (h.slice(0, 5).every((x) => x === 0) && (h[5] === 0xffff || h[5] === 0)) return isInternalIp(v4of(h[6], h[7]));
+  if (h[0] === 0x64 && h[1] === 0xff9b && h.slice(2, 6).every((x) => x === 0)) return isInternalIp(v4of(h[6], h[7]));
+  if ((h[0] & 0xfe00) === 0xfc00) return true; // unique-local fc00::/7
+  if ((h[0] & 0xffc0) === 0xfe80) return true; // link-local fe80::/10
+  if ((h[0] & 0xffc0) === 0xfec0) return true; // deprecated site-local
+  if ((h[0] & 0xff00) === 0xff00) return true; // multicast
+  return false;
+}
+
+// Synchronous part: URL shape, internal names and IP literals. Used directly where a
+// callback cannot wait (axios beforeRedirect); the connect-time lookup covers names.
+function assertPublicHttpUrlSync(rawUrl, label = 'URL') {
   let u;
   try { u = new URL(String(rawUrl)); } catch (e) { throw new Error(`The ${label} is not a valid URL.`); }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error(`The ${label} must be an http(s) URL.`);
-  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  
-  let isPrivate = false;
-  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.localhost') || host === '::1' || host === '::') {
-    isPrivate = true;
-  } else {
-    // Strictly extract IPv4 octets
-    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-    if (m) {
-      const a = +m[1], b = +m[2];
-      if (a === 0 || a === 10 || a === 127) isPrivate = true;
-      else if (a === 169 && b === 254) isPrivate = true;
-      else if (a === 172 && b >= 16 && b <= 31) isPrivate = true;
-      else if (a === 192 && b === 168) isPrivate = true;
-    } else if (/^(fc|fd|fe80)/.test(host)) {
-      isPrivate = true; // Link-local IPv6
-    }
-  }
-
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  const isPrivate = host === 'localhost' || host.endsWith('.local') || host.endsWith('.localhost') ||
+    host.endsWith('.internal') || isInternalIp(host);
   if (isPrivate) throw new Error(`The ${label} may not point at an internal or loopback address.`);
+  return host;
+}
+
+// Full check: also resolves a host name and rejects it if ANY address is internal.
+async function assertPublicHttpUrl(rawUrl, label = 'URL') {
+  const host = assertPublicHttpUrlSync(rawUrl, label);
+  if (require('node:net').isIP(host)) return;
+  let addrs;
+  try { addrs = await require('node:dns').promises.lookup(host, { all: true, verbatim: true }); }
+  catch (e) { throw new Error(`The ${label} host could not be resolved.`); }
+  if (!addrs.length || addrs.some((a) => isInternalIp(a.address))) {
+    throw new Error(`The ${label} may not point at an internal or loopback address.`);
+  }
+}
+
+// dns.lookup drop-in for outbound requests (axios `lookup`): refuses to connect to an
+// internal address, on the first request and on every redirect hop.
+function publicOnlyLookup(hostname, options, cb) {
+  if (typeof options === 'function') { cb = options; options = {}; }
+  require('node:dns').lookup(hostname, { ...(options || {}), all: true }, (err, addrs) => {
+    if (err) return cb(err);
+    if (!addrs.length || addrs.some((a) => isInternalIp(a.address))) {
+      const e = new Error(`Refusing to connect to an internal address for ${hostname}.`);
+      e.code = 'ESSRF';
+      return cb(e);
+    }
+    if (options && options.all) return cb(null, addrs);
+    return cb(null, addrs[0].address, addrs[0].family);
+  });
 }
 
 function buildProxyInfoString(proxy) {
@@ -565,7 +654,7 @@ async function rotateProxyIp(payload) {
   if (!rotationUrl && isDataImpulseSticky(proxy)) return rotateDataImpulseSticky(proxy);
   if (!rotationUrl) throw new Error('No IP rotation link is configured for this proxy.');
   if (!/^https?:\/\//i.test(rotationUrl)) throw new Error('The rotation link must be an http(s) URL.');
-  assertPublicHttpUrl(rotationUrl, 'rotation link');
+  await assertPublicHttpUrl(rotationUrl, 'rotation link');
 
   const axios = require('axios');
   const startedAt = Date.now();
@@ -574,6 +663,8 @@ async function rotateProxyIp(payload) {
     res = await axios.get(rotationUrl, {
       timeout: 20000,
       maxRedirects: 3,
+      // Connect-time check of the RESOLVED address (DNS rebind, names pointing inward).
+      lookup: publicOnlyLookup,
       // audit SSRF: the initial-URL guard alone let a 302 Location:
       // http://169.254.169.254/... (cloud metadata) or a LAN/loopback service be
       // chased and its body returned. Re-run the public-URL guard on EVERY hop.
@@ -581,7 +672,7 @@ async function rotateProxyIp(payload) {
         const proto = options.protocol || 'https:';
         const hostPart = options.hostname || options.host || '';
         const port = (options.port && !String(hostPart).includes(':')) ? `:${options.port}` : '';
-        assertPublicHttpUrl(`${proto}//${hostPart}${port}${options.path || ''}`, 'rotation redirect');
+        assertPublicHttpUrlSync(`${proto}//${hostPart}${port}${options.path || ''}`, 'rotation redirect');
       },
       validateStatus: () => true,
       headers: { 'User-Agent': 'Softglaze/RotationBot' }
@@ -1269,12 +1360,13 @@ async function batchAddProxies(payload) {
 const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
   lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
-  luna: 'Luna Proxy', ipburger: 'IP Burger', tisocks: 'TiSocks', shopsocks5: 'ShopSocks5',
+  ipburger: 'IP Burger', shopsocks5: 'ShopSocks5',
   apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
   froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', packetstream: 'PacketStream',
   airproxy: 'Airproxy', catproxies: 'CatProxies', rapidproxy: 'RapidProxy', novada: 'NOVADA',
-  proxiessx: 'Proxies.sx', mobileproxyspace: 'MobileProxy.Space', proxysolutions: 'Proxy-Solutions'
+  proxiessx: 'Proxies.sx', mobileproxyspace: 'MobileProxy.Space', proxysolutions: 'Proxy-Solutions',
+  proxmint: 'Proxmint', databay: 'Databay'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -1360,9 +1452,13 @@ async function fetchBrightDataPool({ token, username, password, zone }) {
   const ips = String(text).split(/\r?\n/).map((s) => s.trim()).filter((ip) => /^\d{1,3}(\.\d{1,3}){3}$/.test(ip));
   if (!ips.length) throw new Error('Bright Data returned no routable IPs for this zone (check the token has access to it).');
 
-  const userBase = baseUser || `brd-customer-zone-${z}`;
+  // A pinned IP needs the full brd-customer-<id>-zone-<zone> login; without the customer id
+  // every row would be refused, so stop here instead of storing dead proxies.
+  if (!/^brd-customer-[^-]+-zone-/.test(baseUser || '')) throw new Error('Bright Data: enter the proxy username from the zone (brd-customer-<id>-zone-<name>) as well as the API token.');
+  const userBase = baseUser;
+  // Ports 22225 and 33335 were retired on 25 Sep 2026 (docs.brightdata.com FAQ); 44445 is current.
   return ips.slice(0, 200).map((ip) => ({
-    type: 'HTTP', host: 'brd.superproxy.io', port: 22225,
+    type: 'HTTP', host: 'brd.superproxy.io', port: 44445,
     username: `${userBase}-ip-${ip}`, password: String(password || ''),
     label: `Bright Data • ${z} • ${ip}`
   }));
@@ -2087,7 +2183,7 @@ async function psGeoDatabase(key) {
       const zipPath = path.join(dir, 'geo.zip');
       await fs.writeFile(zipPath, buf);
       const outDir = path.join(dir, 'out');
-      await extractZip(zipPath, { dir: outDir }); // extract-zip needs an absolute dir
+      await extractZip(zipPath, { dir: outDir, onEntry: (entry) => require('./extractArchive').assertSafeZipEntry(entry, outDir) }); // extract-zip needs an absolute dir
       const files = (await fs.readdir(outDir, { recursive: true })).map(String).filter((f) => f.toLowerCase().endsWith('.json'));
       if (!files.length) throw new Error('Proxy-Seller location list: the download held no JSON file.');
       data = JSON.parse(await fs.readFile(path.join(outDir, files[0]), 'utf8'));
@@ -2417,7 +2513,7 @@ async function fetchFroxyPool({ username, password, country, state, city, count,
     return 'Residential';
   })();
   const cc = normCountryCode(country);
-  const pw = froxyPassword(base, { country: cc, region: state, city });
+  const pw = froxyPassword(base, { country: cc, region: state, city, poolType });
   // One row per port: each port 9000-9199 is a separate session (its own exit IP).
   const n = clampPoolCount(count, 1, 200);
   const rows = [];
@@ -2426,7 +2522,8 @@ async function fetchFroxyPool({ username, password, country, state, city, count,
       type: socks ? 'SOCKS5' : 'HTTP',
       host: FROXY_GATEWAY.host, port: FROXY_GATEWAY.port + i, username: login, password: pw,
       label: `Froxy • ${kindLabel} • ${cc || 'Any country'} • port ${FROXY_GATEWAY.port + i}`,
-      country: cc || null
+      country: cc || null,
+      dedupeOnPassword: true // country and pool type ride in the password
     });
   }
   return rows;
@@ -2449,6 +2546,8 @@ async function fetchPacketStreamPool({ username, password, country, session, cou
   const host = PACKETSTREAM_GATEWAY.host;
   const port = socks ? PACKETSTREAM_GATEWAY.socks : PACKETSTREAM_GATEWAY.http;
   const cc = normCountryCode(country);
+  // A country PacketStream does not list would be dropped from the password and exit anywhere.
+  if (cc && !packetStreamCountry(cc)) throw new Error(`PacketStream has no exits in ${cc}. Pick another country, or Any.`);
   const where = cc || 'Random';
   // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
   // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
@@ -2488,7 +2587,15 @@ async function fetchPacketStreamPool({ username, password, country, session, cou
 // never persisted in a stored rotation URL. Confirmed against a live account 2026-09-27.
 const AIRPROXY_API = 'https://airproxy.io/api/proxy';
 
-async function fetchAirproxyPool({ token }) {
+// List vendors import what the account already owns, so "How many" caps that list instead of
+// minting more. Blank (or 0) keeps everything, which is what these pulls did before.
+function limitListRows(rows, count) {
+  const raw = String(count == null ? '' : count).trim();
+  if (!raw || !/^\d+$/.test(raw) || Number(raw) <= 0) return rows;
+  return rows.slice(0, clampPoolCount(raw, rows.length, 500));
+}
+
+async function fetchAirproxyPool({ token, count }) {
   const key = String(token || '').trim();
   if (!key || /\s/.test(key)) throw new Error('Airproxy: enter your API key (dashboard, API section).');
   let text;
@@ -2501,7 +2608,7 @@ async function fetchAirproxyPool({ token }) {
   }
   const rows = airproxyRows(text);
   if (!rows.length) throw new Error('Airproxy: no active proxies on this account. Confirm a proxy is assigned and the API key is correct.');
-  return rows;
+  return limitListRows(rows, count);
 }
 
 // --- CatProxies (Standard Residential + Rotating Mobile) --------------------------------
@@ -2512,7 +2619,9 @@ async function fetchAirproxyPool({ token }) {
 // offered yet. Datacenter + Static ISP products are a separate follow-up.
 const CATPROXIES_API = 'https://catproxies.com/api/v1/user';
 const CATPROXIES_PRODUCTS = Object.freeze({
-  residential: { code: 'v2resi', host: 'resi-us.catproxies.com', http: 9000, socks: 11000, mobile: false, kind: 'Residential' },
+  // Residential splits rotating (9000/11000) and sticky (10000/12000) port ranges; the gateway
+  // rejects a -session- username on the rotating range (catproxies.com/docs/api).
+  residential: { code: 'v2resi', host: 'resi-us.catproxies.com', http: 9000, socks: 11000, stickyHttp: 10000, stickySocks: 12000, mobile: false, kind: 'Residential' },
   mobile: { code: 'rotatingmobile', host: 'mobile-us.catproxies.com', http: 5000, socks: 5000, mobile: true, kind: 'Mobile' }
 });
 
@@ -2536,7 +2645,8 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   if (!username || !password) throw new Error('CatProxies: that plan returned no proxy credentials. Confirm the Plan ID matches the chosen product and the plan is active.');
   if (bandwidthLeft === 0) throw new Error('CatProxies: that plan has no bandwidth left, so its proxies would fail on first use.');
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
-  const type = socks && !product.mobile ? 'SOCKS5' : 'HTTP'; // mobile gateway is HTTP only
+  if (socks && product.mobile) throw new Error('CatProxies: Rotating Mobile is HTTP only. Switch Protocol to HTTP.');
+  const type = socks ? 'SOCKS5' : 'HTTP';
   const port = socks && !product.mobile ? product.socks : product.http;
   const cc = normCountryCode(country);
   const where = cc || 'Worldwide';
@@ -2553,15 +2663,16 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
     return [{ type, host: product.host, port, username: user, password, label: `CatProxies • ${product.kind} • ${where} • rotating`, country: cc || null, dedupeOnPassword: true }];
   }
   const n = clampPoolCount(count, 1, 100);
+  const stickyPort = product.mobile ? port : (socks ? product.stickySocks : product.stickyHttp);
   const rows = [];
   const seen = new Set();
   for (let i = 0; i < n; i++) {
     const sid = n > 1 ? `${fixed}${i + 1}` : fixed;
     const user = buildUser(sid);
-    const dkey = `${product.host}:${port}:${user}`;
+    const dkey = `${product.host}:${stickyPort}:${user}`;
     if (seen.has(dkey)) continue;
     seen.add(dkey);
-    rows.push({ type, host: product.host, port, username: user, password, label: `CatProxies • ${product.kind} • ${where} • ${sid}`, country: cc || null, dedupeOnPassword: true });
+    rows.push({ type, host: product.host, port: stickyPort, username: user, password, label: `CatProxies • ${product.kind} • ${where} • ${sid}`, country: cc || null, dedupeOnPassword: true });
   }
   if (!rows.length) throw new Error('CatProxies: could not build any proxies.');
   return rows;
@@ -2700,7 +2811,7 @@ async function fetchProxiesSxPool({ token, poolType, country, session, count }) 
 // ~5 s, so a quick second pull gets a clear "wait" message instead of a generic failure.
 const MOBILEPROXYSPACE_API = 'https://mobileproxy.space/api.html';
 
-async function fetchMobileProxySpacePool({ token, poolType }) {
+async function fetchMobileProxySpacePool({ token, poolType, count }) {
   const key = String(token || '').trim();
   if (!key || /\s/.test(key)) throw new Error('MobileProxy.Space: enter your API token (personal account → API).');
   let text;
@@ -2720,7 +2831,7 @@ async function fetchMobileProxySpacePool({ token, poolType }) {
     throw new Error(`MobileProxy.Space: ${error.slice(0, 160)}`);
   }
   if (!rows.length) throw new Error('MobileProxy.Space: no active proxies on this account yet. Buy or activate one, then pull again.');
-  return rows;
+  return limitListRows(rows, count);
 }
 
 // --- Proxy-Solutions (anti-detect integration endpoint) ----------------------------------
@@ -2729,9 +2840,9 @@ async function fetchMobileProxySpacePool({ token, poolType }) {
 // is read (capped) so large accounts come through whole; expired proxies are skipped.
 const PROXYSOLUTIONS_API = 'https://proxy-solutions.net/api/proxies';
 
-async function fetchProxySolutionsPool({ token, poolType }) {
+async function fetchProxySolutionsPool({ token, poolType, country, count }) {
   const key = String(token || '').trim();
-  if (!key || !/^[A-Za-z0-9_-]{6,200}$/.test(key)) throw new Error('Proxy-Solutions: enter the provider key they issued for your account.');
+  if (!key || !/^[A-Za-z0-9_-]{6,200}$/.test(key)) throw new Error('Proxy-Solutions: paste the Integration token from the API for developers page (not the API key).');
   const proto = String(poolType || '').toLowerCase() === 'socks5' ? 'socks' : 'http';
   const rows = [];
   const seen = new Set();
@@ -2742,7 +2853,7 @@ async function fetchProxySolutionsPool({ token, poolType }) {
       text = await httpRequestText(`${PROXYSOLUTIONS_API}/${encodeURIComponent(key)}?format=object&proto=${proto}&page=${page}&per_page=200`, { headers: { Accept: 'application/json' } });
     } catch (error) {
       const status = error && error.status;
-      if (status === 401 || status === 403 || status === 404) throw new Error('Proxy-Solutions did not accept that provider key. Check it with Proxy-Solutions support.');
+      if (status === 401 || status === 403 || status === 404) throw new Error('Proxy-Solutions did not accept that key. Use the Integration token from the API for developers page, not the API key above it.');
       throw new Error('Proxy-Solutions: could not read your proxies. Check your connection and try again.');
     }
     const res = proxySolutionsPage(text);
@@ -2755,6 +2866,294 @@ async function fetchProxySolutionsPool({ token, poolType }) {
     }
   }
   if (!rows.length) throw new Error('Proxy-Solutions: no active proxies on this account.');
+  const cc = normCountryCode(country);
+  const picked = cc ? rows.filter((r) => r.country === cc) : rows;
+  if (!picked.length) {
+    const have = [...new Set(rows.map((r) => r.country).filter(Boolean))].join(', ');
+    throw new Error(`Proxy-Solutions: none of your proxies are in ${cc}.${have ? ` Your account has: ${have}.` : ''}`);
+  }
+  return limitListRows(picked, count);
+}
+
+// --- Proxmint (pay-as-you-go residential / premium / mobile / datacenter) ----------------
+// GET https://proxmint.com/api/v1/account with the customer's read-only pmk_ key returns each
+// product's gateway and proxy login (proxmintPickProduct). Rows are minted on that gateway
+// with the targeting in the username (proxmintUsername), verified live 2026-10-07. A pmk_ key
+// cannot buy or change anything, so storing it carries no spending risk.
+const PROXMINT_API = 'https://proxmint.com/api/v1';
+
+async function fetchProxmintPool({ token, poolType, country, state, city, session, life, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!/^pmk_[A-Za-z0-9_-]{8,200}$/.test(key)) throw new Error('Proxmint: paste your API key (Settings, API keys). It starts with pmk_.');
+  let json;
+  try {
+    const text = await httpRequestText(`${PROXMINT_API}/account`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json', 'User-Agent': 'SoftGlaze-Browser' } });
+    json = JSON.parse(text);
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401) throw new Error('Proxmint rejected the API key. Create a new one under Settings, API keys.');
+    if (status === 429) throw new Error('Proxmint: too many requests (60 a minute). Wait a moment and pull again.');
+    throw new Error('Proxmint: could not read the account. Check your connection and try again.');
+  }
+  const prod = proxmintPickProduct(json, poolType);
+  if (!prod.host || !prod.username || !prod.password) throw new Error('Proxmint: the account returned no proxy login for that product.');
+  if (prod.remainingBytes === 0) throw new Error(`Proxmint: the ${prod.name} product has no bandwidth left, so its proxies would fail on first use.`);
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const port = socks ? prod.socksPort : prod.httpPort;
+  if (!port) throw new Error(`Proxmint: no ${socks ? 'SOCKS5' : 'HTTP'} port on the ${prod.name} product.`);
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: prod.host, port, password: prod.password, session, count,
+    buildUser: (sid) => proxmintUsername(prod.username, { country: cc, state, city, session: sid, ttlMin: life }),
+    label: `Proxmint • ${prod.name} • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('Proxmint: could not build any proxies.');
+  return rows;
+}
+
+// --- LumiProxy (rotating residential, gateway-minted) -------------------------------------
+// Account login + password from the dashboard (Get Proxies, User & Pass Auth); targeting and
+// the sticky session ride in the username (lumiProxyUsername). Default gateway as.lumiproxy.com
+// :5888 (HTTP and SOCKS5 share the port); country/region nodes like us./eu.lumiproxy.com are
+// reachable through the gateway override.
+const LUMIPROXY_GATEWAY = Object.freeze({ host: 'as.lumiproxy.com', port: 5888 });
+
+async function fetchLumiProxyPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
+  const base = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!base) throw new Error('LumiProxy: enter the proxy username from the dashboard (Get Proxies, User & Pass Auth), e.g. lumi-xxxxxxxx.');
+  if (!pw) throw new Error('LumiProxy: enter the proxy password from the dashboard.');
+  const gw = gatewayOverride(host, port, LUMIPROXY_GATEWAY, 'LumiProxy');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => lumiProxyUsername(base, { country: cc, state, city, session: sid, lifeMin: life }),
+    label: `LumiProxy • Residential • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('LumiProxy: could not build any proxies.');
+  return rows;
+}
+
+// --- IP Burger (rotating residential, gateway-minted) -------------------------------------
+// The proxy user (customer-<id>) + password come from the dashboard, Proxy Users; the country
+// (or one narrowing city/state token) and the sticky session ride in the username
+// (ipBurgerUsername). Gateway residential.ipb.cloud:7777, HTTP only (IPBurger does not offer
+// SOCKS5 on the residential network); res./resi3.ipb.cloud are reachable through the override.
+const IPBURGER_GATEWAY = Object.freeze({ host: 'residential.ipb.cloud', port: 7777 });
+
+async function fetchIpBurgerPool({ username, password, country, state, city, session, life, count, host, port }) {
+  const base = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!base) throw new Error('IP Burger: enter the proxy username from the dashboard (Proxy Users); it starts with customer-.');
+  if (!pw) throw new Error('IP Burger: enter the proxy user password from the dashboard (not your account login).');
+  const gw = gatewayOverride(host, port, IPBURGER_GATEWAY, 'IP Burger');
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => ipBurgerUsername(base, { country: cc, state, city, session: sid, sesstimeMin: life }),
+    label: `IP Burger • Residential • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('IP Burger: could not build any proxies.');
+  return rows;
+}
+
+// --- Proxy302 (dynamic residential, real Open API) ----------------------------------------
+// Sign in with the API sub-account key (name + password from the Proxy302 backend) to get a
+// Bearer-style token, map the chosen country to its numeric id, then ask the dynamic-traffic
+// endpoint for one ready proxy at a time (proxy.proxy302.com:2222). See the helper header in
+// proxyVendorUtils.js for the exact endpoints. Each call yields a distinct session credential,
+// so `count` calls build `count` proxies; a run of duplicates stops the loop early.
+const PROXY302_API = 'https://open.proxy302.com/open_api/v3';
+
+async function fetchProxy302Pool({ username, password, country, count, proxyType }) {
+  const keyName = String(username || '').trim();
+  const keyPass = password != null ? String(password) : '';
+  if (!keyName) throw new Error('Proxy302: enter the API key name from the Proxy302 backend (API, not your login email).');
+  if (!keyPass) throw new Error('Proxy302: enter the API key password from the Proxy302 backend.');
+  let token;
+  try {
+    const text = await httpRequestText(`${PROXY302_API}/user/users/token?username=${encodeURIComponent(keyName)}&password=${encodeURIComponent(keyPass)}`, { headers: { Accept: 'application/json' } });
+    token = proxy302Token(text);
+  } catch (error) {
+    if (error && error.status === 401) throw new Error('Proxy302 rejected the API key. Generate a sub-account key in the backend and paste its name and password.');
+    throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: could not sign in to the API. Check your connection and the key.');
+  }
+  const cc = normCountryCode(country);
+  let countryId = 0;
+  if (cc) {
+    try {
+      const text = await httpRequestText(`${PROXY302_API}/proxy/area/country`, { headers: { Authorization: token, Accept: 'application/json' } });
+      countryId = proxy302CountryId(text, cc);
+    } catch (error) {
+      throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: could not read the country list to resolve the location.');
+    }
+    if (countryId == null) throw new Error(`Proxy302 does not list ${cc} in its country database. Pick another country, or leave it on Any.`);
+  }
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const proto = socks ? 'socks5' : 'http';
+  const n = clampPoolCount(count, 5, 50);
+  const url = `${PROXY302_API}/proxy/api/proxy/dynamic/traffic?s=1&protocol=${proto}&country_id=${countryId}&state_id=0&city_id=0`;
+  const rows = [];
+  const seen = new Set();
+  let dupes = 0;
+  for (let i = 0; i < n && dupes < 3; i += 1) {
+    let text;
+    try {
+      text = await httpRequestText(url, { method: 'POST', headers: { Authorization: token, Accept: 'application/json' } });
+    } catch (error) {
+      if (!rows.length) throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: the proxy request failed. Check the key has API access and traffic left.');
+      break; // keep the proxies already built
+    }
+    let row;
+    try { row = proxy302Row(text, { socks, country: cc }); } catch (error) {
+      if (!rows.length) throw error;
+      break;
+    }
+    if (!row) continue;
+    const key = `${row.host}:${row.port}:${row.username}`;
+    if (seen.has(key)) { dupes += 1; continue; }
+    seen.add(key); rows.push(row); dupes = 0;
+  }
+  if (!rows.length) throw new Error('Proxy302: the API returned no usable proxy. Check the key has traffic and API permission.');
+  return rows;
+}
+
+// --- Databay (residential / mobile / datacenter) -----------------------------------------
+// Gateway-minted: one endpoint, gw.databay.co:8888, carries HTTP and SOCKS5. The proxy user
+// and password come from the Databay dashboard (Proxy Users); zone, location and sticky
+// session ride in the username (databayUsername, docs.databay.com Connection String).
+const DATABAY_GATEWAY = Object.freeze({ host: 'gw.databay.co', port: 8888 });
+
+async function fetchDatabayPool({ username, password, poolType, country, state, city, session, life, count, proxyType, host, port }) {
+  const user = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!user) throw new Error('Databay: enter your proxy user (dashboard, Proxy Users), not the login email.');
+  if (/@/.test(user)) throw new Error('Databay: that looks like the account email. Use the proxy user from the dashboard, Proxy Users.');
+  if (!pw) throw new Error('Databay: enter the proxy user password.');
+  const gw = gatewayOverride(host, port, DATABAY_GATEWAY, 'Databay');
+  const zone = ['residential', 'mobile', 'datacenter'].includes(String(poolType || '').toLowerCase()) ? String(poolType).toLowerCase() : 'residential';
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  const kind = zone.charAt(0).toUpperCase() + zone.slice(1);
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => databayUsername(user, { zone, country: cc, state, city, session: sid, lengthMin: life }),
+    label: `Databay • ${kind} • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('Databay: could not build any proxies.');
+  return rows;
+}
+
+// --- IPFoxy (rotating residential, gateway-minted) ----------------------------------------
+// Account + password from the dashboard; targeting in the username (ipfoxyUsername). Default
+// gateway gate-us.ipfoxy.io:58688 (Americas); gate-sg.ipfoxy.io for Asia-Pacific via override.
+const IPFOXY_GATEWAY = Object.freeze({ host: 'gate-us.ipfoxy.io', port: 58688 });
+
+async function fetchIpfoxyPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
+  const acct = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!acct) throw new Error('IPFoxy: enter the proxy account from the dashboard (Rotating Residential, account).');
+  if (!pw) throw new Error('IPFoxy: enter the proxy account password.');
+  const gw = gatewayOverride(host, port, IPFOXY_GATEWAY, 'IPFoxy');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    buildUser: (sid) => ipfoxyUsername(acct, { country: cc, state, city, session: sid, ttlMin: life }),
+    label: `IPFoxy • Residential • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('IPFoxy: could not build any proxies.');
+  return rows;
+}
+
+// --- kookeey (dynamic residential, gateway-minted) ---------------------------------------
+// Username "<userId>-<policyUser>", geo + session + interval in the password (kookeeyPassword).
+const KOOKEEY_GATEWAY = Object.freeze({ host: 'gate.kookeey.info', port: 1000 });
+
+async function fetchKookeeyPool({ username, password, country, state, city, session, life, count, host, port }) {
+  const user = String(username || '').trim();
+  const pw = password != null ? String(password) : '';
+  if (!/^\d+-\S+$/.test(user)) throw new Error('kookeey: enter the username as <user ID>-<security policy username>, for example 123456789-abcdef.');
+  if (!pw) throw new Error('kookeey: enter the security policy password.');
+  const gw = gatewayOverride(host, port, KOOKEEY_GATEWAY, 'kookeey');
+  const cc = normCountryCode(country);
+  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  const where = cc || 'Global';
+  if (!fixed) {
+    return [{ type: 'HTTP', host: gw.host, port: gw.port, username: user, password: kookeeyPassword(pw, { country: cc, state, city }), label: `kookeey • Residential • ${where} • rotating`, country: cc || null, dedupeOnPassword: true }];
+  }
+  const n = clampPoolCount(count, 1, 100);
+  const rows = [];
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const sidPw = kookeeyPassword(pw, { country: cc, state, city, session: n > 1 ? `${fixed}${i + 1}` : fixed, lifeMin: life });
+    if (seen.has(sidPw)) continue;
+    seen.add(sidPw);
+    rows.push({ type: 'HTTP', host: gw.host, port: gw.port, username: user, password: sidPw, label: `kookeey • Residential • ${where} • sticky ${i + 1}`, country: cc || null, dedupeOnPassword: true });
+  }
+  if (!rows.length) throw new Error('kookeey: could not build any proxies.');
+  return rows;
+}
+
+// --- MangoProxy (API connection-string generator) ----------------------------------------
+// x-api-key + a proxy sub-account: POST /public-api/v1/upstream/json returns ready proxy URLs
+// (mangoProxyRows). Blank sub-account = the first one on the account (GET /accounts).
+const MANGOPROXY_API = 'https://backend.mangoproxy.com/public-api/v1';
+const MANGOPROXY_TRAFFIC = Object.freeze(['residential', 'residential_light', 'datacenter', 'isp']);
+
+async function mangoCall(key, method, pathName, body) {
+  try {
+    const text = await httpRequestText(`${MANGOPROXY_API}${pathName}`, {
+      method,
+      headers: { 'x-api-key': key, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return JSON.parse(text);
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('MangoProxy rejected the API key, or this product is not enabled on the account.');
+    if (status === 429) throw new Error('MangoProxy: too many requests. Wait a moment and pull again.');
+    if (status === 400) throw new Error('MangoProxy: the request was refused (check the sub-account and the chosen location).');
+    throw new Error('MangoProxy: could not reach the API. Check your connection and try again.');
+  }
+}
+
+async function fetchMangoProxyPool({ token, username, poolType, country, state, city, life, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('MangoProxy: paste your API key (dashboard, API).');
+  let sub = String(username || '').trim();
+  if (!sub) {
+    const accounts = await mangoCall(key, 'GET', '/accounts');
+    const first = Array.isArray(accounts) ? accounts.find((a) => a && a.username) : null;
+    if (!first) throw new Error('MangoProxy: this account has no proxy sub-accounts yet. Create one in the dashboard, then pull again.');
+    sub = String(first.username);
+  }
+  const trafficType = MANGOPROXY_TRAFFIC.includes(String(poolType || '').toLowerCase()) ? String(poolType).toLowerCase() : 'residential';
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const n = clampPoolCount(count, 1, 100);
+  const lifeMin = Number.parseInt(String(life), 10);
+  const body = {
+    trafficType,
+    protocols: [socks ? 'socks5' : 'http'],
+    subAccountUsername: sub,
+    count: n,
+    // More than one row needs sticky sessions, or every line is the same rotating gateway.
+    sessionDuration: Number.isInteger(lifeMin) && lifeMin > 0 ? Math.min(120, lifeMin) : (n > 1 ? 30 : 0)
+  };
+  const cc = normCountryCode(country);
+  if (cc) {
+    body.country = cc;
+    const st = String(state || '').trim().toLowerCase();
+    const ct = String(city || '').trim().toLowerCase();
+    if (st) body.state = st;
+    if (ct) body.city = ct;
+  }
+  const json = await mangoCall(key, 'POST', '/upstream/json', body);
+  const rows = mangoProxyRows(json, { socks }).map((r, i) => ({
+    ...r, label: `MangoProxy • ${trafficType.replace('_', ' ')} • ${cc || 'Any country'} • #${i + 1}`, country: cc || null, dedupeOnPassword: true
+  }));
+  if (!rows.length) throw new Error(`MangoProxy returned no ${socks ? 'SOCKS5' : 'HTTP'} proxies for that request.`);
   return rows;
 }
 
@@ -2895,7 +3294,7 @@ function mintLiveProxiesRows({ username, password, country, session, count, prox
   for (let i = 0; i < n; i++) {
     // Up to 8 digits: a typed session number keeps its digits and adds the index; a blank one
     // gets a random 6-digit id per row, like the dashboard.
-    const sid = typed ? `${typed}${i + 1}`.slice(0, 8) : String(100000 + crypto.randomInt(0, 900000));
+    const sid = typed ? `${typed.slice(0, Math.max(1, 8 - String(n).length))}${i + 1}` : String(100000 + crypto.randomInt(0, 900000));
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host: socks ? LIVEPROXIES_GATEWAY.socksHost : liveProxiesStickyHost(i + 1),
@@ -2954,7 +3353,15 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   novada: fetchNovadaPool,
   proxiessx: fetchProxiesSxPool,
   mobileproxyspace: fetchMobileProxySpacePool,
-  proxysolutions: fetchProxySolutionsPool
+  proxysolutions: fetchProxySolutionsPool,
+  proxmint: fetchProxmintPool,
+  databay: fetchDatabayPool,
+  lumiproxy: fetchLumiProxyPool,
+  proxy302: fetchProxy302Pool,
+  ipburger: fetchIpBurgerPool,
+  ipfoxy: fetchIpfoxyPool,
+  kookeey: fetchKookeeyPool,
+  mangoproxy: fetchMangoProxyPool
 });
 
 async function syncVendorPool(payload) {
@@ -2964,6 +3371,9 @@ async function syncVendorPool(payload) {
   if (!PROXY_VENDORS[vendorKey]) throw new Error('Unknown proxy provider.');
 
   const db = getPrisma();
+  // audit S9: vendor sync created rows with no quota check. Refuse up front when already
+  // at maxProxies (no vendor call), then re-check per row below as batchAddProxies does.
+  await assertWithinLimit('proxies');
   const adapter = REAL_VENDOR_ADAPTERS[vendorKey];
   let rows;
   let simulated = false;
@@ -3034,11 +3444,22 @@ async function syncVendorPool(payload) {
   }
 
   const result = { provider: PROXY_VENDORS[vendorKey], simulated, total: rows.length, created: [], skipped: [] };
-  for (const row of rows) {
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    try {
+      await assertWithinLimit('proxies');
+    } catch (quotaErr) {
+      // Stop at the limit and report how many rows were left out.
+      result.limitReached = true;
+      result.quotaSkipped = rows.length - index;
+      result.limitMessage = quotaErr.message;
+      break;
+    }
     const existing = await db.proxy.findFirst({
       // IPRoyal sticky rows share host, port and username and differ only in the password,
       // where the session id lives. Without it every row after the first reads as existing.
-      where: { type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { password: row.password } : {}) },
+      // The stored password is sealed (audit L11), so compare the keyed hash instead.
+      where: { type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { passwordHash: await proxySecrets.hashPassword(db, row.password) } : {}) },
       select: { id: true }
     });
     if (existing) { result.skipped.push(row.label); continue; }
@@ -3200,6 +3621,17 @@ function proxyUserinfo(user) {
   return encodeURIComponent(String(user)).replace(/%2C/gi, ',');
 }
 
+// audit E9/E10: the ONE proxy-type -> proxy-agent scheme mapper, shared by
+// testProxyConnectivity and buildProxyAgent (the deep check used to send SOCKS4 as
+// http). socks5h makes the PROXY resolve hostnames; plain socks5 had proxy-agent
+// resolve them with the host's own DNS first.
+function proxyAgentScheme(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'socks5') return 'socks5h';
+  if (t === 'socks4') return 'socks4';
+  return 'http';
+}
+
 // Routes a request to an IP/geo service THROUGH the given proxy and returns
 // { success, ip, country, city, isp, latencyMs } (or { success:false, error }).
 async function testProxyConnectivity(proxy) {
@@ -3210,8 +3642,7 @@ async function testProxyConnectivity(proxy) {
     return { success: false, error: 'Proxy agent module unavailable. Run "npm install" with the app closed.' };
   }
 
-  const proxyTypeLc = String(proxy.type).toLowerCase();
-  const scheme = proxyTypeLc === 'socks5' ? 'socks5' : (proxyTypeLc === 'socks4' ? 'socks4' : 'http');
+  const scheme = proxyAgentScheme(proxy.type);
   const auth = proxy.username
     ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@`
     : '';
@@ -3333,7 +3764,7 @@ async function checkProxy(payload) {
 function buildProxyAgent(proxy) {
   let ProxyAgent;
   try { ({ ProxyAgent } = require('proxy-agent')); } catch (e) { return null; }
-  const scheme = String(proxy.type).toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  const scheme = proxyAgentScheme(proxy.type);
   const auth = proxy.username ? `${proxyUserinfo(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
   return new ProxyAgent({ getProxyForUrl: () => `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}` });
 }
@@ -4936,13 +5367,15 @@ async function bulkLaunchProfiles(payload) {
       const id = ids[cursor++];
       try {
         const session = await launchProfile({ id });
-        result.launched.push({ id, sessionId: session.sessionId });
+        // geoDegraded / geoWarning (E6): opened, but on the host timezone - the UI warns.
+        const geo = session && session.geoDegraded ? { geoDegraded: true, geoWarning: session.geoWarning || null } : {};
+        result.launched.push({ id, sessionId: session.sessionId, ...geo });
         // Only sessions this run actually STARTED are ours to close on Stop. A profile
         // that was already open before the queue began belongs to the user, not to us.
         if (!session.alreadyRunning) state.started.push({ id, sessionId: session.sessionId });
 
         // Push progress to the UI immediately that it launched successfully
-        emitBulkLaunchProgress({ phase: 'launched', id, total, done: done + 1, ok: true });
+        emitBulkLaunchProgress({ phase: 'launched', id, total, done: done + 1, ok: true, ...geo });
 
         // NEW LOGIC: If in queue mode, halt this worker until the session is closed by the user
         if (isQueueMode) {
@@ -5428,8 +5861,8 @@ const profileLocks = new Map(); // profileId(Number) -> { memberId, memberName, 
 // real session lock is acquired, so a parallel launch of the SAME profile can't
 // slip through that window. It is NOT a live session, so reconcile must not prune
 // it - but a launch that dies before acquiring auto-clears after a TTL.
-const PENDING_LOCK = '__pending__';
-const PENDING_LOCK_TTL_MS = 120000;
+// Shared with teamPolicy.lockBlocks, which now treats a live reservation as blocking.
+const { PENDING_LOCK, PENDING_LOCK_TTL_MS } = teamPolicy;
 
 function reconcileProfileLocks() {
   if (profileLocks.size === 0) return;
@@ -5469,17 +5902,22 @@ function acquireProfileLock(profileId, sessionId, member) {
 
 // Two-phase lock: reserve BEFORE the heavy spawn (placeholder session id),
 // upgrade via acquireProfileLock on success, release on failure.
+// Returns the reservation object; releaseReservedLock only removes THAT object
+// (audit E4), so a failing launch can never drop another launch's reservation or a
+// lock that has since been upgraded.
 function reserveProfileLock(profileId, member) {
-  profileLocks.set(Number(profileId), {
+  const reservation = {
     memberId: (member && member.id != null) ? member.id : currentMemberId,
     memberName: (member && member.name) || 'You',
     sessionId: PENDING_LOCK,
     at: Date.now()
-  });
+  };
+  profileLocks.set(Number(profileId), reservation);
+  return reservation;
 }
-function releaseReservedLock(profileId) {
+function releaseReservedLock(profileId, reservation) {
   const lock = profileLocks.get(Number(profileId));
-  if (lock && lock.sessionId === PENDING_LOCK) profileLocks.delete(Number(profileId));
+  if (lock && lock === reservation && lock.sessionId === PENDING_LOCK) profileLocks.delete(Number(profileId));
 }
 
 async function getProfileLocks() {
@@ -5496,7 +5934,23 @@ async function getProfileLocks() {
   return out;
 }
 
+// audit E4: launches in flight, keyed by profile id. A second launch of a profile
+// that is still starting (double-click, a profile listed twice in a batch) joins
+// the first launch instead of racing it past the lock into a second browser. The
+// caller's own permission + access checks still run before it joins.
+const profileLaunchesInFlight = new Map(); // profileId(Number) -> Promise
 async function launchProfile(payload) {
+  await requirePermission('profiles.launch');
+  const id = parseId(requireObject(payload).id);
+  await assertCanAccessProfile(id);
+  if (profileLaunchesInFlight.has(id)) return profileLaunchesInFlight.get(id);
+  const p = launchProfileNow(payload);
+  profileLaunchesInFlight.set(id, p);
+  try { return await p; }
+  finally { if (profileLaunchesInFlight.get(id) === p) profileLaunchesInFlight.delete(id); }
+}
+
+async function launchProfileNow(payload) {
   await requirePermission('profiles.launch');
   const input = requireObject(payload);
   const db = getPrisma();
@@ -5530,7 +5984,7 @@ async function launchProfile(payload) {
   // Reserve the lock BEFORE the heavy spawn so a parallel launch of the SAME
   // profile can't slip through the check->acquire window. Released on failure;
   // upgraded to a real session lock on success.
-  reserveProfileLock(id, launcher);
+  const reservation = reserveProfileLock(id, launcher);
   try {
     // The Firefox engine is real Firefox. It's a different engine (no CDP/MV3), so route
     // to the Firefox launcher which configures a dedicated profile via user.js prefs
@@ -5630,7 +6084,7 @@ async function launchProfile(payload) {
     await logActivity(db, id, 'launch', `session ${session.sessionId}${rotated ? ` · rotated proxy ${rotated.name}` : ''}`);
     return { ...session, rotatedProxy: rotated ? serializeProxy(rotated) : null };
   } catch (err) {
-    releaseReservedLock(id); // no-op once the lock has been upgraded to a real session
+    releaseReservedLock(id, reservation); // no-op once upgraded, or if it is not ours
     throw err;
   }
 }
@@ -6216,8 +6670,20 @@ async function gatherExport() {
     orderBy: { createdAt: 'asc' }
   });
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
+  // audit S3: profiles.export is rank 1, so an Operator could walk off with every proxy
+  // password, account password and 2FA key in a spreadsheet. Blank those cells unless the
+  // member may reveal them - the same gates the profile view and the 2FA code reader use.
+  await getActiveMember(); // refreshes currentMemberCanRevealProxy
+  const revealCreds = currentMemberCanRevealProxy;
+  let revealTwoFa = revealCreds;
+  if (revealTwoFa) { try { await assertCanRevealKind('twoFactorCode'); } catch (e) { revealTwoFa = false; } }
   const headers = EXPORT_COLUMNS.map((c) => c[0]);
-  const rows = profiles.map((p) => EXPORT_COLUMNS.map((c) => c[1](p, rotationUrls)));
+  const rows = profiles.map((p) => EXPORT_COLUMNS.map((c) => {
+    if (!revealCreds && (c[0] === 'Proxy Password' || c[0] === 'Account Password')) return '';
+    if (!revealCreds && c[0] === 'Proxy Info') return p.proxy ? `${p.proxy.host}:${p.proxy.port}:${p.proxy.username || ''}:` : '';
+    if (!revealTwoFa && c[0] === '2FA Key') return '';
+    return c[1](p, rotationUrls);
+  }));
   return { headers, rows, count: profiles.length };
 }
 
@@ -6969,6 +7435,16 @@ async function getPersonaSecretForUrl(id, url) {
   const offered = (avail && Array.isArray(avail.personas) ? avail.personas : []).some((p) => String(p.id) === pid);
   if (!offered) return null; // not offered for this origin - refuse to resolve
   return getPersonaSecretById(pid);
+}
+
+// audit E3: the autofill bridges (Firefox loopback + Chromium isolated world) serve
+// vault data only while the workspace is unlocked and someone is signed in - the
+// same rule authGate applies to renderer IPC (single-user mode, no members, counts
+// as the Owner). ipcAuthState fails closed on a DB error.
+async function personaVaultAvailable() {
+  const s = await ipcAuthState();
+  if (s.vaultLocked) return false;
+  return Boolean(s.signedIn) || !(Number(s.memberCount) > 0);
 }
 
 // Server-side ONLY: resolve a persona's plaintext password by id for the trusted
@@ -7833,6 +8309,11 @@ async function updateMemberPermissions(payload) {
 
 // Invite email (mirrors the OTP transport: real send when SMTP is configured,
 // otherwise offline mode and the code is shown in-app).
+// The member name is admin-typed free text; it goes into the HTML body, so escape it.
+function escapeEmailHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function buildInviteEmail(cfg, email, name, role, code) {
   return {
     from: `"${cfg.fromName}" <${cfg.user}>`,
@@ -7842,7 +8323,7 @@ function buildInviteEmail(cfg, email, name, role, code) {
     html: `
       <div style="font-family: sans-serif; max-width: 28rem; margin: 0 auto;">
         <h2>SoftGlaze Browser invitation</h2>
-        <p>Hi ${name}, you have been added as a <b>${role.toLowerCase()}</b>.</p>
+        <p>Hi ${escapeEmailHtml(name)}, you have been added as a <b>${role.toLowerCase()}</b>.</p>
         <p>Your invite code is:</p>
         <h1 style="background:#f4f4f5;padding:10px;text-align:center;letter-spacing:3px;">${code}</h1>
         <p style="font-size:12px;color:#666;">Open SoftGlaze Browser, choose "Have an invite code?", enter the code and set your password.</p>
@@ -8081,6 +8562,13 @@ async function superAdminSetup(payload) {
       const err = new Error('Enter your current Super Admin password to change it.'); err.code = 'BAD_CREDS'; throw err;
     }
   } else {
+    // audit L1: claiming the Super Admin role needs the source owner's certificate
+    // (<userData>/owner.cert for this machine, base build only). Without it anyone
+    // could claim the role on a fresh install and with it the licence exemption.
+    if (!(await ownerCertValid())) {
+      const err = new Error('The Super Admin role can only be set up on the source owner\'s machine (no valid owner certificate was found). Sign in as the workspace Owner instead.');
+      err.code = 'OWNER_CERT_REQUIRED'; throw err;
+    }
     // First-run claim (no Super Admin set yet). audit: a lower-privileged member
     // who is already signed in could seize the top role here. Allow the claim only
     // when no member is active (genuine first run / pre-login) or the active member
@@ -8474,7 +8962,41 @@ async function workspaceRestore(payload) {
   // Success - remove the (plaintext) safety copy so it can't linger on disk.
   await dbCrypto.secureUnlink(safety);
   await afterDbReady();
-  return { ok: true, exportedAt: restored.exportedAt };
+  // audit S5: keychain-sealed secrets (enc:v1:, DPAPI) only open for the Windows user
+  // that sealed them. Report the ones this restore could not open so the UI can say so.
+  let unreadableSecrets = [];
+  try { unreadableSecrets = await findUnreadableSealedSecrets(); } catch (e) { unreadableSecrets = []; }
+  return { ok: true, exportedAt: restored.exportedAt, unreadableSecrets };
+}
+
+// Every sealed value in the database that secretStore.open() can no longer decrypt
+// (it fails closed to ''). Labels only - never the values.
+async function findUnreadableSealedSecrets() {
+  const db = getPrisma();
+  const lost = [];
+  const dead = (v) => secretStore.isSealed(v) && secretStore.open(v) === '';
+  const walk = (v, label) => {
+    if (typeof v === 'string') { if (dead(v)) lost.push(label); return; }
+    if (Array.isArray(v)) { v.forEach((x, i) => walk(x, `${label}[${i}]`)); return; }
+    if (v && typeof v === 'object') for (const k of Object.keys(v)) walk(v[k], `${label}.${k}`);
+  };
+  const settings = await db.setting.findMany().catch(() => []);
+  for (const s of settings) {
+    let v = s.value;
+    try { v = JSON.parse(s.value); } catch (e) { /* raw string */ }
+    walk(v, `setting ${s.key}`);
+  }
+  const profiles = await db.profile.findMany({ where: { twoFactorSeed: { startsWith: 'enc:v1:' } }, select: { id: true, title: true, twoFactorSeed: true } }).catch(() => []);
+  for (const p of profiles) if (dead(p.twoFactorSeed)) lost.push(`profile ${p.title || p.id} 2FA seed`);
+  const providers = await db.ipProvider.findMany().catch(() => []);
+  for (const p of providers) {
+    if (dead(p.apiKey)) lost.push(`IP provider ${p.name || p.id} API key`);
+    if (dead(p.secretKey)) lost.push(`IP provider ${p.name || p.id} secret key`);
+  }
+  // Proxy passwords are sealed too (audit L11); the client opens them, so ask for the stored values.
+  const deadProxies = await proxySecrets.listUnreadableProxyPasswords(db).catch(() => []);
+  for (const p of deadProxies) lost.push(`proxy ${p.name || p.id} password`);
+  return lost;
 }
 
 async function readVault() {
@@ -8738,7 +9260,9 @@ async function getEmailConfig() {
 }
 
 async function setEmailConfig(payload) {
-  await requirePermission('members.manage');
+  // audit S4: an Admin (members.manage) could point host at their own server, keep the
+  // stored password and fire a test email to receive it. SMTP config is Owner-only now.
+  await requireOwnerOrSuper('change the email (SMTP) settings');
   const input = requireObject(payload);
   const prev = (await readSetting('smtp', {})) || {};
   const next = {
@@ -8751,6 +9275,13 @@ async function setEmailConfig(payload) {
     pass: (input.pass !== undefined && input.pass !== '') ? secretStore.seal(String(input.pass)) : (prev.pass || ''),
     fromName: String(input.fromName ?? prev.fromName ?? 'SoftGlaze Security').trim()
   };
+  // The kept password belongs to the old server/account: never carry it over to a new
+  // host, port or user without a fresh password.
+  const newPass = input.pass !== undefined && input.pass !== '';
+  const targetChanged = next.host !== String(prev.host ?? '').trim()
+    || next.port !== Number(prev.port ?? 465)
+    || next.user !== String(prev.user ?? '').trim();
+  if (!newPass && targetChanged) next.pass = '';
   await writeSetting('smtp', next);
   return getEmailConfig();
 }
@@ -8980,7 +9511,7 @@ async function reassignProfiles(payload) {
 // Super Admin (source owner) is exempt; single-user mode is unrestricted.
 async function getSeatUsage() {
   const m = await getActiveMember();
-  if (m && m.role === 'SUPER_ADMIN') {
+  if (await isCertifiedSuperAdmin(m)) { // audit L1
     return { used: 0, total: -1, type: 'source-owner', remaining: -1, full: false, exempt: true };
   }
   const db = getPrisma();
@@ -8994,7 +9525,7 @@ async function getSeatUsage() {
 // the very first OWNER bootstrap). Super Admin / single-user mode are unrestricted.
 async function assertSeatAvailable() {
   const m = await getActiveMember();
-  if (!m || m.role === 'SUPER_ADMIN') return;
+  if (!m || await isCertifiedSuperAdmin(m)) return; // audit L1: seat exemption needs the certificate
   const db = getPrisma();
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
@@ -9541,7 +10072,7 @@ async function getBillingPlans() {
     // Who may start the free trial from the Billing page: anyone not exempt and not
     // already on a paid plan (best-effort, local - see the Licenses panel note).
     canStartTrial: !lic.isExempt && !lic.isPaid,
-    canManage: Boolean(me && me.role === 'SUPER_ADMIN')
+    canManage: await isCertifiedSuperAdmin(me) // audit L1
   };
 }
 
@@ -9782,6 +10313,25 @@ async function getMachineId() {
   return id;
 }
 
+// audit L1: the Super Admin is the licence-exempt source owner ONLY on a machine that
+// holds a valid owner certificate (<userData>/owner.cert, signed for this machine's
+// licensing machine id, licenseClient.machineHash()) and only on a base build - never
+// a tenant/sold build (see ownerCert.js). Without it a SUPER_ADMIN keeps the label but
+// is licensed like any Owner and gets none of the licence-management powers.
+async function ownerCertValid() {
+  try {
+    if (ownerCert.isTenantBuild()) return false;
+    const { app } = require('electron');
+    const file = ownerCert.ownerCertPath(app.getPath('userData'));
+    return ownerCert.checkOwnerCertFile(file, { machineId: licenseClient.machineHash() }).ok === true;
+  } catch (_) { return false; }
+}
+
+async function isCertifiedSuperAdmin(member) {
+  if (!member || member.role !== 'SUPER_ADMIN') return false;
+  return ownerCert.isCertifiedSuperAdmin(member, await ownerCertValid());
+}
+
 // The licensing server returns a per-install secret exactly once, at first registration, and
 // requires it for license and redeem (audit T2-6). It is kept sealed next to the install id.
 // Returns { installId, installSecret } or null.
@@ -9879,8 +10429,10 @@ async function backendLicenseInfo() {
 async function getLicense() {
   // The Super Admin is the source owner - exempt from the trial/subscription
   // system entirely. Never create or report a trial license for them.
+  // audit L1: only with a valid owner certificate on a base build; otherwise a
+  // SUPER_ADMIN falls through and is licensed like any Owner.
   const m = await getActiveMember();
-  if (m && m.role === 'SUPER_ADMIN') {
+  if (await isCertifiedSuperAdmin(m)) {
     return {
       type: 'source-owner',
       tier: 'enterprise',
@@ -9903,20 +10455,34 @@ async function getLicense() {
   }
   // Backend-licensed build: a verified, unexpired lease overrides to "paid".
   // Otherwise (and always in the base build) fall through to the local model.
+  // audit L3: `reason` explains a licensing problem to the renderer (e.g. the lease is
+  // bound to another computer). A machine mismatch never reports paid.
+  const issueOf = () => ((licenseClient.licenseIssue && licenseClient.licenseIssue()) || {}).reason || null;
   if (tenantConfig().enabled) {
     const ent = await getBackendEntitlement();
-    if (ent) return licenseViewFromLease(ent);
+    if (ent && issueOf() !== 'machine_mismatch') return { ...licenseViewFromLease(ent), reason: issueOf() };
   }
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
-  return licenseView(lic);
+  return withLicenseReason(await licenseView(lic), issueOf());
+}
+
+// Attach the licensing problem reason; a machine mismatch turns a paid view into an
+// ended one (the paid term belongs to the other computer).
+function withLicenseReason(view, reason) {
+  const out = { ...view, reason: reason || null };
+  if (reason === 'machine_mismatch' && (out.isPaid || out.state === 'paid')) {
+    Object.assign(out, { state: 'banned', status: 'banned', isPaid: false, isBanned: true });
+  }
+  return out;
 }
 
 // Main-side license gate. Refuse a profile launch when the owner tree is banned -
-// never trust the renderer's gate alone. Super Admin is exempt.
+// never trust the renderer's gate alone. Super Admin is exempt only with a valid
+// owner certificate (audit L1).
 async function assertNotBanned() {
   const m = await getActiveMember();
-  if (m && m.role === 'SUPER_ADMIN') return;
+  if (await isCertifiedSuperAdmin(m)) return;
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
   const view = await licenseView(lic);
@@ -9939,31 +10505,18 @@ async function redeemPurchaseCode(payload) {
     if (!ent) throw new Error('Code accepted, but no active license yet - try again in a moment.');
     return licenseViewFromLease(ent);
   }
-  // audit (HIGH): the base build's offline codes self-verify against a secret that
-  // ships in the binary, so they are inherently forgeable - any owner can compute a
-  // fresh valid code and stack paid months. There is NO offline fix (a symmetric
-  // secret must ship); the secure path is the tenant build's Ed25519 server lease
-  // (the tenantConfig().enabled branch above, where redeem routes to the backend). A
-  // base build sold to customers can set SOFTGLAZE_STRICT_LICENSE=1 to refuse offline
-  // code redemption entirely and rely on the backend / Super-Admin grants instead.
-  if (String(process.env.SOFTGLAZE_STRICT_LICENSE || '') === '1') {
-    const e = new Error('Offline purchase codes are disabled in this build.'); e.code = 'OFFLINE_CODES_DISABLED'; throw e;
-  }
-  const v = payments.verifyPurchaseCode(code);
-  if (!v.valid) throw new Error('That purchase code is not valid.');
-  const normalized = code.trim().toUpperCase();
-  const ownerId = await resolveLicenseOwnerId();
-  // Replay guard: a purchase code may be redeemed once per workspace. A prior
-  // redemption (or the checkout/approval that generated the code) leaves an invoice
-  // carrying the code as its reference; reusing it to stack months is rejected.
-  const prior = await getPrisma().invoice.findFirst({ where: { ownerMemberId: ownerId ?? null, reference: normalized } });
-  if (prior) { const e = new Error('That purchase code has already been redeemed.'); e.code = 'CODE_ALREADY_REDEEMED'; throw e; }
-  const lic = await ensureLicense(ownerId);
-  const updated = await applyPaidMonths(lic, v.months, normalized);
-  // Record a receipt so the code can't be replayed and revenue is tracked.
-  await recordInvoice({ ownerId, provider: 'code', amount: '0', currency: 'USD', tier: lic.tier || 'pro', months: v.months, reference: normalized, status: 'paid', source: 'manual', note: 'Purchase code redemption' });
-  await logAudit('billing.redeem', { detail: { months: v.months, ref: normalized } });
-  return licenseView(updated);
+  // Decision A4: there is no offline fallback. The old one validated a code against
+  // a secret shipped in the binary, so anyone with a copy could mint codes valid on
+  // every base build and sell them. Codes are issued and checked server-side now
+  // (see payments.js), which means a build with no licensing backend baked in cannot
+  // redeem anything — a Super Admin grant or an in-app payment provider is the way
+  // to confer a paid term on such a build.
+  const e = new Error(
+    'Purchase codes are issued by the licensing server, and this build has no licensing server configured. '
+    + 'Use a tenant-provisioned build, or have the workspace owner assign a plan.'
+  );
+  e.code = 'LICENSING_BACKEND_NOT_CONFIGURED';
+  throw e;
 }
 
 // ---- Super-Admin lifecycle controls (enforced in main, never UI-trusted) ----
@@ -9984,7 +10537,8 @@ async function setMemberStatus(payload) {
     const all = await db.member.findMany();
     if (!permissions.visibleMemberIds(all, actor).has(id)) throw new Error('You can only manage members you created.');
   }
-  if (target.role === 'OWNER' && status !== 'active' && (!actor || actor.role !== 'SUPER_ADMIN')) {
+  // audit L1: blocking an Owner (a licence power) needs the certified Super Admin.
+  if (target.role === 'OWNER' && status !== 'active' && !(await isCertifiedSuperAdmin(actor))) {
     throw new Error('Only the Super Admin can block or suspend an owner.');
   }
   const data = { status };
@@ -10043,11 +10597,11 @@ async function resetLicense(payload) {
 async function startTrial(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   const me = await getActiveMember();
-  const isSuper = Boolean(me && me.role === 'SUPER_ADMIN');
+  const isSuper = await isCertifiedSuperAdmin(me); // audit L1: targeting any owner needs the certificate
   if (isSuper && (input.ownerId == null || input.ownerId === '')) {
     throw new Error('Choose which owner workspace to start the trial for.');
   }
-  if (!isSuper && me && me.role === 'SUPER_ADMIN') throw new Error('The source owner is exempt from the trial system.');
+  if (!isSuper && me && me.role === 'SUPER_ADMIN') throw new Error('This Super Admin has no owner certificate on this machine, so it cannot manage trials.');
   const ownerId = (isSuper && input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
   const view = await licenseView(lic);
@@ -10117,6 +10671,11 @@ async function listOwnerLicenses() {
 async function requireSuperAdmin() {
   const m = await getActiveMember();
   if (!m || m.role !== 'SUPER_ADMIN') { const e = new Error('Only the Super Admin can manage payment settings.'); e.code = 'FORBIDDEN'; throw e; }
+  // audit L1: plans, licences (assign/grant/extend/reset/edit/terminate) and payment
+  // settings are commercial powers of the source owner - they need the owner certificate.
+  if (!(await isCertifiedSuperAdmin(m))) {
+    const e = new Error('This Super Admin has no owner certificate on this machine, so licence and billing management is disabled.'); e.code = 'OWNER_CERT_REQUIRED'; throw e;
+  }
 }
 
 // (The Owner-or-above gate `requireOwnerOrSuper(action)` is defined once, earlier
@@ -11639,9 +12198,11 @@ function registerIpcHandlers() {
     }
   });
 
-  // Smart Autofill - let the in-page widget (injected into launched Chromium
-  // profiles) reach the persona vault through puppeteer's exposeFunction bridge.
+  // Smart Autofill - let the in-page widget (run in a private isolated world of
+  // launched Chromium profiles) reach the persona vault over its CDP channel.
   configurePersonaBridge({
+    // audit E3 parity: refuse vault calls while locked / signed out.
+    isAvailable: () => personaVaultAvailable(),
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
     markUsed: (id, url) => markPersonaUsed({ id, url }),
     // Resolve a persona's plaintext password server-side by id (audit C2): the
@@ -11660,9 +12221,13 @@ function registerIpcHandlers() {
     // Firefox has no CDP trusted-typer, so the isolated content-script fills the
     // password itself - but only for a persona OFFERED on the committed origin
     // (audit C2), resolved one id at a time via the loopback /secret endpoint.
-    getSecret: (id, url) => getPersonaSecretForUrl(id, url)
+    getSecret: (id, url) => getPersonaSecretForUrl(id, url),
+    // audit E3: no vault data while the app is locked or nobody is signed in.
+    isAvailable: () => personaVaultAvailable()
   });
-  autofillBridge.start().catch(() => {});
+  // audit E3: NOT started at boot any more. firefoxEngine acquires the bridge when a
+  // Firefox profile with the autofill extension launches and releases it on exit,
+  // so the loopback port is only open while Firefox autofill can actually use it.
 
   // Resume the background proxy scheduler if it was enabled previously.
   (async () => {

@@ -50,5 +50,9 @@
     "downloadFailed": "La descarga falló.",
     "pauseFailed": "No se pudo pausar.",
     "resumeFailed": "No se pudo reanudar."
+  },
+  "browsers": {
+    "showAll": "Mostrar las {{n}} versiones",
+    "showLess": "Mostrar menos"
   }
 }

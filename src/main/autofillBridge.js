@@ -13,29 +13,45 @@
 // avoid a circular require (autofillBridge has no deps on ipcHandlers).
 //
 // AUTH / THREAT MODEL: we bind loopback and send NO CORS headers, so a visited
-// web page can't read responses cross-origin. A static shared secret
-// (X-SG-Autofill-Token) blocks casual other-local-apps. A signed .xpi is a fixed
-// artifact, so a per-launch token can't be injected without breaking the
-// signature - the static secret is the deliberate trade-off, and the data is the
-// user's own demo personas, not high-value secrets.
+// web page can't read responses cross-origin. audit E3/S1: the token used to be a
+// static string shipped inside the public .xpi, so anyone could read it. It is now
+// RANDOM PER APP RUN and reaches the extension out-of-band: firefoxEngine writes it
+// to Firefox's managed-storage manifest for our extension id at each launch (see
+// firefoxEngine.writeAutofillManagedToken) and the background script reads it with
+// browser.storage.managed. The server also listens ONLY while at least one Firefox
+// autofill session runs (acquire/release), and refuses vault calls while the vault
+// is locked or nobody is signed in (deps.isAvailable).
 // ---------------------------------------------------------------------------
 const http = require('node:http');
+const crypto = require('node:crypto');
 
 const HOST = '127.0.0.1';
 // First free port in this small range is used; the extension probes the same range.
 const PORT_RANGE = [47800, 47801, 47802, 47803, 47804, 47805, 47806, 47807, 47808, 47809];
-const TOKEN = 'sg-ff-autofill-9f3c1a7b2e6d4058'; // MUST match src/firefox-extension/sg-background.js
+// Per-app-run secret. Never persisted by this module; firefoxEngine hands it to the
+// extension through the managed-storage manifest.
+const TOKEN = crypto.randomBytes(24).toString('hex');
 
 let server = null;
 let runningPort = null;
 let listForUrlFn = null;   // (url) => Promise<{ personas: [...] } | [...]>
 let markUsedFn = null;     // (id, url) => Promise<any>
 let getSecretFn = null;    // (id, url) => Promise<{ password } | null>  (origin-scoped)
+let isAvailableFn = null;  // () => Promise<boolean>  false while locked / signed out
+let holders = 0;           // running Firefox autofill sessions (acquire/release)
 
 function configure(deps = {}) {
   if (typeof deps.listForUrl === 'function') listForUrlFn = deps.listForUrl;
   if (typeof deps.markUsed === 'function') markUsedFn = deps.markUsed;
   if (typeof deps.getSecret === 'function') getSecretFn = deps.getSecret;
+  if (typeof deps.isAvailable === 'function') isAvailableFn = deps.isAvailable;
+}
+
+// Vault calls are refused while the app is locked or signed out. Fails CLOSED: a
+// throwing check means "not available".
+async function vaultAvailable() {
+  if (typeof isAvailableFn !== 'function') return true;
+  try { return (await isAvailableFn()) === true; } catch (e) { return false; }
 }
 
 function sendJson(res, status, obj) {
@@ -90,6 +106,7 @@ async function handleRequest(req, res) {
     if (req.method === 'GET' && url.pathname === '/sg-autofill/list') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
       if (typeof listForUrlFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
+      if (!(await vaultAvailable())) return sendJson(res, 423, { error: 'Locked' });
       const target = url.searchParams.get('url') || '';
       try {
         const r = await listForUrlFn(target);
@@ -108,6 +125,7 @@ async function handleRequest(req, res) {
     if (req.method === 'GET' && url.pathname === '/sg-autofill/secret') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
       if (typeof getSecretFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
+      if (!(await vaultAvailable())) return sendJson(res, 423, { error: 'Locked' });
       const id = url.searchParams.get('id') || '';
       const target = url.searchParams.get('url') || '';
       try {
@@ -122,6 +140,7 @@ async function handleRequest(req, res) {
     if (req.method === 'POST' && url.pathname === '/sg-autofill/mark-used') {
       if (!authed(req)) return sendJson(res, 401, { error: 'Unauthorized' });
       if (typeof markUsedFn !== 'function') return sendJson(res, 503, { error: 'Unavailable' });
+      if (!(await vaultAvailable())) return sendJson(res, 423, { error: 'Locked' });
       const body = await readBody(req);
       try {
         await markUsedFn(String(body.id || ''), String(body.url || ''));
@@ -164,7 +183,23 @@ async function stop() {
 }
 
 function getStatus() {
-  return { running: Boolean(server), port: runningPort, host: HOST };
+  return { running: Boolean(server), port: runningPort, host: HOST, holders };
 }
 
-module.exports = { configure, start, stop, getStatus, TOKEN, PORT_RANGE };
+// audit E3: listen only while a Firefox autofill session needs it. Each launch
+// acquires, each exit releases; the server closes with the last one. Serialized so
+// a release racing a fresh acquire can never leave the server stopped.
+let lifecycle = Promise.resolve();
+function acquire() {
+  holders += 1;
+  lifecycle = lifecycle.then(() => (holders > 0 ? start() : null)).catch(() => null);
+  return lifecycle.then(() => getStatus());
+}
+function release() {
+  holders = Math.max(0, holders - 1);
+  lifecycle = lifecycle.then(() => (holders === 0 ? stop() : null)).catch(() => null);
+  return lifecycle.then(() => getStatus());
+}
+function getToken() { return TOKEN; }
+
+module.exports = { configure, start, stop, acquire, release, getStatus, getToken, TOKEN, PORT_RANGE };

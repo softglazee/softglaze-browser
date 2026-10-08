@@ -245,6 +245,15 @@ function ThemeLangControls() {
 function LicenseBanner({ license, busy, onPay }) {
   const { t } = useTranslation('gate');
   if (!license || license.isExempt) return null;
+  // The lease belongs to another computer (machine-bound licences, audit L3).
+  if (license.reason === 'machine_mismatch') {
+    return (
+      <div role="alert" className="fixed top-0 inset-x-0 z-[90] bg-amber-500/95 text-black px-4 py-2 flex items-center justify-center gap-3 text-[12.5px] font-medium shadow">
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span>{t('license.machineMismatch')}</span>
+      </div>
+    );
+  }
   if (license.isGrace) {
     return (
       <div className="fixed top-0 inset-x-0 z-[90] bg-amber-500/95 text-black px-4 py-2 flex items-center justify-center gap-3 text-[12.5px] font-medium shadow">
@@ -349,9 +358,11 @@ function BannedScreen({ account, license, methods, planCode, setPlanCode, busy, 
         <div className="w-12 h-12 rounded-xl grid place-items-center mb-4" style={{ background: 'color-mix(in srgb, #ef4444 14%, transparent)', border: '1px solid color-mix(in srgb, #ef4444 28%, transparent)' }}><Lock className="w-6 h-6 text-red-400" /></div>
         <h1 className="font-display text-[22px] font-semibold tracking-tight">{adminBlocked ? t('banned.blockedHeading') : t('banned.endedHeading')}</h1>
         <p className="text-[13px] text-muted mt-1.5 mb-6">
-          {adminBlocked
-            ? (account?.firstName ? t('banned.blockedBodyNamed', { name: account.firstName }) : t('banned.blockedBody'))
-            : (account?.firstName ? t('banned.endedBodyNamed', { name: account.firstName }) : t('banned.endedBody'))}
+          {license?.reason === 'machine_mismatch'
+            ? t('license.machineMismatch')
+            : adminBlocked
+              ? (account?.firstName ? t('banned.blockedBodyNamed', { name: account.firstName }) : t('banned.blockedBody'))
+              : (account?.firstName ? t('banned.endedBodyNamed', { name: account.firstName }) : t('banned.endedBody'))}
         </p>
 
         {!adminBlocked && (

@@ -23,6 +23,7 @@ const AutomationPage = lazy(() => import('@/pages/AutomationPage.jsx'));
 const BatchImportPage = lazy(() => import('@/pages/BatchImportPage.jsx'));
 const BillingPage = lazy(() => import('@/pages/BillingPage.jsx'));
 const PersonasPage = lazy(() => import('@/pages/PersonasPage.jsx'));
+const ProxyProvidersPage = lazy(() => import('@/pages/ProxyProvidersPage.jsx'));
 
 function PageFallback() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
                 <Route path="/profiles" element={<ProfilesPage />} />
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/proxies" element={<ProxyPoolPage />} />
+                <Route path="/proxy-providers" element={<ProxyProvidersPage />} />
                 <Route path="/extensions" element={<ExtensionsPage />} />
                 <Route path="/personas" element={<PersonasPage />} />
                 <Route path="/browsers" element={<BrowsersPage />} />

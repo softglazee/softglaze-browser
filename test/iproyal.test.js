@@ -104,7 +104,8 @@ test('the adapter follows the documented generate call', () => {
 
 test('the pool compares the password when a row asks for it', () => {
   const fn = /async function syncVendorPool\([\s\S]*?\n}\r?\n/.exec(IPC);
-  assert.match(fn[0], /row\.dedupeOnPassword \? \{ password: row\.password \} : \{\}/);
+  // Compared through the keyed hash since the password is sealed at rest (audit L11).
+  assert.match(fn[0], /row\.dedupeOnPassword \? \{ passwordHash: await proxySecrets\.hashPassword\(db, row\.password\) \} : \{\}/);
 });
 
 test('the token is scrubbed from transport errors and sub-user passwords stay in main', () => {

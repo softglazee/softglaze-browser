@@ -132,7 +132,8 @@
     },
     "recordingStarted": "Recording… interact with the launched browser, then press Stop to save.",
     "savedNotice": "Saved \"{{name}}\" with {{count}} step(s).",
-    "stoppedNotice": "Recording stopped - captured {{count}} step(s) (not saved)."
+    "stoppedNotice": "Recording stopped - captured {{count}} step(s) (not saved).",
+    "deleteConfirm": "Delete the macro \"{{name}}\" and all its steps? This cannot be undone."
   },
   "saveRecording": {
     "ariaLabel": "Save recorded macro",
@@ -320,7 +321,11 @@
       "startWarmup": "Could not start the warm-up.",
       "stopWarmup": "Could not stop the warm-up.",
       "importFile": "Could not read that file."
-    }
+    },
+    "queueTitle": "Warm one profile at a time (a strict queue): launch a browser, let it finish and close, then the next. Prevents opening every selected browser at once, which can exhaust RAM/CPU and crash the app.",
+    "queueMode": "Run one at a time (queue)",
+    "parallelTitle": "How many profiles to warm simultaneously. Higher = faster but heavier on RAM/CPU.",
+    "parallelLabel": "At a time:"
   },
   "counter": {
     "total": "total",

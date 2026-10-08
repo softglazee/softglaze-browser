@@ -9,17 +9,24 @@ const tenantApiAuth = require('../middleware/tenantApiAuth');
 const { sealJson, seal } = require('../crypto/secrets');
 const { generateTenantKeypair } = require('../crypto/keys');
 const { publicBaseUrl } = require('../env');
+const { buildProviderSecrets } = require('../providers/configFields');
+const { resetMachine } = require('../machineBinding');
 
 const router = express.Router();
 router.use(tenantApiAuth);
 
 // Store a provider's credentials (sealed at rest) + return the webhook URL to set.
-// POST /v1/tenant/payment-config { provider, enabled, secretKey, webhookSecret, merchantId? }
+// POST /v1/tenant/payment-config { provider, enabled, ...fields }
+//   stripe:    { secretKey, webhookSecret }
+//   paypal:    { clientId, clientSecret, webhookId, env?: "live"|"sandbox" }
+//   cryptomus: { merchantId, apiKey }
+// Audit L7: per-provider schema (configFields.js); every required field must be present.
 router.post('/payment-config', asyncHandler(async (req, res) => {
   const b = req.body || {};
   const provider = String(b.provider || '').toLowerCase();
-  if (!['stripe', 'paypal', 'cryptomus'].includes(provider)) return res.status(400).json({ error: 'Unknown provider.' });
-  const secretsSealed = sealJson({ secretKey: b.secretKey || '', webhookSecret: b.webhookSecret || '', merchantId: b.merchantId || '' });
+  const built = buildProviderSecrets(provider, b);
+  if (built.error) return res.status(400).json({ error: built.error });
+  const secretsSealed = sealJson(built.secrets);
   await prisma.tenantPaymentConfig.upsert({
     where: { tenantId_provider: { tenantId: req.tenant.id, provider } },
     update: { enabled: Boolean(b.enabled), secretsSealed },
@@ -78,6 +85,14 @@ router.post('/rotate-key', asyncHandler(async (req, res) => {
   const { publicKeyPem, privateKeyPem } = generateTenantKeypair();
   await prisma.tenant.update({ where: { id: req.tenant.id }, data: { publicKeyPem, privateKeySealed: seal(privateKeyPem) } });
   res.json({ publicKeyPem, note: 'Rebuild the tenant app with this public key. Existing leases stop verifying once the rebuilt app is installed.' });
+}));
+
+// Clear an install's machine binding (audit L3) so the customer's next /v1/license call
+// from their new PC binds to it. No rate limit: the merchant decides.
+// POST /v1/tenant/installs/:installId/reset-machine -> { ok, installId }
+router.post('/installs/:installId/reset-machine', asyncHandler(async (req, res) => {
+  const { status, body } = await resetMachine(prisma, req.tenant, req.params.installId);
+  res.status(status).json(body);
 }));
 
 module.exports = router;

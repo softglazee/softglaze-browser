@@ -13,7 +13,7 @@ const IPC = fs.readFileSync(path.join(ROOT, 'src', 'main', 'ipcHandlers.js'), 'u
 const CLIENT = fs.readFileSync(path.join(ROOT, 'src', 'main', 'licenseClient.js'), 'utf8');
 
 test('the client sends the install secret on license and redeem, and no email', () => {
-  assert.match(CLIENT, /license: \(\{ installId, installSecret \}\) => postJson\('\/v1\/license', \{ tenantId: tenantConfig\(\)\.tenantId, installId, installSecret \}\)/);
+  assert.match(CLIENT, /license: \(\{ installId, installSecret \}\) => postJson\('\/v1\/license', \{ tenantId: tenantConfig\(\)\.tenantId, installId, installSecret, machineHash: machineHash\(\) \}\)/);
   assert.match(CLIENT, /redeem: \(\{ code, installId, installSecret \}\) => postJson\('\/v1\/redeem', \{ tenantId: tenantConfig\(\)\.tenantId, code, installId, installSecret \}\)/);
 });
 

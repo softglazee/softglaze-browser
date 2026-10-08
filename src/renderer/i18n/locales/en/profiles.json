@@ -114,7 +114,10 @@
     "loadCookies": "Load this profile's saved cookies",
     "remarks": "Remarks / Notes",
     "remarksPlaceholder": "Optional notes for this profile...",
-    "crossOsWarning": "This profile claims {{os}} but runs on {{host}}. Host fonts, canvas raster and the real TLS/JS-engine behaviour still say {{host}}, so scanners can spot the mismatch. Use {{host}} unless you specifically need a cross-OS profile."
+    "crossOsWarning": "This profile claims {{os}} but runs on {{host}}. Host fonts, canvas raster and the real TLS/JS-engine behaviour still say {{host}}, so scanners can spot the mismatch. Use {{host}} unless you specifically need a cross-OS profile.",
+    "engine": "Engine",
+    "antidetectLabel": "Anti-detect engine (fingerprint-chromium)",
+    "antidetectHelp": "Launch this profile on the native anti-detect Chromium - spoofs canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off."
   },
   "proxy": {
     "setting": "Proxy setting",
@@ -137,7 +140,9 @@
     "quicDisableTitle": "Disable HTTP/3 (QUIC)",
     "quicEnableTitle": "Enable HTTP/3 (QUIC)",
     "quicLabel": "Enable HTTP/3 (QUIC Support)",
-    "quicWarning": "⚠️ Warning: Only enable this on premium, high-quality proxies that fully support UDP tracking isolation. Enabling QUIC unlocks HTTP/3 speeds but can cause network leaks on poor setups. Default is Disabled (Maximum Stealth)."
+    "quicWarning": "⚠️ Warning: Only enable this on premium, high-quality proxies that fully support UDP tracking isolation. Enabling QUIC unlocks HTTP/3 speeds but can cause network leaks on poor setups. Default is Disabled (Maximum Stealth).",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "platform": {
     "startupTabs": "Startup Tabs",
@@ -253,7 +258,8 @@
     "disableImagesOver": "Disable loading images over",
     "disableImagesUnit": "KB (0 KB means no images loaded)",
     "randomFingerprint": "Random Fingerprint",
-    "randomFingerprintDesc": "New fingerprint will be randomly generated on each startup, ignoring some existing settings."
+    "randomFingerprintDesc": "New fingerprint will be randomly generated on each startup, ignoring some existing settings.",
+    "loadExtensions": "Load SoftGlaze extensions (uses Chrome-for-Testing)"
   },
   "env": {
     "overview": "Environment Overview",
@@ -320,7 +326,11 @@
     "compare": "Compare",
     "compareTitle": "Compare 2-3 profiles",
     "delete": "Delete",
-    "clear": "Clear"
+    "clear": "Clear",
+    "launchPaused": "Paused · {{done}}/{{total}}",
+    "resume": "Resume queue",
+    "pause": "Pause between profiles",
+    "stop": "Stop the rest of the queue"
   },
   "filters": {
     "allGroups": "All groups",
@@ -341,7 +351,8 @@
     "profileCount_one": "{{count}} profile",
     "profileCount_other": "{{count}} profiles",
     "used": "Used",
-    "unused": "Unused"
+    "unused": "Unused",
+    "cancel": "Cancel"
   },
   "table": {
     "name": "Name",
@@ -394,5 +405,12 @@
     "syncFailed": "Could not start the synchronizer.",
     "proxyHostPort": "Please enter at least Host and Port to check.",
     "proxyCheckFailed": "Proxy check failed."
+  },
+  "bulkDeleteResult": {
+    "partial": "Moved {{trashed}} to Trash; {{failed}} could not be deleted: {{reason}}"
+  },
+  "launchWarnings": {
+    "geo": "{{name}}: the proxy location could not be looked up, so this browser is using this computer's timezone. Relaunch it once the proxy answers.",
+    "dismiss": "Dismiss"
   }
 }

@@ -17,6 +17,7 @@
 // Pure module: callers pass the Prisma client, so tests can run it against a fake.
 
 const crypto = require('node:crypto');
+const { normalizeMachineHash } = require('./machineBinding');
 
 function newInstallSecret() {
   const secret = crypto.randomBytes(32).toString('base64url');
@@ -35,8 +36,11 @@ function verifyInstallSecret(secret, storedHash) {
 }
 
 // POST /v1/register. Returns { status, body }.
-async function registerInstall(prisma, tenant, { machineId, account, installSecret }) {
+async function registerInstall(prisma, tenant, { machineId, account, installSecret, machineHash }) {
   if (!machineId) return { status: 400, body: { error: 'machineId is required.' } };
+  // Audit L3: trust on first use. An unbound install binds to the hash it registers with;
+  // an already-bound one is never rebound here (see machineBinding.js).
+  const mh = normalizeMachineHash(machineHash);
   const key = { tenantId_machineId: { tenantId: tenant.id, machineId: String(machineId) } };
   const existing = await prisma.install.findUnique({ where: key });
 
@@ -47,16 +51,17 @@ async function registerInstall(prisma, tenant, { machineId, account, installSecr
     }
     await prisma.install.update({
       where: { id: existing.id },
-      data: { lastSeenAt: new Date(), ...(account ? { account: String(account) } : {}) }
+      data: { lastSeenAt: new Date(), ...(account ? { account: String(account) } : {}), ...(mh && !existing.machineHash ? { machineHash: mh, machineBoundAt: new Date() } : {}) }
     });
     return { status: 200, body: { installId: existing.id, tenantId: tenant.id } };
   }
 
   // New machine, or a row from before secrets existed: issue the secret now.
   const { secret, hash } = newInstallSecret();
+  const bind = mh && !(existing && existing.machineHash) ? { machineHash: mh, machineBoundAt: new Date() } : {};
   const install = existing
-    ? await prisma.install.update({ where: { id: existing.id }, data: { secretHash: hash, lastSeenAt: new Date(), ...(account ? { account: String(account) } : {}) } })
-    : await prisma.install.create({ data: { tenantId: tenant.id, machineId: String(machineId), account: account ? String(account) : null, secretHash: hash } });
+    ? await prisma.install.update({ where: { id: existing.id }, data: { secretHash: hash, lastSeenAt: new Date(), ...(account ? { account: String(account) } : {}), ...bind } })
+    : await prisma.install.create({ data: { tenantId: tenant.id, machineId: String(machineId), account: account ? String(account) : null, secretHash: hash, ...bind } });
   return { status: 200, body: { installId: install.id, installSecret: secret, tenantId: tenant.id } };
 }
 

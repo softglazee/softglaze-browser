@@ -50,5 +50,10 @@
     "emptyTrash_other": "Permanently delete ALL {{count}} profiles in the trash? This cannot be undone.",
     "emptyTrashWithData_one": "Permanently delete ALL {{count}} profile in the trash? This cannot be undone and local browser data will be erased.",
     "emptyTrashWithData_other": "Permanently delete ALL {{count}} profiles in the trash? This cannot be undone and local browser data will be erased."
+  },
+  "pager": {
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "prev": "Prev",
+    "next": "Next"
   }
 }

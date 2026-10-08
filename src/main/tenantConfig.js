@@ -7,7 +7,9 @@
 // behavior - the licensing backend is simply inactive.
 //
 // Env vars override the file (handy for dev/testing without rebaking):
-//   SG_TENANT_ID, SG_API_BASE_URL, SG_TENANT_PUBLIC_KEY
+//   SG_TENANT_ID, SG_API_BASE_URL, SG_TENANT_PUBLIC_KEY, SG_UPDATE_FEED_URL
+// audit L4: only in unpackaged (dev) runs. A packaged build ignores them, so nobody can
+// point an installed app at their own licensing backend / signing key with an env var.
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -27,16 +29,22 @@ function sanitizeSecureUrl(raw, label) {
   return '';
 }
 
+// Guarded: under plain node (tests) require('electron') is the binary path, not the API.
+function isPackagedApp() {
+  try { const { app } = require('electron'); return Boolean(app && app.isPackaged); } catch (_) { return false; }
+}
+
 function load() {
   let fileCfg = {};
   try { fileCfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'tenant.config.json'), 'utf8')) || {}; }
   catch (_) { fileCfg = {}; }
-  const tenantId = String(process.env.SG_TENANT_ID || fileCfg.tenantId || '').trim();
-  const apiBaseUrl = sanitizeSecureUrl(process.env.SG_API_BASE_URL || fileCfg.apiBaseUrl || '', 'apiBaseUrl');
-  const publicKeyPem = String(process.env.SG_TENANT_PUBLIC_KEY || fileCfg.publicKeyPem || '').trim();
+  const env = isPackagedApp() ? {} : process.env;
+  const tenantId = String(env.SG_TENANT_ID || fileCfg.tenantId || '').trim();
+  const apiBaseUrl = sanitizeSecureUrl(env.SG_API_BASE_URL || fileCfg.apiBaseUrl || '', 'apiBaseUrl');
+  const publicKeyPem = String(env.SG_TENANT_PUBLIC_KEY || fileCfg.publicKeyPem || '').trim();
   // Buyer-owned auto-update feed (a generic URL hosting latest.yml + installers).
   // Empty -> auto-update stays off (the build never phones a default/seller feed).
-  const updateFeedUrl = sanitizeSecureUrl(process.env.SG_UPDATE_FEED_URL || fileCfg.updateFeedUrl || '', 'updateFeedUrl');
+  const updateFeedUrl = sanitizeSecureUrl(env.SG_UPDATE_FEED_URL || fileCfg.updateFeedUrl || '', 'updateFeedUrl');
   return {
     tenantId,
     apiBaseUrl,
@@ -51,4 +59,4 @@ function tenantConfig() { if (!cached) cached = load(); return cached; }
 // Test seam: drop the memoized value so a test can re-read after changing env.
 function _reset() { cached = null; }
 
-module.exports = { tenantConfig, _reset };
+module.exports = { tenantConfig, _reset, isPackagedApp };

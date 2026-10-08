@@ -58,8 +58,10 @@ Release Firefox only loads extensions signed by Mozilla. You can get a signed
 ## Security / threat model of the bridge
 
 The bridge binds **127.0.0.1 only** and sends **no CORS headers**, so a visited
-web page cannot read it cross-origin. The `X-SG-Autofill-Token` static shared
-secret blocks casual other-local-apps. The data exchanged is demo registration
-personas from your own vault — not high-value secrets. A signed `.xpi` is a fixed
-artifact, so a per-launch token can't be injected without breaking the signature;
-the static secret is the deliberate trade-off. See `src/main/autofillBridge.js`.
+web page cannot read it cross-origin. The `X-SG-Autofill-Token` is random per
+app run: the app writes it to Firefox managed storage for this extension id at
+every launch (`storage` permission, read with `browser.storage.managed`), and the
+bridge only listens while a Firefox autofill session runs. The origin a call is
+scoped to comes from `sender.url` in the background script, never from the
+content script. Any change to these files needs a fresh Mozilla signature.
+See `src/main/autofillBridge.js`.

@@ -11,6 +11,7 @@
       "profiles": "Profiles",
       "groups": "Groups",
       "proxies": "Proxy pool",
+      "proxyProviders": "Proxy providers",
       "browsers": "Browsers",
       "extensions": "Extensions",
       "batchImport": "Batch import",

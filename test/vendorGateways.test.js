@@ -103,7 +103,8 @@ test('every provider in the UI either has an adapter or is marked unavailable', 
 
 test('a provider marked unavailable carries no gateway to prefill', () => {
   const lines = UI.split(/\r?\n/).filter((l) => /^\s*\{ key: '/.test(l) && /unavailable:\s*true/.test(l));
-  assert.ok(lines.length > 0, 'expected at least one unavailable provider');
+  // As of 2026-10-07 every vendor has a live adapter, so there may be none marked unavailable.
+  // The invariant below still guards any future unavailable provider (gateway must stay null).
   for (const line of lines) {
     const key = /key: '([^']+)'/.exec(line)[1];
     assert.match(line, /gateway: null/,

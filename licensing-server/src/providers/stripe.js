@@ -49,4 +49,48 @@ function verifyEvent({ secretKey, webhookSecret, rawBody, signature }) {
   return client(secretKey).webhooks.constructEvent(rawBody, signature, webhookSecret);
 }
 
-module.exports = { createCheckout, verifyEvent, stripeInterval };
+// Audit L9: the subscription id moved from invoice.subscription to
+// invoice.parent.subscription_details.subscription in newer Stripe API versions; the
+// webhook payload follows the endpoint's API version, so read both. Pure.
+function invoiceSubscriptionId(inv) {
+  if (!inv) return null;
+  const pick = (v) => (v && typeof v === 'object' ? v.id : v) || null;
+  const direct = pick(inv.subscription);
+  if (direct) return String(direct);
+  const nested = inv.parent && inv.parent.subscription_details && pick(inv.parent.subscription_details.subscription);
+  return nested ? String(nested) : null;
+}
+
+const idOf = (v) => (v && typeof v === 'object' ? v.id : v) || null;
+
+// Audit L8: map a refunded / disputed charge back to what it paid for. A one-time
+// purchase is found by its Checkout Session (listed by payment_intent); a subscription
+// charge by its invoice's subscription. { sessionRef, subscriptionId }, either may be null.
+async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) {
+  const stripe = client(secretKey);
+  let sessionRef = null;
+  let subscriptionId = null;
+  const pi = idOf(paymentIntent);
+  if (pi) {
+    const list = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 1 });
+    const s = list && list.data && list.data[0];
+    if (s) {
+      sessionRef = s.id;
+      subscriptionId = idOf(s.subscription);
+    }
+  }
+  if (!sessionRef && !subscriptionId) {
+    let inv = invoice || null;
+    if (!inv && charge) {
+      const ch = typeof charge === 'object' ? charge : await stripe.charges.retrieve(String(charge));
+      inv = ch && ch.invoice;
+    }
+    if (inv) {
+      const invObj = typeof inv === 'object' ? inv : await stripe.invoices.retrieve(String(inv));
+      subscriptionId = invoiceSubscriptionId(invObj);
+    }
+  }
+  return { sessionRef, subscriptionId };
+}
+
+module.exports = { createCheckout, verifyEvent, stripeInterval, invoiceSubscriptionId, resolveChargeRefs };

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
-  Trash2, Settings, Users, Lock, Check, ChevronsUpDown, Sun, Moon,
+  Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
-  LogOut, UserCog, CreditCard, Link2
+  CreditCard, Link2, Plug
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -12,6 +12,8 @@ import { renderFooterNodes } from '@/lib/footerText.jsx';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
 import CommandPalette from '@/components/CommandPalette.jsx';
 import OnboardingWizard from '@/components/OnboardingWizard.jsx';
+import UserMenuPopover from '@/components/UserMenuPopover.jsx';
+import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 
 function ThemeToggle({ collapsed }) {
   const { t } = useTranslation();
@@ -48,6 +50,7 @@ const SECTIONS = [
       { path: '/start-links', labelKey: 'nav.startLinks', icon: Link2 },
       { path: '/profiles', labelKey: 'nav.profiles', icon: Fingerprint, badgeKey: 'profiles', featureKey: 'profiles' },
       { path: '/groups', labelKey: 'nav.groups', icon: Layers, featureKey: 'groups' },
+      { path: '/proxy-providers', labelKey: 'nav.proxyProviders', icon: Plug, badgeKey: 'providers', featureKey: 'proxies' },
       { path: '/proxies', labelKey: 'nav.proxies', icon: Globe, featureKey: 'proxies' },
       { path: '/browsers', labelKey: 'nav.browsers', icon: MonitorDown, featureKey: 'browsers' },
       { path: '/extensions', labelKey: 'nav.extensions', icon: Puzzle, featureKey: 'extensions' }
@@ -120,7 +123,8 @@ export default function AppShell({ children }) {
   // (covers SUPER_ADMIN and any future role not yet in the locale files).
   const roleLabel = (r) => (r ? t(`roles.${r}`, { defaultValue: ROLE_LABEL[r] || r }) : t('shell.noMember'));
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // Narrow windows start with the icon-only sidebar so pages keep usable width.
+  const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [me, setMe] = useState(null);
   const [members, setMembers] = useState([]);
   const [vault, setVault] = useState({ enabled: false });
@@ -134,6 +138,10 @@ export default function AppShell({ children }) {
   const [err, setErr] = useState('');
   const [counts, setCounts] = useState({ profiles: 0, sessions: 0 });
   const ref = useRef(null);
+  const userBtnRef = useRef(null);
+
+  // Close the account popover and clear any in-progress PIN/password entry.
+  const closeMenu = () => { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); };
 
   useEffect(() => {
     let live = true;
@@ -180,8 +188,18 @@ export default function AppShell({ children }) {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = (e) => { if (e.matches) setCollapsed(true); };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
     function onDoc(e) {
-      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); }
+      // The popover is a DOM child of `ref` (even though it renders as a fixed
+      // overlay), so clicks inside it are treated as inside and keep it open.
+      if (ref.current && !ref.current.contains(e.target)) closeMenu();
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
@@ -215,7 +233,8 @@ export default function AppShell({ children }) {
   const initials = me?.initials || 'SG';
   const name = me?.name || t('shell.localWorkspace');
   const role = roleLabel(me?.role);
-  const badges = { profiles: counts.profiles ? String(counts.profiles) : '' };
+  // Proxy providers: the number of vendor integrations the app ships.
+  const badges = { profiles: counts.profiles ? String(counts.profiles) : '', providers: String(PROVIDERS.length) };
   const canSee = makeCanSee(me);
 
   return (
@@ -288,7 +307,14 @@ export default function AppShell({ children }) {
               {!collapsed && <span className="text-[13px] font-medium">{t('shell.collapse')}</span>}
             </button>
 
-            <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors text-left">
+            <button
+              ref={userBtnRef}
+              onClick={() => (open ? closeMenu() : setOpen(true))}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              title={collapsed ? `${name} — ${role}` : undefined}
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors text-left"
+            >
               <span className="w-8 h-8 rounded-full grid place-items-center font-semibold text-[11px] shrink-0" style={{ background: me?.color ? me.color + '22' : 'color-mix(in srgb, var(--accent) 22%, transparent)', color: me?.color || 'var(--accent)' }}>{initials}</span>
               {!collapsed && <>
                 <span className="min-w-0 flex-1">
@@ -299,47 +325,23 @@ export default function AppShell({ children }) {
               </>}
             </button>
 
-            {open && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover border border-border rounded-xl overflow-hidden shadow-2xl shadow-black/40 animate-scale-in">
-                <div className="px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">{t('shell.switchMember')}</div>
-                <div className="max-h-60 overflow-y-auto">
-                  {members.length === 0 && <div className="px-3 py-2 text-[12px] text-muted-foreground">{t('shell.noMembersYet')}</div>}
-                  {members.map((m) => (
-                    <div key={m.id}>
-                      <button onClick={() => doSwitch(m)} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left">
-                        <span className="w-6 h-6 rounded-full grid place-items-center text-[10px] font-semibold" style={{ background: (m.color || '#6366f1') + '22', color: m.color || '#6366f1' }}>{m.initials}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[12.5px] truncate text-foreground">{m.name}</span>
-                          <span className="block text-[10.5px] text-muted-foreground">{roleLabel(m.role)}</span>
-                        </span>
-                        {m.isCurrent && <Check className="w-4 h-4 text-primary" />}
-                      </button>
-                      {pinFor === m.id && pwFor !== m.id && (
-                        <div className="px-3 pb-2 flex items-center gap-2">
-                          <input type="password" value={pin} autoFocus onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder={t('shell.pin')} className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
-                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">{t('shell.go')}</button>
-                        </div>
-                      )}
-                      {pwFor === m.id && (
-                        <div className="px-3 pb-2 flex items-center gap-2">
-                          <input type="password" value={pw} autoFocus onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSwitch(m); }} placeholder={t('shell.memberPasswordPlaceholder', { name: m.name })} className="flex-1 h-8 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary" />
-                          <button onClick={() => doSwitch(m)} className="h-8 px-3 rounded-lg bg-primary hover:bg-primary-hover text-primary-foreground text-[12px] font-semibold">{t('shell.go')}</button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {err && <div className="px-3 py-1.5 text-[11px] text-red-400">{err}</div>}
-                <div className="border-t border-border">
-                  <button onClick={() => { setOpen(false); navigate('/account'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><UserCog className="w-4 h-4" />{t('shell.accountSettings')}</button>
-                  <button onClick={() => { setOpen(false); navigate('/members'); }} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><Users className="w-4 h-4" />{t('shell.manageMembers')}</button>
-                  {vault.enabled && <button onClick={doLock} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-secondary text-left text-[12.5px] text-muted-foreground hover:text-foreground"><Lock className="w-4 h-4" />{t('shell.lockWorkspace')}</button>}
-                </div>
-                <div className="border-t border-border">
-                  <button onClick={doLogout} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-red-500/10 text-left text-[12.5px] text-red-400 hover:text-red-300"><LogOut className="w-4 h-4" />{t('shell.logOut')}</button>
-                </div>
-              </div>
-            )}
+            <UserMenuPopover
+              open={open}
+              onClose={closeMenu}
+              anchorRef={userBtnRef}
+              me={me}
+              members={members}
+              roleLabel={roleLabel}
+              vault={vault}
+              onSwitch={doSwitch}
+              pinFor={pinFor} pin={pin} setPin={setPin}
+              pwFor={pwFor} pw={pw} setPw={setPw}
+              err={err}
+              onLock={doLock}
+              onLogout={doLogout}
+              onAccount={() => { closeMenu(); navigate('/account'); }}
+              onManageMembers={() => { closeMenu(); navigate('/members'); }}
+            />
           </div>
         </div>
       </aside>
@@ -357,7 +359,7 @@ export default function AppShell({ children }) {
             <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground" title={t('shell.dismiss')}><X className="w-4 h-4" /></button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-7 py-6">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-6">{children}</div>
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>
       <CommandPalette />

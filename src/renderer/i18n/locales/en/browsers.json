@@ -50,5 +50,9 @@
     "downloadFailed": "Download failed.",
     "pauseFailed": "Pause failed.",
     "resumeFailed": "Resume failed."
+  },
+  "browsers": {
+    "showAll": "Show all {{n}} versions",
+    "showLess": "Show less"
   }
 }

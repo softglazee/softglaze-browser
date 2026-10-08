@@ -12,13 +12,14 @@ const http = require('node:http');
 const https = require('node:https');
 const os = require('node:os');
 const crypto = require('node:crypto');
-const { spawn } = require('node:child_process');
+const { spawn, execFile } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const { parseProxyInput } = require('./browserEngine');
 const { startSocksAuthRelay } = require('./socksRelay');
 const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
 const platform = require('./platform');
 const { extractFirefox } = require('./extractArchive');
+const autofillBridge = require('./autofillBridge');
 // `app` is a string path (not the API object) when required outside Electron, so
 // `app && app.isPackaged` is a safe runtime guard.
 const { app } = require('electron');
@@ -121,7 +122,48 @@ async function installAutofillExtension(userDataDir) {
   } catch (e) { return { mode: 'none' }; }
 }
 
+// audit E3/S1: hand the loopback bridge's PER-APP-RUN token to the extension. A
+// signed .xpi cannot carry it, and a WebExtension cannot read prefs or arbitrary
+// profile files, so we use Firefox's documented managed-storage manifest for our
+// extension id (read by browser.storage.managed in sg-background.js):
+//   Windows: HKCU\Software\Mozilla\ManagedStorage\<id> -> path of the JSON below
+//   macOS:   ~/Library/Application Support/Mozilla/ManagedStorage/<id>.json
+//   Linux:   ~/.mozilla/managed-storage/<id>.json
+// Only our extension id reads it. Rewritten when the token changes (once per run).
+let managedTokenWritten = null;
+function managedStoragePath() {
+  if (process.platform === 'win32') return path.join(FIREFOX_ROOT, `${AUTOFILL_EXT_ID}.managed.json`);
+  if (process.platform === 'darwin') return path.join(os.homedir(), 'Library', 'Application Support', 'Mozilla', 'ManagedStorage', `${AUTOFILL_EXT_ID}.json`);
+  return path.join(os.homedir(), '.mozilla', 'managed-storage', `${AUTOFILL_EXT_ID}.json`);
+}
+function buildManagedStorageManifest(token) {
+  return JSON.stringify({
+    name: AUTOFILL_EXT_ID,
+    description: 'SoftGlaze autofill: per-run bridge token',
+    type: 'storage',
+    data: { token: String(token) }
+  });
+}
+async function writeAutofillManagedToken(token) {
+  if (!token) return false;
+  if (managedTokenWritten === token) return true;
+  const file = managedStoragePath();
+  await fsp.mkdir(path.dirname(file), { recursive: true });
+  await fsp.writeFile(file, buildManagedStorageManifest(token), { mode: 0o600 });
+  if (process.platform === 'win32') {
+    const key = `HKCU\\Software\\Mozilla\\ManagedStorage\\${AUTOFILL_EXT_ID}`;
+    await new Promise((resolve, reject) => {
+      execFile('reg', ['add', key, '/ve', '/t', 'REG_SZ', '/d', file, '/f'], { windowsHide: true }, (err) => (err ? reject(err) : resolve()));
+    });
+  }
+  managedTokenWritten = token;
+  return true;
+}
+
 const ffSessions = new Map(); // sessionId -> { proc, relay, userDataDir, title, proxyLabel, createdAt }
+// audit E5: launches still in flight, so a double-click cannot start two Firefox
+// processes on one profile directory.
+const ffLaunching = new Map(); // sessionId -> Promise<launch result>
 // Session lifecycle sink (set by ipcHandlers) - parity with browserEngine so Firefox
 // launches/closes/crashes feed the same SessionState + crash-recovery pipeline.
 let sessionEventSink = null;
@@ -216,6 +258,11 @@ function buildUserJs(opts) {
   pref('browser.startup.upgradeDialog.enabled', false);
   pref('startup.homepage_override_url', '');
   pref('browser.startup.homepage', 'about:blank');
+  // audit E7: Stop asks Firefox to close gracefully first; a "close N tabs?" prompt
+  // would block that and force the hard kill.
+  pref('browser.tabs.warnOnClose', false);
+  pref('browser.warnOnQuit', false);
+  pref('browser.sessionstore.warnOnQuit', false);
 
   // Anti-leak: turn OFF WebRTC and geolocation so the real IP/location can't escape.
   pref('media.peerconnection.enabled', false);
@@ -285,7 +332,24 @@ function ipLocaleFromGeo(geo) {
   return Array.from(new Set([loc, loc.split('-')[0], 'en'])).join(',');
 }
 
-async function launchFirefoxProfile(options = {}) {
+// audit E5: one Firefox per profile. A second launch for a profile that is running
+// (or still starting) gets the SAME session back instead of a second process.
+function launchFirefoxProfile(options = {}) {
+  const key = options && options.profileId != null && String(options.profileId).trim() ? String(options.profileId).trim() : null;
+  if (key) {
+    const running = ffSessions.get(key);
+    if (running) return Promise.resolve({ sessionId: key, userDataDir: running.userDataDir, engine: 'firefox', alreadyRunning: true });
+    if (ffLaunching.has(key)) return ffLaunching.get(key);
+  }
+  const p = launchFirefoxProfileNow(options);
+  if (!key) return p;
+  ffLaunching.set(key, p);
+  const clear = () => { if (ffLaunching.get(key) === p) ffLaunching.delete(key); };
+  p.then(clear, clear);
+  return p;
+}
+
+async function launchFirefoxProfileNow(options = {}) {
   const {
     profileId, title, dataDirName, profileRoot, profile = {}, startUrl = 'about:blank',
     // This profile's own saved start links (Profile.startupUrls). Opened as extra
@@ -348,12 +412,22 @@ async function launchFirefoxProfile(options = {}) {
       proxyGeo = await lookupProxyGeoNodeCached(proxy);
     } catch (e) { proxyGeo = null; }
   }
+  // audit E6: lookup failed - use the last geo this proxy resolved to (same cache as
+  // the Chrome engine); with none, the launch returns a geoWarning instead of
+  // silently running a proxied profile on the host timezone.
+  if (proxy && !proxyGeo && (!tzCustom || !langCustom)) {
+    try { proxyGeo = require('./browserEngine').lastKnownProxyGeo(proxy); } catch (e) { proxyGeo = null; }
+  }
   const acceptLanguages = langCustom
     ? String(profile.languageCustom).split(';')[0].trim()
     : ipLocaleFromGeo(proxyGeo);
   const timezoneId = tzCustom
     ? String(profile.timezoneCustom).trim()
     : (proxyGeo && proxyGeo.timezone ? String(proxyGeo.timezone).trim() : null);
+  let geoWarning = null;
+  if (proxy && !timezoneId && profile.timezoneType !== 'Real') {
+    try { geoWarning = require('./browserEngine').GEO_DEGRADED_WARNING; } catch (e) { geoWarning = 'The proxy location could not be looked up.'; }
+  }
 
   // Smart Autofill - install the WebExtension into the profile (and only enable
   // the supporting prefs if it actually landed). Gated by the caller's setting;
@@ -363,6 +437,20 @@ async function launchFirefoxProfile(options = {}) {
     const r = await installAutofillExtension(userDataDir).catch(() => ({ mode: 'none' }));
     autofillInstalled = r.mode !== 'none';
   }
+  // audit E3: the loopback bridge only listens while a Firefox autofill session runs,
+  // and the extension learns this run's token from managed storage. If the token
+  // cannot be handed over, the extension cannot authenticate - skip the bridge.
+  let autofillHeld = false;
+  if (autofillInstalled) {
+    try {
+      await writeAutofillManagedToken(autofillBridge.getToken());
+      await autofillBridge.acquire();
+      autofillHeld = true;
+    } catch (e) {
+      console.warn('[SG][firefox] autofill bridge token handoff failed:', (e && e.message) || e);
+    }
+  }
+  const releaseAutofill = () => { if (autofillHeld) { autofillHeld = false; autofillBridge.release().catch(() => {}); } };
 
   // UA override for real Firefox. NEVER apply a Chrome-family UA to a Gecko binary: the
   // engine still exposes Firefox-only tells (buildID, oscpu, no navigator.userAgentData),
@@ -384,6 +472,7 @@ async function launchFirefoxProfile(options = {}) {
     await fsp.writeFile(path.join(userDataDir, 'user.js'), userJs);
   } catch (e) {
     if (relay) { try { relay.close(); } catch (_) {} }
+    releaseAutofill();
     throw e;
   }
 
@@ -422,10 +511,11 @@ async function launchFirefoxProfile(options = {}) {
     proc = spawn(ff, args, { env, detached: false, windowsHide: false, stdio: 'ignore' });
   } catch (e) {
     if (relay) { try { relay.close(); } catch (_) {} } // don't leak the relay on a spawn failure
+    releaseAutofill();
     throw e;
   }
   const sessionId = String(profileId || crypto.randomUUID());
-  const session = { proc, relay, userDataDir, title: title || `Profile ${sessionId}`, proxyLabel, createdAt: new Date(), engine: 'firefox' };
+  const session = { proc, relay, userDataDir, title: title || `Profile ${sessionId}`, proxyLabel, createdAt: new Date(), engine: 'firefox', releaseAutofill, geoWarning };
   ffSessions.set(sessionId, session);
 
   let ffSettled = false;
@@ -436,7 +526,10 @@ async function launchFirefoxProfile(options = {}) {
     if (ffSettled) return;
     ffSettled = true;
     if (session.relay) session.relay.close();
-    ffSessions.delete(sessionId);
+    session.releaseAutofill();
+    // audit E5: only drop the map entry if it is still THIS session (a relaunch may
+    // already have registered a new one under the same id).
+    if (ffSessions.get(sessionId) === session) ffSessions.delete(sessionId);
     let reason = 'crash';
     if (ffShuttingDown) reason = 'shutdown';
     else if (ffIntentionalClose.has(sessionId)) { reason = 'user'; ffIntentionalClose.delete(sessionId); }
@@ -447,19 +540,34 @@ async function launchFirefoxProfile(options = {}) {
 
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'firefox' });
 
-  return { sessionId, userDataDir, engine: 'firefox' };
+  return { sessionId, userDataDir, engine: 'firefox', geoDegraded: Boolean(geoWarning), geoWarning };
 }
 
 // Kill the tracked process AND its children. With -wait-for-browser the process we hold is
 // the parent of the real browser; a plain proc.kill() would end the waiter but leave the
 // browser window open (and the profile locked). taskkill /T reaps the whole tree on Windows.
-function killProcessTree(proc) {
+// `force` false (audit E7) asks politely: taskkill without /F sends the windows a close
+// request, SIGTERM elsewhere - Firefox then flushes cookies, session and storage.
+function killProcessTree(proc, force = true) {
   if (!proc || !proc.pid) return;
   if (process.platform === 'win32') {
-    try { spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); return; }
+    const args = ['/PID', String(proc.pid), '/T'];
+    if (force) args.push('/F');
+    try { spawn('taskkill', args, { windowsHide: true, stdio: 'ignore' }); return; }
     catch (e) { /* fall through to a plain kill */ }
   }
-  try { proc.kill(); } catch (e) { /* ignore */ }
+  try { proc.kill(force ? 'SIGKILL' : 'SIGTERM'); } catch (e) { /* ignore */ }
+}
+
+const FF_GRACEFUL_STOP_MS = 8000;
+function waitForExit(proc, ms) {
+  return new Promise((resolve) => {
+    if (!proc || proc.exitCode !== null || proc.signalCode !== null) { resolve(true); return; }
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; clearTimeout(t); resolve(v); } };
+    const t = setTimeout(() => finish(false), ms);
+    proc.once('exit', () => finish(true));
+  });
 }
 
 async function closeFirefoxSession(sessionId) {
@@ -467,10 +575,15 @@ async function closeFirefoxSession(sessionId) {
   const session = ffSessions.get(id);
   if (!session) return { closed: false };
   ffIntentionalClose.add(id); // deliberate close - the exit must not be read as a crash
-  killProcessTree(session.proc);
+  // audit E7: graceful close first (profile data is written on a clean exit), then
+  // force only if Firefox is still running after ~8 s.
+  killProcessTree(session.proc, false);
+  const exited = await waitForExit(session.proc, FF_GRACEFUL_STOP_MS);
+  if (!exited) killProcessTree(session.proc, true);
   if (session.relay) session.relay.close();
-  ffSessions.delete(id);
-  return { closed: true };
+  session.releaseAutofill();
+  if (ffSessions.get(id) === session) ffSessions.delete(id);
+  return { closed: true, forced: !exited };
 }
 
 function isFirefoxSession(sessionId) {
@@ -492,7 +605,8 @@ function listFirefoxSessions() {
 
 async function closeAllFirefoxSessions() {
   ffShuttingDown = true; // app quitting - Firefox closes are not crashes
-  for (const id of Array.from(ffSessions.keys())) await closeFirefoxSession(id);
+  // In parallel, so N graceful waits cost ~8 s in total, not 8 s each.
+  await Promise.all(Array.from(ffSessions.keys()).map((id) => closeFirefoxSession(id).catch(() => ({ closed: false }))));
 }
 
 // --- On-demand Firefox download + PORTABLE extract -----------------------------
@@ -874,5 +988,8 @@ module.exports = {
   listFirefoxSessions,
   closeAllFirefoxSessions,
   setSessionEventSink,
+  // audit E3: exported for tests (the token handoff to the extension).
+  buildManagedStorageManifest,
+  managedStoragePath,
   FIREFOX_ROOT
 };

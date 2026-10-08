@@ -37,6 +37,9 @@ async function createCheckout({ secrets, plan, orderId, returnUrl, callbackUrl }
 }
 
 function verifyWebhook({ secrets, payload }) {
+  // Audit L2: with no apiKey the expected sign is md5(base64(body)) — computable by
+  // anyone, so an unconfigured key must reject every webhook, never verify against ''.
+  if (!secrets || typeof secrets.apiKey !== 'string' || !secrets.apiKey) return false;
   if (!payload || typeof payload !== 'object' || !payload.sign) return false;
   const data = { ...payload };
   delete data.sign;

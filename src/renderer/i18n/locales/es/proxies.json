@@ -23,18 +23,44 @@
     "checkAll": "Verificar todo",
     "refresh": "Actualizar",
     "batchAdd": "Añadir en lote",
-    "newProxy": "Nuevo proxy"
+    "newProxy": "Nuevo proxy",
+    "checkNew": "Comprobar nuevos",
+    "checkNewTooltip": "Comprueba solo los proxies recién añadidos que nunca se han comprobado."
   },
   "tabs": {
     "custom": "Proxies personalizados",
     "providers": "Proveedores de proxy",
-    "integrated": "Integrado"
+    "integrated": "Integrado",
+    "history": "Historial de comprobaciones",
+    "groups": "Grupos y países"
   },
   "stats": {
     "totalProxies": "Total de proxies",
+    "totalTip": "Mostrar todo el grupo",
+    "splitSub": "{{verified}} verificados · {{unchecked}} sin comprobar",
     "proxyTypes": "Tipos de proxy",
     "verified": "Verificados",
+    "verifiedTip": "Filtrar la tabla a proxies verificados",
+    "pctOfPool": "{{pct}}% del grupo",
+    "failed": "Fallidos",
+    "failedTip": "Filtrar la tabla a proxies fallidos",
+    "uncheckedSub": "{{count}} sin comprobar aún",
     "nonVerified": "No verificados",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "Mezcla de protocolos del grupo",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "Países",
+    "countriesTip": "Abrir el desglose por país",
+    "topCountry": "{{country}} lidera · {{count}}",
+    "countriesEmpty": "Ejecuta una comprobación para detectar ubicaciones",
+    "lastCheck": "Última comprobación",
+    "lastCheckTip": "Abrir comprobaciones automáticas de estado",
+    "autoEvery": "Comprobar cada {{n}} min",
+    "autoOff": "Comprobación automática desactivada",
+    "justNow": "ahora mismo",
+    "minAgo": "hace {{n}} min",
+    "hrAgo": "hace {{n}} h",
+    "dayAgo": "hace {{n}} d",
     "filtering": "filtrando",
     "noProxies": "Sin proxies",
     "total": "total"
@@ -201,7 +227,8 @@
     "openDetail": "Abrir historial completo",
     "regressed": "Verificado antes, falló después",
     "regressedCount_one": "{{count}} verificado y luego falló",
-    "regressedCount_other": "{{count}} verificados y luego fallaron"
+    "regressedCount_other": "{{count}} verificados y luego fallaron",
+    "empty": "Aún no hay comprobaciones. Ejecuta Comprobar todo o Probar todo en la página Proxies y los resultados aparecerán aquí."
   },
   "form": {
     "dialogTitleEdit": "Editar proxy",
@@ -273,5 +300,22 @@
     "deleteProxy": "No se pudo eliminar el proxy. Quita los perfiles vinculados o cambia su asignación de proxy primero.",
     "rotate": "No se pudo rotar la IP.",
     "rotateStatus": "La solicitud de rotación devolvió HTTP {{status}}."
+  },
+  "groupsPage": {
+    "groupsTitle": "Grupos y países",
+    "openGroup": "Mostrar estos proxies",
+    "noGeo": "Ejecuta Comprobar todo en la página Proxies para detectar el país de cada proxy.",
+    "noProviders": "Aún no hay proxies de proveedores. Descarga algunos desde Proveedores de proxy.",
+    "scheduleTitle": "Comprobaciones automáticas"
+  },
+  "filterBar": {
+    "statusTip": "Estado de comprobación",
+    "statusAll": "Cualquier estado",
+    "blocklistAll": "Cualquier lista negra",
+    "speedAll": "Cualquier velocidad",
+    "groupTip": "Grupo o país",
+    "groupAll": "Todos los grupos",
+    "providerAll": "Todos los proveedores",
+    "reset": "Restablecer filtros"
   }
 }

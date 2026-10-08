@@ -111,7 +111,7 @@ test('payment provisioning matches licences by install or subscription, never by
 });
 
 test('register uses the shared install auth', () => {
-  assert.match(read('routes/register.js'), /registerInstall\(prisma, tenant, \{ machineId, account, installSecret \}\)/);
+  assert.match(read('routes/register.js'), /registerInstall\(prisma, tenant, \{ machineId, account, installSecret, machineHash \}\)/);
   const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8');
   assert.match(/model Install \{[\s\S]*?\n\}/.exec(schema)[0], /secretHash String\?/);
 });

@@ -90,15 +90,23 @@ function activityToCsv(rows) {
 }
 
 // --- Profile locks ---------------------------------------------------------
+// A launch in progress holds a PENDING reservation (no session id yet).
+const PENDING_LOCK = '__pending__';
+const PENDING_LOCK_TTL_MS = 120000;
+
 // Does an existing lock block `requesterMemberId` from launching? It blocks only
 // when the lock is (a) held by a DIFFERENT member AND (b) still live (its session
 // is in `liveSessionIds`). A stale lock - whose browser session has gone away -
 // never blocks (it'll be reaped by reconciliation).
-function lockBlocks(existing, requesterMemberId, liveSessionIds) {
+// audit E4: a PENDING reservation is never in the live set, so it used to count as
+// stale and never blocked - another member could launch the same profile while the
+// first launch was still spawning. It now blocks for its TTL.
+function lockBlocks(existing, requesterMemberId, liveSessionIds, now = Date.now()) {
   if (!existing) return false;
+  if (String(existing.memberId) === String(requesterMemberId)) return false;
+  if (existing.sessionId === PENDING_LOCK) return (now - (Number(existing.at) || 0)) <= PENDING_LOCK_TTL_MS;
   const live = liveSessionIds instanceof Set ? liveSessionIds : new Set(liveSessionIds || []);
-  if (!live.has(String(existing.sessionId))) return false; // stale → not blocking
-  return String(existing.memberId) !== String(requesterMemberId);
+  return live.has(String(existing.sessionId)); // stale → not blocking
 }
 
 module.exports = {
@@ -110,5 +118,7 @@ module.exports = {
   csvEscape,
   ACTIVITY_CSV_COLUMNS,
   activityToCsv,
-  lockBlocks
+  lockBlocks,
+  PENDING_LOCK,
+  PENDING_LOCK_TTL_MS
 };

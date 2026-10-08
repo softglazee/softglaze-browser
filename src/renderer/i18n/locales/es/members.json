@@ -280,7 +280,9 @@
     },
     "confirm": {
       "terminate": "¿Cancelar ahora la suscripción de {{name}}? Sus perfiles se bloquearán hasta que vuelvas a concederle acceso.",
-      "terminateModal": "¿Cancelar ahora esta suscripción? Los perfiles se bloquean hasta que vuelvas a conceder acceso."
+      "terminateModal": "¿Cancelar ahora esta suscripción? Los perfiles se bloquean hasta que vuelvas a conceder acceso.",
+      "resetTrial": "¿Restablecer la prueba de {{name}}? Su periodo de prueba vuelve a empezar y se reemplaza el estado actual de la licencia.",
+      "block": "¿Bloquear a {{name}}? Se cerrará la sesión de esta persona y de todos sus submiembros, y no podrán usar la aplicación hasta que los desbloquees."
     },
     "errors": {
       "load": "No se pudieron cargar las licencias.",

@@ -2,6 +2,41 @@
   "actions": {
     "refresh": "Refresh"
   },
+  "groups": {
+    "general": "General",
+    "browser": "Browser",
+    "runtime": "Runtime",
+    "security": "Security & team",
+    "account": "Account & data"
+  },
+  "nav": {
+    "billing": "Billing",
+    "monetization": "Plan & usage",
+    "migration": "Import & migration",
+    "workspaceSync": "Workspace sync",
+    "branding": "Branding",
+    "dbEncryption": "Database encryption",
+    "workspaceBackup": "Workspace backup",
+    "developerApi": "Developer API"
+  },
+  "fingerprint": {
+    "title": "Fingerprint & identity",
+    "description": "Applied to every profile at launch unless the profile overrides it."
+  },
+  "behaviour": {
+    "title": "Browser behaviour",
+    "description": "How the launched browser behaves day to day."
+  },
+  "ui": {
+    "searchPlaceholder": "Search settings",
+    "jumpTo": "Jump to section",
+    "noResultsTitle": "No settings match “{{term}}”",
+    "noResultsDesc": "Try a shorter word, for example proxy, camera or login.",
+    "experimental": "Experimental",
+    "savedIdle": "All changes saved",
+    "saving": "Saving changes…",
+    "saveError": "Couldn't save changes"
+  },
   "localRuntime": {
     "title": "Local Runtime",
     "description": "Paths are resolved in the Electron main process.",
@@ -167,6 +202,7 @@
     },
     "minimizeCdpFootprint": {
       "title": "Minimize CDP footprint (experimental - anti-CAPTCHA)",
+      "shortTitle": "Minimize CDP footprint",
       "desc": "Drops the persistent CDP Runtime.enable - the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles."
     },
     "lockExtensions": {
@@ -194,6 +230,10 @@
       "desc": "Block image loading to save traffic. Note: image loading is disabled fully; the KB threshold below is stored for future per-request filtering.",
       "skipUnder": "Skip images under",
       "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "Native anti-detect engine (fingerprint-chromium)",
+      "desc": "Launch Chrome profiles on fingerprint-chromium - a source-patched Chromium that spoofs the fingerprint (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively, with no JS-injection race for sites to catch. Requires the fingerprint-chromium binary; falls back to stock Chrome when it is not present. This engine drops the CDP binding the page-to-app bridge used to rely on, so SoftGlaze routes those calls over a binding-free channel instead - Data Vault autofill, the macro recorder, start-page links and session mirroring all work on it. Off by default - turn on and relaunch profiles."
     }
   },
   "performance": {

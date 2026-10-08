@@ -11,7 +11,9 @@ const { leaseDays } = require('./env');
 const DAY = 86400000;
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
-function issueLease(tenant, license, nowMs) {
+// opts.mid: the install's machine hash (audit L3). The desktop refuses a lease whose mid
+// is not its own, so a lease copied to another machine does not activate there.
+function issueLease(tenant, license, nowMs, opts = {}) {
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
   const periodEnd = license.currentPeriodEnd ? new Date(license.currentPeriodEnd).getTime() : 0;
   const cap = now + leaseDays * DAY;
@@ -23,6 +25,7 @@ function issueLease(tenant, license, nowMs) {
     account: license.account || null,
     tier: license.tier || 'pro',
     plan: license.plan || null,
+    ...(opts.mid ? { mid: String(opts.mid) } : {}),
     iat: Math.floor(now / 1000),
     exp: Math.floor(exp / 1000),
     nonce: b64url(randomBytes(8))

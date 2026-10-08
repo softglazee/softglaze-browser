@@ -50,5 +50,10 @@
     "emptyTrash_other": "¿Eliminar permanentemente TODOS los {{count}} perfiles de la papelera? Esta acción no se puede deshacer.",
     "emptyTrashWithData_one": "¿Eliminar permanentemente TODOS los {{count}} perfil de la papelera? Esta acción no se puede deshacer y se borrarán los datos locales del navegador.",
     "emptyTrashWithData_other": "¿Eliminar permanentemente TODOS los {{count}} perfiles de la papelera? Esta acción no se puede deshacer y se borrarán los datos locales del navegador."
+  },
+  "pager": {
+    "showing": "Mostrando {{from}}-{{to}} de {{total}}",
+    "prev": "Anterior",
+    "next": "Siguiente"
   }
 }
