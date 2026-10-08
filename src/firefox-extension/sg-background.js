@@ -139,8 +139,13 @@ browser.runtime.onMessage.addListener(function (msg, sender) {
     }
     var e = activeIds.get(key);
     if (!e || Date.now() - e.at > ACTIVE_TTL_MS) { activeIds.delete(key); return Promise.resolve(null); }
+    // 'finish': a submit that looked final but had no password; the next page decides.
+    if (msg.op === 'finish') {
+      if (String(msg.id || '') !== e.id) return Promise.resolve(null);
+      e.pending = true;
+    }
     e.at = Date.now();
-    return Promise.resolve({ id: e.id });
+    return Promise.resolve({ id: e.id, pending: !!e.pending });
   }
   if (msg.type === 'list') {
     return call('/sg-autofill/list?url=' + encodeURIComponent(url), { method: 'GET' })

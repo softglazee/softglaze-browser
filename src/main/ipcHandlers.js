@@ -40,6 +40,7 @@ const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
 const autofillBridge = require('./autofillBridge');
+const { siteKeyOf } = require('./siteKey');
 const updater = require('./updater');
 const totp = require('./totp');
 const permissions = require('./permissions');
@@ -7409,13 +7410,18 @@ function toPublicPersona(p) {
   return { ...rest, hasPassword: Boolean(password) };
 }
 
-// Return only personas whose usedOnUrls does NOT already contain this host.
+// Return only personas not yet used on this SITE. usedOnUrls keeps the exact host
+// it was used on, but the match is by site (registrable domain): an identity used on
+// learn.example.com is used on example.com too, so a signup that moves between
+// subdomains keeps the same identity offered on every step and never offers a
+// used one again.
 async function getAvailablePersonasForUrl(payload) {
   const input = requireObject(payload);
   const host = normalizeHostname(input.url ?? input.hostname);
   if (!host) throw new Error('A valid URL or hostname is required.');
+  const site = siteKeyOf(host) || host;
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
-  const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).includes(host));
+  const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).some((h) => h === host || siteKeyOf(h) === site));
   // audit C2: never ship the plaintext password in a list payload - strip it here
   // so the Chromium bridge, the Firefox loopback bridge, AND the renderer channel
   // are all password-free at the source.
