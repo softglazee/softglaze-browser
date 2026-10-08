@@ -20,14 +20,14 @@ const vm = require('node:vm');
 const { fingerprintScript } = require('../src/main/browserEngine');
 
 // Build a minimal browser-like global object and run the real script against it.
-function runScriptInSandbox(fp) {
+function runScriptInSandbox(fp, { webdriver = null } = {}) {
   // A fake navigator whose spoofable attributes live on its PROTOTYPE, exactly like a
   // real Navigator — so the script's prototype-vs-instance logic is exercised for real.
   const NavProto = {};
   const proto = (name, val) =>
     Object.defineProperty(NavProto, name, { get() { return val; }, configurable: true, enumerable: true });
   ['webdriver', 'hardwareConcurrency', 'deviceMemory', 'languages', 'language', 'platform', 'vendor']
-    .forEach((n) => proto(n, null));
+    .forEach((n) => proto(n, n === 'webdriver' ? webdriver : null));
   const navigator = Object.create(NavProto);
 
   const sandbox = { navigator, console };
@@ -63,8 +63,8 @@ test('Function.prototype.toString.name is "toString" (not the internal helper na
   assert.doesNotMatch(selfSrc, /_fnToString/);
 });
 
-test('navigator.webdriver is false and lives on the prototype (not an own instance prop)', () => {
-  const s = runScriptInSandbox(FP);
+test('navigator.webdriver: a browser reporting true gets a native-looking false on the prototype', () => {
+  const s = runScriptInSandbox(FP, { webdriver: true });
   assert.equal(s.navigator.webdriver, false);
   assert.equal(Object.prototype.hasOwnProperty.call(s.navigator, 'webdriver'), false,
     'webdriver must not be an own property of the navigator instance');
@@ -74,6 +74,26 @@ test('navigator.webdriver is false and lives on the prototype (not an own instan
   assert.match(desc.get.toString(), /\[native code\]/);
   assert.doesNotMatch(desc.get.toString(), /=>/);
   assert.equal(desc.get.name, 'get webdriver');
+  // Like a real built-in accessor: no .prototype and not constructible.
+  assert.equal('prototype' in desc.get, false);
+  assert.throws(() => new desc.get(), TypeError);
+});
+
+test('navigator.webdriver: a browser already reporting false is left untouched', () => {
+  // Replacing the native getter when it already says false was what Google Search
+  // detected (CAPTCHA on every run, 29 Sep 2026), so the script must not touch it.
+  const s = runScriptInSandbox(FP, { webdriver: false });
+  const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(s.navigator), 'webdriver');
+  assert.equal(s.navigator.webdriver, false);
+  assert.doesNotMatch(desc.get.toString(), /native code/, 'the original getter is still in place');
+});
+
+test('patched Function.prototype.toString has no prototype and is not constructible', () => {
+  const s = runScriptInSandbox(FP);
+  const ts = s.Function.prototype.toString;
+  assert.equal('prototype' in ts, false);
+  assert.throws(() => new ts(), TypeError);
+  assert.equal(ts.name, 'toString');
 });
 
 test('spoofed navigator values are applied and remain non-own', () => {

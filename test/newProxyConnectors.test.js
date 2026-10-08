@@ -82,16 +82,15 @@ test('nodeMavenTtl validates the {n}s/m/h shape', () => {
 });
 
 // --- Froxy -----------------------------------------------------------------------------
-test('froxyPassword builds the SOAX-style targeting string', () => {
-  assert.equal(U.froxyPassword({ poolType: 'residential', country: 'US', region: 'South Carolina', city: 'Myrtle Beach' }),
-    'wifi;us;;south+carolina;myrtle+beach');
-  assert.equal(U.froxyPassword({ poolType: 'mobile', country: 'US' }), 'mobile;us;;;');
-  assert.equal(U.froxyPassword({}), 'wifi;;;;');
+test('froxyPassword appends the geo fields to the dashboard password (help.froxy.com format)', () => {
+  assert.equal(U.froxyPassword('qwerty', { country: 'US' }), 'qwerty;us;;;');
+  assert.equal(U.froxyPassword('qwerty;;;;', { country: 'us' }), 'qwerty;us;;;', 'a pasted password with empty fields keeps only the base');
+  assert.equal(U.froxyPassword('qwerty', { country: 'US', region: 'South Carolina', city: 'Myrtle Beach' }), 'qwerty;us;south+carolina;myrtle+beach;');
+  assert.equal(U.froxyPassword('qwerty', {}), 'qwerty;;;;', 'no country = any location');
+  assert.equal(U.froxyBasePassword('abc;de;;;'), 'abc');
   assert.equal(U.froxyType('mobile'), 'mobile');
   assert.equal(U.froxyType('datacenter'), 'fast');
   assert.equal(U.froxyType('anything'), 'wifi');
-  assert.equal(U.froxyPassword({ poolType: 'datacenter', country: 'us' }), 'fast;us;;;', 'datacenter -> fast');
-  assert.equal(U.froxyPassword({ country: 'us', session: 'abc' }), 'wifi;us;;;;sessionid;abc');
 });
 
 // --- Proxidize -------------------------------------------------------------------------

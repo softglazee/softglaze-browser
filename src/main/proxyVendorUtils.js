@@ -151,6 +151,32 @@ function normalizeGeoJs(j) {
   };
 }
 
+// Pick one geo answer from several services queried through the same proxy. Geo databases
+// disagree on leased proxy ranges: on 29 Sep 2026 ipinfo put 169.128.195.52 in Lisbon while
+// ip-api and geojs both said Albuquerque, US, and trusting ipinfo alone launched a "US" proxy
+// with Portuguese time and language, a loud bot signal. Rule: the country most services agree
+// on wins; a tie goes to the country the user asked the vendor for (hint), then to the order
+// the services were listed in. The winner's own record supplies timezone/city. Each input is
+// the ip-api-shaped object the launch code already uses ({ countryCode, timezone, query, ... }).
+function pickGeoConsensus(results, { countryHint } = {}) {
+  const valid = (Array.isArray(results) ? results : []).filter((r) => r && typeof r === 'object' && /^[A-Z]{2}$/i.test(String(r.countryCode || '')));
+  if (!valid.length) return null;
+  const hint = String(countryHint || '').trim().toUpperCase();
+  const votes = new Map();
+  valid.forEach((r, i) => {
+    const cc = String(r.countryCode).toUpperCase();
+    const v = votes.get(cc) || { n: 0, first: i };
+    v.n += 1;
+    votes.set(cc, v);
+  });
+  const ranked = [...votes.entries()].sort((a, b) => (b[1].n - a[1].n)
+    || ((b[0] === hint) - (a[0] === hint))
+    || (a[1].first - b[1].first));
+  const winner = ranked[0][0];
+  const pick = valid.find((r) => String(r.countryCode).toUpperCase() === winner && r.timezone) || valid.find((r) => String(r.countryCode).toUpperCase() === winner);
+  return { ...pick, countryCode: winner, geoVotes: `${ranked[0][1].n}/${valid.length}` };
+}
+
 // Proxy-Seller products that are sold per IP (an order of N addresses), as opposed to the
 // residential traffic package. All of them list through GET proxy/list/{type}.
 const PROXY_SELLER_ORDER_TYPES = Object.freeze({
@@ -403,11 +429,14 @@ function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, 
 }
 
 // ---------------------------------------------------------------------------------------
-// Froxy (SOAX reseller; gateway proxy.froxy.com:9000). Targeting rides in the PASSWORD as
-// "<type>;<country>;;<region>;<city>" (spaces -> '+'); type is wifi (residential), mobile,
-// or fast (datacenter). The login authenticates. Verified against Froxy's own connection
-// guide; the trailing sticky-session field follows the SOAX convention this gateway inherits
-// (confirm the exact delimiter against a live key before relying on sticky).
+// Froxy (gateway proxy.froxy.com, ports 9000-9199). Login/password access: the LOGIN is the
+// package and the PASSWORD is the dashboard password followed by the geo fields, separated
+// by ";": "<password>;<country>;<region>;<city>;<provider>" (help.froxy.com, Login-Password
+// Authorization; blog example "password;country;;;"). The dashboard shows the bare password
+// with empty fields, e.g. "qwerty;;;;", so only the part before the first ";" is kept as the
+// base. Each port 9000-9199 is its own session, which is how a pull gets several exit IPs.
+// The previous builder replaced the whole password with "wifi;<cc>;..." (a SOAX pattern),
+// which Froxy rejected and reported as "your IP is not in the whitelist" (29 Sep 2026).
 // ---------------------------------------------------------------------------------------
 function froxyType(poolType) {
   const t = String(poolType || '').trim().toLowerCase();
@@ -418,13 +447,12 @@ function froxyType(poolType) {
 function froxyField(v) {
   return String(v || '').trim().toLowerCase().replace(/\s+/g, '+').replace(/[^a-z0-9+]/g, '');
 }
-function froxyPassword({ poolType, country, region, city, session } = {}) {
+function froxyBasePassword(pasted) {
+  return String(pasted == null ? '' : pasted).split(';')[0].trim();
+}
+function froxyPassword(base, { country, region, city } = {}) {
   const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
-  const parts = [froxyType(poolType), /^[a-z]{2}$/.test(cc) ? cc : '', '', froxyField(region), froxyField(city)];
-  let pw = parts.join(';');
-  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
-  if (sid) pw += `;sessionid;${sid}`;
-  return pw;
+  return [froxyBasePassword(base), /^[a-z]{2}$/.test(cc) ? cc : '', froxyField(region), froxyField(city), ''].join(';');
 }
 
 // ---------------------------------------------------------------------------------------
@@ -621,6 +649,33 @@ function liveProxiesRows(text, { socks = false, country = '', plan = 'residentia
   }));
 }
 
+// ---------------------------------------------------------------------------------------
+// Live Proxies gateway (read from the dashboard Proxy Generation panel, 29 Sep 2026). There
+// is no downloadable list URL: the dashboard builds lines from one account username (LV<id>)
+// and one proxy password, and so does the app.
+//   Rotating: b2b.liveproxies.io:7383   user LV58712-lv_us
+//   Sticky:   b2b-s<N>.liveproxies.io:7383   user LV58712-lv_us-<digits, max 8>   (60 min)
+//   SOCKS5:   socks.liveproxies.io:1080 with the same username/password
+// Country = "lv_" + lowercase ISO-2 code (the generator offers 59 countries).
+const LIVEPROXIES_GATEWAY = Object.freeze({ http: 'b2b.liveproxies.io', port: 7383, socksHost: 'socks.liveproxies.io', socksPort: 1080 });
+function liveProxiesBaseUser(raw) {
+  // Accept "LV58712" or a full generated username ("LV58712-lv_us-123") and keep the account part.
+  const m = String(raw || '').trim().match(/^([A-Za-z]{2}\d{2,})/);
+  return m ? m[1].toUpperCase() : '';
+}
+function liveProxiesUsername(base, { country, sid } = {}) {
+  const acct = liveProxiesBaseUser(base);
+  const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  if (!acct || !/^[a-z]{2}$/.test(cc)) return '';
+  const s = String(sid || '').replace(/\D/g, '').slice(0, 8);
+  return `${acct}-lv_${cc}${s ? `-${s}` : ''}`;
+}
+// Sticky server for the Nth sticky proxy (1-based), exactly as the dashboard hands them out.
+function liveProxiesStickyHost(n) {
+  const i = Math.max(1, Number.parseInt(String(n), 10) || 1);
+  return `b2b-s${i}.liveproxies.io`;
+}
+
 // Shared: "new york" / "New-York" -> "NewYork" (vendors that want CamelCase place names).
 function camelPlace(value) {
   return String(value || '').trim().split(/[\s_-]+/).filter(Boolean)
@@ -638,18 +693,28 @@ function camelPlace(value) {
 // spaces; City is only documented under a State, and both need a country. stime (1-180
 // minutes) only works with a session. Source: rapidproxy.io/proxy examples, 2026-09-29.
 const RAPIDPROXY_MAX_STIME = 180;
+// The dashboard generator uses a random 8-digit NUMBER as the session id (sid). A typed or
+// auto-generated name is kept if it is already 1-8 digits, else mapped to a stable 8-digit number.
+function rapidProxySid(session) {
+  const raw = String(session || '').trim();
+  if (!raw) return '';
+  if (/^\d{1,8}$/.test(raw)) return raw;
+  let h = 2166136261;
+  for (const ch of raw) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return String(10000000 + (h % 90000000));
+}
 function rapidProxyUsername(base, { country, state, city, session, lifeMin } = {}) {
   const sub = String(base || '').trim();
   const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
   const hasCc = /^[A-Z]{2}$/.test(cc);
-  let user = `${sub}-residential-${hasCc ? cc : 'global'}`;
+  let user = `${sub}-residential-${hasCc ? cc : 'GLOBAL'}`;
   const st = camelPlace(state);
   if (hasCc && st) {
     user += `-state-${st}`;
     const ct = camelPlace(city);
     if (ct) user += `-city-${ct}`;
   }
-  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  const sid = rapidProxySid(session);
   if (sid) {
     user += `-session-${sid}`;
     const m = Number(lifeMin);
@@ -804,6 +869,13 @@ function proxySolutionsPage(body, { now = Date.now() } = {}) {
 }
 
 module.exports = {
+  rapidProxySid,
+  froxyBasePassword,
+  LIVEPROXIES_GATEWAY,
+  liveProxiesBaseUser,
+  liveProxiesUsername,
+  liveProxiesStickyHost,
+  pickGeoConsensus,
   mobileProxySpaceRows,
   proxySolutionsPage,
   camelPlace,
