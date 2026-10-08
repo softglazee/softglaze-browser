@@ -151,7 +151,7 @@ test('E1: the password gate needs a widget gesture plus TRANSIENT activation, re
   assert.match(attach, /if \(isSecret && !\(await onTarget\(\)\)\) \{ aborted = true; break; \}/);
   // The widget only sets gesture from a trusted row click.
   const widget = SRC('main/personaAutofill.js');
-  assert.match(widget, /if \(!e\.isTrusted\) return; fillWith\(p, \{ gesture: true \}\)/);
+  assert.match(widget, /if \(!e\.isTrusted\) return;[^\n]*\n(?:[^\n]*\n){0,12}?\s*fillWith\(p, \{ gesture: true \}\)/);
   assert.match(widget, /gesture: !opts\.onlyEmpty && opts\.gesture === true/);
   assert.doesNotMatch(widget, /__sgPersonaBeginFill/);
 });

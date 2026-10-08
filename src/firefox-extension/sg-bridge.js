@@ -31,6 +31,13 @@ window.__sgPersonaMarkUsed = function (id, url) {
   catch (e) { return Promise.resolve({ ok: false }); }
 };
 
+// Active identity for a multi-step signup ('get' | 'set' id | 'clear'). Kept by the
+// background script per tab + site, so it survives the page loads between steps.
+window.__sgPersonaActive = function (op, id) {
+  try { return browser.runtime.sendMessage({ type: 'active', op: String(op || 'get'), id: String(id || '') }); }
+  catch (e) { return Promise.resolve(null); }
+};
+
 // Resolve exactly ONE persona's password for on-demand fill (origin-scoped in the
 // app). Returns { password } or null. Firefox-only — see the note above.
 window.__sgPersonaGetSecret = function (id, url) {
