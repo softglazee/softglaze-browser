@@ -92,8 +92,10 @@ function personaAutofillMain(sgRpc) {
     // without a signup form never see an extra element.
     host.style.cssText = 'all:initial;position:fixed;z-index:2147483647;bottom:18px;right:18px;';
     var root = host.attachShadow({ mode: 'closed' });
-    root.innerHTML =
-      '<style>' +
+    // Built with DOM calls, not innerHTML: the markup is static, but Mozilla's
+    // add-on linter (this source is also the Firefox content script) flags any
+    // innerHTML assignment, and DOM building keeps review clean.
+    var CSS =
       ':host{all:initial}' +
       '*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}' +
       '.fab{width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;color:#04222a;font-weight:800;font-size:13px;' +
@@ -120,24 +122,25 @@ function personaAutofillMain(sgRpc) {
       // absolutely-positioned toast shrank to one word per line. z-index keeps it above
       // the panel (it used to render underneath it, so results were never seen).
       '.toast{position:absolute;bottom:60px;right:0;z-index:2;width:max-content;max-width:300px;line-height:1.4;background:#04222a;border:1px solid ' + BRAND + ';color:#e6edf3;font-size:12px;padding:8px 12px;border-radius:9px}' +
-      '[hidden]{display:none!important}' +
-      '</style>' +
-      '<div class="toast" hidden></div>' +
-      '<div class="panel" hidden>' +
-      '  <div class="hd"><span class="dot"></span><b>SoftGlaze Autofill</b><span class="cnt"></span></div>' +
-      '  <div class="body"></div>' +
-      '  <div class="ft" hidden><button class="btn mark">Mark as used</button><button class="btn ghost rel" hidden>Release</button></div>' +
-      '</div>' +
-      '<button class="fab" title="SoftGlaze Smart Autofill" hidden>SG</button>';
+      '[hidden]{display:none!important}';
+    function mk(tag, cls, text) {
+      var n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text) n.textContent = text;
+      return n;
+    }
+    var styleEl = mk('style'); styleEl.textContent = CSS; root.appendChild(styleEl);
+    var toastEl = mk('div', 'toast'); toastEl.hidden = true; root.appendChild(toastEl);
+    var panel = mk('div', 'panel'); panel.hidden = true; root.appendChild(panel);
+    var hd = mk('div', 'hd'); hd.appendChild(mk('span', 'dot')); hd.appendChild(mk('b', '', 'SoftGlaze Autofill'));
+    var cntEl = mk('span', 'cnt'); hd.appendChild(cntEl); panel.appendChild(hd);
+    var body = mk('div', 'body'); panel.appendChild(body);
+    var footer = mk('div', 'ft'); footer.hidden = true; panel.appendChild(footer);
+    var markBtn = mk('button', 'btn mark', 'Mark as used'); footer.appendChild(markBtn);
+    var relBtn = mk('button', 'btn ghost rel', 'Release'); relBtn.hidden = true; footer.appendChild(relBtn);
+    var fab = mk('button', 'fab', 'SG'); fab.title = 'SoftGlaze Smart Autofill'; fab.hidden = true; root.appendChild(fab);
+    function clearBody() { while (body.firstChild) body.removeChild(body.firstChild); }
 
-    var fab = root.querySelector('.fab');
-    var panel = root.querySelector('.panel');
-    var body = root.querySelector('.body');
-    var footer = root.querySelector('.ft');
-    var markBtn = root.querySelector('.mark');
-    var relBtn = root.querySelector('.rel');
-    var cntEl = root.querySelector('.cnt');
-    var toastEl = root.querySelector('.toast');
 
     function mount() { if (document.body && !host.isConnected) document.body.appendChild(host); }
     function unmount() { try { if (host.isConnected) host.remove(); } catch (e) {} }
@@ -192,7 +195,7 @@ function personaAutofillMain(sgRpc) {
       if (!isOpen) return;
       if (loading) return;
       loading = true;
-      body.innerHTML = '<div class="empty">Loading identities…</div>';
+      clearBody(); body.appendChild(mk('div', 'empty', 'Loading identities…'));
       footer.hidden = true;
       try {
         var res = await sgCall('__sgPersonaList', location.href);
@@ -211,7 +214,7 @@ function personaAutofillMain(sgRpc) {
       if (i > 0) personas.unshift(personas.splice(i, 1)[0]);
     }
     function renderList() {
-      body.innerHTML = '';
+      clearBody();
       pinActive();
       cntEl.textContent = personas.length ? (personas.length + ' available') : '';
       // While an identity is active the footer offers the manual controls: mark it
