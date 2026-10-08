@@ -183,6 +183,34 @@ function toPublicPersona(p) {
   return { ...rest, hasPassword: Boolean(password) || Boolean(rest.hasPassword) };
 }
 
+// Active identities, per launched browser (so every tab of one profile shares them and
+// they die with the session). 30 minutes of no activity releases one.
+const ACTIVE_IDENTITY_TTL_MS = 30 * 60 * 1000;
+const activeIdentityStores = new WeakMap(); // Browser -> Map(siteKey -> { id, url, at })
+function activeStoreFor(targetPage) {
+  let owner = null;
+  try { owner = targetPage.browser(); } catch (e) { owner = null; }
+  if (!owner) return new Map();
+  let m = activeIdentityStores.get(owner);
+  if (!m) { m = new Map(); activeIdentityStores.set(owner, m); }
+  return m;
+}
+// The site a signup belongs to: the registrable domain, so signup.example.com and
+// app.example.com are one site. A cheap public-suffix rule: keep three labels when the
+// second-level label is a short generic one under a ccTLD (example.co.uk, example.com.au).
+function siteKeyOf(url) {
+  let h = '';
+  try { const u = new URL(String(url || '')); if (!/^https?:$/.test(u.protocol)) return ''; h = u.hostname.toLowerCase(); } catch (e) { return ''; }
+  if (!h) return '';
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h) || h.includes(':')) return h; // IP literal
+  const parts = h.split('.');
+  if (parts.length <= 2) return h;
+  const tld = parts[parts.length - 1];
+  const sld = parts[parts.length - 2];
+  const keep = (tld.length === 2 && /^(co|com|net|org|gov|edu|ac|ne|or|go)$/.test(sld)) ? 3 : 2;
+  return parts.slice(-keep).join('.');
+}
+
 async function attachPersonaAutofill(targetPage) {
   if (!personaBridge || !targetPage) return;
   // Respect the global Smart Autofill toggle (fail-open if the check throws).
@@ -206,10 +234,52 @@ async function attachPersonaAutofill(targetPage) {
         return list.map(toPublicPersona).filter(Boolean);
       } catch (e) { return []; }
   };
+  // Active identity (multi-step signups): the identity picked on step 1 stays active
+  // for this SITE across steps and page loads, and is marked used only on the final
+  // submit. Kept per browser (profile session), keyed by site, in memory only.
+  const activeSites = activeStoreFor(targetPage);
+  const hPersonaActive = async (op, id) => {
+      if (!(await vaultOpen())) return null;
+      const url = pageUrl();
+      const key = siteKeyOf(url);
+      if (!key) return null;
+      const now = Date.now();
+      if (op === 'clear') { activeSites.delete(key); return null; }
+      if (op === 'set') {
+        const pid = String(id || '');
+        if (!pid) return null;
+        // Only an identity actually offered for this origin can become active.
+        let offered = false;
+        try {
+          const r = await personaBridge.listForUrl(url);
+          const list = (r && Array.isArray(r.personas)) ? r.personas : (Array.isArray(r) ? r : []);
+          offered = list.some((p) => p && String(p.id) === pid);
+        } catch (e) { offered = false; }
+        if (!offered) return null;
+        activeSites.set(key, { id: pid, url, at: now });
+        return { id: pid };
+      }
+      const e = activeSites.get(key);
+      if (!e || now - e.at > ACTIVE_IDENTITY_TTL_MS) { activeSites.delete(key); return null; }
+      e.at = now; // each step keeps it alive
+      return { id: e.id };
+  };
   const hPersonaMarkUsed = async (id) => {
       if (!(await vaultOpen())) return { ok: false, error: 'locked' };
-      try { await personaBridge.markUsed(String(id || ''), pageUrl()); return { ok: true }; }
-      catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+      const pid = String(id || '');
+      // The final submit often navigates before this call lands, so pageUrl() may
+      // already be the post-signup page (another subdomain, or an SSO host). Mark the
+      // identity on the site it was used for: the URL recorded when it became active.
+      let url = pageUrl();
+      const key = siteKeyOf(url);
+      let activeKey = null;
+      for (const [k, e] of activeSites) { if (e.id === pid && (k === key || !activeKey)) activeKey = k; }
+      if (activeKey) url = activeSites.get(activeKey).url;
+      try {
+        await personaBridge.markUsed(pid, url);
+        if (activeKey) activeSites.delete(activeKey);
+        return { ok: true };
+      } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
   };
     // CDP "trusted" typing: the in-page widget stamps each matched field and hands
     // us a fill plan; we type it here with REAL keyboard events (isTrusted:true) and
@@ -220,7 +290,7 @@ async function attachPersonaAutofill(targetPage) {
   // that guards a password runs THERE, where page JS cannot patch
   // getBoundingClientRect/getComputedStyle/navigator.userActivation to lie.
   let world = null;
-  const hPersonaFillPlan = async (plan, meta) => {
+  const fillPlanOnce = async (plan, meta) => {
       if (!Array.isArray(plan)) return { ok: false, filled: 0 };
       if (!(await vaultOpen())) return { ok: false, filled: 0 };
       const items = plan.slice(0, PERSONA_FILL_MAX_ITEMS);
@@ -294,66 +364,51 @@ async function attachPersonaAutofill(targetPage) {
           value = item.value != null ? String(item.value) : '';
           if (value.length > PERSONA_FILL_MAX_VALUE_LEN) value = value.slice(0, PERSONA_FILL_MAX_VALUE_LEN);
         }
+        // Every DOM step below runs in the widget's private isolated world (world.evaluate),
+        // NOT through puppeteer's main-world handles (page.$ / page.select / el.evaluate).
+        // With "Minimize CDP footprint" on, rebrowser's enableDisable mode resolves the
+        // main world to a blank about:blank context on fingerprint-chromium, so page.$
+        // returned null for every field and the whole fill failed instantly ("Could not
+        // fill this form - nothing was entered"). The isolated world shares the page's
+        // DOM, works the same on both engines, and keeps page JS out of the loop.
+        // Mouse and keyboard still go through the CDP Input domain, so they stay trusted.
         try {
           if (item.kind === 'select') {
-            // page.select() resolves the node by selector in the renderer and fires
-            // input+change itself - no geometry, so it is scroll-safe as-is.
-            let selOk = true;
-            await targetPage.select(sel, value).catch(() => { selOk = false; });
+            let selOk = false;
+            try { selOk = (await world.evaluate(personaSetSelect, sel, value)) === true; } catch (e) { selOk = false; }
             if (selOk) filled += 1; else markFailed(itemIdx);
             continue;
           }
-          const el = await targetPage.$(sel);
-          if (!el) { markFailed(itemIdx); continue; }
           // Focus the field the way a human would - a REAL trusted mouse click - but
-          // never at coordinates that may have gone stale.
+          // only where the click is guaranteed to land on THIS field.
           //
-          // Two competing requirements:
-          //  * ANTI-DETECT: a focus event with no preceding mousedown/mouseup is a
-          //    behavioural signal. Bot detectors watch for input that arrives without
-          //    any pointer interaction, so a pure DOM .focus() is cheaper to spot.
-          //  * CORRECTNESS: puppeteer's click() reads getClientRects() (viewport
-          //    relative) and dispatches at those literal pixels several CDP round
-          //    trips later, and page.keyboard has no element target at all - it types
-          //    into whatever currently has focus. Scroll during that window and the
-          //    click lands on a different field, which then receives the whole value.
+          //  * ANTI-DETECT: a focus with no preceding mousedown/mouseup is a behavioural
+          //    signal, so a click is preferred over a bare DOM .focus().
+          //  * CORRECTNESS: a click at the field's centre lands on whatever is on top
+          //    there. On many layouts the autofill panel itself (or a sticky header,
+          //    cookie bar, chat bubble) covers part of the form; clicking through it hit
+          //    another identity row in the panel, which started a SECOND fill whose
+          //    keystrokes interleaved with this one and garbled every field.
           //
-          // Resolution: only take the coordinate path when the element is comfortably
-          // inside the viewport (so click() will not scroll and there is little room
-          // to miss), then VERIFY focus actually landed on the node we aimed at. Any
-          // failure falls back to geometry-free DOM focus, which cannot miss.
-          const inView = await el.evaluate((node) => {
-            try {
-              const r = node.getBoundingClientRect();
-              if (!r.width || !r.height) return false;
-              const vw = window.innerWidth || 0;
-              const vh = window.innerHeight || 0;
-              // Fully in view with a small margin, so a scroll mid-click is unlikely.
-              return r.top >= 8 && r.left >= 0 && r.bottom <= vh - 8 && r.right <= vw;
-            } catch (e) { return false; }
-          }).catch(() => false);
-
+          // So the isolated world scrolls the field into view (instantly), and reports a
+          // click point only when elementFromPoint there IS the field. Otherwise, and
+          // whenever focus does not verify, it falls back to geometry-free DOM focus.
+          let spot = null;
+          try { spot = await world.evaluate(personaPrepareTarget, sel); } catch (e) { spot = null; }
+          if (!spot || !spot.ok) { markFailed(itemIdx); continue; }
           let focused = false;
-          if (inView) {
+          if (spot.click) {
             try {
-              await el.click({ clickCount: 3 }); // trusted mousedown/up + selects existing text
-              focused = await el.evaluate((node) => document.activeElement === node).catch(() => false);
-            } catch (e) { focused = false; } // out of view / occluded / detached
+              await targetPage.mouse.click(spot.x, spot.y, { delay: 30 + Math.floor(Math.random() * 60) });
+              focused = (await world.evaluate(personaFocusTarget, sel, true)) === true;
+            } catch (e) { focused = false; }
           }
           if (!focused) {
-            // Geometry-free fallback. Slightly weaker behaviourally, but it puts the
-            // value in the RIGHT field, which matters more than a missing mouse event.
-            focused = await el.evaluate((node) => {
-              try {
-                node.focus({ preventScroll: true });
-                if (typeof node.select === 'function') { try { node.select(); } catch (e) {} }
-                return document.activeElement === node;
-              } catch (e) { return false; }
-            }).catch(() => false);
+            try { focused = (await world.evaluate(personaFocusTarget, sel, false)) === true; } catch (e) { focused = false; }
           }
           // Focus did not land where we aimed - typing now would spray keystrokes into
           // whatever else has focus. Skip the field and report it instead.
-          if (!focused) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
+          if (!focused) { markFailed(itemIdx); continue; }
           const isSecret = item.kind === 'password';
           // A password is typed ONLY while focus sits on the exact node validated in
           // the isolated world - checked before every keystroke, so a page that moves
@@ -361,38 +416,45 @@ async function attachPersonaAutofill(targetPage) {
           const onTarget = async () => {
             try { return (await world.evaluate(personaTargetFocused, pwSlot)) === true; } catch (e) { return false; }
           };
-          if (isSecret && !(await onTarget())) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
+          if (isSecret && !(await onTarget())) { markFailed(itemIdx); continue; }
           const typed = charBudget > 0 ? value.slice(0, charBudget) : '';
-          if (!typed) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
+          if (!typed) { markFailed(itemIdx); continue; }
           let aborted = false;
           for (const ch of typed) {
             if (isSecret && !(await onTarget())) { aborted = true; break; }
+            // Same guard for plain fields: if focus moved (the user clicked elsewhere,
+            // the page re-rendered), stop rather than type into the wrong field.
+            if (!isSecret && !(await world.evaluate(personaIsFocused, sel).catch(() => false))) { aborted = true; break; }
             await targetPage.keyboard.type(ch, { delay: 50 + Math.floor(Math.random() * 100) });
           }
-          if (aborted) { markFailed(itemIdx); await el.dispose().catch(() => {}); continue; }
+          if (aborted) { markFailed(itemIdx); continue; }
           charBudget -= typed.length;
           // Confirm the characters actually landed in THIS element before claiming a
           // fill. Length only - the value itself is never read back, so a password
-          // does not travel out of the page.
-          const landed = await el.evaluate((node, n) => {
-            try {
-              if (typeof node.value === 'string') return node.value.length >= n;
-              if (node.isContentEditable) return String(node.textContent || '').length >= n;
-              return false;
-            } catch (e) { return false; }
-          }, typed.length).catch(() => false);
-          await el.evaluate((node) => { try { node.dispatchEvent(new Event('change', { bubbles: true })); if (node.blur) node.blur(); } catch (e) {} }).catch(() => {});
-          await el.dispose().catch(() => {});
+          // does not travel out of the page. Then commit (change + blur).
+          let landed = false;
+          try { landed = (await world.evaluate(personaCommitTarget, sel, typed.length)) === true; } catch (e) { landed = false; }
           if (landed) filled += 1; else markFailed(itemIdx);
         } catch (e) { markFailed(itemIdx); /* skip one field, keep going */ }
       }
       return { ok: true, filled, failed, failedIdx };
   };
+  // One fill at a time per tab. page.keyboard types into whatever has focus, so two
+  // plans running together interleave their keystrokes across fields. The widget also
+  // refuses a second pick while one runs; this is the backstop for anything else that
+  // reaches the handler (multi-step re-runs, a double click on a row).
+  let fillChain = Promise.resolve();
+  const hPersonaFillPlan = (plan, meta) => {
+    const run = fillChain.then(() => fillPlanOnce(plan, meta));
+    fillChain = run.catch(() => {});
+    return run;
+  };
 
   const personaHandlers = {
     __sgPersonaList: hPersonaList,
     __sgPersonaMarkUsed: hPersonaMarkUsed,
-    __sgPersonaFillPlan: hPersonaFillPlan
+    __sgPersonaFillPlan: hPersonaFillPlan,
+    __sgPersonaActive: hPersonaActive
   };
   // audit E1/E2: the widget AND its bridge live in a private CDP isolated world.
   // Nothing is exposed in the page's main world any more - no __sgPersona*
@@ -435,6 +497,78 @@ function personaPickPasswordTarget(sel, slot) {
 }
 function personaTargetFocused(slot) {
   try { var el = window[slot]; return !!el && el.isConnected && document.activeElement === el; } catch (e) { return false; }
+}
+// Non-secret field helpers, run in the same isolated world. Each one re-resolves the
+// field from its per-fill selector and requires exactly one match.
+// Scroll the field into view (instantly - a smooth scroll would move it after we
+// measured) and return a click point only if that point actually hits the field.
+function personaPrepareTarget(sel) {
+  try {
+    var list = document.querySelectorAll(sel);
+    if (list.length !== 1) return { ok: false };
+    var el = list[0];
+    if (el.disabled || el.readOnly) return { ok: false };
+    var vw = window.innerWidth || 0, vh = window.innerHeight || 0;
+    var r = el.getBoundingClientRect();
+    var comfy = function (b) { return b.top >= 8 && b.left >= 0 && b.bottom <= vh - 8 && b.right <= vw; };
+    if (!comfy(r)) {
+      try { el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }); } catch (e) {}
+      r = el.getBoundingClientRect();
+    }
+    if (r.width < 2 || r.height < 2 || !comfy(r)) return { ok: true, click: false };
+    // Left of centre: keeps clear of the show-password eyes and clear buttons that sit
+    // on the right of many inputs.
+    var x = r.left + Math.min(r.width / 2, Math.max(10, r.width * 0.35));
+    var y = r.top + r.height / 2;
+    var hit = document.elementFromPoint(x, y);
+    var ok = !!hit && (hit === el || el.contains(hit) || (hit.tagName === 'LABEL' && hit.control === el));
+    return { ok: true, click: ok, x: x, y: y };
+  } catch (e) { return { ok: false }; }
+}
+// Confirm focus is on the field; with `checkOnly` false, move it there (no scroll)
+// and select any existing text so typing replaces it.
+function personaFocusTarget(sel, checkOnly) {
+  try {
+    var list = document.querySelectorAll(sel);
+    if (list.length !== 1) return false;
+    var el = list[0];
+    if (!checkOnly && document.activeElement !== el) el.focus({ preventScroll: true });
+    if (document.activeElement !== el) return false;
+    if (typeof el.select === 'function') { try { el.select(); } catch (e) {} }
+    return true;
+  } catch (e) { return false; }
+}
+function personaIsFocused(sel) {
+  try { var list = document.querySelectorAll(sel); return list.length === 1 && document.activeElement === list[0]; } catch (e) { return false; }
+}
+// Did at least `n` characters land in the field? Length only, the value never leaves
+// the page. Then commit it the way a person leaving the field would (change + blur).
+function personaCommitTarget(sel, n) {
+  try {
+    var list = document.querySelectorAll(sel);
+    if (list.length !== 1) return false;
+    var el = list[0];
+    var len = typeof el.value === 'string' ? el.value.length : (el.isContentEditable ? String(el.textContent || '').length : -1);
+    try { el.dispatchEvent(new Event('change', { bubbles: true })); if (el.blur) el.blur(); } catch (e) {}
+    return len >= n;
+  } catch (e) { return false; }
+}
+// Native <select>: pick the option whose value the widget resolved, then fire the
+// same input + change events page.select() fires.
+function personaSetSelect(sel, value) {
+  try {
+    var list = document.querySelectorAll(sel);
+    if (list.length !== 1) return false;
+    var el = list[0];
+    if (el.tagName !== 'SELECT' || el.disabled) return false;
+    var v = String(value);
+    var has = Array.prototype.some.call(el.options || [], function (o) { return o.value === v; });
+    if (!has) return false;
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return el.value === v;
+  } catch (e) { return false; }
 }
 
 // ---------------------------------------------------------------------------
@@ -5012,6 +5146,9 @@ module.exports = {
   // Test hook: the isolated-world autofill attach + its password probes.
   __attachPersonaAutofill: attachPersonaAutofill,
   __personaPickPasswordTarget: personaPickPasswordTarget,
+  __personaPrepareTarget: personaPrepareTarget,
+  __personaSetSelect: personaSetSelect,
+  __siteKeyOf: siteKeyOf,
   __browserFor: (sessionId) => {
     const s = activeSessions.get(String(sessionId));
     return s ? s.browser : null;

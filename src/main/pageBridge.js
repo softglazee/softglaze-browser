@@ -260,7 +260,9 @@ function isolatedClientScript(cfg, run) {
   function viaFetch(name, args) {
     return fetch(E + '/' + encodeURIComponent(name), {
       method: 'POST', body: JSON.stringify({ args: args, key: K }),
-      cache: 'no-store', credentials: 'omit', mode: 'cors'
+      // keepalive: a call made as the page navigates away (autofill marking an
+      // identity used on the final submit) must still reach main.
+      cache: 'no-store', credentials: 'omit', mode: 'cors', keepalive: true
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (d && d.error) throw new Error(d.error);
       return d ? d.result : null;

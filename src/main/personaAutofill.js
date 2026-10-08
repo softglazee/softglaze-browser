@@ -41,6 +41,12 @@ function personaAutofillMain(sgRpc) {
     var multiStepObserver = null;  // watches for later wizard steps to appear
     var isOpen = false;
     var loading = false;
+    var filling = false; // a user-started fill is running
+    // The identity being used for a signup on this site. It stays active across wizard
+    // steps and page loads (the backend remembers it per site) and is only marked as
+    // used when the FINAL submit happens - marking it used after step 1 dropped it from
+    // the list, so step 2 had nothing to fill with.
+    var active = null;
 
     // Bridge call. Chromium hands us sgRpc (world-scoped CDP binding first,
     // body-authenticated sentinel-fetch RPC for engines like fingerprint-chromium
@@ -58,6 +64,15 @@ function personaAutofillMain(sgRpc) {
     }
     function sgHas(name) {
       return typeof sgRpc === 'function' || typeof window[name] === 'function';
+    }
+    // Active-identity tracking needs a backend that remembers it across documents. An
+    // older Firefox extension without it keeps the old behaviour (mark used on fill).
+    function canTrackActive() { return sgHas('__sgPersonaActive'); }
+    function setActive(p) {
+      active = p || null;
+      if (!canTrackActive()) return Promise.resolve(false);
+      return sgCall('__sgPersonaActive', p ? 'set' : 'clear', p ? p.id : '')
+        .then(function () { return true; }, function () { return false; });
     }
     // Per-document attribute used to hand matched fields to the trusted typer. A
     // fixed name would be one more SoftGlaze tell in the DOM.
@@ -93,6 +108,7 @@ function personaAutofillMain(sgRpc) {
       '.row{width:100%;text-align:left;background:#16212e;border:1px solid #243140;border-radius:10px;padding:9px 11px;margin:6px 0;cursor:pointer;color:#e6edf3;transition:border-color .15s,background .15s}' +
       '.row:hover{border-color:' + BRAND + ';background:#1b2937}' +
       '.row .nm{font-size:13px;font-weight:600}.row .em{font-size:11px;color:#8aa0b2;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.row.on{border-color:' + BRAND + '}' +
       '.row .lb{display:inline-block;margin-top:5px;font-size:10px;color:' + BRAND + ';background:rgba(61,198,218,.12);border:1px solid rgba(61,198,218,.3);border-radius:999px;padding:1px 7px}' +
       '.empty{padding:18px 12px;text-align:center;color:#8aa0b2;font-size:12px;line-height:1.5}' +
       '.ft{padding:10px;border-top:1px solid #243140;display:flex;gap:8px}' +
@@ -100,14 +116,17 @@ function personaAutofillMain(sgRpc) {
       '.btn.mark{background:linear-gradient(135deg,' + BRAND + ',#2aa3b5);color:#04222a}' +
       '.btn.ghost{background:transparent;border:1px solid #243140;color:#aebfcd}' +
       '.btn:disabled{opacity:.5;cursor:default}' +
-      '.toast{position:absolute;bottom:60px;right:0;background:#04222a;border:1px solid ' + BRAND + ';color:#e6edf3;font-size:12px;padding:8px 12px;border-radius:9px;max-width:300px}' +
+      // width:max-content - the host is only as wide as the 48px button, so a plain
+      // absolutely-positioned toast shrank to one word per line. z-index keeps it above
+      // the panel (it used to render underneath it, so results were never seen).
+      '.toast{position:absolute;bottom:60px;right:0;z-index:2;width:max-content;max-width:300px;line-height:1.4;background:#04222a;border:1px solid ' + BRAND + ';color:#e6edf3;font-size:12px;padding:8px 12px;border-radius:9px}' +
       '[hidden]{display:none!important}' +
       '</style>' +
       '<div class="toast" hidden></div>' +
       '<div class="panel" hidden>' +
       '  <div class="hd"><span class="dot"></span><b>SoftGlaze Autofill</b><span class="cnt"></span></div>' +
       '  <div class="body"></div>' +
-      '  <div class="ft" hidden><button class="btn mark">Mark identity as used on this site</button></div>' +
+      '  <div class="ft" hidden><button class="btn mark">Mark as used</button><button class="btn ghost rel" hidden>Release</button></div>' +
       '</div>' +
       '<button class="fab" title="SoftGlaze Smart Autofill" hidden>SG</button>';
 
@@ -116,6 +135,7 @@ function personaAutofillMain(sgRpc) {
     var body = root.querySelector('.body');
     var footer = root.querySelector('.ft');
     var markBtn = root.querySelector('.mark');
+    var relBtn = root.querySelector('.rel');
     var cntEl = root.querySelector('.cnt');
     var toastEl = root.querySelector('.toast');
 
@@ -123,12 +143,14 @@ function personaAutofillMain(sgRpc) {
     function unmount() { try { if (host.isConnected) host.remove(); } catch (e) {} }
 
     var toastTimer = null;
-    function toast(msg) {
+    // Long messages stay up longer (about 60 ms a character, 2.6 s to 9 s).
+    function toast(msg, ms) {
       mount();
       toastEl.textContent = msg;
       toastEl.hidden = false;
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(function () { toastEl.hidden = true; }, 2600);
+      var dur = ms || Math.min(9000, Math.max(2600, String(msg).length * 60));
+      toastTimer = setTimeout(function () { toastEl.hidden = true; }, dur);
     }
 
     // --- form detection ------------------------------------------------------
@@ -147,7 +169,9 @@ function personaAutofillMain(sgRpc) {
       return false;
     }
     function updateVisibility() {
-      var show = looksLikeSignup();
+      // A later wizard step often has no signup cues of its own (just "Phone" and
+      // "Company"), so while an identity is active any fillable field keeps us visible.
+      var show = looksLikeSignup() || (!!active && hasMatchableField());
       fab.hidden = !show;
       if (!show && isOpen) { isOpen = false; panel.hidden = true; }
       // Mount lazily; drop the host again once nothing of ours is visible.
@@ -178,9 +202,22 @@ function personaAutofillMain(sgRpc) {
       renderList();
     }
 
+    // Keep the active identity first in the list (it is never marked used mid-signup,
+    // so it is still offered for this site).
+    function pinActive() {
+      if (!active) return;
+      var i = -1;
+      for (var k = 0; k < personas.length; k++) { if (personas[k].id === active.id) { i = k; break; } }
+      if (i > 0) personas.unshift(personas.splice(i, 1)[0]);
+    }
     function renderList() {
       body.innerHTML = '';
+      pinActive();
       cntEl.textContent = personas.length ? (personas.length + ' available') : '';
+      // While an identity is active the footer offers the manual controls: mark it
+      // used now, or release it without marking (abandoned signup).
+      footer.hidden = !active && !selected;
+      relBtn.hidden = !active;
       if (!personas.length) {
         var d = document.createElement('div');
         d.className = 'empty';
@@ -190,14 +227,28 @@ function personaAutofillMain(sgRpc) {
       }
       personas.forEach(function (p) {
         var btn = document.createElement('button');
-        btn.className = 'row';
+        var isActive = !!active && active.id === p.id;
+        btn.className = isActive ? 'row on' : 'row';
         var nm = document.createElement('div'); nm.className = 'nm';
         nm.textContent = [p.firstName, p.lastName].filter(Boolean).join(' ') || p.username || p.email || 'Identity';
         var em = document.createElement('div'); em.className = 'em';
         em.textContent = p.email || p.username || '';
         btn.appendChild(nm); btn.appendChild(em);
-        if (p.label) { var lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = p.label; btn.appendChild(lb); }
-        btn.addEventListener('click', function (e) { if (!e.isTrusted) return; fillWith(p, { gesture: true }).then(function () { armMultiStep(p); }); }); // audit C2/E1: only a real user click fills (and may carry a password)
+        if (isActive || p.label) { var lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = isActive ? 'In progress - fills each step' : p.label; btn.appendChild(lb); }
+        btn.addEventListener('click', function (e) {
+          if (!e.isTrusted) return; // audit C2/E1: only a real user click fills (and may carry a password)
+          // One fill at a time. A second pick while the first is still typing used to
+          // start a parallel fill whose keystrokes interleaved with the first.
+          if (filling) { toast('Still filling - one moment.'); return; }
+          // Close the panel before filling: left open it covers part of the form, and
+          // the trusted click that focuses a field underneath it would land on another
+          // identity row instead.
+          isOpen = false; panel.hidden = true;
+          filling = true;
+          fillWith(p, { gesture: true })
+            .catch(function () {})
+            .then(function () { filling = false; armMultiStep(p); });
+        });
         body.appendChild(btn);
       });
     }
@@ -392,13 +443,30 @@ function personaAutofillMain(sgRpc) {
       }
       return (best && bestScore > 0) ? best : everything;
     }
+    // A matchable field we have not filled or tried yet, empty and not being typed in.
+    function newEmptyFieldExists() {
+      var fs = collectTargetFields();
+      for (var i = 0; i < fs.length; i++) {
+        var e = fs[i];
+        if (filledEls.has(e) || attemptedEls.has(e) || e === document.activeElement) continue;
+        if (e.value && String(e.value).length) continue;
+        if (isMatchable(e)) return true;
+      }
+      return false;
+    }
+    function hasMatchableField() {
+      try { return newEmptyFieldExists(); } catch (e) { return false; }
+    }
     // Multi-step forms (wizards, email-then-password, 3-step signups): after a fill, watch for
     // the NEXT step's fields and fill the ones still empty. Kept deliberately narrow so it can
     // never spill into other forms on the page:
     //  - only DOM additions (childList) are watched, not class/style flips on every re-render;
-    //  - it stops on a route/URL change and after 90 s;
     //  - each field is attempted at most once (no retry loop on a field that will not take);
-    //  - it never types while the user is typing in another field (no focus stealing).
+    //  - it never types while the user is typing in another field (no focus stealing);
+    //  - it never fills a password (that needs a click on the widget, see audit E1).
+    // While an identity is ACTIVE it keeps watching across SPA route changes (a wizard's next
+    // step often changes the URL) until the final submit or 15 minutes; without active
+    // tracking it keeps the old narrow rule (stop on a route change, 90 s).
     function armMultiStep(p) {
       if (multiStepObserver || !p) return;
       var pending = false;
@@ -408,27 +476,34 @@ function personaAutofillMain(sgRpc) {
         var a = document.activeElement;
         return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) && !filledEls.has(a));
       }
-      function newEmptyFieldExists() {
-        var fs = collectTargetFields();
-        for (var i = 0; i < fs.length; i++) {
-          var e = fs[i];
-          if (filledEls.has(e) || attemptedEls.has(e) || e === document.activeElement) continue;
-          if (e.value && String(e.value).length) continue;
-          if (isMatchable(e)) return true;
-        }
-        return false;
-      }
       var run = debounce(function () {
-        if (location.pathname !== armedPath) { stop(); return; }
-        if (pending || userIsTyping() || !newEmptyFieldExists()) return;
+        var tracking = !!active && active.id === p.id;
+        if (!tracking && (canTrackActive() || location.pathname !== armedPath)) { stop(); return; }
+        if (pending || filling || userIsTyping() || !newEmptyFieldExists()) return;
         pending = true;
-        fillWith(p, { onlyEmpty: true }).catch(function () {}).then(function () { pending = false; });
+        fillWith(p, { onlyEmpty: true }).catch(function () {}).then(function () { pending = false; nudgePassword(); });
       }, 600);
       try {
         multiStepObserver = new MutationObserver(run);
         multiStepObserver.observe(document.documentElement, { childList: true, subtree: true });
       } catch (e) { multiStepObserver = null; }
-      setTimeout(stop, 90000);
+      setTimeout(stop, canTrackActive() ? 15 * 60000 : 90000);
+      run(); // the step already on screen (a page load mid-signup)
+    }
+    // A later step that asks for the password: say so, since it is never auto-filled.
+    var nudged = false;
+    function passwordPending() {
+      if (!active || !active.hasPassword) return false;
+      var pw = document.querySelector('input[type="password"]');
+      return !!(pw && fillable(pw) && !pw.value);
+    }
+    function nudgePassword() {
+      if (nudged || filling || !passwordPending()) return;
+      nudged = true;
+      toast('Click SG, then ' + displayName(active) + ', to fill the password.');
+    }
+    function displayName(p) {
+      return [p.firstName, p.lastName].filter(Boolean).join(' ') || p.username || p.email || 'Identity';
     }
 
     async function fillWith(p, opts) {
@@ -601,36 +676,50 @@ function personaAutofillMain(sgRpc) {
         if (filled && fillFailed) {
           toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + ', but ' + fillFailed + ' did not take - click Autofill again to finish.');
         } else if (filled) {
-          toast('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.');
+          toast(canTrackActive()
+            ? ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '. ' + displayName(p) + ' stays active here until you submit the form.')
+            : ('Filled ' + filled + ' field' + (filled === 1 ? '' : 's') + '.'));
         } else if (fillFailed) {
-          toast('Could not fill this form - nothing was entered. Try again without scrolling.');
+          toast('Could not fill this form - nothing was entered. Click the identity again to retry.');
         } else {
           toast('No matching fields found on this page.');
         }
-        // Auto mark-used: once the requested fields are filled, mark this identity as
-        // used on this site so it isn't offered here again (it moves to "reuse"). If the
-        // mark bridge is unavailable, fall back to showing the manual "mark used" button.
-        // Only on a CLEAN fill - burning the identity after a partial one left the user
-        // with a half-filled form and no way to be offered that persona again.
-        if (filled > 0 && fillFailed === 0) {
-          var _marked = await markSelectedUsed(true);
-          if (!_marked) footer.hidden = false;
+        // The identity becomes ACTIVE for this site: it keeps filling each later step
+        // (same page or a new one) and is marked used only on the FINAL submit (see
+        // watchSubmits). Marking it used right here is what made multi-step signups
+        // lose it after step 1. An older backend without active tracking keeps the old
+        // rule: mark used after a clean fill.
+        if (filled > 0) {
+          if (canTrackActive()) {
+            await setActive(p);
+          } else if (fillFailed === 0) {
+            var _marked = await markSelectedUsed(true);
+            if (!_marked) footer.hidden = false;
+          } else {
+            footer.hidden = false;
+          }
         } else {
           footer.hidden = false;
         }
       } else if (filled) {
-        toast('Filled ' + filled + ' more field' + (filled === 1 ? '' : 's') + ' on this step.');
+        // A step that also asks for the password says so in the same message (a
+        // separate hint would just be replaced by this one).
+        toast('Filled ' + filled + ' more field' + (filled === 1 ? '' : 's') + ' on this step.' + (passwordPending() ? (' Click SG, then ' + displayName(p) + ', to fill the password.') : ''));
+        if (passwordPending()) nudged = true;
       }
     }
 
     // --- mark used -----------------------------------------------------------
     async function markSelectedUsed(silent) {
-      if (!selected || !sgHas('__sgPersonaMarkUsed')) { if (!silent) toast('Autofill bridge unavailable.'); return false; }
-      var id = selected.id, host = location.hostname;
+      var target = active || selected;
+      if (!target || !sgHas('__sgPersonaMarkUsed')) { if (!silent) toast('Autofill bridge unavailable.'); return false; }
+      var id = target.id, hostName = location.hostname;
       try {
+        // The backend clears the active identity when it marks it used.
         await sgCall('__sgPersonaMarkUsed', id, location.href);
-        toast(silent ? ('Identity used on ' + host + ' - moved to Reuse.') : ('Marked as used on ' + host));
+        toast(silent ? ('Identity used on ' + hostName + ' - moved to Reuse.') : ('Marked as used on ' + hostName));
         personas = personas.filter(function (x) { return x.id !== id; });
+        if (active && active.id === id) active = null;
         selected = null;
         footer.hidden = true;
         renderList();
@@ -639,11 +728,89 @@ function personaAutofillMain(sgRpc) {
     }
     markBtn.addEventListener('click', async function (e) {
       if (!e.isTrusted) return; // audit C2: ignore page-scripted clicks
-      if (!selected) return;
+      if (!active && !selected) return;
       markBtn.disabled = true;
       await markSelectedUsed(false);
       markBtn.disabled = false;
     });
+    // Release: stop using the active identity here WITHOUT marking it used (the user
+    // abandoned the signup, or picked the wrong identity).
+    relBtn.addEventListener('click', async function (e) {
+      if (!e.isTrusted || !active) return;
+      var name = displayName(active);
+      await setActive(null);
+      selected = null;
+      renderList();
+      toast(name + ' released - not marked as used.');
+    });
+
+    // --- final submit -> mark used -------------------------------------------
+    // A wizard's intermediate buttons (Next / Continue) keep the identity active; the
+    // final one (Sign up / Register / Submit / Create account / Finish ...) marks it
+    // used. Only REAL user actions count (isTrusted), and only while an identity is
+    // active. The mark is sent from inside the event, before the page unloads.
+    var NEXT_RX = /\b(next|continue|proceed|go on|forward|step \d|save (and|&) continue)\b|[\u2192\u203a\u00bb>]\s*$/i;
+    var FINAL_RX = /\b(sign ?up|register|create( (my|an|your))? account|submit|finish|complete|done|join|get started|start( (my|free|your))? (free )?trial|request|book|apply|subscribe|confirm|send|place order|pay|checkout)\b/i;
+    function controlText(el) {
+      if (!el) return '';
+      var t = (el.tagName === 'INPUT') ? el.value : (el.textContent || el.getAttribute('aria-label') || el.title || '');
+      return String(t || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    }
+    // Is this submit the LAST step? A named control decides by its label; a form
+    // submitted with Enter (no submitter) decides by the form's own submit buttons.
+    function isFinalSubmit(submitter, form) {
+      var t = controlText(submitter);
+      if (t) return !NEXT_RX.test(t);
+      if (!form || !form.querySelectorAll) return false;
+      var btns = form.querySelectorAll('button:not([type="button"]):not([type="reset"]),input[type="submit"]');
+      for (var i = 0; i < btns.length; i++) { if (NEXT_RX.test(controlText(btns[i]))) return false; }
+      return true;
+    }
+    var finalizing = false;
+    function finalSubmit() {
+      if (!active || finalizing) return;
+      finalizing = true;
+      markSelectedUsed(true).then(function () { finalizing = false; }, function () { finalizing = false; });
+    }
+    document.addEventListener('submit', function (e) {
+      if (!e.isTrusted || !active) return;
+      if (isFinalSubmit(e.submitter || null, e.target)) finalSubmit();
+    }, true);
+    // SPA signups often have no <form>: the last step is a plain button with a click
+    // handler. Buttons only - a "Sign up" LINK in a header is navigation, not a submit.
+    document.addEventListener('click', function (e) {
+      if (!e.isTrusted || !active) return;
+      var el = e.target && e.target.closest ? e.target.closest('button,input[type="submit"],input[type="button"],[role="button"]') : null;
+      if (!el || host.contains(el)) return;
+      // A real <form> submit button is handled by the submit event above.
+      if (el.form && (el.type === 'submit' || (el.tagName === 'BUTTON' && !el.getAttribute('type')))) return;
+      var t = controlText(el);
+      if (t && !NEXT_RX.test(t) && FINAL_RX.test(t)) finalSubmit();
+    }, true);
+
+    // --- resume an active identity on a new page / step ------------------------
+    // A full page load mid-signup is a fresh document: ask the backend whether this
+    // site has an active identity and, if so, carry on filling the new step's fields.
+    (function resume() {
+      if (!canTrackActive()) return;
+      sgCall('__sgPersonaActive', 'get').then(function (r) {
+        if (!r || !r.id) return null;
+        return sgCall('__sgPersonaList', location.href).then(function (res) {
+          var list = Array.isArray(res) ? res : (res && Array.isArray(res.personas) ? res.personas : []);
+          var p = null;
+          for (var i = 0; i < list.length; i++) { if (list[i].id === r.id) { p = list[i]; break; } }
+          if (!p) { setActive(null); return null; } // used or deleted meanwhile
+          personas = list;
+          active = p; selected = p;
+          // The step fill reports the password itself; this covers a step that is
+          // ONLY a password (nothing else to fill).
+          var go = function () { updateVisibility(); armMultiStep(p); setTimeout(function () { if (!newEmptyFieldExists()) nudgePassword(); }, 1500); };
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(go, 700); });
+          else setTimeout(go, 700);
+          return null;
+        });
+      }).catch(function () {});
+    })();
   } catch (e) { /* never break the host page */ }
 }
 

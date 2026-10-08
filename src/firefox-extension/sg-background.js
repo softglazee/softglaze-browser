@@ -90,18 +90,71 @@ function senderUrl(sender) {
   return /^https?:\/\//i.test(u) ? u : '';
 }
 
+// Active identities for multi-step signups, per tab + site, in memory (same rules as
+// browserEngine.js: registrable-domain site key, 30 min idle timeout).
+var ACTIVE_TTL_MS = 30 * 60 * 1000;
+var activeIds = new Map(); // 'tabId|site' -> { id, url, at }
+function siteKeyOf(u) {
+  var h = '';
+  try { h = new URL(u).hostname.toLowerCase(); } catch (e) { return ''; }
+  if (!h) return '';
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h) || h.indexOf(':') >= 0) return h;
+  var parts = h.split('.');
+  if (parts.length <= 2) return h;
+  var tld = parts[parts.length - 1], sld = parts[parts.length - 2];
+  var keep = (tld.length === 2 && /^(co|com|net|org|gov|edu|ac|ne|or|go)$/.test(sld)) ? 3 : 2;
+  return parts.slice(-keep).join('.');
+}
+function activeKey(sender, url) {
+  var tab = sender && sender.tab && sender.tab.id != null ? sender.tab.id : 'x';
+  var site = siteKeyOf(url);
+  return site ? (tab + '|' + site) : '';
+}
+if (browser.tabs && browser.tabs.onRemoved) {
+  browser.tabs.onRemoved.addListener(function (tabId) {
+    activeIds.forEach(function (v, k) { if (k.indexOf(tabId + '|') === 0) activeIds.delete(k); });
+  });
+}
+
 browser.runtime.onMessage.addListener(function (msg, sender) {
   if (!msg || !msg.type) return;
   var url = senderUrl(sender);
   if (!url) return undefined;
+  if (msg.type === 'active') {
+    var key = activeKey(sender, url);
+    if (!key) return Promise.resolve(null);
+    if (msg.op === 'clear') { activeIds.delete(key); return Promise.resolve(null); }
+    if (msg.op === 'set') {
+      var pid = String(msg.id || '');
+      // Only an identity the vault offers for this origin can become active.
+      return call('/sg-autofill/list?url=' + encodeURIComponent(url), { method: 'GET' })
+        .then(function (r) {
+          var list = (r && Array.isArray(r.personas)) ? r.personas : [];
+          var ok = list.some(function (p) { return p && String(p.id) === pid; });
+          if (!ok) return null;
+          activeIds.set(key, { id: pid, url: url, at: Date.now() });
+          return { id: pid };
+        })
+        .catch(function () { return null; });
+    }
+    var e = activeIds.get(key);
+    if (!e || Date.now() - e.at > ACTIVE_TTL_MS) { activeIds.delete(key); return Promise.resolve(null); }
+    e.at = Date.now();
+    return Promise.resolve({ id: e.id });
+  }
   if (msg.type === 'list') {
     return call('/sg-autofill/list?url=' + encodeURIComponent(url), { method: 'GET' })
       .then(function (r) { return (r && Array.isArray(r.personas)) ? r.personas : []; })
       .catch(function () { return []; });
   }
   if (msg.type === 'markUsed') {
-    return call('/sg-autofill/mark-used', { method: 'POST', body: JSON.stringify({ id: msg.id, url: url }) })
-      .then(function () { return { ok: true }; })
+    // Mark it on the site it was active for (the final submit may already be on the
+    // post-signup page), then release it.
+    var akey = activeKey(sender, url);
+    var act = akey ? activeIds.get(akey) : null;
+    var markUrl = (act && act.id === String(msg.id || '')) ? act.url : url;
+    return call('/sg-autofill/mark-used', { method: 'POST', body: JSON.stringify({ id: msg.id, url: markUrl }) })
+      .then(function () { if (act && act.id === String(msg.id || '')) activeIds.delete(akey); return { ok: true }; })
       .catch(function () { return { ok: false }; });
   }
   if (msg.type === 'secret') {
