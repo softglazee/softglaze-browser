@@ -176,6 +176,21 @@ test('only a FINAL submit marks the identity used; Next / Continue keep it', () 
   assert.match(widgetSrc, /document\.addEventListener\('submit', function \(e\) \{\s*if \(!e\.isTrusted \|\| !active\) return;/);
 });
 
+test('a final-looking submit without a password only FINISHES: the next page decides', () => {
+  // Buildium's step-1 button reads "Start My Free Trial": it must not burn the identity.
+  const fin = extractFunction(widgetSrc, 'finalSubmit');
+  assert.match(fin, /if \(!canTrackActive\(\) \|\| hasFilledPassword\(scope\)\) \{ markSelectedUsed\(true\)/, 'a filled password = account created = used now');
+  assert.match(fin, /sgCall\('__sgPersonaActive', 'finish', id\)/);
+  assert.match(fin, /if \(!r \|\| r\.id !== id \|\| !r\.pending\) return markSelectedUsed\(true\);/, 'old backend keeps the old rule');
+  const settle = extractFunction(widgetSrc, 'settlePending');
+  assert.match(settle, /if \(stepContinues\(\)\) \{ setActive\(active\);/, 'another step clears pending');
+  assert.match(settle, /markSelectedUsed\(true\); return;/, 'no further step = used');
+  assert.match(widgetSrc, /if \(r\.pending\) settlePending\(8000, carryOn\); else carryOn\(\);/, 'the next page settles a pending finish');
+  assert.match(attach, /if \(op === 'finish'\) \{[\s\S]*?e\.pending = true;/);
+  assert.match(attach, /if \(e && e\.pending\) \{ try \{ await personaBridge\.markUsed\(e\.id, e\.url\);/, 'an abandoned pending finish is marked used on expiry');
+  assert.match(SRC('firefox-extension/sg-background.js'), /if \(msg\.op === 'finish'\) \{/);
+});
+
 test('a new page resumes the active identity and fills the step, never the password', () => {
   assert.match(widgetSrc, /sgCall\('__sgPersonaActive', 'get'\)/);
   const arm = extractFunction(widgetSrc, 'armMultiStep');

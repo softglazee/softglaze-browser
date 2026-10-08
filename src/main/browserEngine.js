@@ -185,6 +185,7 @@ function toPublicPersona(p) {
 
 // Active identities, per launched browser (so every tab of one profile shares them and
 // they die with the session). 30 minutes of no activity releases one.
+const { siteKeyOf } = require('./siteKey');
 const ACTIVE_IDENTITY_TTL_MS = 30 * 60 * 1000;
 const activeIdentityStores = new WeakMap(); // Browser -> Map(siteKey -> { id, url, at })
 function activeStoreFor(targetPage) {
@@ -195,21 +196,7 @@ function activeStoreFor(targetPage) {
   if (!m) { m = new Map(); activeIdentityStores.set(owner, m); }
   return m;
 }
-// The site a signup belongs to: the registrable domain, so signup.example.com and
-// app.example.com are one site. A cheap public-suffix rule: keep three labels when the
-// second-level label is a short generic one under a ccTLD (example.co.uk, example.com.au).
-function siteKeyOf(url) {
-  let h = '';
-  try { const u = new URL(String(url || '')); if (!/^https?:$/.test(u.protocol)) return ''; h = u.hostname.toLowerCase(); } catch (e) { return ''; }
-  if (!h) return '';
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(h) || h.includes(':')) return h; // IP literal
-  const parts = h.split('.');
-  if (parts.length <= 2) return h;
-  const tld = parts[parts.length - 1];
-  const sld = parts[parts.length - 2];
-  const keep = (tld.length === 2 && /^(co|com|net|org|gov|edu|ac|ne|or|go)$/.test(sld)) ? 3 : 2;
-  return parts.slice(-keep).join('.');
-}
+// The site a signup belongs to (registrable domain): see siteKey.js.
 
 async function attachPersonaAutofill(targetPage) {
   if (!personaBridge || !targetPage) return;
@@ -260,9 +247,21 @@ async function attachPersonaAutofill(targetPage) {
         return { id: pid };
       }
       const e = activeSites.get(key);
-      if (!e || now - e.at > ACTIVE_IDENTITY_TTL_MS) { activeSites.delete(key); return null; }
+      if (!e || now - e.at > ACTIVE_IDENTITY_TTL_MS) {
+        activeSites.delete(key);
+        // A "finishing" identity nobody continued with was a real final submit.
+        if (e && e.pending) { try { await personaBridge.markUsed(e.id, e.url); } catch (err) { /* best effort */ } }
+        return null;
+      }
+      // 'finish': a submit that LOOKS final but carried no password ("Start my free
+      // trial" on a step-1 form). It stays active as pending and the next page
+      // decides: more fields = it was a step, nothing to fill = mark used.
+      if (op === 'finish') {
+        if (String(id || '') !== e.id) return null;
+        e.pending = true;
+      }
       e.at = now; // each step keeps it alive
-      return { id: e.id };
+      return { id: e.id, pending: !!e.pending };
   };
   const hPersonaMarkUsed = async (id) => {
       if (!(await vaultOpen())) return { ok: false, error: 'locked' };

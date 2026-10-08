@@ -744,15 +744,52 @@
       for (var i = 0; i < btns.length; i++) { if (NEXT_RX.test(controlText(btns[i]))) return false; }
       return true;
     }
-    var finalizing = false;
-    function finalSubmit() {
+    // A label alone cannot tell the last step: Buildium's STEP 1 button reads "Start
+    // My Free Trial". A submit that carries a filled password is an account being
+    // created, so it is final. Anything else is only "finishing": the identity stays
+    // active (pending) and the page that follows decides - more fields to fill means
+    // it was a step, nothing left means it was the end and the identity is used.
+    function hasFilledPassword(scope) {
+      var pws = (scope && scope.querySelectorAll ? scope : document).querySelectorAll('input[type="password"]');
+      for (var i = 0; i < pws.length; i++) { if (pws[i].value) return true; }
+      return false;
+    }
+    function stepContinues() {
+      if (newEmptyFieldExists()) return true;
+      var pws = document.querySelectorAll('input[type="password"]');
+      for (var i = 0; i < pws.length; i++) { if (fillable(pws[i]) && !pws[i].value) return true; }
+      return false;
+    }
+    // Watch the current page for up to `ms`: a further step continues the signup
+    // (pending cleared), no step at all marks the identity used.
+    function settlePending(ms, onContinue) {
+      var t0 = Date.now();
+      (function check() {
+        if (!active || leaving) return;
+        if (stepContinues()) { setActive(active); if (onContinue) onContinue(); return; }
+        if (Date.now() - t0 >= ms) { markSelectedUsed(true); return; }
+        setTimeout(check, 500);
+      })();
+    }
+    var finalizing = false, leaving = false;
+    window.addEventListener('beforeunload', function () { leaving = true; }, true);
+    window.addEventListener('pagehide', function () { leaving = true; }, true);
+    function finalSubmit(scope) {
       if (!active || finalizing) return;
       finalizing = true;
-      markSelectedUsed(true).then(function () { finalizing = false; }, function () { finalizing = false; });
+      var done = function () { finalizing = false; };
+      if (!canTrackActive() || hasFilledPassword(scope)) { markSelectedUsed(true).then(done, done); return; }
+      var id = active.id;
+      sgCall('__sgPersonaActive', 'finish', id).then(function (r) {
+        // A backend without 'finish' (older Firefox extension) keeps the old rule.
+        if (!r || r.id !== id || !r.pending) return markSelectedUsed(true);
+        // The page may stay (SPA wizard, or a validation error): decide here too.
+        setTimeout(function () { settlePending(8000, function () { armMultiStep(active); }); }, 1500);
+      }).then(done, done);
     }
     document.addEventListener('submit', function (e) {
       if (!e.isTrusted || !active) return;
-      if (isFinalSubmit(e.submitter || null, e.target)) finalSubmit();
+      if (isFinalSubmit(e.submitter || null, e.target)) finalSubmit(e.target);
     }, true);
     // SPA signups often have no <form>: the last step is a plain button with a click
     // handler. Buttons only - a "Sign up" LINK in a header is navigation, not a submit.
@@ -763,7 +800,7 @@
       // A real <form> submit button is handled by the submit event above.
       if (el.form && (el.type === 'submit' || (el.tagName === 'BUTTON' && !el.getAttribute('type')))) return;
       var t = controlText(el);
-      if (t && !NEXT_RX.test(t) && FINAL_RX.test(t)) finalSubmit();
+      if (t && !NEXT_RX.test(t) && FINAL_RX.test(t)) finalSubmit(null);
     }, true);
 
     // --- resume an active identity on a new page / step ------------------------
@@ -782,7 +819,13 @@
           active = p; selected = p;
           // The step fill reports the password itself; this covers a step that is
           // ONLY a password (nothing else to fill).
-          var go = function () { updateVisibility(); armMultiStep(p); setTimeout(function () { if (!newEmptyFieldExists()) nudgePassword(); }, 1500); };
+          var go = function () {
+            updateVisibility();
+            var carryOn = function () { armMultiStep(p); setTimeout(function () { if (!newEmptyFieldExists()) nudgePassword(); }, 1500); };
+            // The last submit only looked final: this page decides (forms often render
+            // late, so give it a few seconds before calling the signup finished).
+            if (r.pending) settlePending(8000, carryOn); else carryOn();
+          };
           if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(go, 700); });
           else setTimeout(go, 700);
           return null;
