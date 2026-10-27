@@ -13,10 +13,15 @@ import { HashRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
 import { initTheme } from './lib/theme.js';
+import { installDialogFocusFix } from './lib/dialogFocusFix.mjs';
 import './i18n/index.js'; // initializes i18next synchronously from the saved language
 
 // Apply the saved theme before first paint to avoid a flash of the wrong theme.
 initTheme();
+
+// Native confirm()/alert() can leave the window unable to take typing on Windows;
+// the main process re-focuses it after each one (see lib/dialogFocusFix.mjs).
+installDialogFocusFix(window, () => window.softglaze?.ui?.refocusAfterDialog?.());
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
