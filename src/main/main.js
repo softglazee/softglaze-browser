@@ -2,7 +2,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const { app, BrowserWindow, shell, session, protocol } = require('electron');
+const { app, BrowserWindow, shell, session, protocol, ipcMain } = require('electron');
 
 // The production renderer is an ES-module bundle. Chromium refuses to load
 // `type="module"` scripts over file:// (the null origin fails CORS) - that leaves a
@@ -319,6 +319,8 @@ await killOrphanedBrowsers(); // <--- Make sure this has await
 
   const { registerIpcHandlers, attemptRememberedUnlock, whenSessionReady } = require('./ipcHandlers');
   registerIpcHandlers();
+  // Hand keyboard focus back after native confirm()/alert() dialogs (see dialogFocus.js).
+  require('./dialogFocus').registerDialogRefocus(ipcMain, () => mainWindow);
 
   // "Keep me signed in on this device": if the user opted in last time, replay the
   // DPAPI-sealed credential now - before the window loads - so the unlock/login

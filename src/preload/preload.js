@@ -252,6 +252,10 @@ const CHANNELS = Object.freeze({
 
 const ALLOWED_CHANNELS = new Set(Object.values(CHANNELS));
 
+// One-way message, not an invoke(): main re-focuses the window after a native
+// alert()/confirm()/prompt() closes. Must match REFOCUS_CHANNEL in src/main/dialogFocus.js.
+const DIALOG_REFOCUS_CHANNEL = 'window:refocus-after-dialog';
+
 async function invoke(channel, payload = undefined) {
   if (!ALLOWED_CHANNELS.has(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
 
@@ -276,6 +280,10 @@ const api = Object.freeze({
   // contextBridge.exposeInMainWorld ever runs — which takes the entire app down with
   // "SoftGlaze preload API is unavailable".
   hostOs: { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows',
+
+  ui: Object.freeze({
+    refocusAfterDialog: () => ipcRenderer.send(DIALOG_REFOCUS_CHANNEL)
+  }),
 
   system: Object.freeze({
     getInfo: () => invoke(CHANNELS.SYSTEM_GET_INFO),
