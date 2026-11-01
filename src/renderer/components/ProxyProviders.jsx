@@ -96,7 +96,10 @@ export const PROVIDERS = [
   { key: 'proxmint', name: 'Proxmint', initials: 'PM', color: '#10b981', referral: 'https://proxmint.com/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential'], ['residential_premium', 'Premium residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true } },
   // Databay: proxy user + password on gw.databay.co:8888 (HTTP and SOCKS5 on one port); zone,
   // country, state or city and a sticky session (max 120 min) ride in the username.
-  { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } }
+  { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
+  // 2extract: the proxy username + password from Connection Details on proxy.2extract.net:5555;
+  // country, state, city and a sticky session ride in the username. Built from the docs, no API call.
+  { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).

@@ -1224,6 +1224,60 @@ function proxy302Row(text, { socks = false, country = '' } = {}) {
   };
 }
 
+// ---------------------------------------------------------------------------------------
+// 2extract (docs.2extract.com: Authentication, Geo-Targeting Parameters, Session Control,
+// Country List; fetched 2026-11-01). Everything rides in the proxy username:
+//   2xt-customer-<id>-proxy-<name>[-country-de[-state-california][-city-berlin]]
+//                                 [-session-<id>[-time-<minutes>]]
+// Rotating per request without -session; -time needs -session; state and city need country.
+// The Public API (GET /v1/proxy/{id}) returns the proxy name and password but not the customer
+// id, so it cannot produce a usable username: the base username comes from the dashboard
+// (Connection Details). NOT live-key tested.
+const TWOEXTRACT_COUNTRIES = new Set('af ax al dz as ad ao ai aq ag ar am aw au at az bh bd bb by be bz bj bm bt bo ba bw bv br io vg bn bg bf bi kh cm ca cv bq ky cf td cl cn cx cc co km ck cr ci hr cu cw cy cz cd dk dj dm do ec eg sv en gq er ee sz et fk fo fj fi fr gf pf tf ga ge de gh gi gr gl gd gp gu gt gg gn gw gy ht hm hn hk hu is in id ir iq ie im il it jm jp je jo kz ke ki xk kw kg la lv lb ls lr ly li lt lu mo mg mw my mv ml mt mh mq mr mu yt mx fm md mc mn me ms ma mz mm na nr np nl nc nz ni ne ng nu nf kp mk mp no om pk pw ps pa pg py pe ph pn pl pt pr qa cg re ro ru rw bl kn lc mf pm vc ws sm st sa sn rs sc sl sg sx sk si sb so za gs kr ss es lk sd sr sj se ch sy tj tw tz th bs gm tl tg tk to tt tn tr tm tc tv vi ug ua ae gb us uy uz vu va ve vn wf eh ye zm zw'.split(' '));
+function twoExtractBaseUser(raw) {
+  // The proxy name is lowercase letters, digits and underscores, so the first hyphen after it
+  // starts a pasted targeting suffix, which is dropped here and rebuilt from the form.
+  const m = /^2xt-customer-[A-Za-z0-9]+-proxy-[A-Za-z0-9_]+/.exec(String(raw || '').trim());
+  return m ? m[0] : '';
+}
+function twoExtractCountry(country) {
+  const cc = String(country || '').trim().toLowerCase();
+  return TWOEXTRACT_COUNTRIES.has(cc) ? cc : '';
+}
+function twoExtractPlace(v) {
+  return String(v || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+function twoExtractUsername(base, { country, state, city, session, timeMin } = {}) {
+  const user = twoExtractBaseUser(base);
+  if (!user) throw new Error('2extract: enter the proxy username from Connection Details. It looks like 2xt-customer-<id>-proxy-<name>.');
+  const parts = [user];
+  const rawCc = String(country || '').trim();
+  const st = twoExtractPlace(state);
+  const ct = twoExtractPlace(city);
+  if (rawCc) {
+    const cc = twoExtractCountry(rawCc);
+    if (!cc) throw new Error(`2extract does not list the country "${rawCc}". Pick another country, or Any.`);
+    parts.push('country', cc);
+    if (st) parts.push('state', st);
+    if (ct) parts.push('city', ct);
+  } else if (st || ct) {
+    throw new Error('2extract: a state or city needs a country as well.');
+  }
+  const rawSid = String(session || '').trim();
+  const sid = rawSid.replace(/[^A-Za-z0-9]/g, '');
+  if (rawSid && !sid) throw new Error('2extract: a sticky session name must contain letters or digits.');
+  const rawTime = String(timeMin == null ? '' : timeMin).trim();
+  if (rawTime) {
+    if (!/^[1-9]\d*$/.test(rawTime)) throw new Error('2extract: Keep same IP must be a whole number of minutes.');
+    if (!sid) throw new Error('2extract: Keep same IP needs a sticky session.');
+  }
+  if (sid) {
+    parts.push('session', sid);
+    if (rawTime) parts.push('time', rawTime);
+  }
+  return parts.join('-');
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1292,5 +1346,6 @@ module.exports = {
   proxidizePerGbUsername,
   PROXMINT_PRODUCTS, proxmintUsername, proxmintPickProduct,
   DATABAY_ZONES, databayUsername,
-  ipfoxyUsername, kookeeySession, kookeeyPassword, mangoProxyRows
+  ipfoxyUsername, kookeeySession, kookeeyPassword, mangoProxyRows,
+  twoExtractBaseUser, twoExtractCountry, twoExtractUsername
 };

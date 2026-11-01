@@ -83,7 +83,8 @@ const {
   parseProxidizePerProxy, proxidizePerGbUsername,
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
-  ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row
+  ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
+  twoExtractBaseUser, twoExtractCountry, twoExtractUsername
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1366,7 +1367,8 @@ const PROXY_VENDORS = Object.freeze({
   froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', packetstream: 'PacketStream',
   airproxy: 'Airproxy', catproxies: 'CatProxies', rapidproxy: 'RapidProxy', novada: 'NOVADA',
   proxiessx: 'Proxies.sx', mobileproxyspace: 'MobileProxy.Space', proxysolutions: 'Proxy-Solutions',
-  proxmint: 'Proxmint', databay: 'Databay'
+  proxmint: 'Proxmint', databay: 'Databay',
+  twoextract: '2extract'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3267,6 +3269,33 @@ async function vendorLookup(payload) {
   });
 }
 
+// --- 2extract (residential + mobile, gateway-minted) --------------------------------------
+// Proxy username + password from the dashboard (My Proxies, Connection Details). Targeting and
+// the sticky session ride in the username (twoExtractUsername). The docs give one gateway,
+// proxy.2extract.net:5555. HTTP or SOCKS5 is chosen per proxy in the 2extract dashboard, on the
+// same port, so Protocol here must match that setting. The /change_ip link is deliberately not
+// stored as a rotation link: it carries the proxy password in the URL. Not live-key tested.
+const TWOEXTRACT_GATEWAY = Object.freeze({ host: 'proxy.2extract.net', port: 5555 });
+
+async function fetchTwoExtractPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
+  const pw = password != null ? String(password) : '';
+  if (!twoExtractBaseUser(username)) throw new Error('2extract: enter the proxy username from Connection Details. It looks like 2xt-customer-<id>-proxy-<name>.');
+  if (!pw) throw new Error('2extract: enter the proxy password from Connection Details.');
+  const gw = gatewayOverride(host, port, TWOEXTRACT_GATEWAY, '2extract');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  const lifeMin = String(life == null ? '' : life).trim();
+  // A chosen Keep same IP needs a session to apply to, even for a single row.
+  const fixed = String(session || '').trim() || (lifeMin ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session: fixed, count,
+    buildUser: (sid) => twoExtractUsername(username, { country, state, city, session: sid, timeMin: sid ? lifeMin : '' }),
+    label: `2extract • ${cc || 'Worldwide'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('2extract: could not build any proxies.');
+  return rows;
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3297,7 +3326,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   ipburger: fetchIpBurgerPool,
   ipfoxy: fetchIpfoxyPool,
   kookeey: fetchKookeeyPool,
-  mangoproxy: fetchMangoProxyPool
+  mangoproxy: fetchMangoProxyPool,
+  twoextract: fetchTwoExtractPool
 });
 
 async function syncVendorPool(payload) {
