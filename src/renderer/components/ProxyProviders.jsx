@@ -76,7 +76,8 @@ export const PROVIDERS = [
   { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true } },
   // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
   // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
-  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile']], count: true, geo: true, session: true, life: true, proto: true } },
+  // ISP and Datacenter plans have fixed IPs and import as a list; Datacenter can filter by country.
+  { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile'], ['isp', 'Dedicated or Custom ISP'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, proto: true } },
   // RapidProxy: no management API, so rows are minted on us.rapidproxy.io:5001 from a dashboard
   // sub-account; country/state/city and a sticky session (up to 180 min) ride in the username.
   { key: 'rapidproxy', name: 'RapidProxy', initials: 'RP', color: '#06b6d4', referral: 'https://www.rapidproxy.io/', gateway: { host: 'us.rapidproxy.io', port: 5001, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']], count: true, geo: true, life: true, maxLife: 180, gateway: true } },

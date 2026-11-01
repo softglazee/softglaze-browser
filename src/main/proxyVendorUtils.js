@@ -1578,6 +1578,69 @@ function proxy6Page(body, { socks = false, now = Date.now() } = {}) {
   return { rows, listCount: list.length, skippedProtocol, error: '' };
 }
 
+// ---------------------------------------------------------------------------------------
+// CatProxies fixed-IP products (catproxies.com/docs/api, fetched 2026-11-01). NOT live-key tested.
+// Dedicated ISP + Custom ISP: GET /generator/isp?orderId= returns one line per IP, each with its
+// own host, port_http, port_socks, login, password. The docs name those fields and the reply's
+// pending flag (HTTP 202) but not the key holding the array, so the array is found by its fields.
+// Datacenter: GET /orders/:id gives proxy.username and proxy.password for every IP, plus ip_list
+// "grouped by country and then city" with cities[].ips. Both an array of groups and an object
+// keyed by country are read, since the docs show no sample. Any IP takes HTTP 1338 / SOCKS5 1339.
+const CATPROXIES_DATACENTER_PORTS = Object.freeze({ http: 1338, socks: 1339 });
+function catProxiesIspRows(json, { socks = false } = {}) {
+  const root = (json && json.payload) || json;
+  if (root && root.pending === true) return { rows: [], pending: true };
+  const isLine = (l) => l && typeof l === 'object' && 'host' in l && ('port_http' in l || 'port_socks' in l);
+  let lines = Array.isArray(root) ? root : [];
+  if (!lines.some(isLine) && root && typeof root === 'object') {
+    const found = Object.values(root).find((v) => Array.isArray(v) && v.some(isLine));
+    lines = found || [];
+  }
+  const rows = [];
+  const seen = new Set();
+  for (const l of lines) {
+    if (!isLine(l)) continue;
+    const host = String(l.host || '').trim();
+    const port = Number.parseInt(String(socks ? l.port_socks : l.port_http), 10);
+    const username = l.login != null ? String(l.login) : '';
+    const password = l.password != null ? String(l.password) : '';
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const exit = String(l.ip || host).trim();
+    rows.push({ type: socks ? 'SOCKS5' : 'HTTP', host, port, username, password, label: `CatProxies • ISP • ${exit}`, country: null });
+  }
+  return { rows, pending: false };
+}
+function catProxiesDatacenterRows(json, { socks = false } = {}) {
+  const order = (json && (json.payload && json.payload.order)) || (json && json.order) || (json && json.payload) || json || {};
+  const proxy = (order && order.proxy) || {};
+  const username = typeof proxy.username === 'string' ? proxy.username.trim() : '';
+  const password = typeof proxy.password === 'string' ? proxy.password : '';
+  const ipList = order.ip_list || proxy.ip_list;
+  const groups = Array.isArray(ipList) ? ipList.map((g) => [null, g])
+    : (ipList && typeof ipList === 'object' ? Object.entries(ipList) : []);
+  const port = socks ? CATPROXIES_DATACENTER_PORTS.socks : CATPROXIES_DATACENTER_PORTS.http;
+  const rows = [];
+  const seen = new Set();
+  if (!username || !password) return rows;
+  for (const [groupKey, group] of groups) {
+    if (!group || typeof group !== 'object') continue;
+    const rawCc = String(groupKey || group.country || group.country_code || group.code || '').trim().toUpperCase();
+    const cc = /^[A-Z]{2}$/.test(rawCc) ? rawCc : '';
+    for (const city of Array.isArray(group.cities) ? group.cities : []) {
+      for (const entry of Array.isArray(city && city.ips) ? city.ips : []) {
+        const host = String(entry && typeof entry === 'object' ? entry.ip : entry || '').trim();
+        if (!host || /[\s/@?#]/.test(host) || seen.has(host)) continue;
+        seen.add(host);
+        rows.push({ type: socks ? 'SOCKS5' : 'HTTP', host, port, username, password, label: `CatProxies • Datacenter${cc ? ` • ${cc}` : ''} • ${host}`, country: cc || null });
+      }
+    }
+  }
+  return rows;
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1654,5 +1717,6 @@ module.exports = {
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
   proxyBonanzaRows,
-  proxy6Page, proxy6ErrorMessage
+  proxy6Page, proxy6ErrorMessage,
+  CATPROXIES_DATACENTER_PORTS, catProxiesIspRows, catProxiesDatacenterRows
 };

@@ -91,7 +91,8 @@ const {
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
   proxyBonanzaRows,
-  proxy6Page, proxy6ErrorMessage
+  proxy6Page, proxy6ErrorMessage,
+  catProxiesIspRows, catProxiesDatacenterRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -2589,12 +2590,12 @@ async function fetchAirproxyPool({ token, count }) {
   return limitListRows(rows, count);
 }
 
-// --- CatProxies (Standard Residential + Rotating Mobile) --------------------------------
+// --- CatProxies (Standard Residential, Rotating Mobile, ISP, Datacenter) ------------------
 // The cp_ API key + a Plan ID (from the dashboard Active Plans) fetch GET /orders/:id, whose
 // proxy.{username,password} feed one gateway. Targeting rides in the username (see the helpers).
 // US gateways only for now (resi-us / mobile-us, both confirmed live 2026-09-27); EU/ASIA
 // regions exist in the dashboard but their exact hostnames are unconfirmed, so they are not
-// offered yet. Datacenter + Static ISP products are a separate follow-up.
+// offered yet. ISP and Datacenter plans have fixed IPs, so they go through fetchCatProxiesFixedIps.
 const CATPROXIES_API = 'https://catproxies.com/api/v1/user';
 const CATPROXIES_PRODUCTS = Object.freeze({
   // Residential splits rotating (9000/11000) and sticky (10000/12000) port ranges; the gateway
@@ -2609,6 +2610,8 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   const product = CATPROXIES_PRODUCTS[String(poolType || '').toLowerCase()] || CATPROXIES_PRODUCTS.residential;
   const id = String(orderId || '').trim();
   if (!/^[0-9a-fA-F-]{8,40}$/.test(id)) throw new Error('CatProxies: paste the Plan ID from the dashboard (Active Plans → the plan you want to use).');
+  const pool = String(poolType || '').toLowerCase();
+  if (pool === 'isp' || pool === 'datacenter') return fetchCatProxiesFixedIps({ key, id, pool, country, state, city, session, count, proxyType });
   let json;
   try {
     const text = await httpRequestText(`${CATPROXIES_API}/orders/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' } });
@@ -2654,6 +2657,49 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   }
   if (!rows.length) throw new Error('CatProxies: could not build any proxies.');
   return rows;
+}
+
+// CatProxies products with fixed IPs: imported as a list, nothing is minted. The IP decides the
+// location, so targeting the product cannot honour is refused rather than ignored.
+async function fetchCatProxiesFixedIps({ key, id, pool, country, state, city, session, count, proxyType }) {
+  const isp = pool === 'isp';
+  const kind = isp ? 'ISP' : 'Datacenter';
+  if (String(state || '').trim() || String(city || '').trim() || String(session || '').trim() || (isp && String(country || '').trim())) {
+    throw new Error(isp
+      ? 'CatProxies: ISP IPs are fixed when you buy them. Clear Country, State, City and Sticky session.'
+      : 'CatProxies: Datacenter IPs are fixed, so only Country applies. Clear State, City and Sticky session.');
+  }
+  const rawCountry = String(country || '').trim();
+  const cc = normCountryCode(rawCountry);
+  if (rawCountry && !cc) throw new Error(`CatProxies: "${rawCountry}" is not a country code.`);
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const url = isp ? `${CATPROXIES_API}/generator/isp?orderId=${encodeURIComponent(id)}` : `${CATPROXIES_API}/orders/${encodeURIComponent(id)}`;
+  let json;
+  try {
+    json = JSON.parse(await httpRequestText(url, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' }, maxBytes: 16_000_000 }));
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('CatProxies rejected the API key. Copy it again from My Account, API.');
+    if (status === 404) throw new Error('CatProxies: no plan with that Plan ID on this account. Check it in Active Plans.');
+    if (status === 429) throw new Error('CatProxies: too many requests (1000 an hour). Wait and pull again.');
+    throw new Error(`CatProxies: could not read that plan. Check your connection, and that the Plan ID is a ${kind} plan.`);
+  }
+  let rows;
+  if (isp) {
+    const res = catProxiesIspRows(json, { socks });
+    if (res.pending) throw new Error('CatProxies: this plan is still being set up. Wait a few seconds and pull again.');
+    rows = res.rows;
+  } else {
+    if (catProxiesCreds(json).bandwidthLeft === 0) throw new Error('CatProxies: that plan has no bandwidth left, so its proxies would fail on first use.');
+    rows = catProxiesDatacenterRows(json, { socks });
+  }
+  if (!rows.length) throw new Error(`CatProxies: that plan returned no ${kind} proxies. Confirm the Plan ID matches the chosen product and the plan is active. A new plan can take a few seconds.`);
+  const picked = cc ? rows.filter((r) => r.country === cc) : rows;
+  if (!picked.length) {
+    const have = [...new Set(rows.map((r) => r.country).filter(Boolean))].join(', ');
+    throw new Error(`CatProxies: no IPs in ${cc} on that plan.${have ? ` It has ${have}.` : ''}`);
+  }
+  return limitListRows(picked, count);
 }
 
 // Shared by the gateway-minting adapters below: an optional host/port override from the form
