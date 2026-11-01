@@ -38,6 +38,10 @@ test('Live Proxies usernames match the dashboard generator', () => {
   assert.equal(U.liveProxiesUsername('LV58712', {}), '', 'a country is required');
   assert.equal(U.liveProxiesStickyHost(1), 'b2b-s1.liveproxies.io');
   assert.equal(U.liveProxiesStickyHost(10), 'b2b-s10.liveproxies.io');
+  // Only 17 sticky servers exist in DNS. A pull of 50 used to invent b2b-s18 to b2b-s50.
+  assert.equal(U.liveProxiesStickyHost(17), 'b2b-s17.liveproxies.io');
+  assert.equal(U.liveProxiesStickyHost(18), 'b2b-s1.liveproxies.io');
+  assert.equal(U.liveProxiesStickyHost(50), 'b2b-s16.liveproxies.io');
   assert.equal(U.LIVEPROXIES_GATEWAY.port, 7383);
 });
 

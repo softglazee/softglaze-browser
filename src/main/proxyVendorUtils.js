@@ -741,10 +741,13 @@ function liveProxiesUsername(base, { country, sid } = {}) {
   const s = String(sid || '').replace(/\D/g, '').slice(0, 8);
   return `${acct}-lv_${cc}${s ? `-${s}` : ''}`;
 }
-// Sticky server for the Nth sticky proxy (1-based), exactly as the dashboard hands them out.
+// Sticky server for the Nth sticky proxy (1-based). Only b2b-s1 to b2b-s17 exist in DNS (checked
+// 2 Nov 2026), so higher numbers wrap around. The session id in the username picks the exit IP, not
+// the server: 49 live proxies sharing these 17 servers came back with 49 different IPs.
+const LIVEPROXIES_STICKY_SERVERS = 17;
 function liveProxiesStickyHost(n) {
   const i = Math.max(1, Number.parseInt(String(n), 10) || 1);
-  return `b2b-s${i}.liveproxies.io`;
+  return `b2b-s${((i - 1) % LIVEPROXIES_STICKY_SERVERS) + 1}.liveproxies.io`;
 }
 
 // Shared: "new york" / "New-York" -> "NewYork" (vendors that want CamelCase place names).
