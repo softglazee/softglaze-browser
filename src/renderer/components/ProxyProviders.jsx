@@ -105,7 +105,10 @@ export const PROVIDERS = [
   { key: 'gonzoproxy', name: 'GonzoProxy', initials: 'GZ', color: '#f43f5e', referral: 'https://gonzoproxy.com/', gateway: { host: 'connect.gonzoproxy.app', port: 10000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, proto: true, gateway: true } },
   // Simply Proxies: UK mobile, no customer API. Username + password on proxy.simplyproxies.com:6890
   // (SOCKS5); the network and a sticky session (5 min to 12 h) ride in the username.
-  { key: 'simplyproxies', name: 'Simply Proxies', initials: 'SY', color: '#8b5cf6', referral: 'https://simplyproxies.com/', gateway: { host: 'proxy.simplyproxies.com', port: 6890, type: 'SOCKS5' }, geoSync: { creds: ['username', 'password'], noCountry: true, count: true, poolType: [['any', 'Any network'], ['ee', 'EE'], ['o2', 'O2'], ['vodafone', 'Vodafone'], ['three', 'Three']], session: true, life: true, maxLife: 720 } }
+  { key: 'simplyproxies', name: 'Simply Proxies', initials: 'SY', color: '#8b5cf6', referral: 'https://simplyproxies.com/', gateway: { host: 'proxy.simplyproxies.com', port: 6890, type: 'SOCKS5' }, geoSync: { creds: ['username', 'password'], noCountry: true, count: true, poolType: [['any', 'Any network'], ['ee', 'EE'], ['o2', 'O2'], ['vodafone', 'Vodafone'], ['three', 'Three']], session: true, life: true, maxLife: 720 } },
+  // Coronium: dedicated mobile proxies listed from the account with an API key. The SIM fixes the
+  // location, and no rotation link is stored (a fetch of one changes the IP).
+  { key: 'coronium', name: 'Coronium', initials: 'CO', color: '#0891b2', referral: 'https://coronium.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).

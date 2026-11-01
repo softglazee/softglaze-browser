@@ -1352,6 +1352,48 @@ function simplyProxiesUsername(base, { network, session, minutes } = {}) {
   return parts.join('-');
 }
 
+// ---------------------------------------------------------------------------------------
+// Coronium (api.coronium.io/api-docs, OpenAPI 3.3.10, fetched 2026-11-01). GET
+// /api/v3/account/proxies with a Bearer key returns { data: [row] }. A classic row connects to
+// ip_address with proxy_login + proxy_password on http_port or socks_port. A row carrying
+// proxyEndpoints instead has per-protocol { host, port, username, password }, and those logins
+// can differ between HTTP and SOCKS5, so they win when present. Rows also carry restartByToken,
+// statusByToken and restartToken: a GET on those rotates the IP with no auth, so only the fields
+// named below are ever copied out. Expired lines are skipped. NOT live-key tested.
+function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
+  let json;
+  try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, expired: 0 }; }
+  const list = Array.isArray(json && json.data) ? json.data : [];
+  const rows = [];
+  const seen = new Set();
+  let expired = 0;
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const exp = Number(p.tariff_expired_at);
+    if (Number.isFinite(exp) && exp > 0 && exp <= now) { expired += 1; continue; }
+    // A row with proxyEndpoints never falls back to the classic fields: those are for other rows.
+    const pe = p.proxyEndpoints && typeof p.proxyEndpoints === 'object' ? p.proxyEndpoints : null;
+    const ep = pe ? (socks ? pe.socks5 : pe.http) : null;
+    if (pe && (!ep || typeof ep !== 'object')) continue;
+    const host = String((ep ? ep.host : (p.ip_address || p.connection_ip)) || '').trim();
+    const port = Number.parseInt(String(ep ? ep.port : (socks ? p.socks_port : p.http_port)), 10);
+    const username = String((ep ? ep.username : p.proxy_login) || '');
+    const password = String((ep ? ep.password : p.proxy_password) || '');
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const name = String(p.name || '').trim();
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `Coronium • Mobile${name ? ` • ${name}` : ''}${p.isOnline === false ? ' • offline' : ''}`,
+      country: null
+    });
+  }
+  return { rows, total: list.length, expired };
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1423,5 +1465,6 @@ module.exports = {
   ipfoxyUsername, kookeeySession, kookeeyPassword, mangoProxyRows,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
-  SIMPLYPROXIES_NETWORKS, simplyProxiesUsername
+  SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
+  coroniumRows
 };

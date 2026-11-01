@@ -86,7 +86,8 @@ const {
   ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
-  SIMPLYPROXIES_NETWORKS, simplyProxiesUsername
+  SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
+  coroniumRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1372,7 +1373,8 @@ const PROXY_VENDORS = Object.freeze({
   proxmint: 'Proxmint', databay: 'Databay',
   twoextract: '2extract',
   gonzoproxy: 'GonzoProxy',
-  simplyproxies: 'Simply Proxies'
+  simplyproxies: 'Simply Proxies',
+  coronium: 'Coronium'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3352,6 +3354,36 @@ async function fetchSimplyProxiesPool({ username, password, poolType, country, s
   return rows;
 }
 
+// --- Coronium (dedicated mobile, list pull) ------------------------------------------------
+// Read-only list of the lines already on the account (coroniumRows). The key goes in the Bearer
+// header, never the legacy ?auth_token query. Rotation is deliberately NOT wired: no rotation
+// link or token is stored, because anything that fetched such a URL would change the IP. The
+// country is only an opaque id in the response, so it is left for the health check to fill.
+// Not live-key tested.
+const CORONIUM_API = 'https://api.coronium.io/api/v3';
+
+async function fetchCoroniumPool({ token, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('Coronium: paste your API key (Dashboard, Account, API Access).');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  let text;
+  try {
+    text = await httpRequestText(`${CORONIUM_API}/account/proxies`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' }, maxBytes: 8_000_000 });
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('Coronium rejected the API key. Copy it again from Dashboard, Account, API Access.');
+    if (status === 429) throw new Error('Coronium: too many requests. Wait a moment and pull again.');
+    throw new Error('Coronium: could not read the proxy list. Check your connection and try again.');
+  }
+  const { rows, total, expired } = coroniumRows(text, { socks });
+  if (!rows.length) {
+    if (!total) throw new Error('Coronium: no proxies on this account yet.');
+    if (expired === total) throw new Error('Coronium: every proxy on this account has expired. Renew one and pull again.');
+    throw new Error(`Coronium: none of the proxies on this account has usable ${socks ? 'SOCKS5' : 'HTTP'} details. Try the other protocol.`);
+  }
+  return limitListRows(rows, count);
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3385,7 +3417,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   mangoproxy: fetchMangoProxyPool,
   twoextract: fetchTwoExtractPool,
   gonzoproxy: fetchGonzoProxyPool,
-  simplyproxies: fetchSimplyProxiesPool
+  simplyproxies: fetchSimplyProxiesPool,
+  coronium: fetchCoroniumPool
 });
 
 async function syncVendorPool(payload) {
