@@ -70,7 +70,7 @@ test.after(async () => {
   try { fs.rmSync(userData, { recursive: true, force: true }); } catch (e) { /* noop */ }
 });
 
-const rawRow = async (id) => (await db.$queryRawUnsafe('SELECT "password", "passwordHash" FROM "Proxy" WHERE "id" = ?', id))[0];
+const rawRow = async (id) => (await db.$queryRawUnsafe('SELECT "password" AS "password", "passwordHash" AS "passwordHash" FROM "Proxy" WHERE "id" = ?', id))[0];
 
 test('secretStore seal/open round trip', () => {
   const sealed = secretStore.seal('s3cr:et@pw');
