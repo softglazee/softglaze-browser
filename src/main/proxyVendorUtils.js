@@ -1317,6 +1317,41 @@ function gonzoProxyUsername(login, { country, state, city, session } = {}) {
   return parts.join('_');
 }
 
+// ---------------------------------------------------------------------------------------
+// Simply Proxies (simplyproxies.com/docs, fetched 2026-11-01). UK only, no customer API. Username:
+//   <user>[-ee|-o2|-vodafone|-three][-session-<id>[-<minutes>]]
+// The network token goes directly after the user and before the session suffix. Minutes run
+// from 5 to 720 and apply on SOCKS5 only (the HTTPS endpoint uses a fixed 12 hour window). An id
+// ending in a hyphen plus digits would be read as id + minutes, so ids stay alphanumeric.
+// NOT live-key tested.
+const SIMPLYPROXIES_NETWORKS = Object.freeze(['ee', 'o2', 'vodafone', 'three']);
+function simplyProxiesUsername(base, { network, session, minutes } = {}) {
+  // Drop a pasted suffix so the targeting is rebuilt from the form, never doubled.
+  const user = String(base || '').trim().replace(/-session-.*$/i, '').replace(/-(ee|o2|vodafone|three)$/i, '');
+  if (!user || /[\s:@]/.test(user)) throw new Error('Simply Proxies: enter the proxy username from your dashboard.');
+  const parts = [user];
+  // The panel's untouched pool select sends the app-wide default 'residential', which it shows as Any.
+  const net = String(network || '').trim().toLowerCase();
+  if (net && net !== 'any' && net !== 'residential') {
+    if (!SIMPLYPROXIES_NETWORKS.includes(net)) throw new Error(`Simply Proxies has no network "${network}". Pick EE, O2, Vodafone, Three or Any.`);
+    parts.push(net);
+  }
+  const rawSid = String(session || '').trim();
+  const sid = rawSid.replace(/[^A-Za-z0-9]/g, '');
+  if (rawSid && !sid) throw new Error('Simply Proxies: a sticky session name must contain letters or digits.');
+  const rawMin = String(minutes == null ? '' : minutes).trim();
+  if (rawMin) {
+    const m = Number(rawMin);
+    if (!Number.isInteger(m) || m < 5 || m > 720) throw new Error('Simply Proxies: Keep same IP must be from 5 minutes to 12 hours.');
+    if (!sid) throw new Error('Simply Proxies: Keep same IP needs a sticky session.');
+  }
+  if (sid) {
+    parts.push('session', sid);
+    if (rawMin) parts.push(String(Number(rawMin)));
+  }
+  return parts.join('-');
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1387,5 +1422,6 @@ module.exports = {
   DATABAY_ZONES, databayUsername,
   ipfoxyUsername, kookeeySession, kookeeyPassword, mangoProxyRows,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
-  gonzoProxyBaseLogin, gonzoProxyUsername
+  gonzoProxyBaseLogin, gonzoProxyUsername,
+  SIMPLYPROXIES_NETWORKS, simplyProxiesUsername
 };

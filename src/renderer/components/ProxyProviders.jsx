@@ -102,7 +102,10 @@ export const PROVIDERS = [
   { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } },
   // GonzoProxy: login + password on connect.gonzoproxy.app:10000 (HTTP and SOCKS5 on one port);
   // country, numeric region, city and a sticky session ride in the login. Sticky rows only.
-  { key: 'gonzoproxy', name: 'GonzoProxy', initials: 'GZ', color: '#f43f5e', referral: 'https://gonzoproxy.com/', gateway: { host: 'connect.gonzoproxy.app', port: 10000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, proto: true, gateway: true } }
+  { key: 'gonzoproxy', name: 'GonzoProxy', initials: 'GZ', color: '#f43f5e', referral: 'https://gonzoproxy.com/', gateway: { host: 'connect.gonzoproxy.app', port: 10000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, proto: true, gateway: true } },
+  // Simply Proxies: UK mobile, no customer API. Username + password on proxy.simplyproxies.com:6890
+  // (SOCKS5); the network and a sticky session (5 min to 12 h) ride in the username.
+  { key: 'simplyproxies', name: 'Simply Proxies', initials: 'SY', color: '#8b5cf6', referral: 'https://simplyproxies.com/', gateway: { host: 'proxy.simplyproxies.com', port: 6890, type: 'SOCKS5' }, geoSync: { creds: ['username', 'password'], noCountry: true, count: true, poolType: [['any', 'Any network'], ['ee', 'EE'], ['o2', 'O2'], ['vodafone', 'Vodafone'], ['three', 'Three']], session: true, life: true, maxLife: 720 } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).

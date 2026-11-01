@@ -85,7 +85,8 @@ const {
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
   ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
-  gonzoProxyBaseLogin, gonzoProxyUsername
+  gonzoProxyBaseLogin, gonzoProxyUsername,
+  SIMPLYPROXIES_NETWORKS, simplyProxiesUsername
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1370,7 +1371,8 @@ const PROXY_VENDORS = Object.freeze({
   proxiessx: 'Proxies.sx', mobileproxyspace: 'MobileProxy.Space', proxysolutions: 'Proxy-Solutions',
   proxmint: 'Proxmint', databay: 'Databay',
   twoextract: '2extract',
-  gonzoproxy: 'GonzoProxy'
+  gonzoproxy: 'GonzoProxy',
+  simplyproxies: 'Simply Proxies'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3323,6 +3325,33 @@ async function fetchGonzoProxyPool({ username, password, country, state, city, s
   return rows;
 }
 
+// --- Simply Proxies (UK mobile, gateway-minted) ---------------------------------------------
+// Username + password from the dashboard; network and sticky session ride in the username
+// (simplyProxiesUsername). No customer API. SOCKS5 only on purpose: the vendor's other endpoint,
+// :6889, needs TLS from the client to the proxy, and this app dials an HTTP proxy in plain text
+// (buildProxyServerArgument and proxyAgentScheme), so an :6889 row could never connect.
+// Not live-key tested.
+const SIMPLYPROXIES_GATEWAY = Object.freeze({ host: 'proxy.simplyproxies.com', socks: 6890 });
+
+async function fetchSimplyProxiesPool({ username, password, poolType, country, session, life, count }) {
+  const pw = password != null ? String(password) : '';
+  if (!String(username || '').trim()) throw new Error('Simply Proxies: enter the proxy username from your dashboard.');
+  if (!pw) throw new Error('Simply Proxies: enter the proxy password from your dashboard.');
+  const cc = String(country || '').trim().toUpperCase();
+  if (cc && cc !== 'GB') throw new Error(`Simply Proxies only has UK exits, not ${cc}.`);
+  const minutes = String(life == null ? '' : life).trim();
+  // A chosen Keep same IP needs a session to apply to, even for a single row.
+  const fixed = String(session || '').trim() || (minutes ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  const net = String(poolType || '').toLowerCase();
+  const rows = mintGatewayRows({
+    type: 'SOCKS5', host: SIMPLYPROXIES_GATEWAY.host, port: SIMPLYPROXIES_GATEWAY.socks, password: pw, session: fixed, count,
+    buildUser: (sid) => simplyProxiesUsername(username, { network: poolType, session: sid, minutes: sid ? minutes : '' }),
+    label: `Simply Proxies • UK${SIMPLYPROXIES_NETWORKS.includes(net) ? ` • ${net === 'o2' ? 'O2' : net === 'ee' ? 'EE' : net.charAt(0).toUpperCase() + net.slice(1)}` : ''}`
+  }).map((r) => ({ ...r, country: 'GB' }));
+  if (!rows.length) throw new Error('Simply Proxies: could not build any proxies.');
+  return rows;
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3355,7 +3384,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   kookeey: fetchKookeeyPool,
   mangoproxy: fetchMangoProxyPool,
   twoextract: fetchTwoExtractPool,
-  gonzoproxy: fetchGonzoProxyPool
+  gonzoproxy: fetchGonzoProxyPool,
+  simplyproxies: fetchSimplyProxiesPool
 });
 
 async function syncVendorPool(payload) {
