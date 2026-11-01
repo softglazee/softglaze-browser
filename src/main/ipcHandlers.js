@@ -90,7 +90,8 @@ const {
   coroniumRows,
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
-  proxyBonanzaRows
+  proxyBonanzaRows,
+  proxy6Page, proxy6ErrorMessage
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1380,7 +1381,8 @@ const PROXY_VENDORS = Object.freeze({
   coronium: 'Coronium',
   singaporemobileproxy: 'Singapore Mobile Proxy',
   gsocks: 'Gsocks',
-  proxybonanza: 'Proxy Bonanza'
+  proxybonanza: 'Proxy Bonanza',
+  proxy6: 'PROXY6'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3506,6 +3508,56 @@ async function fetchProxyBonanzaPool({ token, country, count, proxyType }) {
   return limitListRows(picked, count);
 }
 
+// --- PROXY6 (static IPv4 + IPv6, list pull) ------------------------------------------------
+// Reads the active proxies on the account, page by page (proxy6Page). Read-only: buy, prolong and
+// delete are never called. The key is part of the vendor's URL path, so failures below map to fixed
+// messages and never echo the URL. Country filters the list and How many caps it. Not live-key tested.
+const PROXY6_API = 'https://px6.link/api';
+const PROXY6_PAGE_SIZE = 1000;
+
+async function fetchProxy6Pool({ token, country, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!/^[A-Za-z0-9_-]{6,200}$/.test(key)) throw new Error('PROXY6: paste the API key from your account.');
+  const rawCountry = String(country || '').trim();
+  const cc = normCountryCode(rawCountry);
+  if (rawCountry && !cc) throw new Error(`PROXY6: "${rawCountry}" is not a country code.`);
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const rows = [];
+  const seen = new Set();
+  let listed = 0;
+  let skippedProtocol = 0;
+  for (let page = 1; page <= 50; page += 1) {
+    let text;
+    try {
+      text = await httpRequestText(`${PROXY6_API}/${encodeURIComponent(key)}/getproxy/?state=active&nokey&limit=${PROXY6_PAGE_SIZE}&page=${page}`, { headers: { Accept: 'application/json' }, maxBytes: 8_000_000 });
+    } catch (error) {
+      if (error && error.status === 429) throw new Error('PROXY6: too many requests (3 a second). Wait a moment and pull again.');
+      throw new Error('PROXY6: could not read the proxy list. Check your connection and try again.');
+    }
+    const res = proxy6Page(text, { socks });
+    if (res.error) throw new Error(res.error);
+    listed += res.listCount;
+    skippedProtocol += res.skippedProtocol;
+    for (const r of res.rows) {
+      const k = `${r.host}:${r.port}:${r.username}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push(r);
+    }
+    if (res.listCount < PROXY6_PAGE_SIZE) break;
+  }
+  if (!rows.length) {
+    if (skippedProtocol) throw new Error(`PROXY6: your active proxies do not serve ${socks ? 'SOCKS5' : 'HTTP'}. Switch Protocol, or change the proxy type in your account.`);
+    throw new Error(listed ? 'PROXY6: none of your active proxies can be imported (MTProto proxies are not web proxies).' : 'PROXY6: no active proxies on this account.');
+  }
+  const picked = cc ? rows.filter((r) => r.country === cc) : rows;
+  if (!picked.length) {
+    const have = [...new Set(rows.map((r) => r.country).filter(Boolean))].join(', ');
+    throw new Error(`PROXY6: no active proxies in ${cc} on this account.${have ? ` You have ${have}.` : ''}`);
+  }
+  return limitListRows(picked, count);
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3543,7 +3595,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   coronium: fetchCoroniumPool,
   singaporemobileproxy: fetchSingaporeMobileProxyPool,
   gsocks: fetchGsocksPool,
-  proxybonanza: fetchProxyBonanzaPool
+  proxybonanza: fetchProxyBonanzaPool,
+  proxy6: fetchProxy6Pool
 });
 
 async function syncVendorPool(payload) {

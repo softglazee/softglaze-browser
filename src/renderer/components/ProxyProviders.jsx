@@ -117,7 +117,10 @@ export const PROVIDERS = [
   { key: 'gsocks', name: 'Gsocks', initials: 'GS', color: '#65a30d', referral: 'https://gsocks.net/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile']] } },
   // Proxy Bonanza: one API key lists every proxy IP on the account's active plans; Country filters
   // that list and How many caps it.
-  { key: 'proxybonanza', name: 'Proxy Bonanza', initials: 'PB', color: '#d97706', referral: 'https://proxybonanza.com/', gateway: null, geoSync: { creds: ['token'], count: true, list: true, proto: true } }
+  { key: 'proxybonanza', name: 'Proxy Bonanza', initials: 'PB', color: '#d97706', referral: 'https://proxybonanza.com/', gateway: null, geoSync: { creds: ['token'], count: true, list: true, proto: true } },
+  // PROXY6: static IPv4 and IPv6 listed from the account with an API key; Country filters that list
+  // and How many caps it. MTProto lines are left out.
+  { key: 'proxy6', name: 'PROXY6', initials: 'P6', color: '#4f46e5', referral: 'https://proxy6.net/', gateway: null, geoSync: { creds: ['token'], count: true, list: true, proto: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).

@@ -1529,6 +1529,55 @@ function proxyBonanzaRows(body, { socks = false } = {}) {
   return { rows, error: '', total: list.length };
 }
 
+// ---------------------------------------------------------------------------------------
+// PROXY6 (proxy6.net/en/developers, fetched 2026-11-01). GET
+// https://px6.link/api/<key>/getproxy/?state=active&nokey&limit=1000&page=<n> returns
+// { status, list_count, list } where each proxy has host, port, user, pass, type, country,
+// version, active and unixtime_end. Failures come back as { status: "no", error_id, error } with
+// HTTP 200. version 5 is MTProto, which is not a web proxy, so it is left out. type http or socks
+// fixes the protocol of a line; auto serves both. NOT live-key tested.
+const PROXY6_VERSIONS = Object.freeze({ 3: 'IPv4 Shared', 4: 'IPv4', 6: 'IPv6' });
+function proxy6ErrorMessage(errorId, error) {
+  const id = Number(errorId);
+  if (id === 100) return 'PROXY6 rejected the API key. Copy it again from your account.';
+  if (id === 105) return 'PROXY6 refused this computer\'s IP. Your API key has an IP restriction; add this IP or remove the restriction in your account.';
+  return `PROXY6: ${String(error || 'the API reported an error').trim()}${Number.isFinite(id) ? ` (code ${id})` : ''}.`;
+}
+function proxy6Page(body, { socks = false, now = Date.now() } = {}) {
+  let json;
+  try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], listCount: 0, skippedProtocol: 0, error: 'PROXY6: the API did not return JSON.' }; }
+  if (!json || json.status !== 'yes') {
+    return { rows: [], listCount: 0, skippedProtocol: 0, error: proxy6ErrorMessage(json && json.error_id, json && json.error) };
+  }
+  // With nokey the list is an array; without it, an object keyed by proxy id.
+  const list = Array.isArray(json.list) ? json.list : (json.list && typeof json.list === 'object' ? Object.values(json.list) : []);
+  const rows = [];
+  let skippedProtocol = 0;
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const version = PROXY6_VERSIONS[String(p.version)];
+    if (!version || String(p.active) !== '1') continue;
+    const end = Number(p.unixtime_end);
+    if (Number.isFinite(end) && end > 0 && end * 1000 <= now) continue;
+    const kind = String(p.type || '').toLowerCase();
+    if (kind !== 'auto' && kind !== (socks ? 'socks' : 'http')) { skippedProtocol += 1; continue; }
+    const host = String(p.host || '').trim();
+    const port = Number.parseInt(String(p.port), 10);
+    const username = p.user != null ? String(p.user) : '';
+    const password = p.pass != null ? String(p.pass) : '';
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const cc = String(p.country || '').trim().toUpperCase();
+    const code = /^[A-Z]{2}$/.test(cc) ? cc : '';
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `PROXY6 • ${version}${code ? ` • ${code}` : ''}${p.id != null ? ` • #${p.id}` : ''}`,
+      country: code || null
+    });
+  }
+  return { rows, listCount: list.length, skippedProtocol, error: '' };
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1604,5 +1653,6 @@ module.exports = {
   coroniumRows,
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
-  proxyBonanzaRows
+  proxyBonanzaRows,
+  proxy6Page, proxy6ErrorMessage
 };
