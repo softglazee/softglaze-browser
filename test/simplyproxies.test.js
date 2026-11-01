@@ -48,7 +48,7 @@ test('bad input fails instead of being dropped', () => {
 });
 
 test('rows are SOCKS5 only, because the HTTPS endpoint needs TLS to the proxy', () => {
-  const body = IPC.slice(IPC.indexOf('async function fetchSimplyProxiesPool('), IPC.indexOf('// Vendors wired to real calls'));
+  const body = /async function fetchSimplyProxiesPool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
   assert.match(IPC, /const SIMPLYPROXIES_GATEWAY = Object\.freeze\(\{ host: 'proxy\.simplyproxies\.com', socks: 6890 \}\)/);
   assert.match(body, /type: 'SOCKS5'/);
   assert.doesNotMatch(body, /type: 'HTTP'/);

@@ -35,7 +35,7 @@ test('bad input fails instead of being dropped', () => {
 });
 
 test('rows are always sticky, because only that login form is published', () => {
-  const body = IPC.slice(IPC.indexOf('async function fetchGonzoProxyPool('), IPC.indexOf('// Vendors wired to real calls'));
+  const body = /async function fetchGonzoProxyPool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
   assert.match(body, /session: String\(session \|\| ''\)\.trim\(\) \|\| `sg/);
 });
 
