@@ -129,7 +129,7 @@
     "country": "Country",
     "latency": "Latency",
     "pasteTip": "💡 Tip: Paste your proxy \"host:port:user:pass\" into the Host field to auto-fill.",
-    "hostPlaceholder": "Host (e.g. proxy.smartproxy.net)",
+    "hostPlaceholder": "Host (e.g. proxy.example.com)",
     "portPlaceholder": "Port",
     "userPlaceholder": "Proxy Username (Optional)",
     "passPlaceholder": "Proxy Password (Optional)",

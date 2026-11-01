@@ -1128,39 +1128,6 @@ function mangoProxyRows(json, { socks = false } = {}) {
 }
 
 // ---------------------------------------------------------------------------------------
-// LumiProxy (gateway-minted residential). The username carries the targeting and the sticky
-// session; the gateway host/port stay fixed (as.lumiproxy.com:5888 by default, country/region
-// nodes such as us./eu. are reachable through the gateway override). Grammar verified against
-// LumiProxy's own docs/blog (lumiproxy.com "How to use lumiproxy", fetched 2026-10-07), whose
-// verbatim sticky example is:
-//   eu.lumiproxy.com:5888:lumi-gdskfh45_area-US_city-Bessemer_life-10_session-u9sBvMSOLO:XXXXXX
-// So flags are underscore-joined after the base login: area-<CC> (country, upper ISO-2),
-// city-<City> (CamelCase), life-<min> (sticky minutes, 1-120) and session-<id>. life/session
-// only appear for a sticky pull. state-<State> follows the identical area-/city- pattern and
-// the dashboard's own country/state/city selector; it is emitted between area and city. The
-// base is "lumi-<id>", whose single hyphen never clashes because the flags split on "_".
-function lumiProxyUsername(base, { country, state, city, session, lifeMin } = {}) {
-  const user = String(base || '').trim();
-  if (!user) return '';
-  const suffix = [];
-  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
-  if (/^[A-Z]{2}$/.test(cc)) {
-    suffix.push(`area-${cc}`);
-    const st = camelPlace(state);
-    if (st) suffix.push(`state-${st}`);
-    const ct = camelPlace(city);
-    if (ct) suffix.push(`city-${ct}`);
-  }
-  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '').slice(0, 32);
-  if (sid) {
-    const life = Number.parseInt(String(lifeMin), 10);
-    if (Number.isInteger(life) && life >= 1 && life <= 120) suffix.push(`life-${life}`);
-    suffix.push(`session-${sid}`);
-  }
-  return suffix.length ? `${user}_${suffix.join('_')}` : user;
-}
-
-// ---------------------------------------------------------------------------------------
 // IP Burger (rotating residential, gateway residential.ipb.cloud:7777, HTTP only - their docs
 // state SOCKS5 is not offered on the residential network). The proxy user (customer-<id>) and
 // its password come from the dashboard Proxy Users; everything else rides in the username.
@@ -1258,7 +1225,6 @@ function proxy302Row(text, { socks = false, country = '' } = {}) {
 }
 
 module.exports = {
-  lumiProxyUsername,
   ipBurgerBaseUser,
   ipBurgerUsername,
   IPBURGER_MAX_SESSTIME,

@@ -124,7 +124,7 @@ export default function BatchImportPage() {
       {
         'Profile Title': 'LeadGen_01', 'Group Name': 'Lead Gen', 'Notes': 'Batch 1',
         'Operating System': 'Windows', 'Browser Core': 'Chrome', 'Screen Resolution': '1920x1080',
-        'Proxy Method': 'Custom', 'Proxy Protocol': 'HTTP', 'Proxy Info': 'isp.smartproxy.net:3100:smart-user_area-US:secret1',
+        'Proxy Method': 'Custom', 'Proxy Protocol': 'HTTP', 'Proxy Info': 'proxy.example.com:3100:proxy-user:secret1',
         'WebRTC': 'Forward', 'Canvas': 'Noise', 'WebGL': 'Noise', 'WebGL Vendor': 'Google Inc. (NVIDIA)',
         'WebGL Renderer': 'ANGLE (NVIDIA GeForce RTX 4060)', 'AudioContext': 'Noise', 'CPU Cores': '8', 'Memory (GB)': '16',
         'Do Not Track': '0', 'Timezone Mode': 'Auto', 'Locale Mode': 'Auto', 'Geolocation Mode': 'Prompt',
@@ -133,7 +133,7 @@ export default function BatchImportPage() {
       {
         'Profile Title': 'LeadGen_02', 'Group Name': 'Lead Gen',
         'Operating System': 'macOS', 'Browser Core': 'Firefox', 'Screen Resolution': '1440x900',
-        'Proxy Method': 'Custom', 'Proxy Protocol': 'SOCKS5', 'Proxy Info': 'isp.smartproxy.net:3120:smart-user_area-DE:secret2',
+        'Proxy Method': 'Custom', 'Proxy Protocol': 'SOCKS5', 'Proxy Info': 'proxy.example.com:3120:proxy-user:secret2',
         'Proxy Rotation URL': 'https://provider.example/api/rotate?token=abc',
         'WebRTC': 'Block', 'Canvas': 'Noise', 'WebGL': 'Real', 'AudioContext': 'Real', 'CPU Cores': '4', 'Memory (GB)': '8',
         'Do Not Track': '1', 'Timezone Mode': 'Manual', 'Timezone': 'Europe/Berlin', 'Locale Mode': 'Manual', 'Locale': 'de-DE,de;q=0.9',

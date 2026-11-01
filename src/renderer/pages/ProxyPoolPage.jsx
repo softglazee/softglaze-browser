@@ -31,7 +31,7 @@ const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '',
 
 // Friendly labels for the "auto group by provider" chips.
 const PROVIDER_LABELS = {
-  apify: 'Apify', shopsocks5: 'ShopSocks5', smartproxyorg: 'Smartproxy.org',
+  apify: 'Apify', shopsocks5: 'ShopSocks5',
   smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom'
 };
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];

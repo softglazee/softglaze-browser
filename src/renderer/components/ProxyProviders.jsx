@@ -30,9 +30,6 @@ export const PROVIDERS = [
   { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 44445, type: 'HTTP' } },
   { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, ipv6: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
   { key: 'smartproxy', name: 'Smartproxy', initials: 'SP', color: '#ff6b35', apiSync: true, referral: 'https://smartproxy.com/?ref=softglaze', gateway: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' } },
-  // LumiProxy: rotating residential, gateway-minted on as.lumiproxy.com:5888 (HTTP+SOCKS5 on
-  // one port). Country/state/city and a sticky session (up to 120 min) ride in the username.
-  { key: 'lumiproxy', name: 'LumiProxy', initials: 'LP', color: '#22c55e', referral: 'https://www.lumiproxy.com/?ref=softglaze', gateway: { host: 'as.lumiproxy.com', port: 5888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
   // Proxy302: real Open API. The API sub-account key (name + password) signs in; Country filters
   // the pull; each proxy comes back ready on proxy.proxy302.com:2222. No state/city or session.
   { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'proxy.proxy302.com', port: 2222, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, proto: true } },
@@ -44,7 +41,6 @@ export const PROVIDERS = [
   { key: 'ipburger', name: 'IP Burger', initials: 'IB', color: '#ef4444', referral: 'https://www.ipburger.com/?ref=softglaze', gateway: { host: 'residential.ipb.cloud', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 30, gateway: true } },
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, noSession: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
-  { key: 'smartproxyorg', name: 'Smartproxy.org', initials: 'SO', color: '#2563eb', referral: 'https://www.smartproxy.org/?ref=softglaze', gateway: { host: 'isp.smartproxy.net', port: 3100, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, gateway: true, life: true } },
   { key: 'anyip', name: 'AnyIP', initials: 'AN', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } },
   // DataImpulse is a real list pull: GET /api/list returns rendered login:password@host:port
   // rows, so `geo` (state/city), `count` and `life` (session_ttl) all map to documented
@@ -125,9 +121,9 @@ function formatBytes(n) {
   return `${Math.round(v / 1024)} KB`;
 }
 
-// Country list for the geo-targeted providers (Apify / Smartproxy.org / ShopSocks5).
-// Values are ISO 3166-1 alpha-2 codes - the format Apify (country-XX) and
-// Smartproxy.org (area-XX) expect; ShopSocks5 receives it as its country filter.
+// Country list for the geo-targeted providers (Apify / ShopSocks5).
+// Values are ISO 3166-1 alpha-2 codes - the format Apify (country-XX)
+// expects; ShopSocks5 receives it as its country filter.
 export const PROXY_COUNTRIES = [
   ['', 'Any / Random'],
   ['US', 'United States'], ['GB', 'United Kingdom'], ['CA', 'Canada'], ['AU', 'Australia'],
@@ -149,7 +145,6 @@ const FORM_DRAFTS = new Map();
 const GEO_HINTS = {
   liveproxies: 'Live Proxies builds every proxy on its gateway (b2b.liveproxies.io:7383). Enter the Username (for example LV58712) and Password shown under Proxy Information on the dashboard, and pick a country. How many 1 with no session gives one rotating proxy; more than 1 gives that many sticky proxies, each on its own server with a 60 minute session. A sticky session is digits only.',
   apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.',
-  smartproxyorg: 'Smartproxy.org (Long-Acting ISP) routes through isp.smartproxy.net:3100 and embeds area (country) + optional state/city + a sticky lifetime/session into the proxy username. Enter your sub-account username (smart-…) and its password. "Keep same IP" sets how long one exit IP stays fixed (5 min up to 24 h); leave it on "Different each time" with a blank session to mint several rotating IPs. If your dashboard shows a different host:port, override it below.',
   shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
   anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.'
 };
@@ -339,7 +334,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     finally { if (activeKeyRef.current === pullKey) setSyncing(false); }
   }
 
-  // Country-targeted pull (Apify / Smartproxy.org / ShopSocks5). Sends the chosen
+  // Country-targeted pull (Apify / ShopSocks5). Sends the chosen
   // country (+ pool size and any geo/session/endpoint overrides) to syncVendorPool,
   // which routes to the matching adapter. Irrelevant fields are ignored per provider.
   async function handleGeoSync() {
@@ -1101,14 +1096,14 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
                       <div>
                         <label className={labelCls}>{t('proxyProviders.geo.gatewayHostLabel')}</label>
-                        <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder="isp.smartproxy.net" />
+                        <input value={form.host} onChange={(e) => set('host', e.target.value)} className={inputCls + ' font-mono'} placeholder="proxy.example.com" />
                       </div>
                       <div>
                         <label className={labelCls}>{t('proxyProviders.geo.portLabel')}</label>
                         <input value={form.port} onChange={(e) => set('port', e.target.value)} className={inputCls + ' font-mono'} placeholder="3100" />
                       </div>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground/90">{provider.key === 'smartproxyorg' ? t('proxyProviders.geo.gatewayHint') : !provider.gateway ? t('proxyProviders.geo.gatewayHintNone', { provider: provider.name }) : t('proxyProviders.geo.gatewayHintGeneric', { provider: provider.name, gateway: [(provider.gateway || {}).host, (provider.gateway || {}).port].filter(Boolean).join(':') })}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground/90">{!provider.gateway ? t('proxyProviders.geo.gatewayHintNone', { provider: provider.name }) : t('proxyProviders.geo.gatewayHintGeneric', { provider: provider.name, gateway: [(provider.gateway || {}).host, (provider.gateway || {}).port].filter(Boolean).join(':') })}</p>
                   </div>
                 )}
 
@@ -1372,8 +1367,6 @@ function ProviderIcon({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><path d="M12 3l7 2.5V11c0 4.2-2.9 7.3-7 8.5C7.9 18.3 5 15.2 5 11V5.5z" /><path d="M9 12l2 2 4-4" /></svg>);
     case 'ipfoxy': // fox head
       return (<svg {...line}><path d="M5 4l3.6 3M19 4l-3.6 3" /><path d="M6 7l6 12 6-12-6 2.4z" /><path d="M10.6 12.4h2.8" /></svg>);
-    case 'lumiproxy': // sun / lumen
-      return (<svg {...line}><circle cx="12" cy="12" r="4" /><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.4 5.4l1.8 1.8M16.8 16.8l1.8 1.8M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8" /></svg>);
     case 'proxy302': // bolt
       return (<svg {...solid}><path d="M13 2L5 13h5l-1 9 8-12h-5z" /></svg>);
     case 'mangoproxy': // mango + leaf
@@ -1390,8 +1383,6 @@ function ProviderIcon({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><path d="M6.5 8h11l-1 11.5H7.5z" /><path d="M9 8a3 3 0 0 1 6 0" /></svg>);
     case 'apify': // crawler node + spokes
       return (<svg {...line}><circle cx="12" cy="12" r="3" /><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22M5 5l2.4 2.4M16.6 16.6L19 19M19 5l-2.4 2.4M7.4 16.6L5 19" /></svg>);
-    case 'smartproxyorg': // location pin
-      return (<svg {...line}><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>);
     case 'anyip': // concentric rings
       return (<svg {...line}><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="5.5" /><circle cx="12" cy="12" r="9" /></svg>);
     case 'dataimpulse': // pulse line

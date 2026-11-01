@@ -83,7 +83,7 @@ const {
   parseProxidizePerProxy, proxidizePerGbUsername,
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
-  lumiProxyUsername, ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row
+  ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -583,7 +583,6 @@ function deriveProvider(proxy) {
   if (n.startsWith('apify')) return 'apify';
   if (n.startsWith('anyip')) return 'anyip';
   if (n.startsWith('shopsocks5')) return 'shopsocks5';
-  if (n.startsWith('smartproxy.org') || n.startsWith('smartproxyorg')) return 'smartproxyorg';
   if (n.startsWith('bright')) return 'brightdata';
   if (n.startsWith('oxylabs')) return 'oxylabs';
   if (n.startsWith('smartproxy')) return 'smartproxy';
@@ -1360,9 +1359,9 @@ async function batchAddProxies(payload) {
 // ---------------------------------------------------------------------------
 const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
-  lumiproxy: 'LumiProxy', proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
+  proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
   ipburger: 'IP Burger', shopsocks5: 'ShopSocks5',
-  apify: 'Apify', smartproxyorg: 'Smartproxy.org', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
+  apify: 'Apify', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
   froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', packetstream: 'PacketStream',
   airproxy: 'Airproxy', catproxies: 'CatProxies', rapidproxy: 'RapidProxy', novada: 'NOVADA',
@@ -1505,8 +1504,8 @@ function randSession(len = 8) {
   return s.slice(0, len);
 }
 // Clamp a requested pool size. The default ceiling was 50, which silently truncated
-// requests (asking for 100 minted 50) on the count-driven adapters (Apify,
-// Smartproxy.org). Those adapters build each row as a local sticky-session string with
+// requests (asking for 100 minted 50) on the count-driven adapters (Apify).
+// Those adapters build each row as a local sticky-session string with
 // no per-row network call, so a higher ceiling is cheap; 500 covers realistic requests
 // while still bounding a runaway value. Adapters with a real API limit pass their own max.
 function clampPoolCount(value, def = 5, max = 500) {
@@ -1536,47 +1535,6 @@ async function fetchApifyPool({ password, country, count }) {
       type: gw.type, host: gw.host, port: gw.port,
       username: parts.join(','), password: pw,
       label: `Apify • ${cc || 'Global'} • #${i}`, country: cc || null
-    });
-  }
-  return rows;
-}
-
-// --- Smartproxy.org: area/state/city/session encoded in the username ---------
-// Same gateway model (gate.smartproxy.io:7000): params are appended to the proxy
-// username with dashes - `area-XX` (country), optional `state-`, `city-`, and a
-// sticky `session-`. We mint `count` endpoints; a fixed session id collapses to a
-// single sticky IP. Gateway host/port are overridable from the UI in case the
-// account uses a country-specific entry node.
-async function fetchSmartproxyOrgPool({ username, password, country, state, city, session, count, host, port, life }) {
-  const user = String(username || '').trim();
-  const pw = String(password || '');
-  if (!user) throw new Error('Smartproxy.org: a proxy username (sub-account) is required.');
-  if (!pw) throw new Error('Smartproxy.org: a proxy password is required.');
-  const cc = normCountryCode(country);
-  // The ISP plan gateway is isp.smartproxy.net:3100 (confirmed from the dashboard).
-  // Honor an explicit override; otherwise default to that so the pull just works.
-  const gwHost = String(host || '').trim() || 'isp.smartproxy.net';
-  const gwPort = Number.parseInt(String(port), 10) || 3100;
-  const fixedSession = String(session || '').trim().replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
-  const st = String(state || '').trim().replace(/[^a-zA-Z0-9]/g, '');
-  const ct = String(city || '').trim().replace(/[^a-zA-Z0-9]/g, '');
-  // life = minutes to keep the same exit IP (1-1440). Blank/0 = a fresh IP per request.
-  const lifeMin = Math.min(1440, Math.max(0, Number.parseInt(String(life), 10) || 0));
-  const n = fixedSession ? 1 : clampPoolCount(count);
-  const rows = [];
-  for (let i = 1; i <= n; i += 1) {
-    // smartproxy.org joins params to the sub-account with "_" (NOT "-"); each param is
-    // key-value, e.g. smart-xxxx_area-US_state-California_life-5_session-abc123.
-    const parts = [user];
-    if (cc) parts.push(`area-${cc}`);
-    if (st) parts.push(`state-${st}`);
-    if (ct) parts.push(`city-${ct}`);
-    if (lifeMin) parts.push(`life-${lifeMin}`);
-    parts.push(`session-${fixedSession || randSession()}`);
-    rows.push({
-      type: 'HTTP', host: gwHost, port: gwPort,
-      username: parts.join('_'), password: pw,
-      label: `Smartproxy.org • ${cc || 'Random'} • #${i}`, country: cc || null
     });
   }
   return rows;
@@ -1675,8 +1633,7 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   }
   const rows = [];
   for (let i = 1; i <= n; i += 1) {
-    // Comma-delimited flags, each an underscore key_value (NOTE: differs from
-    // Smartproxy.org, which joins with "_" and keys with "-").
+    // Comma-delimited flags, each an underscore key_value.
     const own = new Map(flags);
     own.set('type', `type_${ptype}`);
     if (cc) own.set('country', `country_${cc}`);
@@ -2916,30 +2873,6 @@ async function fetchProxmintPool({ token, poolType, country, state, city, sessio
   return rows;
 }
 
-// --- LumiProxy (rotating residential, gateway-minted) -------------------------------------
-// Account login + password from the dashboard (Get Proxies, User & Pass Auth); targeting and
-// the sticky session ride in the username (lumiProxyUsername). Default gateway as.lumiproxy.com
-// :5888 (HTTP and SOCKS5 share the port); country/region nodes like us./eu.lumiproxy.com are
-// reachable through the gateway override.
-const LUMIPROXY_GATEWAY = Object.freeze({ host: 'as.lumiproxy.com', port: 5888 });
-
-async function fetchLumiProxyPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
-  const base = String(username || '').trim();
-  const pw = password != null ? String(password) : '';
-  if (!base) throw new Error('LumiProxy: enter the proxy username from the dashboard (Get Proxies, User & Pass Auth), e.g. lumi-xxxxxxxx.');
-  if (!pw) throw new Error('LumiProxy: enter the proxy password from the dashboard.');
-  const gw = gatewayOverride(host, port, LUMIPROXY_GATEWAY, 'LumiProxy');
-  const socks = String(proxyType || '').toLowerCase() === 'socks5';
-  const cc = normCountryCode(country);
-  const rows = mintGatewayRows({
-    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
-    buildUser: (sid) => lumiProxyUsername(base, { country: cc, state, city, session: sid, lifeMin: life }),
-    label: `LumiProxy • Residential • ${cc || 'Worldwide'}`
-  }).map((r) => ({ ...r, country: cc || null }));
-  if (!rows.length) throw new Error('LumiProxy: could not build any proxies.');
-  return rows;
-}
-
 // --- IP Burger (rotating residential, gateway-minted) -------------------------------------
 // The proxy user (customer-<id>) + password come from the dashboard, Proxy Users; the country
 // (or one narrowing city/state token) and the sticky session ride in the username
@@ -3340,7 +3273,6 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   oxylabs: fetchOxylabsPool,
   smartproxy: fetchSmartproxyPool,
   apify: fetchApifyPool,
-  smartproxyorg: fetchSmartproxyOrgPool,
   shopsocks5: fetchShopSocks5Pool,
   anyip: fetchAnyIpPool,
   dataimpulse: fetchDataImpulsePool,
@@ -3361,7 +3293,6 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   proxysolutions: fetchProxySolutionsPool,
   proxmint: fetchProxmintPool,
   databay: fetchDatabayPool,
-  lumiproxy: fetchLumiProxyPool,
   proxy302: fetchProxy302Pool,
   ipburger: fetchIpBurgerPool,
   ipfoxy: fetchIpfoxyPool,
@@ -3391,14 +3322,13 @@ async function syncVendorPool(payload) {
       password: input.password != null ? String(input.password) : '',
       zone: optionalString(input.zone),
       bdpm: input.bdpm === true,
-      // Country-aware providers (Apify / Smartproxy.org / ShopSocks5): the chosen
+      // Country-aware providers (Apify / ShopSocks5): the chosen
       // country + pool size + optional geo/session/endpoint overrides flow through.
       country: optionalString(input.country),
       count: input.count,
       state: optionalString(input.state),
       city: optionalString(input.city),
       session: optionalString(input.session),
-      // Smartproxy.org: minutes to keep the same exit IP (sticky lifetime).
       life: input.life,
       apiUrl: optionalString(input.apiUrl),
       host: optionalString(input.host),
@@ -3550,7 +3480,7 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
       url,
       {
         agent,
-        // Some proxy gateways (e.g. smartproxy.org's ISP pool) return responses -
+        // Some proxy gateways return responses -
         // especially auth-failure 407s - with LF-only line endings instead of CRLF,
         // which Node's strict llhttp parser rejects as "Missing expected CR". Use the
         // lenient parser here so a real exit IP / error still comes through.
@@ -3616,8 +3546,8 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
 }
 
 // Encode a proxy username for a proxy URL WITHOUT mangling the comma-separated
-// tokens that gateways like Apify (`groups-RESIDENTIAL,country-US,session-…`) and
-// Smartproxy.org depend on. Commas are valid in URL userinfo (RFC 3986 sub-delims),
+// tokens that gateways like Apify (`groups-RESIDENTIAL,country-US,session-…`)
+// depend on. Commas are valid in URL userinfo (RFC 3986 sub-delims),
 // but encodeURIComponent turns them into %2C, which the proxy agent forwards
 // un-decoded - so Apify sees one malformed token, can't read `country-US`, and
 // returns a global IP (the "country ignored / mixed countries on check" bug). Keep
