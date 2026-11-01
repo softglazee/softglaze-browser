@@ -1278,6 +1278,45 @@ function twoExtractUsername(base, { country, state, city, session, timeMin } = {
   return parts.join('-');
 }
 
+// ---------------------------------------------------------------------------------------
+// GonzoProxy (help.gonzoproxy.com/ru, fetched 2026-11-01). One gateway for all three pools,
+// connect.gonzoproxy.app:10000, HTTP and SOCKS5 on that one port. Everything selected in the
+// dashboard is written into the login, underscore-joined. The published examples are:
+//   Gonzoj9CiIi_c_US_s_204976RWZ_ttl_72h
+//   Gonzoj9CiIi_c_US_sd_443_s_663698TEC_ttl_72h
+// with c_<CC> country, sd_<number> region, city_Los-Angeles city, isp_<number> provider. Only
+// the sticky form is published, so that is the only form built here: the login for "Randomize
+// IP" is not shown anywhere, and the API's POST /generate does not document its response or the
+// parameter that picks the pool. NOT live-key tested.
+const GONZOPROXY_TTL = '72h'; // the lifetime in every published example
+function gonzoProxyBaseLogin(raw) {
+  const s = String(raw || '').trim();
+  const base = s.split(/_c_/)[0];
+  return /^[A-Za-z0-9]+$/.test(base) ? base : '';
+}
+function gonzoProxyCity(v) {
+  return String(v || '').trim().split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
+}
+function gonzoProxyUsername(login, { country, state, city, session } = {}) {
+  const base = gonzoProxyBaseLogin(login);
+  if (!base) throw new Error('GonzoProxy: enter the login from Proxy Setup in your dashboard (letters and digits, for example Gonzoj9CiIi).');
+  const cc = String(country || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) throw new Error('GonzoProxy: pick a country. Its proxy login needs one.');
+  const parts = [base, 'c', cc];
+  const sd = String(state || '').trim();
+  if (sd) {
+    if (!/^\d+$/.test(sd)) throw new Error('GonzoProxy: State takes the numeric region code from the login in Proxy Setup (the 443 in sd_443), not a name.');
+    parts.push('sd', sd);
+  }
+  const ct = gonzoProxyCity(city);
+  if (ct) parts.push('city', ct);
+  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
+  if (!sid) throw new Error('GonzoProxy: a sticky session name must contain letters or digits.');
+  parts.push('s', sid, 'ttl', GONZOPROXY_TTL);
+  return parts.join('_');
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1347,5 +1386,6 @@ module.exports = {
   PROXMINT_PRODUCTS, proxmintUsername, proxmintPickProduct,
   DATABAY_ZONES, databayUsername,
   ipfoxyUsername, kookeeySession, kookeeyPassword, mangoProxyRows,
-  twoExtractBaseUser, twoExtractCountry, twoExtractUsername
+  twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
+  gonzoProxyBaseLogin, gonzoProxyUsername
 };

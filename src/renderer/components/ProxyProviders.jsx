@@ -99,7 +99,10 @@ export const PROVIDERS = [
   { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
   // 2extract: the proxy username + password from Connection Details on proxy.2extract.net:5555;
   // country, state, city and a sticky session ride in the username. Built from the docs, no API call.
-  { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } }
+  { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } },
+  // GonzoProxy: login + password on connect.gonzoproxy.app:10000 (HTTP and SOCKS5 on one port);
+  // country, numeric region, city and a sticky session ride in the login. Sticky rows only.
+  { key: 'gonzoproxy', name: 'GonzoProxy', initials: 'GZ', color: '#f43f5e', referral: 'https://gonzoproxy.com/', gateway: { host: 'connect.gonzoproxy.app', port: 10000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, proto: true, gateway: true } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).

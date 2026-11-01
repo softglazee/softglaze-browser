@@ -84,7 +84,8 @@ const {
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
   ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
-  twoExtractBaseUser, twoExtractCountry, twoExtractUsername
+  twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
+  gonzoProxyBaseLogin, gonzoProxyUsername
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1368,7 +1369,8 @@ const PROXY_VENDORS = Object.freeze({
   airproxy: 'Airproxy', catproxies: 'CatProxies', rapidproxy: 'RapidProxy', novada: 'NOVADA',
   proxiessx: 'Proxies.sx', mobileproxyspace: 'MobileProxy.Space', proxysolutions: 'Proxy-Solutions',
   proxmint: 'Proxmint', databay: 'Databay',
-  twoextract: '2extract'
+  twoextract: '2extract',
+  gonzoproxy: 'GonzoProxy'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3296,6 +3298,31 @@ async function fetchTwoExtractPool({ username, password, country, state, city, s
   return rows;
 }
 
+// --- GonzoProxy (residential, mobile, datacenter; gateway-minted) ---------------------------
+// Login + password from the dashboard (Proxy Setup); country, region, city and the sticky session
+// ride in the login (gonzoProxyUsername). Rows are always sticky, because that is the only login
+// form the vendor publishes. The pool is whatever the pasted login belongs to: the docs say a
+// request parameter selects it but do not name that parameter, so no pool picker is offered.
+// Not live-key tested.
+const GONZOPROXY_GATEWAY = Object.freeze({ host: 'connect.gonzoproxy.app', port: 10000 });
+
+async function fetchGonzoProxyPool({ username, password, country, state, city, session, count, proxyType, host, port }) {
+  const pw = password != null ? String(password) : '';
+  if (!gonzoProxyBaseLogin(username)) throw new Error('GonzoProxy: enter the login from Proxy Setup in your dashboard (letters and digits, for example Gonzoj9CiIi).');
+  if (!pw) throw new Error('GonzoProxy: enter the proxy password from Proxy Setup.');
+  const gw = gatewayOverride(host, port, GONZOPROXY_GATEWAY, 'GonzoProxy');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw,
+    session: String(session || '').trim() || `sg${crypto.randomBytes(3).toString('hex')}`, count,
+    buildUser: (sid) => gonzoProxyUsername(username, { country, state, city, session: sid }),
+    label: `GonzoProxy • ${cc || 'Unknown'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('GonzoProxy: could not build any proxies.');
+  return rows;
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3327,7 +3354,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   ipfoxy: fetchIpfoxyPool,
   kookeey: fetchKookeeyPool,
   mangoproxy: fetchMangoProxyPool,
-  twoextract: fetchTwoExtractPool
+  twoextract: fetchTwoExtractPool,
+  gonzoproxy: fetchGonzoProxyPool
 });
 
 async function syncVendorPool(payload) {
