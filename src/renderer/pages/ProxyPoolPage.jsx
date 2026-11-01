@@ -321,8 +321,9 @@ export default function ProxyPoolPage() {
   const allSelected = filteredProxies.length > 0 && filteredProxies.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
 
+  const groupsLoadedRef = useRef(false);
   const loadGroups = useCallback(async () => {
-    try { const g = await softglazeApi.proxyGroups.list(); setGroups(Array.isArray(g) ? g : []); }
+    try { const g = await softglazeApi.proxyGroups.list(); groupsLoadedRef.current = true; setGroups(Array.isArray(g) ? g : []); }
     catch (e) { /* groups are optional UI sugar - never block the pool */ }
   }, []);
 
@@ -423,6 +424,11 @@ export default function ProxyPoolPage() {
   }
 
   useEffect(() => { loadProxies(); loadGroups(); loadHealthCards(); }, [loadProxies, loadGroups, loadHealthCards]);
+  // An auto group disappears with its last proxy. Don't stay on a filter for a group that is gone.
+  useEffect(() => {
+    if (activeGroup === 'all' || activeGroup === 'none' || String(activeGroup).startsWith('provider:')) return;
+    if (groupsLoadedRef.current && !groups.some((g) => String(g.id) === String(activeGroup))) setActiveGroup('all');
+  }, [groups, activeGroup]);
   useEffect(() => { loadProxiesRef.current = loadProxies; }, [loadProxies]);
 
   // Subscribe once to the streamed proxy-checker progress. Each event updates the
