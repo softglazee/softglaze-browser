@@ -1394,6 +1394,45 @@ function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
   return { rows, total: list.length, expired };
 }
 
+// ---------------------------------------------------------------------------------------
+// Singapore Mobile Proxy (singaporemobileproxy.com/api-docs, fetched 2026-11-01). GET
+// /api/v1/proxies/my with x-api-key returns { proxyList: [row] }: host_domain, http_port,
+// socket_port, license_status, and authentication_user as "user:password". rotation_link is
+// never copied out, because a fetch of it changes the IP. A line with no login (IP allow-list
+// only) cannot be used from an arbitrary machine, so it is counted and left out. NOT live-key tested.
+function singaporeMobileProxyRows(body, { socks = false } = {}) {
+  let json;
+  try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, inactive: 0, noLogin: 0 }; }
+  const list = Array.isArray(json && json.proxyList) ? json.proxyList : [];
+  const rows = [];
+  const seen = new Set();
+  let inactive = 0;
+  let noLogin = 0;
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    if (String(p.license_status || '').toUpperCase() !== 'ACTIVE') { inactive += 1; continue; }
+    const auth = String(p.authentication_user || '');
+    const at = auth.indexOf(':');
+    const username = at > 0 ? auth.slice(0, at) : '';
+    const password = at > 0 ? auth.slice(at + 1) : '';
+    if (!username || !password) { noLogin += 1; continue; }
+    const host = String(p.host_domain || '').trim();
+    const port = Number.parseInt(String(socks ? p.socket_port : p.http_port), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const plan = String(p.package_name || '').trim();
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `Singapore Mobile Proxy${plan ? ` • ${plan}` : ''} • ${port}`,
+      country: null
+    });
+  }
+  return { rows, total: list.length, inactive, noLogin };
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1466,5 +1505,6 @@ module.exports = {
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
-  coroniumRows
+  coroniumRows,
+  singaporeMobileProxyRows
 };

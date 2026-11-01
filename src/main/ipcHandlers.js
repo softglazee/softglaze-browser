@@ -87,7 +87,8 @@ const {
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
-  coroniumRows
+  coroniumRows,
+  singaporeMobileProxyRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1374,7 +1375,8 @@ const PROXY_VENDORS = Object.freeze({
   twoextract: '2extract',
   gonzoproxy: 'GonzoProxy',
   simplyproxies: 'Simply Proxies',
-  coronium: 'Coronium'
+  coronium: 'Coronium',
+  singaporemobileproxy: 'Singapore Mobile Proxy'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3384,6 +3386,36 @@ async function fetchCoroniumPool({ token, count, proxyType }) {
   return limitListRows(rows, count);
 }
 
+// --- Singapore Mobile Proxy (dedicated mobile, list pull) ----------------------------------
+// Read-only list of the proxies on the account (singaporeMobileProxyRows), with the client API
+// key in x-api-key. Rotation is not wired and rotation_link is not stored. The API also sells
+// other locations and returns no country on a row, so the country is left to the health check.
+// Not live-key tested.
+const SINGAPOREMOBILEPROXY_API = 'https://singaporemobileproxy.com/api/v1';
+
+async function fetchSingaporeMobileProxyPool({ token, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('Singapore Mobile Proxy: paste the API key from your client dashboard.');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  let text;
+  try {
+    text = await httpRequestText(`${SINGAPOREMOBILEPROXY_API}/proxies/my`, { headers: { 'x-api-key': key, Accept: 'application/json' } });
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('Singapore Mobile Proxy rejected the API key. Use a client key from the dashboard; reseller keys do not work here.');
+    if (status === 429) throw new Error('Singapore Mobile Proxy: too many requests (60 a minute). Wait a moment and pull again.');
+    throw new Error('Singapore Mobile Proxy: could not read the proxy list. Check your connection and try again.');
+  }
+  const { rows, total, inactive, noLogin } = singaporeMobileProxyRows(text, { socks });
+  if (!rows.length) {
+    if (!total) throw new Error('Singapore Mobile Proxy: no proxies on this account yet.');
+    if (inactive === total) throw new Error('Singapore Mobile Proxy: no active proxies on this account. Renew one and pull again.');
+    if (noLogin) throw new Error('Singapore Mobile Proxy: your active proxies have no username and password set. Add a login in the dashboard and pull again.');
+    throw new Error(`Singapore Mobile Proxy: none of your active proxies has usable ${socks ? 'SOCKS5' : 'HTTP'} details.`);
+  }
+  return limitListRows(rows, count);
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3418,7 +3450,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   twoextract: fetchTwoExtractPool,
   gonzoproxy: fetchGonzoProxyPool,
   simplyproxies: fetchSimplyProxiesPool,
-  coronium: fetchCoroniumPool
+  coronium: fetchCoroniumPool,
+  singaporemobileproxy: fetchSingaporeMobileProxyPool
 });
 
 async function syncVendorPool(payload) {
