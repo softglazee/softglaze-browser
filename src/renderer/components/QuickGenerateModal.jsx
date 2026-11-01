@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2, Zap, Turtle, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
+import { countBuckets } from '@/lib/proxyBuckets.mjs';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -50,14 +51,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
 
   // Pool quality tallies (same thresholds as the Proxy Pool page) so the user can
   // see how many proxies match a Fast/Slow or Clean/Blacklisted filter up front.
-  const SPEED_FAST_MAX_MS = 1500;
-  const q = { fast: 0, slow: 0, clean: 0, blacklisted: 0 };
-  for (const p of proxies) {
-    const ms = typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null;
-    if (ms != null) { if (ms <= SPEED_FAST_MAX_MS) q.fast += 1; else q.slow += 1; }
-    if (p.lastBlacklisted === false) q.clean += 1;
-    else if (p.lastBlacklisted === true) q.blacklisted += 1;
-  }
+  const q = countBuckets(proxies);
 
   // Map the UI proxy choice to the server-side assignment mode.
   function resolveProxyMode() {

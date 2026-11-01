@@ -4268,7 +4268,7 @@ async function runProxyCheckStream(payload, event) {
       const urls = result.urlChecks || [];
       const okUrls = urls.filter((u) => u.ok).length;
       const line = result.success
-        ? `${label} → ${result.country || '??'}${result.city ? ' · ' + result.city : ''} · ${result.avgMs != null ? result.avgMs + 'ms' : '-'} · ${okUrls}/${urls.length} sites · ${result.health.grade} ${result.health.label} · ${result.speed.rating}${result.blacklist.listed ? ` · ⚠ blacklisted (${result.blacklist.sources.join(', ')})` : (result.blacklist.checked ? ' · clean' : '')}`
+        ? `${label} → ${result.country || '??'}${result.city ? ' · ' + result.city : ''} · ${result.latencyMs != null ? result.latencyMs + 'ms' : '-'} · ${okUrls}/${urls.length} sites · ${result.health.grade} ${result.health.label} · ${result.speed.rating}${result.blacklist.listed ? ` · ⚠ blacklisted (${result.blacklist.sources.join(', ')})` : (result.blacklist.checked ? ' · clean' : '')}`
         : `${label} → FAILED · ${result.error || 'unreachable'}`;
       send({ level: result.success ? (result.blacklist.listed ? 'WARN' : 'SUCCESS') : 'ERROR', proxyId: p.id, phase: 'result', message: line, result: publicProxyCheckResult(result), done, total, ok, fail, percent: Math.round((done / total) * 100), etaMs });
     }
@@ -5148,6 +5148,8 @@ async function batchGenerateProfiles(payload) {
     // never-checked (null) = neither (so "Clean" doesn't silently pull in unchecked proxies).
     if (blSel === 'clean') filter.lastBlacklisted = false;
     else if (blSel === 'blacklisted') filter.lastBlacklisted = true;
+    // A speed or blocklist choice only ever means proxies that work.
+    if (speedSel !== 'any' || blSel !== 'any') filter.lastStatus = 'ok';
     // Unique mode: only proxies NOT already bound to a live (non-deleted) profile.
     if (proxyMode === 'unique') filter.profiles = { none: { deletedAt: null } };
 
@@ -7084,7 +7086,8 @@ async function persistProxyHealth(db, id, result) {
     // Keep WHY it failed, not just that it did, so the pool can tell a quota refusal
     // from a dead exit after a reload. Cleared on success so a stale reason never sticks.
     lastError: result.success ? null : (String(result.error || '').slice(0, 400) || null),
-    lastLatencyMs: typeof result.latencyMs === 'number' ? result.latencyMs : null,
+    // A failed check has no speed: how long it took to fail means nothing.
+    lastLatencyMs: result.success && typeof result.latencyMs === 'number' ? result.latencyMs : null,
     lastCountry: result.country || null,
     lastRegion: result.region || null,
     lastCity: result.city || null,
