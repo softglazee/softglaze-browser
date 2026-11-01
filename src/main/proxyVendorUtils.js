@@ -1063,47 +1063,6 @@ function ipfoxyUsername(account, { country, state, city, session, ttlMin } = {})
 }
 
 // ---------------------------------------------------------------------------------------
-// kookeey dynamic residential (kookeey.com/apidoc, "提取动态IP（账密）"): username is
-// "<userId>-<policyUser>", and geo, session and rotation interval ride in the PASSWORD:
-//   <policyPass>-US                         country
-//   <policyPass>-US_California_city_LosAngeles  state + city   (or US_California / US_city_X)
-//   <policyPass>-global                     any country
-//   <policyPass>-US-71261427-5m             sticky: 8-char session, then interval (Nm / Nh)
-// Gateway gate.kookeey.info:1000 (regional gate-xx.kookeey.info). Built from the docs
-// 2026-10-07; NOT live-key tested. Port 1000's protocol is not stated, so rows are HTTP.
-function kookeeyGeo(v) { return String(v || '').trim().replace(/[^\p{L}\p{N}]+/gu, ''); }
-function kookeeySession(sid) {
-  const s = String(sid || '').replace(/[^A-Za-z0-9]/g, '');
-  if (!s) return '';
-  return s.length >= 8 ? s.slice(-8) : s.padStart(8, '0');
-}
-function kookeeyInterval(min) {
-  const m = Number.parseInt(String(min), 10);
-  if (!Number.isInteger(m) || m <= 0) return '';
-  return m % 60 === 0 ? `${m / 60}h` : `${m}m`;
-}
-function kookeeyPassword(base, { country, state, city, session, lifeMin } = {}) {
-  const pass = String(base == null ? '' : base).split('-')[0];
-  const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
-  let geo = 'global';
-  if (/^[A-Z]{2}$/.test(cc)) {
-    geo = cc;
-    const st = kookeeyGeo(state);
-    const ct = kookeeyGeo(city);
-    if (st) geo += `_${st}`;
-    if (ct) geo += `_city_${ct}`;
-  }
-  let pw = `${pass}-${geo}`;
-  const sid = kookeeySession(session);
-  if (sid) {
-    pw += `-${sid}`;
-    const iv = kookeeyInterval(lifeMin);
-    if (iv) pw += `-${iv}`;
-  }
-  return pw;
-}
-
-// ---------------------------------------------------------------------------------------
 // MangoProxy: POST backend.mangoproxy.com/public-api/v1/upstream/json (x-api-key) returns an
 // array of { http, https, socks5 } proxy URLs (OpenAPI ProxyUrlDto). Turn them into rows.
 function mangoProxyRows(json, { socks = false } = {}) {
@@ -1709,7 +1668,7 @@ module.exports = {
   proxidizePerGbUsername,
   PROXMINT_PRODUCTS, proxmintUsername, proxmintPickProduct,
   DATABAY_ZONES, databayUsername,
-  ipfoxyUsername, kookeeySession, kookeeyPassword, mangoProxyRows,
+  ipfoxyUsername, mangoProxyRows,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,

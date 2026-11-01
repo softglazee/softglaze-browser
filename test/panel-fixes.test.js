@@ -49,7 +49,7 @@ test('Live Proxies adapter uses gateway mode when a username is given', () => {
 
 test('blank session + How many > 1 mints sticky sessions on the gateway vendors', () => {
   const hits = IPC.match(/const fixed = String\(session \|\| ''\)\.trim\(\) \|\| \(clampPoolCount\(count, 1, 100\) > 1 \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
-  assert.equal(hits.length, 4, 'PacketStream, CatProxies, kookeey (session in the password) and the shared gateway minter');
+  assert.equal(hits.length, 3, 'PacketStream, CatProxies and the shared gateway minter');
 });
 
 test('typed provider fields survive tab/provider switches and failed pulls', () => {

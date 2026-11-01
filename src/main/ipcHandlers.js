@@ -75,7 +75,7 @@ const {
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword, froxyBasePassword,
   packetStreamPassword, packetStreamCountry, airproxyRows,
   proxmintUsername, proxmintPickProduct, databayUsername,
-  ipfoxyUsername, kookeeyPassword, mangoProxyRows,
+  ipfoxyUsername, mangoProxyRows,
   catProxiesResiUsername, catProxiesMobileUsername, catProxiesCreds,
   rapidProxyUsername, NOVADA_ZONES, novadaUsername,
   PROXIESSX_POOLS, proxiesSxSid, proxiesSxUsername, proxiesSxProxyCreds,
@@ -1368,7 +1368,7 @@ async function batchAddProxies(payload) {
 // ---------------------------------------------------------------------------
 const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
-  proxy302: 'Proxy302', mangoproxy: 'MangoProxy', kookeey: 'kookeey',
+  proxy302: 'Proxy302', mangoproxy: 'MangoProxy',
   ipburger: 'IP Burger', shopsocks5: 'ShopSocks5',
   apify: 'Apify', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
@@ -3067,35 +3067,6 @@ async function fetchIpfoxyPool({ username, password, country, state, city, sessi
   return rows;
 }
 
-// --- kookeey (dynamic residential, gateway-minted) ---------------------------------------
-// Username "<userId>-<policyUser>", geo + session + interval in the password (kookeeyPassword).
-const KOOKEEY_GATEWAY = Object.freeze({ host: 'gate.kookeey.info', port: 1000 });
-
-async function fetchKookeeyPool({ username, password, country, state, city, session, life, count, host, port }) {
-  const user = String(username || '').trim();
-  const pw = password != null ? String(password) : '';
-  if (!/^\d+-\S+$/.test(user)) throw new Error('kookeey: enter the username as <user ID>-<security policy username>, for example 123456789-abcdef.');
-  if (!pw) throw new Error('kookeey: enter the security policy password.');
-  const gw = gatewayOverride(host, port, KOOKEEY_GATEWAY, 'kookeey');
-  const cc = normCountryCode(country);
-  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
-  const where = cc || 'Global';
-  if (!fixed) {
-    return [{ type: 'HTTP', host: gw.host, port: gw.port, username: user, password: kookeeyPassword(pw, { country: cc, state, city }), label: `kookeey • Residential • ${where} • rotating`, country: cc || null, dedupeOnPassword: true }];
-  }
-  const n = clampPoolCount(count, 1, 100);
-  const rows = [];
-  const seen = new Set();
-  for (let i = 0; i < n; i++) {
-    const sidPw = kookeeyPassword(pw, { country: cc, state, city, session: n > 1 ? `${fixed}${i + 1}` : fixed, lifeMin: life });
-    if (seen.has(sidPw)) continue;
-    seen.add(sidPw);
-    rows.push({ type: 'HTTP', host: gw.host, port: gw.port, username: user, password: sidPw, label: `kookeey • Residential • ${where} • sticky ${i + 1}`, country: cc || null, dedupeOnPassword: true });
-  }
-  if (!rows.length) throw new Error('kookeey: could not build any proxies.');
-  return rows;
-}
-
 // --- MangoProxy (API connection-string generator) ----------------------------------------
 // x-api-key + a proxy sub-account: POST /public-api/v1/upstream/json returns ready proxy URLs
 // (mangoProxyRows). Blank sub-account = the first one on the account (GET /accounts).
@@ -3633,7 +3604,6 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   proxy302: fetchProxy302Pool,
   ipburger: fetchIpBurgerPool,
   ipfoxy: fetchIpfoxyPool,
-  kookeey: fetchKookeeyPool,
   mangoproxy: fetchMangoProxyPool,
   twoextract: fetchTwoExtractPool,
   gonzoproxy: fetchGonzoProxyPool,
