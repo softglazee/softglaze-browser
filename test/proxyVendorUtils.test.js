@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const {
   parseLoginLine, parseLoginList, csvFilter, asnList, FILTER_PATTERNS,
   proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
+  maskProxySellerKey, proxySellerListItems, proxySellerListGeo,
   GEOJS_URL, normalizeGeoJs, proxySellerOrderRows, summarizeProxySellerOrders
 } = require('../src/main/proxyVendorUtils');
 
@@ -144,6 +145,67 @@ test('Proxy-Seller business errors (HTTP 200) become actionable messages', () =>
   assert.throws(() => unwrapProxySeller(env('Request limit reached'), 'x'), /rate limit/);
   assert.throws(() => unwrapProxySeller(env('Invalid country (region, city, isp) ISO code'), 'list create'), /list create: Invalid country/);
   assert.throws(() => unwrapProxySeller('not json', 'download'), /did not return JSON/);
+});
+
+test('the Proxy-Seller access-denied triple does not blame the key alone', () => {
+  // Body shape captured from both /personal/api/v1 and /v2 with a fake key on 1 Nov 2026.
+  const triple = JSON.stringify({ status: 'error', data: null, errors: [
+    { message: 'Error api key', code: 503, customData: null },
+    { message: 'IP not allowed 203.0.113.9', code: 503, customData: null },
+    { message: 'Request limit reached', code: 503, customData: null }
+  ] });
+  assert.throws(() => unwrapProxySeller(triple, 'x'), (e) => {
+    assert.match(e.message, /API key is wrong/);
+    assert.match(e.message, /whitelist/);
+    assert.match(e.message, /rate limit/);
+    assert.ok(!e.message.includes('203.0.113.9'));
+    assert.ok(![0x2013, 0x2014].some((code) => e.message.includes(String.fromCharCode(code))), 'no em or en dashes in user-facing text');
+    return true;
+  });
+});
+
+test('the Proxy-Seller key is masked wherever an error echoes it', () => {
+  const key = 'Abc123.Key+Secret';
+  assert.equal(maskProxySellerKey(`GET /personal/api/v2/${key}/proxy/list`, key), 'GET /personal/api/v2/***/proxy/list');
+  assert.equal(maskProxySellerKey(`/v2/${key.toLowerCase()}/x`, key), '/v2/***/x', 'any letter case');
+  assert.equal(maskProxySellerKey(`/v2/${encodeURIComponent(key)}/x`, key), '/v2/***/x', 'URL-encoded');
+  assert.equal(maskProxySellerKey('no key here', key), 'no key here');
+  assert.equal(maskProxySellerKey('text', ''), 'text');
+  const echoed = JSON.stringify({ status: 'error', data: null, errors: [{ message: `Unknown action /personal/api/v2/${key}/proxy/list`, code: 0 }] });
+  assert.throws(() => unwrapProxySeller(echoed, 'proxy list', key), (e) => {
+    assert.ok(!e.message.includes(key), 'the key must not survive in the thrown message');
+    assert.match(e.message, /Unknown action \/personal\/api\/v2\/\*\*\*\/proxy\/list/);
+    return true;
+  });
+});
+
+test('Proxy-Seller resident lists read as a flat array or under items', () => {
+  const list = { id: 20447213, title: 'The list for example', rotation: 121 };
+  assert.deepEqual(proxySellerListItems([list]), [list], 'the v2 SDK READMEs: flat array');
+  assert.deepEqual(proxySellerListItems({ items: [list] }), [list], 'the v2 docs page: data.items');
+  assert.deepEqual(proxySellerListItems([]), []);
+  assert.deepEqual(proxySellerListItems(null), []);
+  assert.deepEqual(proxySellerListItems({ items: 'nope' }), []);
+});
+
+test('Proxy-Seller list geo reads as an object or the one-item array list/add returns', () => {
+  const geo = { country: 'AD', region: 'Andorra la Vella', city: 'Andorra la Vella', isp: 'Andorra Telecom, S.a.u.' };
+  assert.deepEqual(proxySellerListGeo(geo), geo, 'GET resident/lists');
+  assert.deepEqual(proxySellerListGeo([geo]), geo, 'POST resident/list/add in the v2 docs');
+  assert.deepEqual(proxySellerListGeo([]), {}, 'a list with no geo target');
+  assert.deepEqual(proxySellerListGeo(undefined), {});
+  assert.deepEqual(proxySellerListGeo('US'), {});
+});
+
+test('Proxy-Seller v2 per-IP items keep their ObjectId order ids intact', () => {
+  // Field values from the v2 docs example for GET proxy/list/{type}.
+  const item = psItem({ id: '69fa4b7f256cae5b70a79478', order_id: '69fa4b795a1f522c7a53d589', order_number: 'TEST_1778011001948-uc_e_UUf2Z3RtGH', uptime: false });
+  const [row] = proxySellerOrderRows([item]);
+  assert.equal(row.orderId, '69fa4b795a1f522c7a53d589');
+  const [summary] = summarizeProxySellerOrders({ ipv6: [item], resident: [] });
+  assert.equal(summary.key, 'ipv6');
+  assert.equal(summary.orders[0].id, '69fa4b795a1f522c7a53d589');
+  assert.equal(summary.orders[0].number, 'TEST_1778011001948-uc_e_UUf2Z3RtGH');
 });
 
 test('the Proxy-Seller geo view lists countries, then regions with their cities', () => {

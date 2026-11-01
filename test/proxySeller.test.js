@@ -4,7 +4,7 @@
 // style as dataimpulse.test.js. The parsing and error mapping are exercised for real in
 // proxyVendorUtils.test.js.
 //
-// The rules, all from Proxy-Seller's own docs (docs.proxy-seller.com, API v1):
+// The rules, all from Proxy-Seller's own docs (docs.proxy-seller.com, API v2):
 //  1. The API key lives in the URL PATH, so it must never reach an error message.
 //  2. Business errors come back as HTTP 200 with status "error", so every JSON call goes
 //     through the envelope check.
@@ -43,13 +43,33 @@ test('Proxy-Seller carries no hardcoded gateway', () => {
   assert.ok(!/res\.proxy-seller\.com/.test(fnBody('fetchProxySellerPool')), 'the adapter must not build rows from a guessed gateway');
 });
 
+test('the adapter talks to API v2 and nothing still points at v1', () => {
+  assert.match(IPC, /const PS_API = 'https:\/\/proxy-seller\.com\/personal\/api\/v2';/);
+  assert.ok(!/proxy-seller\.com\/personal\/api\/v1/.test(IPC), 'API v1 is retired, no call may still use it');
+  assert.ok(!/personal\/api\/v1/.test(UI));
+});
+
 test('the API key is scrubbed from transport errors', () => {
   const body = fnBody('psRequest');
-  assert.match(body, /\.split\(key\)\.join\('\*\*\*'\)/, 'a failed request must not echo the key-bearing URL');
+  assert.match(body, /maskProxySellerKey\(/, 'a failed request must not echo the key-bearing URL');
 });
 
 test('JSON calls go through the envelope check', () => {
   assert.match(fnBody('psCall'), /unwrapProxySeller\(/);
+});
+
+test('every envelope check is handed the key, so an echoed path cannot leak it', () => {
+  const adapter = IPC.slice(IPC.indexOf('// --- Proxy-Seller: residential lists'), IPC.indexOf('// --- IPRoyal residential'));
+  const calls = adapter.match(/unwrapProxySeller\([^;]*;/g) || [];
+  assert.equal(calls.length, 3, 'psCall, the download and the geo database');
+  for (const call of calls) assert.match(call, /, key\)/, `${call} must pass the key`);
+});
+
+test('resident lists and their geo are read in every documented shape', () => {
+  assert.match(fnBody('fetchProxySellerPool'), /proxySellerListItems\(data\)/);
+  assert.match(fnBody('fetchProxySellerPool'), /proxySellerListGeo\(list && list\.geo\)/);
+  assert.match(fnBody('lookupProxySeller'), /proxySellerListItems\(listData\)/);
+  assert.match(fnBody('lookupProxySeller'), /proxySellerListGeo\(it\.geo\)/);
 });
 
 test('the package is checked before a list is created', () => {
