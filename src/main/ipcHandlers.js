@@ -89,7 +89,8 @@ const {
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
   coroniumRows,
   singaporeMobileProxyRows,
-  gsocksProxyIds, gsocksListRows
+  gsocksProxyIds, gsocksListRows,
+  proxyBonanzaRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1378,7 +1379,8 @@ const PROXY_VENDORS = Object.freeze({
   simplyproxies: 'Simply Proxies',
   coronium: 'Coronium',
   singaporemobileproxy: 'Singapore Mobile Proxy',
-  gsocks: 'Gsocks'
+  gsocks: 'Gsocks',
+  proxybonanza: 'Proxy Bonanza'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3470,6 +3472,40 @@ async function fetchGsocksPool({ token, poolType, count }) {
   return limitListRows(rows, count);
 }
 
+// --- Proxy Bonanza (static IPs, list pull) -------------------------------------------------
+// One API key returns every proxy IP on the account's active plans (proxyBonanzaRows). Read-only.
+// Country filters that list and How many caps it. Not live-key tested.
+const PROXYBONANZA_API = 'https://proxybonanza.com/api/v1';
+
+async function fetchProxyBonanzaPool({ token, country, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!/^[^\s!]{8,}![0-9]+$/.test(key)) throw new Error('Proxy Bonanza: paste the full API key from Account settings, API Key, including the !<user id> at its end.');
+  const rawCountry = String(country || '').trim();
+  const cc = normCountryCode(rawCountry);
+  if (rawCountry && !cc) throw new Error(`Proxy Bonanza: "${rawCountry}" is not a country code.`);
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  let text;
+  try {
+    // The docs warn this list is not paginated and can be large.
+    text = await httpRequestText(`${PROXYBONANZA_API}/userpackages-ippacks.json`, { headers: { Authorization: key, Accept: 'application/json' }, maxBytes: 32_000_000, timeoutMs: 30000 });
+  } catch (error) {
+    const status = error && error.status;
+    if (status === 401 || status === 403) throw new Error('Proxy Bonanza rejected the API key. Copy it again from Account settings, API Key.');
+    throw new Error('Proxy Bonanza: could not read the proxy list. Check your connection and try again.');
+  }
+  const { rows, error, total } = proxyBonanzaRows(text, { socks });
+  if (error) throw new Error(`Proxy Bonanza: ${error}`);
+  if (!rows.length) {
+    throw new Error(total ? `Proxy Bonanza: none of your proxies has usable ${socks ? 'SOCKS5' : 'HTTP'} details. Try the other protocol.` : 'Proxy Bonanza: no proxies on your active plans.');
+  }
+  const picked = cc ? rows.filter((r) => r.country === cc) : rows;
+  if (!picked.length) {
+    const have = [...new Set(rows.map((r) => r.country).filter(Boolean))].join(', ');
+    throw new Error(`Proxy Bonanza: no proxies in ${cc} on your plans.${have ? ` You have ${have}.` : ''}`);
+  }
+  return limitListRows(picked, count);
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3506,7 +3542,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   simplyproxies: fetchSimplyProxiesPool,
   coronium: fetchCoroniumPool,
   singaporemobileproxy: fetchSingaporeMobileProxyPool,
-  gsocks: fetchGsocksPool
+  gsocks: fetchGsocksPool,
+  proxybonanza: fetchProxyBonanzaPool
 });
 
 async function syncVendorPool(payload) {

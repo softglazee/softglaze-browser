@@ -1490,6 +1490,45 @@ function gsocksListRows(body, { kind = 'Residential', id = '' } = {}) {
   return rows;
 }
 
+// ---------------------------------------------------------------------------------------
+// Proxy Bonanza (proxybonanza.com/en/articles/api-reference-1, fetched 2026-11-01). GET
+// /api/v1/userpackages-ippacks.json with "Authorization: <full key>" returns every proxy IP on
+// the account's active plans: { success, data: [{ ip, port_http, port_socks, login, password,
+// countrycode, georegion_name, userpackage_id }] }. The full key is <api_key>!<user_id>.
+// NOT live-key tested.
+function proxyBonanzaRows(body, { socks = false } = {}) {
+  let json;
+  try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], error: 'The API did not return JSON.' }; }
+  if (!json || json.success !== true) {
+    const msg = json && json.data && typeof json.data.message === 'string' ? json.data.message : 'The API reported a failure.';
+    return { rows: [], error: msg };
+  }
+  const list = Array.isArray(json.data) ? json.data : [];
+  const rows = [];
+  const seen = new Set();
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const host = String(p.ip || '').trim();
+    const port = Number.parseInt(String(socks ? p.port_socks : p.port_http), 10);
+    const username = p.login != null ? String(p.login) : '';
+    const password = p.password != null ? String(p.password) : '';
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const cc = String(p.countrycode || '').trim().toUpperCase();
+    const place = String(p.georegion_name || '').trim();
+    const code = /^[A-Z]{2}$/.test(cc) ? cc : '';
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `Proxy Bonanza • ${[place, code].filter(Boolean).join(', ') || 'Proxy'} • ${host}`,
+      country: code || null
+    });
+  }
+  return { rows, error: '', total: list.length };
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1564,5 +1603,6 @@ module.exports = {
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
   coroniumRows,
   singaporeMobileProxyRows,
-  gsocksProxyIds, gsocksListRows
+  gsocksProxyIds, gsocksListRows,
+  proxyBonanzaRows
 };
