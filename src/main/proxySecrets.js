@@ -200,7 +200,7 @@ async function migrateProxyPasswords(db, log = console) {
   keyInfo.rehashed = true;
   const canSeal = secretStore.isAvailable();
   if (!canSeal) log.error('[proxySecrets] OS encryption unavailable: proxy passwords stay unsealed until it is (hashes are still set)');
-  const rows = await db.$queryRawUnsafe('SELECT "id", "password", "passwordHash" FROM "Proxy" WHERE "password" IS NOT NULL');
+  const rows = await db.$queryRawUnsafe('SELECT "id" AS "id", "password" AS "password", "passwordHash" AS "passwordHash" FROM "Proxy" WHERE "password" IS NOT NULL');
   for (const row of rows) {
     const stored = row.password;
     try {
@@ -236,7 +236,7 @@ async function migrateProxyPasswords(db, log = console) {
 // Proxies whose stored password is sealed but no longer opens here (backup restored
 // under another Windows user / machine). Ids and names only, never the values.
 async function listUnreadableProxyPasswords(db) {
-  const rows = await db.$queryRawUnsafe('SELECT "id", "name", "password" FROM "Proxy" WHERE "password" LIKE ?', 'enc:v1:%');
+  const rows = await db.$queryRawUnsafe('SELECT "id" AS "id", "name" AS "name", "password" AS "password" FROM "Proxy" WHERE "password" LIKE ?', 'enc:v1:%');
   return rows.filter((r) => secretStore.open(r.password) === '').map((r) => ({ id: r.id, name: r.name }));
 }
 
