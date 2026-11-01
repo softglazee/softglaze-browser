@@ -129,7 +129,7 @@
     "country": "País",
     "latency": "Latencia",
     "pasteTip": "💡 Consejo: Pega tu proxy \"host:puerto:usuario:contraseña\" en el campo Host para autocompletar.",
-    "hostPlaceholder": "Host (p. ej. proxy.smartproxy.net)",
+    "hostPlaceholder": "Host (p. ej. proxy.example.com)",
     "portPlaceholder": "Puerto",
     "userPlaceholder": "Usuario del proxy (opcional)",
     "passPlaceholder": "Contraseña del proxy (opcional)",
