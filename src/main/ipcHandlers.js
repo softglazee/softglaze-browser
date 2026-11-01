@@ -51,6 +51,7 @@ const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSign
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
+const profileData = require('./profileData');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
 const licensePolicy = require('./licensePolicy');
@@ -910,15 +911,46 @@ function buildFingerprintFields(input) {
   return merged;
 }
 
-async function ensureUniqueDataDirName(db, desiredName, excludeProfileId = null) {
-  const base = sanitizeDataDirName(desiredName);
-  let candidate = base;
-  for (let i = 0; i < 25; i += 1) {
-    const existing = await db.profile.findUnique({ where: { dataDirName: candidate }, select: { id: true } });
-    if (!existing || existing.id === excludeProfileId) return candidate;
-    candidate = `${base}-${crypto.randomBytes(3).toString('hex')}`;
+// Every new profile gets a folder name that has never been used, so it can never inherit old
+// cookies, logins or a fingerprint seed. See profileData.js.
+async function ensureUniqueDataDirName(db, desiredName) {
+  return profileData.uniqueDataDirName({
+    root: path.resolve(getRuntimeConfig().profileRoot),
+    base: sanitizeDataDirName(desiredName),
+    isTaken: async (candidate) => Boolean(await db.profile.findUnique({ where: { dataDirName: candidate }, select: { id: true } }))
+  });
+}
+
+// Folder names whose data could not be erased yet (a file was still locked).
+const PENDING_WIPES_KEY = 'pendingProfileWipes';
+
+// Erases a profile's data in every engine's folder. Anything still locked is noted and retried at
+// the next start. Returns true when nothing is left.
+async function wipeProfileFolders(dataDirName) {
+  const name = sanitizeDataDirName(dataDirName);
+  const { clean } = await profileData.wipeProfileData(path.resolve(getRuntimeConfig().profileRoot), name);
+  if (!clean) {
+    const pending = await readSetting(PENDING_WIPES_KEY, []);
+    const list = Array.isArray(pending) ? pending : [];
+    if (!list.includes(name)) await writeSetting(PENDING_WIPES_KEY, [...list, name]);
+    console.error(`[SG][profile] could not erase all data of "${name}" yet, will retry at next start`);
   }
-  return `${base}-${crypto.randomUUID()}`;
+  return clean;
+}
+
+async function retryPendingProfileWipes() {
+  const pending = await readSetting(PENDING_WIPES_KEY, []);
+  if (!Array.isArray(pending) || !pending.length) return;
+  const db = getPrisma();
+  const root = path.resolve(getRuntimeConfig().profileRoot);
+  const still = [];
+  for (const raw of pending) {
+    const name = sanitizeDataDirName(raw);
+    if (await db.profile.findUnique({ where: { dataDirName: name }, select: { id: true } })) continue;
+    const { clean } = await profileData.wipeProfileData(root, name);
+    if (!clean) still.push(name);
+  }
+  await writeSetting(PENDING_WIPES_KEY, still);
 }
 
 function resolveProfileDataDir(dataDirName) {
@@ -5379,9 +5411,7 @@ async function deleteProfile(payload) {
   const removeLocalData = Boolean(input.removeLocalData);
   await closeAnySession(id).catch(() => {});
   await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
-  if (removeLocalData) {
-    await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true }).catch(() => {});
-  }
+  if (removeLocalData) await wipeProfileFolders(existing.dataDirName);
 
   await logActivity(db, id, 'delete', `moved "${existing.title}" to Trash${removeLocalData ? ' + wiped local data' : ''}`);
   return { trashed: true, id, removedLocalData: removeLocalData };
@@ -5405,20 +5435,17 @@ async function purgeProfile(payload) {
   const db = getPrisma();
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
-  const removeLocalData = Boolean(input.removeLocalData);
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
+  // Permanent means permanent: the data goes too, in every engine's folder. Nothing could ever
+  // use a leftover folder again, and it holds the profile's cookies and logins.
   await closeAnySession(id).catch(() => {});
+  const erased = await wipeProfileFolders(existing.dataDirName);
   await db.profile.delete({ where: { id } });
 
-  if (removeLocalData) {
-    const dataDir = resolveProfileDataDir(existing.dataDirName);
-    await fs.rm(dataDir, { recursive: true, force: true });
-  }
-
-  await logAudit('profile.purge', { profileId: id, detail: { title: existing.title, removedLocalData: removeLocalData } });
-  return { purged: true, id, removedLocalData: removeLocalData };
+  await logAudit('profile.purge', { profileId: id, detail: { title: existing.title, erased } });
+  return { purged: true, id, erased };
 }
 
 async function bulkDeleteProfiles(payload) {
@@ -5464,19 +5491,16 @@ async function bulkPurgeProfiles(payload) {
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
   const { allowed, denied } = await partitionAccessibleProfileIds(ids);
-  const removeLocalData = Boolean(input.removeLocalData);
   const result = { purged: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
   for (const id of allowed) {
     try {
       const existing = await db.profile.findUnique({ where: { id } });
       if (!existing) { result.errors.push({ id, message: 'Profile not found.' }); continue; }
       await closeAnySession(id).catch(() => {});
+      const erased = await wipeProfileFolders(existing.dataDirName);
       await db.profile.delete({ where: { id } });
-      if (removeLocalData) {
-        await fs.rm(resolveProfileDataDir(existing.dataDirName), { recursive: true, force: true });
-      }
       result.purged.push(id);
-      await logAudit('profile.purge', { profileId: id, detail: { removedLocalData: removeLocalData, bulk: true } });
+      await logAudit('profile.purge', { profileId: id, detail: { erased, bulk: true } });
     } catch (error) {
       result.errors.push({ id, message: error instanceof Error ? error.message : 'Unknown error' });
     }
@@ -9066,6 +9090,7 @@ let sessionRestore = null;
 async function whenSessionReady() { try { await sessionRestore; } catch (e) { /* proceed */ } }
 
 async function afterDbReady() {
+  retryPendingProfileWipes().catch((e) => console.error('[SG][profile] pending wipe retry failed', e && e.message ? e.message : e));
   sessionRestore = restoreSession();
   await sessionRestore;
   try { await seedStarters(); } catch (e) { /* best-effort */ }

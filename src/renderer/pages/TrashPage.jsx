@@ -36,7 +36,6 @@ export default function TrashPage() {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
-  const [removeLocalData, setRemoveLocalData] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
 
@@ -114,9 +113,9 @@ export default function TrashPage() {
   };
 
   const handlePurge = async (id, title) => {
-    if (!window.confirm(t(removeLocalData ? 'confirm.purgeWithData' : 'confirm.purge', { title }))) return;
+    if (!window.confirm(t('confirm.purgeWithData', { title }))) return;
     setBusy(true); setError('');
-    try { await softglazeApi.profiles.purge(id, { removeLocalData }); await loadTrash(); clearSelection(); }
+    try { await softglazeApi.profiles.purge(id); await loadTrash(); clearSelection(); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -131,18 +130,18 @@ export default function TrashPage() {
 
   const handleBulkPurge = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(t(removeLocalData ? 'confirm.bulkPurgeWithData' : 'confirm.bulkPurge', { count: selectedIds.size }))) return;
+    if (!window.confirm(t('confirm.bulkPurgeWithData', { count: selectedIds.size }))) return;
     setBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkPurge([...selectedIds], { removeLocalData }); await loadTrash(); clearSelection(); }
+    try { await softglazeApi.profiles.bulkPurge([...selectedIds]); await loadTrash(); clearSelection(); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
 
   const handleEmptyTrash = async () => {
     if (trashItems.length === 0) return;
-    if (!window.confirm(t(removeLocalData ? 'confirm.emptyTrashWithData' : 'confirm.emptyTrash', { count: trashItems.length }))) return;
+    if (!window.confirm(t('confirm.emptyTrashWithData', { count: trashItems.length }))) return;
     setBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkPurge(trashItems.map((i) => i.id), { removeLocalData }); await loadTrash(); clearSelection(); }
+    try { await softglazeApi.profiles.bulkPurge(trashItems.map((i) => i.id)); await loadTrash(); clearSelection(); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -190,10 +189,6 @@ export default function TrashPage() {
             className="w-full bg-secondary border border-border rounded-md pl-9 pr-3 py-2 text-[13px] text-foreground outline-none focus:border-blue-500 transition"
           />
         </div>
-        <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer select-none">
-          <Checkbox checked={removeLocalData} onChange={() => setRemoveLocalData((v) => !v)} />
-          {t('toolbar.eraseLocalData')}
-        </label>
       </div>
 
       {/* Bulk toolbar */}

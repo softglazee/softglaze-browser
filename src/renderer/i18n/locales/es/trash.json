@@ -17,11 +17,10 @@
   },
   "warning": {
     "title": "Eliminación permanente",
-    "body": "Al restaurar, el perfil vuelve a tu lista sin cambios. La eliminación permanente lo quita de la base de datos; activa la opción de abajo para borrar también del disco sus datos locales del navegador (cookies, caché, inicios de sesión)."
+    "body": "Al restaurar, el perfil vuelve a tu lista sin cambios. La eliminación permanente quita el perfil y borra todos sus datos del navegador (cookies, caché, inicios de sesión) de este equipo."
   },
   "toolbar": {
-    "searchPlaceholder": "Buscar perfiles eliminados...",
-    "eraseLocalData": "Borrar también los datos locales del navegador al eliminar permanentemente"
+    "searchPlaceholder": "Buscar perfiles eliminados..."
   },
   "bulk": {
     "selected": "{{count}} seleccionados"
@@ -40,14 +39,9 @@
     "none": "No tienes perfiles eliminados. ¡Todo limpio y en orden!"
   },
   "confirm": {
-    "purge": "¿Eliminar permanentemente \"{{title}}\"? Esta acción no se puede deshacer.",
     "purgeWithData": "¿Eliminar permanentemente \"{{title}}\"? Esta acción no se puede deshacer y se borrarán sus datos locales del navegador.",
-    "bulkPurge_one": "¿Eliminar permanentemente {{count}} perfil? Esta acción no se puede deshacer.",
-    "bulkPurge_other": "¿Eliminar permanentemente {{count}} perfiles? Esta acción no se puede deshacer.",
     "bulkPurgeWithData_one": "¿Eliminar permanentemente {{count}} perfil? Esta acción no se puede deshacer y se borrarán los datos locales del navegador.",
     "bulkPurgeWithData_other": "¿Eliminar permanentemente {{count}} perfiles? Esta acción no se puede deshacer y se borrarán los datos locales del navegador.",
-    "emptyTrash_one": "¿Eliminar permanentemente TODOS los {{count}} perfil de la papelera? Esta acción no se puede deshacer.",
-    "emptyTrash_other": "¿Eliminar permanentemente TODOS los {{count}} perfiles de la papelera? Esta acción no se puede deshacer.",
     "emptyTrashWithData_one": "¿Eliminar permanentemente TODOS los {{count}} perfil de la papelera? Esta acción no se puede deshacer y se borrarán los datos locales del navegador.",
     "emptyTrashWithData_other": "¿Eliminar permanentemente TODOS los {{count}} perfiles de la papelera? Esta acción no se puede deshacer y se borrarán los datos locales del navegador."
   },
