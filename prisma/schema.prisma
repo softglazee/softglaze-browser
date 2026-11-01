@@ -69,6 +69,7 @@ model ProxyGroup {
   name      String
   color     String?  @default("#3b82f6")
   ownerMemberId Int?
+  autoCreated Boolean @default(false) // made by auto-grouping; removed when it has no proxies left
   createdAt DateTime @default(now())
 
   proxies Proxy[]

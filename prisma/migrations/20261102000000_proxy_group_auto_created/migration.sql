@@ -1,0 +1,5 @@
+-- Marks the groups auto-grouping made, so they can be removed once their last proxy is gone. Groups
+-- a person made are never removed this way. Existing groups named like an auto group are marked: the
+-- country names auto-grouping uses, its two-letter country codes, and "Country - Region" labels.
+ALTER TABLE "ProxyGroup" ADD COLUMN "autoCreated" BOOLEAN NOT NULL DEFAULT 0;
+UPDATE "ProxyGroup" SET "autoCreated" = 1 WHERE "name" IN ('United States','United Kingdom','Canada','Australia','Germany','France','Netherlands','Spain','Italy','Ireland','Sweden','Norway','Finland','Denmark','Poland','Portugal','Switzerland','Austria','Belgium','Czechia','Romania','Greece','Hungary','Japan','South Korea','China','Hong Kong','Taiwan','Singapore','India','Indonesia','Philippines','Vietnam','Thailand','Malaysia','Turkey','United Arab Emirates','Saudi Arabia','Israel','Brazil','Mexico','Argentina','Chile','Colombia','South Africa','Nigeria','Egypt','Russia','Ukraine','New Zealand') OR ("name" GLOB '[A-Z][A-Z]') OR "name" LIKE '% - %';

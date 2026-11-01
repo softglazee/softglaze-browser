@@ -1139,7 +1139,15 @@ async function deleteProxy(payload) {
   await assertCanAccessProxy(id);
   await db.proxy.delete({ where: { id } });
   await logAudit('proxy.delete', { detail: { proxyId: id } });
-  return { deleted: true, id };
+  const removedGroups = await pruneEmptyAutoGroups(db);
+  return { deleted: true, id, removedGroups };
+}
+
+// Auto-grouping makes a group per country. Once its last proxy is gone there is nothing left for it
+// to hold, so it goes too. Only groups auto-grouping made: a group a person made stays, even empty.
+async function pruneEmptyAutoGroups(db) {
+  const res = await db.proxyGroup.deleteMany({ where: { autoCreated: true, proxies: { none: {} } } });
+  return res.count;
 }
 
 // Bulk-delete by id list. Profiles referencing a deleted proxy have their
@@ -1153,7 +1161,8 @@ async function bulkDeleteProxies(payload) {
   if (allowed.length === 0) { const e = new Error('You do not have access to the selected proxies.'); e.code = 'FORBIDDEN'; throw e; }
   const result = await getPrisma().proxy.deleteMany({ where: { id: { in: allowed } } });
   await logAudit('proxy.delete', { detail: { count: result.count, proxyIds: allowed, bulk: true } });
-  return { deleted: result.count, ids: allowed, denied };
+  const removedGroups = await pruneEmptyAutoGroups(getPrisma());
+  return { deleted: result.count, ids: allowed, denied, removedGroups };
 }
 
 // ---------- Proxy rotation / sticky-session pools ----------
@@ -5913,6 +5922,7 @@ async function assignProxiesToGroup(payload) {
   }
   const { allowed } = await partitionAccessibleProxyIds(ids);
   const res = await db.proxy.updateMany({ where: { id: { in: allowed } }, data: { proxyGroupId: groupId } });
+  await pruneEmptyAutoGroups(db); // moving the last proxy out empties an auto group too
   return { assigned: res.count, groupId };
 }
 
@@ -6106,7 +6116,7 @@ async function autoGroupProxies(payload) {
   for (const [name, ids] of buckets) {
     let gid = byName.get(name.toLowerCase());
     if (!gid) {
-      const g = await db.proxyGroup.create({ data: { name: name.slice(0, 80), color: autoGroupColor(name), ownerMemberId: ownerStampId() } });
+      const g = await db.proxyGroup.create({ data: { name: name.slice(0, 80), color: autoGroupColor(name), ownerMemberId: ownerStampId(), autoCreated: true } });
       gid = g.id;
       byName.set(name.toLowerCase(), gid);
       createdGroups += 1;
@@ -6114,7 +6124,8 @@ async function autoGroupProxies(payload) {
     const res = await db.proxy.updateMany({ where: { id: { in: ids } }, data: { proxyGroupId: gid } });
     assigned += res.count;
   }
-  return { level, groups: buckets.size, createdGroups, assigned };
+  const removedGroups = await pruneEmptyAutoGroups(db); // regrouping at another level can empty some
+  return { level, groups: buckets.size, createdGroups, assigned, removedGroups };
 }
 
 async function listTags() {
@@ -8760,6 +8771,7 @@ async function deleteMember(payload) {
     await db.profile.updateMany({ where: { ownerMemberId: id, deletedAt: null }, data: { deletedAt: new Date(), assignedMemberId: null, ownerMemberId: null } }).catch(() => {});
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
     await db.proxy.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
+    await pruneEmptyAutoGroups(db).catch(() => {});
     await db.proxyGroup.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
   } else {
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
@@ -9103,6 +9115,7 @@ let sessionRestore = null;
 async function whenSessionReady() { try { await sessionRestore; } catch (e) { /* proceed */ } }
 
 async function afterDbReady() {
+  pruneEmptyAutoGroups(getPrisma()).catch((e) => console.error('[SG][proxy] empty group cleanup failed', e && e.message ? e.message : e));
   retryPendingProfileWipes().catch((e) => console.error('[SG][profile] pending wipe retry failed', e && e.message ? e.message : e));
   sessionRestore = restoreSession();
   await sessionRestore;
