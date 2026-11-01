@@ -88,9 +88,23 @@ function proxySellerRotation(mode, seconds) {
   return 0;
 }
 
+// Proxy-Seller takes the API key in the URL path, and whatever sits in front of the API can
+// echo that path back in an HTTP error body or an envelope message (their v2 SDK tests show
+// "Unknown action /personal/api/v2/***/proxy/list"). Mask it as is, URL-encoded and in any
+// letter case before a message leaves the adapter.
+function maskProxySellerKey(text, key) {
+  let out = String(text == null ? '' : text);
+  const raw = String(key || '');
+  if (!raw) return out;
+  for (const form of new Set([raw, encodeURIComponent(raw)])) {
+    out = out.replace(new RegExp(form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '***');
+  }
+  return out;
+}
+
 // Proxy-Seller wraps every JSON response in { status, data, errors }. Business errors come
 // back as HTTP 200 with status "error", so the status code alone proves nothing.
-function unwrapProxySeller(text, what) {
+function unwrapProxySeller(text, what, key) {
   let body;
   try {
     body = JSON.parse(String(text));
@@ -100,11 +114,31 @@ function unwrapProxySeller(text, what) {
   if (body && body.status === 'success') return body.data;
   const first = body && Array.isArray(body.errors) && body.errors[0];
   const msg = first && first.message ? String(first.message) : 'request failed';
+  // Access failures arrive as one fixed triple, whichever of the three really happened, so
+  // errors[0] saying "Error api key" proves nothing when the other two are beside it.
+  const all = body && Array.isArray(body.errors) ? body.errors.map((e) => String((e && e.message) || '')) : [];
+  if ([/error api key/i, /ip not allowed/i, /request limit/i].every((re) => all.some((m) => re.test(m)))) {
+    throw new Error('Proxy-Seller: the API refused this request. Either the API key is wrong, this computer\'s IP is not on the key\'s whitelist, or the rate limit was reached. Copy the key again from the dashboard, API section, check its IP list, and try again in a minute.');
+  }
   if (/error api key/i.test(msg)) throw new Error('Proxy-Seller: the API key was rejected. Copy it again from the dashboard, API section.');
   if (/ip not allowed/i.test(msg)) throw new Error('Proxy-Seller: this API key only accepts calls from whitelisted IPs, and this machine is not one of them. Add its IP in the dashboard API settings.');
   if (/tarif not found/i.test(msg)) throw new Error('Proxy-Seller: this account has no active residential package.');
   if (/request limit/i.test(msg)) throw new Error('Proxy-Seller: the API rate limit was reached. Wait a minute and try again.');
-  throw new Error(`Proxy-Seller ${what}: ${msg}`);
+  throw new Error(`Proxy-Seller ${what}: ${maskProxySellerKey(msg, key)}`);
+}
+
+// GET resident/lists. The v2 docs page shows data.items; the v2 SDK READMEs (Node, Python,
+// PHP) say data is a flat array with no items wrapper. Read both.
+function proxySellerListItems(data) {
+  if (Array.isArray(data)) return data;
+  return data && Array.isArray(data.items) ? data.items : [];
+}
+
+// A list's geo. The v2 docs show an object on GET resident/lists and a one-item array on the
+// POST resident/list/add response, so a label read straight off the array would say "Global".
+function proxySellerListGeo(geo) {
+  const one = Array.isArray(geo) ? geo[0] : geo;
+  return one && typeof one === 'object' ? one : {};
 }
 
 // Trim the residential geo database (a JSON array of countries, each with regions, each
@@ -1269,6 +1303,9 @@ module.exports = {
   FILTER_PATTERNS,
   proxySellerRotation,
   unwrapProxySeller,
+  maskProxySellerKey,
+  proxySellerListItems,
+  proxySellerListGeo,
   proxySellerGeoView,
   parseHostPort,
   marsProxiesLocation,

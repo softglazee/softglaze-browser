@@ -69,7 +69,7 @@ const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
 const { SECRET_MASK, maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
 const {
-  parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, proxySellerGeoView,
+  parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, maskProxySellerKey, proxySellerListItems, proxySellerListGeo, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword, froxyBasePassword,
@@ -2003,8 +2003,9 @@ async function lookupDataImpulse({ username, password, country, groupby }) {
 }
 
 // --- Proxy-Seller: residential lists over the documented User API ---------------
-// Base https://proxy-seller.com/personal/api/v1/{API_KEY}/. The key sits in the URL PATH,
-// so a request URL must never reach a log line or an error message.
+// Base https://proxy-seller.com/personal/api/v2/{API_KEY}/. API v2 still takes the key in
+// the URL PATH (their docs also warn never to log full request URLs), so a request
+// URL must never reach a log line, and every error message goes through maskProxySellerKey.
 //
 // A Proxy-Seller residential proxy is a LIST: one login and password, a geo target, a
 // rotation rule and up to 1000 ports, where each port is its own exit IP (their docs:
@@ -2013,7 +2014,7 @@ async function lookupDataImpulse({ username, password, country, groupby }) {
 // means a second pull adds new proxies rather than colliding with the first. A list made
 // in the dashboard can be pulled by id instead. Business errors arrive as HTTP 200 with
 // status "error"; unwrapProxySeller turns them into messages the operator can act on.
-const PS_API = 'https://proxy-seller.com/personal/api/v1';
+const PS_API = 'https://proxy-seller.com/personal/api/v2';
 const PS_MAX_PORTS = 1000;
 
 function psKey(token) {
@@ -2035,12 +2036,12 @@ async function psRequest(key, method, pathAndQuery, what, { body, binary } = {})
       maxBytes: binary ? 8_000_000 : undefined
     });
   } catch (e) {
-    throw new Error(`Proxy-Seller ${what}: ${String((e && e.message) || 'request failed').split(key).join('***')}`);
+    throw new Error(`Proxy-Seller ${what}: ${maskProxySellerKey((e && e.message) || 'request failed', key)}`);
   }
 }
 
 async function psCall(key, method, pathAndQuery, what, body) {
-  return unwrapProxySeller(await psRequest(key, method, pathAndQuery, what, { body }), what);
+  return unwrapProxySeller(await psRequest(key, method, pathAndQuery, what, { body }), what, key);
 }
 
 async function psPackage(key) {
@@ -2114,8 +2115,7 @@ async function fetchProxySellerPool({ token, country, state, city, count, poolTy
   const wantedId = Number.parseInt(String(listId || ''), 10);
   if (Number.isInteger(wantedId) && wantedId > 0) {
     const data = await psCall(key, 'GET', 'resident/lists', 'list lookup');
-    const items = Array.isArray(data && data.items) ? data.items : [];
-    list = items.find((it) => Number(it && it.id) === wantedId) || null;
+    list = proxySellerListItems(data).find((it) => Number(it && it.id) === wantedId) || null;
     if (!list) throw new Error('Proxy-Seller: that list is no longer on the account. Reload the lists and pick again.');
   } else {
     const cc = normCountryCode(country);
@@ -2148,11 +2148,11 @@ async function fetchProxySellerPool({ token, country, state, city, count, poolTy
   const parsed = parseLoginList(text);
   if (!parsed.length) {
     // A JSON body here is an error envelope, so let it speak before the generic message.
-    if (String(text).trim().startsWith('{')) unwrapProxySeller(text, 'download');
+    if (String(text).trim().startsWith('{')) unwrapProxySeller(text, 'download', key);
     throw new Error(`Proxy-Seller returned no proxies for list "${list.title || list.id}". It is saved on your account, so pick it under Existing list and pull again in a minute.`);
   }
 
-  const geo = (list && list.geo) || {};
+  const geo = proxySellerListGeo(list && list.geo);
   const cc = normCountryCode(geo.country);
   const where = [cc || 'Global', geo.city || geo.region].filter(Boolean).join(' ');
   const rotation = psRotationLabel(list.rotation);
@@ -2164,8 +2164,9 @@ async function fetchProxySellerPool({ token, country, state, city, count, poolTy
   }));
 }
 
-// The residential geo database is a ZIP holding one JSON file (~300 KB zipped, ~3 MB
-// unzipped). It changes rarely, so keep the parsed copy for a few hours.
+// The residential geo database. The v2 docs describe a ZIP holding one JSON file (~300 KB
+// zipped, ~3 MB unzipped); the v2 SDK READMEs say a plain JSON file, not a ZIP. Both are read
+// below. It changes rarely, so keep the parsed copy for a few hours.
 let psGeoCache = { at: 0, data: null };
 async function psGeoDatabase(key) {
   if (psGeoCache.data && Date.now() - psGeoCache.at < 6 * 60 * 60 * 1000) return psGeoCache.data;
@@ -2174,7 +2175,7 @@ async function psGeoDatabase(key) {
   let data;
   if (text.startsWith('{')) {
     // An envelope: an error throws here, a success may carry the array as data.
-    data = unwrapProxySeller(text, 'location list');
+    data = unwrapProxySeller(text, 'location list', key);
   } else if (text.startsWith('[')) {
     data = JSON.parse(text);
   } else {
@@ -2221,14 +2222,17 @@ async function lookupProxySeller({ token, country, groupby }) {
     leftBytes: pkg ? Number(pkg.traffic_left) || 0 : 0,
     expiresAt: pkg && pkg.expired_at ? String(pkg.expired_at) : null,
     active: pkg ? pkg.is_active !== false : false,
-    lists: (Array.isArray(listData && listData.items) ? listData.items : []).map((it) => ({
-      id: Number(it.id),
-      title: String(it.title || `List ${it.id}`),
-      country: it.geo && it.geo.country ? String(it.geo.country) : '',
-      region: it.geo && it.geo.region ? String(it.geo.region) : '',
-      city: it.geo && it.geo.city ? String(it.geo.city) : '',
-      rotation: psRotationLabel(it.rotation)
-    })).filter((l) => Number.isInteger(l.id) && l.id > 0),
+    lists: proxySellerListItems(listData).map((it) => {
+      const geo = proxySellerListGeo(it.geo);
+      return {
+        id: Number(it.id),
+        title: String(it.title || `List ${it.id}`),
+        country: geo.country ? String(geo.country) : '',
+        region: geo.region ? String(geo.region) : '',
+        city: geo.city ? String(geo.city) : '',
+        rotation: psRotationLabel(it.rotation)
+      };
+    }).filter((l) => Number.isInteger(l.id) && l.id > 0),
     geo: []
   };
   const by = String(groupby || '').toLowerCase();
