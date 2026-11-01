@@ -1433,6 +1433,63 @@ function singaporeMobileProxyRows(body, { socks = false } = {}) {
   return { rows, total: list.length, inactive, noLogin };
 }
 
+// ---------------------------------------------------------------------------------------
+// Gsocks (help.gsocks.net/en/articles/9847111-api-documentation, fetched 2026-11-01). Base
+// api.gsocks.net, header "authorization: key <api_key>". GET /proxy?type=&active=&limit=&page=
+// returns { proxies, count }, then GET /proxy/residential-proxy-list/:id or /mobile-proxy-list/:id
+// returns a text list of host:port:user:pass lines. Two things the page does not spell out, so
+// they fail loudly here rather than being assumed quietly: the field holding a proxy's id in
+// `proxies` (read as `id`, the name its URL parameter uses), and whether the text list comes bare
+// or wrapped as { List } (both accepted). Private and datacenter have no text list and their
+// proxy object is undocumented, so they are not offered. NOT live-key tested.
+function gsocksProxyIds(body) {
+  let json;
+  try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { ids: [], listed: 0, total: 0 }; }
+  const list = Array.isArray(json && json.proxies) ? json.proxies : [];
+  const ids = [];
+  for (const p of list) {
+    const id = p && p.id;
+    if ((typeof id === 'number' && Number.isInteger(id)) || (typeof id === 'string' && /^\d+$/.test(id))) ids.push(String(id));
+  }
+  const total = Number.parseInt(String(json && json.count), 10);
+  return { ids, listed: list.length, total: Number.isInteger(total) ? total : list.length };
+}
+function gsocksListRows(body, { kind = 'Residential', id = '' } = {}) {
+  let text = typeof body === 'string' ? body : '';
+  if (typeof body !== 'string' && body && typeof body === 'object') text = body.List ?? body.list ?? '';
+  const trimmed = String(text).trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('"')) {
+    try {
+      const j = JSON.parse(trimmed);
+      text = typeof j === 'string' ? j : (j && (j.List ?? j.list)) || '';
+    } catch { text = ''; }
+  }
+  const rows = [];
+  const seen = new Set();
+  for (const raw of String(text).split(/\r?\n|<br\s*\/?>/i)) {
+    const line = raw.trim();
+    if (!line) continue;
+    // host:port:user:pass, and only the password may hold further colons.
+    const parts = line.split(':');
+    if (parts.length < 4) continue;
+    const [host, portText, username] = parts;
+    const password = parts.slice(3).join(':');
+    const port = Number.parseInt(portText, 10);
+    if (!/^[A-Za-z0-9.-]+$/.test(host) || !/^\d+$/.test(portText) || port < 1 || port > 65535 || !username || !password) continue;
+    const key = `${host}:${port}:${username}:${password}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      type: 'HTTP',
+      host, port, username, password,
+      label: `Gsocks • ${kind}${id ? ` • #${id}` : ''}`,
+      country: null,
+      dedupeOnPassword: true
+    });
+  }
+  return rows;
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1506,5 +1563,6 @@ module.exports = {
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
   coroniumRows,
-  singaporeMobileProxyRows
+  singaporeMobileProxyRows,
+  gsocksProxyIds, gsocksListRows
 };

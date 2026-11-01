@@ -111,7 +111,10 @@ export const PROVIDERS = [
   { key: 'coronium', name: 'Coronium', initials: 'CO', color: '#0891b2', referral: 'https://coronium.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } },
   // Singapore Mobile Proxy: dedicated mobile proxies listed from the account with a client API key
   // (GET /api/v1/proxies/my). No rotation link is stored.
-  { key: 'singaporemobileproxy', name: 'Singapore Mobile Proxy', initials: 'SG', color: '#e11d48', referral: 'https://singaporemobileproxy.com/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } }
+  { key: 'singaporemobileproxy', name: 'Singapore Mobile Proxy', initials: 'SG', color: '#e11d48', referral: 'https://singaporemobileproxy.com/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } },
+  // Gsocks: an API key lists the residential or mobile proxies on the account and imports each one's
+  // text export. Read-only; targeting is set when the list is created in the Gsocks panel.
+  { key: 'gsocks', name: 'Gsocks', initials: 'GS', color: '#65a30d', referral: 'https://gsocks.net/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile']] } }
 ];
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).

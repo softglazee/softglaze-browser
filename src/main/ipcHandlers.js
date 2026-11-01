@@ -88,7 +88,8 @@ const {
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
   coroniumRows,
-  singaporeMobileProxyRows
+  singaporeMobileProxyRows,
+  gsocksProxyIds, gsocksListRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1376,7 +1377,8 @@ const PROXY_VENDORS = Object.freeze({
   gonzoproxy: 'GonzoProxy',
   simplyproxies: 'Simply Proxies',
   coronium: 'Coronium',
-  singaporemobileproxy: 'Singapore Mobile Proxy'
+  singaporemobileproxy: 'Singapore Mobile Proxy',
+  gsocks: 'Gsocks'
 });
 
 // Gateway endpoints for the vendors whose adapters build a URL from this table.
@@ -3416,6 +3418,58 @@ async function fetchSingaporeMobileProxyPool({ token, count, proxyType }) {
   return limitListRows(rows, count);
 }
 
+// --- Gsocks (residential + mobile, list pull) ----------------------------------------------
+// Reads the proxy lists already on the account, then each list's text export (gsocksProxyIds,
+// gsocksListRows). Read-only: nothing is created or bought. Rows are HTTP because the docs name no
+// SOCKS5 port for the exported lines. Targeting is fixed when a list is made, in the Gsocks panel.
+// Not live-key tested.
+const GSOCKS_API = 'https://api.gsocks.net';
+const GSOCKS_POOLS = Object.freeze({
+  residential: { query: 'residential', path: 'residential-proxy-list', kind: 'Residential' },
+  mobile: { query: 'mobile', path: 'mobile-proxy-list', kind: 'Mobile' }
+});
+
+async function fetchGsocksPool({ token, poolType, count }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('Gsocks: paste the API key from your dashboard.');
+  const pool = GSOCKS_POOLS[String(poolType || '').toLowerCase()];
+  if (!pool) throw new Error('Gsocks: pick Residential or Mobile. Other types have no documented proxy list to import.');
+  const call = async (url) => {
+    try {
+      return await httpRequestText(url, { headers: { authorization: `key ${key}`, Accept: 'application/json, text/plain' }, maxBytes: 8_000_000 });
+    } catch (error) {
+      const status = error && error.status;
+      if (status === 401 || status === 403) throw new Error('Gsocks rejected the API key. Create a new one in your dashboard and paste it again.');
+      if (status === 429) throw new Error('Gsocks: too many requests. Wait a moment and pull again.');
+      throw new Error('Gsocks: could not read the proxy list. Check your connection and try again.');
+    }
+  };
+  const ids = [];
+  let listed = 0;
+  for (let page = 1; page <= 20; page += 1) {
+    const res = gsocksProxyIds(await call(`${GSOCKS_API}/proxy?type=${pool.query}&active=active&limit=100&page=${page}`));
+    ids.push(...res.ids);
+    listed += res.listed;
+    if (!res.listed || listed >= res.total) break;
+  }
+  if (!listed) throw new Error(`Gsocks: no active ${pool.kind.toLowerCase()} proxies on this account. Create one in the Gsocks panel first.`);
+  if (!ids.length) throw new Error('Gsocks: the account returned proxies without a readable id, so their lists cannot be fetched.');
+  const cap = /^[1-9]\d*$/.test(String(count == null ? '' : count).trim()) ? Number(count) : Infinity;
+  const rows = [];
+  const seen = new Set();
+  for (const id of ids) {
+    if (rows.length >= cap) break;
+    for (const r of gsocksListRows(await call(`${GSOCKS_API}/proxy/${pool.path}/${encodeURIComponent(id)}`), { kind: pool.kind, id })) {
+      const k = `${r.host}:${r.port}:${r.username}:${r.password}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push(r);
+    }
+  }
+  if (!rows.length) throw new Error('Gsocks: the proxy lists came back with no host:port:user:pass lines to import.');
+  return limitListRows(rows, count);
+}
+
 // Vendors wired to real calls. Everything else falls back to the simulation.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -3451,7 +3505,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   gonzoproxy: fetchGonzoProxyPool,
   simplyproxies: fetchSimplyProxiesPool,
   coronium: fetchCoroniumPool,
-  singaporemobileproxy: fetchSingaporeMobileProxyPool
+  singaporemobileproxy: fetchSingaporeMobileProxyPool,
+  gsocks: fetchGsocksPool
 });
 
 async function syncVendorPool(payload) {
