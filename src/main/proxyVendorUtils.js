@@ -750,6 +750,14 @@ function liveProxiesStickyHost(n) {
   return `b2b-s${((i - 1) % LIVEPROXIES_STICKY_SERVERS) + 1}.liveproxies.io`;
 }
 
+// Middle value of some timings, ignoring anything that is not a number. Null when there are none.
+function medianMs(values) {
+  const v = values.filter((x) => typeof x === 'number' && Number.isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const mid = v.length >> 1;
+  return v.length % 2 ? v[mid] : Math.round((v[mid - 1] + v[mid]) / 2);
+}
+
 // Shared: "new york" / "New-York" -> "NewYork" (vendors that want CamelCase place names).
 function camelPlace(value) {
   return String(value || '').trim().split(/[\s_-]+/).filter(Boolean)
@@ -1612,6 +1620,7 @@ module.exports = {
   proxy302Row,
   rapidProxySid,
   froxyBasePassword,
+  medianMs,
   LIVEPROXIES_GATEWAY,
   liveProxiesBaseUser,
   liveProxiesUsername,

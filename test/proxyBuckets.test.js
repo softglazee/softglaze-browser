@@ -19,10 +19,10 @@ test('a failed proxy is neither fast nor slow, whatever its stored time says', a
   assert.equal(speedOf(ok(3, 33), { 3: { success: false, latencyMs: 40 } }), 'unknown', 'a fresh failure wins');
 });
 
-test('a working proxy is fast at 1500 ms or under, slow above', async () => {
+test('a working proxy is fast at 2000 ms or under, slow above', async () => {
   const { speedOf } = await load();
-  assert.equal(speedOf(ok(1, 1500)), 'fast');
-  assert.equal(speedOf(ok(2, 1501)), 'slow');
+  assert.equal(speedOf(ok(1, 2000)), 'fast');
+  assert.equal(speedOf(ok(2, 2001)), 'slow');
   assert.equal(speedOf({ id: 3 }), 'unknown', 'never checked');
   assert.equal(speedOf(dead(4, 33), { 4: { success: true, latencyMs: 900 } }), 'fast', 'a fresh pass wins');
 });
@@ -54,7 +54,7 @@ test('sorting puts unmeasured and failed proxies last, in both directions', asyn
 
 test('the counts always add up: fast + slow = working proxies with a time', async () => {
   const { countBuckets } = await load();
-  const pool = [ok(1, 900), ok(2, 1400), ok(3, 2000), dead(4, 33), dead(5, 30014), { id: 6 }];
+  const pool = [ok(1, 900), ok(2, 1400), ok(3, 2500), dead(4, 33), dead(5, 30014), { id: 6 }];
   const c = countBuckets(pool);
   assert.equal(c.verified, 3);
   assert.equal(c.failed, 2);
@@ -73,6 +73,22 @@ test('the pool page and Quick generate use these rules', () => {
 
 test('a failed check saves no time, and the Fast or Clean filter only takes working proxies', () => {
   const ipc = read('src/main/ipcHandlers.js');
-  assert.match(ipc, /lastLatencyMs: result\.success && typeof result\.latencyMs === 'number' \? result\.latencyMs : null/);
+  assert.match(ipc, /lastLatencyMs: speedMs,/);
+  assert.match(ipc, /const speedMs = result\.success && typeof rawMs === 'number'/);
   assert.match(ipc, /if \(speedSel !== 'any' \|\| blSel !== 'any'\) filter\.lastStatus = 'ok';/);
+});
+
+test('speed is the median of the last three passing checks, so one odd reading does not flip it', () => {
+  const { medianMs } = require('../src/main/proxyVendorUtils');
+  assert.equal(medianMs([1400]), 1400);
+  assert.equal(medianMs([1400, 1600]), 1500);
+  assert.equal(medianMs([1400, 29984, 1600]), 1600, 'a one-off spike is ignored');
+  assert.equal(medianMs([]), null);
+  assert.equal(medianMs([null, 'x']), null);
+});
+
+test('the quick generate speed filter uses the same line as the pool page', () => {
+  const ipc = read('src/main/ipcHandlers.js');
+  assert.match(ipc, /speedSel === 'fast'\) filter\.lastLatencyMs = \{ lte: 2000 \}/);
+  assert.match(ipc, /speedSel === 'slow'\) filter\.lastLatencyMs = \{ gt: 2000 \}/);
 });

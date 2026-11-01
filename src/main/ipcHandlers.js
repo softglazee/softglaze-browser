@@ -85,6 +85,7 @@ const {
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
   ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
+  medianMs,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
@@ -5141,8 +5142,8 @@ async function batchGenerateProfiles(payload) {
     // Quality filters (from the generate modal): pre-narrow the candidate pool by the
     // proxies' stored latency and DNSBL result before the live health-check gate runs.
     const speedSel = (optionalString(input.proxySpeed) || 'any').toLowerCase();
-    if (speedSel === 'fast') filter.lastLatencyMs = { lte: 1500 };
-    else if (speedSel === 'slow') filter.lastLatencyMs = { gt: 1500 };
+    if (speedSel === 'fast') filter.lastLatencyMs = { lte: 2000 };
+    else if (speedSel === 'slow') filter.lastLatencyMs = { gt: 2000 };
     const blSel = (optionalString(input.proxyBlacklist) || 'any').toLowerCase();
     // Strict, to match the count chips / Proxy Pool page: false = clean, true = flagged,
     // never-checked (null) = neither (so "Clean" doesn't silently pull in unchecked proxies).
@@ -7081,13 +7082,22 @@ function proxyGeoLabel(result) {
 }
 
 async function persistProxyHealth(db, id, result) {
+  // One reading is noisy (the same proxy can vary by hundreds of ms between checks), so the speed
+  // the pool shows and filters on is the median of the last three passing checks. Every caller
+  // reports result.latencyMs, so it is set here to keep the live value and the saved value equal.
+  const rawMs = result.latencyMs;
+  const recent = result.success && typeof rawMs === 'number'
+    ? await db.proxyHealthEvent.findMany({ where: { proxyId: id, status: 'ok', latencyMs: { not: null } }, orderBy: { ts: 'desc' }, take: 2, select: { latencyMs: true } }).catch(() => [])
+    : [];
+  const speedMs = result.success && typeof rawMs === 'number' ? medianMs([rawMs, ...recent.map((e) => e.latencyMs)]) : null;
+  if (speedMs != null) result.latencyMs = speedMs;
   const data = {
     lastStatus: result.success ? 'ok' : 'fail',
     // Keep WHY it failed, not just that it did, so the pool can tell a quota refusal
     // from a dead exit after a reload. Cleared on success so a stale reason never sticks.
     lastError: result.success ? null : (String(result.error || '').slice(0, 400) || null),
     // A failed check has no speed: how long it took to fail means nothing.
-    lastLatencyMs: result.success && typeof result.latencyMs === 'number' ? result.latencyMs : null,
+    lastLatencyMs: speedMs,
     lastCountry: result.country || null,
     lastRegion: result.region || null,
     lastCity: result.city || null,
@@ -7111,7 +7121,7 @@ async function persistProxyHealth(db, id, result) {
   await db.proxy.update({ where: { id }, data }).catch(() => {});
   // Append a time-series event for the history charts (best-effort).
   try {
-    await db.proxyHealthEvent.create({ data: { proxyId: id, status: data.lastStatus, latencyMs: data.lastLatencyMs, country: data.lastCountry } });
+    await db.proxyHealthEvent.create({ data: { proxyId: id, status: data.lastStatus, latencyMs: result.success && typeof rawMs === 'number' ? rawMs : null, country: data.lastCountry } });
   } catch (e) { /* history is best-effort; never block a health write */ }
 }
 

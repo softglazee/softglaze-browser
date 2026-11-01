@@ -201,8 +201,8 @@
     "all": "All",
     "fast": "Fast",
     "slow": "Slow",
-    "fastTip": "Show only proxies measured at 1.5s or faster",
-    "slowTip": "Show only proxies measured slower than 1.5s"
+    "fastTip": "Show only proxies measured at 2s or faster",
+    "slowTip": "Show only proxies measured slower than 2s"
   },
   "bulkDelete": {
     "confirm_one": "Delete {{count}} selected proxy? Linked profiles will keep working with their proxy assignment cleared.",

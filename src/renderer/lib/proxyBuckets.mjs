@@ -1,7 +1,9 @@
 // One definition of a proxy's health, speed and blocklist state, used by every filter, count, badge
 // and sort. A fresh check result wins over the stored snapshot. Plain module so tests can import it.
 
-export const SPEED_FAST_MAX_MS = 1500;
+// Live residential proxies measured a median of 1499 ms, so a line at 1500 ms flipped 29 of 66 of them
+// between checks. 2000 ms sits clear of that.
+export const SPEED_FAST_MAX_MS = 2000;
 
 export function proxyHealthOf(p, checkResults = {}) {
   const r = checkResults[p.id];
@@ -11,9 +13,9 @@ export function proxyHealthOf(p, checkResults = {}) {
   return 'unknown';
 }
 
-// The measured time of the IP check, the same number every kind of check records and saves, so a
-// proxy shows the same value live and after a reload. A failed proxy has no speed: the time it took
-// to fail says nothing (a server name that does not exist fails in 30 ms, which would read as fast).
+// The saved speed (the median of the proxy's recent passing checks), the same number every kind of
+// check returns and stores, so a proxy shows the same value live and after a reload. A failed proxy
+// has no speed: a server name that does not exist fails in 30 ms, which would read as fast.
 export function measuredMs(p, checkResults = {}) {
   if (proxyHealthOf(p, checkResults) !== 'verified') return null;
   const r = checkResults[p.id];
