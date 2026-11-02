@@ -50,6 +50,7 @@ const CHANNELS = Object.freeze({
   PROXY_AUTO_GROUP: 'proxy:auto-group',
   PROXY_HEALTH_HISTORY: 'proxy:health-history',
   PROXY_RECENT_HEALTH: 'proxy:recent-health',
+  PROXY_VENDOR_SCOREBOARD: 'proxy:vendor-scoreboard',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -343,7 +344,8 @@ const api = Object.freeze({
     },
     autoGroup: (level) => invoke(CHANNELS.PROXY_AUTO_GROUP, { level }),
     healthHistory: (id) => invoke(CHANNELS.PROXY_HEALTH_HISTORY, { id }),
-    recentHealth: (opts) => invoke(CHANNELS.PROXY_RECENT_HEALTH, opts || {})
+    recentHealth: (opts) => invoke(CHANNELS.PROXY_RECENT_HEALTH, opts || {}),
+    vendorScoreboard: () => invoke(CHANNELS.PROXY_VENDOR_SCOREBOARD)
   }),
   proxyGroups: Object.freeze({
     list: () => invoke(CHANNELS.PROXY_GROUP_LIST),

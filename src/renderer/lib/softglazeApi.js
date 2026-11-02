@@ -61,7 +61,9 @@ export const softglazeApi = {
     autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level),
     healthHistory: (id) => getSoftglazeApi().proxies.healthHistory(id),
     // Recent checks grouped per proxy - powers the Proxy Pool history-cards row.
-    recentHealth: (opts) => getSoftglazeApi().proxies.recentHealth(opts)
+    recentHealth: (opts) => getSoftglazeApi().proxies.recentHealth(opts),
+    // Per-vendor success rate, speed and blocklist rate from the last 7 days of checks.
+    vendorScoreboard: () => getSoftglazeApi().proxies.vendorScoreboard()
   },
   proxyGroups: {
     list: () => getSoftglazeApi().proxyGroups.list(),
