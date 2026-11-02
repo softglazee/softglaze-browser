@@ -58,6 +58,7 @@ const profileData = require('./profileData');
 const captchaScore = require('./captchaScore');
 const launchCheck = require('./launchCheck');
 const vendorScoreboard = require('./vendorScoreboard');
+const proxyScope = require('./proxyScope');
 const warmAutopilot = require('./warmAutopilot');
 const providerAccount = require('./providerAccount');
 const dbCrypto = require('./dbCrypto');
@@ -1062,6 +1063,9 @@ async function listProxies(payload = {}) {
   if (optionalString(payload.provider)) {
     clauses.push({ provider: optionalString(payload.provider).toLowerCase() });
   }
+  // scope: 'paid' (default), 'free' (the Free proxies page) or 'all' (pickers that show both).
+  const scopeWhere = proxyScope.proxyScopeWhere(payload.scope);
+  if (scopeWhere) clauses.push(scopeWhere);
   const where = clauses.length ? (clauses.length === 1 ? clauses[0] : { AND: clauses }) : undefined;
 
   const proxies = await db.proxy.findMany({
@@ -1176,8 +1180,9 @@ async function getProxyRotation(payload) {
   await assertCanAccessProfile(id); // rotation config is per-profile - gate on profile access
   const all = (await readSetting('proxyRotation', {})) || {};
   const cfg = all[id] || { enabled: false, mode: 'round-robin', proxyIds: [] };
+  // Free public proxies never join a rotation pool.
   const proxies = (await getPrisma().proxy.findMany({
-    where: await scopedProxyWhere(undefined),
+    where: await scopedProxyWhere(proxyScope.proxyScopeWhere('paid')),
     orderBy: { createdAt: 'desc' },
     include: { _count: { select: { profiles: true } } }
   })).map(serializeProxy);
@@ -1203,10 +1208,11 @@ async function setProxyRotation(payload) {
   // profile to another member's proxies).
   if (proxyIds.length) {
     const accessible = await getPrisma().proxy.findMany({
-      where: await scopedProxyWhere({ id: { in: proxyIds } }), select: { id: true }
+      where: await scopedProxyWhere({ id: { in: proxyIds } }), select: { id: true, provider: true }
     });
     const okSet = new Set(accessible.map((p) => p.id));
     if (proxyIds.some((pid) => !okSet.has(pid))) throw new Error('One or more selected proxies are not accessible to you.');
+    if (accessible.some((p) => proxyScope.isFreeProxy(p))) throw new Error('Free proxies cannot join a rotation pool.');
   }
   const all = (await readSetting('proxyRotation', {})) || {};
   all[id] = { enabled, mode, proxyIds };
@@ -1286,8 +1292,8 @@ async function pickRotationProxy(db, profileId) {
   const cfg = all[profileId];
   if (!cfg || !cfg.enabled || !Array.isArray(cfg.proxyIds) || cfg.proxyIds.length === 0) return null;
 
-  const rows = await db.proxy.findMany({ where: { id: { in: cfg.proxyIds } } });
-  // Preserve the configured order for stable round-robin; drop deleted ids.
+  const rows = await db.proxy.findMany({ where: proxyScope.withProxyScope({ id: { in: cfg.proxyIds } }, 'paid') });
+  // Preserve the configured order for stable round-robin; drop deleted (and free) ids.
   let ordered = cfg.proxyIds.map((pid) => rows.find((p) => p.id === pid)).filter(Boolean);
   if (ordered.length === 0) return null;
 
@@ -4177,7 +4183,8 @@ async function runProxyCheckStream(payload, event) {
     const { allowed } = await partitionAccessibleProxyIds(ids);
     proxies = await db.proxy.findMany({ where: { id: { in: allowed } }, orderBy: { createdAt: 'asc' } });
   } else {
-    proxies = await db.proxy.findMany({ where: await scopedProxyWhere(undefined), orderBy: { createdAt: 'asc' } });
+    // "Check all" is the paid pool's; the Free proxies page always names its ids.
+    proxies = await db.proxy.findMany({ where: await scopedProxyWhere(proxyScope.proxyScopeWhere('paid')), orderBy: { createdAt: 'asc' } });
   }
   const total = proxies.length;
   const runId = `pcheck-${Date.now()}`;
@@ -5016,16 +5023,18 @@ async function batchGenerateProfiles(payload) {
   // a profile meant to be behind a proxy must not open on the real IP.
   let noProxyReason = null;
   let poolMatched = 0;
+  let freeSource = false;
 
   if (proxyMode === 'unique' || proxyMode === 'pool') {
     const filter = {};
+    let sourceGroupId;
     if (input.proxyGroupId !== undefined && input.proxyGroupId !== '' && input.proxyGroupId !== 'all') {
-      filter.proxyGroupId = input.proxyGroupId === 'none' ? null : parseId(input.proxyGroupId, 'proxyGroupId');
+      sourceGroupId = input.proxyGroupId === 'none' ? null : parseId(input.proxyGroupId, 'proxyGroupId');
     }
-    if (optionalString(input.provider)) filter.provider = optionalString(input.provider).toLowerCase();
-    // Free public proxies are only used when the user picks them on purpose (their
-    // provider or a group): never mixed into "all proxies" for real profiles.
-    else if (filter.proxyGroupId === undefined) filter.OR = [{ provider: null }, { provider: { not: 'free' } }];
+    // Free public proxies are used only when the user picks the Free proxies source, and then only
+    // working ones; they are never mixed into the paid pool, a paid group or a provider.
+    const sourceWhere = proxyScope.batchProxySourceWhere({ source: input.proxySource, proxyGroupId: sourceGroupId, provider: optionalString(input.provider) });
+    freeSource = sourceWhere.provider === proxyScope.FREE_PROVIDER;
     const cc = normCountryCode(input.country);
     if (cc) filter.lastCountry = cc;
     // Narrow candidates by stored latency and DNSBL result before the live health check.
@@ -5043,15 +5052,16 @@ async function batchGenerateProfiles(payload) {
     if (proxyMode === 'unique') filter.profiles = { none: { deletedAt: null } };
 
     const pool = await db.proxy.findMany({
-      where: await scopedProxyWhere(Object.keys(filter).length ? filter : undefined),
+      where: await scopedProxyWhere(proxyScope.andWhere(sourceWhere, filter)),
       orderBy: { createdAt: 'asc' },
       select: { id: true, type: true, host: true, port: true, username: true, password: true, lastStatus: true, lastCheckedAt: true }
     });
     poolMatched = pool.length;
 
     // Only attach proxies that pass a live health check; those verified 'ok' in the last 30 minutes
-    // are trusted as is. verifyProxies: false bypasses the gate.
-    const verify = input.verifyProxies !== false;
+    // are trusted as is. verifyProxies: false bypasses the gate, except for free proxies, which die
+    // within hours.
+    const verify = input.verifyProxies !== false || freeSource;
     const FRESH_MS = 30 * 60 * 1000;
     const isHealthy = async (p) => {
       if (!verify) return true;
@@ -5169,7 +5179,9 @@ async function batchGenerateProfiles(payload) {
   }
 
   let message;
-  if (noProxyReason === 'no-match') {
+  if (noProxyReason === 'no-match' && freeSource) {
+    message = `Nothing was created: there is no working free proxy${proxyMode === 'unique' ? ' that no profile uses yet' : ''}. Find or check some on the Free proxies page, or choose another proxy source.`;
+  } else if (noProxyReason === 'no-match') {
     message = `Nothing was created: no proxy in your pool matches the selected source, country, speed or blocklist filter. Change the filters or add proxies. To create profiles without a proxy, choose "No proxy".`;
   } else if (noProxyReason === 'none-healthy') {
     message = `Nothing was created: none of the ${poolMatched} matching prox${poolMatched === 1 ? 'y' : 'ies'} passed the live check, and profiles are never created on your real IP by mistake. Check the proxies on the Proxy Pool page, or choose "No proxy" to create profiles without one.`;
@@ -5193,6 +5205,7 @@ async function batchGenerateProfiles(payload) {
     availableProxies,
     proxyVerifyExcluded,
     proxyMode,
+    proxySource: freeSource ? 'free' : 'paid',
     noProxyReason,
     groupId,
     errors,
@@ -5711,19 +5724,26 @@ async function bulkRenameProfiles(payload) {
 }
 
 // ---- Proxy groups ----
+// Paid view only: the "Free proxies" group and free proxies inside any group are left out.
 async function listProxyGroups() {
   const db = getPrisma();
-  const groups = await db.proxyGroup.findMany({
-    orderBy: { createdAt: 'asc' },
-    include: { _count: { select: { proxies: true } } }
-  });
-  return groups.map((g) => ({
+  const [groups, freeCounts] = await Promise.all([
+    db.proxyGroup.findMany({
+      orderBy: { createdAt: 'asc' },
+      include: { _count: { select: { proxies: true } } }
+    }),
+    db.proxy.groupBy({ by: ['proxyGroupId'], where: { provider: proxyScope.FREE_PROVIDER, proxyGroupId: { not: null } }, _count: { _all: true } }).catch(() => [])
+  ]);
+  const freeByGroup = {};
+  for (const r of freeCounts) freeByGroup[r.proxyGroupId] = r._count._all;
+  return proxyScope.paidGroupView(groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color || '#3b82f6',
+    autoCreated: Boolean(g.autoCreated),
     proxyCount: g._count?.proxies ?? 0,
     createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt
-  }));
+  })), freeByGroup);
 }
 
 async function createProxyGroup(payload) {
@@ -5845,8 +5865,9 @@ async function bulkAssignProxies(payload) {
     const filter = {};
     if (source === 'unassigned') filter.profiles = { none: { deletedAt: null } };
     else if (source === 'group') filter.proxyGroupId = parseId(input.proxyGroupId, 'proxyGroupId');
+    // Reassigning draws from the paid pool only; a free proxy is picked one at a time in the editor.
     sourceProxies = await db.proxy.findMany({
-      where: await scopedProxyWhere(Object.keys(filter).length ? filter : undefined),
+      where: await scopedProxyWhere(proxyScope.withProxyScope(Object.keys(filter).length ? filter : undefined, 'paid')),
       orderBy: { createdAt: 'desc' } // newest first, so fresh additions are used first
     });
   }
@@ -5914,8 +5935,9 @@ async function autoGroupProxies(payload) {
 
   const base = { lastCountry: { not: null } };
   if (onlyUngrouped) base.proxyGroupId = null;
+  // Free proxies stay in their own group, off the paid side.
   const proxies = await db.proxy.findMany({
-    where: await scopedProxyWhere(base),
+    where: await scopedProxyWhere(proxyScope.withProxyScope(base, 'paid')),
     select: { id: true, lastCountry: true, lastRegion: true, lastCity: true }
   });
 
@@ -6430,7 +6452,9 @@ async function swapProxyAfterBlock(profile, evt, retryUrl) {
   await requirePermission('profiles.edit');
   await assertCanAccessProfile(id, { requireEdit: true });
   const db = getPrisma();
-  const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
+  // A spare comes from the paid pool: a free proxy is never picked for a profile automatically.
+  const candidates = (await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) }))
+    .filter((p) => !proxyScope.isFreeProxy(p));
   const ctx = blockDetect.blockedProxyContext((await captchaContexts(db, [profile])).get(id));
   const best = captchaScore.bestReplacement(profile, ctx, candidates);
   if (!best) return null;
@@ -6624,7 +6648,8 @@ async function commitProfileImport(payload, event) {
 
   // For auto-bind: load the saved proxy pool once and round-robin matches per
   // country so the import spreads profiles evenly across same-country proxies.
-  const pool = autoBind ? await db.proxy.findMany() : [];
+  // autoBindSource 'free' binds to working free proxies; the default is the paid pool.
+  const pool = autoBind ? await db.proxy.findMany({ where: proxyScope.autoBindPoolWhere(input.autoBindSource) }) : [];
   const rrIndex = {};
   const pickProxyForCountry = (country) => {
     const code = toCountryCode(country);
@@ -7124,7 +7149,8 @@ async function captchaFix(payload) {
 // Moves a profile to the spare proxy that lowers its CAPTCHA risk most: only proxies no other
 // profile uses, from the pool this member may use. Throws NO_SPARE_PROXY / NO_BETTER_PROXY.
 async function applySpareProxy(db, profile) {
-  const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
+  const candidates = (await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) }))
+    .filter((p) => !proxyScope.isFreeProxy(p)); // never a free proxy automatically
   if (!captchaScore.pickReplacementProxy(candidates, profile.proxy)) {
     const e = new Error('No spare proxy: every working, clean proxy in your pool is already used by a profile. Add or check more proxies, then try again.');
     e.code = 'NO_SPARE_PROXY';
@@ -7280,9 +7306,9 @@ async function getRecentProxyHealth(payload) {
   const perProxy = Math.min(20, Math.max(3, Number(input.perProxy) || 8));   // pips per card
   const maxProxies = Math.min(60, Math.max(1, Number(input.maxProxies) || 40));
   const db = getPrisma();
-  // Same fail-closed scope as listProxies: a member sees only their subtree's proxies.
+  // Same fail-closed scope as listProxies: a member sees only their subtree's proxies (paid only).
   const proxies = await db.proxy
-    .findMany({ where: await scopedProxyWhere(undefined), select: { id: true, name: true, host: true, port: true, type: true } })
+    .findMany({ where: await scopedProxyWhere(proxyScope.proxyScopeWhere('paid')), select: { id: true, name: true, host: true, port: true, type: true } })
     .catch(() => []);
   if (!proxies.length) return [];
   const byId = new Map(proxies.map((p) => [p.id, p]));
@@ -7387,7 +7413,8 @@ async function runProxyHealthSweep() {
 // { total, ok, fail }.
 async function runProxyHealthSweepConcurrent(limit = 8) {
   const db = getPrisma();
-  const proxies = await db.proxy.findMany();
+  // The paid pool only: free proxies are checked from their own page.
+  const proxies = await db.proxy.findMany({ where: proxyScope.proxyScopeWhere('paid') });
   const summary = { total: proxies.length, ok: 0, fail: 0 };
   if (proxies.length === 0) return summary;
 
@@ -8114,7 +8141,7 @@ async function getDashboardStats() {
 
   // Scope every count to what the viewer may see, mirroring listProfiles/listProxies.
   const profileWhere = await scopedProfileWhere({ deletedAt: null });
-  const proxyWhere = await scopedProxyWhere(undefined);
+  const proxyWhere = await scopedProxyWhere(proxyScope.proxyScopeWhere('paid')); // free proxies are not counted
 
   const [totalProfiles, totalProxies, totalGroups] = await Promise.all([
     db.profile.count({ where: profileWhere }),

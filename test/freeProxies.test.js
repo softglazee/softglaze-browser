@@ -116,5 +116,8 @@ test('main: gated, one search at a time, free group, audit, and channels wired',
 });
 
 test('Quick generate never mixes free proxies into "all proxies"', () => {
-  assert.match(IPC, /else if \(filter\.proxyGroupId === undefined\) filter\.OR = \[\{ provider: null \}, \{ provider: \{ not: 'free' \} \}\];/);
+  // The source filter (src/main/proxyScope.js, tested in freeProxiesPage.test.js) keeps the paid
+  // pool free of them and is ANDed with every other Quick generate filter.
+  assert.match(IPC, /const sourceWhere = proxyScope\.batchProxySourceWhere\(\{ source: input\.proxySource, proxyGroupId: sourceGroupId, provider: optionalString\(input\.provider\) \}\);/);
+  assert.match(IPC, /where: await scopedProxyWhere\(proxyScope\.andWhere\(sourceWhere, filter\)\),/);
 });
