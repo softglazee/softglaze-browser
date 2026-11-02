@@ -5,10 +5,17 @@
   "outOf100": "de 100",
   "level": {
     "low": "Riesgo bajo",
-    "some": "Algo de riesgo",
+    "some": "Riesgo medio",
     "high": "Riesgo alto",
     "veryHigh": "Riesgo muy alto"
   },
+  "levelShort": {
+    "low": "Bajo",
+    "some": "Medio",
+    "high": "Alto",
+    "veryHigh": "Muy alto"
+  },
+  "column": "Riesgo CAPTCHA",
   "issues_zero": "No se encontraron problemas",
   "issues_one": "1 problema",
   "issues_other": "{{count}} problemas",

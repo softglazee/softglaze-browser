@@ -2269,15 +2269,16 @@ export default function ProfilesPage() {
                   </th>
                   <th className="px-5 py-4">{t('table.name')}</th>
                   <th className="px-5 py-4">{t('table.proxy')}</th>
-                  <th className="px-5 py-4">{t('table.created')}</th>
-                  <th className="px-5 py-4">{t('table.lastUsed')}</th>
+                  <th className="px-3 py-4">{t('table.created')}</th>
+                  <th className="px-2 py-4 whitespace-nowrap">{tc('column')}</th>
+                  <th className="px-3 py-4">{t('table.lastUsed')}</th>
                   <th className="px-5 py-4 text-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredProfiles.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="p-12">
+                    <td colSpan="7" className="p-12">
                        <EmptyState title={t('table.emptyTitle')} description={t('table.emptyDesc')} icon={<Monitor className="w-10 h-10 text-muted" />} />
                     </td>
                   </tr>
@@ -2367,13 +2368,16 @@ export default function ProfilesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground text-xs">
+                    <td className="px-3 py-3.5 text-muted-foreground text-xs">
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span title={formatDateTime(p.createdAt)}>{formatDate(p.createdAt)}</span>
                         <ProfileAgeBadge createdAt={p.createdAt} stat={warmStats[p.id]} formatAgo={relTime} />
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
+                    <td className="px-2 py-3.5">
+                      <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title })} />
+                    </td>
+                    <td className="px-3 py-3.5 text-muted-foreground">
                       <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title={t('row.viewActivity')}>
                         <History className="h-3.5 w-3.5" />
                         <span title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.neverUsed')}>{p.lastUsedAt ? relTime(p.lastUsedAt) : t('relTime.never')}</span>
@@ -2381,7 +2385,7 @@ export default function ProfilesPage() {
                       </button>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
+                      <div className="flex justify-end gap-1">
                         {runningIds.has(p.id) ? (
                           <Button size="sm" variant="danger" onClick={() => handleBulkClose([p.id])} className="px-3" title={t('actions.stop')}>
                             <Square className="w-3.5 h-3.5 mr-1" /> {t('actions.stop')}
@@ -2398,23 +2402,22 @@ export default function ProfilesPage() {
 
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
 
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setEnvProfile(p)} title={t('actions.environmentOverview')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setEnvProfile(p)} title={t('actions.environmentOverview')}>
                           <Fingerprint className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
                           <Settings2 className="w-4 h-4" />
                         </Button>
-                        <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title })} />
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
                           <Cookie className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')}>
                           <Shuffle className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')}>
                           <Copy className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')}>
                           <Dices className="w-4 h-4" />
                         </Button>
 

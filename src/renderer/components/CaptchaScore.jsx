@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, AlertTriangle, XCircle, X, Loader2, RefreshCcw, Wand2, ShieldCheck, Radio } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, X, Loader2, RefreshCcw, Wand2, Radio } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -38,9 +38,8 @@ function factorMessage(t, f) {
   return t(`factor.${f.key}.${f.status}`, p);
 }
 
-const LEVEL_TEXT = { low: 'text-success', some: 'text-warning', high: 'text-warning', veryHigh: 'text-destructive' };
-
-// The row's shield button: coloured by risk and showing the score once it has loaded.
+// The Profiles table's CAPTCHA risk cell: score and level in words, coloured by level. Opens the
+// score window, which also leads to the detailed leak check.
 export function CaptchaBadge({ score, onClick }) {
   const { t } = useTranslation('captcha');
   const label = score ? t('badgeTitle', { score: score.score }) : t('title');
@@ -50,10 +49,9 @@ export function CaptchaBadge({ score, onClick }) {
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`inline-flex items-center gap-1 rounded px-1.5 py-1.5 text-xs font-semibold tabular-nums transition hover:bg-secondary ${score ? LEVEL_TEXT[score.level] : 'text-muted-foreground hover:text-foreground'}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums transition hover:brightness-110 ${score ? LEVEL_STYLE[score.level] : 'border-border text-muted-foreground'}`}
     >
-      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-      {score ? score.score : null}
+      {score ? `${score.score} · ${t(`levelShort.${score.level}`)}` : '…'}
     </button>
   );
 }
