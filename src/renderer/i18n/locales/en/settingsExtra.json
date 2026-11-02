@@ -213,6 +213,37 @@
       "title": "Check profiles before they open",
       "desc": "Before a profile opens from the Profiles page, list clear mismatches (system, graphics card, screen, language, timezone, WebRTC, a dead proxy) and offer to fix them first."
     },
+    "switchProxyOnBlock": {
+      "title": "Switch proxy when a site blocks a profile",
+      "desc": "When a site keeps a Chrome-based profile on a block or CAPTCHA page, get a new IP from the proxy's rotation link, or move the profile to a better spare proxy, and open the page again. At most twice an hour per profile, and never while automation or the Local API is using it. Every block is logged with the proxy that failed.",
+      "toast": {
+        "blocked": "{{site}} blocked {{profile}} ({{kind}}).",
+        "rotated": "Got a new IP for {{proxy}} and reloaded the page.",
+        "switched": "Switched to {{proxy}} and opened the page again.",
+        "notReopened": "Switched to {{proxy}}, but the profile did not open again.",
+        "none": {
+          "disabled": "Proxy switching is off in Settings, so nothing was changed.",
+          "noProxy": "The profile runs without a saved proxy, so nothing was changed.",
+          "busy": "Automation or the Local API is using this profile, so nothing was changed.",
+          "limit": "This profile already switched {{limit}} times in the last hour, so nothing was changed.",
+          "proxyPool": "The profile uses a rotation pool, so nothing was changed.",
+          "noSpare": "No spare proxy would do better, so nothing was changed.",
+          "noPermission": "Your role cannot change this profile's proxy, so nothing was changed.",
+          "signedOut": "Nobody is signed in, so nothing was changed.",
+          "inProgress": "A switch for this profile is already running.",
+          "failed": "The switch failed, so nothing was changed."
+        },
+        "kind": {
+          "googleSorry": "Google unusual-traffic page",
+          "rateLimit": "too many requests",
+          "cloudflare": "Cloudflare challenge",
+          "datadome": "DataDome block",
+          "accessDenied": "Access Denied page",
+          "perimeterx": "PerimeterX block",
+          "unknown": "block page"
+        }
+      }
+    },
     "lockExtensions": {
       "title": "Disable installing/removing extensions",
       "desc": "In Chrome-based profiles, the Extensions page and the Chrome Web Store are closed as soon as they open, so extensions cannot be added, removed or turned off. Extensions you install from the Extensions page in SoftGlaze still load. Applies to profiles launched after you change it."

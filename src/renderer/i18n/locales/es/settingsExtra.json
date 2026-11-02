@@ -213,6 +213,37 @@
       "title": "Revisar los perfiles antes de abrirlos",
       "desc": "Antes de abrir un perfil desde la página Perfiles, muestra las incoherencias claras (sistema, tarjeta gráfica, pantalla, idioma, zona horaria, WebRTC, un proxy caído) y ofrece arreglarlas primero."
     },
+    "switchProxyOnBlock": {
+      "title": "Cambiar de proxy cuando un sitio bloquea un perfil",
+      "desc": "Cuando un sitio deja un perfil basado en Chrome en una página de bloqueo o de CAPTCHA, pide una IP nueva con el enlace de rotación del proxy, o pasa el perfil a un proxy libre mejor, y vuelve a abrir la página. Como máximo dos veces por hora por perfil, y nunca mientras la automatización o la API local lo están usando. Cada bloqueo queda registrado con el proxy que falló.",
+      "toast": {
+        "blocked": "{{site}} bloqueó {{profile}} ({{kind}}).",
+        "rotated": "Se obtuvo una IP nueva para {{proxy}} y se recargó la página.",
+        "switched": "Se cambió a {{proxy}} y se volvió a abrir la página.",
+        "notReopened": "Se cambió a {{proxy}}, pero el perfil no se volvió a abrir.",
+        "none": {
+          "disabled": "El cambio de proxy está desactivado en Ajustes, así que no se cambió nada.",
+          "noProxy": "El perfil no usa un proxy guardado, así que no se cambió nada.",
+          "busy": "La automatización o la API local está usando este perfil, así que no se cambió nada.",
+          "limit": "Este perfil ya cambió {{limit}} veces en la última hora, así que no se cambió nada.",
+          "proxyPool": "El perfil usa un grupo de rotación, así que no se cambió nada.",
+          "noSpare": "Ningún proxy libre sería mejor, así que no se cambió nada.",
+          "noPermission": "Tu rol no puede cambiar el proxy de este perfil, así que no se cambió nada.",
+          "signedOut": "No hay ninguna sesión iniciada, así que no se cambió nada.",
+          "inProgress": "Ya hay un cambio en curso para este perfil.",
+          "failed": "El cambio falló, así que no se cambió nada."
+        },
+        "kind": {
+          "googleSorry": "página de tráfico inusual de Google",
+          "rateLimit": "demasiadas solicitudes",
+          "cloudflare": "desafío de Cloudflare",
+          "datadome": "bloqueo de DataDome",
+          "accessDenied": "página de acceso denegado",
+          "perimeterx": "bloqueo de PerimeterX",
+          "unknown": "página de bloqueo"
+        }
+      }
+    },
     "lockExtensions": {
       "title": "Desactivar la instalación/eliminación de extensiones",
       "desc": "En los perfiles basados en Chrome, la página de extensiones y Chrome Web Store se cierran en cuanto se abren, así que no se pueden añadir, quitar ni desactivar extensiones. Las extensiones que instales desde la página Extensiones de SoftGlaze se siguen cargando. Se aplica a los perfiles que se abran después del cambio."

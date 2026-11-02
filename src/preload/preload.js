@@ -216,6 +216,7 @@ const CHANNELS = Object.freeze({
   SESSION_RESTORE_RUN: 'session:restore-run',
   SESSION_RESOURCE_USAGE: 'session:resource-usage',
   SESSION_CRASH: 'session:crash',
+  SESSION_BLOCKED: 'session:blocked',
   MEMORY_PRESSURE: 'system:memory-pressure',
 
   BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
@@ -439,6 +440,11 @@ const api = Object.freeze({
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.SESSION_CRASH, listener);
       return () => ipcRenderer.removeListener(CHANNELS.SESSION_CRASH, listener);
+    },
+    onBlocked: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.SESSION_BLOCKED, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.SESSION_BLOCKED, listener);
     },
     onMemoryPressure: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };

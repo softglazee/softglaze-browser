@@ -905,7 +905,8 @@ function BehaviourSection({ sec, s, apply }) {
           <SwitchRow wired title={tx('browser.disableDevtools.title')} description={tx('browser.disableDevtools.desc')} checked={s.browser.disableDevtools} onChange={(v) => apply({ browser: { disableDevtools: v } })} />
           <SwitchRow wired title={tx('browser.lockExtensions.title')} description={tx('browser.lockExtensions.desc')} checked={s.browser.lockExtensions} onChange={(v) => apply({ browser: { lockExtensions: v } })} />
           <SwitchRow wired title={tx('browser.blockThirdPartyCookies.title')} description={tx('browser.blockThirdPartyCookies.desc')} checked={Boolean(s.browser.blockThirdPartyCookies)} onChange={(v) => apply({ browser: { blockThirdPartyCookies: v } })} />
-          <SwitchRow wired title={tx('browser.checkBeforeLaunch.title')} description={tx('browser.checkBeforeLaunch.desc')} checked={s.browser.checkBeforeLaunch !== false} onChange={(v) => apply({ browser: { checkBeforeLaunch: v } })} />
+          <SwitchRow title={tx('browser.checkBeforeLaunch.title')} description={tx('browser.checkBeforeLaunch.desc')} checked={s.browser.checkBeforeLaunch !== false} onChange={(v) => apply({ browser: { checkBeforeLaunch: v } })} />
+          <SwitchRow title={tx('browser.switchProxyOnBlock.title')} description={tx('browser.switchProxyOnBlock.desc')} checked={s.browser.switchProxyOnBlock !== false} onChange={(v) => apply({ browser: { switchProxyOnBlock: v } })} />
           <SwitchRow wired title={tx('browser.secureAccess.title')} description={tx('browser.secureAccess.desc')} checked={s.browser.secureAccess} onChange={(v) => apply({ browser: { secureAccess: v } })} />
           <SwitchRow wired title={tx('browser.disableVideos.title')} description={tx('browser.disableVideos.desc')} checked={s.browser.disableVideos} onChange={(v) => apply({ browser: { disableVideos: v } })} />
           <SwitchRow

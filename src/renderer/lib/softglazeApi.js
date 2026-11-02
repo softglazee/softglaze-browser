@@ -154,6 +154,7 @@ export const softglazeApi = {
     restoreRun: (payload) => getSoftglazeApi().sessions.restoreRun(payload),
     resourceUsage: () => getSoftglazeApi().sessions.resourceUsage(),
     onCrash: (cb) => getSoftglazeApi().sessions.onCrash(cb),
+    onBlocked: (cb) => getSoftglazeApi().sessions.onBlocked(cb),
     onMemoryPressure: (cb) => getSoftglazeApi().sessions.onMemoryPressure(cb)
   },
   members: {
