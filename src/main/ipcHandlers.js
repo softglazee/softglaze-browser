@@ -34,8 +34,11 @@ const {
   configurePersonaBridge,
   pruneDeadSessions,
   listSessionPids,
-  setSessionEventSink
+  setSessionEventSink,
+  retryBlockedPage,
+  isRecordingMacro
 } = require('./browserEngine');
+const blockDetect = require('./blockDetect');
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
@@ -305,6 +308,7 @@ const CHANNELS = Object.freeze({
   SESSION_RESTORE_RUN: 'session:restore-run',
   SESSION_RESOURCE_USAGE: 'session:resource-usage',
   SESSION_CRASH: 'session:crash', // main -> renderer push
+  SESSION_BLOCKED: 'session:blocked', // main -> renderer push
   MEMORY_PRESSURE: 'system:memory-pressure', // main -> renderer push
 
   BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
@@ -6201,11 +6205,13 @@ async function markSessionCrashed(profileId) {
   } catch (e) { return 0; }
 }
 
-// The sink browserEngine/firefoxEngine call on every launch / close / crash.
+// The sink browserEngine/firefoxEngine call on every launch / close / crash / block page.
 function handleSessionEvent(evt) {
   if (!evt || !evt.type) return;
   const pid = (evt.profileId != null) ? Number(evt.profileId) : (Number.isFinite(Number(evt.sessionId)) ? Number(evt.sessionId) : null);
   if (evt.type === 'launched') { markSessionLaunched(pid, evt.engine).catch(() => {}); return; }
+  if (evt.type === 'blocked') { onSessionBlocked(evt).catch(() => {}); return; }
+  if (pid != null) apiDrivenProfiles.delete(pid); // closed or crashed: no script drives it any more
   if (evt.type === 'closed') {
     if (evt.reason === 'shutdown') return; // app quitting - leave the row 'running' so it can be restored next launch
     markSessionClosed(pid).catch(() => {});
@@ -6236,6 +6242,160 @@ async function onSessionCrashed(profileId) {
     }
   }
   emitSessionCrash({ profileId: Number(profileId), title, crashCount, restarted });
+}
+
+// ---- Switch proxy when a site blocks a profile ----
+// browserEngine reports a block page that did not clear by itself. Every block is logged with the
+// proxy that met it ('proxy.blocked' rows: proxyId, provider, site, kind, action; the vendor
+// scoreboard reads them). With browser.switchProxyOnBlock on, the profile then gets a new IP from
+// its vendor or a better spare proxy, and the page opens again.
+const blockSwitchTimes = new Map(); // profileId -> times of automatic changes, for the loop guard
+const blockSwitchInFlight = new Set(); // profileIds being switched right now
+const apiDrivenProfiles = new Set(); // profileIds started over the Local API: a script drives them
+
+function emitSessionBlocked(data) {
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.SESSION_BLOCKED, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
+}
+
+// A macro, parallel run, warm-up, recording or Local API script is driving this profile; closing
+// its browser or changing its IP would break that run.
+function profileDrivenByAutomation(profileId) {
+  const id = Number(profileId);
+  if (apiDrivenProfiles.has(id) || profilesInParallelRun().has(id)) return true;
+  for (const c of macroRuns.values()) if (Number(c.profileId) === id) return true;
+  for (const r of warmerRuns.values()) if ((r.profileIds || []).some((p) => Number(p) === id)) return true;
+  return isRecordingMacro(String(id));
+}
+
+// A rotation pool picks the launch proxy, so changing the profile's own proxy would not change
+// the next launch. Same conditions as pickRotationProxy, without moving its cursor.
+async function profileUsesRotationPool(profileId) {
+  if ((await resolveProxyPolicyMode(profileId)) === 'sticky') return false;
+  const cfg = ((await readSetting('proxyRotation', {})) || {})[profileId];
+  return Boolean(cfg && cfg.enabled && Array.isArray(cfg.proxyIds) && cfg.proxyIds.length);
+}
+
+async function onSessionBlocked(evt) {
+  const profileId = Number(evt.profileId);
+  if (!Number.isInteger(profileId) || profileId < 1) return;
+  const db = getPrisma();
+  const profile = await db.profile.findUnique({ where: { id: profileId }, include: { proxy: true } });
+  if (!profile || profile.deletedAt) return;
+  // Only Chromium sessions are watched (Firefox has no CDP); skip anything else that reports.
+  if (normalizeBrowserCore(profile.browserCore) === BROWSER_CORE.FIREFOX) return;
+  const proxyId = Number.isInteger(evt.proxyId) ? evt.proxyId : null;
+  const proxy = proxyId != null ? await db.proxy.findUnique({ where: { id: proxyId } }).catch(() => null) : null;
+  const site = blockDetect.siteOf(evt.url);
+  const kind = String(evt.kind || 'unknown');
+
+  let outcome;
+  if (blockSwitchInFlight.has(profileId)) {
+    outcome = { action: 'none', reason: 'inProgress' };
+  } else {
+    blockSwitchInFlight.add(profileId);
+    try { outcome = await respondToBlock(evt, profile, proxy); }
+    catch (e) { outcome = { action: 'none', reason: 'failed' }; }
+    finally { blockSwitchInFlight.delete(profileId); }
+  }
+
+  const newProxy = outcome.newProxy || null;
+  await logAudit('proxy.blocked', {
+    profileId,
+    detail: {
+      proxyId: proxy ? proxy.id : null,
+      provider: proxy ? deriveProvider(proxy) : null,
+      proxyName: proxy ? proxy.name : null,
+      site,
+      kind,
+      action: outcome.action,
+      reason: outcome.reason || null,
+      newProxyId: newProxy ? newProxy.id : null,
+      newProxyName: newProxy ? newProxy.name : null
+    }
+  });
+  // No toast while a run drives the profile: a warm-up over many profiles would flood the screen,
+  // and the run's own log shows the failed page.
+  if (outcome.reason === 'busy') return;
+  emitSessionBlocked({
+    profileId, title: profile.title || `Profile ${profileId}`, site, kind,
+    action: outcome.action, reason: outcome.reason || null, limit: blockDetect.SWITCH_LIMIT,
+    proxyName: proxy ? proxy.name : null, newProxyName: newProxy ? newProxy.name : null
+  });
+}
+
+// Tries, in order: a new IP from the vendor (rotation link or DataImpulse sticky port), then a
+// better spare proxy. Returns { action: 'rotated' | 'switched' | 'none', reason, newProxy }.
+// Automatic changes act with the active member's rights, like the same actions from the UI.
+async function respondToBlock(evt, profile, proxy) {
+  const id = profile.id;
+  const settings = await getGlobalSettings().catch(() => ({}));
+  const enabled = !(settings.browser && settings.browser.switchProxyOnBlock === false);
+  if (enabled && authGate.decide(CHANNELS.PROFILE_LAUNCH, await ipcAuthState())) return { action: 'none', reason: 'signedOut' };
+  const now = Date.now();
+  const times = blockDetect.recentSwitches(blockSwitchTimes.get(id), now);
+  const plan = blockDetect.planBlockResponse({
+    enabled,
+    hasProxy: Boolean(proxy),
+    busy: profileDrivenByAutomation(id),
+    withinBudget: blockDetect.withinSwitchBudget(times, now),
+    canRotate: Boolean(proxy) && (Boolean(proxy.rotationUrl) || isDataImpulseSticky(proxy)),
+    poolInUse: Boolean(proxy) && (proxy.id !== profile.proxyId || await profileUsesRotationPool(id))
+  });
+  if (!plan.steps.length) return { action: 'none', reason: plan.reason };
+
+  const retryUrl = blockDetect.retryUrlFor(evt.url);
+  let reason = 'failed';
+  for (const step of plan.steps) {
+    try {
+      if (step === 'rotate') {
+        const res = await rotateProxyIp({ id: proxy.id });
+        if (!res || res.ok === false) { reason = 'failed'; continue; }
+        blockSwitchTimes.set(id, [...times, now]);
+        await sleepMs(blockDetect.ROTATE_SETTLE_MS);
+        await retryBlockedPage(evt.sessionId, evt.url, retryUrl);
+        return { action: 'rotated' };
+      }
+      if (step === 'swap') {
+        const swapped = await swapProxyAfterBlock(profile, evt, retryUrl);
+        if (swapped) { blockSwitchTimes.set(id, [...times, now]); return swapped; }
+        reason = 'noSpare';
+      }
+    } catch (e) {
+      reason = (e && e.code === 'FORBIDDEN') ? 'noPermission' : 'failed';
+      console.warn(`[SG][block] profile ${id}: ${step} failed - ${(e && e.message) || e}`);
+    }
+  }
+  return { action: 'none', reason };
+}
+
+// The CAPTCHA score's 'swap-proxy' fix for a running profile: the same permission checks, spare
+// proxies and scoring, with the blocked proxy counted as failing. The browser closes, the profile
+// moves to the spare and opens again on the blocked page. Null when no spare is better.
+async function swapProxyAfterBlock(profile, evt, retryUrl) {
+  const id = profile.id;
+  await requirePermission('profiles.edit');
+  await assertCanAccessProfile(id, { requireEdit: true });
+  const db = getPrisma();
+  const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
+  const ctx = blockDetect.blockedProxyContext((await captchaContexts(db, [profile])).get(id));
+  const best = captchaScore.bestReplacement(profile, ctx, candidates);
+  if (!best) return null;
+  await db.profile.update({
+    where: { id },
+    data: { ...best.profileFields, proxyId: best.proxy.id, proxyInfoString: buildProxyInfoString(best.proxy), systemProxyBehavior: 'PROFILE_PROXY' }
+  });
+  await closeAnySession(evt.sessionId).catch(() => {});
+  reconcileProfileLocks();
+  // Same pause as a crash restart, so Chrome releases the profile folder first.
+  await sleepMs(1500);
+  try {
+    // The Chrome engine opens its own start page, so the blocked page is opened after launch.
+    const session = await launchProfileById(id, 'about:blank');
+    if (session && session.sessionId) await retryBlockedPage(session.sessionId, null, retryUrl);
+  } catch (e) {
+    return { action: 'switched', reason: 'notReopened', newProxy: best.proxy };
+  }
+  return { action: 'switched', reason: null, newProxy: best.proxy };
 }
 
 // Restore candidates: profiles whose SessionState is still 'running' (open at the last exit or
@@ -7151,6 +7311,9 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     // Off = Chrome's normal default (third-party cookies allowed outside Incognito),
     // which CAPTCHA providers rely on. See browserEngine.ensureCookiePolicyPref.
     blockThirdPartyCookies: false,
+    // When a site shows a block or CAPTCHA wall, rotate the IP or move the profile to a better
+    // spare proxy and open the page again (Chrome-based profiles; capped per profile per hour).
+    switchProxyOnBlock: true,
     enableVirtualCamera: false,
     mobileSimulation: false,
     secureAccess: false,
@@ -11409,7 +11572,7 @@ async function runMacroOnProfile(payload, event) {
 
   const { sessionId, launched } = await ensureProfileSession(profileId);
   const runId = `macro-${Date.now()}`;
-  const control = { paused: false, aborted: false, ownerMemberId: currentMemberId };
+  const control = { paused: false, aborted: false, profileId, ownerMemberId: currentMemberId };
   macroRuns.set(runId, control);
 
   // Live progress stream (mirrors the warmer-progress pattern). The scheduler runs
@@ -12427,7 +12590,12 @@ function registerIpcHandlers() {
   // Softglaze Pro - wire the local REST API to the launch pipeline + settings,
   // then start it if the user has it enabled. Loopback-only; off by default.
   localApi.configure({
-    launchProfileById,
+    // A profile started over the API is driven by the caller's script, so a block must not switch it.
+    launchProfileById: async (id, startUrl, opts) => {
+      const res = await launchProfileById(id, startUrl, opts);
+      apiDrivenProfiles.add(Number(id));
+      return res;
+    },
     // Slim, non-secret profile list for GET /api/v1/profiles (no proxy passwords).
     readProfiles: async () => {
       const rows = await getPrisma().profile.findMany({ where: { deletedAt: null }, orderBy: { id: 'asc' } });

@@ -21,6 +21,7 @@ const PERSONA_AUTOFILL_RUN_SOURCE = buildAutofillRunSource();
 const { startSocksAuthRelay } = require('./socksRelay');
 const { startHttpAuthRelay } = require('./httpRelay');
 const { GEOJS_URL, normalizeGeoJs, pickGeoConsensus } = require('./proxyVendorUtils');
+const blockDetect = require('./blockDetect');
 
 // Puppeteer defaults a page can observe: webdriver/infobar, popup blocking, IPC flood throttling,
 // forced sRGB, missing component extensions. Background-throttling switches stay so runners do not
@@ -2647,6 +2648,9 @@ async function launchProfileSessionNow(options = {}) {
 
   const resolvedProxy = parseProxyInput(options.proxy || options.proxyInfoString);
   const proxyLabel = resolvedProxy ? `${resolvedProxy.type} ${resolvedProxy.host}:${resolvedProxy.port}` : 'Direct (No Proxy)';
+  // The saved proxy this session runs on (a rotation pool may pick one other than the profile's), so
+  // a block is charged to the proxy that was really used.
+  const sessionProxyId = (options.proxy && typeof options.proxy === 'object' && Number.isInteger(options.proxy.id)) ? options.proxy.id : null;
 
   if (browserSettings.onlyOpenWithProxy && !resolvedProxy) {
     throw new Error('This profile is set to only open with an available proxy, but no proxy is configured.');
@@ -3252,6 +3256,7 @@ const rootCdp = await browser.target().createCDPSession();
   };
 
   await applyToPage(page);
+  watchPageForBlocks(page, profileId, sessionProxyId);
   if (injectionDegraded) {
     console.error('[SG][fingerprint] WARNING: profile', (title || profileId),
       'launched WITHOUT full fingerprint masking - the real UA/timezone/devices may be exposed.');
@@ -3280,6 +3285,7 @@ const rootCdp = await browser.target().createCDPSession();
       // that never fires framenavigated, so the tab would load forever. authenticate() answers it in flight.
       if (proxyCreds) await newPage.authenticate(proxyCreds).catch(() => {});
       await applyToPage(newPage, true).catch(() => {});
+      watchPageForBlocks(newPage, profileId, sessionProxyId);
       // A new tab usually starts on the internal NTP (skipped above), so apply once it reaches a real site
       // (idempotent). The .catch keeps a transient CDP error from becoming an unhandledRejection.
       newPage.on('framenavigated', (frame) => {
@@ -3352,6 +3358,7 @@ const rootCdp = await browser.target().createCDPSession();
     injectionOk: !injectionDegraded,
     geoWarning,
     socksRelay, // local auth relay (or null), closed when the session ends
+    openTab: hOpenTab, // opens a page in a new tab with proxy auth (retryBlockedPage)
     createdAt: new Date()
   });
   sessionRegistered = true;
@@ -3399,6 +3406,107 @@ async function navigateSession(sessionId, url, options = {}) {
   } catch (e) {
     return false;
   }
+}
+
+// ---- Block pages ----
+// Watches each tab's main documents for block and challenge pages (blockDetect) and reports a
+// confirmed one as a 'blocked' session event; ipcHandlers decides what to do about it.
+const blockWatch = new WeakMap(); // page -> { seen, last, cdp }; seen = blocked URLs reported or in their grace period
+
+// The tab title from its navigation entry. No script runs in the page, so this adds no
+// Runtime.enable on the minimal-CDP engine.
+async function tabTitle(page, state) {
+  try {
+    if (!state.cdp) state.cdp = await page.target().createCDPSession();
+    const history = await state.cdp.send('Page.getNavigationHistory');
+    const entry = history && Array.isArray(history.entries) ? history.entries[history.currentIndex] : null;
+    return entry && entry.title ? String(entry.title) : '';
+  } catch (e) {
+    state.cdp = null;
+    return '';
+  }
+}
+
+function watchPageForBlocks(page, profileId, proxyId) {
+  if (!page || profileId == null || blockWatch.has(page)) return;
+  const sessionId = String(profileId);
+  const state = { seen: new Set(), last: null, cdp: null };
+  blockWatch.set(page, state);
+
+  const report = async (doc, verdict) => {
+    state.seen.add(doc.url);
+    if (!verdict.hard) {
+      // A good IP often passes a challenge by itself within seconds; only a page still blocked
+      // after the grace period counts.
+      await sleep(blockDetect.GRACE_MS);
+      if (page.isClosed()) return;
+      const cur = state.last || doc;
+      const again = blockDetect.classifyBlock({ url: page.url(), status: cur.status, headers: cur.headers, title: await tabTitle(page, state) });
+      if (!again.blocked) { state.seen.delete(doc.url); return; }
+    }
+    // A start-up tab can be blocked before the session is registered; a tab of a session that has
+    // since closed (or been relaunched under the same id) reports nothing.
+    const live = () => { const s = activeSessions.get(sessionId); return Boolean(s && s.browser === page.browser()); };
+    for (let i = 0; i < 60 && !live() && !page.isClosed() && page.browser().isConnected(); i += 1) await sleep(1000);
+    if (page.isClosed() || !live()) return;
+    emitSessionEvent({ type: 'blocked', sessionId, profileId: Number(profileId), proxyId, url: doc.url, kind: verdict.kind });
+  };
+
+  const inspect = async (withTitle) => {
+    const doc = state.last;
+    if (!doc || state.seen.has(doc.url)) return;
+    const title = withTitle ? await tabTitle(page, state) : '';
+    if (state.last !== doc || state.seen.has(doc.url)) return; // replaced or already claimed meanwhile
+    const verdict = blockDetect.classifyBlock({ ...doc, title });
+    if (verdict.blocked) await report(doc, verdict);
+  };
+
+  // Main-frame documents only: a CAPTCHA iframe inside a normal page is not a block.
+  page.on('response', (res) => {
+    try {
+      const req = res.request();
+      if (!req.isNavigationRequest() || req.frame() !== page.mainFrame()) return;
+      const url = res.url();
+      if (!/^https?:/i.test(url)) return;
+      state.last = { url, status: res.status(), headers: res.headers() };
+      inspect(false).catch(() => {});
+    } catch (e) { /* a closing tab */ }
+  });
+  // Title-based signals need the parsed document.
+  page.on('domcontentloaded', () => { inspect(true).catch(() => {}); });
+}
+
+// Opens a blocked page again in a running session. With blockedUrl: reloads the tab that showed it
+// (re-armed, so a block that persists is reported once more), or nothing if that tab is gone.
+// Without (a freshly relaunched session): a blank first tab, else a new tab.
+async function retryBlockedPage(sessionId, blockedUrl, retryUrl) {
+  const session = activeSessions.get(String(sessionId || '').trim());
+  const url = String(retryUrl || '');
+  if (!session || !session.browser || !/^https?:\/\//i.test(url)) return false;
+  let target = null;
+  if (blockedUrl) {
+    let pages = [];
+    try { pages = await session.browser.pages(); } catch (e) { pages = []; }
+    target = pages.find((p) => { const w = blockWatch.get(p); return w && w.seen.has(blockedUrl) && !p.isClosed(); }) || null;
+    if (!target) return false;
+  } else if (session.page && !session.page.isClosed() && /^(about:blank)?$/.test(session.page.url())) {
+    target = session.page;
+  }
+  if (target) {
+    const w = blockWatch.get(target);
+    if (w && blockedUrl) w.seen.delete(blockedUrl);
+    try {
+      await target.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  if (typeof session.openTab === 'function') {
+    await session.openTab(url);
+    return true;
+  }
+  return false;
 }
 
 // ---- Cookie Robot / Session Warmer (Pro) ----
@@ -4325,6 +4433,11 @@ async function stopMacroRecording(sessionId) {
   return { recording: false, steps: rec.steps };
 }
 
+function isRecordingMacro(sessionId) {
+  const rec = macroRecorders.get(String(sessionId || '').trim());
+  return Boolean(rec && !rec.stopped);
+}
+
 function listActiveSessions() {
   return Array.from(activeSessions.entries()).map(([sessionId, session]) => ({
     id: sessionId,
@@ -4387,6 +4500,8 @@ module.exports = {
   listSessionPids,
   setSessionEventSink,
   navigateSession,
+  retryBlockedPage,
+  isRecordingMacro,
   runCookieRobot,
   warmInteract,
   runMacro,
