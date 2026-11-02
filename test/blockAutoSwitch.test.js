@@ -241,7 +241,8 @@ test('the renderer is told on its own push channel', () => {
   assert.match(IPC, /w\.webContents\.send\(CHANNELS\.SESSION_BLOCKED, data\)/);
   assert.match(PRELOAD, /onBlocked: \(callback\) => \{/);
   assert.match(read('src/renderer/lib/softglazeApi.js'), /onBlocked: \(cb\) => getSoftglazeApi\(\)\.sessions\.onBlocked\(cb\)/);
-  assert.match(read('src/renderer/pages/DashboardPage.jsx'), /softglazeApi\.sessions\.onBlocked\(/);
+  assert.match(read('src/renderer/components/ResilienceToasts.jsx'), /softglazeApi\.sessions\.onBlocked\(/);
+  assert.match(read('src/renderer/components/AppShell.jsx'), /<ResilienceToasts \/>/, 'the notice shows on every page, not only the Dashboard');
 });
 
 test('the Settings page has the switch', () => {

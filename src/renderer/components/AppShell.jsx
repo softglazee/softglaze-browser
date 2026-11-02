@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { renderFooterNodes } from '@/lib/footerText.jsx';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
+import ResilienceToasts from '@/components/ResilienceToasts.jsx';
 import CommandPalette from '@/components/CommandPalette.jsx';
 import OnboardingWizard from '@/components/OnboardingWizard.jsx';
 import UserMenuPopover from '@/components/UserMenuPopover.jsx';
@@ -358,6 +359,7 @@ export default function AppShell({ children }) {
         <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-6">{children}</div>
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>
+      <ResilienceToasts />
       <CommandPalette />
       <OnboardingWizard />
     </div>
