@@ -110,6 +110,29 @@ test('an account with no residential package still gets the IPv6 view', async ()
   assert.equal(out.products[0].active, 1);
 });
 
+// Live, 2 Nov 2026: an account holding only IPv6 got this v2 wording from resident/package,
+// and Load account failed because only the v1 "Tarif not found" was recognised.
+test('an IPv6-only account still loads with the v2 "no package" wording', async () => {
+  const a = adapter({ 'GET proxy/list': ok({ ipv6: [IPV6_ITEM] }), 'GET resident/package': fail('Make order with resident first') });
+  const out = await a.lookupProxySeller({ token: KEY });
+  assert.equal(out.residential, false);
+  assert.deepEqual(out.lists, []);
+  assert.equal(out.products[0].active, 1);
+  assert.ok(!a.calls.some((c) => c.rel === 'resident/lists'), 'no list lookup without a package');
+});
+
+test('the geo database reads as the v2 JSON envelope (live shape, 2 Nov 2026)', async () => {
+  const a = adapter({ 'GET proxy/list': ok({}), 'GET resident/package': fail('Make order with resident first'), 'GET resident/geo': ok(GEO_DB) });
+  const out = await a.lookupProxySeller({ token: KEY, groupby: 'country' });
+  assert.deepEqual(out.geo, [{ key: 'AD', label: 'Andorra' }]);
+});
+
+test('a residential pull without a package names the reason under the v2 wording', async () => {
+  const a = adapter({ 'GET resident/package': fail('Make order with resident first') });
+  await assert.rejects(a.fetchProxySellerPool({ token: KEY, country: 'US', count: 1 }), /no active residential package/);
+  assert.equal(a.calls.length, 1, 'nothing is created');
+});
+
 test('a new list is created as documented and its array geo still labels the rows', async () => {
   const a = adapter({ 'GET resident/package': ok(PACKAGE), 'POST resident/list/add': ok(CREATED), 'GET proxy/download/resident': DOWNLOAD });
   const rows = await a.fetchProxySellerPool({ token: KEY, country: 'ad', state: 'Andorra la Vella', city: 'Andorra la Vella', count: 2, poolType: 'sticky' });

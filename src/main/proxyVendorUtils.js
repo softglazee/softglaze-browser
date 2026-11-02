@@ -122,7 +122,9 @@ function unwrapProxySeller(text, what, key) {
   }
   if (/error api key/i.test(msg)) throw new Error('Proxy-Seller: the API key was rejected. Copy it again from the dashboard, API section.');
   if (/ip not allowed/i.test(msg)) throw new Error('Proxy-Seller: this API key only accepts calls from whitelisted IPs, and this machine is not one of them. Add its IP in the dashboard API settings.');
-  if (/tarif not found/i.test(msg)) throw new Error('Proxy-Seller: this account has no active residential package.');
+  // v1 said "Tarif not found". v2 says "Make order with resident first" (live, 2 Nov 2026,
+  // on an account holding only IPv6). Both mean the same thing.
+  if (/tarif not found|make order with resident/i.test(msg)) throw new Error('Proxy-Seller: this account has no active residential package.');
   if (/request limit/i.test(msg)) throw new Error('Proxy-Seller: the API rate limit was reached. Wait a minute and try again.');
   throw new Error(`Proxy-Seller ${what}: ${maskProxySellerKey(msg, key)}`);
 }
