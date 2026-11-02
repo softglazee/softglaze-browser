@@ -1,0 +1,43 @@
+{
+  "title": "Vendor scoreboard",
+  "note": "From your own proxy checks over the last {{days}} days.",
+  "refresh": "Refresh",
+  "show": "Show the vendor scoreboard",
+  "hide": "Hide the vendor scoreboard",
+  "loading": "Loading the scoreboard...",
+  "loadError": "Could not load the scoreboard: {{message}}",
+  "empty": "No proxies yet. Pull some from a provider or add your own, then check them to see how each vendor does.",
+  "truncated": "Only the newest {{max}} checks were counted.",
+  "scoreHelp": "Score out of 100. Check success counts most, then how few proxies are on a blocklist, then speed, then site blocks per proxy. Rows with fewer than {{min}} checks are not scored.",
+  "own": "Your own proxies",
+  "free": "Free proxies",
+  "col": {
+    "vendor": "Vendor",
+    "score": "Score",
+    "success": "Check success",
+    "speed": "Median speed",
+    "blocklisted": "Blocklisted",
+    "datacenter": "Datacenter",
+    "blocks": "Site blocks",
+    "proxies": "Proxies",
+    "lastChecked": "Last checked"
+  },
+  "sortBy": "Sort by {{column}}",
+  "notEnough": "Not enough data",
+  "notEnoughTitle_one": "Only {{count}} check in the last {{days}} days. A score needs {{min}}.",
+  "notEnoughTitle_other": "Only {{count}} checks in the last {{days}} days. A score needs {{min}}.",
+  "level": {
+    "good": "Good",
+    "fair": "Fair",
+    "poor": "Poor"
+  },
+  "scoreTitle": "{{level}}: {{score}} out of 100",
+  "checks_one": "{{count}} check",
+  "checks_other": "{{count}} checks",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} working",
+  "noData": "No data",
+  "never": "Never",
+  "openProvider": "Open {{name}}",
+  "topSites": "Most blocks: {{sites}}"
+}

@@ -56,12 +56,15 @@ export const softglazeApi = {
     onCheckProgress: (cb) => getSoftglazeApi().proxies.onCheckProgress(cb),
     getProviderCreds: (provider) => getSoftglazeApi().proxies.getProviderCreds(provider),
     saveProviderCreds: (payload) => getSoftglazeApi().proxies.saveProviderCreds(payload),
+    providerAccount: (payload) => getSoftglazeApi().proxies.providerAccount(payload),
     rotateIp: (payload) => getSoftglazeApi().proxies.rotateIp(payload),
     testAll: () => getSoftglazeApi().proxies.testAll(),
     autoGroup: (level) => getSoftglazeApi().proxies.autoGroup(level),
     healthHistory: (id) => getSoftglazeApi().proxies.healthHistory(id),
     // Recent checks grouped per proxy - powers the Proxy Pool history-cards row.
-    recentHealth: (opts) => getSoftglazeApi().proxies.recentHealth(opts)
+    recentHealth: (opts) => getSoftglazeApi().proxies.recentHealth(opts),
+    // Per-vendor success rate, speed and blocklist rate from the last 7 days of checks.
+    vendorScoreboard: () => getSoftglazeApi().proxies.vendorScoreboard()
   },
   proxyGroups: {
     list: () => getSoftglazeApi().proxyGroups.list(),
@@ -109,6 +112,9 @@ export const softglazeApi = {
     liveLeak: (id) => getSoftglazeApi().profiles.liveLeak(id),
     captchaScores: (ids) => getSoftglazeApi().profiles.captchaScores(ids),
     captchaFix: (id, action) => getSoftglazeApi().profiles.captchaFix(id, action),
+    captchaFixBulk: (ids) => getSoftglazeApi().profiles.captchaFixBulk(ids),
+    prelaunchCheck: (ids) => getSoftglazeApi().profiles.prelaunchCheck(ids),
+    warmStats: (ids) => getSoftglazeApi().profiles.warmStats(ids),
     activity: (id) => getSoftglazeApi().profiles.activity(id),
     get2faToken: (id) => getSoftglazeApi().profiles.get2faToken(id),
     bulkSynchronize: (ids) => getSoftglazeApi().profiles.bulkSynchronize(ids),
@@ -150,6 +156,7 @@ export const softglazeApi = {
     restoreRun: (payload) => getSoftglazeApi().sessions.restoreRun(payload),
     resourceUsage: () => getSoftglazeApi().sessions.resourceUsage(),
     onCrash: (cb) => getSoftglazeApi().sessions.onCrash(cb),
+    onBlocked: (cb) => getSoftglazeApi().sessions.onBlocked(cb),
     onMemoryPressure: (cb) => getSoftglazeApi().sessions.onMemoryPressure(cb)
   },
   members: {
@@ -316,6 +323,8 @@ export const softglazeApi = {
     runParallel: (payload) => getSoftglazeApi().automation.runParallel(payload),
     parallelStatus: (runId) => getSoftglazeApi().automation.parallelStatus(runId),
     pickDataFile: () => getSoftglazeApi().automation.pickDataFile(),
+    getWarmAutopilot: () => getSoftglazeApi().automation.getWarmAutopilot(),
+    setWarmAutopilot: (payload) => getSoftglazeApi().automation.setWarmAutopilot(payload),
     onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback),
     onMacroProgress: (callback) => getSoftglazeApi().automation.onMacroProgress(callback),
     onRunProgress: (callback) => getSoftglazeApi().automation.onRunProgress(callback)

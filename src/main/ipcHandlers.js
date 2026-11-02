@@ -34,8 +34,11 @@ const {
   configurePersonaBridge,
   pruneDeadSessions,
   listSessionPids,
-  setSessionEventSink
+  setSessionEventSink,
+  retryBlockedPage,
+  isRecordingMacro
 } = require('./browserEngine');
+const blockDetect = require('./blockDetect');
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
@@ -53,6 +56,10 @@ const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
 const profileData = require('./profileData');
 const captchaScore = require('./captchaScore');
+const launchCheck = require('./launchCheck');
+const vendorScoreboard = require('./vendorScoreboard');
+const warmAutopilot = require('./warmAutopilot');
+const providerAccount = require('./providerAccount');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
 const licensePolicy = require('./licensePolicy');
@@ -130,6 +137,7 @@ const CHANNELS = Object.freeze({
   PROXY_VENDOR_LOOKUP: 'proxy:vendor-lookup',
   PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
+  PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_CHECK_STREAM: 'proxy:check-stream',
@@ -146,6 +154,7 @@ const CHANNELS = Object.freeze({
   PROXY_AUTO_GROUP: 'proxy:auto-group',
   PROXY_HEALTH_HISTORY: 'proxy:health-history',
   PROXY_RECENT_HEALTH: 'proxy:recent-health',
+  PROXY_VENDOR_SCOREBOARD: 'proxy:vendor-scoreboard',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -181,6 +190,9 @@ const CHANNELS = Object.freeze({
   PROFILE_LIVE_LEAK: 'profile:live-leak',
   PROFILE_CAPTCHA_SCORES: 'profile:captcha-scores',
   PROFILE_CAPTCHA_FIX: 'profile:captcha-fix',
+  PROFILE_CAPTCHA_FIX_BULK: 'profile:captcha-fix-bulk',
+  PROFILE_PRELAUNCH_CHECK: 'profile:prelaunch-check',
+  PROFILE_WARM_STATS: 'profile:warm-stats',
   PROFILE_ACTIVITY: 'profile:activity',
   // Softglaze Premium
   PROFILE_GET_2FA_TOKEN: 'profile:get-2fa-token',
@@ -305,6 +317,7 @@ const CHANNELS = Object.freeze({
   SESSION_RESTORE_RUN: 'session:restore-run',
   SESSION_RESOURCE_USAGE: 'session:resource-usage',
   SESSION_CRASH: 'session:crash', // main -> renderer push
+  SESSION_BLOCKED: 'session:blocked', // main -> renderer push
   MEMORY_PRESSURE: 'system:memory-pressure', // main -> renderer push
 
   BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
@@ -337,6 +350,8 @@ const CHANNELS = Object.freeze({
   AUTOMATION_PARALLEL_STATUS: 'automation:parallel-status', // is a parallel run still going (backstop for a lost 'done' frame)
   AUTOMATION_RUN_PROGRESS: 'automation:run-progress', // main -> renderer stream
   AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
+  AUTOMATION_WARM_AUTOPILOT_GET: 'automation:warm-autopilot-get',
+  AUTOMATION_WARM_AUTOPILOT_SET: 'automation:warm-autopilot-set',
 
   // Softglaze Pro - local developer API
   API_TOKEN_LIST: 'api:token-list',
@@ -3292,6 +3307,45 @@ async function vendorLookup(payload) {
   });
 }
 
+// ---- Provider account status (plan, expiry, traffic, balance) for the provider card ----
+// Uses the saved credentials and returns only the summary, never a secret. The last result per
+// provider is kept in the providerAccountCache setting, which only this gated handler reads.
+async function readSavedProviderCreds(provider) {
+  const stored = (await readProxyProviderCredMap())[provider];
+  if (!stored || typeof stored !== 'object') return null;
+  const out = {};
+  for (const f of PROXY_CRED_PLAIN_FIELDS) if (stored[f] != null) out[f] = stored[f];
+  for (const f of PROXY_CRED_SECRET_FIELDS) if (stored[f] != null) out[f] = secretStore.open(stored[f]);
+  return out;
+}
+
+async function readProviderAccountCache() {
+  const cache = await readSetting('providerAccountCache', {});
+  return cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : {};
+}
+
+async function getProviderAccount(payload) {
+  await requirePermission('proxies.manage');
+  const input = requireObject(payload);
+  const provider = requiredString(input.provider, 'Provider').toLowerCase();
+  if (!PROXY_VENDORS[provider]) throw new Error('Unknown proxy provider.');
+  const supported = Boolean(providerAccount.accountAdapterFor(provider));
+  const dashboardUrl = providerAccount.dashboardUrlFor(provider);
+  if (input.cachedOnly || !supported) {
+    const cached = supported ? (await readProviderAccountCache())[provider] : null;
+    return { provider, supported, dashboardUrl, account: cached && typeof cached === 'object' ? cached : null };
+  }
+  const creds = await readSavedProviderCreds(provider);
+  if (!creds) throw new Error(`${PROXY_VENDORS[provider]}: no saved credentials yet. Enter them on the Pull tab and save them first.`);
+  const res = await providerAccount.checkProviderAccount(provider, creds, (url, opts = {}) => httpRequestText(url, {
+    method: 'GET', headers: opts.headers || {}, timeoutMs: 20000, maxBytes: 8_000_000
+  }));
+  const account = { ...res.account, checkedAt: new Date().toISOString() };
+  // Re-read just before writing so two checks at once keep both results.
+  await writeSetting('providerAccountCache', { ...(await readProviderAccountCache()), [provider]: account });
+  return { provider, supported: true, dashboardUrl, account };
+}
+
 // ---- 2extract (residential + mobile, gateway-minted) ----
 // HTTP or SOCKS5 is set per proxy in the 2extract dashboard on one port, so Protocol must match it.
 // The /change_ip link carries the proxy password, so it is never stored. Not live-key tested.
@@ -6201,11 +6255,13 @@ async function markSessionCrashed(profileId) {
   } catch (e) { return 0; }
 }
 
-// The sink browserEngine/firefoxEngine call on every launch / close / crash.
+// The sink browserEngine/firefoxEngine call on every launch / close / crash / block page.
 function handleSessionEvent(evt) {
   if (!evt || !evt.type) return;
   const pid = (evt.profileId != null) ? Number(evt.profileId) : (Number.isFinite(Number(evt.sessionId)) ? Number(evt.sessionId) : null);
   if (evt.type === 'launched') { markSessionLaunched(pid, evt.engine).catch(() => {}); return; }
+  if (evt.type === 'blocked') { onSessionBlocked(evt).catch(() => {}); return; }
+  if (pid != null) apiDrivenProfiles.delete(pid); // closed or crashed: no script drives it any more
   if (evt.type === 'closed') {
     if (evt.reason === 'shutdown') return; // app quitting - leave the row 'running' so it can be restored next launch
     markSessionClosed(pid).catch(() => {});
@@ -6236,6 +6292,160 @@ async function onSessionCrashed(profileId) {
     }
   }
   emitSessionCrash({ profileId: Number(profileId), title, crashCount, restarted });
+}
+
+// ---- Switch proxy when a site blocks a profile ----
+// browserEngine reports a block page that did not clear by itself. Every block is logged with the
+// proxy that met it ('proxy.blocked' rows: proxyId, provider, site, kind, action; the vendor
+// scoreboard reads them). With browser.switchProxyOnBlock on, the profile then gets a new IP from
+// its vendor or a better spare proxy, and the page opens again.
+const blockSwitchTimes = new Map(); // profileId -> times of automatic changes, for the loop guard
+const blockSwitchInFlight = new Set(); // profileIds being switched right now
+const apiDrivenProfiles = new Set(); // profileIds started over the Local API: a script drives them
+
+function emitSessionBlocked(data) {
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.SESSION_BLOCKED, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
+}
+
+// A macro, parallel run, warm-up, recording or Local API script is driving this profile; closing
+// its browser or changing its IP would break that run.
+function profileDrivenByAutomation(profileId) {
+  const id = Number(profileId);
+  if (apiDrivenProfiles.has(id) || profilesInParallelRun().has(id)) return true;
+  for (const c of macroRuns.values()) if (Number(c.profileId) === id) return true;
+  for (const r of warmerRuns.values()) if ((r.profileIds || []).some((p) => Number(p) === id)) return true;
+  return isRecordingMacro(String(id));
+}
+
+// A rotation pool picks the launch proxy, so changing the profile's own proxy would not change
+// the next launch. Same conditions as pickRotationProxy, without moving its cursor.
+async function profileUsesRotationPool(profileId) {
+  if ((await resolveProxyPolicyMode(profileId)) === 'sticky') return false;
+  const cfg = ((await readSetting('proxyRotation', {})) || {})[profileId];
+  return Boolean(cfg && cfg.enabled && Array.isArray(cfg.proxyIds) && cfg.proxyIds.length);
+}
+
+async function onSessionBlocked(evt) {
+  const profileId = Number(evt.profileId);
+  if (!Number.isInteger(profileId) || profileId < 1) return;
+  const db = getPrisma();
+  const profile = await db.profile.findUnique({ where: { id: profileId }, include: { proxy: true } });
+  if (!profile || profile.deletedAt) return;
+  // Only Chromium sessions are watched (Firefox has no CDP); skip anything else that reports.
+  if (normalizeBrowserCore(profile.browserCore) === BROWSER_CORE.FIREFOX) return;
+  const proxyId = Number.isInteger(evt.proxyId) ? evt.proxyId : null;
+  const proxy = proxyId != null ? await db.proxy.findUnique({ where: { id: proxyId } }).catch(() => null) : null;
+  const site = blockDetect.siteOf(evt.url);
+  const kind = String(evt.kind || 'unknown');
+
+  let outcome;
+  if (blockSwitchInFlight.has(profileId)) {
+    outcome = { action: 'none', reason: 'inProgress' };
+  } else {
+    blockSwitchInFlight.add(profileId);
+    try { outcome = await respondToBlock(evt, profile, proxy); }
+    catch (e) { outcome = { action: 'none', reason: 'failed' }; }
+    finally { blockSwitchInFlight.delete(profileId); }
+  }
+
+  const newProxy = outcome.newProxy || null;
+  await logAudit('proxy.blocked', {
+    profileId,
+    detail: {
+      proxyId: proxy ? proxy.id : null,
+      provider: proxy ? deriveProvider(proxy) : null,
+      proxyName: proxy ? proxy.name : null,
+      site,
+      kind,
+      action: outcome.action,
+      reason: outcome.reason || null,
+      newProxyId: newProxy ? newProxy.id : null,
+      newProxyName: newProxy ? newProxy.name : null
+    }
+  });
+  // No toast while a run drives the profile: a warm-up over many profiles would flood the screen,
+  // and the run's own log shows the failed page.
+  if (outcome.reason === 'busy') return;
+  emitSessionBlocked({
+    profileId, title: profile.title || `Profile ${profileId}`, site, kind,
+    action: outcome.action, reason: outcome.reason || null, limit: blockDetect.SWITCH_LIMIT,
+    proxyName: proxy ? proxy.name : null, newProxyName: newProxy ? newProxy.name : null
+  });
+}
+
+// Tries, in order: a new IP from the vendor (rotation link or DataImpulse sticky port), then a
+// better spare proxy. Returns { action: 'rotated' | 'switched' | 'none', reason, newProxy }.
+// Automatic changes act with the active member's rights, like the same actions from the UI.
+async function respondToBlock(evt, profile, proxy) {
+  const id = profile.id;
+  const settings = await getGlobalSettings().catch(() => ({}));
+  const enabled = !(settings.browser && settings.browser.switchProxyOnBlock === false);
+  if (enabled && authGate.decide(CHANNELS.PROFILE_LAUNCH, await ipcAuthState())) return { action: 'none', reason: 'signedOut' };
+  const now = Date.now();
+  const times = blockDetect.recentSwitches(blockSwitchTimes.get(id), now);
+  const plan = blockDetect.planBlockResponse({
+    enabled,
+    hasProxy: Boolean(proxy),
+    busy: profileDrivenByAutomation(id),
+    withinBudget: blockDetect.withinSwitchBudget(times, now),
+    canRotate: Boolean(proxy) && (Boolean(proxy.rotationUrl) || isDataImpulseSticky(proxy)),
+    poolInUse: Boolean(proxy) && (proxy.id !== profile.proxyId || await profileUsesRotationPool(id))
+  });
+  if (!plan.steps.length) return { action: 'none', reason: plan.reason };
+
+  const retryUrl = blockDetect.retryUrlFor(evt.url);
+  let reason = 'failed';
+  for (const step of plan.steps) {
+    try {
+      if (step === 'rotate') {
+        const res = await rotateProxyIp({ id: proxy.id });
+        if (!res || res.ok === false) { reason = 'failed'; continue; }
+        blockSwitchTimes.set(id, [...times, now]);
+        await sleepMs(blockDetect.ROTATE_SETTLE_MS);
+        await retryBlockedPage(evt.sessionId, evt.url, retryUrl);
+        return { action: 'rotated' };
+      }
+      if (step === 'swap') {
+        const swapped = await swapProxyAfterBlock(profile, evt, retryUrl);
+        if (swapped) { blockSwitchTimes.set(id, [...times, now]); return swapped; }
+        reason = 'noSpare';
+      }
+    } catch (e) {
+      reason = (e && e.code === 'FORBIDDEN') ? 'noPermission' : 'failed';
+      console.warn(`[SG][block] profile ${id}: ${step} failed - ${(e && e.message) || e}`);
+    }
+  }
+  return { action: 'none', reason };
+}
+
+// The CAPTCHA score's 'swap-proxy' fix for a running profile: the same permission checks, spare
+// proxies and scoring, with the blocked proxy counted as failing. The browser closes, the profile
+// moves to the spare and opens again on the blocked page. Null when no spare is better.
+async function swapProxyAfterBlock(profile, evt, retryUrl) {
+  const id = profile.id;
+  await requirePermission('profiles.edit');
+  await assertCanAccessProfile(id, { requireEdit: true });
+  const db = getPrisma();
+  const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
+  const ctx = blockDetect.blockedProxyContext((await captchaContexts(db, [profile])).get(id));
+  const best = captchaScore.bestReplacement(profile, ctx, candidates);
+  if (!best) return null;
+  await db.profile.update({
+    where: { id },
+    data: { ...best.profileFields, proxyId: best.proxy.id, proxyInfoString: buildProxyInfoString(best.proxy), systemProxyBehavior: 'PROFILE_PROXY' }
+  });
+  await closeAnySession(evt.sessionId).catch(() => {});
+  reconcileProfileLocks();
+  // Same pause as a crash restart, so Chrome releases the profile folder first.
+  await sleepMs(1500);
+  try {
+    // The Chrome engine opens its own start page, so the blocked page is opened after launch.
+    const session = await launchProfileById(id, 'about:blank');
+    if (session && session.sessionId) await retryBlockedPage(session.sessionId, null, retryUrl);
+  } catch (e) {
+    return { action: 'switched', reason: 'notReopened', newProxy: best.proxy };
+  }
+  return { action: 'switched', reason: null, newProxy: best.proxy };
 }
 
 // Restore candidates: profiles whose SessionState is still 'running' (open at the last exit or
@@ -6840,6 +7050,7 @@ async function captchaContexts(db, rows) {
   const settings = (await getGlobalSettings().catch(() => ({}))).browser || {};
   const root = path.resolve(getRuntimeConfig().profileRoot);
   const hostOs = HOST_OS_LABEL[process.platform] || 'Linux';
+  const warmStats = (await readSetting('warmStats', {})) || {};
   const out = new Map();
   for (const r of rows) {
     out.set(r.id, {
@@ -6847,7 +7058,8 @@ async function captchaContexts(db, rows) {
       sharedWith: r.proxyId ? Math.max(0, (usage.get(r.proxyId) || 1) - 1) : 0,
       settings,
       hostOs,
-      cookieBytes: await profileCookieBytes(r, root)
+      cookieBytes: await profileCookieBytes(r, root),
+      warmRuns: warmStats[r.id] ? Number(warmStats[r.id].runs) || 0 : 0
     });
   }
   return out;
@@ -6899,28 +7111,94 @@ async function captchaFix(payload) {
     return { ok: Boolean(result.success), error: result.success ? null : (result.error || 'The proxy did not answer.') };
   }
   if (action === 'swap-proxy' || action === 'assign-proxy') {
-    // Only proxies no other profile uses, from the pool this member may use, and only one that
-    // scores better than what the profile has now.
-    const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
-    if (!captchaScore.pickReplacementProxy(candidates, profile.proxy)) {
-      const e = new Error('No spare proxy: every working, clean proxy in your pool is already used by a profile. Add or check more proxies, then try again.');
-      e.code = 'NO_SPARE_PROXY';
-      throw e;
-    }
-    const ctx = (await captchaContexts(db, [profile])).get(id);
-    const best = captchaScore.bestReplacement(profile, ctx, candidates);
-    if (!best) {
-      const e = new Error('No better proxy: none of your spare proxies would lower this profile\'s CAPTCHA risk.');
-      e.code = 'NO_BETTER_PROXY';
-      throw e;
-    }
-    await db.profile.update({
-      where: { id },
-      data: { ...best.profileFields, proxyId: best.proxy.id, proxyInfoString: buildProxyInfoString(best.proxy), systemProxyBehavior: 'PROFILE_PROXY' }
-    });
+    const best = await applySpareProxy(db, profile);
     return { ok: true, proxyName: best.proxy.name, score: best.score };
   }
   throw new Error('Unknown fix.');
+}
+
+// Moves a profile to the spare proxy that lowers its CAPTCHA risk most: only proxies no other
+// profile uses, from the pool this member may use. Throws NO_SPARE_PROXY / NO_BETTER_PROXY.
+async function applySpareProxy(db, profile) {
+  const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
+  if (!captchaScore.pickReplacementProxy(candidates, profile.proxy)) {
+    const e = new Error('No spare proxy: every working, clean proxy in your pool is already used by a profile. Add or check more proxies, then try again.');
+    e.code = 'NO_SPARE_PROXY';
+    throw e;
+  }
+  const ctx = (await captchaContexts(db, [profile])).get(profile.id);
+  const best = captchaScore.bestReplacement(profile, ctx, candidates);
+  if (!best) {
+    const e = new Error('No better proxy: none of your spare proxies would lower this profile\'s CAPTCHA risk.');
+    e.code = 'NO_BETTER_PROXY';
+    throw e;
+  }
+  await db.profile.update({
+    where: { id: profile.id },
+    data: { ...best.profileFields, proxyId: best.proxy.id, proxyInfoString: buildProxyInfoString(best.proxy), systemProxyBehavior: 'PROFILE_PROXY' }
+  });
+  return best;
+}
+
+// "Fix all" for many profiles: each gets its own safe setting fixes, then a spare proxy when one
+// lowers its risk. Proxy checks, warm-ups and the workspace cookie switch stay one click each.
+async function captchaFixBulk(payload) {
+  await requirePermission('profiles.edit');
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids).slice(0, 1000);
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
+  const db = getPrisma();
+  const results = [];
+  for (const id of allowed) {
+    const row = { id, applied: [], proxyName: null, error: null, errorCode: null };
+    try {
+      let profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
+      if (!profile || profile.deletedAt) { row.error = 'Profile not found.'; results.push(row); continue; }
+      const score = captchaScore.scoreProfile(profile, (await captchaContexts(db, [profile])).get(id));
+      const fields = {};
+      for (const action of score.fixes) {
+        if (captchaScore.PROFILE_FIELD_FIXES[action]) { Object.assign(fields, captchaScore.PROFILE_FIELD_FIXES[action]); row.applied.push(action); }
+      }
+      if (Object.keys(fields).length) profile = await db.profile.update({ where: { id }, data: fields, include: { proxy: true } });
+      if (score.fixes.includes('swap-proxy') || score.fixes.includes('assign-proxy')) {
+        try {
+          const best = await applySpareProxy(db, profile);
+          row.applied.push('swap-proxy');
+          row.proxyName = best.proxy.name;
+        } catch (e) {
+          if (e.code !== 'NO_SPARE_PROXY' && e.code !== 'NO_BETTER_PROXY') throw e;
+          row.error = e.message;
+          row.errorCode = e.code;
+        }
+      }
+    } catch (e) { row.error = e.message || 'Fix failed.'; row.errorCode = e.code || 'FAILED'; }
+    results.push(row);
+  }
+  return {
+    results,
+    denied,
+    changed: results.filter((r) => r.applied.length).length,
+    swapped: results.filter((r) => r.proxyName).length
+  };
+}
+
+// Mismatches worth stopping a launch for, per profile; empty when the setting is off.
+async function prelaunchCheck(payload) {
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids).slice(0, 500);
+  const settings = await getGlobalSettings().catch(() => ({}));
+  if (settings.browser && settings.browser.checkBeforeLaunch === false) return { enabled: false, issues: {} };
+  if (!ids.length) return { enabled: true, issues: {} };
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  const db = getPrisma();
+  const rows = await db.profile.findMany({ where: { id: { in: allowed } }, include: { proxy: true } });
+  const contexts = await captchaContexts(db, rows);
+  const issues = {};
+  for (const r of rows) {
+    const found = launchCheck.preLaunchIssues(r, contexts.get(r.id));
+    if (found.length) issues[r.id] = found;
+  }
+  return { enabled: true, issues };
 }
 
 // ---- Proxy health: persistence and scheduler ----
@@ -7040,6 +7318,47 @@ async function getRecentProxyHealth(payload) {
   return cards.slice(0, maxProxies);
 }
 
+// ---- Vendor scoreboard ----
+// Success rate, speed and blocklist rate per proxy vendor from this workspace's own checks. Scoped
+// like the pool: a member sees only the proxies they may use, and only those proxies' checks and
+// blocks. The event window is bounded so a large pool still answers quickly.
+const SCOREBOARD_MAX_EVENTS = 50000;
+const SCOREBOARD_MAX_BLOCKS = 20000;
+
+async function getVendorScoreboard() {
+  await requirePermission('proxies.manage');
+  const db = getPrisma();
+  const now = Date.now();
+  const since = new Date(now - vendorScoreboard.WINDOW_MS);
+  const scope = await scopedProxyWhere(undefined);
+  const proxies = await db.proxy.findMany({
+    where: scope,
+    select: { id: true, name: true, provider: true, lastStatus: true, lastBlacklisted: true, lastIsp: true, lastCheckedAt: true }
+  });
+  if (!proxies.length) return { ...vendorScoreboard.buildScoreboard({ now }), truncated: false, maxEvents: SCOREBOARD_MAX_EVENTS };
+  // Unscoped (Owner, Super Admin, single user), every event belongs to a listed proxy or to a
+  // deleted one that buildScoreboard drops, so no id list is sent. A member's query names their ids.
+  const ids = proxies.map((p) => p.id);
+  const eventWhere = scope ? { proxyId: { in: ids }, ts: { gte: since } } : { ts: { gte: since } };
+  const [events, blocks] = await Promise.all([
+    db.proxyHealthEvent.findMany({
+      where: eventWhere,
+      orderBy: { ts: 'desc' },
+      take: SCOREBOARD_MAX_EVENTS,
+      select: { proxyId: true, status: true, latencyMs: true, ts: true }
+    }).catch(() => []),
+    // A block names its proxy inside the JSON detail; buildScoreboard keeps only the listed proxies'.
+    db.activityLog.findMany({
+      where: { action: 'proxy.blocked', createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: SCOREBOARD_MAX_BLOCKS,
+      select: { detail: true, createdAt: true }
+    }).catch(() => [])
+  ]);
+  const board = vendorScoreboard.buildScoreboard({ proxies, events, blocks, now, vendors: PROXY_VENDORS });
+  return { ...board, truncated: events.length >= SCOREBOARD_MAX_EVENTS, maxEvents: SCOREBOARD_MAX_EVENTS };
+}
+
 async function readSetting(key, fallback) {
   try {
     const row = await getPrisma().setting.findUnique({ where: { key } });
@@ -7151,6 +7470,12 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     // Off = Chrome's normal default (third-party cookies allowed outside Incognito),
     // which CAPTCHA providers rely on. See browserEngine.ensureCookiePolicyPref.
     blockThirdPartyCookies: false,
+    // Before a profile opens from the Profiles page, list clear mismatches (OS, GPU, screen,
+    // language, timezone, WebRTC, dead proxy) and offer to fix them.
+    checkBeforeLaunch: true,
+    // When a site shows a block or CAPTCHA wall, rotate the IP or move the profile to a better
+    // spare proxy and open the page again (Chrome-based profiles; capped per profile per hour).
+    switchProxyOnBlock: true,
     enableVirtualCamera: false,
     mobileSimulation: false,
     secureAccess: false,
@@ -7231,6 +7556,38 @@ async function setGlobalSettings(payload) {
   const next = deepMergeSettings(current, input);
   await writeSetting('globalSettings', next);
   return next;
+}
+
+// Provider trial notes record the Super Admin's own vendor testing, so the IPC read leaves them out
+// and the IPC write refuses them for everyone else. Internal callers use the functions above.
+const SUPER_ONLY_GLOBAL_KEYS = Object.freeze(['proxyProviderTrials']);
+
+async function activeIsSuperAdmin() {
+  const m = await getActiveMember();
+  return Boolean(m && m.role === 'SUPER_ADMIN');
+}
+
+function withoutSuperOnlyKeys(settings) {
+  const out = { ...settings };
+  for (const k of SUPER_ONLY_GLOBAL_KEYS) delete out[k];
+  return out;
+}
+
+async function getGlobalSettingsForActor() {
+  const all = await getGlobalSettings();
+  return (await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all);
+}
+
+async function setGlobalSettingsForActor(payload) {
+  const input = requireObject(payload);
+  const isSuper = await activeIsSuperAdmin();
+  if (!isSuper && SUPER_ONLY_GLOBAL_KEYS.some((k) => Object.prototype.hasOwnProperty.call(input, k))) {
+    const err = new Error('Only the Super Admin can track provider trials.');
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+  const next = await setGlobalSettings(input);
+  return isSuper ? next : withoutSuperOnlyKeys(next);
 }
 
 // Saved proxy provider credentials, one workspace-wide Setting blob keyed by provider; secret
@@ -11409,7 +11766,7 @@ async function runMacroOnProfile(payload, event) {
 
   const { sessionId, launched } = await ensureProfileSession(profileId);
   const runId = `macro-${Date.now()}`;
-  const control = { paused: false, aborted: false, ownerMemberId: currentMemberId };
+  const control = { paused: false, aborted: false, profileId, ownerMemberId: currentMemberId };
   macroRuns.set(runId, control);
 
   // Live progress stream (mirrors the warmer-progress pattern). The scheduler runs
@@ -11815,6 +12172,11 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
   // Reuse an already-open session if the profile is running; otherwise launch.
   let sessionId = String(profileId);
   const alreadyOpen = listActiveSessions().some((s) => String(s.sessionId) === sessionId);
+  if (alreadyOpen && opts.skipOpen) {
+    // The autopilot never drives a browser someone opened after it picked the profile.
+    emit(profileId, 'WARN', 'Skipped: the profile is open.');
+    return { sessionId, cookieCount: null, loaded: 0, skipped: true };
+  }
   if (alreadyOpen) {
     emit(profileId, 'INFO', 'Using the already-open session.');
   } else {
@@ -11828,6 +12190,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 
   const aborted = () => Boolean(run && run.aborted);
   const rounds = opts.loop ? 1000 : 1; // "loop" repeats until stopped (safety cap)
+  let loaded = 0;
   outer:
   for (let r = 0; r < rounds; r++) {
     for (const site of sites) {
@@ -11836,6 +12199,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
       emit(profileId, 'INFO', `Visiting ${site.label} (${site.seconds}s${tag})…`);
       const ok = await navigateSession(sessionId, site.url, { timeout: 30000 });
       if (!ok) { emit(profileId, 'WARN', `Could not load ${site.label} (skipped)`); continue; }
+      loaded += 1;
       emit(profileId, 'SUCCESS', `Loaded ${site.label}`);
       try {
         const inter = await warmInteract(sessionId, { clickMode: site.clickMode, clicks: site.clicks, scroll: site.scroll });
@@ -11870,7 +12234,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 
   const cookieNote = cookieCount != null ? ` · ${cookieCount} cookies saved` : '';
   emit(profileId, aborted() ? 'WARN' : 'SUCCESS', `${aborted() ? 'Warm-up stopped' : 'Warm-up complete'}${cookieNote}${diskNote}.`);
-  return { sessionId, cookieCount };
+  return { sessionId, cookieCount, loaded };
 }
 
 async function startWarmer(payload, event) {
@@ -11887,14 +12251,26 @@ async function startWarmer(payload, event) {
   // Default concurrency 1 is a strict queue: each profile finishes its sites and closes before the next
   // launches. Launching every selected browser at once runs out of memory on large selections.
   const concurrency = Math.max(1, Math.min(16, Number.parseInt(input.concurrency, 10) || 1));
-  const runId = `warm-${Date.now()}`;
+  const run = await beginWarmerRun({
+    ids, sites, opts, concurrency,
+    push: (frame) => { try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, frame); } catch (e) { /* renderer gone */ } },
+    ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
+  });
+  return { started: true, runId: run.id, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
+}
+
+// Registers a warm-up run and starts its worker pool in the background. `push` streams each frame
+// to the renderer that started the run; the autopilot has no renderer and passes none. Autopilot runs
+// stay out of the Task History, which keeps only 50 rows. `run.finished` settles when the run ends.
+async function beginWarmerRun({ ids, sites, opts, concurrency, push = null, autopilot = false, ownerMemberId = null }) {
+  const runId = autopilot ? `autowarm-${ids[0]}-${Date.now()}` : `warm-${Date.now()}`;
   const run = {
     id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null,
     // Metadata and a rolling log let a renderer that navigated away re-attach to (and stop) the run.
     // `active` holds profiles warming right now; total/done drive the live progress counter.
     profileIds: ids, total: ids.length, done: 0, active: new Set(), concurrency,
     loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: [],
-    ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
+    autopilot, results: new Map(), finished: null, ownerMemberId
   };
   warmerRuns.set(runId, run);
 
@@ -11910,25 +12286,33 @@ async function startWarmer(payload, event) {
       }
     };
     try { run.logs.push(enriched); if (run.logs.length > 300) run.logs.splice(0, run.logs.length - 300); } catch (e) {}
-    try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, enriched); } catch (e) { /* renderer gone */ }
+    if (push) push(enriched);
   };
   run.send = send;
   const emit = (profileId, level, message) => send({ runId, profileId, level, message, ts: Date.now() });
 
   send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s) · ${concurrency === 1 ? 'one-by-one (queue)' : concurrency + ' at a time'}${opts.headless ? ' · hidden (no windows)' : ''}${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
-  await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
+  if (!autopilot) await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
 
   // Fire-and-forget worker pool with a shared cursor caps how many profiles warm at once; at width 1
   // a worker takes the next id only after its previous profile has finished and closed.
-  (async () => {
+  run.finished = (async () => {
     let cursor = 0;
     const worker = async () => {
       while (!run.aborted) {
         const i = cursor; cursor += 1;
         if (i >= ids.length) break;
         run.active.add(String(ids[i])); // now warming - reflected in the live counter
-        try { await warmOneProfile(ids[i], sites, opts, emit, run); }
-        catch (e) { emit(ids[i], 'ERROR', e && e.message ? e.message : 'Warm-up failed.'); }
+        try {
+          const res = await warmOneProfile(ids[i], sites, opts, emit, run);
+          run.results.set(ids[i], res);
+          // A warm-up counts once a site has loaded; the autopilot and the CAPTCHA score read the count.
+          if (res && res.loaded > 0) await recordWarmRun(ids[i]);
+        } catch (e) {
+          const message = e && e.message ? e.message : 'Warm-up failed.';
+          run.results.set(ids[i], { loaded: 0, error: message });
+          emit(ids[i], 'ERROR', message);
+        }
         finally { run.active.delete(String(ids[i])); run.done += 1; }
       }
     };
@@ -11936,17 +12320,29 @@ async function startWarmer(payload, event) {
     await Promise.all(Array.from({ length: width }, () => worker()));
     const stopped = run.aborted;
     send({ runId, level: stopped ? 'WARN' : 'SUCCESS', message: stopped ? 'Warm-up stopped.' : 'All warm-up tasks finished.', done: true, ts: Date.now() });
-    await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: stopped ? 'stopped' : 'completed', finishedAt: Date.now() }).catch(() => {});
+    if (!autopilot) await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: stopped ? 'stopped' : 'completed', finishedAt: Date.now() }).catch(() => {});
     warmerRuns.delete(runId);
+    return { stopped };
   })();
 
-  return { started: true, runId, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
+  return run;
+}
+
+// Serialised like the history writes: warm-ups finishing together would otherwise lose a count.
+let _warmStatsChain = Promise.resolve();
+function recordWarmRun(profileId) {
+  _warmStatsChain = _warmStatsChain.then(async () => {
+    const stats = (await readSetting('warmStats', {})) || {};
+    await writeSetting('warmStats', warmAutopilot.withWarmRun(stats, profileId, Date.now()));
+  }).catch(() => {});
+  return _warmStatsChain;
 }
 
 // Lets a renderer returning to the Automation page re-attach to a job still running in main, with
-// its recent logs, instead of leaving the launched browsers orphaned and unstoppable.
+// its recent logs, instead of leaving the launched browsers orphaned and unstoppable. Autopilot runs
+// are left out: they stream to no renderer, so the panel would wait on them forever.
 function listActiveWarmers() {
-  return [...warmerRuns.values()].map((r) => ({
+  return [...warmerRuns.values()].filter((r) => !r.autopilot).map((r) => ({
     runId: r.id, total: r.total, done: r.done, active: r.active ? r.active.size : 0,
     remaining: Math.max(0, r.total - r.done - (r.active ? r.active.size : 0)),
     concurrency: r.concurrency,
@@ -11956,7 +12352,7 @@ function listActiveWarmers() {
 }
 
 // Stop a running warm-up. `force` also closes the sessions this run launched.
-// With no runId, stops every active run.
+// With no runId, stops every active run except the autopilot's (turning the autopilot off stops those).
 async function stopWarmer(payload) {
   // Gated like startWarmer and limited to runs the caller may control, since force-stop closes the
   // run's browsers.
@@ -11964,7 +12360,7 @@ async function stopWarmer(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   const force = Boolean(input.force);
   const runId = input.runId ? String(input.runId) : null;
-  const candidates = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()];
+  const candidates = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()].filter((r) => !r.autopilot);
   const targets = [];
   for (const run of candidates) {
     try { await assertCanControlRun(run.ownerMemberId); targets.push(run); }
@@ -11979,6 +12375,194 @@ async function stopWarmer(payload) {
     }
   }
   return { stopped: true, force, runs: targets.length };
+}
+
+// ---- Warm-up autopilot ----
+// Warms each covered profile with a few random sites, a few times a day inside the active hours,
+// through the Cookie Warmer runner, so history and cookies build up over days. Who is due and when
+// lives in warmAutopilot.js. The timer always ticks and reads the setting each time, so turning the
+// autopilot on needs no restart and works when the database is unlocked after start-up.
+const WARM_AUTOPILOT_TICK_MS = 60 * 1000;
+let warmAutopilotTimer = null;
+// One tick at a time, so a slow tick cannot overlap the next.
+let warmAutopilotBusy = false;
+const warmAutopilotRetryAt = new Map(); // profileId -> when a failed profile may be tried again
+let warmAutopilotLastError = null; // { code, message, profileId, title, at }
+
+function autopilotWarmerRuns() {
+  return [...warmerRuns.values()].filter((r) => r.autopilot);
+}
+
+// Profiles something else is using: open or launching browsers, launch locks, warm-up, macro and
+// parallel runs, and a scheduled macro pass in progress. The autopilot leaves them alone.
+async function profilesBusyForWarmup() {
+  const busy = new Set();
+  const add = (id) => { const n = Number(id); if (Number.isInteger(n)) busy.add(n); };
+  for (const s of listAllSessions()) add(s.sessionId);
+  for (const id of profileLocks.keys()) add(id);
+  for (const id of profileLaunchesInFlight.keys()) add(id);
+  for (const r of warmerRuns.values()) r.profileIds.forEach(add);
+  for (const c of macroRuns.values()) add(c.profileId);
+  for (const id of profilesInParallelRun()) add(id);
+  if (macroScheduleBusy) {
+    const m = await readSetting('macroSchedule', null);
+    if (m && Array.isArray(m.profileIds)) m.profileIds.forEach(add);
+  }
+  return busy;
+}
+
+// The timer runs as whoever is signed in (often nobody, which passes every access check), so like
+// the macro schedule the autopilot only covers profiles the member who turned it on may still use.
+// Returns the covered rows, or none with a problem code.
+async function warmAutopilotProfiles(cfg) {
+  const db = getPrisma();
+  const where = cfg.target === 'group' ? { deletedAt: null, groupId: cfg.groupId } : { deletedAt: null };
+  const rows = await db.profile.findMany({ where, select: { ...PROFILE_ACCESS_SELECT, title: true, groupId: true, deletedAt: true } });
+  if (cfg.ownerMemberId == null) return { rows, problem: null }; // single-user mode
+  const all = await db.member.findMany();
+  const owner = all.find((m) => Number(m.id) === Number(cfg.ownerMemberId))
+    || (Number(cfg.ownerMemberId) === permissions.SUPER_ADMIN_ID ? { ...permissions.SUPER_ADMIN } : null);
+  if (!owner) return { rows: [], problem: 'owner-missing' };
+  if (owner.status === 'banned' || owner.status === 'suspended') return { rows: [], problem: 'owner-inactive' };
+  if (owner.role === 'SUPER_ADMIN') return { rows, problem: null };
+  if (permissions.effectivePermissions(owner).actions['automation.run'] === false) return { rows: [], problem: 'owner-no-permission' };
+  const visible = permissions.visibleMemberIds(all, owner);
+  return { rows: rows.filter((r) => permissions.profileRowAccessible(visible, r, false)), problem: null };
+}
+
+async function runWarmAutopilotTick() {
+  if (warmAutopilotBusy) return;
+  warmAutopilotBusy = true;
+  try {
+    if (!database.isDbUnlocked()) return;
+    const cfg = warmAutopilot.normalizeConfig(await readSetting('warmAutopilot', null));
+    const now = Date.now();
+    if (!cfg.enabled || !warmAutopilot.inWindow(new Date(now).getHours(), cfg)) return;
+    const slots = cfg.maxConcurrent - autopilotWarmerRuns().length;
+    if (slots <= 0) return;
+    for (const [id, at] of warmAutopilotRetryAt) if (at <= now) warmAutopilotRetryAt.delete(id);
+    const { rows, problem } = await warmAutopilotProfiles(cfg);
+    if (problem) {
+      warmAutopilotLastError = { code: problem, message: null, profileId: null, title: null, at: now };
+      return;
+    }
+    const stats = (await readSetting('warmStats', {})) || {};
+    const busy = await profilesBusyForWarmup();
+    const due = warmAutopilot.pickDue(rows, { cfg, stats, now, busy, retryAt: warmAutopilotRetryAt, slots });
+    const titles = new Map(rows.map((r) => [r.id, r.title]));
+    for (const pid of due) await startAutopilotWarm(pid, titles.get(pid), cfg);
+  } catch (e) {
+    warmAutopilotLastError = { code: 'tick-failed', message: (e && e.message) || 'Unknown error', profileId: null, title: null, at: Date.now() };
+  } finally {
+    warmAutopilotBusy = false;
+  }
+}
+
+async function startAutopilotWarm(profileId, title, cfg) {
+  const sites = warmAutopilot.pickSites(defaultWarmSites(), cfg.sitesPerRun);
+  const run = await beginWarmerRun({
+    ids: [profileId], sites, concurrency: 1, autopilot: true, ownerMemberId: cfg.ownerMemberId,
+    // skipOpen: a browser someone opened after this tick picked the profile is left alone.
+    opts: { loop: false, keepOpen: false, headless: cfg.headless, skipOpen: true }
+  });
+  run.finished.then(async () => {
+    const res = run.results.get(profileId) || { loaded: 0 };
+    if (res.loaded > 0) {
+      warmAutopilotRetryAt.delete(profileId);
+      const cookies = res.cookieCount != null ? ` · ${res.cookieCount} cookies` : '';
+      await logActivity(getPrisma(), profileId, 'warm-up', `autopilot · ${res.loaded}/${sites.length} sites${cookies}`);
+    } else if (!res.skipped && !run.aborted) {
+      warmAutopilotRetryAt.set(profileId, Date.now() + warmAutopilot.RETRY_MS);
+      warmAutopilotLastError = { code: 'warm-failed', message: res.error || 'No site loaded.', profileId, title: title || null, at: Date.now() };
+    }
+  }).catch(() => {});
+}
+
+function startWarmAutopilotTimer() {
+  stopWarmAutopilotTimer();
+  warmAutopilotTimer = setInterval(() => { runWarmAutopilotTick().catch(() => {}); }, WARM_AUTOPILOT_TICK_MS);
+  if (warmAutopilotTimer.unref) warmAutopilotTimer.unref();
+}
+
+function stopWarmAutopilotTimer() {
+  if (warmAutopilotTimer) { clearInterval(warmAutopilotTimer); warmAutopilotTimer = null; }
+}
+
+// Settings plus a status line. Counts and the last error cover only profiles this viewer may see.
+async function warmAutopilotView(cfg) {
+  const now = Date.now();
+  const { rows, problem } = await warmAutopilotProfiles(cfg);
+  const check = await profileAccessChecker();
+  const seen = new Set((check ? rows.filter(check) : rows).map((r) => r.id));
+  const stats = (await readSetting('warmStats', {})) || {};
+  let canEdit = true;
+  try { await assertCanChangeWarmAutopilot(cfg.ownerMemberId); } catch (e) { canEdit = false; }
+  let lastError = problem ? { code: problem, at: now } : warmAutopilotLastError;
+  if (lastError && lastError.profileId != null && !seen.has(lastError.profileId)) lastError = { code: lastError.code, at: lastError.at };
+  const { ownerMemberId, ...settings } = cfg;
+  return {
+    ...settings,
+    canEdit,
+    status: {
+      inWindow: warmAutopilot.inWindow(new Date(now).getHours(), cfg),
+      covered: seen.size,
+      warmedToday: warmAutopilot.warmedToday(stats, [...seen], now),
+      warmingNow: autopilotWarmerRuns().length,
+      nextRunAt: problem ? null : warmAutopilot.nextRunAt(rows, { cfg, stats, now, retryAt: warmAutopilotRetryAt }),
+      lastError
+    }
+  };
+}
+
+// Only the member who turned the autopilot on, or someone above them, may change it. When that
+// member has been deleted nobody is above them, so the workspace Owner takes it over.
+async function assertCanChangeWarmAutopilot(ownerMemberId) {
+  if (ownerMemberId == null) return;
+  const gone = !permissions.isSuperAdminId(ownerMemberId)
+    && !(await getPrisma().member.findUnique({ where: { id: Number(ownerMemberId) }, select: { id: true } }));
+  if (gone) await requireOwnerOrSuper('take over the warm-up autopilot');
+  else await assertCanControlRun(ownerMemberId);
+}
+
+async function getWarmAutopilot() {
+  await requirePermission('automation.run');
+  return warmAutopilotView(warmAutopilot.normalizeConfig(await readSetting('warmAutopilot', null)));
+}
+
+async function setWarmAutopilot(payload) {
+  // Gated like the macro schedule. The caller becomes the owner every tick is checked against
+  // (see warmAutopilotProfiles).
+  await requirePermission('automation.run');
+  const input = requireObject(payload);
+  const existing = await readSetting('warmAutopilot', null);
+  if (existing) await assertCanChangeWarmAutopilot(existing.ownerMemberId);
+  const cfg = { ...warmAutopilot.normalizeConfig(input), ownerMemberId: currentMemberId };
+  if (warmAutopilot.configProblem(cfg)) throw new Error('Choose a group for the autopilot to warm.');
+  // Groups belong to the whole workspace (the group list is not scoped per member), so any existing
+  // group is one the member can see; the profiles in it are still checked one by one on each tick.
+  if (cfg.target === 'group' && !(await getPrisma().group.findUnique({ where: { id: cfg.groupId }, select: { id: true } }))) {
+    throw new Error('That group no longer exists.');
+  }
+  await writeSetting('warmAutopilot', cfg);
+  // Turning it off stops warm-ups in flight; each closes the browser it opened.
+  if (!cfg.enabled) for (const run of autopilotWarmerRuns()) run.aborted = true;
+  warmAutopilotLastError = null;
+  await logAudit('automation.warm-autopilot', { detail: { enabled: cfg.enabled, target: cfg.target, groupId: cfg.groupId } });
+  return warmAutopilotView(cfg);
+}
+
+// Warm-up count and last warm-up per profile, for the age badge on the Profiles list.
+async function getWarmStats(payload) {
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids).slice(0, 500);
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  const all = (await readSetting('warmStats', {})) || {};
+  const stats = {};
+  for (const id of allowed) {
+    const s = all[id];
+    if (s) stats[id] = { runs: Number(s.runs) || 0, lastAt: s.lastAt || null };
+  }
+  return { stats };
 }
 
 // ---- Local developer API tokens + server toggle ----
@@ -12123,6 +12707,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_VENDOR_LOOKUP, vendorLookup);
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_GET, getProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_SET, saveProxyProviderCreds);
+  registerHandler(CHANNELS.PROXY_PROVIDER_ACCOUNT, getProviderAccount);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
   registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
   registerHandler(CHANNELS.PROXY_CHECK_STREAM, runProxyCheckStream);
@@ -12135,6 +12720,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_AUTO_GROUP, autoGroupProxies);
   registerHandler(CHANNELS.PROXY_HEALTH_HISTORY, getProxyHealthHistory);
   registerHandler(CHANNELS.PROXY_RECENT_HEALTH, getRecentProxyHealth);
+  registerHandler(CHANNELS.PROXY_VENDOR_SCOREBOARD, getVendorScoreboard);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
@@ -12169,6 +12755,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_LIVE_LEAK, liveProfileLeak);
   registerHandler(CHANNELS.PROFILE_CAPTCHA_SCORES, captchaScores);
   registerHandler(CHANNELS.PROFILE_CAPTCHA_FIX, captchaFix);
+  registerHandler(CHANNELS.PROFILE_CAPTCHA_FIX_BULK, captchaFixBulk);
+  registerHandler(CHANNELS.PROFILE_PRELAUNCH_CHECK, prelaunchCheck);
+  registerHandler(CHANNELS.PROFILE_WARM_STATS, getWarmStats);
   registerHandler(CHANNELS.PROFILE_ACTIVITY, listActivity);
   registerHandler(CHANNELS.PROFILE_GET_2FA_TOKEN, getProfile2faToken);
   registerHandler(CHANNELS.PROFILE_BULK_SYNCHRONIZE, bulkSynchronize);
@@ -12178,8 +12767,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.SYSTEM_HUMAN_TYPE, systemHumanType);
   registerHandler(CHANNELS.SETTINGS_GET_SCHEDULER, getProxyScheduler);
   registerHandler(CHANNELS.SETTINGS_SET_SCHEDULER, setProxyScheduler);
-  registerHandler(CHANNELS.SETTINGS_GET_GLOBAL, getGlobalSettings);
-  registerHandler(CHANNELS.SETTINGS_SET_GLOBAL, setGlobalSettings);
+  registerHandler(CHANNELS.SETTINGS_GET_GLOBAL, getGlobalSettingsForActor);
+  registerHandler(CHANNELS.SETTINGS_SET_GLOBAL, setGlobalSettingsForActor);
   registerHandler(CHANNELS.SETTINGS_GET_PROXY_POLICY, getProxyPolicy);
   registerHandler(CHANNELS.SETTINGS_SET_PROXY_POLICY, setProxyPolicy);
 
@@ -12263,6 +12852,7 @@ function registerIpcHandlers() {
       const mcfg = await readSetting('macroSchedule', null);
       if (mcfg && mcfg.enabled) startMacroScheduler(mcfg.everyMinutes);
     } catch (e) { /* ignore */ }
+    startWarmAutopilotTimer();
     try {
       // Keep the proxy health-history table bounded (~30 days).
       const cutoff = new Date(Date.now() - 30 * 86400000);
@@ -12333,6 +12923,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_RUN_PARALLEL, runParallelMacroHandler);
   registerHandler(CHANNELS.AUTOMATION_PARALLEL_STATUS, getParallelRunStatus);
   registerHandler(CHANNELS.AUTOMATION_PICK_DATA_FILE, pickDataFile);
+  registerHandler(CHANNELS.AUTOMATION_WARM_AUTOPILOT_GET, getWarmAutopilot);
+  registerHandler(CHANNELS.AUTOMATION_WARM_AUTOPILOT_SET, setWarmAutopilot);
 
   // Softglaze Pro - local developer API
   registerHandler(CHANNELS.API_TOKEN_LIST, listApiTokens);
@@ -12427,7 +13019,12 @@ function registerIpcHandlers() {
   // Softglaze Pro - wire the local REST API to the launch pipeline + settings,
   // then start it if the user has it enabled. Loopback-only; off by default.
   localApi.configure({
-    launchProfileById,
+    // A profile started over the API is driven by the caller's script, so a block must not switch it.
+    launchProfileById: async (id, startUrl, opts) => {
+      const res = await launchProfileById(id, startUrl, opts);
+      apiDrivenProfiles.add(Number(id));
+      return res;
+    },
     // Slim, non-secret profile list for GET /api/v1/profiles (no proxy passwords).
     readProfiles: async () => {
       const rows = await getPrisma().profile.findMany({ where: { deletedAt: null }, orderBy: { id: 'asc' } });
@@ -12458,6 +13055,7 @@ function registerIpcHandlers() {
 async function shutdownIpcHandlers() {
   stopProxyScheduler();
   stopMacroScheduler();
+  stopWarmAutopilotTimer();
   if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
   await localApi.stop().catch(() => {});
   await autofillBridge.stop().catch(() => {});

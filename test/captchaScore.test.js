@@ -114,6 +114,16 @@ test('little browsing history suggests a warm-up', () => {
   assert.equal(factor(scoreProfile(goodProfile({ launchCount: 0 }), ctx({ cookieBytes: null })), 'history').status, 'warn');
 });
 
+test('three warm-ups count as browsing history, and the text can say how many', () => {
+  const thin = ctx({ cookieBytes: 24 * 1024 });
+  assert.equal(factor(scoreProfile(goodProfile({ launchCount: 0 }), { ...thin, warmRuns: 2 }), 'history').status, 'warn');
+  const warmed = factor(scoreProfile(goodProfile({ launchCount: 0 }), { ...thin, warmRuns: 3 }), 'history');
+  assert.equal(warmed.status, 'pass');
+  assert.equal(warmed.fix, null);
+  assert.equal(warmed.params.warmRuns, 3);
+  assert.equal(scoreProfile(goodProfile(), { ...thin, warmRuns: 5 }).score, 100);
+});
+
 test('device and OS mismatches are advice only, never an automatic change', () => {
   const r = scoreProfile(goodProfile({ os: 'macOS' }), ctx());
   assert.equal(factor(r, 'device').status, 'fail', 'Direct3D on macOS');

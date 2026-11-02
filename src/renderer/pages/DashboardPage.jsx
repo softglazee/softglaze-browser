@@ -315,42 +315,6 @@ function RestoreBanner() {
   );
 }
 
-// Transient toasts for crash + memory-pressure notifications pushed from main.
-function ResilienceToasts() {
-  const [toasts, setToasts] = useState([]);
-  const idRef = useRef(0);
-  useEffect(() => {
-    const add = (kind, text) => {
-      const id = ++idRef.current;
-      setToasts((t) => [...t, { id, kind, text }]);
-      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6500);
-    };
-    const offs = [];
-    if (softglazeApi.sessions.onCrash) offs.push(softglazeApi.sessions.onCrash((d) => {
-      if (!d) return;
-      add('crash', `${d.title || 'A profile'} stopped unexpectedly${d.restarted ? ' - restarting…' : ''}.`);
-    }));
-    if (softglazeApi.sessions.onMemoryPressure) offs.push(softglazeApi.sessions.onMemoryPressure((d) => {
-      if (!d) return;
-      add('memory', `Low memory - closed ${d.closed} profile${d.closed === 1 ? '' : 's'} (free ${d.freePct}%).`);
-    }));
-    return () => offs.forEach((off) => { if (typeof off === 'function') off(); });
-  }, []);
-  if (!toasts.length) return null;
-  return (
-    <div className="fixed bottom-5 right-5 z-50 flex max-w-sm flex-col gap-2" role="status" aria-live="polite">
-      {toasts.map((t) => (
-        <div key={t.id} className="flex items-start gap-2.5 rounded-xl border px-4 py-3 shadow-lg animate-fade-up" style={{ background: 'var(--card)', borderColor: 'color-mix(in srgb, var(--destructive) 35%, transparent)' }}>
-          {t.kind === 'crash'
-            ? <Zap className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--warning)' }} />
-            : <Cpu className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--destructive)' }} />}
-          <p className="text-[12.5px] text-foreground">{t.text}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function SectionLabel({ icon: Icon, title, sub }) {
   return (
     <div className="mb-3 flex items-center gap-2.5">
@@ -520,7 +484,6 @@ export default function DashboardPage() {
     <div className="space-y-6 pb-10">
       <UpdateBanner />
       <RestoreBanner />
-      <ResilienceToasts />
 
       <WelcomeBanner />
 

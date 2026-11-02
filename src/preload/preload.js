@@ -34,6 +34,7 @@ const CHANNELS = Object.freeze({
   PROXY_VENDOR_LOOKUP: 'proxy:vendor-lookup',
   PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
+  PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_CHECK_STREAM: 'proxy:check-stream',
@@ -50,6 +51,7 @@ const CHANNELS = Object.freeze({
   PROXY_AUTO_GROUP: 'proxy:auto-group',
   PROXY_HEALTH_HISTORY: 'proxy:health-history',
   PROXY_RECENT_HEALTH: 'proxy:recent-health',
+  PROXY_VENDOR_SCOREBOARD: 'proxy:vendor-scoreboard',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -85,6 +87,9 @@ const CHANNELS = Object.freeze({
   PROFILE_LIVE_LEAK: 'profile:live-leak',
   PROFILE_CAPTCHA_SCORES: 'profile:captcha-scores',
   PROFILE_CAPTCHA_FIX: 'profile:captcha-fix',
+  PROFILE_CAPTCHA_FIX_BULK: 'profile:captcha-fix-bulk',
+  PROFILE_PRELAUNCH_CHECK: 'profile:prelaunch-check',
+  PROFILE_WARM_STATS: 'profile:warm-stats',
   PROFILE_ACTIVITY: 'profile:activity',
   PROFILE_GET_2FA_TOKEN: 'profile:get-2fa-token',
   PROFILE_BULK_SYNCHRONIZE: 'profile:bulk-synchronize',
@@ -213,6 +218,7 @@ const CHANNELS = Object.freeze({
   SESSION_RESTORE_RUN: 'session:restore-run',
   SESSION_RESOURCE_USAGE: 'session:resource-usage',
   SESSION_CRASH: 'session:crash',
+  SESSION_BLOCKED: 'session:blocked',
   MEMORY_PRESSURE: 'system:memory-pressure',
 
   BATCH_PREVIEW_PROFILES_DIALOG: 'batch:preview-profiles-dialog',
@@ -243,6 +249,8 @@ const CHANNELS = Object.freeze({
   AUTOMATION_PARALLEL_STATUS: 'automation:parallel-status',
   AUTOMATION_RUN_PROGRESS: 'automation:run-progress',
   AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
+  AUTOMATION_WARM_AUTOPILOT_GET: 'automation:warm-autopilot-get',
+  AUTOMATION_WARM_AUTOPILOT_SET: 'automation:warm-autopilot-set',
 
   API_TOKEN_LIST: 'api:token-list',
   API_TOKEN_CREATE: 'api:token-create',
@@ -322,6 +330,8 @@ const api = Object.freeze({
     vendorLookup: (payload) => invoke(CHANNELS.PROXY_VENDOR_LOOKUP, payload),
     getProviderCreds: (provider) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_GET, { provider }),
     saveProviderCreds: (payload) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_SET, payload),
+    // { provider, cachedOnly } -> { supported, dashboardUrl, account }; never returns a secret.
+    providerAccount: (payload) => invoke(CHANNELS.PROXY_PROVIDER_ACCOUNT, payload),
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL),
     checkStream: (payload) => invoke(CHANNELS.PROXY_CHECK_STREAM, payload),
@@ -341,7 +351,8 @@ const api = Object.freeze({
     },
     autoGroup: (level) => invoke(CHANNELS.PROXY_AUTO_GROUP, { level }),
     healthHistory: (id) => invoke(CHANNELS.PROXY_HEALTH_HISTORY, { id }),
-    recentHealth: (opts) => invoke(CHANNELS.PROXY_RECENT_HEALTH, opts || {})
+    recentHealth: (opts) => invoke(CHANNELS.PROXY_RECENT_HEALTH, opts || {}),
+    vendorScoreboard: () => invoke(CHANNELS.PROXY_VENDOR_SCOREBOARD)
   }),
   proxyGroups: Object.freeze({
     list: () => invoke(CHANNELS.PROXY_GROUP_LIST),
@@ -389,6 +400,9 @@ const api = Object.freeze({
     liveLeak: (id) => invoke(CHANNELS.PROFILE_LIVE_LEAK, { id }),
     captchaScores: (ids) => invoke(CHANNELS.PROFILE_CAPTCHA_SCORES, { ids }),
     captchaFix: (id, action) => invoke(CHANNELS.PROFILE_CAPTCHA_FIX, { id, action }),
+    captchaFixBulk: (ids) => invoke(CHANNELS.PROFILE_CAPTCHA_FIX_BULK, { ids }),
+    prelaunchCheck: (ids) => invoke(CHANNELS.PROFILE_PRELAUNCH_CHECK, { ids }),
+    warmStats: (ids) => invoke(CHANNELS.PROFILE_WARM_STATS, { ids }),
     activity: (id) => invoke(CHANNELS.PROFILE_ACTIVITY, { id }),
     get2faToken: (id) => invoke(CHANNELS.PROFILE_GET_2FA_TOKEN, { id }),
     bulkSynchronize: (ids) => invoke(CHANNELS.PROFILE_BULK_SYNCHRONIZE, { ids }),
@@ -433,6 +447,11 @@ const api = Object.freeze({
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.SESSION_CRASH, listener);
       return () => ipcRenderer.removeListener(CHANNELS.SESSION_CRASH, listener);
+    },
+    onBlocked: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.SESSION_BLOCKED, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.SESSION_BLOCKED, listener);
     },
     onMemoryPressure: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
@@ -602,6 +621,8 @@ const api = Object.freeze({
     runParallel: (payload) => invoke(CHANNELS.AUTOMATION_RUN_PARALLEL, payload),
     parallelStatus: (runId) => invoke(CHANNELS.AUTOMATION_PARALLEL_STATUS, { runId }),
     pickDataFile: () => invoke(CHANNELS.AUTOMATION_PICK_DATA_FILE),
+    getWarmAutopilot: () => invoke(CHANNELS.AUTOMATION_WARM_AUTOPILOT_GET),
+    setWarmAutopilot: (payload) => invoke(CHANNELS.AUTOMATION_WARM_AUTOPILOT_SET, payload),
     onWarmerProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);

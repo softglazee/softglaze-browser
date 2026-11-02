@@ -10,6 +10,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import NumberInput from '@/components/ui/NumberInput.jsx';
+import WarmAutopilotCard from '@/components/WarmAutopilotCard.jsx';
 import i18n from '@/i18n/index.js';
 import automationEn from '@/i18n/locales/en/automation.json';
 import automationEs from '@/i18n/locales/es/automation.json';
@@ -1589,6 +1590,7 @@ function WarmerPanel() {
       </div>
 
       <div className="flex flex-col gap-3 min-w-0">
+        <WarmAutopilotCard />
         {/* Stays visible and restores on re-attach so done / running / queued counts always show */}
         {(running || counts) && (
           <div className="rounded-xl border border-border bg-card px-4 py-3">

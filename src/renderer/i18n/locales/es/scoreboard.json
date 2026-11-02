@@ -1,0 +1,43 @@
+{
+  "title": "Clasificación de proveedores",
+  "note": "Según tus propias comprobaciones de proxies de los últimos {{days}} días.",
+  "refresh": "Actualizar",
+  "show": "Mostrar la clasificación de proveedores",
+  "hide": "Ocultar la clasificación de proveedores",
+  "loading": "Cargando la clasificación...",
+  "loadError": "No se pudo cargar la clasificación: {{message}}",
+  "empty": "Aún no hay proxies. Importa algunos de un proveedor o añade los tuyos y compruébalos para ver cómo rinde cada proveedor.",
+  "truncated": "Solo se contaron las {{max}} comprobaciones más recientes.",
+  "scoreHelp": "Puntuación sobre 100. Lo que más cuenta es el éxito de las comprobaciones, después que pocos proxies estén en listas de bloqueo, después la velocidad y por último los bloqueos de sitios por proxy. Las filas con menos de {{min}} comprobaciones no se puntúan.",
+  "own": "Tus propios proxies",
+  "free": "Proxies gratuitos",
+  "col": {
+    "vendor": "Proveedor",
+    "score": "Puntuación",
+    "success": "Éxito de comprobaciones",
+    "speed": "Velocidad mediana",
+    "blocklisted": "En listas de bloqueo",
+    "datacenter": "Centro de datos",
+    "blocks": "Bloqueos de sitios",
+    "proxies": "Proxies",
+    "lastChecked": "Última comprobación"
+  },
+  "sortBy": "Ordenar por {{column}}",
+  "notEnough": "Datos insuficientes",
+  "notEnoughTitle_one": "Solo {{count}} comprobación en los últimos {{days}} días. Una puntuación necesita {{min}}.",
+  "notEnoughTitle_other": "Solo {{count}} comprobaciones en los últimos {{days}} días. Una puntuación necesita {{min}}.",
+  "level": {
+    "good": "Buena",
+    "fair": "Regular",
+    "poor": "Mala"
+  },
+  "scoreTitle": "{{level}}: {{score}} de 100",
+  "checks_one": "{{count}} comprobación",
+  "checks_other": "{{count}} comprobaciones",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} operativos",
+  "noData": "Sin datos",
+  "never": "Nunca",
+  "openProvider": "Abrir {{name}}",
+  "topSites": "Más bloqueos: {{sites}}"
+}

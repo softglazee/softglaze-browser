@@ -358,5 +358,41 @@
     "groupAll": "Todos los grupos",
     "providerAll": "Todos los proveedores",
     "reset": "Restablecer filtros"
+  },
+  "providerAccount": {
+    "title": "Cuenta",
+    "check": "Comprobar cuenta",
+    "checkedAt": "Comprobado {{time}}",
+    "notChecked": "Aún no se ha comprobado. Comprobar cuenta lee el plan, la caducidad, el tráfico y el saldo con la clave guardada para este proveedor.",
+    "notSupported": "La API de este proveedor no informa de los datos de la cuenta.",
+    "openDashboard": "Abrir panel",
+    "status": "Estado",
+    "statusActive": "Activa",
+    "statusExpired": "Caducada",
+    "statusSuspended": "Suspendida",
+    "statusUnknown": "Desconocido",
+    "plan": "Plan",
+    "expires": "Caduca",
+    "daysLeft_one": "queda {{count}} día",
+    "daysLeft_other": "quedan {{count}} días",
+    "endsToday": "termina hoy",
+    "endedAgo_one": "terminó hace {{count}} día",
+    "endedAgo_other": "terminó hace {{count}} días",
+    "traffic": "Tráfico",
+    "trafficLeft": "{{left}} disponibles",
+    "trafficUsedOf": "{{used}} usados de {{total}}",
+    "trafficUsed": "{{used}} usados",
+    "trafficTotal": "Plan de {{total}}",
+    "balance": "Saldo",
+    "noDetails": "El proveedor respondió, pero no informó de plan, caducidad, tráfico ni saldo.",
+    "error": "No se pudo comprobar la cuenta: {{message}}",
+    "note": {
+      "firstToExpire": "La caducidad mostrada es la del primer proxy o plan que termina.",
+      "summedPlans": "Las cifras suman todos tus planes activos.",
+      "noActivePlans": "No hay planes activos en esta cuenta.",
+      "noActiveProxies": "No hay proxies activos en esta cuenta.",
+      "planSizeOnly": "La API informa del tamaño del plan, no del tráfico restante.",
+      "firstPageOnly": "Calculado con tus primeros 1000 proxies."
+    }
   }
 }
