@@ -27,6 +27,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
+import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
@@ -546,7 +547,8 @@ export default function ProfilesPage() {
   const [activityProfile, setActivityProfile] = useState(null);
   const [groups, setGroups] = useState([]);
   const [allTags, setAllTags] = useState([]);
-  const [allProxies, setAllProxies] = useState([]);
+  const [allProxies, setAllProxies] = useState([]); // the paid pool
+  const [freeProxies, setFreeProxies] = useState([]); // free public proxies, listed apart from the pool
   const [proxyGroups, setProxyGroups] = useState([]);
   const [runningIds, setRunningIds] = useState(() => new Set());
   const [locks, setLocks] = useState({}); // profileId -> { memberName, mine } (in-use-by-another-member)
@@ -681,14 +683,15 @@ export default function ProfilesPage() {
   const loadData = useCallback(async () => {
     const seq = ++loadSeq.current;
     try {
-      const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
+      const [profs, grps, tgs, pxs, sess, lockMap, pgs, freePxs] = await Promise.all([
         softglazeApi.profiles.list({ search }),
         softglazeApi.groups.list(),
         softglazeApi.tags.list(),
-        softglazeApi.proxies.list({}),
+        softglazeApi.proxies.list({ scope: 'paid' }),
         softglazeApi.sessions.list(),
         softglazeApi.profiles.getLocks().catch(() => ({})),
-        softglazeApi.proxyGroups.list().catch(() => [])
+        softglazeApi.proxyGroups.list().catch(() => []),
+        softglazeApi.proxies.list({ scope: 'free' }).catch(() => [])
       ]);
       // Ignore a stale response: a slow broad search can resolve after a faster narrow one.
       if (seq !== loadSeq.current) return;
@@ -697,13 +700,14 @@ export default function ProfilesPage() {
       setGroups(grps);
       setAllTags(tgs);
       setAllProxies(pxs);
+      setFreeProxies(Array.isArray(freePxs) ? freePxs : []);
       setProxyGroups(Array.isArray(pgs) ? pgs : []);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
     } catch (err) { if (seq === loadSeq.current) setError(err.message); }
   }, [search]);
 
-  // Debounce only the search-driven reload (each reload makes 7 IPC calls); direct loadData() calls
+  // Debounce only the search-driven reload (each reload makes 8 IPC calls); direct loadData() calls
   // after mutations stay immediate, and loadSeq drops stragglers.
   useEffect(() => {
     const h = setTimeout(() => { loadData(); }, 200);
@@ -795,10 +799,8 @@ export default function ProfilesPage() {
   async function handleQuickGenerate(config, onProgress) {
     const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
-    // proxySource (pool mode only): '' = all, 'group:<id>', or 'provider:<key>'.
-    const src = String(proxySource || '');
-    const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
-    const provider = src.startsWith('provider:') ? src.slice(9) : undefined;
+    // proxySource: '' = the paid pool, 'group:<id>', 'provider:<key>', or 'free' (free proxies only).
+    const { proxySource: source, proxyGroupId, provider } = quickGenProxyFields(proxySource);
     // The server-side generator enforces batch invariants: a unique proxy per profile (capped at
     // availability), unique fingerprints, and an even Chrome-version spread.
     const result = await softglazeApi.profiles.batchGenerate({
@@ -813,6 +815,7 @@ export default function ProfilesPage() {
       groupId: groupId && groupId !== 'ungrouped' ? groupId : null,
       newGroupName: newGroupName || null,
       proxyMode, // 'direct' | 'unique' | 'pool' | 'paste'
+      proxySource: source, // 'paid' | 'free'
       proxyGroupId,
       provider,
       proxySpeed, // 'any' | 'fast' | 'slow' (pool/unique: pre-filter by latency)
@@ -1521,9 +1524,21 @@ export default function ProfilesPage() {
                       <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.selectProxy')}</label>
                       <CustomSelect value={pd.selectedSavedProxy} onChange={e => updatePd('selectedSavedProxy', e.target.value)} className="w-full max-w-md">
                         <option value="">{t('proxy.chooseSaved')}</option>
-                        {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
+                        {allProxies.length > 0 && (
+                          <optgroup label={t('proxy.optgroupPaid')}>
+                            {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
+                          </optgroup>
+                        )}
+                        {freeProxies.length > 0 && (
+                          <optgroup label={t('proxy.optgroupFree')}>
+                            {freeProxies.map(p => <option key={p.id} value={p.id}>{p.host}:{p.port} ({p.type}{p.lastCountry ? ` · ${p.lastCountry}` : ''})</option>)}
+                          </optgroup>
+                        )}
                       </CustomSelect>
-                      {allProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
+                      {allProxies.length === 0 && freeProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
+                      {freeProxies.some(p => String(p.id) === String(pd.selectedSavedProxy)) && (
+                        <p role="note" className="flex items-start gap-1.5 text-xs text-warning mt-2 lg:col-start-2"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.freeWarning')}</p>
+                      )}
                     </div>
                   )}
 
@@ -2213,6 +2228,11 @@ export default function ProfilesPage() {
           <option value="">{t('filters.allProxies')}</option>
           <option value="none">{t('filters.directNoProxy')}</option>
           {allProxies.map((px) => <option key={px.id} value={px.id}>{px.name}</option>)}
+          {freeProxies.length > 0 && (
+            <optgroup label={t('proxy.optgroupFree')}>
+              {freeProxies.map((px) => <option key={px.id} value={px.id}>{px.host}:{px.port}</option>)}
+            </optgroup>
+          )}
         </CustomSelect>
 
         <CustomSelect value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto">
@@ -2486,7 +2506,7 @@ export default function ProfilesPage() {
         <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
       )}
       {showQuickGen && (
-        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} onCreateGroup={async (name) => { const g = await softglazeApi.groups.create({ name }); await loadData(); return g; }} />
+        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} freeProxies={freeProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} onCreateGroup={async (name) => { const g = await softglazeApi.groups.create({ name }); await loadData(); return g; }} />
       )}
       {showBrowserManager && (
         <BrowserManagerModal onClose={() => setShowBrowserManager(false)} onInstalled={refreshInstalledBrowsers} />

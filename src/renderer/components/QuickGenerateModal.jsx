@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2, Zap, Turtle, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2, Zap, Turtle, ShieldCheck, ShieldAlert, Gift } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import { countBuckets } from '@/lib/proxyBuckets.mjs';
+import { healthyFreeProxies } from '@/lib/freeProxies.mjs';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -12,7 +13,9 @@ const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
 
 const PROVIDER_LABELS = { apify: 'Apify', shopsocks5: 'ShopSocks5', smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom' };
 
-export default function QuickGenerateModal({ osPlatforms = [], groups = [], proxies = [], proxyGroups = [], onClose, onGenerate, onCreateGroup }) {
+// proxies is the paid pool; freeProxies (the Free proxies page) is a separate source that is never
+// the default and is used only when its tile is chosen.
+export default function QuickGenerateModal({ osPlatforms = [], groups = [], proxies = [], freeProxies = [], proxyGroups = [], onClose, onGenerate, onCreateGroup }) {
   const { t } = useTranslation('cmpModalsC');
   const [count, setCount] = useState(5);
   const [baseName, setBaseName] = useState('Profile');
@@ -21,8 +24,8 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [os, setOs] = useState(osPlatforms[0]?.id || 'Windows');
   const [randomize, setRandomize] = useState(true);
   const [startupUrls, setStartupUrls] = useState('');
-  const [proxyMode, setProxyMode] = useState('none'); // none | pool | paste
-  const [assignUnique, setAssignUnique] = useState(true); // pool: 1:1 unique vs round-robin reuse
+  const [proxyMode, setProxyMode] = useState('none'); // none | pool | free | paste
+  const [assignUnique, setAssignUnique] = useState(true); // pool/free: 1:1 unique vs round-robin reuse
   const [proxySource, setProxySource] = useState(''); // '' all | group:<id> | provider:<key>
   const [proxySpeed, setProxySpeed] = useState('any'); // any | fast | slow (by measured latency)
   const [proxyBlacklist, setProxyBlacklist] = useState('any'); // any | clean | blacklisted
@@ -34,9 +37,12 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [result, setResult] = useState(null);
   const [savingGroup, setSavingGroup] = useState(false);
 
+  // Free proxies whose last check passed; the server checks them live again before use.
+  const healthyFree = healthyFreeProxies(freeProxies);
   const proxyModes = [
     { id: 'none', label: t('quickGenerate.proxyModeDirect'), icon: Ban },
     { id: 'pool', label: t('quickGenerate.proxyModePool', { count: proxies.length }), icon: Server },
+    { id: 'free', label: t('quickGenerate.proxyModeFree', { count: healthyFree.length }), icon: Gift },
     { id: 'paste', label: t('quickGenerate.proxyModePaste'), icon: ListPlus }
   ];
   const start = 1;
@@ -54,7 +60,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   function resolveProxyMode() {
     if (proxyMode === 'none') return 'direct';
     if (proxyMode === 'paste') return 'paste'; // unique-by-line
-    return assignUnique ? 'unique' : 'pool';
+    return assignUnique ? 'unique' : 'pool'; // pool and free
   }
 
   // Creates and selects the group at once; without onCreateGroup the group is created on generate.
@@ -76,6 +82,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     if (!baseName.trim()) return setErr(t('quickGenerate.errBaseName'));
     if (groupId === '__new__' && !newGroupName.trim()) return setErr(t('quickGenerate.errNewGroupName'));
     if (proxyMode === 'pool' && proxies.length === 0) return setErr(t('quickGenerate.errNoPoolProxies'));
+    if (proxyMode === 'free' && healthyFree.length === 0) return setErr(t('quickGenerate.errNoFreeProxies'));
     if (proxyMode === 'paste' && !pasted.trim()) return setErr(t('quickGenerate.errNoPasted'));
     setBusy(true); setProgress({ done: 0, total: n });
     try {
@@ -90,7 +97,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           randomize,
           startupUrls: startupUrls.trim(),
           proxyMode: resolveProxyMode(),
-          proxySource: proxyMode === 'pool' ? proxySource : '',
+          proxySource: proxyMode === 'pool' ? proxySource : (proxyMode === 'free' ? 'free' : ''),
           proxySpeed: proxyMode === 'pool' ? proxySpeed : 'any',
           proxyBlacklist: proxyMode === 'pool' ? proxyBlacklist : 'any',
           pasted
@@ -174,9 +181,9 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
 
           <div>
             <label className={labelCls}>{t('quickGenerate.proxy')}</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {proxyModes.map((m) => (
-                <button key={m.id} type="button" onClick={() => setProxyMode(m.id)} className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border text-[11.5px] transition-colors ${proxyMode === m.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:border-muted-dark'}`}>
+                <button key={m.id} type="button" aria-pressed={proxyMode === m.id} onClick={() => setProxyMode(m.id)} className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border text-[11.5px] transition-colors ${proxyMode === m.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:border-muted-dark'}`}>
                   <m.icon className="w-4 h-4" />{m.label}
                 </button>
               ))}
@@ -240,7 +247,14 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
             </div>
           )}
 
-          {proxyMode === 'pool' && (
+          {proxyMode === 'free' && (
+            <div role="note" className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-[12px] text-warning">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+              <span>{t('quickGenerate.freeWarn')}{healthyFree.length === 0 ? <span className="block mt-1">{t('quickGenerate.freeNone')}</span> : null}</span>
+            </div>
+          )}
+
+          {(proxyMode === 'pool' || proxyMode === 'free') && (
             <label className="flex items-start gap-2.5 text-[12px] text-foreground cursor-pointer bg-background border border-border rounded-lg px-3 py-2.5">
               <input type="checkbox" checked={assignUnique} onChange={(e) => setAssignUnique(e.target.checked)} className="accent-[#6366f1] mt-0.5" />
               <span>
