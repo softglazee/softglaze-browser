@@ -92,6 +92,7 @@ export default function ProxyProvidersPage() {
   const [trialErr, setTrialErr] = useState('');
   const [savingTrial, setSavingTrial] = useState(false);
   const detailRef = useRef(null);
+  const listRef = useRef(null);
 
   useEffect(() => {
     softglazeApi.monetization.getLinks().then((r) => setLinks(r && r.links ? r.links : {})).catch(() => {});
@@ -147,6 +148,21 @@ export default function ProxyProvidersPage() {
   }, [loading, selectedKey, rows]);
 
   const sel = selectedKey ? byKey[selectedKey] : null;
+
+  // Keeps the selected provider visible inside the list's own scroll area (a ?provider= link can
+  // pick one far down) without scrolling the page.
+  useEffect(() => {
+    const box = listRef.current;
+    if (!box || !selectedKey) return;
+    const row = box.querySelector(`tr[data-provider="${selectedKey}"]`);
+    if (!row) return;
+    const head = box.querySelector('thead');
+    const b = box.getBoundingClientRect();
+    const r = row.getBoundingClientRect();
+    const top = b.top + (head ? head.offsetHeight : 0);
+    if (r.top < top) box.scrollTop -= top - r.top;
+    else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom;
+  }, [selectedKey, loading]);
 
   function openProvider(key, nextTab = 'pull', scroll = false) {
     setSelectedKey(key);
@@ -218,9 +234,11 @@ export default function ProxyProvidersPage() {
 
       {loadErr && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm" style={toneText('danger')}>{t('loadError', { message: loadErr })}</div>}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 items-start">
-        <Card className="overflow-hidden">
-          <div className="p-4 flex flex-col gap-3 border-b border-border">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 items-start xl:items-stretch">
+        {/* Size containment stops the long list from setting the row height, so on two columns the
+            row follows the detail card and the list scrolls inside that height. */}
+        <Card className="overflow-hidden flex flex-col xl:[contain:size] xl:min-h-[480px]">
+          <div className="p-4 flex flex-col gap-3 border-b border-border shrink-0">
             <div className="max-w-sm">
               <Input icon={Search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('table.search', { count: PROVIDERS.length })} aria-label={t('table.searchLabel')} />
             </div>
@@ -240,9 +258,9 @@ export default function ProxyProvidersPage() {
               ))}
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div ref={listRef} className="flex-1 min-h-0 overflow-auto max-h-[60vh] xl:max-h-none">
             <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border">
+              <thead className="sticky top-0 z-[1] bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold shadow-[inset_0_-1px_0_var(--border)]">
                 <tr>
                   <th scope="col" className="px-4 py-3">{t('table.colProvider')}</th>
                   <th scope="col" className="px-4 py-3">{t('table.colState')}</th>
@@ -256,6 +274,7 @@ export default function ProxyProvidersPage() {
                   return (
                     <tr
                       key={r.p.key}
+                      data-provider={r.p.key}
                       onClick={() => openProvider(r.p.key, tab)}
                       className={cn('cursor-pointer transition-colors', isSel ? 'bg-primary/10' : 'hover:bg-secondary/60')}
                     >
