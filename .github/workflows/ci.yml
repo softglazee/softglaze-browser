@@ -14,6 +14,12 @@ jobs:
       # binary downloads to keep CI fast.
       PUPPETEER_SKIP_DOWNLOAD: 'true'
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      # With the binary skipped, require('electron') in a test DOWNLOADS it on first use,
+      # and node --test runs test files in parallel processes, so several of them unpacked
+      # it into the same folder at once ("File exists (os error 17)" -> "Electron failed
+      # to install correctly"), failing a random test. Under plain node the tests only
+      # get the binary's path, never run it, so point that path at a dummy folder.
+      ELECTRON_OVERRIDE_DIST_PATH: '/tmp/electron-not-installed'
     steps:
       - uses: actions/checkout@v4
 
