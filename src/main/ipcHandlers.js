@@ -53,6 +53,7 @@ const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
 const profileData = require('./profileData');
 const captchaScore = require('./captchaScore');
+const providerAccount = require('./providerAccount');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
 const licensePolicy = require('./licensePolicy');
@@ -130,6 +131,7 @@ const CHANNELS = Object.freeze({
   PROXY_VENDOR_LOOKUP: 'proxy:vendor-lookup',
   PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
+  PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_CHECK_STREAM: 'proxy:check-stream',
@@ -3290,6 +3292,45 @@ async function vendorLookup(payload) {
     country: optionalString(input.country),
     groupby: optionalString(input.groupby)
   });
+}
+
+// ---- Provider account status (plan, expiry, traffic, balance) for the provider card ----
+// Uses the saved credentials and returns only the summary, never a secret. The last result per
+// provider is kept in the providerAccountCache setting, which only this gated handler reads.
+async function readSavedProviderCreds(provider) {
+  const stored = (await readProxyProviderCredMap())[provider];
+  if (!stored || typeof stored !== 'object') return null;
+  const out = {};
+  for (const f of PROXY_CRED_PLAIN_FIELDS) if (stored[f] != null) out[f] = stored[f];
+  for (const f of PROXY_CRED_SECRET_FIELDS) if (stored[f] != null) out[f] = secretStore.open(stored[f]);
+  return out;
+}
+
+async function readProviderAccountCache() {
+  const cache = await readSetting('providerAccountCache', {});
+  return cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : {};
+}
+
+async function getProviderAccount(payload) {
+  await requirePermission('proxies.manage');
+  const input = requireObject(payload);
+  const provider = requiredString(input.provider, 'Provider').toLowerCase();
+  if (!PROXY_VENDORS[provider]) throw new Error('Unknown proxy provider.');
+  const supported = Boolean(providerAccount.accountAdapterFor(provider));
+  const dashboardUrl = providerAccount.dashboardUrlFor(provider);
+  if (input.cachedOnly || !supported) {
+    const cached = supported ? (await readProviderAccountCache())[provider] : null;
+    return { provider, supported, dashboardUrl, account: cached && typeof cached === 'object' ? cached : null };
+  }
+  const creds = await readSavedProviderCreds(provider);
+  if (!creds) throw new Error(`${PROXY_VENDORS[provider]}: no saved credentials yet. Enter them on the Pull tab and save them first.`);
+  const res = await providerAccount.checkProviderAccount(provider, creds, (url, opts = {}) => httpRequestText(url, {
+    method: 'GET', headers: opts.headers || {}, timeoutMs: 20000, maxBytes: 8_000_000
+  }));
+  const account = { ...res.account, checkedAt: new Date().toISOString() };
+  // Re-read just before writing so two checks at once keep both results.
+  await writeSetting('providerAccountCache', { ...(await readProviderAccountCache()), [provider]: account });
+  return { provider, supported: true, dashboardUrl, account };
 }
 
 // ---- 2extract (residential + mobile, gateway-minted) ----
@@ -12155,6 +12196,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_VENDOR_LOOKUP, vendorLookup);
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_GET, getProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_SET, saveProxyProviderCreds);
+  registerHandler(CHANNELS.PROXY_PROVIDER_ACCOUNT, getProviderAccount);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
   registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
   registerHandler(CHANNELS.PROXY_CHECK_STREAM, runProxyCheckStream);

@@ -8,6 +8,7 @@ import {
 
 import ProxyProviders, { PROVIDERS, ProviderLogo } from '@/components/ProxyProviders.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
+import ProviderAccount from '@/components/ProviderAccount.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card } from '@/components/ui/Card.jsx';
 import Input from '@/components/ui/Input.jsx';
@@ -425,6 +426,8 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
           )}
         </dl>
       </section>
+
+      {!p.unavailable && <ProviderAccount providerKey={p.key} />}
 
       <div role="tablist" className="flex items-center gap-1 px-5 border-b border-border">
         {TABS.map(([key, label]) => (

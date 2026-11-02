@@ -358,5 +358,41 @@
     "groupAll": "All groups",
     "providerAll": "All providers",
     "reset": "Reset filters"
+  },
+  "providerAccount": {
+    "title": "Account",
+    "check": "Check account",
+    "checkedAt": "Checked {{time}}",
+    "notChecked": "Not checked yet. Check account reads the plan, expiry, traffic and balance with the key saved for this provider.",
+    "notSupported": "This provider's API does not report account details.",
+    "openDashboard": "Open dashboard",
+    "status": "Status",
+    "statusActive": "Active",
+    "statusExpired": "Expired",
+    "statusSuspended": "Suspended",
+    "statusUnknown": "Unknown",
+    "plan": "Plan",
+    "expires": "Expires",
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "endsToday": "ends today",
+    "endedAgo_one": "ended {{count}} day ago",
+    "endedAgo_other": "ended {{count}} days ago",
+    "traffic": "Traffic",
+    "trafficLeft": "{{left}} left",
+    "trafficUsedOf": "{{used}} used of {{total}}",
+    "trafficUsed": "{{used}} used",
+    "trafficTotal": "Plan of {{total}}",
+    "balance": "Balance",
+    "noDetails": "The provider answered but reported no plan, expiry, traffic or balance.",
+    "error": "Could not check the account: {{message}}",
+    "note": {
+      "firstToExpire": "The expiry shown is the first of your proxies or plans to end.",
+      "summedPlans": "The figures add up all your active plans.",
+      "noActivePlans": "No active plans on this account.",
+      "noActiveProxies": "No active proxies on this account.",
+      "planSizeOnly": "The API reports the plan size, not how much traffic is left.",
+      "firstPageOnly": "Worked out from your first 1000 proxies."
+    }
   }
 }

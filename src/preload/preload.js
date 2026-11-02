@@ -34,6 +34,7 @@ const CHANNELS = Object.freeze({
   PROXY_VENDOR_LOOKUP: 'proxy:vendor-lookup',
   PROXY_PROVIDER_CREDS_GET: 'proxy-provider:creds-get',
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
+  PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_CHECK_STREAM: 'proxy:check-stream',
@@ -322,6 +323,8 @@ const api = Object.freeze({
     vendorLookup: (payload) => invoke(CHANNELS.PROXY_VENDOR_LOOKUP, payload),
     getProviderCreds: (provider) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_GET, { provider }),
     saveProviderCreds: (payload) => invoke(CHANNELS.PROXY_PROVIDER_CREDS_SET, payload),
+    // { provider, cachedOnly } -> { supported, dashboardUrl, account }; never returns a secret.
+    providerAccount: (payload) => invoke(CHANNELS.PROXY_PROVIDER_ACCOUNT, payload),
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL),
     checkStream: (payload) => invoke(CHANNELS.PROXY_CHECK_STREAM, payload),
