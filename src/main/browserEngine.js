@@ -747,6 +747,34 @@ function buildAntidetectFlags(profile, fpConfig, seed, timezoneId, hasProxy) {
 // --- PID TRACKING FOR ORPHAN CLEANUP ---
 const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
 
+// --- SESSION END CLASSIFICATION ---
+// How a profile browser ended, from the app's point of view:
+//   'shutdown'      the app is quitting
+//   'user'          the app's own Stop / close
+//   'window-closed' the browser process exited NORMALLY (exit code 0, no signal): the
+//                   user closed the window with its X, or a script closed it over CDP
+//   'crash'         anything else: a non-zero code, a signal, or the connection dropped
+//                   while the process kept running / its end could not be seen
+// Shared by the Chrome and Firefox engines.
+function classifyBrowserExit({ shuttingDown = false, intentional = false, exit = null } = {}) {
+  if (shuttingDown) return 'shutdown';
+  if (intentional) return 'user';
+  if (exit && exit.code === 0 && !exit.signal) return 'window-closed';
+  return 'crash';
+}
+
+// Resolve with { code, signal } once the process has exited, or null after `ms` if it
+// is still running (or there is no process handle).
+function waitForProcessExit(proc, ms = 3000) {
+  return new Promise((resolve) => {
+    if (!proc) return resolve(null);
+    if (proc.exitCode !== null && proc.exitCode !== undefined) return resolve({ code: proc.exitCode, signal: null });
+    if (proc.signalCode) return resolve({ code: null, signal: proc.signalCode });
+    const timer = setTimeout(() => resolve(null), ms);
+    proc.once('exit', (code, signal) => { clearTimeout(timer); resolve({ code, signal }); });
+  });
+}
+
 // Each entry is { pid, dir } - the profile's user-data-dir is recorded with the PID so
 // the next start can verify a leftover PID really is THIS profile's browser before
 // killing it (orphanCleanup.js). Old files with bare numbers are still read there.
@@ -4012,7 +4040,8 @@ const rootCdp = await browser.target().createCDPSession();
   let wsEndpoint = null;
   try { wsEndpoint = browser.wsEndpoint(); } catch (e) { wsEndpoint = null; }
   let sessionPid = null;
-  try { sessionPid = browser.process() ? browser.process().pid : null; } catch (e) { sessionPid = null; }
+  let sessionProcess = null; // the Chrome ChildProcess, to read its exit code on disconnect
+  try { sessionProcess = browser.process() || null; sessionPid = sessionProcess ? sessionProcess.pid : null; } catch (e) { sessionPid = null; sessionProcess = null; }
   activeSessions.set(sessionId, {
     browser,
     page,
@@ -4030,12 +4059,20 @@ const rootCdp = await browser.target().createCDPSession();
   browser.on('disconnected', () => {
     activeSessions.delete(sessionId);
     if (socksRelay) { try { socksRelay.close(); } catch (e) {} } // tear down the relay with the browser
-    // Classify the disconnect: app shutdown and explicit user-close are clean;
-    // anything else is a crash (ipcHandlers bumps crashCount + notifies).
-    let reason = 'crash';
-    if (shuttingDown) reason = 'shutdown';
-    else if (intentionalClose.has(sessionId)) { reason = 'user'; intentionalClose.delete(sessionId); }
-    emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
+    // Classify the disconnect: app shutdown and an app Stop are clean right away.
+    // Otherwise look at HOW the browser process ended (audit 2 Nov 2026): every other
+    // disconnect used to count as a crash - including the user simply closing the
+    // profile window with its own X, or a script closing it over CDP - which showed a
+    // crash toast, bumped crashCount, offered a "restore" and could even auto-relaunch
+    // the profile. A process that exits normally (code 0) is a close, not a crash.
+    const intentional = intentionalClose.has(sessionId);
+    if (intentional) intentionalClose.delete(sessionId);
+    const emit = (exit) => {
+      const reason = classifyBrowserExit({ shuttingDown, intentional, exit });
+      emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason });
+    };
+    if (shuttingDown || intentional) { emit(null); return; }
+    waitForProcessExit(sessionProcess, 3000).then(emit, () => emit(null));
   });
 
   // Success - emit 'launched' and return the session handle from INSIDE the guard try,
@@ -5126,6 +5163,9 @@ function listSessionPids() {
 module.exports = {
   DEFAULT_PROFILE_ROOT,
   PUPPETEER_DEFAULT_ARGS_TO_DROP,
+  // Shared with the Firefox engine (and tests): how a profile browser ended.
+  classifyBrowserExit,
+  waitForProcessExit,
   parseProxyInput,
   formatProxyHost,
   // Pure helper exported for regression tests: maps a proxy type to its --proxy-server

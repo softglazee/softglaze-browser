@@ -586,7 +586,8 @@ async function launchFirefoxProfileNow(options = {}) {
   ffSessions.set(sessionId, session);
 
   let ffSettled = false;
-  const onGone = () => {
+  // `exit` = { code, signal } from the process 'exit' event; null for a spawn 'error'.
+  const onGone = (exit) => {
     // 'exit' and 'error' can BOTH fire for one process - run teardown (and emit the
     // session event) exactly once, or a single close is reported as two and can drive a
     // spurious crash-recovery relaunch.
@@ -597,13 +598,16 @@ async function launchFirefoxProfileNow(options = {}) {
     // audit E5: only drop the map entry if it is still THIS session (a relaunch may
     // already have registered a new one under the same id).
     if (ffSessions.get(sessionId) === session) ffSessions.delete(sessionId);
-    let reason = 'crash';
-    if (ffShuttingDown) reason = 'shutdown';
-    else if (ffIntentionalClose.has(sessionId)) { reason = 'user'; ffIntentionalClose.delete(sessionId); }
+    // audit 2 Nov 2026: a Firefox the user closed with its own X exits with code 0 and
+    // used to be reported as a crash (toast, crashCount, restore offer, auto-relaunch).
+    const intentional = ffIntentionalClose.has(sessionId);
+    if (intentional) ffIntentionalClose.delete(sessionId);
+    const { classifyBrowserExit } = require('./browserEngine');
+    const reason = classifyBrowserExit({ shuttingDown: ffShuttingDown, intentional, exit });
     emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason, engine: 'firefox' });
   };
-  proc.on('exit', onGone);
-  proc.on('error', onGone);
+  proc.on('exit', (code, signal) => onGone({ code, signal }));
+  proc.on('error', () => onGone(null));
 
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'firefox' });
 
