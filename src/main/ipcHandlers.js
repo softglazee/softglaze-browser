@@ -1671,6 +1671,10 @@ function randSession(len = 8) {
 }
 // Count-driven adapters (Apify) mint sticky-session strings locally with no network call per row, so
 // 500 is cheap while still bounding a runaway value. Adapters with a real API limit pass their own max.
+// Gateways that mint sessions locally (the username carries the session) have no vendor-side limit
+// on how many a pull makes, so they share this cap; list APIs use the vendor's documented maximum.
+const MINTED_PULL_MAX = 1000;
+
 function clampPoolCount(value, def = 5, max = 500) {
   const n = Number.parseInt(String(value), 10);
   if (!Number.isFinite(n) || n < 1) return def;

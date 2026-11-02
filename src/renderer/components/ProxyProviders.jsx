@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getLogo } from '@/lib/providerLogos.js';
+import { countryOptions } from '@/lib/countries.mjs';
 import i18n from '@/i18n/index.js';
 import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
 import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
@@ -166,7 +167,7 @@ const GEO_HINTS = {
 // `selectedKey` + `embedded` let the Proxy providers page drive which connector is on screen
 // and render only the connector workspace (it draws its own provider list and header).
 export default function ProxyProviders({ onSynced, selectedKey: controlledKey, embedded = false }) {
-  const { t } = useTranslation('cmpSettingsC');
+  const { t, i18n } = useTranslation('cmpSettingsC');
   const [ownSelectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
   const selectedKey = controlledKey || ownSelectedKey;
   const provider = useMemo(() => PROVIDERS.find((p) => p.key === selectedKey) || PROVIDERS[0], [selectedKey]);
@@ -563,7 +564,8 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           <div className="sm:max-w-[320px]">
             <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
             <select value={form.country} onChange={(e) => { set('country', e.target.value); set('state', ''); set('city', ''); setGeoOptions((o) => ({ ...o, state: [], city: [] })); }} className={selectCls} style={chevronStyle}>
-              {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}{code ? ` (${code})` : ''}</option>)}
+              <option value="">{t('proxyProviders.countries.any', 'Any / Random')}</option>
+{countryOptions(provider, i18n.language).map(([code, name]) => <option key={code} value={code}>{`${name} (${code})`}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -626,7 +628,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     const regions = geoOptions.region;
     const regionHit = regions.find((r) => r.key === form.state);
     const cities = regionHit ? regionHit.cities : [];
-    const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key, c.label]) : PROXY_COUNTRIES.filter(([code]) => code);
+    const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key, c.label]) : countryOptions(provider, i18n.language);
     const mode = form.poolType === 'interval' ? 'interval' : form.poolType === 'rotating' ? 'rotating' : 'sticky';
     const residential = form.plan === 'residential';
     const products = account && account.provider === 'proxyseller' && Array.isArray(account.products) ? account.products : [];
@@ -795,7 +797,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     const isIpr = account && account.provider === 'iproyal';
     const subusers = isIpr && Array.isArray(account.subusers) ? account.subusers : [];
     const useSub = Boolean(form.subuserHash);
-    const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key.toUpperCase(), c.label]) : PROXY_COUNTRIES.filter(([code]) => code);
+    const countries = geoOptions.country.length ? geoOptions.country.map((c) => [c.key.toUpperCase(), c.label]) : countryOptions(provider, i18n.language);
     const states = geoOptions.region;
     const stateHit = states.find((s) => s.key === form.state);
     const cities = stateHit ? stateHit.cities : geoOptions.city;
@@ -1125,7 +1127,8 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                     <div>
                       <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
                       <select value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
-                        {PROXY_COUNTRIES.map(([code, name]) => <option key={code || 'any'} value={code}>{t(`proxyProviders.countries.${code || 'any'}`, name)}{code ? ` (${code})` : ''}</option>)}
+                        <option value="">{t('proxyProviders.countries.any', 'Any / Random')}</option>
+{countryOptions(provider, i18n.language).map(([code, name]) => <option key={code} value={code}>{`${name} (${code})`}</option>)}
                       </select>
                     </div>
                   )}
