@@ -30,7 +30,6 @@ function VersionRow({ label, versionText, installed, download, accent, onDownloa
   const failed = d && d.state === 'error';
   const canPause = d && (d.state === 'downloading' || d.state === 'queued');
   const stateLabel = d ? (d.state === 'extracting' || d.state === 'installing' || d.state === 'verifying' ? t('row.installing') : d.state === 'queued' ? t('row.queued') : `${d.percent || 0}%`) : '';
-  // Progress bar tint: amber while paused/interrupted, primary while active.
   const barColor = (paused || interrupted) ? '#f59e0b' : 'var(--primary)';
   return (
     <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-elevated border border-border">
@@ -123,7 +122,7 @@ export default function BrowsersPage() {
 
   useEffect(() => { mounted.current = true; load(); return () => { mounted.current = false; }; }, [load]);
 
-  // Live progress for BOTH engines; refresh counts the moment one finishes.
+  // Poll download progress for both engines; reload counts as soon as one finishes.
   useEffect(() => {
     const id = setInterval(async () => {
       try {
@@ -209,9 +208,8 @@ export default function BrowsersPage() {
   // The system-detected Firefox counts as ready even if not a versioned install.
   const ffReady = ffInstalled + (firefox?.installed ? 1 : 0);
 
-  // Show/hide: by default surface only the "relevant" versions (installed or
-  // downloading) plus the few latest, so the list isn't an overwhelming wall of
-  // every major. "Show all" reveals the rest. Original order is preserved.
+  // By default show only installed or downloading versions plus the latest few, keeping list order;
+  // "Show all" reveals the rest.
   const RELEVANT_LIMIT = 6;
   const relevantOnly = (list) => {
     const anchored = list.filter((it) => it.installed || (it.download && it.download.state));
@@ -247,7 +245,7 @@ export default function BrowsersPage() {
 
       {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400">{err}</div>}
 
-      {/* Anti-detect engine (fingerprint-chromium) - the native-spoofing Chromium */}
+      {/* fingerprint-chromium: the Chromium build that spoofs fingerprints natively */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
           <div className="w-10 h-10 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #06b6d4 12%, transparent)', border: '1px solid color-mix(in srgb, #06b6d4 22%, transparent)' }}>
@@ -296,7 +294,6 @@ export default function BrowsersPage() {
         </div>
       </div>
 
-      {/* Firefox engine section */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
         <div className="flex items-start gap-3 px-5 py-4 border-b border-border">
           <div className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #f59e0b 14%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 24%, transparent)' }}>
@@ -353,7 +350,6 @@ export default function BrowsersPage() {
         </div>
       </div>
 
-      {/* Chromium engine section */}
       <div className="rounded-xl bg-card border border-border overflow-hidden animate-fade-up">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-border">
           <div className="w-10 h-10 rounded-lg grid place-items-center" style={{ background: 'color-mix(in srgb, #3b82f6 12%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 22%, transparent)' }}>

@@ -17,7 +17,7 @@ async function token({ clientId, clientSecret, env }) {
   return json.access_token;
 }
 
-// plan.amount is in MINOR units (cents); PayPal wants a decimal string.
+// plan.amount is in minor units (cents); PayPal wants a decimal string.
 async function createCheckout({ secrets, plan, returnUrl, cancelUrl }) {
   const t = await token(secrets);
   const value = (plan.amount / 100).toFixed(2);
@@ -34,11 +34,9 @@ async function createCheckout({ secrets, plan, returnUrl, cancelUrl }) {
   return { ref: json.id, url: approve ? approve.href : null };
 }
 
-// Audit L6: capture errors are thrown, never swallowed, so the webhook fails and PayPal
-// retries it. PayPal-Request-Id is derived from the order id, so a retried capture is
-// idempotent at PayPal (it replays the first response instead of charging again). An
-// order that is already captured returns { alreadyCaptured: true }; PAYMENT.CAPTURE.
-// COMPLETED provisions it.
+// Throw capture errors so the webhook fails and PayPal retries. PayPal-Request-Id derives from the
+// order id, so a retried capture replays the first response instead of charging again. An order
+// already captured returns { alreadyCaptured: true }; PAYMENT.CAPTURE.COMPLETED provisions it.
 async function captureOrder({ secrets, orderId }) {
   if (!orderId) throw new Error('PayPal: capture needs an order id.');
   const t = await token(secrets);

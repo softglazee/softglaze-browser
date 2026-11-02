@@ -1,15 +1,7 @@
 'use strict';
-// Cross-platform engine layer helpers.
-//
-// The browser-engine code (browserDownloader.js, browserEngine.js, firefoxEngine.js)
-// was originally hard-wired to Windows: it filtered Chrome-for-Testing to the `win64`
-// token, launched `chrome.exe`/`firefox.exe`, and built win64 Mozilla URLs. This module
-// centralizes every one of those OS-specific decisions so those files ask here instead
-// of hardcoding, which is what makes a macOS / Linux build actually launch browsers.
-//
-// Every function takes optional (platform, arch) so it is pure and unit-testable for all
-// three OSes from any host; they default to the running machine. Paths are returned with
-// forward slashes (Node accepts them on Windows too, and at runtime platform === host).
+// OS-specific engine decisions (CfT platform tokens, binary names, Mozilla URLs) live here so the
+// engine code runs on Windows, macOS and Linux. Functions take optional (platform, arch) for tests;
+// paths use forward slashes, which Node accepts on Windows too.
 const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -17,10 +9,6 @@ const fs = require('node:fs');
 const P = { WIN: 'win32', MAC: 'darwin', LINUX: 'linux' };
 
 function isWindows(platform = process.platform) { return platform === P.WIN; }
-
-// ---------------------------------------------------------------------------
-// Chrome for Testing (browserDownloader.js + browserEngine.js)
-// ---------------------------------------------------------------------------
 
 // The platform key used in Google's known-good-versions-with-downloads.json.
 function cftPlatform(platform = process.platform, arch = process.arch) {
@@ -35,15 +23,14 @@ function chromeExtractDir(platform = process.platform, arch = process.arch) {
   return `chrome-${cftPlatform(platform, arch)}`;
 }
 
-// Launchable Chrome binary path RELATIVE to chromeExtractDir().
+// Launchable Chrome binary path relative to chromeExtractDir().
 function chromeBinaryRel(platform = process.platform) {
   if (platform === P.WIN) return 'chrome.exe';
   if (platform === P.MAC) return 'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
   return 'chrome'; // linux
 }
 
-// Full binary path RELATIVE to a CfT install dir (subdir + binary),
-// e.g. 'chrome-win64/chrome.exe'. Used for install-completeness checks.
+// Binary path relative to a CfT install dir, e.g. 'chrome-win64/chrome.exe'; used by install checks.
 function chromeBinaryFromInstallDir(platform = process.platform, arch = process.arch) {
   return `${chromeExtractDir(platform, arch)}/${chromeBinaryRel(platform)}`;
 }
@@ -54,8 +41,7 @@ function chromeInstallDirName(version, platform = process.platform, arch = proce
   return `${cftPlatform(platform, arch)}-${version}`;
 }
 
-// Matches any managed CfT install dir name across platforms, capturing
-// [full, cftToken, major, rest]. Replaces the old /^win64-(\d+)\.([\d.]+)$/.
+// Any managed CfT install dir name; captures [full, cftToken, major, rest].
 const CHROME_INSTALL_DIR_RE = /^(win64|mac-x64|mac-arm64|linux64)-(\d+)\.([\d.]+)$/;
 
 // System-installed Chrome/Chromium locations to probe as a fallback engine.
@@ -85,10 +71,8 @@ function realChromeCandidates(platform = process.platform) {
   ].filter(Boolean);
 }
 
-// fingerprint-chromium (ungoogled-chromium fork) extracts to different layouts
-// per OS and the exact binary name varies by build, so instead of hardcoding it we
-// SCAN <root> and one level of subdirs for the launchable binary. Returns its path
-// or null. `plat` is injectable for tests.
+// fingerprint-chromium's layout and binary name vary by OS and build, so scan <root> and one level
+// of subdirs for the launchable binary. Returns its path or null; `plat` is injectable for tests.
 function findFpChromiumBinary(root, plat = process.platform) {
   const macBinaries = (base) => {
     let apps = [];
@@ -122,10 +106,6 @@ function findFpChromiumBinary(root, plat = process.platform) {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Firefox (firefoxEngine.js)
-// ---------------------------------------------------------------------------
-
 // Mozilla release sub-path segment per OS ('win64' | 'mac' | 'linux-x86_64').
 function firefoxMozDir(platform = process.platform) {
   if (platform === P.WIN) return 'win64';
@@ -152,7 +132,7 @@ function firefoxSha256Key(full, platform = process.platform) {
   return `${firefoxMozDir(platform)}/en-US/${firefoxArtifactName(full, platform)}`;
 }
 
-// Firefox binary path RELATIVE to our managed install dir, after extraction.
+// Firefox binary path relative to the managed install dir, after extraction.
 function firefoxBinaryRel(platform = process.platform) {
   if (platform === P.WIN) return 'firefox.exe';
   if (platform === P.MAC) return 'Firefox.app/Contents/MacOS/firefox';
@@ -184,7 +164,6 @@ function firefoxSystemCandidates(platform = process.platform) {
 module.exports = {
   P,
   isWindows,
-  // Chrome
   cftPlatform,
   chromeExtractDir,
   chromeBinaryRel,
@@ -193,7 +172,6 @@ module.exports = {
   CHROME_INSTALL_DIR_RE,
   realChromeCandidates,
   findFpChromiumBinary,
-  // Firefox
   firefoxArtifactName,
   firefoxInstallerUrl,
   firefoxSha256Key,

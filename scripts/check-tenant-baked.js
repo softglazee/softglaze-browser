@@ -1,14 +1,7 @@
 'use strict';
-// Refuse to package an installer that has no licensing backend baked in.
-//
-// Decision A4: entitlement must come from a server-signed lease the client can
-// only verify. A build with an empty src/main/tenant.config.json runs entirely on
-// the local trial/grace/ban state machine and cannot redeem anything — fine for
-// development, wrong to hand to a customer. Since the difference is invisible in
-// the finished installer, the check happens here rather than in review.
-//
-// Build a sellable installer with:      npm run build:tenant -- <tenant.config.json>
-// Build a local/dev installer with:     SG_ALLOW_BASE_BUILD=1 npm run build
+// Refuse to package an installer with no licensing backend baked in: an empty tenant.config.json
+// runs only on the local trial state machine and cannot redeem anything. Sellable builds use
+// `npm run build:tenant -- <config>`; dev builds set SG_ALLOW_BASE_BUILD=1.
 const fs = require('node:fs');
 const path = require('node:path');
 

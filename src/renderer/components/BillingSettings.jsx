@@ -41,8 +41,7 @@ export default function BillingSettings() {
 
   if (loading) return null;
   const role = me?.role;
-  // The Super Admin is the source owner - exempt from the trial/subscription
-  // system, so they never see the Subscription card (only the gateway config).
+  // The Super Admin (source owner) is exempt from trial/subscription, so sees only the gateway config.
   const showSubscription = role === 'OWNER' || !me;
   const showGateway = role === 'SUPER_ADMIN';
   if (!showSubscription && !showGateway) return null;
@@ -56,9 +55,7 @@ export default function BillingSettings() {
   );
 }
 
-// Compact subscription summary for the Settings page. The full plan comparison,
-// checkout and redeem flow now live on the dedicated Billing page (/billing) -
-// this card shows status at a glance and links there.
+// Compact summary; the full plan comparison, checkout and redeem flow live on /billing.
 function SubscriptionCard({ license, seats }) {
   const navigate = useNavigate();
   const { t } = useTranslation('cmpSettingsA');
@@ -112,10 +109,8 @@ function SubscriptionCard({ license, seats }) {
   );
 }
 
-// Super-Admin payment-method configuration. Renders one editable block per
-// provider (Cryptomus / Stripe / PayPal / Wise / Manual), driven by the metadata
-// the main process returns - so adding a provider in payments.js surfaces here
-// automatically. Secret values are never sent back to the renderer.
+// One editable block per provider, driven by main-process metadata, so a provider added in
+// payments.js shows up here. Secret values are never sent back to the renderer.
 function PaymentGatewayCard() {
   const { t } = useTranslation('cmpSettingsA');
   const [config, setConfig] = useState(null);
@@ -141,7 +136,6 @@ function PaymentGatewayCard() {
       {err && <div className="mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
 
       {!config ? (
-        // A failed load used to leave this spinner running forever under the error.
         err
           ? <div className="mt-3"><button type="button" onClick={load} className="h-8 px-3 rounded-lg text-[12px] font-semibold border border-border text-foreground hover:bg-secondary">{t('billing.gateway.retry')}</button></div>
           : <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /></div>
@@ -202,7 +196,6 @@ function ProviderConfig({ provider, onSaved }) {
       const payloadValues = {};
       provider.fields.forEach((f) => { payloadValues[f.key] = values[f.key]; });
       await softglazeApi.payments.setConfig({ id: provider.id, enabled, values: payloadValues });
-      // Mark secrets that were just set as stored, then clear the inputs.
       setStored((prev) => {
         const n = { ...prev };
         provider.fields.forEach((f) => { if (f.secret && values[f.key]) n[f.key] = true; });
@@ -234,7 +227,6 @@ function ProviderConfig({ provider, onSaved }) {
 
   return (
     <div className="rounded-lg border border-border bg-elevated/40 overflow-hidden">
-      {/* Header row: label + kind badge + enable toggle */}
       <div className="flex items-center gap-3 px-4 py-3">
         <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
           <span className="text-[13px] font-semibold text-foreground">{provider.label}</span>

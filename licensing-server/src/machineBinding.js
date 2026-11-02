@@ -1,19 +1,7 @@
 'use strict';
-// Machine binding for installs (audit L3, 7 Oct 2026).
-//
-// installId + installSecret used to be the whole credential for a lease, so one paying
-// user could copy the pair to any number of machines. Each install is now bound to one
-// machine hash (a SHA-256 the desktop derives from its OS machine identity; raw hardware
-// ids never leave the machine):
-//  - trust on first use: an install with no stored hash binds to the first one it sees
-//    (at /v1/register or the first /v1/license call);
-//  - a different hash gets 403 { error: 'machine_mismatch' } and no lease;
-//  - the signed lease carries the hash as `mid` and the desktop refuses a lease whose mid
-//    is not its own, so a copied lease is useless too.
-// A legitimate PC change goes through the tenant-admin reset (no limit) or the
-// self-service transfer below (install secret + proof of purchase, 2 per 30 days).
-//
-// Pure module: callers pass the Prisma client, so tests can run it against a fake.
+// Each install is bound to one machine hash (a SHA-256 of the OS machine identity; raw ids never
+// leave the machine). Trust on first use; a different hash gets 403 machine_mismatch, and leases carry
+// it as `mid`. PC changes go through the admin reset or the self-service transfer (2 per 30 days).
 
 const crypto = require('node:crypto');
 
@@ -59,13 +47,9 @@ async function resetMachine(prisma, tenant, installId) {
   return { status: 200, body: { ok: true, installId: install.id } };
 }
 
-// Proof of purchase for a self-service transfer. The install secret alone is what gets
-// shared, so it is not enough. Accepted, strongest first:
-//  1) the activation code this install redeemed (LicenseCode.redeemedBy = install.id);
-//  2) the licence's provider reference (Stripe subscription/order id, PayPal order id,
-//     Cryptomus order id) recorded on License.providerRef;
-//  3) the provider reference of a paid Payment made for this install (checkout session /
-//     order id shown in the buyer's receipt).
+// Proof of purchase for a self-service transfer; the install secret alone is what gets shared.
+// Accepted, strongest first: the activation code this install redeemed, the licence's providerRef,
+// or the providerRef of a paid Payment for this install (the order id on the buyer's receipt).
 async function hasPurchaseProof(prisma, tenant, install, lic, proof) {
   const p = typeof proof === 'string' ? proof.trim() : '';
   if (p.length < 6) return false;

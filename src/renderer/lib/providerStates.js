@@ -59,8 +59,7 @@ export function useProviderStates() {
     return () => { live = false; };
   }, []);
 
-  // Trial tracking is our own vendor testing, so only the Super Admin ever sees it.
-  // Customers buy their proxies; for them no provider is ever "on trial".
+  // Trials track the Super Admin's own vendor testing; customers buy proxies, so never see trials.
   const isSuper = Boolean(me && me.role === 'SUPER_ADMIN');
   const roleKnown = me !== undefined;
 

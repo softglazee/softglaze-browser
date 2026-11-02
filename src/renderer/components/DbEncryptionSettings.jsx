@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Database, Lock, KeyRound, ShieldCheck, AlertTriangle, Loader2, Check, ChevronDown } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// Full-database encryption at rest (Phase 6). Honest by design: it never claims
-// runtime protection it doesn't provide, it's OFF until the user opts in, and
-// enabling forces an explicit acknowledgement that a lost password is unrecoverable.
+// Full-database encryption at rest. Off until the user opts in, never overclaims runtime
+// protection, and enabling requires acknowledging that a lost password is unrecoverable.
 export default function DbEncryptionSettings() {
   const { t } = useTranslation('cmpSettingsB');
   const [status, setStatus] = useState(null);
@@ -77,7 +76,6 @@ export default function DbEncryptionSettings() {
         </span>
       </div>
 
-      {/* Honest scope statement - never overclaim */}
       <div className="mt-4 px-3 py-2.5 rounded-lg bg-elevated border border-border text-[12px] text-muted-foreground leading-relaxed">
         {t('dbEncryption.scopeBefore')} <span className="text-foreground">{t('dbEncryption.scopeRunningUnlocked')}</span>{t('dbEncryption.scopeAfter')}
       </div>

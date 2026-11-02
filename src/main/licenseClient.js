@@ -1,14 +1,7 @@
 'use strict';
-// Client side of the SoftGlaze licensing backend. Two concerns:
-//
-//   1) verifyLease(token) - OFFLINE Ed25519 verification of a backend-signed lease
-//      using the baked tenant public key. This is the trust boundary: tier/exp are
-//      believed only if the signature checks out. Returns the entitlement or null.
-//
-//   2) api.* - thin HTTPS calls to the backend (register / checkout / license /
-//      redeem). Inactive unless a tenant config is baked (tenantConfig().enabled).
-//
-// No new dependencies: Node's crypto.verify does Ed25519; node:https/http for I/O.
+// Client for the SoftGlaze licensing backend. verifyLease() checks a backend-signed lease offline
+// (Ed25519, baked tenant public key): tier/exp are trusted only if the signature verifies.
+// api.* are thin HTTPS calls, inactive unless a tenant config is baked in.
 const https = require('node:https');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -19,14 +12,9 @@ const { tenantConfig } = require('./tenantConfig');
 
 const fromB64url = (s) => Buffer.from(String(s), 'base64url');
 
-// --- machine binding (audit L3) ---------------------------------------------
-// installId + installSecret used to be the whole credential, so they could be copied to
-// any number of machines. The server now binds each install to one machine hash and
-// signs it into the lease as `mid`. The hash is SHA-256 over the OS machine identity
-// (Windows MachineGuid, macOS IOPlatformUUID, Linux /etc/machine-id), salted with the
-// tenant id. The raw id never leaves this process. It is NOT the settings-stored
-// getMachineId() UUID in ipcHandlers: that one travels with a copied data folder, so it
-// proves nothing about the machine. getMachineId() is left exactly as it was.
+// The server binds each install to one machine hash, signed into the lease as `mid`: SHA-256 of the
+// OS machine id (MachineGuid, IOPlatformUUID, /etc/machine-id) salted with the tenant id. Not the
+// getMachineId() UUID in ipcHandlers, which travels with a copied data folder.
 function readOsMachineId() {
   try {
     if (process.platform === 'win32') {
@@ -56,9 +44,8 @@ function machineHash() {
   return cachedMachineHash;
 }
 
-// Last licensing problem the renderer should explain, e.g. { reason: 'machine_mismatch' }.
-// Set when the server refuses this machine or a lease bound to another machine is seen;
-// cleared by the next successful lease fetch or a verified lease for this machine.
+// Last licensing problem for the renderer to explain, e.g. { reason: 'machine_mismatch' }. Cleared by
+// the next successful lease fetch or a verified lease for this machine.
 let lastIssue = null;
 function noteIssue(reason) { lastIssue = { reason, at: Date.now() }; }
 function licenseIssue() { return lastIssue ? { ...lastIssue } : null; }
@@ -86,20 +73,14 @@ function verifyLease(token, opts = {}) {
   try { payload = JSON.parse(fromB64url(payloadB64).toString('utf8')); }
   catch (_) { return null; }
 
-  // Bind to this tenant (when the build is tenant-scoped). audit: the old check
-  // also required payload.tenant to be present, so a tenant-LESS lease bypassed
-  // binding entirely and would activate under any tenant-scoped build (given a
-  // shared signing key). In a tenant-scoped build now REQUIRE a matching tenant
-  // claim; legitimately-issued leases for that tenant already carry it. The base
-  // build (no cfg.tenantId) stays unbound.
+  // A tenant-scoped build requires a matching tenant claim, so a tenant-less lease cannot activate
+  // under it. The base build (no cfg.tenantId) stays unbound.
   if (cfg.tenantId && payload.tenant !== cfg.tenantId) return null;
   const nowSec = Math.floor((opts.nowMs || Date.now()) / 1000);
   if (!payload.exp || payload.exp < nowSec) return null; // expired
 
-  // Machine binding (audit L3). A lease with a mid must carry THIS machine's hash. A lease
-  // without one was issued before binding existed: it is honoured only until its own
-  // (short, LEASE_DAYS) expiry and is flagged legacy so the caller re-fetches a bound one.
-  // The server no longer issues mid-less leases, so this path closes on its own.
+  // A lease with a mid must carry this machine's hash. A mid-less (legacy) lease is honoured only
+  // until its short LEASE_DAYS expiry and is flagged so the caller fetches a bound one.
   const legacy = !payload.mid;
   if (!legacy) {
     const own = opts.machineHash || machineHash();
@@ -120,7 +101,6 @@ function verifyLease(token, opts = {}) {
   };
 }
 
-// --- thin backend transport -------------------------------------------------
 const ERROR_TEXT = {
   machine_mismatch: 'This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it.',
   machine_required: 'This app version is too old for the licensing server. Update the app.',
@@ -167,8 +147,8 @@ function postJson(pathName, body) {
   });
 }
 
-// The licensing server issues a per-install secret at first registration and requires it
-// for license and redeem (audit T2-6). An email is never a credential.
+// The licensing server issues a per-install secret at first registration and requires it for
+// license and redeem. An email is never a credential.
 const api = {
   register: (machineId, account, installSecret) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account, installSecret, machineHash: machineHash() }),
   checkout: ({ planKey, installId, account, provider }) => postJson('/v1/checkout', { tenantId: tenantConfig().tenantId, planKey, installId, account, provider }),

@@ -9,8 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 
-// Roles that may reassign profiles / manage the team (mirrors the main-side
-// `members.manage` gate; the backend re-checks regardless).
+// UI gate only; mirrors main's `members.manage` check, and the backend re-checks regardless.
 function canManageTeam(me) {
   if (!me) return true; // single-user mode == owner
   return ['OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(me.role);
@@ -28,8 +27,7 @@ const ROLE_CONFIG = {
   OPERATOR: { label: 'Operator', icon: User, color: '#9ca3af' }
 };
 
-// Which roles a viewer can create (mirrors permissions.js for UI gating; the
-// backend re-checks and clamps everything).
+// Roles each viewer can create; mirrors permissions.js for UI gating, the backend re-checks.
 const ROLES_BELOW = {
   SUPER_ADMIN: ['OWNER', 'ADMIN', 'MANAGER', 'OPERATOR'],
   OWNER: ['ADMIN', 'MANAGER', 'OPERATOR'],
@@ -44,8 +42,7 @@ const FEATURES = [
   ['batchImport', 'Batch import'], ['trash', 'Trash'], ['members', 'Members'], ['settings', 'Settings']
 ];
 
-// Role ranks (mirror of permissions.js) - used to show only the action toggles a
-// member's role can actually perform.
+// Mirror of permissions.js; decides which action toggles a member's role can perform.
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
 
 // Child-role caps relevant to a given member role.
@@ -96,9 +93,7 @@ function fmtLimit(used, max) {
   return `${used || 0} / ${max}`;
 }
 
-// A single numeric-limit field. Hoisted to MODULE scope: when it was defined inside
-// PermissionEditor's render, every keystroke created a new component type, so React
-// remounted the <input> and it lost focus after one digit.
+// Keep at module scope: defined inside a render, each keystroke remounts the input and it loses focus.
 function NumLimit({ k, label, value, granter, set, t }) {
   const max = granter ? granter[k] : -1;
   const unlimited = value[k] === -1;
@@ -278,8 +273,7 @@ export default function MembersPage() {
   );
 }
 
-// Super-Admin only: per-owner-tree license console. Grant / extend / reset a
-// license and block / unblock the owner. Every action is re-enforced in main.
+// Super-Admin license console per owner tree (grant, extend, reset, block); main re-enforces each.
 const LIC_TONE = {
   paid: { c: '#10b981', label: 'Paid' },
   trialing: { c: '#3b82f6', label: 'Trial' },
@@ -387,8 +381,7 @@ function SuperAdminLicensePanel() {
   );
 }
 
-// Full per-owner license editor: set type/tier/exact expiry, grant a chosen plan,
-// start the free trial or terminate - every action re-enforced in main.
+// Per-owner license editor (state, plan grant, trial, terminate); main re-enforces every action.
 function LicenseEditModal({ row, plans, onClose, onSaved }) {
   const { t } = useTranslation('members');
   const lic = row.license || {};
@@ -422,7 +415,6 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Set exact state */}
           <div>
             <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('license.setState')}</p>
             <div className="grid grid-cols-3 gap-3">
@@ -441,7 +433,6 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
             <button onClick={() => run('save', () => softglazeApi.license.edit({ ownerId: row.ownerId, type, tier, endsAt: endsAt || null }))} disabled={busy === 'save'} className="mt-3 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 disabled:opacity-60">{busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('license.actions.saveState')}</button>
           </div>
 
-          {/* Grant a plan */}
           {paidPlans.length > 0 && (
             <div className="border-t border-border pt-4">
               <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('license.grantPlan')}</p>
@@ -457,7 +448,6 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Lifecycle */}
           <div className="border-t border-border pt-4">
             <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('license.lifecycle')}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -494,8 +484,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
   const [showDelete, setShowDelete] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
 
-  // Change account status (suspend / ban / unban) - re-enforced in main. Owners can
-  // only be blocked/unblocked by the Super Admin (the backend enforces this).
+  // Main re-enforces this; only the Super Admin can block or unblock an owner.
   async function changeStatus(status, reason) {
     setStatusBusy(true); setErr('');
     try { await softglazeApi.members.setStatus({ id: member.id, status, reason }); onSaved(); }
@@ -524,10 +513,8 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         onSaved();
       } else {
         await softglazeApi.members.update({ id: member.id, name: name.trim(), email: email.trim() || null, color, ...(member.status === 'banned' ? {} : { status: suspended ? 'suspended' : 'active' }) });
-        // These must NOT swallow their errors. Swallowing them and then calling
-        // onSaved() reported success even when the permission write was rejected, so an
-        // admin could believe a member had been restricted while they kept full access.
-        // The surrounding catch already surfaces the message and clears the busy state.
+        // Let these throw: catching them and calling onSaved() would report success even when the
+        // permission write was rejected. The outer catch shows the error and clears busy.
         await softglazeApi.members.updatePermissions(member.id, perms);
         await softglazeApi.members.setInstructions(member.id, instructions.trim());
         onSaved();
@@ -544,7 +531,6 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
     finally { setBusy(false); }
   }
 
-  // Invite-code result screen.
   if (invite) {
     return (
       <Shell onClose={onSaved} title={t('invite.createdTitle')} icon={Mail}>
@@ -630,7 +616,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
           </div>
         )}
 
-        {/* Allocation rollup - how much of this member's quota is handed to their team */}
+        {/* How much of this member's quota is handed to their team */}
         {!isNew && member.allocation && member.allocation.childCount > 0 && (
           <div className="rounded-xl border border-border bg-elevated/40 p-3 space-y-1.5">
             <div className="flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-primary" /><span className="text-[12px] font-semibold text-foreground">{t('alloc.heading', { count: member.allocation.childCount })}</span></div>
@@ -639,7 +625,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
           </div>
         )}
 
-        {/* Permissions + limits - editable for sub-members, and for OWNERs when a Super Admin is editing */}
+        {/* Editable for sub-members, and for owners only when a Super Admin edits */}
         {(isNew ? allowed.length > 0 : (member.role !== 'OWNER' || me?.role === 'SUPER_ADMIN')) && (
           <div className="space-y-2">
             <PermissionEditor role={isNew ? role : member.role} value={perms} onChange={setPerms} granter={granter} />
@@ -708,9 +694,8 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
   );
 }
 
-// Delete a member with an explicit choice for their data (Profiles / Proxies /
-// ProxyGroups): reassign to the actor, reassign to another member, or delete it
-// all (profiles → Trash, proxies/groups removed). Backend re-enforces every guard.
+// Their data is reassigned to the actor or another member, or deleted (profiles go to Trash).
+// The backend re-enforces every guard.
 function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
   const { t } = useTranslation('members');
   const pickable = (members || []).filter((m) => m.id !== member.id && m.inviteStatus !== 'pending');
@@ -783,9 +768,7 @@ function DeleteMemberModal({ member, members = [], onClose, onDeleted }) {
   );
 }
 
-// Handoff: pick which profiles are assigned to a member. Pre-checks profiles
-// already assigned to them; on save, newly checked are assigned and previously-
-// assigned-but-unchecked are unassigned (each writes an audit row in main).
+// On save, newly checked profiles are assigned and unchecked ones unassigned; main logs each change.
 function AssignProfilesModal({ member, onClose }) {
   const { t } = useTranslation('members');
   const [profiles, setProfiles] = useState([]);
@@ -918,8 +901,7 @@ function PermissionEditor({ role, value, onChange, granter }) {
   const setFeature = (k, on) => onChange({ ...value, features: { ...(value.features || {}), [k]: on } });
   const setAction = (k, on) => onChange({ ...value, actions: { ...(value.actions || {}), [k]: on } });
 
-  // Per-action capability catalog (single source = permissions.js). We only show the
-  // actions this member's ROLE can perform; toggling one OFF revokes it (restrict-only).
+  // Catalog comes from permissions.js; only the role's actions show, and switching one off revokes it.
   const [catalog, setCatalog] = useState([]);
   useEffect(() => {
     let live = true;
@@ -1023,8 +1005,7 @@ function actionLabel(a) {
   };
   return map[String(a || '').toLowerCase()] || a;
 }
-// Translated display label for an action. Keeps actionLabel() as the canonical
-// English value (used for ACTION_COLORS lookup); this only swaps the visible text.
+// actionLabel() stays the canonical English value for ACTION_COLORS; this only translates the text.
 function actionLabelT(a, t) {
   const eng = actionLabel(a);
   const key = String(eng).replace(/[^a-z0-9]+/gi, '_');

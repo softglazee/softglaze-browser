@@ -1,58 +1,22 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Page -> main RPC that does NOT depend on CDP Runtime bindings.
-//
-// WHY THIS EXISTS
-// Every page->main feature (persona/Data-Vault autofill, the macro recorder, the
-// start-page new-tab links, synchronized-session mirroring) used to ride on
-// puppeteer's `page.exposeFunction`, which is built on `Runtime.addBinding`.
-//
-// fingerprint-chromium - the native anti-detect engine - breaks that. Measured on
-// build 148.0.7778.215:
-//   • the binding works in the FIRST execution context, then dies on the next
-//     navigation (even to about:blank),
-//   • puppeteer re-injects its WRAPPER on every document, so `window.__sgFoo` is
-//     still `typeof 'function'` and looks healthy,
-//   • calling it throws `globalThis[(prefix + name)] is not a function`,
-//   • re-sending Runtime.addBinding for the new context does NOT recover it.
-// Callers that swallowed that throw (the start page did) silently did nothing.
-// `Runtime.consoleAPICalled` is also suppressed on that build, so console is not a
-// usable transport either. `Runtime.evaluate` (main -> page) is unaffected.
-//
-// TRANSPORT
-// The page fetches a sentinel https URL and the main process fulfils it over CDP's
-// Fetch domain - verified working on BOTH stock Chrome and fingerprint-chromium.
-//   • Host is under `.invalid` (RFC 6761): it can never resolve publicly, so if
-//     interception ever fails the request dies locally instead of leaking payload.
-//   • The path carries a per-session random token, and Fetch.enable is scoped to
-//     that exact prefix. A visited site cannot probe for the bridge (an untokened
-//     URL is never paused, so it just fails DNS) - otherwise the bridge itself
-//     would fingerprint the profile as SoftGlaze.
-//   • Only the sentinel prefix is paused, so ordinary page traffic is untouched.
-//
-// The page-side helper prefers the native binding and falls back to RPC, so stock
-// Chrome keeps its existing, proven path and only the broken engine pays for it.
-// ---------------------------------------------------------------------------
+// Page -> main RPC without CDP bindings: fingerprint-chromium kills exposeFunction bindings after the
+// first navigation. The page fetches a per-session tokenized URL under .invalid (never resolves, so
+// nothing leaks) that main fulfils via CDP Fetch; only that prefix is paused, so sites cannot probe it.
 
 const crypto = require('node:crypto');
 
 const SENTINEL_HOST = 'sg-bridge.invalid';
 
-// Cap a single RPC payload. The fill plan is the largest legitimate caller and is
-// already item/char capped upstream; this is a backstop against a hostile page
-// trying to push the main process around.
+// Backstop against a hostile page; the fill plan is the largest legitimate payload and is already
+// capped upstream.
 const MAX_BODY_BYTES = 512 * 1024;
 
 function newToken() {
   return crypto.randomBytes(16).toString('hex');
 }
 
-// The in-page helper. Serialized with .toString(), so it must be self-contained.
-// `window.__sgBridge(name, arg)` -> Promise, used by the vault widget, the macro
-// recorder and the start page instead of calling the raw binding directly.
-// `fileOnly` (E2): the start page is the only file:// document that needs the bridge.
-// With it set, every later http(s) document in that tab gets NOTHING, so a visited
-// site can never see window.__sgBridge on the profile's first tab.
+// In-page helper, serialized with .toString(), so it must be self-contained. With `fileOnly` only
+// the file:// start page gets window.__sgBridge, so visited sites in that tab never see it.
 function bridgeClientScript(endpoint, fileOnly) {
   if (fileOnly && !(typeof location !== 'undefined' && location && location.protocol === 'file:')) return;
   if (window.__sgBridge) return;
@@ -100,20 +64,13 @@ function bridgeClientScript(endpoint, fileOnly) {
   }
 }
 
-// One bridge per page. Persona autofill, the start page and the macro recorder all
-// attach to the same page at different times; without this they would each call
-// Fetch.enable and stack interceptors on one target. Re-attaching MERGES the new
-// handlers into the existing channel and reuses its endpoint.
+// One bridge per page: autofill, the start page and the recorder attach at different times and would
+// otherwise stack Fetch.enable interceptors. Re-attaching merges handlers into the existing channel.
 const bridges = new WeakMap();
 
-// Attach the RPC channel to one page.
-//   handlers : { name: async (...args) => result }  - the same functions passed to
-//              exposeFunction, so the two transports cannot drift apart.
-// Returns { endpoint, dispose }. Never throws: a page that cannot host the bridge
-// must still load.
-//   opts.fileOnly : install the page helper on file:// documents only (start page).
-//              A later attach WITHOUT it (recorder, session mirroring) widens the
-//              existing channel to every document.
+// handlers: { name: async (...args) => result }, the same functions given to exposeFunction.
+// Returns { endpoint, dispose } and never throws. opts.fileOnly limits the helper to file:// (start
+// page); a later attach without it widens the channel to every document.
 async function attachPageBridge(page, handlers, opts = {}) {
   if (!page || !handlers) return { endpoint: null, dispose: () => {} };
   const fileOnly = Boolean(opts && opts.fileOnly);
@@ -138,8 +95,7 @@ async function attachPageBridge(page, handlers, opts = {}) {
   let cdp = null;
   try {
     cdp = await page.target().createCDPSession();
-    // Scope interception to the sentinel prefix ONLY. Ordinary requests are never
-    // paused, so this adds no latency to real page traffic.
+    // Intercept only the sentinel prefix, so real page traffic is never paused or slowed.
     await cdp.send('Fetch.enable', { patterns: [{ urlPattern: pattern }] });
   } catch (e) {
     try { if (cdp) await cdp.detach(); } catch (e2) { /* ignore */ }
@@ -201,8 +157,8 @@ async function attachPageBridge(page, handlers, opts = {}) {
 
   cdp.on('Fetch.requestPaused', onPaused);
 
-  // Install the page helper for THIS document and every future one, so it survives
-  // the navigations that kill the native binding.
+  // Install the helper for this document and every future one, so it survives the navigations that
+  // kill the native binding.
   const source = `(${bridgeClientScript.toString()})(${JSON.stringify(endpoint)}, ${fileOnly});`;
   try { await page.evaluateOnNewDocument(source); } catch (e) { /* ignore */ }
   try { await page.evaluate(source); } catch (e) { /* no document yet */ }
@@ -218,27 +174,9 @@ async function attachPageBridge(page, handlers, opts = {}) {
   return { endpoint, dispose };
 }
 
-// ---------------------------------------------------------------------------
-// ISOLATED-WORLD channel (audit E1/E2) - used by the Data-Vault widget.
-//
-// attachPageBridge above lives in the page's MAIN world: any script on the visited
-// site can call window.__sgBridge, so it must never carry vault data. This channel
-// runs the caller's script in a private, randomly named CDP isolated world instead:
-//   • the script (and the rpc helper it is handed) shares the DOM with the page but
-//     NOT its JS globals - the page cannot see, call or patch anything in it;
-//   • transport 1 is a Runtime binding scoped to that world's name
-//     (executionContextName), so it never appears on the page's window;
-//   • transport 2 (engines that drop bindings) is the tokened sentinel fetch, but
-//     every request must also carry a per-attach secret in its POST body. The URL
-//     can surface in the page's Resource Timing buffer; the body never does, so a
-//     page that learns the URL still cannot drive the handlers;
-//   • nothing is added to the page's main world - no global, no binding wrapper.
-// All CDP traffic goes over ONE dedicated session, because Chromium keys inspector
-// isolated worlds per session: the world the script runs in, the binding and the
-// evaluate() helper below must all come from the same session to meet.
-// Never enables the Runtime domain (the CDP automation tell): addBinding, evaluate
-// and callFunctionOn all work without it.
-// ---------------------------------------------------------------------------
+// Vault data goes over a private CDP isolated world, never the main-world bridge above.
+// The fetch fallback needs a per-attach secret in the POST body, since URLs leak via Resource Timing.
+// One CDP session for all of it (Chromium keys isolated worlds per session); never Runtime.enable.
 function randIdent(prefix) {
   return prefix + crypto.randomBytes(9).toString('hex');
 }
@@ -305,11 +243,9 @@ function isolatedClientScript(cfg, run) {
   run(rpc);
 }
 
-// Attach `handlers` and run `runSource` (a function-expression string taking rpc)
-// in a private isolated world on every top-level document of `page`, the current
-// one included. Returns { ok, evaluate(fn, ...args), dispose }. evaluate runs fn in
-// the SAME isolated world of the top frame, where page JS cannot patch the DOM APIs
-// it sees. Never throws: a page that cannot host the channel must still load.
+// Runs `runSource` (a function expression taking rpc) in a private isolated world on every top-level
+// document. evaluate() runs in that world of the top frame, where page JS cannot patch DOM APIs.
+// Never throws: a page that cannot host the channel must still load.
 async function attachIsolatedWorld(page, handlers, runSource) {
   const none = { ok: false, evaluate: async () => { throw new Error('isolated world unavailable'); }, dispose: async () => {} };
   if (!page || !handlers || !runSource) return none;

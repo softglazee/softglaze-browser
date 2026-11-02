@@ -6,11 +6,9 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import Input from '@/components/ui/Input.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// "Free proxies": for users with no proxy account. Main fetches the public lists that
-// free-proxy projects publish, tests every candidate through the proxy itself, rejects any
-// that are dead or pass the user's real IP on to websites, and adds up to `limit` good
-// ones to a "Free proxies" group. Quick generate never uses them unless that group or
-// provider is chosen on purpose. The warnings are shown every time, before starting.
+// Fetches public free-proxy lists, tests each candidate through itself, drops dead ones and any
+// that leak the real IP, and adds up to limit to a "Free proxies" group. Quick generate uses them
+// only when that group or provider is chosen. The warnings show every time before starting.
 const selectCls = 'h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40';
 const labelCls = 'block text-xs font-medium text-muted mb-1.5';
 

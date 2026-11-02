@@ -1,17 +1,8 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - Team-at-scale policy helpers (PURE).
-//
-// Seat math, audit-log CSV serialization, and the profile-lock conflict rule.
-// No Electron, no DB, no globals - every input is passed in - so this is
-// unit-testable in isolation (same seam pattern as parallelRunner/importParser).
-// ipcHandlers.js injects the live members/license/session data.
-// ---------------------------------------------------------------------------
+// Pure team helpers (seats, audit-log CSV export, profile locks): no Electron, DB or globals.
+// ipcHandlers.js injects the live members, license and session data.
 
-// --- Seats -----------------------------------------------------------------
-// Seats are derived from the license type (no DB column), so the rule stays
-// reversible and Phase 8 can later promote it to an explicit, Super-Admin-
-// editable field on the License.
+// Seats derive from the license type; there is no DB column for them.
 const SEATS_BY_TYPE = Object.freeze({ trial: 3, paid: 25 });
 const DEFAULT_SEATS = 3;
 
@@ -25,10 +16,8 @@ function notSuspended(m) {
   return String((m && m.status) || 'active').toLowerCase() !== 'suspended';
 }
 
-// The set of non-suspended member ids that consume a seat within an owner's
-// subtree (the owner counts as seat #1). `members` is the full list of
-// { id, status, parentMemberId }. ownerId == null => count every non-suspended
-// member (single-owner install).
+// Ids of non-suspended members that use a seat in the owner's subtree (the owner is seat 1).
+// ownerId == null counts every non-suspended member (single-owner install).
 function activeSeatIds(members, ownerId) {
   const list = Array.isArray(members) ? members : [];
   if (ownerId == null) return new Set(list.filter(notSuspended).map((m) => m.id));
@@ -70,11 +59,9 @@ function seatUsage(members, ownerId, license) {
   };
 }
 
-// --- Audit-log CSV ---------------------------------------------------------
 function csvEscape(value) {
   const s = value == null ? '' : String(value);
-  // Quote when the field contains a comma, double-quote, CR or LF; escape
-  // embedded quotes by doubling them (RFC 4180).
+  // RFC 4180: quote fields with a comma, quote, CR or LF, and double embedded quotes.
   if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -89,18 +76,12 @@ function activityToCsv(rows) {
   return [header, ...lines].join('\r\n');
 }
 
-// --- Profile locks ---------------------------------------------------------
-// A launch in progress holds a PENDING reservation (no session id yet).
+// A launch in progress holds a pending reservation (no session id yet).
 const PENDING_LOCK = '__pending__';
 const PENDING_LOCK_TTL_MS = 120000;
 
-// Does an existing lock block `requesterMemberId` from launching? It blocks only
-// when the lock is (a) held by a DIFFERENT member AND (b) still live (its session
-// is in `liveSessionIds`). A stale lock - whose browser session has gone away -
-// never blocks (it'll be reaped by reconciliation).
-// audit E4: a PENDING reservation is never in the live set, so it used to count as
-// stale and never blocked - another member could launch the same profile while the
-// first launch was still spawning. It now blocks for its TTL.
+// Blocks only when another member holds the lock and it is live: its session is in liveSessionIds,
+// or it is a pending reservation within its TTL. Stale locks never block; reconciliation reaps them.
 function lockBlocks(existing, requesterMemberId, liveSessionIds, now = Date.now()) {
   if (!existing) return false;
   if (String(existing.memberId) === String(requesterMemberId)) return false;

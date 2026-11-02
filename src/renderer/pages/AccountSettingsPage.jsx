@@ -74,9 +74,8 @@ export default function AccountSettingsPage() {
     reader.readAsDataURL(file);
   }
 
-  // Validate, then split into a direct (non-sensitive) save and a verified
-  // (sensitive) flow. Non-sensitive saves apply immediately; sensitive ones open
-  // the OTP modal and are only committed after the code is confirmed.
+  // Non-sensitive changes save immediately; sensitive ones open the OTP modal and commit only
+  // after the code is confirmed.
   async function onSave() {
     setErr(''); setOkMsg('');
     if (!editable) return;
@@ -129,7 +128,6 @@ export default function AccountSettingsPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* HEADER */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">{t('header.eyebrow')}</p>
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-display tracking-tight flex items-center gap-2.5">
@@ -156,9 +154,7 @@ export default function AccountSettingsPage() {
         </div>
       )}
 
-      {/* PROFILE CARD */}
       <div className="bg-card border border-border rounded-xl p-5 sm:p-6 space-y-6">
-        {/* Avatar + name */}
         <div className="flex items-center gap-5">
           <div className="relative shrink-0">
             <div className="w-20 h-20 rounded-2xl overflow-hidden grid place-items-center text-2xl font-bold"
@@ -193,7 +189,6 @@ export default function AccountSettingsPage() {
 
         <div className="h-px bg-border" />
 
-        {/* Email (sensitive) */}
         <div>
           <label className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">
             <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {t('fields.email')}</span>
@@ -209,7 +204,6 @@ export default function AccountSettingsPage() {
           />
         </div>
 
-        {/* Password (sensitive) */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">
@@ -252,7 +246,6 @@ export default function AccountSettingsPage() {
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex items-center gap-3 pt-1">
           <button
             onClick={onSave}
@@ -285,9 +278,8 @@ export default function AccountSettingsPage() {
   );
 }
 
-// OTP confirmation modal for sensitive (email/password) changes. The request was
-// already issued (code sent) before this opened; here we collect the code and
-// commit. Re-send is available if the code never arrives.
+// The code was already sent before this opens; it collects the code and commits, with re-send
+// if the code never arrives.
 function VerifyModal({ info, onClose, onVerified }) {
   const { t } = useTranslation('account');
   const [code, setCode] = useState('');

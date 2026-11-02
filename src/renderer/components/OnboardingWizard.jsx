@@ -7,27 +7,22 @@ import i18n from '@/i18n/index.js';
 import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
 import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
 
-// Register the "cmpOverlays" namespace without touching the central i18n config.
-// addResourceBundle is a no-op if the bundle already exists, so this is safe across
-// hot reloads (and the CommandPalette performing the same registration).
+// Registers cmpOverlays without touching the central i18n config; the guard keeps it safe across
+// hot reloads and the CommandPalette's identical registration.
 if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
 if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
-// First-run setup. Reuses the existing SMTP / proxy / profile flows behind a few
-// guided steps. Shown only on a genuinely fresh workspace (no profiles yet) and
-// only until completed/skipped - the "done" flag lives in global settings, so
-// there's no new IPC and no migration. Every step is skippable; nothing is faked.
+// First-run setup over the existing SMTP / proxy / profile flows. Shown only on a fresh workspace
+// until completed or skipped (flag in global settings); every step is skippable.
 const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary';
 const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5';
 
-// Defined at module scope (not inside the component) so it isn't a new component
-// type on every render - otherwise the inputs would remount and lose focus on each
-// keystroke.
+// Module scope so it is not a new component type each render, which would remount the inputs
+// and drop focus on every keystroke.
 function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, onSkip, err, msg }) {
   const { t } = useTranslation('cmpOverlays');
-  // Focus-trap + scroll-lock + focus-restore + ARIA. Escape is intentionally NOT
-  // wired to close: this is a setup flow, and a stray Escape shouldn't permanently
-  // skip onboarding (the X / Skip buttons remain the explicit exits).
+  // Escape deliberately does not close: a stray Escape must not skip onboarding for good;
+  // X and Skip are the explicit exits.
   const { dialogRef } = useDialog({ onClose: onSkip, closeOnEscape: false });
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">

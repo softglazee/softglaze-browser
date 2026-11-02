@@ -1,9 +1,7 @@
 'use strict';
-// Where a profile's browser data lives on disk, and the two rules that keep a new profile clean:
-//   1. A new profile never takes a folder name that was used before. The name always gets a
-//      random suffix, and it must be free in the database and on disk. The fingerprint seed also
-//      derives from this name, so reusing one would bring back the old fingerprint as well.
-//   2. Deleting a profile for good erases its data in every engine's folder.
+// A new profile never reuses a folder name: names get a random suffix and must be free in the DB and
+// on disk, since the fingerprint seed derives from the name. Deleting a profile for good erases its
+// data in every engine's folder.
 
 const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');

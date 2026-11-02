@@ -1,7 +1,7 @@
 'use strict';
-// Smoke test against a RUNNING licensing server (no DB/secrets needed locally).
-//   BASE=http://localhost:8787 node scripts/smoke.js [tenantId]
-// Checks /health, and if a tenantId is given, exercises /v1/register + /v1/license.
+// Smoke test against a running server; needs no local DB or secrets.
+// Checks /health, and with a tenantId also /v1/register and /v1/license.
+// Usage: BASE=http://localhost:8787 node scripts/smoke.js [tenantId]
 const http = require('node:http');
 const https = require('node:https');
 

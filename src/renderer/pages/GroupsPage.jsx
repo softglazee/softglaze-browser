@@ -12,7 +12,6 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#ec4899', '#14b8a6', '#f97316'];
 
-// --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
 const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
   <div className={`relative flex items-center ${className}`}>
     <select
@@ -29,7 +28,6 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
   </div>
 );
 
-// Small reusable checkbox styled like the rest of the app
 const Checkbox = ({ checked, onChange }) => (
   <button
     type="button"
@@ -53,7 +51,6 @@ export default function GroupsPage() {
   const [activeTag, setActiveTag] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
-  // Group create/edit inline state
   const [isAddingGroup, setIsAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupColor, setNewGroupColor] = useState(GROUP_COLORS[0]);
@@ -61,7 +58,6 @@ export default function GroupsPage() {
   const [editGroupName, setEditGroupName] = useState('');
   const [editGroupColor, setEditGroupColor] = useState(GROUP_COLORS[0]);
 
-  // Per-row tag input
   const [tagEditFor, setTagEditFor] = useState(null);
   const [tagInput, setTagInput] = useState('');
 
@@ -81,7 +77,7 @@ export default function GroupsPage() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // --- DERIVED (computed live from profiles so the UI reacts instantly) ---
+  // Computed from profiles so counts update instantly.
   const groupMeta = useMemo(() => {
     const counts = new Map();
     const tags = new Map();
@@ -115,10 +111,8 @@ export default function GroupsPage() {
     return list;
   }, [profiles, activeGroupId, activeTag, search]);
 
-  // When the FILTER changes, drop any selected ids that are no longer visible. Without
-  // this, a "select all" under one filter carries hidden ids into a move-to-group under another
-  // - the "select 5, but act on everything" bug. Keyed on the filter inputs only, so a
-  // background data refresh never clears the selection mid-task.
+  // When the filter changes, drop selected ids that are no longer visible, so a bulk action never
+  // touches hidden rows. Keyed on filter inputs only, so a background refresh keeps the selection.
   const visibleProfileIdsRef = useRef(null);
   visibleProfileIdsRef.current = filteredProfiles;
   useEffect(() => {
@@ -131,7 +125,6 @@ export default function GroupsPage() {
     });
   }, [activeGroupId, activeTag, search]);
 
-  // --- SELECTION ---
   const allSelected = filteredProfiles.length > 0 && selectedIds.size === filteredProfiles.length;
   const toggleSelect = (id) => setSelectedIds((prev) => {
     const next = new Set(prev);
@@ -141,7 +134,6 @@ export default function GroupsPage() {
   const toggleSelectAll = () => setSelectedIds((prev) => (prev.size === filteredProfiles.length ? new Set() : new Set(filteredProfiles.map((p) => p.id))));
   const clearSelection = () => setSelectedIds(new Set());
 
-  // --- GROUP CRUD ---
   const handleAddGroup = async (e) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
@@ -177,7 +169,6 @@ export default function GroupsPage() {
     finally { setBusy(false); }
   };
 
-  // --- ASSIGNMENT ---
   const handleAssign = async (ids, groupId) => {
     setBusy(true); setError('');
     try {
@@ -194,17 +185,8 @@ export default function GroupsPage() {
     clearSelection();
   };
 
-  // --- TAGS ---
-  // Uses the dedicated tags-only handler, NOT profiles.update().
-  //
-  // profiles.update() rebuilds the whole record through extractFingerprintData(),
-  // which turns ABSENT fields into destructive values rather than leaving them alone:
-  // platformAccounts -> null, browserSettingsJson -> null, syncItemsJson -> null,
-  // userAgent -> 'Auto', enableQuic -> false, antidetectEngine -> false. The scrub
-  // that follows only deletes `undefined`, never `null`, so all of that is written.
-  // Sending the partial { id, tags } payload from here therefore erased the profile's
-  // saved platform usernames and passwords and silently switched off its anti-detect
-  // engine every time someone added or removed a single tag chip.
+  // Use the tags-only handler, never profiles.update(): it rebuilds the whole record and turns absent
+  // fields into destructive values (clears saved platform logins, turns off the anti-detect engine).
   const commitTag = async (profile, tag, mode) => {
     setBusy(true); setError('');
     try {
@@ -246,7 +228,6 @@ export default function GroupsPage() {
 
       <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
 
-        {/* LEFT SIDEBAR (Groups) */}
         <Card className="w-full md:w-72 shrink-0 flex flex-col bg-surface border-border shadow-sm rounded">
           <div className="p-4 border-b border-border bg-card/50 flex justify-between items-center rounded-t">
             <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider">{t('sidebar.directories')}</h2>
@@ -284,7 +265,6 @@ export default function GroupsPage() {
 
             <div className="my-3 border-t border-border"></div>
 
-            {/* Inline Add Group Form */}
             {isAddingGroup && (
               <form onSubmit={handleAddGroup} className="mb-2 px-3 py-3 bg-background rounded border border-primary/50 space-y-3 shadow-inner">
                 <div className="flex items-center gap-3">
@@ -308,7 +288,6 @@ export default function GroupsPage() {
               </form>
             )}
 
-            {/* Render Groups */}
             {groups.map((group) => {
               const isEditing = editingGroupId === group.id;
               const isActive = activeGroupId === group.id;
@@ -378,7 +357,6 @@ export default function GroupsPage() {
           </div>
         </Card>
 
-        {/* RIGHT AREA (Profiles Data Table) */}
         <Card className="flex-1 flex flex-col bg-surface border-border overflow-hidden shadow-sm rounded">
           <div className="p-5 border-b border-border flex flex-col gap-4 bg-card/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -398,7 +376,6 @@ export default function GroupsPage() {
               </div>
             </div>
 
-            {/* Tag filter bar */}
             {allTags.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <span className="text-xs text-muted font-medium uppercase tracking-wider flex items-center gap-1.5 mr-1"><TagIcon className="w-3 h-3" /> {t('tagFilter.label')}</span>
@@ -418,7 +395,6 @@ export default function GroupsPage() {
             )}
           </div>
 
-          {/* Bulk move toolbar */}
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-primary/5 shadow-inner transition-all animate-in fade-in slide-in-from-top-2">
               <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>

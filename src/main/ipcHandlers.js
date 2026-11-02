@@ -342,7 +342,7 @@ const CHANNELS = Object.freeze({
   API_SERVER_STATUS: 'api:server-status',
   API_SERVER_SET_ENABLED: 'api:server-set-enabled',
 
-  // Softglaze Enterprise - at-rest DB encryption + workspace backup/restore (Phase 6)
+  // Softglaze Enterprise - at-rest DB encryption + workspace backup/restore
   DB_ENCRYPTION_STATUS: 'db:encryption-status',
   DB_UNLOCK: 'db:unlock',
   DB_ENABLE_ENCRYPTION: 'db:enable-encryption',
@@ -364,15 +364,13 @@ let registered = false;
 let proxySchedulerTimer = null;
 let memoryGuardTimer = null;
 let currentMemberId = null;
-// Cached capability of the active member, refreshed by getActiveMember(). Used by the
-// (synchronous) proxy serializer to decide credential redaction without an async hop.
-// Single-user mode (no member) is treated as owner → full reveal.
+// Cached by getActiveMember() so the synchronous proxy serializer can decide redaction.
+// Single-user mode (no member) counts as owner, so full reveal.
 let currentMemberCanRevealProxy = true;
 let vaultLocked = false;
-// HOW the workspace was last unlocked: 'vault' = with the workspace (Owner) password,
-// 'member' = by a team member's own login, 'super' = Super Admin, 'none' = no vault set,
-// null = locked. Only a 'vault' (or 'none') unlock lets the member picker open a
-// password-less identity such as the registered Owner; see switchMember.
+// How the workspace was last unlocked: 'vault' (Owner password), 'member', 'super', 'none' (no vault)
+// or null (locked). Only 'vault' or 'none' lets the member picker open a password-less identity such
+// as the registered Owner; see switchMember.
 let vaultUnlockSource = null;
 const importPreviewCache = new Map();
 
@@ -383,9 +381,8 @@ function toIpcError(error) {
   };
 }
 
-// audit S7: the sign-in / vault-lock state that authGate.decide() needs. A stale
-// currentMemberId (the member row is gone) counts as signed out. Any DB error fails
-// closed (memberCount Infinity => only the pre-auth channels are served).
+// Sign-in and vault-lock state for authGate.decide(). A stale currentMemberId counts as signed out;
+// a DB error fails closed (memberCount Infinity serves only pre-auth channels).
 async function ipcAuthState() {
   const state = { vaultLocked: Boolean(vaultLocked), signedIn: false, memberCount: 0 };
   if (state.vaultLocked) return state;
@@ -403,8 +400,7 @@ async function ipcAuthState() {
 function registerHandler(channel, handler) {
   ipcMain.handle(channel, async (event, payload) => {
     try {
-      // audit S7: sign-out and the vault lock are enforced here, in main, for every
-      // channel outside the login/lock/first-run allowlist (see authGate.js).
+      // Sign-out and vault lock are enforced in main for every channel outside authGate's pre-auth allowlist.
       if (!authGate.isPreAuthChannel(channel)) {
         const denied = authGate.decide(channel, await ipcAuthState());
         if (denied) return { ok: false, error: { message: denied.message, code: denied.code } };
@@ -452,12 +448,8 @@ async function logActivity(db, profileId, action, detail = null) {
   try { await db.activityLog.create({ data: { profileId, action, detail, memberId: currentMemberId } }); } catch (e) { /* non-fatal */ }
 }
 
-// Audit-trail helper for SECURITY / team events that have no associated profile
-// (member lifecycle, permission/role/status changes, logins, exports). Stored with
-// profileId 0 - the "system" sentinel (no profile has id 0; the activity feed renders
-// a falsy profileId as a System actor). `detail` may be a string OR an object: objects
-// are stored as compact JSON so the structured context survives, and the renderer
-// pretty-prints them. Never throws - auditing must not break the underlying action.
+// Audit-log entry for security/team events with no profile, stored under profileId 0 (shown as
+// System). Object details are stored as compact JSON. Never throws, so logging cannot break the action.
 async function logAudit(action, opts = {}) {
   try {
     const raw = opts && opts.detail;
@@ -496,12 +488,9 @@ function sanitizeDataDirName(value) {
   return base || `profile-${crypto.randomUUID()}`;
 }
 
-// Reject internal / loopback / link-local targets for a main-process outbound
-// request whose URL came from the renderer (audit: SSRF via rotateProxyIp).
-// audit S8 (7 Oct): the old string check missed CGNAT, IPv4-mapped IPv6 and any public
-// NAME that resolves to a private address. The name is now resolved (every address)
-// and each one checked; publicOnlyLookup() repeats the check at connect time so a
-// DNS rebind between the check and the request cannot slip through either.
+// Rejects internal, loopback and link-local targets for renderer-supplied URLs (SSRF). Names are
+// resolved and every address checked; publicOnlyLookup repeats the check at connect time against
+// DNS rebinding.
 function ipv6Hextets(ip) {
   let s = String(ip).toLowerCase().replace(/%.*$/, '');
   const v4 = /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
@@ -638,23 +627,15 @@ function serializeProxy(proxy) {
     lastCountry: proxy.lastCountry || null,
     lastCheckedAt: proxy.lastCheckedAt instanceof Date ? proxy.lastCheckedAt.toISOString() : (proxy.lastCheckedAt || null)
   };
-  // Raw-credential redaction (rbacPolicy): the password is already masked for everyone;
-  // also mask the username for viewers who lack the `proxies.reveal` capability
-  // (Operators by default, or anyone an admin has revoked it from). Single-user/owner
-  // sessions reveal in full. Connectivity still works - launches use the raw DB row,
-  // never this serialized view.
+  // Passwords are masked for everyone; usernames too without `proxies.reveal`. Launches read the raw
+  // DB row, never this view, so connectivity is unaffected.
   return currentMemberCanRevealProxy ? out : rbacPolicy.redactForRole('OPERATOR', 'proxyCredentials', out);
 }
 
-// Pro - trigger a vendor-side IP rotation. Many mobile/residential plans expose a
-// one-shot "change IP" link; we read it off the proxy (or accept+persist a fresh
-// one) and fire a server-side GET to trigger the exit-node change. Defensive: a
-// missing link, malformed URL, or network failure all return/throw cleanly and
-// never touch the live proxy credentials.
+// Fires the vendor's one-shot "change IP" link (stored, or provided and persisted) server-side.
+// Failures return or throw cleanly and never touch the live proxy credentials.
 async function rotateProxyIp(payload) {
-  // audit: had NO authorization and fired a main-process axios.get() at a
-  // renderer-supplied URL (SSRF). Require the manage permission, verify the caller
-  // can access THIS proxy, and reject internal/loopback rotation targets.
+  // Main fetches a renderer-supplied URL: require proxies.manage, access to this proxy, a public target.
   await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.proxyId);
@@ -683,11 +664,9 @@ async function rotateProxyIp(payload) {
     res = await axios.get(rotationUrl, {
       timeout: 20000,
       maxRedirects: 3,
-      // Connect-time check of the RESOLVED address (DNS rebind, names pointing inward).
+      // Connect-time check of the resolved address (DNS rebind, names pointing inward).
       lookup: publicOnlyLookup,
-      // audit SSRF: the initial-URL guard alone let a 302 Location:
-      // http://169.254.169.254/... (cloud metadata) or a LAN/loopback service be
-      // chased and its body returned. Re-run the public-URL guard on EVERY hop.
+      // Re-check every redirect hop so a 302 to cloud metadata (169.254.169.254) or a LAN host is refused.
       beforeRedirect: (options) => {
         const proto = options.protocol || 'https:';
         const hostPart = options.hostname || options.host || '';
@@ -710,16 +689,14 @@ async function rotateProxyIp(payload) {
   };
 }
 
-// Pro - export a profile's cache + config as a single AES-256-encrypted, portable
-// `.sgz` file. Prompts for a destination, then streams the archive (see
-// profileArchive.js). Defensive throughout: a missing profile, cancelled dialog,
-// or stream failure surfaces a clean error rather than a half-written file.
+// Streams the profile's cache + config into an AES-256-encrypted .sgz (see profileArchive.js).
+// Failures surface a clean error instead of a half-written file.
 async function exportProfileArchive(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.profileId);
   await assertCanAccessProfile(id);
-  // The archive is the whole user-data directory: every cookie and saved login, which is
-  // strictly more than a cookie dump, so it takes the same clearance (T2-3).
+  // The archive holds every cookie and saved login, more than a cookie dump, so it needs the same
+  // clearance.
   await assertCanRevealKind('cookieDump');
   const password = requiredString(input.password, 'Encryption password');
   const db = getPrisma();
@@ -751,17 +728,15 @@ async function exportProfileArchive(payload) {
   return { ok: true, path: save.filePath, bytes: res.plainBytes };
 }
 
-// Pro - Cookie Robot: drive a profile through real sites to build organic cookies
-// + history. Reuses an open session or launches one (so the profile's proxy +
-// fingerprint apply), runs the engine's robot, and closes it again when it
-// launched the session itself.
+// Cookie Robot: browse real sites to build organic cookies and history. Reuses an open session or
+// launches one so proxy and fingerprint apply, and closes it only if it launched it.
 async function cookieRobot(payload) {
   const input = requireObject(payload);
   const profileId = parseId(input.profileId ?? input.id);
   await assertCanAccessProfile(profileId);
   const urls = Array.isArray(input.targetUrls) ? input.targetUrls.map((u) => String(u || '').trim()).filter(Boolean) : [];
   if (!urls.length) throw new Error('Provide at least one target URL for the cookie robot.');
-  // audit: only http(s) targets - otherwise a file:// URL drives the profile to local files.
+  // http(s) only; a file:// target would drive the profile to local files.
   for (const u of urls) {
     if (!/^https?:\/\//i.test(u)) throw new Error('Cookie Robot targets must be http(s) URLs.');
   }
@@ -788,12 +763,10 @@ async function cookieRobot(payload) {
 }
 
 function serializeProfile(profile) {
-  // audit T2-1: the row used to be spread as-is, handing every member cleartext platform
-  // passwords, the raw proxyInfoString and the 2FA seed. See profileRedaction.js.
+  // The raw row holds platform passwords, the raw proxy string and the 2FA seed; see profileRedaction.js.
   const reveal = currentMemberCanRevealProxy;
   const safe = redactProfileRow(profile, { reveal });
 
-  // Safe JSON Parsing for React Arrays/Objects
   let platformAccounts = [];
   try { platformAccounts = redactPlatformAccounts(profile.platformAccounts ? JSON.parse(profile.platformAccounts) : [], reveal); } catch (e) {}
 
@@ -828,7 +801,7 @@ function serializeProfile(profile) {
   };
 }
 
-// Maps incoming React Payload to Prisma Schema keys
+// Maps the renderer payload onto Prisma columns.
 function extractFingerprintData(input) {
   return {
     browserCore: toStoredBrowserCore(input.browserCore),
@@ -840,9 +813,8 @@ function extractFingerprintData(input) {
     userAgent: input.userAgent || 'Auto',
     startupUrls: input.startupUrls,
     platformAccounts: input.platformAccounts ? JSON.stringify(input.platformAccounts) : null,
-    // Softglaze Premium 2FA vault. undefined => leave unchanged on update; an
-    // empty string clears it; otherwise store the trimmed base32 secret, SEALED
-    // at rest (decrypted only when minting a live token).
+    // 2FA seed: undefined leaves it unchanged, '' clears it, otherwise the trimmed base32 secret is
+    // sealed at rest and decrypted only to mint a live token.
     twoFactorSeed: input.twoFactorSeed === undefined ? undefined : (String(input.twoFactorSeed).trim() ? secretStore.seal(String(input.twoFactorSeed).trim()) : null),
 
     webrtc: input.webrtc,
@@ -890,8 +862,7 @@ function extractFingerprintData(input) {
     hardwareAcceleration: input.hardwareAcceleration,
     disableTls: input.disableTls,
     launchArgs: input.launchArgs,
-    // HTTP/3 (QUIC) opt-in - default false (max stealth). Explicit boolean so an
-    // older payload without the field saves as disabled rather than null.
+    // HTTP/3 (QUIC) is opt-in, off for stealth; explicit boolean so a payload without it saves false.
     enableQuic: input.enableQuic === true,
     // Per-profile anti-detect engine (fingerprint-chromium) opt-in - explicit boolean.
     antidetectEngine: input.antidetectEngine === true,
@@ -905,15 +876,12 @@ function extractFingerprintData(input) {
   };
 }
 
-// When randomFingerprint is set, a freshly generated fingerprint is the base and
-// any explicit fields the caller sends still override it. Otherwise we just map
-// the caller's payload as before.
+// With randomFingerprint, a freshly generated fingerprint is the base and explicit fields override it.
 function buildFingerprintFields(input) {
   const manual = extractFingerprintData(input);
   if (input.randomFingerprint !== true) return manual;
-  // Pass the requested OS + pinned version INTO the generator so the whole base
-  // (GPU / screen / UA major) is internally coherent for that OS. Overriding os
-  // AFTER generation would leave e.g. a macOS GPU on a Windows profile - a mismatch.
+  // Generate for the requested OS and version so GPU, screen and UA major agree; overriding os
+  // afterwards would leave e.g. a macOS GPU on a Windows profile.
   const merged = { ...generateFingerprint({ deviceClass: input.deviceClass, os: input.os, browserVersion: input.browserVersion }) };
   for (const [key, value] of Object.entries(manual)) {
     if (value !== undefined) merged[key] = value;
@@ -973,8 +941,7 @@ function resolveProfileDataDir(dataDirName) {
   return target;
 }
 
-// Recursively sum the on-disk size (bytes + file count) of a profile data dir,
-// capped so a huge cache folder can't make the walk run unbounded.
+// Capped so a huge cache folder cannot make the walk unbounded.
 async function directorySize(dir, cap = 200000) {
   let bytes = 0;
   let files = 0;
@@ -995,8 +962,7 @@ async function directorySize(dir, cap = 200000) {
   return { bytes, files };
 }
 
-// On-disk storage info for a profile (cookies, cache, logins live here). Used by
-// the delete dialog so the user can see what would be wiped before confirming.
+// Shown in the delete dialog so the user sees what would be wiped before confirming.
 async function getProfileStorageInfo(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
@@ -1024,13 +990,9 @@ function parseColonProxyLine(rawLine, fallbackType = 'HTTP') {
   });
 }
 
-// The full identity of a proxy endpoint: type + host + port + username + PASSWORD, the
-// same columns as the DB unique key (@@unique([type, host, port, username, passwordHash])).
-// The password is part of it because many vendors carry the sticky session in it
-// (IPRoyal `pass_country-us_session-ab12`, PacketStream, Froxy, MarsProxies...): two
-// lines that differ only there are two different exits. `password: x` is rewritten to the
-// keyed passwordHash by proxySecrets.extendClient, so this works on sealed rows.
-// Nulls are explicit so a missing username/password matches only rows that have none.
+// Matches the DB unique key (type, host, port, username, passwordHash). Vendors carry sticky sessions
+// in the password, so lines differing only there are distinct exits. extendClient rewrites `password`
+// to passwordHash; explicit nulls match only rows without a username/password.
 function proxyIdentityWhere(parsed) {
   return {
     type: parsed.type,
@@ -1047,14 +1009,9 @@ async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint =
   // An explicit "Proxy Type" column (HTTP/HTTPS/SOCKS5) overrides the default.
   if (typeHint) parsed.type = typeHint;
 
-  // Reuse a row only when EVERY credential matches. A line that differs only in its
-  // password is a different sticky session (or a different account) and gets its own
-  // row: overwriting the matched row's password used to collapse N pasted sessions into
-  // one proxy (all profiles on one exit IP) and could rewrite another member's proxy.
-  // An existing row is reused only when the caller supplied the very same credentials,
-  // so nothing is revealed and nothing on that row is changed. (No member-scope query
-  // here: this also runs inside db.$transaction(tx) during migration, where a second
-  // query on the outer client would wait on SQLite's single connection.)
+  // Reuse a row only when every credential matches, so nothing is revealed or changed; a different
+  // password is a different sticky session or account. No member-scope query: this also runs inside
+  // a migration transaction, where a query on the outer client would block on SQLite's one connection.
   const existing = await db.proxy.findFirst({ where: proxyIdentityWhere(parsed) });
   if (existing) return existing;
 
@@ -1171,15 +1128,13 @@ async function deleteProxy(payload) {
   return { deleted: true, id, removedGroups };
 }
 
-// Auto-grouping makes a group per country. Once its last proxy is gone there is nothing left for it
-// to hold, so it goes too. Only groups auto-grouping made: a group a person made stays, even empty.
+// Removes auto-created groups left empty; a group a person made stays, even empty.
 async function pruneEmptyAutoGroups(db) {
   const res = await db.proxyGroup.deleteMany({ where: { autoCreated: true, proxies: { none: {} } } });
   return res.count;
 }
 
-// Bulk-delete by id list. Profiles referencing a deleted proxy have their
-// proxyId nulled automatically (Profile.proxy relation uses onDelete: SetNull).
+// Profiles on a deleted proxy get proxyId nulled by the relation's onDelete: SetNull.
 async function bulkDeleteProxies(payload) {
   await requirePermission('proxies.manage');
   const input = requireObject(payload);
@@ -1193,10 +1148,9 @@ async function bulkDeleteProxies(payload) {
   return { deleted: result.count, ids: allowed, denied, removedGroups };
 }
 
-// ---------- Proxy rotation / sticky-session pools ----------
-// Config is stored in the Settings table keyed by profile id (no schema change).
-// A rotating profile keeps its own userDataDir - cookies/logins persist - while
-// the EXIT IP rotates across the pool on each launch (round-robin or random).
+// ---- Proxy rotation / sticky-session pools ----
+// Config lives in Settings keyed by profile id. A rotating profile keeps its userDataDir (cookies
+// persist) while the exit IP rotates across the pool each launch.
 
 async function getProxyRotation(payload) {
   const input = requireObject(payload);
@@ -1242,18 +1196,9 @@ async function setProxyRotation(payload) {
   return { profileId: id, enabled, mode, proxyIds };
 }
 
-// Returns the next pool proxy for a launching profile, or null when rotation is
-// off / empty. Round-robin advances a persisted per-profile cursor.
-// ---------------------------------------------------------------------------
-// Proxy policy - HOW the rotation pool is applied to a launch (per profile, with
-// a global default). Stored under the `proxyPolicy` Setting as
-//   { default: 'each-launch' | 'sticky' | 'failover', byProfile: { [id]: mode } }
-//   • each-launch → rotate to the next pool proxy on every launch (legacy default)
-//   • sticky      → ignore the pool; keep the profile's own fixed proxy
-//   • failover    → rotate, but skip proxies whose last health check failed
-// This LAYERS on top of the existing rotation primitive (proxyRotation config);
-// it does not replace it.
-// ---------------------------------------------------------------------------
+// ---- Proxy policy: how the rotation pool applies to a launch ----
+// Setting `proxyPolicy` = { default, byProfile: { [id]: mode } }. each-launch rotates every launch;
+// sticky keeps the profile's own proxy; failover skips failed ones. Layers on top of proxyRotation.
 const PROXY_POLICY_MODES = new Set(['each-launch', 'sticky', 'failover', 'latency-optimized']);
 
 async function getProxyPolicy() {
@@ -1328,9 +1273,8 @@ async function pickRotationProxy(db, profileId) {
   let ordered = cfg.proxyIds.map((pid) => rows.find((p) => p.id === pid)).filter(Boolean);
   if (ordered.length === 0) return null;
 
-  // Failover: prefer proxies that passed their last health check. If every one is
-  // failing (or none has been checked yet), fall back to the full list so a launch
-  // is never blocked by a stale/empty health table.
+  // Failover prefers proxies that passed their last check; if none did (or none were checked), use
+  // the full list so a stale health table never blocks a launch.
   const policyCfg = (await readSetting('proxyPolicy', {})) || {};
   if (policy === 'failover') {
     const healthy = ordered.filter((p) => p.lastStatus !== 'fail');
@@ -1369,8 +1313,7 @@ async function pickRotationProxy(db, profileId) {
 }
 
 async function batchAddProxies(payload) {
-  // audit: bulk proxy import bypassed the manage gate + quota and created rows
-  // with no owner (invisible to non-super members). Match createProxy's gating.
+  // Same gating as createProxy: manage permission, quota, and an owner so members can see the rows.
   await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
@@ -1384,9 +1327,7 @@ async function batchAddProxies(payload) {
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    // audit: enforce the quota PER ROW - it was checked once before this unbounded
-    // loop, so a member at 5/10 could paste 10k lines and blow past maxProxies. Once
-    // the limit is hit, mark the remaining lines skipped and stop (bounded work).
+    // Quota is checked per row so a large paste cannot exceed maxProxies; the rest are marked skipped.
     try {
       await assertWithinLimit('proxies');
     } catch (quotaErr) {
@@ -1413,8 +1354,7 @@ async function batchAddProxies(payload) {
           port: parsed.port,
           username: parsed.username,
           password: parsed.password,
-          // Origin tag for auto-grouping (schema: Proxy.provider). Persisted from the
-          // batch's declared vendor when supplied, else null.
+          // Vendor tag for auto-grouping, from the batch's declared provider.
           provider: input.provider ? String(input.provider).toLowerCase() : null,
           ownerMemberId: proxyStampId
         }
@@ -1428,13 +1368,9 @@ async function batchAddProxies(payload) {
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// Free public proxies (opt-in). For users with no proxy account: fetch the public
-// lists free-proxy projects publish, test every candidate, and add only the ones that
-// work AND do not pass the user's real IP to websites. They go into their own "Free
-// proxies" group with provider 'free', and Quick generate never picks them unless that
-// group or provider is chosen on purpose. See freeProxies.js for the checks.
-// ---------------------------------------------------------------------------
+// ---- Free public proxies (opt-in) ----
+// Only candidates that work and hide the real IP are added, to a "Free proxies" group with provider
+// 'free'; Quick generate skips them unless chosen. See freeProxies.js.
 const freeProxies = require('./freeProxies');
 let freeHarvestRun = null; // { controller, ownerMemberId } while a search runs (one at a time)
 
@@ -1519,8 +1455,7 @@ async function harvestFreeProxiesHandler(payload, event) {
 
   try {
     const res = await freeProxies.harvestFreeProxies({
-      // 48 checks at a time, 6 s per step: most free proxies are dead, so the search is
-      // bounded by how fast dead ones are given up on (measured live, 2 Nov 2026).
+      // Most free proxies are dead, so search speed depends on how fast dead ones are given up on.
       protocol, country, limit, concurrency: 48, stepTimeoutMs: 6000, timeBudgetMs: 3 * 60000, exclude,
       signal: controller.signal,
       onProgress: (p) => send(p, p.phase !== 'check')
@@ -1570,15 +1505,9 @@ async function cancelFreeProxyHarvest() {
   return { cancelled: true };
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Provider Core - integrated proxy-vendor sync.
-//
-// Pulls a customer's purchased proxies from a partner vendor and maps the rows
-// into our native Proxy schema. Bright Data, Oxylabs and Smartproxy are wired to
-// REAL vendor calls (see REAL_VENDOR_ADAPTERS); every other provider still uses
-// the deterministic SIMULATION stub until its endpoint is wired. The
-// persistence/dedup path at the bottom is shared and production-ready.
-// ---------------------------------------------------------------------------
+// ---- Provider Core: proxy-vendor sync ----
+// Pulls a customer's purchased proxies from a vendor and maps them into the Proxy schema; the
+// persistence/dedup path is shared by every adapter.
 const PROXY_VENDORS = Object.freeze({
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Smartproxy',
   proxy302: 'Proxy302', mangoproxy: 'MangoProxy',
@@ -1599,25 +1528,19 @@ const PROXY_VENDORS = Object.freeze({
   proxy6: 'PROXY6'
 });
 
-// Gateway endpoints for the vendors whose adapters build a URL from this table.
-// Every other entry was removed: they existed only to shape simulated rows, were never
-// verified against the vendor, and six of them did not resolve in DNS at all. Do not add
-// a host here unless the vendor documents it AND it is confirmed to resolve.
+// Gateways for adapters that build a URL from this table. Add a host only if the vendor documents it
+// and it resolves in DNS.
 const VENDOR_GATEWAYS = Object.freeze({
   oxylabs: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' },
   smartproxy: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' },
   apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }
-  // NOTE: DataImpulse is deliberately NOT listed here. Its adapter never builds a URL
-  // from this table: GET /api/list returns the real host and port for every row, and
-  // that is what gets stored. Adding a hardcoded gateway would reintroduce exactly the
-  // unverified-host problem the other entries were removed for.
+  // DataImpulse is deliberately absent: GET /api/list returns the real host and port for every row,
+  // so a hardcoded gateway would only add an unverified host.
 });
 
 
-// Minimal native HTTPS text fetch with custom headers + a hard timeout/size cap.
-// Used for direct vendor REST calls (e.g. Bright Data) where we need a Bearer
-// header that the shared httpGetJson() helper doesn't expose. Rejects with a
-// clean, status-bearing message so adapters can surface vendor errors verbatim.
+// Native HTTPS fetch with custom headers (e.g. a Bearer token httpGetJson cannot set), a timeout and
+// a size cap. Rejects with a status-bearing message so adapters surface vendor errors verbatim.
 function httpRequestText(url, options = {}) {
   return new Promise((resolve, reject) => {
     let lib;
@@ -1659,10 +1582,9 @@ function httpRequestText(url, options = {}) {
   });
 }
 
-// --- Bright Data: REAL list extraction --------------------------------------
-// GET /zone/route_ips returns a zone's routable exit IPs (one per line) for a
-// Bearer API token. We pin each IP to the standard super-proxy gateway via the
-// `-ip-<ip>` username suffix, producing rows usable straight away.
+// ---- Bright Data ----
+// GET /zone/route_ips lists a zone's exit IPs for a Bearer token; each is pinned to the super-proxy
+// gateway via the `-ip-<ip>` username suffix.
 async function fetchBrightDataPool({ token, username, password, zone }) {
   const apiToken = String(token || '').trim();
   if (!apiToken) throw new Error('Bright Data API token is required to sync.');
@@ -1686,7 +1608,7 @@ async function fetchBrightDataPool({ token, username, password, zone }) {
   // every row would be refused, so stop here instead of storing dead proxies.
   if (!/^brd-customer-[^-]+-zone-/.test(baseUser || '')) throw new Error('Bright Data: enter the proxy username from the zone (brd-customer-<id>-zone-<name>) as well as the API token.');
   const userBase = baseUser;
-  // Ports 22225 and 33335 were retired on 25 Sep 2026 (docs.brightdata.com FAQ); 44445 is current.
+  // Bright Data retired ports 22225 and 33335; 44445 is current.
   return ips.slice(0, 200).map((ip) => ({
     type: 'HTTP', host: 'brd.superproxy.io', port: 44445,
     username: `${userBase}-ip-${ip}`, password: String(password || ''),
@@ -1694,11 +1616,9 @@ async function fetchBrightDataPool({ token, username, password, zone }) {
   }));
 }
 
-// --- Oxylabs / Smartproxy: REAL credential-verified gateway sync -------------
-// These are gateway-based rotating services, so there is no per-IP list to pull
-// for residential. "Real sync" = make a live authenticated request THROUGH the
-// vendor's own gateway with the supplied credentials; only persist the working
-// endpoint. Bad credentials surface as a clean error, never a stored dead proxy.
+// ---- Oxylabs / Smartproxy ----
+// Gateway-based, so there is no per-IP list: sync makes a live authenticated request through the
+// vendor gateway and stores only a working endpoint; bad credentials surface as an error.
 async function fetchGatewayVerifiedPool(label, gateway, { username, password }) {
   const user = String(username || '').trim();
   if (!user) throw new Error(`${label}: a proxy username is required to sync.`);
@@ -1710,11 +1630,9 @@ async function fetchGatewayVerifiedPool(label, gateway, { username, password }) 
     label: `${label} • ${gateway.host}${probe.ip ? ` • verified ${probe.ip}` : ' • verified'}`
   }];
 }
-// Oxylabs is the one configured vendor that documents an address-family selector: the
-// username carries `-ipversion-6` and the gateway stays pr.oxylabs.io:7777. Two caveats
-// straight from their docs, both surfaced in the UI: if the target host publishes no
-// AAAA record Oxylabs silently resolves back to IPv4 (and returns 522 if you disable
-// that auto-resolution), and the feature may need enabling on the account first.
+// Oxylabs selects IPv6 via `-ipversion-6` in the username on the same gateway. Per their docs, a host
+// without AAAA silently falls back to IPv4 (522 if that fallback is disabled), and the account may
+// need the feature enabled first.
 function fetchOxylabsPool(creds) {
   const user = String((creds && creds.username) || '').trim();
   const want6 = String((creds && creds.ipVersion) || '') === '6';
@@ -1723,7 +1641,7 @@ function fetchOxylabsPool(creds) {
 }
 function fetchSmartproxyPool(creds) { return fetchGatewayVerifiedPool('Smartproxy', VENDOR_GATEWAYS.smartproxy, creds); }
 
-// --- Country / session helpers (shared by the country-aware adapters below) --
+// ---- Country / session helpers (country-aware adapters) ----
 function normCountryCode(value) {
   const v = String(value || '').trim().toUpperCase();
   return /^[A-Z]{2}$/.test(v) ? v : '';
@@ -1733,23 +1651,17 @@ function randSession(len = 8) {
   while (s.length < len) s += Math.random().toString(36).slice(2);
   return s.slice(0, len);
 }
-// Clamp a requested pool size. The default ceiling was 50, which silently truncated
-// requests (asking for 100 minted 50) on the count-driven adapters (Apify).
-// Those adapters build each row as a local sticky-session string with
-// no per-row network call, so a higher ceiling is cheap; 500 covers realistic requests
-// while still bounding a runaway value. Adapters with a real API limit pass their own max.
+// Count-driven adapters (Apify) mint sticky-session strings locally with no network call per row, so
+// 500 is cheap while still bounding a runaway value. Adapters with a real API limit pass their own max.
 function clampPoolCount(value, def = 5, max = 500) {
   const n = Number.parseInt(String(value), 10);
   if (!Number.isFinite(n) || n < 1) return def;
   return Math.min(n, max);
 }
 
-// --- Apify Residential: country/session encoded in the username --------------
-// Apify residential uses ONE gateway (proxy.apify.com:8000); the exit IP is chosen
-// by the username - `groups-RESIDENTIAL` picks the pool, `country-XX` pins the
-// country, `session-<id>` makes the IP sticky. There's no list to pull, so we MINT
-// `count` sticky-session endpoints (each a distinct, reusable residential IP) with
-// the account proxy password. The chosen country is recorded on every row.
+// ---- Apify Residential ----
+// One gateway (proxy.apify.com:8000); the username picks pool (groups-RESIDENTIAL), country
+// (country-XX) and stickiness (session-<id>). No list to pull, so `count` sessions are minted.
 async function fetchApifyPool({ password, country, count }) {
   const pw = String(password || '').trim();
   if (!pw) throw new Error('Apify: your proxy password is required (Apify Console → Proxy → HTTP settings → password).');
@@ -1770,29 +1682,11 @@ async function fetchApifyPool({ password, country, count }) {
   return rows;
 }
 
-// --- anyip.io: type/country/sesstime/session encoded in the username ---------
-// anyip.io uses ONE gateway (portal.anyip.io:1080 by default; 443 also serves both
-// HTTP and SOCKS5, and an account may be assigned a custom port - so host/port are
-// overridable from the UI). Everything else is encoded into the proxy username as a
-// comma-delimited list of underscore-keyed flags on the base username:
-//   type_<residential|mobile>, country_<XX>, sesstime_<minutes> (1..10080),
-//   session_<name>  (sticky; omit for rotating).
-// Example: user_ABCD,type_residential,country_US,sesstime_60,session_ab12cd34
-// A fixed session name pins ONE sticky IP (count collapses to 1); a blank session
-// mints `count` distinct rotating IPs.
-//
-// Credentials arrive one of two ways:
-//   1. DIRECT - the user pastes the proxy Username (user_…) + Password from the anyip
-//      dashboard ("Get Proxy Details" / Proxy List Generator). NOTE: the API key is
-//      NOT the proxy password (they are distinct values).
-//   2. AUTO-PROVISION - the user supplies an API key + Team ID and we POST a new proxy
-//      account to anyip's REST API. The create endpoint REQUIRES us to supply
-//      plain_password (read endpoints never return it), so we generate the credentials,
-//      register them, and then hold the working user:pass. One pull provisions one
-//      account and mints N sticky-session rows from it.
+// anyip.io: one gateway (portal.anyip.io:1080, overridable); flags go in the username, comma-separated:
+// user_X,type_residential,country_US,sesstime_60,session_ab12. A fixed session pins one IP.
+// Creds are pasted (the API key is not the proxy password) or provisioned via API key + Team ID.
 
-// POST a new anyip proxy account via the REST API; returns { username, password }. The
-// password is the one WE supply on create (retrievable no other way).
+// Creates an anyip proxy account; the API never returns the password, so the one supplied here is kept.
 async function anyipProvisionAccount(apiKey, teamId) {
   const key = String(apiKey || '').trim();
   const team = String(teamId || '').trim();
@@ -1814,8 +1708,7 @@ async function anyipProvisionAccount(apiKey, teamId) {
   } catch (e) {
     throw new Error(`AnyIP provisioning failed: ${e.message} - verify the API key and Team ID (dashboard → Settings).`);
   }
-  // The create endpoint echoes the account (id, username, hash, …). We already know the
-  // password (we supplied it); prefer the API's returned username if present.
+  // The password is already known (supplied on create); prefer the API's returned username.
   let acct = null;
   try { acct = JSON.parse(text); } catch (e) { acct = null; }
   const finalUser = (acct && typeof acct.username === 'string' && acct.username) ? acct.username : genUser;
@@ -1825,7 +1718,7 @@ async function anyipProvisionAccount(apiKey, teamId) {
 async function fetchAnyIpPool({ username, password, country, session, count, host, port, life, poolType, token, teamId }) {
   let user = String(username || '').trim();
   let pw = String(password || '');
-  // AUTO-PROVISION path: no direct creds, but an API key + Team ID were supplied.
+  // Auto-provision: no direct creds, but an API key and Team ID were supplied.
   if ((!user || !pw) && String(token || '').trim() && String(teamId || '').trim()) {
     const prov = await anyipProvisionAccount(token, teamId);
     user = prov.username;
@@ -1838,22 +1731,14 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   const gwHost = String(host || '').trim() || 'portal.anyip.io';
   const gwPort = Number.parseInt(String(port), 10) || 1080;
   const fixedSession = String(session || '').trim().replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
-  // sesstime = minutes to keep the same exit IP (anyip allows 1..10080). Blank/0 =
-  // rotate a fresh IP per request. (The shared UI dropdown tops out at 1440; the
-  // adapter accepts the full range if a larger value is ever passed.)
+  // sesstime = minutes to keep the exit IP (1..10080); blank/0 rotates per request. The UI tops out at
+  // 1440, but the full range is accepted.
   const lifeMin = Math.min(10080, Math.max(0, Number.parseInt(String(life), 10) || 0));
   const ptype = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
   const n = fixedSession ? 1 : clampPoolCount(count);
-  // The Username field commonly gets the operator's WHOLE gateway username pasted
-  // into it, e.g. "user_4a497e,sesstime_10080,session_7fqh2zpcf3" straight off the
-  // AnyIP dashboard. Appending our own flags on top then emits the same key TWICE
-  // ("...,session_7fqh2zpcf3,type_residential,country_US,session_0lcdj93s"), and which
-  // one the gateway honours is undefined. Measured: AnyIP takes the LAST, so every
-  // profile did get its own exit IP, but it is one parser change away from all of them
-  // silently collapsing onto a single shared IP, which is the worst possible failure
-  // for an anti-detect browser because it correlates every identity at once.
-  // So: keep only the bare account id, treat any flag the operator embedded as a
-  // default, and let the explicit options here win. Each key is emitted exactly once.
+  // Operators often paste the whole gateway username (with session_/sesstime_ flags). Duplicate keys
+  // leave it to the gateway which one wins, which could collapse every profile onto one IP. Keep the
+  // bare account id, treat pasted flags as defaults, and emit each key once.
   const userSegs = user.split(',').map((s) => s.trim()).filter(Boolean);
   const baseUser = userSegs.shift() || user;
   const flags = new Map(); // key -> full "key_value" segment, insertion-ordered
@@ -1863,14 +1748,12 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   }
   const rows = [];
   for (let i = 1; i <= n; i += 1) {
-    // Comma-delimited flags, each an underscore key_value.
     const own = new Map(flags);
     own.set('type', `type_${ptype}`);
     if (cc) own.set('country', `country_${cc}`);
     if (lifeMin) own.set('sesstime', `sesstime_${lifeMin}`);
-    // session goes LAST, matching the layout that is known-good against the live
-    // gateway. Map.set keeps a key's original position, so drop it first to move it
-    // to the end rather than leaving it wherever the operator had pasted it.
+    // session goes last, the layout known to work against the live gateway; delete first because
+    // Map.set keeps an existing key's position.
     own.delete('session');
     own.set('session', `session_${fixedSession || randSession()}`);
     const parts = [baseUser, ...own.values()];
@@ -1883,11 +1766,9 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   return rows;
 }
 
-// --- ShopSocks5: REAL list pull via the documented account API ---------------
-// POST form-urlencoded to /socks/{premium|list|daily} on shopsocks5.com, authed by
-// user_name + api_token (BOTH required - token alone fails with "User or Api Token
-// incorrect"). country/state/city filter the pool; proxy_type=proxy_sock_5 (SOCKS5)
-// or proxy_https. The list is returned under the `response` array.
+// ---- ShopSocks5 ----
+// POST form-urlencoded to /socks/{premium|list|daily}; needs both user_name and api_token (the token
+// alone fails). proxy_type is proxy_sock_5 or proxy_https; rows come back under `response`.
 async function fetchShopSocks5Pool({ token, username, country, count, state, city, plan, proxyType }) {
   const tok = String(token || '').trim();
   if (!tok) throw new Error('ShopSocks5: your API token is required.');
@@ -1895,9 +1776,7 @@ async function fetchShopSocks5Pool({ token, username, country, count, state, cit
   if (!user) throw new Error('ShopSocks5: your ShopSocks5 account username or email is required - the API authenticates with user_name + api_token together.');
   const cc = normCountryCode(country);
 
-  // Real ShopSocks5 API (https://shopsocks5.com/document): POST form-urlencoded to
-  // /socks/{premium|list|daily}; auth = user_name + api_token; returns
-  // { success, response: [...], message }. proxy_type = proxy_sock_5 | proxy_https.
+  // API docs: https://shopsocks5.com/document. Returns { success, response: [...], message }.
   const ep = (String(plan || 'premium').toLowerCase().match(/^(premium|list|daily)$/) || [])[1] || 'premium';
   const ptype = String(proxyType || 'proxy_sock_5').trim() || 'proxy_sock_5';
   const isHttps = ptype === 'proxy_https';
@@ -1930,10 +1809,9 @@ async function fetchShopSocks5Pool({ token, username, country, count, state, cit
     throw new Error(`ShopSocks5: ${msg} - check your account username + API token, and that the chosen country/type has stock.`);
   }
 
-  // The proxy list lives under `response`. Confirmed daily/premium item shape:
-  // { sock_ip:"host:port", user_name, password, proxy_type:"SOCKS5 Proxy",
-  //   country_code:"US", country:"United States", city, states, ... }.
-  // Also tolerate plain {ip/host,port}, packed combo fields, or a bare string.
+  // Items look like { sock_ip: "host:port", user_name, password, proxy_type: "SOCKS5 Proxy",
+  // country_code, country, city, states }. Plain {ip/host, port}, packed combos and bare strings
+  // are tolerated too.
   const list = Array.isArray(parsed.response) ? parsed.response : (Array.isArray(parsed) ? parsed : []);
   const rows = [];
   for (const it of list) {
@@ -1970,18 +1848,9 @@ async function fetchShopSocks5Pool({ token, username, country, count, state, cit
   return rows.slice(0, 200);
 }
 
-// --- DataImpulse: REAL list extraction over Basic Auth -----------------------
-// gw.dataimpulse.com:777 is a documented REST API behind HTTP Basic Auth. Unlike the
-// gateway-only vendors above there IS a list to pull: GET /api/list returns one proxy
-// per line in the shape `login:password@hostname:port`, already rendered, with country
-// and session targeting applied server-side. That is a direct match for the pool, so we
-// store exactly what the API returns instead of assembling a username ourselves.
-//
-// PRODUCTS: a DataImpulse account can hold several plans (Residential, Residential
-// Premium, Mobile, Datacenter), and each plan carries its OWN login and password. So the
-// product is chosen by WHICH credentials are entered, not by a request parameter. `plan`
-// is therefore a label only: it names the rows so four products do not collide in the
-// pool. Do not turn it into an API parameter without checking the vendor documents one.
+// ---- DataImpulse ----
+// GET /api/list (Basic Auth) returns ready `login:password@host:port` lines with targeting applied,
+// stored as-is. Each plan has its own login, so `plan` only labels rows; it is not an API parameter.
 const DI_API = 'https://gw.dataimpulse.com:777/api';
 const DI_PRODUCTS = Object.freeze({
   residential: 'Residential', residential_premium: 'Residential Premium',
@@ -2013,10 +1882,7 @@ async function diPlanStats(headers) {
 async function fetchDataImpulsePool({ username, password, country, state, city, zip, asn, excludeCountries, excludeAsns, count, life, plan, poolType, proxyType, existingPorts }) {
   const headers = diAuthHeaders(username, password);
 
-  // Verify against /api/stats BEFORE pulling. A wrong login then surfaces as a clean
-  // auth error instead of an empty pool, and an exhausted plan is named as such rather
-  // than minting rows that die on first use. Same "verify, then persist" rule the
-  // gateway vendors follow; this one just has a real endpoint to verify against.
+  // Verify via /api/stats first so a wrong login is an auth error and an exhausted plan is named as such.
   const stats = await diPlanStats(headers);
   const left = Number(stats && stats.traffic_left);
   if (Number.isFinite(left) && left <= 0) {
@@ -2031,14 +1897,8 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   const ttl = Number.parseInt(String(life), 10);
   const product = DI_PRODUCTS[String(plan || '').toLowerCase()] || DI_PRODUCTS.residential;
 
-  // A ROTATING pull returns the SAME endpoint N times. The exit IP changes per REQUEST,
-  // not per row: DataImpulse's own documented example response is three identical lines.
-  // Asking for five would mint five copies of one proxy, which is the "rows that look
-  // distinct and are not" problem this file exists to avoid, so ask for one and let the
-  // label say it rotates. That also matches fetchGatewayVerifiedPool, which returns
-  // exactly one row for the other rotating gateways (Oxylabs, Smartproxy).
-  // STICKY is the opposite: each row is its own session pinned to its own port, so a
-  // pool of N distinct exit IPs is exactly what a user wants and we ask for N.
+  // A rotating pull returns the same endpoint N times (the IP changes per request), so ask for one row.
+  // Sticky rows each pin their own session and port, so ask for N.
   const want = sticky ? n : 1;
   const qs = new URLSearchParams();
   qs.set('quantity', String(want));
@@ -2046,9 +1906,7 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   qs.set('protocol', socks ? 'socks5' : 'http');
   // The API takes lower-case ISO country codes ("us"), and omitting it means global.
   if (cc) qs.set('countries', cc.toLowerCase());
-  // states, cities, zipcodes and asns are documented as comma-separated lists. The
-  // vendor resolves them, and an unknown value comes back as an empty list rather than a
-  // wrong exit, which the "no usable proxies" guard below reports.
+  // An unknown state, city, zip or ASN comes back as an empty list, which the guard below reports.
   const st = csvFilter(state, FILTER_PATTERNS.text);
   const ct = csvFilter(city, FILTER_PATTERNS.text);
   const zp = csvFilter(zip, FILTER_PATTERNS.zip);
@@ -2064,9 +1922,8 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   // session_ttl is minutes and only means anything for sticky sessions.
   if (sticky && Number.isFinite(ttl) && ttl > 0) qs.set('session_ttl', String(ttl));
 
-  // parseLoginList collapses repeats on the identity the pool itself dedupes on. Without
-  // that a rotating pull reports "Returned: 5, Added: 1, Existing: 4", which reads like a
-  // failure when it is really one endpoint listed five times.
+  // parseLoginList collapses repeats on the pool's dedupe identity, so a rotating endpoint listed
+  // five times reports one proxy instead of "Added: 1, Existing: 4".
   const pullList = async () => {
     let text;
     try {
@@ -2082,16 +1939,9 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
     throw new Error('DataImpulse returned no usable proxies. Try a different country, or check the plan still has traffic.');
   }
 
-  // STICKY ports are handed out deterministically, 10000 upwards. Measured live on
-  // 15 Sep 2026: pulling 5 twice returned the same 5 ports, so the second pull added
-  // nothing and "How many" behaved like a total. People read it as "give me N more", so
-  // that is what it now means: find every port the pool already holds for this plan
-  // login, ask the vendor for that many on top, and keep only ports not held yet.
-  // The match is on the BASE login (before "__", where DataImpulse appends targeting
-  // such as __cr.us or __sessttl.5), not the full username. A pull with a different
-  // country or lifetime returns ports from 10000 again under a different username, and
-  // if the vendor ties a sticky session to the port, reusing one would put two profiles
-  // on the same exit IP. Skipping a port costs nothing; sharing one correlates identities.
+  // Sticky ports are handed out deterministically from 10000, so request N more than the ports
+  // already held for this base login (before "__", where targeting goes) and keep only new ones.
+  // Reusing a port could put two profiles on the same exit IP.
   let have = new Set();
   if (sticky && typeof existingPorts === 'function') {
     const first = parsed[0];
@@ -2118,18 +1968,15 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
     throw new Error('DataImpulse returned no usable proxies. Try a different country, or check the plan still has traffic.');
   }
   if (sticky && rows.length < n) {
-    // Not an error: the vendor caps what it can pin for this filter. Say so in the label
-    // of the first row rather than silently handing back fewer than asked for.
+    // The vendor caps how many sessions it can pin for this filter; say so on the first row's label.
     rows[0].label += ` (${rows.length} of ${n} available)`;
   }
   return rows;
 }
 
-// DataImpulse sticky proxies sit on ports 10000 and up under one plan login (rotating is
-// port 823; both measured live 15 Sep 2026). GET /api/rotate_ip?port=N with Basic Auth for
-// the plan login resets that port's sticky session, so the same proxy row gets a fresh exit
-// IP without pulling a new one. Their docs set a 30 second minimum between resets of one
-// session. The stored username carries targeting after "__", the plan login is before it.
+// DataImpulse sticky proxies use ports 10000+ under one plan login (rotating is port 823).
+// GET /api/rotate_ip?port=N with the plan login's Basic Auth gives that port a fresh exit IP;
+// the vendor requires 30 s between resets. The plan login is the username before "__".
 function isDataImpulseSticky(proxy) {
   return Boolean(proxy)
     && String(proxy.provider || '').toLowerCase() === 'dataimpulse'
@@ -2145,9 +1992,8 @@ async function rotateDataImpulseSticky(proxy) {
   try {
     body = JSON.parse(await httpRequestText(`${DI_API}/rotate_ip?port=${encodeURIComponent(String(proxy.port))}`, { headers }));
   } catch (e) {
-    // Measured live 15 Sep 2026: a reset inside the window comes back as HTTP 500 with
-    // {"status":"error","message":"IP rotation interval must be greater than 30 seconds"}.
-    // A new sticky session (for example after its lifetime expires) starts that window too.
+    // A reset inside the 30 s window returns HTTP 500 with a JSON "message"; a new sticky session
+    // (for example after its lifetime expires) starts that window too.
     const vendor = /"message"\s*:\s*"([^"]+)"/.exec(String((e && e.message) || ''));
     if (vendor) throw new Error(`DataImpulse: ${vendor[1]}. Wait 30 seconds after the last change on this proxy, then try again.`);
     throw new Error(`DataImpulse rotation failed: ${scrubProxySecrets(e.message, proxy)}`);
@@ -2158,8 +2004,8 @@ async function rotateDataImpulseSticky(proxy) {
   return { ok: true, status: 200, latencyMs: Date.now() - started, response: String(body.message || 'ok'), provider: 'dataimpulse' };
 }
 
-// Plan stats plus a live geo breakdown for the provider panel. groupby is one of the
-// documented values; the pool counts come from /api/pool_stats_with_parameters.
+// Plan stats plus a live geo breakdown for the provider panel; pool counts come from
+// /api/pool_stats_with_parameters and groupby is limited to the documented values.
 const DI_GROUPBY = new Set(['country', 'state', 'city', 'asn', 'zip']);
 async function lookupDataImpulse({ username, password, country, groupby }) {
   const headers = diAuthHeaders(username, password);
@@ -2189,18 +2035,9 @@ async function lookupDataImpulse({ username, password, country, groupby }) {
   return out;
 }
 
-// --- Proxy-Seller: residential lists over the documented User API ---------------
-// Base https://proxy-seller.com/personal/api/v2/{API_KEY}/. API v2 still takes the key in
-// the URL PATH (their docs also warn never to log full request URLs), so a request
-// URL must never reach a log line, and every error message goes through maskProxySellerKey.
-//
-// A Proxy-Seller residential proxy is a LIST: one login and password, a geo target, a
-// rotation rule and up to 1000 ports, where each port is its own exit IP (their docs:
-// "1.2.3.4:10005 and 1.2.3.4:10006 are different IPs"). So a pull of N proxies creates a
-// list with N ports and then downloads that list, and every pull gets its own login, which
-// means a second pull adds new proxies rather than colliding with the first. A list made
-// in the dashboard can be pulled by id instead. Business errors arrive as HTTP 200 with
-// status "error"; unwrapProxySeller turns them into messages the operator can act on.
+// ---- Proxy-Seller ----
+// API v2 takes the key in the URL path, so never log a request URL; mask errors with maskProxySellerKey.
+// A residential list is one login with up to 1000 ports, each its own exit IP; errors come as HTTP 200.
 const PS_API = 'https://proxy-seller.com/personal/api/v2';
 const PS_MAX_PORTS = 1000;
 
@@ -2245,11 +2082,8 @@ function psRotationLabel(rotation) {
   return 'rotation unknown';
 }
 
-// IPv6, IPv4, ISP, Mobile and the Mix products are sold per IP: an order holds N addresses,
-// each with its own HTTP and SOCKS5 port on the entry host. There is nothing to create, so
-// the pull downloads what the account already owns from GET proxy/list/{type}, optionally
-// one order. Measured on his dashboard 15 Sep 2026: 200 IPv6 addresses, USA, all behind one
-// IPv4 entry host on separate ports, login authentication.
+// Per-IP products (IPv6, IPv4, ISP, Mobile, Mix) are orders of N addresses, each with its own HTTP
+// and SOCKS5 port on the entry host. Nothing is created: the pull reads proxy/list/{type}.
 async function fetchProxySellerOrderPool(key, { product, proxyType, orderId, count, existingPorts }) {
   const label = PROXY_SELLER_ORDER_TYPES[product];
   const qs = new URLSearchParams();
@@ -2260,8 +2094,7 @@ async function fetchProxySellerOrderPool(key, { product, proxyType, orderId, cou
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const rows = proxySellerOrderRows(data && data.items, { socks, label: `Proxy-Seller • ${label}` });
   if (!rows.length) {
-    // An order is bought for one protocol: live 2 Nov 2026, an IPv6 order with protocol
-    // "HTTPS" had port_socks "" on all 200 items. Say so instead of "no proxies".
+    // An order serves one protocol (an HTTPS order has an empty port_socks), so name the mismatch.
     const other = proxySellerOrderRows(data && data.items, { socks: !socks });
     if (other.length) {
       const want = socks ? 'SOCKS5' : 'HTTP';
@@ -2270,9 +2103,8 @@ async function fetchProxySellerOrderPool(key, { product, proxyType, orderId, cou
     }
     throw new Error(`Proxy-Seller: this account has no active ${label} proxies${oid ? ' in that order' : ''}.`);
   }
-  // Honour "how many": an order can hold hundreds of addresses, and a pull of 5 imported all
-  // 200 IPv6 ones (29 Sep 2026). Addresses already in the pool are skipped, so each pull adds
-  // the NEXT ones. A blank count keeps the old behaviour and imports the whole order.
+  // An order can hold hundreds of addresses: skip those already pooled and take the next "How many".
+  // A blank count imports the whole order.
   let fresh = rows;
   if (typeof existingPorts === 'function') {
     const held = new Map();
@@ -2324,8 +2156,7 @@ async function fetchProxySellerPool({ token, country, state, city, count, poolTy
     const title = `SoftGlaze ${[cc || 'Global', region, town].filter(Boolean).join(' ')} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
     list = await psCall(key, 'POST', 'resident/list/add', 'list create', {
       title: title.slice(0, 100),
-      // Blank whitelist = authorise with the list's own login and password, which is what
-      // a profile needs. A whitelist would tie the list to this machine's IP instead.
+      // A blank whitelist means login/password auth; a whitelist would tie the list to this machine's IP.
       whitelist: '',
       geo,
       export: { ports: clampPoolCount(count, 5, PS_MAX_PORTS), ext: 'txt' },
@@ -2359,9 +2190,8 @@ async function fetchProxySellerPool({ token, country, state, city, count, poolTy
   }));
 }
 
-// The residential geo database. The v2 docs describe a ZIP holding one JSON file (~300 KB
-// zipped, ~3 MB unzipped); the v2 SDK READMEs say a plain JSON file, not a ZIP. Both are read
-// below. It changes rarely, so keep the parsed copy for a few hours.
+// Residential geo database: the v2 docs say a ZIP with one JSON file, the SDK READMEs say plain
+// JSON, so both are handled. It changes rarely, so the parsed copy is cached for 6 hours.
 let psGeoCache = { at: 0, data: null };
 async function psGeoDatabase(key) {
   if (psGeoCache.data && Date.now() - psGeoCache.at < 6 * 60 * 60 * 1000) return psGeoCache.data;
@@ -2395,8 +2225,7 @@ async function psGeoDatabase(key) {
 
 async function lookupProxySeller({ token, country, groupby }) {
   const key = psKey(token);
-  // Per-IP products (IPv6 and friends) come from one call covering every type. It also
-  // proves the key works, so an account with no residential package still gets a view.
+  // One call covers every per-IP product and proves the key works, even with no residential package.
   const all = await psCall(key, 'GET', 'proxy/list', 'proxy list');
   const products = summarizeProxySellerOrders(all);
   // The residential package is optional: "Tarif not found" just means there is none.
@@ -2437,13 +2266,9 @@ async function lookupProxySeller({ token, country, groupby }) {
   return out;
 }
 
-// --- IPRoyal residential over the documented API ---------------------------------------
-// resi-api.iproyal.com/v1, Bearer token from Dashboard, Settings, API. The OpenAPI spec is
-// served at https://resi-api.iproyal.com/docs. POST /access/generate-proxy-list returns a JSON
-// array of ready proxy lines for either a sub-user hash or the proxy username + password.
-// Targeting AND the sticky session live in the PASSWORD (…_country-us_session-ab12cd34_
-// lifetime-30m), so sticky rows share host, port and username and differ only by password.
-// Random rotation appends nothing, so every line is the same endpoint: ask for one.
+// ---- IPRoyal residential (resi-api.iproyal.com/v1, Bearer token) ----
+// Targeting and the sticky session live in the password (_country-us_session-..._lifetime-30m), so
+// sticky rows differ only by password. Random rotation lines are all one endpoint, so ask for one.
 const IPR_API = 'https://resi-api.iproyal.com/v1';
 const IPR_MAX_COUNT = 500;
 
@@ -2539,8 +2364,7 @@ async function lookupIpRoyal({ token, country, groupby }) {
     leftBytes: Math.round(gb * 1024 ** 3),
     totalBytes: 0,
     subusersCount: Number(me && me.subusers_count) || 0,
-    // Hash, name and balance only: the sub-user password never needs to reach the renderer,
-    // because the generate call accepts the hash instead.
+    // Never send the sub-user password to the renderer; the generate call accepts the hash.
     subusers: (subs && Array.isArray(subs.data) ? subs.data : [])
       .filter((s) => s && /^[A-Za-z0-9]{26}$/.test(String(s.hash || '')))
       .map((s) => ({ hash: String(s.hash), username: String(s.username || ''), trafficGb: Number(s.traffic_available) || 0, shared: s.is_using_shared_traffic === true })),
@@ -2560,12 +2384,9 @@ async function lookupIpRoyal({ token, country, groupby }) {
   return out;
 }
 
-// --- MarsProxies residential over the documented API -----------------------------------
-// api.marsproxies.com, Bearer token from Dashboard > Settings > API (unlocks after >=1 GB of
-// residential traffic). POST /v1/residential/access/generate-proxy-list returns a JSON array
-// of "{hostname}:{port}:{username}:{password}" strings. Residential only; ISP/datacenter/mobile
-// have no documented API. Built from the live GitBook + embedded OpenAPI, 2026-09-19. NOT yet
-// live-key tested.
+// ---- MarsProxies residential (api.marsproxies.com, Bearer token) ----
+// generate-proxy-list returns "host:port:user:pass" strings. The API unlocks after 1 GB of
+// residential traffic; ISP, datacenter and mobile have no documented API. Not live-key tested.
 const MARS_API = 'https://api.marsproxies.com';
 const MARS_GATEWAY = 'ultra.marsproxies.com';
 
@@ -2646,11 +2467,9 @@ async function fetchMarsProxiesPool({ token, username, password, subuserHash, co
   }));
 }
 
-// --- NodeMaven (gateway gate.nodemaven.com, targeting encoded in the username) ----------
-// No list endpoint: build "<login>-country-..-type-<residential|mobile>-sid-<id>" per proxy
-// against the fixed gateway. Proxy username + password come from the dashboard (Proxy Setup);
-// the account API key is separate and not used here. count sticky sessions get distinct sids.
-// Built from NodeMaven's live docs + published SDK grammar, 2026-09-19. NOT yet live-key tested.
+// ---- NodeMaven (gateway gate.nodemaven.com, targeting in the username) ----
+// No list endpoint: each row is "<login>-country-..-type-<residential|mobile>-sid-<id>", using the
+// dashboard proxy login (the account API key is not used). Not live-key tested.
 const NODEMAVEN_GATEWAY = Object.freeze({ host: 'gate.nodemaven.com', http: 8080, socks: 1080 });
 
 function nodeMavenTtlFromMinutes(life) {
@@ -2691,13 +2510,9 @@ async function fetchNodeMavenPool({ username, password, country, state, city, se
   return rows;
 }
 
-// --- Froxy (SOAX reseller; gateway proxy.froxy.com:9000) --------------------------------
-// The management API needs an email/password login, so instead the app takes the Filter login
-// + password from the dashboard (Export Proxy List) and builds rows directly. With a country
-// chosen, targeting rides in the password as "<type>;<cc>;;<region>;<city>" (wifi/mobile/fast);
-// with no country the pasted password is used verbatim. Built from Froxy's connection guide +
-// the SOAX gateway it resells, 2026-09-19. NOT yet live-key tested; confirm the sticky-session
-// delimiter against a live key.
+// Froxy (SOAX reseller, proxy.froxy.com:9000): rows use the dashboard Filter login, since the API
+// needs an email login. A country makes the password "<type>;<cc>;;<region>;<city>".
+// TODO: confirm the sticky-session delimiter against a live key.
 const FROXY_GATEWAY = Object.freeze({ host: 'proxy.froxy.com', port: 9000 });
 
 async function fetchFroxyPool({ username, password, country, state, city, count, poolType, proxyType }) {
@@ -2729,12 +2544,8 @@ async function fetchFroxyPool({ username, password, country, state, city, count,
   return rows;
 }
 
-// --- PacketStream (residential gateway) -------------------------------------------------
-// One gateway, credentials from the dashboard Network Access page: username + proxy password.
-// Country + sticky session ride in the password (packetStreamPassword). No API call - the app
-// mints gateway rows locally, like Froxy. HTTP/HTTPS = 31112, SOCKS5 = 31113. A blank session
-// gives a single rotating row; a session name mints `count` sticky rows so each profile can
-// pin its own exit IP. Confirmed against the dashboard generator 2026-09-27.
+// ---- PacketStream (proxy.packetstream.io; HTTP 31112, SOCKS5 31113) ----
+// No API: rows are minted locally, with country and sticky session in the password.
 const PACKETSTREAM_GATEWAY = Object.freeze({ host: 'proxy.packetstream.io', http: 31112, socks: 31113 });
 
 async function fetchPacketStreamPool({ username, password, country, session, count, proxyType }) {
@@ -2749,8 +2560,7 @@ async function fetchPacketStreamPool({ username, password, country, session, cou
   // A country PacketStream does not list would be dropped from the password and exit anywhere.
   if (cc && !packetStreamCountry(cc)) throw new Error(`PacketStream has no exits in ${cc}. Pick another country, or Any.`);
   const where = cc || 'Random';
-  // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
-  // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
+  // A blank session with How many > 1 mints that many sticky sessions; with 1 it stays rotating.
   const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     // Rotating: one gateway row, a fresh IP per request.
@@ -2779,16 +2589,12 @@ async function fetchPacketStreamPool({ username, password, country, session, cou
   return rows;
 }
 
-// --- Airproxy (dedicated mobile proxies) ------------------------------------------------
-// Read-only list pull: GET https://airproxy.io/api/proxy/list/?key=<KEY> returns the proxies
-// already assigned to the account (each its own SIM), which airproxyRows maps to HTTP rows.
-// The API key goes in the query string (URL-encoded). Rotation exists at
-// /api/proxy/change_ip/?id=&key= but is intentionally NOT wired here so the account key is
-// never persisted in a stored rotation URL. Confirmed against a live account 2026-09-27.
+// ---- Airproxy (dedicated mobile, list pull) ----
+// GET /api/proxy/list/?key=<KEY> returns the account's proxies, one SIM each. Rotation (change_ip)
+// is not wired, so the account key is never stored in a rotation URL.
 const AIRPROXY_API = 'https://airproxy.io/api/proxy';
 
-// List vendors import what the account already owns, so "How many" caps that list instead of
-// minting more. Blank (or 0) keeps everything, which is what these pulls did before.
+// "How many" caps a list pull instead of minting more; blank or 0 keeps the whole list.
 function limitListRows(rows, count) {
   const raw = String(count == null ? '' : count).trim();
   if (!raw || !/^\d+$/.test(raw) || Number(raw) <= 0) return rows;
@@ -2811,12 +2617,9 @@ async function fetchAirproxyPool({ token, count }) {
   return limitListRows(rows, count);
 }
 
-// --- CatProxies (Standard Residential, Rotating Mobile, ISP, Datacenter) ------------------
-// The cp_ API key + a Plan ID (from the dashboard Active Plans) fetch GET /orders/:id, whose
-// proxy.{username,password} feed one gateway. Targeting rides in the username (see the helpers).
-// US gateways only for now (resi-us / mobile-us, both confirmed live 2026-09-27); EU/ASIA
-// regions exist in the dashboard but their exact hostnames are unconfirmed, so they are not
-// offered yet. ISP and Datacenter plans have fixed IPs, so they go through fetchCatProxiesFixedIps.
+// ---- CatProxies ----
+// The cp_ key and a Plan ID fetch GET /orders/:id for the login; targeting rides in the username.
+// US gateways only: the EU/Asia hostnames are unconfirmed. Fixed-IP plans use fetchCatProxiesFixedIps.
 const CATPROXIES_API = 'https://catproxies.com/api/v1/user';
 const CATPROXIES_PRODUCTS = Object.freeze({
   // Residential splits rotating (9000/11000) and sticky (10000/12000) port ranges; the gateway
@@ -2857,8 +2660,7 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   const buildUser = (sid) => product.mobile
     ? catProxiesMobileUsername(username, { country: cc, city, session: sid, ttlMin: lifeMin })
     : catProxiesResiUsername(username, { country: cc, state, city, session: sid, lifetimeMin: resiLife });
-  // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
-  // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
+  // A blank session with How many > 1 mints that many sticky sessions; with 1 it stays rotating.
   const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     const user = buildUser('');
@@ -2880,8 +2682,7 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   return rows;
 }
 
-// CatProxies products with fixed IPs: imported as a list, nothing is minted. The IP decides the
-// location, so targeting the product cannot honour is refused rather than ignored.
+// Fixed-IP products are imported as a list; the IP sets the location, so targeting is refused, not ignored.
 async function fetchCatProxiesFixedIps({ key, id, pool, country, state, city, session, count, proxyType }) {
   const isp = pool === 'isp';
   const kind = isp ? 'ISP' : 'Datacenter';
@@ -2923,9 +2724,8 @@ async function fetchCatProxiesFixedIps({ key, id, pool, country, state, city, se
   return limitListRows(picked, count);
 }
 
-// Shared by the gateway-minting adapters below: an optional host/port override from the form
-// (vendors hand some accounts a regional or per-plan gateway). Rejects anything that is not a
-// bare hostname and a valid port, so a pasted URL or credential never becomes a host.
+// Optional host/port override (some accounts get a regional or per-plan gateway). Only a bare
+// hostname and a valid port pass, so a pasted URL or credential never becomes a host.
 function gatewayOverride(host, port, def, label) {
   const h = String(host || '').trim();
   const p = port != null && String(port).trim() !== '' ? Number.parseInt(String(port), 10) : def.port;
@@ -2937,8 +2737,7 @@ function gatewayOverride(host, port, def, label) {
 // Mint `count` sticky rows (one session id each) or a single rotating row, for vendors whose
 // targeting lives in the username. buildUser(sid) returns the full username for that session.
 function mintGatewayRows({ type, host, port, password, session, count, buildUser, label }) {
-  // Blank session + How many > 1: mint that many sticky sessions (one exit IP each), like
-  // Froxy/NodeMaven already do. Blank session + 1 keeps the single rotating gateway.
+  // A blank session with How many > 1 mints that many sticky sessions; with 1 it stays rotating.
   const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     return [{ type, host, port, username: buildUser(''), password, label: `${label} • rotating`, dedupeOnPassword: true }];
@@ -2957,11 +2756,9 @@ function mintGatewayRows({ type, host, port, password, session, count, buildUser
   return rows;
 }
 
-// --- RapidProxy (rotating residential) -------------------------------------------------
-// No management API is published, so the app mints gateway rows from a dashboard sub-account
-// (Proxies → Residential → sub-account username + password). Targeting rides in the username
-// (rapidProxyUsername). Default gateway us.rapidproxy.io:5001 (HTTP), confirmed from the
-// vendor's own examples 2026-09-29; other regional nodes are reachable through the override.
+// ---- RapidProxy (rotating residential) ----
+// No management API: rows are minted from a dashboard sub-account, with targeting in the username.
+// Default gateway us.rapidproxy.io:5001; other regional nodes go through the override.
 const RAPIDPROXY_GATEWAY = Object.freeze({ host: 'us.rapidproxy.io', port: 5001 });
 
 async function fetchRapidProxyPool({ username, password, country, state, city, session, life, count, host, port, poolType }) {
@@ -2975,7 +2772,7 @@ async function fetchRapidProxyPool({ username, password, country, state, city, s
   const gw = gatewayOverride(host, port, RAPIDPROXY_GATEWAY, 'RapidProxy');
   const where = cc || 'Global';
   const rows = mintGatewayRows({
-    // SOCKS5 runs on the same host:port (dashboard test command, 29 Sep 2026).
+    // SOCKS5 runs on the same host:port.
     type: String(poolType || '').toLowerCase() === 'socks5' ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
     buildUser: (sid) => rapidProxyUsername(sub, { country: cc, state, city, session: sid, lifeMin: Number(life) }),
     label: `RapidProxy • ${where}`
@@ -2984,11 +2781,9 @@ async function fetchRapidProxyPool({ username, password, country, state, city, s
   return rows;
 }
 
-// --- NOVADA (residential / rotating ISP / mobile) ----------------------------------------
-// Gateway rows minted from a PROXY USER (Residential Proxies → Users), not the login email.
-// Zone, country, state, city and a sticky session ride in the username (novadaUsername).
-// Default super.novada.pro:7777 (HTTP); the endpoint generator may show a regional host such
-// as pr-as.novada.pro, which the override accepts. Confirmed in the dashboard 2026-09-29.
+// ---- NOVADA (residential / rotating ISP / mobile) ----
+// Rows use a proxy user (not the login email); zone, geo and sticky session ride in the username.
+// Default super.novada.pro:7777; a regional host such as pr-as.novada.pro goes through the override.
 const NOVADA_GATEWAY = Object.freeze({ host: 'super.novada.pro', port: 7777 });
 
 async function fetchNovadaPool({ username, password, poolType, country, state, city, session, life, count, host, port }) {
@@ -3009,15 +2804,9 @@ async function fetchNovadaPool({ username, password, poolType, country, state, c
   return rows;
 }
 
-// --- Proxies.sx (pool gateway) -----------------------------------------------------------
-// The API key (X-API-Key) reads the account's gateway username + proxy password from
-// GET /v1/account/proxy-password; the login password never works on the gateway. Rows are
-// minted on gw.proxies.sx:7000 (HTTP; 7001 is SOCKS5). Per the vendor's acceptance checks:
-//  1. A country is required and every row carries failover-strict on a single pool (mbl or
-//     peer), so an out-of-stock country FAILS (E_NO_STOCK_COUNTRY) and never exits elsewhere.
-//  2. "Keep the same IP" and "rotate" are distinct: a sticky row pins its own sid with
-//     rot-sticky; a rotating row has no sid, so every new connection gets a new IP; an explicit
-//     rotate is a new session name. Grammar from agents.proxies.sx, 2026-09-29.
+// Proxies.sx: the X-API-Key reads the gateway login (the account password never works there).
+// A country is required and each row is failover-strict on one pool, so out of stock fails
+// (E_NO_STOCK_COUNTRY) instead of exiting elsewhere. Sticky rows pin a sid; rotating rows have none.
 const PROXIESSX_API = 'https://api.proxies.sx/v1';
 const PROXIESSX_GATEWAY = Object.freeze({ host: 'gw.proxies.sx', http: 7000, socks: 7001 });
 
@@ -3049,11 +2838,9 @@ async function fetchProxiesSxPool({ token, poolType, country, session, count }) 
   return rows;
 }
 
-// --- MobileProxy.Space (dedicated mobile proxies) ----------------------------------------
-// Read-only list pull: GET /api.html?command=get_my_proxy with a Bearer token returns every
-// proxy on the account (mobileProxySpaceRows). Rotation is the per-proxy change-IP link in
-// the vendor dashboard; it is not stored here. The API allows one identical request per
-// ~5 s, so a quick second pull gets a clear "wait" message instead of a generic failure.
+// ---- MobileProxy.Space (dedicated mobile, list pull) ----
+// Rotation is the per-proxy change-IP link in the vendor dashboard and is not stored here.
+// The API allows one identical request per ~5 s, so a quick second pull gets a "wait" message.
 const MOBILEPROXYSPACE_API = 'https://mobileproxy.space/api.html';
 
 async function fetchMobileProxySpacePool({ token, poolType, count }) {
@@ -3079,10 +2866,9 @@ async function fetchMobileProxySpacePool({ token, poolType, count }) {
   return limitListRows(rows, count);
 }
 
-// --- Proxy-Solutions (anti-detect integration endpoint) ----------------------------------
-// GET /api/proxies/{provider_key}?format=object&proto=http|socks, paged (per_page 200). The
-// provider key is issued per account by Proxy-Solutions for anti-detect browsers. Every page
-// is read (capped) so large accounts come through whole; expired proxies are skipped.
+// ---- Proxy-Solutions (anti-detect integration endpoint) ----
+// The provider key is issued per account for anti-detect browsers. Pages of 200 are all read (up
+// to a cap) and expired proxies are skipped.
 const PROXYSOLUTIONS_API = 'https://proxy-solutions.net/api/proxies';
 
 async function fetchProxySolutionsPool({ token, poolType, country, count }) {
@@ -3120,11 +2906,9 @@ async function fetchProxySolutionsPool({ token, poolType, country, count }) {
   return limitListRows(picked, count);
 }
 
-// --- Proxmint (pay-as-you-go residential / premium / mobile / datacenter) ----------------
-// GET https://proxmint.com/api/v1/account with the customer's read-only pmk_ key returns each
-// product's gateway and proxy login (proxmintPickProduct). Rows are minted on that gateway
-// with the targeting in the username (proxmintUsername), verified live 2026-10-07. A pmk_ key
-// cannot buy or change anything, so storing it carries no spending risk.
+// ---- Proxmint (pay-as-you-go residential / premium / mobile / datacenter) ----
+// The read-only pmk_ key returns each product's gateway and login; targeting rides in the username.
+// A pmk_ key cannot buy or change anything, so storing it carries no spending risk.
 const PROXMINT_API = 'https://proxmint.com/api/v1';
 
 async function fetchProxmintPool({ token, poolType, country, state, city, session, life, count, proxyType }) {
@@ -3156,11 +2940,9 @@ async function fetchProxmintPool({ token, poolType, country, state, city, sessio
   return rows;
 }
 
-// --- IP Burger (rotating residential, gateway-minted) -------------------------------------
-// The proxy user (customer-<id>) + password come from the dashboard, Proxy Users; the country
-// (or one narrowing city/state token) and the sticky session ride in the username
-// (ipBurgerUsername). Gateway residential.ipb.cloud:7777, HTTP only (IPBurger does not offer
-// SOCKS5 on the residential network); res./resi3.ipb.cloud are reachable through the override.
+// ---- IP Burger (rotating residential, gateway-minted) ----
+// Country (or one city/state token) and session ride in the customer-<id> username. HTTP only:
+// IPBurger offers no SOCKS5 on residential. Other hosts go through the override.
 const IPBURGER_GATEWAY = Object.freeze({ host: 'residential.ipb.cloud', port: 7777 });
 
 async function fetchIpBurgerPool({ username, password, country, state, city, session, life, count, host, port }) {
@@ -3179,12 +2961,9 @@ async function fetchIpBurgerPool({ username, password, country, state, city, ses
   return rows;
 }
 
-// --- Proxy302 (dynamic residential, real Open API) ----------------------------------------
-// Sign in with the API sub-account key (name + password from the Proxy302 backend) to get a
-// Bearer-style token, map the chosen country to its numeric id, then ask the dynamic-traffic
-// endpoint for one ready proxy at a time (proxy.proxy302.com:2222). See the helper header in
-// proxyVendorUtils.js for the exact endpoints. Each call yields a distinct session credential,
-// so `count` calls build `count` proxies; a run of duplicates stops the loop early.
+// ---- Proxy302 (dynamic residential, Open API; endpoints in proxyVendorUtils.js) ----
+// Sign in with the API sub-account key, map the country to its numeric id, then request one proxy
+// per call (each a distinct session); a run of duplicates stops the loop early.
 const PROXY302_API = 'https://open.proxy302.com/open_api/v3';
 
 async function fetchProxy302Pool({ username, password, country, count, proxyType }) {
@@ -3240,10 +3019,8 @@ async function fetchProxy302Pool({ username, password, country, count, proxyType
   return rows;
 }
 
-// --- Databay (residential / mobile / datacenter) -----------------------------------------
-// Gateway-minted: one endpoint, gw.databay.co:8888, carries HTTP and SOCKS5. The proxy user
-// and password come from the Databay dashboard (Proxy Users); zone, location and sticky
-// session ride in the username (databayUsername, docs.databay.com Connection String).
+// ---- Databay (residential / mobile / datacenter) ----
+// One gateway port carries HTTP and SOCKS5; zone, location and sticky session ride in the username.
 const DATABAY_GATEWAY = Object.freeze({ host: 'gw.databay.co', port: 8888 });
 
 async function fetchDatabayPool({ username, password, poolType, country, state, city, session, life, count, proxyType, host, port }) {
@@ -3266,9 +3043,8 @@ async function fetchDatabayPool({ username, password, poolType, country, state, 
   return rows;
 }
 
-// --- IPFoxy (rotating residential, gateway-minted) ----------------------------------------
-// Account + password from the dashboard; targeting in the username (ipfoxyUsername). Default
-// gateway gate-us.ipfoxy.io:58688 (Americas); gate-sg.ipfoxy.io for Asia-Pacific via override.
+// ---- IPFoxy (rotating residential, gateway-minted) ----
+// Targeting rides in the username; gate-sg.ipfoxy.io (Asia-Pacific) goes through the override.
 const IPFOXY_GATEWAY = Object.freeze({ host: 'gate-us.ipfoxy.io', port: 58688 });
 
 async function fetchIpfoxyPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
@@ -3288,9 +3064,8 @@ async function fetchIpfoxyPool({ username, password, country, state, city, sessi
   return rows;
 }
 
-// --- MangoProxy (API connection-string generator) ----------------------------------------
-// x-api-key + a proxy sub-account: POST /public-api/v1/upstream/json returns ready proxy URLs
-// (mangoProxyRows). Blank sub-account = the first one on the account (GET /accounts).
+// ---- MangoProxy (API connection-string generator) ----
+// POST /upstream/json returns ready proxy URLs; a blank sub-account means the first one (GET /accounts).
 const MANGOPROXY_API = 'https://backend.mangoproxy.com/public-api/v1';
 const MANGOPROXY_TRAFFIC = Object.freeze(['residential', 'residential_light', 'datacenter', 'isp']);
 
@@ -3349,11 +3124,9 @@ async function fetchMangoProxyPool({ token, username, poolType, country, state, 
   return rows;
 }
 
-// --- Proxidize (api.proxidize.com/api/v1, Bearer JWT) -----------------------------------
-// Per-Proxy plans: GET /perproxy/proxies/{username} returns ready host:port:user:pass. Per-GB
-// plans: GET /pergb/{mobile|residential}/access-point gives a sub-user whose username carries a
-// sticky "-s-<session>" token, built against the gateway host from Proxy Details (20000 HTTP /
-// 20002 SOCKS5). Built from the live GitBook, 2026-09-19. NOT yet live-key tested.
+// ---- Proxidize (api.proxidize.com/api/v1, Bearer JWT) ----
+// Per-Proxy plans return ready credentials. Per-GB plans give a sub-user with a sticky "-s-<session>"
+// token on the Proxy Details gateway (20000 HTTP / 20002 SOCKS5). Not live-key tested.
 const PROXIDIZE_API = 'https://api.proxidize.com/api/v1';
 
 async function proxidizeCall(token, method, pathAndQuery, what, body) {
@@ -3408,8 +3181,8 @@ async function fetchProxidizePool({ token, username, host, country, state, city,
   const fixed = String(session || '').trim();
   for (let i = 0; i < n; i++) {
     const sid = fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(5).toString('hex');
-    // Geo tokens need the exact values from /pergb/.../locations-proxy, so v1 targets by the
-    // access point's dashboard geo and only adds the sticky session here.
+    // Geo tokens need exact values from /pergb/.../locations-proxy, so targeting uses the access
+    // point's dashboard geo and only the sticky session is added here.
     const uname = proxidizePerGbUsername(String(ap.username), { session: sid });
     const key = `${gwHost}:${port}:${uname}`;
     if (seen.has(key)) continue;
@@ -3425,15 +3198,12 @@ async function fetchProxidizePool({ token, username, host, country, state, city,
   return rows;
 }
 
-// --- Live Proxies: pull the plan's own list --------------------------------------------
-// Live Proxies hands each plan a downloadable proxy list (and documents the credential
-// shape as username:password@host:port; see liveProxiesListUrl for why the URL comes from
-// the user's dashboard rather than a hardcoded endpoint). The list URL already carries the
-// account access code, so an optional Bearer token is sent only when the user supplies one.
+// ---- Live Proxies ----
+// A pasted plan list URL already carries the access code, so a Bearer token is sent only if given.
 async function fetchLiveProxiesPool({ apiUrl, token, username, password, country, session, count, proxyType, poolType }) {
   // Gateway mode (what the dashboard actually offers): username LV<id> + proxy password.
   if (String(username || '').trim()) return mintLiveProxiesRows({ username, password, country, session, count, proxyType, poolType });
-  // Legacy: a pasted list link, kept for anyone who saved one before this change.
+  // Legacy: a pasted list link, still accepted for saved settings.
   const url = liveProxiesListUrl(apiUrl);
   if (!url) {
     throw new Error('Live Proxies: paste the proxy list URL from your dashboard (it must be an https liveproxies.io link).');
@@ -3459,9 +3229,8 @@ async function fetchLiveProxiesPool({ apiUrl, token, username, password, country
   return rows;
 }
 
-// Live Proxies gateway rows, built the way the dashboard's Proxy Generation panel builds them
-// (LIVEPROXIES_GATEWAY). Blank session + How many 1 = one rotating row; otherwise that many
-// sticky rows, each on its own b2b-s<N> server with its own numeric session (60 minutes).
+// Mirrors the dashboard's Proxy Generation panel: a blank session with How many 1 is one rotating
+// row; otherwise sticky rows, each on its own b2b-s<N> server with a numeric 60-minute session.
 function mintLiveProxiesRows({ username, password, country, session, count, proxyType, poolType }) {
   const acct = liveProxiesBaseUser(username);
   const pw = password != null ? String(password) : '';
@@ -3504,8 +3273,7 @@ const VENDOR_LOOKUPS = Object.freeze({
   iproyal: lookupIpRoyal
 });
 
-// Read-only account view for the provider panel: plan traffic, saved lists and the
-// locations a pull can target. Never creates anything on the vendor side.
+// Read-only account view for the provider panel; never creates anything on the vendor side.
 async function vendorLookup(payload) {
   await requirePermission('proxies.manage');
   const input = requireObject(payload);
@@ -3521,12 +3289,9 @@ async function vendorLookup(payload) {
   });
 }
 
-// --- 2extract (residential + mobile, gateway-minted) --------------------------------------
-// Proxy username + password from the dashboard (My Proxies, Connection Details). Targeting and
-// the sticky session ride in the username (twoExtractUsername). The docs give one gateway,
-// proxy.2extract.net:5555. HTTP or SOCKS5 is chosen per proxy in the 2extract dashboard, on the
-// same port, so Protocol here must match that setting. The /change_ip link is deliberately not
-// stored as a rotation link: it carries the proxy password in the URL. Not live-key tested.
+// ---- 2extract (residential + mobile, gateway-minted) ----
+// HTTP or SOCKS5 is set per proxy in the 2extract dashboard on one port, so Protocol must match it.
+// The /change_ip link carries the proxy password, so it is never stored. Not live-key tested.
 const TWOEXTRACT_GATEWAY = Object.freeze({ host: 'proxy.2extract.net', port: 5555 });
 
 async function fetchTwoExtractPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {
@@ -3548,12 +3313,9 @@ async function fetchTwoExtractPool({ username, password, country, state, city, s
   return rows;
 }
 
-// --- GonzoProxy (residential, mobile, datacenter; gateway-minted) ---------------------------
-// Login + password from the dashboard (Proxy Setup); country, region, city and the sticky session
-// ride in the login (gonzoProxyUsername). Rows are always sticky, because that is the only login
-// form the vendor publishes. The pool is whatever the pasted login belongs to: the docs say a
-// request parameter selects it but do not name that parameter, so no pool picker is offered.
-// Not live-key tested.
+// ---- GonzoProxy (residential, mobile, datacenter; gateway-minted) ----
+// Geo and session ride in the login; rows are always sticky, the only published login form. The pool
+// is whatever the login belongs to (its selector parameter is undocumented). Not live-key tested.
 const GONZOPROXY_GATEWAY = Object.freeze({ host: 'connect.gonzoproxy.app', port: 10000 });
 
 async function fetchGonzoProxyPool({ username, password, country, state, city, session, count, proxyType, host, port }) {
@@ -3573,12 +3335,9 @@ async function fetchGonzoProxyPool({ username, password, country, state, city, s
   return rows;
 }
 
-// --- Simply Proxies (UK mobile, gateway-minted) ---------------------------------------------
-// Username + password from the dashboard; network and sticky session ride in the username
-// (simplyProxiesUsername). No customer API. SOCKS5 only on purpose: the vendor's other endpoint,
-// :6889, needs TLS from the client to the proxy, and this app dials an HTTP proxy in plain text
-// (buildProxyServerArgument and proxyAgentScheme), so an :6889 row could never connect.
-// Not live-key tested.
+// ---- Simply Proxies (UK mobile, gateway-minted) ----
+// SOCKS5 only: the other endpoint, :6889, needs TLS to the proxy, and this app talks plain-text HTTP
+// to proxies (buildProxyServerArgument, proxyAgentScheme). Not live-key tested.
 const SIMPLYPROXIES_GATEWAY = Object.freeze({ host: 'proxy.simplyproxies.com', socks: 6890 });
 
 async function fetchSimplyProxiesPool({ username, password, poolType, country, session, life, count }) {
@@ -3600,12 +3359,9 @@ async function fetchSimplyProxiesPool({ username, password, poolType, country, s
   return rows;
 }
 
-// --- Coronium (dedicated mobile, list pull) ------------------------------------------------
-// Read-only list of the lines already on the account (coroniumRows). The key goes in the Bearer
-// header, never the legacy ?auth_token query. Rotation is deliberately NOT wired: no rotation
-// link or token is stored, because anything that fetched such a URL would change the IP. The
-// country is only an opaque id in the response, so it is left for the health check to fill.
-// Not live-key tested.
+// ---- Coronium (dedicated mobile, list pull) ----
+// The key goes in the Bearer header, never ?auth_token. No rotation link is stored, since fetching
+// one changes the IP. Rows carry only an opaque country id, so the health check fills the country.
 const CORONIUM_API = 'https://api.coronium.io/api/v3';
 
 async function fetchCoroniumPool({ token, count, proxyType }) {
@@ -3630,11 +3386,9 @@ async function fetchCoroniumPool({ token, count, proxyType }) {
   return limitListRows(rows, count);
 }
 
-// --- Singapore Mobile Proxy (dedicated mobile, list pull) ----------------------------------
-// Read-only list of the proxies on the account (singaporeMobileProxyRows), with the client API
-// key in x-api-key. Rotation is not wired and rotation_link is not stored. The API also sells
-// other locations and returns no country on a row, so the country is left to the health check.
-// Not live-key tested.
+// ---- Singapore Mobile Proxy (dedicated mobile, list pull) ----
+// Rotation is not wired and rotation_link is never stored. Rows carry no country (other locations
+// are sold too), so the health check fills it. Not live-key tested.
 const SINGAPOREMOBILEPROXY_API = 'https://singaporemobileproxy.com/api/v1';
 
 async function fetchSingaporeMobileProxyPool({ token, count, proxyType }) {
@@ -3660,11 +3414,9 @@ async function fetchSingaporeMobileProxyPool({ token, count, proxyType }) {
   return limitListRows(rows, count);
 }
 
-// --- Gsocks (residential + mobile, list pull) ----------------------------------------------
-// Reads the proxy lists already on the account, then each list's text export (gsocksProxyIds,
-// gsocksListRows). Read-only: nothing is created or bought. Rows are HTTP because the docs name no
-// SOCKS5 port for the exported lines. Targeting is fixed when a list is made, in the Gsocks panel.
-// Not live-key tested.
+// ---- Gsocks (residential + mobile, list pull) ----
+// Reads existing lists and their text exports; nothing is bought. Rows are HTTP because the docs name
+// no SOCKS5 port. Targeting is fixed when a list is made in the Gsocks panel. Not live-key tested.
 const GSOCKS_API = 'https://api.gsocks.net';
 const GSOCKS_POOLS = Object.freeze({
   residential: { query: 'residential', path: 'residential-proxy-list', kind: 'Residential' },
@@ -3712,9 +3464,8 @@ async function fetchGsocksPool({ token, poolType, count }) {
   return limitListRows(rows, count);
 }
 
-// --- Proxy Bonanza (static IPs, list pull) -------------------------------------------------
-// One API key returns every proxy IP on the account's active plans (proxyBonanzaRows). Read-only.
-// Country filters that list and How many caps it. Not live-key tested.
+// ---- Proxy Bonanza (static IPs, list pull) ----
+// One API key returns every IP on the active plans. Not live-key tested.
 const PROXYBONANZA_API = 'https://proxybonanza.com/api/v1';
 
 async function fetchProxyBonanzaPool({ token, country, count, proxyType }) {
@@ -3746,10 +3497,9 @@ async function fetchProxyBonanzaPool({ token, country, count, proxyType }) {
   return limitListRows(picked, count);
 }
 
-// --- PROXY6 (static IPv4 + IPv6, list pull) ------------------------------------------------
-// Reads the active proxies on the account, page by page (proxy6Page). Read-only: buy, prolong and
-// delete are never called. The key is part of the vendor's URL path, so failures below map to fixed
-// messages and never echo the URL. Country filters the list and How many caps it. Not live-key tested.
+// ---- PROXY6 (static IPv4 + IPv6, list pull) ----
+// Read-only: buy, prolong and delete are never called. The key is in the URL path, so errors map
+// to fixed messages that never echo the URL. Not live-key tested.
 const PROXY6_API = 'https://px6.link/api';
 const PROXY6_PAGE_SIZE = 1000;
 
@@ -3796,7 +3546,7 @@ async function fetchProxy6Pool({ token, country, count, proxyType }) {
   return limitListRows(picked, count);
 }
 
-// Vendors wired to real calls. Everything else falls back to the simulation.
+// Vendors wired to live API calls; syncVendorPool refuses every other vendor.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
   oxylabs: fetchOxylabsPool,
@@ -3837,29 +3587,26 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
 });
 
 async function syncVendorPool(payload) {
-  await requirePermission('proxies.manage'); // audit: vendor sync creates proxies + makes vendor calls, was ungated
+  await requirePermission('proxies.manage'); // creates proxies and calls the vendor
   const input = requireObject(payload);
   const vendorKey = requiredString(input.provider, 'Provider').toLowerCase();
   if (!PROXY_VENDORS[vendorKey]) throw new Error('Unknown proxy provider.');
 
   const db = getPrisma();
-  // audit S9: vendor sync created rows with no quota check. Refuse up front when already
-  // at maxProxies (no vendor call), then re-check per row below as batchAddProxies does.
+  // Refuse before any vendor call when already at maxProxies; each row is re-checked below.
   await assertWithinLimit('proxies');
   const adapter = REAL_VENDOR_ADAPTERS[vendorKey];
   let rows;
   let simulated = false;
 
   if (adapter) {
-    // REAL vendor path - adapters throw a clean message on auth/endpoint failure.
+    // Adapters throw a user-facing message on auth or endpoint failure.
     rows = await adapter({
       token: optionalString(input.token) || '',
       username: optionalString(input.username),
       password: input.password != null ? String(input.password) : '',
       zone: optionalString(input.zone),
       bdpm: input.bdpm === true,
-      // Country-aware providers (Apify / ShopSocks5): the chosen
-      // country + pool size + optional geo/session/endpoint overrides flow through.
       country: optionalString(input.country),
       count: input.count,
       state: optionalString(input.state),
@@ -3872,8 +3619,7 @@ async function syncVendorPool(payload) {
       // ShopSocks5 plan endpoint (premium|list|daily) + proxy type (proxy_sock_5|proxy_https).
       plan: optionalString(input.plan),
       proxyType: optionalString(input.proxyType),
-      // anyip.io: residential vs mobile pool selector (encoded as type_<poolType>) +
-      // optional REST auto-provision (API key = input.token, Team ID = input.teamId).
+      // anyip.io: pool selector (sent as type_<poolType>) and team id for REST auto-provisioning.
       poolType: optionalString(input.poolType),
       teamId: optionalString(input.teamId),
       // Address family. Only Oxylabs documents a selector for this ('6' -> -ipversion-6);
@@ -3890,10 +3636,8 @@ async function syncVendorPool(payload) {
       orderId: optionalString(input.orderId),
       // IPRoyal: authenticate the generated list with a sub-user hash instead of a password.
       subuserHash: optionalString(input.subuserHash),
-      // Ports already in the pool for one plan login (the bare login, or the login plus
-      // DataImpulse's "__" targeting suffix). DataImpulse hands out sticky ports
-      // deterministically, so it needs this to add NEW proxies instead of returning the
-      // ones the pool already holds.
+      // Ports already pooled for a plan login (bare, or with DataImpulse's "__" suffix). DataImpulse
+      // hands out sticky ports deterministically, so this lets a pull add new proxies.
       existingPorts: async ({ host, login }) => new Set(
         (await db.proxy.findMany({
           where: { host, OR: [{ username: login }, { username: { startsWith: `${login}__` } }] },
@@ -3902,12 +3646,7 @@ async function syncVendorPool(payload) {
       )
     });
   } else {
-    // No live adapter for this vendor. This used to fall through to a SIMULATION that
-    // invented four rows from a made-up gateway, so the pool filled with proxies that
-    // could never connect. Six of those eight invented gateways did not resolve in DNS
-    // at all (verified against 8.8.8.8 and 1.1.1.1; the list is in
-    // test/vendorGateways.test.js), and a fabricated username pointed at a real host is
-    // worse still, because the row looks plausible. Refuse instead.
+    // No live adapter: refuse rather than invent rows that could never connect.
     throw new Error(
       `${PROXY_VENDORS[vendorKey]} is not connected to a live API yet, so there is nothing to pull. `
       + 'Add its proxies manually under Proxies, or use a provider marked as connected.'
@@ -3927,9 +3666,8 @@ async function syncVendorPool(payload) {
       break;
     }
     const existing = await db.proxy.findFirst({
-      // IPRoyal sticky rows share host, port and username and differ only in the password,
-      // where the session id lives. Without it every row after the first reads as existing.
-      // The stored password is sealed (audit L11), so compare the keyed hash instead.
+      // Sticky IPRoyal-style rows differ only in the password (the session id), which is sealed,
+      // so compare its keyed hash.
       where: { type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { passwordHash: await proxySecrets.hashPassword(db, row.password) } : {}) },
       select: { id: true }
     });
@@ -3938,12 +3676,11 @@ async function syncVendorPool(payload) {
       data: {
         name: row.label, type: row.type, host: row.host, port: row.port,
         username: row.username, password: row.password, ownerMemberId: ownerStampId(),
-        // Origin tag so the pool can auto-group "by provider" (apify / shopsocks5 / …).
+        // Lets the pool group proxies by provider.
         provider: vendorKey,
         // A vendor-supplied reboot link (Proxy-Seller mobile) powers the pool's Rotate IP.
         ...(row.rotationUrl ? { rotationUrl: row.rotationUrl } : {}),
-        // Record the targeted country up front so the pool shows it before any
-        // health-check runs (a later checkProxy() refines it from the live exit IP).
+        // Show the targeted country until a health check reads the live exit IP.
         ...(row.country ? { lastCountry: row.country } : {})
       }
     });
@@ -3952,23 +3689,11 @@ async function syncVendorPool(payload) {
   return result;
 }
 
-// Performs a real HTTP(S) GET through the supplied http.Agent and resolves the
-// parsed JSON body. Enforces a hard timeout and a small response-size cap.
-// Performs a real HTTP(S) GET through the supplied http.Agent and resolves the
-// parsed JSON body. Enforces a hard timeout, response-size cap, and safe cleanup.
-// Max bytes of a non-2xx body kept for an error message. Proxy gateways answer with
-// a short plain-text reason; anything longer is a page we do not want in a toast.
+// Max bytes of a non-2xx body kept for an error message; gateways send a short plain-text reason.
 const PROXY_ERROR_BODY_LIMIT = 300;
 
-// Names the party that actually returned a non-2xx during a proxy check, and surfaces
-// ITS message. A gateway announces itself with `server:` and/or an `x-*-proxy-error`
-// header, so when one of those is present the failure belongs to the PROXY, not to the
-// IP/geo service we were trying to reach through it. Draining the body unread used to
-// turn Apify's "Monthly usage hard limit exceeded" into a bare "HTTP 403" blamed on the
-// IP service, which sent debugging in entirely the wrong direction.
-// Strip proxy credentials out of a message before it is stored or displayed. Gateway
-// bodies are usually clean, but a transport error can echo the whole proxy URL
-// (`http://user:pass@host:port`), and these messages now get PERSISTED and rendered.
+// Strip proxy credentials from a message before it is stored or shown: a transport error can echo
+// the whole proxy URL (user:pass@host:port).
 function scrubProxySecrets(message, proxy) {
   let out = String(message || '');
   if (!out) return out;
@@ -4016,18 +3741,15 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
       url,
       {
         agent,
-        // Some proxy gateways return responses -
-        // especially auth-failure 407s - with LF-only line endings instead of CRLF,
-        // which Node's strict llhttp parser rejects as "Missing expected CR". Use the
-        // lenient parser here so a real exit IP / error still comes through.
+        // Some gateways send LF-only line endings (often on 407s), which llhttp rejects as
+        // "Missing expected CR"; the lenient parser lets the real answer through.
         insecureHTTPParser: true,
         headers: { 'User-Agent': 'SoftGlaze-ProxyCheck/1.0', Accept: 'application/json' }
       },
       (res) => {
         const status = res.statusCode || 0;
         if (status < 200 || status >= 300) {
-          // Keep a bounded prefix of the body: the gateway puts the actionable reason
-          // (quota, plan, auth) there, and describeGatewayError attributes it correctly.
+          // Keep a bounded prefix: the gateway's actionable reason (quota, plan, auth) is in the body.
           let errBody = '';
           res.setEncoding('utf8');
           res.on('data', (chunk) => {
@@ -4081,21 +3803,14 @@ function httpGetJson(url, agent, timeoutMs = 15000) {
   });
 }
 
-// Encode a proxy username for a proxy URL WITHOUT mangling the comma-separated
-// tokens that gateways like Apify (`groups-RESIDENTIAL,country-US,session-…`)
-// depend on. Commas are valid in URL userinfo (RFC 3986 sub-delims),
-// but encodeURIComponent turns them into %2C, which the proxy agent forwards
-// un-decoded - so Apify sees one malformed token, can't read `country-US`, and
-// returns a global IP (the "country ignored / mixed countries on check" bug). Keep
-// commas literal; everything else still gets encoded.
+// Keep commas literal: gateways such as Apify read comma-separated tokens (country-US), and the proxy
+// agent forwards %2C undecoded, so the country would be ignored. Commas are valid in userinfo.
 function proxyUserinfo(user) {
   return encodeURIComponent(String(user)).replace(/%2C/gi, ',');
 }
 
-// audit E9/E10: the ONE proxy-type -> proxy-agent scheme mapper, shared by
-// testProxyConnectivity and buildProxyAgent (the deep check used to send SOCKS4 as
-// http). socks5h makes the PROXY resolve hostnames; plain socks5 had proxy-agent
-// resolve them with the host's own DNS first.
+// Shared by testProxyConnectivity and buildProxyAgent. socks5h makes the proxy resolve hostnames;
+// plain socks5 would resolve them with the local DNS first.
 function proxyAgentScheme(type) {
   const t = String(type || '').toLowerCase();
   if (t === 'socks5') return 'socks5h';
@@ -4103,8 +3818,8 @@ function proxyAgentScheme(type) {
   return 'http';
 }
 
-// Routes a request to an IP/geo service THROUGH the given proxy and returns
-// { success, ip, country, city, isp, latencyMs } (or { success:false, error }).
+// Routes a request to an IP/geo service through the proxy; returns { success, ip, country, city,
+// isp, latencyMs } or { success: false, error }.
 async function testProxyConnectivity(proxy) {
   let ProxyAgent;
   try {
@@ -4122,10 +3837,8 @@ async function testProxyConnectivity(proxy) {
 
   const started = Date.now();
 
-  // Primary: two HTTPS services raced in parallel - both work through HTTP CONNECT tunnels
-  // and SOCKS5. ipinfo.io has no AAAA record, so an IPv6-only exit (Proxy-Seller IPv6) can
-  // only reach get.geojs.io; asking them one after another made every IPv6 check wait out
-  // ipinfo's timeout first (~31 s per proxy, measured 29 Sep 2026). The first answer wins.
+  // Race two HTTPS services; the first answer wins. ipinfo.io has no AAAA record, so an IPv6-only
+  // exit can only reach get.geojs.io, and trying them in turn made IPv6 checks wait out ipinfo.
   const viaIpinfo = httpGetJson('https://ipinfo.io/json', agent, 15000).then((data) => {
     if (!data || !data.ip) throw new Error('ipinfo.io returned no IP.');
     return { ip: data.ip, country: data.country || null, region: data.region || null, city: data.city || null, zip: data.postal || null, isp: data.org || null, timezone: data.timezone || null };
@@ -4162,10 +3875,8 @@ async function testProxyConnectivity(proxy) {
         latencyMs: Date.now() - started
       };
     } catch (fallbackError) {
-      // (The dual-stack geojs service already ran in the primary race above.)
-      // Prefer whichever attempt named the gateway: the plain-HTTP fallback surfaces the
-      // gateway's own body, while a failed HTTPS CONNECT usually yields only a generic
-      // tunnel error. Fall back to the primary message when the secondary says nothing.
+      // Prefer the plain-HTTP fallback's message when it names the gateway: a failed HTTPS CONNECT
+      // usually gives only a generic tunnel error.
       const fb = (fallbackError && fallbackError.message) || '';
       const pm = (primaryError && primaryError.message) || '';
       const message = /returned HTTP/.test(fb) ? fb : (fb || pm || 'Proxy connection failed.');
@@ -4204,10 +3915,8 @@ async function checkProxy(payload) {
 
   let result = await testProxyConnectivity(proxy);
 
-  // A vendor can take a few seconds to activate credentials it has just issued: every
-  // Proxy-Seller residential port answered HTTP 407 right after a pull and worked ~20 s later
-  // (29 Sep 2026). So a saved proxy created in the last 3 minutes that fails with 407 is
-  // retried a few times before it is recorded as dead. Older proxies are not retried.
+  // Vendors can take ~20 s to activate fresh credentials (Proxy-Seller answers 407 meanwhile), so a
+  // proxy created in the last 3 minutes that fails with 407 is retried before it is marked dead.
   if (savedId !== null && result && !result.success && /\b407\b/.test(String(result.error || ''))) {
     const row = await getPrisma().proxy.findUnique({ where: { id: savedId }, select: { createdAt: true } });
     const ageMs = row && row.createdAt ? Date.now() - new Date(row.createdAt).getTime() : Infinity;
@@ -4217,7 +3926,6 @@ async function checkProxy(payload) {
     }
   }
 
-  // Persist health for saved proxies so the pool shows durable status badges.
   if (savedId !== null) {
     await persistProxyHealth(getPrisma(), savedId, result);
   }
@@ -4225,11 +3933,8 @@ async function checkProxy(payload) {
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// Deep proxy check - connectivity + geo, extra real-site probes, DNSBL blacklist
-// lookup, and a rolled-up health score + speed rating. Streamed to the UI in
-// batches (runProxyCheckStream) with live per-proxy progress.
-// ---------------------------------------------------------------------------
+// ---- Deep proxy check ----
+// Connectivity, geo, real-site probes and DNSBL rolled into a health score; streamed by runProxyCheckStream.
 
 // Build a proxy agent for ad-hoc probes (mirrors testProxyConnectivity's agent).
 function buildProxyAgent(proxy) {
@@ -4240,9 +3945,8 @@ function buildProxyAgent(proxy) {
   return new ProxyAgent({ getProxyForUrl: () => `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}` });
 }
 
-// Lightweight connectivity probe THROUGH a proxy agent - returns the HTTP status
-// (any response means bytes flowed end-to-end) or throws on timeout/refusal. The
-// body is drained and ignored.
+// Resolves the HTTP status of a request through the agent (any response means bytes flowed);
+// throws on timeout or refusal.
 function httpProbeStatus(url, agent, timeoutMs = 12000) {
   return new Promise((resolve, reject) => {
     let lib;
@@ -4252,7 +3956,7 @@ function httpProbeStatus(url, agent, timeoutMs = 12000) {
     const cleanup = () => { done = true; if (timer) clearTimeout(timer); };
     const req = lib.get(url, { agent, insecureHTTPParser: true, headers: { 'User-Agent': 'SoftGlaze-ProxyCheck/1.0', Accept: '*/*' } }, (res) => {
       const status = res.statusCode || 0;
-      res.resume(); // drain the body - we only care that a response came back
+      res.resume(); // drain; only the status matters
       res.on('end', () => { if (done) return; cleanup(); resolve(status); });
       res.on('error', () => { if (done) return; cleanup(); resolve(status); });
     });
@@ -4261,8 +3965,7 @@ function httpProbeStatus(url, agent, timeoutMs = 12000) {
   });
 }
 
-// Two ultra-light, globally-reachable endpoints (tiny responses) to prove the proxy
-// can load real sites, not just the IP service.
+// Tiny, globally reachable endpoints that prove the proxy loads real sites, not just the IP service.
 const PROXY_PROBE_URLS = [
   { name: 'Google', url: 'https://www.google.com/generate_204', host: 'google.com' },
   { name: 'Cloudflare', url: 'https://www.cloudflare.com/cdn-cgi/trace', host: 'cloudflare.com' }
@@ -4277,13 +3980,9 @@ async function probeUrl(agent, target) {
   }
 }
 
-// DNSBL (DNS blocklist) reputation check for the proxy's EXIT IP. Reverses the
-// octets and queries a few well-known blocklists; a listing-range A record (127.0.0.x)
-// = flagged. Best-effort: a zone that errors/times out or returns a non-listing
-// sentinel (e.g. Spamhaus's "public resolver blocked" 127.255.255.x) is treated as
-// NOT listed, so we never raise a false positive.
-// v6: whether the zone answers IPv6 (nibble-format) queries at all. Zones that do
-// not are simply skipped for an IPv6 address rather than queried and misread.
+// DNSBL check of the exit IP: a 127.0.0.x answer means listed. Errors, timeouts and sentinels such
+// as Spamhaus's 127.255.255.x (public resolver blocked) count as not listed, to avoid false positives.
+// v6: whether the zone answers IPv6 nibble queries; zones without it are skipped for IPv6.
 const DNSBL_ZONES = [
   { zone: 'zen.spamhaus.org', name: 'Spamhaus', v6: true },
   { zone: 'bl.spamcop.net', name: 'SpamCop', v6: false },
@@ -4291,9 +3990,8 @@ const DNSBL_ZONES = [
   { zone: 'b.barracudacentral.org', name: 'Barracuda', v6: false }
 ];
 
-// DNSBLs address IPv6 as 32 reversed nibbles, e.g. 2001:db8::1 becomes
-// 1.0.0.0.....8.b.d.0.1.0.0.2 . Returns the 32-char expanded hex, or '' if the input
-// is not a well-formed IPv6 literal.
+// Expands an IPv6 literal to 32 hex chars (DNSBLs query it as reversed nibbles); '' when the
+// input is not well-formed IPv6.
 function expandIpv6(value) {
   const raw = String(value || '').trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '').split('%')[0];
   if (!require('node:net').isIPv6(raw)) return '';
@@ -4326,9 +4024,7 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 }
 async function checkBlacklist(ip) {
-  // IPv4 reverses by octet; IPv6 reverses by nibble. Previously anything that was not
-  // dotted-quad returned checked:false, so every IPv6 proxy silently skipped the only
-  // reputation check the app has.
+  // IPv4 reverses by octet; IPv6 reverses by nibble.
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || ''));
   let rev = '';
   let isV6 = false;
@@ -4336,7 +4032,7 @@ async function checkBlacklist(ip) {
     rev = `${m[4]}.${m[3]}.${m[2]}.${m[1]}`;
   } else {
     const hex = expandIpv6(ip);
-    if (!hex) return { checked: false, listed: false, sources: [] }; // not an IP we can query
+    if (!hex) return { checked: false, listed: false, sources: [] }; // not a queryable IP
     rev = hex.split('').reverse().join('.');
     isV6 = true;
   }
@@ -4374,8 +4070,8 @@ function computeProxyHealthScore({ okCount, total, avgMs, listedCount }) {
   return { score, grade, label };
 }
 
-// Superset of testProxyConnectivity's result (adds urlChecks, blacklist, avgMs,
-// health, speed) - persistProxyHealth still reads the same base fields unchanged.
+// Superset of testProxyConnectivity's result (adds urlChecks, blacklist, avgMs, health, speed);
+// persistProxyHealth reads only the shared base fields.
 async function deepCheckProxy(proxy) {
   const geo = await testProxyConnectivity(proxy); // primary probe (IP/geo service)
   const urlChecks = [{ name: 'IP / Geo', host: 'ipinfo.io', ok: !!geo.success, status: geo.success ? 200 : 0, ms: geo.latencyMs ?? null }];
@@ -4407,9 +4103,8 @@ function publicProxyCheckResult(r) {
   };
 }
 
-// Live, streamed batch checker for "Check all" / "Check selected". Deep-checks with
-// bounded concurrency and pushes per-proxy + overall progress (proxy:check-progress)
-// so the UI can render a real progress bar, ETA, counts and a running log.
+// Streamed batch check for "Check all" / "Check selected": deep-checks with bounded concurrency
+// and pushes progress on proxy:check-progress.
 const proxyCheckRuns = new Map();
 
 async function runProxyCheckStream(payload, event) {
@@ -4466,7 +4161,7 @@ async function runProxyCheckStream(payload, event) {
     await Promise.all(Array.from({ length: Math.min(cap, total) }, () => worker()));
     try { await autoGroupProxies({ level: 'country', onlyUngrouped: true }); } catch (e) { /* ignore */ }
 const totalMs = Date.now() - startedAt;
-    send({ level: run.aborted ? 'WARN' : 'SUCCESS', message: run.aborted ? `Stopped · ${done}/${total} checked · ${ok} healthy, ${fail} failed` : `Finished · ${ok} healthy, ${fail} failed · ${(totalMs / 1000).toFixed(1)}s`, done, total, ok, fail, percent: Math.round((done / total) * 100), finished: true, totalMs }, true); // Pass true to force the final emit
+    send({ level: run.aborted ? 'WARN' : 'SUCCESS', message: run.aborted ? `Stopped · ${done}/${total} checked · ${ok} healthy, ${fail} failed` : `Finished · ${ok} healthy, ${fail} failed · ${(totalMs / 1000).toFixed(1)}s`, done, total, ok, fail, percent: Math.round((done / total) * 100), finished: true, totalMs }, true); // force the final emit
     proxyCheckRuns.delete(runId);
   })();
   return { started: true, runId, total };
@@ -4479,14 +4174,8 @@ async function stopProxyCheck(payload) {
   return { stopped: runs.length };
 }
 
-// Cross-checks a profile's fingerprint configuration against its proxy's real
-// exit geo and reports per-vector pass/warn/fail. Static analysis (no browser
-// launch): WebRTC/timezone/language are evaluated from configuration + the live
-// proxy lookup, which catches the common, high-signal leaks.
-// Reduce a list of pass/warn/fail checks to a single 0-100 trust score with a
-// letter grade. Fails dominate - a single real leak (e.g. WebRTC exposing the
-// real IP, or a timezone mismatch) should visibly tank the score; warns are
-// lighter advisories. Returned by both the static and live leak analyses.
+// Reduces pass/warn/fail checks to a 0-100 score and letter grade. One fail (a real leak such as
+// WebRTC exposing the real IP) must visibly sink the score; warns weigh less.
 function computeTrustScore(checks) {
   const summary = {
     pass: checks.filter((c) => c.status === 'pass').length,
@@ -4516,7 +4205,6 @@ async function analyzeProfileLeaks(payload) {
   const checks = [];
   let geo = null;
 
-  // 1) IP / proxy connectivity
   if (usesProxy) {
     geo = await testProxyConnectivity({
       type: profile.proxy.type,
@@ -4537,7 +4225,6 @@ async function analyzeProfileLeaks(payload) {
     checks.push({ key: 'ip', label: 'IP / Proxy', status: 'warn', detail: 'No profile proxy in use - the machine\'s real IP is exposed.' });
   }
 
-  // 2) WebRTC
   const webrtc = profile.webrtc || 'Forward';
   if (webrtc === 'Real') {
     checks.push({
@@ -4550,7 +4237,6 @@ async function analyzeProfileLeaks(payload) {
     checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Mode "${webrtc}" - real IP not leaked via WebRTC.` });
   }
 
-  // 3) Timezone
   const tzType = profile.timezoneType || 'Based on IP';
   if (tzType === 'Based on IP') {
     checks.push({
@@ -4572,7 +4258,6 @@ async function analyzeProfileLeaks(payload) {
     }
   }
 
-  // 4) Language
   const langType = profile.languageType || 'Based on IP';
   if (langType === 'Based on IP') {
     checks.push({ key: 'language', label: 'Language', status: 'pass', detail: usesProxy ? 'Auto from proxy country.' : 'Based on IP.' });
@@ -4591,7 +4276,6 @@ async function analyzeProfileLeaks(payload) {
     }
   }
 
-  // 5) Geolocation
   const locType = profile.locationType || 'Based on IP';
   if (locType === 'Based on IP') {
     checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Auto from IP.' });
@@ -4604,15 +4288,13 @@ async function analyzeProfileLeaks(payload) {
     });
   }
 
-  // 6) Fingerprint noise protection
   const noiseOn = profile.canvasNoise && profile.webglImageNoise && profile.audioContextNoise;
   checks.push({
     key: 'fp', label: 'Fingerprint noise', status: noiseOn ? 'pass' : 'warn',
     detail: noiseOn ? 'Canvas / WebGL / Audio noise enabled.' : 'One or more fingerprint-noise toggles are off.'
   });
 
-  // 7) Device ↔ GPU coherence - a mobile UA with a desktop GPU (or vice versa) is
-  // an easily-scored mismatch.
+  // A mobile UA with a desktop GPU (or the reverse) is an easily scored mismatch.
   const coh = deviceGpuCoherence({ deviceClass: profile.deviceClass, os: profile.os, webglRenderer: profile.webglRenderer });
   checks.push({ key: 'device', label: 'Device coherence', status: coh.status, detail: coh.detail });
 
@@ -4620,19 +4302,11 @@ async function analyzeProfileLeaks(payload) {
   return { profileId: id, title: profile.title, usesProxy, geo, checks, summary: score.summary, score };
 }
 
-// ---------- Cookie import/export (per profile, via the live session) ----------
+// ---- Cookie import/export ----
 
-// Resolve a cookie's expiry to unix SECONDS, whatever dialect it arrived in.
-//
-// Only `expires` was ever read, but every browser cookie-extension export
-// (EditThisCookie, Cookie-Editor, Cookiebro) writes `expirationDate` instead. A CDP
-// CookieParam with no `expires` is a SESSION cookie, so importing a normal cookie
-// file silently downgraded every persistent login to one that dies when the browser
-// closes - the exact opposite of what a profile is for, and invisible until the
-// account was logged out.
-//
-// Also normalises the two units traps: an explicit `session: true` wins, and a value
-// large enough to be milliseconds is converted rather than landing in the year 55000.
+// Resolves a cookie's expiry to unix seconds. Extension exports (EditThisCookie, Cookie-Editor)
+// write `expirationDate`, and a CDP cookie with no `expires` is a session cookie, so reading only
+// `expires` would make every persistent login die on close.
 function cookieExpirySeconds(c) {
   if (!c) return 0;
   if (c.session === true) return 0; // extensions flag true session cookies explicitly
@@ -4730,8 +4404,7 @@ function cookieHealth(cookies) {
   return { total: list.length, domains: domains.size, session, expired, expiringSoon, secure, httpOnly };
 }
 
-// Build headless-read options (data dir + matching Chrome) for a profile that
-// isn't currently running, so cookies can be exported/imported without launching.
+// Data dir and matching Chrome for a stopped profile, so its cookies can move without launching it.
 async function offlineProfileOpts(id) {
   const db = getPrisma();
   const profile = await db.profile.findUnique({ where: { id } });
@@ -4741,10 +4414,8 @@ async function offlineProfileOpts(id) {
   return { userDataDir, executablePath: resolved && resolved.exePath ? resolved.exePath : undefined };
 }
 
-// Export-style reveals (cookie dumps, profile archives, live 2FA codes) are gated by role
-// on top of profile access, using rbacPolicy's RAW_VALUE_MIN_RANK. Profile access alone let
-// an operator with use-level sharing walk off with a logged-in session (audit T2-3, T2-4).
-// Single-user mode (no active member) and the super admin pass, as everywhere else.
+// Cookie dumps, archives and live 2FA codes need RAW_VALUE_MIN_RANK on top of profile access, so a
+// use-level share cannot take a logged-in session. Single-user mode and the super admin pass.
 const REVEAL_LABELS = Object.freeze({
   cookieDump: 'export cookies or archives',
   twoFactorCode: 'read 2FA codes'
@@ -4804,9 +4475,8 @@ async function importProfileCookies(payload) {
   return { imported: result.imported, parsed: parsed.length, health: cookieHealth(parsed) };
 }
 
-// Bulk import the same cookie set into every CURRENTLY RUNNING profile. Cookie
-// injection is a live-session (CDP) operation, so this targets open sessions
-// rather than launching profiles. Returns a per-session result breakdown.
+// Imports one cookie set into every running profile (injection needs a live CDP session);
+// returns a per-session breakdown.
 async function importCookiesToRunning(payload) {
   const input = requireObject(payload);
   const format = (optionalString(input.format) || 'json').toLowerCase();
@@ -4840,9 +4510,9 @@ async function importCookiesToRunning(payload) {
   return { targets: sessions.length, parsed: parsed.length, health: cookieHealth(parsed), results };
 }
 
-// ---------- Clone & Templates ----------
+// ---- Clone & templates ----
 
-// Columns that are identity/bookkeeping and must NOT be carried into a copy.
+// Identity and bookkeeping columns, never carried into a copy.
 const CLONE_EXCLUDE = new Set(['id', 'dataDirName', 'title', 'createdAt', 'updatedAt', 'deletedAt']);
 
 function pickCloneableFields(row) {
@@ -4899,8 +4569,7 @@ async function reconcileReferences(db, fields) {
 }
 
 async function cloneProfile(payload) {
-  // audit: this created a profile directly, skipping the create-permission and
-  // quota gates that createProfile enforces. Apply the same gates here.
+  // Same create-permission and quota gates as createProfile.
   await requirePermission('profiles.create');
   const input = requireObject(payload);
   const db = getPrisma();
@@ -4915,16 +4584,11 @@ async function cloneProfile(payload) {
   const title = `${src.title} (copy)`;
   const dataDirName = await ensureUniqueDataDirName(db, title);
 
-  // Reroll: replace the whole identity/environment fingerprint with a fresh,
-  // internally-consistent one (OS↔GPU↔screen stay paired) - for safe account
-  // farms where copies must NOT share a fingerprint. Otherwise just regenerate
-  // the hardware identity so the copy is not a byte-identical twin.
-  // Preserve the source's device class on reroll so a mobile profile stays mobile.
+  // Reroll swaps in a fresh, consistent fingerprint (OS, GPU and screen stay paired, device class
+  // kept) so copies never share one; otherwise only the hardware identity is regenerated.
   const isMobile = src.deviceClass === 'mobile';
   const fingerprint = reroll ? generateFingerprint({ deviceClass: src.deviceClass }) : {};
-  // Stamp ownership to the current member (audit: the clone previously inherited
-  // the source's ownerMemberId/assignedMemberId, so cloning a shared profile
-  // produced a copy owned by someone else).
+  // The copy belongs to the current member, not the source's owner or assignee.
   const cloneStampId = ownerStampId();
   const data = { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac(), ownerMemberId: cloneStampId, assignedMemberId: cloneStampId };
   // Desktop machine names are randomized per copy; a mobile profile keeps its device
@@ -4938,18 +4602,14 @@ async function saveProfileAsTemplate(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
-  // audit: this had NO ownership/permission gate (unlike cloneProfile and every
-  // other profile handler), so an Operator could template a victim profile they
-  // couldn't access and round-trip it into one they own. Gate it like a clone.
+  // Gated like a clone, so a template cannot copy a profile the member cannot access.
   await requirePermission('profiles.create');
   await assertCanAccessProfile(id);
   const name = requiredString(input.name, 'Template name');
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
   const fields = pickCloneableFields(src);
-  // audit: a Template is workspace-global, so it must never carry live secrets -
-  // strip the 2FA seed and platform-account credentials (createProfileFromTemplate
-  // re-stamps ownership anyway). Cloning keeps them; templating does not.
+  // Templates are workspace-global, so strip live secrets (2FA seed, platform accounts); clones keep them.
   delete fields.twoFactorSeed;
   delete fields.platformAccounts;
   const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields) } });
@@ -4971,7 +4631,7 @@ async function deleteTemplate(payload) {
 }
 
 async function createProfileFromTemplate(payload) {
-  // audit: created a profile directly, bypassing create-permission + quota.
+  // Same create-permission and quota gates as createProfile.
   await requirePermission('profiles.create');
   const input = requireObject(payload);
   const db = getPrisma();
@@ -5001,14 +4661,9 @@ async function createProfileFromTemplate(payload) {
   return serializeProfile(created);
 }
 
-// ---- Profile access scoping (tenant isolation) ----------------------------
-// A member may only see / act on profiles within their own visible subtree
-// (assigned to, or owned by, themselves or a descendant). Single-user mode (no
-// active member) and the Super Admin are unrestricted; OWNER-and-up also keep
-// access to legacy/unstamped profiles (created before a team existed). Enforced
-// in main - never trust the renderer to hide a profile.
-// Profiles a member may touch are selected with their owner/assignee ids AND the
-// ProfileAccess (F2 sharing) rows, so the fail-closed check is ACL-aware.
+// ---- Profile access scoping (tenant isolation) ----
+// A member sees profiles owned by, assigned to or shared with someone in their visible subtree.
+// Single-user mode and the Super Admin are unrestricted. Enforced in main, never in the renderer.
 const PROFILE_ACCESS_SELECT = { id: true, ownerMemberId: true, assignedMemberId: true, accesses: { select: { memberId: true, level: true } } };
 
 async function profileAccessChecker() {
@@ -5016,9 +4671,8 @@ async function profileAccessChecker() {
   if (!member || member.role === 'SUPER_ADMIN') return null; // unrestricted
   const all = await getPrisma().member.findMany();
   const visible = permissions.visibleMemberIds(all, member);
-  // Fail closed: a member sees only profiles owned by, assigned to, OR explicitly
-  // SHARED (ProfileAccess) with someone in their visible subtree. Unowned profiles
-  // (Super Admin, who stamps no member id) stay hidden until assigned/shared out.
+  // Fail closed: unowned profiles (the Super Admin stamps no member id) stay hidden until assigned
+  // or shared out.
   return (p) => permissions.profileRowAccessible(visible, p, false);
 }
 
@@ -5034,10 +4688,8 @@ async function assertCanAccessProfile(id, opts = {}) {
   }
 }
 
-// Split a renderer-supplied id list into the ones the active member may touch and
-// the ones they may not (the latter become per-id errors in bulk handlers).
-// `requireEdit` filters to profiles the member may edit (owner/assignee or an
-// 'edit'-level share) - used by the sharing handlers.
+// Splits renderer-supplied ids into allowed and denied (denied become per-id errors in bulk
+// handlers). `requireEdit` keeps only profiles the member may edit, for the sharing handlers.
 async function partitionAccessibleProfileIds(ids, opts = {}) {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return { allowed: ids, denied: [] };
@@ -5054,9 +4706,7 @@ async function partitionAccessibleProfileIds(ids, opts = {}) {
   return { allowed, denied };
 }
 
-// Merge the active member's ownership filter into a profile list query. Mirrors
-// profileAccessChecker (fail closed) - owner OR assignee OR an ACL share to a
-// visible member.
+// Adds the active member's ownership filter to a profile query; mirrors profileAccessChecker.
 async function scopedProfileWhere(baseWhere) {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
@@ -5070,9 +4720,8 @@ async function scopedProfileWhere(baseWhere) {
   return { AND: [baseWhere, { OR: or }] };
 }
 
-// --- Proxy ownership scoping (proxies carry only ownerMemberId) -------------
-// Same fail-closed model as profiles: a member sees only proxies whose owner is
-// in their visible subtree; Super Admin (and single-user mode) is unrestricted.
+// ---- Proxy ownership scoping ----
+// Fail closed like profiles: a member sees only proxies owned within their visible subtree.
 async function scopedProxyWhere(baseWhere) {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
@@ -5130,8 +4779,8 @@ async function listTrash() {
 
 async function createProfile(payload) {
   await requirePermission('profiles.create');
-  // A new profile has nothing stored, so any mask in the payload (for example an editor
-  // opened from an existing profile) becomes empty instead of being saved as dots (T2-1).
+  // A new profile has nothing stored, so a masked secret in the payload (an editor opened from an
+  // existing profile) becomes empty instead of being saved as dots.
   const input = restoreMaskedSecrets(requireObject(payload), null);
   const db = getPrisma();
   await assertWithinLimit('profiles');
@@ -5171,10 +4820,9 @@ async function createProfile(payload) {
   return serializeProfile(created);
 }
 
-// --- Phase F2: shared profile pools / resource ACLs -------------------------
-// Grant (or update) access to one or more profiles for a member. The actor must
-// have EDIT access to each profile (owner/assignee or an 'edit' share) and may
-// only share with a member in their visible subtree. level: 'use' | 'edit'.
+// ---- Shared profiles ----
+// The actor needs edit access to each profile and may share only with a member in their visible
+// subtree. level: 'use' | 'edit'.
 async function grantProfileAccess(payload) {
   await requirePermission('profiles.share');
   const input = requireObject(payload);
@@ -5263,11 +4911,8 @@ function normalizeStartupUrls(value) {
 
 // Sanity cap so a pasted list cannot spawn hundreds of tabs on a single launch.
 const MAX_STARTUP_TABS = 20;
-// Read side of normalizeStartupUrls - splits the stored newline-joined string back
-// into the tabs to open at launch. Kept next to the writer so the two cannot drift.
-// Until this existed, Profile.startupUrls was a WRITE-ONLY column: every creation
-// path (single, batch and CSV import) saved it correctly and no launch path ever
-// read it, so a profile's custom links simply never opened.
+// Read side of normalizeStartupUrls: splits the stored newline-joined string into launch tabs.
+// Kept next to the writer so the two cannot drift.
 function parseStartupUrls(value) {
   if (!value) return [];
   return String(value)
@@ -5277,15 +4922,9 @@ function parseStartupUrls(value) {
     .slice(0, MAX_STARTUP_TABS);
 }
 
-// ---------------------------------------------------------------------------
-// SERVER-SIDE BATCH GENERATOR. Owns the batch-level invariants that per-profile
-// create() calls cannot: (1) a UNIQUE proxy per profile (no proxy on two profiles),
-// capping the run at the number of available proxies and reporting the shortfall;
-// (2) UNIQUE fingerprints (deduped by the visible hardware/UA signature); (3) EVEN
-// distribution of the reported Chrome version across the batch. Reuses createProfile
-// for the actual persistence so all the normal plumbing (limits, ownership, data
-// dir, proxy-info cache) stays identical.
-// ---------------------------------------------------------------------------
+// Server-side batch generator. It owns what per-profile create() cannot: a unique proxy per profile
+// (the run is capped at available proxies), unique visible fingerprints and an even Chrome-version
+// spread. createProfile does the persistence, so limits, ownership and data dirs stay identical.
 async function batchGenerateProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
@@ -5293,32 +4932,27 @@ async function batchGenerateProfiles(payload) {
   const count = Math.max(1, Math.min(500, Number.parseInt(String(input.count), 10) || 1));
   const prefix = (optionalString(input.prefix) || optionalString(input.baseName) || 'Profile').slice(0, 60);
   const startIndex = Math.max(0, Number.parseInt(String(input.startIndex), 10) || 1);
-  // Coherence-first: an unspecified OS falls through to the REAL HOST OS (the
-  // generator's default). The batch still honors an explicit OS pick, and an explicit
-  // "Random" still mints a cross-OS spread for users who deliberately want variety.
+  // No OS means the real host OS (the generator's default), for coherence; an explicit "Random"
+  // still mints a cross-OS spread.
   const os = optionalString(input.os) || '';
   const deviceClass = input.deviceClass === 'mobile' ? 'mobile' : 'desktop';
-  const randomFp = input.randomFingerprint !== false; // default ON (the whole point)
+  const randomFp = input.randomFingerprint !== false; // on by default
   const distributeVersions = randomFp && input.distributeVersions !== false && deviceClass !== 'mobile';
   const startupUrls = normalizeStartupUrls(input.startupUrls);
   const notes = optionalString(input.notes) || 'Auto-generated batch';
 
-  // ---- Resolve the target profile group (existing id; a NEW group is created only
-  // after the proxy plan below, so a run that creates nothing leaves no empty group) ----
+  // A new group is created only after the proxy plan, so a run that creates nothing leaves none.
   let groupId = input.groupId ? parseId(input.groupId, 'groupId') : null;
   const newGroupName = optionalString(input.newGroupName);
 
-  // ---- Build the per-profile proxy assignment plan ----
   const proxyMode = (optionalString(input.proxyMode) || 'direct').toLowerCase(); // unique | pool | paste | direct
   const assignments = [];
   let proxyLimited = false;
   let availableProxies = 0;
   let effectiveCount = count;
   let proxyVerifyExcluded = 0;
-  // Why a proxy-backed run created nothing: 'no-match' (no proxy matches the filters)
-  // or 'none-healthy' (proxies matched but none passed the live check). Never fall back
-  // to DIRECT silently - a profile the user asked to put behind a proxy must not open
-  // on their real IP. "No proxy" stays available as its own explicit mode.
+  // Why a proxy-backed run created nothing: 'no-match' or 'none-healthy'. Never fall back to DIRECT:
+  // a profile meant to be behind a proxy must not open on the real IP.
   let noProxyReason = null;
   let poolMatched = 0;
 
@@ -5333,8 +4967,7 @@ async function batchGenerateProfiles(payload) {
     else if (filter.proxyGroupId === undefined) filter.OR = [{ provider: null }, { provider: { not: 'free' } }];
     const cc = normCountryCode(input.country);
     if (cc) filter.lastCountry = cc;
-    // Quality filters (from the generate modal): pre-narrow the candidate pool by the
-    // proxies' stored latency and DNSBL result before the live health-check gate runs.
+    // Narrow candidates by stored latency and DNSBL result before the live health check.
     const speedSel = (optionalString(input.proxySpeed) || 'any').toLowerCase();
     if (speedSel === 'fast') filter.lastLatencyMs = { lte: 2000 };
     else if (speedSel === 'slow') filter.lastLatencyMs = { gt: 2000 };
@@ -5345,7 +4978,7 @@ async function batchGenerateProfiles(payload) {
     else if (blSel === 'blacklisted') filter.lastBlacklisted = true;
     // A speed or blocklist choice only ever means proxies that work.
     if (speedSel !== 'any' || blSel !== 'any') filter.lastStatus = 'ok';
-    // Unique mode: only proxies NOT already bound to a live (non-deleted) profile.
+    // Unique mode: only proxies not bound to a live (non-deleted) profile.
     if (proxyMode === 'unique') filter.profiles = { none: { deletedAt: null } };
 
     const pool = await db.proxy.findMany({
@@ -5355,10 +4988,8 @@ async function batchGenerateProfiles(payload) {
     });
     poolMatched = pool.length;
 
-    // STRICT VERIFICATION GATE (default on): only attach proxies that pass a LIVE
-    // health check. Proxies verified 'ok' within the last 30 min are trusted as-is
-    // (skip-recent); the rest are checked live and their health persisted. A failed
-    // proxy is never assigned. Set input.verifyProxies === false to bypass.
+    // Only attach proxies that pass a live health check; those verified 'ok' in the last 30 minutes
+    // are trusted as is. verifyProxies: false bypasses the gate.
     const verify = input.verifyProxies !== false;
     const FRESH_MS = 30 * 60 * 1000;
     const isHealthy = async (p) => {
@@ -5391,9 +5022,8 @@ async function batchGenerateProfiles(payload) {
       if (effectiveCount < count) { proxyLimited = true; proxyVerifyExcluded = Math.max(0, checked - healthy.length); }
       for (let i = 0; i < effectiveCount; i += 1) assignments.push({ proxyId: healthy[i].id });
     } else {
-      // Pool: round-robin over the healthy subset (reuse allowed). Need at most
-      // `count` distinct healthy proxies. If none pass, NOTHING is created (see
-      // noProxyReason) - never a silent fall back to the real IP.
+      // Pool: round-robin over the healthy subset, reuse allowed. If none pass, nothing is created
+      // (see noProxyReason).
       const { healthy, checked } = await collectHealthy(pool, count);
       availableProxies = healthy.length;
       proxyVerifyExcluded = Math.max(0, checked - healthy.length);
@@ -5424,14 +5054,12 @@ async function batchGenerateProfiles(payload) {
     groupId = g.id;
   }
 
-  // ---- Even Chrome-version distribution across the run ----
   let versionPlan = null;
   if (distributeVersions) {
     const order = shuffleInPlace([...CHROME_VERSIONS]);
     versionPlan = Array.from({ length: effectiveCount }, (_, i) => order[i % order.length]);
   }
 
-  // ---- Generate + persist ----
   const created = [];
   const errors = [];
   const usedSignatures = new Set();
@@ -5459,9 +5087,8 @@ async function batchGenerateProfiles(payload) {
     if (randomFp) {
       const verPin = versionPlan ? versionPlan[i] : (optionalString(input.browserVersion) || undefined);
       let fp = null;
-      // Regenerate up to a few times to dodge a duplicate visible signature; the
-      // random MAC / device-name / canvas seed make profiles distinct regardless,
-      // but this keeps the user-visible hardware tuple unique while the pools allow.
+      // Retry a few times so the visible hardware tuple stays unique while the pools allow; MAC,
+      // device name and canvas seed differ anyway.
       for (let attempt = 0; attempt < 8; attempt += 1) {
         fp = generateFingerprint({ deviceClass, os, browserVersion: verPin });
         const sig = fingerprintSignature(fp);
@@ -5520,19 +5147,15 @@ async function updateProfile(payload) {
   await assertCanAccessProfile(id, { requireEdit: true });
   const existing = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!existing) throw new Error('Profile not found.');
-  // The editor echoes back the masked secrets it was given (T2-1). A mask means "keep what
-  // is stored", so saving never overwrites a real password or 2FA seed with dots.
+  // The editor echoes back masked secrets; a mask means "keep what is stored", so a save never
+  // overwrites a real password or 2FA seed with dots.
   input = restoreMaskedSecrets(input, existing);
 
-  const data = { ...extractFingerprintData(input) }; // Inject all React payload fields
+  const data = { ...extractFingerprintData(input) };
 
-  // extractFingerprintData is shared with create(), where "absent" legitimately means
-  // "use the default" - so it maps a missing field to a CONCRETE value (null / false /
-  // 'Auto') rather than undefined. On an UPDATE that is destructive: the scrub further
-  // down only deletes `undefined`, so a PARTIAL payload silently overwrites real data.
-  // A caller sending just { id, tags } erased the profile's saved platform usernames
-  // and passwords and switched its anti-detect engine off. On update, absent must mean
-  // UNCHANGED. The full profile editor always sends these, so it is unaffected.
+  // extractFingerprintData maps a missing field to a concrete default for create(), but the scrub
+  // below only drops `undefined`, so on update a partial payload would overwrite saved data.
+  // These fields keep their stored value when absent.
   const PATCH_SAFE = [
     ['platformAccounts', 'platformAccounts'],   // saved usernames + passwords
     ['browserSettingsJson', 'browserSettings'], // per-profile browser settings
@@ -5583,18 +5206,9 @@ async function updateProfile(payload) {
     data.proxyInfoString = buildProxyInfoString(proxy);
   }
 
-  // dataDirName is IMMUTABLE once a profile exists. It names the on-disk Chromium
-  // user-data directory AND seeds the fingerprint (browserEngine: seedFromString of
-  // this value drives canvas noise, media-device ids and fonts). Nothing in the app
-  // moves the folder, so changing it silently:
-  //   * abandons the real directory and mkdir's a fresh empty one at the next launch
-  //     - every cookie, logged-in session, saved password and extension state gone
-  //   * re-seeds the fingerprint, so the profile stops looking like the same machine
-  // The profile editor sent `dataDirName: <title>` on every save, so simply RENAMING
-  // a profile destroyed it. (A profile whose dir carries a uniqueness suffix would
-  // even flip on a no-change save, since sanitize(title) never equals "Title-1a2b3c".)
-  // bulkRenameProfiles already gets this right and only touches the display title.
-  // Renaming is a display-name operation: `title` changes, the directory does not.
+  // dataDirName never changes once a profile exists: it names the Chromium user-data folder and seeds
+  // the fingerprint (canvas noise, media-device ids, fonts). Changing it would orphan every cookie and
+  // login and re-seed the fingerprint. Renaming changes only `title`.
   if (input.dataDirName !== undefined) {
     const requestedDir = sanitizeDataDirName(input.dataDirName);
     if (requestedDir !== existing.dataDirName) {
@@ -5602,7 +5216,6 @@ async function updateProfile(payload) {
     }
   }
 
-  // Undefined properties from extractFingerprintData will be ignored by Prisma
   Object.keys(data).forEach(key => data[key] === undefined && delete data[key]);
 
   const updated = await db.profile.update({ where: { id }, data, include: { proxy: true, group: true } });
@@ -5611,7 +5224,7 @@ async function updateProfile(payload) {
 }
 
 async function deleteProfile(payload) {
-  await requirePermission('profiles.delete'); // audit: was scope-only, no rank gate
+  await requirePermission('profiles.delete');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -5619,9 +5232,8 @@ async function deleteProfile(payload) {
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
-  // Move to Trash (soft delete). Close any running session first. Local data
-  // (cookies/cache) is KEPT by default so the profile can be restored, but the
-  // user can opt to wipe it now via the delete dialog.
+  // Soft delete to Trash after closing any session. Local data is kept so the profile can be
+  // restored, unless the delete dialog asked to wipe it.
   const removeLocalData = Boolean(input.removeLocalData);
   await closeAnySession(id).catch(() => {});
   await db.profile.update({ where: { id }, data: { deletedAt: new Date() } });
@@ -5644,7 +5256,7 @@ async function restoreProfile(payload) {
 }
 
 async function purgeProfile(payload) {
-  await requirePermission('profiles.purge'); // audit: irreversible delete, was ungated
+  await requirePermission('profiles.purge');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
@@ -5652,8 +5264,7 @@ async function purgeProfile(payload) {
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
-  // Permanent means permanent: the data goes too, in every engine's folder. Nothing could ever
-  // use a leftover folder again, and it holds the profile's cookies and logins.
+  // Wipe every engine's folder too: nothing reuses it, and it holds the profile's cookies and logins.
   await closeAnySession(id).catch(() => {});
   const erased = await wipeProfileFolders(existing.dataDirName);
   await db.profile.delete({ where: { id } });
@@ -5663,7 +5274,7 @@ async function purgeProfile(payload) {
 }
 
 async function bulkDeleteProfiles(payload) {
-  await requirePermission('profiles.delete'); // audit: was scope-only, no rank gate
+  await requirePermission('profiles.delete');
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
@@ -5700,7 +5311,7 @@ async function bulkRestoreProfiles(payload) {
 }
 
 async function bulkPurgeProfiles(payload) {
-  await requirePermission('profiles.purge'); // audit: irreversible delete, was ungated
+  await requirePermission('profiles.purge');
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
@@ -5722,8 +5333,7 @@ async function bulkPurgeProfiles(payload) {
   return result;
 }
 
-// Push live bulk-launch progress to all renderer windows (mirrors the updater
-// sink). Emitting from ipcHandlers keeps the IPC-parity test happy.
+// Broadcasts bulk-launch progress to every window; it lives here for the IPC-parity test.
 function emitBulkLaunchProgress(data) {
   try {
     for (const w of BrowserWindow.getAllWindows()) {
@@ -5731,15 +5341,8 @@ function emitBulkLaunchProgress(data) {
     }
   } catch (e) { /* ignore */ }
 }
-// Live control state for an in-flight bulk launch (queue). The Profiles page can
-// pause (hold before the next profile), resume, or stop (abort the rest) a running
-// queue. Single queue at a time - a fresh bulkLaunchProfiles resets this.
-// Live state of the Profiles-page bulk launch queue. `total`/`done`/`ids` used to be
-// function-locals of bulkLaunchProfiles, so the main process could not answer "what is
-// running right now?" - and since progress is broadcast-only, a renderer that remounted
-// (user navigated away and back) heard only FUTURE frames and lost the Stop/Pause/Resume
-// controls while the queue kept launching browsers. They live here so the page can
-// re-attach on mount via getBulkLaunchStatus().
+// State of the single bulk-launch queue (pause, resume, stop); a new bulkLaunchProfiles replaces it.
+// It lives at module level so a remounted Profiles page can re-attach via getBulkLaunchStatus().
 let bulkLaunchState = { runId: null, active: false, paused: false, aborted: false, total: 0, done: 0, ids: [] };
 
 // Snapshot for a renderer re-attaching to a queue already in flight.
@@ -5768,10 +5371,8 @@ async function controlBulkLaunch(payload) {
   else if (action === 'stop' || action === 'end' || action === 'abort') {
     bulkLaunchState.aborted = true;
     bulkLaunchState.paused = false;
-    // Stop used to only stop launching MORE profiles and left every browser the queue
-    // had already opened running, which reads as "Stop did nothing". Close the sessions
-    // THIS run started. Profiles that were already open before the queue began are not
-    // touched: they are the user's, not the queue's. Pass closeOpened:false to opt out.
+    // Stop also closes the sessions this run started; profiles open before the queue began are the
+    // user's and stay open. closeOpened: false opts out.
     if (input.closeOpened !== false && Array.isArray(bulkLaunchState.started)) {
       const started = bulkLaunchState.started.splice(0);
       for (const s of started) {
@@ -5787,17 +5388,14 @@ async function controlBulkLaunch(payload) {
   return { ...bulkLaunchState, closed };
 }
 
-// `state` is the run's OWN state object, not the module-level `bulkLaunchState`.
-// Reading the module-level one here was half of the double-launch bug: once a second
-// run replaced it, the first run's workers started reading the NEW run's flags and
-// could never be told to stop.
+// `state` is the run's own state object, not the module-level bulkLaunchState, so an older run
+// can still be stopped after a newer one replaces it.
 function waitForSessionClose(sessionId, state) {
   return new Promise((resolve) => {
     const interval = setInterval(() => {
-      // listAllSessions() gets all active Chrome & Firefox sessions
+      // listAllSessions covers both Chrome and Firefox.
       const isOpen = listAllSessions().some((s) => String(s.sessionId) === String(sessionId));
-      // Stop waiting if the user aborted the queue - otherwise a stopped queue
-      // would hang here until the profile is manually closed.
+      // Stop waiting on abort, or a stopped queue hangs until the profile is closed by hand.
       if (!isOpen || (state && state.aborted)) {
         clearInterval(interval);
         resolve();
@@ -5820,26 +5418,19 @@ async function bulkLaunchProfiles(payload) {
   const width = Math.min(cap, total);
   let done = 0;
   let cursor = 0;
-  // A run in flight MUST be stopped before starting another, or its workers keep
-  // launching alongside the new run's workers and "1 at a time" opens two browsers.
-  // Clicking Launch twice (or launching again before the queue drains) is the ordinary
-  // way to hit this. The previous run's workers hold their OWN state object, so setting
-  // aborted here is visible to them even after bulkLaunchState is replaced below.
+  // Abort a run in flight first, or its workers keep launching beside the new run's (a double Launch
+  // click). They hold their own state object, so this flag still reaches them after replacement.
   if (bulkLaunchState && bulkLaunchState.active) {
     bulkLaunchState.aborted = true;
     bulkLaunchState.active = false;
   }
-  // Per-run state. Workers close over THIS object rather than the module-level binding.
+  // Per-run state; workers close over this object, not the module-level binding.
   const state = { runId: crypto.randomUUID(), active: true, paused: false, aborted: false, total, done: 0, ids: ids.slice(), width, queue: false, started: [] };
   bulkLaunchState = state;
   emitBulkLaunchProgress({ phase: 'start', total, done, width });
 
-  // Queue mode: each worker holds its slot until the user CLOSES that browser, so
-  // exactly `width` profiles stay open at a time and the next one opens as soon as a
-  // slot frees. This used to be hardcoded to `cap === 1` (strictly one at a time);
-  // the caller can now state the width, e.g. { queue: true, concurrency: 3 } keeps
-  // three open and feeds the rest in as they close. Absent the explicit flag, keep the
-  // historical behaviour where a concurrency of 1 implied a queue.
+  // Queue mode: each worker holds its slot until the user closes that browser, so `width` profiles
+  // stay open and the next opens as a slot frees. Without the flag, a concurrency of 1 means queue.
   const isQueueMode = input.queue !== undefined ? Boolean(input.queue) : (cap === 1);
   state.queue = isQueueMode;
 
@@ -5855,17 +5446,15 @@ async function bulkLaunchProfiles(payload) {
       const id = ids[cursor++];
       try {
         const session = await launchProfile({ id });
-        // geoDegraded / geoWarning (E6): opened, but on the host timezone - the UI warns.
+        // geoDegraded: opened on the host timezone; the UI warns.
         const geo = session && session.geoDegraded ? { geoDegraded: true, geoWarning: session.geoWarning || null } : {};
         result.launched.push({ id, sessionId: session.sessionId, ...geo });
-        // Only sessions this run actually STARTED are ours to close on Stop. A profile
-        // that was already open before the queue began belongs to the user, not to us.
+        // Stop closes only sessions this run started; a profile already open belongs to the user.
         if (!session.alreadyRunning) state.started.push({ id, sessionId: session.sessionId });
 
-        // Push progress to the UI immediately that it launched successfully
         emitBulkLaunchProgress({ phase: 'launched', id, total, done: done + 1, ok: true, ...geo });
 
-        // NEW LOGIC: If in queue mode, halt this worker until the session is closed by the user
+        // Queue mode: hold this worker's slot until the user closes the browser.
         if (isQueueMode) {
           await waitForSessionClose(session.sessionId, state);
         }
@@ -5883,9 +5472,8 @@ async function bulkLaunchProfiles(payload) {
   };
 
   if (isQueueMode) {
-    // If we are waiting for user interaction, do NOT await Promise.all() here. 
-    // Otherwise the IPC call hangs and the UI loading spinner spins forever.
-    // Fire the worker pool in the background and resolve immediately.
+    // Queue mode waits on the user, so run the workers in the background and resolve now; awaiting
+    // them would hang the IPC call.
     Promise.all(Array.from({ length: width }, () => worker())).then(() => {
       const aborted = state.aborted;
       state.active = false;
@@ -5893,7 +5481,6 @@ async function bulkLaunchProfiles(payload) {
     });
     return { message: "Queue started in background.", launched: [], errors: [] };
   } else {
-    // Normal concurrent launch: await all browser startups
     await Promise.all(Array.from({ length: width }, () => worker()));
     const aborted = state.aborted;
     state.active = false;
@@ -6001,9 +5588,8 @@ async function assignProfilesToGroup(payload) {
   return { assigned: res.count, groupId };
 }
 
-// Add or remove a single tag across the selected profiles. Tags are a JSON array
-// per profile, so this is a scoped per-profile read-modify-write (case-insensitive
-// dedupe on add, case-insensitive filter on remove).
+// Adds or removes one tag across profiles. Tags are a JSON array per profile, so this is a scoped
+// read-modify-write, case-insensitive both ways.
 async function assignTagToProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
@@ -6029,9 +5615,8 @@ async function assignTagToProfiles(payload) {
   return { updated, tag, mode };
 }
 
-// Bulk rename selected profiles. Either an explicit list [{id,title}] or a pattern
-// { prefix, start } numbered in the order the renderer sent (its visible order).
-// Only the display title changes - dataDirName (the on-disk profile) is untouched.
+// Takes an explicit [{id,title}] list or a { prefix, start } pattern numbered in the renderer's
+// visible order. Only the title changes; dataDirName never does.
 async function bulkRenameProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
@@ -6064,7 +5649,7 @@ async function bulkRenameProfiles(payload) {
   return { renamed };
 }
 
-// --- Proxy categories/groups (USA, UK, Japan, …) -----------------------------
+// ---- Proxy groups ----
 async function listProxyGroups() {
   const db = getPrisma();
   const groups = await db.proxyGroup.findMany({
@@ -6128,18 +5713,9 @@ async function assignProxiesToGroup(payload) {
   return { assigned: res.count, groupId };
 }
 
-// Bulk (re)assign / swap proxies across a set of EXISTING profiles. Complements
-// batchGenerateProfiles (which only assigns at creation time). Modes:
-//   'unique'  - each profile gets a DISTINCT proxy drawn from a source set (whole
-//               pool, a proxy group, or only-unassigned); caps if the source runs dry.
-//   'pool'    - round-robin a source set across the profiles (reuse allowed).
-//   'single'  - assign ONE chosen proxy (input.proxyId) to every selected profile.
-//   'shuffle' - reshuffle (swap) the proxies the selected profiles ALREADY have.
-//   'clear'   - detach the proxy from each profile (set DIRECT).
-// For 'unique'/'pool' the source set comes from input.source ('all' | 'unassigned' |
-// 'group' | 'paste'). The pool source is ordered newest-first so "reassign the proxies I just added"
-// naturally pulls the freshest proxies. Optional live health gate (verifyProxies,
-// default OFF - the user is deliberately moving known proxies here).
+// Reassigns proxies across existing profiles. Modes: unique (a distinct proxy each, capped by the
+// source), pool (round-robin, reuse allowed), single (input.proxyId to all), shuffle, clear.
+// Sources come newest first; the live health gate is opt-in since these are known proxies.
 async function bulkAssignProxies(payload) {
   await requirePermission('profiles.edit');
   const input = requireObject(payload);
@@ -6165,13 +5741,12 @@ async function bulkAssignProxies(payload) {
     catch (e) { result.errors.push({ id: profileId, message: (e && e.message) || 'update failed' }); }
   };
 
-  // ---- CLEAR: detach proxies (direct connection) ----
   if (mode === 'clear') {
     for (const id of allowed) await safeApply(id, null);
     return finish({ source: 0 });
   }
 
-  // ---- SHUFFLE: swap the proxies already on the selected profiles among themselves ----
+  // Shuffle swaps the proxies the selected profiles already have among themselves.
   if (mode === 'shuffle') {
     const rows = await db.profile.findMany({ where: { id: { in: allowed } }, select: { id: true, proxyId: true } });
     const proxied = rows.filter((r) => r.proxyId != null);
@@ -6185,7 +5760,6 @@ async function bulkAssignProxies(payload) {
     return finish({ source: proxied.length });
   }
 
-  // ---- SINGLE: one chosen proxy → all selected profiles ----
   if (mode === 'single') {
     const proxyId = parseId(input.proxyId, 'proxyId');
     await assertCanAccessProxy(proxyId);
@@ -6195,9 +5769,8 @@ async function bulkAssignProxies(payload) {
     return finish({ source: 1 });
   }
 
-  // ---- Build the SOURCE proxy set for unique / pool ----
-  // source: 'all' (whole pool) | 'unassigned' (not bound to a live profile) |
-  //         'group' (a proxy group) | 'paste' (raw lines, created/reused on the fly).
+  // Source for unique/pool: 'all', 'unassigned' (not on a live profile), 'group', or 'paste' (raw
+  // lines, created or reused on the fly).
   let sourceProxies = [];
   const source = (optionalString(input.source) || 'all').toLowerCase();
   if (source === 'paste') {
@@ -6213,7 +5786,7 @@ async function bulkAssignProxies(payload) {
     else if (source === 'group') filter.proxyGroupId = parseId(input.proxyGroupId, 'proxyGroupId');
     sourceProxies = await db.proxy.findMany({
       where: await scopedProxyWhere(Object.keys(filter).length ? filter : undefined),
-      orderBy: { createdAt: 'desc' } // newest first - "reassign the proxies newly added"
+      orderBy: { createdAt: 'desc' } // newest first, so fresh additions are used first
     });
   }
 
@@ -6269,14 +5842,9 @@ function autoGroupColor(name) {
   return AUTO_GROUP_COLORS[h % AUTO_GROUP_COLORS.length];
 }
 
-// Auto-categorize proxies into ProxyGroups by verified exit geo. `level`:
-//   'country' (default) → "United States"
-//   'state'             → "United States - California"  (falls back to country)
-//   'city'              → "United States - Los Angeles" (falls back to state/country)
-// ProxyGroup membership is single, so each proxy lands in exactly ONE group at the
-// chosen level. Geo comes from the health check (lastCountry/lastRegion/lastCity);
-// proxies without a known country are skipped. `onlyUngrouped` (used by the auto-run
-// after Test All) leaves manually-grouped proxies untouched.
+// Groups proxies by verified exit geo at `level` country, state or city (falling back to the
+// coarser level). Each proxy joins exactly one group; proxies with no known country are skipped.
+// `onlyUngrouped` (the auto-run after Test All) leaves manually grouped proxies alone.
 async function autoGroupProxies(payload) {
   const input = requireObject(payload || {});
   const level = ['country', 'state', 'city'].includes(String(input.level)) ? String(input.level) : 'country';
@@ -6301,7 +5869,6 @@ async function autoGroupProxies(payload) {
     return city ? `${country} - ${city}` : (region ? `${country} - ${region}` : country);
   };
 
-  // Bucket proxy ids by their target group name.
   const buckets = new Map();
   for (const p of proxies) {
     const name = targetName(p);
@@ -6336,22 +5903,13 @@ async function listTags() {
   return collectTags(rows).sort((a, b) => a.localeCompare(b));
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - Profile lock-when-in-use.
-//
-// A transient, in-memory registry of which member is currently running which
-// profile. It blocks a SECOND concurrent launch of the same profile by a
-// DIFFERENT member (a real constraint too - Chromium can't open two instances on
-// one userDataDir). Locks are NOT persisted: they're reconciled against the live
-// session set (`listAllSessions()` - the existing orphan-cleanup source of
-// truth), so a close/crash/restart clears them automatically.
-// ---------------------------------------------------------------------------
+// ---- Profile lock-when-in-use ----
+// In-memory: blocks a second launch of a profile by a different member (Chromium cannot open one
+// userDataDir twice). Locks reconcile against listAllSessions(), so a close or crash clears them.
 const profileLocks = new Map(); // profileId(Number) -> { memberId, memberName, sessionId, at }
-// A pending reservation is held between the launchability check and the moment a
-// real session lock is acquired, so a parallel launch of the SAME profile can't
-// slip through that window. It is NOT a live session, so reconcile must not prune
-// it - but a launch that dies before acquiring auto-clears after a TTL.
-// Shared with teamPolicy.lockBlocks, which now treats a live reservation as blocking.
+// A pending reservation covers the gap between the launchability check and a real session lock, so
+// a parallel launch cannot slip through. Reconcile never prunes it; a dead launch clears after a TTL.
+// teamPolicy.lockBlocks treats a live reservation as blocking.
 const { PENDING_LOCK, PENDING_LOCK_TTL_MS } = teamPolicy;
 
 function reconcileProfileLocks() {
@@ -6390,11 +5948,8 @@ function acquireProfileLock(profileId, sessionId, member) {
   });
 }
 
-// Two-phase lock: reserve BEFORE the heavy spawn (placeholder session id),
-// upgrade via acquireProfileLock on success, release on failure.
-// Returns the reservation object; releaseReservedLock only removes THAT object
-// (audit E4), so a failing launch can never drop another launch's reservation or a
-// lock that has since been upgraded.
+// Two-phase lock: reserve before the heavy spawn, upgrade via acquireProfileLock on success, release
+// on failure. releaseReservedLock removes only this reservation object, never another launch's lock.
 function reserveProfileLock(profileId, member) {
   const reservation = {
     memberId: (member && member.id != null) ? member.id : currentMemberId,
@@ -6424,10 +5979,8 @@ async function getProfileLocks() {
   return out;
 }
 
-// audit E4: launches in flight, keyed by profile id. A second launch of a profile
-// that is still starting (double-click, a profile listed twice in a batch) joins
-// the first launch instead of racing it past the lock into a second browser. The
-// caller's own permission + access checks still run before it joins.
+// A second launch of a profile still starting (double-click, a profile listed twice in a batch)
+// joins the first instead of racing past the lock. The caller's permission and access checks run first.
 const profileLaunchesInFlight = new Map(); // profileId(Number) -> Promise
 async function launchProfile(payload) {
   await requirePermission('profiles.launch');
@@ -6449,8 +6002,7 @@ async function launchProfileNow(payload) {
   const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
   if (!profile) throw new Error('Profile not found.');
 
-  // License gate - a banned owner tree cannot launch (enforced in main, not just
-  // the renderer).
+  // A banned owner tree cannot launch; enforced in main, not just the renderer.
   await assertNotBanned();
 
   // Block a concurrent launch by a different member (lock-when-in-use).
@@ -6461,9 +6013,8 @@ async function launchProfileNow(payload) {
   // the engine split so the concurrency ceiling applies to Chrome AND Firefox).
   const globalSettings = await getGlobalSettings();
 
-  // Optional hard ceiling on total concurrently-running sessions (memory safety).
-  // null/0 = unlimited. Reject past it with a clear, catchable error rather than
-  // OOM the machine; the bulk launcher surfaces this per-profile.
+  // Optional cap on running sessions (null/0 = unlimited): refuse with a catchable error rather than
+  // run the machine out of memory; the bulk launcher reports it per profile.
   const ceiling = Number((globalSettings.performance && globalSettings.performance.maxConcurrentProfiles) || 0);
   if (ceiling > 0 && listAllSessions().length >= ceiling) {
     const e = new Error(`Concurrent profile limit reached (${ceiling} running). Close a profile or raise the limit in Settings → Performance.`);
@@ -6471,14 +6022,11 @@ async function launchProfileNow(payload) {
     throw e;
   }
 
-  // Reserve the lock BEFORE the heavy spawn so a parallel launch of the SAME
-  // profile can't slip through the check->acquire window. Released on failure;
-  // upgraded to a real session lock on success.
+  // Reserve before the heavy spawn so a parallel launch cannot slip through the check-to-acquire window.
   const reservation = reserveProfileLock(id, launcher);
   try {
-    // The Firefox engine is real Firefox. It's a different engine (no CDP/MV3), so route
-    // to the Firefox launcher which configures a dedicated profile via user.js prefs
-    // (proxy + auth relay, UA, locale, timezone, WebRTC off).
+    // Firefox has no CDP or MV3, so its launcher configures a dedicated profile through user.js prefs
+    // (proxy and auth relay, UA, locale, timezone, WebRTC off).
     const isFirefox = normalizeBrowserCore(profile.browserCore) === BROWSER_CORE.FIREFOX;
     if (isFirefox) {
       const { profileRoot: ffRoot } = getRuntimeConfig();
@@ -6496,9 +6044,8 @@ async function launchProfileNow(payload) {
         proxy: ffProxy,
         proxyInfoString: ffRotated ? null : (useFfProxy ? profile.proxyInfoString : null),
         startUrl: input.startUrl || 'about:blank',
-        // The profile's own custom links. `startUrl` stays the explicit per-launch
-        // override (the warmer and automation pass one); these are the user's saved
-        // links and open as additional tabs.
+        // The profile's saved links open as extra tabs; `startUrl` is the per-launch override (the warmer
+        // and automation pass one).
         startupUrls: parseStartupUrls(profile.startupUrls),
         profileRoot: ffRoot,
         profile,
@@ -6510,11 +6057,8 @@ async function launchProfileNow(payload) {
       return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
     }
 
-    // A stored CUSTOM User-Agent that doesn't match the real binary would be a
-    // detection tell - but the Chrome engine ALWAYS derives the UA from the real
-    // launched binary and ignores profile.userAgent, so the safe thing is to launch
-    // anyway with that auto-derived (matching) UA rather than block the user. We only
-    // warn for legacy/mismatched values; we never reject the launch.
+    // A custom UA that does not match the binary would be a tell, but the Chrome engine always derives
+    // the UA from the launched binary, so a mismatch only warns and never blocks the launch.
     const uaStr = String(profile.userAgent || '').trim();
     if (uaStr && uaStr.toLowerCase() !== 'auto') {
       const resolved = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
@@ -6537,11 +6081,8 @@ async function launchProfileNow(payload) {
     const launchProxy = rotated || (useProfileProxy ? profile.proxy : null);
     const launchProxyInfo = rotated ? null : (useProfileProxy ? profile.proxyInfoString : null);
 
-    // Per-profile opt-in for loading SoftGlaze/team extensions. Real stable Chrome
-    // ignores --load-extension, so a profile that wants extensions launches on
-    // Chrome-for-Testing (chooseBrowserBinary honors this); profiles that don't stay on
-    // stealthier real Chrome. Only resolve/attach the team extensions when the profile
-    // opted in - otherwise they're neither mounted nor worth carrying.
+    // Stable Chrome ignores --load-extension, so a profile that opts into extensions launches on
+    // Chrome for Testing (chooseBrowserBinary); the rest stay on stealthier real Chrome.
     let perProfileBrowser = {};
     try { perProfileBrowser = profile.browserSettingsJson ? JSON.parse(profile.browserSettingsJson) : {}; } catch (e) { perProfileBrowser = {}; }
     const loadExtensions = perProfileBrowser.loadExtensions === true;
@@ -6554,12 +6095,11 @@ async function launchProfileNow(payload) {
       proxy: launchProxy,
       proxyInfoString: launchProxyInfo,
       startUrl: input.startUrl || 'about:blank',
-      // The profile's own custom links. `startUrl` stays the explicit per-launch
-      // override (the warmer and automation pass one); these are the user's saved
-      // links and open as additional tabs.
+      // The profile's saved links open as extra tabs; `startUrl` is the per-launch override (the warmer
+      // and automation pass one).
       startupUrls: parseStartupUrls(profile.startupUrls),
       profileRoot,
-      headless: Boolean(input.headless), // hidden warm-ups (Cookie Warmer) launch headless; normal launches stay visible
+      headless: Boolean(input.headless), // Cookie Warmer warm-ups run headless
       profile, // full fingerprint config applied at launch
       browserSettings,
       captcha: globalSettings.captcha,
@@ -6579,11 +6119,8 @@ async function launchProfileNow(payload) {
   }
 }
 
-// Close a session by id REGARDLESS of engine. Chrome and Firefox each key their
-// sessions by the profile id, so any caller that only has an id (the Profiles-page
-// Stop button / bulk close, delete + purge, warmer teardown) must route through here
-// - calling closeProfileSession() directly silently no-ops on a Firefox session,
-// leaving the real Firefox window open (the reported "Stop does nothing" bug).
+// Close a session by id on either engine. closeProfileSession() alone does nothing for a Firefox
+// session, so every id-only caller (Stop, bulk close, delete, purge, warmer) must come through here.
 async function closeAnySession(sessionId) {
   const id = String(sessionId);
   return firefoxEngine.isFirefoxSession(id)
@@ -6616,12 +6153,9 @@ async function listSessionsForViewer() {
   return all.filter((s) => allowedSet.has(String(Number(s.sessionId))));
 }
 
-// ---------------------------------------------------------------------------
-// Resilience (Phase B): SessionState persistence, restore, crash recovery, and an
-// opt-in memory-pressure guard. browserEngine/firefoxEngine report lifecycle via
-// the session-event sink (set in registerIpcHandlers); the DB writes + renderer
-// notifications live here.
-// ---------------------------------------------------------------------------
+// ---- Session resilience ----
+// SessionState persistence, restore, crash recovery and an opt-in memory-pressure guard. The engines
+// report lifecycle through the session-event sink set in registerIpcHandlers.
 function emitSessionCrash(data) {
   try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.SESSION_CRASH, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
 }
@@ -6701,8 +6235,8 @@ async function onSessionCrashed(profileId) {
   emitSessionCrash({ profileId: Number(profileId), title, crashCount, restarted });
 }
 
-// Profiles whose SessionState row is still 'running' (were open at the last exit or
-// crash) and are NOT already live this session - the Dashboard restore candidates.
+// Restore candidates: profiles whose SessionState is still 'running' (open at the last exit or
+// crash) and not live in this session.
 async function getSessionRestore() {
   let settings = {};
   try { settings = await getGlobalSettings(); } catch (e) { /* ignore */ }
@@ -6730,12 +6264,12 @@ async function runSessionRestore(payload) {
     return { dismissed: true };
   }
   if (!ids.length) return { launched: 0, errors: [] };
-  const res = await bulkLaunchProfiles({ ids }); // respects the Phase A concurrency cap
+  const res = await bulkLaunchProfiles({ ids }); // respects the concurrency cap
   return { launched: res.launched.length, errors: res.errors };
 }
 
-// Per-session memory via ONE batched Windows tasklist call -> main-process RSS (KB).
-// Best-effort / approximate (Chromium's child-process tree is not summed).
+// Per-session memory from one batched Windows tasklist call: main-process RSS in KB. Approximate,
+// since Chromium's child processes are not summed.
 function readProcessRssKb() {
   return new Promise((resolve) => {
     if (process.platform !== 'win32') return resolve({});
@@ -6759,8 +6293,8 @@ async function getSessionResourceUsage() {
   };
 }
 
-// Memory-pressure guard (opt-in). When free RAM drops below the floor, close the
-// OLDEST sessions until recovered, then notify the renderer.
+// Opt-in memory-pressure guard: below the free-RAM floor, close the oldest sessions until
+// recovered, then notify the renderer.
 let memoryGuardBusy = false;
 async function checkMemoryPressure() {
   if (memoryGuardBusy) return;
@@ -6942,8 +6476,7 @@ async function commitProfileImport(payload, event) {
         }]);
       }
 
-      // Imported fingerprint / localization fields override the generated base.
-      // Anything not present in the file keeps its sane generated default.
+      // Imported fingerprint and locale fields override the generated base; absent ones keep the default.
       const fp = {};
       if (item.os) fp.os = item.os;
       if (item.browserCore) fp.browserCore = item.browserCore;
@@ -6967,8 +6500,7 @@ async function commitProfileImport(payload, event) {
       if (item.locationLng) fp.locationLng = String(item.locationLng);
 
       const dataDirName = await ensureUniqueDataDirName(db, item.dataDirName || item.title);
-      // Distinct fingerprint per imported profile FIRST, then the explicit
-      // template values override (so imported settings aren't clobbered).
+      // Generate a distinct fingerprint first, then let the imported values override it.
       const fpFields = generateFingerprint();
       const profile = await db.profile.create({
         data: {
@@ -7006,12 +6538,9 @@ async function commitProfileImport(payload, event) {
   return result;
 }
 
-// --- Profile Migration (transfer from competitor platforms) ----------------
-// Fetches profiles from a competitor platform's API and imports them. Gated to
-// Owner / Super Admin (enforced HERE in the main process - never trust the UI).
-// Progress streams live to the renderer; each profile (+ its proxy) is inserted
-// in its OWN transaction so a single malformed row can't corrupt the database
-// or abort the whole transfer - failures are collected and reported.
+// ---- Profile migration from other platforms ----
+// Owner or Super Admin only, enforced here in main. Each profile and its proxy go in their own
+// transaction, so one malformed row cannot abort the transfer; failures are collected.
 async function migrateProfiles(payload, event) {
   await requireOwnerOrSuper('transfer profiles');
   const input = requireObject(payload);
@@ -7105,8 +6634,8 @@ function firstAccount(p) {
   } catch (e) { return { username: '', password: '', twoFa: '' }; }
 }
 
-// The single source of truth for the EXPORT layout - kept symmetrical with the
-// importer's column blueprint so an export re-imports cleanly. [header, getter].
+// Single source of truth for the export layout, kept symmetrical with the importer's columns so
+// an export re-imports cleanly. [header, getter].
 const EXPORT_COLUMNS = [
   ['Profile Title', (p) => p.title || ''],
   ['Group Name', (p) => (p.group ? p.group.name : '')],
@@ -7150,9 +6679,7 @@ const EXPORT_COLUMNS = [
 
 async function gatherExport() {
   const db = getPrisma();
-  // audit: this exported EVERY profile's raw proxy/account secrets regardless of
-  // the caller's subtree, bypassing tenant isolation. Scope to the member's own
-  // visible profiles (Super Admin / single-user stay unrestricted).
+  // Scope to the member's visible profiles: the export carries raw proxy and account secrets.
   const where = await scopedProfileWhere({ deletedAt: null });
   const profiles = await db.profile.findMany({
     where,
@@ -7160,9 +6687,8 @@ async function gatherExport() {
     orderBy: { createdAt: 'asc' }
   });
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
-  // audit S3: profiles.export is rank 1, so an Operator could walk off with every proxy
-  // password, account password and 2FA key in a spreadsheet. Blank those cells unless the
-  // member may reveal them - the same gates the profile view and the 2FA code reader use.
+  // profiles.export is rank 1, so blank proxy passwords, account passwords and 2FA keys unless the
+  // member may reveal them (the same gates as the profile view and the 2FA code reader).
   await getActiveMember(); // refreshes currentMemberCanRevealProxy
   const revealCreds = currentMemberCanRevealProxy;
   let revealTwoFa = revealCreds;
@@ -7210,7 +6736,7 @@ async function exportProfilesToFile(payload) {
   return { saved: true, path: res.filePath, count };
 }
 
-// ---------- Activity / usage history ----------
+// ---- Activity history ----
 
 async function listActivity(payload) {
   const input = requireObject(payload);
@@ -7235,7 +6761,7 @@ async function listActivity(payload) {
   };
 }
 
-// ---------- Live leak test (reads real values from the running browser) ----------
+// ---- Live leak test (reads real values from the running browser) ----
 
 function isPrivateIp(ip) {
   return /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc|fd|fe80)/i.test(ip) || /\.local$/i.test(ip);
@@ -7281,7 +6807,7 @@ async function liveProfileLeak(payload) {
   return { profileId: id, running: true, env, webrtcIps, exit, checks, summary: score.summary, score };
 }
 
-// ---------- Proxy health: persistence + background scheduler ----------
+// ---- Proxy health: persistence and scheduler ----
 
 // Build a human geo label from a check result, e.g. "US Kirkland, Washington 98033".
 function proxyGeoLabel(result) {
@@ -7294,9 +6820,8 @@ function proxyGeoLabel(result) {
 }
 
 async function persistProxyHealth(db, id, result) {
-  // One reading is noisy (the same proxy can vary by hundreds of ms between checks), so the speed
-  // the pool shows and filters on is the median of the last three passing checks. Every caller
-  // reports result.latencyMs, so it is set here to keep the live value and the saved value equal.
+  // A single reading is noisy, so the speed the pool shows and filters on is the median of the last
+  // three passing checks; result.latencyMs is set to it so the live and saved values match.
   const rawMs = result.latencyMs;
   const recent = result.success && typeof rawMs === 'number'
     ? await db.proxyHealthEvent.findMany({ where: { proxyId: id, status: 'ok', latencyMs: { not: null } }, orderBy: { ts: 'desc' }, take: 2, select: { latencyMs: true } }).catch(() => [])
@@ -7305,8 +6830,7 @@ async function persistProxyHealth(db, id, result) {
   if (speedMs != null) result.latencyMs = speedMs;
   const data = {
     lastStatus: result.success ? 'ok' : 'fail',
-    // Keep WHY it failed, not just that it did, so the pool can tell a quota refusal
-    // from a dead exit after a reload. Cleared on success so a stale reason never sticks.
+    // Keep why it failed so the pool can tell a quota refusal from a dead exit; cleared on success.
     lastError: result.success ? null : (String(result.error || '').slice(0, 400) || null),
     // A failed check has no speed: how long it took to fail means nothing.
     lastLatencyMs: speedMs,
@@ -7315,13 +6839,10 @@ async function persistProxyHealth(db, id, result) {
     lastCity: result.city || null,
     lastCheckedAt: new Date()
   };
-  // Persist the DNSBL blocklist verdict when the deep checker actually ran it, so the
-  // pool can be filtered by blacklisted/clean even after a reload. Left untouched when
-  // a check didn't reach the blacklist stage (e.g. an unreachable proxy).
+  // Store the DNSBL verdict only when the deep check reached it, so the blacklisted/clean filter
+  // survives a reload.
   if (result.blacklist && result.blacklist.checked) data.lastBlacklisted = !!result.blacklist.listed;
-  // Enrich the proxy NAME with the verified exit location so the pool is easy to scan
-  // (matches the vendor "Provider • US City, Region" style for every proxy). The part
-  // before " • " is kept as the base (provider/user label) and only the geo is refreshed.
+  // Refresh the geo part of the name ("Provider • US City, Region"); the part before " • " stays.
   const geo = proxyGeoLabel(result);
   if (geo) {
     try {
@@ -7351,10 +6872,8 @@ async function getProxyHealthHistory(payload) {
     .reverse();
 }
 
-// Recent health events across the viewer's ACCESSIBLE proxies, grouped per proxy -
-// powers the Proxy Pool "history cards" row (each proxy's last N checks as pass/fail
-// pips, plus a verified→failed flag). One access-scoped query + JS grouping instead of
-// N per-proxy round-trips. Only proxies that have at least one recorded check appear.
+// Recent health events per accessible proxy for the Proxy Pool history cards (pass/fail pips and
+// a verified-then-failed flag). One scoped query grouped in JS, not one round-trip per proxy.
 async function getRecentProxyHealth(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   const perProxy = Math.min(20, Math.max(3, Number(input.perProxy) || 8));   // pips per card
@@ -7384,8 +6903,7 @@ async function getRecentProxyHealth(payload) {
     if (!p) continue;
     const checks = evs.slice().reverse().map((e) => ({ ts: iso(e.ts), status: e.status === 'ok' ? 'ok' : 'fail', latencyMs: e.latencyMs })); // oldest → newest
     const latest = evs[0];
-    // "Verified before, failed on a later check": at least one OK earlier AND the most
-    // recent check failed - the exact cross-verification signal the user asked for.
+    // Regressed: passed at least once before and the latest check failed.
     const okBefore = checks.slice(0, -1).some((c) => c.status === 'ok');
     const regressed = okBefore && checks[checks.length - 1].status === 'fail';
     cards.push({
@@ -7419,14 +6937,12 @@ async function writeSetting(key, value) {
 }
 
 async function runProxyHealthSweep() {
-  // Delegate to the concurrent sweeper (worker-capped) so the scheduled sweep and
-  // the manual "Test all" share one code path.
+  // The scheduled sweep and the manual "Test all" share one code path.
   await runProxyHealthSweepConcurrent(8);
 }
 
-// Concurrent health sweep - runs up to `limit` checks at a time instead of one
-// after another. Reuses the existing single-proxy checker + health persistence,
-// so it does not reimplement connectivity logic. Returns { total, ok, fail }.
+// Runs up to `limit` health checks at a time through the single-proxy checker; returns
+// { total, ok, fail }.
 async function runProxyHealthSweepConcurrent(limit = 8) {
   const db = getPrisma();
   const proxies = await db.proxy.findMany();
@@ -7449,12 +6965,10 @@ async function runProxyHealthSweepConcurrent(limit = 8) {
   return summary;
 }
 
-// "Test all" action - concurrent health check of every proxy. No secrets are
-// returned (only a count summary), so it is safe for any role.
+// Returns only a count summary, no secrets, so it is safe for any role.
 async function testAllProxies() {
   const summary = await runProxyHealthSweepConcurrent(8);
-  // Freshly-checked proxies now carry geo - auto-bucket the UNGROUPED ones by
-  // country (never disturbs manually-grouped proxies). Best-effort, non-fatal.
+  // Fresh results carry geo, so group the ungrouped proxies by country; manual groups are untouched.
   try { await autoGroupProxies({ level: 'country', onlyUngrouped: true }); } catch (e) { /* ignore */ }
   return summary;
 }
@@ -7484,18 +6998,9 @@ async function setProxyScheduler(payload) {
   return { enabled, minutes, running: Boolean(proxySchedulerTimer) };
 }
 
-// ---------------------------------------------------------------------------
-// Global application settings. Stored as a single merged JSON
-// blob under the `globalSettings` key. Reads always return defaults merged with
-// stored overrides so new fields appear automatically across upgrades. Writes
-// deep-merge a partial patch so the renderer can save one toggle at a time.
-//
-// Enforcement note: the `browser` and `onStartup` groups are honored by the
-// launch engine (see launchProfile). The `security`, `multiDevice`, `website`,
-// `platform`, `ipSetting`, and `dataSync` groups are persisted preferences that
-// the rest of the app reads; deep behavioral enforcement (e.g. real 2FA gating,
-// cross-device sync) is layered on top of these flags, not implied by them.
-// ---------------------------------------------------------------------------
+// Global settings, one JSON blob under `globalSettings`. Reads merge defaults with stored overrides;
+// writes deep-merge a partial patch. Only `browser` and `onStartup` are enforced by launchProfile;
+// the other groups are stored preferences that the rest of the app reads.
 const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   security: {
     remoteLoginReminder: false,
@@ -7533,16 +7038,12 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     disableVideos: false,
     disableImages: false,
     imageMinKb: 10,
-    // OPT-IN probe: switch the Chromium engine to rebrowser (enableDisable) to drop the
-    // persistent CDP Runtime.enable - the #1 Cloudflare/anti-bot automation tell. Default
-    // OFF. TRADE-OFF while ON: persona autofill, start-page check-links, and sync mirror
-    // stop working (they need the CDP binding). See browserEngine getRuntimeFixPuppeteer.
+    // Opt-in: switch the engine to rebrowser to drop the persistent CDP Runtime.enable, a top anti-bot
+    // tell. While on, persona autofill, start-page check-links and sync mirror stop working (they need
+    // the CDP binding).
     minimizeCdpFootprint: false,
-    // Native anti-detect engine (fingerprint-chromium): spoofs the fingerprint at the
-    // binary level from launch flags and natively blocks the WebRTC real-IP leak - no
-    // JS-injection race. Requires the fingerprint-chromium binary (Browsers page /
-    // managed dir); falls back to stock Chrome when absent. Default OFF.
-    // See browserEngine resolveAntidetectBinary.
+    // fingerprint-chromium spoofs the fingerprint at the binary level and blocks the WebRTC real-IP
+    // leak, with no JS-injection race. Falls back to stock Chrome when the binary is absent.
     antidetectEngine: false
   },
   onStartup: {
@@ -7558,25 +7059,19 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     solveRecaptchaV2: true,
     solveHcaptcha: true
   },
-  // Geo auto-match: derive each profile's timezone / locale / WebRTC exit IP from
-  // its proxy's geo at launch. ON by default; turning this off makes profiles use
-  // only their manually-configured values (the per-field Real/Custom types still
-  // apply). See browserEngine launchProfileSession({ geoMatchEnabled }).
+  // Derive each profile's timezone, locale and WebRTC IP from its proxy's geo at launch; off means
+  // only the manually configured values apply.
   geoMatch: {
     enabled: true
   },
-  // App branding shown in the shell footer (editable by the Super Admin in Settings).
-  // `{year}` is replaced with the current year at render time; http(s) URLs are
-  // auto-linked. Keep it a single short line.
+  // Footer branding, editable by the Super Admin. `{year}` becomes the current year and http(s)
+  // URLs are auto-linked; keep it one short line.
   branding: {
     footerEnabled: true,
     footerText: '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
   },
-  // Launch performance / scale controls (heavy-user). launchConcurrency caps how
-  // many profiles spawn in PARALLEL during a bulk launch (Chromium is RAM-heavy,
-  // so this is bounded, not unlimited). maxConcurrentProfiles is an optional hard
-  // ceiling on total running sessions (null = unlimited); launches past it are
-  // reported, never silently dropped. See launchProfile + bulkLaunchProfiles.
+  // launchConcurrency caps parallel spawns in a bulk launch (Chromium is RAM-heavy).
+  // maxConcurrentProfiles caps running sessions (null = unlimited); launches past it are reported.
   performance: { launchConcurrency: 5, maxConcurrentProfiles: null },
   // Resilience: restore last session's profiles on next launch; auto-restart crashed
   // profiles (opt-in, capped); close oldest sessions under memory pressure (opt-in).
@@ -7585,12 +7080,10 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   memoryGuard: { enabled: false, lowFreePct: 12, recoverFreePct: 25 },
   // Saved profile-filter presets (name + filter state) - managed from the Profiles page.
   profileFilters: [],
-  // Smart Autofill - the identity widget from the Data Vault. `enabled` is the
-  // master toggle (Chromium in-page injection + Firefox). `firefox` separately
-  // gates the Firefox WebExtension path (no CDP there; uses the loopback bridge).
+  // `enabled` is the Smart Autofill master toggle; `firefox` also gates the Firefox WebExtension
+  // path (no CDP there, so it uses the loopback bridge).
   smartAutofill: { enabled: true, firefox: true },
-  // Audit log retention - activity/security events older than this are pruned at
-  // startup. 0 = keep forever. Default 90 days.
+  // Activity and security events older than this are pruned at startup; 0 keeps them forever.
   audit: { retentionDays: 90 }
 });
 
@@ -7621,13 +7114,8 @@ async function setGlobalSettings(payload) {
   return next;
 }
 
-// ---------------------------------------------------------------------------
-// Proxy provider credentials - remembered so the user doesn't re-type API tokens
-// / usernames / passwords on every pull. Stored workspace-wide in one Setting blob
-// keyed by provider; secret fields are DPAPI-sealed via secretStore (same pattern
-// as IpProvider). Pre-filled into the Proxy Providers modal on open.
-// ---------------------------------------------------------------------------
-// apiUrl is a secret: a Live Proxies list link carries the account access code.
+// Saved proxy provider credentials, one workspace-wide Setting blob keyed by provider; secret
+// fields are DPAPI-sealed via secretStore. apiUrl is secret: a Live Proxies link carries the access code.
 const PROXY_CRED_SECRET_FIELDS = ['password', 'token', 'apiToken', 'apiUrl'];
 const PROXY_CRED_PLAIN_FIELDS = ['username', 'zone', 'plan', 'host', 'port', 'orderId'];
 
@@ -7637,9 +7125,7 @@ async function readProxyProviderCredMap() {
 }
 
 async function getProxyProviderCreds(payload) {
-  // audit: returned DECRYPTED vendor API tokens/passwords to any member. These are
-  // workspace-level provider credentials - gate to Owner / Super Admin, matching
-  // the write path below.
+  // Returns decrypted workspace vendor credentials, so Owner or Super Admin only, like the write path.
   await requireOwnerOrSuper('view proxy provider credentials');
   const input = requireObject(payload);
   const provider = requiredString(input.provider, 'provider').toLowerCase();
@@ -7674,16 +7160,9 @@ async function saveProxyProviderCreds(payload) {
   return { ok: true };
 }
 
-// ---------------------------------------------------------------------------
-// Monetization - affiliate / referral links for the Proxy Provider marketplace.
-// Owners and the Super Admin set the partner URLs that the "Purchase at X" /
-// "Visit X Dashboard" buttons on the Proxy pool → Providers tab link out to.
-// Stored as a single { providerKey: url } override map under the `affiliateLinks`
-// setting key. Reads are open to every member (the URLs are public-facing and
-// power buttons all members can click); writes are gated to Owner / Super Admin.
-// A blank value clears the override so the button falls back to its built-in
-// default - the override map only ever holds non-empty URLs.
-// ---------------------------------------------------------------------------
+// ---- Affiliate links for the Proxy Providers tab ----
+// A { providerKey: url } override map under `affiliateLinks`. Reads are open (the URLs are public);
+// writes need Owner or Super Admin. A blank value clears the override back to the built-in default.
 function sanitizeAffiliateUrl(value) {
   const s = String(value == null ? '' : value).trim();
   if (!s) return ''; // empty clears the override
@@ -7722,13 +7201,9 @@ async function setAffiliateLinks(payload) {
   return { links: next };
 }
 
-// ---------------------------------------------------------------------------
-// Team Extensions - download Chrome Web Store extensions as raw .crx, unzip them
-// locally (extensionManager), and persist a record. Globally-enabled extensions
-// are merged into --load-extension at every profile launch. Installs/edits are
-// gated to ADMIN+ since an extension injected into every profile is high-impact;
-// listing is open so the page renders for everyone who can see it.
-// ---------------------------------------------------------------------------
+// ---- Team extensions ----
+// Chrome Web Store .crx files unzipped locally; global ones join --load-extension at every launch.
+// Installs and edits need ADMIN+ since they reach every profile; listing is open.
 function serializeExtension(e) {
   return {
     id: e.id,
@@ -7757,8 +7232,7 @@ async function installExtensionFromId(payload) {
   const existing = await db.extension.findUnique({ where: { chromeId } });
   if (existing) throw new Error('That extension is already in your Team Repository.');
 
-  // Download + unzip the .crx and persist the record (throws a friendly message
-  // on any failure). New manual installs default to enabled.
+  // Throws a friendly message on any download or unzip failure; manual installs default to enabled.
   const created = await extensionManager.installById(chromeId, { isGlobal: true });
   return serializeExtension(created);
 }
@@ -7787,14 +7261,9 @@ async function toggleExtensionGlobal(payload) {
   return serializeExtension(updated);
 }
 
-// ---------------------------------------------------------------------------
-// Identity Data Vault - personas/identities for the Smart Autofill engine.
-// A workspace-global vault of demo registration identities. Each persona tracks
-// which domains it has already been used on (`usedOnUrls`, a JSON array of
-// hostnames) so the in-page autofill widget stops offering it on those sites.
-// Passwords are stored as a plaintext column (the autofill engine must type them
-// verbatim); the optional whole-DB at-rest encryption covers them at rest.
-// ---------------------------------------------------------------------------
+// ---- Identity Data Vault (personas for Smart Autofill) ----
+// usedOnUrls lists the hosts a persona was used on, so the widget stops offering it there. Passwords
+// are plaintext because autofill types them verbatim; optional whole-DB encryption covers them at rest.
 
 // Persona fields the vault accepts from the client, in form order. `id`,
 // `usedOnUrls`, and the timestamps are managed by the DB / handlers.
@@ -7874,10 +7343,9 @@ function serializePersona(p) {
   };
 }
 
-// Bulk-insert an already-mapped array of personas (the Excel/CSV reading and
-// column-mapping happen in the renderer; this handler just persists the result).
+// Persists personas already mapped in the renderer (it reads the file and maps the columns).
 async function importPersonas(payload) {
-  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
+  await requirePermission('vault.manage');
   const input = requireObject(payload);
   const list = Array.isArray(input.personas) ? input.personas : [];
   if (list.length === 0) throw new Error('No personas were provided to import.');
@@ -7888,34 +7356,28 @@ async function importPersonas(payload) {
 }
 
 async function createPersonaManual(payload) {
-  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
+  await requirePermission('vault.manage');
   const data = sanitizePersonaInput(payload);
   const created = await getPrisma().personaData.create({ data });
   return serializePersona(created);
 }
 
 async function getAllPersonas() {
-  await requirePermission('vault.manage'); // audit: returns plaintext passwords; owner-only
+  await requirePermission('vault.manage'); // returns plaintext passwords
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
   return { personas: rows.map(serializePersona) };
 }
 
-// Password-free projection for the autofill bridge / URL-availability path. The
-// plaintext password (audit C2) must NEVER leave the main process in a list
-// payload - it is resolved one persona at a time, server-side and origin-scoped,
-// by getPersonaSecretById at fill time. Keeps the non-secret fields the widget
-// fills plus a `hasPassword` flag so the widget knows whether to request the secret.
+// Password-free projection for list payloads: the plaintext password never leaves main in a list.
+// getPersonaSecretById resolves it per persona at fill time; `hasPassword` tells the widget to ask.
 function toPublicPersona(p) {
   if (!p || typeof p !== 'object') return p;
   const { password, ...rest } = p;
   return { ...rest, hasPassword: Boolean(password) };
 }
 
-// Return only personas not yet used on this SITE. usedOnUrls keeps the exact host
-// it was used on, but the match is by site (registrable domain): an identity used on
-// learn.example.com is used on example.com too, so a signup that moves between
-// subdomains keeps the same identity offered on every step and never offers a
-// used one again.
+// Personas not yet used on this site (registrable domain): one used on learn.example.com counts as
+// used on example.com, so a used identity is never offered again on any subdomain.
 async function getAvailablePersonasForUrl(payload) {
   const input = requireObject(payload);
   const host = normalizeHostname(input.url ?? input.hostname);
@@ -7923,15 +7385,12 @@ async function getAvailablePersonasForUrl(payload) {
   const site = siteKeyOf(host) || host;
   const rows = await getPrisma().personaData.findMany({ orderBy: { createdAt: 'desc' } });
   const available = rows.filter((p) => !parseUsedOnUrls(p.usedOnUrls).some((h) => h === host || siteKeyOf(h) === site));
-  // audit C2: never ship the plaintext password in a list payload - strip it here
-  // so the Chromium bridge, the Firefox loopback bridge, AND the renderer channel
-  // are all password-free at the source.
+  // Strip the password at the source, so the Chromium bridge, the Firefox bridge and the renderer
+  // channel are all password-free.
   return { hostname: host, personas: available.map((p) => toPublicPersona(serializePersona(p))) };
 }
 
-// Origin-scoped secret resolution for the autofill bridges (audit C2 bypass): a
-// page/widget may only obtain a persona's password if that persona is actually
-// OFFERED for the committed origin (i.e. present in getAvailablePersonasForUrl),
+// A page may get a persona's password only if that persona is offered for the committed origin,
 // never for an arbitrary or guessed id. Returns { password } or null.
 async function getPersonaSecretForUrl(id, url) {
   const pid = optionalString(id);
@@ -7944,20 +7403,16 @@ async function getPersonaSecretForUrl(id, url) {
   return getPersonaSecretById(pid);
 }
 
-// audit E3: the autofill bridges (Firefox loopback + Chromium isolated world) serve
-// vault data only while the workspace is unlocked and someone is signed in - the
-// same rule authGate applies to renderer IPC (single-user mode, no members, counts
-// as the Owner). ipcAuthState fails closed on a DB error.
+// The autofill bridges serve vault data only while the workspace is unlocked and someone is signed
+// in, as authGate requires for renderer IPC (no members counts as the Owner). Fails closed on DB error.
 async function personaVaultAvailable() {
   const s = await ipcAuthState();
   if (s.vaultLocked) return false;
   return Boolean(s.signedIn) || !(Number(s.memberCount) > 0);
 }
 
-// Server-side ONLY: resolve a persona's plaintext password by id for the trusted
-// CDP autofill bridge. Never exposed as an IPC channel and never returned to the
-// renderer or page - the value is typed into the target field in the main process
-// (audit C2: passwords must not cross into page JS via the list payload).
+// Server-side only: resolves a persona's password for the trusted CDP autofill bridge, which types
+// it in main. Never an IPC channel, never returned to the renderer or page.
 async function getPersonaSecretById(id) {
   const pid = optionalString(id);
   if (!pid) return null;
@@ -7983,7 +7438,7 @@ async function markPersonaUsed(payload) {
 // Reset usedOnUrls to "[]" for specific personas ({ ids }) or all ({ all: true }),
 // making them available on every domain again.
 async function clearPersonaUsed(payload) {
-  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
+  await requirePermission('vault.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   if (input.all === true) {
@@ -7998,7 +7453,7 @@ async function clearPersonaUsed(payload) {
 
 // Delete specific personas ({ ids }) or clear the whole vault ({ all: true }).
 async function deletePersonas(payload) {
-  await requirePermission('vault.manage'); // audit: could wipe the whole vault ungated
+  await requirePermission('vault.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   if (input.all === true) {
@@ -8011,9 +7466,8 @@ async function deletePersonas(payload) {
   return { deleted: result.count };
 }
 
-// Build an update patch: only the keys actually present in the input (trimmed).
-// Unlike sanitizePersonaInput it never injects '' for an absent required field, so
-// editing one field leaves the others untouched.
+// Update patch: only keys present in the input. Unlike sanitizePersonaInput it never fills '' for
+// an absent required field, so editing one field leaves the rest alone.
 function sanitizePersonaPatch(raw) {
   const input = requireObject(raw, 'persona');
   const data = {};
@@ -8025,7 +7479,7 @@ function sanitizePersonaPatch(raw) {
 }
 
 async function updatePersona(payload) {
-  await requirePermission('vault.manage'); // audit: Identity Vault mutations were ungated
+  await requirePermission('vault.manage');
   const input = requireObject(payload);
   const id = requiredString(input.id, 'Persona id');
   const data = sanitizePersonaPatch(input);
@@ -8039,11 +7493,8 @@ async function updatePersona(payload) {
   return serializePersona(updated);
 }
 
-// Open a native file dialog, parse the chosen workbook/CSV in the main process
-// (reusing the xlsx-backed importParser, so the renderer never bundles xlsx), and
-// return the raw headers + row objects for the column-mapping step. The renderer
-// maps columns to fields and calls personas:import-batch with the result. Capped at
-// parseDataRows' 1000-row limit per import.
+// Parses the chosen workbook or CSV in main (the renderer never bundles xlsx) and returns headers
+// and rows for column mapping, capped at parseDataRows' 1000-row limit.
 async function previewPersonaFile() {
   const selection = await dialog.showOpenDialog({
     title: 'Select a spreadsheet of identities to import',
@@ -8134,9 +7585,7 @@ async function resumeBrowserDownload(payload) {
   return { started: true, version: entry.version, state: entry.state };
 }
 
-// Anti-detect engine (fingerprint-chromium) status + one-shot fetch.
-// Needed for the PACKAGED build: dev resolves the binary from the repo, but the installer
-// ships without it, so the user fetches it once from here.
+// fingerprint-chromium status and one-shot fetch: the installer ships without the binary.
 async function antidetectEngineStatus() {
   return browserDownloader.getFpChromiumStatus();
 }
@@ -8183,10 +7632,7 @@ async function getDashboardStats() {
   const member = await getActiveMember();
   const unrestricted = !member || member.role === 'SUPER_ADMIN';
 
-  // Scope every count to what the viewer is allowed to see. Super Admin (and
-  // single-user mode) sees the whole workspace; an owner sees their own tree
-  // (their admins/managers/operators); an admin sees only their own subtree and
-  // what's assigned to them - never the owner's. Mirrors listProfiles/listProxies.
+  // Scope every count to what the viewer may see, mirroring listProfiles/listProxies.
   const profileWhere = await scopedProfileWhere({ deletedAt: null });
   const proxyWhere = await scopedProxyWhere(undefined);
 
@@ -8209,15 +7655,12 @@ async function getDashboardStats() {
   return { totalProfiles, activeSessions, totalProxies, totalGroups };
 }
 
-// ===================== Members, roles & vault (app lock) =====================
+// ---- Members, roles and vault (app lock) ----
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
 const VALID_ROLES = ['OPERATOR', 'MANAGER', 'ADMIN', 'OWNER']; // SUPER_ADMIN is virtual, never a DB row
 
-// Minimum role rank required for each gated action.
-// Action -> minimum role rank, derived from the single-source capability catalog in
-// permissions.js. The original six gated actions keep their exact ranks; the catalog
-// adds more (launch/create/edit/export profiles, proxies.manage/reveal, automation.run)
-// whose baselines preserve prior behavior, so granularity comes from per-member revokes.
+// Action -> minimum role rank, from the capability catalog in permissions.js; finer control comes
+// from per-member revokes.
 const PERMISSIONS = permissions.ACTION_MIN_RANK;
 
 function rankOf(role) { return ROLE_RANK[String(role || '').toUpperCase()] || 0; }
@@ -8297,9 +7740,8 @@ function clampPermissions(requested, granterPerms, childRole) {
   const features = {};
   for (const k of permissions.FEATURE_KEYS) features[k] = Boolean(rf[k]) && (gf[k] !== false);
   out.features = features;
-  // Per-action overrides (restrict-only): keep only known catalog keys, coerce to
-  // boolean, and never grant an action the granter itself lacks. We persist only the
-  // keys the admin explicitly set; effectivePermissions fills the rest from the role.
+  // Per-action overrides only restrict: keep known catalog keys as booleans, never grant what the
+  // granter lacks, and store only explicit keys (effectivePermissions fills the rest from the role).
   const reqActions = (requested && requested.actions && typeof requested.actions === 'object') ? requested.actions : null;
   if (reqActions) {
     const gActions = granterPerms.actions || {};
@@ -8381,9 +7823,7 @@ async function requirePermission(action) {
   }
 }
 
-// Owner / Super Admin only. Single-user mode (no active member) is treated as
-// the owner, consistent with the rest of the app's gating (e.g. the developer
-// API and IP-provider settings).
+// Owner or Super Admin only; single-user mode counts as the owner.
 async function requireOwnerOrSuper(action = 'perform this action') {
   const member = await getActiveMember();
   if (!member) return; // single-user mode == owner
@@ -8397,9 +7837,8 @@ async function requireOwnerOrSuper(action = 'perform this action') {
   }
 }
 
-// Gate for buying / renewing a subscription. Owner-or-Super (or single-user),
-// but - unlike requireOwnerOrSuper - a BANNED owner is allowed through so they
-// can pay to restore their own access. Sub-members can never drive checkout.
+// Subscription checkout: Owner or Super Admin (or single-user), and unlike requireOwnerOrSuper a
+// banned owner passes so they can pay to restore access.
 async function requirePurchaser(action = 'purchase a subscription') {
   const member = await getActiveMember();
   if (!member) return; // single-user mode == owner
@@ -8410,9 +7849,7 @@ async function requirePurchaser(action = 'purchase a subscription') {
   }
 }
 
-// Static per-action capability catalog for the Members UI's action toggles
-// (single source of truth = permissions.js). Ungated metadata; editing a member's
-// actions is still gated by members.manage in updateMemberPermissions.
+// Ungated catalog for the Members UI toggles; editing a member's actions still needs members.manage.
 async function getPermissionCatalog() {
   return { actions: permissions.ACTION_CATALOG };
 }
@@ -8513,9 +7950,8 @@ async function listMembers() {
     ownedProxies: ownedProxies[m.id] || 0,
     childCounts: childCounts[m.id] || { ADMIN: 0, MANAGER: 0, OPERATOR: 0, total: 0 },
     allocation: allocationFor(m),
-    // Only a signed-in viewer sees pending invite codes. member:list is also called
-    // before sign-in (the Gate's member picker), and a code read there could be redeemed
-    // with member:accept-invite to sign in as that invitee without any credential.
+    // Only a signed-in viewer sees pending invite codes: member:list also runs before sign-in, and a
+    // code read there could be redeemed via member:accept-invite with no credential.
     inviteCode: viewer && m.inviteStatus === 'pending' ? m.inviteCode : null,
     workspaceProfiles: totalProfiles,
     workspaceProxies: totalProxies,
@@ -8656,15 +8092,9 @@ async function memberLogin(payload) {
   return serializeMember(member, { isCurrent: true });
 }
 
-// Sign the active member out: drop the in-memory id AND clear the persisted
-// pointer so a reload lands on the login screen (Gate.jsx) rather than silently
-// re-activating the last member.
-// audit 2 Nov 2026: signing out now also LOCKS the workspace when a workspace password
-// is set. It used to leave the vault unlocked, and with nobody signed in the member
-// picker opened password-less identities freely - the registered Owner has no login
-// password of its own (its credential IS the workspace password), so any team member
-// could sign in, sign out, click the Owner and become Owner. After sign-out the next
-// person must enter the workspace password or sign in with their own team login.
+// Signs out: clears the in-memory and persisted member id so a reload lands on the login screen, and
+// locks the workspace when it has a password. The Owner's credential is the workspace password, so
+// an unlocked vault would let anyone pick the Owner from the member picker.
 async function memberLogout() {
   await logAudit('member.logout'); // log while currentMemberId is still the departing member
   currentMemberId = null;
@@ -8682,12 +8112,9 @@ async function memberLogout() {
   return { ok: true };
 }
 
-// ---------------------------------------------------------------------------
-// Self-service account settings (the active member editing their OWN profile).
-// Non-sensitive fields (name / avatar / color) save directly; sensitive fields
-// (email / password) go through an OTP confirmed against the member's CURRENT
-// verified email - see requestMemberChange / commitMemberChange.
-// ---------------------------------------------------------------------------
+// ---- Self-service account settings ----
+// Name, avatar and color save directly; email and password need an OTP sent to the member's current
+// verified email (requestMemberChange, commitMemberChange).
 const ACCOUNT_EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // The active, real (DB-backed) member, or a thrown FORBIDDEN for single-user /
@@ -8726,9 +8153,8 @@ async function updateOwnProfile(payload) {
   return serializeMember(updated, { isCurrent: true });
 }
 
-// Step 1 of a SENSITIVE change: validate + stash the requested change and email a
-// 6-digit code to the member's CURRENT verified email (proving ownership before
-// anything is committed). The change lives only in the scoped OTP record.
+// Step 1 of a sensitive change: validate and stash it in the scoped OTP record, then email a 6-digit
+// code to the member's current verified email to prove ownership before anything is committed.
 async function requestMemberChange(payload) {
   const input = requireObject(payload);
   const member = await requireSelfEditableMember();
@@ -8764,8 +8190,7 @@ async function requestMemberChange(payload) {
   return { sent: true, sentTo: member.email, devMode: Boolean(res.devMode), devCode: res.devMode ? code : undefined };
 }
 
-// Step 2: verify the code against the scoped record and COMMIT the stashed change
-// to the member row. The code is consumed only on success.
+// Step 2: verify the code, then apply the stashed change. The code is consumed only on success.
 async function commitMemberChange(payload) {
   const input = requireObject(payload);
   const member = await requireSelfEditableMember();
@@ -8789,8 +8214,7 @@ async function commitMemberChange(payload) {
 
   const updated = await getPrisma().member.update({ where: { id: member.id }, data });
 
-  // Keep the OWNER's account-profile email in sync so the login greeting/lookup
-  // (which reads the 'account' setting) stays correct after an email change.
+  // The login greeting and lookup read the 'account' setting, so keep the Owner's email in sync.
   if (data.email && member.role === 'OWNER') {
     const acct = (await readSetting('account', {})) || {};
     await writeSetting('account', { ...acct, email: data.email });
@@ -8800,8 +8224,7 @@ async function commitMemberChange(payload) {
   return { ok: true, member: serializeMember(updated, { isCurrent: true }) };
 }
 
-// Update a member's granted permissions/limits. Only an ancestor (or super admin)
-// may do this, and the grant is clamped to the granter's own permissions.
+// Only an ancestor or the Super Admin may change grants, and they are clamped to the granter's own.
 async function updateMemberPermissions(payload) {
   await requirePermission('members.manage');
   const input = requireObject(payload);
@@ -8817,8 +8240,7 @@ async function updateMemberPermissions(payload) {
     const visible = permissions.visibleMemberIds(all, granter);
     if (!visible.has(id) || id === granter.id) throw new Error('You can only manage members you created.');
   }
-  // Revert to role defaults: clear the stored overrides so effectivePermissions
-  // falls back to the role's built-in defaults.
+  // Clearing the overrides makes effectivePermissions fall back to the role defaults.
   if (input.reset) {
     const reverted = await db.member.update({ where: { id }, data: { permissionsJson: null } });
     await logAudit('member.permissions', { detail: { target: id, name: target.name, reset: true } });
@@ -8831,9 +8253,7 @@ async function updateMemberPermissions(payload) {
   return serializeMember(updated);
 }
 
-// Invite email (mirrors the OTP transport: real send when SMTP is configured,
-// otherwise offline mode and the code is shown in-app).
-// The member name is admin-typed free text; it goes into the HTML body, so escape it.
+// Member names are admin-typed free text that lands in the invite HTML body, so escape them.
 function escapeEmailHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -8907,10 +8327,8 @@ async function setMemberPin(payload) {
   return { ok: true };
 }
 
-// Subtree + rank guard for acting ON another member's record (edit / pin /
-// instructions). Single-user mode and the Super Admin are unrestricted. You may
-// act on yourself (when allowSelf), or on a STRICTLY lower-ranked member inside
-// your visible subtree - mirrors deleteMember's scoping.
+// Allows acting on yourself (allowSelf) or a strictly lower-ranked member in your visible subtree.
+// Single-user mode and the Super Admin are unrestricted.
 async function assertCanManageMember(id, { allowSelf = true } = {}) {
   const actor = await getActiveMember();
   if (!actor || actor.role === 'SUPER_ADMIN') return;
@@ -8938,8 +8356,7 @@ async function deleteMember(payload) {
   const target = await db.member.findUnique({ where: { id } });
   if (!target) throw new Error('Member not found.');
 
-  // Subtree scoping: you may only remove members beneath you, never yourself,
-  // never an equal/higher role. (OWNER removal also keeps the last-owner guard.)
+  // Only members beneath you may be removed, never yourself or an equal or higher role.
   const actor = await getActiveMember();
   if (actor && actor.role !== 'SUPER_ADMIN') {
     if (id === actor.id) throw new Error('You cannot remove yourself.');
@@ -8953,14 +8370,12 @@ async function deleteMember(payload) {
     if (owners <= 1) throw new Error('You cannot remove the last owner.');
   }
 
-  // Re-parent the removed member's direct children up to its own parent so no
-  // subtree is orphaned (keeps everyone reachable by the owner).
+  // Re-parent direct children to the removed member's parent so no subtree is orphaned.
   await db.member.updateMany({ where: { parentMemberId: id }, data: { parentMemberId: target.parentMemberId ?? null } }).catch(() => {});
 
-  // What to do with the member's data (Profiles / Proxies / ProxyGroups):
-  //   'reassign' → move ownership (+ assignment) to another member, or to the actor
-  //   'delete'   → soft-delete their owned profiles to Trash + remove their proxies/groups
-  //   (unset)    → legacy behaviour: unassign + orphan owned profiles (owner→null)
+  // dataAction: 'reassign' moves ownership and assignment to another member (or the actor);
+  // 'delete' trashes owned profiles and removes their proxies and groups;
+  // unset unassigns them and orphans owned profiles (owner -> null).
   const dataAction = String(input.dataAction || '').toLowerCase();
   let reassignedTo = null;
   if (dataAction === 'reassign') {
@@ -8979,16 +8394,13 @@ async function deleteMember(payload) {
       if (!permissions.visibleMemberIds(all, actor).has(toId)) throw new Error('You can only reassign data to members you manage.');
     }
     reassignedTo = toId;
-    // Owned profiles → new owner + assignee; merely-assigned profiles → new assignee.
     await db.profile.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId, assignedMemberId: toId } }).catch(() => {});
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: toId } }).catch(() => {});
     await db.proxy.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
     await db.proxyGroup.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
   } else if (dataAction === 'delete') {
-    // Soft-delete owned profiles (recoverable from Trash; preserves local data dirs)
-    // and remove the member's proxies + proxy groups. Deleting a proxy nulls proxyId
-    // on any profile using it (relation onDelete: SetNull). Assigned-not-owned
-    // profiles are merely unassigned.
+    // Owned profiles go to Trash (recoverable, local data kept); assigned-only ones are unassigned.
+    // Deleting a proxy nulls proxyId on profiles using it (onDelete: SetNull).
     await db.profile.updateMany({ where: { ownerMemberId: id, deletedAt: null }, data: { deletedAt: new Date(), assignedMemberId: null, ownerMemberId: null } }).catch(() => {});
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
     await db.proxy.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
@@ -9019,12 +8431,9 @@ async function switchMember(payload) {
   if (m.status === 'suspended') throw new Error('This member is suspended.');
   if (m.status === 'banned') throw new Error('This member is blocked.');
 
-  // Authorization. The quick-switcher is a convenience WITHIN an authenticated
-  // workspace, not a login. When a real member is already active they may only
-  // switch to members they manage, and may NEVER assume a higher- or equal-rank
-  // identity without that member's own password (prevents an OPERATOR from
-  // becoming the OWNER via DevTools). The boot path (no active actor yet - the
-  // workspace vault was just unlocked) and the Super Admin are unrestricted.
+  // The quick-switcher works inside an authenticated workspace, not as a login: an active member may
+  // only switch to members they manage, never to an equal or higher rank without its password.
+  // The boot path (no active actor yet) and the Super Admin are unrestricted.
   const actor = await getActiveMember();
   const switchingToSelf = actor && Number(actor.id) === Number(id);
   if (actor && actor.role !== 'SUPER_ADMIN' && !switchingToSelf) {
@@ -9039,22 +8448,16 @@ async function switchMember(payload) {
       }
     }
   } else if (!actor) {
-    // audit: with NO active actor (post-logout, or the member picker after a vault
-    // unlock) the whole block above was skipped, so anyone could assume a
-    // password-protected identity (e.g. OWNER) with only an optional PIN. If the
-    // target has a login password, require it - password-less members still switch
-    // freely so the normal boot/picker flow is unchanged.
+    // With no active actor (after logout or a vault unlock) the check above is skipped, so require
+    // the target's login password when it has one; password-less members still switch freely.
     if (m.passwordHash) {
       const pw = String(input.password || '');
       if (!verifySecret(pw, m.passwordSalt, m.passwordHash)) {
         const err = new Error('Enter this member’s password to sign in.'); err.code = 'NEED_PASSWORD'; throw err;
       }
     } else {
-      // audit 2 Nov 2026: a password-less identity (the registered Owner, whose
-      // credential is the workspace password, or a single-user setup) may only be
-      // opened from the picker when the workspace was unlocked WITH the workspace
-      // password - not after a team member's own login. Otherwise the workspace
-      // password itself is required here.
+      // A password-less identity (the registered Owner or a single-user setup) opens from the picker only
+      // when the workspace was unlocked with the workspace password; otherwise that password is required.
       if (m.inviteStatus === 'pending') {
         const err = new Error('This invite has not been accepted yet. Redeem the invite code to set a password first.'); err.code = 'INVITE_PENDING'; throw err;
       }
@@ -9070,7 +8473,7 @@ async function switchMember(payload) {
     }
   }
 
-  // Per-member PIN (a secondary lock) is still honored for everyone.
+  // The per-member PIN is a secondary lock that applies to everyone.
   if (m.pinHash && !verifySecret(String(input.pin || ''), m.pinSalt, m.pinHash)) {
     const err = new Error('Incorrect PIN.'); err.code = 'BAD_PIN'; throw err;
   }
@@ -9080,11 +8483,8 @@ async function switchMember(payload) {
   return serializeMember(m, { isCurrent: true });
 }
 
-// Super Admin - hardcoded source-owner login. Bypasses registration AND the vault,
-// and is granted every permission. There is exactly one, never stored in the DB.
-// Per-install Super Admin credential (replaces the old shared hardcoded password).
-// Stored hashed in Setting['superAdminAuth'] = { identifier, salt, hash }. Set once
-// at first run; no plaintext, no shared secret in the binary.
+// Super Admin: the source owner's login. Bypasses registration and the vault, has every permission.
+// Its per-install credential is stored hashed in Setting['superAdminAuth'] = { identifier, salt, hash }.
 async function readSuperAdminAuth() {
   const a = await readSetting('superAdminAuth', null);
   return (a && a.hash && a.salt) ? a : null;
@@ -9095,8 +8495,7 @@ async function superAdminStatus() {
   return { configured: Boolean(await readSuperAdminAuth()) };
 }
 
-// Create (first run) or change the Super Admin credential. Changing an existing
-// one requires the current password. On success the Super Admin is signed in.
+// Creates or changes the credential (changing needs the current password), then signs in.
 async function superAdminSetup(payload) {
   const input = requireObject(payload);
   const existing = await readSuperAdminAuth();
@@ -9105,25 +8504,21 @@ async function superAdminSetup(payload) {
       const err = new Error('Enter your current Super Admin password to change it.'); err.code = 'BAD_CREDS'; throw err;
     }
   } else {
-    // audit L1: claiming the Super Admin role needs the source owner's certificate
-    // (<userData>/owner.cert for this machine, base build only). Without it anyone
-    // could claim the role on a fresh install and with it the licence exemption.
+    // Claiming Super Admin needs the source owner's certificate (<userData>/owner.cert, base build only);
+    // without it anyone could claim the role, and its licence exemption, on a fresh install.
     if (!(await ownerCertValid())) {
       const err = new Error('The Super Admin role can only be set up on the source owner\'s machine (no valid owner certificate was found). Sign in as the workspace Owner instead.');
       err.code = 'OWNER_CERT_REQUIRED'; throw err;
     }
-    // First-run claim (no Super Admin set yet). audit: a lower-privileged member
-    // who is already signed in could seize the top role here. Allow the claim only
-    // when no member is active (genuine first run / pre-login) or the active member
-    // is the Owner.
+    // A signed-in lower-privileged member must not seize the top role: allow the first-run claim only
+    // when no member is active or the active member is the Owner.
     const actor = await getActiveMember();
     if (actor && actor.role !== 'OWNER' && actor.role !== 'SUPER_ADMIN') {
       const err = new Error('Only the workspace Owner can set up the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
     }
     if (!actor) {
-      // Pre-login claim: only a genuine first run (no members yet) may proceed. If members
-      // already exist the workspace is set up - an unauthenticated caller must NOT be able
-      // to seize Super Admin; require the Owner to sign in first.
+      // Pre-login, only a genuine first run (no members yet) may claim the role; otherwise the Owner
+      // must sign in first.
       const memberCount = await getPrisma().member.count().catch(() => 0);
       if (memberCount > 0) {
         const err = new Error('This workspace is already set up - sign in as the Owner to configure the Super Admin credential.'); err.code = 'FORBIDDEN'; throw err;
@@ -9163,25 +8558,13 @@ async function superLogin(payload) {
   return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - at-rest database encryption + workspace backup/restore
-// (Phase 6). Encrypts the whole SQLite file when the app is closed/locked (Option
-// A envelope-at-rest), keyed by the vault password. Backup-first, reversible, OFF
-// by default. Honest scope: a plaintext working file exists while the app is
-// running + unlocked (Prisma's requirement) - see DbEncryptionSettings.jsx.
-// ---------------------------------------------------------------------------
+// ---- Database encryption at rest + workspace backup/restore ----
+// The SQLite file is encrypted with the vault password while the app is closed or locked. Prisma
+// needs a plaintext working file while the app runs unlocked. Off by default.
 
-// Run once the DB is readable (normal boot when unencrypted, or after a successful
-// db:unlock / workspace restore): restore the saved member session + vault lock
-// state and start the local API if the user enabled it. This is the logic that
-// used to run inline at the end of registerIpcHandlers - extracted so the unlock
-// path can reuse it.
-// ---------------------------------------------------------------------------
-// Starter content - seeded ONCE on first DB-ready so a new workspace isn't empty.
-// A few ready-to-edit automation macros (real runner step shapes) and coherent
-// profile templates (built from the real fingerprint generator). Guarded by a
-// Setting flag: never duplicates, never touches user-created rows.
-// ---------------------------------------------------------------------------
+// ---- Starter content ----
+// Seeded once on first DB-ready so a new workspace is not empty. A Setting flag guards it, so it
+// never duplicates or touches user-created rows.
 const STARTER_MACROS = [
   {
     name: 'Warm & scroll',
@@ -9246,8 +8629,7 @@ const STARTER_MACROS = [
   }
 ];
 
-// Generate a coherent desktop fingerprint for a specific OS (the generator weights
-// OS randomly, so retry until it matches; fall back to any OS after a bounded loop).
+// The generator picks the OS at random, so retry until it matches, then fall back to any OS.
 function starterDesktopFingerprint(targetOs) {
   for (let i = 0; i < 80; i += 1) {
     const fp = generateFingerprint();
@@ -9280,20 +8662,14 @@ async function seedStarters() {
   } catch (e) { /* best-effort - never block startup */ }
 }
 
-// First launch only: kick off background downloads of the newest few Chrome +
-// Firefox builds so a fresh install ships with browsers ready, instead of forcing
-// the user to fetch each one by hand. Fully best-effort:
-//   - idempotent  - the downloaders skip any version already installed
-//   - run-once    - a Setting flag is set only after we actually reach the network,
-//                   so a first launch that is offline simply retries next time
-//   - non-blocking - fired and forgotten; progress shows on the Browsers page
+// First launch only: download the newest few Chrome and Firefox builds in the background.
+// Installed versions are skipped, and the flag is set only once a download starts, so an offline
+// first launch retries on the next boot.
 const FIRST_RUN_BROWSER_COUNT = 3;
 async function maybeSeedBrowsers() {
   try {
     const seeded = await readSetting('firstRunBrowsersSeeded', false);
-    // Fast path: already seeded AND we can see an installed Chrome → nothing to do.
-    // (If the flag was set on a prior boot but NOTHING actually installed - a failed
-    // or partial first run - we fall through and try again, so the seed self-heals.)
+    // If the flag is set but nothing is installed (a failed first run), fall through and retry.
     let anyInstalled = false;
     try { anyInstalled = (listAvailableBrowsers() || []).length > 0; } catch (e) { /* none yet */ }
     if (seeded && anyInstalled) return;
@@ -9321,9 +8697,7 @@ async function maybeSeedBrowsers() {
       }
     } catch (e) { console.warn('[browser-seed] Firefox catalog unavailable:', e && e.message); }
 
-    // Only mark the run as seeded once a download has actually STARTED (or a browser
-    // is already present). If nothing started - offline / empty catalog - leave the
-    // flag unset so the next boot retries instead of silently giving up forever.
+    // Set the flag only once a download has started or a browser exists, so an offline boot retries.
     if (started > 0 || anyInstalled) {
       await writeSetting('firstRunBrowsersSeeded', true).catch(() => {});
       console.log(`[browser-seed] First-run fleet: ${started} download(s) started (latest ${FIRST_RUN_BROWSER_COUNT} Chrome + ${FIRST_RUN_BROWSER_COUNT} Firefox).`);
@@ -9333,13 +8707,9 @@ async function maybeSeedBrowsers() {
   } catch (e) { /* never block startup */ }
 }
 
-// The critical, must-finish-before-the-window-loads slice of afterDbReady: restore
-// the persisted member session (currentMemberId) and the vault-lock state. Kept
-// separate and awaitable (see whenSessionReady) because the renderer's very first
-// members.current() answers INSTANTLY from an as-yet-unrestored `currentMemberId`
-// (getActiveMember short-circuits on null with no DB read), while this cold Setting
-// read is still in flight - so a returning user was dropped onto the member picker
-// on every launch. main.js now blocks window creation on this.
+// Restores the member session and vault lock. main.js awaits it before creating the window, because
+// the renderer's first members.current() answers from currentMemberId without a DB read, and an
+// unrestored session drops a returning user onto the member picker.
 async function restoreSession() {
   try {
     const savedMember = await readSetting('currentMemberId', null);
@@ -9350,9 +8720,8 @@ async function restoreSession() {
   } catch (e) { /* ignore - fall back to a fresh session */ }
 }
 
-// Set to the in-flight restoreSession() promise for this boot so main.js can await
-// it before showing the window. Null until the DB is readable (on the encrypted
-// path the restore happens later, inside db:unlock -> afterDbReady).
+// In-flight restoreSession() promise for main.js to await. Null until the DB is readable; on the
+// encrypted path the restore happens later, in db:unlock -> afterDbReady.
 let sessionRestore = null;
 async function whenSessionReady() { try { await sessionRestore; } catch (e) { /* proceed */ } }
 
@@ -9383,9 +8752,7 @@ async function dbEncryptionStatus() {
   return { ...info, lastBackupAt };
 }
 
-// Pre-Gate unlock. No permission gate (the workspace is not open yet); the .enc's
-// GCM tag is the authenticator. On success the DB is opened + migrated and the
-// saved session restored.
+// No permission gate: the workspace is not open yet, and the .enc GCM tag authenticates the password.
 async function dbUnlock(payload) {
   const input = requireObject(payload);
   const password = String(input.password || '');
@@ -9394,9 +8761,7 @@ async function dbUnlock(payload) {
   await database.unlockEncryptedDb(password); // throws DB_UNLOCK_FAILED / DB_MISSING
   await database.bootstrapDatabase();
   await afterDbReady();
-  // The DB key IS the vault password, and it just decrypted the database, so it is
-  // by definition correct - unlock the workspace vault too, so the user isn't asked
-  // for the same password again at the Gate.
+  // The DB key is the vault password and it just worked, so unlock the vault too instead of asking again.
   try {
     const v = await readVault();
     if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) { vaultLocked = false; vaultUnlockSource = 'vault'; }
@@ -9412,8 +8777,7 @@ async function dbEnableEncryption(payload) {
   const input = requireObject(payload);
   if (!input.confirm) throw new Error('Please confirm you understand that a lost password makes the data unrecoverable.');
   const password = String(input.password || '');
-  // The DB key IS the vault password - require an enabled vault and verify it, so
-  // the same password that unlocks the workspace also unlocks the database.
+  // The DB key is the vault password, so require an enabled vault and verify the password against it.
   const v = await readVault();
   if (!v.enabled || !v.hash) {
     const e = new Error('Set a workspace password (vault) first - database encryption uses it as the key.');
@@ -9478,8 +8842,8 @@ async function workspaceRestore(payload) {
   if (selection.canceled || !selection.filePaths || !selection.filePaths.length) return { cancelled: true };
   const filePath = selection.filePaths[0];
 
-  // GCM-verified decrypt happens BEFORE we touch any live file - a wrong password
-  // or tampered backup throws here and the working DB is never changed.
+  // Decrypt (GCM-verified) before touching any live file, so a wrong password or tampered backup
+  // leaves the working DB unchanged.
   const restored = await profileArchive.restoreWorkspaceArchive(filePath, password);
 
   const { dbPath } = getRuntimeConfig();
@@ -9510,8 +8874,8 @@ async function workspaceRestore(payload) {
   // Success - remove the (plaintext) safety copy so it can't linger on disk.
   await dbCrypto.secureUnlink(safety);
   await afterDbReady();
-  // audit S5: keychain-sealed secrets (enc:v1:, DPAPI) only open for the Windows user
-  // that sealed them. Report the ones this restore could not open so the UI can say so.
+  // Keychain-sealed secrets (enc:v1:, DPAPI) only open for the Windows user that sealed them;
+  // report the ones this restore could not open so the UI can say so.
   let unreadableSecrets = [];
   try { unreadableSecrets = await findUnreadableSealedSecrets(); } catch (e) { unreadableSecrets = []; }
   return { ok: true, exportedAt: restored.exportedAt, unreadableSecrets };
@@ -9541,7 +8905,7 @@ async function findUnreadableSealedSecrets() {
     if (dead(p.apiKey)) lost.push(`IP provider ${p.name || p.id} API key`);
     if (dead(p.secretKey)) lost.push(`IP provider ${p.name || p.id} secret key`);
   }
-  // Proxy passwords are sealed too (audit L11); the client opens them, so ask for the stored values.
+  // Proxy passwords are sealed too; the client opens them, so ask for the stored values.
   const deadProxies = await proxySecrets.listUnreadableProxyPasswords(db).catch(() => []);
   for (const p of deadProxies) lost.push(`proxy ${p.name || p.id} password`);
   return lost;
@@ -9551,15 +8915,11 @@ async function readVault() {
   return readSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
 }
 
-// ---------------------------------------------------------------------------
-// "Keep me signed in on this device" (rememberStore, DPAPI-sealed). Default OFF.
-// The login/unlock handlers call applyRememberChoice() with the verified secret;
-// attemptRememberedUnlock() replays it at boot through the same code paths.
-// ---------------------------------------------------------------------------
+// ---- Keep me signed in (rememberStore, DPAPI-sealed, off by default) ----
+// Login and unlock handlers pass the verified secret to applyRememberChoice();
+// attemptRememberedUnlock() replays it at boot through the same paths.
 
-// Persist (or forget) the auto-login credential based on the user's checkbox.
-// `remember === true`  -> seal the blob ; `remember === false` -> forget ;
-// undefined/absent     -> leave whatever is there untouched.
+// remember: true seals the blob, false forgets it, undefined leaves the stored one untouched.
 function applyRememberChoice(remember, blob) {
   try {
     if (remember === true) rememberStore.write(blob);
@@ -9567,17 +8927,15 @@ function applyRememberChoice(remember, blob) {
   } catch (e) { /* best-effort - never block a successful login */ }
 }
 
-// Replay the remembered credential at startup so the gates open without a prompt.
-// Returns a small status object; clears the blob if it no longer works (e.g. the
-// password was changed elsewhere) so it can't get stuck retrying forever.
+// Opens the gates at startup without a prompt. A blob that no longer works (e.g. the password was
+// changed elsewhere) is cleared so it cannot retry forever.
 async function attemptRememberedUnlock() {
   const blob = rememberStore.read();
   if (!blob) return { attempted: false, unlocked: false };
   try {
     if (blob.kind === 'vault') {
       const password = String(blob.password || '');
-      // 1) If the DB is encrypted-at-rest and still locked, the vault password IS the
-      //    DB key - decrypt + open it first (mirrors dbUnlock).
+      // 1) The vault password is the DB key: open a still-locked encrypted DB first, as dbUnlock does.
       if (database.isDbEncryptionEnabled() && !database.isDbUnlocked()) {
         await database.unlockEncryptedDb(password);
         await database.bootstrapDatabase();
@@ -9610,7 +8968,6 @@ function rememberStatus() {
   return rememberStore.status();
 }
 
-// Explicit "forget this device" from Settings.
 async function forgetRemembered() {
   rememberStore.clear();
   return rememberStore.status();
@@ -9636,21 +8993,16 @@ async function vaultSetPassword(payload) {
   const next = requiredString(input.password, 'Password');
   if (next.length < 4) throw new Error('Password must be at least 4 characters.');
   const { salt, hash } = hashSecret(next);
-  // Re-key the at-rest .enc to the new password BEFORE persisting the new vault
-  // hash. rekeyEncryptedDb throws on failure, so a failed re-key leaves BOTH the
-  // vault hash and the .enc on the OLD password (the old password still unlocks
-  // everything, no lockout). Previously the hash was written first and a swallowed
-  // re-key error left the .enc on the old key while the vault expected the new one,
-  // which locked the user out on the next boot.
+  // Re-key the .enc before saving the new vault hash: rekeyEncryptedDb throws on failure, leaving both
+  // on the old password. Saving the hash first could lock the user out on the next boot.
   if (database.isDbEncryptionEnabled()) {
     await database.rekeyEncryptedDb(next);
   }
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes ?? v.autoLockMinutes) || 0 });
   vaultLocked = false;
   vaultUnlockSource = 'vault';
-  // Keep "stay signed in" working across a password change: re-seal the remembered
-  // vault credential with the new password (otherwise auto-login would fail once and
-  // self-clear). Untouched for super/member remember blobs.
+  // Re-seal a remembered vault credential with the new password so auto-login keeps working.
+  // Super and member blobs are left alone.
   try {
     const remembered = rememberStore.read();
     if (remembered && remembered.kind === 'vault') rememberStore.write({ kind: 'vault', password: next });
@@ -9680,9 +9032,8 @@ async function vaultLock() {
 
 async function vaultDisable(payload) {
   await requirePermission('vault.manage');
-  // Database encryption is keyed by the vault password - removing the vault would
-  // strand the encrypted DB with no key. Force the user to turn off DB encryption
-  // first (which decrypts back to plaintext).
+  // DB encryption is keyed by the vault password, so removing the vault would strand the encrypted DB;
+  // turning encryption off first decrypts it.
   if (database.isDbEncryptionEnabled()) {
     const e = new Error('Turn off database encryption first - it uses your workspace password as its key.');
     e.code = 'DB_ENCRYPTION_ON';
@@ -9737,15 +9088,10 @@ async function accountSave(payload) {
   return accountGet();
 }
 
-// OTP delivery seam. A local-first app has no mail transport, so until a real
-// provider (SMTP / Resend / a backend endpoint) is wired in here, we run in
-// dev mode and return the code to the caller so the flow stays testable.
 const nodemailer = require('nodemailer');
 
-// Resolve SMTP settings from the DB first (configurable in Settings → Email),
-// falling back to environment variables. Email is OPTIONAL: if nothing is
-// configured we run in offline mode and surface the code in-app so that
-// registration is never blocked on a fresh install.
+// SMTP settings come from the DB (Settings > Email), then environment variables. Email is optional:
+// without it the code is shown in-app so registration never blocks on a fresh install.
 async function resolveSmtpConfig() {
   const s = (await readSetting('smtp', null)) || {};
   const host = s.host || process.env.SMTP_HOST || '';
@@ -9796,7 +9142,7 @@ async function deliverOtp(email, code) {
   }
 }
 
-// Returns config WITHOUT the password (never sent to the renderer).
+// The password is never sent to the renderer.
 async function getEmailConfig() {
   const cfg = await resolveSmtpConfig();
   return {
@@ -9811,8 +9157,8 @@ async function getEmailConfig() {
 }
 
 async function setEmailConfig(payload) {
-  // audit S4: an Admin (members.manage) could point host at their own server, keep the
-  // stored password and fire a test email to receive it. SMTP config is Owner-only now.
+  // Owner-only: an Admin could point the host at their own server and send a test email to capture
+  // the stored password.
   await requireOwnerOrSuper('change the email (SMTP) settings');
   const input = requireObject(payload);
   const prev = (await readSetting('smtp', {})) || {};
@@ -9837,7 +9183,6 @@ async function setEmailConfig(payload) {
   return getEmailConfig();
 }
 
-// Sends a real test email to the given address using the saved/env config.
 async function testEmail(payload) {
   await requirePermission('members.manage');
   const input = requireObject(payload);
@@ -9857,23 +9202,15 @@ async function testEmail(payload) {
   return { sent: true, devMode: false };
 }
 
-// OTP records are scoped by purpose + identity so concurrent flows can never
-// clobber one another. The old single global 'otp' key meant a second request
-// (a different email registering, or an in-app email/password change) silently
-// overwrote the first - a race and a cross-flow security collision. Registration
-// has no member yet, so it is keyed by the email being verified; in-app account
-// changes (see requestMemberChange) are keyed by the active member id.
+// OTP records are keyed by purpose + identity so concurrent flows cannot overwrite each other:
+// registration by the email being verified, account changes (requestMemberChange) by member id.
 function otpKey(scope) {
   return `otp:${String(scope || '').toLowerCase()}`;
 }
 
-// audit C1: the master-account bootstrap (OTP send + register) creates the very
-// first OWNER and sets the vault password. It must run ONLY at genuine first run.
-// Once any member exists - or a vault is already enabled - refuse: otherwise a
-// logged-in member (or anyone with renderer/devtools access) could self-serve an
-// OTP, register a NEW owner, and OVERWRITE the vault password to seize the whole
-// workspace and lock everyone else out. Additional owners are added later through
-// the authenticated member-management flow, never through this bootstrap.
+// The master-account bootstrap creates the first Owner and sets the vault password, so it runs only
+// at first run. Otherwise anyone with renderer access could register a new Owner and overwrite the
+// vault password. Later owners come through member management.
 async function assertFirstRunSetup() {
   let memberCount = 0;
   try { memberCount = await getPrisma().member.count(); } catch (e) { memberCount = 0; }
@@ -9914,13 +9251,10 @@ async function accountVerifyOtp(payload) {
   return { verified: true };
 }
 
-// Atomic master-account registration. Verifies the OTP, creates the OWNER member,
-// sets the vault password and saves the account profile in one privileged step,
-// and only consumes the OTP once everything has succeeded. This removes the
-// fragile multi-call sequence in the renderer that could leave the flow
-// half-finished (OTP already spent, vault not set, member created as OPERATOR).
+// Verifies the OTP, creates the Owner, sets the vault password and saves the account profile in one
+// privileged step; the OTP is consumed only once everything succeeds.
 async function accountRegister(payload) {
-  await assertFirstRunSetup(); // audit C1: first-run bootstrap only - never re-register / clobber the vault
+  await assertFirstRunSetup(); // first run only; never re-register or overwrite the vault
   const input = requireObject(payload);
   const firstName = requiredString(input.firstName, 'First name');
   const lastName = requiredString(input.lastName, 'Last name');
@@ -9930,7 +9264,7 @@ async function accountRegister(payload) {
   const code = String(input.code || '').trim();
   if (password.length < 8) throw new Error('Password must be at least 8 characters.');
 
-  // 1) Verify the OTP WITHOUT clearing it yet.
+  // 1) Verify the OTP without clearing it yet.
   const key = otpKey(`reg:${email}`);
   const rec = await readSetting(key, null);
   if (!rec || !rec.hash) throw new Error('No verification code was requested.');
@@ -9960,7 +9294,7 @@ async function accountRegister(payload) {
   currentMemberId = owner.id;
   await writeSetting('currentMemberId', owner.id).catch(() => {});
 
-  // 4) Set the vault password (we are now OWNER, so vault.manage is allowed).
+  // 4) Set the vault password (the Owner is now active, so vault.manage passes).
   const { salt, hash } = hashSecret(password);
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes) || 0 });
   vaultLocked = false;
@@ -9991,10 +9325,8 @@ async function setMemberInstructions(payload) {
   return { id, instructions: text };
 }
 
-// Workspace-wide activity feed: the honest local answer to "what is happening /
-// who is doing what". Joins ActivityLog with member names and profile titles.
-// Note: this is per-install only. Cross-machine metrics (e.g. total downloads
-// across all users) are impossible without a central backend.
+// Workspace-wide activity feed: ActivityLog joined with member names and profile titles.
+// Per-install only; cross-machine metrics would need a central backend.
 async function getTeamActivity(payload) {
   await requirePermission('members.manage');
   const input = (payload && typeof payload === 'object') ? payload : {};
@@ -10021,8 +9353,8 @@ async function getTeamActivity(payload) {
   }));
 }
 
-// Handoff: reassign one or more profiles to a member (null = unassign) and write
-// a per-profile audit row. Gated to ADMIN+ and scoped to members the actor can see.
+// Reassigns profiles to a member (null = unassign) and logs each one. Gated to Admin and above
+// and scoped to members the actor can see.
 async function reassignProfiles(payload) {
   await requirePermission('members.manage');
   const input = requireObject(payload);
@@ -10063,7 +9395,7 @@ async function reassignProfiles(payload) {
 // Super Admin (source owner) is exempt; single-user mode is unrestricted.
 async function getSeatUsage() {
   const m = await getActiveMember();
-  if (await isCertifiedSuperAdmin(m)) { // audit L1
+  if (await isCertifiedSuperAdmin(m)) {
     return { used: 0, total: -1, type: 'source-owner', remaining: -1, full: false, exempt: true };
   }
   const db = getPrisma();
@@ -10073,11 +9405,11 @@ async function getSeatUsage() {
   return teamPolicy.seatUsage(members, ownerId, lic);
 }
 
-// Throw when the owner-tree has no free seats. Called from createMember (never on
-// the very first OWNER bootstrap). Super Admin / single-user mode are unrestricted.
+// Called from createMember, never on the first-Owner bootstrap. Super Admin and single-user mode
+// are unrestricted.
 async function assertSeatAvailable() {
   const m = await getActiveMember();
-  if (!m || await isCertifiedSuperAdmin(m)) return; // audit L1: seat exemption needs the certificate
+  if (!m || await isCertifiedSuperAdmin(m)) return; // the seat exemption needs the owner certificate
   const db = getPrisma();
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
@@ -10139,20 +9471,12 @@ async function exportTeamActivity(payload) {
   return { ok: true, path: save.filePath, count: rows.length, format: isJson ? 'json' : 'csv' };
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - End-to-End encrypted cloud sync  [needs backend]
-//
-// Wires the existing CloudSyncEngine (tested crypto envelope) to a concrete REST
-// object-store transport (src/main/syncTransport.js - an EXTERNAL service you
-// host). Everything is encrypted LOCALLY before upload (zero-knowledge): the
-// bucket only ever stores opaque envelopes. The sync passphrase is held in memory
-// for the session only and never persisted in plaintext (the vault keeps only a
-// hash, so we can't reuse it). With no endpoint configured, status reports
-// disabled and nothing pretends to sync.
-// ---------------------------------------------------------------------------
+// ---- End-to-end encrypted cloud sync ----
+// Profiles are encrypted locally before upload to the REST object store (syncTransport.js), so the
+// bucket holds only opaque envelopes. The passphrase stays in memory for the session only.
 
-// Profile fields that define identity/fingerprint and are safe to sync. NOT
-// synced: id/dataDirName/ownership/assignment/proxy bindings (all install-local).
+// Identity/fingerprint fields that are safe to sync. Install-local fields (id, dataDirName,
+// ownership, assignment, proxy bindings) are not synced.
 const SYNC_SCALAR_FIELDS = [
   'browserCore', 'browserBrand', 'browserVersion', 'os', 'osVersion', 'userAgent', 'startupUrls',
   'webrtc', 'timezoneType', 'timezoneCustom', 'locationType', 'locationLat', 'locationLng', 'locationAcc',
@@ -10163,7 +9487,7 @@ const SYNC_SCALAR_FIELDS = [
   'cpuType', 'cpuCores', 'ramType', 'ramGb', 'twoFactorSeed', 'notes'
 ];
 
-// Session-scoped sync state. The passphrase-derived key lives ONLY here.
+// Session-scoped sync state; the passphrase-derived key lives only here.
 let cloudSyncEngine = null;     // CloudSyncEngine (transport + derived key) when unlocked
 let cloudSyncUnlocked = false;
 let cloudSyncLastError = null;
@@ -10177,7 +9501,7 @@ async function readCloudSyncConfig() {
     sealedToken: c.sealedToken || '',
     passphraseSalt: c.passphraseSalt || null,
     passphraseVerifier: c.passphraseVerifier || null,
-    // Random per-workspace salt for the E2E master key (audit: NOT the namespace).
+    // Random per-workspace salt for the E2E master key, never the namespace.
     workspaceSalt: c.workspaceSalt || null
   };
 }
@@ -10197,11 +9521,9 @@ async function unlockCloudSync(passphrase) {
   const token = secretStore.open(c.sealedToken);
   const transport = syncTransport.createTransport({ baseUrl: c.baseUrl, token });
   const engine = new CloudSyncEngine({ transport, namespace: c.namespace });
-  // Derive the E2E master key from a RANDOM per-workspace salt (audit: never the
-  // public namespace/bucket name). The salt must be IDENTICAL on every device or
-  // their ciphertext is mutually unreadable, so a bucket-held salt is authoritative
-  // and ours is uploaded once when the bucket has none. This is best-effort and
-  // falls back to the local salt on a transport error (see resolveWorkspaceSalt).
+  // The E2E key comes from a random per-workspace salt, never the public namespace. Every device needs
+  // the same salt, so a bucket-held salt wins and ours is uploaded when the bucket has none;
+  // a transport error falls back to the local salt (see resolveWorkspaceSalt).
   const workspaceSalt = await resolveWorkspaceSalt(
     transport,
     c.namespace,
@@ -10222,8 +9544,8 @@ async function syncConfigure(payload) {
 
   const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
   const namespace = (input.namespace !== undefined ? String(input.namespace || '').trim() : prev.namespace) || 'softglaze';
-  // audit: the namespace is interpolated into the bucket object key - keep it to a
-  // single safe path segment so it can never escape its prefix (see syncTransport._url).
+  // The namespace goes into the bucket object key, so keep it to one safe path segment that cannot
+  // escape its prefix (see syncTransport._url).
   if (!/^[A-Za-z0-9._-]+$/.test(namespace) || namespace === '.' || namespace === '..') {
     throw new Error('Namespace may only contain letters, numbers, dot, underscore, and hyphen - no path separators.');
   }
@@ -10234,8 +9556,7 @@ async function syncConfigure(payload) {
   let passphraseVerifier = prev.passphraseVerifier;
   const passphrase = (input.passphrase !== undefined && input.passphrase !== '') ? String(input.passphrase) : null;
   if (passphrase) {
-    // First-time set or an intentional re-key only when it differs from the stored
-    // one; entering the SAME passphrase just unlocks (verifier preserved).
+    // Re-key only when the passphrase differs; the same passphrase just unlocks and keeps the verifier.
     if (!passphraseVerifier || !verifySecret(passphrase, passphraseSalt, passphraseVerifier)) {
       const h = hashSecret(passphrase); passphraseSalt = h.salt; passphraseVerifier = h.hash;
     }
@@ -10245,8 +9566,7 @@ async function syncConfigure(payload) {
   if (enabled && !baseUrl) throw new Error('Enter the sync endpoint URL before enabling sync.');
   if (enabled && !passphraseVerifier) throw new Error('Set a sync passphrase before enabling sync.');
 
-  // Random per-workspace salt for the E2E master key (audit: not the namespace).
-  // Generated once and preserved thereafter so the derived key stays stable.
+  // Random per-workspace salt, never the namespace; generated once and kept so the derived key is stable.
   const workspaceSalt = prev.workspaceSalt || crypto.randomBytes(16).toString('base64');
   await writeSetting('cloudSync', { enabled, baseUrl, namespace, sealedToken, passphraseSalt, passphraseVerifier, workspaceSalt });
 
@@ -10286,7 +9606,7 @@ async function syncStatus() {
   };
 }
 
-// --- transport envelope helpers (encrypt locally, store opaque) -------------
+// ---- Transport envelope helpers (encrypt locally, store opaque) ----
 async function syncPut(engine, key, obj) {
   const env = engine.encryptPayload(obj);
   await engine.transport.put(`${engine.namespace}/${key}`, Buffer.from(JSON.stringify(env)));
@@ -10315,7 +9635,7 @@ async function pullSyncIndex(engine) {
   return (payload && payload.profiles && typeof payload.profiles === 'object') ? payload.profiles : {};
 }
 
-// --- profile <-> sync state mapping -----------------------------------------
+// ---- Profile <-> sync state mapping ----
 function pickSyncFingerprint(profile) {
   const fp = { title: profile.title };
   for (const k of SYNC_SCALAR_FIELDS) fp[k] = profile[k];
@@ -10331,8 +9651,7 @@ async function gatherProfileSyncState(profile) {
   return { cookies, localStorage: {}, fingerprint: pickSyncFingerprint(profile) };
 }
 
-// Apply a pulled remote state onto an EXISTING local profile (build the update
-// data explicitly so we never clobber install-local fields with defaults).
+// Build the update data explicitly so install-local fields are never overwritten with defaults.
 async function applyRemoteToProfile(db, profile, remoteState) {
   const fp = (remoteState && remoteState.fingerprint) || {};
   const data = {};
@@ -10351,8 +9670,7 @@ async function applyRemoteToProfile(db, profile, remoteState) {
   await logActivity(db, profile.id, 'sync', 'pulled from cloud').catch(() => {});
 }
 
-// Create a brand-new local profile from a pulled remote state (convergence: the
-// second install gains profiles the first one had).
+// Convergence: a second install gains the profiles the first one had.
 async function createProfileFromRemote(remoteState) {
   const fp = (remoteState && remoteState.fingerprint) || {};
   const payload = {};
@@ -10461,21 +9779,14 @@ async function pushSyncIndex(engine, profiles) {
   await syncPut(engine, 'index.sgz-env', { v: 1, profiles });
 }
 
-// ---------------------------------------------------------------------------
-// Licensing / billing (local-first). Each OWNER tree has a licence: a 7-day free
-// trial that, when it lapses, WARNS but does not block (per product choice).
-// Payment is via Cryptomus using the SUPER ADMIN's merchant credentials; a paid
-// invoice extends the licence 30 days and issues a self-verifying purchase code.
-// ---------------------------------------------------------------------------
+// ---- Licensing / billing (local-first) ----
+// Each Owner tree has a licence. Payment is via Cryptomus with the Super Admin's merchant credentials.
 const TRIAL_DAYS = 7;
 const GRACE_DAYS = 3; // after the trial/paid term lapses: app still works but nags, then bans
 const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months: 1, days: 30, label: '$5 / month' });
 
-// Purchasable plans catalog - the BUILT-IN DEFAULTS. The live catalog is persisted
-// in Setting['billingPlans'] and fully editable by the Super Admin (price, name,
-// tagline, features, highlight, active) plus brand-new packages. `pro` mirrors PLAN
-// (the app's historical $5/month price). When no override is saved, these defaults
-// are used verbatim; both are billed monthly via the same checkout.
+// Built-in default plans. The live catalog lives in Setting['billingPlans']; the Super Admin can edit
+// it and add packages. These defaults apply when no override is saved. `pro` mirrors PLAN.
 const DEFAULT_BILLING_PLANS = Object.freeze([
   Object.freeze({
     id: 'free-trial',
@@ -10541,10 +9852,8 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
   })
 ]);
 
-// Coerce any raw plan record (a saved override or a default) into the canonical
-// shape the renderer + checkout expect. Tolerant of partial/edited input.
-// Coerce a money amount to a non-negative numeric string ("0" on garbage), max
-// 2 decimals - so a malformed price can never reach checkout or an invoice.
+// Non-negative numeric string with at most 2 decimals ("0" on garbage), so a malformed price
+// never reaches checkout or an invoice.
 function sanitizeAmount(value) {
   const n = Number.parseFloat(value);
   if (!Number.isFinite(n) || n < 0) return '0';
@@ -10575,26 +9884,23 @@ function normalizePlan(raw, idx) {
   };
 }
 
-// The LIVE plans catalog: the Super Admin's saved overrides if present, else the
-// built-in defaults. Includes inactive plans (callers filter as needed).
+// The Super Admin's saved overrides if present, else the built-in defaults. Includes inactive plans.
 async function readBillingPlans() {
   const stored = await readSetting('billingPlans', null);
   const list = Array.isArray(stored) && stored.length ? stored : DEFAULT_BILLING_PLANS;
   return list.map((p, i) => normalizePlan(p, i));
 }
 
-// Resolve a plan by id from the live catalog (async - the catalog is persisted).
-// Falls back to the first active plan, then the first plan, so checkout never
-// dereferences undefined even if an id was deleted between page-load and pay.
+// Falls back to the first active plan, then the first plan, so checkout never gets undefined
+// when a plan is deleted between page load and pay.
 async function findPlan(planId) {
   const id = String(planId || '').toLowerCase();
   const plans = await readBillingPlans();
   return plans.find((p) => p.id === id) || plans.find((p) => p.active) || plans[0] || normalizePlan(DEFAULT_BILLING_PLANS[0], 0);
 }
 
-// Like findPlan, but rejects an explicitly-supplied id that no longer resolves (a
-// plan deleted/renamed between page-load and pay) instead of silently charging a
-// different plan's price/tier. An empty id still falls back to the default plan.
+// Unlike findPlan, rejects a supplied id that no longer resolves instead of charging another plan's
+// price. An empty id still falls back to the default plan.
 async function findPlanOrThrow(planId) {
   const plan = await findPlan(planId);
   const requested = String(planId == null ? '' : planId).trim().toLowerCase();
@@ -10604,10 +9910,8 @@ async function findPlanOrThrow(planId) {
   return plan;
 }
 
-// Renderer-facing plans catalog + the viewer's current tier/state, so the Billing
-// page can highlight the active plan and decide which CTA to show. Reuses
-// getLicense (which already handles the Super-Admin exempt path). `canManage` lets
-// the page reveal the plan-editor / subscribers / assign controls.
+// Plans plus the viewer's tier and state, so the Billing page can mark the active plan and pick
+// its CTA. `canManage` reveals the plan editor, subscribers and assign controls.
 async function getBillingPlans() {
   const lic = await getLicense();
   const me = await getActiveMember();
@@ -10624,12 +9928,12 @@ async function getBillingPlans() {
     // Who may start the free trial from the Billing page: anyone not exempt and not
     // already on a paid plan (best-effort, local - see the Licenses panel note).
     canStartTrial: !lic.isExempt && !lic.isPaid,
-    canManage: await isCertifiedSuperAdmin(me) // audit L1
+    canManage: await isCertifiedSuperAdmin(me)
   };
 }
 
-// ---- Super-Admin plan management (edit prices/details, add packages) ----------
-// All plans incl. inactive - for the editor grid.
+// ---- Super Admin plan management ----
+// All plans including inactive ones, for the editor grid.
 async function listBillingPlansAdmin() {
   await requireSuperAdmin();
   return { plans: await readBillingPlans(), currency: PLAN.currency };
@@ -10780,15 +10084,12 @@ async function clampLicenseNow() {
   return { effectiveNow: r.effectiveNow, tampered: r.tampered };
 }
 
-// Marker that distinguishes an automatic license-lapse ban from a deliberate
-// Super-Admin block. Only license-caused bans are auto-cleared when the licence
-// becomes valid again - an admin block stays until the admin lifts it.
+// Marks an automatic licence-lapse ban. Only these are auto-cleared when the licence is valid again;
+// a Super Admin block stays until it is lifted.
 const LICENSE_BAN_REASON = 'Trial and grace period ended.';
 
-// Reconcile the owner's Member.status with the license state, and report the
-// owner's resulting status. License-lapse bans are applied/cleared automatically;
-// an admin block (different banReason) is never touched here. Returns the status
-// string (so callers can fold an admin block into the effective ban).
+// Applies or clears licence-lapse bans on the owner; an admin block (other banReason) is never
+// touched. Returns the owner's status so callers can fold an admin block into the effective ban.
 async function syncOwnerBanState(ownerId, licenseBanned) {
   if (ownerId == null) return null;
   try {
@@ -10807,9 +10108,8 @@ async function syncOwnerBanState(ownerId, licenseBanned) {
   } catch (e) { return null; }
 }
 
-// Evaluate + format a licence: runs the state machine (with the tamper-clamped
-// clock), reconciles the owner ban flag, and returns the renderer-facing view. The
-// effective ban is license-lapse OR a Super-Admin block on the owner.
+// Runs the state machine on the tamper-clamped clock and reconciles the owner ban flag.
+// The effective ban is a licence lapse or a Super Admin block on the owner.
 async function licenseView(lic) {
   const { effectiveNow, tampered } = await clampLicenseNow();
   const st = licensePolicy.computeLicenseState({ type: lic.type, trialEndsAt: lic.trialEndsAt, now: effectiveNow, graceDays: GRACE_DAYS });
@@ -10840,8 +10140,8 @@ async function licenseView(lic) {
   };
 }
 
-// Shared "grant paid" used by redeem AND checkout-poll: advances the paid term,
-// optionally records the tier, AND clears any ban (restoring the owner to active).
+// Shared by redeem and checkout polling: advances the paid term, optionally sets the tier, and
+// clears any ban.
 async function applyPaidMonths(lic, months, code, tier) {
   const base = Math.max(Date.now(), lic.trialEndsAt ? new Date(lic.trialEndsAt).getTime() : Date.now());
   const until = new Date(base + months * PLAN.days * 86400000);
@@ -10859,20 +10159,17 @@ async function applyPaidMonths(lic, months, code, tier) {
   return updated;
 }
 
-// ---- Licensing backend client (active only when a tenant config is baked) ----
-// Install identity, online lease refresh, and OFFLINE entitlement from the cached
-// signed lease. All inert unless tenantConfig().enabled (the base build).
+// ---- Licensing backend client (only when a tenant config is baked in) ----
+// Install identity, online lease refresh and offline entitlement from the cached signed lease.
 async function getMachineId() {
   let id = await readSetting('machineId', null);
   if (!id) { id = crypto.randomUUID(); await writeSetting('machineId', id); }
   return id;
 }
 
-// audit L1: the Super Admin is the licence-exempt source owner ONLY on a machine that
-// holds a valid owner certificate (<userData>/owner.cert, signed for this machine's
-// licensing machine id, licenseClient.machineHash()) and only on a base build - never
-// a tenant/sold build (see ownerCert.js). Without it a SUPER_ADMIN keeps the label but
-// is licensed like any Owner and gets none of the licence-management powers.
+// The Super Admin is licence-exempt only on a base build holding a valid owner certificate
+// (<userData>/owner.cert, signed for licenseClient.machineHash()). Otherwise a SUPER_ADMIN is
+// licensed like any Owner and has no licence-management powers.
 async function ownerCertValid() {
   try {
     if (ownerCert.isTenantBuild()) return false;
@@ -10887,8 +10184,8 @@ async function isCertifiedSuperAdmin(member) {
   return ownerCert.isCertifiedSuperAdmin(member, await ownerCertValid());
 }
 
-// The licensing server returns a per-install secret exactly once, at first registration, and
-// requires it for license and redeem (audit T2-6). It is kept sealed next to the install id.
+// The licensing server returns a per-install secret once, at first registration, and requires it
+// for license and redeem. It is kept sealed next to the install id.
 // Returns { installId, installSecret } or null.
 async function ensureBackendInstall() {
   const installId = await readSetting('backendInstallId', null);
@@ -10902,9 +10199,8 @@ async function ensureBackendInstall() {
   try {
     res = await licenseClient.api.register(await getMachineId(), account);
   } catch (e) {
-    // The server already holds a secret for this machine id and we do not (an install
-    // registered before secrets existed, or a lost setting). Knowing the id is no longer
-    // proof, so start a fresh identity rather than stay locked out.
+    // The server holds a secret for this machine id that is missing locally (an older install or a lost
+    // setting). The id alone is not proof, so start a fresh identity rather than stay locked out.
     if (!/already registered/i.test(String(e && e.message))) throw e;
     await writeSetting('machineId', crypto.randomUUID());
     res = await licenseClient.api.register(await getMachineId(), account);
@@ -10945,11 +10241,8 @@ async function getBackendEntitlement() {
   if (!sealed) return null;
   let cached;
   try { cached = JSON.parse(secretStore.open(sealed)); } catch (_) { return null; }
-  // audit: verify the cached lease against the tamper-CLAMPED clock, not the raw
-  // system clock. Otherwise a cancelled subscriber can roll the OS clock back inside
-  // the cached lease's validity window and keep state:'paid' indefinitely offline.
-  // The clamp only ever raises the floor of "now", so a legitimately-online user
-  // (real clock, refreshed lease) is never locked out - only rollback is neutralized.
+  // Verify against the tamper-clamped clock, not the system clock, so rolling the clock back cannot
+  // keep a cancelled lease paid offline. The clamp only raises "now", so honest users are unaffected.
   const { effectiveNow } = await clampLicenseNow();
   const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow });
   if (!ent) return null;
@@ -10982,10 +10275,8 @@ async function backendLicenseInfo() {
 }
 
 async function getLicense() {
-  // The Super Admin is the source owner - exempt from the trial/subscription
-  // system entirely. Never create or report a trial license for them.
-  // audit L1: only with a valid owner certificate on a base build; otherwise a
-  // SUPER_ADMIN falls through and is licensed like any Owner.
+  // The certified Super Admin (valid owner certificate, base build) is exempt from the trial and
+  // subscription system; otherwise a SUPER_ADMIN is licensed like any Owner.
   const m = await getActiveMember();
   if (await isCertifiedSuperAdmin(m)) {
     return {
@@ -11008,10 +10299,9 @@ async function getLicense() {
       plan: PLAN
     };
   }
-  // Backend-licensed build: a verified, unexpired lease overrides to "paid".
-  // Otherwise (and always in the base build) fall through to the local model.
-  // audit L3: `reason` explains a licensing problem to the renderer (e.g. the lease is
-  // bound to another computer). A machine mismatch never reports paid.
+  // Backend-licensed builds: a verified, unexpired lease means paid; otherwise use the local model.
+  // `reason` explains a licensing problem (e.g. the lease is bound to another computer); a machine
+  // mismatch never reports paid.
   const issueOf = () => ((licenseClient.licenseIssue && licenseClient.licenseIssue()) || {}).reason || null;
   if (tenantConfig().enabled) {
     const ent = await getBackendEntitlement();
@@ -11032,9 +10322,8 @@ function withLicenseReason(view, reason) {
   return out;
 }
 
-// Main-side license gate. Refuse a profile launch when the owner tree is banned -
-// never trust the renderer's gate alone. Super Admin is exempt only with a valid
-// owner certificate (audit L1).
+// Main-side licence gate: refuse a profile launch when the owner tree is banned, never trusting
+// the renderer's gate alone. The Super Admin is exempt only with a valid owner certificate.
 async function assertNotBanned() {
   const m = await getActiveMember();
   if (await isCertifiedSuperAdmin(m)) return;
@@ -11060,12 +10349,9 @@ async function redeemPurchaseCode(payload) {
     if (!ent) throw new Error('Code accepted, but no active license yet - try again in a moment.');
     return licenseViewFromLease(ent);
   }
-  // Decision A4: there is no offline fallback. The old one validated a code against
-  // a secret shipped in the binary, so anyone with a copy could mint codes valid on
-  // every base build and sell them. Codes are issued and checked server-side now
-  // (see payments.js), which means a build with no licensing backend baked in cannot
-  // redeem anything — a Super Admin grant or an in-app payment provider is the way
-  // to confer a paid term on such a build.
+  // No offline fallback: codes are issued and checked server-side (see payments.js), since a secret
+  // in the binary would let anyone mint codes. Builds without a licensing backend use a Super Admin
+  // grant or an in-app payment provider instead.
   const e = new Error(
     'Purchase codes are issued by the licensing server, and this build has no licensing server configured. '
     + 'Use a tenant-provisioned build, or have the workspace owner assign a plan.'
@@ -11092,15 +10378,14 @@ async function setMemberStatus(payload) {
     const all = await db.member.findMany();
     if (!permissions.visibleMemberIds(all, actor).has(id)) throw new Error('You can only manage members you created.');
   }
-  // audit L1: blocking an Owner (a licence power) needs the certified Super Admin.
+  // Blocking an Owner is a licence power, so it needs the certified Super Admin.
   if (target.role === 'OWNER' && status !== 'active' && !(await isCertifiedSuperAdmin(actor))) {
     throw new Error('Only the Super Admin can block or suspend an owner.');
   }
   const data = { status };
   data.banReason = status === 'banned' ? (optionalString(input.reason) || 'Blocked by administrator.') : null;
   const updated = await db.member.update({ where: { id }, data });
-  // Was logActivity(db, null, …) - but profileId is required, so that insert silently
-  // failed and these status changes were never audited. logAudit (profileId 0) fixes it.
+  // Use logAudit (profileId 0): ActivityLog.profileId is required, so logActivity with null fails silently.
   await logAudit('member.status', { detail: { target: id, name: target.name, status, reason: data.banReason || null } });
   return serializeMember(updated);
 }
@@ -11144,27 +10429,20 @@ async function resetLicense(payload) {
   return licenseView(updated);
 }
 
-// Has this licence already had its free trial (or a paid term)? Every workspace gets
-// its trial when the licence row is created (ensureLicense), so a set trialEndsAt means
-// the trial was given; a paid type or purchase code means it went past the trial.
+// Every licence gets its trial when created (ensureLicense), so a set trialEndsAt means it was used;
+// a paid type or purchase code means it went past the trial.
 function licenseTrialUsed(lic) {
   if (!lic) return false;
   return lic.type === 'paid' || Boolean(lic.purchaseCode) || lic.trialEndsAt != null;
 }
 
-// Start the full-access free trial for an owner workspace. Tier + length come from the
-// catalog's trial plan (defaults: enterprise, 7 days).
-// audit 2 Nov 2026: this used to RESTART the trial for anyone whose plan was not
-// currently paid - an expired trial, a lapsed paid term, even a running trial (a fresh 7
-// days each click), from any role - so paid plans could be skipped forever. Now:
-//   - only the workspace Owner (or the certified Super Admin, for any owner) may call it;
-//   - a running trial is returned unchanged (no extension);
-//   - a workspace that already had its trial or a paid term is refused.
-// The Super Admin keeps the ability to grant a fresh trial to any owner (support tool).
+// Starts the full-access trial (tier and length from the catalog trial plan). Only the Owner may
+// call it; a running trial is returned unchanged and a used one is refused. The certified Super Admin
+// can grant a fresh trial to any owner.
 async function startTrial(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   const me = await getActiveMember();
-  const isSuper = await isCertifiedSuperAdmin(me); // audit L1: targeting any owner needs the certificate
+  const isSuper = await isCertifiedSuperAdmin(me); // targeting any owner needs the owner certificate
   if (isSuper && (input.ownerId == null || input.ownerId === '')) {
     throw new Error('Choose which owner workspace to start the trial for.');
   }
@@ -11188,8 +10466,6 @@ async function startTrial(payload) {
     data: { type: 'trial', status: 'active', tier, purchaseCode: null, trialEndsAt: new Date(Date.now() + days * 86400000) }
   });
   await syncOwnerBanState(ownerId, false);
-  // logAudit (profileId 0 = system): the old logActivity(db, null, ...) violated the
-  // NOT NULL profileId column, so trial starts were never recorded.
   await logAudit('license.trial-start', { detail: { ownerId, days, bySuperAdmin: isSuper } });
   return licenseView(updated);
 }
@@ -11215,9 +10491,8 @@ async function editLicense(payload) {
   return licenseView(updated);
 }
 
-// Super-Admin: terminate a subscription now - push the term past grace so the
-// state machine reports it ended (profile launch locks). Reversible by a later
-// grant. Clears any paid code. This is a clean lapse, not a sticky admin block.
+// Ends a subscription now by pushing the term past grace (profile launch locks). A later grant
+// reverses it; this is a clean lapse, not a sticky admin block.
 async function terminateLicense(payload) {
   await requireSuperAdmin();
   const input = requireObject(payload);
@@ -11225,7 +10500,7 @@ async function terminateLicense(payload) {
   const lic = await ensureLicense(ownerId);
   const past = new Date(Date.now() - (GRACE_DAYS + 1) * 86400000);
   const updated = await getPrisma().license.update({ where: { id: lic.id }, data: { status: 'expired', trialEndsAt: past, purchaseCode: null } });
-  await logAudit('license.terminate', { detail: { ownerId } }); // was a NOT NULL-violating logActivity(db, null, ...)
+  await logAudit('license.terminate', { detail: { ownerId } });
   return licenseView(updated);
 }
 
@@ -11243,24 +10518,19 @@ async function listOwnerLicenses() {
   return out;
 }
 
-// ---- Payment gateway (Cryptomus) - config is SUPER ADMIN only ----
+// ---- Payment gateway (Cryptomus); config is Super Admin only ----
 async function requireSuperAdmin() {
   const m = await getActiveMember();
   if (!m || m.role !== 'SUPER_ADMIN') { const e = new Error('Only the Super Admin can manage payment settings.'); e.code = 'FORBIDDEN'; throw e; }
-  // audit L1: plans, licences (assign/grant/extend/reset/edit/terminate) and payment
-  // settings are commercial powers of the source owner - they need the owner certificate.
+  // Plans, licences and payment settings are the source owner's commercial powers, so they need the
+  // owner certificate.
   if (!(await isCertifiedSuperAdmin(m))) {
     const e = new Error('This Super Admin has no owner certificate on this machine, so licence and billing management is disabled.'); e.code = 'OWNER_CERT_REQUIRED'; throw e;
   }
 }
 
-// (The Owner-or-above gate `requireOwnerOrSuper(action)` is defined once, earlier
-// in this file, and reused by the developer-API, IP-provider, and monetization
-// handlers below.)
-
-// One-time, in-memory migration of the legacy single-Cryptomus config
-// ({ provider, cryptomus:{...} }) into the per-provider map shape. The legacy
-// plaintext API key is sealed on the way in (secretStore.open is fail-safe).
+// In-memory migration of the legacy single-Cryptomus config ({ provider, cryptomus:{...} }) to the
+// per-provider map. The legacy plaintext API key is sealed on the way in.
 function migrateLegacyPayments(cfg, providers) {
   if (!cfg.providers && cfg.cryptomus && !providers.cryptomus) {
     providers.cryptomus = {
@@ -11279,7 +10549,7 @@ async function readPaymentStore() {
   return providers;
 }
 
-// A single provider's config with secrets DECRYPTED - for outbound API calls only.
+// Secrets come back decrypted, so use this for outbound API calls only.
 async function openProviderConfig(id) {
   const def = payments.getProviderDef(id);
   if (!def) throw new Error('Unknown payment provider.');
@@ -11310,7 +10580,7 @@ async function getPaymentConfig() {
       type: f.type || 'text',
       options: f.options || null,
       placeholder: f.placeholder || '',
-      // Secret values are NEVER returned - only whether one is stored.
+      // Secret values are never returned, only whether one is stored.
       value: f.secret ? '' : (saved[f.key] != null ? String(saved[f.key]) : (f.default || '')),
       has: Boolean(saved[f.key])
     }));
@@ -11359,9 +10629,8 @@ async function validatePaymentConfig(payload) {
   return provider.validate(cfg);
 }
 
-// Enabled methods the buyer can choose at checkout (no secrets). Automated
-// methods only appear once fully configured; manual ones carry their public
-// instructions / pay link.
+// Enabled checkout methods (no secrets). Automated ones appear only once fully configured; manual
+// ones carry their public instructions or pay link.
 async function listPaymentMethods() {
   const store = await readPaymentStore();
   const methods = [];
@@ -11475,9 +10744,9 @@ async function pollCheckout(payload) {
   return { status: st.status, paid: true, license: await licenseView(updated), purchaseCode: code };
 }
 
-// ---- Manual payments (Wise / bank transfer / custom) ----------------------
-// The buyer pays out-of-band and submits a reference; a Super Admin approves it
-// in-app, which grants the term. Nothing is auto-trusted from the renderer.
+// ---- Manual payments (Wise / bank transfer / custom) ----
+// The buyer pays out-of-band and submits a reference; a Super Admin approves it in-app, which grants
+// the term. Nothing from the renderer is trusted automatically.
 async function submitManualPayment(payload) {
   const input = requireObject(payload);
   const def = payments.getProviderDef(String(input.provider || 'manual').trim());
@@ -11559,10 +10828,9 @@ async function resolveManualPayment(payload) {
   return { ok: true, status: entry.status };
 }
 
-// ---- Invoices ----------------------------------------------------------------
-// Receipts for subscription payments: auto-captured on a successful checkout /
-// manual approval, plus manual entries by the Super Admin. Owners see their own
-// tree's invoices read-only; the Super Admin manages all.
+// ---- Invoices ----
+// Captured on checkout or manual approval, or entered by the Super Admin, who manages all of them.
+// Owners see their own tree's invoices read-only.
 function serializeInvoice(inv) {
   return {
     id: inv.id,
@@ -11604,8 +10872,8 @@ async function recordInvoice(data) {
       }
     });
   } catch (e) {
-    // Best-effort (must never fail a payment) but NOT silent: a failure here means a
-    // license may be advanced with no receipt, which a Super Admin needs to reconcile.
+    // Must never fail a payment, but must not be silent either: the licence may have advanced with no
+    // receipt, which a Super Admin needs to reconcile.
     console.error('[recordInvoice] receipt write FAILED - license may be advanced without an invoice:', e && e.message ? e.message : e);
   }
 }
@@ -11686,9 +10954,8 @@ async function updateInvoice(payload) {
   }
   const updated = await db.invoice.update({ where: { id }, data });
 
-  // Refund → claw back the granted term. When an invoice flips to 'refunded', subtract
-  // its months from the owner's license so access reflects the reversal; the
-  // trial→grace→ban state machine then re-evaluates (and licenseView re-syncs the ban).
+  // A refund claws back the granted term: subtract the invoice's months from the owner's licence;
+  // licenseView then re-evaluates the state and re-syncs the ban.
   if (data.status === 'refunded' && existing.status !== 'refunded' && existing.ownerMemberId != null && existing.months) {
     try {
       const lic = await db.license.findFirst({ where: { ownerMemberId: existing.ownerMemberId } });
@@ -11727,11 +10994,8 @@ async function deliverPurchaseCode(email, name, code) {
   } catch (e) { console.error('[Purchase code email]', e); return false; }
 }
 
-// ---------------------------------------------------------------------------
-// IP provider integrations (Super Admin only). Master credentials for the proxy
-// vendors we resell. Keys are stored locally and NEVER returned to the renderer
-// in full - only a masked preview.
-// ---------------------------------------------------------------------------
+// ---- IP provider integrations (Super Admin only) ----
+// Master credentials for resold proxy vendors; the renderer only ever gets a masked key preview.
 const DEFAULT_IP_PROVIDERS = [
   { name: 'Bright Data', referralLink: 'https://brightdata.com/cp/api_example' },
   { name: 'Oxylabs', referralLink: 'https://dashboard.oxylabs.io/' },
@@ -11792,9 +11056,8 @@ async function updateIpProviderCredentials(payload) {
   const provider = await db.ipProvider.findUnique({ where: { id } });
   if (!provider) throw new Error('Provider not found.');
   const data = {};
-  // Blank/undefined keeps the stored value (the renderer only ever sees a mask).
-  // Keys are sealed at rest; open() (in serializeIpProvider) is fail-safe for any
-  // legacy plaintext value.
+  // The renderer only sees a mask, so a missing key keeps the stored value. Keys are sealed at rest;
+  // open() in serializeIpProvider tolerates legacy plaintext.
   if (input.apiKey !== undefined && String(input.apiKey).trim() !== '') data.apiKey = secretStore.seal(String(input.apiKey).trim());
   if (input.secretKey !== undefined && String(input.secretKey).trim() !== '') data.secretKey = secretStore.seal(String(input.secretKey).trim());
   // Allow explicit clearing.
@@ -11818,9 +11081,7 @@ async function toggleIpProviderStatus(payload) {
   return serializeIpProvider(updated);
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Pro - No-Code Macro Automation
-// ---------------------------------------------------------------------------
+// ---- No-code macro automation ----
 function serializeMacro(m) {
   let steps = [];
   try { steps = JSON.parse(m.stepsJson || '[]'); } catch (e) { steps = []; }
@@ -11835,13 +11096,9 @@ function serializeMacro(m) {
   };
 }
 
-// --- Macro ownership (audit T2-5) ---------------------------------------------------
-// Macros were global and ungated: any member could read every recorded login macro (a
-// recorded step keeps the typed value, passwords included), rewrite someone else's, or
-// delete the workspace's macros. Now they follow the proxy model: a member sees macros
-// owned inside their visible subtree. Macros from before ownership existed (and the
-// seeded starters) have no owner and stay visible to owners and admins only, so nothing
-// an owner already had disappears. Single-user mode and the super admin are unrestricted.
+// A member sees macros owned inside their visible subtree (recorded steps keep typed values,
+// passwords included). Unowned macros (older ones and seeded starters) are visible to owners and
+// admins only. Single-user mode and the Super Admin are unrestricted.
 async function macroScope() {
   const member = await getActiveMember();
   if (!member || member.role === 'SUPER_ADMIN') return null;
@@ -11880,13 +11137,11 @@ async function saveMacro(payload) {
   const description = optionalString(input.description);
   let steps = input.steps !== undefined ? input.steps : [];
   if (typeof steps === 'string') {
-    // A malformed steps blob used to be swallowed into [] - saving a macro that
-    // silently lost every step. Surface it instead.
+    // Surface a malformed steps blob instead of saving a macro with no steps.
     try { steps = JSON.parse(steps); } catch (e) { throw new Error('Macro steps are not valid JSON.'); }
   }
-  // Validate + canonicalise against the engine's schema. Throws a "Step N (type): …"
-  // message the editor shows inline, so a bad step is caught here rather than
-  // failing mid-run across every profile in a parallel batch.
+  // Validate against the engine's schema; the "Step N (type): ..." error shows inline in the editor,
+  // so a bad step fails here, not mid-run across a parallel batch.
   const stepsJson = JSON.stringify(normalizeMacroSteps(Array.isArray(steps) ? steps : []));
   if (input.id) {
     const id = parseId(input.id);
@@ -11902,20 +11157,14 @@ async function deleteMacro(payload) {
   await requirePermission('automation.run');
   const id = parseId(requireObject(payload).id);
   await loadAccessibleMacro(id);
-  // This used to swallow every delete error and report success whatever happened.
   await getPrisma().macro.delete({ where: { id } });
   await logAudit('macro.deleted', { detail: { macroId: id } });
   return { deleted: true };
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Pro - Cookie Warmer
-//
-// Genuinely warms a profile by launching it and visiting a rotation of popular
-// sites for the requested duration, so real cookies/history accumulate. Runs in
-// the background (the IPC call returns immediately) and streams per-profile
-// progress to the renderer. Never blocks or crashes the main process.
-// ---------------------------------------------------------------------------
+// ---- Cookie warmer ----
+// Launches a profile and visits a rotation of popular sites for the requested time so real cookies
+// and history build up. Runs in the background and streams per-profile progress.
 const sleepMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const WARM_SITES = [
@@ -11931,9 +11180,8 @@ const WARM_SITES = [
   { label: 'weather.com', url: 'https://weather.com/' }
 ];
 
-// Serialize all history writes through one in-process chain so two runs finishing
-// near-simultaneously can't clobber each other's row (the store is a single JSON
-// blob in one Setting, so a naive read-modify-write would lose updates).
+// Serialize history writes through one chain: the store is a single JSON blob in one Setting, so two
+// runs finishing together would lose updates with a naive read-modify-write.
 let _historyWriteChain = Promise.resolve();
 function appendWarmerHistory(entry) {
   _historyWriteChain = _historyWriteChain.then(() => _appendWarmerHistoryUnsafe(entry)).catch(() => {});
@@ -11943,10 +11191,8 @@ function appendWarmerHistory(entry) {
 async function _appendWarmerHistoryUnsafe(entry) {
   const list = (await readSetting('automationHistory', [])) || [];
   const arr = Array.isArray(list) ? list : [];
-  // Upsert by runId. A run records once on start (status 'running') and again on
-  // finish (status 'completed'/'stopped'); merge those into ONE row (moved to the
-  // top) instead of appending a duplicate - which also produced duplicate React
-  // keys in the history table.
+  // Upsert by runId: a run records on start ('running') and on finish ('completed'/'stopped');
+  // merge both into one row, moved to the top, so the history table gets no duplicate keys.
   if (entry && entry.runId) {
     const idx = arr.findIndex((e) => e && e.runId === entry.runId);
     if (idx >= 0) {
@@ -11960,11 +11206,8 @@ async function _appendWarmerHistoryUnsafe(entry) {
   await writeSetting('automationHistory', next).catch(() => {});
 }
 
-// A warmer/parallel run records `status: 'running'` when it starts and only merges in
-// 'completed'/'stopped' when it finishes. Quitting or crashing mid-run skips that second
-// write, so the row stays "running" forever and the history claims a run is still in
-// flight long after it died. At process start nothing can be in flight by definition, so
-// settle any leftover here. Best-effort, exactly like the other startup reconciles.
+// A run that quits or crashes mid-way never writes its finish status, so its row stays 'running'.
+// Nothing can be in flight at process start, so settle leftovers here (best-effort).
 async function reconcileInterruptedAutomationRuns() {
   const list = (await readSetting('automationHistory', [])) || [];
   const arr = Array.isArray(list) ? list : [];
@@ -11988,26 +11231,15 @@ async function launchProfileById(id, startUrl, opts = {}) {
   return launchProfile({ id: parseId(id), startUrl: startUrl || 'about:blank', headless: Boolean(opts.headless) });
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Pro - Macro runner, visual recorder & scheduler.
-//
-// The execution + capture primitives live in browserEngine (runMacro /
-// startMacroRecording / stopMacroRecording) because they need the live session
-// page. These handlers add session management, persistence (reusing the Macro
-// model + automationHistory) and a setInterval scheduler mirroring the proxy
-// health-sweep timer pattern.
-// ---------------------------------------------------------------------------
+// ---- Macro runner, visual recorder and scheduler ----
+// Execution and capture live in browserEngine (runMacro, start/stopMacroRecording) because they need
+// the live session page; these handlers add sessions, persistence and scheduling.
 
-// Return the sessionId for a profile, launching it first if it isn't open.
-// `launched` is true only when THIS call opened the browser (so the caller knows
-// whether it owns the session's lifecycle and should close it when done).
+// `launched` is true only when this call opened the browser, so the caller owns closing it.
 async function ensureProfileSession(profileId) {
-  // audit: gate access to the target profile HERE, before returning OR launching a
-  // session. The macro/recording/warmer handlers only enforced access via the launch
-  // path, but the already-open-session shortcut (and sessions surviving switchMember)
-  // let a lower member drive macros/keystrokes/navigation inside another member's
-  // AUTHENTICATED running session. Every automation handler routes through this, so a
-  // single check closes the whole class - exactly what systemHumanType was patched for.
+  // Check profile access here, before returning or launching a session: the open-session shortcut
+  // (and sessions surviving switchMember) would otherwise let a lower member drive another member's
+  // signed-in session. Every automation handler routes through this.
   await assertCanAccessProfile(parseId(profileId));
   const pid = String(profileId);
   const open = listActiveSessions().find((s) => String(s.sessionId) === pid);
@@ -12019,10 +11251,8 @@ async function ensureProfileSession(profileId) {
 // Active macro runs, keyed by runId, so a run can be paused / resumed / stopped.
 const macroRuns = new Map();
 
-// A step as it may be streamed to the renderer: typed text (often a password recorded
-// by the macro recorder) never leaves the main process in a progress frame. The run
-// window only needs the step's position and kind; the macro's owner can still read the
-// full steps in the macro editor.
+// Typed text (often a recorded password) never leaves main in a progress frame. The run window only
+// needs the step's position and kind; the owner can read full steps in the macro editor.
 function redactStepForProgress(step) {
   if (!step || typeof step !== 'object') return step;
   const out = { ...step };
@@ -12051,8 +11281,8 @@ async function runMacroOnProfile(payload, event) {
   const macroId = parseId(input.macroId);
   const profileId = parseId(input.profileId);
   const db = getPrisma();
-  // audit 2 Nov 2026: was db.macro.findUnique - any member could run (and stream the
-  // typed values of) another member's macro by id. Same ownership rule as the editor.
+  // Same ownership rule as the editor, so a member cannot run (and stream the typed values of)
+  // another member's macro by id.
   const macro = await loadAccessibleMacro(macroId);
   let steps = [];
   try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
@@ -12075,11 +11305,9 @@ async function runMacroOnProfile(payload, event) {
     result = await runMacro(sessionId, steps, { continueOnError: Boolean(input.continueOnError), control, onStep });
   } finally {
     macroRuns.delete(runId);
-    // Close the browser only when THIS run opened it AND the user STOPPED the
-    // macro (the requested "closing a running macro closes its browser"). A run
-    // that finishes on its own leaves the browser open so the result stays
-    // visible - and a browser the user already had open (launched=false) is never
-    // touched. This also avoids a relaunch racing a just-closed profile.
+    // Close the browser only when this run opened it and the user stopped the macro. A finished run
+    // leaves it open so the result stays visible, and an already-open browser is never touched.
+    // This also avoids a relaunch racing a just-closed profile.
     if (launched && result && result.aborted) await closeProfileSession(sessionId).catch(() => {});
   }
 
@@ -12120,10 +11348,8 @@ async function startMacroRecordingOnProfile(payload) {
 }
 
 async function stopMacroRecordingOnProfile(payload) {
-  // audit 2 Nov 2026: this had no permission or profile check and took any sessionId,
-  // so a member could stop another session's recording and receive its captured steps
-  // (typed passwords included). The session is now always the profile's own, and the
-  // caller must have access to that profile.
+  // The session is always the profile's own and the caller needs access to that profile, since
+  // stopping returns the captured steps, typed passwords included.
   await requirePermission('automation.run');
   const input = requireObject(payload);
   const profileId = parseId(input.profileId);
@@ -12134,9 +11360,8 @@ async function stopMacroRecordingOnProfile(payload) {
   }
   const res = await stopMacroRecording(sessionId);
   const captured = Array.isArray(res.steps) ? res.steps : [];
-  // Canonicalise what the recorder captured, but LENIENTLY: a recording cannot be
-  // re-taken after the fact, so one unusable step must not throw away the whole
-  // session. Bad steps are dropped and counted instead.
+  // Canonicalise leniently: a recording cannot be re-taken, so drop and count bad steps rather than
+  // throwing the whole session away.
   const steps = [];
   let dropped = 0;
   for (const raw of captured) {
@@ -12155,16 +11380,14 @@ async function stopMacroRecordingOnProfile(payload) {
   return { steps, count: steps.length, dropped, saved };
 }
 
-// --- Macro scheduler (mirrors the proxy health-sweep timer) ----------------
+// ---- Macro scheduler ----
 let macroSchedulerTimer = null;
 
-// The schedule runs with whoever happens to be signed in when the timer fires - often
-// nobody, which passes every access check. So each run is checked against the member
-// who SET the schedule (stored with it): that member must still exist and be active,
-// still see the macro, and still have access to each profile. Anything else is skipped.
-// Returns the subset of profileIds that may run, or [] with a reason.
+// The timer fires as whoever is signed in, often nobody, which passes every access check. So each
+// run is checked against the member who set the schedule: still active, still sees the macro and
+// each profile. Returns the allowed profileIds, or [] with a reason.
 async function scheduleAllowedProfiles(cfg) {
-  if (cfg.ownerMemberId == null) return { allowed: cfg.profileIds, reason: null }; // single-user / pre-fix schedule
+  if (cfg.ownerMemberId == null) return { allowed: cfg.profileIds, reason: null }; // single-user, or a schedule saved without an owner
   const db = getPrisma();
   const all = await db.member.findMany();
   const owner = all.find((m) => Number(m.id) === Number(cfg.ownerMemberId))
@@ -12180,8 +11403,7 @@ async function scheduleAllowedProfiles(cfg) {
   return { allowed: cfg.profileIds.filter((id) => ok.has(id)), reason: null };
 }
 
-// One scheduled pass at a time: a pass that takes longer than the interval used to
-// start a second, overlapping loop on the same profiles every tick.
+// One scheduled pass at a time, so a pass longer than the interval cannot overlap the next tick.
 let macroScheduleBusy = false;
 
 async function runDueMacroSchedule() {
@@ -12235,12 +11457,8 @@ async function getMacroSchedule() {
 }
 
 async function setMacroSchedule(payload) {
-  // audit 2 Nov 2026: this had no permission, macro or profile check, so any member could
-  // point the schedule at any macro and any profiles (or switch off the Owner's schedule),
-  // and the run later executed as whoever was signed in. It is now gated like a manual
-  // run, may only be replaced by the member who set it or someone above them, and records
-  // that member so every scheduled run is re-checked against them (see
-  // scheduleAllowedProfiles).
+  // Gated like a manual run; only the member who set the schedule or someone above them may replace
+  // it. The setter is stored so every scheduled run is re-checked (see scheduleAllowedProfiles).
   await requirePermission('automation.run');
   const input = requireObject(payload);
   const enabled = Boolean(input.enabled);
@@ -12262,16 +11480,9 @@ async function setMacroSchedule(payload) {
   return { ...cfg, running: Boolean(macroSchedulerTimer) };
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - Parallel macro runner + live (redacted) run console.
-//
-// Runs one macro across many profiles with a concurrency cap and streams a live,
-// per-profile status to the renderer. The orchestration + redaction live in the
-// pure `parallelRunner` module; here we inject the real launch / run / close
-// primitives and bridge the relay's sanitized frames to a progress channel
-// (mirroring the AI-warmer's warmer-progress stream). Optionally each profile is
-// bound to one spreadsheet row (data-driven) via {{Header}} placeholders.
-// ---------------------------------------------------------------------------
+// ---- Parallel macro runner + live (redacted) run console ----
+// Orchestration and redaction live in the pure parallelRunner module; this injects the real launch,
+// run and close primitives. Each profile can bind one spreadsheet row via {{Header}} placeholders.
 
 // Parsed data-binding sheets, keyed by an opaque token (mirrors importPreviewCache).
 const dataRowsCache = new Map();
@@ -12291,7 +11502,7 @@ async function pickDataFile() {
   const parsed = parseDataRows(filePath);
   const token = crypto.randomUUID();
   dataRowsCache.set(token, { createdAt: Date.now(), rows: parsed.rows });
-  // Keep the cache small - drop the oldest entry once we exceed a handful.
+  // Keep the cache small by dropping the oldest entry.
   if (dataRowsCache.size > 20) {
     let oldestKey = null; let oldestAt = Infinity;
     for (const [k, v] of dataRowsCache) { if (v.createdAt < oldestAt) { oldestAt = v.createdAt; oldestKey = k; } }
@@ -12309,16 +11520,15 @@ async function runParallelMacroHandler(payload, event) {
   const macroId = parseId(input.macroId);
   const profileIds = parseIdArray(input.profileIds);
   if (profileIds.length === 0) throw new Error('Select at least one profile for the parallel run.');
-  // audit: verify access to EVERY target profile - the parallel path reuses
-  // already-open sessions and otherwise never hits the launch-time access check.
+  // Check access to every target profile: the parallel path reuses open sessions and would otherwise
+  // skip the launch-time access check.
   for (const pid of profileIds) await assertCanAccessProfile(pid);
   const concurrency = Math.max(1, Math.min(10, Number.parseInt(input.concurrency, 10) || 3));
   const continueOnError = input.continueOnError !== false;
   const closeWhenDone = input.closeWhenDone !== false;
 
   const db = getPrisma();
-  // audit 2 Nov 2026: was db.macro.findUnique - the same macro-ownership rule as a
-  // single run now applies to a parallel run.
+  // Same macro-ownership rule as a single run.
   const macro = await loadAccessibleMacro(macroId);
   let steps = [];
   try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
@@ -12339,9 +11549,8 @@ async function runParallelMacroHandler(payload, event) {
     vars: rows[i] || null
   }));
 
-  // audit 2 Nov 2026: one parallel run per profile at a time. The panel used to report
-  // "finished" 1.5 s after starting (the handler returns at once), so a second click
-  // started an overlapping run on the same browsers; refuse that here as well.
+  // One parallel run per profile at a time: the handler returns at once, so a second click could
+  // start an overlapping run on the same browsers.
   const busy = profileIds.filter((pid) => profilesInParallelRun().has(pid));
   if (busy.length) {
     const e = new Error(`${busy.length} of the selected profile(s) are still running a parallel macro. Wait for it to finish or stop it first.`);
@@ -12351,10 +11560,9 @@ async function runParallelMacroHandler(payload, event) {
   const runId = `par-${Date.now()}`;
   parallelRuns.set(runId, { runId, ownerMemberId: currentMemberId, profileIds, startedAt: Date.now(), done: false, summary: null });
 
-  // Bridge sanitized relay frames for THIS run to the renderer. One global
-  // listener, filtered by runId, that removes itself on the run-level 'done'
-  // frame (with a finally backstop below). relay.emitFrame already routes every
-  // payload through sanitizeFrame before it reaches us.
+  // Bridge this run's sanitized relay frames to the renderer: one listener filtered by runId that
+  // removes itself on the run-level 'done' frame (finally is the backstop). relay.emitFrame already
+  // sanitizes every payload.
   relay.setMaxListeners(0);
   const onFrame = (frame) => {
     if (!frame || !frame.payload || frame.payload.runId !== runId) return;
@@ -12519,19 +11727,17 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
     if (opts.loop && !aborted()) emit(profileId, 'INFO', 'Looping the site list again…');
   }
 
-  // Cookie report - read the live cookie jar BEFORE closing (needs the open session).
+  // Read the live cookie jar before closing; it needs the open session.
   let cookieCount = null;
   try { const cookies = await exportSessionCookies(sessionId); cookieCount = Array.isArray(cookies) ? cookies.length : null; }
   catch (e) { /* ignore */ }
 
-  // Close only sessions we launched, unless the user chose to keep them open. A
-  // graceful browser.close() FLUSHES cookies + cache to the profile's userDataDir,
-  // so a later, separate normal launch of this profile reuses the warmed session.
+  // Close only sessions this run launched, unless keepOpen. A graceful browser.close() flushes cookies
+  // and cache to the userDataDir, so a later normal launch reuses the warmed session.
   const didClose = !opts.keepOpen && run && run.launched.has(sessionId);
   if (didClose) await closeAnySession(sessionId).catch(() => {}); // engine-aware (Firefox too)
 
-  // On-disk footprint proof - cookies + cache now persisted in the profile folder.
-  // Only meaningful once flushed (i.e. after a close), so we skip it for keep-open runs.
+  // The on-disk footprint is only meaningful once a close has flushed it, so skip it for keep-open runs.
   let diskNote = '';
   if (didClose) {
     try {
@@ -12549,10 +11755,8 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 }
 
 async function startWarmer(payload, event) {
-  // audit: startWarmer alone among the automation handlers had NO permission gate,
-  // so a member whose automation.run capability was revoked could still drive it -
-  // and no per-profile access check, so it could warm (drive) another member's
-  // already-open authenticated session. Add both, like its peers.
+  // Gated like the other automation handlers, with a per-profile check so a member cannot drive
+  // another member's open signed-in session.
   await requirePermission('automation.run');
   const input = requireObject(payload);
   const ids = parseIdArray(input.profileIds);
@@ -12561,27 +11765,22 @@ async function startWarmer(payload, event) {
   let sites = normalizeWarmSites(input.sites);
   if (!sites.length) sites = defaultWarmSites();
   const opts = { loop: Boolean(input.loop), keepOpen: Boolean(input.keepOpen), headless: Boolean(input.headless) };
-  // Concurrency: default 1 = a strict one-by-one QUEUE (launch a profile, let it finish
-  // its sites and close, THEN the next). This replaces the old fire-everything-at-once
-  // fan-out (Promise.allSettled over ids.map) that launched N real browsers in the same
-  // tick and OOM-crashed the app on large selections. A higher value warms that many at
-  // a time via a shared-cursor worker pool.
+  // Default concurrency 1 is a strict queue: each profile finishes its sites and closes before the next
+  // launches. Launching every selected browser at once runs out of memory on large selections.
   const concurrency = Math.max(1, Math.min(16, Number.parseInt(input.concurrency, 10) || 1));
   const runId = `warm-${Date.now()}`;
   const run = {
     id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null,
-    // Metadata + a rolling log buffer so a renderer that navigated away and came back can
-    // re-attach to (and stop) the still-running job instead of orphaning it.
-    // `active` = profiles warming RIGHT NOW; total/done drive the live progress counter.
+    // Metadata and a rolling log let a renderer that navigated away re-attach to (and stop) the run.
+    // `active` holds profiles warming right now; total/done drive the live progress counter.
     profileIds: ids, total: ids.length, done: 0, active: new Set(), concurrency,
     loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: [],
     ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
   };
   warmerRuns.set(runId, run);
 
-  // Every progress frame carries a `counts` snapshot (total / done / active / remaining)
-  // so the panel can render a live "X done · Y running · Z queued" counter and restore
-  // it on re-attach. Kept in its OWN key so it never clobbers the terminal `done:true`.
+  // Each frame carries a `counts` snapshot (total/done/active/remaining) for the live counter and
+  // re-attach, in its own key so it never overwrites the terminal `done: true`.
   const send = (data) => {
     const enriched = {
       ...data,
@@ -12600,10 +11799,8 @@ async function startWarmer(payload, event) {
   send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s) · ${concurrency === 1 ? 'one-by-one (queue)' : concurrency + ' at a time'}${opts.headless ? ' · hidden (no windows)' : ''}${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
   await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
 
-  // Fire-and-forget: a shared-cursor worker pool caps how many profiles warm at once.
-  // width=1 (default) is a strict queue; a worker pulls the next id only after the
-  // previous profile it was handling has fully finished (and closed). The handler
-  // returns immediately; progress arrives via the stream above.
+  // Fire-and-forget worker pool with a shared cursor caps how many profiles warm at once; at width 1
+  // a worker takes the next id only after its previous profile has finished and closed.
   (async () => {
     let cursor = 0;
     const worker = async () => {
@@ -12627,10 +11824,8 @@ async function startWarmer(payload, event) {
   return { started: true, runId, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
 }
 
-// List active warm-up runs so a renderer returning to the Automation page can RE-ATTACH
-// to a job still running in the main process - instead of showing an idle panel while the
-// launched browsers keep running orphaned (and unstoppable). Returns each run's metadata
-// plus its recent log buffer so the console can be restored.
+// Lets a renderer returning to the Automation page re-attach to a job still running in main, with
+// its recent logs, instead of leaving the launched browsers orphaned and unstoppable.
 function listActiveWarmers() {
   return [...warmerRuns.values()].map((r) => ({
     runId: r.id, total: r.total, done: r.done, active: r.active ? r.active.size : 0,
@@ -12644,8 +11839,8 @@ function listActiveWarmers() {
 // Stop a running warm-up. `force` also closes the sessions this run launched.
 // With no runId, stops every active run.
 async function stopWarmer(payload) {
-  // audit 2 Nov 2026: any member could stop or force-close (closing the browsers of)
-  // anyone's warm-up. Gated like startWarmer, and limited to runs the caller may control.
+  // Gated like startWarmer and limited to runs the caller may control, since force-stop closes the
+  // run's browsers.
   await requirePermission('automation.run');
   const input = (payload && typeof payload === 'object') ? payload : {};
   const force = Boolean(input.force);
@@ -12667,9 +11862,7 @@ async function stopWarmer(payload) {
   return { stopped: true, force, runs: targets.length };
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Pro - Local Developer API tokens + server toggle
-// ---------------------------------------------------------------------------
+// ---- Local developer API tokens + server toggle ----
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
 }
@@ -12678,8 +11871,7 @@ function serializeApiToken(t) {
   return {
     id: t.id,
     name: t.name,
-    // The plaintext token is shown only at creation; later we can only show a
-    // generic mask since just the hash is stored.
+    // Only the hash is stored, so after creation the token can only be shown as a generic mask.
     preview: 'sg_••••••••••••',
     lastUsedAt: t.lastUsedAt instanceof Date ? t.lastUsedAt.toISOString() : (t.lastUsedAt || null),
     createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : (t.createdAt || null)
@@ -12730,14 +11922,12 @@ async function setApiServerEnabled(payload) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Softglaze Premium - 2FA vault, Human-Type, Synchronizer handlers
-// ---------------------------------------------------------------------------
+// ---- 2FA vault, Human-Type, Synchronizer ----
 async function getProfile2faToken(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
-  // A live code is a login credential: role-gated and audited (T2-4).
+  // A live code is a login credential, so revealing it is role-gated and logged.
   await assertCanRevealKind('twoFactorCode');
   const profile = await getPrisma().profile.findUnique({ where: { id }, select: { twoFactorSeed: true } });
   if (!profile) throw new Error('Profile not found.');
@@ -12755,8 +11945,7 @@ async function getProfile2faToken(payload) {
 async function systemHumanType(payload) {
   const input = requireObject(payload);
   const sessionId = requiredString(input.sessionId, 'sessionId');
-  // audit: this drove keystrokes into ANY session id with no access check. Session
-  // ids equal profile ids, so verify the caller may access that profile first.
+  // Session ids equal profile ids, so check the caller may access that profile before typing.
   if (/^\d+$/.test(sessionId)) await assertCanAccessProfile(Number.parseInt(sessionId, 10));
   const text = String(input.text == null ? '' : input.text);
   return humanType(sessionId, text, { minDelay: input.minDelay, maxDelay: input.maxDelay });
@@ -12791,9 +11980,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_STATUS, firefoxDownloadStatus);
   registerHandler(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_PAUSE, pauseFirefoxDownload);
   registerHandler(CHANNELS.BROWSER_FIREFOX_DOWNLOAD_RESUME, resumeFirefoxDownload);
-  // Extract any leftover browser .zip (e.g. a half-finished manual download) so it
-  // becomes a usable install on next launch. Then re-surface any download that was
-  // interrupted by a crash / power loss so the UI can offer Resume.
+  // Extract leftover browser .zips (e.g. a half-finished manual download) into usable installs, then
+  // re-surface downloads interrupted by a crash so the UI can offer Resume.
   browserDownloader.reconcileStrayZips().catch(() => {});
   browserDownloader.initResumableState().catch(() => {});
   firefoxEngine.initFirefoxResumableState().catch(() => {});
@@ -12888,11 +12076,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PERSONA_IMPORT_BATCH, importPersonas);
   registerHandler(CHANNELS.PERSONA_CREATE_MANUAL, createPersonaManual);
   registerHandler(CHANNELS.PERSONA_GET_ALL, getAllPersonas);
-  // audit: these two persona helpers were ungated on the renderer channel (a
-  // non-owner member could enumerate the vault by iterating hostnames / poison
-  // usedOnUrls). Gate the *channels* behind vault.manage; the autofill bridges
-  // below intentionally call the raw functions (password-free + origin-scoped) so
-  // in-session autofill still works for any member without vault.manage.
+  // These channels need vault.manage so a non-owner cannot enumerate the vault or poison usedOnUrls.
+  // The autofill bridges below call the raw functions (password-free, origin-scoped) so in-session
+  // autofill works for any member.
   registerHandler(CHANNELS.PERSONA_GET_AVAILABLE_FOR_URL, async (payload) => {
     await requirePermission('vault.manage');
     return getAvailablePersonasForUrl(payload);
@@ -12921,33 +12107,30 @@ function registerIpcHandlers() {
   // Smart Autofill - let the in-page widget (run in a private isolated world of
   // launched Chromium profiles) reach the persona vault over its CDP channel.
   configurePersonaBridge({
-    // audit E3 parity: refuse vault calls while locked / signed out.
+    // Refuse vault calls while locked or signed out.
     isAvailable: () => personaVaultAvailable(),
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
     markUsed: (id, url) => markPersonaUsed({ id, url }),
-    // Resolve a persona's plaintext password server-side by id (audit C2): the
-    // password is typed via the trusted CDP bridge and never crosses into page JS.
+    // Resolve the plaintext password server-side by id: it is typed via the trusted CDP bridge and
+    // never crosses into page JS.
     getSecret: (id) => getPersonaSecretById(id),
     // Gate injection on the global Smart Autofill toggle (default on; fail-open).
     isEnabled: async () => { try { const g = await getGlobalSettings(); return g?.smartAutofill?.enabled !== false; } catch (e) { return true; } }
   });
 
-  // Firefox Smart Autofill - same persona vault, reached over a loopback bridge
-  // (Firefox has no CDP/exposeFunction; its WebExtension talks to this server).
-  // Loopback-only, started best-effort so a busy port never breaks boot.
+  // Firefox Smart Autofill: Firefox has no CDP/exposeFunction, so its WebExtension reaches the same
+  // persona vault over a loopback-only bridge.
   autofillBridge.configure({
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
     markUsed: (id, url) => markPersonaUsed({ id, url }),
-    // Firefox has no CDP trusted-typer, so the isolated content-script fills the
-    // password itself - but only for a persona OFFERED on the committed origin
-    // (audit C2), resolved one id at a time via the loopback /secret endpoint.
+    // Firefox has no CDP trusted typer, so the content script fills the password itself, but only for a
+    // persona offered on the committed origin, resolved one id at a time via the loopback /secret endpoint.
     getSecret: (id, url) => getPersonaSecretForUrl(id, url),
-    // audit E3: no vault data while the app is locked or nobody is signed in.
+    // No vault data while the app is locked or nobody is signed in.
     isAvailable: () => personaVaultAvailable()
   });
-  // audit E3: NOT started at boot any more. firefoxEngine acquires the bridge when a
-  // Firefox profile with the autofill extension launches and releases it on exit,
-  // so the loopback port is only open while Firefox autofill can actually use it.
+  // Not started at boot: firefoxEngine acquires the bridge when a Firefox profile with the autofill
+  // extension launches and releases it on exit, so the loopback port is open only while needed.
 
   // Resume the background proxy scheduler if it was enabled previously.
   (async () => {
@@ -13133,8 +12316,7 @@ function registerIpcHandlers() {
         os: p.os || null,
         browserVersion: p.browserVersion || null,
         userAgent: p.userAgent || null,
-        // proxyInfoString is host:port:user:pass. The old regex only masked user:pass@host,
-        // so it matched nothing and the password went out in the clear (T2-1).
+        // proxyInfoString is host:port:user:pass; mask it so the API never returns the password.
         proxy: p.proxyInfoString ? maskProxyInfoString(p.proxyInfoString, null) : null,
         groupId: p.groupId || null,
         lastUsedAt: p.lastUsedAt instanceof Date ? p.lastUsedAt.toISOString() : (p.lastUsedAt || null)
@@ -13143,9 +12325,8 @@ function registerIpcHandlers() {
     readConfig: () => readSetting('localApi', { enabled: false, port: localApi.DEFAULT_PORT }),
     writeConfig: (cfg) => writeSetting('localApi', cfg)
   });
-  // Bring the session online (member + vault state + local API) only when the DB
-  // is actually readable. When at-rest encryption is on, the DB starts locked and
-  // this is deferred until the db:unlock handler runs afterDbReady() itself.
+  // Bring the session online only when the DB is readable. With at-rest encryption the DB starts
+  // locked, and db:unlock runs afterDbReady() itself.
   if (database.isDbUnlocked()) {
     afterDbReady();
   }

@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { clampNumber } from '@/lib/uiGuards.mjs';
 
-// <input type="number"> that keeps the raw text while the user types and only clamps and
-// commits on blur (or Enter). Clamping on every keystroke made values impossible to type:
-// clearing "30" to type "45" snapped to the fallback, and "1" in a min-3 field jumped to 3.
+// Keeps the raw text while typing and clamps only on blur or Enter; clamping per keystroke
+// made values impossible to type (e.g. "1" in a min-3 field jumped to 3).
 export default function NumberInput({ value, min, max, fallback, onCommit, onKeyDown, ...rest }) {
   const [raw, setRaw] = useState(value == null ? '' : String(value));
   const focused = useRef(false);

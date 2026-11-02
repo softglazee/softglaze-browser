@@ -1,9 +1,6 @@
 'use strict';
-// Pure helpers shared by the proxy vendor adapters in ipcHandlers.js.
-//
-// They live in their own module because ipcHandlers.js pulls in electron and cannot be
-// required from a test. Everything here is plain data in, plain data out, so the tests
-// can exercise the real parsing instead of pattern-matching the source.
+// Pure helpers for the proxy vendor adapters, kept out of ipcHandlers.js (which pulls in electron)
+// so tests can require them.
 
 // Parse one `login:password@host:port` line, as returned by DataImpulse /api/list and by
 // Proxy-Seller /proxy/download/resident with a custom template. Returns null for a blank
@@ -12,9 +9,7 @@ function parseLoginLine(raw) {
   // Proxy-Seller's documented export ends each line with ';'.
   const line = String(raw || '').trim().replace(/;+$/, '').trim();
   if (!line || line.startsWith('{') || line.startsWith('[') || line.startsWith('<')) return null;
-  // Split at the LAST '@' and the FIRST ':' of the credential half. A password may
-  // legitimately contain '@' or ':', and splitting naively is exactly the bug that once
-  // parsed user:pass@host:port into host="user" with a NaN port.
+  // Split at the last '@' and the first ':' of the credential half: passwords may contain '@' or ':'.
   const at = line.lastIndexOf('@');
   if (at < 0) return null;
   const cred = line.slice(0, at);
@@ -22,7 +17,7 @@ function parseLoginLine(raw) {
   const c = cred.indexOf(':');
   const username = c >= 0 ? cred.slice(0, c) : cred;
   const password = c >= 0 ? cred.slice(c + 1) : '';
-  // host:port splits at the LAST ':' so a bracketed IPv6 host survives.
+  // host:port splits at the last ':' so a bracketed IPv6 host survives.
   const h = endpoint.lastIndexOf(':');
   if (h < 0) return null;
   let host = endpoint.slice(0, h).trim();
@@ -88,10 +83,8 @@ function proxySellerRotation(mode, seconds) {
   return 0;
 }
 
-// Proxy-Seller takes the API key in the URL path, and whatever sits in front of the API can
-// echo that path back in an HTTP error body or an envelope message (their v2 SDK tests show
-// "Unknown action /personal/api/v2/***/proxy/list"). Mask it as is, URL-encoded and in any
-// letter case before a message leaves the adapter.
+// Proxy-Seller takes the API key in the URL path, which error bodies can echo back
+// ("Unknown action /personal/api/v2/<key>/proxy/list"). Mask it raw, URL-encoded and in any case.
 function maskProxySellerKey(text, key) {
   let out = String(text == null ? '' : text);
   const raw = String(key || '');
@@ -122,8 +115,7 @@ function unwrapProxySeller(text, what, key) {
   }
   if (/error api key/i.test(msg)) throw new Error('Proxy-Seller: the API key was rejected. Copy it again from the dashboard, API section.');
   if (/ip not allowed/i.test(msg)) throw new Error('Proxy-Seller: this API key only accepts calls from whitelisted IPs, and this machine is not one of them. Add its IP in the dashboard API settings.');
-  // v1 said "Tarif not found". v2 says "Make order with resident first" (live, 2 Nov 2026,
-  // on an account holding only IPv6). Both mean the same thing.
+  // v1 says "Tarif not found", v2 "Make order with resident first"; both mean no residential package.
   if (/tarif not found|make order with resident/i.test(msg)) throw new Error('Proxy-Seller: this account has no active residential package.');
   if (/request limit/i.test(msg)) throw new Error('Proxy-Seller: the API rate limit was reached. Wait a minute and try again.');
   throw new Error(`Proxy-Seller ${what}: ${maskProxySellerKey(msg, key)}`);
@@ -166,11 +158,9 @@ function proxySellerGeoView(db, country) {
     }));
 }
 
-// Dual-stack geo lookup used when ipinfo.io and ip-api.com cannot be reached through a
-// proxy. Neither of those publishes an AAAA record (checked 15 Sep 2026), so an IPv6-only
-// exit cannot reach them at all and a healthy IPv6 proxy used to look dead. get.geojs.io
-// answers on both families. Response fields verified live: ip, country_code, region,
-// city, timezone, latitude, longitude, organization_name.
+// Dual-stack geo fallback for when ipinfo.io and ip-api.com fail through a proxy: neither has an AAAA
+// record, so IPv6-only exits cannot reach them. get.geojs.io answers on both families.
+// Fields: ip, country_code, region, city, timezone, latitude, longitude, organization_name.
 const GEOJS_URL = 'https://get.geojs.io/v1/ip/geo.json';
 function normalizeGeoJs(j) {
   if (!j || typeof j !== 'object' || !j.ip) return null;
@@ -187,13 +177,9 @@ function normalizeGeoJs(j) {
   };
 }
 
-// Pick one geo answer from several services queried through the same proxy. Geo databases
-// disagree on leased proxy ranges: on 29 Sep 2026 ipinfo put 169.128.195.52 in Lisbon while
-// ip-api and geojs both said Albuquerque, US, and trusting ipinfo alone launched a "US" proxy
-// with Portuguese time and language, a loud bot signal. Rule: the country most services agree
-// on wins; a tie goes to the country the user asked the vendor for (hint), then to the order
-// the services were listed in. The winner's own record supplies timezone/city. Each input is
-// the ip-api-shaped object the launch code already uses ({ countryCode, timezone, query, ... }).
+// Geo databases disagree on leased proxy ranges, and a wrong country gives mismatched timezone and
+// language (a bot signal). The majority country wins; ties go to countryHint, then input order.
+// Inputs are ip-api-shaped ({ countryCode, timezone, query, ... }); the winner supplies timezone/city.
 function pickGeoConsensus(results, { countryHint } = {}) {
   const valid = (Array.isArray(results) ? results : []).filter((r) => r && typeof r === 'object' && /^[A-Z]{2}$/i.test(String(r.countryCode || '')));
   if (!valid.length) return null;
@@ -277,14 +263,10 @@ function summarizeProxySellerOrders(data) {
   return out;
 }
 
-// ---------------------------------------------------------------------------------------
-// IPRoyal residential (resi-api.iproyal.com/v1, OpenAPI spec served at /docs).
-// ---------------------------------------------------------------------------------------
+// IPRoyal residential: resi-api.iproyal.com/v1 (OpenAPI spec served at /docs).
 
-// Parse one line of POST /access/generate-proxy-list requested in the
-// {hostname}:{port}:{username}:{password} format. Hostnames and usernames carry no ':' and
-// the password carries the targeting and sticky session (…_country-us_session-xxxx_lifetime-30m),
-// so split on the first three colons and keep the rest as the password.
+// Parses one generate-proxy-list line in {hostname}:{port}:{username}:{password} form. Only the
+// password may hold ':' (it carries targeting and session), so split on the first three colons.
 function parseIpRoyalLine(raw) {
   const line = String(raw || '').trim();
   const parts = line.split(':');
@@ -321,8 +303,8 @@ function ipRoyalLocation({ country, state, city } = {}) {
   return out;
 }
 
-// Pick the named port for the protocol from GET /access/entry-nodes. The port NAME is what the
-// generate call takes ("http", "socks5"), not the number.
+// Named port for the protocol from GET /access/entry-nodes. The generate call takes the port name
+// ("http", "socks5"), not the number.
 function pickIpRoyalPort(nodes, socks) {
   const list = Array.isArray(nodes) ? nodes : [];
   const want = socks ? /socks/i : /^https?$/i;
@@ -360,10 +342,7 @@ function ipRoyalErrorMessage(text) {
   return m ? m[1] : null;
 }
 
-// ---------------------------------------------------------------------------------------
-// Shared: split a bare "host:port" (IPv6-bracket aware). Used by the Proxidize per-proxy
-// parser, whose API returns the endpoint already joined.
-// ---------------------------------------------------------------------------------------
+// Splits a bare "host:port" (IPv6-bracket aware), as the Proxidize per-proxy API returns it.
 function parseHostPort(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
@@ -378,13 +357,9 @@ function parseHostPort(raw) {
   return { host, port };
 }
 
-// ---------------------------------------------------------------------------------------
-// MarsProxies residential (api.marsproxies.com, Bearer token). POST
-// /v1/residential/access/generate-proxy-list returns a JSON array of strings, each rendered
-// "{hostname}:{port}:{username}:{password}". Location and the sticky session ride in the
-// generated string, so each line parses exactly like an IPRoyal line. Sticky lifetime uses
-// the same {n}s/{n}m/{n}h rule as IPRoyal (reuse ipRoyalLifetime).
-// ---------------------------------------------------------------------------------------
+// MarsProxies residential (api.marsproxies.com, Bearer): generate-proxy-list returns a JSON array of
+// "host:port:user:pass" strings carrying location and session, parsed like IPRoyal lines. Sticky
+// lifetime follows the IPRoyal rule (ipRoyalLifetime).
 
 // Underscore-joined location, e.g. "_country-us_state-texas_city-dallas" or "_region-europe".
 // Codes come from GET /v1/residential/access/countries|regions; a non-plain token is dropped.
@@ -422,12 +397,9 @@ function parseMarsProxiesList(text) {
   return out;
 }
 
-// ---------------------------------------------------------------------------------------
-// NodeMaven (gateway gate.nodemaven.com; targeting encoded in the proxy USERNAME, no list
-// endpoint). Build "<login>-country-<cc>-region-<r>-city-<c>-type-<residential|mobile>-sid-
-// <id>-ttl-<t>-filter-<f>". A value containing '-' is truncated by the gateway, so drop it.
-// city requires region beside it; type selects residential vs mobile.
-// ---------------------------------------------------------------------------------------
+// NodeMaven (gate.nodemaven.com): targeting lives in the username, no list endpoint:
+// <login>-country-<cc>-region-<r>-city-<c>-type-<residential|mobile>-sid-<id>-ttl-<t>-filter-<f>.
+// The gateway truncates on '-', so values containing it are dropped; city needs region.
 const NODEMAVEN_TTL = /^[1-9]\d*[smh]$/;
 function nodeMavenTtl(value) {
   const v = String(value || '').trim().toLowerCase();
@@ -464,16 +436,9 @@ function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, 
   return parts.join('-');
 }
 
-// ---------------------------------------------------------------------------------------
-// Froxy (gateway proxy.froxy.com, ports 9000-9199). Login/password access: the LOGIN is the
-// package and the PASSWORD is the dashboard password followed by the geo fields, separated
-// by ";": "<password>;<country>;<region>;<city>;<provider>" (help.froxy.com, Login-Password
-// Authorization; blog example "password;country;;;"). The dashboard shows the bare password
-// with empty fields, e.g. "qwerty;;;;", so only the part before the first ";" is kept as the
-// base. Each port 9000-9199 is its own session, which is how a pull gets several exit IPs.
-// The previous builder replaced the whole password with "wifi;<cc>;..." (a SOAX pattern),
-// which Froxy rejected and reported as "your IP is not in the whitelist" (29 Sep 2026).
-// ---------------------------------------------------------------------------------------
+// Froxy (proxy.froxy.com, ports 9000-9199, each its own session). Login is the package; password is
+// "<password>;<country>;<region>;<city>;<provider>". The dashboard shows "qwerty;;;;", so only the
+// text before the first ';' is the base. Froxy reports a malformed password as an IP-whitelist error.
 function froxyType(poolType) {
   const t = String(poolType || '').trim().toLowerCase();
   if (t === 'mobile') return 'mobile';
@@ -496,14 +461,9 @@ function froxyPassword(base, { country, region, city, poolType } = {}) {
   return [head, /^[a-z]{2}$/.test(cc) ? cc : '', froxyField(region), froxyField(city), ''].join(';');
 }
 
-// ---------------------------------------------------------------------------------------
-// PacketStream: a single residential gateway (proxy.packetstream.io:31112 HTTP / :31113
-// SOCKS5). Country and sticky session are appended to the PASSWORD, e.g.
-// <pass>_country-US_session-ab12cd. No flags = random country + rotating IP. Country codes
-// are 2-letter uppercase. Confirmed against the dashboard Network Access generator 2026-09-27.
-// PacketStream targets a country by its English name with the spaces removed
-// (_country-UnitedStates), not by ISO code; a bare code is ignored and the exit is random.
-// These are the 126 names its dashboard (Network Access, Location) offered on 2026-10-06.
+// PacketStream: one gateway (proxy.packetstream.io:31112 HTTP, :31113 SOCKS5). Country and session go
+// on the password (<pass>_country-UnitedStates_session-ab12cd). Countries are English names without
+// spaces, not ISO codes (a code is ignored); these are the 126 names its dashboard offers.
 const PACKETSTREAM_COUNTRIES = Object.freeze({
   US: 'UnitedStates', CA: 'Canada', AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria',
   AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan',
@@ -542,11 +502,8 @@ function packetStreamPassword(base, { country, session } = {}) {
   return pw;
 }
 
-// ---------------------------------------------------------------------------------------
-// Airproxy: dedicated mobile proxies (each its own SIM). GET /api/proxy/list/ returns
-// { proxies: [{ id, ip, port, username, password, isp, in_use_till, ... }], count, success }.
-// HTTP only (no SOCKS port documented). Map active, well-formed entries to pool rows and
-// dedupe on host:port:username. Confirmed against a live account 2026-09-27.
+// Airproxy dedicated mobile proxies (HTTP only). GET /api/proxy/list/ returns { proxies: [{ id, ip,
+// port, username, password, isp, in_use_till, ... }], count, success }.
 function airproxyRows(body) {
   let data;
   try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return []; }
@@ -575,15 +532,9 @@ function airproxyRows(body) {
   return rows;
 }
 
-// ---------------------------------------------------------------------------------------
-// CatProxies: multi-product. The app supports the two ROTATING pools (Standard Residential
-// and Rotating Mobile). Both use one gateway with the targeting appended to the USERNAME and
-// the plan's proxy password unchanged. Grammars confirmed against the live dashboard
-// generator 2026-09-27:
-//   Standard Residential: <base>-type-residential[-country-<cc>][-state-..][-city-..]
-//                          [-lifetime-<min>-session-<id>]      (rotating = no session)
-//   Rotating Mobile:       <base>[-country-<CC>][-city-..][-sid-<id>[-ttl-<n>m]]
-// Country is lowercased for residential, uppercased for mobile (as the dashboard emits).
+// CatProxies rotating pools: targeting goes on the username, password unchanged. Residential:
+// <base>-type-residential[-country-<cc>][-state-..][-city-..][-lifetime-<min>-session-<id>]
+// Mobile: <base>[-country-<CC>][-city-..][-sid-<id>[-ttl-<n>m]]. Country case follows the dashboard.
 function catProxiesResiUsername(base, { country, state, city, session, lifetimeMin } = {}) {
   let u = `${String(base || '').trim()}-type-residential`;
   const code = (v) => String(v || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -620,13 +571,9 @@ function catProxiesCreds(json) {
   return { username, password, bandwidthLeft: Number.isFinite(bw) ? bw : null };
 }
 
-// ---------------------------------------------------------------------------------------
-// Proxidize (api.proxidize.com/api/v1, Bearer token). Per-Proxy plans return ready
-// host:port:user:pass from GET /perproxy/proxies/{username}. Per-GB plans expose a sub-user
-// (access point) whose username carries geo tokens "-co-USA-st-TX-ci-Dallas" and an optional
-// "-s-<session>" sticky token, built against the access point's own gateway host (20000 HTTP,
-// 20002 SOCKS5).
-// ---------------------------------------------------------------------------------------
+// Proxidize (api.proxidize.com/api/v1, Bearer). Per-Proxy plans return host:port:user:pass from
+// GET /perproxy/proxies/{username}. Per-GB sub-users take "-co-USA-st-TX-ci-Dallas" and an optional
+// "-s-<session>" in the username, on the access point's host (20000 HTTP, 20002 SOCKS5).
 function parseProxidizePerProxy(data, { socks = false } = {}) {
   const list = Array.isArray(data) ? data : (data && Array.isArray(data.data) ? data.data : []);
   const out = [];
@@ -670,20 +617,9 @@ function proxidizePerGbUsername(base, { country, state, city, session } = {}) {
   return out;
 }
 
-// ---------------------------------------------------------------------------------------
-// Live Proxies (rotating residential, static residential, rotating mobile).
-//
-// What is actually documented publicly is the CREDENTIAL shape, not an endpoint: the help
-// centre's own curl example is
-//   curl -x LV3418547-dc1LU7SsG-33:AL7sj3xus1@172.148.150.38:7383 http://ipinfo.io/
-// i.e. plain `username:password@host:port`, which parseLoginLine already handles (including
-// a password containing '@' or ':'). Plans are downloaded as a list from the dashboard, and
-// the programmatic API is documented inside the dashboard rather than on the public site.
-//
-// So this adapter takes the list URL the user copies out of THEIR dashboard instead of a
-// guessed endpoint. The URL is pinned to liveproxies.io over https so a typo or a pasted
-// third-party link cannot turn the pull into a request to an arbitrary host, and the account
-// access code that Live Proxies embeds in that URL never has to be handled separately.
+// Live Proxies documents only the credential shape (user:pass@host:port), so the adapter takes the
+// list URL from the user's dashboard. It is pinned to https liveproxies.io so a typo or pasted link
+// cannot send the request, with the access code embedded in it, to another host.
 const LIVEPROXIES_HOST = /(^|\.)liveproxies\.io$/i;
 function liveProxiesListUrl(raw) {
   const text = String(raw || '').trim();
@@ -695,9 +631,8 @@ function liveProxiesListUrl(raw) {
   return u.toString();
 }
 
-// Map a downloaded Live Proxies list into pool rows. Rotating plans hand out one gateway
-// endpoint that re-rotates per request, so a repeated line is ONE proxy; parseLoginList
-// already dedupes on host/port/username, which is the identity the pool dedupes on too.
+// Rotating plans give one gateway that re-rotates per request, so a repeated line is one proxy;
+// parseLoginList dedupes on host/port/username, like the pool.
 const LIVEPROXIES_PLANS = Object.freeze({
   residential: 'Residential',
   static: 'Static residential',
@@ -722,14 +657,9 @@ function liveProxiesRows(text, { socks = false, country = '', plan = 'residentia
   }));
 }
 
-// ---------------------------------------------------------------------------------------
-// Live Proxies gateway (read from the dashboard Proxy Generation panel, 29 Sep 2026). There
-// is no downloadable list URL: the dashboard builds lines from one account username (LV<id>)
-// and one proxy password, and so does the app.
-//   Rotating: b2b.liveproxies.io:7383   user LV58712-lv_us
-//   Sticky:   b2b-s<N>.liveproxies.io:7383   user LV58712-lv_us-<digits, max 8>   (60 min)
-//   SOCKS5:   socks.liveproxies.io:1080 with the same username/password
-// Country = "lv_" + lowercase ISO-2 code (the generator offers 59 countries).
+// Live Proxies gateway (no list URL): lines are built from the account username (LV<id>) and password.
+// Rotating b2b.liveproxies.io:7383 (user LV58712-lv_us); sticky b2b-s<N>, user -<1-8 digits>, 60 min;
+// SOCKS5 socks.liveproxies.io:1080. Country is "lv_" + lowercase ISO-2 code.
 const LIVEPROXIES_GATEWAY = Object.freeze({ http: 'b2b.liveproxies.io', port: 7383, socksHost: 'socks.liveproxies.io', socksPort: 1080 });
 function liveProxiesBaseUser(raw) {
   // Accept "LV58712" or a full generated username ("LV58712-lv_us-123") and keep the account part.
@@ -743,9 +673,8 @@ function liveProxiesUsername(base, { country, sid } = {}) {
   const s = String(sid || '').replace(/\D/g, '').slice(0, 8);
   return `${acct}-lv_${cc}${s ? `-${s}` : ''}`;
 }
-// Sticky server for the Nth sticky proxy (1-based). Only b2b-s1 to b2b-s17 exist in DNS (checked
-// 2 Nov 2026), so higher numbers wrap around. The session id in the username picks the exit IP, not
-// the server: 49 live proxies sharing these 17 servers came back with 49 different IPs.
+// Only b2b-s1 to b2b-s17 exist in DNS, so higher numbers wrap. The username's session id picks the
+// exit IP, not the server.
 const LIVEPROXIES_STICKY_SERVERS = 17;
 function liveProxiesStickyHost(n) {
   const i = Math.max(1, Number.parseInt(String(n), 10) || 1);
@@ -769,16 +698,12 @@ function camelPlace(value) {
     .join('');
 }
 
-// ---------------------------------------------------------------------------------------
-// RapidProxy (rotating residential): gateway us.rapidproxy.io:5001, credentials are a
-// dashboard sub-account. Targeting rides in the USERNAME, hyphen-separated:
-//   <sub>-residential-<CC|global>[-state-<State>[-city-<City>]][-session-<id>[-stime-<min>]]
-// Country is 2-letter uppercase (global = anywhere). State and City are CamelCase with no
-// spaces; City is only documented under a State, and both need a country. stime (1-180
-// minutes) only works with a session. Source: rapidproxy.io/proxy examples, 2026-09-29.
+// RapidProxy (us.rapidproxy.io:5001, dashboard sub-account); targeting rides in the username:
+// <sub>-residential-<CC|global>[-state-<State>[-city-<City>]][-session-<id>[-stime-<min>]]
+// State/City are CamelCase and need a country, City needs State; stime (1-180 min) needs a session.
 const RAPIDPROXY_MAX_STIME = 180;
-// The dashboard generator uses a random 8-digit NUMBER as the session id (sid). A typed or
-// auto-generated name is kept if it is already 1-8 digits, else mapped to a stable 8-digit number.
+// The dashboard uses a random 8-digit number as the sid. Input of 1-8 digits is kept; anything else
+// maps to a stable 8-digit number.
 function rapidProxySid(session) {
   const raw = String(session || '').trim();
   if (!raw) return '';
@@ -807,14 +732,9 @@ function rapidProxyUsername(base, { country, state, city, session, lifeMin } = {
   return user;
 }
 
-// ---------------------------------------------------------------------------------------
-// NOVADA: gateway super.novada.pro:7777 (the dashboard may assign a regional host such as
-// pr-as.novada.pro, so the host is overridable). Auth is a PROXY USER created under
-// Residential Proxies -> Users, not the login email. Targeting rides in the USERNAME:
-//   <user>-zone-<res|isp|mob>[-region-<cc>[-st-<state>][-city-<city>]][-session-<id>-sessTime-<min>]
-// Values are lowercase with no spaces; sessTime is 1-120 minutes. Sources:
-// developer.novada.com location-settings + session-type pages, and the dashboard endpoint
-// generator (...-zone-res-session-<id>-sessTime-5), 2026-09-29.
+// NOVADA (super.novada.pro:7777, overridable for regional hosts like pr-as.novada.pro). Auth is a
+// proxy user from Residential Proxies -> Users, not the login email. Lowercase, no spaces:
+// <user>-zone-<res|isp|mob>[-region-<cc>[-st-<state>][-city-<city>]][-session-<id>-sessTime-<1-120>]
 const NOVADA_ZONES = Object.freeze({ residential: 'res', isp: 'isp', mobile: 'mob' });
 const NOVADA_MAX_SESSTIME = 120;
 function novadaPlace(value) {
@@ -840,21 +760,13 @@ function novadaUsername(base, { poolType, country, state, city, session, lifeMin
   return user;
 }
 
-// ---------------------------------------------------------------------------------------
-// Proxies.sx pool gateway: gw.proxies.sx, 7000 HTTP / 7001 SOCKS5. Username grammar:
-//   psx_<acct>-<pool>-<cc>[-sid-<id>-rot-sticky]-failover-strict
-// The gateway lowercases the username and splits on "-", so no value may contain a hyphen.
-// pool = mbl (mobile modems) or peer (residential peers); "best"/"any" are never used because
-// they fail over across pools. failover-strict makes an out-of-stock country return an error
-// (E_NO_STOCK_COUNTRY) instead of silently exiting somewhere else, and a country is required.
-// A sticky row pins one session id (sid, [a-z0-9_] 8-64 chars) with rot-sticky; a rotating row
-// has no sid, so each new connection gets a fresh IP. An explicit rotate = a new sid.
-// Source: agents.proxies.sx pool skill + rotation cookbook, 2026-09-29.
+// Proxies.sx (gw.proxies.sx, 7000 HTTP, 7001 SOCKS5) lowercases the username and splits it on '-':
+// psx_<acct>-<mbl|peer>-<cc>[-sid-<id>-rot-sticky]-failover-strict. Never best/any (they cross pools);
+// failover-strict errors on an out-of-stock country instead of exiting elsewhere.
 const PROXIESSX_POOLS = Object.freeze({ mobile: 'mbl', residential: 'peer' });
 function proxiesSxSid(prefix, index) {
-  // Short ids are padded on the LEFT of the name, never on the right: mintGatewayRows numbers
-  // sessions before they reach here ('ab1', 'ab10'), and right-padding turned both into
-  // 'sg_ab100'. Left-padding keeps every distinct input distinct. Minimum total length 8.
+  // Pad short ids on the left: callers number sessions ('ab1', 'ab10'), and right-padding would make
+  // them collide. Minimum total length 8.
   let core = String(prefix || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
   if (index != null) core = `${core}_${index}`;
   if (core.length >= 8) return core.slice(0, 64);
@@ -883,14 +795,9 @@ function proxiesSxProxyCreds(body) {
   };
 }
 
-// ---------------------------------------------------------------------------------------
-// MobileProxy.Space: GET https://mobileproxy.space/api.html?command=get_my_proxy with
-// Authorization: Bearer <token> returns { status: 'ok', list: [Proxy] }. Each dedicated
-// mobile proxy has one login/password and separate HTTP and SOCKS5 ports on proxy_host_ip
-// (or proxy_hostname). Numbers may arrive as strings, so every one is parsed. proxy_exp is
-// kept as the vendor's text (their timezone is Moscow). Errors come back as
-// { status: 'err', message }. Source: github.com/mobileproxy/api-docs openapi.yaml + a live
-// bad-token probe, 2026-09-29.
+// MobileProxy.Space: GET mobileproxy.space/api.html?command=get_my_proxy (Bearer) -> { status: 'ok',
+// list }; errors are { status: 'err', message }. Each proxy has one login, separate HTTP/SOCKS5 ports;
+// numbers may be strings, and proxy_exp stays vendor text (Moscow time).
 function mobileProxySpaceRows(body, { socks = false } = {}) {
   let data;
   try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { error: 'bad-json', rows: [] }; }
@@ -922,13 +829,9 @@ function mobileProxySpaceRows(body, { socks = false } = {}) {
   return { error: '', rows };
 }
 
-// ---------------------------------------------------------------------------------------
-// Proxy-Solutions anti-detect integration: GET https://proxy-solutions.net/api/proxies/
-// {provider_key}?format=object&proto=http|socks&page=N&per_page=200 returns
-// { page, per_page, total_pages, total_proxies, proxies: [{ name, location, country_code,
-// dynamic, proto, ip, port, login, password, expires_at (epoch ms) }] }. Expired entries are
-// skipped. Source: the contract Proxy-Solutions sent SoftGlaze by email, 2026-09-28 (not in
-// their public docs yet, so it is verified against one live key before listing).
+// Proxy-Solutions: GET proxy-solutions.net/api/proxies/{provider_key}?format=object&proto=http|socks
+// &page=N&per_page=200 -> { total_pages, proxies: [{ ip, port, login, password, expires_at ms }] }.
+// The contract came by email and is not in their public docs; expired entries are skipped.
 function proxySolutionsPage(body, { now = Date.now() } = {}) {
   let data;
   try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], totalPages: 0 }; }
@@ -956,15 +859,9 @@ function proxySolutionsPage(body, { now = Date.now() } = {}) {
   return { rows, totalPages: Number.isInteger(totalPages) && totalPages > 0 ? totalPages : 1 };
 }
 
-// ---------------------------------------------------------------------------------------
-// Proxmint: GET /api/v1/account (Bearer pmk_ key) returns every product with its gateway
-// host, HTTP/SOCKS5 ports and proxy login. Targeting rides in the username after "__",
-// parameters joined by ";". Verified against the live gateway 2026-10-07:
-//   <user>__cr.de                      country (lower-case ISO code)
-//   <user>__cr.us;state.newyork        state, words joined, lower-case (underscores fail)
-//   <user>__cr.us;city.losangeles      city; sent WITHOUT the state (state+city weakened it)
-//   <user>__sessid.<id>;sessttl.<min>  sticky session, 1-120 minutes; works with or without cr
-// Rotating gateway port 823 (HTTP) / 824 (SOCKS5).
+// Proxmint: GET /api/v1/account (Bearer pmk_) lists products with host, ports and login. Targeting
+// follows "__" in the username, ';'-joined: cr.<cc>; state.<words joined, lowercase>; city.<name>
+// (without state); sessid.<id>;sessttl.<1-120 min>. Underscores fail. Rotating ports 823/824 (SOCKS5).
 const PROXMINT_PRODUCTS = Object.freeze(['residential', 'residential_premium', 'mobile', 'datacenter']);
 function proxmintGeoToken(v) {
   return String(v || '').trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
@@ -1014,13 +911,9 @@ function proxmintPickProduct(json, poolType) {
   };
 }
 
-// ---------------------------------------------------------------------------------------
-// Databay: one gateway, gw.databay.co:8888, for HTTP and SOCKS5. Targeting rides in the
-// proxy username as hyphen-separated key/value pairs (docs.databay.com, Connection String):
-//   <user>-zone-<residential|mobile|datacenter>-countryCode-US-stateName-California
-//   -cityName-Los Angeles-sessionId-<id>-sessionLength-<minutes, max 120>
-// One location filter is used (most specific wins on their side, so only the most specific
-// is sent). State and city exist on Residential only; Mobile and Datacenter take country.
+// Databay gateway gw.databay.co:8888 (HTTP and SOCKS5). Username: <user>-zone-<zone>-countryCode-US
+// -stateName-<s>-cityName-<c>-sessionId-<id>-sessionLength-<max 120 min>. Only the most specific
+// location is sent; state and city exist on Residential only.
 const DATABAY_ZONES = Object.freeze(['residential', 'mobile', 'datacenter']);
 function databayGeoValue(v) {
   // Hyphen is the parameter separator, so it can never appear inside a value.
@@ -1047,11 +940,9 @@ function databayUsername(base, { zone, country, state, city, session, lengthMin 
   return u;
 }
 
-// ---------------------------------------------------------------------------------------
-// IPFoxy rotating residential (ipfoxy.com/help/docs/1eyfJt + /session-time): one account on
-// gate-us.ipfoxy.io / gate-sg.ipfoxy.io port 58688 (HTTP and SOCKS5). Targeting rides in the
-// username: customer-<user>-cc-US-st-Florida-city-Miami-sessid-<id>-ttl-<min>; -ttl- must be
-// last and only applies to a sticky session. Built from the docs 2026-10-07; NOT live-key tested.
+// IPFoxy rotating residential: gate-us/gate-sg.ipfoxy.io:58688 (HTTP and SOCKS5). Username:
+// customer-<user>-cc-US-st-Florida-city-Miami-sessid-<id>-ttl-<min>; -ttl- goes last, sticky only.
+// Built from the docs; not tested with a live key.
 function ipfoxyGeo(v) { return String(v || '').trim().replace(/[^\p{L}\p{N}]+/gu, ''); }
 function ipfoxyUsername(account, { country, state, city, session, ttlMin } = {}) {
   let user = String(account || '').trim();
@@ -1075,9 +966,8 @@ function ipfoxyUsername(account, { country, state, city, session, ttlMin } = {})
   return user;
 }
 
-// ---------------------------------------------------------------------------------------
-// MangoProxy: POST backend.mangoproxy.com/public-api/v1/upstream/json (x-api-key) returns an
-// array of { http, https, socks5 } proxy URLs (OpenAPI ProxyUrlDto). Turn them into rows.
+// MangoProxy: POST backend.mangoproxy.com/public-api/v1/upstream/json (x-api-key) returns
+// [{ http, https, socks5 }] proxy URLs (OpenAPI ProxyUrlDto).
 function mangoProxyRows(json, { socks = false } = {}) {
   const list = Array.isArray(json) ? json : [];
   const rows = [];
@@ -1099,17 +989,9 @@ function mangoProxyRows(json, { socks = false } = {}) {
   return rows;
 }
 
-// ---------------------------------------------------------------------------------------
-// IP Burger (rotating residential, gateway residential.ipb.cloud:7777, HTTP only - their docs
-// state SOCKS5 is not offered on the residential network). The proxy user (customer-<id>) and
-// its password come from the dashboard Proxy Users; everything else rides in the username.
-// Grammar verified against IPBurger's own residential product page (ipburger.com/residential-
-// proxies, fetched 2026-10-07), whose verbatim examples are:
-//   customer-a1b2c3d4e5-cc-US                                        (country-wide, rotating)
-//   customer-a1b2c3d4e5-city-washington-sessid-cFNk-sesstime-30      (city, sticky)
-// So the geo is ONE token - cc-<CC> for the whole country, OR a narrowing city-/state- token
-// used INSTEAD of cc (the examples never combine them; the gateway resolves the city's country
-// itself). sessid-<id> + sesstime-<min> (held minutes, max 30) appear only for a sticky pull.
+// IP Burger: residential.ipb.cloud:7777, HTTP only (no residential SOCKS5). Username: customer-<id>
+// plus one geo token, cc-<CC> or a city-/state- token instead (never both), e.g. customer-x-cc-US or
+// customer-x-city-washington-sessid-cFNk-sesstime-30 (sticky only, max 30 min).
 function ipBurgerBaseUser(raw) {
   const s = String(raw || '').trim();
   const m = s.match(/^customer-([A-Za-z0-9]+)/i);
@@ -1141,19 +1023,9 @@ function ipBurgerUsername(base, { country, state, city, session, sesstimeMin } =
   return parts.join('-');
 }
 
-// ---------------------------------------------------------------------------------------
-// Proxy302 (open.proxy302.com Open API v3). A real list API, not a gateway grammar. Flow,
-// verified against the published docs (proxy302.apifox.cn, fetched 2026-10-07):
-//   GET  /user/users/token?username=<keyName>&password=<keyPwd>  -> { code:0, data:{ token } }
-//        the returned token already includes the "Basic " prefix and is sent verbatim as the
-//        Authorization header on every later call. The key is an API sub-account, not the login.
-//   GET  /proxy/area/country                                     -> { code:0, data:{ data:[
-//        { id, name, code } ] } }  maps an ISO-2 code to the numeric country_id.
-//   POST /proxy/api/proxy/dynamic/traffic?s=1&protocol=<http|socks5>&country_id=&state_id=0&
-//        city_id=0                                                -> { code:0, data:{ host:
-//        "proxy.proxy302.com", port:2222, user_name, password, protocol } }  one ready proxy.
-// Every response wraps the payload in { code, msg, data }; code 0 is success, anything else is
-// a business error carried in msg (so the HTTP status alone proves nothing).
+// Proxy302 Open API v3. GET /user/users/token (API sub-account, not the login) returns the full
+// Authorization value ("Basic ..."). /proxy/area/country maps ISO-2 to country_id; POST
+// /proxy/api/proxy/dynamic/traffic gives one proxy. A nonzero code in { code, msg, data } is an error.
 function proxy302Body(text, what) {
   let body;
   try { body = JSON.parse(String(text)); } catch (e) { throw new Error(`Proxy302 ${what}: the API did not return JSON.`); }
@@ -1196,15 +1068,9 @@ function proxy302Row(text, { socks = false, country = '' } = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------------------
-// 2extract (docs.2extract.com: Authentication, Geo-Targeting Parameters, Session Control,
-// Country List; fetched 2026-11-01). Everything rides in the proxy username:
-//   2xt-customer-<id>-proxy-<name>[-country-de[-state-california][-city-berlin]]
-//                                 [-session-<id>[-time-<minutes>]]
-// Rotating per request without -session; -time needs -session; state and city need country.
-// The Public API (GET /v1/proxy/{id}) returns the proxy name and password but not the customer
-// id, so it cannot produce a usable username: the base username comes from the dashboard
-// (Connection Details). NOT live-key tested.
+// 2extract username: 2xt-customer-<id>-proxy-<name>[-country-de[-state-..][-city-..]][-session-<id>
+// [-time-<min>]]; -time needs -session, state/city need country. The Public API lacks the customer id,
+// so the base username comes from the dashboard. Not tested with a live key.
 const TWOEXTRACT_COUNTRIES = new Set('af ax al dz as ad ao ai aq ag ar am aw au at az bh bd bb by be bz bj bm bt bo ba bw bv br io vg bn bg bf bi kh cm ca cv bq ky cf td cl cn cx cc co km ck cr ci hr cu cw cy cz cd dk dj dm do ec eg sv en gq er ee sz et fk fo fj fi fr gf pf tf ga ge de gh gi gr gl gd gp gu gt gg gn gw gy ht hm hn hk hu is in id ir iq ie im il it jm jp je jo kz ke ki xk kw kg la lv lb ls lr ly li lt lu mo mg mw my mv ml mt mh mq mr mu yt mx fm md mc mn me ms ma mz mm na nr np nl nc nz ni ne ng nu nf kp mk mp no om pk pw ps pa pg py pe ph pn pl pt pr qa cg re ro ru rw bl kn lc mf pm vc ws sm st sa sn rs sc sl sg sx sk si sb so za gs kr ss es lk sd sr sj se ch sy tj tw tz th bs gm tl tg tk to tt tn tr tm tc tv vi ug ua ae gb us uy uz vu va ve vn wf eh ye zm zw'.split(' '));
 function twoExtractBaseUser(raw) {
   // The proxy name is lowercase letters, digits and underscores, so the first hyphen after it
@@ -1250,16 +1116,9 @@ function twoExtractUsername(base, { country, state, city, session, timeMin } = {
   return parts.join('-');
 }
 
-// ---------------------------------------------------------------------------------------
-// GonzoProxy (help.gonzoproxy.com/ru, fetched 2026-11-01). One gateway for all three pools,
-// connect.gonzoproxy.app:10000, HTTP and SOCKS5 on that one port. Everything selected in the
-// dashboard is written into the login, underscore-joined. The published examples are:
-//   Gonzoj9CiIi_c_US_s_204976RWZ_ttl_72h
-//   Gonzoj9CiIi_c_US_sd_443_s_663698TEC_ttl_72h
-// with c_<CC> country, sd_<number> region, city_Los-Angeles city, isp_<number> provider. Only
-// the sticky form is published, so that is the only form built here: the login for "Randomize
-// IP" is not shown anywhere, and the API's POST /generate does not document its response or the
-// parameter that picks the pool. NOT live-key tested.
+// GonzoProxy: connect.gonzoproxy.app:10000, HTTP and SOCKS5, all pools. Targeting is in the login,
+// underscore-joined: Gonzoj9CiIi_c_US_sd_443_s_663698TEC_ttl_72h (sd = region; also isp_, city_).
+// Only the sticky form is documented, so only it is built. Not tested with a live key.
 const GONZOPROXY_TTL = '72h'; // the lifetime in every published example
 function gonzoProxyBaseLogin(raw) {
   const s = String(raw || '').trim();
@@ -1289,13 +1148,9 @@ function gonzoProxyUsername(login, { country, state, city, session } = {}) {
   return parts.join('_');
 }
 
-// ---------------------------------------------------------------------------------------
-// Simply Proxies (simplyproxies.com/docs, fetched 2026-11-01). UK only, no customer API. Username:
-//   <user>[-ee|-o2|-vodafone|-three][-session-<id>[-<minutes>]]
-// The network token goes directly after the user and before the session suffix. Minutes run
-// from 5 to 720 and apply on SOCKS5 only (the HTTPS endpoint uses a fixed 12 hour window). An id
-// ending in a hyphen plus digits would be read as id + minutes, so ids stay alphanumeric.
-// NOT live-key tested.
+// Simply Proxies (UK only, no customer API): <user>[-ee|-o2|-vodafone|-three][-session-<id>[-<min>]].
+// Minutes (5-720) apply on SOCKS5 only; HTTPS uses a fixed 12 h window. Ids stay alphanumeric, since
+// a trailing -<digits> would read as minutes. Not tested with a live key.
 const SIMPLYPROXIES_NETWORKS = Object.freeze(['ee', 'o2', 'vodafone', 'three']);
 function simplyProxiesUsername(base, { network, session, minutes } = {}) {
   // Drop a pasted suffix so the targeting is rebuilt from the form, never doubled.
@@ -1324,14 +1179,9 @@ function simplyProxiesUsername(base, { network, session, minutes } = {}) {
   return parts.join('-');
 }
 
-// ---------------------------------------------------------------------------------------
-// Coronium (api.coronium.io/api-docs, OpenAPI 3.3.10, fetched 2026-11-01). GET
-// /api/v3/account/proxies with a Bearer key returns { data: [row] }. A classic row connects to
-// ip_address with proxy_login + proxy_password on http_port or socks_port. A row carrying
-// proxyEndpoints instead has per-protocol { host, port, username, password }, and those logins
-// can differ between HTTP and SOCKS5, so they win when present. Rows also carry restartByToken,
-// statusByToken and restartToken: a GET on those rotates the IP with no auth, so only the fields
-// named below are ever copied out. Expired lines are skipped. NOT live-key tested.
+// Coronium: GET /api/v3/account/proxies (Bearer) -> { data }. Rows use ip_address + proxy_login on
+// http_port/socks_port, or per-protocol proxyEndpoints, which win. The restart/status token URLs
+// rotate the IP without auth, so only the named fields are copied. Not tested with a live key.
 function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, expired: 0 }; }
@@ -1366,12 +1216,9 @@ function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
   return { rows, total: list.length, expired };
 }
 
-// ---------------------------------------------------------------------------------------
-// Singapore Mobile Proxy (singaporemobileproxy.com/api-docs, fetched 2026-11-01). GET
-// /api/v1/proxies/my with x-api-key returns { proxyList: [row] }: host_domain, http_port,
-// socket_port, license_status, and authentication_user as "user:password". rotation_link is
-// never copied out, because a fetch of it changes the IP. A line with no login (IP allow-list
-// only) cannot be used from an arbitrary machine, so it is counted and left out. NOT live-key tested.
+// Singapore Mobile Proxy: GET /api/v1/proxies/my (x-api-key) -> { proxyList }; authentication_user is
+// "user:password". rotation_link changes the IP when fetched, so it is never copied. Lines without a
+// login (IP allow-list only) are counted and left out. Not tested with a live key.
 function singaporeMobileProxyRows(body, { socks = false } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, inactive: 0, noLogin: 0 }; }
@@ -1405,15 +1252,9 @@ function singaporeMobileProxyRows(body, { socks = false } = {}) {
   return { rows, total: list.length, inactive, noLogin };
 }
 
-// ---------------------------------------------------------------------------------------
-// Gsocks (help.gsocks.net/en/articles/9847111-api-documentation, fetched 2026-11-01). Base
-// api.gsocks.net, header "authorization: key <api_key>". GET /proxy?type=&active=&limit=&page=
-// returns { proxies, count }, then GET /proxy/residential-proxy-list/:id or /mobile-proxy-list/:id
-// returns a text list of host:port:user:pass lines. Two things the page does not spell out, so
-// they fail loudly here rather than being assumed quietly: the field holding a proxy's id in
-// `proxies` (read as `id`, the name its URL parameter uses), and whether the text list comes bare
-// or wrapped as { List } (both accepted). Private and datacenter have no text list and their
-// proxy object is undocumented, so they are not offered. NOT live-key tested.
+// Gsocks (api.gsocks.net, "authorization: key <api_key>"): GET /proxy returns { proxies, count },
+// then /proxy/<residential|mobile>-proxy-list/:id a host:port:user:pass text list (bare or { List }).
+// The id field is undocumented (read as `id`, failing loudly). Not tested with a live key.
 function gsocksProxyIds(body) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { ids: [], listed: 0, total: 0 }; }
@@ -1462,12 +1303,9 @@ function gsocksListRows(body, { kind = 'Residential', id = '' } = {}) {
   return rows;
 }
 
-// ---------------------------------------------------------------------------------------
-// Proxy Bonanza (proxybonanza.com/en/articles/api-reference-1, fetched 2026-11-01). GET
-// /api/v1/userpackages-ippacks.json with "Authorization: <full key>" returns every proxy IP on
-// the account's active plans: { success, data: [{ ip, port_http, port_socks, login, password,
-// countrycode, georegion_name, userpackage_id }] }. The full key is <api_key>!<user_id>.
-// NOT live-key tested.
+// Proxy Bonanza: GET /api/v1/userpackages-ippacks.json with "Authorization: <api_key>!<user_id>"
+// returns { success, data: [{ ip, port_http, port_socks, login, password, countrycode, ... }] }
+// for every IP on active plans. Not tested with a live key.
 function proxyBonanzaRows(body, { socks = false } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], error: 'The API did not return JSON.' }; }
@@ -1501,13 +1339,9 @@ function proxyBonanzaRows(body, { socks = false } = {}) {
   return { rows, error: '', total: list.length };
 }
 
-// ---------------------------------------------------------------------------------------
-// PROXY6 (proxy6.net/en/developers, fetched 2026-11-01). GET
-// https://px6.link/api/<key>/getproxy/?state=active&nokey&limit=1000&page=<n> returns
-// { status, list_count, list } where each proxy has host, port, user, pass, type, country,
-// version, active and unixtime_end. Failures come back as { status: "no", error_id, error } with
-// HTTP 200. version 5 is MTProto, which is not a web proxy, so it is left out. type http or socks
-// fixes the protocol of a line; auto serves both. NOT live-key tested.
+// PROXY6: GET px6.link/api/<key>/getproxy/?state=active&nokey&limit=1000&page=<n> -> { list }.
+// Failures are { status: "no", error_id, error } with HTTP 200. Version 5 (MTProto) is not a web proxy;
+// type http/socks fixes a line's protocol, auto serves both. Not tested with a live key.
 const PROXY6_VERSIONS = Object.freeze({ 3: 'IPv4 Shared', 4: 'IPv4', 6: 'IPv6' });
 function proxy6ErrorMessage(errorId, error) {
   const id = Number(errorId);
@@ -1550,14 +1384,9 @@ function proxy6Page(body, { socks = false, now = Date.now() } = {}) {
   return { rows, listCount: list.length, skippedProtocol, error: '' };
 }
 
-// ---------------------------------------------------------------------------------------
-// CatProxies fixed-IP products (catproxies.com/docs/api, fetched 2026-11-01). NOT live-key tested.
-// Dedicated ISP + Custom ISP: GET /generator/isp?orderId= returns one line per IP, each with its
-// own host, port_http, port_socks, login, password. The docs name those fields and the reply's
-// pending flag (HTTP 202) but not the key holding the array, so the array is found by its fields.
-// Datacenter: GET /orders/:id gives proxy.username and proxy.password for every IP, plus ip_list
-// "grouped by country and then city" with cities[].ips. Both an array of groups and an object
-// keyed by country are read, since the docs show no sample. Any IP takes HTTP 1338 / SOCKS5 1339.
+// CatProxies fixed IP, not tested with a live key. ISP: GET /generator/isp?orderId= gives a line per
+// IP; the array key is undocumented, so it is found by its fields (pending = HTTP 202). Datacenter:
+// GET /orders/:id has shared logins and ip_list by country/city (array or object); ports 1338 / 1339.
 const CATPROXIES_DATACENTER_PORTS = Object.freeze({ http: 1338, socks: 1339 });
 function catProxiesIspRows(json, { socks = false } = {}) {
   const root = (json && json.payload) || json;

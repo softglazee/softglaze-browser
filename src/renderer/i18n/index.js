@@ -1,21 +1,6 @@
-// App internationalization (i18n) - offline, bundled resources.
-//
-// Translations ship as JSON imported straight into the Vite bundle (no HTTP
-// backend), so the app stays fully local-first. The selected language is
-// persisted in localStorage and mirrored onto <html lang> for accessibility,
-// exactly like the theme system in lib/theme.js.
-//
-// Namespaces are split per page (common = app chrome + dashboard + settings
-// header; one namespace per route page). All are registered here so every page
-// resolves regardless of load order. (Some pages also self-register their own
-// namespace via i18n.addResourceBundle for hot-reload friendliness; that call is
-// a guarded no-op once this central init has run.)
-//
-// This module is the single source of truth for the supported-language list and
-// the persistence key; lib/lang.js builds the user-facing setLang/getStoredLang
-// helpers on top of it (one-way dependency - this file imports nothing from there
-// to avoid a cycle). Initialization is synchronous (resources are inlined), so
-// useSuspense is off and no <Suspense> fallback is ever shown for translations.
+// Offline i18n: translations are bundled JSON (local-first). Single source of the language list and
+// storage key; lib/lang.js builds on it, so never import from there (cycle). Init is synchronous, so
+// useSuspense is off. Every namespace registers here so pages resolve in any load order.
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 

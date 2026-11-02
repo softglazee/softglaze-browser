@@ -20,9 +20,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
 
-// Register this page's "personas" namespace without touching the central i18n
-// config (which only bundles the "common" namespace). addResourceBundle is a
-// no-op if the bundle already exists, so this is safe across hot reloads.
+// Register the "personas" namespace here; the central i18n config only bundles "common".
 if (!i18n.hasResourceBundle('en', 'personas')) i18n.addResourceBundle('en', 'personas', personasEn);
 if (!i18n.hasResourceBundle('es', 'personas')) i18n.addResourceBundle('es', 'personas', personasEs);
 
@@ -49,7 +47,6 @@ const FIELD_DEFS = [
   { key: 'label', label: 'Batch label', aliases: ['label', 'batch', 'batch label', 'tag', 'group'] }
 ];
 
-// Form layout - fields grouped into sections (mirrors the schema's natural shape).
 const FORM_GROUPS = [
   { title: 'Identity', fields: ['firstName', 'lastName', 'dateOfBirth', 'phone'] },
   { title: 'Account', fields: ['email', 'username', 'password'] },
@@ -73,13 +70,8 @@ function autoGuessMapping(headers) {
   const nh = headers.map(norm);
   for (const def of FIELD_DEFS) map[def.key] = '';
   const claim = (def, idx) => { map[def.key] = headers[idx]; used.add(headers[idx]); };
-  // Pass 1 - EXACT alias, for every field, before any fuzzy matching happens.
-  // The two passes used to be interleaved per field, so a field earlier in
-  // FIELD_DEFS could fuzzy-steal a header that a later field matched exactly. The
-  // fuzzy test is bidirectional (`h.includes(na) || na.includes(h)`), so a
-  // "Company address" column was swallowed by addressLine1 - whose 'address' alias
-  // is a substring of it - and the company address silently imported into the
-  // persona's HOME street on every bulk import.
+  // Pass 1 - exact aliases for every field before any fuzzy match. The fuzzy test is bidirectional,
+  // so an earlier field could otherwise steal a header a later one matches exactly ("Company address").
   for (const def of FIELD_DEFS) {
     if (map[def.key]) continue;
     for (const a of def.aliases) {
@@ -100,8 +92,6 @@ function autoGuessMapping(headers) {
   return map;
 }
 
-// Tinted, clickable stat card (matches the Proxy Pool / Extensions cards). Shows an
-// accent ring while it's the active filter.
 function StatCard({ icon: Icon, label, value, color, onClick, active }) {
   const { t } = useTranslation('personas');
   const Tag = onClick ? 'button' : 'div';
@@ -137,7 +127,6 @@ function Field({ label, required, children }) {
   );
 }
 
-// A native select styled to match the design system (used by the import mapper).
 function MapSelect({ value, onChange, headers }) {
   const { t } = useTranslation('personas');
   return (
@@ -155,12 +144,10 @@ function MapSelect({ value, onChange, headers }) {
   );
 }
 
-// Compose a short single-line address from the parts.
 function addressOf(p) {
   return [p.addressLine1, p.addressLine2, p.city, p.state, p.zipCode, p.country].filter(Boolean).join(', ');
 }
 
-// Password cell: masked by default, click the eye to reveal (demo-vault data).
 function PasswordCell({ value }) {
   const { t } = useTranslation('personas');
   const [show, setShow] = useState(false);
@@ -188,13 +175,11 @@ export default function PersonasPage() {
   const [showFormPassword, setShowFormPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Manual add / edit modal
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Import modal
   const [importOpen, setImportOpen] = useState(false);
   const [importStep, setImportStep] = useState(1); // 1 = pick file, 2 = map columns
   const [preview, setPreview] = useState(null); // { fileName, headers, rows }
@@ -245,9 +230,8 @@ export default function PersonasPage() {
   const paged = pageSize === Infinity ? filtered : filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { setPage(1); }, [search, usageFilter, pageSize]);
 
-  // When the search or usage filter changes, drop selected ids that are no longer visible,
-  // so "select all" under one filter can never delete or reset rows hidden by the next one.
-  // Keyed on the filter inputs only, so a reload after an edit keeps the selection.
+  // On a filter change, drop selected ids no longer visible so bulk delete/reset never hits hidden rows.
+  // Keyed on filter inputs only, so a reload after an edit keeps the selection.
   const visiblePersonaIdsRef = useRef(null);
   visiblePersonaIdsRef.current = filtered;
   useEffect(() => {
@@ -281,7 +265,6 @@ export default function PersonasPage() {
   }
   function clearSelection() { setSelectedIds(new Set()); }
 
-  // --- Manual add / edit ---
   function openCreate() { setForm(EMPTY_FORM); setFormError(''); setShowFormPassword(false); setFormOpen(true); }
   function openEdit(p) {
     setForm({
@@ -315,7 +298,6 @@ export default function PersonasPage() {
     }
   }
 
-  // --- Row + bulk actions ---
   async function handleDeleteOne(p) {
     const who = [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email || p.username || t('confirm.fallbackName');
     if (!window.confirm(t('confirm.deleteOne', { name: who }))) return;
@@ -346,7 +328,6 @@ export default function PersonasPage() {
     finally { setBusy(false); }
   }
 
-  // --- Excel / CSV import ---
   function openImport() {
     setImportStep(1);
     setPreview(null);
@@ -425,7 +406,6 @@ export default function PersonasPage() {
         }
       />
 
-      {/* STATS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard icon={Users} label={t('stats.totalIdentities')} value={personas.length} color="#8b5cf6" onClick={() => setUsageFilter('all')} active={usageFilter === 'all'} />
         <StatCard icon={Sparkles} label={t('stats.neverUsed')} value={neverUsed} color="#10b981" onClick={() => setFilter('unused')} active={usageFilter === 'unused'} />
@@ -435,7 +415,6 @@ export default function PersonasPage() {
 
       {error && <div className="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
 
-      {/* TOOLBAR */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative max-w-sm flex-1 min-w-[220px]">
           <Input icon={Search} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('toolbar.searchPlaceholder')} />
@@ -447,7 +426,6 @@ export default function PersonasPage() {
         )}
       </div>
 
-      {/* BULK BAR */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
           <span className="font-medium text-foreground">{t('bulk.selected', { count: selectedIds.size })}</span>
@@ -464,7 +442,6 @@ export default function PersonasPage() {
         </div>
       )}
 
-      {/* TABLE */}
       <Card className="bg-surface border-border flex flex-col shadow-xl flex-1 min-h-0 rounded">
         <CardContent className="p-0 overflow-auto flex-1 min-h-0 rounded">
           {loading ? (
@@ -559,7 +536,6 @@ export default function PersonasPage() {
         )}
       </Card>
 
-      {/* --- ADD / EDIT MODAL --- */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent title={isEditing ? t('form.dialogTitleEdit') : t('form.dialogTitleAdd')} className="rounded border-border bg-card flex flex-col max-h-[88vh]">
           <form onSubmit={handleSave} className="flex flex-col min-h-0">
@@ -616,7 +592,6 @@ export default function PersonasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* --- IMPORT MODAL --- */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent title={t('import.dialogTitle')} className="rounded border-border bg-card flex flex-col max-h-[88vh]">
           <DialogHeader>

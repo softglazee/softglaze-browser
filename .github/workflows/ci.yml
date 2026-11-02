@@ -10,15 +10,10 @@ jobs:
     name: Lint, build & unit tests
     runs-on: ubuntu-latest
     env:
-      # Tests/build never launch a browser or Electron — skip those large
-      # binary downloads to keep CI fast.
+      # Tests never launch a browser or Electron, so skip the binary downloads.
       PUPPETEER_SKIP_DOWNLOAD: 'true'
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      # With the binary skipped, require('electron') in a test DOWNLOADS it on first use,
-      # and node --test runs test files in parallel processes, so several of them unpacked
-      # it into the same folder at once ("File exists (os error 17)" -> "Electron failed
-      # to install correctly"), failing a random test. Under plain node the tests only
-      # get the binary's path, never run it, so point that path at a dummy folder.
+      # Stops parallel test files from racing to download Electron on require('electron').
       ELECTRON_OVERRIDE_DIST_PATH: '/tmp/electron-not-installed'
     steps:
       - uses: actions/checkout@v4
@@ -67,9 +62,6 @@ jobs:
         run: npx vite build
 
       - name: Package unpacked app (build-only)
-        # Smoke test only: skip exe edit/sign so electron-builder never fetches
-        # winCodeSign (its 7z carries a macOS symlink that fails to extract on a
-        # fresh Windows runner — "Cannot create symbolic link"). The real signed
-        # build (npm run build:electron, run locally with the cert) keeps full
-        # icon + version patching and signing.
+        # Unsigned smoke build: winCodeSign fails to extract on a fresh Windows runner.
+        # Signed builds run locally with npm run build:electron.
         run: npx electron-builder --dir --publish never --config.win.signAndEditExecutable=false

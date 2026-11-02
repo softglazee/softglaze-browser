@@ -4,8 +4,7 @@ import { X, Download, Check, Loader2, RefreshCcw, MonitorDown, Cloud, Play } fro
 import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// On-demand browser manager: lists every Chrome-for-Testing build,
-// shows installed vs downloadable, and downloads+installs on demand with progress.
+// Lists Chrome-for-Testing builds (installed vs downloadable) and installs them on demand.
 export default function BrowserManagerModal({ onClose, onInstalled }) {
   const { t } = useTranslation('cmpModalsC');
   const { dialogRef } = useDialog({ onClose });

@@ -1,6 +1,6 @@
 'use strict';
-// Audit L7: the credential fields each payment provider needs, validated on save by
-// POST /v1/tenant/payment-config and sealed together (sealJson) at rest. Pure.
+// Credential fields each payment provider needs, validated on save by POST /v1/tenant/payment-config
+// and sealed together (sealJson) at rest.
 const PROVIDER_FIELDS = {
   stripe: { required: ['secretKey', 'webhookSecret'], optional: [] },
   paypal: { required: ['clientId', 'clientSecret', 'webhookId'], optional: ['env'] },

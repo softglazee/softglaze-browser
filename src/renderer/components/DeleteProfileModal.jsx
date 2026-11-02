@@ -13,9 +13,7 @@ function formatBytes(n) {
   return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${u[i]}`;
 }
 
-// Confirm moving a profile to Trash, with the choice to also wipe its on-disk
-// browser data (cookies / cache / logins) now. Shows the storage size first so
-// the decision is informed.
+// Moves a profile to Trash, optionally wiping its on-disk browser data; shows the storage size first.
 export default function DeleteProfileModal({ profile, onClose, onDeleted }) {
   const { t } = useTranslation('cmpModalsA');
   const [info, setInfo] = useState(null);

@@ -1,15 +1,7 @@
 'use strict';
-// Produce a per-tenant (white-label) build by baking a provisioned tenant config
-// into src/main/tenant.config.json, then running the Electron build. The base
-// config is always restored afterward so the working tree stays clean.
-//
-//   node scripts/build-tenant.js <tenant.config.json>             # bake + build + restore
-//   node scripts/build-tenant.js <tenant.config.json> --bake-only # just bake (for dev)
-//   node scripts/build-tenant.js --reset                          # restore the empty base config
-//
-// The config is the file emitted by the licensing-server's `npm run provision`:
-//   { "tenantId": "...", "apiBaseUrl": "https://...", "publicKeyPem": "-----BEGIN PUBLIC KEY-----\n..." }
-// Optional white-label overrides: { "brand": { "name", "appId", "winIcon" } }.
+// Bakes a provisioned tenant config (from licensing-server `npm run provision`) into
+// src/main/tenant.config.json, runs the Electron build, then restores the base config.
+// Usage: build-tenant.js <tenant.config.json> [--bake-only] | --reset
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');

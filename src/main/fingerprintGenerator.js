@@ -1,15 +1,7 @@
 'use strict';
-// Generates a complete, internally-consistent desktop fingerprint.
-//
-// Design principles:
-//  - Device traits (OS, GPU, screen, CPU/RAM) are randomized but PAIRED so they
-//    agree with each other (a macOS profile gets an Apple GPU + a Mac resolution).
-//  - The browser VERSION is left to the engine (userAgent 'Auto', browserVersion
-//    blank) so the reported UA / Client-Hints match the real Chromium binary's
-//    TLS / JA4 / HTTP2 fingerprint. Faking a version the binary doesn't have is
-//    exactly the kind of mismatch detectors look for.
-//  - Timezone / language / geolocation are intentionally left on "Based on IP"
-//    so the launch engine binds them to the proxy's exit IP at launch time.
+// Device traits (OS, GPU, screen, CPU/RAM) are random but paired so they agree with each other.
+// The browser version is left to the engine so UA/Client Hints match the binary's TLS/JA4 fingerprint.
+// Timezone, language and geolocation stay "Based on IP" so launch binds them to the proxy exit IP.
 
 const crypto = require('node:crypto');
 
@@ -44,13 +36,9 @@ function normalizeDesktopOs(os) {
   return null;
 }
 
-// Resolve the profile's *preferred* Chrome version: honor an explicit pin (full version
-// or a bare major like "142"), otherwise pick one at random from the recent-stable pool.
-// NOTE: this is a preference/display value only. At launch the engine's coherence guard
-// (buildUserAgentBundle) overrides the reported major/full with the ACTUAL launched
-// binary's version whenever it differs, so the wire identity always matches the real
-// TLS/JA4 - this pin is used verbatim only when a matching binary is launched (e.g. a
-// Chrome-for-Testing build of the pinned version) or when the binary version is unreadable.
+// Preferred version only: honors a pin (full or bare major), else picks from the pool. At launch,
+// buildUserAgentBundle reports the real binary's version when it differs, so the wire identity
+// matches TLS/JA4; the pin is used verbatim only when it matches or the binary version is unreadable.
 function pickChromeVersion(pinned) {
   const p = String(pinned || '').trim();
   if (p && p.toLowerCase() !== 'auto') {
@@ -70,10 +58,8 @@ const WIN_RES = [
   '1280x720', '1680x1050', '1920x1200', '3840x2160', '2560x1080', '1360x768',
   '1280x1024', '3440x1440', '1280x800', '2256x1504'
 ];
-// macOS LOGICAL (CSS-point) resolutions. A real Retina Mac reports logical points
-// (with devicePixelRatio 2), NOT the physical panel size - 3024x1964 / 2880x1800 as
-// screen.width is impossible at DPR 1 and absurd at DPR 2, an instant tell. The engine
-// pairs these with DPR 2 for macOS profiles so screen dims + DPR stay consistent.
+// Logical (CSS-point) sizes: a Retina Mac reports points at DPR 2, not the panel size, so a physical
+// size as screen.width is a tell. The engine pairs these with DPR 2.
 const MAC_RES = [
   '1440x900', '1470x956', '1512x982', '1680x1050', '1728x1117', '1280x800', '2056x1329', '1512x945'
 ];
@@ -126,39 +112,22 @@ const LINUX_GPU = [
   ['Google Inc. (AMD)', 'ANGLE (AMD, AMD Radeon RX 6600 (RADV NAVI23), OpenGL 4.6)']
 ];
 
-// Recent Chrome stable full versions, one per major. A profile is pinned one of these
-// as its *preferred* reported version (a batch can distribute them for a plausible
-// display spread). This is NOT the final wire identity: the launch engine's coherence
-// guard reports the ACTUALLY-launched binary's major/full version instead whenever they
-// differ, because a UA major that disagrees with the real TLS/JA4 handshake is a hard
-// bot signal. So keeping this pool current is only cosmetic (it affects the stored/
-// displayed version and the Chrome-for-Testing fallback target) - a stale pool degrades
-// safely to "report the real binary", never to an incoherent mismatch. Bump periodically.
+// Recent stable versions, one per major, used as a profile's preferred version. The launch engine
+// reports the real binary's version when they differ, so a stale pool only affects the displayed
+// version and the Chrome-for-Testing fallback target. Bump periodically.
 const CHROME_VERSIONS = [
   '140.0.7339.208', '141.0.7390.108', '142.0.7444.176', '143.0.7499.96',
   '144.0.7559.133', '145.0.7612.88', '146.0.7673.55', '147.0.7728.144',
   '148.0.7780.102', '149.0.7827.155'
 ];
 
-// Mobile (Android, CDP-emulated). The UA + Client-Hints layer in browserEngine.js
-// reports a Pixel 7 / Android 13, so the generated GPU + screen MUST match that
-// exact device or the WebGL renderer would contradict the UA (an easy mismatch to
-// score). Everything here is therefore a real Pixel 7 (Tensor G2 / Mali-G710,
-// 8 cores, 8 GB, 412x915 CSS @ DPR 2.625). The launch engine derives the DPR and
-// touch points from deviceClass='mobile'. Add more devices later by parametrizing
-// osTokens()/userAgentMetadata.model alongside a matching pool entry here.
+// browserEngine reports a Pixel 7 / Android 13, so GPU and screen must match that exact device or
+// WebGL contradicts the UA. DPR and touch points come from deviceClass='mobile'.
 const ANDROID_GPU = ['Google Inc. (ARM)', 'ANGLE (ARM, Mali-G710 MC10, OpenGL ES 3.2)'];
 const ANDROID_RES = '412x915'; // CSS logical viewport of a Pixel 7 (physical 1080x2400)
 
-// ---------------------------------------------------------------------------
-// Media-device label pools, per OS. enumerateDevices() consistency is a real
-// detection surface: a profile that reports 0 devices - or labels that don't fit
-// the spoofed OS - gets flagged. These are plausible, real-world endpoint names
-// (Realtek/Intel audio + common laptop webcams on Windows, the Built-in family on
-// macOS, ALSA/UVC names on Linux). The concrete deviceId/groupId HASHES are
-// derived per-profile in the launch engine from the profile seed, so they stay
-// stable across launches; here we only choose the human-readable labels.
-// ---------------------------------------------------------------------------
+// enumerateDevices() is a detection surface: zero devices or labels that do not fit the OS get flagged.
+// Only labels are picked here; the launch engine derives stable deviceId/groupId from the profile seed.
 const MEDIA_LABELS = {
   Windows: {
     audioinput: ['Microphone (Realtek(R) Audio)', 'Microphone Array (Realtek(R) Audio)', 'Microphone (2- High Definition Audio Device)', 'Headset Microphone (3- USB Audio Device)'],
@@ -177,17 +146,9 @@ const MEDIA_LABELS = {
   }
 };
 
-// ---------------------------------------------------------------------------
-// Chromium-family brand identities. Edge / Brave / Opera / Vivaldi / Yandex all
-// run the SAME Blink engine as Chrome, so Softglaze launches the real Chrome
-// binary and only swaps the *identity layer*: the UA token, the Sec-CH-UA brand
-// list, navigator.vendor and a couple of vendor JS globals. The underlying
-// Chromium MAJOR (and therefore TLS / JA4 / HTTP2 and the "Chromium" + "Chrome/M"
-// tokens) ALWAYS comes from the real launched binary, so nothing the vendor token
-// adds contradicts the wire fingerprint - exactly how the real vendor browsers
-// look. The vendor DISPLAY versions are approximate maps off the Chromium major
-// (the only cosmetic value here); keep them centralized for easy bumping.
-// ---------------------------------------------------------------------------
+// Edge/Brave/Opera/Vivaldi/Yandex run the real Chrome binary with only the identity layer swapped
+// (UA token, Sec-CH-UA brands, navigator.vendor, vendor globals). The Chromium major always comes from
+// the binary so TLS/JA4 match; vendor display versions are approximate maps off that major.
 function normalizeBrand(brand) {
   const t = String(brand || '').toLowerCase();
   if (t.includes('edge') || t === 'edg') return 'Edge';
@@ -200,13 +161,8 @@ function normalizeBrand(brand) {
 
 const NOT_A_BRAND = { brand: 'Not_A Brand', version: '24', full: '24.0.0.0' };
 
-// Given the REAL Chromium major (M) + full version, produce the identity bundle
-// for `brand`. uaInfix is inserted before " Safari/537.36" (Yandex), uaSuffix is
-// appended after it (Edge/Opera); brands feed Sec-CH-UA brands + fullVersionList;
-// `inject` lists which vendor globals the in-page script should add; `vendor` is
-// navigator.vendor (Google Inc. for every Chromium browser). vendor/inject do NOT
-// depend on the Chromium major, so callers that only need the JS-layer bits can
-// pass major 0.
+// uaInfix goes before " Safari/537.36" (Yandex), uaSuffix after it (Edge/Opera); `inject` lists
+// vendor globals for the page script. vendor/inject ignore the major, so JS-only callers may pass 0.
 function buildBrandIdentity(brand, chromiumMajor, chromiumFull) {
   const M = Number(chromiumMajor) || 0;
   const full = chromiumFull && /^\d+\.\d/.test(chromiumFull) ? chromiumFull : `${M}.0.0.0`;
@@ -242,9 +198,7 @@ function buildBrandIdentity(brand, chromiumMajor, chromiumFull) {
       };
     }
     case 'Vivaldi': {
-      // Modern Vivaldi presents an otherwise-stock Chrome identity (its UA token is
-      // off by default) and does NOT add itself to Sec-CH-UA - so it looks like
-      // Chrome on the wire, which is exactly what we reproduce.
+      // Vivaldi presents a stock Chrome identity: its UA token is off by default and it is not in Sec-CH-UA.
       return {
         id, vendor: 'Google Inc.', uaInfix: '', uaSuffix: '',
         brands: [chromiumBrand, chromeBrand, NOT_A_BRAND],
@@ -252,9 +206,8 @@ function buildBrandIdentity(brand, chromiumMajor, chromiumFull) {
       };
     }
     case 'Yandex': {
-      // YaBrowser version is year-based and doesn't derive cleanly from the Chromium
-      // major; pin a recent train. The Chromium major still drives everything else.
-      // YaBrowser/Yowser tokens sit BEFORE the Safari token in the real UA.
+      // YaBrowser versions are year-based, so pin a recent train; the Chromium major drives the rest.
+      // Its tokens sit before the Safari token in the real UA.
       const ya = '24.12.0.0';
       return {
         id, vendor: 'Google Inc.', uaInfix: ` YaBrowser/${ya} Yowser/2.5`, uaSuffix: '',
@@ -278,10 +231,7 @@ function mediaOsKey(os) {
   return 'Windows';
 }
 
-// Pick a realistic, OS-appropriate microphone / speaker / camera label triple.
-// When a numeric `seed` is supplied the choice is DETERMINISTIC (same profile →
-// same hardware on every launch); otherwise it's freshly randomized (profile
-// creation). Returns a serializable descriptor consumed by the launch engine.
+// With a numeric `seed` the pick is deterministic (same hardware every launch); otherwise random.
 function generateMediaDevices(os, seed) {
   const key = mediaOsKey(os);
   const pool = MEDIA_LABELS[key];
@@ -302,9 +252,7 @@ function generateMediaDevices(os, seed) {
   };
 }
 
-// Pixel 7 / Android 13 fingerprint, coherent with the Android UA + Client-Hints
-// produced in browserEngine.js. screen.width/height are reported in CSS pixels
-// (the engine applies deviceScaleFactor 2.625 + touch at launch from deviceClass).
+// screen.width/height are CSS pixels; at launch the engine applies DPR 2.625 and touch (deviceClass).
 function generateMobileFingerprint() {
   const [resW, resH] = ANDROID_RES.split('x');
   return {
@@ -357,17 +305,11 @@ function generateMobileFingerprint() {
 }
 
 function generateFingerprint(opts = {}) {
-  // Mobile is a distinct device class (Android), not just another OS - route it to
-  // its own coherent generator so desktop GPU/screen pools never leak into it.
+  // Mobile has its own generator so desktop GPU/screen pools never leak into it.
   if (opts && opts.deviceClass === 'mobile') return generateMobileFingerprint();
 
-  // OS selection (coherence-first). An explicitly-chosen OS is honored; an explicit
-  // "Random"/"Mixed"/"Cross" request (or opts.allowCrossOs) mints a weighted cross-OS
-  // spread; and the DEFAULT (blank/Auto) is the REAL HOST OS. Rationale: a string-only
-  // OS spoof over the real binary + host is always betrayed by the host's fonts, canvas
-  // raster and WebGL render output - so a Windows box claiming macOS/Linux fails every
-  // scanner. Cross-OS variety is therefore now an explicit opt-in, not the silent
-  // default that made ~35% of generated profiles fundamentally incoherent.
+  // An explicit OS is honored; "Random"/"Mixed"/"Cross" or allowCrossOs gives a weighted cross-OS mix.
+  // Blank/Auto uses the real host OS, since host fonts, canvas and WebGL betray a string-only OS spoof.
   const HOST_OS = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows';
   const rawOs = String((opts && opts.os) || '').trim().toLowerCase();
   const wantsCrossOs = (opts && opts.allowCrossOs === true)
@@ -421,12 +363,9 @@ function generateFingerprint(opts = {}) {
     resolutionW: resW,
     resolutionH: resH,
 
-    // "Real": the engine reports the TRUE host GPU on the main thread, dedicated
-    // workers AND the service worker - no main-vs-worker mismatch. A fake desktop GPU
-    // string only swaps two getParameter() values while the real render output +
-    // extension list + MAX_* params keep exposing the host GPU, a contradiction every
-    // scanner scores. webglVendor/Renderer are retained for the picker display and the
-    // device↔GPU coherence check, but are NOT injected unless the user picks Custom.
+    // "Real" reports the true host GPU in the page and all workers. A fake string only swaps two
+    // getParameter() values while render output and MAX_* params still expose the host GPU.
+    // webglVendor and webglRenderer are for display and the coherence check; injected only for Custom.
     webglMetadata: 'Real',
     webglVendor: gpu[0],
     webglRenderer: gpu[1],
@@ -463,12 +402,8 @@ function generateFingerprint(opts = {}) {
   };
 }
 
-// Device ↔ GPU coherence rule used by the leak/trust check. A mobile (Android)
-// profile MUST report a mobile GPU (Mali / Adreno / PowerVR / Apple GPU); a
-// desktop profile must NOT. A mobile UA paired with a desktop GPU (or vice versa)
-// is one of the easiest mismatches for a detector to score, so we flag it as a
-// hard fail. Pure + dependency-free so it can be unit-tested directly.
-// Returns { status: 'pass'|'warn'|'fail', detail }.
+// Android profiles must report a mobile GPU (Mali/Adreno/PowerVR/Apple) and desktop ones must not;
+// a mismatch is a hard fail. Returns { status: 'pass'|'warn'|'fail', detail }.
 function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
   const renderer = String(webglRenderer || '');
   const osStr = String(os || '');
@@ -478,14 +413,8 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
   const mobileGpu = /mali|adreno|powervr|apple gpu|apple a\d/i.test(renderer);
   const desktopGpu = /direct3d|d3d11|geforce|nvidia|radeon|\bamd\b|intel|metal renderer|apple m\d|opengl 4/i.test(renderer);
 
-  // OS <-> GRAPHICS-API COHERENCE, checked FIRST because it is the loudest tell.
-  //
-  // A renderer string names the graphics backend, and each OS has exactly one:
-  // Direct3D/D3D11 is Windows-only, Metal is Apple-only, Mesa is Linux-only. So a
-  // profile claiming macOS while reporting `ANGLE (NVIDIA ... Direct3D11 ...)` reads
-  // as Windows in a single line, whatever navigator.platform says. The old check only
-  // compared mobile-vs-desktop and so reported PASS for exactly that case - the most
-  // common way a cross-OS profile gets burned, and invisible in the Leak Check.
+  // Checked first because it is the loudest tell: Direct3D is Windows-only, Metal Apple-only, Mesa
+  // Linux-only, so a renderer naming another OS's API gives the profile away.
   const api = {
     d3d: /direct3d|d3d11|\bd3d\b/i.test(renderer),
     metal: /metal renderer|apple m\d|apple a\d/i.test(renderer),
@@ -519,10 +448,8 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
     : { status: 'pass', detail: 'Desktop profile reports a GPU consistent with its OS.' };
 }
 
-// Stable signature of the user-visible hardware/identity combo. The batch generator
-// uses it to guarantee no two profiles in a run share the same GPU + screen + CPU +
-// RAM + reported UA-major tuple (deviceName / MAC / canvas seed are random-unique on
-// their own, so they're intentionally excluded - this keeps the VISIBLE traits distinct).
+// Signature of the visible GPU + screen + CPU + RAM + UA-major combo; batches keep it unique per run.
+// deviceName, MAC and canvas seed are already random-unique, so they are left out.
 function fingerprintSignature(fp) {
   if (!fp) return '';
   const major = String(fp.browserVersion || '').split('.')[0] || '';

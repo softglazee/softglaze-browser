@@ -1,20 +1,7 @@
 'use strict';
-// Install authentication (audit T2-6, 11 Sep 2026).
-//
-// The old flow had no proof of ownership anywhere:
-//  - POST /v1/license matched a licence by `account` (an email) from the request body, so
-//    posting a customer's email returned a signed lease.
-//  - POST /v1/register upserted by machineId and returned the existing installId to anyone
-//    who sent that machineId, so the installId was a bearer credential anyone could fetch.
-//  - Install.account is whatever the client claims at register, so matching a licence via
-//    a registered install's account would have reopened the same hole.
-//
-// Now each install gets a random secret when it is first registered. Only its SHA-256 is
-// stored. The secret is returned exactly once, and every later register, licence or redeem
-// call for that install must present it. Licences are found by the authenticated installId,
-// never by a client-supplied email.
-//
-// Pure module: callers pass the Prisma client, so tests can run it against a fake.
+// Each install gets a random secret at first register; only its SHA-256 is stored. Register, licence
+// and redeem calls must present it, and licences are found by the authenticated installId, never by
+// a client-supplied email. Callers pass the Prisma client so tests can use a fake.
 
 const crypto = require('node:crypto');
 const { normalizeMachineHash } = require('./machineBinding');
@@ -38,8 +25,8 @@ function verifyInstallSecret(secret, storedHash) {
 // POST /v1/register. Returns { status, body }.
 async function registerInstall(prisma, tenant, { machineId, account, installSecret, machineHash }) {
   if (!machineId) return { status: 400, body: { error: 'machineId is required.' } };
-  // Audit L3: trust on first use. An unbound install binds to the hash it registers with;
-  // an already-bound one is never rebound here (see machineBinding.js).
+  // Trust on first use: an unbound install binds to the hash it registers with; a bound one is never
+  // rebound here (see machineBinding.js).
   const mh = normalizeMachineHash(machineHash);
   const key = { tenantId_machineId: { tenantId: tenant.id, machineId: String(machineId) } };
   const existing = await prisma.install.findUnique({ where: key });
@@ -56,7 +43,7 @@ async function registerInstall(prisma, tenant, { machineId, account, installSecr
     return { status: 200, body: { installId: existing.id, tenantId: tenant.id } };
   }
 
-  // New machine, or a row from before secrets existed: issue the secret now.
+  // New machine, or a legacy row without a secret: issue one now.
   const { secret, hash } = newInstallSecret();
   const bind = mh && !(existing && existing.machineHash) ? { machineHash: mh, machineBoundAt: new Date() } : {};
   const install = existing

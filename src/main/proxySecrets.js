@@ -1,24 +1,8 @@
 'use strict';
 
-// Proxy passwords at rest (audit L11, 7 Oct).
-//
-// Proxy.password used to sit in SQLite in plaintext. It is now sealed with
-// secretStore (enc:v1:, DPAPI / Keychain / libsecret) like every other stored
-// credential. A sealed value is not deterministic, so it cannot carry the unique
-// key that lets rotating vendors keep rows differing only by password; that job
-// moves to Proxy.passwordHash, a keyed HMAC-SHA256 of the plaintext password.
-// The HMAC key is random per install and stored sealed in the Setting table.
-//
-// One choke point instead of forty call sites: extendClient() wraps the Prisma
-// client so that
-//  - every proxy write (create / update / upsert / *Many) seals `password` and
-//    sets `passwordHash` from the plaintext,
-//  - every proxy filter on `password` equality is rewritten to `passwordHash`,
-//  - every proxy read (top level AND nested `include: { proxy: true }`) returns
-//    the OPENED password, so the launch path, the checks, export, reveal and the
-//    renderer keep seeing plaintext exactly as before (never a sealed blob),
-//  - `passwordHash` itself is never handed back to callers.
-// migrateProxyPasswords() converts existing plaintext rows once, at startup.
+// Proxy.password is sealed at rest (secretStore). Sealing is not deterministic, so uniqueness of rows
+// differing only by password rides on passwordHash, a keyed HMAC-SHA256. extendClient() seals writes,
+// rewrites password filters to the hash and opens reads (nested too); passwordHash is never returned.
 
 const crypto = require('node:crypto');
 const secretStore = require('./secretStore');
@@ -31,12 +15,9 @@ function hashWithKey(key, plain) {
   return crypto.createHmac('sha256', key).update(String(plain), 'utf8').digest('hex');
 }
 
-// Load (or create on first use) the per-install HMAC key. Memoised per database:
-// database.js calls resetHashKeyCache() whenever it drops the client (restore,
-// encryption toggle), because a restored DB carries its own key.
-// `created` is true when this call had to mint a new key, which makes the data
-// migration recompute every hash (a key that no longer opens, e.g. after a
-// restore on another Windows user, invalidates the old hashes).
+// Loads or creates the per-install HMAC key, memoised per database; database.js calls
+// resetHashKeyCache() when it drops the client, since a restored DB carries its own key.
+// `created` means a new key was minted, so the migration recomputes every hash.
 function loadHashKey(db) {
   if (!keyPromise) {
     keyPromise = (async () => {
@@ -63,9 +44,8 @@ function loadHashKey(db) {
       }
       const key = crypto.randomBytes(32);
       let value;
-      // The HMAC key is not a secret the way a password is - it keys the dedup hash, and
-      // when encryption is unavailable the password itself is kept plaintext too (see the
-      // migration). So fall back to storing the key unsealed rather than failing to hash.
+      // The HMAC key only keys the dedup hash, and without OS encryption passwords stay plaintext anyway,
+      // so store the key unsealed rather than fail to hash.
       try { value = JSON.stringify(secretStore.seal(key.toString('hex'))); }
       catch (e) { value = JSON.stringify({ plain: key.toString('hex') }); }
       await db.setting.upsert({ where: { key: KEY_SETTING }, update: { value }, create: { key: KEY_SETTING, value } });
@@ -86,9 +66,8 @@ async function hashPassword(db, plain) {
 
 const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
-// Copy of a proxy write payload with the password sealed and passwordHash set.
-// A caller-supplied passwordHash is never trusted (it may come from another
-// install's key, e.g. a sync import); it is recomputed or dropped.
+// Copy of a proxy write payload with the password sealed and passwordHash set. A caller-supplied
+// passwordHash is never trusted (it may use another install's key); it is recomputed or dropped.
 async function sealProxyData(data, getKey) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
   const out = { ...data };
@@ -115,9 +94,8 @@ function whereNeedsKey(where) {
   });
 }
 
-// `password: 'x'` / `password: null` equality becomes `passwordHash: hmac(x)` / null.
-// Other operators on the sealed column (contains, startsWith) would be meaningless
-// and are left alone; nothing in the app filters proxies that way.
+// Equality on `password` (string or null) becomes equality on passwordHash. Other operators on the
+// sealed column would be meaningless; nothing in the app filters proxies that way.
 function rewriteWhere(where, key) {
   if (!where || typeof where !== 'object') return where;
   const out = { ...where };
@@ -178,14 +156,9 @@ function scrub(err, ...secrets) {
   return msg.replace(/enc:v1:[A-Za-z0-9+/=]+/g, 'enc:v1:[redacted]').slice(0, 300);
 }
 
-// One-time, idempotent conversion of stored proxy passwords. Raw SQL on purpose:
-// it must see the stored value, not the opened one the extended client returns.
-//  - plaintext row  -> password sealed + passwordHash set (verified round trip first)
-//  - sealed row     -> passwordHash filled in if missing (or recomputed after a new key)
-//  - NULL password  -> untouched
-// The UPDATE is guarded on the value it read, so a concurrent edit is never overwritten.
-// A failing row is logged (scrubbed) and left exactly as it was; the next start retries.
-// Safe on an empty database and safe to run any number of times.
+// Idempotent conversion of stored proxy passwords; raw SQL so it sees stored, not opened, values.
+// Plaintext rows are sealed and hashed, sealed rows get a missing hash, NULL is untouched. Updates are
+// guarded on the value read so concurrent edits win; failed rows stay as they were until next start.
 async function migrateProxyPasswords(db, log = console) {
   const summary = { sealed: 0, hashed: 0, skipped: 0, failed: 0 };
   let keyInfo;

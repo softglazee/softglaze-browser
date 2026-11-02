@@ -1,14 +1,7 @@
 'use strict';
 
-// ---------------------------------------------------------------------------
-// Softglaze Extension Manager
-//
-// Downloads Chrome Web Store extensions as raw .crx packages (bypassing the
-// store's automation blocks), strips the CRX signature header to expose the
-// inner ZIP, and unzips each into userData/softglaze_extensions/<chromeId>.
-// browserEngine then mounts the unzipped folders into launched profiles via
-// Chromium's --load-extension switch.
-// ---------------------------------------------------------------------------
+// Downloads Chrome Web Store extensions as raw .crx (avoiding the store's automation blocks), strips
+// the CRX header and unzips to userData/softglaze_extensions/<chromeId> for --load-extension.
 const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const path = require('node:path');
@@ -16,57 +9,41 @@ const { app } = require('electron');
 const { getPrisma } = require('./database');
 const { assertAllowedDownloadUrl, hostAllowed, HOSTS } = require('./downloadGuard');
 
-// Extensions are small; cap the CRX download so a malicious/oversized redirect
-// target can't buffer an unbounded arraybuffer and OOM the main process.
+// Cap the download so an oversized redirect target cannot OOM the main process.
 const MAX_CRX_BYTES = 128 * 1024 * 1024;
-// axios + extract-zip are required lazily inside downloadAndExtract() so a
-// missing optional package degrades CRX install instead of bricking app startup
-// (extensionManager is required at boot by ipcHandlers).
+// axios and extract-zip load lazily in downloadAndExtract(): this module is required at boot,
+// so a missing optional package must only break CRX install.
 
 // Chrome Web Store IDs are exactly 32 chars from the alphabet a-p (a base-16
 // encoding of the public-key hash).
 const CHROME_ID_RE = /^[a-p]{32}$/;
 
-// Setting key that records the one-time recommended-extension seeding has run.
-// Bumped to _v2 when the SoftGlaze Screen Recorder was added so existing installs
-// seed the new extension once. installById is idempotent (already-present ones are
-// skipped), and a user who later deletes a recommended extension won't see it
-// return because the (bumped) flag stays set.
-const SEED_FLAG = 'recommendedExtensionsSeeded_v3'; // v3: swapped uBlock + SwitchyOmega to their MV3 IDs
+// Marks the one-time recommended-extension seeding as done; bump the suffix to seed new defaults.
+// A user who deletes a recommended extension does not get it back while the flag stays set.
+const SEED_FLAG = 'recommendedExtensionsSeeded_v3';
 
-// One-time reconcile flag (separate from SEED_FLAG). The seeder only sets isGlobal on
-// FIRST install and never revisits it, so a recommended extension that was installed
-// while its default was `enable:false` (historically uBlock, then SwitchyOmega) stays
-// dormant even after the default is flipped to `enable:true`. reconcileRecommendedExtensions()
-// runs ONCE to force-enable those, then locks - so a user's later manual disable is
-// respected. Bump the suffix to re-run the reconcile after changing the defaults again.
-const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v2'; // v2: re-run after the MV3 uBlock/SwitchyOmega swap
+// The seeder sets isGlobal only on first install, so this one-time pass force-enables recommended
+// extensions installed while disabled by default, then locks so later manual disables stick.
+// Bump the suffix to re-run it after changing the defaults.
+const RECONCILE_FLAG = 'recommendedExtensionsReconciled_v2';
 
 // The SoftGlaze first-party extension. Loaded unpacked (--load-extension) into the
 // profiles SoftGlaze launches, and nowhere else.
 const SOFTGLAZE_RECORDER_ID = 'ofjommapkklakbolagajoiklgfldhlmp';
 
-// Curated set auto-installed on first run. IDs are verified to download from the
-// anonymous CRX endpoint. `enable` decides the default isGlobal:
-//   • on  → injected into every profile (low-footprint, complementary tools)
-//   • off → installed but dormant; user opts in per their anti-detect strategy
-//     (content blockers change page/network behavior; SwitchyOmega can override
-//     Softglaze's native per-profile proxy).
+// Seeded on first run; IDs are verified against the anonymous CRX endpoint. `enable` sets the default
+// isGlobal: on = injected into every profile, off = installed but dormant until the user opts in.
 const RECOMMENDED_EXTENSIONS = [
   { chromeId: SOFTGLAZE_RECORDER_ID, name: 'SoftGlaze Screen Recorder', enable: true },
-  // Third-party helpers are OPT-IN: seeded but not globally enabled, so they show up on
-  // the Extensions page for the user to switch on rather than altering every profile by
-  // default. Content blockers / SwitchyOmega change page + network behavior (an
-  // anti-detect tradeoff) and SwitchyOmega can override the native per-profile proxy.
+  // Third-party helpers stay opt-in: blockers change page and network behavior (an anti-detect
+  // tradeoff) and SwitchyOmega can override the native per-profile proxy.
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: false },
-  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: false }, // MV3 successor (Chrome is disabling the MV2 build)
-  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: false } // MV3 successor; can override Softglaze's native per-profile proxy
+  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: false }, // MV3 build; Chrome is disabling the MV2 one
+  { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: false } // MV3 build
 ];
 
-// Extensions earlier builds seeded that must not stay installed. Removed once from
-// existing installs by removeRetiredExtensions(); never re-seeded.
-//   gcaiimgaiohlnlflkjjmcohobkpbbnfi - a third-party vendor's own assistant extension,
-//   which SoftGlaze has no reason to download or list.
+// Seeded by older builds and must not stay installed; removeRetiredExtensions() removes them once.
+// gcaiimgaiohlnlflkjjmcohobkpbbnfi: a third-party vendor's assistant SoftGlaze has no reason to ship.
 const RETIRED_EXTENSION_IDS = Object.freeze(['gcaiimgaiohlnlflkjjmcohobkpbbnfi']);
 const RETIRED_CLEANUP_FLAG = 'retiredExtensionsRemoved_v1';
 
@@ -84,20 +61,18 @@ function parseChromeId(input) {
   return match && CHROME_ID_RE.test(match[0]) ? match[0] : null;
 }
 
-// The Google-internal CRX endpoint. `response=redirect` bounces us to the real
-// signed package on the CDN; axios follows the redirect automatically.
+// Google's CRX update endpoint; `response=redirect` 302s to the signed package on the CDN.
 function downloadUrlFor(id) {
   return `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=114.0&acceptformat=crx2,crx3&x=id%3D${id}%26uc`;
 }
 
-// CRX → ZIP. A .crx is a small signature header ("Cr24" magic) followed by a
-// standard ZIP. We slice off the header so any ordinary unzip can read it.
-//   CRX2: [Cr24][u32 ver=2][u32 pubKeyLen][u32 sigLen][pubKey][sig][ZIP]
-//   CRX3: [Cr24][u32 ver=3][u32 headerLen][protobuf header][ZIP]
+// A .crx is a signature header ("Cr24" magic) followed by a plain ZIP; slice the header off.
+// CRX2: [Cr24][u32 ver=2][u32 pubKeyLen][u32 sigLen][pubKey][sig][ZIP]
+// CRX3: [Cr24][u32 ver=3][u32 headerLen][protobuf header][ZIP]
 function crxToZip(buf) {
   const PK = Buffer.from([0x50, 0x4b, 0x03, 0x04]); // local file header "PK\x03\x04"
   if (buf.length < 16 || buf.toString('ascii', 0, 4) !== 'Cr24') {
-    // Not a CRX wrapper - maybe the CDN already handed us a plain ZIP.
+    // Not a CRX wrapper; the CDN may have served a plain ZIP.
     const at = buf.indexOf(PK);
     if (at >= 0) return buf.subarray(at);
     throw new Error('Downloaded file is not a valid CRX or ZIP package.');
@@ -122,8 +97,7 @@ function crxToZip(buf) {
   throw new Error('CRX did not contain a recognizable ZIP payload.');
 }
 
-// Resolve a human-readable name + version from the unzipped manifest, including
-// localized __MSG_name__ tokens via _locales/<locale>/messages.json.
+// Reads name + version from the manifest, resolving __MSG_name__ via _locales/<locale>/messages.json.
 async function readManifestMeta(dir) {
   let manifest = {};
   try { manifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8')); }
@@ -147,9 +121,8 @@ async function readManifestMeta(dir) {
   return { name: name || null, version };
 }
 
-// audit L13: a hostile package could carry a symlink entry (extract-zip writes it as-is,
-// pointing anywhere on disk) or a name that resolves outside the extension folder. Called
-// from extract-zip's onEntry, before the entry is written; throwing aborts the unzip.
+// A hostile package can carry a symlink entry (extract-zip writes it as-is) or a name that resolves
+// outside the folder. Runs as extract-zip's onEntry; throwing aborts the unzip before the write.
 function assertSafeZipEntry(entry, destDir) {
   const name = String((entry && entry.fileName) || '');
   const mode = ((Number(entry && entry.externalFileAttributes) || 0) >>> 16) & 0xFFFF;
@@ -173,7 +146,6 @@ async function assertNoLinksUnder(dir) {
   }
 }
 
-// Download a CRX by id, strip its header, and unzip it into a named folder.
 // Returns { localPath, name, version }.
 async function downloadAndExtract(chromeId) {
   if (!CHROME_ID_RE.test(chromeId)) throw new Error('Invalid Chrome extension id.');
@@ -187,8 +159,7 @@ async function downloadAndExtract(chromeId) {
   const root = extensionsRoot();
   await fs.mkdir(root, { recursive: true });
 
-  // audit: https-only + Google-host allowlist on the URL and every redirect, and a
-  // hard size cap so an oversized/hostile response can't OOM the main process.
+  // https-only Google-host allowlist on the URL and every redirect, plus a size cap against OOM.
   const startUrl = downloadUrlFor(chromeId);
   assertAllowedDownloadUrl(startUrl, HOSTS.crx, 'extension download');
   let resp;
@@ -233,9 +204,7 @@ async function downloadAndExtract(chromeId) {
     await fs.rm(tmpZip, { force: true }).catch(() => {});
   }
 
-  // Chromium refuses to load unpacked extensions that contain the reserved
-  // "_metadata" folder (the CRX3 signature payload). Strip it so the unpacked
-  // load stays clean.
+  // Chromium refuses unpacked extensions containing the reserved _metadata folder (CRX3 signature).
   await fs.rm(path.join(destDir, '_metadata'), { recursive: true, force: true }).catch(() => {});
 
   if (!fsSync.existsSync(path.join(destDir, 'manifest.json'))) {
@@ -247,9 +216,7 @@ async function downloadAndExtract(chromeId) {
   return { localPath: destDir, name: meta.name, version: meta.version };
 }
 
-// Download + unzip an extension and persist (or refresh) its DB record. Used by
-// the install IPC handler and the recommended-set seeder. On an existing record
-// the user's isGlobal toggle is preserved; only the files/name/version refresh.
+// On an existing record the user's isGlobal toggle is kept; only files, name and version refresh.
 async function installById(chromeId, { isGlobal = true, nameFallback = null } = {}) {
   if (!CHROME_ID_RE.test(chromeId)) throw new Error('Invalid Chrome extension id.');
   const { localPath, name, version } = await downloadAndExtract(chromeId);
@@ -261,10 +228,8 @@ async function installById(chromeId, { isGlobal = true, nameFallback = null } = 
   });
 }
 
-// One-time, best-effort install of the recommended team extensions. Idempotent:
-// already-present extensions are skipped, and the run only locks (sets the seed
-// flag) once the full set is in place - so an offline first launch simply retries
-// on the next boot instead of permanently skipping the seed.
+// Best-effort and idempotent: present extensions are skipped, and the seed flag is set only once
+// the full set is installed, so an offline first launch retries next boot.
 async function seedRecommendedExtensions() {
   const db = getPrisma();
   const flag = await db.setting.findUnique({ where: { key: SEED_FLAG } }).catch(() => null);
@@ -291,11 +256,9 @@ async function seedRecommendedExtensions() {
   return { installed, present, failed };
 }
 
-// One-time reconcile: force-enable (isGlobal:true) the recommended extensions that ship
-// enabled-by-default but may already be installed-yet-dormant from a build where their
-// default was `enable:false`. seedRecommendedExtensions() never updates isGlobal on an
-// existing row, so this closes that exact gap once. Idempotent and gated by
-// RECONCILE_FLAG: after it succeeds, a user's deliberate later disable is NOT undone.
+// seedRecommendedExtensions() never updates isGlobal on an existing row, so this one-time pass
+// enables recommended rows left dormant by an older default. RECONCILE_FLAG keeps later manual
+// disables intact.
 async function reconcileRecommendedExtensions() {
   const db = getPrisma();
   const flag = await db.setting.findUnique({ where: { key: RECONCILE_FLAG } }).catch(() => null);
@@ -304,8 +267,6 @@ async function reconcileRecommendedExtensions() {
   const wantIds = RECOMMENDED_EXTENSIONS.filter((r) => r.enable).map((r) => r.chromeId);
   let enabled = 0;
   try {
-    // Flip only the recommended rows that are currently OFF - never touches an already
-    // -global row, and never touches a non-recommended extension the user installed.
     const res = await db.extension.updateMany({
       where: { chromeId: { in: wantIds }, isGlobal: false },
       data: { isGlobal: true }
@@ -321,9 +282,7 @@ async function reconcileRecommendedExtensions() {
   return { enabled };
 }
 
-// All currently-global extension folders that still exist on disk. Passed to the
-// browser engine at launch and merged into --load-extension. Missing folders are
-// skipped (an extension can be deleted off disk without breaking a launch).
+// Global extension folders still on disk, merged into --load-extension; missing folders are skipped.
 async function resolveGlobalExtensionDirs() {
   let rows = [];
   try { rows = await getPrisma().extension.findMany({ where: { isGlobal: true } }); }
@@ -339,8 +298,7 @@ async function resolveGlobalExtensionDirs() {
   return dirs;
 }
 
-// Remove an extension's unzipped folder. Guarded so we only ever delete inside
-// our own extensions root, never an arbitrary path from the DB.
+// Deletes only inside the extensions root, never an arbitrary path from the DB.
 async function removeExtensionFiles(localPath, extRoot = extensionsRoot()) {
   if (!localPath) return;
   const root = path.resolve(extRoot);
@@ -349,11 +307,8 @@ async function removeExtensionFiles(localPath, extRoot = extensionsRoot()) {
   await fs.rm(resolved, { recursive: true, force: true }).catch(() => {});
 }
 
-// One-time removal of RETIRED_EXTENSION_IDS from installs that already downloaded
-// them: the DB row, the unzipped folder (guarded to our extensions root) and any
-// leftover download zip. The flag is set only once every folder is really gone, so
-// a locked file or DB error retries on the next launch. `db` and `root` are
-// injectable for tests.
+// Removes RETIRED_EXTENSION_IDS once: DB row, folder and leftover zip. The flag is set only when
+// every folder is gone, so a locked file or DB error retries next launch. db and root are for tests.
 async function removeRetiredExtensions({ db = getPrisma(), root = extensionsRoot() } = {}) {
   const flag = await db.setting.findUnique({ where: { key: RETIRED_CLEANUP_FLAG } }).catch(() => null);
   if (flag && flag.value === 'true') return { skipped: true };

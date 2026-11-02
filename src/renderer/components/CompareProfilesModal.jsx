@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
-// Side-by-side comparison of 2-3 profiles. Renderer-only - uses the profile objects
-// already loaded on the Profiles page. Rows where the values differ are highlighted
-// so config drift (e.g. a mismatched timezone or UA) is obvious at a glance.
+// Compares 2-3 already-loaded profiles and highlights differing rows, so config drift
+// (e.g. a mismatched timezone or UA) stands out.
 export default function CompareProfilesModal({ profiles = [], onClose }) {
   const { t } = useTranslation('cmpModalsA');
   const { dialogRef } = useDialog({ onClose });

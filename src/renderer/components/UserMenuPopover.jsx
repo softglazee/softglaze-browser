@@ -2,14 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X, Check, UserCog, Users, Lock, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-// Account / member-switcher popover for the sidebar user button.
-//
-// Positioning: fixed to the viewport and computed from the anchor button's rect
-// so it opens directly ABOVE the user button (aligned to the sidebar), never
-// over the Dark-mode toggle. When there isn't enough room above (short windows),
-// it falls back to a centered sheet/dialog. Being `position: fixed` it is never
-// clipped by the sidebar's overflow. All actions are owned by AppShell and passed
-// in as callbacks — this component only handles layout, polish and close affordances.
+// Fixed to the viewport above the user button (never over the Dark-mode toggle, never clipped by
+// the sidebar); short windows get a centered sheet. AppShell owns every action.
 const PANEL_W = 276;
 const GAP = 10;          // gap between the button and the popover
 const MIN_ROOM_ABOVE = 280; // below this, use the centered sheet instead
@@ -89,7 +83,6 @@ export default function UserMenuPopover({
       className={`z-[60] flex flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl shadow-black/20 outline-none animate-scale-in ${sheet ? 'w-full max-w-sm max-h-[85vh]' : ''}`}
       style={sheet ? undefined : layout.style}
     >
-      {/* Header: avatar, name, role, close */}
       <div className="flex items-center gap-3 px-3.5 py-3 border-b border-border shrink-0">
         <span
           className="w-9 h-9 rounded-full grid place-items-center font-semibold text-[12px] shrink-0"
@@ -106,7 +99,6 @@ export default function UserMenuPopover({
         ><X className="w-4 h-4" strokeWidth={2} /></button>
       </div>
 
-      {/* Member switcher */}
       <div className="px-3.5 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70 shrink-0">{t('shell.switchMember')}</div>
       <div className="px-1.5 overflow-y-auto flex-1 min-h-0">
         {members.length === 0 && <div className="px-2 py-2 text-[12px] text-muted-foreground">{t('shell.noMembersYet')}</div>}
@@ -137,7 +129,6 @@ export default function UserMenuPopover({
       </div>
       {err && <div className="px-3.5 py-1.5 text-[11px] text-destructive shrink-0">{err}</div>}
 
-      {/* Account actions */}
       <div className="border-t border-border p-1.5 shrink-0">
         <button onClick={onAccount} className={`${rowBtn} text-muted-foreground hover:bg-secondary hover:text-foreground`}><UserCog className="w-4 h-4 shrink-0" />{t('shell.accountSettings')}</button>
         <button onClick={onManageMembers} className={`${rowBtn} text-muted-foreground hover:bg-secondary hover:text-foreground`}><Users className="w-4 h-4 shrink-0" />{t('shell.manageMembers')}</button>

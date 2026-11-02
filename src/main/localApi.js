@@ -1,19 +1,7 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Pro - Local Developer REST API
-//
-// A tiny, loopback-only HTTP server that lets power users drive Softglaze
-// programmatically (CI, scripts, orchestration). It is OFF by default and only
-// ever binds to 127.0.0.1 - it is never exposed on the network.
-//
-// Auth: every protected route requires `Authorization: Bearer sg_…`. We store
-// only the SHA-256 hash of each token (see the ApiToken model), so the request
-// token is hashed and matched against the table; a hit updates lastUsedAt.
-//
-// Design: the actual profile-launch logic lives in ipcHandlers (it handles
-// Firefox routing, proxy rotation and global settings). To avoid a circular
-// require, that launcher is injected via configure() rather than required here.
-// ---------------------------------------------------------------------------
+// Loopback-only REST API for scripting (off by default, binds 127.0.0.1 only). Protected routes need
+// `Authorization: Bearer sg_...`; only SHA-256 token hashes are stored. The launcher is injected via
+// configure() to avoid a circular require of ipcHandlers.
 const http = require('node:http');
 const crypto = require('node:crypto');
 const { getPrisma } = require('./database');
@@ -67,11 +55,8 @@ async function handleRequest(req, res) {
     const url = new URL(req.url, `http://${HOST}:${runningPort || DEFAULT_PORT}`);
     const parts = url.pathname.split('/').filter(Boolean); // e.g. ['api','v1','profiles','12','start']
 
-    // DNS-rebinding guard: only serve requests whose Host header targets our loopback
-    // endpoint. A malicious page that resolves its own domain to 127.0.0.1 reaches this
-    // server but sends its OWN Host (evil.com:port); rejecting on Host mismatch blocks the
-    // cross-origin/rebinding path (and stops the unauthenticated /health probe from
-    // fingerprinting the app for arbitrary web pages).
+    // DNS-rebinding guard: a page that resolves its own domain to 127.0.0.1 still sends its own Host,
+    // so reject any Host that is not our loopback endpoint. This also stops web pages probing /health.
     const reqHost = String(req.headers.host || '').toLowerCase();
     const apiPort = runningPort || DEFAULT_PORT;
     if (!new Set([`127.0.0.1:${apiPort}`, `localhost:${apiPort}`, `[::1]:${apiPort}`]).has(reqHost)) {
@@ -95,9 +80,8 @@ async function handleRequest(req, res) {
       }
     }
 
-    // POST /api/v1/profiles/:id/start  - launch a profile by id (Bearer auth).
-    // Returns the WebDriver/CDP `wsEndpoint` so callers can attach Playwright,
-    // Puppeteer, or a CDP-speaking Selenium driver directly to the container.
+    // POST /api/v1/profiles/:id/start (Bearer auth). Returns the CDP `wsEndpoint` so Playwright,
+    // Puppeteer or a CDP-speaking Selenium driver can attach directly.
     if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'v1' && parts[2] === 'profiles' && parts[4] === 'start') {
       const token = await verifyBearer(req);
       if (!token) return sendJson(res, 401, { error: 'Unauthorized', message: 'A valid Bearer API token is required.' });

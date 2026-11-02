@@ -1,16 +1,7 @@
 'use strict';
-// On-demand Chrome-for-Testing download manager. Lets the app
-// ship WITHOUT bundling every Chrome build - the user downloads the version they
-// want and it auto-installs into /chrome/win64-<version>/chrome-win64/chrome.exe,
-// which the launcher already resolves. Pure Node + PowerShell Expand-Archive, no
-// new npm dependency.
-//
-// RESILIENCE: downloads stream to a partial _download.zip and the live byte
-// offset is persisted to /chrome/.download-state.json. If the network drops or
-// the PC shuts down mid-download, the partial file + state survive; on the next
-// launch the entry is surfaced as "interrupted" and a Range: bytes=<offset>-
-// request resumes the stream from the exact byte it stopped at (no restart from
-// 0%). Pause/Resume use the same machinery.
+// On-demand Chrome-for-Testing downloads, so the app ships without bundled Chrome builds.
+// Downloads stream to a partial zip and persist the byte offset, so after a crash or shutdown a
+// Range request resumes where it stopped. Pause and Resume use the same path.
 const https = require('node:https');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -24,15 +15,13 @@ const { extractZipCrossPlatform, extractFpChromium, ensureExecutable } = require
 const { app } = require('electron');
 
 const CFT_ENDPOINT = 'https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json';
-// Downloads MUST land in a writable, real directory. In a packaged build
-// `__dirname` is inside app.asar (a FILE), so `../../chrome` resolves to
-// `…/app.asar/chrome` and every mkdir/write throws ENOTDIR. Use userData when
-// packaged; keep the project-root path in dev so the existing dev cache is reused.
+// In a packaged build __dirname is inside app.asar (a file), so ../../chrome writes fail with ENOTDIR.
+// Use userData when packaged; dev keeps the project-root cache.
 const CHROME_ROOT = (app && app.isPackaged)
   ? path.join(app.getPath('userData'), 'chrome')
   : path.resolve(__dirname, '../../chrome');
 const STATE_FILE = path.join(CHROME_ROOT, '.download-state.json');
-// The Chrome-for-Testing platform key + on-disk layout for THIS machine
+// Chrome-for-Testing platform key and on-disk layout for this machine
 // (win64 | mac-x64 | mac-arm64 | linux64). Everything below resolves through it.
 const CFT_PLATFORM = platform.cftPlatform();
 
@@ -57,9 +46,6 @@ function cmpVersion(a, b) {
   return 0;
 }
 
-// ---------------------------------------------------------------------------
-// Persistent download state (survives crashes / power loss).
-// ---------------------------------------------------------------------------
 function persistState(force) {
   const now = Date.now();
   if (!force && now - lastPersist < 1000) return; // throttle progress writes
@@ -77,9 +63,8 @@ function persistState(force) {
   } catch (e) { /* best-effort */ }
 }
 
-// Called once at boot: any download that was mid-flight when the app died is
-// re-surfaced as "interrupted" (its partial zip is still on disk) so the UI can
-// offer Resume. Nothing is auto-resumed - the user decides.
+// At boot, a download that was mid-flight when the app died is shown as "interrupted" (its partial
+// zip is still on disk) so the UI can offer Resume. Nothing auto-resumes.
 async function initResumableState() {
   let raw;
   try { raw = await fsp.readFile(STATE_FILE, 'utf8'); } catch (e) { return; }
@@ -110,7 +95,7 @@ async function initResumableState() {
 function httpsGet(url, allowedHosts = HOSTS.chrome, label = 'Chrome download', redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
-    // audit: https-only + vendor-host allowlist on the URL and every redirect.
+    // https only, with the vendor-host allowlist checked on the URL and every redirect.
     let target;
     try { target = assertAllowedDownloadUrl(url, allowedHosts, label); }
     catch (e) { return reject(e); }
@@ -137,9 +122,8 @@ async function fetchJson(url, allowedHosts = HOSTS.chrome, label = 'Chrome downl
   return JSON.parse(data);
 }
 
-// A download key must be a plain Chrome version (major, or dotted up to 4 parts).
-// It is later interpolated into a filesystem path that gets recursively removed on
-// a fatal error, so anything containing '/' or '..' must never get that far.
+// Version keys end up in a path that is recursively removed on a fatal error, so reject anything but
+// a plain version (major, or up to 4 dotted parts); '/' or '..' must never get that far.
 function isValidVersionKey(key) {
   return /^\d+(\.\d+){0,3}$/.test(String(key));
 }
@@ -148,7 +132,6 @@ function chromeTargetDir(version) {
   return path.join(CHROME_ROOT, platform.chromeInstallDirName(version));
 }
 
-// Absolute path of the launchable Chrome binary inside an install dir, for THIS OS.
 function chromeBinaryPath(version) {
   return path.join(chromeTargetDir(version), platform.chromeBinaryFromInstallDir());
 }
@@ -158,7 +141,7 @@ function isInstalled(version) {
   catch (e) { return false; }
 }
 
-// Latest Chrome-for-Testing build per major version available for THIS platform.
+// Latest Chrome-for-Testing build per major version for this platform.
 async function listDownloadableVersions() {
   const now = Date.now();
   if (cachedVersions && now - cachedAt < 10 * 60 * 1000) return cachedVersions;
@@ -177,12 +160,12 @@ async function listDownloadableVersions() {
   return cachedVersions;
 }
 
-// GET that carries custom headers (Range) AND follows redirects preserving them.
-// Resolves with the FINAL { res, req } so the caller can abort the live request.
+// GET that keeps custom headers (Range) across redirects. Resolves with the final { res, req }
+// so the caller can abort the live request.
 function rawGet(url, headers, allowedHosts = HOSTS.chrome, label = 'Chrome download', redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
-    // audit: https-only + vendor-host allowlist on the URL and every redirect.
+    // https only, with the vendor-host allowlist checked on the URL and every redirect.
     let target;
     try { target = assertAllowedDownloadUrl(url, allowedHosts, label); }
     catch (e) { return reject(e); }
@@ -201,9 +184,8 @@ function rawGet(url, headers, allowedHosts = HOSTS.chrome, label = 'Chrome downl
   });
 }
 
-// Resumable streaming download. If `dest` already holds bytes, asks the server to
-// continue from that offset (Range). Falls back to a clean restart if the server
-// ignores Range (responds 200). `registerAbort` receives an abort fn for pause.
+// Resumable download: if `dest` already holds bytes, requests the rest with Range, and restarts
+// cleanly if the server ignores it (200). `registerAbort` receives an abort fn for pause.
 // Resolves with { received, total }.
 async function downloadToFile(url, dest, onProgress, registerAbort, allowedHosts = HOSTS.chrome, label = 'Chrome download') {
   let startByte = 0;
@@ -254,18 +236,16 @@ async function downloadToFile(url, dest, onProgress, registerAbort, allowedHosts
   return { received, total };
 }
 
-// Cross-platform .zip extraction (Chrome for Testing + fingerprint-chromium).
-// Windows used to shell out to PowerShell Expand-Archive; extractZipCrossPlatform
-// (extract-zip) works identically on win/mac/linux and preserves the unix exec bit.
+// Cross-platform .zip extraction (Chrome for Testing and fingerprint-chromium); keeps the exec bit.
 function extractZip(zipPath, destDir) {
   return extractZipCrossPlatform(zipPath, destDir);
 }
 
-// Kick off (or RESUME) a background download+install. Returns the progress entry.
+// Starts or resumes a background download and install. Returns the progress entry.
 function startDownload(versionOrMajor) {
   const key = String(versionOrMajor);
-  // DL-1: reject a non-version key before any fs/network work, so a crafted value
-  // like '../../..' can never reach chromeTargetDir() / fsp.rm().
+  // Reject a non-version key before any fs or network work, so a value like '../../..' never reaches
+  // chromeTargetDir() or fsp.rm().
   if (!isValidVersionKey(key)) {
     return { version: key, major: parseInt(key, 10) || 0, percent: 0, state: 'error', error: 'Invalid Chrome version.', receivedBytes: 0, totalBytes: 0, url: '', dest: '' };
   }
@@ -314,9 +294,8 @@ function startDownload(versionOrMajor) {
       }, (abortFn) => { aborters.set(found.version, abortFn); });
       aborters.delete(found.version);
 
-      // Integrity gate: if we know the expected size and fell short, the stream was
-      // cut (e.g. a silent socket close that still flushed 'finish'). Don't extract a
-      // truncated zip - surface it as resumable.
+      // If the expected size is known and fell short, the stream was cut (a silent socket close can still
+      // flush 'finish'). Never extract a truncated zip; surface it as resumable.
       if (total && received < total) {
         throw Object.assign(new Error('Connection interrupted before completion.'), { interrupted: true });
       }
@@ -360,8 +339,8 @@ function startDownload(versionOrMajor) {
   return entry;
 }
 
-// Cooperatively pause an in-flight download: abort the socket but KEEP the partial
-// file + state. startDownload(version) later resumes from the saved byte offset.
+// Pauses an in-flight download: aborts the socket but keeps the partial file and state, so
+// startDownload(version) later resumes from the saved byte offset.
 function pauseDownload(versionOrMajor) {
   const key = String(versionOrMajor);
   let entry = downloads.get(key);
@@ -376,7 +355,6 @@ function pauseDownload(versionOrMajor) {
   return { ok: true, version: entry.version, state: entry.state };
 }
 
-// Resume a paused/interrupted download (alias of startDownload, which resumes).
 function resumeDownload(versionOrMajor) {
   return startDownload(versionOrMajor);
 }
@@ -385,8 +363,8 @@ function getDownloadStatus() {
   return Array.from(downloads.values());
 }
 
-// Extract any leftover *.zip sitting directly in /chrome (e.g. a half-finished
-// manual download) into its win64-<version> folder, then remove the zip.
+// Extracts any leftover *.zip directly in the Chrome root (e.g. a half-finished manual download)
+// into its version folder, then removes the zip.
 async function reconcileStrayZips() {
   let entries = [];
   try { entries = await fsp.readdir(CHROME_ROOT); } catch (e) { return; }
@@ -415,39 +393,27 @@ async function reconcileStrayZips() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// fingerprint-chromium (native anti-detect engine) - one-shot GitHub download.
-// Lands in FP_CHROMIUM_ROOT (sibling of CHROME_ROOT: userData/fp-chromium when
-// packaged, <repo>/fp-chromium in dev, matching browserEngine.resolveAntidetectBinary).
-// The release zip extracts to a versioned subdir (ungoogled-chromium_<v>_windows_x64/
-// chrome.exe), which the launcher's resolver already looks one level deep for.
-// ---------------------------------------------------------------------------
+// fingerprint-chromium (native anti-detect engine), one-shot GitHub download into FP_CHROMIUM_ROOT,
+// next to CHROME_ROOT, matching browserEngine.resolveAntidetectBinary. The release extracts to a
+// versioned subdir, which the launcher's resolver searches one level deep.
 const FP_CHROMIUM_ROOT = path.join(path.dirname(CHROME_ROOT), 'fp-chromium');
 const FP_CHROMIUM_REPO = 'adryfish/fingerprint-chromium';
 // Pinned to the empirically-validated build (coherent platform/UA/GPU, no WebRTC leak).
 // Bump deliberately after re-validating a newer release rather than tracking "latest".
 const FP_CHROMIUM_VERSION = '148.0.7778.215';
-// The exact release asset for that tag, pinned by name, size and SHA-256. A release
-// tag on GitHub can have its assets replaced after publication, so the tag alone does
-// not identify the binary. The digest is the one GitHub reports for the asset; a
-// download that does not hash to it is deleted and never extracted or run.
-// Bumping FP_CHROMIUM_VERSION means re-validating the build and updating all three.
-// The pinned release asset PER platform, by name + size + SHA-256 (the values
-// GitHub reports for adryfish/fingerprint-chromium at this tag). A release tag can
-// have its assets replaced after publication, so the tag alone does not identify the
-// binary; a download that does not match size+digest is deleted, never run. Bumping
-// FP_CHROMIUM_VERSION means re-validating each build and updating these.
+// Pinned release asset per platform, by name, size and SHA-256 as GitHub reports them. A tag can have
+// its assets replaced after publication, so a download that does not match is deleted, never run.
+// Bumping FP_CHROMIUM_VERSION means re-validating each build and updating these.
 const FP_CHROMIUM_ASSETS = Object.freeze({
   'win64': { name: 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip', size: 189767686, sha256: '9ef3f471b7a6641b4224532522b29141ce3746e27d55788d88e2fd951f362579' },
   'mac-x64': { name: 'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg', size: 140187500, sha256: 'b72f091e2e1a7583eed389c4b8e3534ed355e568af8c8bbf8fc30a25e23ca679' },
   'mac-arm64': { name: 'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg', size: 140187500, sha256: 'b72f091e2e1a7583eed389c4b8e3534ed355e568af8c8bbf8fc30a25e23ca679' },
   'linux64': { name: 'ungoogled-chromium-148.0.7778.215-1-x86_64_linux.tar.xz', size: 141269020, sha256: '70d239830332e5820aa34dfcb284161cac0429eee25da642830afe04bda717f4' }
 });
-// The asset for THIS machine. The macOS .dmg is shared by both arches (an x64 build
-// runs under Rosetta on Apple Silicon if it is not universal).
+// The asset for this machine. The macOS .dmg serves both arches (an x64 build runs under Rosetta
+// on Apple Silicon if it is not universal).
 const FP_CHROMIUM_ASSET = FP_CHROMIUM_ASSETS[CFT_PLATFORM] || FP_CHROMIUM_ASSETS['win64'];
 
-// SHA-256 of a file on disk, streamed.
 function sha256File(file) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash('sha256');
@@ -458,9 +424,8 @@ function sha256File(file) {
   });
 }
 
-// Pick the pinned asset out of a GitHub release payload. Fatal when it is missing, or
-// when GitHub reports a different size or digest than the pinned one (the asset was
-// replaced), so nothing is downloaded at all in that case.
+// Picks the pinned asset from a GitHub release payload. Fatal when it is missing or GitHub reports
+// a different size or digest (the asset was replaced), so nothing is downloaded.
 function pickFpChromiumAsset(release, pinned = FP_CHROMIUM_ASSET) {
   const assets = (release && release.assets) || [];
   const asset = assets.find((a) => a && a.name === pinned.name);
@@ -488,14 +453,12 @@ async function verifyFpChromiumArchive(file, pinned = FP_CHROMIUM_ASSET) {
   return true;
 }
 
-// version -> chrome.exe present anywhere one level under the root (or at the root).
 function fpChromiumInstalled() {
   // Scans root + one level for the chromium binary, per OS (win chrome.exe, mac
   // *.app/Contents/MacOS/*, linux chrome/chromium).
   return !!platform.findFpChromiumBinary(FP_CHROMIUM_ROOT);
 }
 
-// Resolve the pinned windows_x64 asset URL for the pinned tag via the GitHub API.
 async function resolveFpChromiumAsset() {
   const api = `https://api.github.com/repos/${FP_CHROMIUM_REPO}/releases/tags/${FP_CHROMIUM_VERSION}`;
   const rel = await fetchJson(api, HOSTS.fpchromium, 'fingerprint-chromium release');
@@ -510,8 +473,8 @@ function getFpChromiumStatus() {
   return { ...fpStatus, installed: fpChromiumInstalled(), version: FP_CHROMIUM_VERSION };
 }
 
-// Kick off (or return the in-flight) fingerprint-chromium install. Idempotent: a no-op
-// when already installed or already downloading. ~180 MB; extracts via Expand-Archive.
+// Starts the fingerprint-chromium install (~180 MB), or returns the in-flight one. A no-op when
+// already installed or downloading.
 function startFpChromiumDownload() {
   if (fpChromiumInstalled()) { fpStatus = { state: 'done', percent: 100, error: null, receivedBytes: 0, totalBytes: 0 }; return getFpChromiumStatus(); }
   if (fpInflight) return getFpChromiumStatus();

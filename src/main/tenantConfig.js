@@ -1,22 +1,12 @@
 'use strict';
-// Baked per-tenant config: { tenantId, apiBaseUrl, publicKeyPem }.
-//
-// The per-tenant build pipeline overwrites tenant.config.json with the merchant's
-// values (from `provision-tenant.js`). The BASE build ships empty values, which
-// means `enabled` is false and the app keeps its existing local trial/license
-// behavior - the licensing backend is simply inactive.
-//
-// Env vars override the file (handy for dev/testing without rebaking):
-//   SG_TENANT_ID, SG_API_BASE_URL, SG_TENANT_PUBLIC_KEY, SG_UPDATE_FEED_URL
-// audit L4: only in unpackaged (dev) runs. A packaged build ignores them, so nobody can
-// point an installed app at their own licensing backend / signing key with an env var.
+// Baked per-tenant config { tenantId, apiBaseUrl, publicKeyPem }; the base build ships it empty,
+// which leaves licensing inactive. SG_* env vars override it only in unpackaged (dev) runs, so an
+// installed app cannot be pointed at another licensing backend or signing key.
 const fs = require('node:fs');
 const path = require('node:path');
 
-// audit: license leases/tokens and the update feed must never travel over
-// cleartext http. Require https for any real host; allow http ONLY for
-// localhost/loopback (dev backends). A misconfigured http URL is dropped (treated
-// as unset) with a warning rather than silently sending secrets in the clear.
+// License tokens and the update feed must never use cleartext http: require https except for
+// loopback, and drop a bad URL (treated as unset) with a warning.
 function sanitizeSecureUrl(raw, label) {
   const s = String(raw || '').trim().replace(/\/+$/, '');
   if (!s) return '';
@@ -42,8 +32,7 @@ function load() {
   const tenantId = String(env.SG_TENANT_ID || fileCfg.tenantId || '').trim();
   const apiBaseUrl = sanitizeSecureUrl(env.SG_API_BASE_URL || fileCfg.apiBaseUrl || '', 'apiBaseUrl');
   const publicKeyPem = String(env.SG_TENANT_PUBLIC_KEY || fileCfg.publicKeyPem || '').trim();
-  // Buyer-owned auto-update feed (a generic URL hosting latest.yml + installers).
-  // Empty -> auto-update stays off (the build never phones a default/seller feed).
+  // Buyer-owned update feed (generic URL with latest.yml and installers); empty keeps auto-update off.
   const updateFeedUrl = sanitizeSecureUrl(env.SG_UPDATE_FEED_URL || fileCfg.updateFeedUrl || '', 'updateFeedUrl');
   return {
     tenantId,
