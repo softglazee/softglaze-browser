@@ -365,6 +365,11 @@ let currentMemberId = null;
 // Single-user mode (no member) is treated as owner → full reveal.
 let currentMemberCanRevealProxy = true;
 let vaultLocked = false;
+// HOW the workspace was last unlocked: 'vault' = with the workspace (Owner) password,
+// 'member' = by a team member's own login, 'super' = Super Admin, 'none' = no vault set,
+// null = locked. Only a 'vault' (or 'none') unlock lets the member picker open a
+// password-less identity such as the registered Owner; see switchMember.
+let vaultUnlockSource = null;
 const importPreviewCache = new Map();
 
 function toIpcError(error) {
@@ -8357,7 +8362,10 @@ async function listMembers() {
     ownedProxies: ownedProxies[m.id] || 0,
     childCounts: childCounts[m.id] || { ADMIN: 0, MANAGER: 0, OPERATOR: 0, total: 0 },
     allocation: allocationFor(m),
-    inviteCode: m.inviteStatus === 'pending' ? m.inviteCode : null,
+    // Only a signed-in viewer sees pending invite codes. member:list is also called
+    // before sign-in (the Gate's member picker), and a code read there could be redeemed
+    // with member:accept-invite to sign in as that invitee without any credential.
+    inviteCode: viewer && m.inviteStatus === 'pending' ? m.inviteCode : null,
     workspaceProfiles: totalProfiles,
     workspaceProxies: totalProxies,
     isCurrent: m.id === currentMemberId,
@@ -8464,6 +8472,7 @@ async function acceptInvite(payload) {
   currentMemberId = updated.id;
   await writeSetting('currentMemberId', updated.id).catch(() => {});
   vaultLocked = false;
+  vaultUnlockSource = 'member';
   await db.member.update({ where: { id: updated.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   await logAudit('member.invite-accept', { detail: { name: updated.name } });
   return serializeMember(updated, { isCurrent: true });
@@ -8489,6 +8498,7 @@ async function memberLogin(payload) {
   currentMemberId = member.id;
   await writeSetting('currentMemberId', member.id).catch(() => {});
   vaultLocked = false; // member's own password is their auth
+  vaultUnlockSource = 'member';
   applyRememberChoice(input.remember, { kind: 'member', identifier, password });
   await db.member.update({ where: { id: member.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   await logAudit('member.login', { detail: { name: member.name } });
@@ -8496,13 +8506,25 @@ async function memberLogin(payload) {
 }
 
 // Sign the active member out: drop the in-memory id AND clear the persisted
-// pointer so a reload lands on the member-picker / login screen (Gate.jsx) rather
-// than silently re-activating the last member. The vault state is left untouched
-// (logging out is not the same as locking the workspace).
+// pointer so a reload lands on the login screen (Gate.jsx) rather than silently
+// re-activating the last member.
+// audit 2 Nov 2026: signing out now also LOCKS the workspace when a workspace password
+// is set. It used to leave the vault unlocked, and with nobody signed in the member
+// picker opened password-less identities freely - the registered Owner has no login
+// password of its own (its credential IS the workspace password), so any team member
+// could sign in, sign out, click the Owner and become Owner. After sign-out the next
+// person must enter the workspace password or sign in with their own team login.
 async function memberLogout() {
   await logAudit('member.logout'); // log while currentMemberId is still the departing member
   currentMemberId = null;
   await writeSetting('currentMemberId', null).catch(() => {});
+  try {
+    const v = await readVault();
+    if (v.enabled && v.hash) { vaultLocked = true; vaultUnlockSource = null; }
+  } catch (e) {
+    // Cannot read the vault setting: fail closed.
+    vaultLocked = true; vaultUnlockSource = null;
+  }
   // Signing out is an explicit "this isn't my session" - forget any remembered
   // auto-login on this device so the next start asks for credentials again.
   rememberStore.clear();
@@ -8876,6 +8898,24 @@ async function switchMember(payload) {
       if (!verifySecret(pw, m.passwordSalt, m.passwordHash)) {
         const err = new Error('Enter this member’s password to sign in.'); err.code = 'NEED_PASSWORD'; throw err;
       }
+    } else {
+      // audit 2 Nov 2026: a password-less identity (the registered Owner, whose
+      // credential is the workspace password, or a single-user setup) may only be
+      // opened from the picker when the workspace was unlocked WITH the workspace
+      // password - not after a team member's own login. Otherwise the workspace
+      // password itself is required here.
+      if (m.inviteStatus === 'pending') {
+        const err = new Error('This invite has not been accepted yet. Redeem the invite code to set a password first.'); err.code = 'INVITE_PENDING'; throw err;
+      }
+      const v = await readVault();
+      const vaultOn = Boolean(v.enabled && v.hash);
+      if (vaultOn && vaultUnlockSource !== 'vault') {
+        const pw = String(input.password || '');
+        if (!pw || !verifySecret(pw, v.salt, v.hash)) {
+          const err = new Error('Enter the workspace password to open this account.'); err.code = 'NEED_PASSWORD'; throw err;
+        }
+        vaultUnlockSource = 'vault';
+      }
     }
   }
 
@@ -8947,6 +8987,7 @@ async function superAdminSetup(payload) {
   currentMemberId = permissions.SUPER_ADMIN_ID;
   await writeSetting('currentMemberId', currentMemberId).catch(() => {});
   vaultLocked = false;
+  vaultUnlockSource = 'super';
   return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
 }
 
@@ -8966,6 +9007,7 @@ async function superLogin(payload) {
   currentMemberId = permissions.SUPER_ADMIN_ID;
   await writeSetting('currentMemberId', currentMemberId).catch(() => {});
   vaultLocked = false; // source owner is never gated by the workspace vault
+  vaultUnlockSource = 'super';
   applyRememberChoice(input.remember, { kind: 'super', identifier, password });
   return serializeMember({ ...permissions.SUPER_ADMIN }, { isCurrent: true });
 }
@@ -9152,7 +9194,8 @@ async function restoreSession() {
     const savedMember = await readSetting('currentMemberId', null);
     if (savedMember != null) currentMemberId = Number(savedMember) || null;
     const v = await readSetting('vault', null);
-    if (v && v.enabled) vaultLocked = true; // require unlock at startup
+    if (v && v.enabled) { vaultLocked = true; vaultUnlockSource = null; } // require unlock at startup
+    else vaultUnlockSource = 'none';
   } catch (e) { /* ignore - fall back to a fresh session */ }
 }
 
@@ -9205,7 +9248,7 @@ async function dbUnlock(payload) {
   // for the same password again at the Gate.
   try {
     const v = await readVault();
-    if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
+    if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) { vaultLocked = false; vaultUnlockSource = 'vault'; }
   } catch (e) { /* leave vault locked - the Gate will ask */ }
   // The same password opens both the DB and the vault, so remember it as a 'vault'
   // credential - attemptRememberedUnlock() will replay it through this exact path.
@@ -9391,7 +9434,7 @@ async function attemptRememberedUnlock() {
       }
       // 2) Clear the workspace vault lock.
       const v = await readVault();
-      if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) vaultLocked = false;
+      if (v.enabled && v.hash && verifySecret(password, v.salt, v.hash)) { vaultLocked = false; vaultUnlockSource = 'vault'; }
       return { attempted: true, unlocked: !vaultLocked };
     }
     if (blob.kind === 'super') {
@@ -9453,6 +9496,7 @@ async function vaultSetPassword(payload) {
   }
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes ?? v.autoLockMinutes) || 0 });
   vaultLocked = false;
+  vaultUnlockSource = 'vault';
   // Keep "stay signed in" working across a password change: re-seal the remembered
   // vault credential with the new password (otherwise auto-login would fail once and
   // self-clear). Untouched for super/member remember blobs.
@@ -9466,19 +9510,20 @@ async function vaultSetPassword(payload) {
 async function vaultUnlock(payload) {
   const input = requireObject(payload);
   const v = await readVault();
-  if (!v.enabled || !v.hash) { vaultLocked = false; return vaultStatus(); }
+  if (!v.enabled || !v.hash) { vaultLocked = false; vaultUnlockSource = 'none'; return vaultStatus(); }
   const password = String(input.password || '');
   if (!verifySecret(password, v.salt, v.hash)) {
     const err = new Error('Incorrect password.'); err.code = 'BAD_PASSWORD'; throw err;
   }
   vaultLocked = false;
+  vaultUnlockSource = 'vault';
   applyRememberChoice(input.remember, { kind: 'vault', password });
   return vaultStatus();
 }
 
 async function vaultLock() {
   const v = await readVault();
-  if (v.enabled) vaultLocked = true;
+  if (v.enabled) { vaultLocked = true; vaultUnlockSource = null; }
   return vaultStatus();
 }
 
@@ -9499,6 +9544,7 @@ async function vaultDisable(payload) {
   }
   await writeSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
   vaultLocked = false;
+  vaultUnlockSource = 'none';
   return vaultStatus();
 }
 
@@ -9767,6 +9813,7 @@ async function accountRegister(payload) {
   const { salt, hash } = hashSecret(password);
   await writeSetting('vault', { enabled: true, hash, salt, autoLockMinutes: Number(input.autoLockMinutes) || 0 });
   vaultLocked = false;
+  vaultUnlockSource = 'vault';
 
   // 5) Save the account profile.
   await writeSetting('account', {
