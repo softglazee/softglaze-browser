@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/Card.jsx';
 import LeakCheckModal from '@/components/LeakCheckModal.jsx';
 import CaptchaScoreModal, { CaptchaBadge, fixAllActions } from '@/components/CaptchaScore.jsx';
 import PreLaunchCheckModal from '@/components/PreLaunchCheck.jsx';
+import ProfileAgeBadge from '@/components/ProfileAgeBadge.jsx';
 import CookieManagerModal from '@/components/CookieManagerModal.jsx';
 import BrowserManagerModal from '@/components/BrowserManagerModal.jsx';
 import BrowserVersionSelect from '@/components/BrowserVersionSelect.jsx';
@@ -532,6 +533,7 @@ export default function ProfilesPage() {
   const [leakProfile, setLeakProfile] = useState(null);
   const [captchaProfile, setCaptchaProfile] = useState(null);
   const [captchaScores, setCaptchaScores] = useState({});
+  const [warmStats, setWarmStats] = useState({}); // profileId -> { runs, lastAt } from the warm-up
   const [cookieProfile, setCookieProfile] = useState(null);
   const [loadingCookies, setLoadingCookies] = useState(false);
   const [showBrowserManager, setShowBrowserManager] = useState(false);
@@ -644,6 +646,17 @@ export default function ProfilesPage() {
     })();
     return () => { cancelled = true; };
   }, [scoreIdsKey, profiles]);
+
+  // Warm-up counts for the age badge, for the rows on screen.
+  const pagedIdsKey = pagedProfiles.map((p) => p.id).join(',');
+  useEffect(() => {
+    if (!pagedIdsKey) return undefined;
+    let cancelled = false;
+    softglazeApi.profiles.warmStats(pagedIdsKey.split(',').map(Number))
+      .then((res) => { if (!cancelled && res && res.stats) setWarmStats((prev) => ({ ...prev, ...res.stats })); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [pagedIdsKey, profiles]);
 
   const totalCount = profiles.length;
   const runningCount = useMemo(
@@ -2295,7 +2308,8 @@ export default function ProfilesPage() {
                             <BrandMark id={p.browserBrand} className="w-3.5 h-3.5" />
                           </span>
                         )}
-                        <span className="truncate max-w-[200px]">{p.title}</span>
+                        {/* Capped so the name, its badges and the age tag fit at 1440 px with no sideways scroll */}
+                        <span className="truncate max-w-[160px]" title={p.title}>{p.title}</span>
                         {(p.launchCount > 0 || p.lastUsedAt) && (
                           <span
                             title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.used', { defaultValue: 'Used' })}
@@ -2304,6 +2318,7 @@ export default function ProfilesPage() {
                             ✓ {t('row.used', { defaultValue: 'Used' })}
                           </span>
                         )}
+                        <ProfileAgeBadge createdAt={p.createdAt} stat={warmStats[p.id]} formatAgo={relTime} />
                         {(p.deviceClass === 'mobile' || /android/i.test(p.os || '')) && (
                           <span
                             title={t('row.mobileTitle')}

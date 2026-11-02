@@ -33,6 +33,7 @@ function factorMessage(t, f) {
   if (f.key === 'proxyHealth' && f.status === 'warn') return t(p.never ? 'factor.proxyHealth.never' : 'factor.proxyHealth.stale', { days: p.days });
   if (f.key === 'language' && p.unverified) return t('factor.language.unverified', { lang: p.lang });
   if (f.key === 'sharedProxy') return t('factor.sharedProxy.msg', { count: p.count });
+  if (f.key === 'history' && f.status === 'pass' && p.warmRuns) return t('factor.history.warmed', { count: p.warmRuns });
   if (f.key === 'ipType') return t(`factor.ipType.${f.status}`, { isp: p.isp ? ` (${p.isp})` : '' });
   return t(`factor.${f.key}.${f.status}`, p);
 }

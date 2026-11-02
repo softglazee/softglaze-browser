@@ -58,6 +58,7 @@ const profileData = require('./profileData');
 const captchaScore = require('./captchaScore');
 const launchCheck = require('./launchCheck');
 const vendorScoreboard = require('./vendorScoreboard');
+const warmAutopilot = require('./warmAutopilot');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
 const licensePolicy = require('./licensePolicy');
@@ -189,6 +190,7 @@ const CHANNELS = Object.freeze({
   PROFILE_CAPTCHA_FIX: 'profile:captcha-fix',
   PROFILE_CAPTCHA_FIX_BULK: 'profile:captcha-fix-bulk',
   PROFILE_PRELAUNCH_CHECK: 'profile:prelaunch-check',
+  PROFILE_WARM_STATS: 'profile:warm-stats',
   PROFILE_ACTIVITY: 'profile:activity',
   // Softglaze Premium
   PROFILE_GET_2FA_TOKEN: 'profile:get-2fa-token',
@@ -346,6 +348,8 @@ const CHANNELS = Object.freeze({
   AUTOMATION_PARALLEL_STATUS: 'automation:parallel-status', // is a parallel run still going (backstop for a lost 'done' frame)
   AUTOMATION_RUN_PROGRESS: 'automation:run-progress', // main -> renderer stream
   AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
+  AUTOMATION_WARM_AUTOPILOT_GET: 'automation:warm-autopilot-get',
+  AUTOMATION_WARM_AUTOPILOT_SET: 'automation:warm-autopilot-set',
 
   // Softglaze Pro - local developer API
   API_TOKEN_LIST: 'api:token-list',
@@ -7005,6 +7009,7 @@ async function captchaContexts(db, rows) {
   const settings = (await getGlobalSettings().catch(() => ({}))).browser || {};
   const root = path.resolve(getRuntimeConfig().profileRoot);
   const hostOs = HOST_OS_LABEL[process.platform] || 'Linux';
+  const warmStats = (await readSetting('warmStats', {})) || {};
   const out = new Map();
   for (const r of rows) {
     out.set(r.id, {
@@ -7012,7 +7017,8 @@ async function captchaContexts(db, rows) {
       sharedWith: r.proxyId ? Math.max(0, (usage.get(r.proxyId) || 1) - 1) : 0,
       settings,
       hostOs,
-      cookieBytes: await profileCookieBytes(r, root)
+      cookieBytes: await profileCookieBytes(r, root),
+      warmRuns: warmStats[r.id] ? Number(warmStats[r.id].runs) || 0 : 0
     });
   }
   return out;
@@ -12093,6 +12099,11 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
   // Reuse an already-open session if the profile is running; otherwise launch.
   let sessionId = String(profileId);
   const alreadyOpen = listActiveSessions().some((s) => String(s.sessionId) === sessionId);
+  if (alreadyOpen && opts.skipOpen) {
+    // The autopilot never drives a browser someone opened after it picked the profile.
+    emit(profileId, 'WARN', 'Skipped: the profile is open.');
+    return { sessionId, cookieCount: null, loaded: 0, skipped: true };
+  }
   if (alreadyOpen) {
     emit(profileId, 'INFO', 'Using the already-open session.');
   } else {
@@ -12106,6 +12117,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 
   const aborted = () => Boolean(run && run.aborted);
   const rounds = opts.loop ? 1000 : 1; // "loop" repeats until stopped (safety cap)
+  let loaded = 0;
   outer:
   for (let r = 0; r < rounds; r++) {
     for (const site of sites) {
@@ -12114,6 +12126,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
       emit(profileId, 'INFO', `Visiting ${site.label} (${site.seconds}s${tag})…`);
       const ok = await navigateSession(sessionId, site.url, { timeout: 30000 });
       if (!ok) { emit(profileId, 'WARN', `Could not load ${site.label} (skipped)`); continue; }
+      loaded += 1;
       emit(profileId, 'SUCCESS', `Loaded ${site.label}`);
       try {
         const inter = await warmInteract(sessionId, { clickMode: site.clickMode, clicks: site.clicks, scroll: site.scroll });
@@ -12148,7 +12161,7 @@ async function warmOneProfile(profileId, sites, opts, emit, run) {
 
   const cookieNote = cookieCount != null ? ` · ${cookieCount} cookies saved` : '';
   emit(profileId, aborted() ? 'WARN' : 'SUCCESS', `${aborted() ? 'Warm-up stopped' : 'Warm-up complete'}${cookieNote}${diskNote}.`);
-  return { sessionId, cookieCount };
+  return { sessionId, cookieCount, loaded };
 }
 
 async function startWarmer(payload, event) {
@@ -12165,14 +12178,26 @@ async function startWarmer(payload, event) {
   // Default concurrency 1 is a strict queue: each profile finishes its sites and closes before the next
   // launches. Launching every selected browser at once runs out of memory on large selections.
   const concurrency = Math.max(1, Math.min(16, Number.parseInt(input.concurrency, 10) || 1));
-  const runId = `warm-${Date.now()}`;
+  const run = await beginWarmerRun({
+    ids, sites, opts, concurrency,
+    push: (frame) => { try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, frame); } catch (e) { /* renderer gone */ } },
+    ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
+  });
+  return { started: true, runId: run.id, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
+}
+
+// Registers a warm-up run and starts its worker pool in the background. `push` streams each frame
+// to the renderer that started the run; the autopilot has no renderer and passes none. Autopilot runs
+// stay out of the Task History, which keeps only 50 rows. `run.finished` settles when the run ends.
+async function beginWarmerRun({ ids, sites, opts, concurrency, push = null, autopilot = false, ownerMemberId = null }) {
+  const runId = autopilot ? `autowarm-${ids[0]}-${Date.now()}` : `warm-${Date.now()}`;
   const run = {
     id: runId, aborted: false, launched: new Set(), sessions: new Set(), send: null,
     // Metadata and a rolling log let a renderer that navigated away re-attach to (and stop) the run.
     // `active` holds profiles warming right now; total/done drive the live progress counter.
     profileIds: ids, total: ids.length, done: 0, active: new Set(), concurrency,
     loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: [],
-    ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
+    autopilot, results: new Map(), finished: null, ownerMemberId
   };
   warmerRuns.set(runId, run);
 
@@ -12188,25 +12213,33 @@ async function startWarmer(payload, event) {
       }
     };
     try { run.logs.push(enriched); if (run.logs.length > 300) run.logs.splice(0, run.logs.length - 300); } catch (e) {}
-    try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, enriched); } catch (e) { /* renderer gone */ }
+    if (push) push(enriched);
   };
   run.send = send;
   const emit = (profileId, level, message) => send({ runId, profileId, level, message, ts: Date.now() });
 
   send({ runId, level: 'INFO', message: `Starting warm-up · ${ids.length} profile(s) · ${sites.length} site(s) · ${concurrency === 1 ? 'one-by-one (queue)' : concurrency + ' at a time'}${opts.headless ? ' · hidden (no windows)' : ''}${opts.loop ? ' · looping until stopped' : ''}.`, ts: Date.now() });
-  await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
+  if (!autopilot) await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: 'running', startedAt: Date.now() }).catch(() => {});
 
   // Fire-and-forget worker pool with a shared cursor caps how many profiles warm at once; at width 1
   // a worker takes the next id only after its previous profile has finished and closed.
-  (async () => {
+  run.finished = (async () => {
     let cursor = 0;
     const worker = async () => {
       while (!run.aborted) {
         const i = cursor; cursor += 1;
         if (i >= ids.length) break;
         run.active.add(String(ids[i])); // now warming - reflected in the live counter
-        try { await warmOneProfile(ids[i], sites, opts, emit, run); }
-        catch (e) { emit(ids[i], 'ERROR', e && e.message ? e.message : 'Warm-up failed.'); }
+        try {
+          const res = await warmOneProfile(ids[i], sites, opts, emit, run);
+          run.results.set(ids[i], res);
+          // A warm-up counts once a site has loaded; the autopilot and the CAPTCHA score read the count.
+          if (res && res.loaded > 0) await recordWarmRun(ids[i]);
+        } catch (e) {
+          const message = e && e.message ? e.message : 'Warm-up failed.';
+          run.results.set(ids[i], { loaded: 0, error: message });
+          emit(ids[i], 'ERROR', message);
+        }
         finally { run.active.delete(String(ids[i])); run.done += 1; }
       }
     };
@@ -12214,17 +12247,29 @@ async function startWarmer(payload, event) {
     await Promise.all(Array.from({ length: width }, () => worker()));
     const stopped = run.aborted;
     send({ runId, level: stopped ? 'WARN' : 'SUCCESS', message: stopped ? 'Warm-up stopped.' : 'All warm-up tasks finished.', done: true, ts: Date.now() });
-    await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: stopped ? 'stopped' : 'completed', finishedAt: Date.now() }).catch(() => {});
+    if (!autopilot) await appendWarmerHistory({ type: 'warmer', runId, profileIds: ids, sites: sites.length, status: stopped ? 'stopped' : 'completed', finishedAt: Date.now() }).catch(() => {});
     warmerRuns.delete(runId);
+    return { stopped };
   })();
 
-  return { started: true, runId, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
+  return run;
+}
+
+// Serialised like the history writes: warm-ups finishing together would otherwise lose a count.
+let _warmStatsChain = Promise.resolve();
+function recordWarmRun(profileId) {
+  _warmStatsChain = _warmStatsChain.then(async () => {
+    const stats = (await readSetting('warmStats', {})) || {};
+    await writeSetting('warmStats', warmAutopilot.withWarmRun(stats, profileId, Date.now()));
+  }).catch(() => {});
+  return _warmStatsChain;
 }
 
 // Lets a renderer returning to the Automation page re-attach to a job still running in main, with
-// its recent logs, instead of leaving the launched browsers orphaned and unstoppable.
+// its recent logs, instead of leaving the launched browsers orphaned and unstoppable. Autopilot runs
+// are left out: they stream to no renderer, so the panel would wait on them forever.
 function listActiveWarmers() {
-  return [...warmerRuns.values()].map((r) => ({
+  return [...warmerRuns.values()].filter((r) => !r.autopilot).map((r) => ({
     runId: r.id, total: r.total, done: r.done, active: r.active ? r.active.size : 0,
     remaining: Math.max(0, r.total - r.done - (r.active ? r.active.size : 0)),
     concurrency: r.concurrency,
@@ -12234,7 +12279,7 @@ function listActiveWarmers() {
 }
 
 // Stop a running warm-up. `force` also closes the sessions this run launched.
-// With no runId, stops every active run.
+// With no runId, stops every active run except the autopilot's (turning the autopilot off stops those).
 async function stopWarmer(payload) {
   // Gated like startWarmer and limited to runs the caller may control, since force-stop closes the
   // run's browsers.
@@ -12242,7 +12287,7 @@ async function stopWarmer(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   const force = Boolean(input.force);
   const runId = input.runId ? String(input.runId) : null;
-  const candidates = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()];
+  const candidates = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()].filter((r) => !r.autopilot);
   const targets = [];
   for (const run of candidates) {
     try { await assertCanControlRun(run.ownerMemberId); targets.push(run); }
@@ -12257,6 +12302,194 @@ async function stopWarmer(payload) {
     }
   }
   return { stopped: true, force, runs: targets.length };
+}
+
+// ---- Warm-up autopilot ----
+// Warms each covered profile with a few random sites, a few times a day inside the active hours,
+// through the Cookie Warmer runner, so history and cookies build up over days. Who is due and when
+// lives in warmAutopilot.js. The timer always ticks and reads the setting each time, so turning the
+// autopilot on needs no restart and works when the database is unlocked after start-up.
+const WARM_AUTOPILOT_TICK_MS = 60 * 1000;
+let warmAutopilotTimer = null;
+// One tick at a time, so a slow tick cannot overlap the next.
+let warmAutopilotBusy = false;
+const warmAutopilotRetryAt = new Map(); // profileId -> when a failed profile may be tried again
+let warmAutopilotLastError = null; // { code, message, profileId, title, at }
+
+function autopilotWarmerRuns() {
+  return [...warmerRuns.values()].filter((r) => r.autopilot);
+}
+
+// Profiles something else is using: open or launching browsers, launch locks, warm-up, macro and
+// parallel runs, and a scheduled macro pass in progress. The autopilot leaves them alone.
+async function profilesBusyForWarmup() {
+  const busy = new Set();
+  const add = (id) => { const n = Number(id); if (Number.isInteger(n)) busy.add(n); };
+  for (const s of listAllSessions()) add(s.sessionId);
+  for (const id of profileLocks.keys()) add(id);
+  for (const id of profileLaunchesInFlight.keys()) add(id);
+  for (const r of warmerRuns.values()) r.profileIds.forEach(add);
+  for (const c of macroRuns.values()) add(c.profileId);
+  for (const id of profilesInParallelRun()) add(id);
+  if (macroScheduleBusy) {
+    const m = await readSetting('macroSchedule', null);
+    if (m && Array.isArray(m.profileIds)) m.profileIds.forEach(add);
+  }
+  return busy;
+}
+
+// The timer runs as whoever is signed in (often nobody, which passes every access check), so like
+// the macro schedule the autopilot only covers profiles the member who turned it on may still use.
+// Returns the covered rows, or none with a problem code.
+async function warmAutopilotProfiles(cfg) {
+  const db = getPrisma();
+  const where = cfg.target === 'group' ? { deletedAt: null, groupId: cfg.groupId } : { deletedAt: null };
+  const rows = await db.profile.findMany({ where, select: { ...PROFILE_ACCESS_SELECT, title: true, groupId: true, deletedAt: true } });
+  if (cfg.ownerMemberId == null) return { rows, problem: null }; // single-user mode
+  const all = await db.member.findMany();
+  const owner = all.find((m) => Number(m.id) === Number(cfg.ownerMemberId))
+    || (Number(cfg.ownerMemberId) === permissions.SUPER_ADMIN_ID ? { ...permissions.SUPER_ADMIN } : null);
+  if (!owner) return { rows: [], problem: 'owner-missing' };
+  if (owner.status === 'banned' || owner.status === 'suspended') return { rows: [], problem: 'owner-inactive' };
+  if (owner.role === 'SUPER_ADMIN') return { rows, problem: null };
+  if (permissions.effectivePermissions(owner).actions['automation.run'] === false) return { rows: [], problem: 'owner-no-permission' };
+  const visible = permissions.visibleMemberIds(all, owner);
+  return { rows: rows.filter((r) => permissions.profileRowAccessible(visible, r, false)), problem: null };
+}
+
+async function runWarmAutopilotTick() {
+  if (warmAutopilotBusy) return;
+  warmAutopilotBusy = true;
+  try {
+    if (!database.isDbUnlocked()) return;
+    const cfg = warmAutopilot.normalizeConfig(await readSetting('warmAutopilot', null));
+    const now = Date.now();
+    if (!cfg.enabled || !warmAutopilot.inWindow(new Date(now).getHours(), cfg)) return;
+    const slots = cfg.maxConcurrent - autopilotWarmerRuns().length;
+    if (slots <= 0) return;
+    for (const [id, at] of warmAutopilotRetryAt) if (at <= now) warmAutopilotRetryAt.delete(id);
+    const { rows, problem } = await warmAutopilotProfiles(cfg);
+    if (problem) {
+      warmAutopilotLastError = { code: problem, message: null, profileId: null, title: null, at: now };
+      return;
+    }
+    const stats = (await readSetting('warmStats', {})) || {};
+    const busy = await profilesBusyForWarmup();
+    const due = warmAutopilot.pickDue(rows, { cfg, stats, now, busy, retryAt: warmAutopilotRetryAt, slots });
+    const titles = new Map(rows.map((r) => [r.id, r.title]));
+    for (const pid of due) await startAutopilotWarm(pid, titles.get(pid), cfg);
+  } catch (e) {
+    warmAutopilotLastError = { code: 'tick-failed', message: (e && e.message) || 'Unknown error', profileId: null, title: null, at: Date.now() };
+  } finally {
+    warmAutopilotBusy = false;
+  }
+}
+
+async function startAutopilotWarm(profileId, title, cfg) {
+  const sites = warmAutopilot.pickSites(defaultWarmSites(), cfg.sitesPerRun);
+  const run = await beginWarmerRun({
+    ids: [profileId], sites, concurrency: 1, autopilot: true, ownerMemberId: cfg.ownerMemberId,
+    // skipOpen: a browser someone opened after this tick picked the profile is left alone.
+    opts: { loop: false, keepOpen: false, headless: cfg.headless, skipOpen: true }
+  });
+  run.finished.then(async () => {
+    const res = run.results.get(profileId) || { loaded: 0 };
+    if (res.loaded > 0) {
+      warmAutopilotRetryAt.delete(profileId);
+      const cookies = res.cookieCount != null ? ` · ${res.cookieCount} cookies` : '';
+      await logActivity(getPrisma(), profileId, 'warm-up', `autopilot · ${res.loaded}/${sites.length} sites${cookies}`);
+    } else if (!res.skipped && !run.aborted) {
+      warmAutopilotRetryAt.set(profileId, Date.now() + warmAutopilot.RETRY_MS);
+      warmAutopilotLastError = { code: 'warm-failed', message: res.error || 'No site loaded.', profileId, title: title || null, at: Date.now() };
+    }
+  }).catch(() => {});
+}
+
+function startWarmAutopilotTimer() {
+  stopWarmAutopilotTimer();
+  warmAutopilotTimer = setInterval(() => { runWarmAutopilotTick().catch(() => {}); }, WARM_AUTOPILOT_TICK_MS);
+  if (warmAutopilotTimer.unref) warmAutopilotTimer.unref();
+}
+
+function stopWarmAutopilotTimer() {
+  if (warmAutopilotTimer) { clearInterval(warmAutopilotTimer); warmAutopilotTimer = null; }
+}
+
+// Settings plus a status line. Counts and the last error cover only profiles this viewer may see.
+async function warmAutopilotView(cfg) {
+  const now = Date.now();
+  const { rows, problem } = await warmAutopilotProfiles(cfg);
+  const check = await profileAccessChecker();
+  const seen = new Set((check ? rows.filter(check) : rows).map((r) => r.id));
+  const stats = (await readSetting('warmStats', {})) || {};
+  let canEdit = true;
+  try { await assertCanChangeWarmAutopilot(cfg.ownerMemberId); } catch (e) { canEdit = false; }
+  let lastError = problem ? { code: problem, at: now } : warmAutopilotLastError;
+  if (lastError && lastError.profileId != null && !seen.has(lastError.profileId)) lastError = { code: lastError.code, at: lastError.at };
+  const { ownerMemberId, ...settings } = cfg;
+  return {
+    ...settings,
+    canEdit,
+    status: {
+      inWindow: warmAutopilot.inWindow(new Date(now).getHours(), cfg),
+      covered: seen.size,
+      warmedToday: warmAutopilot.warmedToday(stats, [...seen], now),
+      warmingNow: autopilotWarmerRuns().length,
+      nextRunAt: problem ? null : warmAutopilot.nextRunAt(rows, { cfg, stats, now, retryAt: warmAutopilotRetryAt }),
+      lastError
+    }
+  };
+}
+
+// Only the member who turned the autopilot on, or someone above them, may change it. When that
+// member has been deleted nobody is above them, so the workspace Owner takes it over.
+async function assertCanChangeWarmAutopilot(ownerMemberId) {
+  if (ownerMemberId == null) return;
+  const gone = !permissions.isSuperAdminId(ownerMemberId)
+    && !(await getPrisma().member.findUnique({ where: { id: Number(ownerMemberId) }, select: { id: true } }));
+  if (gone) await requireOwnerOrSuper('take over the warm-up autopilot');
+  else await assertCanControlRun(ownerMemberId);
+}
+
+async function getWarmAutopilot() {
+  await requirePermission('automation.run');
+  return warmAutopilotView(warmAutopilot.normalizeConfig(await readSetting('warmAutopilot', null)));
+}
+
+async function setWarmAutopilot(payload) {
+  // Gated like the macro schedule. The caller becomes the owner every tick is checked against
+  // (see warmAutopilotProfiles).
+  await requirePermission('automation.run');
+  const input = requireObject(payload);
+  const existing = await readSetting('warmAutopilot', null);
+  if (existing) await assertCanChangeWarmAutopilot(existing.ownerMemberId);
+  const cfg = { ...warmAutopilot.normalizeConfig(input), ownerMemberId: currentMemberId };
+  if (warmAutopilot.configProblem(cfg)) throw new Error('Choose a group for the autopilot to warm.');
+  // Groups belong to the whole workspace (the group list is not scoped per member), so any existing
+  // group is one the member can see; the profiles in it are still checked one by one on each tick.
+  if (cfg.target === 'group' && !(await getPrisma().group.findUnique({ where: { id: cfg.groupId }, select: { id: true } }))) {
+    throw new Error('That group no longer exists.');
+  }
+  await writeSetting('warmAutopilot', cfg);
+  // Turning it off stops warm-ups in flight; each closes the browser it opened.
+  if (!cfg.enabled) for (const run of autopilotWarmerRuns()) run.aborted = true;
+  warmAutopilotLastError = null;
+  await logAudit('automation.warm-autopilot', { detail: { enabled: cfg.enabled, target: cfg.target, groupId: cfg.groupId } });
+  return warmAutopilotView(cfg);
+}
+
+// Warm-up count and last warm-up per profile, for the age badge on the Profiles list.
+async function getWarmStats(payload) {
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids).slice(0, 500);
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  const all = (await readSetting('warmStats', {})) || {};
+  const stats = {};
+  for (const id of allowed) {
+    const s = all[id];
+    if (s) stats[id] = { runs: Number(s.runs) || 0, lastAt: s.lastAt || null };
+  }
+  return { stats };
 }
 
 // ---- Local developer API tokens + server toggle ----
@@ -12450,6 +12683,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_CAPTCHA_FIX, captchaFix);
   registerHandler(CHANNELS.PROFILE_CAPTCHA_FIX_BULK, captchaFixBulk);
   registerHandler(CHANNELS.PROFILE_PRELAUNCH_CHECK, prelaunchCheck);
+  registerHandler(CHANNELS.PROFILE_WARM_STATS, getWarmStats);
   registerHandler(CHANNELS.PROFILE_ACTIVITY, listActivity);
   registerHandler(CHANNELS.PROFILE_GET_2FA_TOKEN, getProfile2faToken);
   registerHandler(CHANNELS.PROFILE_BULK_SYNCHRONIZE, bulkSynchronize);
@@ -12544,6 +12778,7 @@ function registerIpcHandlers() {
       const mcfg = await readSetting('macroSchedule', null);
       if (mcfg && mcfg.enabled) startMacroScheduler(mcfg.everyMinutes);
     } catch (e) { /* ignore */ }
+    startWarmAutopilotTimer();
     try {
       // Keep the proxy health-history table bounded (~30 days).
       const cutoff = new Date(Date.now() - 30 * 86400000);
@@ -12614,6 +12849,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_RUN_PARALLEL, runParallelMacroHandler);
   registerHandler(CHANNELS.AUTOMATION_PARALLEL_STATUS, getParallelRunStatus);
   registerHandler(CHANNELS.AUTOMATION_PICK_DATA_FILE, pickDataFile);
+  registerHandler(CHANNELS.AUTOMATION_WARM_AUTOPILOT_GET, getWarmAutopilot);
+  registerHandler(CHANNELS.AUTOMATION_WARM_AUTOPILOT_SET, setWarmAutopilot);
 
   // Softglaze Pro - local developer API
   registerHandler(CHANNELS.API_TOKEN_LIST, listApiTokens);
@@ -12744,6 +12981,7 @@ function registerIpcHandlers() {
 async function shutdownIpcHandlers() {
   stopProxyScheduler();
   stopMacroScheduler();
+  stopWarmAutopilotTimer();
   if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
   await localApi.stop().catch(() => {});
   await autofillBridge.stop().catch(() => {});
