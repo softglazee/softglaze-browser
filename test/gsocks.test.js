@@ -2,6 +2,8 @@
 // Gsocks connector: endpoints from help.gsocks.net/en/articles/9847111-api-documentation (fetched
 // 2026-11-01). The docs show the line format but no sample list body and no proxy object, so the
 // fixtures below are shaped from the prose. Built from the docs only: never checked live.
+// Auth: the Authorization section and every header table say "authorization: key {api_key}"; the
+// curl samples' "session eyJ..." is a dashboard login token, not an API key.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -49,6 +51,55 @@ test('anything that is not the documented line format gives no row', () => {
   assert.equal(U.gsocksListRows('u:p@h.example.net:80').length, 0);
   assert.equal(U.gsocksListRows('h.example.net:notaport:u:p').length, 0);
   assert.equal(U.gsocksListRows('{"error":"x"}').length, 0);
+});
+
+// Runs the real adapter against a fake account: 45 residential lists of 30 lines each.
+function ipcFunction(name) {
+  return new RegExp(`(?:async )?function ${name}\\([\\s\\S]*?\\r?\\n\\}\\r?\\n`).exec(IPC)[0];
+}
+function adapter(total = 45, perList = 30) {
+  const urls = [];
+  const headers = [];
+  const httpRequestText = async (url, opts = {}) => {
+    urls.push(url);
+    headers.push(opts.headers || {});
+    const page = /\/proxy\?type=residential&active=active&limit=(\d+)&page=(\d+)$/.exec(url);
+    if (page) {
+      const size = Number(page[1]);
+      const from = (Number(page[2]) - 1) * size;
+      const ids = Array.from({ length: Math.max(0, Math.min(size, total - from)) }, (_, i) => ({ id: from + i + 1 }));
+      return JSON.stringify({ proxies: ids, count: total });
+    }
+    const list = /\/proxy\/residential-proxy-list\/(\d+)$/.exec(url);
+    if (list) return Array.from({ length: perList }, (_, i) => `residential.gsocks.net:${8000 + i}:u${list[1]}:p${i}`).join('\n');
+    throw Object.assign(new Error('unexpected'), { status: 404 });
+  };
+  const constant = (name) => new RegExp(`^const ${name} = (.+?);`, 'm').exec(IPC)[1];
+  const fn = new Function(
+    'httpRequestText', 'gsocksProxyIds', 'gsocksListRows',
+    `const GSOCKS_API = ${constant('GSOCKS_API')};\nconst GSOCKS_POOLS = ${/const GSOCKS_POOLS = (Object\.freeze\(\{[\s\S]*?\}\));/.exec(IPC)[1]};\n`
+    + `const GSOCKS_PAGE_SIZE = ${constant('GSOCKS_PAGE_SIZE')};\nconst GSOCKS_MAX_PAGES = ${constant('GSOCKS_MAX_PAGES')};\n`
+    + `${['clampPoolCount', 'limitListRows', 'fetchGsocksPool'].map(ipcFunction).join('\n')}\nreturn fetchGsocksPool;`
+  )(httpRequestText, U.gsocksProxyIds, U.gsocksListRows);
+  return { fetchGsocksPool: fn, urls, headers };
+}
+
+test('Gsocks pages through every list with the documented page size and key header', async () => {
+  const a = adapter();
+  const rows = await a.fetchGsocksPool({ token: 'K1', poolType: 'residential', count: '' });
+  assert.equal(rows.length, 45 * 30, 'blank How many imports every line');
+  const pages = a.urls.filter((u) => u.includes('/proxy?'));
+  assert.deepEqual(pages.map((u) => /limit=(\d+)&page=(\d+)/.exec(u).slice(1).join('/')), ['20/1', '20/2', '20/3']);
+  assert.ok(a.headers.every((h) => h.authorization === 'key K1'));
+});
+
+test('How many stops fetching lists once enough lines are in, with no 500 cap', async () => {
+  const a = adapter();
+  const rows = await a.fetchGsocksPool({ token: 'K1', poolType: 'residential', count: '75' });
+  assert.equal(rows.length, 75);
+  assert.equal(a.urls.filter((u) => u.includes('-proxy-list/')).length, 3);
+  const b = adapter();
+  assert.equal((await b.fetchGsocksPool({ token: 'K1', poolType: 'residential', count: '900' })).length, 900);
 });
 
 test('Gsocks is wired and only ever reads', () => {

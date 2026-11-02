@@ -59,6 +59,24 @@ test('a non UK country is refused', () => {
   assert.match(IPC, /Simply Proxies only has UK exits/);
 });
 
+// Runs the real adapter with the shared mint helper. The docs set no limit on sessions per pull.
+function ipcFunction(name) {
+  return new RegExp(`(?:async )?function ${name}\\([\\s\\S]*?\\r?\\n\\}\\r?\\n`).exec(IPC)[0];
+}
+const fetchSimplyProxiesPool = new Function(
+  'crypto', 'simplyProxiesUsername', 'SIMPLYPROXIES_NETWORKS', 'SIMPLYPROXIES_GATEWAY', 'MINTED_PULL_MAX',
+  `${['clampPoolCount', 'mintGatewayRows', 'fetchSimplyProxiesPool'].map(ipcFunction).join('\n')}\nreturn fetchSimplyProxiesPool;`
+)(require('crypto'), U.simplyProxiesUsername, U.SIMPLYPROXIES_NETWORKS, { host: 'proxy.simplyproxies.com', socks: 6890 }, Number(/const MINTED_PULL_MAX = (\d+);/.exec(IPC)[1]));
+
+test('a pull mints up to MINTED_PULL_MAX sticky SOCKS5 rows', async () => {
+  const rows = await fetchSimplyProxiesPool({ username: 'u', password: 'p', poolType: 'ee', count: '400', life: '60' });
+  assert.equal(rows.length, 400);
+  assert.equal(new Set(rows.map((r) => r.username)).size, 400);
+  assert.match(rows[0].username, /^u-ee-session-sg[0-9a-f]{6}1-60$/);
+  assert.deepEqual([rows[0].type, rows[0].port, rows[0].country], ['SOCKS5', 6890, 'GB']);
+  assert.equal((await fetchSimplyProxiesPool({ username: 'u', password: 'p', count: '5000' })).length, 1000);
+});
+
 test('Simply Proxies is wired: adapter, registry, panel entry and hints', () => {
   assert.match(IPC, /simplyproxies: fetchSimplyProxiesPool/);
   assert.match(IPC, /simplyproxies: 'Simply Proxies'/);

@@ -1042,6 +1042,53 @@ function mangoProxyRows(json, { socks = false } = {}) {
   }
   return rows;
 }
+// Location values are lowercase with no spaces, as in Mango's location lists (california, losangeles).
+function mangoProxyPlace(v) {
+  return String(v || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+// The API takes an ASN as AS<number> (GenerateConnectionDetailsDto.asn); a bare number gets the prefix.
+function mangoProxyAsn(v) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  const m = /^(?:AS)?(\d{1,10})$/i.exec(s);
+  if (!m) throw new Error(`MangoProxy: "${s}" is not an ASN. Use its number, for example 7922 or AS7922.`);
+  return `AS${m[1]}`;
+}
+// /upstream/json makes at most 100 lines per call, so a bigger pull calls again until `want` new lines
+// are in hand. A call that adds nothing new (a rotating line repeats itself) ends the pull.
+const MANGOPROXY_BATCH_MAX = 100;
+const MANGOPROXY_MAX_CALLS = 20;
+async function mangoProxyCollect(want, fetchBatch, { socks = false } = {}) {
+  const rows = [];
+  const seen = new Set();
+  for (let call = 0; rows.length < want && call < MANGOPROXY_MAX_CALLS; call += 1) {
+    const json = await fetchBatch(Math.min(MANGOPROXY_BATCH_MAX, want - rows.length));
+    let added = 0;
+    for (const r of mangoProxyRows(json, { socks })) {
+      const key = `${r.host}:${r.port}:${r.username}:${r.password}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(r);
+      added += 1;
+      if (rows.length >= want) break;
+    }
+    if (!added) break;
+  }
+  return rows;
+}
+// GET /locations/countries -> { data: [{ code, title }], meta: { currentPage, lastPage } }.
+function mangoProxyCountryPage(json) {
+  const list = Array.isArray(json && json.data) ? json.data : [];
+  const countries = [];
+  for (const c of list) {
+    const code = String((c && c.code) || '').trim().toUpperCase();
+    if (/^[A-Z]{2}$/.test(code)) countries.push({ key: code, label: String((c && c.title) || '').trim() || code });
+  }
+  const meta = (json && json.meta) || {};
+  const current = Number(meta.currentPage);
+  const last = Number(meta.lastPage);
+  return { countries, more: Number.isInteger(current) && Number.isInteger(last) && current < last };
+}
 
 // IP Burger: residential.ipb.cloud:7777, HTTP only (no residential SOCKS5). Username: customer-<id>
 // plus one geo token, cc-<CC> or a city-/state- token instead (never both), e.g. customer-x-cc-US or
@@ -1122,9 +1169,10 @@ function proxy302Row(text, { socks = false, country = '' } = {}) {
   };
 }
 
-// 2extract username: 2xt-customer-<id>-proxy-<name>[-country-de[-state-..][-city-..]][-session-<id>
-// [-time-<min>]]; -time needs -session, state/city need country. The Public API lacks the customer id,
-// so the base username comes from the dashboard. Not tested with a live key.
+// 2extract username: 2xt-customer-<id>-proxy-<name>[-country-de[-state-..][-city-..][-zip-..] | -asn-<n>]
+// [-session-<id>[-time-<min>]]; -time needs -session, state/city/zip need country, and asn excludes
+// all geography. The Public API lacks the customer id, so the base username comes from the dashboard.
+// Not tested with a live key.
 const TWOEXTRACT_COUNTRIES = new Set('af ax al dz as ad ao ai aq ag ar am aw au at az bh bd bb by be bz bj bm bt bo ba bw bv br io vg bn bg bf bi kh cm ca cv bq ky cf td cl cn cx cc co km ck cr ci hr cu cw cy cz cd dk dj dm do ec eg sv en gq er ee sz et fk fo fj fi fr gf pf tf ga ge de gh gi gr gl gd gp gu gt gg gn gw gy ht hm hn hk hu is in id ir iq ie im il it jm jp je jo kz ke ki xk kw kg la lv lb ls lr ly li lt lu mo mg mw my mv ml mt mh mq mr mu yt mx fm md mc mn me ms ma mz mm na nr np nl nc nz ni ne ng nu nf kp mk mp no om pk pw ps pa pg py pe ph pn pl pt pr qa cg re ro ru rw bl kn lc mf pm vc ws sm st sa sn rs sc sl sg sx sk si sb so za gs kr ss es lk sd sr sj se ch sy tj tw tz th bs gm tl tg tk to tt tn tr tm tc tv vi ug ua ae gb us uy uz vu va ve vn wf eh ye zm zw'.split(' '));
 function twoExtractBaseUser(raw) {
   // The proxy name is lowercase letters, digits and underscores, so the first hyphen after it
@@ -1139,21 +1187,31 @@ function twoExtractCountry(country) {
 function twoExtractPlace(v) {
   return String(v || '').trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 }
-function twoExtractUsername(base, { country, state, city, session, timeMin } = {}) {
+function twoExtractUsername(base, { country, state, city, zip, asn, session, timeMin } = {}) {
   const user = twoExtractBaseUser(base);
   if (!user) throw new Error('2extract: enter the proxy username from Connection Details. It looks like 2xt-customer-<id>-proxy-<name>.');
   const parts = [user];
   const rawCc = String(country || '').trim();
   const st = twoExtractPlace(state);
   const ct = twoExtractPlace(city);
-  if (rawCc) {
+  const rawZip = String(zip || '').trim();
+  const zp = rawZip.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (rawZip && !zp) throw new Error(`2extract: "${rawZip}" is not a ZIP code.`);
+  const rawAsn = String(asn || '').trim();
+  if (rawAsn) {
+    const m = /^(?:AS)?(\d{1,10})$/i.exec(rawAsn);
+    if (!m) throw new Error(`2extract: "${rawAsn}" is not an ASN. Use its number, for example 7922.`);
+    if (rawCc || st || ct || zp) throw new Error('2extract: ASN targeting cannot be combined with a country, state, city or ZIP. Clear one of them.');
+    parts.push('asn', m[1]);
+  } else if (rawCc) {
     const cc = twoExtractCountry(rawCc);
     if (!cc) throw new Error(`2extract does not list the country "${rawCc}". Pick another country, or Any.`);
     parts.push('country', cc);
     if (st) parts.push('state', st);
     if (ct) parts.push('city', ct);
-  } else if (st || ct) {
-    throw new Error('2extract: a state or city needs a country as well.');
+    if (zp) parts.push('zip', zp);
+  } else if (st || ct || zp) {
+    throw new Error('2extract: a state, city or ZIP needs a country as well.');
   }
   const rawSid = String(session || '').trim();
   const sid = rawSid.replace(/[^A-Za-z0-9]/g, '');
@@ -1172,8 +1230,17 @@ function twoExtractUsername(base, { country, state, city, session, timeMin } = {
 
 // GonzoProxy: connect.gonzoproxy.app:10000, HTTP and SOCKS5, all pools. Targeting is in the login,
 // underscore-joined: Gonzoj9CiIi_c_US_sd_443_s_663698TEC_ttl_72h (sd = region; also isp_, city_).
-// Only the sticky form is documented, so only it is built. Not tested with a live key.
-const GONZOPROXY_TTL = '72h'; // the lifetime in every published example
+// A login with no _s_/_ttl_ gets a new IP per request (LOGIN_c_us on gonzoproxy.com); _ttl_ takes
+// s, m or h up to 7 days. Not tested with a live key.
+const GONZOPROXY_TTL = '72h'; // the dashboard generator's default lifetime
+const GONZOPROXY_MAX_TTL_MIN = 7 * 24 * 60;
+function gonzoProxyTtl(minutes) {
+  const raw = String(minutes == null ? '' : minutes).trim();
+  if (!raw) return GONZOPROXY_TTL;
+  const m = Number(raw);
+  if (!/^\d+$/.test(raw) || m < 1 || m > GONZOPROXY_MAX_TTL_MIN) throw new Error('GonzoProxy: Keep same IP must be from 1 minute to 7 days.');
+  return m % 60 === 0 ? `${m / 60}h` : `${m}m`;
+}
 function gonzoProxyBaseLogin(raw) {
   const s = String(raw || '').trim();
   const base = s.split(/_c_/)[0];
@@ -1183,7 +1250,7 @@ function gonzoProxyCity(v) {
   return String(v || '').trim().split(/[^\p{L}\p{N}]+/u).filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
 }
-function gonzoProxyUsername(login, { country, state, city, session } = {}) {
+function gonzoProxyUsername(login, { country, state, city, session, ttlMin } = {}) {
   const base = gonzoProxyBaseLogin(login);
   if (!base) throw new Error('GonzoProxy: enter the login from Proxy Setup in your dashboard (letters and digits, for example Gonzoj9CiIi).');
   const cc = String(country || '').trim().toUpperCase();
@@ -1196,9 +1263,12 @@ function gonzoProxyUsername(login, { country, state, city, session } = {}) {
   }
   const ct = gonzoProxyCity(city);
   if (ct) parts.push('city', ct);
-  const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
-  if (!sid) throw new Error('GonzoProxy: a sticky session name must contain letters or digits.');
-  parts.push('s', sid, 'ttl', GONZOPROXY_TTL);
+  const rawSid = String(session || '').trim();
+  const sid = rawSid.replace(/[^A-Za-z0-9]/g, '');
+  if (rawSid && !sid) throw new Error('GonzoProxy: a sticky session name must contain letters or digits.');
+  const rawTtl = String(ttlMin == null ? '' : ttlMin).trim();
+  if (rawTtl && !sid) throw new Error('GonzoProxy: Keep same IP needs a sticky session.');
+  if (sid) parts.push('s', sid, 'ttl', gonzoProxyTtl(rawTtl));
   return parts.join('_');
 }
 
@@ -1570,8 +1640,9 @@ module.exports = {
   proxmintUsername, proxmintPickProduct,
   databayUsername,
   ipfoxyUsername, mangoProxyRows,
+  mangoProxyPlace, mangoProxyAsn, mangoProxyCollect, MANGOPROXY_BATCH_MAX, mangoProxyCountryPage,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
-  gonzoProxyBaseLogin, gonzoProxyUsername,
+  gonzoProxyBaseLogin, gonzoProxyUsername, gonzoProxyTtl,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
   coroniumRows,
   singaporeMobileProxyRows,
