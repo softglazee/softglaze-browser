@@ -198,7 +198,7 @@
     },
     "disableDevtools": {
       "title": "Desactivar las herramientas de desarrollo del navegador",
-      "desc": "Escribe un archivo de política gestionada DeveloperToolsAvailability en cada perfil. Chromium lo aplica una vez que el archivo se registra en la ubicación de políticas gestionadas del sistema operativo (no se aplica automáticamente a toda la máquina)."
+      "desc": "En los perfiles basados en Chrome, cualquier ventana o panel de herramientas de desarrollo (F12, Ctrl+Mayús+I, Inspeccionar) se cierra en cuanto se abre. Se aplica a los perfiles que se abran después del cambio. Tu propio Chrome en este equipo no se ve afectado."
     },
     "minimizeCdpFootprint": {
       "title": "Minimizar la huella de CDP (experimental - anti-CAPTCHA)",
@@ -207,7 +207,7 @@
     },
     "lockExtensions": {
       "title": "Desactivar la instalación/eliminación de extensiones",
-      "desc": "Escribe un archivo de política gestionada ExtensionInstallBlocklist por perfil (la extensión de autenticación de proxy no se ve afectada). Se aplica una vez registrado en la ubicación de políticas gestionadas del sistema operativo."
+      "desc": "En los perfiles basados en Chrome, la página de extensiones y Chrome Web Store se cierran en cuanto se abren, así que no se pueden añadir, quitar ni desactivar extensiones. Las extensiones que instales desde la página Extensiones de SoftGlaze se siguen cargando. Se aplica a los perfiles que se abran después del cambio."
     },
     "virtualCamera": {
       "title": "Cámara virtual",

@@ -18,6 +18,7 @@ const { CHROME_ROOT: DOWNLOAD_CHROME_ROOT } = require('./browserDownloader');
 // into every launched page. No deps; just returns a self-contained IIFE string.
 const { buildAutofillRunSource } = require('./personaAutofill');
 const { attachPageBridge, attachIsolatedWorld } = require('./pageBridge');
+const { attachBrowserLocks } = require('./browserLocks');
 // A function expression taking the isolated world's rpc - see attachPersonaAutofill.
 const PERSONA_AUTOFILL_RUN_SOURCE = buildAutofillRunSource();
 // Local SOCKS5 auth-injecting relay - Chromium can't authenticate to a SOCKS5
@@ -3093,6 +3094,9 @@ async function launchProfileSessionNow(options = {}) {
   await fs.mkdir(userDataDir, { recursive: true });
 
   // Materialize the dev-tools / extension-lock managed-policy file (if requested).
+  // NOTE: Chromium on Windows does not read this file (policy comes only from the
+  // registry), so it is kept for reference only; the locks are actually enforced by
+  // attachBrowserLocks() right after launch.
   await writeManagedPolicies(userDataDir, browserSettings);
 
   const seed = seedFromString(safeDirName);
@@ -3456,6 +3460,14 @@ async function launchProfileSessionNow(options = {}) {
   // it. On failure, tear it down and rethrow.
   let sessionRegistered = false;
   try {
+
+  // "Disable browser developer tools" / "Disable installing/removing extensions":
+  // enforced here, per profile, from the first moment the browser exists (the policy
+  // file written above is not read by Chromium on Windows; see browserLocks.js).
+  await attachBrowserLocks(browser, {
+    disableDevtools: browserSettings.disableDevtools === true,
+    lockExtensions: browserSettings.lockExtensions === true
+  });
 
   // KEEP puppeteer-extra-stealth's onTargetCreated listener so its ~11 evasions
   // (window.chrome, navigator.plugins, navigator.permissions, iframe.contentWindow,
