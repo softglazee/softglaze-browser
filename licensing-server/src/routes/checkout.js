@@ -1,7 +1,6 @@
 'use strict';
 // POST /v1/checkout { tenantId, planKey, installId?, account?, provider='stripe' } -> { url, ref }
-// Creates a hosted payment session using the TENANT's own (sealed) provider keys,
-// and records a pending Payment so the webhook can provision uniformly by ref.
+// Uses the tenant's own sealed provider keys and records a pending Payment for the webhook to claim.
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');

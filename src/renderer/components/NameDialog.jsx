@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useDialog } from '@/lib/useDialog.js';
 
-// In-app "enter a name" dialog. Electron returns null from window.prompt(), so any
-// flow that used it silently did nothing. Same look and a11y wiring as the macro
-// SaveRecordingModal (useDialog: Escape, focus trap, scroll lock). The caller passes
-// already-translated strings so this stays namespace-agnostic.
+// Electron returns null from window.prompt(), so flows use this in-app dialog instead. The caller
+// passes translated strings so it stays namespace-agnostic.
 export default function NameDialog({ title, label, initialValue = '', placeholder = '', saveLabel, cancelLabel, maxLength = 80, onSave, onClose }) {
   const [value, setValue] = useState(initialValue);
   const { dialogRef } = useDialog({ onClose });

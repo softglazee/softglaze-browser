@@ -1,11 +1,7 @@
 import { Component } from 'react';
 
-// audit: the renderer had NO error boundary anywhere, so ANY page's render
-// exception unmounted the whole React root and blanked the entire app until a
-// relaunch (a partial settings payload in GlobalPreferences was one concrete
-// trigger). This catches render errors below it, keeps the app shell/sidebar
-// alive, shows a recoverable fallback, and auto-resets when `resetKey` changes
-// (the caller passes the route pathname) so navigating away restores the page.
+// Keeps the shell alive when a page throws during render, shows a recoverable fallback, and
+// resets when resetKey (the route pathname) changes, so navigating away restores the page.
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);

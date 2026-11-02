@@ -1,35 +1,16 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - Live Workspace Shadowing / Remote Management Relay
-//                        (PROTOCOL FOUNDATION)
-//
-// Establishes the secure WebSocket relay pipeline that streams a live status log
-// (and, later, downscaled visual frames) of an active automation container back
-// to a manager portal for remote performance audits - without ever exposing the
-// container's raw cookies/credentials over the wire.
-//
-// What is real here: the relay registry, the framing/serialization of audit
-// events, subscription fan-out, and a redaction hook so secrets never stream.
-// What is stubbed: the concrete WebSocket server/transport (`attachTransport`) -
-// drop in `ws`/socket.io (or Electron's net) when the cloud portal ships.
-//
-// Frame shape (JSON, one per message):
-//   { t: 'status'|'log'|'frame', sessionId, ts, payload }
-// All frames pass through `sanitizeFrame` so credential-bearing fields are
-// stripped before transmission (defense-in-depth alongside rbacPolicy).
-// ---------------------------------------------------------------------------
+// Relay that streams sanitized status/log frames of a running session to a manager portal.
+// The WebSocket transport is a stub (attachTransport) until the cloud portal exists.
+// Frames are { t: 'status'|'log'|'frame', sessionId, ts, payload }, all passed through sanitizeFrame.
 const { EventEmitter } = require('node:events');
 
-// Case-insensitive SUBSTRING match on key names. The old exact, case-sensitive Set missed
-// Cookie/Set-Cookie/Authorization headers, sessionToken/sid, and any capitalized variant -
-// all of which would have streamed to the portal. Any key that looks credential/session/
-// cookie/auth-bearing is redacted.
+// Case-insensitive substring match on key names, so Cookie, Set-Cookie, Authorization, sessionToken
+// and capitalized variants are all redacted.
 const SECRET_KEY_RE = /pass|secret|token|api[_-]?key|auth|cookie|session|credential|bearer|private|otp|2fa|passphrase/i;
 // Binary/image frames (screenshots) can render credentials/PII; never stream raw image data.
 const IMAGE_KEY_RE = /^(image|screenshot|thumbnail|jpe?g|png|dataurl|framedata|snapshot)$/i;
 
-// Recursively strip secret-bearing keys and raw images from any outbound payload so a live
-// audit stream can never carry raw credentials/cookies/screenshots to the portal.
+// Recursively strips secret-bearing keys and raw images from any outbound payload.
 function sanitizeFrame(value, depth = 0) {
   if (depth > 6 || value == null) return value;
   if (Array.isArray(value)) return value.map((v) => sanitizeFrame(v, depth + 1));
@@ -71,8 +52,7 @@ class RemoteRelay extends EventEmitter {
     this.subscribers.delete(String(sessionId));
   }
 
-  // A manager portal subscribes to a session's audit stream. Returns an
-  // unsubscribe fn (mirrors the app's other progress-stream subscriptions).
+  // A manager portal subscribes to a session's frames; returns an unsubscribe function.
   subscribe(sessionId, fn) {
     const sid = String(sessionId);
     if (!this.subscribers.has(sid)) this.subscribers.set(sid, new Set());
@@ -80,8 +60,7 @@ class RemoteRelay extends EventEmitter {
     return () => { const set = this.subscribers.get(sid); if (set) set.delete(fn); };
   }
 
-  // Emit an audit frame for a session. Sanitized, fanned out to local subscribers,
-  // and (when a transport exists) pushed to the remote portal. Never throws.
+  // Sanitized, fanned out to local subscribers and, with a transport, to the portal. Never throws.
   emitFrame(sessionId, type, payload) {
     try {
       const sid = String(sessionId);
@@ -96,7 +75,7 @@ class RemoteRelay extends EventEmitter {
         try { this.transport.broadcast(sid, frame); } catch (_) { /* transport down - keep local stream alive */ }
       }
       this.emit('frame', frame);
-    } catch (_) { /* auditing must never destabilize the session it observes */ }
+    } catch (_) { /* streaming must never destabilize the session it observes */ }
   }
 
   // Convenience emitters matching the frame `t` taxonomy.

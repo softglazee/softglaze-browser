@@ -15,11 +15,8 @@ import providersPageEs from '@/i18n/locales/es/providersPage.json';
 if (!i18n.hasResourceBundle('en', 'providersPage')) i18n.addResourceBundle('en', 'providersPage', providersPageEn);
 if (!i18n.hasResourceBundle('es', 'providersPage')) i18n.addResourceBundle('es', 'providersPage', providersPageEs);
 
-// ---------------------------------------------------------------------------
-// Provider status: Super Admin only, for our own vendor testing. Lists what needs a look and
-// which test trials are running. Customers buy their proxies, so they never see this page; the
-// role only exists on the machine that holds the source owner's certificate.
-// ---------------------------------------------------------------------------
+// Super Admin only, for in-house vendor testing; customers buy their own proxies and never see it.
+// The role exists only on the machine holding the source owner's certificate.
 
 const ATTENTION_PREVIEW = 8;
 

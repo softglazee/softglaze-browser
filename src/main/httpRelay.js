@@ -1,23 +1,7 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Local HTTP(S) proxy auth-injecting relay (sibling of socksRelay.js).
-//
-// Chromium CAN answer an authenticated HTTP proxy's 407 via puppeteer's
-// page.authenticate() - but that handler is registered PER PAGE and only after a
-// tab object exists. A browser-opened "+" tab (or a window.open / target=_blank
-// popup) fires its FIRST request through the upstream proxy BEFORE authenticate()
-// is wired, so the upstream answers 407: the tab stalls and the bare, unauthenticated
-// request looks highly suspicious to bot-detection (e.g. Google's /sorry CAPTCHA).
-//
-// Fix (mirrors the SOCKS5 relay): run a tiny forward proxy on 127.0.0.1 that accepts
-// NO auth from Chromium and injects `Proxy-Authorization` on every hop to the upstream
-// proxy. Chromium points --proxy-server at http://127.0.0.1:<port> (auth-free), so it
-// never sees a challenge on ANY tab and the new-tab proxy-auth race is gone.
-//
-// Handles CONNECT tunnels (HTTPS / any TLS - the common case) and plain-HTTP
-// absolute-URI forwarding. Returns { port, close } - the same shape as socksRelay,
-// so the browserEngine session teardown closes either kind identically.
-// ---------------------------------------------------------------------------
+// puppeteer's page.authenticate() is wired per page, so a new tab or popup sends its first request
+// before auth and gets a 407 (and looks like a bot). This relay on 127.0.0.1 takes no auth and adds
+// Proxy-Authorization upstream (CONNECT and plain HTTP); returns { port, close } like socksRelay.
 const net = require('node:net');
 const http = require('node:http');
 

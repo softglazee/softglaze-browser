@@ -1,9 +1,6 @@
 'use strict';
-// Real Firefox launch engine. Firefox is a different engine from Chrome (no CDP /
-// MV3), so instead of the extension-based injection we configure a dedicated
-// profile via user.js prefs: proxy, User-Agent, locale, timezone (TZ env) and
-// WebRTC-off (so the real IP can't leak). Authenticated HTTP proxies are handled
-// by a tiny local relay (Firefox can't store proxy creds in prefs).
+// Firefox has no CDP, so profiles are configured via user.js: proxy, UA, locale, TZ env and WebRTC
+// off (no real-IP leak). Authenticated proxies go through a local relay; prefs cannot hold creds.
 const fs = require('node:fs');
 const { firefoxDirName } = require('./profileData');
 const fsp = require('node:fs/promises');
@@ -25,18 +22,14 @@ const autofillBridge = require('./autofillBridge');
 // `app && app.isPackaged` is a safe runtime guard.
 const { app } = require('electron');
 
-// Must be a writable, real directory. In a packaged build `__dirname` lives inside
-// app.asar (a FILE), so `../../firefox` → `…/app.asar/firefox` and any write throws
-// ENOTDIR. Use userData when packaged; keep the project-root path in dev.
+// Packaged, __dirname is inside app.asar (a file), so writes there throw ENOTDIR; use userData.
 const FIREFOX_ROOT = (app && app.isPackaged)
   ? path.join(app.getPath('userData'), 'firefox')
   : path.resolve(__dirname, '../../firefox');
 
-// Absolute path of the launchable firefox binary inside an install dir, per OS
-// (firefox.exe on Windows, Firefox.app/Contents/MacOS/firefox on mac, firefox/firefox on linux).
 function firefoxBinaryInDir(dir) { return path.join(dir, ...platform.firefoxBinaryRel().split('/')); }
 
-// System Firefox locations for THIS OS, then an optional downloaded copy at the root.
+// System Firefox locations for this OS, then an optional downloaded copy at the root.
 const FIREFOX_CANDIDATES = [
   ...platform.firefoxSystemCandidates(),
   firefoxBinaryInDir(FIREFOX_ROOT)
@@ -49,7 +42,7 @@ function findFirefoxBinary() {
   return null;
 }
 
-// --- Versioned Firefox installs (downloaded on demand into /firefox/<version>) ---
+// ---- Versioned installs (downloaded on demand into firefox/<version>) ----
 
 function firefoxInstallDir(version) { return path.join(FIREFOX_ROOT, String(version)); }
 
@@ -58,8 +51,7 @@ function isFirefoxVersionInstalled(version) {
   catch (e) { return false; }
 }
 
-// Resolve the binary for a profile's selected version: prefer a downloaded
-// versioned install, then fall back to whatever Firefox is on the machine.
+// Prefer a downloaded versioned install, then any Firefox on the machine.
 function resolveFirefoxBinary(version) {
   if (version && String(version) !== 'Auto') {
     const p = firefoxBinaryInDir(firefoxInstallDir(version));
@@ -68,12 +60,9 @@ function resolveFirefoxBinary(version) {
   return findFirefoxBinary();
 }
 
-// --- Smart Autofill extension --------------------------------------------------
-// Firefox has no CDP/exposeFunction, so the Identity-Vault autofill widget ships
-// as a real WebExtension installed into the profile's extensions/ dir + a loopback
-// bridge (src/main/autofillBridge.js). Packaged builds use the Mozilla-SIGNED .xpi
-// (release Firefox requires signing); dev copies the unpacked source for
-// Developer-Edition/Nightly testing (with xpinstall.signatures.required=false).
+// ---- Smart Autofill extension ----
+// Firefox has no CDP, so autofill ships as a WebExtension plus a loopback bridge (autofillBridge.js).
+// Release Firefox requires the signed .xpi; dev copies the unpacked source for unsigned testing.
 const AUTOFILL_EXT_ID = 'autofill@softglaze.app';
 
 // Bundled signed .xpi (copied into resources by build/afterPack.js). Only present
@@ -85,15 +74,12 @@ function autofillSignedXpiPath() {
   return null;
 }
 
-// Unpacked extension source (dev only - inside app.asar when packaged, so it is
-// never loadable from there; the signed .xpi is the packaged path).
+// Dev only: when packaged this lives inside app.asar, which Firefox cannot read.
 function autofillUnpackedSrcDir() {
   return path.resolve(__dirname, '../firefox-extension');
 }
 
-// Place the extension where Firefox auto-installs profile add-ons. Returns the
-// install mode so the caller knows whether to enable the autofill prefs.
-//   { mode: 'xpi' | 'unpacked' | 'none' }
+// Installs into the profile's extensions/ dir. Returns { mode: 'xpi' | 'unpacked' | 'none' }.
 async function installAutofillExtension(userDataDir) {
   const extDir = path.join(userDataDir, 'extensions');
   try { await fsp.mkdir(extDir, { recursive: true }); } catch (e) { return { mode: 'none' }; }
@@ -123,14 +109,9 @@ async function installAutofillExtension(userDataDir) {
   } catch (e) { return { mode: 'none' }; }
 }
 
-// audit E3/S1: hand the loopback bridge's PER-APP-RUN token to the extension. A
-// signed .xpi cannot carry it, and a WebExtension cannot read prefs or arbitrary
-// profile files, so we use Firefox's documented managed-storage manifest for our
-// extension id (read by browser.storage.managed in sg-background.js):
-//   Windows: HKCU\Software\Mozilla\ManagedStorage\<id> -> path of the JSON below
-//   macOS:   ~/Library/Application Support/Mozilla/ManagedStorage/<id>.json
-//   Linux:   ~/.mozilla/managed-storage/<id>.json
-// Only our extension id reads it. Rewritten when the token changes (once per run).
+// The bridge's per-run token reaches the extension via Firefox's managed-storage manifest
+// (browser.storage.managed): a signed .xpi cannot carry it and an extension cannot read prefs.
+// On Windows an HKCU ManagedStorage registry key points at the JSON file.
 let managedTokenWritten = null;
 function managedStoragePath() {
   if (process.platform === 'win32') return path.join(FIREFOX_ROOT, `${AUTOFILL_EXT_ID}.managed.json`);
@@ -162,11 +143,9 @@ async function writeAutofillManagedToken(token) {
 }
 
 const ffSessions = new Map(); // sessionId -> { proc, relay, userDataDir, title, proxyLabel, createdAt }
-// audit E5: launches still in flight, so a double-click cannot start two Firefox
-// processes on one profile directory.
+// Launches in flight, so a double-click cannot start two Firefox processes on one profile.
 const ffLaunching = new Map(); // sessionId -> Promise<launch result>
-// Session lifecycle sink (set by ipcHandlers) - parity with browserEngine so Firefox
-// launches/closes/crashes feed the same SessionState + crash-recovery pipeline.
+// Set by ipcHandlers so Firefox sessions feed the same SessionState and crash-recovery pipeline.
 let sessionEventSink = null;
 function setSessionEventSink(fn) { sessionEventSink = (typeof fn === 'function') ? fn : null; }
 function emitSessionEvent(evt) { try { if (sessionEventSink) sessionEventSink(evt); } catch (e) { /* never break a launch/close */ } }
@@ -239,15 +218,11 @@ function buildUserJs(opts) {
   pref('browser.newtabpage.enabled', false);
   pref('browser.newtab.url', 'about:blank');
 
-  // Windows: disable the launcher/stub process so the process we spawn IS the real
-  // browser. With the launcher on, the first firefox.exe hands off and exits right after
-  // startup, and that exit is misread as a crash (the tracked PID dies while Firefox
-  // keeps running). Honored from prefs on subsequent launches.
+  // Windows: disable the launcher stub so the spawned process is the real browser; otherwise
+  // firefox.exe hands off and exits, which reads as a crash. Honored from prefs on later launches.
   pref('browser.launcherProcess.enabled', false);
 
-  // Full first-run / onboarding suppression, so a brand-new profile opens straight to the
-  // start page instead of the multi-step "first time user setup" (about:welcome, the
-  // import wizard, the What's-New panel, the DoH first-run, the upgrade dialog).
+  // Skip first-run onboarding (about:welcome, import wizard, What's New, DoH first-run, upgrade dialog).
   pref('browser.aboutwelcome.enabled', false);
   pref('browser.startup.firstrunSkipsHomepage', true);
   pref('trailhead.firstrun.didSeeAboutWelcome', true);
@@ -259,30 +234,25 @@ function buildUserJs(opts) {
   pref('browser.startup.upgradeDialog.enabled', false);
   pref('startup.homepage_override_url', '');
   pref('browser.startup.homepage', 'about:blank');
-  // audit E7: Stop asks Firefox to close gracefully first; a "close N tabs?" prompt
-  // would block that and force the hard kill.
+  // Stop closes Firefox gracefully first; a "close N tabs?" prompt would block that and force a kill.
   pref('browser.tabs.warnOnClose', false);
   pref('browser.warnOnQuit', false);
   pref('browser.sessionstore.warnOnQuit', false);
 
-  // Anti-leak: turn OFF WebRTC and geolocation so the real IP/location can't escape.
+  // Disable WebRTC and geolocation so the real IP and location cannot leak.
   pref('media.peerconnection.enabled', false);
   pref('media.navigator.enabled', false);
   pref('geo.enabled', false);
   pref('dom.webnotifications.enabled', false);
 
-  // User-Agent override (kept consistent with the profile).
   if (opts.userAgent) pref('general.useragent.override', opts.userAgent);
 
-  // Locale.
   if (opts.acceptLanguages) {
     pref('intl.accept_languages', opts.acceptLanguages);
     pref('intl.locale.requested', opts.acceptLanguages.split(',')[0]);
   }
 
-  // Smart Autofill extension (installed into <profile>/extensions/). Allow
-  // profile-scope (sideloaded) add-ons to install + stay enabled, and don't let
-  // Firefox phone home to update them.
+  // Let profile-scope (sideloaded) add-ons install and stay enabled, without update checks.
   if (opts.autofill) {
     pref('extensions.autoDisableScopes', 0);
     pref('extensions.enabledScopes', 15);
@@ -290,40 +260,82 @@ function buildUserJs(opts) {
     pref('extensions.installDistroAddons', false);
     pref('extensions.update.enabled', false);
     pref('extensions.getAddons.cache.enabled', false);
-    // Honored on Developer Edition / Nightly / ESR-unbranded → loads the UNSIGNED
-    // build for testing. Locked-true on release/beta, which require the signed .xpi.
+    // Honored on Developer Edition/Nightly/unbranded ESR for unsigned testing; release and beta lock it
+    // to true and need the signed .xpi.
     pref('xpinstall.signatures.required', false);
   }
 
-  // Proxy. type 1 = manual. `opts.proxy` is the EFFECTIVE proxy - the caller has
-  // already swapped it to point at a local no-auth relay when the upstream needs
-  // credentials (Firefox prefs can carry NO proxy auth, for HTTP or SOCKS), so this
-  // just maps host/port/type onto the right prefs.
-  if (opts.proxy) {
-    const p = opts.proxy;
-    const isSocks = /socks/i.test(p.type);
-    pref('network.proxy.type', 1);
-    pref('network.proxy.no_proxies_on', '');
-    if (isSocks) {
-      pref('network.proxy.socks', p.host);
-      pref('network.proxy.socks_port', Number(p.port));
-      pref('network.proxy.socks_version', /4/.test(p.type) ? 4 : 5);
-      pref('network.proxy.socks_remote_dns', true);
-    } else {
-      pref('network.proxy.http', p.host);
-      pref('network.proxy.http_port', Number(p.port));
-      pref('network.proxy.ssl', p.host);
-      pref('network.proxy.ssl_port', Number(p.port));
-      pref('network.proxy.share_proxy_settings', true);
-    }
-  }
+  // type 1 = manual. opts.proxy is already the local no-auth relay when the upstream needs creds,
+  // since Firefox prefs cannot carry proxy auth for HTTP or SOCKS.
+  for (const [k, v] of firefoxProxyPrefs(opts.proxy)) pref(k, v);
 
   return lines.join('\n') + '\n';
 }
 
-// Map a proxy-geo result (from browserEngine.lookupProxyGeoNodeCached) to a Firefox
-// intl.accept_languages value (e.g. "de-DE,de,en"). Returns null when the country is
-// unknown so the caller leaves the locale untouched.
+// Firefox reads its zone from TZ. On Windows SpiderMonkey accepts only EST5EDT, CST6CDT, MST7MDT,
+// PST8PDT and UTC/GMT variants and ignores IANA names, so zones map to the id with the same offsets
+// and DST rules; a zone with none returns null and the launch warns.
+const FIREFOX_WIN_TZ_EXACT = new Set(['EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT', 'UTC', 'UCT', 'GMT', 'GMT0', 'GMT+0', 'GMT-0']);
+const FIREFOX_WIN_TZ_MAP = (() => {
+  const m = new Map();
+  const add = (id, zones) => zones.forEach((z) => m.set(z, id));
+  add('EST5EDT', ['America/New_York', 'US/Eastern', 'America/Detroit', 'US/Michigan', 'America/Toronto', 'America/Montreal',
+    'America/Nipigon', 'America/Thunder_Bay', 'America/Iqaluit', 'America/Nassau', 'America/Indiana/Indianapolis',
+    'America/Indianapolis', 'America/Fort_Wayne', 'US/East-Indiana', 'America/Indiana/Marengo', 'America/Indiana/Petersburg',
+    'America/Indiana/Vevay', 'America/Indiana/Vincennes', 'America/Indiana/Winamac', 'America/Kentucky/Louisville',
+    'America/Louisville', 'America/Kentucky/Monticello', 'Canada/Eastern']);
+  add('CST6CDT', ['America/Chicago', 'US/Central', 'America/Indiana/Knox', 'America/Knox_IN', 'US/Indiana-Starke',
+    'America/Indiana/Tell_City', 'America/Menominee', 'America/North_Dakota/Center', 'America/North_Dakota/New_Salem',
+    'America/North_Dakota/Beulah', 'America/Winnipeg', 'America/Rainy_River', 'America/Rankin_Inlet', 'America/Resolute',
+    'America/Matamoros', 'Canada/Central']);
+  add('MST7MDT', ['America/Denver', 'US/Mountain', 'America/Shiprock', 'Navajo', 'America/Boise', 'America/Edmonton',
+    'America/Cambridge_Bay', 'America/Inuvik', 'America/Yellowknife', 'America/Ciudad_Juarez', 'America/Ojinaga', 'Canada/Mountain']);
+  add('PST8PDT', ['America/Los_Angeles', 'US/Pacific', 'America/Vancouver', 'America/Tijuana', 'America/Ensenada',
+    'America/Santa_Isabel', 'Mexico/BajaNorte', 'Canada/Pacific']);
+  // Zero offset all year, no DST.
+  add('UTC', ['Etc/UTC', 'Etc/UCT', 'Etc/Universal', 'Etc/Zulu', 'Universal', 'Zulu', 'Etc/GMT', 'Etc/GMT0', 'Etc/GMT+0',
+    'Etc/GMT-0', 'Etc/Greenwich', 'Greenwich', 'Africa/Abidjan', 'Africa/Accra', 'Africa/Bamako', 'Africa/Banjul',
+    'Africa/Bissau', 'Africa/Conakry', 'Africa/Dakar', 'Africa/Freetown', 'Africa/Lome', 'Africa/Monrovia',
+    'Africa/Nouakchott', 'Africa/Ouagadougou', 'Africa/Timbuktu', 'Atlantic/Reykjavik', 'Iceland', 'Atlantic/St_Helena',
+    'America/Danmarkshavn']);
+  return m;
+})();
+
+function firefoxTzEnv(timezoneId, osPlatform = process.platform) {
+  const tz = String(timezoneId || '').trim();
+  if (!tz) return null;
+  if (osPlatform !== 'win32') return tz;
+  if (FIREFOX_WIN_TZ_EXACT.has(tz)) return tz;
+  return FIREFOX_WIN_TZ_MAP.get(tz) || null;
+}
+
+function firefoxTzUnsupportedWarning(timezoneId) {
+  return `Firefox on Windows cannot use the ${timezoneId} time zone (it only supports the US Eastern, Central, Mountain and Pacific zones and UTC), so this profile shows your PC's time zone. Use a Chrome-based browser for this profile to match the proxy's time zone.`;
+}
+
+// Every proxy pref is written on every launch: Firefox keeps user.js values in prefs.js after a line
+// is removed, so stale relay host/ports would survive and could route through another profile's relay.
+// No proxy = type 5 (system settings), Firefox's default and what Chromium does without --proxy-server.
+function firefoxProxyPrefs(proxy) {
+  const out = [];
+  const isSocks = Boolean(proxy) && /socks/i.test(String(proxy.type || ''));
+  const host = proxy ? String(proxy.host) : '';
+  const port = proxy ? Number(proxy.port) || 0 : 0;
+  out.push(['network.proxy.type', proxy ? 1 : 5]);
+  out.push(['network.proxy.no_proxies_on', '']);
+  out.push(['network.proxy.socks', isSocks ? host : '']);
+  out.push(['network.proxy.socks_port', isSocks ? port : 0]);
+  out.push(['network.proxy.socks_version', isSocks && /4/.test(String(proxy.type)) ? 4 : 5]);
+  out.push(['network.proxy.socks_remote_dns', true]);
+  out.push(['network.proxy.http', proxy && !isSocks ? host : '']);
+  out.push(['network.proxy.http_port', proxy && !isSocks ? port : 0]);
+  out.push(['network.proxy.ssl', proxy && !isSocks ? host : '']);
+  out.push(['network.proxy.ssl_port', proxy && !isSocks ? port : 0]);
+  out.push(['network.proxy.share_proxy_settings', Boolean(proxy) && !isSocks]);
+  return out;
+}
+
+// Proxy geo to intl.accept_languages (e.g. "de-DE,de,en"); null when the country is unknown.
 function ipLocaleFromGeo(geo) {
   if (!geo || !geo.countryCode) return null;
   let COUNTRY_LOCALE;
@@ -333,8 +345,7 @@ function ipLocaleFromGeo(geo) {
   return Array.from(new Set([loc, loc.split('-')[0], 'en'])).join(',');
 }
 
-// audit E5: one Firefox per profile. A second launch for a profile that is running
-// (or still starting) gets the SAME session back instead of a second process.
+// One Firefox per profile: a second launch for a running or starting profile gets the same session.
 function launchFirefoxProfile(options = {}) {
   const key = options && options.profileId != null && String(options.profileId).trim() ? String(options.profileId).trim() : null;
   if (key) {
@@ -353,9 +364,7 @@ function launchFirefoxProfile(options = {}) {
 async function launchFirefoxProfileNow(options = {}) {
   const {
     profileId, title, dataDirName, profileRoot, profile = {}, startUrl = 'about:blank',
-    // This profile's own saved start links (Profile.startupUrls). Opened as extra
-    // tabs alongside the start page. Was previously never passed at all, so a
-    // profile's custom links never opened on Firefox either.
+    // The profile's saved start links (Profile.startupUrls), opened as extra tabs.
     startupUrls = []
   } = options;
 
@@ -371,23 +380,16 @@ async function launchFirefoxProfileNow(options = {}) {
   const proxy = parseProxyInput(options.proxy || options.proxyInfoString);
   const proxyLabel = proxy ? `${proxy.type} ${proxy.host}:${proxy.port}` : 'Direct (No Proxy)';
 
-  // Firefox prefs can carry NO proxy credentials - neither for HTTP nor SOCKS. When the
-  // upstream needs auth, run a tiny local NO-AUTH relay that injects the credentials and
-  // point Firefox at 127.0.0.1:<relayPort> instead:
-  //   • authenticated HTTP(S) proxy → HTTP relay (startAuthRelay)
-  //   • authenticated SOCKS5 proxy  → SOCKS5 relay (startSocksAuthRelay) - mirrors the
-  //     Chrome engine; without it an auth SOCKS5 proxy makes Firefox report "The proxy
-  //     server is refusing connections" because it can only offer NO-AUTH.
-  // No-auth proxies (IP-whitelisted) are pointed at directly. A relay that fails to bind
-  // now THROWS a clear error instead of silently falling back to a broken direct config.
+  // Firefox prefs cannot carry proxy creds, so an authenticated upstream gets a local no-auth relay
+  // (HTTP or SOCKS5) on 127.0.0.1; without it auth SOCKS5 fails as "refusing connections".
+  // No-auth proxies are used directly; a relay that fails to bind throws.
   let relay = null;              // { port, close } - closed on teardown / launch failure
   let effectiveProxy = proxy;
   if (proxy && (proxy.username || proxy.password)) {
     const typeLc = String(proxy.type || '').toLowerCase();
     const isSocks5 = typeLc === 'socks5';   // only SOCKS5 carries username/password auth
     const isSocks4 = typeLc.startsWith('socks') && !isSocks5; // socks4/4a can't carry a password
-    // A SOCKS4/4a upstream has no password handshake - its optional userid isn't auth we
-    // can inject, so pass it directly (matches the Chrome engine, which only relays socks5).
+    // SOCKS4/4a has no password handshake, so pass it directly (the Chrome engine relays only SOCKS5).
     if (!isSocks4) {
       try {
         relay = isSocks5 ? await startSocksAuthRelay(proxy) : await startAuthRelay(proxy);
@@ -398,12 +400,8 @@ async function launchFirefoxProfileNow(options = {}) {
     }
   }
 
-  // Bind timezone + locale to the PROXY EXIT (parity with the Chrome engine). Firefox
-  // previously left both on the HOST unless the user picked "Custom", so a proxied
-  // profile on the default "Based on IP" leaked the host timezone/locale while exiting
-  // in another country - a direct IP-vs-JS mismatch every scanner flags. Look the geo up
-  // THROUGH the real upstream proxy (which carries the creds + real exit), cached so
-  // repeat launches of the same proxy don't re-hit the network.
+  // Bind timezone and locale to the proxy exit, or a proxied "Based on IP" profile leaks the host's.
+  // The geo lookup goes through the real upstream and is cached per proxy.
   const tzCustom = profile.timezoneType === 'Custom' && profile.timezoneCustom;
   const langCustom = profile.languageType === 'Custom' && profile.languageCustom;
   let proxyGeo = null;
@@ -413,9 +411,8 @@ async function launchFirefoxProfileNow(options = {}) {
       proxyGeo = await lookupProxyGeoNodeCached(proxy);
     } catch (e) { proxyGeo = null; }
   }
-  // audit E6: lookup failed - use the last geo this proxy resolved to (same cache as
-  // the Chrome engine); with none, the launch returns a geoWarning instead of
-  // silently running a proxied profile on the host timezone.
+  // Lookup failed: use the last geo this proxy resolved to; with none, the launch returns a geoWarning
+  // instead of running on the host timezone.
   if (proxy && !proxyGeo && (!tzCustom || !langCustom)) {
     try { proxyGeo = require('./browserEngine').lastKnownProxyGeo(proxy); } catch (e) { proxyGeo = null; }
   }
@@ -429,18 +426,19 @@ async function launchFirefoxProfileNow(options = {}) {
   if (proxy && !timezoneId && profile.timezoneType !== 'Real') {
     try { geoWarning = require('./browserEngine').GEO_DEGRADED_WARNING; } catch (e) { geoWarning = 'The proxy location could not be looked up.'; }
   }
+  // The TZ value Firefox will actually honor on this OS (see firefoxTzEnv). On Windows
+  // most zones cannot be applied; say so instead of silently showing the PC's zone.
+  const tzEnv = timezoneId ? firefoxTzEnv(timezoneId) : null;
+  if (timezoneId && !tzEnv && !geoWarning) geoWarning = firefoxTzUnsupportedWarning(timezoneId);
 
-  // Smart Autofill - install the WebExtension into the profile (and only enable
-  // the supporting prefs if it actually landed). Gated by the caller's setting;
-  // never fatal to a launch.
+  // Prefs are enabled only if the extension actually installed; never fatal to a launch.
   let autofillInstalled = false;
   if (options.autofillEnabled !== false) {
     const r = await installAutofillExtension(userDataDir).catch(() => ({ mode: 'none' }));
     autofillInstalled = r.mode !== 'none';
   }
-  // audit E3: the loopback bridge only listens while a Firefox autofill session runs,
-  // and the extension learns this run's token from managed storage. If the token
-  // cannot be handed over, the extension cannot authenticate - skip the bridge.
+  // The loopback bridge listens only during a Firefox autofill session, and the extension gets the token
+  // from managed storage; if the token cannot be handed over, skip the bridge.
   let autofillHeld = false;
   if (autofillInstalled) {
     try {
@@ -453,11 +451,8 @@ async function launchFirefoxProfileNow(options = {}) {
   }
   const releaseAutofill = () => { if (autofillHeld) { autofillHeld = false; autofillBridge.release().catch(() => {}); } };
 
-  // UA override for real Firefox. NEVER apply a Chrome-family UA to a Gecko binary: the
-  // engine still exposes Firefox-only tells (buildID, oscpu, no navigator.userAgentData),
-  // so a `Chrome/NNN` UA over them is an instant engine/UA mismatch (the pixelscan flag).
-  // Honor an explicit *Firefox* UA if one is set; for 'Auto', empty, or a Chrome UA fall
-  // back to null → the binary's own native, coherent Firefox UA (matches its TLS/JA4).
+  // Never apply a Chrome UA to Gecko: buildID, oscpu and the missing userAgentData still say Firefox.
+  // Honor an explicit Firefox UA; otherwise null keeps the binary's native UA (matches its TLS/JA4).
   const storedUa = profile.userAgent && profile.userAgent !== 'Auto' ? String(profile.userAgent).trim() : '';
   const firefoxUserAgent = (/firefox\//i.test(storedUa) && !/chrome\//i.test(storedUa)) ? storedUa : null;
   const userJs = buildUserJs({
@@ -466,9 +461,7 @@ async function launchFirefoxProfileNow(options = {}) {
     acceptLanguages,
     autofill: autofillInstalled
   });
-  // audit: from relay creation until the exit handlers are wired, a throw here leaves
-  // the relay (an open authenticated local proxy) listening forever. Close it on any
-  // failure of the two realistic throw points (user.js write, spawn) before re-throwing.
+  // Until exit handlers are wired, a throw would leave the authenticated relay listening; close it.
   try {
     await fsp.writeFile(path.join(userDataDir, 'user.js'), userJs);
   } catch (e) {
@@ -478,11 +471,10 @@ async function launchFirefoxProfileNow(options = {}) {
   }
 
   const env = { ...process.env };
-  if (timezoneId) env.TZ = timezoneId; // Firefox honors TZ for Date/Intl on all platforms
+  if (tzEnv) env.TZ = tzEnv;
 
-  // Open the SoftGlaze start page (proxy IP / geo card + quick links) - the same page the
-  // Chrome engine shows - unless the caller passed a concrete URL. Generated INTO the
-  // profile dir and passed as a proper file:// URL (Firefox needs the file:///C:/… form).
+  // Default to the SoftGlaze start page (proxy IP/geo card), written into the profile dir.
+  // Firefox needs it as a proper file:/// URL.
   let openUrl = (startUrl && startUrl !== 'about:blank') ? startUrl : null;
   if (!openUrl) {
     try {
@@ -492,11 +484,8 @@ async function launchFirefoxProfileNow(options = {}) {
     } catch (e) { openUrl = null; /* fall back to the homepage prefs */ }
   }
 
-  // -wait-for-browser: keep THIS process alive until the real browser exits. Without it the
-  // initial firefox.exe hands off to the actual browser and returns immediately, so the
-  // tracked process died right after launch - the session was dropped from the registry (no
-  // Stop button in the UI) while Firefox kept running. --no-first-run is a CHROME flag;
-  // Firefox's first-run is suppressed via prefs (buildUserJs) instead.
+  // -wait-for-browser keeps this process alive until the browser exits; otherwise firefox.exe hands
+  // off and returns at once, dropping the session while Firefox runs. First-run is suppressed via prefs.
   const args = ['-profile', userDataDir, '-no-remote', '-new-instance', '-wait-for-browser'];
   if (openUrl) args.push('-url', openUrl);
   // The profile's own start links. Firefox opens each bare URL argument in its own
@@ -520,35 +509,34 @@ async function launchFirefoxProfileNow(options = {}) {
   ffSessions.set(sessionId, session);
 
   let ffSettled = false;
-  const onGone = () => {
-    // 'exit' and 'error' can BOTH fire for one process - run teardown (and emit the
-    // session event) exactly once, or a single close is reported as two and can drive a
-    // spurious crash-recovery relaunch.
+  // `exit` = { code, signal } from the process 'exit' event; null for a spawn 'error'.
+  const onGone = (exit) => {
+    // 'exit' and 'error' can both fire; tear down once, or one close is reported twice and can trigger
+    // a spurious crash-recovery relaunch.
     if (ffSettled) return;
     ffSettled = true;
     if (session.relay) session.relay.close();
     session.releaseAutofill();
-    // audit E5: only drop the map entry if it is still THIS session (a relaunch may
-    // already have registered a new one under the same id).
+    // Drop the entry only if it is still this session; a relaunch may have registered a new one.
     if (ffSessions.get(sessionId) === session) ffSessions.delete(sessionId);
-    let reason = 'crash';
-    if (ffShuttingDown) reason = 'shutdown';
-    else if (ffIntentionalClose.has(sessionId)) { reason = 'user'; ffIntentionalClose.delete(sessionId); }
+    // A Firefox closed with its own X exits with code 0 and must not count as a crash.
+    const intentional = ffIntentionalClose.has(sessionId);
+    if (intentional) ffIntentionalClose.delete(sessionId);
+    const { classifyBrowserExit } = require('./browserEngine');
+    const reason = classifyBrowserExit({ shuttingDown: ffShuttingDown, intentional, exit });
     emitSessionEvent({ type: reason === 'crash' ? 'crashed' : 'closed', sessionId, reason, engine: 'firefox' });
   };
-  proc.on('exit', onGone);
-  proc.on('error', onGone);
+  proc.on('exit', (code, signal) => onGone({ code, signal }));
+  proc.on('error', () => onGone(null));
 
   emitSessionEvent({ type: 'launched', sessionId, profileId: (profileId != null ? Number(profileId) : null), engine: 'firefox' });
 
   return { sessionId, userDataDir, engine: 'firefox', geoDegraded: Boolean(geoWarning), geoWarning };
 }
 
-// Kill the tracked process AND its children. With -wait-for-browser the process we hold is
-// the parent of the real browser; a plain proc.kill() would end the waiter but leave the
-// browser window open (and the profile locked). taskkill /T reaps the whole tree on Windows.
-// `force` false (audit E7) asks politely: taskkill without /F sends the windows a close
-// request, SIGTERM elsewhere - Firefox then flushes cookies, session and storage.
+// The held process is the waiter parent of the real browser; a plain kill leaves the window open and
+// the profile locked, so taskkill /T reaps the tree. force=false asks politely (no /F, or SIGTERM)
+// so Firefox flushes cookies, session and storage.
 function killProcessTree(proc, force = true) {
   if (!proc || !proc.pid) return;
   if (process.platform === 'win32') {
@@ -576,8 +564,7 @@ async function closeFirefoxSession(sessionId) {
   const session = ffSessions.get(id);
   if (!session) return { closed: false };
   ffIntentionalClose.add(id); // deliberate close - the exit must not be read as a crash
-  // audit E7: graceful close first (profile data is written on a clean exit), then
-  // force only if Firefox is still running after ~8 s.
+  // Graceful close first so profile data is written; force only if still running after the timeout.
   killProcessTree(session.proc, false);
   const exited = await waitForExit(session.proc, FF_GRACEFUL_STOP_MS);
   if (!exited) killProcessTree(session.proc, true);
@@ -610,12 +597,9 @@ async function closeAllFirefoxSessions() {
   await Promise.all(Array.from(ffSessions.keys()).map((id) => closeFirefoxSession(id).catch(() => ({ closed: false }))));
 }
 
-// --- On-demand Firefox download + PORTABLE extract -----------------------------
-// We pull the FULL offline installer from Mozilla's release archive and, instead of
-// RUNNING it (which would register Firefox system-wide in Windows), EXTRACT its
-// payload into /firefox/<version> so the launcher can resolve a version-matched
-// binary. Pure Node + Windows' built-in bsdtar - no new npm dependency, and NO
-// system footprint (mirrors the portable Chrome-for-Testing unzip).
+// ---- On-demand Firefox download ----
+// The release package is extracted into firefox/<version> rather than installed, so nothing is
+// registered system-wide.
 
 const FF_HISTORY = 'https://product-details.mozilla.org/1.0/firefox_history_major_releases.json';
 const FF_STATE_FILE = path.join(FIREFOX_ROOT, '.download-state.json');
@@ -626,9 +610,8 @@ let ffCatalog = null;
 let ffCatalogAt = 0;
 let ffLastPersist = 0;
 
-// Stable partial-download path (NOT keyed by PID, so it survives an app restart
-// and can be resumed). bsdtar sniffs the archive by content, not extension, so we
-// extract straight from the .part file.
+// Not keyed by PID, so a partial download survives a restart and can resume.
+// The extractor sniffs content, so the .part file is extracted as-is.
 function ffPartialPath(major) { return path.join(FIREFOX_ROOT, `_download-ff-${major}.part`); }
 
 function ffPersistState(force) {
@@ -678,7 +661,7 @@ async function initFirefoxResumableState() {
 function ffHttpsGet(url, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 6) return reject(new Error('Too many redirects'));
-    // audit: https-only + Mozilla-host allowlist on the URL and every redirect.
+    // https-only and Mozilla-host allowlist on the URL and every redirect.
     let target;
     try { target = assertAllowedDownloadUrl(url, HOSTS.firefox, 'Firefox download'); }
     catch (e) { return reject(e); }
@@ -715,7 +698,6 @@ function ffInstallerUrl(version) {
   return platform.firefoxInstallerUrl(ffFullVersion(version));
 }
 
-// SHA-256 of a local file (streamed).
 function ffSha256File(file) {
   return new Promise((resolve, reject) => {
     const h = crypto.createHash('sha256');
@@ -726,10 +708,8 @@ function ffSha256File(file) {
   });
 }
 
-// Fetch Mozilla's published SHA256SUMS for a release and return the expected hash
-// for the win64/en-US installer, or null if it can't be obtained/parsed. Served
-// from the ftp.mozilla.org ORIGIN (the installer itself may come from a CDN edge),
-// so this is an independent integrity path on top of https + host-pinning.
+// Expected installer hash from Mozilla's SHA256SUMS, or null. Served from the ftp.mozilla.org origin
+// while the installer may come from a CDN edge, so it is an independent integrity check.
 async function ffExpectedInstallerSha(version) {
   const full = ffFullVersion(version);
   const url = `https://ftp.mozilla.org/pub/firefox/releases/${full}/SHA256SUMS`;
@@ -775,12 +755,12 @@ async function listFirefoxDownloadable() {
   };
 }
 
-// GET carrying custom headers (Range) AND following redirects preserving them.
-// Resolves with the FINAL { res, req } so the caller can abort the live request.
+// GET with custom headers (Range) kept across redirects. Resolves with the final { res, req }
+// so the caller can abort the live request.
 function ffRawGet(url, headers, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 6) return reject(new Error('Too many redirects'));
-    // audit: https-only + Mozilla-host allowlist on the URL and every redirect.
+    // https-only and Mozilla-host allowlist on the URL and every redirect.
     let target;
     try { target = assertAllowedDownloadUrl(url, HOSTS.firefox, 'Firefox download'); }
     catch (e) { return reject(e); }
@@ -848,15 +828,8 @@ async function ffDownloadToFile(url, dest, onProgress, registerAbort) {
   return { received, total };
 }
 
-// Portable extraction - NO system install, per OS (see extractArchive.extractFirefox):
-//   Windows: the "Firefox Setup <v>.exe" 7-Zip SFX, bsdtar-flattened from core/ so
-//            firefox.exe lands at <dir>/firefox.exe. Running the NSIS installer would
-//            register Firefox system-wide (HKLM/HKCU keys, Add/Remove entry, the
-//            Maintenance Service, the default-browser-agent task) - the footprint we avoid.
-//   macOS:   the .dmg is mounted read-only and Firefox.app is copied out (ditto).
-//   Linux:   the .tar.xz is unpacked to <dir>/firefox/.
-// The resulting layout matches platform.firefoxBinaryRel() that resolveFirefoxBinary /
-// isFirefoxVersionInstalled expect, with zero system footprint.
+// No system install: running the NSIS installer would register Firefox system-wide (registry keys,
+// Add/Remove entry, Maintenance Service, default-browser agent). See extractArchive.extractFirefox.
 function extractFirefoxPortable(part, dir) {
   return extractFirefox(part, dir);
 }
@@ -899,11 +872,8 @@ function startFirefoxDownload(version) {
         throw Object.assign(new Error('Connection interrupted before completion.'), { interrupted: true });
       }
 
-      // audit: verify the downloaded installer against Mozilla's published
-      // SHA256SUMS before running it. If the checksum is available and mismatches,
-      // refuse to execute (fatal - the partial file is then wiped below). If
-      // SHA256SUMS can't be fetched (offline / older layout), fall back to the
-      // transport trust already enforced (https + Mozilla-host pinning).
+      // Verify against Mozilla's SHA256SUMS before use; a mismatch is fatal and wipes the partial file.
+      // If SHA256SUMS is unavailable, rely on https plus Mozilla-host pinning.
       entry.state = 'verifying';
       entry.percent = 86;
       ffPersistState(true);
@@ -918,8 +888,7 @@ function startFirefoxDownload(version) {
       entry.state = 'installing';
       entry.percent = 88;
       ffPersistState(true);
-      // Portable extract into /firefox/<major> - NO system install (see
-      // extractFirefoxPortable). bsdtar needs the -C target to exist first.
+      // Portable extract, no system install; the -C target must exist first.
       await fsp.mkdir(firefoxInstallDir(major), { recursive: true });
       await extractFirefoxPortable(part, firefoxInstallDir(major));
       await fsp.unlink(part).catch(() => {});
@@ -951,7 +920,7 @@ function startFirefoxDownload(version) {
   return entry;
 }
 
-// Pause an in-flight Firefox download: abort the socket, KEEP the partial file.
+// Abort the socket but keep the partial file so the download can resume.
 function pauseFirefoxDownload(version) {
   const major = ffMajor(version);
   const entry = ffDownloads.get(String(major));
@@ -975,8 +944,6 @@ function getFirefoxDownloadStatus() {
 
 module.exports = {
   findFirefoxBinary,
-  resolveFirefoxBinary,
-  isFirefoxVersionInstalled,
   listFirefoxDownloadable,
   startFirefoxDownload,
   pauseFirefoxDownload,
@@ -989,8 +956,9 @@ module.exports = {
   listFirefoxSessions,
   closeAllFirefoxSessions,
   setSessionEventSink,
-  // audit E3: exported for tests (the token handoff to the extension).
+  // Exported for tests.
   buildManagedStorageManifest,
   managedStoragePath,
-  FIREFOX_ROOT
+  buildUserJs,
+  firefoxTzEnv,
 };

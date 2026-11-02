@@ -1,9 +1,7 @@
 'use strict';
-// Provision a new tenant: generate an Ed25519 keypair (private key sealed at
-// rest), create the Tenant row, and emit the build config to bake into that
-// merchant's desktop build. The tenant API key is printed ONCE.
-//
-//   npm run provision -- "Acme Browsers"
+// Provision a tenant: Ed25519 keypair (private key sealed at rest), Tenant row, and the build config
+// for that merchant's desktop build. The tenant API key is printed once.
+// Usage: npm run provision -- "Acme Browsers"
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');

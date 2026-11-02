@@ -29,14 +29,11 @@ import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
 import profilesEs from '@/i18n/locales/es/profiles.json';
 
-// Register this page's "profiles" namespace without touching the central i18n
-// config. addResourceBundle is a no-op if the bundle already exists, so this is
-// safe across hot reloads.
+// Register the "profiles" namespace here instead of in the central i18n config.
 if (!i18n.hasResourceBundle('en', 'profiles')) i18n.addResourceBundle('en', 'profiles', profilesEn);
 if (!i18n.hasResourceBundle('es', 'profiles')) i18n.addResourceBundle('es', 'profiles', profilesEs);
 
-// Compact relative time ("just now", "5m ago", "3h ago", "2d ago"); the absolute
-// timestamp stays available on hover via the cell's title.
+// Compact relative time; the cell's title keeps the absolute timestamp on hover.
 function relTime(iso) {
   const tr = (k, opts) => i18n.t(k, { ns: 'profiles', ...opts });
   try {
@@ -53,7 +50,6 @@ function relTime(iso) {
   } catch (e) { return tr('relTime.never'); }
 }
 
-// --- CUSTOM STYLED SELECT DROPDOWN ---
 const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
   <div className={`relative flex items-center ${className}`}>
     <select
@@ -70,7 +66,6 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
   </div>
 );
 
-// --- HELPER COMPONENT FOR TAB BUTTONS ---
 const ButtonTabs = ({ value, onChange, options, className = '' }) => (
   <div className={`flex flex-wrap bg-background border border-border rounded w-max overflow-hidden ${className}`}>
     {options.map(opt => (
@@ -86,7 +81,6 @@ const ButtonTabs = ({ value, onChange, options, className = '' }) => (
   </div>
 );
 
-// --- HELPER COMPONENT FOR ON/OFF TOGGLES (Hardware Noise) ---
 const ToggleSwitch = ({ checked, onChange }) => (
   <button
     type="button"
@@ -99,7 +93,6 @@ const ToggleSwitch = ({ checked, onChange }) => (
   </button>
 );
 
-// --- HELPER COMPONENT FOR CUSTOM CHECKBOX ---
 const CustomCheckbox = ({ checked, onChange, label }) => (
   <label className="flex items-center gap-2 cursor-pointer group">
     <div className={`w-4 h-4 rounded border flex items-center justify-center transition ${checked ? 'bg-primary border-primary' : 'bg-background border-border group-hover:border-muted'}`}>
@@ -109,7 +102,6 @@ const CustomCheckbox = ({ checked, onChange, label }) => (
   </label>
 );
 
-// --- HELPER COMPONENT FOR FINGERPRINT ROWS ---
 const FpRow = ({ label, description, children }) => (
   <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] items-start gap-2 lg:gap-6 border-b border-border pb-5 mb-5 last:border-0 last:pb-0 last:mb-0">
     <div className="mt-1">
@@ -122,18 +114,11 @@ const FpRow = ({ label, description, children }) => (
   </div>
 );
 
-// --- GENERATORS ---
+// ---- Generators ----
 const generateMac = () => "XX-XX-XX-XX-XX-XX".replace(/X/g, () => "0123456789ABCDEF".charAt(Math.floor(Math.random() * 16)));
 const generateDeviceName = () => "DESKTOP-" + Math.random().toString(36).substring(2, 9).toUpperCase();
-// Plausible desktop core/RAM pairings (RAM scales with cores). Randomized per
-// profile so the spoofed hardware is unique rather than a static 8/8.
-//
-// HOST_CORES is the real machine's core count (filled once from system info). We
-// EXCLUDE it from the pool so a profile never spoofs to the exact value of the
-// machine it was created on - otherwise the "spoofed" hardwareConcurrency is
-// indistinguishable from real and looks like a leak (e.g. a 16-core PC getting a
-// 16-core profile). Cross-machine the value is still plausible; locally it's
-// always visibly different.
+// Plausible core/RAM pairings, randomized per profile. HOST_CORES (the real core count) is excluded
+// so a profile never spoofs the creating machine's exact value, which would read as a leak.
 let HOST_CORES = null;
 const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const generateCpuCores = () => {
@@ -142,18 +127,8 @@ const generateCpuCores = () => {
 };
 const generateRamGb = (cores) => (Number(cores) >= 12 ? pickOne(['16', '32']) : pickOne(['8', '16']));
 
-// --- DYNAMIC DATA GENERATORS & CONSTANTS ---
-const CHROME_VERSIONS = ['Auto', ...Array.from({ length: 30 }, (_, i) => String(149 - i))];
-const FIREFOX_VERSIONS = ['Auto', ...Array.from({ length: 32 }, (_, i) => String(151 - i))];
-
-// iOS is deliberately NOT offered. Every real iOS browser is WebKit and this engine is
-// Blink, so an iOS profile is betrayed by JS-engine behaviour, CSS support and missing
-// WebKit quirks no matter what strings are set - there is no coherent iOS identity to
-// ship. Worse, the launch path had no iOS branch at all, so picking it silently
-// produced a WINDOWS DESKTOP fingerprint: the user believed they had an iPhone profile
-// while every scanner saw Windows. Android is the mobile identity this engine can
-// actually carry coherently. Existing/imported iOS profiles are mapped to Android at
-// launch (see osTokens in browserEngine.js).
+// iOS is not offered: every real iOS browser is WebKit and this engine is Blink, so it cannot pass.
+// Android is the mobile option; saved iOS profiles map to Android at launch (osTokens, browserEngine).
 const OS_PLATFORMS = [
   { id: 'Windows', icon: Monitor, versions: ['All Windows', '11', '10', '8', '7'], logo: '/logos/windows.png' },
   { id: 'macOS', icon: Apple, versions: ['All macOS', '26', '15', '14', '13', '12', '11', '10'], logo: '/logos/macos.png' },
@@ -217,10 +192,8 @@ function osUaToken(os) {
   return 'Windows NT 10.0; Win64; x64';
 }
 
-// Build a Chrome User-Agent whose VERSION matches the selected browser, so the UA
-// never disagrees with the real engine / Client-Hints. When chromeMajor is known
-// (a concrete selected version, or the newest installed for "Auto") we synthesize
-// the UA from it; otherwise we fall back to the legacy curated pool.
+// Synthesize the UA from chromeMajor so it matches the real engine and Client Hints;
+// without a known major, fall back to the curated pool.
 function generateAutoUserAgent(os, uaCategory, index = 0, chromeMajor = null) {
   if (chromeMajor) {
     const token = osUaToken(os);
@@ -273,7 +246,6 @@ const WEBGL_RENDERERS = {
   ]
 };
 
-// --- INITIAL STATE ---
 const initialProfileData = {
   id: null,
   name: '',
@@ -312,7 +284,6 @@ const initialProfileData = {
   proxyProvider: 'Smartproxy',
   proxyApiKey: '',
 
-  // -- COMPREHENSIVE FINGERPRINT STATES --
   webrtc: 'Forward',
   timezoneType: 'Based on IP',
   timezoneCustom: '',
@@ -343,8 +314,8 @@ const initialProfileData = {
   webglRenderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)',
   webgpu: 'Based on WebGL',
   
-  // Spoofed by DEFAULT - never expose the real machine unless the user flips a
-  // field to "Real". Concrete values are randomized per profile in openCreate().
+  // Spoofed by default; the real machine shows only when the user sets a field to "Real".
+  // Concrete values are randomized per profile in openCreate().
   cpuType: 'Custom',
   cpuCores: '8',
   ramType: 'Custom',
@@ -360,7 +331,6 @@ const initialProfileData = {
   disableTls: 'Close',
   launchArgs: '',
 
-  // -- ADVANCED TAB STATES --
   advancedExt: 'Team',
   advancedSync: 'Global',
   syncItems: { cookie: true, passwords: true, bookmarks: true, localStorage: true, indexedDB: true, extensionData: true, history: false },
@@ -374,13 +344,7 @@ const initialProfileData = {
   randomFingerprint: false,
 };
 
-const MOCK_SAVED_PROXIES = [
-  { id: '1', name: 'US Rotating - SmartProxy', host: 'proxy.smartproxy.com', port: '10000', tags: 'US, Unused' },
-  { id: '2', name: 'UK Datacenter - Oxylabs', host: 'uk.oxylabs.io', port: '8000', tags: 'UK, Unused' }
-];
-
-// Bulk-tag dialog for the current selection. Markup is unchanged from its former
-// inline form; useDialog adds Escape/focus-trap/scroll-lock without altering it.
+// Bulk-tag dialog; useDialog adds Escape, focus trap and scroll lock.
 function TagModal({ onClose, count, tagInput, setTagInput, allTags, bulkBusy, onAssign }) {
   const { t } = useTranslation('profiles');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
@@ -407,8 +371,6 @@ function TagModal({ onClose, count, tagInput, setTagInput, allTags, bulkBusy, on
   );
 }
 
-// Bulk-rename dialog for the current selection. Markup unchanged from its former
-// inline form; useDialog adds the standard modal a11y behaviors.
 function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStart, setRenameStart, bulkBusy, onRename }) {
   const { t } = useTranslation('profiles');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
@@ -433,9 +395,8 @@ function RenameModal({ onClose, count, renamePrefix, setRenamePrefix, renameStar
   );
 }
 
-// Bulk proxy (re)assign / swap dialog for the current selection. Draws proxies from
-// the whole pool, a group, only-unassigned, or a pasted list - unique 1:1, round-robin,
-// or one-to-all - and can also shuffle the proxies profiles already have, or clear them.
+// Sources: whole pool, a group, unassigned only, or a pasted list. Modes: unique 1:1, round-robin,
+// one-to-all, shuffle the existing proxies, or clear them.
 function ProxyReassignModal({ onClose, count, allProxies, proxyGroups, bulkBusy, onApply }) {
   const { t } = useTranslation('profiles');
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !bulkBusy });
@@ -538,10 +499,9 @@ export default function ProfilesPage() {
   const { t } = useTranslation('profiles');
   const [profiles, setProfiles] = useState([]);
   const [search, setSearch] = useState('');
-  // The search the CURRENT `profiles` list was loaded for. Search is server-side, so the
-  // selection prune must run when the new rows arrive, not when the input changes.
+  // The search the current `profiles` list was loaded for. Search is server-side, so the selection
+  // prune must run when the new rows arrive, not when the input changes.
   const [loadedSearch, setLoadedSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   
@@ -556,14 +516,12 @@ export default function ProfilesPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [launchQueue, setLaunchQueue] = useState(false); // true = feed the selection through a queue
-  // How many profiles the queue keeps open at once. Each slot is held until the user
-  // closes that browser, then the next profile fills it. 1 = the original strict
-  // one-at-a-time behaviour.
+  // Profiles the queue keeps open at once; each slot frees when its browser closes. 1 = one at a time.
   const [launchQueueWidth, setLaunchQueueWidth] = useState(1);
   const [launchProgress, setLaunchProgress] = useState(null); // { done, total } during a bulk launch
   const [launchPaused, setLaunchPaused] = useState(false); // queue paused between profiles
-  // Non-blocking launch warnings (E6): profiles that opened without the proxy's
-  // timezone because the geo lookup failed. { [profileId]: true }
+  // Profiles that launched without the proxy's timezone because the geo lookup failed.
+  // { [profileId]: true }
   const [geoWarnings, setGeoWarnings] = useState({});
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
@@ -614,10 +572,8 @@ export default function ProfilesPage() {
     return list;
   }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
 
-  // When the FILTER changes, drop any selected ids that are no longer visible. Without
-  // this, a "select all" under one filter carries hidden ids into a bulk delete under another
-  // - the "select 5, but act on everything" bug. Keyed on the filter inputs only, so a
-  // background data refresh never clears the selection mid-task.
+  // When the filter changes, drop selected ids that are no longer visible, so a bulk action never
+  // touches hidden rows. Keyed on filter inputs only, so a background refresh keeps the selection.
   const visibleProfileIdsRef = useRef(null);
   visibleProfileIdsRef.current = filteredProfiles;
   useEffect(() => {
@@ -630,14 +586,12 @@ export default function ProfilesPage() {
     });
   }, [filterGroup, filterTag, filterProxy, filterStatus, loadedSearch]);
 
-  // The selected ids that are still visible under the current filters + search, in table
-  // order. Every bulk handler acts on this, never on the raw set, so a row hidden by a
-  // filter or a server-side search can never be launched, tagged or deleted by accident.
+  // Selected ids still visible under the current filters and search, in table order. Bulk handlers
+  // use this, never the raw set, so hidden rows are never launched, tagged or deleted.
   function visibleSelectedIds() {
     return intersectSelection(selectedIds, filteredProfiles);
   }
 
-  // Universal pagination (items-per-page selector via the shared Pager).
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filteredProfiles.length / pageSize));
@@ -645,7 +599,6 @@ export default function ProfilesPage() {
   const pagedProfiles = pageSize === Infinity ? filteredProfiles : filteredProfiles.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { setPage(1); }, [filterGroup, filterTag, filterProxy, filterStatus, pageSize]);
 
-  // Real, derived counts for the header subtitle + stat cards (no mock data).
   const totalCount = profiles.length;
   const runningCount = useMemo(
     () => profiles.filter((p) => runningIds.has(p.id)).length,
@@ -659,27 +612,15 @@ export default function ProfilesPage() {
   const isEditing = Boolean(pd.id);
   const tabs = ['General', 'Proxy', 'Platform', 'Fingerprint', 'Advanced']; 
 
-  const currentOsObj = OS_PLATFORMS.find(o => o.id === pd.os) || OS_PLATFORMS[0];
-  // Host OS comes from preload as a plain value (no IPC). Warn when the profile
-  // claims a different OS than the machine it runs on - the generator defaults to
-  // the host for exactly this reason.
+  // hostOs comes from preload, no IPC. Warn when the profile claims a different OS than the host;
+  // the generator defaults to the host for this reason.
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
   const crossOsWarning = Boolean(pd.os) && pd.os !== hostOs;
-  // Prefer the real installed Chrome majors (newest first) for Chromium; fall
-  // back to the static list when none are detected on disk.
-  const installedMajors = useMemo(() => {
-    const set = new Set(installedBrowsers.map((b) => String(b.major)));
-    return ['Auto', ...Array.from(set).sort((a, b) => Number(b) - Number(a))];
-  }, [installedBrowsers]);
-  const browserVersionsList = pd.browserCore === 'Chromium'
-    ? (installedMajors.length > 1 ? installedMajors : CHROME_VERSIONS)
-    : FIREFOX_VERSIONS;
   const filteredUAGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(pd.os));
 
   const loadSeq = useRef(0);
   const loadData = useCallback(async () => {
     const seq = ++loadSeq.current;
-    setLoading(true);
     try {
       const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
         softglazeApi.profiles.list({ search }),
@@ -690,8 +631,7 @@ export default function ProfilesPage() {
         softglazeApi.profiles.getLocks().catch(() => ({})),
         softglazeApi.proxyGroups.list().catch(() => [])
       ]);
-      // audit: ignore a stale response - a slow broad search ("a") could resolve after
-      // a fast narrow one ("ab") and overwrite the correct list.
+      // Ignore a stale response: a slow broad search can resolve after a faster narrow one.
       if (seq !== loadSeq.current) return;
       setProfiles(profs);
       setLoadedSearch(search);
@@ -702,19 +642,16 @@ export default function ProfilesPage() {
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
     } catch (err) { if (seq === loadSeq.current) setError(err.message); }
-    finally { if (seq === loadSeq.current) setLoading(false); }
   }, [search]);
 
-  // audit: debounce the search-driven reload (each keystroke fired 7 IPC calls with no
-  // debounce). Direct loadData() calls after mutations stay immediate; only this
-  // search-dependency effect waits ~200ms, and the loadSeq guard above drops stragglers.
+  // Debounce only the search-driven reload (each reload makes 7 IPC calls); direct loadData() calls
+  // after mutations stay immediate, and loadSeq drops stragglers.
   useEffect(() => {
     const h = setTimeout(() => { loadData(); }, 200);
     return () => clearTimeout(h);
   }, [loadData]);
 
-  // Learn the real machine's core count once so generated profiles never spoof to
-  // the exact host value (which would look like a hardware leak - see HOST_CORES).
+  // Learn the host core count once so generated profiles never spoof that exact value (see HOST_CORES).
   useEffect(() => {
     softglazeApi.system.getInfo().then((i) => { if (i && i.cpuCount) HOST_CORES = i.cpuCount; }).catch(() => {});
   }, []);
@@ -738,8 +675,6 @@ export default function ProfilesPage() {
     return () => clearInterval(t);
   }, [refreshSessions]);
 
-  // Live bulk-launch progress: update the counter as each profile spawns, refresh
-  // the running indicators incrementally, and clear when the batch finishes.
   useEffect(() => {
     if (!softglazeApi.profiles.onBulkLaunchProgress) return undefined;
     const off = softglazeApi.profiles.onBulkLaunchProgress((p) => {
@@ -753,8 +688,7 @@ export default function ProfilesPage() {
       }
       if (p.phase === 'control') {
         setLaunchPaused(Boolean(p.paused));
-        // Build a fresh object when there is no previous state. Bailing out on
-        // `prev === null` meant a page that had remounted could never recover the
+        // Build a fresh object when there is no previous state, so a remounted page recovers the
         // progress badge from a pause/resume frame.
         setLaunchProgress((prev) => (prev
           ? { ...prev, paused: Boolean(p.paused) }
@@ -766,11 +700,8 @@ export default function ProfilesPage() {
     return off;
   }, [refreshSessions]);
 
-  // Re-attach to a bulk queue still running in the main process (the user navigated
-  // away and came back). Progress is a broadcast-only stream, so a remounted page
-  // hears only FUTURE frames - and in Queue mode the next frame does not arrive until
-  // the current browser is closed. Without this the Stop/Pause/Resume controls vanish
-  // while the queue keeps launching profiles, leaving no way to stop it. Runs on mount.
+  // On mount, re-attach to a bulk queue still running in main: progress is broadcast-only and may
+  // not arrive until the current browser closes, leaving no Stop/Pause/Resume controls meanwhile.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -779,26 +710,22 @@ export default function ProfilesPage() {
         if (!alive || !st || !st.active) return;
         setLaunchProgress({ done: Number(st.done) || 0, total: Number(st.total) || 0, paused: Boolean(st.paused) });
         setLaunchPaused(Boolean(st.paused));
-        // Restore the queue settings too, so the controls reflect the run actually in
-        // flight rather than this fresh component's defaults.
+        // Restore the queue settings so the controls reflect the run in flight.
         if (st.queue) { setLaunchQueue(true); setLaunchQueueWidth(Number(st.width) || 1); }
-        // Restore the queued ids too, so the selection-gated bulk bar reappears with
-        // the same profiles the run was started for.
+        // Restore the queued ids so the selection-gated bulk bar reappears for the same profiles.
         if (Array.isArray(st.ids) && st.ids.length) setSelectedIds(new Set(st.ids));
       } catch (e) { /* no queue running, or an older preload without the channel */ }
     })();
     return () => { alive = false; };
   }, []);
 
-  // Load saved filter presets (stored in global Settings).
   useEffect(() => {
     softglazeApi.settings.getGlobal()
       .then((g) => { if (Array.isArray(g?.profileFilters)) setFilterPresets(g.profileFilters); })
       .catch(() => {});
   }, []);
 
-  // Load the real Chrome builds installed on disk so the version picker only
-  // offers versions that will actually launch a matching real binary.
+  // Installed Chrome builds, so the version picker offers only versions that launch a real binary.
   const refreshInstalledBrowsers = useCallback(() => {
     softglazeApi.system.listBrowsers()
       .then((r) => setInstalledBrowsers(r && Array.isArray(r.browsers) ? r.browsers : []))
@@ -813,9 +740,8 @@ export default function ProfilesPage() {
     const src = String(proxySource || '');
     const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
     const provider = src.startsWith('provider:') ? src.slice(9) : undefined;
-    // Server-side batch generator owns the batch-level invariants the old per-profile
-    // loop could not: a UNIQUE proxy per profile (capped at availability), UNIQUE
-    // fingerprints, and even Chrome-version distribution.
+    // The server-side generator enforces batch invariants: a unique proxy per profile (capped at
+    // availability), unique fingerprints, and an even Chrome-version spread.
     const result = await softglazeApi.profiles.batchGenerate({
       count,
       prefix: baseName,
@@ -875,12 +801,10 @@ export default function ProfilesPage() {
       platformAccounts: profile.platformAccounts || [],
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
       proxyType: profile.proxyType || 'HTTP',
-      // Merge saved per-profile browser settings over the defaults so newly added keys
-      // (e.g. loadExtensions) always have a boolean value - keeping their checkboxes
-      // controlled and letting the flag round-trip on save.
+      // Merge over the defaults so newly added keys (e.g. loadExtensions) always have a boolean,
+      // keeping checkboxes controlled and letting the flag round-trip on save.
       browserSettings: { ...initialProfileData.browserSettings, ...(profile.browserSettings || {}) },
-      // Pre-select the linked saved proxy so editing shows it (and re-saving keeps
-      // PROFILE_PROXY instead of silently reverting to DIRECT).
+      // Pre-select the linked saved proxy so re-saving keeps PROFILE_PROXY instead of reverting to DIRECT.
       proxySetting: profile.proxyId ? 'Saved Proxies' : 'Custom',
       selectedSavedProxy: profile.proxyId ? String(profile.proxyId) : ''
     });
@@ -900,11 +824,8 @@ export default function ProfilesPage() {
         const newOsObj = OS_PLATFORMS.find(o => o.id === v);
         nextState.osVersion = newOsObj.versions[0];
         nextState.uaCategory = 'All'; nextState.userAgent = 'Auto';
-        // Device class + a coherent GPU/screen follow the platform. Android is a
-        // mobile device (touchscreen + small high-DPR screen + a mobile GPU); the
-        // launch engine emulates the metrics, and here we keep the saved
-        // fingerprint coherent so the leak check doesn't (rightly) flag a mobile
-        // UA paired with a desktop GPU.
+        // Device class, GPU and screen follow the platform: Android gets a touchscreen, small high-DPR
+        // screen and mobile GPU, so the leak check does not flag a mobile UA with a desktop GPU.
         if (v === 'Android') {
           nextState.deviceClass = 'mobile';
           nextState.resolutionType = 'Custom';
@@ -967,8 +888,7 @@ export default function ProfilesPage() {
     return str;
   };
 
-  // Pull the profile's persisted cookies into the editor field. Works whether or
-  // not the profile is running (the backend reads them headlessly when offline).
+  // Works whether or not the profile is running; offline, the backend reads cookies headlessly.
   async function handleLoadCookies() {
     if (!pd.id) return;
     setLoadingCookies(true);
@@ -989,10 +909,8 @@ export default function ProfilesPage() {
     setSaving(true);
     try {
       const finalUA = pd.userAgent === 'Auto' ? generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length, effectiveChromeMajor) : pd.userAgent;
-      // Resolve the proxy from whichever mode the user picked. The old code only
-      // honored a manually-typed proxy, so selecting a SAVED proxy silently fell
-      // back to DIRECT (no proxy) and leaked the real IP. Now both modes set a
-      // proxy AND flip systemProxyBehavior to PROFILE_PROXY so launch applies it.
+      // Both saved and custom proxies set a proxy and flip systemProxyBehavior to PROFILE_PROXY;
+      // otherwise launch falls back to DIRECT and leaks the real IP.
       const proxyRaw = pd.proxySetting === 'Custom' ? constructProxyString() : '';
       const savedProxyId = pd.proxySetting === 'Saved Proxies' && pd.selectedSavedProxy
         ? Number(pd.selectedSavedProxy) : null;
@@ -1011,11 +929,8 @@ export default function ProfilesPage() {
       };
       
       if (isEditing) {
-        // Never send dataDirName on an update. It names the on-disk Chromium profile
-        // and seeds the fingerprint, and nothing moves the folder - so passing the
-        // (possibly renamed) title here abandoned the profile's cookies, sessions and
-        // saved logins and re-seeded its fingerprint. The backend now ignores it too;
-        // this keeps a rename from logging a warning on every save. Only `title` moves.
+        // Never send dataDirName on an update: it names the on-disk profile folder and seeds the fingerprint,
+        // and nothing moves the folder. The backend ignores it too; this avoids a warning on every save.
         const { dataDirName, ...updatePayload } = payload;
         await softglazeApi.profiles.update({ id: pd.id, ...updatePayload });
       } else {
@@ -1030,7 +945,7 @@ export default function ProfilesPage() {
   async function handleLaunch(profileId) {
     try {
       const res = await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' });
-      // The browser opened, but without the proxy's timezone: warn, do not block (E6).
+      // The browser opened without the proxy's timezone: warn, do not block.
       setGeoWarnings((prev) => {
         const next = { ...prev };
         if (res && res.geoDegraded) next[profileId] = true; else delete next[profileId];
@@ -1066,10 +981,8 @@ export default function ProfilesPage() {
     const ids = visibleSelectedIds();
     if (ids.length === 0) return;
     setBulkBusy(true); setError('');
-    // Queue mode holds `launchQueueWidth` profiles open at a time and opens the next
-    // as each one is closed. Otherwise the main process uses the configured
-    // launch-concurrency cap and opens them all as fast as it can. Progress is cleared
-    // by the 'done' event (not here), so a background queue keeps its live counter.
+    // Queue mode holds launchQueueWidth profiles open and opens the next as each closes; otherwise main
+    // uses the launch-concurrency cap. The 'done' event clears progress, so a background queue keeps it.
     const opts = launchQueue
       ? { queue: true, concurrency: Math.max(1, Number(launchQueueWidth) || 1) }
       : undefined;
@@ -1078,8 +991,7 @@ export default function ProfilesPage() {
     finally { setBulkBusy(false); }
   }
 
-  // Live queue controls (pause between profiles / resume / stop the rest). Best-effort;
-  // a failed control call must never wedge the UI.
+  // Queue controls are best-effort; a failed control call must never wedge the UI.
   async function pauseQueue() {
     try { if (softglazeApi.profiles.bulkLaunchControl) await softglazeApi.profiles.bulkLaunchControl('pause'); } catch (e) { /* ignore */ }
   }
@@ -1091,8 +1003,7 @@ export default function ProfilesPage() {
     setLaunchProgress(null); setLaunchPaused(false);
   }
   async function handleBulkClose(ids) {
-    // Called two ways: from the bulk bar (no arg → use selection) and from a
-    // single row's Stop button (handleBulkClose([id])). Honor an explicit list.
+    // No argument uses the selection; a row's Stop button passes [id].
     const targets = Array.isArray(ids) && ids.length ? ids : visibleSelectedIds();
     if (targets.length === 0) return;
     setBulkBusy(true); setError('');
@@ -1111,8 +1022,7 @@ export default function ProfilesPage() {
       const res = await softglazeApi.profiles.bulkDelete(ids);
       clearSelection();
       await loadData();
-      // The main process returns { trashed, errors }; a denied or failed row used to
-      // vanish from the report silently while the user assumed everything was trashed.
+      // Main returns { trashed, errors }; report denied or failed rows instead of dropping them.
       const errs = (res && Array.isArray(res.errors)) ? res.errors : [];
       if (errs.length) {
         const trashed = (res && Array.isArray(res.trashed)) ? res.trashed.length : 0;
@@ -1178,8 +1088,7 @@ export default function ProfilesPage() {
     try { await softglazeApi.settings.setGlobal({ profileFilters: next }); } catch (err) { setError(err.message); }
   }
 
-  // Softglaze Premium - fetch the live TOTP for a profile and copy it to the
-  // clipboard, flashing a "Copied!" tooltip on its badge.
+  // Softglaze Premium: copy the profile's live TOTP and flash "Copied!" on its badge.
   async function handleCopy2fa(profileId) {
     setError('');
     try {
@@ -1216,9 +1125,8 @@ export default function ProfilesPage() {
     }
   }
 
-  // Resolve the Chrome major that will actually launch: a concrete selected
-  // version, else the newest installed build ("Auto"). Used so every generated /
-  // previewed UA matches the engine and never trips the pre-launch UA check.
+  // The Chrome major that will actually launch: the selected version, else the newest installed.
+  // Generated and previewed UAs use it so they pass the pre-launch UA check.
   const effectiveChromeMajor = (() => {
     const v = String(pd.browserVersion || '').trim();
     const m = v.match(/^(\d+)/);
@@ -1227,14 +1135,13 @@ export default function ProfilesPage() {
     return majors.length ? Math.max(...majors) : null;
   })();
 
-  // The engine launches the REAL Chrome binary for the selected version, so the
-  // preview UA must follow it (not a stale random UA). 'Auto' → newest installed.
+  // The engine launches the real Chrome binary for the selected version, so the preview UA follows it.
   const displayUA = (() => {
     if (pd.userAgent && pd.userAgent !== 'Auto') return pd.userAgent;
     return generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length, effectiveChromeMajor);
   })();
 
-  // --- EDITOR VIEW ---
+  // ---- Editor view ----
   if (view === 'editor') {
     return (
       <div className="w-full h-full bg-card text-foreground font-sans flex flex-col rounded border border-border overflow-hidden shadow-2xl">
@@ -1260,7 +1167,6 @@ export default function ProfilesPage() {
 
             <div className="p-6 overflow-y-auto flex-1 text-sm">
               
-              {/* General Tab */}
               {activeTab === 'General' && (
                 <div className="space-y-6 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
@@ -1371,11 +1277,7 @@ export default function ProfilesPage() {
                     </div>
                   </div>
 
-                  {/* Cross-OS warning. A string-only OS spoof cannot hold up: the host's
-                      fonts, canvas raster, WebGL render output and real TLS/JS-engine
-                      behaviour all come from the actual machine. This is why the
-                      fingerprint generator defaults to the host OS. The GPU is now forced
-                      coherent at launch, but that only removes the loudest tell. */}
+                  {/* A string-only OS spoof cannot hold up: fonts, canvas, WebGL and TLS come from the real machine */}
                   {crossOsWarning && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
                       <div />
@@ -1452,7 +1354,6 @@ export default function ProfilesPage() {
                 </div>
               )}
 
-              {/* Proxy Tab */}
               {activeTab === 'Proxy' && (
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
@@ -1517,7 +1418,6 @@ export default function ProfilesPage() {
                     </div>
                   )}
 
-                  {/* Network - per-profile HTTP/3 (QUIC) toggle */}
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.network')}</label>
@@ -1549,7 +1449,6 @@ export default function ProfilesPage() {
                 </div>
               )}
 
-              {/* Platform Tab */}
               {activeTab === 'Platform' && (
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
@@ -1584,7 +1483,6 @@ export default function ProfilesPage() {
 
                   <div className="w-full h-px bg-border"></div>
 
-                  {/* Softglaze Premium - native 2FA vault */}
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <div className="text-left lg:text-right mt-2">
                       <label htmlFor="pf-platform-2fa" className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('platform.twoFactor')}</label>
@@ -1607,7 +1505,6 @@ export default function ProfilesPage() {
                 </div>
               )}
 
-              {/* COMPREHENSIVE FINGERPRINT TAB */}
               {activeTab === 'Fingerprint' && (
                 <div className="max-w-4xl pr-4 pb-10">
                   <div className="flex items-center gap-2.5 mb-6">
@@ -1831,12 +1728,7 @@ export default function ProfilesPage() {
                   <FpRow label={t('fp.portScanProtection')}>
                     <div className="flex flex-col gap-1.5">
                       <ButtonTabs value={pd.portScanProtection} onChange={v => updatePd('portScanProtection', v)} options={['Enable', 'Close']} />
-                      {/* A genuine trade-off, so state it rather than defaulting it on
-                          silently. Enabling this replaces window.fetch,
-                          XMLHttpRequest.prototype.open and window.WebSocket in page JS to
-                          block requests aimed at private IPs. Real sites detect that: a
-                          live console logged "native JS function modified: window.fetch"
-                          on a page that then refused account creation. Now off by default. */}
+                      {/* Off by default: it wraps fetch, XHR and WebSocket in page JS, which real sites detect. */}
                       {/^enable/i.test(String(pd.portScanProtection || '')) && (
                         <span className="flex items-start gap-1.5 text-[11px] text-amber-500">
                           <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />
@@ -1861,7 +1753,6 @@ export default function ProfilesPage() {
                 </div>
               )}
 
-              {/* NEW ADVANCED TAB */}
               {activeTab === 'Advanced' && (
                 <div className="max-w-4xl pr-4 pb-10">
                   <div className="flex items-center gap-2.5 mb-6">
@@ -1944,7 +1835,6 @@ export default function ProfilesPage() {
               )}
             </div>
 
-            {/* Bottom Actions */}
             <div className="bg-surface border-t border-border p-5 flex justify-end gap-3 shrink-0 rounded-b">
               <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 mr-1.5" /> {t('editor.previewEnvironment')}</Button>
               <div className="flex-1" />
@@ -1953,7 +1843,6 @@ export default function ProfilesPage() {
             </div>
           </div>
 
-          {/* Right Sidebar Matrix */}
           <div className="hidden lg:flex w-80 shrink-0 bg-surface rounded border border-border p-5 flex-col shadow-sm h-fit sticky top-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t('env.overview')}</h2>
@@ -2033,7 +1922,7 @@ export default function ProfilesPage() {
     );
   }
 
-  // --- LIST VIEW ---
+  // ---- List view ----
   return (
     <>
       <PageHeader
@@ -2062,7 +1951,6 @@ export default function ProfilesPage() {
         }
       />
 
-      {/* Tinted glow stat cards - REAL derived counts only */}
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div
           className="rounded-xl p-4 flex items-center gap-3 animate-fade-up"
@@ -2134,15 +2022,7 @@ export default function ProfilesPage() {
         </div>
       )}
 
-      {/* Shown when there is a selection OR a bulk queue is in flight. The queue's
-          Stop/Pause/Resume controls used to be nested inside the selection gate, so a
-          remount (navigate away and back) emptied selectedIds and hid the only way to
-          stop a running queue - even once its progress had been restored.
-
-          flex-wrap matters here: with a selection AND a queue in flight this row carries
-          the count, the progress text, Pause/Stop, the queue width control and ten action
-          buttons. Unwrapped they overflowed the panel and Delete/Clear were clipped off
-          the right edge of the window at ordinary widths. */}
+      {/* Also shown while a queue runs, so Stop survives a remount; flex-wrap keeps every button visible. */}
       {(selectedIds.size > 0 || launchProgress) && (
         <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-primary/30 bg-primary/5 px-5 py-3.5 shadow-glow shadow-primary/10 transition-all">
           {selectedIds.size > 0 && <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>}
@@ -2176,8 +2056,7 @@ export default function ProfilesPage() {
             <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground cursor-pointer select-none" title={t('bulk.queueTitle', 'Feed the selected profiles through a queue: keep a fixed number open at a time and start the next one as each is closed.')}>
               <input type="checkbox" checked={launchQueue} onChange={(e) => setLaunchQueue(e.target.checked)} disabled={bulkBusy} className="accent-primary" /> {t('bulk.queue', 'Queue')}
             </label>
-            {/* How many the queue keeps open at once. Each slot is held until the user
-                closes that browser, then the next profile fills it. */}
+            {/* Slots the queue keeps open; each frees when its browser closes. */}
             {launchQueue && (
               <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 select-none" title={t('bulk.queueWidthTitle', 'How many profiles stay open at the same time. The next one opens as soon as you close one.')}>
                 <select

@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 
-// Format a plan price using the plan's own currency (USD gets a $ glyph).
 function money(amount, currency) {
   const a = String(amount ?? '');
   return currency === 'USD' ? `$${a}` : `${a} ${currency || ''}`.trim();
@@ -39,7 +38,7 @@ export default function BillingPage() {
 
   // Checkout + redeem state lives at page level so the panel persists across cards.
   const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(''); // '' | 'redeem' | planId
+  const [busy, setBusy] = useState(''); // '' | 'redeem' | 'trial' | '<planId>:<methodId>'
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [checkout, setCheckout] = useState(null); // { url, uuid, orderId, planName }
@@ -68,7 +67,6 @@ export default function BillingPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
-  // a11y: close the inline payment-method picker on Escape while it's open.
   useEffect(() => {
     if (!payFor) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setPayFor(null); } };
@@ -88,7 +86,6 @@ export default function BillingPage() {
     finally { setBusy(''); }
   }
 
-  // Start the full-access free trial for this workspace.
   async function startTrial() {
     setErr(''); setMsg(''); setBusy('trial');
     try {
@@ -100,8 +97,7 @@ export default function BillingPage() {
     finally { setBusy(''); }
   }
 
-  // Open the method picker for a plan. If exactly one automated method is
-  // enabled, start it immediately (no extra click).
+  // When the only enabled method is automated, start it without opening the picker.
   function openPay(plan) {
     setErr(''); setMsg(''); setManualRef(''); setManualNote(''); setManualDone(false);
     const autos = methods.filter((m) => m.kind === 'automated');
@@ -121,9 +117,7 @@ export default function BillingPage() {
       setPayFor(null);
       setCheckout({ ...c, planName: c.planName || plan.name });
       try { window.open(c.url, '_blank'); } catch (e) { /* user can click the link */ }
-      // audit: clear any prior poll before starting a new one - a second checkout
-      // (or a different plan) would otherwise orphan interval #1, which keeps polling
-      // and calling load() forever.
+      // Clear any prior poll first, or a second checkout orphans the old interval and it polls forever.
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       // Desktop apps can't receive webhooks - poll for completion.
       pollRef.current = setInterval(async () => {
@@ -162,12 +156,13 @@ export default function BillingPage() {
   const isPaid = Boolean(license?.isPaid);
   const plans = (plansInfo && Array.isArray(plansInfo.plans)) ? plansInfo.plans : [];
 
-  // CTA label/state for a given plan card given the viewer's current license.
   function planCta(plan) {
     if (plan.kind === 'trial') {
       if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown, trial: true };
       if (isPaid) return { label: t('cta.onPaidPlan'), disabled: true, icon: Check, trial: true };
       if (license?.isTrial) return { label: t('cta.trialActiveDaysLeft', { days: license.daysLeftTrial ?? '' }), disabled: true, icon: Sparkles, trial: true };
+      // One free trial per workspace: once used (or after a paid term) it cannot restart.
+      if (license?.trialUsed) return { label: t('cta.trialUsed'), disabled: true, icon: Sparkles, trial: true };
       return { label: t('cta.startFreeTrial'), disabled: false, icon: Sparkles, trial: true };
     }
     if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown };
@@ -179,7 +174,6 @@ export default function BillingPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
       <div>
         <h1 className="font-display text-[22px] font-semibold tracking-tight text-foreground flex items-center gap-2.5">
           <CreditCard className="w-5 h-5 text-primary" /> {t('header.title')}
@@ -187,7 +181,6 @@ export default function BillingPage() {
         <p className="text-[13px] text-muted-foreground mt-1">{t('header.description')}</p>
       </div>
 
-      {/* Backend-licensed build: show the verified-license status */}
       {backend?.enabled && (
         <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg" style={{ background: 'color-mix(in srgb, #10b981 8%, transparent)', border: '1px solid color-mix(in srgb, #10b981 22%, transparent)' }}>
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -200,7 +193,6 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Current subscription */}
       <div className="rounded-xl bg-card border border-border p-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
@@ -250,7 +242,6 @@ export default function BillingPage() {
         )}
       </div>
 
-      {/* Active checkout panel */}
       {checkout && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
           <div className="flex items-center gap-2 text-[13px] text-foreground"><Loader2 className="w-4 h-4 animate-spin text-primary" /> {checkout.planName ? t('checkout.waitingForPlan', { plan: checkout.planName }) : t('checkout.waiting')}</div>
@@ -262,7 +253,6 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Plan comparison */}
       {!isExempt && plans.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t('plans.chooseHeading')}</h2>
@@ -325,7 +315,6 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Redeem code */}
       {!isExempt && (
         <div className="rounded-xl bg-card border border-border p-5">
           <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('redeem.label')}</label>
@@ -341,14 +330,11 @@ export default function BillingPage() {
       {msg && <p className="text-[12px] text-emerald-400 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />{msg}</p>}
       {err && <p className="text-[12px] text-red-400">{err}</p>}
 
-      {/* Super-Admin console - plan editor + subscribers + assign */}
       {me?.role === 'SUPER_ADMIN' && <PlanManager onChange={load} />}
       {me?.role === 'SUPER_ADMIN' && <SubscribersSection />}
 
-      {/* Invoices */}
       <InvoicesSection />
 
-      {/* Payment-method picker */}
       {payFor && (() => {
         const sel = methods.find((m) => m.id === selMethod) || null;
         return (
@@ -368,7 +354,6 @@ export default function BillingPage() {
                 </div>
               ) : (
                 <>
-                  {/* Method chooser */}
                   <div className="space-y-1.5">
                     {methods.map((m) => {
                       const active = m.id === selMethod;
@@ -391,7 +376,6 @@ export default function BillingPage() {
                     })}
                   </div>
 
-                  {/* Action for the selected method */}
                   {sel && sel.kind === 'automated' && (
                     <button
                       onClick={() => payAutomated(payFor, sel)}
@@ -428,7 +412,6 @@ export default function BillingPage() {
         );
       })()}
 
-      {/* Gateway config shortcut for admins */}
       {me?.role === 'SUPER_ADMIN' && (
         <button onClick={() => navigate('/settings')} className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground">
           <Settings2 className="w-3.5 h-3.5" /> {t('admin.configureMethods')}
@@ -597,9 +580,7 @@ function InvoiceForm({ invoice, onClose, onSaved }) {
   );
 }
 
-// ── Super-Admin: plan editor ──────────────────────────────────────────────────
-// Edit prices/details of existing packages, toggle active/highlight, create new
-// packages, delete. Writes the live catalog that drives checkout + the cards above.
+// Super-Admin plan editor; writes the live catalog that drives checkout and the plan cards.
 function PlanManager({ onChange }) {
   const { t } = useTranslation('billing');
   const [plans, setPlans] = useState(null);
@@ -761,8 +742,7 @@ function PlanForm({ plan, onClose, onSaved }) {
   );
 }
 
-// ── Super-Admin: subscribers ──────────────────────────────────────────────────
-// Every owner tree with join date, plan, expiry + a one-click "assign plan" action.
+// Super-Admin list of owner trees with join date, plan and expiry, plus one-click plan assignment.
 function SubscribersSection() {
   const { t } = useTranslation('billing');
   const [rows, setRows] = useState(null);

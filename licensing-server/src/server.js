@@ -1,7 +1,6 @@
 'use strict';
-// SoftGlaze licensing server — Express bootstrap.
-// IMPORTANT: the webhook router is mounted BEFORE express.json() because Stripe
-// signature verification needs the raw request body.
+// The webhook router is mounted before express.json() because Stripe signature verification needs
+// the raw request body.
 const express = require('express');
 const { port } = require('./env');
 const { rateLimit } = require('./middleware/rateLimit');
@@ -16,7 +15,6 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'softglaze-licens
 // rate-limited here; authenticity is enforced by per-tenant signature checks.
 app.use('/v1/webhooks', require('./routes/webhooks'));
 
-// JSON parser for the rest.
 app.use(express.json({ limit: '256kb' }));
 
 // Basic abuse protection on the public, unauthenticated endpoints.

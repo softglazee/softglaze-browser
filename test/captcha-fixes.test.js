@@ -27,7 +27,10 @@ test('1: every profile launch sets a fixed DevTools port, never port 0', () => {
   const launchAt = ENGINE.indexOf('browser = await engine.launch(launchOptions)');
   const portAt = ENGINE.indexOf('launchOptions.debuggingPort = await getFreeLocalPort()');
   assert.ok(portAt > 0 && portAt < launchAt, 'the port is set before the launch call');
-  assert.match(ENGINE, /ignoreDefaultArgs: \['--enable-automation'\]/, 'the automation flag stays stripped');
+  // The automation flag stays stripped, now as part of the page-observable default
+  // switches that are dropped together (test/antidetectLaunchLeaks.test.js).
+  assert.match(ENGINE, /ignoreDefaultArgs: \[\.\.\.PUPPETEER_DEFAULT_ARGS_TO_DROP\]/, 'the launch drops the listed defaults');
+  assert.match(ENGINE, /const PUPPETEER_DEFAULT_ARGS_TO_DROP = Object\.freeze\(\[\s*'--enable-automation',/, 'the automation flag stays stripped');
 });
 
 test('2: pickGeoConsensus takes the majority country and its timezone', () => {

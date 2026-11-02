@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fingerprint, X, Cpu, MemoryStick, Monitor, Globe, ShieldCheck, Languages, Clock, MapPin, Network } from 'lucide-react';
+import { Fingerprint, X, Cpu, Monitor, Globe, ShieldCheck, Clock, Network } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
 // Build a representative User-Agent string from the profile's OS + version, so
@@ -11,12 +11,9 @@ function buildUa(p) {
   if (os.includes('mac')) platform = 'Macintosh; Intel Mac OS X 10_15_7';
   else if (os.includes('linux')) platform = 'X11; Linux x86_64';
   else if (os.includes('android')) platform = 'Linux; Android 13; Pixel 7';
-  // The launch engine uses the REAL Chrome binary matching browserVersion, so the
-  // version shown here must follow browserVersion - NOT any stale stored userAgent
-  // string (which the engine ignores). Prefer browserVersion; fall back to an
-  // explicit custom UA only when no numeric version is set.
-  // Chromium-family identity token, mirroring the launch engine. The Chromium
-  // major stays the real binary's; only the vendor token differs.
+  // The engine runs the real Chrome binary for browserVersion and ignores any stored UA, so follow
+  // browserVersion and fall back to a custom UA only when no numeric version is set. Brand tokens
+  // mirror the engine: the Chromium major stays real, only the vendor token differs.
   const brandTokens = (m) => {
     const b = String(p.browserBrand || '').toLowerCase();
     if (b.includes('edge')) return { infix: '', suffix: ` Edg/${m}.0.0.0` };

@@ -1,17 +1,10 @@
-// Clean, dependency-free SVG chart kit for the Dashboard.
-//
-// Zero install (no recharts/d3) and strictly on-brand: every colour is a design
-// token (var(--chart-1..5), var(--success|warning|destructive), var(--foreground),
-// var(--muted-foreground), var(--border), var(--elevated)) so the charts re-theme
-// with the app in BOTH light and dark. No decorative gradients, no glow/blur -
-// the only gradient is a functional area fade under a line (standard data-viz).
-// Each chart carries an accessible role="img" + aria-label summary.
+// Dependency-free SVG chart kit. Every colour is a design token so charts re-theme in light and
+// dark; each chart carries role="img" and an aria-label summary.
 import { useId } from 'react';
 
 const GRID = 'color-mix(in srgb, var(--foreground) 9%, transparent)';
 const AXIS = 'var(--muted-foreground)';
 
-// ---- Sparkline: line + subtle functional area fill ----------------------
 export function Sparkline({ data = [], color = 'var(--chart-1)', height = 150, labels = [], ariaLabel }) {
   const gid = useId().replace(/:/g, '');
   const vals = data.length ? data : [0];
@@ -45,7 +38,6 @@ export function Sparkline({ data = [], color = 'var(--chart-1)', height = 150, l
   );
 }
 
-// ---- Vertical bars (e.g. a 7-day series) --------------------------------
 export function Bars({ data = [], labels = [], color = 'var(--chart-1)', height = 150, ariaLabel, formatValue }) {
   const vals = data.length ? data : [0];
   const W = 600, H = height, padT = 12, padB = labels.length ? 22 : 8, padL = 6, padR = 6;
@@ -75,7 +67,6 @@ export function Bars({ data = [], labels = [], color = 'var(--chart-1)', height 
   );
 }
 
-// ---- Donut: proportional segments + centre label ------------------------
 export function Donut({ segments = [], size = 160, thickness = 20, centerLabel, centerSub, ariaLabel }) {
   const total = segments.reduce((s, d) => s + (d.value || 0), 0);
   const r = (size - thickness) / 2;
@@ -120,7 +111,6 @@ export function Legend({ items = [], total }) {
   );
 }
 
-// ---- Horizontal bars (e.g. top countries) -------------------------------
 export function HBars({ rows = [], color = 'var(--chart-1)', ariaLabel, emptyLabel }) {
   const max = Math.max(1, ...rows.map((r) => r.value || 0));
   if (rows.length === 0) {
@@ -141,7 +131,6 @@ export function HBars({ rows = [], color = 'var(--chart-1)', ariaLabel, emptyLab
   );
 }
 
-// ---- Progress meter (solid fill, token colour) --------------------------
 export function Meter({ label, value = 0, color = 'var(--chart-1)', suffix = '%', caption }) {
   const pct = Math.max(0, Math.min(100, value));
   return (

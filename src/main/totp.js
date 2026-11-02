@@ -1,19 +1,9 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Premium - native TOTP (RFC 6238) generator.
-//
-// Implemented with node:crypto only (no otplib dependency) so the 2FA vault has
-// zero install footprint and is fully self-contained. Verified against the
-// official RFC 6238 SHA-1 test vectors (see the test at the bottom of the repo's
-// verification run). Swap to otplib later if desired - the public surface
-// (generateTotp / totpToken) stays the same.
-// ---------------------------------------------------------------------------
+// RFC 6238 TOTP on node:crypto only, so the 2FA vault needs no extra dependency.
 const crypto = require('node:crypto');
 
-// Decode an RFC 4648 base32 string (the format authenticator seeds use). Spaces,
-// hyphens and lower-case are tolerated; '=' padding is ignored. Throws on an
-// invalid character so a bad seed surfaces clearly instead of producing a wrong
-// code silently.
+// Decodes RFC 4648 base32 (authenticator seeds): tolerates spaces, hyphens and lower case, ignores
+// = padding, and throws on a bad character instead of yielding a wrong code.
 function base32Decode(input) {
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const clean = String(input || '').toUpperCase().replace(/[\s-]/g, '').replace(/=+$/, '');
@@ -34,9 +24,7 @@ function base32Decode(input) {
   return Buffer.from(out);
 }
 
-// Generate a TOTP/HOTP code. Returns the zero-padded code string.
-//   secret   base32 string
-//   options  { digits=6, period=30, algorithm='sha1', timestampMs, counter }
+// Zero-padded code. options: { digits=6, period=30, algorithm='sha1', timestampMs, counter }
 function generateTotp(secret, options = {}) {
   const digits = Number(options.digits) || 6;
   const period = Number(options.period) || 30;
@@ -64,7 +52,7 @@ function generateTotp(secret, options = {}) {
   return code;
 }
 
-// Convenience: return { token, period, secondsRemaining } for live UI display.
+// Returns { token, period, secondsRemaining } for the live UI.
 function totpToken(secret, options = {}) {
   const period = Number(options.period) || 30;
   const nowMs = Number(options.timestampMs) || Date.now();

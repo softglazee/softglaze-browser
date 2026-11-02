@@ -1,8 +1,6 @@
 import React from 'react';
 
-// Shadcn-style toggle switch (no external dependency). Controlled:
-//   <Switch checked={bool} onChange={(next) => …} />
-// `onChange` receives the NEXT boolean value.
+// Controlled toggle: onChange receives the next boolean value.
 export default function Switch({ checked, onChange, disabled = false, label, className = '' }) {
   return (
     <button

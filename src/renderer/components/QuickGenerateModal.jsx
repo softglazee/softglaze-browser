@@ -6,8 +6,7 @@ import { countBuckets } from '@/lib/proxyBuckets.mjs';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
-// Polished dropdown: hide the native OS arrow and paint an inset chevron so the icon
-// isn't glued to the field edge (matches the rest of the app's styled selects).
+// Hide the native arrow and paint an inset chevron, matching the app's other selects.
 const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
 const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
 
@@ -17,7 +16,6 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const { t } = useTranslation('cmpModalsC');
   const [count, setCount] = useState(5);
   const [baseName, setBaseName] = useState('Profile');
-  const [startIndex, setStartIndex] = useState(1);
   const [groupId, setGroupId] = useState('ungrouped');
   const [newGroupName, setNewGroupName] = useState('');
   const [os, setOs] = useState(osPlatforms[0]?.id || 'Windows');
@@ -41,7 +39,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     { id: 'pool', label: t('quickGenerate.proxyModePool', { count: proxies.length }), icon: Server },
     { id: 'paste', label: t('quickGenerate.proxyModePaste'), icon: ListPlus }
   ];
-  const start = Number(startIndex) || 1;
+  const start = 1;
   const pad = (x) => String(x).padStart(3, '0');
 
   // Distinct providers present in the pool (for "create from <provider> proxies").
@@ -49,8 +47,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   for (const p of proxies) { if (p.provider) providerCounts[p.provider] = (providerCounts[p.provider] || 0) + 1; }
   const providers = Object.entries(providerCounts);
 
-  // Pool quality tallies (same thresholds as the Proxy Pool page) so the user can
-  // see how many proxies match a Fast/Slow or Clean/Blacklisted filter up front.
+  // Same thresholds as the Proxy Pool page, so Fast/Slow and Clean/Blacklisted counts show up front.
   const q = countBuckets(proxies);
 
   // Map the UI proxy choice to the server-side assignment mode.
@@ -60,8 +57,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     return assignUnique ? 'unique' : 'pool';
   }
 
-  // Inline "create group" - create it immediately, select it, and hide the input.
-  // Falls back to the deferred create-on-generate path if onCreateGroup isn't given.
+  // Creates and selects the group at once; without onCreateGroup the group is created on generate.
   async function saveNewGroup() {
     const name = newGroupName.trim();
     if (!name || !onCreateGroup || savingGroup) return;
@@ -101,8 +97,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
         },
         (done, total) => setProgress({ done, total })
       );
-      // Surface the result - especially the "capped at N proxies" notice - instead of
-      // silently closing, so the user knows exactly how many profiles were created.
+      // Show the result (notably the "capped at N proxies" notice) instead of closing silently.
       if (r && (r.proxyLimited || (Array.isArray(r.errors) && r.errors.length))) {
         setResult(r); setBusy(false);
       } else {
@@ -210,7 +205,6 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           {proxyMode === 'pool' && (
             <div className="space-y-2">
               <label className={labelCls}>{t('quickGenerate.quality')}</label>
-              {/* Speed - narrow the pool to fast / slow proxies before assigning */}
               <div className="flex items-center gap-2">
                 <span className="w-16 shrink-0 text-[11px] text-muted-dark">{t('quickGenerate.qSpeed')}</span>
                 <div className="flex-1 flex items-center gap-1 rounded-lg border border-border bg-background p-1">
@@ -226,7 +220,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
                   ))}
                 </div>
               </div>
-              {/* Blocklist - clean vs flagged (from the DNSBL health check) */}
+              {/* Blocklist status comes from the DNSBL health check */}
               <div className="flex items-center gap-2">
                 <span className="w-16 shrink-0 text-[11px] text-muted-dark">{t('quickGenerate.qBlocklist')}</span>
                 <div className="flex-1 flex items-center gap-1 rounded-lg border border-border bg-background p-1">

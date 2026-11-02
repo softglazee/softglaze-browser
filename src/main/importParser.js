@@ -13,20 +13,17 @@ function normalizeHeader(value) {
 }
 
 const HEADER_ALIASES = Object.freeze({
-  // --- Profile & group basics ---
   title: ['profile title', 'profile name', 'name', 'title', 'browser profile', 'account name'],
   group: ['group name', 'group', 'group management', 'folder', 'category'],
   notes: ['profile notes', 'notes', 'remark', 'remarks', 'description'],
   dataDirName: ['data dir name', 'data directory', 'profile directory', 'folder path', 'user data dir'],
 
-  // --- Core browser & system environment ---
   os: ['operating system', 'os', 'platform', 'target os'],
   browserCore: ['browser core', 'browser engine', 'core', 'browser type', 'browser kernel'],
   browserBrand: ['browser brand', 'brand', 'browser identity', 'identity', 'browser flavor'],
   userAgent: ['user-agent', 'ua', 'ua(user agent)', 'user agent', 'useragent', 'ua user agent'],
   resolution: ['screen resolution', 'resolution', 'screen size'],
 
-  // --- Proxy configuration ---
   proxyMethod: ['proxy method', 'proxy mode', 'proxy way'],
   proxyType: ['proxy protocol', 'protocol', 'proxy type'],
   proxyId: ['proxy id', 'saved proxy id', 'proxy reference'],
@@ -41,7 +38,6 @@ const HEADER_ALIASES = Object.freeze({
   proxyPassword: ['proxy password', 'proxy pass'],
   proxyRotationUrl: ['proxy rotation url', 'rotation url', 'refresh url', 'change ip url'],
 
-  // --- Advanced fingerprinting & hardware spoofing ---
   webrtc: ['webrtc', 'webrtc mode', 'web rtc'],
   canvas: ['canvas', 'canvas mode', 'canvas spoofing'],
   webgl: ['webgl', 'webgl mode', 'webgl behavior'],
@@ -52,7 +48,6 @@ const HEADER_ALIASES = Object.freeze({
   ram: ['device memory', 'memory', 'ram', 'ram gb'],
   dnt: ['do not track', 'dnt'],
 
-  // --- Localization & spacetime ---
   timezoneMode: ['timezone mode', 'tz mode'],
   timezoneVal: ['custom timezone', 'timezone', 'time zone', 'tz'],
   localeMode: ['locale mode', 'language mode'],
@@ -61,7 +56,7 @@ const HEADER_ALIASES = Object.freeze({
   latitude: ['latitude', 'lat'],
   longitude: ['longitude', 'lng', 'lon', 'long'],
 
-  // --- Platform account credentials (NOT proxy creds) ---
+  // Platform account credentials, not proxy creds
   accountUsername: ['account username', 'username', 'user name', 'login'],
   accountPassword: ['account password', 'login password', 'password', 'pass'],
   twoFa: ['2fa key', '2fa', 'two factor', 'otp secret', 'totp', '2fa secret', 'authenticator'],
@@ -74,13 +69,8 @@ const HEADER_ALIASES = Object.freeze({
   country: ['country', 'country/region', 'region', 'geo', 'location', 'proxy country', 'target country']
 });
 
-// Multi-word instruction PHRASES that mark a template's note/instruction rows
-// (which only sit ABOVE the first real data row). audit: the old list matched bare
-// single words like "example"/"note "/"optional"/"purchased", so legitimate
-// profiles titled e.g. "Example Corp" or "Notes Account" were silently dropped.
-// These phrases are unambiguous instruction fragments that never occur in a real
-// profile title, and detection is additionally gap-limited to the pre-data rows
-// (see parseWorkbookFile) so nothing below the first data row can be lost.
+// Phrases that mark a template's instruction rows. Bare words like "example" would drop real
+// profiles ("Example Corp"), and detection only runs above the first data row (parseWorkbookFile).
 const INSTRUCTION_PHRASES = [
   'please enter', 'please refer', 'please fill', 'please note', 'open the browser',
   'fill in the', 'the data is entered', 'for example', 'e.g.', 'it is required',
@@ -117,10 +107,7 @@ function findColumnIndex(headers, aliases) {
 function detectHeaderRowIndex(rows) {
   const maxScan = Math.min(rows.length, 30);
 
-  // Scan from the VERY FIRST row. Some spreadsheet templates put the column
-  // titles on row 1 with instruction rows below them and data starting on row 4 -
-  // the old code started at row 3 and treated a data row as the header, which is
-  // exactly why "Could not detect a profile title column" was thrown.
+  // Scan from the first row: some templates put headers on row 1, instructions below, data from row 4.
   let best = -1, bestScore = 0;
   for (let index = 0; index < maxScan; index += 1) {
     const row = rows[index] || [];
@@ -181,9 +168,8 @@ function normalizeOs(value) {
 // Engine identifiers stored in Profile.browserCore.
 const BROWSER_CORE = Object.freeze({ CHROMIUM: 'Chromium', FIREFOX: 'Firefox' });
 
-// Legacy engine names, accepted on INPUT ONLY: spreadsheets written for other
-// tools, exports and sync payloads from builds before the rename. This file is the
-// only place they appear. They are never stored, exported or shown in the UI.
+// Legacy engine names from other tools' sheets and older exports/sync payloads. Accepted on input
+// only, never stored, exported or shown; this file is the only place they appear.
 const LEGACY_FIREFOX_CORE_NAMES = Object.freeze(['flowerbrowser', 'flower']);
 const LEGACY_CHROMIUM_CORE_NAMES = Object.freeze(['sunbrowser', 'sun']);
 
@@ -196,10 +182,8 @@ function normalizeBrowserCore(value) {
   return null;
 }
 
-// The value to persist for an incoming engine name. The launcher routes every
-// non-Firefox profile to Chromium, so anything unrecognised is stored as Chromium.
-// undefined / null / '' pass through unchanged so "field not provided" keeps its
-// meaning on partial updates.
+// Anything unrecognised is stored as Chromium, since the launcher routes every non-Firefox profile
+// there. undefined/null/'' pass through so "not provided" keeps its meaning on partial updates.
 function toStoredBrowserCore(value) {
   if (value === undefined || value === null || value === '') return value;
   return normalizeBrowserCore(value) || BROWSER_CORE.CHROMIUM;
@@ -219,10 +203,7 @@ function normalizeBrowserBrand(value) {
 }
 
 function parseResolution(value) {
-  // audit: the previous regex had three adjacent whitespace-matching groups
-  // (\s* [x×*by ]+ \s*) → polynomial backtracking (ReDoS) on a cell like
-  // "100" + " ".repeat(50000). Bound the input AND use a single, bounded
-  // separator character class so there is no overlapping/unbounded matching.
+  // Bounded input and a single bounded separator class avoid polynomial backtracking (ReDoS).
   const s = String(value || '').slice(0, 64);
   const m = /(\d{3,5})[\sx×*by]{1,8}(\d{3,5})/i.exec(s);
   if (!m) return null;
@@ -308,16 +289,12 @@ function rowLooksEmpty(row) {
   return row.every((cell) => cellText(cell) === '');
 }
 
-// audit: parseWorkbookFile had NO row cap (unlike parseDataRows), so a huge/hostile
-// sheet built an unbounded items array and froze the main thread. Cap it.
+// Row cap so a huge or hostile sheet cannot build an unbounded array and freeze the main thread.
 const MAX_IMPORT_ROWS = 5000;
 const MAX_IMPORT_FILE_BYTES = 25 * 1024 * 1024; // 25 MB on-disk cap for an import file
 
-// audit: XLSX.readFile + sheet_to_json materialize the ENTIRE declared sheet before
-// any row cap applies, so a small hostile .xlsx declaring millions of rows OOMs the
-// main thread. Bound the on-disk size up front, and pass `sheetRows` so the parse
-// itself reads only up to the cap (SheetJS stops at that row) instead of expanding
-// the whole range into memory.
+// XLSX.readFile materializes the whole declared sheet before any row cap, so a tiny hostile .xlsx
+// can OOM the main thread. Cap the file size and pass `sheetRows` so SheetJS stops at the cap.
 function assertImportFileSane(filePath) {
   try {
     const st = require('node:fs').statSync(filePath);
@@ -365,13 +342,11 @@ function parseWorkbookFile(filePath) {
     systemProxyBehavior: findColumnIndex(headers, HEADER_ALIASES.systemProxyBehavior),
     dataDirName: findColumnIndex(headers, HEADER_ALIASES.dataDirName),
     country: findColumnIndex(headers, HEADER_ALIASES.country),
-    // Core environment
     os: findColumnIndex(headers, HEADER_ALIASES.os),
     browserCore: findColumnIndex(headers, HEADER_ALIASES.browserCore),
     browserBrand: findColumnIndex(headers, HEADER_ALIASES.browserBrand),
     resolution: findColumnIndex(headers, HEADER_ALIASES.resolution),
     proxyRotationUrl: findColumnIndex(headers, HEADER_ALIASES.proxyRotationUrl),
-    // Fingerprint / hardware
     webrtc: findColumnIndex(headers, HEADER_ALIASES.webrtc),
     canvas: findColumnIndex(headers, HEADER_ALIASES.canvas),
     webgl: findColumnIndex(headers, HEADER_ALIASES.webgl),
@@ -381,7 +356,6 @@ function parseWorkbookFile(filePath) {
     cpuCores: findColumnIndex(headers, HEADER_ALIASES.cpuCores),
     ram: findColumnIndex(headers, HEADER_ALIASES.ram),
     dnt: findColumnIndex(headers, HEADER_ALIASES.dnt),
-    // Localization & spacetime
     timezoneMode: findColumnIndex(headers, HEADER_ALIASES.timezoneMode),
     timezoneVal: findColumnIndex(headers, HEADER_ALIASES.timezoneVal),
     localeMode: findColumnIndex(headers, HEADER_ALIASES.localeMode),
@@ -405,9 +379,8 @@ function parseWorkbookFile(filePath) {
     if (items.length >= MAX_IMPORT_ROWS) { truncated = true; break; }
     const row = rows[rowIndex] || [];
     if (rowLooksEmpty(row)) continue;
-    // Instruction/note rows only sit ABOVE the first real data row. Once one profile
-    // has been imported, stop treating rows as instructions so a legitimate profile
-    // titled "Example Corp" / "Notes Account" is never silently dropped (audit).
+    // Instruction rows only sit above the first data row; after one profile is imported, stop checking
+    // so a profile titled "Example Corp" is never dropped.
     if (!sawData && looksLikeInstructionRow(row, columns.title)) {
       const skippedTitle = getCell(row, columns.title);
       if (skippedTitle) skipped.push({ row: rowIndex + 1, title: skippedTitle });
@@ -453,22 +426,20 @@ function parseWorkbookFile(filePath) {
         userAgent: getCell(row, columns.userAgent),
         openUrl: getCell(row, columns.openUrl),
         notes: getCell(row, columns.notes),
-        // Dedicated Group column (aliases: group / group name / folder / category),
-        // falling back to a legacy "Group Management"-style tag column if present.
+        // Falls back to a legacy "Group Management"-style tag column.
         group: getCell(row, columns.group) || getCell(row, columns.tagManagement),
         tagManagement: parseBooleanInt(getCell(row, columns.tagManagement)),
         systemProxyBehavior,
         dataDirName: getCell(row, columns.dataDirName) || title,
         country: getCell(row, columns.country),
 
-        // --- Core environment ---
         os: normalizeOs(getCell(row, columns.os)),
         browserCore: normalizeBrowserCore(getCell(row, columns.browserCore)),
         browserBrand: normalizeBrowserBrand(getCell(row, columns.browserBrand)),
         resolutionW: res ? res.w : null,
         resolutionH: res ? res.h : null,
 
-        // --- Fingerprint / hardware (undefined = keep generated default) ---
+        // undefined keeps the generated default
         webrtc: normalizeWebrtc(getCell(row, columns.webrtc)),
         canvasNoise: modeToNoise(getCell(row, columns.canvas)),
         webglNoise: modeToNoise(getCell(row, columns.webgl)),
@@ -479,7 +450,6 @@ function parseWorkbookFile(filePath) {
         ramGb: getCell(row, columns.ram),
         doNotTrack: normalizeDnt(getCell(row, columns.dnt)),
 
-        // --- Localization & spacetime ---
         timezoneType: tzManual === null ? (tzVal ? 'Custom' : null) : (tzManual ? 'Custom' : 'Based on IP'),
         timezoneCustom: tzVal,
         languageType: localeManual === null ? (localeVal ? 'Custom' : null) : (localeManual ? 'Custom' : 'Based on IP'),
@@ -510,12 +480,8 @@ function parseWorkbookFile(filePath) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Generic spreadsheet -> rows-as-objects parser, used by data-driven parallel
-// macro runs. Unlike parseWorkbookFile (which maps known profile-import columns),
-// this keeps the sheet verbatim: row 1 = headers, each later row -> an object
-// keyed by header text. Macro steps reference these via {{Header}} placeholders.
-// ---------------------------------------------------------------------------
+// Generic sheet parser for data-driven macro runs: row 1 = headers, each later row = an object
+// keyed by header text, referenced from macro steps as {{Header}}.
 const MAX_DATA_ROWS = 1000;
 
 function parseDataRows(filePath) {
@@ -535,9 +501,7 @@ function parseDataRows(filePath) {
   for (let i = 1; i < matrix.length && rows.length < MAX_DATA_ROWS; i += 1) {
     const row = matrix[i] || [];
     if (rowLooksEmpty(row)) continue;
-    // audit: keys come from user-controlled header cells, so a header named
-    // "__proto__"/"constructor"/"prototype" could pollute Object.prototype. Build
-    // on a null-prototype object AND skip those keys defensively.
+    // Keys come from user-controlled headers: null-prototype object, and prototype-polluting names skipped.
     const obj = Object.create(null);
     rawHeaders.forEach((header, idx) => {
       if (header && header !== '__proto__' && header !== 'constructor' && header !== 'prototype') {
@@ -558,7 +522,6 @@ function parseDataRows(filePath) {
 module.exports = {
   parseWorkbookFile,
   parseDataRows,
-  parseBooleanInt,
   parseSystemProxyBehavior,
   BROWSER_CORE,
   normalizeBrowserCore,

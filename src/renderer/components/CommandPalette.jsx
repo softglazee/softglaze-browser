@@ -10,17 +10,13 @@ import i18n from '@/i18n/index.js';
 import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
 import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
 
-// Register the "cmpOverlays" namespace without touching the central i18n config.
-// addResourceBundle is a no-op if the bundle already exists, so this is safe
-// across hot reloads (and the OnboardingWizard performing the same registration).
+// Registers cmpOverlays without touching the central i18n config; the guard keeps it safe across
+// hot reloads and the OnboardingWizard's identical registration.
 if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
 if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
-// Global Ctrl/Cmd-K command palette. No new dependency - a window keydown listener,
-// the existing router, and the existing list APIs. Jumps to any page and searches
-// profiles / proxies / members. Mounted once in AppShell so it's available app-wide.
-// `labelKey` is resolved to a translated display name at render time (module scope
-// can't call the hook); the search filter matches on that translated label.
+// Global Ctrl/Cmd-K palette, mounted once in AppShell: jumps to pages and searches profiles,
+// proxies and members. labelKey is translated at render time (module scope cannot call the hook).
 const NAV = [
   { path: '/dashboard', labelKey: 'palette.nav.dashboard', icon: LayoutDashboard },
   { path: '/profiles', labelKey: 'palette.nav.profiles', icon: Fingerprint },
@@ -90,8 +86,7 @@ export default function CommandPalette() {
     const q = query.trim().toLowerCase();
     const out = [];
     for (const n of NAV) {
-      // Match the search filter against the TRANSLATED label so search still works
-      // regardless of the active UI language.
+      // Match the translated label so search works in any UI language.
       const label = t(n.labelKey);
       if (!q || label.toLowerCase().includes(q)) out.push({ icon: n.icon, label, hint: t('palette.hint.page'), run: () => navigate(n.path) });
     }

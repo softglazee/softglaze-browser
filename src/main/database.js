@@ -10,10 +10,8 @@ const proxySecrets = require('./proxySecrets');
 let prisma = null;
 let runtime = null;
 
-// At-rest encryption state (Phase 6, Option A). When `enabled`, the on-disk DB is
-// `softglaze.sqlite.enc`; a plaintext working file (`softglaze.sqlite`) only exists
-// while `unlocked` (decrypted at boot, re-encrypted + shredded at quit). The AES
-// key + its salt are held in memory only for the unlocked session.
+// At-rest encryption state. When enabled the on-disk DB is softglaze.sqlite.enc; the plaintext
+// softglaze.sqlite exists only while unlocked. Key and salt are held in memory for the session.
 const dbEnc = { enabled: false, unlocked: false, key: null, salt: null, version: dbCrypto.LEGACY_VERSION };
 // Set during an enable/disable migration so getPrisma() refuses to (re)open the
 // file mid-operation and create an inconsistent or empty database.
@@ -23,10 +21,8 @@ function normalizeSqliteFileUrl(filePath) {
   return `file:${filePath.replace(/\\/g, '/')}`;
 }
 
-// --- encryption metadata sidecar (plaintext, non-secret: just a flag) ----------
-// Stored OUTSIDE the database so boot can learn "is the DB encrypted?" before
-// opening Prisma. It holds no password material - the .enc is self-authenticating
-// via its GCM tag, so there is nothing secret to keep here.
+// Encryption flag sidecar, stored outside the DB so boot knows to unlock before opening Prisma.
+// Not secret: the .enc authenticates itself via its GCM tag.
 function readSidecar() {
   try {
     if (!runtime || !fs.existsSync(runtime.sidecarPath)) return { enabled: false };
@@ -66,12 +62,8 @@ function configureDatabaseEnv() {
     databaseUrl: process.env.DATABASE_URL
   };
 
-  // Learn the at-rest encryption state. The plaintext sidecar can be lost or
-  // corrupted (AV, chkdsk, an interrupted rename, a userData copy that misses it),
-  // and readSidecar() fails OPEN. So the ciphertext's own presence is authoritative:
-  // if softglaze.sqlite.enc exists we treat the workspace as encrypted and fail
-  // CLOSED (require unlock) rather than boot a fresh empty DB over the good .enc.
-  // disableDbEncryption shreds the .enc, so this never resurrects a disabled state.
+  // The sidecar can be lost (AV, chkdsk, partial copy) and readSidecar() fails open, so an existing
+  // .enc is authoritative: require unlock rather than boot an empty DB over it. Disabling shreds it.
   dbEnc.enabled = Boolean(readSidecar().enabled) || fs.existsSync(runtime.encPath);
   if (dbEnc.enabled) dbEnc.unlocked = false;
 
@@ -90,9 +82,8 @@ function getPrisma() {
     configureDatabaseEnv();
   }
 
-  // Never open (and thereby auto-create) the SQLite file while it is encrypted and
-  // locked, or mid-migration - that would spawn an empty plaintext DB beside the
-  // real ciphertext.
+  // Never open (and so auto-create) the SQLite file while locked or mid-migration:
+  // it would spawn an empty plaintext DB beside the ciphertext.
   if (dbEnc.enabled && !dbEnc.unlocked) {
     const err = new Error('The database is locked.');
     err.code = 'DATABASE_LOCKED';
@@ -105,8 +96,7 @@ function getPrisma() {
   }
 
   if (!prisma) {
-    // Proxy passwords are sealed on write and opened on read by this extension
-    // (audit L11); every caller keeps working with plaintext.
+    // This extension seals proxy passwords on write and opens them on read; callers see plaintext.
     prisma = proxySecrets.extendClient(new PrismaClient({
       log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error']
     }));
@@ -115,15 +105,11 @@ function getPrisma() {
   return prisma;
 }
 
-// ---------------------------------------------------------------------------
-// At-rest DB encryption lifecycle (Phase 6, Option A)
-// ---------------------------------------------------------------------------
 function isDbEncryptionEnabled() {
   return dbEnc.enabled;
 }
 
-// True when the DB can be opened: either encryption is off, or it is on and the
-// session has been unlocked.
+// True when the DB can be opened.
 function isDbUnlocked() {
   return !dbEnc.enabled || dbEnc.unlocked;
 }
@@ -132,9 +118,7 @@ function getDbEncryptionInfo() {
   return { enabled: dbEnc.enabled, unlocked: isDbUnlocked() };
 }
 
-// Fold the WAL back into the main DB file and close the handle, so there is a
-// single consistent file to encrypt/copy. Removing the (now-checkpointed) WAL
-// sidecars keeps the encrypted envelope to just the main file.
+// Fold the WAL into the main file and close the handle, leaving one file to encrypt or copy.
 async function checkpointAndDisconnect() {
   if (prisma) {
     try { await prisma.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);'); } catch (e) { /* not in WAL mode - fine */ }
@@ -148,19 +132,16 @@ async function checkpointAndDisconnect() {
 }
 
 function unlockError(e) {
-  // The .enc is self-authenticating: a GCM failure means the password is wrong or
-  // the file is corrupted. We can't distinguish the two, so we say both and let
-  // the UI offer "try again" and "restore from backup".
+  // A GCM failure means a wrong password or a corrupted file, which can't be told apart,
+  // so the message says both and the UI offers retry and restore.
   const err = new Error('Incorrect password - or the database file is corrupted. If you are sure the password is right, restore from a backup.');
   err.code = 'DB_UNLOCK_FAILED';
   err.cause = e;
   return err;
 }
 
-// Boot/unlock path. Decrypts the .enc into the working file (or adopts a
-// crash-leftover plaintext, after verifying the password against the .enc), then
-// holds the key for the session. Throws DB_MISSING if there is no ciphertext, or
-// DB_UNLOCK_FAILED on a wrong password / corrupted file.
+// Boot/unlock: decrypt the .enc into the working file (or adopt a verified crash leftover) and hold
+// the key. Throws DB_MISSING without ciphertext, DB_UNLOCK_FAILED on a wrong password or corrupt file.
 async function unlockEncryptedDb(password) {
   if (!dbEnc.enabled) return getDbEncryptionInfo();
   const { dbPath, encPath } = runtime;
@@ -172,10 +153,8 @@ async function unlockEncryptedDb(password) {
   const { version, salt } = await dbCrypto.readHeader(encPath);
   const key = await dbCrypto.deriveKey(password, salt, version);
 
-  // A plaintext working file present alongside the .enc can only be a crash
-  // leftover (a clean quit shreds it) - and it is the NEWEST copy. Keep it, but
-  // still authenticate the password by decrypting the .enc into a throwaway temp
-  // so a wrong password can't be accepted and later re-encrypt with a bad key.
+  // A plaintext file beside the .enc is a crash leftover and the newest copy. Keep it, but verify the
+  // password by decrypting the .enc to a temp file so a wrong password is never accepted.
   const leftover = fs.existsSync(dbPath) && dbCrypto.looksLikeSqlite(dbPath);
   if (leftover) {
     const verifyTmp = `${dbPath}.verify-unlock`;
@@ -201,9 +180,8 @@ async function unlockEncryptedDb(password) {
   return getDbEncryptionInfo();
 }
 
-// Quit/relock path. Re-encrypts the working file to the .enc (refreshing the
-// at-rest copy with this session's changes) and shreds the plaintext, then clears
-// the key from memory. Safe to call when not enabled/unlocked (no-op).
+// Quit/relock: re-encrypt the working file to the .enc, shred the plaintext, drop the key.
+// No-op unless enabled and unlocked.
 async function relockEncryptedDb() {
   if (!dbEnc.enabled || !dbEnc.unlocked || !dbEnc.key || !dbEnc.salt) return;
   const { dbPath, encPath } = runtime;
@@ -219,10 +197,8 @@ async function relockEncryptedDb() {
   dbEnc.salt = null;
 }
 
-// One-time enable migration. Backup-first, verified, reversible. The plaintext
-// working file is left in place for this session (Prisma keeps using it); it is
-// re-encrypted and shredded at quit. The caller is responsible for confirming the
-// user understands that a lost password is unrecoverable.
+// One-time enable migration: backup-first, verified, reversible. The plaintext stays for this session
+// and is encrypted and shredded at quit. The caller confirms the user knows a lost password is final.
 async function enableDbEncryption(password) {
   if (dbEnc.enabled) return getDbEncryptionInfo();
   if (!password || String(password).length < 8) {
@@ -236,14 +212,14 @@ async function enableDbEncryption(password) {
   const backupPath = `${dbPath}.bak-${stamp}`;
   try {
     await checkpointAndDisconnect();
-    fs.copyFileSync(dbPath, backupPath); // safety net while we work
+    fs.copyFileSync(dbPath, backupPath); // safety net during migration
 
     const salt = dbCrypto.newSalt();
     const version = dbCrypto.CURRENT_VERSION; // new databases use the strong (v2) KDF
     const key = await dbCrypto.deriveKey(password, salt, version);
     await dbCrypto.encryptDbFile(dbPath, encPath, key, salt, version);
 
-    // Prove the encrypted copy decrypts back bit-for-bit before we trust it.
+    // Prove the encrypted copy decrypts back bit-for-bit before trusting it.
     const verifyTmp = `${dbPath}.verify-${stamp}`;
     await dbCrypto.decryptDbFile(encPath, verifyTmp, key);
     const lossless = (await dbCrypto.sha256File(dbPath)) === (await dbCrypto.sha256File(verifyTmp));
@@ -259,12 +235,11 @@ async function enableDbEncryption(password) {
     dbEnc.key = key;
     dbEnc.salt = salt;
     dbEnc.version = version;
-    // Encryption verified - the plaintext safety backup is no longer needed (and
-    // keeping it would defeat the purpose).
+    // Verified, so drop the plaintext backup; keeping it would defeat the purpose.
     await dbCrypto.secureUnlink(backupPath);
     return getDbEncryptionInfo();
   } catch (e) {
-    // Roll back any partial ciphertext if we never reached the committed state.
+    // Roll back partial ciphertext if the committed state was never reached.
     if (!dbEnc.enabled) { try { await dbCrypto.secureUnlink(encPath); } catch (_) { /* noop */ } }
     throw e;
   } finally {
@@ -272,10 +247,8 @@ async function enableDbEncryption(password) {
   }
 }
 
-// Reverse of enable. The live working file is ALREADY plaintext and current, so
-// disabling just stops encrypting at rest: verify the password against the .enc,
-// clear the sidecar, and shred the ciphertext. We never decrypt the (older) .enc
-// over the (newer) working file - that would lose this session's changes.
+// Disable: the working file is already current plaintext, so verify the password, clear the sidecar
+// and shred the .enc. Never decrypt the older .enc over the newer working file.
 async function disableDbEncryption(password) {
   if (!dbEnc.enabled) return getDbEncryptionInfo();
   const { dbPath, encPath } = runtime;
@@ -308,9 +281,8 @@ async function disableDbEncryption(password) {
   return getDbEncryptionInfo();
 }
 
-// Re-key the at-rest ciphertext to a new password (called when the vault password
-// changes while encryption is on, so "the vault password unlocks the DB" stays
-// true). The live working file is untouched; only the .enc + held key change.
+// Re-key the .enc to a new vault password so the vault password keeps unlocking the DB.
+// Only the .enc and the held key change.
 async function rekeyEncryptedDb(newPassword) {
   if (!dbEnc.enabled || !dbEnc.unlocked) {
     const err = new Error('Cannot re-key: the database is not unlocked.');
@@ -323,12 +295,9 @@ async function rekeyEncryptedDb(newPassword) {
     err.code = 'DB_MISSING';
     throw err;
   }
-  // Fold any WAL-resident commits into the main file, and block concurrent Prisma
-  // access, before reading it. Previously this encrypted the LIVE WAL database, so
-  // rows committed to the -wal file were absent from the new .enc, and a concurrent
-  // write could tear the snapshot. The guards above now throw instead of returning
-  // silently, so a re-key that cannot run fails loudly rather than leaving the .enc
-  // on the old key while the caller commits the new vault password.
+  // Fold WAL commits into the main file and block Prisma access before reading it, so the new .enc has
+  // every row and no torn snapshot. The guards above throw so a re-key that can't run never leaves
+  // the .enc on the old key while the caller commits the new vault password.
   migrating = true;
   try {
     await checkpointAndDisconnect();
@@ -347,14 +316,8 @@ async function rekeyEncryptedDb(newPassword) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Automated SQLite Migration Runner
-// ---------------------------------------------------------------------------
-// Split a migration SQL blob into individual statements. Quote-aware: a ';'
-// inside a '...' string literal does NOT end a statement (SQLite escapes an inner
-// quote by doubling it: ''). Comment lines are stripped by the caller before this.
-// NOTE: trigger bodies (CREATE TRIGGER ... BEGIN ...; ...; END) are not handled -
-// author such a migration as a single statement, or split it manually.
+// Split migration SQL into statements, quote-aware ('' escapes a quote inside a string literal).
+// The caller strips comment lines first. Trigger bodies (BEGIN ...; END) are not handled.
 function splitSqlStatements(sql) {
   const out = [];
   let buf = '';
@@ -381,7 +344,6 @@ function splitSqlStatements(sql) {
 async function applyMigrations(db) {
   console.log('[DB] Starting automated migration runner...');
 
-  // 1. Ensure the migration tracking table exists
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "_AppMigrations" (
       "id" TEXT PRIMARY KEY,
@@ -389,8 +351,8 @@ async function applyMigrations(db) {
     );
   `);
 
-  // 2. BASELINING LOGIC: Check if this is an older database that already has tables
-  // but no migration history. This prevents the "table Proxy already exists" crash.
+  // Baseline a legacy database that has tables but no migration history,
+  // or init would fail with "table Proxy already exists".
   const existingTables = await db.$queryRawUnsafe(`SELECT name AS "name" FROM sqlite_master WHERE type='table' AND name='Proxy';`);
   // AS on every raw read: SQLite does not guarantee result column names without it, and a
   // key of "id" with its quotes would make every migration look unapplied.
@@ -407,8 +369,7 @@ async function applyMigrations(db) {
     }
   }
 
-  // 3. Locate the migrations directory
-  // In production (app.asar), the prisma folder is unpacked.
+  // Packaged builds read the unpacked prisma folder outside app.asar.
   const isPackaged = app.isPackaged;
   const basePath = isPackaged
     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'prisma', 'migrations')
@@ -419,14 +380,13 @@ async function applyMigrations(db) {
     return;
   }
 
-  // 4. Read migration folders (they start with a 14-digit timestamp)
+  // Migration folders start with a 14-digit timestamp.
   const entries = fs.readdirSync(basePath, { withFileTypes: true });
   const migrationFolders = entries
     .filter(entry => entry.isDirectory() && /^\d{14}_/.test(entry.name))
     .map(entry => entry.name)
     .sort();
 
-  // 5. Apply new migrations sequentially
   for (const folder of migrationFolders) {
     if (!appliedSet.has(folder)) {
       console.log(`[DB] Applying new migration: ${folder}`);
@@ -435,35 +395,22 @@ async function applyMigrations(db) {
       if (fs.existsSync(sqlPath)) {
         const sqlContent = fs.readFileSync(sqlPath, 'utf8');
 
-        // Strip full-line SQL comments first - a comment-bearing statement makes
-        // the SQLite driver throw SQLITE_MISUSE (code 21). Then split into single
-        // statements (the driver executes one statement per call).
+        // Strip full-line SQL comments (the driver throws SQLITE_MISUSE, code 21, on them),
+        // then split: the driver runs one statement per call.
         const cleaned = sqlContent
           .split(/\r?\n/)
           .filter((line) => !line.trim().startsWith('--'))
           .join('\n');
         const statements = splitSqlStatements(cleaned);
 
-        // Execute inside a transaction
         await db.$transaction(async (tx) => {
           for (const statement of statements) {
             try {
               await tx.$executeRawUnsafe(statement + ';');
             } catch (e) {
-              // Idempotent DDL tolerance - NARROW (audit). A statement that is silently
-              // skipped while the migration is still recorded as "applied" is how a
-              // table-rebuild (CREATE new_X → INSERT SELECT → DROP X → RENAME) can
-              // drop real rows: if the CREATE is swallowed, the later DROP/RENAME run
-              // against stale state and the loss is never retried. So tolerate ONLY the
-              // two genuinely idempotent, non-destructive cases `prisma db push` drift
-              // produces:
-              //   • "duplicate column name" on ALTER TABLE ... ADD COLUMN (SQLite has
-              //     no ADD COLUMN IF NOT EXISTS), and
-              //   • "already exists" on CREATE INDEX / TRIGGER (re-create is a no-op).
-              // Everything else - crucially "already exists" on CREATE TABLE - is a HARD
-              // failure: throwing rolls back the whole $transaction, so the migration is
-              // NOT recorded (and is retried next boot) rather than committing a
-              // half-applied schema or a data-losing rebuild.
+              // Tolerate only idempotent `prisma db push` drift: duplicate ADD COLUMN, existing INDEX/TRIGGER.
+              // Anything else (even an existing CREATE TABLE) throws and rolls back the transaction, so the
+              // migration retries next boot instead of committing a half-applied, data-losing rebuild.
               const msg = String((e && e.message) || e).toLowerCase();
               const stmt = String(statement || '').trim().toLowerCase();
               const dupColumnOnAddColumn = msg.includes('duplicate column name') && /^alter\s+table\b[\s\S]*\badd\s+column\b/.test(stmt);
@@ -474,7 +421,6 @@ async function applyMigrations(db) {
               throw e;
             }
           }
-          // Record successful application
           await tx.$executeRawUnsafe(`INSERT INTO "_AppMigrations" ("id") VALUES (?);`, folder);
         });
 
@@ -491,11 +437,9 @@ async function applyMigrations(db) {
 async function bootstrapDatabase() {
   const db = getPrisma();
 
-  // Run the safe SQL migration reader
   await applyMigrations(db);
 
-  // One-time, idempotent: seal any proxy password still stored in plaintext and fill
-  // its passwordHash (audit L11). Never throws - a failing row is logged and kept.
+  // Idempotent: seal plaintext proxy passwords and fill passwordHash; failing rows are logged and kept.
   try { await proxySecrets.migrateProxyPasswords(db); } catch (e) { console.error('[DB] proxy password migration skipped:', e && e.message ? e.message : e); }
 
   return true;
@@ -515,7 +459,7 @@ module.exports = {
   getPrisma,
   bootstrapDatabase,
   disconnectPrisma,
-  // Phase 6 - at-rest encryption lifecycle
+  // At-rest encryption lifecycle
   isDbEncryptionEnabled,
   isDbUnlocked,
   getDbEncryptionInfo,

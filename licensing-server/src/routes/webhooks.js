@@ -24,14 +24,9 @@ async function tenantAndSecrets(tenantId, provider) {
   return { tenant, secrets: openJson(cfg.secretsSealed) };
 }
 
-// Audit L5: race-free, retry-safe idempotency.
-//  1. Insert the WebhookEvent row FIRST. The primary key makes the insert the lock: a
-//     unique-constraint violation (P2002) means another delivery owns or finished it.
-//  2. prepare() does the provider calls (capture, lookups) outside any DB transaction.
-//  3. The returned apply(tx) runs in one transaction together with marking the event
-//     processed, so provisioning and the status change commit or roll back together.
-//  4. On any failure the event row is deleted, so the provider's retry is reprocessed.
-// Returns false for a duplicate, true when handled.
+// Idempotency: the WebhookEvent insert is the lock (P2002 means another delivery owns it). prepare()
+// makes provider calls outside any transaction; apply(tx) commits with marking the event processed.
+// On failure the row is deleted so the provider's retry is reprocessed. Returns false for a duplicate.
 async function claimEvent(id, tenantId, provider, type) {
   try {
     await prisma.webhookEvent.create({ data: { id, tenantId, provider, type: type || '' } });
@@ -64,8 +59,8 @@ async function handleOnce(tenantId, provider, eventId, type, prepare) {
 
 const idOf = (v) => (v && typeof v === 'object' ? v.id : v) || null;
 
-// Stripe checkout session that is actually paid (audit L8: completed != paid for
-// delayed methods; those arrive later as checkout.session.async_payment_succeeded).
+// Only a paid Stripe checkout session counts: delayed methods complete unpaid and arrive later as
+// checkout.session.async_payment_succeeded.
 function stripeSessionApply(tenant, s) {
   if (!s || s.payment_status !== 'paid') return null;
   const md = s.metadata || {};
@@ -95,7 +90,7 @@ function stripeSessionApply(tenant, s) {
   }, tx);
 }
 
-// --- Stripe (raw body for signature verification) ---------------------------
+// Stripe needs the raw body for signature verification.
 router.post('/stripe/:tenantId', express.raw({ type: '*/*' }), async (req, res) => {
   try {
     const { tenant, secrets } = await tenantAndSecrets(req.params.tenantId, 'stripe');
@@ -150,7 +145,6 @@ router.post('/stripe/:tenantId', express.raw({ type: '*/*' }), async (req, res) 
   } catch (e) { console.error('[webhook:stripe]', e && e.stack ? e.stack : e); res.status(500).json({ error: 'handler error' }); }
 });
 
-// --- Cryptomus (offline sign verification) ----------------------------------
 router.post('/cryptomus/:tenantId', express.json({ type: '*/*', limit: '256kb' }), async (req, res) => {
   try {
     const { tenant, secrets } = await tenantAndSecrets(req.params.tenantId, 'cryptomus');
@@ -167,11 +161,9 @@ router.post('/cryptomus/:tenantId', express.json({ type: '*/*', limit: '256kb' }
   } catch (e) { console.error('[webhook:cryptomus]', e && e.stack ? e.stack : e); res.status(500).json({ error: 'handler error' }); }
 });
 
-// --- PayPal (verify via API, then capture the approved order) ---------------
-// Audit L6: provision only after a capture that PayPal reports COMPLETED (from our own
-// capture call, or from PAYMENT.CAPTURE.COMPLETED). A failed capture throws, the event
-// is released and PayPal retries it. Both events can arrive for one order; the Payment
-// pending -> paid claim provisions it exactly once.
+// PayPal: verify via the API, then capture. Provision only after a COMPLETED capture (ours or
+// PAYMENT.CAPTURE.COMPLETED); a failed capture throws so PayPal retries. Both events can arrive
+// for one order; the Payment pending -> paid claim provisions it exactly once.
 router.post('/paypal/:tenantId', express.json({ type: '*/*', limit: '256kb' }), async (req, res) => {
   try {
     const { tenant, secrets } = await tenantAndSecrets(req.params.tenantId, 'paypal');

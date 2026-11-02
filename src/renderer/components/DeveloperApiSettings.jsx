@@ -104,7 +104,6 @@ export default function DeveloperApiSettings() {
         <div className="grid place-items-center py-10"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /></div>
       ) : (
         <div className="mt-4 space-y-5">
-          {/* API key generation */}
           <div className="rounded-xl border border-border bg-elevated/50 p-4">
             <div className="flex items-center gap-2 mb-3">
               <KeyRound className="w-4 h-4 text-muted-foreground" />
@@ -124,7 +123,6 @@ export default function DeveloperApiSettings() {
               </button>
             </div>
 
-            {/* One-time reveal */}
             {freshToken && (
               <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                 <div className="flex items-start gap-2">
@@ -142,7 +140,6 @@ export default function DeveloperApiSettings() {
               </div>
             )}
 
-            {/* Existing keys */}
             <div className="mt-3 space-y-1.5">
               {tokens.length === 0 ? (
                 <p className="text-[12px] text-muted-foreground">{t('developerApi.keys.empty')}</p>
@@ -160,7 +157,6 @@ export default function DeveloperApiSettings() {
             </div>
           </div>
 
-          {/* Local server */}
           <div className="rounded-xl border border-border bg-elevated/50 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">

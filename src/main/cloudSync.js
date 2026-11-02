@@ -1,18 +1,7 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - End-to-End Encrypted Cloud Sync Engine  (FOUNDATION)
-//
-// Zero-knowledge boundary: profile state (cookies, localStorage, fingerprint
-// config) is serialized and encrypted LOCALLY with a key derived from the user's
-// master password BEFORE any byte leaves the device. The remote bucket only ever
-// stores opaque ciphertext + a salt/iv envelope - it can never read the contents.
-//
-// What is real here: the crypto envelope + serialization (so the security
-// boundary is concrete and testable). What is stubbed: the remote transport
-// (`pushEnvelope`/`pullEnvelope`) - wire these to your bucket/API when the cloud
-// tier ships. Every method is defensive and never throws raw transport errors at
-// the caller.
-// ---------------------------------------------------------------------------
+// E2E encrypted cloud sync (Enterprise): profile state is encrypted locally with a key derived from
+// the master password before anything leaves the device; the bucket only ever stores ciphertext.
+// The crypto envelope is real; the remote transport is a stub until the cloud tier ships.
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 
@@ -30,14 +19,9 @@ class CloudSyncEngine {
     this._masterKey = null; // derived per-session, never persisted
   }
 
-  // Derive (and cache for the session) a 32-byte master key from the user's
-  // password + an explicit high-entropy per-workspace salt supplied by the caller.
-  // audit: this previously fell back to the CONSTANT public bucket namespace
-  // ('softglaze') as the salt, so a single precomputed scrypt dictionary attacked
-  // every default-namespace user at once and two users with the same passphrase
-  // derived the SAME key. The salt is now REQUIRED - fail closed rather than use a
-  // guessable constant. (The caller stores a random per-workspace salt and, for
-  // cross-device convergence, shares it via the bucket when the transport ships.)
+  // Derive (and cache for the session) a 32-byte key from the password and a required per-workspace
+  // random salt. Never fall back to a constant salt: one precomputed scrypt dictionary would then
+  // cover every user, and equal passphrases would give equal keys.
   async deriveMasterKey(password, workspaceSalt) {
     if (!password) throw new Error('A master password is required to derive the sync key.');
     if (workspaceSalt === undefined || workspaceSalt === null || workspaceSalt === '') {
@@ -48,9 +32,7 @@ class CloudSyncEngine {
     return true;
   }
 
-  // Serialize the syncable surface of a profile into a single plain object. This
-  // is the canonical shape that gets encrypted - keep it explicit so we never
-  // accidentally ship a field we didn't mean to.
+  // The canonical shape that gets encrypted; keep it explicit so no field ships by accident.
   static serializeProfileState({ cookies = [], localStorage = {}, fingerprint = {} } = {}) {
     return {
       v: 1,
@@ -80,17 +62,14 @@ class CloudSyncEngine {
     };
   }
 
-  // Inverse of encryptPayload - decrypts an envelope back to the original object.
   decryptPayload(envelope) {
     if (!this._masterKey) throw new Error('Master key not derived - call deriveMasterKey() first.');
     if (!envelope || envelope.v !== 1) throw new Error('Unrecognized sync envelope.');
     const salt = Buffer.from(envelope.salt, 'base64');
     const iv = Buffer.from(envelope.iv, 'base64');
     const tag = Buffer.from(envelope.tag, 'base64');
-    // A GCM tag is 16 bytes and IV/salt are fixed length. Node otherwise accepts
-    // 4/8/12..16-byte tags and arbitrary-length IVs, so a hostile bucket could ship a
-    // 4-byte tag and drop forgery from 2^128 to 2^32. Reject anything off-spec BEFORE
-    // decrypting, and pin authTagLength.
+    // Reject off-spec envelopes before decrypting and pin authTagLength: Node accepts short GCM tags,
+    // so a hostile bucket could ship a 4-byte tag and cut forgery cost from 2^128 to 2^32.
     if (tag.length !== 16 || iv.length !== IV_LEN || salt.length !== PBKDF_SALT_LEN) {
       throw new Error('Unrecognized sync envelope.');
     }
@@ -101,9 +80,7 @@ class CloudSyncEngine {
     return JSON.parse(out.toString('utf8'));
   }
 
-  // Push a profile's encrypted state to the remote bucket. Encryption happens
-  // here, locally, BEFORE the transport sees anything - the bucket only stores the
-  // opaque envelope. Returns { ok, skipped? , error? }.
+  // Encryption happens here, before the transport sees anything. Returns { ok, skipped?, error? }.
   async pushProfileState(profileId, state) {
     try {
       const envelope = this.encryptPayload(CloudSyncEngine.serializeProfileState(state));
@@ -117,7 +94,6 @@ class CloudSyncEngine {
     }
   }
 
-  // Pull + decrypt a profile's state from the remote bucket.
   async pullProfileState(profileId) {
     try {
       if (!this.transport || typeof this.transport.get !== 'function') {
@@ -133,15 +109,9 @@ class CloudSyncEngine {
   }
 }
 
-// Cross-device convergence of the E2E key salt (H-CR2). The salt is NOT secret,
-// but every device MUST derive the master key from the SAME salt or their
-// ciphertext is mutually unreadable and one device's push overwrites the other's
-// data. A salt already in the bucket is authoritative; otherwise the local one is
-// published exactly once (a fresh 16-byte base64 salt is minted if none exists).
-// Best-effort: on ANY transport error we fall back to the local salt (minting if
-// needed), so a bucket outage never blocks unlock and convergence simply happens on
-// the next unlock that reaches the bucket. `persist(salt)` stores the chosen salt
-// locally and is invoked only when the salt is (re)selected.
+// Every device must derive the key from the same (non-secret) salt, or their ciphertext is mutually
+// unreadable. A bucket salt is authoritative; else the local one (minted if absent) is published once.
+// On a transport error the local salt is used, so a bucket outage never blocks unlock.
 async function resolveWorkspaceSalt(transport, namespace, localSalt, persist) {
   const key = `${namespace}/workspace.salt`;
   const mint = () => crypto.randomBytes(16).toString('base64');
@@ -169,8 +139,7 @@ async function resolveWorkspaceSalt(transport, namespace, localSalt, persist) {
     await save(salt);
     return salt;
   } catch (e) {
-    // Bucket unreachable: keep using the local salt (mint if needed), exactly as
-    // before this fix, so unlock still works offline.
+    // Bucket unreachable: keep the local salt (mint if needed) so unlock still works offline.
     if (!salt) { salt = mint(); await save(salt); }
     return salt;
   }

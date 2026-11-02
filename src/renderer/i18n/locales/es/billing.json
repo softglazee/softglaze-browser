@@ -68,6 +68,7 @@
     "onPaidPlan": "En un plan de pago",
     "trialActiveDaysLeft": "Prueba activa · quedan {{days}} d",
     "startFreeTrial": "Iniciar prueba gratuita",
+    "trialUsed": "Prueba gratuita ya usada",
     "currentPlan": "Plan actual",
     "upgradeEnterprise": "Mejorar a Enterprise",
     "downgradePro": "Cambiar a Pro",

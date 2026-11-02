@@ -1,14 +1,8 @@
 import { useEffect, useRef } from 'react';
 
-// Accessibility behaviors for a modal dialog, added to an EXISTING hand-rolled modal
-// without changing its markup: attach `dialogRef` to the panel element (and give it
-// role="dialog" aria-modal="true" aria-label="…" tabIndex={-1}). While mounted this:
-//   • closes on Escape (unless closeOnEscape=false),
-//   • traps Tab focus inside the panel,
-//   • moves focus into the panel on open (without stealing from an autoFocus input),
-//   • restores focus to the previously-focused element on close,
-//   • locks body scroll.
-// Backdrop-click-to-close is left to the modal's existing overlay handler.
+// Adds modal a11y to an existing hand-rolled modal: put dialogRef on the panel (role="dialog",
+// aria-modal, aria-label, tabIndex -1). Escape closes, Tab is trapped, focus moves in and is
+// restored, body scroll locks. Backdrop clicks stay with the modal's own overlay.
 const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function useDialog({ onClose, closeOnEscape = true } = {}) {

@@ -6,16 +6,13 @@ import i18n from '@/i18n/index.js';
 import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
 import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
 
-// Register the shared "cmpUi" namespace without touching the central i18n config.
-// addResourceBundle is a no-op if the bundle already exists, so this is safe across
-// hot reloads and the other components that register the same namespace.
+// Registers the shared cmpUi namespace without touching the central i18n config; the guard keeps
+// it safe across hot reloads and other components that register it.
 if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
 if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
-// On-demand version picker: each version row carries its own download/install
-// control. Installed versions show "Ready" (no download icon); missing ones show a
-// download button that streams a progress bar inline and flips to "Ready" on finish.
-// Works for both engines: Chromium (Chrome-for-Testing builds) and Firefox.
+// Each version row has its own install control: installed ones show Ready, missing ones stream
+// an inline progress bar. Covers Chromium (Chrome-for-Testing) and Firefox.
 export default function BrowserVersionSelect({ core, value, onChange }) {
   const { t } = useTranslation('cmpUi');
   const isFirefox = core === 'Firefox';

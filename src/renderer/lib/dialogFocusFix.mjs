@@ -1,7 +1,5 @@
-// Native alert()/confirm()/prompt() can leave the window unable to take typing on
-// Windows (see src/main/dialogFocus.js). Wrap the three so the main process
-// re-focuses the window as soon as one returns. Kept framework-free (and .mjs) so
-// the node:test suite can import it directly.
+// Native alert/confirm/prompt can leave the window unable to take typing on Windows (see
+// src/main/dialogFocus.js), so main re-focuses it after each. Framework-free .mjs for node:test.
 
 const DIALOGS = ['alert', 'confirm', 'prompt'];
 

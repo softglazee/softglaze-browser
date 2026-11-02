@@ -3,33 +3,16 @@
 const { app } = require('electron');
 const { tenantConfig } = require('./tenantConfig');
 
-// Auto-update via electron-updater. SAFE BY DEFAULT: it stays fully inert unless an
-// update feed is explicitly configured - so a build NEVER auto-pulls from a default
-// or seller-owned feed.
-//
-//   • Tenant (white-label) builds: a buyer-owned `updateFeedUrl` is baked into the
-//     tenant config; we point electron-updater at that generic feed. Each buyer
-//     controls (and hosts) their own updates.
-//   • Seller's own distribution: opt in with SG_ENABLE_GITHUB_UPDATES=1 to use the
-//     baked `build.publish` feed from package.json.
-//   • Otherwise: no update check is ever made.
-//
-// On `update-available` / `download-progress` / `update-downloaded` we push an
-// `updater:event` to the renderer, which shows an in-app banner on the Dashboard
-// ("New update available - Click to install"). `autoInstallOnAppQuit` stays on as a
-// silent fallback if the user never clicks. quitAndInstall is driven from the
-// banner via the `updater:install` IPC.
-//
-// Note: on Windows, electron-updater verifies the downloaded installer's Authenticode
-// signature, so updates are only safe on CODE-SIGNED builds (see docs/signing-and-updates.md).
+// Inert unless an update feed is configured: tenant builds use their baked updateFeedUrl, the
+// seller's build opts in with SG_ENABLE_GITHUB_UPDATES=1. On Windows electron-updater checks the
+// installer's Authenticode signature, so updates are only safe on code-signed builds.
 
 let autoUpdaterRef = null;
 let eventSink = null;
 // status: idle | checking | available | not-available | downloading | downloaded | error
 let lastState = { status: 'idle', version: null, percent: 0, error: null, releaseNotes: null, checkedAt: null };
 
-// The renderer broadcast is owned by ipcHandlers (it holds the CHANNELS map and
-// sends to every window); the updater just pushes state into the sink it registers.
+// ipcHandlers owns the broadcast to every window; the updater only pushes state into its sink.
 function setEventSink(fn) { eventSink = typeof fn === 'function' ? fn : null; }
 
 function sendEvent(patch) {
@@ -51,9 +34,7 @@ function normalizeNotes(info) {
 function resolveFeed() {
   const url = tenantConfig().updateFeedUrl; // already https-validated by tenantConfig
   if (url) {
-    // Defense-in-depth: refuse anything that isn't https (an http feed can be
-    // MITM'd to serve a malicious installer). tenantConfig already drops http, so
-    // this only fires if that ever changes.
+    // Defense in depth: an http feed can be MITM'd to serve a malicious installer.
     if (!/^https:\/\//i.test(url)) { console.error('[updater] refusing non-https update feed - auto-update disabled.'); return null; }
     return { kind: 'generic', url };
   }
@@ -61,44 +42,51 @@ function resolveFeed() {
   return null;
 }
 
-// audit C3: electron-updater can only verify a downloaded installer's authenticity
-// when the INSTALLED app is itself Authenticode-signed (it matches the update's
-// publisher against the running app's). On an UNSIGNED build there is nothing to
-// verify against, so auto-download + auto-install is a silent RCE vector. Verify at
-// runtime that the current executable carries a Valid signature; if not, the whole
-// updater stays disabled. Windows-only target; anything else is treated as unsigned.
+// electron-updater can only verify an installer when the installed app is itself Authenticode-signed.
+// On an unsigned build auto-update would be an unverified RCE path, so the updater stays disabled.
 let _signedCache = null;
+// Async because it shells out to PowerShell; runs once in the background so startup never blocks.
 function isSignedBuild() {
-  if (_signedCache !== null) return _signedCache;
-  _signedCache = false;
-  if (process.platform !== 'win32') return _signedCache;
-  try {
+  if (_signedCache !== null) return Promise.resolve(_signedCache);
+  if (process.platform !== 'win32') { _signedCache = false; return Promise.resolve(false); }
+  return new Promise((resolve) => {
     const exe = process.execPath.replace(/'/g, "''");
     const psCmd = `(Get-AuthenticodeSignature -FilePath '${exe}').Status`;
-    const out = require('node:child_process').execFileSync(
+    require('node:child_process').execFile(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-Command', psCmd],
-      { encoding: 'utf8', timeout: 10000, windowsHide: true }
+      { encoding: 'utf8', timeout: 10000, windowsHide: true },
+      (err, out) => {
+        if (err) console.warn('[updater] signature check failed; treating build as unsigned:', err && err.message);
+        _signedCache = !err && String(out || '').trim() === 'Valid';
+        resolve(_signedCache);
+      }
     );
-    _signedCache = out.trim() === 'Valid';
-  } catch (e) {
-    console.warn('[updater] signature check failed; treating build as unsigned:', e && e.message);
-    _signedCache = false;
-  }
-  return _signedCache;
+  });
 }
 
-function initAutoUpdater(mainWindow) {
-  if (!app.isPackaged) return;
+// Records why auto-update is off so the banner can say it plainly.
+function disable(reason, message) {
+  sendEvent({ status: 'disabled', disabledReason: reason, error: null, message });
+}
 
-  // Hard gate (audit C3): never auto-update an unsigned build.
-  if (!isSignedBuild()) {
+// Called from main.js once the window exists; goes live only on a packaged, signed build with a feed.
+async function initAutoUpdater(mainWindow) {
+  if (autoUpdaterRef) return; // once per run
+  if (!app.isPackaged) { disable('dev', 'Automatic updates only run in the installed app.'); return; }
+
+  if (!(await isSignedBuild())) {
     console.warn('[updater] build is not code-signed - auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');
+    disable('unsigned', 'Automatic updates are off because this build is not code-signed. Download new versions from the website.');
     return;
   }
 
   const feed = resolveFeed();
-  if (!feed) { console.log('[updater] no update feed configured - auto-update disabled.'); return; }
+  if (!feed) {
+    console.log('[updater] no update feed configured - auto-update disabled.');
+    disable('no-feed', 'Automatic updates are not set up for this build. Download new versions from the website.');
+    return;
+  }
 
   let autoUpdater;
   try {
@@ -136,11 +124,10 @@ function initAutoUpdater(mainWindow) {
   autoUpdater.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
 }
 
-// Current known updater state - so the banner can render correctly even if the
-// Dashboard mounts AFTER the event already fired.
+// Lets the banner render correctly when the Dashboard mounts after the event fired.
 function getState() { return { ...lastState, active: Boolean(autoUpdaterRef) }; }
 
-// Quit and install the downloaded update (driven by the banner's "Install" button).
+// Driven by the banner's Install button.
 function installDownloadedUpdate() {
   if (!autoUpdaterRef) return { ok: false, error: 'Auto-update is not active in this build.' };
   if (lastState.status !== 'downloaded') return { ok: false, error: 'No update has finished downloading yet.' };
@@ -148,9 +135,8 @@ function installDownloadedUpdate() {
   catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
 }
 
-// Manual re-check (optional; the banner can offer "Check again").
 function checkForUpdatesNow() {
-  if (!autoUpdaterRef) return { ok: false, active: false, error: 'Automatic updates are not enabled in this build.' };
+  if (!autoUpdaterRef) return { ok: false, active: false, error: lastState.message || 'Automatic updates are not enabled in this build.' };
   autoUpdaterRef.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
   return { ok: true, active: true };
 }

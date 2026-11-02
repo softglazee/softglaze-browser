@@ -17,7 +17,7 @@ export default function BatchImportPage() {
   const { t } = useTranslation('batchImport');
   const [activeTab, setActiveTab] = useState('file'); // 'file' | 'quick'
 
-  // --- FILE IMPORT STATES ---
+  // File import
   const [previewData, setPreviewData] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -32,15 +32,14 @@ export default function BatchImportPage() {
   // Auto-scroll the terminal log to the newest line.
   useEffect(() => { logEndRef.current?.scrollIntoView({ block: 'end' }); }, [importLog]);
 
-  // --- QUICK GENERATE (shared modal - identical to the Profiles page) ---
+  // Quick Generate uses the shared modal, identical to the Profiles page.
   const [showQuickGen, setShowQuickGen] = useState(false);
   const [savedProxies, setSavedProxies] = useState([]);
   const [groups, setGroups] = useState([]);
   const [proxyGroups, setProxyGroups] = useState([]);
 
-  // Load saved proxies, profile groups, and proxy groups so Quick Generate can
-  // assign a unique proxy each, target a group (create one inline), and pick a
-  // specific proxy group / provider as the source.
+  // Quick Generate needs proxies (unique assignment), profile groups (target or create inline)
+  // and proxy groups / providers as a source.
   const loadGenData = () => {
     softglazeApi.proxies.list({}).then((p) => setSavedProxies(Array.isArray(p) ? p : (p?.items || []))).catch(() => {});
     softglazeApi.groups.list().then((g) => setGroups(Array.isArray(g) ? g : [])).catch(() => {});
@@ -48,12 +47,10 @@ export default function BatchImportPage() {
   };
   useEffect(() => { loadGenData(); }, []);
 
-  // --- FILE IMPORT LOGIC ---
   const handleSelectFile = async () => {
     setFileError('');
     setImportResult(null);
     try {
-      // Calls the Electron dialog & parser backend logic
       const result = await softglazeApi.batch.previewProfilesFromSpreadsheet();
       if (result.cancelled) return;
       setPreviewData(result);
@@ -70,7 +67,6 @@ export default function BatchImportPage() {
     setImportLog([]);
     setImportProgress({ pct: 0, index: 0, total });
 
-    // Subscribe to the backend's live progress stream (terminal log + bar).
     const levelKind = (lvl) => (lvl === 'success' ? 'ok' : lvl === 'error' ? 'error' : lvl === 'warn' ? 'warn' : 'info');
     const unsubscribe = softglazeApi.batch.onImportProgress((data) => {
       if (data.message) setImportLog((lines) => [...lines, { kind: levelKind(data.level), message: data.message }]);
@@ -82,7 +78,7 @@ export default function BatchImportPage() {
     try {
       const result = await softglazeApi.batch.commitProfileImport(previewData.token, { autoBindByCountry: autoBind });
       setImportResult(result);
-      setPreviewData(null); // Clear preview once committed
+      setPreviewData(null);
     } catch (err) {
       setFileError(err.message || t('errors.commit'));
       setImportLog((lines) => [...lines, { kind: 'error', message: err.message || t('errors.importFailed') }]);
@@ -92,8 +88,7 @@ export default function BatchImportPage() {
     }
   };
 
-  // Export every profile (+ its mapped proxy/group/fingerprint) via a native save
-  // dialog to an Excel/CSV sheet that round-trips back through the importer.
+  // Exports every profile with its proxy, group and fingerprint; the sheet round-trips via the importer.
   const handleExport = async (format = 'xlsx') => {
     setExporting(true);
     setFileError('');
@@ -110,8 +105,7 @@ export default function BatchImportPage() {
   };
 
   const handleDownloadTemplate = () => {
-    // The full symmetrical column blueprint (same matrix the exporter produces),
-    // so a downloaded template + an export are interchangeable.
+    // Same columns as the exporter, so a template and an export are interchangeable.
     const headers = [
       'Profile Title', 'Group Name', 'Notes', 'Data Dir Name',
       'Operating System', 'Browser Core', 'User-Agent', 'Screen Resolution',
@@ -163,12 +157,10 @@ export default function BatchImportPage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  // --- QUICK GENERATE LOGIC (shared modal) ---
-  // Identical contract to the Profiles page: proxySource ('group:<id>' | 'provider:<key>')
-  // maps to proxyGroupId/provider so only that selection is assigned; the modal owns
-  // progress + result display and inline group creation.
+  // Same contract as the Profiles page: proxySource ('group:<id>' | 'provider:<key>') maps to
+  // proxyGroupId/provider so only that selection is assigned.
   const handleQuickGenerate = async (config, onProgress) => {
-    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource } = config;
+    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
     const src = String(proxySource || '');
     const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
@@ -187,6 +179,8 @@ export default function BatchImportPage() {
       proxyMode,
       proxyGroupId,
       provider,
+      proxySpeed, // same pre-filters as the Profiles page
+      proxyBlacklist,
       proxyList: pasted
     });
     if (onProgress) onProgress(result?.createdCount ?? count, count);
@@ -218,7 +212,6 @@ export default function BatchImportPage() {
         </div>
       )}
 
-      {/* TABS */}
       <div className="flex border-b border-border mb-6">
         <button
           onClick={() => setActiveTab('file')}
@@ -234,12 +227,10 @@ export default function BatchImportPage() {
         </button>
       </div>
 
-      {/* --- TAB 1: IMPORT FROM SPREADSHEET --- */}
       {activeTab === 'file' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
 
-            {/* Step 1 */}
             <Card className="bg-card border-border">
               <CardHeader className="pb-3 border-b border-border">
                 <CardTitle className="text-foreground text-[15px] flex items-center gap-2">
@@ -257,7 +248,6 @@ export default function BatchImportPage() {
               </CardContent>
             </Card>
 
-            {/* Step 2 */}
             <Card className="bg-card border-border">
               <CardHeader className="pb-3 border-b border-border">
                 <CardTitle className="text-foreground text-[15px] flex items-center gap-2">
@@ -297,7 +287,6 @@ export default function BatchImportPage() {
               </CardHeader>
               <CardContent className="p-0 flex-1 flex flex-col relative">
 
-                {/* STATE: Waiting for file */}
                 {!previewData && !importResult && (
                   <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
                     <Server className="w-12 h-12 mb-4 text-muted-foreground" />
@@ -306,7 +295,6 @@ export default function BatchImportPage() {
                   </div>
                 )}
 
-                {/* STATE: Previewing Data */}
                 {previewData && (
                   <div className="flex flex-col h-full">
                     <div className="p-4 bg-secondary border-b border-border flex justify-between items-center text-xs">
@@ -320,7 +308,6 @@ export default function BatchImportPage() {
                     </div>
 
                     {importing ? (
-                      /* STATE: Live processing - progress bar + scrolling terminal log */
                       <div className="flex-1 flex flex-col p-4 gap-3 min-h-0">
                         <div>
                           <div className="flex justify-between text-[12px] text-muted-foreground mb-1.5">
@@ -395,7 +382,6 @@ export default function BatchImportPage() {
                   </div>
                 )}
 
-                {/* STATE: Success Result */}
                 {importResult && (
                   <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
                     <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
@@ -418,7 +404,6 @@ export default function BatchImportPage() {
         </div>
       )}
 
-      {/* --- TAB 2: QUICK GENERATE (shared modal) --- */}
       {activeTab === 'quick' && (
         <Card className="bg-card border-border max-w-3xl">
           <CardHeader className="border-b border-border">

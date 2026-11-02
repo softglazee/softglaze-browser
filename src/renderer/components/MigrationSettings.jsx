@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FolderSync, ShieldCheck, AlertTriangle, KeyRound, Terminal, CheckCircle2, Loader2, Globe2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// Source platforms (mirrors the ids in src/main/migrationService.js). User-facing
-// placeholder/warning copy is resolved at render via i18n keys (see *Key fields).
+// Ids mirror src/main/migrationService.js; user-facing copy resolves through the *Key i18n fields.
 const PLATFORMS = [
   { id: 'dolphin', label: 'Dolphin{anty}', placeholderKey: 'migration.platforms.dolphin.placeholder', instructionsUrl: 'https://dolphin-anty.com/docs/basic-templates-api/', warningKey: 'migration.platforms.dolphin.warning' },
   { id: 'gologin', label: 'GoLogin', placeholderKey: 'migration.platforms.gologin.placeholder', instructionsUrl: 'https://gologin.com/docs/api-reference/quick-start' },
@@ -77,7 +76,6 @@ export default function MigrationSettings() {
 
   return (
     <div className="rounded-xl bg-card border border-border p-5">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-1">
         <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0 bg-sky-500/12 border border-sky-500/20">
           <FolderSync className="w-5 h-5 text-sky-400" />
@@ -96,7 +94,6 @@ export default function MigrationSettings() {
       {err && <div className="mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
 
       <div className="mt-4 space-y-5">
-        {/* Step 1 - source platform */}
         <div className="rounded-xl border border-border bg-elevated/50 p-4">
           <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('migration.sourcePlatform')}</span>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -134,7 +131,6 @@ export default function MigrationSettings() {
           </div>
         )}
 
-        {/* Step 2 - token + start */}
         <div className="rounded-xl border border-border bg-elevated/50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <KeyRound className="w-4 h-4 text-muted-foreground" />
@@ -172,7 +168,6 @@ export default function MigrationSettings() {
           </p>
         </div>
 
-        {/* Step 3 - live progress / log */}
         {(log.length > 0 || running) && (
           <div>
             <div className="flex items-center justify-between mb-1.5">

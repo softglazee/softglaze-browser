@@ -11,13 +11,10 @@ import i18n from '@/i18n/index.js';
 import trashEn from '@/i18n/locales/en/trash.json';
 import trashEs from '@/i18n/locales/es/trash.json';
 
-// Register this page's "trash" namespace without touching the central i18n
-// config (which only bundles the "common" namespace). addResourceBundle is a
-// no-op if the bundle already exists, so this is safe across hot reloads.
+// Register the "trash" namespace here; the central i18n config only bundles "common".
 if (!i18n.hasResourceBundle('en', 'trash')) i18n.addResourceBundle('en', 'trash', trashEn);
 if (!i18n.hasResourceBundle('es', 'trash')) i18n.addResourceBundle('es', 'trash', trashEs);
 
-// --- HELPER COMPONENT FOR CUSTOM CHECKBOX ---
 const Checkbox = ({ checked, onChange }) => (
   <button
     type="button"
@@ -59,10 +56,8 @@ export default function TrashPage() {
     return trashItems.filter((item) => (item.title || '').toLowerCase().includes(q));
   }, [trashItems, search]);
 
-  // When the FILTER changes, drop any selected ids that are no longer visible. Without
-  // this, a "select all" under one filter carries hidden ids into a permanent purge under another
-  // - the "select 5, but act on everything" bug. Keyed on the filter inputs only, so a
-  // background data refresh never clears the selection mid-task.
+  // When the filter changes, drop selected ids that are no longer visible, so a purge never touches
+  // hidden rows. Keyed on filter inputs only, so a background refresh keeps the selection.
   const visibleTrashIdsRef = useRef(null);
   visibleTrashIdsRef.current = filteredItems;
   useEffect(() => {
@@ -75,7 +70,6 @@ export default function TrashPage() {
     });
   }, [search]);
 
-  // Paginate the (already filtered) trash so long lists stay usable.
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const pagedItems = useMemo(
     () => filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
@@ -166,7 +160,6 @@ export default function TrashPage() {
 
       {error && <div className="mb-4 rounded-lg border border-red-900/70 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>}
 
-      {/* Warning Banner */}
       <div className="mb-6 flex items-start gap-3 bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 p-4 rounded-lg">
         <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
         <div className="text-[13px] leading-relaxed">
@@ -177,7 +170,6 @@ export default function TrashPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -191,7 +183,6 @@ export default function TrashPage() {
         </div>
       </div>
 
-      {/* Bulk toolbar */}
       {selectedIds.size > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
           <span className="text-[13px] text-foreground font-medium">{t('bulk.selected', { count: selectedIds.size })}</span>
@@ -207,7 +198,6 @@ export default function TrashPage() {
         </div>
       )}
 
-      {/* Data Table */}
       <Card>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">

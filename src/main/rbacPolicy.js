@@ -1,22 +1,11 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - RBAC Policy Layer (credential-redaction middleware)
-//
-// The app already enforces role RANK gating (see permissions.js / requirePermission
-// in ipcHandlers). This module adds the COMPLEMENTARY policy layer the Enterprise
-// tier needs: a strict, centralized redaction policy so an OPERATOR can USE a
-// resource (launch a profile through its proxy) but can NEVER read the raw secret
-// values behind it - proxy credentials, token strings, or cookie dumps.
-//
-// Wire `redactForRole(role, kind, record)` into any serializer that returns
-// secret-bearing data to the renderer. It is pure + defensive (unknown role ⇒
-// treated as the most-restricted Operator).
-// ---------------------------------------------------------------------------
+// Credential redaction by role, on top of rank gating (permissions.js): an Operator can use a
+// resource but never read its raw secrets. Unknown roles count as Operator. Wrap any serializer
+// that returns secrets to the renderer with redactForRole().
 
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
 
-// Minimum rank allowed to see the RAW value of each sensitive resource kind.
-// Operators are below all of these, so they are completely blocked.
+// Minimum rank that may read each kind's raw value; Operators are below all of them.
 const RAW_VALUE_MIN_RANK = {
   proxyCredentials: ROLE_RANK.MANAGER, // host:port may show; user/pass never to Operator
   tokenString: ROLE_RANK.ADMIN,        // API/integration tokens
@@ -30,19 +19,14 @@ function rankOf(role) {
   return ROLE_RANK[String(role || '').toUpperCase()] || 0;
 }
 
-// Can this role read the raw value of `kind`?
 function canReadRaw(role, kind) {
   const need = RAW_VALUE_MIN_RANK[kind];
-  // audit: an unrecognized `kind` (typo at a call site, or a newly-added secret
-  // kind someone forgot to register) previously defaulted to ALLOW, handing raw
-  // secrets to an Operator. Fail closed - an unknown kind is treated as maximally
-  // sensitive and denied to everyone below Owner.
+  // Fail closed: an unregistered kind (typo or new secret) is denied to everyone below Owner.
   if (!need) return rankOf(role) >= ROLE_RANK.OWNER;
   return rankOf(role) >= need;
 }
 
-// Redact a record for a role. Returns a SHALLOW COPY with sensitive fields masked
-// when the role lacks clearance - the raw object is never mutated.
+// Returns a shallow copy with sensitive fields masked when the role lacks clearance; never mutates.
 function redactForRole(role, kind, record) {
   if (!record || typeof record !== 'object') return record;
   if (canReadRaw(role, kind)) return record;
@@ -53,9 +37,7 @@ function redactForRole(role, kind, record) {
       // Connectivity stays usable in the UI; the secrets are blanked.
       if ('username' in out) out.username = out.username ? REDACTED : '';
       if ('password' in out) out.password = out.password ? REDACTED : '';
-      // audit: also blank COMBINED credential strings - a proxy is often carried
-      // as `host:port:user:pass` (proxyRaw / url / connectionString), which the
-      // per-field masking above would leak straight through.
+      // Also blank combined host:port:user:pass strings, which per-field masking would leak.
       for (const f of ['proxyRaw', 'url', 'connectionString']) {
         if (out[f]) out[f] = REDACTED;
       }
@@ -68,7 +50,7 @@ function redactForRole(role, kind, record) {
       if ('secretKey' in out) out.secretKey = out.secretKey ? REDACTED : '';
       break;
     case 'cookieDump':
-      // An Operator may know cookies EXIST (count) but never read their values.
+      // An Operator may see the cookie count but never the values.
       out.cookies = undefined;
       out.cookieCount = Array.isArray(record.cookies) ? record.cookies.length : (record.cookieCount || 0);
       break;
@@ -83,9 +65,8 @@ function redactForRole(role, kind, record) {
   return out;
 }
 
-// Hard guard for export-style actions (cookie dump download, raw proxy reveal).
-// Throws FORBIDDEN when the role is below clearance - call this in the handler
-// BEFORE assembling any raw payload.
+// Hard guard for export-style actions (cookie dump, raw proxy reveal). Throws FORBIDDEN; call it
+// before assembling any raw payload.
 function assertCanReveal(role, kind) {
   if (!canReadRaw(role, kind)) {
     const e = new Error(`Your role cannot reveal ${kind}.`);
@@ -94,4 +75,4 @@ function assertCanReveal(role, kind) {
   }
 }
 
-module.exports = { ROLE_RANK, RAW_VALUE_MIN_RANK, rankOf, canReadRaw, redactForRole, assertCanReveal };
+module.exports = { ROLE_RANK, RAW_VALUE_MIN_RANK, rankOf, redactForRole, assertCanReveal };

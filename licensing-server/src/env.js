@@ -7,11 +7,8 @@ try {
   const fs = require('fs');
   // 1) the standard local .env (next to the process cwd).
   dotenv.config();
-  // 2) a shared config/.env higher up the tree. Some hosts (LiteSpeed/Hostinger
-  //    Node apps) keep the env file outside the per-deploy folder and do not inject
-  //    every var into the worker, so the local .env ends up empty. Walk up from here
-  //    and load the first `config/.env` found. dotenv never overrides already-set
-  //    vars, so a real process env or the local .env always wins.
+  // 2) the first config/.env up the tree: some hosts (LiteSpeed/Hostinger Node apps) keep it outside
+  // the deploy folder. dotenv never overrides set vars, so the process env or local .env wins.
   let dir = __dirname;
   for (let i = 0; i < 8; i++) {
     const candidate = path.join(dir, 'config', '.env');

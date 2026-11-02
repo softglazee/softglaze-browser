@@ -5,10 +5,8 @@ import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 
-// Phase F2 - shared profile pools. Bulk-share the selected profiles with a team
-// member at a chosen access level, or revoke that member's access. The backend
-// enforces that the actor may only share profiles they can edit and only with
-// members they manage; this UI is a thin, fail-safe front for that.
+// Bulk-shares profiles with a member at an access level, or revokes access. The backend enforces
+// that actors share only profiles they can edit with members they manage; this UI is a thin front.
 const ROLE_KEY = { OWNER: 'shareProfile.roleOwner', ADMIN: 'shareProfile.roleAdmin', MANAGER: 'shareProfile.roleManager', OPERATOR: 'shareProfile.roleOperator', SUPER_ADMIN: 'shareProfile.roleSuperAdmin' };
 
 export default function ShareProfileModal({ profileIds = [], onClose }) {

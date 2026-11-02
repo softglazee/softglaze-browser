@@ -14,7 +14,7 @@ const path = require('node:path');
 const utils = require('../src/main/proxyVendorUtils');
 
 const IPC = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'ipcHandlers.js'), 'utf8');
-const SECTION = IPC.slice(IPC.indexOf('// --- Proxy-Seller: residential lists'), IPC.indexOf('// --- IPRoyal residential'));
+const SECTION = IPC.slice(IPC.indexOf('const PS_API = '), IPC.indexOf('const IPR_API = '));
 const KEY = 'testKey1234567890abc';
 const BASE = `https://proxy-seller.com/personal/api/v2/${KEY}`;
 

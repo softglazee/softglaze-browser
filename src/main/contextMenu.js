@@ -1,7 +1,6 @@
 'use strict';
-// Right-click menu for the app window. Electron shows no context menu by default, so a mouse
-// could not cut, copy or paste anywhere in the app. Each action goes through Chromium's own edit
-// role, and editFlags decides what is enabled, so password fields still refuse Copy and Cut.
+// Right-click menu: Electron has none by default. Actions use Chromium's edit roles, and editFlags
+// decides what is enabled, so password fields still refuse Copy and Cut.
 
 const LABELS = Object.freeze({
   en: { undo: 'Undo', redo: 'Redo', cut: 'Cut', copy: 'Copy', paste: 'Paste', selectAll: 'Select all', copyLink: 'Copy link' },
