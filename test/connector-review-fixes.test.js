@@ -34,7 +34,11 @@ test('Live Proxies keeps the index inside the 8-digit session', () => {
 test('Bright Data uses port 44445 and refuses a login without the customer id', () => {
   assert.doesNotMatch(IPC + UI, /port: (22225|33335)\b/, 'ports 22225/33335 were retired on 25 Sep 2026');
   assert.match(IPC, /port: 44445/);
-  assert.match(IPC, /\^brd-customer-\[\^-\]\+-zone-/);
+  // The login check moved into brightDataZoneUser; the adapter refuses when it returns null.
+  assert.equal(U.brightDataZoneUser('brd-zone-residential'), null);
+  assert.equal(U.brightDataZoneUser('myuser'), null);
+  assert.equal(U.brightDataZoneUser('brd-customer-hl_1234-zone-isp1').base, 'brd-customer-hl_1234-zone-isp1');
+  assert.match(IPC, /if \(!zoneUser\) throw new Error\('Bright Data: enter the proxy username from the zone/);
 });
 
 test('CatProxies Rotating Mobile refuses SOCKS5 instead of returning HTTP rows', () => {

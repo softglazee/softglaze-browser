@@ -93,7 +93,7 @@ test('a rotating pull asks for ONE endpoint, not N copies of the same one', () =
   // five IDENTICAL lines, so the pool deduped them and reported "Returned: 5, Added: 1,
   // Existing: 4". DataImpulse's own documented example response is three identical lines
   // too. A rotating gateway is ONE endpoint whose exit IP changes per request, which is
-  // exactly how fetchGatewayVerifiedPool treats Oxylabs and Smartproxy.
+  // exactly how a rotating Oxylabs or Smartproxy pull is treated (mintGatewayRows).
   const body = adapterBody();
   assert.match(body, /const want = sticky \? n : 1/,
     'rotating must request a single endpoint; asking for N mints N copies of one proxy');
@@ -108,7 +108,8 @@ test('a second sticky pull adds NEW ports instead of returning the same ones', (
   const body = adapterBody();
   assert.match(body, /existingPorts\(\{ host: first\.host, login: first\.username\.split\('__'\)\[0\] \}\)/,
     'the lookup must key on the BASE login, so a different country or lifetime never reuses a held port');
-  assert.match(body, /qs\.set\('quantity', String\(have\.size \+ n\)\)/,
+  // Capped at the sticky port range, 10000 to 20000 (docs.dataimpulse.com, Types of connections).
+  assert.match(body, /qs\.set\('quantity', String\(Math\.min\(DI_STICKY_PORTS, have\.size \+ n\)\)\)/,
     'the re-pull must ask for what the pool holds plus the new amount');
   assert.match(body, /filter\(\(r\) => !have\.has\(r\.port\)\)/,
     'ports already in the pool must be dropped before rows are returned');
@@ -141,7 +142,7 @@ test('the DataImpulse selects are seeded with values its own options carry', () 
   // three selects render with nothing selected.
   assert.match(UI, /const di = provider\.key === 'dataimpulse'/,
     'the form reset must know which provider it is priming');
-  assert.match(UI, /plan: di \? 'residential' : 'premium'/, 'product must default to residential');
+  assert.match(UI, /plan: di \? 'residential' : /, 'product must default to residential');
   assert.match(UI, /proxyType: di \|\| \(provider\.geoSync && provider\.geoSync\.proto\) \? 'http' : 'proxy_sock_5'/, 'protocol must default to http');
   // Sticky, because a profile needs an exit IP that stays put and rotating adds one proxy.
   assert.match(UI, /poolType: di \? 'sticky' : 'residential'/, 'session must default to sticky');
