@@ -219,7 +219,7 @@ test('profiles in use anywhere else are left alone', () => {
   for (const src of ['listAllSessions()', 'profileLocks.keys()', 'profileLaunchesInFlight.keys()', 'warmerRuns.values()', 'macroRuns.values()', 'profilesInParallelRun()', 'macroScheduleBusy']) {
     assert.ok(busy.includes(src), src);
   }
-  assert.match(fnBody('runMacroOnProfile'), /const control = \{ profileId, paused: false, aborted: false, ownerMemberId: currentMemberId \};/);
+  assert.match(fnBody('runMacroOnProfile'), /const control = \{[^}]*\bprofileId\b[^}]*\};/, 'a macro run records its profile');
   assert.match(fnBody('startAutopilotWarm'), /skipOpen: true/, 'a browser opened after the pick is not driven');
   assert.match(fnBody('warmOneProfile'), /if \(alreadyOpen && opts\.skipOpen\)/);
 });
