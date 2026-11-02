@@ -1,23 +1,8 @@
 'use strict';
 
-// "Keep me signed in on this device" - persists the credential that opens the
-// startup gate (workspace vault password, the DB-at-rest key, or a super/team
-// member login) so the user is not asked for it again after an app restart.
-//
-// CRITICAL DESIGN NOTES
-//  - The blob is sealed with the OS keychain via Electron's safeStorage (DPAPI on
-//    Windows). It is encrypted to the logged-in Windows account - never written in
-//    plaintext. If OS encryption is unavailable we REFUSE to write (a login secret
-//    must never hit disk in the clear), unlike secretStore which fails open.
-//  - It is stored as a FILE in userData, NOT in the SQLite Setting table. The DB may
-//    be encrypted-at-rest and therefore unreadable at boot - the whole point of this
-//    file is to hold the key that decrypts it, so it cannot live inside it.
-//  - Default is OFF: the file only exists once the user ticks the checkbox at login.
-//
-// Blob shape (discriminated by `kind`):
-//   { kind: 'vault',  password }                 - workspace vault / DB-at-rest key
-//   { kind: 'super',  identifier, password }     - Super Admin source-owner login
-//   { kind: 'member', identifier, password }     - team-member login
+// Keep me signed in: stores the startup-gate credential sealed with safeStorage (DPAPI on Windows).
+// Never written without OS encryption (unlike secretStore), and kept as a file in userData, not in
+// the DB, which it may unlock. Off until the user opts in at login. Kinds: vault, super, member.
 
 const path = require('path');
 const fs = require('fs');
@@ -56,20 +41,17 @@ function read() {
   const fp = filePath();
   try {
     if (!fs.existsSync(fp)) return null; // no remembered credential - the normal case
-    // OS crypto down THIS boot (rare/transient) - KEEP the blob and retry next launch;
-    // do NOT delete a possibly-good credential over a temporary keychain hiccup.
+    // OS crypto may be down only for this boot: keep the blob and retry next launch rather than
+    // delete a possibly good credential.
     if (!isAvailable()) return null;
     const buf = fs.readFileSync(fp);
     const json = safeStorage.decryptString(buf);
     const blob = JSON.parse(json);
     return blob && typeof blob === 'object' && blob.kind ? blob : null;
   } catch (e) {
-    // The file EXISTS and the keychain IS available, yet it won't decrypt/parse - the blob
-    // is corrupt or was sealed under a different OS crypto context (roaming profile, Windows
-    // account change). It can NEVER work, so delete it and self-heal: otherwise every boot
-    // re-attempts, fails, and shows the gate forever with no way to recover. A fresh login
-    // re-seals a good one. (Distinct from the "absent"/"unavailable" returns above, which
-    // must not delete anything.)
+    // The keychain works but the blob will not decrypt or parse: it is corrupt or sealed under another
+    // OS crypto context, so it can never work. Delete it, or every boot fails at the gate; a fresh login
+    // re-seals. The absent and unavailable cases above must not delete anything.
     console.error('[rememberStore] stored credential is unusable - clearing it to self-heal:', e && e.message);
     try { fs.unlinkSync(fp); } catch (e2) { /* best-effort */ }
     return null;

@@ -59,7 +59,7 @@ test('JSON calls go through the envelope check', () => {
 });
 
 test('every envelope check is handed the key, so an echoed path cannot leak it', () => {
-  const adapter = IPC.slice(IPC.indexOf('// --- Proxy-Seller: residential lists'), IPC.indexOf('// --- IPRoyal residential'));
+  const adapter = IPC.slice(IPC.indexOf('const PS_API = '), IPC.indexOf('const IPR_API = '));
   const calls = adapter.match(/unwrapProxySeller\([^;]*;/g) || [];
   assert.equal(calls.length, 3, 'psCall, the download and the geo database');
   for (const call of calls) assert.match(call, /, key\)/, `${call} must pass the key`);

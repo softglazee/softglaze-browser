@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput, AlertTriangle, Zap, Turtle } from 'lucide-react';
+import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, FolderInput, AlertTriangle, Zap, Turtle } from 'lucide-react';
 
-// Live-checker log level → colour, health grade → colour, and a short duration format.
 const CHECK_LEVEL_COLOR = { INFO: 'text-sky-300', SUCCESS: 'text-emerald-400', WARN: 'text-amber-400', ERROR: 'text-red-400' };
 const GRADE_COLOR = { A: 'text-emerald-400', B: 'text-lime-400', C: 'text-amber-400', D: 'text-orange-400', F: 'text-red-400' };
 function fmtDuration(ms) {
@@ -14,7 +13,7 @@ function fmtDuration(ms) {
 
 import EmptyState from '@/components/EmptyState.jsx';
 import { AreaChart } from '@/components/charts/Charts.jsx';
-import { Clock, BarChart3, History, RotateCw, ArrowUpRight } from 'lucide-react';
+import { Clock, History, RotateCw, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import FreeProxiesDialog from '@/components/FreeProxiesDialog.jsx';
 import { Gift } from 'lucide-react';
@@ -39,7 +38,7 @@ const PROVIDER_LABELS = {
 };
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
 
-// Short relative-time label for the "Last check" card (accurate, locale-strings via i18n).
+// Relative time for the "Last check" card.
 function timeAgo(ms, t) {
   if (!ms) return null;
   const diff = Date.now() - ms;
@@ -52,9 +51,7 @@ function timeAgo(ms, t) {
   return t('stats.dayAgo', { n: Math.floor(hrs / 24) });
 }
 
-// Dependency-free inline-SVG segmented bar. Stretches to its container width; a flat muted
-// track shows through when there's no data. Drives the verified/failed/unchecked and
-// protocol splits in the stat cards (no gradients, no glow - just flat token fills).
+// Dependency-free SVG segmented bar; a muted track shows when there is no data.
 function SegBar({ segments }) {
   const total = segments.reduce((a, s) => a + (s.value > 0 ? s.value : 0), 0);
   let x = 0;
@@ -75,10 +72,8 @@ function SegBar({ segments }) {
   );
 }
 
-// Compact, token-only stat card: label, big number, small sub-detail. Clickable cards
-// render as a focusable <button> that sets the matching table filter; an accent-coloured
-// 1px border marks the active one. No gradients/glow - flat card, 8px radius, mono/tabular
-// numbers. `accent` is an app token (var(--success), var(--chart-1), ...).
+// Clickable cards render as a focusable <button> that sets the matching table filter.
+// `accent` is an app token (var(--success), var(--chart-1), ...).
 function MiniStat({ icon: Icon, label, value, sub, accent = 'var(--primary)', onClick, active, title }) {
   const Tag = onClick ? 'button' : 'div';
   return (
@@ -113,7 +108,6 @@ function Field({ label, children }) {
   );
 }
 
-// --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
 const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
   <div className={`relative flex items-center ${className}`}>
     <select
@@ -151,7 +145,7 @@ export default function ProxyPoolPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [copiedId, setCopiedId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [view, setView] = useState('custom'); // 'custom' | 'history' | 'groups' (providers moved to /proxy-providers)
+  const [view, setView] = useState('custom'); // 'custom' | 'history' | 'groups'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'failed' (driven by the stat cards)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -174,14 +168,12 @@ export default function ProxyPoolPage() {
   const [autoGroupLevel, setAutoGroupLevel] = useState('country');
   const [autoGrouping, setAutoGrouping] = useState(false);
   const [autoGroupMsg, setAutoGroupMsg] = useState('');
-  // Phase D - proxy intelligence: latency sort, rotation tuning, scheduler, geo, history.
   const [sortBy, setSortBy] = useState('default'); // 'default' | 'fastest' | 'slowest'
   const [policyDetail, setPolicyDetail] = useState({ failoverMaxLatencyMs: 0, latencyTopN: 3 });
   const [scheduler, setScheduler] = useState({ enabled: false, minutes: 30 });
   const [historyProxy, setHistoryProxy] = useState(null);
   const [historyData, setHistoryData] = useState(null); // null = loading; [] = none
-  // History cards: each recently-checked proxy's last N results as pass/fail pips, so
-  // "verified before, failed on a later check" is visible at a glance for cross-verification.
+  // Recent results per proxy as pass/fail pips, so a proxy that later failed stands out.
   const [healthCards, setHealthCards] = useState([]);
 
   const loadHealthCards = useCallback(async () => {
@@ -210,8 +202,7 @@ export default function ProxyPoolPage() {
     return m;
   }, [proxies]);
 
-  // Client-side filter: search text + active category (group / ungrouped / provider)
-  // + the verified/failed status filter (driven by the clickable stat cards).
+  // Client-side filter: search, active category and the stat-card status filter.
   const filteredProxies = useMemo(() => {
     const q = search.trim().toLowerCase();
     return proxies.filter((p) => {
@@ -254,28 +245,21 @@ export default function ProxyPoolPage() {
   // Speed tallies for the Fast/Slow filter chips (fresh check wins over the snapshot).
   const spdCounts = { fast: bucketCounts.fast, slow: bucketCounts.slow };
 
-  // Proxies that have NEVER been checked - no live result and no persisted health. These
-  // are what a fresh import adds; because the health/speed/blacklist filters treat them
-  // as 'unknown' (excluded), they "disappear" the moment such a filter is active until
-  // they're checked. The "Check new" button (below) checks exactly this set so imports
-  // gain health without re-checking the whole pool.
+  // Never-checked proxies (fresh imports). Health, speed and blacklist filters treat them as unknown
+  // and hide them, so "Check new" checks exactly this set.
   const uncheckedIds = useMemo(
     () => proxies.filter((p) => !p.lastStatus && !checkResults[p.id]).map((p) => p.id),
     [proxies, checkResults]
   );
 
-  // Pagination over the filtered+sorted set (keeps long lists fast; pager is pinned at
-  // the bottom of the table card so you never scroll to the end to change pages).
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(sortedProxies.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const pagedProxies = pageSize === Infinity ? sortedProxies : sortedProxies.slice((safePage - 1) * pageSize, safePage * pageSize);
   // Reset to page 1 whenever the filter/sort set changes out from under us.
   useEffect(() => { setPage(1); }, [search, activeGroup, statusFilter, blacklistFilter, speedFilter, pageSize, sortBy]);
 
-  // When the FILTER changes, drop any selected ids that are no longer visible. Without
-  // this, a "select all" under one filter carries hidden ids into a delete under another
-  // - the "select 5, but delete everything" bug. Keyed on the filter inputs only (not
-  // checkResults) so a live health check never clears the selection mid-run.
+  // When the filter changes, drop selected ids that are no longer visible, so a delete never hits
+  // hidden rows. Keyed on filter inputs, not checkResults, so a live check keeps the selection.
   useEffect(() => {
     setSelectedIds((prev) => {
       if (prev.size === 0) return prev;
@@ -286,12 +270,9 @@ export default function ProxyPoolPage() {
     });
   }, [search, activeGroup, statusFilter, blacklistFilter, speedFilter]);
 
-  // Toggle a status filter from a stat card (clicking the active one clears it).
   const toggleStatusFilter = (s) => setStatusFilter((cur) => (cur === s ? 'all' : s));
 
-  // The word shown in BOTH the "Delete all <scope>" button and its confirm. They used to
-  // be computed separately, so the confirm said "all" while the blacklist or speed filter
-  // had narrowed the set (or the button said "filtered" while the confirm said "all").
+  // One label for both the "Delete all <scope>" button and its confirm, so they always agree.
   function deleteFilteredScopeLabel() {
     if (statusFilter !== 'all') return t(`deleteFiltered.scope.${statusFilter}`);
     if (blacklistFilter !== 'all') return t(`blacklistFilter.${blacklistFilter}`);
@@ -380,9 +361,7 @@ export default function ProxyPoolPage() {
   }
 
   async function handleBulkDelete() {
-    // Only delete selected proxies that are ACTUALLY visible under the current filter -
-    // never hidden ones carried over from a prior select-all (defense-in-depth on top of
-    // the filter-change prune effect above).
+    // Delete only selected proxies visible under the current filter, as a backstop to the prune effect.
     const visible = new Set(filteredProxies.map((p) => p.id));
     const ids = Array.from(selectedIds).filter((id) => visible.has(id));
     if (ids.length === 0) return;
@@ -434,9 +413,7 @@ export default function ProxyPoolPage() {
   }, [groups, activeGroup]);
   useEffect(() => { loadProxiesRef.current = loadProxies; }, [loadProxies]);
 
-  // Subscribe once to the streamed proxy-checker progress. Each event updates the
-  // progress bar/counts + appends a log line; per-proxy 'result' events also update
-  // the inline row status. On finish, reload so persisted health/geo is reflected.
+  // Per-proxy 'result' events also update the row; on finish, reload to show persisted health and geo.
   useEffect(() => {
     if (!softglazeApi.proxies.onCheckProgress) return undefined;
     const off = softglazeApi.proxies.onCheckProgress((data) => {
@@ -468,12 +445,9 @@ export default function ProxyPoolPage() {
     return () => { try { off && off(); } catch (e) { /* ignore */ } };
   }, []);
 
-  // Auto-scroll the checker log to the newest line.
   useEffect(() => { if (checkLogRef.current) checkLogRef.current.scrollTop = checkLogRef.current.scrollHeight; }, [checkRun && checkRun.logs && checkRun.logs.length]);
 
-  // Auto-close the checker console shortly after the final check finishes - the
-  // per-proxy results persist to health history, so nothing is lost. A running or
-  // freshly-started run cancels the pending close.
+  // Auto-close the checker after the run ends (results persist to health history); a new run cancels it.
   useEffect(() => {
     if (!checkRun || checkRun.running) return undefined;
     const id = setTimeout(() => setCheckRun(null), 5000);
@@ -484,8 +458,7 @@ export default function ProxyPoolPage() {
     setProxyForm((current) => ({ ...current, [key]: value }));
   }
 
-  // Paste "host:port:user:pass" into the Host field to auto-fill every field
-  // (mirrors the Add Profile page's proxy section).
+  // Pasting "host:port:user:pass" into Host fills every field, as on the Add Profile page.
   function handleProxyPaste(event) {
     const text = ((event.clipboardData && event.clipboardData.getData('text')) || '').trim();
     const parts = text.split(':');
@@ -516,8 +489,7 @@ export default function ProxyPoolPage() {
     setSaving(true);
     setError('');
     try {
-      // Don't send the masked placeholder back on save - that would overwrite the real
-      // stored password with the bullets and break the proxy's auth on any unrelated edit.
+      // Never send the masked placeholder back: it would overwrite the stored password and break auth.
       const payload = { name: proxyForm.name, type: proxyForm.type, host: proxyForm.host, port: proxyForm.port, username: proxyForm.username, password: proxyForm.password === '••••••••' ? undefined : proxyForm.password };
       if (isEditing) await softglazeApi.proxies.update({ id: proxyForm.id, ...payload });
       else await softglazeApi.proxies.create(payload);
@@ -578,14 +550,11 @@ export default function ProxyPoolPage() {
     }
   }
 
-  // Deep-check every proxy (streamed, concurrent, with progress + log).
   async function handleCheckAll() {
     await startStreamCheck(null);
   }
 
-  // Deep-check ONLY the never-checked proxies (freshly imported ones). Lets imports gain
-  // health so the health/speed filters include them - without the full-pool re-check the
-  // user previously needed just to make filtering work.
+  // Check only never-checked proxies, so fresh imports join the health and speed filters.
   async function handleCheckNew() {
     if (uncheckedIds.length === 0) return;
     await startStreamCheck(uncheckedIds);
@@ -636,7 +605,7 @@ export default function ProxyPoolPage() {
     catch (e) { setHistoryData([]); }
   }
 
-  // --- Proxy groups: create / edit / delete / assign / drag-drop ---
+  // ---- Proxy groups ----
   async function saveGroup() {
     const m = groupModal;
     if (!m) return;
@@ -670,8 +639,7 @@ export default function ProxyPoolPage() {
     } catch (err) { setError(err.message || t('errors.moveProxies')); }
   }
 
-  // Auto-categorize proxies into Country/State/City groups from their verified geo
-  // (set by the proxy health check). Run Test All first so proxies have a country.
+  // Group proxies by verified Country/State/City from the health check; run Test All first for geo.
   async function handleAutoGroup() {
     setAutoGrouping(true); setError(''); setAutoGroupMsg('');
     try {
@@ -717,9 +685,7 @@ export default function ProxyPoolPage() {
     return <span className="text-xs text-muted-dark">-</span>;
   }
 
-  // Compact table badges: proxy speed bucket and blocklist state (fresh check wins
-  // over the stored snapshot). Shown as their own columns so the whole pool can be
-  // scanned at a glance without opening the checker.
+  // Speed and blocklist badges; a fresh check wins over the stored snapshot.
   function renderSpeedCell(proxy) {
     const s = speedOf(proxy, checkResults);
     if (s === 'unknown') return <span className="text-muted-dark text-xs">-</span>;
@@ -772,9 +738,8 @@ export default function ProxyPoolPage() {
     }
   }
 
-  // REAL stats derived from the proxy list + any check results. verified/failed use
-  // the same health resolution as the filter so card counts match the filtered rows,
-  // and the leftover is the never-checked ('unknown') bucket - all three sum to the total.
+  // Verified/failed use the filter's health resolution so card counts match the rows;
+  // the rest is the never-checked bucket, so all three sum to the total.
   const verifiedCount = bucketCounts.verified;
   const failedCount = bucketCounts.failed;
   const uncheckedCount = Math.max(0, proxies.length - verifiedCount - failedCount);
@@ -859,9 +824,7 @@ export default function ProxyPoolPage() {
         }
       />
 
-      {/* LIVE CHECKER - inline, ABOVE the Custom / Integrations tabs (was a floating
-          bottom-right card). Auto-closes ~5s after the run finishes; per-proxy results
-          persist to each proxy's health history for cross-verification. */}
+      {/* Auto-closes ~5 s after the run; per-proxy results persist to health history */}
       {checkRun && (
         <div className="mb-4 rounded-2xl border border-border-strong bg-card p-4 space-y-3 animate-scale-in">
           <div className="flex items-center gap-3 flex-wrap">
@@ -901,7 +864,6 @@ export default function ProxyPoolPage() {
         </div>
       )}
 
-      {/* Dual-view tab partition. Vendor connectors live on their own page now. */}
       <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
         {[
@@ -924,12 +886,8 @@ export default function ProxyPoolPage() {
       </Link>
       </div>
 
-      {/* STATS ROW - real, accurate pool stats (shown on every view as a pool overview).
-          Clickable cards set the matching table filter and jump to the Custom Proxies view;
-          Countries / Last check open the Groups & countries view where that detail lives.
-          Token colours only, flat 1px borders, inline-SVG split bars - no gradients/glow. */}
+      {/* Clickable cards set the table filter; Countries and Last check open the Groups view */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
-        {/* Total + verified/failed/unchecked split */}
         <MiniStat
           icon={Boxes}
           label={t('stats.totalProxies')}
@@ -949,7 +907,6 @@ export default function ProxyPoolPage() {
             </div>
           )}
         />
-        {/* Verified */}
         <MiniStat
           icon={ShieldCheck}
           label={t('stats.verified')}
@@ -968,7 +925,6 @@ export default function ProxyPoolPage() {
             </div>
           )}
         />
-        {/* Failed */}
         <MiniStat
           icon={ShieldOff}
           label={t('stats.failed')}
@@ -979,7 +935,7 @@ export default function ProxyPoolPage() {
           onClick={() => { toggleStatusFilter('failed'); setView('custom'); }}
           sub={<span className="block truncate">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
         />
-        {/* Protocol mix (HTTP vs SOCKS) - informational, no type filter exists */}
+        {/* Protocol mix is informational; there is no type filter */}
         <MiniStat
           icon={Wifi}
           label={t('stats.protocols')}
@@ -997,7 +953,6 @@ export default function ProxyPoolPage() {
             </div>
           )}
         />
-        {/* Countries covered - opens the Groups & countries breakdown */}
         <MiniStat
           icon={Globe}
           label={t('stats.countries')}
@@ -1007,7 +962,6 @@ export default function ProxyPoolPage() {
           onClick={() => setView('groups')}
           sub={<span className="block truncate">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
         />
-        {/* Last check + schedule - opens the automatic health-check settings */}
         <MiniStat
           icon={Clock}
           label={t('stats.lastCheck')}
@@ -1023,9 +977,7 @@ export default function ProxyPoolPage() {
 
 
 
-      {/* CHECK HISTORY sub-page: each recently-checked proxy's last N results as pass/fail
-          pips. An amber card = "verified before, failed on a later check". Click a card for the
-          full latency/status history. */}
+      {/* An amber card means verified before, failed on a later check */}
       {view === 'history' && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1082,9 +1034,7 @@ export default function ProxyPoolPage() {
         </div>
       )}
 
-      {/* GROUPS & COUNTRIES sub-page: manage groups (country groups from Auto-group included),
-          the per-country breakdown, the per-provider breakdown and the auto-check schedule.
-          Clicking a group or provider opens the Proxies page filtered to it. */}
+      {/* Clicking a group or provider opens the proxy list filtered to it */}
       {view === 'groups' && (
         <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-border bg-card p-4">
@@ -1181,8 +1131,7 @@ export default function ProxyPoolPage() {
       )}
 
       {view === 'custom' && (<>
-      {/* FILTER BAR - one row of dropdowns. Groups, history and the country breakdown live on
-          their own sub-pages; a filter chosen there lands here. */}
+      {/* Filters chosen on the Groups, History or country sub-pages land here */}
       <div className="mb-3 flex items-center gap-2 flex-wrap">
         <div className="relative max-w-sm flex-1 min-w-[220px]">
           <Input icon={Search} value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('search.placeholder')} />
@@ -1415,7 +1364,6 @@ export default function ProxyPoolPage() {
       </Card>
       </>)}
 
-      {/* --- PROXY HEALTH HISTORY --- */}
       <Dialog open={!!historyProxy} onOpenChange={(o) => { if (!o) { setHistoryProxy(null); setHistoryData(null); } }}>
         <DialogContent title={t('history.dialogTitle')} className="rounded border-border bg-card">
           <DialogHeader>
@@ -1447,7 +1395,6 @@ export default function ProxyPoolPage() {
         </DialogContent>
       </Dialog>
 
-      {/* --- CREATE / EDIT MODAL --- */}
       <Dialog open={proxyOpen} onOpenChange={setProxyOpen}>
         <DialogContent title={isEditing ? t('form.dialogTitleEdit') : t('form.dialogTitleCreate')} className="rounded border-border bg-card">
           <form onSubmit={handleSaveProxy}>
@@ -1498,7 +1445,6 @@ export default function ProxyPoolPage() {
         </DialogContent>
       </Dialog>
 
-      {/* --- BATCH IMPORT MODAL --- */}
       <FreeProxiesDialog open={freeOpen} onOpenChange={setFreeOpen} onAdded={loadProxies} />
 
       <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
@@ -1555,7 +1501,6 @@ export default function ProxyPoolPage() {
         </DialogContent>
       </Dialog>
 
-      {/* --- CREATE / EDIT PROXY GROUP MODAL --- */}
       <Dialog open={Boolean(groupModal)} onOpenChange={(o) => { if (!o) setGroupModal(null); }}>
         <DialogContent title={groupModal?.id ? t('groupModal.dialogTitleEdit') : t('groupModal.dialogTitleNew')} className="rounded border-border bg-card">
           <form onSubmit={(e) => { e.preventDefault(); saveGroup(); }}>

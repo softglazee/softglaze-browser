@@ -12,7 +12,7 @@ export function getStoredTheme() {
   }
 }
 
-export function applyTheme(theme) {
+function applyTheme(theme) {
   const el = document.documentElement;
   el.classList.remove('light', 'dark');
   el.classList.add(theme === 'light' ? 'light' : 'dark');
@@ -23,10 +23,6 @@ export function setTheme(theme) {
   try { localStorage.setItem(KEY, next); } catch (e) { /* ignore */ }
   applyTheme(next);
   return next;
-}
-
-export function toggleTheme() {
-  return setTheme(getStoredTheme() === 'dark' ? 'light' : 'dark');
 }
 
 // Called once before React renders to avoid a flash of the wrong theme.

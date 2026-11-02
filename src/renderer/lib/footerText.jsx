@@ -1,11 +1,7 @@
 import React from 'react';
 
-// Render footer text as React nodes:
-//   • {year}            → the current year
-//   • [label](https://) → an anchor showing the LABEL (URL hidden)
-//   • bare https://url  → an anchor showing the URL without its scheme
-// Shared by the global FooterBar (AppShell) and the Settings live preview so they
-// always match.
+// Renders {year}, [label](https://) as a label-only link, and bare https URLs without the scheme.
+// Shared by FooterBar and the Settings preview so both always match.
 export function renderFooterNodes(text, linkClass = 'text-primary hover:underline') {
   const resolved = String(text || '').replace(/\{year\}/g, String(new Date().getFullYear()));
   const nodes = [];

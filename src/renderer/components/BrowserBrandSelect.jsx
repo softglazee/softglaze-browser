@@ -1,20 +1,14 @@
-// Chromium-family brand identity picker + reusable brand marks.
-//
-// Edge / Brave / Opera / Vivaldi / Yandex all run Softglaze's real Chrome engine;
-// this control only chooses the *presented identity* (UA token, Sec-CH-UA brands,
-// navigator globals). It's shown only when the engine is Chromium.
-//
-// The marks below are ORIGINAL stylized glyphs (currentColor), NOT the vendors'
-// trademarked logos - same trademark-safe approach as the proxy provider marks.
+// Chromium brand identity picker and marks. Every brand runs the real Chrome engine; this only
+// picks the presented identity (UA, Sec-CH-UA brands, navigator). Marks are original glyphs, not
+// vendor logos (trademark-safe).
 
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/index.js';
 import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
 import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
 
-// Register the shared "cmpUi" namespace without touching the central i18n config.
-// addResourceBundle is a no-op if the bundle already exists, so this is safe across
-// hot reloads and the other components that register the same namespace.
+// Registers the shared cmpUi namespace without touching the central i18n config; the guard keeps
+// it safe across hot reloads and other components that register it.
 if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
 if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 

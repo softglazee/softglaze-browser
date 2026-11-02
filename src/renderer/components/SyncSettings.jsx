@@ -3,10 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { FolderSync, Loader2, Check, AlertTriangle, Lock, RefreshCw, ShieldCheck, ChevronDown } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// End-to-end encrypted cloud sync. The bucket is an EXTERNAL service you host;
-// this card configures the endpoint + a sync passphrase, shows honest status,
-// and runs a sync. Nothing is faked: with no endpoint it says "disabled", and a
-// run only reports success when the main process confirms it.
+// End-to-end encrypted cloud sync to a self-hosted bucket. Status is honest: no endpoint shows
+// "disabled", and a run reports success only when main confirms it.
 function statusTone(s, t) {
   if (!s || !s.configured) return { color: '#9ca3af', label: t('sync.toneDisabled') };
   if (!s.unlocked) return { color: '#f59e0b', label: t('sync.toneLocked') };
@@ -101,7 +99,6 @@ export default function SyncSettings() {
         </span>
       </div>
 
-      {/* Status line */}
       {status?.configured && (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statEndpoint')}</div><div className="text-foreground truncate font-mono">{status.endpointHost || '-'}</div></div>
@@ -117,14 +114,12 @@ export default function SyncSettings() {
         </div>
       )}
 
-      {/* Not configured → explicit disabled notice */}
       {!status?.configured && !showConfig && (
         <div className="mt-4 px-3 py-2.5 rounded-lg bg-elevated border border-border text-[12px] text-muted-foreground">
           {t('sync.disabledNotice')}
         </div>
       )}
 
-      {/* Configured & locked → unlock with passphrase */}
       {status?.configured && !status?.unlocked && (
         <div className="mt-4">
           <label className={labelCls}><Lock className="w-3 h-3 inline mr-1" />{t('sync.unlockLabel')}</label>
@@ -137,7 +132,6 @@ export default function SyncSettings() {
         </div>
       )}
 
-      {/* Actions */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {status?.configured && status?.unlocked && status?.enabled && (
           <button onClick={runNow} disabled={busy === 'run'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[12.5px] font-semibold text-white bg-gradient-to-br from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 shadow-lg shadow-teal-500/25 disabled:opacity-60">
@@ -149,7 +143,6 @@ export default function SyncSettings() {
         </button>
       </div>
 
-      {/* Configure form */}
       {showConfig && (
         <div className="mt-4 pt-4 border-t border-border space-y-3.5">
           <div>

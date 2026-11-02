@@ -1,21 +1,7 @@
 'use strict';
-/* eslint-disable no-console */
-// ---------------------------------------------------------------------------
-// Softglaze — dependency drift checker
-//
-// Scans src/** for every `require('pkg')`, `import … from 'pkg'`, bare
-// `import 'pkg'`, dynamic `import('pkg')` and `export … from 'pkg'`, then fails
-// (exit 1) if any imported package is not declared in package.json
-// dependencies/devDependencies.
-//
-// This catches the class of bug Phase 0 fixed: a package that only works
-// because it happens to sit in an unsaved local node_modules, and would crash a
-// fresh `git clone && npm install`.
-//
-// Ignored specifiers: Node core builtins (with or without the `node:` prefix),
-// relative/absolute paths (./ ../ /), and the package's own name. No third-party
-// deps — runs on a clean checkout before `npm install`.
-// ---------------------------------------------------------------------------
+// Fails (exit 1) when src/** imports a package not declared in package.json, which would break a
+// fresh clone. Ignores Node builtins, relative paths and the package itself.
+// No third-party deps, so it runs before `npm install`.
 const fs = require('node:fs');
 const path = require('node:path');
 const { builtinModules } = require('node:module');
@@ -24,7 +10,6 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC_DIR = path.join(ROOT, 'src');
 const SCAN_EXTS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
 
-// --- load declared dependencies --------------------------------------------
 let pkg;
 try {
   pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -41,9 +26,7 @@ const declared = new Set([
 const ownName = pkg.name;
 const builtins = new Set(builtinModules);
 
-// --- helpers ----------------------------------------------------------------
-// Reduce an import specifier to its installable package name, or null if it is
-// not a third-party package we should validate.
+// Installable package name for an import specifier, or null when it is not a third-party package.
 function toPackageName(spec) {
   if (!spec) return null;
   if (spec.startsWith('node:')) return null;             // node:fs, node:crypto …
@@ -57,9 +40,8 @@ function toPackageName(spec) {
   return spec.split('/')[0];                             // pkg or pkg/subpath
 }
 
-// A module specifier is a tight token: letters, digits, _ @ . / -. Restricting
-// the capture to that set (no spaces/newlines/punctuation) stops the regex from
-// swallowing unrelated code between two quotes. Each capture group 2 is the spec.
+// Specs are tight tokens (letters, digits, _ @ . / -) so the regex never spans code between quotes.
+// Capture group 2 is the spec.
 const SPEC = "([\\w@./-]+)";
 const PATTERNS = [
   new RegExp(`\\brequire\\(\\s*(['"\`])${SPEC}\\1\\s*\\)`, 'g'),          // require('x')
@@ -96,7 +78,6 @@ function walk(dir, out) {
   }
 }
 
-// --- scan -------------------------------------------------------------------
 if (!fs.existsSync(SRC_DIR)) {
   console.error(`check:deps — source directory not found: ${SRC_DIR}`);
   process.exit(2);
@@ -124,7 +105,6 @@ for (const file of files) {
   }
 }
 
-// --- report -----------------------------------------------------------------
 if (offenders.size === 0) {
   console.log(`check:deps — OK. Scanned ${scanned} file(s); all imports are declared in package.json.`);
   process.exit(0);

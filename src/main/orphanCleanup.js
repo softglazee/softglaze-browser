@@ -1,17 +1,7 @@
 'use strict';
-// Start-up cleanup of profile browsers left running by a previous app run (crash, kill,
-// power loss), done SAFELY.
-//
-// The app records each profile browser's PID in %TEMP%\softglaze_active_pids.json and
-// used to kill every listed PID at the next start with process.kill(pid, 9), without
-// checking what that PID is now. After a crash or a power cut the file survives, Windows
-// reuses PIDs, and the next start could force-close unrelated programs (an editor, a
-// game, Excel) and lose their unsaved work.
-//
-// Now a listed PID is only killed when the process that holds it RIGHT NOW is a browser
-// executable whose command line points at that profile's own data folder (recorded with
-// the PID), or - for entries written by older versions, which only stored the number -
-// at the SoftGlaze profile root. Anything else is left alone.
+// Startup cleanup of profile browsers left by a crash, kill or power loss. Windows reuses PIDs, so a
+// PID from %TEMP%\softglaze_active_pids.json is killed only when it is now a browser whose command
+// line points at that profile's data folder (or, for number-only entries, the profile root).
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -103,4 +93,4 @@ async function killTrackedOrphans({ pidFile = PID_FILE, execFile = require('node
   return { killed, skipped: entries.length - killed.length };
 }
 
-module.exports = { PID_FILE, parseTrackedPids, selectVerifiedPids, queryProcesses, killTrackedOrphans };
+module.exports = { PID_FILE, parseTrackedPids, selectVerifiedPids, killTrackedOrphans };

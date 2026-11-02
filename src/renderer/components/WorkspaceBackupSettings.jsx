@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { DatabaseBackup, Download, ArchiveRestore, AlertTriangle, Loader2, Check } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// Encrypted, portable backup of the whole workspace (database + settings) into a
-// single passphrase-protected .sgzw file, with a restore that verifies the file
-// before it touches the live database.
+// Passphrase-protected .sgzw backup of the database and settings; restore verifies the file
+// before touching the live database.
 export default function WorkspaceBackupSettings() {
   const { t } = useTranslation('cmpSettingsB');
   const [status, setStatus] = useState(null);
@@ -80,7 +79,6 @@ export default function WorkspaceBackupSettings() {
       )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {/* Backup */}
         <div className="rounded-lg bg-elevated border border-border p-4">
           <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground mb-3"><Download className="w-4 h-4 text-sky-400" /> {t('workspaceBackup.createTitle')}</div>
           <label className={labelCls}>{t('workspaceBackup.backupPasswordLabel')}</label>
@@ -91,7 +89,6 @@ export default function WorkspaceBackupSettings() {
           </button>
         </div>
 
-        {/* Restore */}
         <div className="rounded-lg bg-elevated border border-border p-4">
           <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground mb-3"><ArchiveRestore className="w-4 h-4 text-amber-400" /> {t('workspaceBackup.restoreTitle')}</div>
           <label className={labelCls}>{t('workspaceBackup.backupPasswordLabel')}</label>

@@ -1,14 +1,6 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - Cloud sync conflict policy (PURE).
-//
-// Decides, per profile, whether to push (local -> remote), pull (remote ->
-// local), do nothing, or flag a conflict. Resolution is last-write-wins by
-// updatedAt, but a genuine divergence (both sides changed since the last sync)
-// is reported as `conflict` so the UI can surface it instead of silently
-// clobbering the loser. No Electron / DB / transport - unit-testable in isolation
-// (same seam as teamPolicy / parallelRunner / syncTransport).
-// ---------------------------------------------------------------------------
+// Per-profile cloud sync decision: push, pull, noop or conflict. Last-write-wins by updatedAt, but
+// when both sides changed since the last sync it reports a conflict instead of clobbering the loser.
 
 // Normalize a timestamp (Date | ISO string | epoch ms) to epoch ms, or 0.
 function toMs(value) {
@@ -18,27 +10,18 @@ function toMs(value) {
   return Number.isFinite(t) ? t : 0;
 }
 
-// localUpdatedAt : when the local profile last changed (Date | ISO | ms)
-// remoteMeta     : { updatedAt, rev } from the bucket index, or null if absent
-// lastSync       : { syncedAt, rev } from local sync state, or null if never synced
-//
-// Returns { action: 'push'|'pull'|'noop'|'conflict', resolution: 'push'|'pull'|null, reason }.
-// `resolution` is the concrete operation to perform (LWW winner) for the unambiguous
-// cases. For a genuine conflict (both sides changed) resolution is null - the caller must
-// resolve it explicitly rather than trust a wall-clock winner.
+// remoteMeta { updatedAt, rev } comes from the bucket index, lastSync { syncedAt, rev } from local
+// state; either may be null. Returns { action: push|pull|noop|conflict, resolution, reason }, where
+// resolution is the LWW winner, or null for a real conflict the caller must resolve explicitly.
 function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   const local = toMs(localUpdatedAt);
   const remote = remoteMeta ? toMs(remoteMeta.updatedAt) : null;
   const syncedAt = lastSync ? toMs(lastSync.syncedAt) : 0;
 
-  // Nothing remote yet -> first upload.
   if (remote == null) return { action: 'push', resolution: 'push', reason: 'remote-absent' };
 
-  // Prefer the monotonic `rev` for remote change detection - it is immune to clock
-  // skew. With wall-clock only, a device whose clock lags could write a remote
-  // updatedAt <= our syncedAt; we'd read remoteChanged=false and, if we also
-  // changed, silently push over its genuine change (the conflict never even fires).
-  // Fall back to updatedAt only when a rev isn't present on both sides.
+  // Compare the monotonic rev when both sides have one: it is immune to clock skew, whereas a
+  // lagging clock could hide a remote change and let a local push overwrite it.
   const haveRevs = remoteMeta && remoteMeta.rev != null && lastSync && lastSync.rev != null;
   const localChanged = local > syncedAt;
   const remoteChanged = haveRevs ? (remoteMeta.rev !== lastSync.rev) : (remote > syncedAt);
@@ -47,10 +30,8 @@ function decideProfileSync({ localUpdatedAt, remoteMeta, lastSync } = {}) {
   if (localChanged && !remoteChanged) return { action: 'push', resolution: 'push', reason: 'local-changed' };
   if (!localChanged && remoteChanged) return { action: 'pull', resolution: 'pull', reason: 'remote-changed' };
 
-  // Both changed since the last sync -> a genuine conflict. Do NOT auto-pick a winner:
-  // wall-clock last-write-wins lets a skewed or rolled-back clock permanently clobber the
-  // good side. Report it with resolution:null so the caller resolves it explicitly (or
-  // surfaces it) instead of silently applying a timestamp race.
+  // Both sides changed: never auto-pick a winner, since a skewed clock would clobber the good side.
+  // resolution null makes the caller resolve it explicitly.
   return { action: 'conflict', resolution: null, reason: 'both-changed' };
 }
 

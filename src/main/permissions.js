@@ -1,19 +1,9 @@
 'use strict';
-// Role hierarchy + permission/limit model for the team system.
-//
-//   SUPER_ADMIN  (the source owner - one, hardcoded, no registration)
-//     └─ OWNER   (buys a licence / runs a free trial; top of an org tree)
-//          └─ ADMIN
-//               └─ MANAGER
-//                    └─ OPERATOR
-//
-// Each member carries a permission object (limits + feature flags) GRANTED by its
-// parent. A parent can never grant more than it holds itself. Visibility is scoped
-// to a member's own subtree (plus, for managers, their parent admin) so siblings
-// never see each other.
+// Role hierarchy: SUPER_ADMIN > OWNER > ADMIN > MANAGER > OPERATOR. A parent grants each child its
+// limits and feature flags, never more than it holds. Members see only their own subtree (managers
+// also see their parent admin), so siblings never see each other.
 
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
-const VALID_MEMBER_ROLES = ['OPERATOR', 'MANAGER', 'ADMIN', 'OWNER']; // SUPER_ADMIN is virtual, never a DB row
 
 // Which roles a given role is allowed to create beneath it (subject to per-member flags).
 const ROLES_BELOW = {
@@ -38,13 +28,9 @@ function allFeaturesOn() {
 
 function rankOf(role) { return ROLE_RANK[String(role || '').toUpperCase()] || 0; }
 
-// Per-action capability catalog. Each action has a role-rank BASELINE - the rank at
-// or above which the role may perform it by default. On top of the baseline a parent
-// can REVOKE an action for an individual member (restrict-only: an override can never
-// escalate above the role baseline). Baselines preserve existing behavior - actions
-// that were previously ungated are rank 1 (everyone), so nothing changes until an
-// admin explicitly revokes. `proxies.reveal` is MANAGER+ to match the raw-credential
-// redaction policy (rbacPolicy.js). requirePermission() reads ACTION_MIN_RANK.
+// Each action has a minimum role rank. A parent may revoke an action per member but never grant one
+// above the role baseline. `proxies.reveal` is MANAGER+ to match the credential redaction in
+// rbacPolicy.js. requirePermission() reads ACTION_MIN_RANK.
 const ACTION_CATALOG = [
   { key: 'profiles.launch', label: 'Launch profiles', category: 'Profiles', minRank: 1 },
   { key: 'profiles.create', label: 'Create profiles', category: 'Profiles', minRank: 1 },
@@ -62,15 +48,6 @@ const ACTION_CATALOG = [
   { key: 'members.delete', label: 'Delete members / change roles', category: 'Team', minRank: 4 }
 ];
 const ACTION_MIN_RANK = ACTION_CATALOG.reduce((m, a) => { m[a.key] = a.minRank; return m; }, {});
-
-// Default per-action allow map for a role: an action is on iff the role meets the
-// baseline rank. Stored overrides may only turn within-rank actions OFF.
-function defaultActionsFor(role) {
-  const r = rankOf(role);
-  const out = {};
-  for (const a of ACTION_CATALOG) out[a.key] = r >= a.minRank;
-  return out;
-}
 
 // -1 means "unlimited" for any numeric limit.
 function defaultPermissionsFor(role) {
@@ -138,11 +115,8 @@ function effectivePermissions(member) {
     features: { ...def.features, ...(stored.features || {}) },
     actions
   };
-  // CLAMP: a stored (or tampered) permissionsJson may RESTRICT within the role but must
-  // never ESCALATE beyond the role default. Numeric limits are capped to the role default
-  // (a lower stored restriction is honored, -1 = unlimited); create-flags are ANDed with
-  // the default so a stored `true` can never enable a role the member couldn't otherwise
-  // create. Without this, editing permissionsJson granted arbitrary quota / child-role rights.
+  // Stored permissionsJson may restrict within the role but never escalate: limits are capped to the
+  // role default and create flags are ANDed with it, so a tampered row cannot grant quota or roles.
   for (const k of ['maxProfiles', 'maxProxies', 'maxBrowsers', 'maxAdmins', 'maxManagers', 'maxOperators']) {
     merged[k] = clampLimit(merged[k], def[k]);
   }
@@ -152,9 +126,8 @@ function effectivePermissions(member) {
   return merged;
 }
 
-// Clamp a stored numeric limit against the role default. -1 (unlimited) role defaults
-// honor a lower stored restriction but stay unlimited otherwise; finite defaults are a
-// hard ceiling that a stored value (including a stored -1/"unlimited") cannot exceed.
+// An unlimited (-1) default honors a lower stored limit; a finite default is a hard ceiling that no
+// stored value, -1 included, can exceed.
 function clampLimit(storedVal, defVal) {
   const s = Number(storedVal);
   const hasStored = Number.isFinite(s);
@@ -163,7 +136,6 @@ function clampLimit(storedVal, defVal) {
   return Math.min(s, defVal);
 }
 
-// The flag that gates creating a particular child role.
 function createFlagFor(targetRole) {
   const r = String(targetRole || '').toUpperCase();
   if (r === 'ADMIN') return 'canCreateAdmins';
@@ -184,7 +156,6 @@ function canCreateRole(creator, targetRole) {
   return Boolean(effectivePermissions(creator)[flag]);
 }
 
-// The numeric child cap for a role on the parent's permissions.
 function childCapFor(parentPerms, targetRole) {
   const r = String(targetRole || '').toUpperCase();
   if (r === 'ADMIN') return parentPerms.maxAdmins;
@@ -193,13 +164,8 @@ function childCapFor(parentPerms, targetRole) {
   return 0;
 }
 
-// ---------------------------------------------------------------------------
-// Super Admin - the source-owner account. Logs in WITHOUT registration and
-// always bypasses role/limit/trial gating. The credential is per-install: it is
-// set on first run and stored hashed in Setting['superAdminAuth'] (see
-// ipcHandlers superLogin / superAdminSetup) - there is NO shared/hardcoded
-// password in the shipped binary.
-// ---------------------------------------------------------------------------
+// Super Admin (source owner): logs in without registration and bypasses role, limit and trial gates.
+// Its credential is set per install on first run and stored hashed in Setting['superAdminAuth'].
 const SUPER_ADMIN_ID = -1;
 const DEFAULT_SUPER_ADMIN_IDENTIFIER = 'superadmin';
 const SUPER_ADMIN = Object.freeze({
@@ -215,14 +181,8 @@ const SUPER_ADMIN = Object.freeze({
 
 function isSuperAdminId(id) { return Number(id) === SUPER_ADMIN_ID; }
 
-// ---------------------------------------------------------------------------
-// Visibility - the set of member ids a viewer is allowed to see.
-//   SUPER_ADMIN / OWNER : their whole subtree (everyone under them).
-//   ADMIN               : self + own descendants.
-//   MANAGER             : self + own descendants + parent admin.
-//   OPERATOR            : self only.
-// `members` is the full member list; `viewer` is a member object (or SUPER_ADMIN).
-// ---------------------------------------------------------------------------
+// Visibility: SUPER_ADMIN and OWNER see their whole subtree, ADMIN self + descendants,
+// MANAGER self + descendants + parent admin, OPERATOR self only.
 function descendantIds(members, rootId) {
   const childrenOf = new Map();
   for (const m of members) {
@@ -243,10 +203,10 @@ function descendantIds(members, rootId) {
 
 function visibleMemberIds(members, viewer) {
   const role = String(viewer && viewer.role || '').toUpperCase();
-  if (role === 'SUPER_ADMIN') return new Set(members.map((m) => m.id)); // sees everyone
+  if (role === 'SUPER_ADMIN') return new Set(members.map((m) => m.id));
 
   const ids = new Set();
-  if (viewer && viewer.id != null && viewer.id >= 0) ids.add(viewer.id); // self
+  if (viewer && viewer.id != null && viewer.id >= 0) ids.add(viewer.id);
   if (viewer && viewer.id != null) {
     for (const d of descendantIds(members, viewer.id)) ids.add(d);
   }
@@ -260,10 +220,7 @@ function visibleMemberIds(members, viewer) {
   return ids;
 }
 
-// --- Phase F2: shared-profile (ProfileAccess) ACL resolution ----------------
-// Pure, DB-free so it is unit-testable. `row` is a profile selected with
-// { ownerMemberId, assignedMemberId, accesses:[{memberId, level}] }; `visibleSet`
-// is the viewer's visibleMemberIds(). Owner/assignee always get full (edit) access;
+// Shared-profile ACL, DB-free for unit tests. Owner and assignee always get edit access;
 // a ProfileAccess grant to a visible member adds access at its level.
 const ACCESS_LEVEL_RANK = { use: 1, edit: 2 };
 function accessLevelRank(level) { return ACCESS_LEVEL_RANK[String(level)] || 1; }
@@ -282,20 +239,15 @@ function profileRowAccessible(visibleSet, row, requireEdit = false) {
 
 module.exports = {
   ROLE_RANK,
-  VALID_MEMBER_ROLES,
   ROLES_BELOW,
   FEATURE_KEYS,
   ACTION_CATALOG,
   ACTION_MIN_RANK,
-  defaultActionsFor,
   rankOf,
-  allFeaturesOn,
   defaultPermissionsFor,
   effectivePermissions,
   canCreateRole,
-  createFlagFor,
   childCapFor,
-  descendantIds,
   visibleMemberIds,
   accessLevelRank,
   profileRowAccessible,

@@ -23,15 +23,8 @@ import providersPageEs from '@/i18n/locales/es/providersPage.json';
 if (!i18n.hasResourceBundle('en', 'providersPage')) i18n.addResourceBundle('en', 'providersPage', providersPageEn);
 if (!i18n.hasResourceBundle('es', 'providersPage')) i18n.addResourceBundle('es', 'providersPage', providersPageEs);
 
-// ---------------------------------------------------------------------------
-// Proxy providers - every vendor integration on one page.
-//
-// The connector forms themselves (geo, count, protocol, sticky, creds, pull) are the
-// existing ProxyProviders component rendered in `embedded` mode, so every IPC call,
-// FORM_DRAFTS, persistCreds and syncVendorPool path is the same code the Proxy Pool
-// tab used. This page adds the shell around it, built from useProviderStates. Needs attention
-// and Trials are on the Super Admin's Provider status page, not here.
-// ---------------------------------------------------------------------------
+// The connector forms are the ProxyProviders component in `embedded` mode, so IPC, drafts and
+// pool sync share one code path. Needs-attention and trials live on the Provider status page.
 
 const TEST_AFTER_KEY = 'sg.providers.testAfterImport';
 const POOL_PREVIEW = 50;
@@ -165,7 +158,6 @@ export default function ProxyProvidersPage() {
     }
   }
 
-  // ---- pulls + test after import -------------------------------------------------
   async function handleSynced(r, key) {
     const created = r && Array.isArray(r.created) ? r.created.filter(Boolean) : [];
     setLastPull({ key, created });
@@ -181,7 +173,6 @@ export default function ProxyProvidersPage() {
     }
   }
 
-  // ---- trials --------------------------------------------------------------------
   async function saveTrial(remove) {
     if (!sel) return;
     setSavingTrial(true); setTrialErr('');
@@ -195,7 +186,6 @@ export default function ProxyProvidersPage() {
     } finally { setSavingTrial(false); }
   }
 
-  // ---- render --------------------------------------------------------------------
   const poolTotal = proxies.length;
   const active = rows.filter((r) => r.state === 'connected' || r.state === 'trial' || r.state === 'needsKey').length;
   const supplying = rows.filter((r) => r.pool.total > 0).length;
@@ -228,7 +218,6 @@ export default function ProxyProvidersPage() {
 
       {loadErr && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm" style={toneText('danger')}>{t('loadError', { message: loadErr })}</div>}
 
-      {/* Integrations table + detail panel */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 items-start">
         <Card className="overflow-hidden">
           <div className="p-4 flex flex-col gap-3 border-b border-border">
@@ -357,7 +346,6 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
         )}
       </div>
 
-      {/* Overview */}
       <section className="px-5 py-3 border-b border-border" aria-label={t('detail.overview')}>
         <dl className="divide-y divide-border/60">
           <Row icon={Plug} label={t('detail.connector')}>{t(`kind.${kind}`)}</Row>
@@ -419,7 +407,6 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
         </dl>
       </section>
 
-      {/* Tabs */}
       <div role="tablist" className="flex items-center gap-1 px-5 border-b border-border">
         {TABS.map(([key, label]) => (
           <button
@@ -449,7 +436,6 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
                 <Switch checked={testAfter} onChange={setTestAfter} label={t('detail.testAfter')} />
               </label>
 
-              {/* The real connector: same forms, IPC calls and drafts as before. */}
               <ProxyProviders embedded selectedKey={p.key} onSynced={onSynced} />
 
               {testRun && (

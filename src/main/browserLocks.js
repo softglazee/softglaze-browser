@@ -1,19 +1,7 @@
 'use strict';
-// Enforces the "Disable browser developer tools" and "Disable installing/removing
-// extensions" settings on a launched Chromium profile.
-//
-// These used to be written as a managed_policies.json inside the profile folder, which
-// Chromium never reads: on Windows it takes policy only from the registry
-// (HKLM/HKCU\Software\Policies\...), and writing there would also lock the user's own
-// personal Chrome. So the settings did nothing. Instead, this watches the profile's
-// targets over the browser-level DevTools connection the app already holds and closes:
-//   - any DevTools window or docked panel (devtools:// targets) when DevTools is disabled
-//     (F12, Ctrl+Shift+I, "Inspect", chrome://inspect all open one);
-//   - the Extensions page and the Chrome Web Store when extensions are locked, so the
-//     profile's extensions (including the fingerprint "Core" extension) cannot be
-//     removed, disabled or added from the UI.
-// Only the browser-level Target domain is used (no Runtime on any page), so it adds no
-// page-observable CDP footprint.
+// Enforces "Disable developer tools" and "lock extensions": closes devtools:// targets and the
+// Extensions page / Web Store via the browser-level Target domain (no page-observable CDP footprint).
+// Not policy: Chromium on Windows reads it only from the registry, which would lock personal Chrome.
 
 const DEVTOOLS_URL = /^devtools:\/\//i;
 const EXTENSIONS_URL = /^chrome:\/\/(extensions|extensions-frame)(?=[/?#]|$)/i;
@@ -28,8 +16,7 @@ function lockedReason(url, opts = {}) {
   return null;
 }
 
-// Attach the watcher. `cdp` is a browser-level CDP session (browser.target()
-// .createCDPSession()); passed in so the logic can be tested without a browser.
+// `cdp` is a browser-level CDP session, passed in so this can be tested without a browser.
 // Returns null when neither lock is on, else { detach }.
 async function attachBrowserLocksToSession(cdp, opts = {}, log = () => {}) {
   if (!cdp || (!opts.disableDevtools && !opts.lockExtensions)) return null;

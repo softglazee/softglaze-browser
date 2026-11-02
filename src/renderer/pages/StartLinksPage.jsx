@@ -6,8 +6,7 @@ import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// Normalize a user-typed URL to an http(s) URL (prepend https:// if no scheme).
-// Returns '' if it isn't http/https after normalizing.
+// Prepends https:// when there is no scheme; returns '' unless the result is http(s).
 function normalizeUrl(raw) {
   let u = String(raw || '').trim();
   if (!u) return '';
@@ -27,8 +26,7 @@ function labelFromUrl(raw) {
   } catch (e) { return ''; }
 }
 
-// Manage the global custom links shown on every profile's browser start page,
-// stored in globalSettings.startPageLinks as [{ label, url }].
+// Global start-page links for every profile, kept in globalSettings.startPageLinks: [{ label, url }].
 export default function StartLinksPage() {
   const { t } = useTranslation();
   const [items, setItems] = useState([]);
@@ -38,8 +36,7 @@ export default function StartLinksPage() {
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
   const [dirty, setDirty] = useState(false);
-  // Save stays blocked until a load has succeeded. A failed load used to show an empty
-  // list, and saving it overwrote every stored link with [].
+  // Save is blocked until a load succeeds, or saving an empty list would wipe every stored link.
   const [loadErr, setLoadErr] = useState('');
   const [loadTick, setLoadTick] = useState(0);
   // Rows dropped by the last save because their URL was not http(s), as "#n url".
@@ -89,8 +86,7 @@ export default function StartLinksPage() {
   const save = async () => {
     if (loading || loadErr) return;
     setSaving(true); setErr(''); setSaved(false); setDropped([]);
-    // Rows that have something typed but no usable http(s) URL are dropped; name them
-    // instead of losing them silently. Fully blank rows are just ignored.
+    // Report rows with text but no usable http(s) URL rather than drop them silently; skip blank rows.
     const bad = [];
     items.forEach((it, i) => {
       if (!normalizeUrl(it.url) && (String(it.url || '').trim() || String(it.label || '').trim())) {
@@ -142,7 +138,6 @@ export default function StartLinksPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
 
-        {/* Editable list */}
         <Card className="bg-card border border-border rounded-xl">
           <CardContent className="p-0">
             <div className="flex items-center justify-between px-5 py-3 border-b border-border">
@@ -179,7 +174,6 @@ export default function StartLinksPage() {
           </CardContent>
         </Card>
 
-        {/* Bulk add */}
         <Card className="bg-card border border-border rounded-xl">
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center gap-2">

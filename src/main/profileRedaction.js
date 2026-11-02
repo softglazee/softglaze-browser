@@ -1,19 +1,7 @@
 'use strict';
-// Profile secret redaction (audit T2-1, 11 Sep 2026).
-//
-// serializeProfile used to spread the whole Profile row to the renderer, so every member,
-// including an operator with only use-level access, received cleartext platform account
-// passwords, the raw proxyInfoString (host:port:user:pass) and the sealed 2FA seed.
-//
-// The rule now:
-//  - The 2FA seed never leaves the main process. The renderer only needs to know one is
-//    saved (the 2FA badge, the editor field) and codes are minted server-side, so it gets
-//    the mask. That applies to owners too.
-//  - Platform passwords and the proxy password are masked unless the viewer may reveal
-//    credentials (owner, single-user mode, or a member with proxies.reveal).
-//  - The profile editor echoes every field back on save, so a masked value must mean
-//    "unchanged" on update. Without that, redacting would wipe the stored secrets the
-//    first time a restricted member saved a profile. An emptied field still clears.
+// The 2FA seed never leaves main (the renderer gets the mask, owners too). Account and proxy passwords
+// are masked unless the viewer may reveal credentials. The editor echoes fields back on save, so a
+// masked value means unchanged on update; an emptied field still clears.
 
 const SECRET_MASK = '••••••••';
 
@@ -38,8 +26,7 @@ function redactPlatformAccounts(accounts, reveal) {
   return accounts.map((a) => {
     if (!a || typeof a !== 'object') return a;
     if (reveal) return a;
-    // The per-account 2FA key (twoFa, from the import template) is as sensitive as the
-    // password: masked the same way (audit S2, 7 Oct).
+    // The per-account 2FA key (twoFa) is as sensitive as the password, so it is masked too.
     const out = { ...a, password: a.password ? SECRET_MASK : '' };
     if (a.twoFa !== undefined) out.twoFa = a.twoFa ? SECRET_MASK : '';
     return out;

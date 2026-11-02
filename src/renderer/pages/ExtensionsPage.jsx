@@ -9,8 +9,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 // Members at ADMIN and above may install / toggle / remove team extensions.
 const MANAGE_ROLES = new Set(['ADMIN', 'OWNER', 'SUPER_ADMIN']);
 
-// Deterministic accent per extension so the grid stays colorful without any
-// category metadata (we only know what the manifest tells us).
+// Deterministic accent per extension; the manifest carries no category to colour by.
 const ACCENTS = ['#3b82f6', '#8b5cf6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#14b8a6', '#6366f1'];
 function accentFor(id) {
   let h = 0;
@@ -18,8 +17,7 @@ function accentFor(id) {
   return ACCENTS[h % ACCENTS.length];
 }
 
-// The download → unzip → register pipeline runs as one backend call; we surface
-// its phases as a staged label so the user sees real, honest progress.
+// Install is one backend call (download, unzip, register), so the phase label advances on a timer.
 const INSTALL_PHASE_KEYS = ['installPhase.downloading', 'installPhase.extracting', 'installPhase.registering'];
 
 export default function ExtensionsPage() {
@@ -74,7 +72,6 @@ export default function ExtensionsPage() {
     setInstallError('');
     setInstalling(true);
     setInstallPhase(0);
-    // Advance the staged label while the single backend call runs.
     phaseTimer.current = setInterval(() => {
       setInstallPhase((p) => Math.min(p + 1, INSTALL_PHASE_KEYS.length - 1));
     }, 1100);
@@ -121,7 +118,6 @@ export default function ExtensionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-1">{t('header.eyebrow')}</p>
@@ -132,7 +128,6 @@ export default function ExtensionsPage() {
         </div>
       </div>
 
-      {/* STAT ROW - real derived counts */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: t('stats.total'), value: totalCount, icon: Package, color: '#3b82f6' },
@@ -161,7 +156,6 @@ export default function ExtensionsPage() {
         })}
       </div>
 
-      {/* ENGINE CAVEAT */}
       <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/[0.06] px-4 py-3">
         <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <p className="text-[12px] text-muted-foreground leading-relaxed">
@@ -169,7 +163,6 @@ export default function ExtensionsPage() {
         </p>
       </div>
 
-      {/* MANUAL WEB STORE IMPORTER */}
       <div className="bg-card border border-border rounded-xl p-5 animate-fade-up">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 15%, transparent)' }}>
@@ -213,7 +206,6 @@ export default function ExtensionsPage() {
         )}
       </div>
 
-      {/* SEARCH */}
       <div className="relative flex-1 max-w-md">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -225,7 +217,6 @@ export default function ExtensionsPage() {
         />
       </div>
 
-      {/* GRID */}
       {loadError ? (
         <EmptyStateInline title={t('empty.loadErrorTitle')} description={loadError} />
       ) : loading ? (
@@ -252,7 +243,6 @@ export default function ExtensionsPage() {
                   boxShadow: `0 0 20px color-mix(in srgb, ${accent} 10%, transparent)`
                 } : undefined}
               >
-                {/* Header */}
                 <div className="flex items-start gap-3.5">
                   <div
                     className="w-11 h-11 rounded-lg shrink-0 flex items-center justify-center"
@@ -277,7 +267,6 @@ export default function ExtensionsPage() {
                   </button>
                 </div>
 
-                {/* Footer */}
                 <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-4">
                   <a
                     href={ext.storeUrl || `https://chromewebstore.google.com/detail/${ext.chromeId}`}
@@ -313,7 +302,6 @@ export default function ExtensionsPage() {
   );
 }
 
-// Inline themed empty state matching the design language.
 function EmptyStateInline({ title, description }) {
   return (
     <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/60 p-10 text-center animate-fade-up">

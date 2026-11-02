@@ -34,7 +34,6 @@
     "@radix-ui/react-dialog": "^1.1.16",
     "archiver": "^5.3.2",
     "axios": "^1.20.0",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "electron-updater": "^6.3.4",
@@ -62,7 +61,6 @@
     "cross-env": "^7.0.3",
     "electron": "^42.6.1",
     "electron-builder": "^24.13.3",
-    "png2icons": "^2.0.1",
     "prisma": "^6.19.3",
     "vite": "^8.0.16",
     "wait-on": "^7.2.0"

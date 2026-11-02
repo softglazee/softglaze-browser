@@ -1,10 +1,5 @@
 'use strict';
-// Cross-platform archive extraction for the browser-engine layer.
-//
-// Replaces the Windows-only extractors the engine code used to shell out to:
-//   - Chrome-for-Testing / fingerprint-chromium: `powershell.exe Expand-Archive`
-//   - Firefox: `%SystemRoot%\System32\tar.exe` against the NSIS `core/` layout
-// so that macOS and Linux can unpack their own engine artifacts.
+// Cross-platform extraction for engine downloads (zip, tar.xz, dmg, Firefox NSIS installer).
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -19,9 +14,7 @@ function run(cmd, args, opts = {}) {
   });
 }
 
-// Cross-platform .zip extraction (Chrome for Testing, fingerprint-chromium).
-// extract-zip (yauzl) honors the unix mode bits stored in the zip, so the Chrome
-// binary keeps its executable bit on macOS/Linux; we chmod defensively anyway.
+// extract-zip (yauzl) keeps the zip's unix mode bits, so binaries stay executable; chmod is a fallback.
 async function extractZipCrossPlatform(zipPath, destDir) {
   fs.mkdirSync(destDir, { recursive: true });
   const dir = path.resolve(destDir);
@@ -32,9 +25,8 @@ async function extractZipCrossPlatform(zipPath, destDir) {
 // the target folder. Pass as onEntry: throwing aborts the unzip before the entry is written.
 function assertSafeZipEntry(entry, destDir) {
   const raw = String((entry && entry.fileName) || '');
-  // A backslash is a path separator on Windows but a legal filename byte on POSIX,
-  // so normalize it before the traversal check: a Windows-targeted "..\evil" must be
-  // refused whatever OS we validate on.
+  // A backslash is a separator on Windows but a filename byte on POSIX; normalize it so "..\evil"
+  // is refused whichever OS validates.
   const name = raw.replace(/\\/g, '/');
   const mode = ((Number(entry && entry.externalFileAttributes) || 0) >>> 16) & 0xFFFF;
   if ((mode & 0o170000) === 0o120000) throw new Error(`Refusing symlink entry "${raw}" in the archive.`);
@@ -45,23 +37,19 @@ function assertSafeZipEntry(entry, destDir) {
   }
 }
 
-// Ensure a downloaded binary is executable on POSIX (no-op on Windows).
 function ensureExecutable(binPath) {
   if (process.platform === 'win32') return;
   try { fs.chmodSync(binPath, 0o755); } catch (_) { /* best effort */ }
 }
 
-// Extract a Linux .tar.xz into destDir (its top-level dir lands inside destDir).
-// GNU/BSD tar handles .xz via -J; content-sniffed, so a .part file works too.
+// The archive's top-level dir lands inside destDir. tar sniffs content, so a .part file works too.
 async function extractTarXz(file, destDir) {
   fs.mkdirSync(destDir, { recursive: true });
   await run('tar', ['-xJf', file, '-C', destDir]);
 }
 
-// Mount a macOS .dmg read-only, copy every *.app at its root into destDir with
-// ditto (preserves the bundle's symlinks/permissions), then detach. Works for any
-// app image (Firefox.app, Chromium.app, ...). hdiutil content-sniffs the image, so
-// an extension-less .part file mounts fine.
+// Mounts the .dmg read-only and copies each root *.app with ditto (keeps symlinks/permissions).
+// hdiutil sniffs content, so an extension-less .part file mounts fine.
 async function extractDmgApps(dmgPath, destDir) {
   fs.mkdirSync(destDir, { recursive: true });
   const mnt = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-dmg-'));
@@ -77,8 +65,7 @@ async function extractDmgApps(dmgPath, destDir) {
   }
 }
 
-// Firefox package extraction, per OS. Leaves the Firefox tree under destDir so
-// that platform.firefoxBinaryRel() resolves the launchable binary.
+// Leaves the tree where platform.firefoxBinaryRel() expects the launchable binary.
 async function extractFirefox(artifactPath, destDir, platform = process.platform) {
   fs.mkdirSync(destDir, { recursive: true });
   if (platform === 'win32') {
@@ -101,11 +88,7 @@ async function extractFirefox(artifactPath, destDir, platform = process.platform
   throw new Error(`Unsupported platform for Firefox extraction: ${platform}`);
 }
 
-// fingerprint-chromium (ungoogled-chromium fork) package extraction, per OS:
-//   Windows: windows_x64.zip  -> extract-zip
-//   macOS:   macos.dmg        -> copy Chromium.app
-//   Linux:   x86_64_linux.tar.xz -> unpack the chromium tree
-// Callers resolve the launchable binary via platform.findFpChromiumBinary().
+// Callers locate the binary with platform.findFpChromiumBinary().
 async function extractFpChromium(artifactPath, destDir, platform = process.platform) {
   fs.mkdirSync(destDir, { recursive: true });
   if (platform === 'win32') { await extractZipCrossPlatform(artifactPath, destDir); return; }
@@ -118,8 +101,6 @@ module.exports = {
   run,
   extractZipCrossPlatform,
   assertSafeZipEntry,
-  extractTarXz,
-  extractDmgApps,
   extractFirefox,
   extractFpChromium,
   ensureExecutable

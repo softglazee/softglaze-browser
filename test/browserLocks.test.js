@@ -84,7 +84,7 @@ test('the launch attaches the locks right after the browser starts', () => {
   assert.match(ENGINE, /const \{ attachBrowserLocks \} = require\('\.\/browserLocks'\);/);
   const launch = ENGINE.indexOf('browser = await engine.launch(launchOptions);');
   const attach = ENGINE.indexOf('await attachBrowserLocks(browser, {');
-  const stealth = ENGINE.indexOf("KEEP puppeteer-extra-stealth's onTargetCreated listener");
-  assert.ok(launch > 0 && attach > launch && attach < stealth, 'attached first in the post-launch setup');
+  const fpInject = ENGINE.indexOf('const fpInjectSource = ');
+  assert.ok(launch > 0 && attach > launch && attach < fpInject, 'attached first in the post-launch setup');
   assert.match(ENGINE, /disableDevtools: browserSettings\.disableDevtools === true,\s*lockExtensions: browserSettings\.lockExtensions === true/);
 });

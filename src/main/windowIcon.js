@@ -1,17 +1,7 @@
 'use strict';
-// Best-effort runtime taskbar/window icon swapping for launched profiles.
-//
-// HONEST SCOPE: the spawned Chrome process owns its own window, and on Windows a
-// window's icon comes from the executable's embedded resource. We can't repaint
-// chrome.exe, but we CAN push a per-profile icon onto its top-level window via the
-// Win32 WM_SETICON message (found by PID), which updates the title-bar + taskbar
-// icon for that window. This is best-effort: it runs after the window exists, and
-// some Chrome internal repaints may reset it. No native npm module is used - a
-// short PowerShell P/Invoke does the EnumWindows + LoadImage + SendMessage.
-//
-// The icons are ORIGINAL brand-COLORED marks generated here in code (a rounded
-// square + a centered glyph), NOT the vendors' trademarked logos - same
-// trademark-safe stance as the proxy-provider and brand marks in the UI.
+// Best-effort per-profile taskbar icon: Windows takes a window's icon from the exe, so push one
+// with WM_SETICON through a short PowerShell P/Invoke (window found by PID); Chrome may repaint it.
+// Icons are original colored marks drawn in code, not vendor logos (trademark-safe).
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -19,9 +9,7 @@ const { spawn } = require('node:child_process');
 
 const ICON_DIR = path.join(os.tmpdir(), 'softglaze-brand-icons');
 
-// Brand accent colors (match BrowserBrandSelect). Chrome is included so that even
-// a stock Chrome-identity profile gets a clean colored icon instead of the
-// Chrome-for-Testing "Testing" badge baked into the binary.
+// Matches BrowserBrandSelect. Chrome is listed so its icon replaces the Chrome-for-Testing badge.
 const BRAND_COLORS = {
   Chrome: [66, 133, 244],
   Edge: [15, 138, 224],
@@ -41,8 +29,7 @@ function normalizeBrand(brand) {
   return 'Chrome';
 }
 
-// Build a 32x32 32bpp .ico buffer: a rounded square filled with the accent color
-// and a white centered ring, fully procedural (no external asset).
+// Builds a 32x32 32bpp .ico in code: accent-colored rounded square with a white centered ring.
 function buildIcoBuffer([r, g, b]) {
   const S = 32;
   const cornerR = 5;
@@ -106,8 +93,7 @@ function buildIcoBuffer([r, g, b]) {
   return Buffer.concat([iconDir, entry, dib]);
 }
 
-// Generate (and cache on disk) the .ico for a brand. Returns the file path, or
-// null for Chrome / unknown brands (no swap needed).
+// Generates and caches the brand's .ico on disk; returns its path, or null for Chrome/unknown brands.
 function ensureBrandIcon(brand) {
   const id = normalizeBrand(brand);
   const color = BRAND_COLORS[id];
@@ -120,8 +106,8 @@ function ensureBrandIcon(brand) {
   } catch (e) { return null; }
 }
 
-// Push the icon onto the process's top-level window via WM_SETICON. The PowerShell
-// snippet polls briefly for the window (it may not exist the instant we launch).
+// Sets the icon on the process's top-level window via WM_SETICON. The script polls briefly
+// because the window may not exist yet right after launch.
 function applyWindowIcon(pid, icoPath) {
   if (process.platform !== 'win32' || !pid || !icoPath) return;
   const ps = `
@@ -161,7 +147,7 @@ for($i=0;$i -lt 24;$i++){
   } catch (e) { /* best-effort */ }
 }
 
-// Convenience: resolve the brand's icon and apply it (no-op for Chrome / non-win32).
+// No-op for Chrome and on non-Windows platforms.
 function applyBrandWindowIcon(pid, brand) {
   try {
     const ico = ensureBrandIcon(brand);
@@ -169,4 +155,4 @@ function applyBrandWindowIcon(pid, brand) {
   } catch (e) { /* best-effort */ }
 }
 
-module.exports = { ensureBrandIcon, applyWindowIcon, applyBrandWindowIcon, normalizeBrand };
+module.exports = { applyBrandWindowIcon, normalizeBrand };

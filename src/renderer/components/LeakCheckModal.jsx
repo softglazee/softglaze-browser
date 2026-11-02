@@ -19,8 +19,7 @@ const GRADE_STYLE = {
   F: { ring: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30', text: 'text-red-400' }
 };
 
-// Circular 0-100 trust score with letter grade. The ring fills proportionally
-// to the score and is coloured by grade band.
+// Circular 0-100 trust score with letter grade; the ring is coloured by grade band.
 function ScoreBadge({ score }) {
   const { t } = useTranslation('cmpModalsA');
   if (!score) return null;
@@ -117,7 +116,6 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Static analysis */}
           <div>
             <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">{t('leakCheck.configAnalysis')}</h3>
             {loading ? (
@@ -140,7 +138,6 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
             ) : null}
           </div>
 
-          {/* Live test */}
           <div className="border-t border-border pt-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">

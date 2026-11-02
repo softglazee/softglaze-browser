@@ -274,15 +274,9 @@ async function invoke(channel, payload = undefined) {
 }
 
 const api = Object.freeze({
-  // The host OS this copy runs on, as a plain value — no IPC round trip. The profile
-  // editor uses it to warn when a profile is given a DIFFERENT OS than the machine: a
-  // string-only OS spoof is betrayed by the host's fonts, canvas raster and real
-  // TLS/JS-engine behaviour, so cross-OS profiles fail scanners. Same mapping the
-  // fingerprint generator uses for its host-OS default.
-  // MUST live inside this literal: `api` is frozen and the file is strict mode, so
-  // assigning it afterwards throws and kills the whole preload before
-  // contextBridge.exposeInMainWorld ever runs — which takes the entire app down with
-  // "SoftGlaze preload API is unavailable".
+  // Host OS, so the profile editor can warn about cross-OS profiles: host fonts, canvas and TLS
+  // betray a string-only OS spoof. Must stay inside this literal: api is frozen in strict mode, so a
+  // later assignment throws and kills the preload before exposeInMainWorld runs.
   hostOs: { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows',
 
   ui: Object.freeze({
@@ -369,9 +363,8 @@ const api = Object.freeze({
     bulkPurge: (ids) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids }),
     bulkLaunch: (ids, opts) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids, ...(opts && typeof opts === 'object' ? opts : {}) }),
     bulkLaunchControl: (action) => invoke(CHANNELS.PROFILE_BULK_LAUNCH_CONTROL, { action }),
-    // Re-attach to a bulk queue already running in main (page remounted after the
-    // user navigated away). Progress is broadcast-only, so without this the page
-    // can never rebuild the current state and the queue controls stay hidden.
+    // Re-attaches to a bulk queue still running in main after the page remounts; progress is
+    // broadcast-only, so without this the page cannot rebuild state or show the queue controls.
     bulkLaunchStatus: () => invoke(CHANNELS.PROFILE_BULK_LAUNCH_STATUS),
     bulkAssignProxy: (payload) => invoke(CHANNELS.PROFILE_BULK_ASSIGN_PROXY, payload),
     tagAssign: (ids, tag, mode) => invoke(CHANNELS.PROFILE_TAG_ASSIGN, { ids, tag, mode }),
@@ -380,7 +373,6 @@ const api = Object.freeze({
     grantAccess: (payload) => invoke(CHANNELS.PROFILE_ACCESS_GRANT, payload),
     revokeAccess: (payload) => invoke(CHANNELS.PROFILE_ACCESS_REVOKE, payload),
     listAccess: (profileId) => invoke(CHANNELS.PROFILE_ACCESS_LIST, { profileId }),
-    // Subscribe to live bulk-launch progress; returns an unsubscribe function.
     onBulkLaunchProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.PROFILE_BULK_LAUNCH_PROGRESS, listener);
@@ -433,13 +425,11 @@ const api = Object.freeze({
     restoreGet: () => invoke(CHANNELS.SESSION_RESTORE_GET),
     restoreRun: (payload) => invoke(CHANNELS.SESSION_RESTORE_RUN, payload),
     resourceUsage: () => invoke(CHANNELS.SESSION_RESOURCE_USAGE),
-    // Subscribe to crash notifications; returns an unsubscribe function.
     onCrash: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.SESSION_CRASH, listener);
       return () => ipcRenderer.removeListener(CHANNELS.SESSION_CRASH, listener);
     },
-    // Subscribe to memory-pressure notifications; returns an unsubscribe function.
     onMemoryPressure: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.MEMORY_PRESSURE, listener);
@@ -577,7 +567,6 @@ const api = Object.freeze({
     commitProfileImport: (token, options = {}) => invoke(CHANNELS.BATCH_COMMIT_PROFILE_IMPORT, { token, autoBindByCountry: Boolean(options.autoBindByCountry) }),
     exportProfiles: () => invoke(CHANNELS.BATCH_EXPORT_PROFILES),
     exportProfilesToFile: (options = {}) => invoke(CHANNELS.BATCH_EXPORT_PROFILES_FILE, options),
-    // Subscribe to live import progress; returns an unsubscribe function.
     onImportProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.BATCH_IMPORT_PROGRESS, listener);
@@ -586,7 +575,6 @@ const api = Object.freeze({
   }),
   migration: Object.freeze({
     startTransfer: (payload) => invoke(CHANNELS.MIGRATION_START_TRANSFER, payload),
-    // Subscribe to live transfer progress; returns an unsubscribe function.
     onProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.MIGRATION_PROGRESS, listener);
@@ -610,19 +598,16 @@ const api = Object.freeze({
     runParallel: (payload) => invoke(CHANNELS.AUTOMATION_RUN_PARALLEL, payload),
     parallelStatus: (runId) => invoke(CHANNELS.AUTOMATION_PARALLEL_STATUS, { runId }),
     pickDataFile: () => invoke(CHANNELS.AUTOMATION_PICK_DATA_FILE),
-    // Subscribe to live warm-up progress; returns an unsubscribe function.
     onWarmerProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);
       return () => ipcRenderer.removeListener(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);
     },
-    // Subscribe to live macro-run progress (per-step); returns an unsubscribe function.
     onMacroProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_MACRO_PROGRESS, listener);
       return () => ipcRenderer.removeListener(CHANNELS.AUTOMATION_MACRO_PROGRESS, listener);
     },
-    // Subscribe to live parallel-run progress frames; returns an unsubscribe function.
     onRunProgress: (callback) => {
       const listener = (_event, frame) => { try { callback(frame); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_RUN_PROGRESS, listener);
@@ -640,7 +625,7 @@ const api = Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),
     install: () => invoke(CHANNELS.UPDATER_INSTALL),
     check: () => invoke(CHANNELS.UPDATER_CHECK),
-    // Subscribe to live updater events (available / downloading / downloaded); returns an unsubscribe fn.
+    // Updater events: available, downloading, downloaded.
     onEvent: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.UPDATER_EVENT, listener);

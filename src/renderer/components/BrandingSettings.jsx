@@ -99,7 +99,6 @@ export default function BrandingSettings() {
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      {/* App footer - Super Admin editable */}
       <Card icon={Palette} accent="#8b5cf6" title={t('branding.footerCardTitle')} description={t('branding.footerCardDesc')}>
         {isSuper ? (
           <div className="space-y-3">
@@ -136,7 +135,6 @@ export default function BrandingSettings() {
         )}
       </Card>
 
-      {/* Stay signed in - per device */}
       <Card icon={ShieldCheck} accent="#10b981" title={t('branding.staySignedInTitle')} description={t('branding.staySignedInDesc')}>
         {!remember.available ? (
           <p className="text-[12.5px] text-muted-foreground flex items-center gap-2"><Info className="w-4 h-4" /> {t('branding.osEncryptionUnavailable')}</p>
@@ -156,7 +154,6 @@ export default function BrandingSettings() {
         )}
       </Card>
 
-      {/* Smart Autofill - workspace toggle (Owner / Super Admin) */}
       <Card icon={Wand2} accent="#6366f1" title={t('branding.autofillTitle')} description={t('branding.autofillDesc')}>
         <div className="flex items-center justify-between gap-3">
           <span className="text-[12.5px] text-muted-foreground">{autofill ? t('branding.autofillEnabled') : t('branding.autofillDisabled')}</span>

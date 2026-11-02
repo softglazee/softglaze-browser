@@ -1,18 +1,7 @@
 'use strict';
-// Free public proxies: fetch the lists that free-proxy projects publish, test every
-// candidate, and keep only the ones that work AND do not reveal the user's real IP.
-//
-// Free proxies are run by strangers. Most are dead within hours, many are on blocklists
-// (more CAPTCHAs, not fewer), and an HTTP proxy can read and change unencrypted traffic.
-// So this module is strict:
-//   - every candidate is tested live through the proxy (a working HTTPS request), with a
-//     short timeout, and its real exit country is read from that response;
-//   - HTTP proxies must also pass an anonymity check on a plain-HTTP header echo: if the
-//     request reaches the site with the user's real IP, or with Via / X-Forwarded-For /
-//     Forwarded / X-Real-IP headers, the proxy is "transparent" and is rejected - it would
-//     hand the real IP to every plain-HTTP site the profile opens;
-//   - the caller sets a hard limit on how many to keep and a time budget for the search.
-// The network calls are injected (deps) so the logic is testable without a network.
+// Free proxies are run by strangers, often dead or blocklisted, so each candidate is tested live and
+// HTTP ones must also pass an anonymity check: one that forwards the real IP or Via/X-Forwarded-For
+// style headers is transparent and rejected. Network calls are injected (deps) for testing.
 
 const crypto = require('node:crypto');
 
@@ -20,9 +9,7 @@ const crypto = require('node:crypto');
 // the PC, which leaks it, so it is not offered.
 const PROTOCOLS = ['http', 'socks5'];
 
-// Sources: public lists their maintainers publish for free use. Each yields text lines
-// "scheme://ip:port" or "ip:port", except Geonode (JSON with country and anonymity).
-// Checked reachable 2 Nov 2026.
+// Lines are "scheme://ip:port" or "ip:port", except Geonode (JSON with country and anonymity).
 const SOURCES = [
   {
     id: 'proxyscrape',
@@ -126,7 +113,6 @@ function shuffle(arr) {
   return arr;
 }
 
-// Fetch every source for this protocol/country, merge, de-duplicate, shuffle.
 // deps.fetchText(url) -> Promise<string>; a failing source is skipped and reported.
 async function collectCandidates({ protocol, country, exclude = new Set() }, deps) {
   const want = normProtocol(protocol);
@@ -142,9 +128,8 @@ async function collectCandidates({ protocol, country, exclude = new Set() }, dep
       return { id: src.id, ok: false, error: (e && e.message) || 'failed', list: [] };
     }
   }));
-  // Order matters: most entries in these lists are dead, and the search has a time budget.
-  // Sources that re-verify their lists every few minutes go first (SOURCES order), each
-  // shuffled so repeated searches do not keep testing the same head of the list.
+  // Most entries are dead and the search has a time budget, so sources that re-verify often go first
+  // (SOURCES order), each shuffled so repeat searches do not retest the same head of the list.
   const seen = new Set(exclude);
   const merged = [];
   for (const r of results) {
@@ -296,12 +281,9 @@ function fetchTextDirect(url, { timeoutMs = 15000, maxBytes = 4 * 1024 * 1024, r
 module.exports = {
   fetchTextDirect,
   SOURCES,
-  PROTOCOLS,
   isPublicIPv4,
   parseProxyLines,
   parseGeonode,
-  collectCandidates,
   revealsClient,
-  checkCandidate,
   harvestFreeProxies
 };

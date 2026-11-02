@@ -5,14 +5,8 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import IpProvidersSettings from '@/components/IpProvidersSettings.jsx';
 import { PROVIDERS, ProviderLogo } from '@/components/ProxyProviders.jsx';
 
-// ---------------------------------------------------------------------------
-// Monetization - a single Owner/Super-Admin home for the app's revenue wiring.
-//   1. Affiliate & Referral Links - the partner URLs the marketplace "Purchase"
-//      buttons (Proxy pool → Providers) link out to.
-//   2. Reseller API credentials - the relocated IP-provider master keys (the
-//      vendors the operator resells), which self-gate to the Super Admin.
-// New monetization methods drop straight into this section.
-// ---------------------------------------------------------------------------
+// Owner/Super Admin home for revenue wiring: affiliate links behind the marketplace Purchase
+// buttons, and the reseller IP-provider API keys (Super Admin only).
 export default function MonetizationSettings() {
   const { t } = useTranslation('cmpSettingsA');
   const [me, setMe] = useState(undefined); // undefined = loading
@@ -36,16 +30,13 @@ export default function MonetizationSettings() {
 
       <AffiliateLinksCard />
 
-      {/* Relocated here from its standalone slot: reseller master API credentials
-          (renders only for the Super Admin). */}
+      {/* Reseller master API credentials (renders only for the Super Admin) */}
       <IpProvidersSettings />
     </div>
   );
 }
 
-// Per-provider affiliate URL editor. Persists a single { providerKey: url }
-// override map; a blank field clears the override so the button uses the
-// built-in Softglaze default.
+// Saves one { providerKey: url } override map; a blank field falls back to the built-in default.
 function AffiliateLinksCard() {
   const { t } = useTranslation('cmpSettingsA');
   const [links, setLinks] = useState({});
@@ -87,7 +78,6 @@ function AffiliateLinksCard() {
 
   return (
     <div className="rounded-xl bg-card border border-border p-5">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-1">
         <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0 bg-amber-500/12 border border-amber-500/20">
           <Link2 className="w-5 h-5 text-amber-400" />

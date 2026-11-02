@@ -1,17 +1,7 @@
 'use strict';
-// Owner certificate (audit L1). The Super Admin role used to carry the source-owner
-// licence exemption on its own, and any customer could claim the role on a fresh
-// install - unlimited enterprise use, tenant builds included. The exemption (and
-// claiming the role, and the licence-management powers) now needs proof that this is
-// the source owner's own machine: an Ed25519-signed certificate
-//   { v: 1, machineId, issuedAt, note, sig }
-// read from <userData>/owner.cert, signed by the OWNER key whose PUBLIC half is baked
-// in below. The private key never ships; scripts/owner-cert.js signs certificates.
-//
-// machineId is the app's licensing machine id: licenseClient.machineHash() (SHA-256 of
-// the OS machine identity, the same value the licensing server binds a lease to). Not
-// the settings-stored getMachineId() UUID, which travels with a copied data folder.
-// A tenant / sold build never honours a certificate.
+// Owner certificate: proof that this is the source owner's machine, needed for the Super Admin
+// licence exemption. Ed25519-signed { v: 1, machineId, issuedAt, note, sig } in <userData>/owner.cert,
+// machineId = licenseClient.machineHash(). The private key never ships (scripts/owner-cert.js signs).
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -41,9 +31,8 @@ function signOwnerCert(privateKeyPem, machineId, note = '', issuedAt = new Date(
   return { ...cert, sig: sig.toString('base64') };
 }
 
-// A tenant / sold build: anything baked (or, in dev, env-set) that names a tenant.
-// Same source of truth as tenantConfig.js. Fails closed: an unreadable config counts
-// as a tenant build so the exemption is never granted by accident.
+// A tenant/sold build names a tenant in its baked (or, in dev, env) config, read as tenantConfig.js does.
+// Fails closed: an unreadable config counts as a tenant build, so the exemption is never granted.
 function isTenantBuild() {
   try {
     const cfg = tenantConfig();
@@ -78,21 +67,18 @@ function checkOwnerCertFile(file, opts = {}) {
   return verifyOwnerCert(readOwnerCert(file), opts);
 }
 
-// Only a Super Admin WITH a valid certificate is the source owner. Without one the
-// role keeps its label but is licensed like any Owner.
+// Only a Super Admin with a valid certificate is the source owner; without one the role keeps its
+// label but is licensed like any Owner.
 function isCertifiedSuperAdmin(member, certOk) {
   return Boolean(member && member.role === 'SUPER_ADMIN' && certOk === true);
 }
 
 module.exports = {
   OWNER_PUBLIC_KEY_PEM,
-  CERT_FILE_NAME,
-  certPayload,
   signOwnerCert,
   isTenantBuild,
   verifyOwnerCert,
   ownerCertPath,
-  readOwnerCert,
   checkOwnerCertFile,
   isCertifiedSuperAdmin
 };

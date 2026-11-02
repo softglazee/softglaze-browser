@@ -1,14 +1,8 @@
 'use strict';
 
-// The site a URL or hostname belongs to: its registrable domain, so learn.example.com,
-// www.example.com and signup.example.com are one site. Used for multi-step signups
-// (the active identity follows the user across subdomains) and for the Data Vault
-// "already used here" rule (an identity used on one subdomain is used on the site).
-//
-// A cheap public-suffix rule, no list download: keep three labels when the
-// second-level label is a short generic one under a ccTLD (example.co.uk,
-// example.com.au), and when the parent is a shared hosting domain where every
-// subdomain is a different owner (shop.myshopify.com, user.github.io).
+// Registrable domain of a URL or host, so www., learn. and signup.example.com are one site (multi-step
+// signups, Data Vault "already used here"). Cheap public-suffix rule: keep three labels under a short
+// generic SLD in a ccTLD (example.co.uk) or a shared hosting parent (shop.myshopify.com).
 const SHARED_HOSTING = new Set([
   'myshopify.com', 'github.io', 'gitlab.io', 'herokuapp.com', 'vercel.app', 'netlify.app',
   'pages.dev', 'workers.dev', 'web.app', 'firebaseapp.com', 'appspot.com', 'azurewebsites.net',

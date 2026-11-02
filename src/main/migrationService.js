@@ -1,21 +1,7 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Profile Migration Service
-// ---------------------------------------------------------------------------
-// Pulls profiles from competitor anti-detect platforms via their APIs and
-// normalizes them into Softglaze's Profile/Proxy shape. This module is
-// DB-AGNOSTIC: it only fetches + normalizes. The IPC handler owns persistence,
-// the role gate, transactions, and progress streaming.
-//
-// Cloud platforms (Dolphin{anty}, GoLogin, Multilogin) authenticate with a
-// Bearer API token. Local platforms (AdsPower, ixBrowser) expose a loopback
-// HTTP API on the user's machine; the "token" is that local API key.
-//
-// Each adapter is wired to the platform's documented endpoint. Response shapes
-// vary by API version, so the normalizers read DEFENSIVELY (multiple field-name
-// fallbacks) and anything missing falls back to a Softglaze-generated
-// fingerprint default downstream. Validate each adapter against the live API
-// before shipping a given platform as "stable".
+// Fetches profiles from other anti-detect platforms' APIs and normalizes them to Profile/Proxy shape;
+// the IPC handler owns persistence, gating and progress. Response shapes vary by API version, so
+// normalizers read defensively. Validate each adapter against the live API before calling it stable.
 
 const PLATFORMS = [
   {
@@ -89,7 +75,7 @@ async function httpJson(url, options = {}) {
   }
 }
 
-// ---- Platform adapters: each returns an array of RAW competitor profiles ----
+// Platform adapters: each returns an array of raw platform profiles.
 
 // Dolphin{anty} - cloud. GET /browser_profiles (paginated), Bearer token.
 async function fetchDolphinProfiles(token) {
@@ -123,7 +109,7 @@ async function fetchMultiloginProfiles(token) {
   return (json && (json.data || json.profiles)) || (Array.isArray(json) ? json : []);
 }
 
-// AdsPower - LOCAL loopback API. The app must be running with the Local API on.
+// AdsPower: local loopback API; the app must be running with its Local API on.
 async function fetchAdsPowerProfiles(token) {
   const base = 'http://local.adspower.net:50325';
   const out = [];
@@ -141,7 +127,7 @@ async function fetchAdsPowerProfiles(token) {
   return out;
 }
 
-// ixBrowser - LOCAL loopback API. POST profile-list.
+// ixBrowser: local loopback API, POST profile-list.
 async function fetchIxBrowserProfiles(token) {
   const out = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -173,7 +159,7 @@ async function fetchProfiles(platform, token) {
   }
 }
 
-// ---- Normalizer: RAW competitor profile -> Softglaze-shaped object ----------
+// Normalizer: raw platform profile -> Softglaze-shaped object.
 
 // First defined/non-empty value across a list of dotted key paths.
 function pick(obj, ...keys) {

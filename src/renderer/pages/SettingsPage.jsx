@@ -22,9 +22,7 @@ import i18n from '@/i18n/index.js';
 import settingsExtraEn from '@/i18n/locales/en/settingsExtra.json';
 import settingsExtraEs from '@/i18n/locales/es/settingsExtra.json';
 
-// Register this page's "settingsExtra" namespace without touching the central
-// i18n config (which only bundles the "common" namespace). addResourceBundle is
-// a no-op if the bundle already exists, so this is safe across hot reloads.
+// Register the "settingsExtra" namespace here; the central i18n config only bundles "common".
 if (!i18n.hasResourceBundle('en', 'settingsExtra')) i18n.addResourceBundle('en', 'settingsExtra', settingsExtraEn);
 if (!i18n.hasResourceBundle('es', 'settingsExtra')) i18n.addResourceBundle('es', 'settingsExtra', settingsExtraEs);
 
@@ -34,7 +32,6 @@ const SearchCtx = createContext('');
 
 const numCls = 'w-20 bg-input-background border border-border rounded px-2 py-1 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary';
 
-// --- CUSTOM STYLED SELECT DROPDOWN (Max 4px rounded) ---
 function CustomSelect({ value, onChange, className = '', children, disabled, id }) {
   return (
     <div className={`relative flex items-center ${className}`}>
@@ -54,11 +51,8 @@ function CustomSelect({ value, onChange, className = '', children, disabled, id 
   );
 }
 
-// ---------------------------------------------------------------------------
-// Section metadata. Built from the live translations so nav labels, section
-// headings and the search keywords all stay in sync in both languages. Both the
-// left nav and the content sections reference the same ids / keyword strings.
-// ---------------------------------------------------------------------------
+// Section metadata from live translations, so nav labels, headings and search keywords stay in sync.
+// The nav and the content sections share these ids and keyword strings.
 function buildSections(t, tx) {
   const n = (s) => (s || '').toLowerCase();
   const map = {};
@@ -148,9 +142,7 @@ export default function SettingsPage() {
   const rootRef = useRef(null);
   const searchRef = useRef(null);
 
-  // Page-level auto-save status, reported by the global-settings hook. The app
-  // persists every control immediately, so the concept's "Save" bar becomes an
-  // honest save-status bar.
+  // Page-level auto-save status from the global-settings hook; every control persists immediately.
   const [save, setSave] = useState({ state: 'idle', message: '' });
   const savedTimer = useRef(null);
   const reportSave = useCallback((state, message) => {
@@ -227,7 +219,6 @@ export default function SettingsPage() {
     if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActive(id); }
   }, []);
 
-  // "/" focuses the search box, matching the concept.
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -289,7 +280,6 @@ export default function SettingsPage() {
           <SettingsNav groups={sections.groups} active={active} query={query} setQuery={setQuery} onJump={jumpTo} searchRef={searchRef} />
 
           <div className="min-w-0 max-w-[860px] space-y-8">
-            {/* GENERAL -------------------------------------------------------- */}
             <GroupBlock group={sections.groups[0]} map={SEC}>
               <LanguageSection sec={SEC.language} />
               <OnStartupSection sec={SEC.onstartup} s={s} apply={apply} />
@@ -297,7 +287,6 @@ export default function SettingsPage() {
               <PlatformSection sec={SEC.platform} s={s} apply={apply} />
             </GroupBlock>
 
-            {/* BROWSER -------------------------------------------------------- */}
             <GroupBlock group={sections.groups[1]} map={SEC}>
               <FingerprintSection sec={SEC.fingerprint} s={s} apply={apply} />
               <BehaviourSection sec={SEC.behaviour} s={s} apply={apply} />
@@ -307,7 +296,6 @@ export default function SettingsPage() {
               <CaptchaSection sec={SEC.captcha} s={s} apply={apply} />
             </GroupBlock>
 
-            {/* RUNTIME -------------------------------------------------------- */}
             <GroupBlock group={sections.groups[2]} map={SEC}>
               <LocalRuntimeSection sec={SEC.localruntime} loading={loading} systemInfo={systemInfo} />
               <PerformanceSection sec={SEC.performance} s={s} apply={apply} />
@@ -317,7 +305,6 @@ export default function SettingsPage() {
               <DataSyncSection sec={SEC.datasync} s={s} apply={apply} />
             </GroupBlock>
 
-            {/* SECURITY & TEAM ------------------------------------------------ */}
             <GroupBlock group={sections.groups[3]} map={SEC}>
               <SecuritySection sec={SEC.security} s={s} apply={apply} />
               <MultiDeviceSection sec={SEC.multidevice} s={s} apply={apply} />
@@ -325,7 +312,6 @@ export default function SettingsPage() {
               <EmailSection sec={SEC.email} />
             </GroupBlock>
 
-            {/* ACCOUNT & DATA ------------------------------------------------- */}
             <GroupBlock group={sections.groups[4]} map={SEC}>
               <SearchGate sec={SEC.billing}><BillingSettings /></SearchGate>
               <SearchGate sec={SEC.monetization}><MonetizationSettings /></SearchGate>
@@ -349,10 +335,7 @@ export default function SettingsPage() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Left section navigation: search box + grouped jump links with scroll-spy. On
-// narrow screens the vertical list collapses to a search box and a jump <select>.
-// ---------------------------------------------------------------------------
+// On narrow screens the list collapses to a search box and a jump <select>.
 function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
   const { t: tx } = useTranslation('settingsExtra');
   const q = query.trim().toLowerCase();
@@ -374,7 +357,6 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
         <kbd className="hidden lg:flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center h-5 px-1.5 rounded border border-border bg-secondary text-[10px] font-mono text-muted-foreground pointer-events-none">/</kbd>
       </div>
 
-      {/* Mobile / tablet: jump select */}
       <label className="lg:hidden block">
         <span className="sr-only">{tx('ui.jumpTo')}</span>
         <CustomSelect value={active} onChange={(e) => onJump(e.target.value)} aria-label={tx('ui.jumpTo')}>
@@ -388,8 +370,6 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
         </CustomSelect>
       </label>
 
-      {/* Desktop: bordered card rail - grouped jump links with dividers, group
-          count badges and a bordered + accent-bar active pill (scroll-spy). */}
       <nav className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden" aria-label="Sections">
         {groups.map((g, gi) => {
           const groupHit = !q || g.items.some((it) => all.find((x) => x.id === it.id) && it.label.toLowerCase().includes(q));
@@ -436,8 +416,7 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
   );
 }
 
-// Auto-save status bar, pinned to the bottom of the viewport while settings are
-// in view. No manual Save button: every control already persists on change.
+// No manual Save button: every control already persists on change.
 function SaveBar({ status }) {
   const { t: tx } = useTranslation('settingsExtra');
   const saving = status.state === 'saving';
@@ -464,9 +443,7 @@ function SaveBar({ status }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Layout primitives
-// ---------------------------------------------------------------------------
+// ---- Layout primitives ----
 function GroupBlock({ group, map, children }) {
   const query = useContext(SearchCtx);
   const visible = !query || group.items.some((it) => map[it.id] && map[it.id].kw.includes(query));
@@ -571,9 +548,8 @@ function Toggle({ checked, onChange, disabled }) {
   );
 }
 
-// A label/description row with a right-aligned control. `inline` keeps the
-// control beside the label at every width (for small controls like switches);
-// otherwise the control stacks below the label on narrow screens.
+// `inline` keeps the control beside the label at every width (for small controls like switches);
+// otherwise it stacks below the label on narrow screens.
 function Row({ title, description, badges, experimental, control, children, inline = false, align = 'center' }) {
   return (
     <div
@@ -620,11 +596,7 @@ function LoadingRow({ label }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Global-settings state. Lifted into a hook so the whole page can render the
-// sections in nav order and surface one shared save-status bar. The optimistic
-// apply() keeps the recent request-sequence guard and revert-on-failure intact.
-// ---------------------------------------------------------------------------
+// Global settings live in one hook so sections render in nav order with one shared save-status bar.
 function mergeLocal(base, patch) {
   if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) return patch;
   const out = { ...(base && typeof base === 'object' ? base : {}) };
@@ -637,9 +609,7 @@ function mergeLocal(base, patch) {
   return out;
 }
 
-// audit: normalize incoming settings so every group/sub-group the render touches
-// always exists (a missing top-level group used to throw a TypeError that blanked
-// the whole app before the ErrorBoundary).
+// Fill in every group the render touches; a missing top-level group throws and blanks the app.
 function withGlobalDefaults(cfg) {
   const c = cfg || {};
   return {
@@ -659,10 +629,8 @@ function useGlobalSettings(tx, reportSave) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  // Request bookkeeping for apply(): the newest request's ticket, how many are
-  // still in flight, and the last settings the main process actually confirmed
-  // (with the ticket that produced it, so an out-of-order older response cannot
-  // replace it).
+  // apply() bookkeeping: newest request ticket, in-flight count, and the last settings main confirmed
+  // (with its ticket, so an older out-of-order response cannot replace it).
   const applySeq = useRef(0);
   const inFlight = useRef(0);
   const confirmed = useRef({ seq: 0, value: null });
@@ -676,12 +644,9 @@ function useGlobalSettings(tx, reportSave) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Optimistic update + persist of a partial patch.
-  //  - Only the NEWEST request may replace the on-screen settings; a stale
-  //    response resolving late used to roll back a toggle the user flipped since.
-  //  - On failure the error shows and, once nothing is in flight, the screen is
-  //    reset to the newest settings the main process confirmed.
-  //  - saving clears only when the last in-flight request finishes.
+  // Optimistic update of a partial patch. Only the newest request may replace on-screen settings;
+  // on failure, once nothing is in flight, revert to the last confirmed settings.
+  // saving clears only when the last in-flight request finishes.
   const apply = useCallback((patch) => {
     const seq = ++applySeq.current;
     inFlight.current += 1;
@@ -719,9 +684,7 @@ function useGlobalSettings(tx, reportSave) {
   return { s, loading, saving, err, apply };
 }
 
-// ---------------------------------------------------------------------------
-// GENERAL
-// ---------------------------------------------------------------------------
+// ---- General ----
 function LanguageSection({ sec }) {
   const { t } = useTranslation();
   const [lang, setLangState] = useState(getStoredLang());
@@ -858,10 +821,7 @@ function PlatformSection({ sec, s, apply }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// BROWSER
-// ---------------------------------------------------------------------------
-// Install status + one-shot downloader for the native anti-detect engine.
+// ---- Browser ----
 function AntidetectEngineInstaller() {
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -1089,9 +1049,7 @@ function CaptchaSection({ sec, s, apply }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// RUNTIME
-// ---------------------------------------------------------------------------
+// ---- Runtime ----
 function LocalRuntimeSection({ sec, loading, systemInfo }) {
   const { t: tx } = useTranslation('settingsExtra');
   return (
@@ -1300,9 +1258,7 @@ function DataSyncSection({ sec, s, apply }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// SECURITY & TEAM
-// ---------------------------------------------------------------------------
+// ---- Security and team ----
 function SecuritySection({ sec, s, apply }) {
   const { t: tx } = useTranslation('settingsExtra');
   return (
@@ -1487,11 +1443,8 @@ function EmailSection({ sec }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
-// Free-text setting field that keeps a local draft and persists on blur, on
-// Enter, or after a short pause in typing (not on every keystroke).
+// ---- Shared helpers ----
+// Keeps a local draft and persists on blur, Enter or a short typing pause, not on every keystroke.
 function DraftTextInput({ value, onCommit, delayMs = 800, ...rest }) {
   const [draft, setDraft] = useState(value || '');
   const focused = useRef(false);
@@ -1522,7 +1475,6 @@ function DraftTextInput({ value, onCommit, delayMs = 800, ...rest }) {
   );
 }
 
-// Key-value pair for the read-only Local Runtime card.
 function InfoRow({ label, value }) {
   return (
     <div>

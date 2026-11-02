@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Wand2, Bot, Flame, History, Plus, Loader2, Play, Pause, Square, X, Search,
-  Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical, Pencil, MousePointer2,
+  Trash2, Clock, CheckCircle2, Workflow, GripVertical, Pencil, MousePointer2,
   Layers, FileSpreadsheet, XCircle, AlertTriangle, Save, Copy, Download, Check, Eraser
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -14,9 +14,8 @@ import i18n from '@/i18n/index.js';
 import automationEn from '@/i18n/locales/en/automation.json';
 import automationEs from '@/i18n/locales/es/automation.json';
 
-// Register this page's "automation" namespace without touching the central i18n
-// config (which only bundles the "common" namespace). addResourceBundle is a
-// no-op if the bundle already exists, so this is safe across hot reloads.
+// Registers the automation namespace without touching the central i18n config; the guard keeps
+// it safe across hot reloads.
 if (!i18n.hasResourceBundle('en', 'automation')) i18n.addResourceBundle('en', 'automation', automationEn);
 if (!i18n.hasResourceBundle('es', 'automation')) i18n.addResourceBundle('es', 'automation', automationEs);
 
@@ -75,7 +74,6 @@ const MACRO_STEP_TYPES = [
   { type: 'check', label: 'Check / uncheck', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="terms"]' }, { key: 'state', label: 'State', kind: 'choice', options: ['checked', 'unchecked'] }] },
   { type: 'clear', label: 'Clear field', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="email"]' }] }
 ];
-const STEP_LABEL = Object.fromEntries(MACRO_STEP_TYPES.map((s) => [s.type, s.label]));
 
 function defaultStep(type) {
   const step = { type };
@@ -110,9 +108,8 @@ function stepSummary(step, t) {
   }
 }
 
-// Coerce an editor step into the runner shape (numeric fields → numbers, drop blanks).
-// The main process re-validates with normalizeMacroSteps - this only keeps the
-// payload clean so a blank optional input doesn't reach the engine as "".
+// Coerces an editor step to the runner shape (numbers, no blanks) so empty optional inputs never
+// reach the engine as ""; main re-validates with normalizeMacroSteps.
 function coerceStep(s) {
   const def = MACRO_STEP_TYPES.find((d) => d.type === s.type);
   const out = { type: s.type };
@@ -134,10 +131,8 @@ const LEVEL_COLOR = {
 
 export default function AutomationPage() {
   const { t } = useTranslation('automation');
-  // Remember the active sub-tab across navigation + restarts, so returning to this
-  // page (e.g. after checking a profile) lands you back on the Cookie Warmer where a
-  // run may still be streaming - instead of resetting to My Macros and hiding the
-  // Stop button / live console.
+  // Persist the sub-tab so returning lands on the Cookie Warmer, where a run may still be streaming,
+  // instead of hiding its Stop button and live console.
   const [tab, setTab] = useState(() => {
     try { const s = localStorage.getItem('sg.automation.tab'); return TABS.some((x) => x.key === s) ? s : 'macros'; }
     catch (e) { return 'macros'; }
@@ -152,7 +147,6 @@ export default function AutomationPage() {
         description={t('header.description')}
       />
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit mb-5">
         {TABS.map(({ key, icon: Icon }) => (
           <button
@@ -175,9 +169,7 @@ export default function AutomationPage() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// My Macros
-// ---------------------------------------------------------------------------
+// ---- My Macros ----
 function MacrosPanel() {
   const { t } = useTranslation('automation');
   const [macros, setMacros] = useState([]);
@@ -232,8 +224,7 @@ function MacrosPanel() {
 
   async function toggleRecording() {
     setErr(''); setNotice('');
-    // Stopping: open the in-app save modal. Electron's <webview>/renderer does not
-    // support window.prompt(), so we collect the macro name with our own dialog.
+    // Stopping opens the in-app save modal: Electron does not support window.prompt().
     if (recording) { setRecName(t('saveRecording.placeholder')); setSaveRec(recording); return; }
     setBusyRec(true);
     try {
@@ -356,7 +347,6 @@ function MacrosPanel() {
       {runState && <MacroRunModal {...runState} onClose={() => { setRunState(null); load(); }} />}
       {showSchedule && <ScheduleModal macros={macros} profiles={profiles} onClose={() => setShowSchedule(false)} />}
 
-      {/* Stop-and-save recording dialog (replaces window.prompt, unsupported in Electron). */}
       {saveRec && (
         <SaveRecordingModal
           recName={recName}
@@ -710,9 +700,8 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
     softglazeApi.automation.runMacro({ macroId: macro.id, profileId, continueOnError: true })
       .catch((e) => { if (live) { setErr(e.message || t('runModal.errors.run')); setPhase('done'); } });
     return () => { live = false; try { off && off(); } catch (e) { /* ignore */ } };
-    // Depend ONLY on the run identity. Including `t`/`profileName` meant a mid-run language
-    // switch re-ran this effect and started a SECOND concurrent macro run. Log strings use
-    // the closure's `t` (cosmetic if the language changes mid-run).
+    // Depend only on the run identity: re-running on a t/profileName change (e.g. a language switch)
+    // would start a second concurrent run. Log strings use the closure's t.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [macro.id, profileId]);
 
@@ -806,10 +795,8 @@ function MacroRunModal({ macro, profileId, profileName, onClose }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Parallel Runs - run one macro across many profiles with a live, redacted
-// per-profile status stream (frames arrive via the relay → run-progress channel).
-// ---------------------------------------------------------------------------
+// ---- Parallel Runs ----
+// One macro across many profiles with a redacted per-profile status stream (relay -> run-progress).
 const PAR_STATE = {
   queued: { label: 'Queued', cls: 'text-muted-foreground bg-secondary', Icon: Clock },
   launching: { label: 'Launching', cls: 'text-sky-400 bg-sky-500/12', Icon: Loader2, spin: true },
@@ -837,9 +824,8 @@ function ParallelPanel() {
   const [dataBinding, setDataBinding] = useState(null); // { token, fileName, headers, rowCount }
   const [err, setErr] = useState('');
   const logRef = useRef(null);
-  // This panel's run. Frames from any other run (another window, an older run) are
-  // ignored. Frames that arrive while the start call is still in flight - before the
-  // runId is known - are held and replayed once it is, instead of guessing.
+  // Frames from any other run are ignored; frames that arrive before the start call returns a
+  // runId are held and replayed once it is known.
   const runIdRef = useRef(null);
   const pendingFramesRef = useRef(null);
 
@@ -878,9 +864,8 @@ function ParallelPanel() {
     return () => { try { off && off(); } catch (e) { /* ignore */ } };
   }, []);
 
-  // While "Running", ask main every few seconds whether the run has really ended.
-  // This replaces the old 1.5 s timer, which cleared "Running" while the run was still
-  // going (the start call returns at once), re-enabling Run for an overlapping run.
+  // While Running, poll main every few seconds for the real end: the start call returns at once,
+  // so a short timer would clear Running mid-run and allow an overlapping run.
   useEffect(() => {
     if (!running) return undefined;
     const timer = setInterval(async () => {
@@ -974,7 +959,6 @@ function ParallelPanel() {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
-      {/* Controls */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-4 min-w-0">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-indigo-500/12 border border-indigo-500/20"><Layers className="w-5 h-5 text-indigo-400" /></span>
@@ -1002,7 +986,6 @@ function ParallelPanel() {
           </div>
         </div>
 
-        {/* Optional data binding */}
         <div className="rounded-lg border border-border bg-elevated/40 p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -1069,9 +1052,7 @@ function ParallelPanel() {
         {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
       </div>
 
-      {/* Live status + console */}
       <div className="space-y-3">
-        {/* Per-profile status grid */}
         <div className="rounded-xl border border-border bg-card p-3">
           <div className="flex items-center justify-between mb-2 px-1">
             <span className="text-[11.5px] font-semibold text-muted-foreground">{t('parallel.runStatus')}</span>
@@ -1115,7 +1096,6 @@ function ParallelPanel() {
           )}
         </div>
 
-        {/* Console */}
         <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-h-[220px]">
           <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-elevated/30">
             <span className="flex gap-1.5">
@@ -1153,9 +1133,7 @@ function ParallelPanel() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Cookie Warmer
-// ---------------------------------------------------------------------------
+// ---- Cookie Warmer ----
 function WarmerPanel() {
   const { t } = useTranslation('automation');
   const [profiles, setProfiles] = useState([]);
@@ -1168,16 +1146,15 @@ function WarmerPanel() {
   const [err, setErr] = useState('');
   const logRef = useRef(null);
 
-  // Per-site plan: each row visited for `seconds`, doing `clickMode` behaviour.
-  // Seeded with a few suggestions so the panel works out-of-the-box and is editable.
+  // Per-site plan (visit each row for seconds, with clickMode behaviour), seeded with suggestions.
   const [sites, setSites] = useState(() => PRESET_SITES.slice(0, 4).map((s) => ({ ...s, seconds: 30, clickMode: 'none' })));
   const [presetPick, setPresetPick] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [loop, setLoop] = useState(false);
   const [keepOpen, setKeepOpen] = useState(false);
-  const [hidden, setHidden] = useState(true); // default ON - warm without opening visible windows
-  const [queueMode, setQueueMode] = useState(true); // default ON - warm one profile at a time (a queue)
-  const [parallelCount, setParallelCount] = useState(3); // profiles at a time when queue is OFF
+  const [hidden, setHidden] = useState(true); // default on: warm without visible windows
+  const [queueMode, setQueueMode] = useState(true); // default on: warm one profile at a time (a queue)
+  const [parallelCount, setParallelCount] = useState(3); // profiles at a time when queue mode is off
   const [bulkText, setBulkText] = useState('');
   const [showBulk, setShowBulk] = useState(false);
   const [pasteIds, setPasteIds] = useState('');
@@ -1196,8 +1173,8 @@ function WarmerPanel() {
     softglazeApi.profiles.list({}).then((rows) => setProfiles(Array.isArray(rows) ? rows : [])).catch(() => setProfiles([]));
   }, []);
 
-  // Restore the saved warm-up plan (sites + options + named lists) so it survives
-  // switching tabs AND app restarts. Runs once; guards the auto-save until loaded.
+  // Restore the saved warm-up plan (sites, options, named lists) across tabs and restarts; runs
+  // once and holds auto-save until loaded.
   useEffect(() => {
     let alive = true;
     softglazeApi.settings.getGlobal().then((g) => {
@@ -1224,9 +1201,8 @@ function WarmerPanel() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [sites, loop, keepOpen, hidden, queueMode, parallelCount]);
 
-  // Re-attach to a warm-up still running in the main process (e.g. the user navigated
-  // away and came back). Without this the panel looks idle while the launched browsers
-  // keep running - and there'd be no runId to Stop them. Runs once on mount.
+  // Re-attach on mount to a warm-up still running in main; otherwise the panel looks idle while
+  // browsers keep running, with no runId to Stop them.
   useEffect(() => {
     let alive = true;
     const list = softglazeApi.automation.listActiveWarmers;
@@ -1398,8 +1374,8 @@ function WarmerPanel() {
         loop,
         keepOpen,
         headless: hidden,
-        // Queue mode = one browser at a time (default). This is what keeps a 100-profile
-        // warm-up from launching 100 browsers at once and crashing the app.
+        // Queue mode (the default) runs one browser at a time, so a 100-profile warm-up never launches
+        // 100 browsers at once and crashes the app.
         concurrency: width,
         sites: sites.map((s) => ({ url: s.url, label: s.label, seconds: Number(s.seconds) || 30, clickMode: s.clickMode || 'none' }))
       };
@@ -1428,7 +1404,6 @@ function WarmerPanel() {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
-      {/* Controls */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-4 min-w-0">
         <div className="flex items-center gap-2.5">
           <span className="w-9 h-9 rounded-lg grid place-items-center bg-orange-500/12 border border-orange-500/20"><Flame className="w-5 h-5 text-orange-400" /></span>
@@ -1438,11 +1413,9 @@ function WarmerPanel() {
           </div>
         </div>
 
-        {/* Sites to visit */}
         <div className="space-y-2">
           <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('warmer.sitesLabel', { count: sites.length })}</label>
 
-          {/* Add a suggested site */}
           <div className="flex items-center gap-2">
             <select value={presetPick} onChange={(e) => setPresetPick(e.target.value)} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-2 text-[12px] text-foreground outline-none focus:border-primary">
               <option value="">{t('warmer.addSuggested')}</option>
@@ -1450,7 +1423,7 @@ function WarmerPanel() {
             </select>
             <button onClick={addPreset} disabled={!presetPick} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
-          {/* Add a custom URL - the seconds + behaviour here apply to every link you add */}
+          {/* The seconds and behaviour here apply to every link added */}
           <div className="flex items-center gap-2">
             <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustom(); }} placeholder={t('warmer.customPlaceholder')} className="h-8 flex-1 min-w-0 bg-input-background border border-border rounded-lg px-3 text-[12px] text-foreground outline-none focus:border-primary" />
             <NumberInput min={3} max={600} fallback={30} value={addSeconds} onCommit={setAddSeconds} title={t('warmer.addSecondsTitle')} className="w-14 h-8 bg-input-background border border-border rounded-lg px-1.5 text-[11.5px] text-center text-foreground outline-none focus:border-primary" />
@@ -1460,7 +1433,6 @@ function WarmerPanel() {
             <button onClick={addCustom} disabled={!customUrl.trim()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> {t('warmer.add')}</button>
           </div>
 
-          {/* Bulk add links · import a .txt/.csv · clear all */}
           <div className="flex items-center gap-2">
             <button onClick={() => setShowBulk((v) => !v)} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> {t('warmer.bulkAdd')}</button>
             <button onClick={() => fileRef.current && fileRef.current.click()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><FileSpreadsheet className="w-3.5 h-3.5" /> {t('warmer.importFile')}</button>
@@ -1479,7 +1451,6 @@ function WarmerPanel() {
             </div>
           )}
 
-          {/* Reusable saved link lists - persisted for future use */}
           <div className="flex flex-wrap items-center gap-1.5">
             <button onClick={() => { if (!sites.length) { setErr(t('warmer.errors.addSite')); return; } setShowListName(true); }} disabled={!sites.length} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Save className="w-3.5 h-3.5" /> {t('warmer.saveList')}</button>
             {savedLists.map((l) => (
@@ -1490,7 +1461,6 @@ function WarmerPanel() {
             ))}
           </div>
 
-          {/* Site-row bulk edit toolbar - select rows, then set time/behaviour or delete */}
           {sites.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-[11px]">
               <label className="flex items-center gap-1.5 text-muted-foreground cursor-pointer">
@@ -1511,7 +1481,6 @@ function WarmerPanel() {
             </div>
           )}
 
-          {/* Configured sites - per-site dwell time + behaviour */}
           <div className="rounded-lg border border-border bg-elevated/40 divide-y divide-border/60 max-h-[240px] overflow-y-auto">
             {sites.length === 0 ? (
               <div className="px-3 py-5 text-center text-[12px] text-muted-foreground">{t('warmer.noSites')}</div>
@@ -1534,7 +1503,6 @@ function WarmerPanel() {
             ))}
           </div>
 
-          {/* Options */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
             <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
               <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} className="accent-orange-500" /> {t('warmer.loopUntilStopped')}
@@ -1559,7 +1527,6 @@ function WarmerPanel() {
           <p className="text-[10.5px] text-muted-foreground/80">{t('warmer.cookieNote')}</p>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2">
           {!running ? (
             <button onClick={start} className="h-9 px-5 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 shadow shadow-orange-500/25 inline-flex items-center gap-2">
@@ -1583,7 +1550,6 @@ function WarmerPanel() {
             </div>
           </div>
 
-          {/* Bulk selection - all/none/invert + add a whole group or tag at once */}
           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
             <button onClick={selectAll} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.selectAll')}</button>
             <button onClick={selectNone} className="h-7 px-2 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary">{t('warmer.selectNone')}</button>
@@ -1622,10 +1588,8 @@ function WarmerPanel() {
         {err && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">{err}</div>}
       </div>
 
-      {/* Live counter + console */}
       <div className="flex flex-col gap-3 min-w-0">
-        {/* Run progress counter - stays visible (and restores on re-attach) so the
-            operator always sees how many profiles are done / running / queued. */}
+        {/* Stays visible and restores on re-attach so done / running / queued counts always show */}
         {(running || counts) && (
           <div className="rounded-xl border border-border bg-card px-4 py-3">
             <div className="flex items-center justify-between mb-2">
@@ -1643,7 +1607,6 @@ function WarmerPanel() {
           </div>
         )}
 
-        {/* Live console */}
         <div className="rounded-xl border border-border bg-[#0b0f17] overflow-hidden flex flex-col min-w-0 min-h-[360px] max-h-[75vh]">
           <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/60 bg-elevated/30">
             <span className="flex gap-1.5">
@@ -1687,12 +1650,9 @@ function WarmerPanel() {
 }
 
 
-// ---------------------------------------------------------------------------
-// Task History
-// ---------------------------------------------------------------------------
-// Collapse history rows that share a runId - older saves may hold two entries per
-// run (a 'running' start + a 'completed'/'stopped' finish). Keep the first
-// occurrence (most recent, already updated) so each run renders as one row.
+// ---- Task History ----
+// Collapse rows sharing a runId (older saves hold a start and a finish entry); keep the first,
+// most recent one.
 function dedupeHistory(rows) {
   if (!Array.isArray(rows)) return [];
   const seen = new Set();
@@ -1811,9 +1771,7 @@ function describeHistoryEntry(h, t) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Shared: live run counter + console toolbar (reused by Warmer / Parallel / Macros)
-// ---------------------------------------------------------------------------
+// ---- Shared run counter and console toolbar ----
 
 // Compact chip row: total / running / done / queued, plus the run mode. Shown above
 // each live console so the operator always sees how many profiles are left.

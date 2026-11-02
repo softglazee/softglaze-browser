@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
-  Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
+  ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
   CreditCard, Link2, Plug, ClipboardList } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -72,7 +72,7 @@ const SECTIONS = [
     items: [{ path: '/members', labelKey: 'nav.members', icon: Users, featureKey: 'members' }]
   },
   {
-    // Our own vendor testing. The Super Admin role exists only on the source owner's machine.
+    // Vendor testing; the Super Admin role exists only on the source owner's machine.
     labelKey: 'nav.sectionAdmin',
     items: [{ path: '/provider-status', labelKey: 'nav.providerStatus', icon: ClipboardList, superOnly: true }]
   }
@@ -87,9 +87,8 @@ function makeCanSee(me) {
 
 const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATOR: 'Operator' };
 
-// App-wide footer. `{year}` resolves to the current year; http(s) URLs become
-// links (shown without the scheme) that open in the default browser. Text is set
-// by the Super Admin in Settings → App footer.
+// {year} becomes the current year; http(s) URLs become links (shown without the scheme) that
+// open in the default browser. The Super Admin sets the text in Settings.
 function FooterBar({ text }) {
   if (!text) return null;
   return (
@@ -123,8 +122,7 @@ function NavItem({ path, label, icon: Icon, collapsed, badge }) {
 export default function AppShell({ children }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  // Localized role name; falls back to the English label map, then the raw role
-  // (covers SUPER_ADMIN and any future role not yet in the locale files).
+  // Falls back to the English label, then the raw role (SUPER_ADMIN or roles missing from locales).
   const roleLabel = (r) => (r ? t(`roles.${r}`, { defaultValue: ROLE_LABEL[r] || r }) : t('shell.noMember'));
   const [open, setOpen] = useState(false);
   // Narrow windows start with the icon-only sidebar so pages keep usable width.
@@ -144,7 +142,6 @@ export default function AppShell({ children }) {
   const ref = useRef(null);
   const userBtnRef = useRef(null);
 
-  // Close the account popover and clear any in-progress PIN/password entry.
   const closeMenu = () => { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); };
 
   useEffect(() => {
@@ -226,9 +223,7 @@ export default function AppShell({ children }) {
     try { await softglazeApi.vault.lock(); window.location.reload(); } catch (e) { /* ignore */ }
   }
 
-  // Sign out: clear the active member server-side, then reload so Gate.jsx falls
-  // back to the member-picker / login screen. The reload runs even if the API call
-  // fails, so the user is never stuck in a half-logged-out state.
+  // Reload even if logout fails, so Gate.jsx shows the login screen and nobody is left half-signed-out.
   async function doLogout() {
     try { await softglazeApi.members.logout(); } catch (e) { /* proceed to reload anyway */ }
     window.location.reload();
@@ -247,7 +242,6 @@ export default function AppShell({ children }) {
         className="bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-[width] duration-300 ease-out"
         style={{ width: collapsed ? 68 : 232 }}
       >
-        {/* Brand */}
         <div className="flex items-center gap-3 px-4 py-5 shrink-0 overflow-hidden">
           <img
             src="/logos/app-source-512.png"
@@ -263,7 +257,6 @@ export default function AppShell({ children }) {
           )}
         </div>
 
-        {/* Active-session status pill */}
         {!collapsed && (
           <div
             className="mx-3 mb-3 flex items-center gap-2 px-3 py-2 rounded-lg animate-fade-in"
@@ -301,7 +294,6 @@ export default function AppShell({ children }) {
             {canSee('billing') && <NavItem path="/billing" label={t('nav.billing')} icon={CreditCard} collapsed={collapsed} />}
             {canSee('settings') && <NavItem path="/settings" label={t('nav.settings')} icon={Settings} collapsed={collapsed} />}
 
-            {/* Collapse toggle */}
             <button
               onClick={() => setCollapsed((c) => !c)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"

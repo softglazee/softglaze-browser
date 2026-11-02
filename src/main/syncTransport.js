@@ -1,27 +1,12 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze Enterprise - Cloud sync transport (REST object-store CLIENT).
-//
-// Talks to an EXTERNAL, SEPARATE server service that you host yourself: a thin
-// object store that accepts PUT/GET of opaque blobs by key, authorized with a
-// Bearer token. This client only ever sends/receives the already-encrypted sync
-// envelope produced by CloudSyncEngine - the server stores opaque ciphertext and
-// can never read it (zero-knowledge).
-//
-// Server contract (host this separately - it is NOT part of this app):
-//   PUT {baseUrl}/{key}  Authorization: Bearer <token>  body = opaque bytes  -> 2xx
-//   GET {baseUrl}/{key}  Authorization: Bearer <token>                       -> 200 + bytes | 404
-//
-// Any S3-compatible bucket fronted by such a proxy, or a tiny REST bucket, works.
-// ---------------------------------------------------------------------------
+// REST object-store client for cloud sync. The separately hosted server only stores opaque,
+// already-encrypted blobs: PUT/GET {baseUrl}/{key} with a Bearer token; GET gives 200 + bytes or 404.
 const https = require('node:https');
 const http = require('node:http');
 const { URL } = require('node:url');
 
 const DEFAULT_TIMEOUT_MS = 20000;
-// Hard ceiling on a single response body. The sync envelope is an encrypted blob whose
-// real size is bounded by the workspace data; capping it stops a hostile/broken server
-// from streaming unbounded bytes into memory (OOM).
+// Caps one response body so a hostile or broken server cannot exhaust memory.
 const MAX_RESPONSE_BYTES = 512 * 1024 * 1024;
 
 class RestBucketTransport {
@@ -32,11 +17,8 @@ class RestBucketTransport {
     this.timeoutMs = Number(options.timeoutMs) || DEFAULT_TIMEOUT_MS;
   }
 
-  // Encode each path segment but keep the '/' separators (keys look like
-  // "namespace/profile.sgz-env"). audit: encodeURIComponent does NOT encode dots,
-  // so a '..' segment survived and new URL(baseUrl + '/ns/../../x') normalized it,
-  // escaping the namespace prefix (cross-namespace read/write on the bucket). Reject
-  // any '.'/'..' segment and assert the resolved URL still sits under baseUrl.
+  // Encode each segment but keep the / separators. encodeURIComponent leaves dots alone, so reject
+  // . and .. segments and check the resolved URL stays under baseUrl (no namespace escape).
   _url(key) {
     const segments = String(key).split('/');
     for (const seg of segments) {
@@ -51,8 +33,7 @@ class RestBucketTransport {
     return new Promise((resolve, reject) => {
       let u;
       try { u = new URL(this._url(key)); } catch (e) { return reject(new Error('Invalid sync endpoint URL.')); }
-      // Never send the bucket Bearer token in cleartext over http:// (except to a local dev
-      // endpoint) - it would be sniffable end-to-end and grants full read/write of the store.
+      // Never send the Bearer token over plain http (except to localhost): it grants full store access.
       const host = String(u.hostname || '').replace(/^\[|\]$/g, '');
       const isLocal = host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' || host === 'localhost';
       if (u.protocol === 'http:' && this.token && !isLocal) {
@@ -81,9 +62,7 @@ class RestBucketTransport {
           if (overflowed) return;
           const status = res.statusCode || 0;
           const buf = Buffer.concat(chunks);
-          // 404 = "no such object" ONLY for a read. A PUT that 404s is a real failure (bad
-          // path / server error) and must NOT be reported as success, or the upload
-          // silently no-ops and the data is lost.
+          // 404 means "no object" only for GET; a 404 on PUT is a real failure and must not look like success.
           if (status === 404 && method === 'GET') return resolve({ status, body: null });
           if (status >= 200 && status < 300) return resolve({ status, body: buf });
           reject(new Error(`Sync server responded ${status}${buf.length ? `: ${buf.toString('utf8').slice(0, 200)}` : ''}`));

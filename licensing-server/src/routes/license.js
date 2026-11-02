@@ -1,20 +1,7 @@
 'use strict';
-// POST /v1/license { tenantId, installId, installSecret, machineHash }
-//   -> { lease, exp, tier, currentPeriodEnd }   when an active license exists
-//   -> { lease: null, status }                  otherwise
-//   -> 401                                      unknown install or wrong secret
-//   -> 400 { error: 'machine_required' }        no/invalid machineHash
-//   -> 403 { error: 'machine_mismatch' }        install is bound to another machine
-// The desktop calls this on launch + periodically; it caches the signed lease and
-// runs offline until it expires (LEASE_DAYS), then re-checks here.
-//
-// Audit T2-6: this used to match a licence by `account` (an email) taken from the request
-// body, so the email was the whole credential. The licence is now found only by an
-// installId the caller has proved it owns with its install secret.
-//
-// Audit L3: the install secret could be copied to any number of machines. The install is
-// now bound to one machine hash (trust on first use) and the lease carries it as `mid`.
-// See machineBinding.js for the binding, the admin reset and the self-service transfer.
+// POST /v1/license { tenantId, installId, installSecret, machineHash } -> { lease, exp, tier,
+// currentPeriodEnd } | { lease: null, status }; 401 bad install/secret, 400 machine_required,
+// 403 machine_mismatch. The licence is found only by the authenticated installId, never by email.
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -50,10 +37,8 @@ router.post('/', asyncHandler(async (req, res) => {
 }));
 
 // POST /v1/license/transfer { tenantId, installId, installSecret, machineHash, proof }
-// Self-service move of a licence to a new PC. Needs the install secret AND a proof of
-// purchase (the redeemed activation code, or the payment/subscription reference), and is
-// limited to 2 transfers per licence per 30 days. -> { ok, transferred, remaining? }
-//   400 machine_required, 401 bad secret, 403 invalid_proof, 404 no_license, 429 transfer_limit
+// -> { ok, transferred, remaining? }. Needs the install secret and a proof of purchase; 2 per 30 days.
+// Errors: 400 machine_required, 401 bad secret, 403 invalid_proof, 404 no_license, 429 transfer_limit
 router.post('/transfer', asyncHandler(async (req, res) => {
   const { tenantId, installId, installSecret, machineHash, proof } = req.body || {};
   if (!tenantId) return res.status(400).json({ error: 'tenantId is required.' });

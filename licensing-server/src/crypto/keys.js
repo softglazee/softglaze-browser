@@ -1,7 +1,6 @@
 'use strict';
-// Ed25519 keypair generation + signing for license leases, plus tenant-admin API
-// key helpers. The PRIVATE key never leaves the backend (sealed at rest); the
-// PUBLIC key is baked into the tenant's desktop build to verify leases offline.
+// Ed25519 lease signing and tenant-admin API key helpers. The private key never leaves the backend
+// (sealed at rest); the public key is baked into the desktop build to verify leases offline.
 const {
   generateKeyPairSync, sign: edSign, createPrivateKey, randomBytes, createHash
 } = require('node:crypto');
@@ -14,7 +13,7 @@ function generateTenantKeypair() {
   };
 }
 
-// Ed25519 sign — the algorithm argument MUST be null for Ed25519 in Node.
+// Node requires a null algorithm argument for Ed25519.
 function signEd25519(privateKeyPem, dataBuf) {
   return edSign(null, dataBuf, createPrivateKey(privateKeyPem));
 }

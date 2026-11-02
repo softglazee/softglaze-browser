@@ -3,8 +3,7 @@ import React from 'react';
 export default function PageHeader({ eyebrow, title, description, actions, className = '' }) {
   return (
     <div className={`flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border/50 pb-6 mb-6 ${className}`}>
-      {/* The title keeps a readable minimum width; a long action bar wraps instead of
-          squeezing the title to "P…" and the description to one word per line. */}
+      {/* Min width keeps the title readable; a long action bar wraps instead of squeezing it. */}
       <div className="flex-1 min-w-0 sm:min-w-[16rem]">
         {eyebrow && (
           <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1.5">
