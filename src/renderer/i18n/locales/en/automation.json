@@ -366,5 +366,47 @@
     "hidden": "Hidden",
     "checked": "Checked",
     "unchecked": "Unchecked"
+  },
+  "autopilot": {
+    "title": "Warm-up autopilot",
+    "subtitle": "Warms profiles with a few sites every day, so they build real browsing history.",
+    "toggle": "Turn the warm-up autopilot on or off",
+    "target": "Profiles",
+    "targetAll": "All profiles",
+    "targetGroup": "One group",
+    "group": "Group",
+    "runsPerDay": "Runs per day",
+    "runsPerDayTitle": "How many times a day each profile is warmed",
+    "sitesPerRun": "Sites per run",
+    "sitesPerRunTitle": "Random sites from the suggested list, 20 to 45 seconds each",
+    "activeHours": "Active hours",
+    "startHour": "Start hour",
+    "endHour": "End hour",
+    "hoursTo": "to",
+    "atATime": "At a time",
+    "atATimeTitle": "Profiles warmed at once. More is faster but uses more memory.",
+    "hidden": "Run hidden (no windows)",
+    "hint": "A profile is warmed when its last warm-up is older than 24 hours divided by the runs per day. Open, locked or busy profiles are skipped.",
+    "ownedByOther": "Another member turned this on. Only they or someone above them can change it.",
+    "status": {
+      "off": "Off",
+      "nextSoon": "Next run within a minute",
+      "nextAt": "Next run {{time}}",
+      "nothingDue": "No profiles to warm",
+      "warmedToday": "{{done}} of {{total}} warmed today",
+      "warmingNow": "{{n}} warming now",
+      "lastError": "Last error, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "Could not load the autopilot settings.",
+      "save": "Could not save the autopilot settings.",
+      "noGroups": "No groups yet. Create one on the Profiles page first.",
+      "owner-missing": "The member who turned on the autopilot no longer exists. The workspace Owner can turn it off and on again to take it over.",
+      "owner-inactive": "The member who turned on the autopilot is suspended or banned.",
+      "owner-no-permission": "The member who turned on the autopilot may no longer run automation.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "A profile you cannot see failed to warm up.",
+      "tick-failed": "{{error}}"
+    }
   }
 }

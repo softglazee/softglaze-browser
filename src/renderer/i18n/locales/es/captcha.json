@@ -115,7 +115,9 @@
     },
     "history": {
       "pass": "Tiene historial de navegación y cookies.",
-      "warn": "Casi sin cookies ni historial todavía. Los sitios confían en un perfil que se ha usado."
+      "warn": "Casi sin cookies ni historial todavía. Los sitios confían en un perfil que se ha usado.",
+      "warmed_one": "Calentado {{count}} vez, así que tiene historial de navegación y cookies reales.",
+      "warmed_other": "Calentado {{count}} veces, así que tiene historial de navegación y cookies reales."
     },
     "device": {
       "warn": "La tarjeta gráfica (WebGL) puede no encajar con este dispositivo o sistema.",

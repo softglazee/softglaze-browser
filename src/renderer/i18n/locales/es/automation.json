@@ -366,5 +366,47 @@
     "hidden": "Oculto",
     "checked": "Marcado",
     "unchecked": "Desmarcado"
+  },
+  "autopilot": {
+    "title": "Piloto automático de calentamiento",
+    "subtitle": "Calienta los perfiles con unos pocos sitios cada día, para que acumulen historial de navegación real.",
+    "toggle": "Activar o desactivar el piloto automático de calentamiento",
+    "target": "Perfiles",
+    "targetAll": "Todos los perfiles",
+    "targetGroup": "Un grupo",
+    "group": "Grupo",
+    "runsPerDay": "Pasadas al día",
+    "runsPerDayTitle": "Cuántas veces al día se calienta cada perfil",
+    "sitesPerRun": "Sitios por pasada",
+    "sitesPerRunTitle": "Sitios al azar de la lista sugerida, de 20 a 45 segundos cada uno",
+    "activeHours": "Horario activo",
+    "startHour": "Hora de inicio",
+    "endHour": "Hora de fin",
+    "hoursTo": "a",
+    "atATime": "A la vez",
+    "atATimeTitle": "Perfiles calentados a la vez. Más es más rápido, pero usa más memoria.",
+    "hidden": "Ejecutar oculto (sin ventanas)",
+    "hint": "Un perfil se calienta cuando su último calentamiento tiene más de 24 horas divididas entre las pasadas al día. Se omiten los perfiles abiertos, bloqueados u ocupados.",
+    "ownedByOther": "Lo activó otro miembro. Solo esa persona o alguien por encima puede cambiarlo.",
+    "status": {
+      "off": "Desactivado",
+      "nextSoon": "Próxima pasada en menos de un minuto",
+      "nextAt": "Próxima pasada: {{time}}",
+      "nothingDue": "No hay perfiles que calentar",
+      "warmedToday": "{{done}} de {{total}} calentados hoy",
+      "warmingNow": "{{n}} calentándose ahora",
+      "lastError": "Último error, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "No se pudo cargar la configuración del piloto automático.",
+      "save": "No se pudo guardar la configuración del piloto automático.",
+      "noGroups": "Aún no hay grupos. Crea uno primero en la página Perfiles.",
+      "owner-missing": "El miembro que activó el piloto automático ya no existe. El Propietario del espacio de trabajo puede desactivarlo y volver a activarlo para hacerse cargo.",
+      "owner-inactive": "El miembro que activó el piloto automático está suspendido o bloqueado.",
+      "owner-no-permission": "El miembro que activó el piloto automático ya no puede ejecutar automatizaciones.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "Un perfil que no puedes ver no se pudo calentar.",
+      "tick-failed": "{{error}}"
+    }
   }
 }

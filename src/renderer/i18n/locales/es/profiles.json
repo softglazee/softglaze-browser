@@ -377,7 +377,16 @@
     "direct": "Directo",
     "viewActivity": "Ver actividad",
     "neverUsed": "Nunca usado",
-    "used": "Usado"
+    "used": "Usado",
+    "ageDays": "{{count}}d",
+    "ageMonths": "{{count}}m",
+    "ageYears": "{{count}}a",
+    "createdToday": "Creado hoy",
+    "createdDaysAgo_one": "Creado hace {{count}} día",
+    "createdDaysAgo_other": "Creado hace {{count}} días",
+    "neverWarmed": "nunca calentado",
+    "warmedTimes_one": "calentado {{count}} vez, la última {{last}}",
+    "warmedTimes_other": "calentado {{count}} veces, la última {{last}}"
   },
   "actions": {
     "stop": "Detener",

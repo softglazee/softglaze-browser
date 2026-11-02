@@ -58,6 +58,8 @@ function profileOsFamily(os) {
 // Cookie stores below these sizes hold almost nothing. An empty Chrome store is about 20 KB and
 // Firefox pre-allocates about 96 KB.
 const LITTLE_HISTORY_BYTES = { Chromium: 64 * 1024, Firefox: 192 * 1024 };
+// Warm-ups (Cookie Warmer or autopilot) after which a profile counts as having real history.
+const WARMED_RUNS = 3;
 
 function gradeFor(score) {
   if (score >= 85) return { grade: 'A', level: 'low' };
@@ -66,7 +68,7 @@ function gradeFor(score) {
   return { grade: 'D', level: 'veryHigh' };
 }
 
-// ctx: { proxy, sharedWith, settings: { blockThirdPartyCookies }, hostOs, cookieBytes, now }
+// ctx: { proxy, sharedWith, settings: { blockThirdPartyCookies }, hostOs, cookieBytes, warmRuns, now }
 function scoreProfile(profile, ctx = {}) {
   const p = profile || {};
   const proxy = ctx.proxy || null;
@@ -138,9 +140,10 @@ function scoreProfile(profile, ctx = {}) {
   const limit = LITTLE_HISTORY_BYTES[isFirefox ? 'Firefox' : 'Chromium'];
   const bytes = typeof ctx.cookieBytes === 'number' ? ctx.cookieBytes : null;
   const ageDays = p.createdAt ? Math.floor((now - new Date(p.createdAt).getTime()) / DAY_MS) : null;
-  const littleHistory = bytes != null ? bytes < limit : launches < 3;
+  const warmRuns = Number(ctx.warmRuns) || 0;
+  const littleHistory = warmRuns < WARMED_RUNS && (bytes != null ? bytes < limit : launches < 3);
   if (littleHistory) add('history', 'warn', 10, { launches, ageDays }, 'warm-up');
-  else add('history', 'pass', 0, { launches });
+  else add('history', 'pass', 0, warmRuns >= WARMED_RUNS ? { launches, warmRuns } : { launches });
 
   // ---- Fingerprint consistency (advice only: changing it changes the device sites know) ----
   const coh = deviceGpuCoherence({ deviceClass: p.deviceClass, os: p.os, webglRenderer: p.webglRenderer });
@@ -218,4 +221,4 @@ function rankReplacements(candidates, current) {
   return usable;
 }
 
-module.exports = { scoreProfile, ipTypeOf, isRotating, pickReplacementProxy, bestReplacement, PROFILE_FIELD_FIXES, HOSTING_PATTERNS };
+module.exports = { scoreProfile, ipTypeOf, isRotating, pickReplacementProxy, bestReplacement, PROFILE_FIELD_FIXES, HOSTING_PATTERNS, WARMED_RUNS };

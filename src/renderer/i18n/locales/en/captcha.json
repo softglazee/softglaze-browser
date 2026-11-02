@@ -115,7 +115,9 @@
     },
     "history": {
       "pass": "Has browsing history and cookies.",
-      "warn": "Almost no cookies or history yet. Sites trust a profile that has been used."
+      "warn": "Almost no cookies or history yet. Sites trust a profile that has been used.",
+      "warmed_one": "Warmed up {{count}} time, so it has real browsing history and cookies.",
+      "warmed_other": "Warmed up {{count}} times, so it has real browsing history and cookies."
     },
     "device": {
       "warn": "The graphics card (WebGL) may not fit this device or system.",

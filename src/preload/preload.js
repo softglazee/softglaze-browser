@@ -85,6 +85,7 @@ const CHANNELS = Object.freeze({
   PROFILE_LIVE_LEAK: 'profile:live-leak',
   PROFILE_CAPTCHA_SCORES: 'profile:captcha-scores',
   PROFILE_CAPTCHA_FIX: 'profile:captcha-fix',
+  PROFILE_WARM_STATS: 'profile:warm-stats',
   PROFILE_ACTIVITY: 'profile:activity',
   PROFILE_GET_2FA_TOKEN: 'profile:get-2fa-token',
   PROFILE_BULK_SYNCHRONIZE: 'profile:bulk-synchronize',
@@ -243,6 +244,8 @@ const CHANNELS = Object.freeze({
   AUTOMATION_PARALLEL_STATUS: 'automation:parallel-status',
   AUTOMATION_RUN_PROGRESS: 'automation:run-progress',
   AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
+  AUTOMATION_WARM_AUTOPILOT_GET: 'automation:warm-autopilot-get',
+  AUTOMATION_WARM_AUTOPILOT_SET: 'automation:warm-autopilot-set',
 
   API_TOKEN_LIST: 'api:token-list',
   API_TOKEN_CREATE: 'api:token-create',
@@ -389,6 +392,7 @@ const api = Object.freeze({
     liveLeak: (id) => invoke(CHANNELS.PROFILE_LIVE_LEAK, { id }),
     captchaScores: (ids) => invoke(CHANNELS.PROFILE_CAPTCHA_SCORES, { ids }),
     captchaFix: (id, action) => invoke(CHANNELS.PROFILE_CAPTCHA_FIX, { id, action }),
+    warmStats: (ids) => invoke(CHANNELS.PROFILE_WARM_STATS, { ids }),
     activity: (id) => invoke(CHANNELS.PROFILE_ACTIVITY, { id }),
     get2faToken: (id) => invoke(CHANNELS.PROFILE_GET_2FA_TOKEN, { id }),
     bulkSynchronize: (ids) => invoke(CHANNELS.PROFILE_BULK_SYNCHRONIZE, { ids }),
@@ -602,6 +606,8 @@ const api = Object.freeze({
     runParallel: (payload) => invoke(CHANNELS.AUTOMATION_RUN_PARALLEL, payload),
     parallelStatus: (runId) => invoke(CHANNELS.AUTOMATION_PARALLEL_STATUS, { runId }),
     pickDataFile: () => invoke(CHANNELS.AUTOMATION_PICK_DATA_FILE),
+    getWarmAutopilot: () => invoke(CHANNELS.AUTOMATION_WARM_AUTOPILOT_GET),
+    setWarmAutopilot: (payload) => invoke(CHANNELS.AUTOMATION_WARM_AUTOPILOT_SET, payload),
     onWarmerProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.AUTOMATION_WARMER_PROGRESS, listener);

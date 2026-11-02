@@ -377,7 +377,16 @@
     "direct": "Direct",
     "viewActivity": "View activity",
     "neverUsed": "Never used",
-    "used": "Used"
+    "used": "Used",
+    "ageDays": "{{count}}d",
+    "ageMonths": "{{count}}mo",
+    "ageYears": "{{count}}y",
+    "createdToday": "Created today",
+    "createdDaysAgo_one": "Created {{count}} day ago",
+    "createdDaysAgo_other": "Created {{count}} days ago",
+    "neverWarmed": "never warmed",
+    "warmedTimes_one": "warmed {{count}} time, last {{last}}",
+    "warmedTimes_other": "warmed {{count}} times, last {{last}}"
   },
   "actions": {
     "stop": "Stop",
