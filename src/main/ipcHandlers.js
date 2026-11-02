@@ -1015,22 +1015,39 @@ function parseColonProxyLine(rawLine, fallbackType = 'HTTP') {
   });
 }
 
+// The full identity of a proxy endpoint: type + host + port + username + PASSWORD, the
+// same columns as the DB unique key (@@unique([type, host, port, username, passwordHash])).
+// The password is part of it because many vendors carry the sticky session in it
+// (IPRoyal `pass_country-us_session-ab12`, PacketStream, Froxy, MarsProxies...): two
+// lines that differ only there are two different exits. `password: x` is rewritten to the
+// keyed passwordHash by proxySecrets.extendClient, so this works on sealed rows.
+// Nulls are explicit so a missing username/password matches only rows that have none.
+function proxyIdentityWhere(parsed) {
+  return {
+    type: parsed.type,
+    host: parsed.host,
+    port: parsed.port,
+    username: parsed.username == null || parsed.username === '' ? null : String(parsed.username),
+    password: parsed.password == null || parsed.password === '' ? null : String(parsed.password)
+  };
+}
+
 async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint = null) {
   const parsed = parseProxyInput(proxyInput);
   if (!parsed) return null;
   // An explicit "Proxy Type" column (HTTP/HTTPS/SOCKS5) overrides the default.
   if (typeHint) parsed.type = typeHint;
 
-  const existing = await db.proxy.findFirst({
-    where: { type: parsed.type, host: parsed.host, port: parsed.port, username: parsed.username }
-  });
-
-  if (existing) {
-    if (parsed.password && existing.password !== parsed.password) {
-      return db.proxy.update({ where: { id: existing.id }, data: { password: parsed.password } });
-    }
-    return existing;
-  }
+  // Reuse a row only when EVERY credential matches. A line that differs only in its
+  // password is a different sticky session (or a different account) and gets its own
+  // row: overwriting the matched row's password used to collapse N pasted sessions into
+  // one proxy (all profiles on one exit IP) and could rewrite another member's proxy.
+  // An existing row is reused only when the caller supplied the very same credentials,
+  // so nothing is revealed and nothing on that row is changed. (No member-scope query
+  // here: this also runs inside db.$transaction(tx) during migration, where a second
+  // query on the outer client would wait on SQLite's single connection.)
+  const existing = await db.proxy.findFirst({ where: proxyIdentityWhere(parsed) });
+  if (existing) return existing;
 
   return db.proxy.create({
     data: {
@@ -1091,11 +1108,13 @@ async function createProxy(payload) {
     password: optionalString(input.password)
   });
 
+  // Same identity as the DB unique key, password included: a second sticky session on
+  // the same gateway user is a different proxy, not a duplicate.
   const existing = await db.proxy.findFirst({
-    where: { type: parsed.type, host: parsed.host, port: parsed.port, username: parsed.username },
+    where: proxyIdentityWhere(parsed),
     select: { id: true }
   });
-  if (existing) throw new Error('A proxy with the same type, host, port, and username already exists.');
+  if (existing) throw new Error('This proxy (same type, host, port, username and password) already exists.');
 
   const created = await db.proxy.create({
     data: {
@@ -1367,8 +1386,9 @@ async function batchAddProxies(payload) {
     }
     try {
       const parsed = parseColonProxyLine(line, fallbackType);
+      // Password included: N sticky-session lines on one gateway user are N proxies.
       const existing = await db.proxy.findFirst({
-        where: { type: parsed.type, host: parsed.host, port: parsed.port, username: parsed.username }
+        where: proxyIdentityWhere(parsed)
       });
 
       if (existing) {
