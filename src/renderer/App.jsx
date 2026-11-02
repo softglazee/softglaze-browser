@@ -15,8 +15,7 @@ import MembersPage from '@/pages/MembersPage.jsx';
 import AccountSettingsPage from '@/pages/AccountSettingsPage.jsx';
 import StartLinksPage from '@/pages/StartLinksPage.jsx';
 
-// Heavy pages are code-split into their own chunks so they don't bloat the
-// initial bundle; each loads on first navigation behind the <Suspense> fallback.
+// Heavy pages are code-split and load on first navigation behind the Suspense fallback.
 const ProfilesPage = lazy(() => import('@/pages/ProfilesPage.jsx'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage.jsx'));
 const AutomationPage = lazy(() => import('@/pages/AutomationPage.jsx'));

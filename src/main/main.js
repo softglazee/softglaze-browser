@@ -1,25 +1,24 @@
 'use strict';
 const path = require('node:path');
 const fs = require('node:fs');
-const os = require('node:os');
 const { app, BrowserWindow, shell, session, protocol, ipcMain } = require('electron');
 const { attachContextMenu } = require('./contextMenu');
+const { killTrackedOrphans } = require('./orphanCleanup');
 
-// The production renderer is an ES-module bundle. Chromium refuses to load
-// `type="module"` scripts over file:// (the null origin fails CORS) - that leaves a
-// blank window. So instead of loadFile(file://) we serve dist/ over a custom,
-// privileged scheme `app://` (standard + secure + corsEnabled), where modules load
-// normally and CSP 'self' still scopes everything to the app origin. This MUST be
-// registered before app 'ready', hence at module top level.
+// Dev/test only: an unpackaged build may use a separate data folder (Electron on Windows ignores
+// APPDATA). Must run before anything reads userData. The app:// scheme below must be registered
+// before 'ready' because Chromium will not load module scripts over file://.
+if (!app.isPackaged && process.env.SG_USER_DATA_DIR) {
+  app.setPath('userData', path.resolve(process.env.SG_USER_DATA_DIR));
+}
+
 const APP_SCHEME = 'app';
 protocol.registerSchemesAsPrivileged([
   { scheme: APP_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }
 ]);
 
-// Load .env from the locations that actually exist in a packaged build.
-// dotenv's default (cwd/.env) does NOT exist next to a packaged executable,
-// so SMTP and other env vars would silently be undefined in production.
-// We try, in order: an .env beside the executable, and one in userData.
+// dotenv's default cwd/.env does not exist beside a packaged executable, so try the exe folder,
+// then userData, then the project root.
 (() => {
   const candidates = [
     path.join(path.dirname(app.getPath('exe')), '.env'),
@@ -34,19 +33,16 @@ protocol.registerSchemesAsPrivileged([
 
 const { configureDatabaseEnv, bootstrapDatabase, isDbEncryptionEnabled, relockEncryptedDb } = require('./database');
 
-// audit S6: a packaged build must never honour NODE_ENV=development (an .env beside the
-// exe or in userData could set it) - that opened DevTools and loaded the renderer from a
-// localhost URL. Dev behaviour needs an unpackaged run.
+// A packaged build never honours NODE_ENV=development: an .env beside the exe could set it and
+// open DevTools or load the renderer from localhost.
 const isDev = !app.isPackaged && process.env.NODE_ENV === 'development';
 let mainWindow = null;
 // Guards the graceful-shutdown handshake in `before-quit` (see below) so the
 // async cleanup runs exactly once and the real quit is allowed through after.
 let isCleaningUp = false;
 
-// CRITICAL safety net: without these, ANY unhandled promise rejection or stray
-// exception in the main process tears down Electron - and because the launched
-// profile browsers are puppeteer child processes, they die with it ("the browser
-// closes by itself" when opening a new tab). Log and keep running instead.
+// Without these, any unhandled rejection or stray exception tears down Electron, and the launched
+// puppeteer browsers die with it. Log and keep running instead.
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
   try {
@@ -58,10 +54,8 @@ process.on('unhandledRejection', (reason) => {
     }
   } catch (e) { /* ignore log failure */ }
 });
-// Circuit breaker (audit: a blanket swallow keeps a CORRUPTED process alive). A single
-// stray CDP/puppeteer rejection must NOT kill the app (its child browsers die with it), so
-// we still swallow one-offs - but a process throwing REPEATEDLY is genuinely broken, so
-// after a burst we quit CLEANLY (closing sessions) instead of limping along in a bad state.
+// Circuit breaker: a one-off CDP/puppeteer rejection must not kill the app, but a process throwing
+// repeatedly is broken, so after a burst quit cleanly (closing sessions) instead of limping on.
 let uncaughtCount = 0;
 let uncaughtWindowStart = 0;
 process.on('uncaughtException', (err) => {
@@ -76,33 +70,16 @@ process.on('uncaughtException', (err) => {
   }
 });
 
-// --- ORPHANED PROCESS CLEANUP ---
-// Stale profile windows are a real trap: when the app is killed (e.g. Ctrl+C in
-// dev) the launched Chrome windows survive, but puppeteer's 'disconnected' handler
-// removes their PIDs from the tracking file during teardown - so they become
-// UNTRACKED orphans that the PID-file cleanup can never find. They keep running the
-// OLD fingerprint injection, and re-testing one looks like "the fix didn't work".
-// We therefore clean up in TWO ways on startup: the PID file (fast path) AND a
-// command-line scan that finds any Chrome whose --user-data-dir is under our profile
-// root, regardless of whether it was ever tracked. The scan only matches Softglaze
-// profile processes, so the user's personal Chrome is never touched, and it runs
-// before any profile of THIS instance launches, so it can't kill a live session.
+// When the app is killed, launched Chrome windows survive but drop out of the PID file, so startup
+// also scans command lines for any Chrome whose --user-data-dir is under our profile root. Only
+// SoftGlaze profiles match, and it runs before this instance launches any profile.
 async function killOrphanedBrowsers() {
-  const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
-  if (fs.existsSync(PID_FILE)) {
-    try {
-      const content = fs.readFileSync(PID_FILE, 'utf8').trim();
-      const pids = content ? JSON.parse(content) : []; // Safely parse or default to empty array
-      
-      if (Array.isArray(pids) && pids.length) {
-        console.log(`[Startup] Found ${pids.length} tracked browser process(es). Cleaning up...`);
-        pids.forEach(pid => { try { process.kill(pid, 9); } catch (e) { /* already gone */ } });
-      }
-      fs.unlinkSync(PID_FILE); // Clear the file after cleanup
-    } catch (e) {
-      console.error('[Startup] Failed to parse PID file. Resetting it.', e.message);
-      try { fs.unlinkSync(PID_FILE); } catch(err) {} // Delete corrupted file
-    }
+  // Each tracked PID is verified first (a browser executable whose command line points at that
+  // profile's folder; see orphanCleanup.js), because Windows reuses PIDs after a crash.
+  try {
+    await killTrackedOrphans();
+  } catch (e) {
+    console.error('[Startup] Tracked-PID cleanup failed:', e && e.message);
   }
   await killOrphanedBrowsersByCommandLine();
 }
@@ -116,7 +93,6 @@ function killOrphanedBrowsersByCommandLine() {
       + "Where-Object { $_.CommandLine -match 'softglaze_profiles' } | "
       + "Select-Object -ExpandProperty ProcessId";
     
-    // Asynchronous non-blocking execution
     execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 12000, windowsHide: true }, (err, stdout) => {
       if (err || !stdout) return resolve();
       
@@ -132,19 +108,12 @@ function killOrphanedBrowsersByCommandLine() {
     });
   });
 }
-// --------------------------------
 
 function getPreloadPath() {
   return path.join(__dirname, '../preload/preload.js');
 }
 
-function getProductionIndexPath() {
-  return path.join(__dirname, '../../dist/index.html');
-}
-
-// Resolve the SoftGlaze app icon for the BrowserWindow (taskbar + title bar).
-// In a packaged build the .exe already carries the embedded icon (build.win.icon),
-// but setting it here makes dev runs AND the live window show the brand mark too.
+// The packaged .exe embeds the icon (build.win.icon); setting it here also covers dev runs.
 // Vite copies public/ into dist/, so the packaged path is dist/logos/app.ico.
 function getAppIconPath() {
   const candidates = [
@@ -157,9 +126,8 @@ function getAppIconPath() {
   return undefined;
 }
 
-// Serve the built renderer (dist/) over app://. We set an explicit MIME per
-// extension because Chromium rejects a module script served with the wrong type,
-// and refuse any path that escapes dist/ (traversal guard).
+// Serve dist/ over app:// with an explicit MIME per extension, because Chromium rejects a module
+// script served with the wrong type. Paths that escape dist/ are refused.
 const APP_MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
   '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
@@ -230,11 +198,9 @@ function createMainWindow() {
     return { action: 'deny' };
   });
 
-  // Keep the SPA penned inside its own origin: same-origin navigations (in-app
-  // routing + Vite HMR) pass through; anything else is blocked and handed to the
-  // system browser. Validation + preventDefault are fully synchronous, and the
-  // only async call (openExternal) is caught so newer Electron can't raise an
-  // unhandled promise rejection here.
+  // Keep the SPA inside its own origin: same-origin navigations (routing, Vite HMR) pass; anything
+  // else is blocked and handed to the system browser. preventDefault must stay synchronous, and the
+  // openExternal promise is caught so Electron cannot raise an unhandled rejection.
   mainWindow.webContents.on('will-navigate', (event, targetUrl) => {
     let target;
     try {
@@ -256,9 +222,8 @@ function createMainWindow() {
   if (isDev) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173');
   } else {
-    // Served via the app:// handler registered in whenReady (NOT file://, which
-    // can't load ES-module scripts). base:'./' in vite makes assets resolve to
-    // app://local/assets/… off this URL.
+    // Served via the app:// handler from whenReady, not file://, which cannot load ES-module scripts.
+    // Vite's base:'./' resolves assets to app://local/assets/... off this URL.
     mainWindow.loadURL(`${APP_SCHEME}://local/index.html`);
   }
 
@@ -272,19 +237,14 @@ function createMainWindow() {
 function configureSessionSecurity() {
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   session.defaultSession.setDevicePermissionHandler(() => false);
-  // Synchronous permission checks (getUserMedia gating, persistent-storage, etc.) go
-  // through a separate hook. The app-shell window needs none of them, so deny by default
-  // to match the request/device handlers above.
+  // Synchronous permission checks (getUserMedia gating, persistent storage) use a separate hook;
+  // the app shell needs none, so deny them like the handlers above.
   session.defaultSession.setPermissionCheckHandler(() => false);
 }
 
-// --- SINGLE-INSTANCE LOCK ---
-// Only ONE SoftGlaze instance may own the workspace at a time. This is critical,
-// not cosmetic: startup runs killOrphanedBrowsers(), whose command-line scan
-// taskkills EVERY Chrome referencing softglaze_profiles. A second instance would
-// therefore kill the FIRST instance's live profile sessions mid-use - the classic
-// "the browser closes by itself" report. If we can't get the lock, quit before
-// whenReady runs any cleanup; if we hold it, a second launch just focuses us.
+// Only one instance may own the workspace: the startup orphan scan kills every Chrome referencing
+// softglaze_profiles, so a second instance would kill the first one's live sessions. Without the
+// lock, quit before whenReady runs any cleanup; with it, a second launch focuses this one.
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
@@ -302,17 +262,14 @@ app.on('second-instance', () => {
 }
 
 app.whenReady().then(async () => {
-  // Second instance lost the lock and is quitting - do NO cleanup/launch work
-  // (guards against whenReady racing app.quit() above).
+  // A second instance that lost the lock is quitting: do no cleanup or launch work, since whenReady
+  // can race app.quit() above.
   if (!hasSingleInstanceLock) return;
-  // Always clean up orphaned processes before starting
-await killOrphanedBrowsers(); // <--- Make sure this has await
+await killOrphanedBrowsers(); // must finish before any profile launches
 
   configureDatabaseEnv();
-  // When at-rest encryption is on, the DB file is ciphertext and cannot be opened
-  // until the user unlocks it. Defer bootstrap to the `db:unlock` handler (driven
-  // by the pre-Gate "Unlock Database" screen). With encryption off this is the
-  // unchanged boot path.
+  // With at-rest encryption on, the DB file is ciphertext, so bootstrap waits for the db:unlock
+  // handler (the pre-Gate "Unlock Database" screen).
   if (!isDbEncryptionEnabled()) {
     await bootstrapDatabase();
   } else {
@@ -325,19 +282,15 @@ await killOrphanedBrowsers(); // <--- Make sure this has await
   // Hand keyboard focus back after native confirm()/alert() dialogs (see dialogFocus.js).
   require('./dialogFocus').registerDialogRefocus(ipcMain, () => mainWindow);
 
-  // "Keep me signed in on this device": if the user opted in last time, replay the
-  // DPAPI-sealed credential now - before the window loads - so the unlock/login
-  // gates open without a prompt. Handles both at-rest-encrypted DB (decrypts it) and
-  // the workspace vault. Best-effort: a stale credential self-clears and the user
-  // just sees a normal login once. Runs at process start only (not on manual lock).
+  // 1st: wait for the saved member session to restore before the window loads.
 try {
     await whenSessionReady();
   } catch (e) {
     console.warn('[Startup] session restore wait failed:', e && e.message);
   }
 
-  // 2nd: "Keep me signed in on this device". Now that the session is restored (and 
-  // potentially locked), we replay the DPAPI-sealed credential to securely unlock it.
+  // 2nd: "Keep me signed in": replay the DPAPI-sealed credential so the DB and vault gates open
+  // without a prompt. A stale credential self-clears. Runs at process start only, not on manual lock.
   try {
     await attemptRememberedUnlock();
   } catch (e) {
@@ -349,11 +302,15 @@ try {
 
   createMainWindow();
 
-  // One-time, best-effort: auto-install the recommended team extensions (download +
-  // unzip) then run the one-time reconcile that force-enables any recommended
-  // extension left dormant by an older `enable:false` default. Background so the
-  // window opens immediately; reconcile runs after the seed so a just-installed
-  // extension is present for it to flip.
+  // Off unless the build is packaged, code-signed and has an update feed (see updater.js). Starts a
+  // few seconds after launch so it never delays the window.
+  setTimeout(() => {
+    require('./updater').initAutoUpdater(mainWindow)
+      .catch((e) => console.warn('[updater] init failed:', e && e.message));
+  }, 8000);
+
+  // In the background so the window opens at once: seed the recommended extensions, then reconcile
+  // (re-enabling ones left off by an older `enable:false` default) once the seed has installed them.
   {
     const extMgr = require('./extensionManager');
     // Earlier builds force-installed the recorder into every Chromium on the machine
@@ -378,10 +335,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// Graceful shutdown handshake. Electron does NOT await async `before-quit`
-// listeners - the app would exit mid-flush, risking a corrupt SQLite file. So on
-// the first pass we cancel the quit, run cleanup to completion, then re-issue the
-// quit (the `isCleaningUp` guard lets the second pass straight through).
+// Electron does not await async `before-quit` listeners, so the app could exit mid-flush and corrupt
+// SQLite. Cancel the first quit, finish cleanup, then quit again (isCleaningUp lets it through).
 app.on('before-quit', async (event) => {
   if (isCleaningUp) return; // second pass - allow the real quit
   event.preventDefault();
@@ -409,7 +364,7 @@ app.on('before-quit', async (event) => {
     }
   };
 
-  // Add a 5-second timeout safety net. If cleanup hangs, force close anyway.
+  // If cleanup hangs, force close after 5 seconds.
   const timeout = new Promise((resolve) => setTimeout(resolve, 5000));
   
   await Promise.race([cleanupTasks(), timeout]);

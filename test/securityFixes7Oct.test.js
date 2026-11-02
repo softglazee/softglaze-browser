@@ -124,7 +124,7 @@ test('L4: tenant env overrides apply unpackaged and are ignored when packaged', 
 
 // ---- S8 ----
 function loadSsrfGuard(lookupResult) {
-  const start = IPC.indexOf('// Reject internal / loopback / link-local targets');
+  const start = IPC.indexOf('function ipv6Hextets(ip) {');
   const end = IPC.indexOf('function buildProxyInfoString(proxy)');
   assert.ok(start >= 0 && end > start);
   const fakeDns = {

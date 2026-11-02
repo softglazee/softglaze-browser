@@ -1,7 +1,5 @@
-// Display-language preference - the user-facing surface over the i18n instance.
-// Mirrors lib/theme.js: read the persisted choice, and on change persist it,
-// update <html lang> for accessibility, and switch the live i18next language so
-// every component using useTranslation re-renders instantly (no reload).
+// User-facing language preference over i18n, mirroring lib/theme.js: persist the choice, set
+// <html lang>, and switch i18next live so components re-render without a reload.
 import i18n, { LANG_KEY, SUPPORTED_LANGS, readStoredLang } from '@/i18n/index.js';
 
 export { SUPPORTED_LANGS };

@@ -1,17 +1,13 @@
 'use strict';
-// Shared license provisioning, used by every payment webhook. grantMonths extends
-// (or creates) a license; provisionFromPaymentRef recovers the grant details from
-// the Payment row recorded at checkout, so all providers provision uniformly.
-// Every function takes an optional `db` (a Prisma transaction client) so a webhook
-// can make provisioning and the payment/event status change one atomic unit.
+// Shared license provisioning for every payment webhook; grants come from the Payment row recorded
+// at checkout. Each function takes an optional `db` (a Prisma transaction client) so provisioning
+// and the payment status change commit as one unit.
 const prisma = require('./db');
 
 const DAY = 86400000;
 
-// Audit T2-6: an existing licence is matched by installId only. It used to match by account
-// (an email from checkout metadata) too and then overwrite installId, so a one-month
-// purchase made with a victim's email moved the victim's licence onto the buyer's install.
-// The account is still recorded, but it never selects or re-binds a licence.
+// Match an existing licence by installId only, never by account: the account comes from checkout
+// metadata, so matching on it lets a purchase with someone else's email take over their licence.
 async function grantMonths(tenant, { account, installId, tier, plan, months, providerRef }, db = prisma) {
   const now = Date.now();
   const existing = installId
@@ -39,10 +35,9 @@ async function grantMonths(tenant, { account, installId, tier, plan, months, pro
   });
 }
 
-// Audit L2: claim the Payment recorded at checkout for (provider, providerRef) and flip
-// it pending -> paid. The lookup is scoped to the provider, so a ref from one gateway can
-// never settle another gateway's order, and the conditional update means only one caller
-// ever wins: an already-paid (or failed/refunded) payment returns null and grants nothing.
+// Claim the checkout Payment for (provider, providerRef) and flip it pending -> paid. Scoped to the
+// provider so one gateway's ref cannot settle another's; the conditional update lets only one caller
+// win, and a payment that is not pending returns null.
 async function claimPendingPayment(tenant, provider, providerRef, db = prisma) {
   if (!provider || !providerRef) return null;
   const payment = await db.payment.findFirst({
@@ -75,10 +70,8 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
   return { provisioned: true };
 }
 
-// --- Subscriptions ----------------------------------------------------------
-// Unlike grantMonths (additive, one-time), a subscription SETS the period end to
-// an absolute date (the Stripe billing-period end), keyed primarily by the Stripe
-// subscription id, so renewals are idempotent.
+// A subscription sets the period end to an absolute date (the Stripe billing-period end), keyed by
+// the Stripe subscription id so renewals are idempotent; grantMonths is additive instead.
 async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, tier, plan, periodEnd, status = 'active' }, db = prisma) {
   // Match by the subscription first (renewals), then by installId. Never by account: see
   // grantMonths. An existing licence keeps the install it is already bound to.
@@ -107,16 +100,9 @@ async function cancelSubscription(tenant, subscriptionId, db = prisma) {
   if (lic) await db.license.update({ where: { id: lic.id }, data: { status: 'expired' } });
 }
 
-// --- Refunds and disputes (audit L8) -----------------------------------------
-// The schema has no per-purchase ledger, only one licence per install whose period end
-// stacks every purchase. The most conservative action it supports without taking away
-// time the customer still paid for:
-//  - one-time purchase: the Payment goes paid -> refunded (once; a second refund or a
-//    dispute on the same charge is a no-op) and exactly the term it granted
-//    (plan.months x 30 days) is removed from that install's licence. If nothing paid is
-//    left, the licence is ended now with status 'canceled'.
-//  - subscription: the licence keyed to the subscription is ended now ('canceled').
-// Returns { changed }.
+// No per-purchase ledger exists, only one licence per install stacking every purchase. One-time:
+// Payment paid -> refunded once, and its term (plan.months x 30 days) is removed; with nothing paid
+// left the licence ends as 'canceled'. Subscription: its licence ends now. Returns { changed }.
 async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId }, db = prisma) {
   const now = Date.now();
   if (sessionRef) {

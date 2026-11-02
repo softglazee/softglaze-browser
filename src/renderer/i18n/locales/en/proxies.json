@@ -27,6 +27,47 @@
     "checkNew": "Check new",
     "checkNewTooltip": "Check only the newly added, never-checked proxies."
   },
+  "free": {
+    "button": "Free proxies",
+    "buttonTooltip": "Find, test and add free public proxies (no proxy account needed)",
+    "title": "Free public proxies",
+    "description": "SoftGlaze downloads the public lists that free-proxy projects publish, tests every proxy, and adds only the ones that work to a \"Free proxies\" group.",
+    "warn": {
+      "strangers": "Free proxies are run by unknown people. Do not use them to sign in to accounts, enter passwords or pay: the owner of a proxy can see traffic that is not encrypted.",
+      "quality": "They are slow, often stop working within hours, and many are on blocklists, so expect more CAPTCHAs than with a paid proxy. For real account work, use a proxy provider.",
+      "legal": "Only use them where that is allowed. Quick generate never picks free proxies unless you choose the \"Free proxies\" group."
+    },
+    "checks": "Each proxy is tested live, and HTTP proxies that pass your real IP on to websites are rejected.",
+    "protocol": "Protocol",
+    "country": "Country (optional)",
+    "countryPlaceholder": "e.g. US",
+    "limit": "How many to add",
+    "start": "Find free proxies",
+    "again": "Find more",
+    "cancel": "Stop",
+    "close": "Close",
+    "done": "Done",
+    "progress": {
+      "fetching": "Downloading the public lists…",
+      "checking": "Tested {{checked}} of {{total}} · {{found}} good"
+    },
+    "result": {
+      "added": "Added {{added}} of {{requested}} requested.",
+      "checked": "Tested {{checked}} of {{total}} candidates",
+      "rejected": "{{dead}} not working, {{leak}} leaked your IP, {{country}} wrong country",
+      "planLimit": "Your plan's proxy limit was reached, so some good proxies were not added."
+    },
+    "stopped": {
+      "limit": "Stopped: the number you asked for was reached.",
+      "time": "Stopped after 3 minutes. Run it again to find more.",
+      "cancelled": "Stopped by you.",
+      "exhausted": "Every candidate in the lists was tested."
+    },
+    "errors": {
+      "country": "Use a two-letter country code, such as US or DE.",
+      "failed": "Could not finish the search."
+    }
+  },
   "tabs": {
     "custom": "Custom Proxies",
     "providers": "Proxy Providers",

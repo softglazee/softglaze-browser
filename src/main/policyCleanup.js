@@ -1,17 +1,7 @@
 'use strict';
-// Removes a Chromium extension policy that earlier builds wrote.
-//
-// Builds before this change added the per-user value
-//   HKCU\Software\Policies\Chromium\ExtensionInstallForcelist  "100"
-//   = "<SoftGlaze recorder id>;https://clients2.google.com/service/update2/crx"
-// so the Chrome Web Store would count active users. That policy force-installs the
-// extension into EVERY Chromium-based browser that reads the Chromium policy key, not
-// only SoftGlaze profiles. The writer has been removed; this deletes what it left.
-//
-// Only a value whose data is exactly that entry is deleted. Anything else in the key
-// (another product's policy) is left alone, and the key itself is removed only when
-// that leaves it completely empty. Runs at every launch on Windows: it is cheap and
-// idempotent, and a machine that ran an older build since will be cleaned again.
+// Deletes the HKCU Chromium ExtensionInstallForcelist value older builds wrote: it force-installed
+// the recorder into every Chromium-based browser. Only an exact match is removed, and the key only
+// if that leaves it empty. Cheap and idempotent, so it runs at every Windows launch.
 
 const { execFile } = require('node:child_process');
 
@@ -76,7 +66,6 @@ module.exports = {
   FORCELIST_KEY,
   CWS_UPDATE_URL,
   parseRegValues,
-  hasSubkeys,
   ownedForcelistValues,
   removeLegacyExtensionForcelist
 };

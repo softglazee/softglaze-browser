@@ -1,7 +1,6 @@
 'use strict';
-// Per-tenant Cryptomus. Secrets (sealed): { merchantId, apiKey }. Checkout creates
-// a hosted invoice + returns its URL; the webhook signature is verified OFFLINE
-// (md5 of base64(body)+apiKey, with PHP-style slash escaping to match Cryptomus).
+// Per-tenant Cryptomus. Secrets (sealed): { merchantId, apiKey }. Checkout creates a hosted invoice;
+// the webhook sign is verified offline: md5(base64(body) + apiKey), with PHP-style slash escaping.
 const crypto = require('node:crypto');
 const { httpsRequest } = require('../http');
 
@@ -22,7 +21,7 @@ async function request(path, body, { merchantId, apiKey }) {
   return json.result;
 }
 
-// plan.amount is in MINOR units (cents); Cryptomus wants a decimal string.
+// plan.amount is in minor units (cents); Cryptomus wants a decimal string.
 async function createCheckout({ secrets, plan, orderId, returnUrl, callbackUrl }) {
   const body = {
     amount: (plan.amount / 100).toFixed(2),
@@ -37,8 +36,8 @@ async function createCheckout({ secrets, plan, orderId, returnUrl, callbackUrl }
 }
 
 function verifyWebhook({ secrets, payload }) {
-  // Audit L2: with no apiKey the expected sign is md5(base64(body)) — computable by
-  // anyone, so an unconfigured key must reject every webhook, never verify against ''.
+  // With no apiKey the expected sign is md5(base64(body)), which anyone can compute, so an
+  // unconfigured key must reject every webhook.
   if (!secrets || typeof secrets.apiKey !== 'string' || !secrets.apiKey) return false;
   if (!payload || typeof payload !== 'object' || !payload.sign) return false;
   const data = { ...payload };

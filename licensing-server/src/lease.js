@@ -1,8 +1,7 @@
 'use strict';
-// Build + sign a short-lived license lease. Format: <payloadB64url>.<sigB64url>,
-// signed with the tenant's Ed25519 private key. The desktop verifies the signature
-// with the baked public key and trusts tier/exp only if it checks out. The lease
-// is capped to LEASE_DAYS and never overshoots the paid term (currentPeriodEnd).
+// Short-lived license lease: <payloadB64url>.<sigB64url>, signed with the tenant's Ed25519 key.
+// The desktop trusts tier/exp only if the signature checks against its baked public key.
+// Capped to LEASE_DAYS and never past the paid term (currentPeriodEnd).
 const { randomBytes } = require('node:crypto');
 const { signEd25519 } = require('./crypto/keys');
 const { open } = require('./crypto/secrets');
@@ -11,8 +10,8 @@ const { leaseDays } = require('./env');
 const DAY = 86400000;
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
-// opts.mid: the install's machine hash (audit L3). The desktop refuses a lease whose mid
-// is not its own, so a lease copied to another machine does not activate there.
+// opts.mid: the install's machine hash. The desktop refuses a lease whose mid is not its own,
+// so a copied lease does not activate elsewhere.
 function issueLease(tenant, license, nowMs, opts = {}) {
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
   const periodEnd = license.currentPeriodEnd ? new Date(license.currentPeriodEnd).getTime() : 0;

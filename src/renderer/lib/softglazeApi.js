@@ -1,10 +1,5 @@
-// audit: this used to THROW synchronously when the preload API was missing. Every
-// wrapper below is `() => getSoftglazeApi().x.y()`, so the throw happened while the
-// call expression was being evaluated - BEFORE a promise existed - which meant the
-// per-call `.catch()` guards all over the renderer (and Promise.all(...catch()))
-// never fired, and an uncaught error escaped into React render/effects. Instead,
-// return a stub whose every leaf call resolves to a REJECTED promise, so failures
-// are catchable exactly like a normal async IPC error.
+// Returns a stub whose every call rejects instead of throwing synchronously: a sync throw happens
+// before any promise exists, so the per-call .catch() guards would never fire.
 function apiUnavailableError() {
   return new Error('SoftGlaze preload API is unavailable. Check preload.js, contextIsolation, and main.js configuration.');
 }
@@ -55,6 +50,9 @@ export const softglazeApi = {
     vendorLookup: (payload) => getSoftglazeApi().proxies.vendorLookup(payload),
     checkStream: (payload) => getSoftglazeApi().proxies.checkStream(payload),
     stopCheck: (payload) => getSoftglazeApi().proxies.stopCheck(payload),
+    freeHarvest: (payload) => getSoftglazeApi().proxies.freeHarvest(payload),
+    freeCancel: () => getSoftglazeApi().proxies.freeCancel(),
+    onFreeProgress: (cb) => getSoftglazeApi().proxies.onFreeProgress(cb),
     onCheckProgress: (cb) => getSoftglazeApi().proxies.onCheckProgress(cb),
     getProviderCreds: (provider) => getSoftglazeApi().proxies.getProviderCreds(provider),
     saveProviderCreds: (payload) => getSoftglazeApi().proxies.saveProviderCreds(payload),
@@ -87,8 +85,8 @@ export const softglazeApi = {
     bulkPurge: (ids) => getSoftglazeApi().profiles.bulkPurge(ids),
     bulkLaunch: (ids, opts) => getSoftglazeApi().profiles.bulkLaunch(ids, opts),
     bulkLaunchControl: (action) => getSoftglazeApi().profiles.bulkLaunchControl(action),
-    // Re-attach to a bulk queue already in flight. Tolerates an older preload that
-    // lacks the channel (returns an inactive snapshot) rather than throwing on mount.
+    // Re-attaches to a bulk queue already in flight; an older preload without the channel gets an
+    // inactive snapshot instead of a throw on mount.
     bulkLaunchStatus: () => {
       const api = getSoftglazeApi().profiles;
       if (typeof api.bulkLaunchStatus !== 'function') return Promise.resolve({ active: false });
@@ -263,9 +261,8 @@ export const softglazeApi = {
     status: () => getSoftglazeApi().vault.status(),
     setPassword: (payload) => getSoftglazeApi().vault.setPassword(payload),
     unlock: (password, remember) => getSoftglazeApi().vault.unlock(password, remember),
-    // audit: the preload/IPC surface has no `recover` channel, so calling this threw
-    // a synchronous TypeError (bypassing every .catch()). Fail soft with a rejected
-    // promise until a VAULT_RECOVER channel exists, so callers can handle it.
+    // There is no VAULT_RECOVER IPC channel, so reject instead of throwing a sync TypeError that
+    // would bypass every .catch().
     recover: (recoveryCode, password) => {
       const api = getSoftglazeApi();
       return (api && api.vault && typeof api.vault.recover === 'function')
@@ -304,10 +301,8 @@ export const softglazeApi = {
     deleteMacro: (id) => getSoftglazeApi().automation.deleteMacro(id),
     startWarmer: (payload) => getSoftglazeApi().automation.startWarmer(payload),
     stopWarmer: (payload) => getSoftglazeApi().automation.stopWarmer(payload),
-    // Re-attach to a warm-up still running in the main process after navigating away.
-    // Exposed by the preload bridge; without this line the Automation page's re-attach
-    // guard (typeof listActiveWarmers !== 'function') silently no-ops, so the Stop
-    // button and console logs vanish when you leave and return to the page.
+    // Re-attaches to a warm-up still running in main; without it the Automation page's re-attach guard
+    // no-ops and the Stop button and logs vanish after navigating away.
     listActiveWarmers: () => getSoftglazeApi().automation.listActiveWarmers(),
     getHistory: () => getSoftglazeApi().automation.getHistory(),
     runMacro: (payload) => getSoftglazeApi().automation.runMacro(payload),
@@ -317,6 +312,7 @@ export const softglazeApi = {
     getSchedule: () => getSoftglazeApi().automation.getSchedule(),
     setSchedule: (payload) => getSoftglazeApi().automation.setSchedule(payload),
     runParallel: (payload) => getSoftglazeApi().automation.runParallel(payload),
+    parallelStatus: (runId) => getSoftglazeApi().automation.parallelStatus(runId),
     pickDataFile: () => getSoftglazeApi().automation.pickDataFile(),
     onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback),
     onMacroProgress: (callback) => getSoftglazeApi().automation.onMacroProgress(callback),

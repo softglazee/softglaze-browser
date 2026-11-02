@@ -1,31 +1,13 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze - at-rest database encryption primitives (Phase 6, Option A)
-//
-// These functions wrap the whole SQLite file in an AES-256-GCM envelope so that,
-// when the app is closed or locked, only ciphertext (`softglaze.sqlite.enc`)
-// exists on disk. The plaintext working file Prisma reads is only present while
-// the app is unlocked. This is honest "encryption at rest" for the realistic
-// threat (stolen laptop / disk image / file copied while the app is closed); it
-// is NOT runtime memory protection - see DbEncryptionSettings.jsx for the wording
-// shown to users.
-//
-// This module is intentionally free of Electron/Prisma deps so it can be unit
-// tested directly (test/dbCrypto.test.js), the same seam pattern as
-// profileArchive.js / cloudSync.js.
-//
-// On-disk format (header is clear-text; the salt is NOT secret - it only seasons
-// the scrypt KDF, and embedding it keeps the .enc self-describing so a backup is
-// recoverable from the password alone even if the metadata sidecar is lost):
-//   [ "SGDB1" (5 bytes) ][ salt (16) ][ iv (12) ][ ciphertext … ][ authTag (16) ]
-//   key = scrypt(password, salt, 32)
-// ---------------------------------------------------------------------------
+// AES-256-GCM envelope for the SQLite file: only ciphertext is on disk while the app is closed/locked.
+// Not runtime memory protection. Free of Electron/Prisma deps so it can be unit tested directly.
+// Layout: magic(5) salt(16) iv(12) ciphertext tag(16); the clear salt keeps a backup self-describing.
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 
-const MAGIC = Buffer.from('SGDB1');  // KDF v1: Node-default scrypt (what originally shipped)
+const MAGIC = Buffer.from('SGDB1'); // KDF v1: Node-default scrypt
 const MAGIC2 = Buffer.from('SGDB2'); // KDF v2: scrypt N=2^17 (OWASP minimum) - same layout
 const SALT_LEN = 16;
 const IV_LEN = 12;
@@ -34,14 +16,9 @@ const KEY_LEN = 32;
 const HEADER_LEN = MAGIC.length + SALT_LEN + IV_LEN; // salt + iv live in the clear header
 const MIN_LEN = HEADER_LEN + TAG_LEN; // smallest possible valid file (empty ciphertext)
 
-// KDF profiles keyed by header version. The KDF version is SELF-DESCRIBING via the
-// 5-byte magic (SGDB1→v1, SGDB2→v2), so a file always decrypts with the exact cost
-// it was written with - existing SGDB1 databases are never re-keyed behind the
-// user's back and keep opening. v1 deliberately equals Node's scrypt defaults
-// (N=16384,r=8,p=1) so an explicit v1 derive produces the SAME key the original
-// param-less call did (the key depends only on password/salt/N/r/p/keylen, not
-// maxmem). v2 raises N to 2^17; that needs ~134 MB, above Node's 32 MB default
-// maxmem, so maxmem is lifted for v2. New databases and password changes use v2.
+// The magic selects the KDF, so a file always decrypts with the cost it was written with.
+// v1 equals Node's scrypt defaults (N=16384, r=8, p=1) so existing SGDB1 files derive the same key.
+// v2 uses N=2^17 (~134 MB), above Node's 32 MB maxmem default, so maxmem is raised for v2.
 const LEGACY_VERSION = 1;
 const CURRENT_VERSION = 2;
 const KDF = {
@@ -56,10 +33,8 @@ function versionForMagic(headerBuf) {
   return 0; // unknown
 }
 
-// SQLite files always begin with this exact 16-byte signature: the ASCII text
-// "SQLite format 3" (15 bytes) followed by a NUL terminator. Defined as explicit
-// bytes to avoid any source-literal whitespace ambiguity. Used to sanity-check a
-// decrypted or crash-leftover file before trusting it as a database.
+// Every SQLite file starts with "SQLite format 3" plus NUL (16 bytes). Used to sanity-check a
+// decrypted or crash-leftover file before trusting it.
 const SQLITE_MAGIC = Buffer.from([
   0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x20, 0x66, // "SQLite f"
   0x6f, 0x72, 0x6d, 0x61, 0x74, 0x20, 0x33, 0x00 // "ormat 3" + NUL
@@ -71,10 +46,8 @@ function newSalt() {
   return crypto.randomBytes(SALT_LEN);
 }
 
-// Derive the 32-byte AES key from a password + salt using the KDF profile for the
-// given header version (default = legacy/v1 so old call sites keep the exact prior
-// behaviour). The caller reads the version from the .enc header (readHeader) so the
-// derive always matches how the file was written.
+// Derives the 32-byte AES key with the KDF for the header version (from readHeader).
+// Defaults to v1 for callers that do not pass a version.
 async function deriveKey(password, salt, version = LEGACY_VERSION) {
   if (!Buffer.isBuffer(salt) || salt.length !== SALT_LEN) {
     throw new Error('deriveKey requires a 16-byte salt buffer.');
@@ -83,8 +56,7 @@ async function deriveKey(password, salt, version = LEGACY_VERSION) {
   return scrypt(String(password), salt, KEY_LEN, { N: p.N, r: p.r, p: p.p, maxmem: p.maxmem });
 }
 
-// Read the KDF version + salt out of an existing .enc header. Keeps the .enc the
-// authoritative, self-describing source of both (resilient to a lost sidecar).
+// The .enc header is the source of truth for KDF version and salt, so a lost sidecar is harmless.
 async function readHeader(encPath) {
   const fh = await fsp.open(encPath, 'r');
   try {
@@ -103,10 +75,8 @@ async function readHeaderSalt(encPath) {
   return (await readHeader(encPath)).salt;
 }
 
-// Encrypt plainPath → encPath with an already-derived key and the salt that key
-// was derived from (re-used so the held session key keeps matching across
-// re-encryptions). Writes atomically via a temp file + rename so an interrupted
-// write can never leave a truncated .enc in place of a good one.
+// Reuses the salt the key was derived from so the held session key keeps matching.
+// Writes via temp file + rename so an interrupted write never truncates a good .enc.
 async function encryptDbFile(plainPath, encPath, key, salt, version = LEGACY_VERSION) {
   if (!Buffer.isBuffer(key) || key.length !== KEY_LEN) throw new Error('encryptDbFile requires a 32-byte key.');
   if (!Buffer.isBuffer(salt) || salt.length !== SALT_LEN) throw new Error('encryptDbFile requires a 16-byte salt.');
@@ -115,25 +85,22 @@ async function encryptDbFile(plainPath, encPath, key, salt, version = LEGACY_VER
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([cipher.update(data), cipher.final()]);
   const tag = cipher.getAuthTag();
-  // The header magic records the KDF version (so the file is self-describing); the
-  // byte layout after the 5-byte magic is identical for v1 and v2.
+  // The magic records the KDF version; the layout after it is the same for v1 and v2.
   const out = Buffer.concat([magicForVersion(version), salt, iv, ciphertext, tag]);
   const tmp = `${encPath}.tmp-${crypto.randomBytes(6).toString('hex')}`;
   await fsp.writeFile(tmp, out);
   await fsp.rename(tmp, encPath);
 }
 
-// Decrypt encPath → plainPath using an already-derived key. Throws if the GCM tag
-// does not verify (wrong key or tampered/corrupted file) - so a successful return
-// is itself the integrity guarantee: the plaintext is bit-identical to what was
-// encrypted. Written via temp + rename for the same atomicity reason as above.
+// Throws if the GCM tag fails (wrong key or tampered file), so a normal return proves integrity.
+// Writes via temp file + rename, like encryptDbFile.
 async function decryptDbFile(encPath, plainPath, key) {
   if (!Buffer.isBuffer(key) || key.length !== KEY_LEN) throw new Error('decryptDbFile requires a 32-byte key.');
   const buf = await fsp.readFile(encPath);
   if (buf.length < MIN_LEN || !versionForMagic(buf)) { // accept SGDB1 or SGDB2 - identical layout
     throw new Error('Not a valid Softglaze encrypted database (bad header).');
   }
-  let off = MAGIC.length + SALT_LEN; // skip magic+salt (salt was used for key derivation by the caller)
+  let off = MAGIC.length + SALT_LEN; // skip magic + salt; the caller already derived the key
   const iv = buf.subarray(off, off += IV_LEN);
   const tag = buf.subarray(buf.length - TAG_LEN);
   const ciphertext = buf.subarray(off, buf.length - TAG_LEN);
@@ -152,8 +119,7 @@ async function decryptDbFile(encPath, plainPath, key) {
   await fsp.rename(tmp, plainPath);
 }
 
-// SHA-256 of a file, hex. Used by the enable migration to prove the encrypted copy
-// decrypts back bit-for-bit before the plaintext original is shredded.
+// Lets the enable migration prove the encrypted copy round-trips before the plaintext is shredded.
 async function sha256File(filePath) {
   const hash = crypto.createHash('sha256');
   const data = await fsp.readFile(filePath);
@@ -161,8 +127,7 @@ async function sha256File(filePath) {
   return hash.digest('hex');
 }
 
-// True if the file's first bytes are the SQLite signature. Cheap sanity check used
-// to recognise a crash-leftover plaintext DB (vs. junk) before adopting it.
+// Tells a crash-leftover plaintext DB from junk before it is adopted.
 function looksLikeSqlite(filePath) {
   try {
     const fd = fs.openSync(filePath, 'r');
@@ -178,18 +143,15 @@ function looksLikeSqlite(filePath) {
   }
 }
 
-// Best-effort secure delete: overwrite the file's bytes with random data once,
-// then unlink. On SSDs/journaled filesystems this is not a guaranteed wipe, but
-// it removes the obvious plaintext copy and is better than a plain unlink. Never
-// throws - a failure here must not block the lifecycle.
+// Best-effort wipe: one random overwrite, then unlink. Not guaranteed on SSDs or journaled
+// filesystems. Never throws, so a failure cannot block the lifecycle.
 async function secureUnlink(filePath) {
   try {
     const stat = await fsp.stat(filePath);
     if (stat.isFile() && stat.size > 0) {
       const fh = await fsp.open(filePath, 'r+');
       try {
-        // Overwrite in bounded chunks so a multi-GB DB does not allocate its whole
-        // size in RAM (and randomBytes cannot throw on an oversized single request).
+        // Bounded chunks: a multi-GB DB is never held in RAM and randomBytes never gets an oversized request.
         const CHUNK = 1 << 20; // 1 MiB
         for (let offset = 0; offset < stat.size; offset += CHUNK) {
           const len = Math.min(CHUNK, stat.size - offset);
@@ -207,7 +169,7 @@ async function secureUnlink(filePath) {
   try {
     await fsp.unlink(filePath);
   } catch (e) {
-    // Already gone, or genuinely locked. Nothing more we can safely do.
+    // Already gone or locked; nothing more can safely be done.
   }
 }
 

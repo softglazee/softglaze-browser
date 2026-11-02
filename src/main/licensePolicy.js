@@ -1,22 +1,7 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// Softglaze - license lifecycle state machine (Phase 8). Pure + dependency-free
-// so it can be unit-tested directly (test/licensePolicy.test.js), the same seam
-// pattern as teamPolicy.js / syncPolicy.js. The Electron/DB side (ipcHandlers.js)
-// feeds it raw values and acts on the result (persisting the owner ban state,
-// rendering the gate, etc.).
-//
-// States, evaluated against the license's `trialEndsAt` boundary (which the paid
-// flow also advances, so a lapsed paid licence falls through the same grace→ban):
-//   paid      - type 'paid' and now <= ends
-//   trialing  - type 'trial' and now <= ends
-//   grace     - now within `graceDays` after ends (app works, but nags)
-//   banned    - past ends + graceDays (and not paid)
-//
-// HONEST CAVEAT: this is local-first and therefore bypassable (editing the SQLite
-// file or the system clock). It's the UX + best-effort gate, not unbreakable DRM -
-// real enforcement needs a signed, server-time licensing backend.
-// ---------------------------------------------------------------------------
+// Pure licence state machine (tested in test/licensePolicy.test.js); ipcHandlers acts on the result.
+// Against trialEndsAt: paid/trialing until it ends, grace for graceDays (works but nags), then banned.
+// Local-first, so editing SQLite or the clock bypasses it; real enforcement is the signed backend.
 
 const DAY_MS = 86400000;
 
@@ -45,12 +30,8 @@ function computeLicenseState({ type, trialEndsAt, now, graceDays = 3 } = {}) {
   let daysLeftGrace = null;
 
   if (ends == null) {
-    // No expiry recorded. audit: a non-paid licence here previously became an
-    // UNLIMITED 'trialing' state that never reached grace/ban - nulling this one
-    // column granted a perpetual trial. Fail closed: a paid licence with no expiry
-    // is a valid lifetime licence, but a missing trial boundary is treated as
-    // expired (the DB layer always sets trialEndsAt, so this only fires on a
-    // wiped/tampered column).
+    // No expiry recorded: a paid licence is lifetime, but a missing trial boundary fails closed as
+    // expired (the DB always sets trialEndsAt, so this only fires on a wiped or tampered column).
     if (isPaidType) {
       state = 'paid';
     } else {
@@ -84,24 +65,17 @@ function computeLicenseState({ type, trialEndsAt, now, graceDays = 3 } = {}) {
   };
 }
 
-// Best-effort clock-tamper clamp. If the system clock has jumped materially
-// BACKWARD versus the last value we persisted, a user could be trying to extend an
-// expired trial. We don't trust the rolled-back clock for licensing: the effective
-// "now" never goes below the last seen time (minus a small tolerance for legit
-// drift/NTP corrections). Returns the effective now to compute state with, the new
-// lastSeenAt to persist, and whether tampering was detected.
+// Clock-tamper clamp: the effective now never drops below the last seen time (minus a tolerance for
+// drift/NTP), so rolling the clock back cannot extend a trial. Returns the effective now, the new
+// lastSeenAt to persist and whether tampering was detected.
 function clampNow({ now, lastSeenAt, toleranceMs = DAY_MS, maxAdvanceMs = 90 * DAY_MS } = {}) {
   const nowMs = toMs(now) ?? 0;
   const seen = toMs(lastSeenAt);
   const tampered = seen != null && nowMs < seen - toleranceMs;
   const effectiveNow = seen != null ? Math.max(nowMs, seen) : nowMs;
-  // audit: cap how far the PERSISTED floor may advance in one step. Previously any
-  // forward jump was stored verbatim, so a transient clock spike (BIOS/NTP glitch to
-  // e.g. 2030) became a permanent lastSeenAt floor that then evaluated a genuinely
-  // valid paid/trial licence as expired forever - auto-banning a paying customer who
-  // had to manually clear the setting. A jump beyond maxAdvanceMs (90d - well past
-  // any realistic gap between app opens, well short of a year-scale clock glitch) is
-  // capped; the floor still catches up in later opens, and rollback is still held.
+  // Cap how far the persisted floor advances per call (maxAdvanceMs, 90 days): a transient clock spike
+  // would otherwise become a permanent floor that expires a valid licence. The floor still catches up
+  // over later opens, and rollback is still held.
   const nextSeen = seen == null ? nowMs
     : (nowMs <= seen ? seen : Math.min(nowMs, seen + maxAdvanceMs));
   return { effectiveNow, lastSeenAt: nextSeen, tampered };

@@ -3,27 +3,22 @@ import { Database, Lock, Loader2, AlertTriangle, KeyRound, Check } from 'lucide-
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
-// Pre-Gate database unlock. When at-rest encryption is on, the database file is
-// ciphertext at boot and nothing else in the app can read it - so this screen runs
-// BEFORE <Gate>, collects the workspace password, and asks main to decrypt + open
-// the database. Once unlocked it renders its children (the normal Gate flow). When
-// encryption is off (the default) it is a transparent pass-through.
+// With encryption at rest the DB file is ciphertext at boot, so this runs before <Gate>, takes the
+// workspace password and has main decrypt and open the DB. With encryption off it passes through.
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark font-mono';
 
 export default function DbGate({ children }) {
   const { t } = useTranslation('gate');
   const [phase, setPhase] = useState('loading'); // loading | unlock | ready
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON - DPAPI-sealed workspace key; cleared on opt-out)
+  const [remember, setRemember] = useState(true); // "keep me signed in": DPAPI-sealed workspace key, cleared on opt-out
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [corrupted, setCorrupted] = useState(false);
 
   async function evaluate() {
-    // audit: fail closed. A status-read failure could mean the DB is encrypted +
-    // still locked, so don't silently pass into the app. Retry once to absorb a
-    // transient IPC hiccup; if it still fails, show the unlock screen (the data is
-    // ciphertext either way, and unlocking re-drives the open path).
+    // Fail closed: a status-read failure may mean the DB is still locked. Retry once for a transient
+    // IPC error, then show the unlock screen (unlocking re-drives the open path).
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         const s = await softglazeApi.db.encryptionStatus();

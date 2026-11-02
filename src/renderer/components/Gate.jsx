@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
-  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, Crown, AlertTriangle, Check,
+  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, AlertTriangle, Check,
   Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,12 +11,11 @@ import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
-// Shared primary CTA - gradient fill, soft glow, and a subtle lift on hover. Used by
-// every "continue / sign in / create" button so the whole flow feels of a piece.
+// Shared primary CTA for every continue / sign in / create button.
 const primaryBtn = 'mt-6 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200 hover:shadow-[0_10px_28px_-8px_rgba(59,130,246,0.65)] hover:-translate-y-px active:translate-y-0';
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-// Ambient aurora used behind the form column - two slow-floating blobs for depth.
+// Decorative background behind the form column.
 function AuthAura() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -38,15 +37,12 @@ function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
   );
 }
 
-// "Keep me signed in on this device" - opt-in (default off). When ticked, the
-// login secret is sealed with the OS keychain (DPAPI) and replayed at the next app
-// start, so the password isn't asked for again. See rememberStore.js (main).
+// When ticked, the login secret is sealed with the OS keychain (DPAPI) and replayed at the next
+// start, so the password is not asked again. See rememberStore.js (main).
 function RememberToggle({ checked, onChange }) {
   const { t } = useTranslation('gate');
-  // Surface the silent failure mode: rememberStore REFUSES to persist a login secret
-  // unless the OS keychain (DPAPI/Keychain/libsecret) is available - a login credential
-  // must never hit disk in the clear. When it's unavailable, "keep me signed in" can't
-  // work and the user would otherwise just be re-prompted every launch with no reason.
+  // rememberStore refuses to persist a login secret without an OS keychain (it must never hit disk
+  // in the clear), so say why "keep me signed in" is unavailable instead of failing silently.
   const [available, setAvailable] = useState(true);
   useEffect(() => {
     let live = true;
@@ -114,9 +110,8 @@ function OtpInput({ value, onChange, onComplete }) {
   );
 }
 
-// Slides for the left carousel - self-contained (gradient + icon graphic), so the
-// screen needs no bundled photography and works fully offline. Each maps to a
-// gate.brand.slides.<key> {title, body} i18n pair.
+// Self-contained slides (gradient + icon): no bundled photos, so the screen works offline.
+// Each key maps to a gate.brand.slides.<key> {title, body} i18n pair.
 const SLIDES = [
   { key: 'security', Icon: ShieldCheck, from: '#0b3b8f', via: '#0a1730', accent: '#3b82f6' },
   { key: 'fingerprint', Icon: Fingerprint, from: '#3b1d6e', via: '#160b2c', accent: '#8b5cf6' },
@@ -124,8 +119,7 @@ const SLIDES = [
   { key: 'automation', Icon: Zap, from: '#7c2d12', via: '#241006', accent: '#f59e0b' }
 ];
 
-// Left brand panel - an auto-rotating carousel that mirrors the reference layout
-// (big graphic, bold caption bottom-left, dot indicators). Manual dots too.
+// Auto-rotating brand carousel with manual dot controls.
 function CarouselPanel() {
   const { t } = useTranslation('gate');
   const [i, setI] = useState(0);
@@ -138,7 +132,6 @@ function CarouselPanel() {
   const Icon = slide.Icon;
   return (
     <div className="relative hidden md:flex flex-col overflow-hidden border-r border-border">
-      {/* Cross-fading per-slide gradient background */}
       {SLIDES.map((s, idx) => (
         <div
           key={s.key}
@@ -151,7 +144,6 @@ function CarouselPanel() {
       <div aria-hidden className="absolute -top-24 -left-20 w-96 h-96 rounded-full blur-[130px] animate-float-slow" style={{ background: `${slide.accent}40` }} />
       <div aria-hidden className="absolute bottom-16 -right-16 w-80 h-80 rounded-full blur-[130px] animate-float-slower" style={{ background: `${slide.accent}33` }} />
 
-      {/* Logo */}
       <div className="relative flex items-center gap-3 p-9">
         <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-10 h-10 object-contain drop-shadow-[0_2px_16px_rgba(59,130,246,0.6)]" draggable={false} />
         <div className="flex flex-col leading-none">
@@ -160,7 +152,6 @@ function CarouselPanel() {
         </div>
       </div>
 
-      {/* Center graphic - concentric rings + a glassy icon tile */}
       <div className="relative flex-1 grid place-items-center px-10">
         <div className="relative grid place-items-center">
           <div aria-hidden className="absolute w-60 h-60 rounded-full border animate-aurora" style={{ borderColor: `${slide.accent}3a` }} />
@@ -171,7 +162,6 @@ function CarouselPanel() {
         </div>
       </div>
 
-      {/* Caption + dot indicators */}
       <div className="relative p-10">
         <h2 key={slide.key} className="font-display text-white text-[30px] font-semibold leading-tight tracking-tight animate-fade-up">
           {t(`brand.slides.${slide.key}.title`)}
@@ -194,7 +184,6 @@ function CarouselPanel() {
   );
 }
 
-// Language + light/dark switchers pinned to the top-right of the form column.
 function ThemeLangControls() {
   const [theme, setThemeState] = useState(getStoredTheme());
   const [lang, setLangState] = useState(getStoredLang());
@@ -239,13 +228,12 @@ function ThemeLangControls() {
   );
 }
 
-// Non-blocking overlay shown over the app: a persistent grace banner (with a
-// renew CTA + countdown) or an unobtrusive trial-days chip. Module-scope so it
-// isn't remounted on every Gate render.
+// Non-blocking overlay: a grace banner with renew CTA and countdown, or a trial-days chip.
+// Module scope so Gate re-renders do not remount it.
 function LicenseBanner({ license, busy, onPay }) {
   const { t } = useTranslation('gate');
   if (!license || license.isExempt) return null;
-  // The lease belongs to another computer (machine-bound licences, audit L3).
+  // The lease belongs to another computer (licences are machine-bound).
   if (license.reason === 'machine_mismatch') {
     return (
       <div role="alert" className="fixed top-0 inset-x-0 z-[90] bg-amber-500/95 text-black px-4 py-2 flex items-center justify-center gap-3 text-[12.5px] font-medium shadow">
@@ -276,16 +264,14 @@ function LicenseBanner({ license, busy, onPay }) {
   return null;
 }
 
-// Compact payment-method chooser used on the banned screen and the register
-// plan step. Shows only the methods the admin enabled; automated → hosted
-// checkout (caller polls), manual → submit a reference for admin approval.
+// Shows only the methods the admin enabled: automated opens hosted checkout (caller polls),
+// manual submits a reference for admin approval.
 function PayMethods({ methods, busy, onAutomated, onManual }) {
   const { t } = useTranslation('gate');
   const [sel, setSel] = useState(() => (methods[0] ? methods[0].id : null));
   const [reference, setReference] = useState('');
   const [done, setDone] = useState(false);
-  // Methods load async; if none existed at mount, select the first once they arrive so the
-  // pay button actually renders (otherwise a banned user sees no way to pay).
+  // Methods load async: select the first once they arrive, or a banned user sees no pay button.
   useEffect(() => { if (sel == null && methods[0]) setSel(methods[0].id); }, [methods]);
   const cur = methods.find((m) => m.id === sel) || null;
 
@@ -414,7 +400,7 @@ export default function Gate({ children }) {
 
   // login / pick
   const [loginPass, setLoginPass] = useState('');
-  const [remember, setRemember] = useState(true); // "keep me signed in" (default ON - stay signed in unless the user opts out; the credential is DPAPI-sealed to this Windows account and cleared on opt-out / sign-out)
+  const [remember, setRemember] = useState(true); // default on; DPAPI-sealed to this Windows account, cleared on opt-out or sign-out
   const [forgot, setForgot] = useState(false);
   const [pinFor, setPinFor] = useState(null);
   const [pin, setPin] = useState('');
@@ -435,9 +421,7 @@ export default function Gate({ children }) {
   async function evaluate() {
     try {
       const [vs, acct, cur, list] = await Promise.all([
-        // audit: FAIL CLOSED. An unreadable vault status must be treated as LOCKED
-        // (show the unlock/login screen), never as unlocked - otherwise a transient
-        // read error would drop the user straight past the auth gate.
+        // Fail closed: an unreadable vault status counts as locked, so a read error never skips the gate.
         softglazeApi.vault.status().catch(() => ({ enabled: true, locked: true })),
         softglazeApi.account.get().catch(() => null),
         softglazeApi.members.current().catch(() => null),
@@ -447,15 +431,13 @@ export default function Gate({ children }) {
       setMembers(ms); setAccount(acct);
       if (acct?.email) setEmail(acct.email);
       if (vs && vs.locked) { setPhase('login'); return; }
-      // An already signed-in member/super skips the gate. Check this BEFORE the empty-list
-      // 'register' branch: the SUPER_ADMIN (currentMemberId -1) is NOT in members.list(),
-      // so with zero regular members a remembered super session would otherwise be dumped
-      // on the register screen every boot instead of proceeding into the app.
+      // Check the signed-in member before the empty-list branch: SUPER_ADMIN (id -1) is not in
+      // members.list(), so a remembered super session would otherwise land on register every boot.
       if (cur) { setBusy(false); setPhase('licensing'); return; }
       if (ms.length === 0) { setPhase('register'); setStep('details'); return; }
       setPhase('pick');
     } catch (e) {
-      // audit: fail closed to the login screen rather than dropping into the app.
+      // Fail closed to the login screen rather than into the app.
       setPhase('login');
     }
   }
@@ -507,9 +489,8 @@ export default function Gate({ children }) {
     if (c.length !== 6) return setErr(t('errors.enter6Digit'));
     setErr(''); setBusy(true);
     try {
-      // Single atomic step: verifies OTP, creates the OWNER, sets the vault
-      // password and saves the account server-side. The OTP is only consumed
-      // once everything succeeds, so a failure here is safely retryable.
+      // One atomic step (verify OTP, create OWNER, set vault password, save account); the OTP is
+      // consumed only when all succeed, so a failure is retryable.
       await softglazeApi.account.register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -518,8 +499,7 @@ export default function Gate({ children }) {
         password,
         code: c
       });
-      // Account + 7-day trial now exist. Offer the plan step (trial / redeem / buy)
-      // before entering the workspace.
+      // Account and 7-day trial exist at this point; offer the plan step (trial / redeem / buy) first.
       setBusy(false); setErr(''); setPlanCode(''); setPhase('plan');
     } catch (e) { setErr(e.message || t('errors.verificationFailed')); setBusy(false); }
   }
@@ -596,9 +576,8 @@ export default function Gate({ children }) {
     } catch (e) { setErr(e.message || t('errors.couldNotSignIn')); setBusy(false); }
   }
 
-  // After any successful auth we pass through 'licensing': resolve the license and
-  // either enter the app, or show the blocking 'banned' screen. A read error never
-  // hard-blocks (fail open to the app, consistent with local-first).
+  // After any auth, 'licensing' resolves the license and enters the app or shows 'banned'.
+  // A read error fails open to the app (local-first).
   useEffect(() => {
     if (phase !== 'licensing') return undefined;
     let live = true;
@@ -625,10 +604,8 @@ export default function Gate({ children }) {
 
   const pollRef = useRef(null);
   function stopPoll() { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } }
-  // audit: the purchase-poll interval was a bare local - never cancelled on unmount
-  // or sign-out. A poll that returned `paid` after the user signed out would call
-  // setPhase('licensing') -> 'ready' and re-enter the app with NO current member.
-  // Store it in a ref, clear on unmount, and never re-enter once it's been stopped.
+  // The poll lives in a ref and is cleared on unmount and sign-out: a late paid result must never
+  // re-enter the app with no current member.
   useEffect(() => () => stopPoll(), []);
 
   function pollPurchase(inv) {
@@ -638,7 +615,7 @@ export default function Gate({ children }) {
       tries += 1;
       try {
         const r = await softglazeApi.payments.pollCheckout({ uuid: inv.uuid, orderId: inv.orderId });
-        // If the poll was stopped mid-flight (unmount / sign-out), do NOT re-enter.
+        // If the poll was stopped mid-flight (unmount or sign-out), never re-enter.
         if (r && r.paid && pollRef.current) { stopPoll(); setBusy(false); setPhase('licensing'); return; }
       } catch (e) { /* keep polling */ }
       if (tries > 120) { stopPoll(); setBusy(false); } // ~10-minute cap
@@ -714,7 +691,6 @@ export default function Gate({ children }) {
       <CarouselPanel />
       <div className="relative flex flex-col overflow-y-auto">
         <AuthAura />
-        {/* Top bar: brand (mobile) + language & theme switchers */}
         <div className="relative flex items-center justify-between gap-3 px-6 pt-5">
           <div className="flex items-center gap-2.5 md:invisible">
             <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-8 h-8 object-contain drop-shadow-[0_2px_10px_rgba(59,130,246,0.45)]" draggable={false} />
@@ -726,7 +702,6 @@ export default function Gate({ children }) {
           <div className="w-full max-w-[420px] animate-fade-up">
             <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
 
-          {/* REGISTER - details */}
           {phase === 'register' && step === 'details' && (
             <>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('register.title')}</h1>
@@ -756,7 +731,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* REGISTER - verify */}
           {phase === 'register' && step === 'verify' && (
             <>
               <button onClick={() => { setStep('details'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('common.back')}</button>
@@ -779,7 +753,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* PLAN - choose how to start (after account creation) */}
           {phase === 'plan' && (
             <>
               <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Sparkles className="w-5 h-5" /></div>
@@ -810,7 +783,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* LOGIN */}
           {phase === 'login' && (
             <>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{account?.firstName ? t('login.welcomeBackNamed', { name: account.firstName }) : t('login.welcomeBack')}</h1>
@@ -846,7 +818,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* INVITE REDEMPTION */}
           {phase === 'invite' && (
             <>
               <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('common.back')}</button>
@@ -865,7 +836,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* TEAM MEMBER LOGIN */}
           {phase === 'memberlogin' && (
             <>
               <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('common.back')}</button>
@@ -885,7 +855,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* SUPER ADMIN */}
           {phase === 'super' && (
             <>
               <button onClick={() => { setPhase(members.length ? 'login' : 'register'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('common.back')}</button>
@@ -921,7 +890,6 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {/* PICK */}
           {phase === 'pick' && (
             <>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('pick.title')}</h1>

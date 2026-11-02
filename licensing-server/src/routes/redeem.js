@@ -1,13 +1,7 @@
 'use strict';
-// POST /v1/redeem { tenantId, code, installId, installSecret }
-// Backend-issued activation codes (manual sales / resellers). Replaces the old
-// client-side self-signed purchase code.
-//
-// Audit T2-6: redeem used to accept `account` alone and matched an existing licence by that
-// email, then overwrote its installId with the caller's. Redeeming a cheap code with a
-// victim's email therefore moved the victim's licence onto the attacker's machine. The
-// code now applies only to an install the caller has authenticated, and the licence is
-// matched by that installId alone.
+// POST /v1/redeem { tenantId, code, installId, installSecret }: backend-issued activation codes
+// (manual sales, resellers). Codes apply only to an authenticated install, and the licence is matched
+// by that installId alone, never by an account email.
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -24,7 +18,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const tenant = await prisma.tenant.findUnique({ where: { id: String(tenantId) } });
   if (!tenant || tenant.status !== 'active') return res.status(404).json({ error: 'Unknown tenant.' });
 
-  // Authenticate BEFORE the code is claimed, so a bad secret cannot burn a code.
+  // Authenticate before claiming the code, so a bad secret cannot burn it.
   const install = await authenticateInstall(prisma, tenant, { installId, installSecret });
   if (!install) return res.status(401).json({ error: 'Unknown install or wrong install secret.' });
 
@@ -33,9 +27,8 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!rec) return res.status(404).json({ error: 'Invalid code.' });
   if (rec.redeemedAt) return res.status(409).json({ error: 'This code has already been redeemed.' });
 
-  // Atomically claim the code: only the first concurrent request whose WHERE still sees
-  // redeemedAt:null wins. Closes the check-then-act race where two requests both pass the
-  // check above and both redeem the same single-use code.
+  // Atomic claim: only the request whose WHERE still sees redeemedAt: null wins, so two concurrent
+  // requests cannot both redeem a single-use code.
   const claim = await prisma.licenseCode.updateMany({
     where: { id: rec.id, redeemedAt: null },
     data: { redeemedAt: new Date(), redeemedBy: install.id }

@@ -1,13 +1,7 @@
 'use strict';
-// Keyboard focus after native dialogs.
-//
-// On Windows, Electron can leave a window without keyboard focus once a native
-// alert()/confirm()/prompt() closes (electron/electron#41603, #41602, #31917).
-// Clicks still land, but typing goes nowhere until the window is re-focused from
-// the OS (Alt+Tab away and back). The app confirms every delete with
-// window.confirm(), so after one of those (OK or Cancel) every input in the app
-// looked stuck. Blurring and re-focusing the window, then its page, hands the
-// keyboard back. The renderer asks for this right after each dialog returns.
+// On Windows, Electron can leave a window without keyboard focus after a native alert/confirm/prompt
+// (electron/electron#41603): clicks land but typing does not. Blurring and re-focusing the window
+// and its page restores input; the renderer asks for this after each dialog.
 
 const REFOCUS_CHANNEL = 'window:refocus-after-dialog';
 

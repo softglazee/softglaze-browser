@@ -6,9 +6,8 @@ import i18n from '@/i18n/index.js';
 import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
 import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
 
-// Register the "cmpSettingsC" namespace without touching the central i18n config.
-// addResourceBundle is a no-op if the bundle already exists, so this is safe
-// across hot reloads (and ProxyProviders performing the same registration).
+// Registers cmpSettingsC without touching the central i18n config; the guard keeps it safe across
+// hot reloads and ProxyProviders' identical registration.
 if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
 if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
@@ -142,7 +141,6 @@ function ProviderCard({ provider, onChange, onError }) {
           </span>
         </div>
 
-        {/* Status toggle switch */}
         <button
           type="button"
           role="switch"

@@ -1,8 +1,6 @@
 'use strict';
-// Per-tenant Stripe integration. The secret key comes from the tenant's sealed
-// payment config (never hardcoded, never shared). Supports BOTH one-time payment
-// (grant N months per payment) and recurring subscriptions (plan.recurring), each
-// keyed to the plan's interval.
+// Per-tenant Stripe; the secret key comes from the tenant's sealed payment config. Supports one-time
+// payments (N months each) and recurring subscriptions (plan.recurring), keyed to the plan's interval.
 const Stripe = require('stripe');
 const { publicBaseUrl } = require('../env');
 
@@ -11,8 +9,7 @@ function client(secretKey) {
   return new Stripe(secretKey, { apiVersion: '2024-06-20' });
 }
 
-// Map a plan interval to a Stripe recurring interval (Stripe supports day/week/
-// month/year; we treat anything non-yearly as monthly). Pure — unit-tested.
+// Anything non-yearly maps to Stripe's 'month' interval.
 function stripeInterval(interval) {
   return String(interval || 'month').toLowerCase() === 'year' ? 'year' : 'month';
 }
@@ -49,9 +46,8 @@ function verifyEvent({ secretKey, webhookSecret, rawBody, signature }) {
   return client(secretKey).webhooks.constructEvent(rawBody, signature, webhookSecret);
 }
 
-// Audit L9: the subscription id moved from invoice.subscription to
-// invoice.parent.subscription_details.subscription in newer Stripe API versions; the
-// webhook payload follows the endpoint's API version, so read both. Pure.
+// Newer Stripe API versions move the subscription id to invoice.parent.subscription_details,
+// and the payload follows the endpoint's API version, so read both.
 function invoiceSubscriptionId(inv) {
   if (!inv) return null;
   const pick = (v) => (v && typeof v === 'object' ? v.id : v) || null;
@@ -63,9 +59,8 @@ function invoiceSubscriptionId(inv) {
 
 const idOf = (v) => (v && typeof v === 'object' ? v.id : v) || null;
 
-// Audit L8: map a refunded / disputed charge back to what it paid for. A one-time
-// purchase is found by its Checkout Session (listed by payment_intent); a subscription
-// charge by its invoice's subscription. { sessionRef, subscriptionId }, either may be null.
+// Map a refunded or disputed charge to what it paid for: a one-time purchase via its Checkout
+// Session (listed by payment_intent), a subscription via its invoice. Either ref may be null.
 async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) {
   const stripe = client(secretKey);
   let sessionRef = null;

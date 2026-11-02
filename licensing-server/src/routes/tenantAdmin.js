@@ -15,12 +15,9 @@ const { resetMachine } = require('../machineBinding');
 const router = express.Router();
 router.use(tenantApiAuth);
 
-// Store a provider's credentials (sealed at rest) + return the webhook URL to set.
-// POST /v1/tenant/payment-config { provider, enabled, ...fields }
-//   stripe:    { secretKey, webhookSecret }
-//   paypal:    { clientId, clientSecret, webhookId, env?: "live"|"sandbox" }
-//   cryptomus: { merchantId, apiKey }
-// Audit L7: per-provider schema (configFields.js); every required field must be present.
+// POST /v1/tenant/payment-config { provider, enabled, ...fields }: seals the credentials and returns
+// the webhook URL. Fields per provider are in configFields.js (stripe: secretKey, webhookSecret;
+// paypal: clientId, clientSecret, webhookId, env?; cryptomus: merchantId, apiKey).
 router.post('/payment-config', asyncHandler(async (req, res) => {
   const b = req.body || {};
   const provider = String(b.provider || '').toLowerCase();
@@ -78,17 +75,16 @@ router.post('/codes', asyncHandler(async (req, res) => {
   res.json({ codes });
 }));
 
-// Rotate this tenant's Ed25519 signing keypair. Returns the NEW public key — the
-// merchant must rebuild their app with it; leases signed by the old key stop
-// verifying once the rebuilt app ships.
+// Rotate this tenant's Ed25519 keypair. The merchant must rebuild the app with the new public key;
+// leases signed by the old key stop verifying once that build ships.
 router.post('/rotate-key', asyncHandler(async (req, res) => {
   const { publicKeyPem, privateKeyPem } = generateTenantKeypair();
   await prisma.tenant.update({ where: { id: req.tenant.id }, data: { publicKeyPem, privateKeySealed: seal(privateKeyPem) } });
   res.json({ publicKeyPem, note: 'Rebuild the tenant app with this public key. Existing leases stop verifying once the rebuilt app is installed.' });
 }));
 
-// Clear an install's machine binding (audit L3) so the customer's next /v1/license call
-// from their new PC binds to it. No rate limit: the merchant decides.
+// Clear an install's machine binding so the next /v1/license call from the new PC binds.
+// No rate limit; the merchant decides.
 // POST /v1/tenant/installs/:installId/reset-machine -> { ok, installId }
 router.post('/installs/:installId/reset-machine', asyncHandler(async (req, res) => {
   const { status, body } = await resetMachine(prisma, req.tenant, req.params.installId);

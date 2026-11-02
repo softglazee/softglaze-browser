@@ -1,7 +1,6 @@
 'use strict';
-// Minimal in-memory fixed-window rate limiter (per server instance), keyed by
-// client IP. For multi-instance deployments move this to a shared store (Redis).
-// No external dependency.
+// In-memory fixed-window limiter per server instance, keyed by client IP.
+// Multi-instance deployments need a shared store (Redis).
 function rateLimit({ windowMs = 60000, max = 120 } = {}) {
   const hits = new Map();
   return function limiter(req, res, next) {

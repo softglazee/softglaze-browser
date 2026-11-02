@@ -1,14 +1,9 @@
 'use strict';
-// Owner certificate tool (audit L1). See src/main/ownerCert.js.
+// Owner certificate tool (see src/main/ownerCert.js).
 //
-//   node scripts/owner-cert.js keygen <dir>
-//       Writes owner-private.pem + owner-public.pem (Ed25519). Refuses to overwrite.
-//       Keep the private key OUT of the repo; paste the public PEM into ownerCert.js.
-//   node scripts/owner-cert.js sign <privateKeyPath> <machineId> [note]
-//       Prints the certificate JSON. Save it as <userData>/owner.cert on that machine.
-//   node scripts/owner-cert.js machine-id
-//       Prints this machine's licensing machine id (licenseClient.machineHash(): SHA-256
-//       of the OS machine identity), the value a certificate must be signed for.
+//   keygen <dir>                       write an Ed25519 key pair; keep the private key out of the repo
+//   sign <privateKey> <machineId> [note]  print the cert to save as <userData>/owner.cert on that machine
+//   machine-id                         print this machine's id, the value a cert must be signed for
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');

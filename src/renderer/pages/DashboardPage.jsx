@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Activity, Play, Globe, Folder, Clock, X, MonitorSmartphone, Zap, Loader2,
-  ArrowUpRight, Shield, RefreshCw, Cpu, HardDrive, Server, Sparkles, CalendarDays,
+  ArrowUpRight, Shield, RefreshCw, Cpu, Server, Sparkles, CalendarDays,
   Fingerprint, Users, Wand2, IdCard, LineChart, BarChart3, PieChart, Rocket
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,8 +16,7 @@ const CHART = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--char
 const fmtGB = (bytes) => (bytes / 1024 / 1024 / 1024).toFixed(1);
 const fmtNum = (v) => (v == null ? '—' : v);
 
-// Build the last 7 calendar days (oldest -> today) with short weekday labels in
-// the app's language, plus a bucketing helper for createdAt-style timestamps.
+// Last 7 calendar days, oldest first, with localized weekday labels and a createdAt bucketing helper.
 function last7Days(locale) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = [];
@@ -41,7 +40,6 @@ function bucketByDay(items, getDate, days) {
   return counts;
 }
 
-// Clean brand stat tile: token-coloured icon tile, big value, small delta line.
 function StatCard({ icon: Icon, label, value, change, color }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 animate-fade-up">
@@ -83,8 +81,7 @@ function ChartCard({ title, subtitle, icon: Icon, iconColor, children, className
   );
 }
 
-// Navigable quick-access card: a real <a> (keyboard focusable, global focus ring),
-// a key number, and a short caption. Jumps to the target page on click/Enter.
+// A real link, so it is keyboard focusable and gets the global focus ring.
 function QuickLink({ to, icon: Icon, label, value, caption, color, openLabel }) {
   return (
     <Link
@@ -124,9 +121,7 @@ function firstNameOf(member, account) {
   return first || '';
 }
 
-// Personalized hero: time-aware greeting + the user's first name, a live clock and
-// date in the app language, and a rotating motivational line. Clean brand surface -
-// no decorative gradient or glow (a thin primary bar is the only accent).
+// Time-aware greeting with the user's first name, a live clock and date, and a rotating line.
 function WelcomeBanner() {
   const { t, i18n } = useTranslation();
   const [who, setWho] = useState({ name: '', role: '' });
@@ -192,8 +187,7 @@ function WelcomeBanner() {
   );
 }
 
-// In-app OTA update banner. Subscribes to updater events and reads the current
-// state on mount (so it appears even if the event fired before this page mounted).
+// Also reads the updater state on mount, in case the event fired before this page mounted.
 function UpdateBanner() {
   const [state, setState] = useState(null);
   const [installing, setInstalling] = useState(false);
@@ -394,7 +388,7 @@ export default function DashboardPage() {
       setProxies(Array.isArray(arr) ? arr : []);
       setSysInfo(info);
 
-      // Live rolling timeline (real values sampled over the app's runtime).
+      // Rolling timeline sampled over the app's runtime.
       const label = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const point = { x: label, sessions: (Array.isArray(realSessions) ? realSessions.length : 0), proxies: Array.isArray(arr) ? arr.length : 0 };
       setHistory((prev) => {
@@ -416,7 +410,7 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [loadDashboardData]);
 
-  // One-time, best-effort counts for the quick-access cards (existing IPC only).
+  // One-time, best-effort counts for the quick-access cards.
   useEffect(() => {
     let live = true;
     const len = (r) => {
@@ -460,7 +454,6 @@ export default function DashboardPage() {
     );
   }
 
-  // ---- Derived REAL data -------------------------------------------------
   const { days, labels: dayLabels } = last7Days(i18n.language);
 
   // Proxy pool health = latest check result per proxy (ok / fail / never checked).
@@ -495,22 +488,20 @@ export default function DashboardPage() {
   const typeRows = Object.entries(typeMap).sort((a, b) => b[1] - a[1])
     .map(([label, value], i) => ({ label, value, color: CHART[i % CHART.length] }));
 
-  // New proxies added per day over the last 7 days (REAL, from createdAt).
+  // New proxies per day over the last 7 days, from createdAt.
   const newProxySeries = bucketByDay(proxies, (p) => p.createdAt, days);
   const newProxyTotal = newProxySeries.reduce((a, b) => a + b, 0);
 
-  // Launches per day - SAMPLE. The app does not persist per-day launch history,
-  // so this illustrative shape is clearly badged and never presented as real.
+  // Sample data: per-day launch history is not persisted, so the UI badges this shape as a sample.
   const launchSample = [4, 6, 3, 8, 5, 9, 6];
 
   const providerCount = new Set(proxies.map((p) => p.provider).filter(Boolean)).size || null;
 
-  // Health scores (REAL).
   const memPct = sysInfo && sysInfo.memTotal ? Math.round((sysInfo.memUsed / sysInfo.memTotal) * 100) : 0;
   const activeRatio = stats.totalProfiles ? Math.round((stats.activeSessions / stats.totalProfiles) * 100) : 0;
   const proxyCoverage = stats.totalProfiles ? Math.min(100, Math.round((stats.totalProxies / stats.totalProfiles) * 100)) : (stats.totalProxies ? 100 : 0);
 
-  // Live activity timeline (REAL, sampled this runtime).
+  // Activity timeline sampled during this runtime.
   const activityValues = history.map((h) => h[metric]);
   const activityLabels = history.map((h) => h.x);
   const activityPeak = activityValues.length ? Math.max(...activityValues) : 0;
@@ -531,10 +522,8 @@ export default function DashboardPage() {
       <RestoreBanner />
       <ResilienceToasts />
 
-      {/* PERSONALIZED WELCOME */}
       <WelcomeBanner />
 
-      {/* COMMAND-CENTER TOOLBAR */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">{t('dashboard.overview')}</p>
@@ -557,7 +546,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* STAT TILES */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard icon={MonitorSmartphone} label={t('dashboard.statTotalProfiles')} value={stats.totalProfiles} change={t('dashboard.changeGroups', { count: stats.totalGroups })} color="var(--chart-1)" />
         <StatCard icon={Play} label={t('dashboard.statActiveSessions')} value={stats.activeSessions} change={stats.activeSessions > 0 ? t('dashboard.changeLiveNow') : t('dashboard.changeIdle')} color="var(--chart-3)" />
@@ -565,7 +553,6 @@ export default function DashboardPage() {
         <StatCard icon={Folder} label={t('dashboard.statGroups')} value={stats.totalGroups} change={t('dashboard.changeOrganized')} color="var(--chart-4)" />
       </div>
 
-      {/* QUICK ACCESS */}
       <section aria-labelledby="dash-quick">
         <SectionLabel icon={Rocket} title={<span id="dash-quick">{t('dashboard.quickAccessTitle')}</span>} sub={t('dashboard.quickAccessSub')} />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
@@ -575,11 +562,9 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* INSIGHTS */}
       <section aria-labelledby="dash-insights">
         <SectionLabel icon={LineChart} title={<span id="dash-insights">{t('dashboard.insightsTitle')}</span>} sub={t('dashboard.insightsSub')} />
 
-        {/* Row 1 */}
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <ChartCard
             className="xl:col-span-2"
@@ -620,7 +605,6 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
-        {/* Row 2 */}
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
           <ChartCard headingId="c-geo" title={t('dashboard.topCountriesTitle')} subtitle={t('dashboard.topCountriesSub')} icon={Globe} iconColor="var(--chart-2)">
             <HBars rows={topCountries} ariaLabel={t('dashboard.chartCountriesAria')} emptyLabel={t('dashboard.noData')} />
@@ -644,7 +628,6 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
-        {/* Row 3 */}
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
           <ChartCard headingId="c-scores" title={t('dashboard.healthScores')} subtitle={t('dashboard.healthScoresSub')} icon={Shield} iconColor="var(--chart-3)">
             <div className="space-y-4 pt-1">
@@ -679,7 +662,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* LIVE SESSIONS */}
       <section className="overflow-hidden rounded-xl border border-border bg-card animate-fade-up" aria-labelledby="dash-live">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">

@@ -1,13 +1,6 @@
-// Generate the Firefox extension's widget from the single source of truth
-// (src/main/personaAutofill.js). The SAME bootstrap that Chromium injects via
-// puppeteer is written out as sg-widget.js, so the autofill behavior (form
-// detection, field matching, human typing, Shadow-DOM UI) never forks between
-// engines. sg-bridge.js provides the window.__sgPersona* surface it expects.
-//
-//   npm run build:firefox-ext
-//
-// The output IS committed so the unpacked dev-launch path works without a build
-// step; re-run this whenever personaAutofill.js changes (and before signing).
+// Writes sg-widget.js from src/main/personaAutofill.js, the same bootstrap Chromium injects via
+// puppeteer, so autofill never forks between engines. Run `npm run build:firefox-ext` after
+// changing personaAutofill.js; the output is committed so dev launches need no build.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';

@@ -87,7 +87,6 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
           {error && <div className="rounded-lg border border-red-900/70 bg-red-950/40 px-3 py-2 text-[13px] text-red-200">{error}</div>}
           {info && <div className="rounded-lg border border-emerald-900/60 bg-emerald-950/30 px-3 py-2 text-[13px] text-emerald-300">{info}</div>}
 
-          {/* Save a profile as a template */}
           <div className="rounded-lg border border-border bg-card p-4">
             <h3 className="text-[13px] font-medium text-foreground mb-3 flex items-center gap-2"><Save className="w-4 h-4 text-muted-foreground" /> {t('templates.saveSectionTitle')}</h3>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -110,7 +109,6 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
             </div>
           </div>
 
-          {/* Existing templates */}
           <div>
             <h3 className="text-[13px] font-medium text-foreground mb-3">{t('templates.listTitle')}</h3>
             {loading ? (

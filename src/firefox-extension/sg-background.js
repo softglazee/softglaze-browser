@@ -1,21 +1,7 @@
 'use strict';
-// ---------------------------------------------------------------------------
-// SoftGlaze Smart Autofill — Firefox background script.
-//
-// Firefox profiles are launched raw (no CDP / no puppeteer exposeFunction), so
-// the in-page widget can't reach Electron directly. This background script is the
-// only context allowed to talk to the loopback autofill bridge that the SoftGlaze
-// app runs (host permission http://127.0.0.1/*; content scripts can't cross-origin
-// fetch). The content-script shim (sg-bridge.js) forwards `list` / `markUsed`
-// requests here via runtime.sendMessage and we answer from the bridge.
-//
-// Discovery: the bridge binds the first free port in a small fixed loopback range,
-// so we probe that range once and cache the live base URL (re-probing if a call
-// fails). Auth (audit E3/S1): a PER-APP-RUN token the SoftGlaze app writes to
-// Firefox's managed storage for this extension id at every launch - it is no
-// longer a static string baked into this file. Re-read on every discovery, so an
-// app restart (new token) heals itself on the next call.
-// ---------------------------------------------------------------------------
+// Firefox profiles have no CDP, so this background script is the only context that can reach the
+// loopback autofill bridge (content scripts cannot fetch cross-origin). sg-bridge.js forwards here.
+// The bridge takes the first free port in PORTS; the per-launch token is re-read from managed storage.
 
 var PORTS = [47800, 47801, 47802, 47803, 47804, 47805, 47806, 47807, 47808, 47809];
 
@@ -46,7 +32,7 @@ function pingPort(port) {
 function discover() {
   if (baseUrl && token) return Promise.resolve(baseUrl);
   return loadToken().then(function (t) {
-    if (!t) return null; // no token handed over: never send an empty one around
+    if (!t) return null; // never send an empty token
     var chain = Promise.resolve(null);
     PORTS.forEach(function (p) {
       chain = chain.then(function (found) { return found || pingPort(p); });
@@ -65,8 +51,7 @@ function doFetch(base, pathAndQuery, opts) {
   });
 }
 
-// Call the bridge, transparently re-discovering the port if the cached one died
-// (e.g. the app restarted onto a different port).
+// Re-discovers the port if the cached one died (the app may restart on another port).
 function call(pathAndQuery, opts) {
   return discover().then(function (base) {
     if (!base) throw new Error('SoftGlaze autofill bridge is offline.');
@@ -80,9 +65,8 @@ function call(pathAndQuery, opts) {
   });
 }
 
-// audit E3: the origin a call is scoped to comes from the SENDER (the browser's own
-// record of which top-level document the content script runs in), never from the
-// message body. Anything that is not a top-frame http(s) content script is ignored.
+// The origin comes from the sender (the browser's record of the content script's top-level document),
+// never from the message body. Anything but a top-frame http(s) content script is ignored.
 function senderUrl(sender) {
   if (!sender || sender.id !== browser.runtime.id) return '';
   if (sender.frameId != null && sender.frameId !== 0) return '';

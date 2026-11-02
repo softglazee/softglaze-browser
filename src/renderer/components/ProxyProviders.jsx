@@ -10,21 +10,14 @@ import i18n from '@/i18n/index.js';
 import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
 import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
 
-// Register the "cmpSettingsC" namespace without touching the central i18n config.
-// addResourceBundle is a no-op if the bundle already exists, so this is safe
-// across hot reloads (and IpProvidersSettings performing the same registration).
+// Registers cmpSettingsC without touching the central i18n config; the guard keeps it safe across
+// hot reloads and IpProvidersSettings' identical registration.
 if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
 if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
-// ---------------------------------------------------------------------------
-// Softglaze Provider Core - integrated proxy-vendor marketplace.
-//
-// A static catalog of partner vendors. `referral` links out through our platform
-// (replace the ?ref=softglaze placeholder with each partner's real affiliate URL
-// when the programs are live). `tokenSync` providers hide the host form and show
-// a secure "Proxy Token" + Sync mechanic; the rest show the rotating-engine form.
-// lucide ships no brand logos, so each card uses a branded initials tile.
-// ---------------------------------------------------------------------------
+// Static partner-vendor catalog. tokenSync providers show a Proxy Token + Sync form instead of
+// the host form; cards use initials tiles because lucide has no brand logos.
+// TODO: replace the ?ref=softglaze placeholders with real affiliate URLs once programs are live.
 export const PROVIDERS = [
   { key: 'ipfoxy', name: 'IPFoxy', initials: 'IF', color: '#f97316', referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: { host: 'gate-us.ipfoxy.io', port: 58688, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
   { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 44445, type: 'HTTP' } },
@@ -41,9 +34,8 @@ export const PROVIDERS = [
   { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/?ref=softglaze', gateway: { host: 'gate.shopsocks5.com', port: 1080, type: 'SOCKS5' }, geoSync: { creds: ['username', 'token'], count: true, geo: true, noSession: true, shop: true } },
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/?fpr=softglaze', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true } },
   { key: 'anyip', name: 'AnyIP', initials: 'AN', color: '#0ea5e9', referral: 'https://anyip.io/?ref=softglaze', gateway: { host: 'portal.anyip.io', port: 1080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], apiKey: true, count: true, session: true, life: true, gateway: true, poolType: true } },
-  // DataImpulse is a real list pull: GET /api/list returns rendered login:password@host:port
-  // rows, so `geo` (state/city), `count` and `life` (session_ttl) all map to documented
-  // query parameters rather than to an invented username grammar.
+  // DataImpulse is a real list pull: GET /api/list returns login:password@host:port rows, so geo
+  // (state/city), count and life (session_ttl) map to documented query parameters.
   { key: 'dataimpulse', name: 'DataImpulse', initials: 'DI', color: '#a3e635', referral: 'https://dataimpulse.com/?ref=softglaze', gateway: { host: 'gw.dataimpulse.com', port: 823, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, life: true, di: true } },
   // Proxy-Seller residential: the API key creates a list (geo + rotation + N ports, each
   // port its own exit IP) and downloads it, or downloads a list made in the dashboard.
@@ -92,7 +84,7 @@ export const PROVIDERS = [
   // proxies on the account; Country filters that list and How many caps it.
   { key: 'proxysolutions', name: 'Proxy-Solutions', initials: 'PN', color: '#dc2626', referral: 'https://proxy-solutions.net/', gateway: null, geoSync: { creds: ['token'], count: true, list: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
   // Proxmint: a read-only pmk_ key returns each product's gateway and login (GET /api/v1/account);
-  // country, state or city and a sticky session (1-120 min) ride in the username. Verified live.
+  // country, state or city and a sticky session (1-120 min) ride in the username.
   { key: 'proxmint', name: 'Proxmint', initials: 'PM', color: '#10b981', referral: 'https://proxmint.com/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential'], ['residential_premium', 'Premium residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true } },
   // Databay: proxy user + password on gw.databay.co:8888 (HTTP and SOCKS5 on one port); zone,
   // country, state or city and a sticky session (max 120 min) ride in the username.
@@ -145,9 +137,7 @@ function formatBytes(n) {
   return `${Math.round(v / 1024)} KB`;
 }
 
-// Country list for the geo-targeted providers (Apify / ShopSocks5).
-// Values are ISO 3166-1 alpha-2 codes - the format Apify (country-XX)
-// expects; ShopSocks5 receives it as its country filter.
+// ISO 3166-1 alpha-2 codes: Apify takes them as country-XX, ShopSocks5 as its country filter.
 export const PROXY_COUNTRIES = [
   ['', 'Any / Random'],
   ['US', 'United States'], ['GB', 'United Kingdom'], ['CA', 'Canada'], ['AU', 'Australia'],
@@ -180,15 +170,13 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   const [ownSelectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
   const selectedKey = controlledKey || ownSelectedKey;
   const provider = useMemo(() => PROVIDERS.find((p) => p.key === selectedKey) || PROVIDERS[0], [selectedKey]);
-  // The provider on screen right now. Each pull is tagged with the key it started for;
-  // a result (or error) that lands after the user switched provider is not shown on the
-  // new provider's panel, and does not clear its spinner.
+  // Each pull is tagged with its provider key; a late result or error after a provider switch
+  // is not shown on the new panel and does not clear its spinner.
   const activeKeyRef = useRef(provider.key);
   activeKeyRef.current = provider.key;
 
-  // Affiliate-link overrides set by the Owner/Super Admin in Settings → Monetization.
-  // The marketplace "Purchase" / "Visit dashboard" button uses the configured link
-  // when present, otherwise the built-in default below.
+  // Owner/Super Admin affiliate overrides (Settings > Monetization); the Purchase / Visit dashboard
+  // button falls back to the built-in referral.
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
@@ -217,14 +205,12 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   // Re-prime the workspace whenever the active provider changes.
   useEffect(() => {
     const gw = provider.gateway || { host: '', port: '' };
-    // DataImpulse labels these three selects with its own vocabulary (product /
-    // rotating-sticky / http-socks5), so it needs defaults that its own <option>
-    // values actually carry. Sharing one default set renders blank selects.
-    // Proxy-Seller shares the protocol and session vocabulary. Sticky is the default for
-    // both because an anti-detect profile needs an exit IP that stays put.
+    // DataImpulse, Proxy-Seller and IPRoyal use their own select vocabulary, so they need defaults
+    // their <option> values carry (shared defaults render blank). Sticky is the default because an
+    // anti-detect profile needs an exit IP that stays put.
     const di = provider.key === 'dataimpulse' || provider.key === 'proxyseller' || provider.key === 'iproyal';
-    // Restore what was typed for this provider earlier in the session (switching provider or
-    // leaving the tab used to wipe it, including pasted keys from a pull that had failed).
+    // Restore what was typed for this provider earlier in the session, including keys pasted
+    // before a failed pull.
     const draft = FORM_DRAFTS.get(provider.key);
     if (draft) setForm({ ...draft });
     else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: provider.geoSync && provider.geoSync.list ? '' : '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di || (provider.geoSync && provider.geoSync.proto) ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
@@ -238,9 +224,8 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     setErr('');
   }, [provider]);
 
-  // Pre-fill saved credentials for this provider (sealed at rest with DPAPI). Runs
-  // after the reset above so saved values win; guarded so a fast provider switch
-  // can't apply stale creds.
+  // Pre-fill DPAPI-sealed saved credentials. Runs after the reset above so saved values win; the
+  // live guard stops a fast provider switch from applying stale creds.
   useEffect(() => {
     let live = true;
     try {
@@ -273,9 +258,8 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     return next;
   });
 
-  // Remember the entered credentials for this provider so they're pre-filled next
-  // time. Best-effort; secrets are DPAPI-sealed in the main process. Empty fields
-  // are cleared. Called after a successful pull/sync.
+  // Saves the entered credentials for pre-fill next time (secrets DPAPI-sealed in main, empty
+  // fields cleared). Best-effort; called after a successful pull or sync.
   function persistCreds() {
     try {
       softglazeApi.proxies.saveProviderCreds({
@@ -287,9 +271,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     } catch (e) { /* ignore */ }
   }
 
-  // Persist what the operator typed, without needing a pull to hang it off. persistCreds
-  // was only ever called from the three sync paths, so anyone using the manual form had
-  // no way to save an API key at all.
+  // Saves typed credentials without a pull, so manual-form users can store an API key.
   async function handleSaveCreds() {
     setSavingCreds(true); setErr('');
     try {
@@ -358,16 +340,15 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     finally { if (activeKeyRef.current === pullKey) setSyncing(false); }
   }
 
-  // Country-targeted pull (Apify / ShopSocks5). Sends the chosen
-  // country (+ pool size and any geo/session/endpoint overrides) to syncVendorPool,
-  // which routes to the matching adapter. Irrelevant fields are ignored per provider.
+  // Country-targeted pull: sends country, pool size and any geo/session/endpoint overrides to
+  // syncVendorPool, which routes to the matching adapter and ignores irrelevant fields.
   async function handleGeoSync() {
     setErr(''); setSyncResult(null);
     const g = provider.geoSync || {};
     const creds = g.creds || [];
     if (creds.includes('token') && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
     if (g.apiKey) {
-      // anyip: accept EITHER direct proxy Username + Password OR an API key + Team ID.
+      // anyip: accept either proxy Username + Password or an API key + Team ID.
       const hasCreds = form.username.trim() && form.password;
       const hasApi = form.token.trim() && form.teamId.trim();
       if (!hasCreds && !hasApi) { setErr(t('proxyProviders.errors.anyipCredsOrApi', 'Enter your proxy Username + Password, or an API key + Team ID to auto-provision.')); return; }
@@ -379,8 +360,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     if (fromList && !form.listId) { setErr(t('proxyProviders.ps.pickList', 'Pick one of your saved lists, or switch to New list.')); return; }
     const pullKey = provider.key;
     setSyncing(true);
-    // Save what was typed as soon as Pull is clicked, not only after a successful pull,
-    // so a failed pull no longer throws the pasted keys away.
+    // Save what was typed as soon as Pull is clicked, so a failed pull keeps the pasted keys.
     persistCreds();
     try {
       const r = await softglazeApi.proxies.syncVendorPool({
@@ -454,7 +434,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   }
 
   const inputCls = 'w-full h-10 bg-background border border-border rounded px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
-  // Styled <select>: hide the native arrow, paint an inset chevron (icon not glued to the edge).
+  // Styled <select>: hide the native arrow and paint an inset chevron.
   const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
   const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
   const labelCls = 'mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground';
@@ -470,9 +450,8 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   // A vendor shows a sticky-session field when it reads one: either a standalone session
   // (session: true) or one implied by its geo targeting, unless it explicitly takes none.
   const showSession = Boolean(provider.geoSync && !provider.geoSync.noSession && (provider.geoSync.session || provider.geoSync.geo));
-  // Shared "Save credentials" action for every connector form. Persists through the same
-  // DPAPI-sealed path a pull uses (never logs the secret) and shows a clear ready-to-pull
-  // confirmation, distinct from the pull spinner.
+  // Shared Save credentials row: persists through the DPAPI-sealed pull path (never logs the
+  // secret) with a ready-to-pull confirmation distinct from the pull spinner.
   const renderSaveRow = () => (
     <div className="flex flex-wrap items-center gap-3">
       <button type="button" onClick={handleSaveCreds} disabled={savingCreds} className={secondaryBtnCls}>
@@ -950,7 +929,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   return (
     <Card className={embedded ? '' : 'bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden'}>
       <div className={embedded ? '' : 'grid grid-cols-1 lg:grid-cols-[300px_1fr] flex-1 min-h-0'}>
-        {/* LEFT - provider grid */}
         {!embedded && <div className="border-b lg:border-b-0 lg:border-r border-border bg-card/40 flex flex-col min-h-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
             <Boxes className="w-4 h-4 text-primary" />
@@ -980,7 +958,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           </div>
         </div>}
 
-        {/* RIGHT - dynamic configuration workspace */}
         <div className={embedded ? '' : 'overflow-y-auto p-5 min-h-0'}>
           {/* Promo banner (the Proxy providers page shows its own header instead) */}
           {!embedded && <div className="rounded-xl p-5 mb-5 relative overflow-hidden" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${provider.color} 22%, var(--card)), var(--card))`, border: `1px solid color-mix(in srgb, ${provider.color} 30%, transparent)` }}>
@@ -1048,7 +1025,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           ) : provider.geoSync ? (
             /* ---- Geo-targeted pull: one consistent grid for every vendor ---- */
             <div className="space-y-4 max-w-2xl">
-              {/* Connection: the credentials this vendor needs, in aligned pairs. */}
               <section className={sectionCls}>
                 <div className={sectionTitleCls}><KeyRound className="w-4 h-4 text-violet-400" /> {t('proxyProviders.creds.connectionTitle', 'Connection')}</div>
 
@@ -1142,7 +1118,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                 {renderSaveRow()}
               </section>
 
-              {/* Targeting: location and pull options on one aligned grid. */}
               <section className={sectionCls}>
                 <div className={sectionTitleCls}><MapPin className="w-4 h-4 text-sky-400" /> {t('proxyProviders.creds.targetingTitle', 'Targeting')}</div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1227,9 +1202,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
           ) : (
             /* ---- Rotating engine configuration form ---- */
             <div className="space-y-4 max-w-2xl">
-              {/* No automatic pull for this vendor yet. Say so, then let the operator
-                  enter the real details their dashboard gives them. Storing the API key
-                  here means it is already in place the day the connector lands. */}
+              {/* No automatic pull yet: say so, and let the operator store real details for when it lands. */}
               {provider.unavailable && (
                 <>
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[12.5px] text-[color-mix(in_srgb,var(--color-amber-500)_45%,var(--foreground))]">
@@ -1275,7 +1248,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                 </div>
               </div>
 
-              {/* Bright Data BDPM specialized toggle */}
               {provider.bdpm && (
                 <label className="flex items-start gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer bg-card border border-border rounded-lg px-3.5 py-3">
                   <input type="checkbox" checked={form.bdpm} onChange={(e) => set('bdpm', e.target.checked)} className="accent-primary mt-0.5" />
@@ -1301,7 +1273,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
               </div>
               <p className="text-[11.5px] text-muted-foreground italic">{t('proxyProviders.rotating.tip')}</p>
 
-              {/* Live API sync for wired vendors */}
               {provider.apiSync && (
                 <div className="mt-1 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4">
                   <div className="flex items-center gap-2 mb-2.5">
@@ -1344,7 +1315,6 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
             </div>
           )}
 
-          {/* Sync result */}
           {syncResult && (
             <div className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 max-w-2xl">
               <div className="flex items-center gap-2 text-[13px] font-semibold text-emerald-400 mb-1.5"><Check className="w-4 h-4" /> {t('proxyProviders.result.syncedInto', { provider: syncResult.provider })}</div>
@@ -1361,14 +1331,12 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   );
 }
 
-// Local lightweight Card wrapper to avoid an extra import cycle; mirrors the
-// page's card surface.
+// Local Card wrapper to avoid an import cycle.
 function Card({ className = '', children }) {
   return <div className={className}>{children}</div>;
 }
 
-// The real vendor logo (bundled under assets/providers/) when we have one; otherwise
-// the stylized fallback mark below. `k` is the provider key, `className` sizes the box.
+// Bundled vendor logo (assets/providers/) when one exists, else the stylized fallback mark.
 export function ProviderLogo({ k, className = 'w-6 h-6' }) {
   const logo = getLogo(k);
   if (logo) {
@@ -1377,8 +1345,7 @@ export function ProviderLogo({ k, className = 'w-6 h-6' }) {
   return <ProviderIcon k={k} className={className} />;
 }
 
-// Distinctive, ORIGINAL stylized marks per provider (fallback when no bundled logo).
-// They inherit the tile's brand color via `currentColor`.
+// Original stylized fallback marks; they inherit the tile's brand color via currentColor.
 function ProviderIcon({ k, className = 'w-6 h-6' }) {
   const line = { className, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' };
   const solid = { className, viewBox: '0 0 24 24', fill: 'currentColor', stroke: 'none' };
