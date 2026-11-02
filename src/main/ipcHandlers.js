@@ -2089,6 +2089,14 @@ async function fetchProxySellerOrderPool(key, { product, proxyType, orderId, cou
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const rows = proxySellerOrderRows(data && data.items, { socks, label: `Proxy-Seller • ${label}` });
   if (!rows.length) {
+    // An order is bought for one protocol: live 2 Nov 2026, an IPv6 order with protocol
+    // "HTTPS" had port_socks "" on all 200 items. Say so instead of "no proxies".
+    const other = proxySellerOrderRows(data && data.items, { socks: !socks });
+    if (other.length) {
+      const want = socks ? 'SOCKS5' : 'HTTP';
+      const protos = [...new Set((data.items || []).map((it) => it && it.protocol).filter(Boolean).map(String))].join(', ');
+      throw new Error(`Proxy-Seller: these ${label} proxies have no ${want} port${protos ? ` (the order's protocol is ${protos})` : ''}. Pull them as ${socks ? 'HTTP' : 'SOCKS5'} instead.`);
+    }
     throw new Error(`Proxy-Seller: this account has no active ${label} proxies${oid ? ' in that order' : ''}.`);
   }
   // Honour "how many": an order can hold hundreds of addresses, and a pull of 5 imported all

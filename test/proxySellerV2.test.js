@@ -190,6 +190,28 @@ test('an IPv6 pull can filter by the numeric order id or the order number', asyn
   }
 });
 
+// Live shape, 2 Nov 2026: an IPv6 order bought as HTTPS. Ports are strings and port_socks is empty.
+const HTTPS_ONLY_ITEM = { ...IPV6_ITEM, ip: '11.55.11.0:10385', protocol: 'HTTPS', port_socks: '', port_http: '10385' };
+
+test('an HTTPS-only order pulls over HTTP with string ports', async () => {
+  const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [HTTPS_ONLY_ITEM] }) });
+  const rows = await a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', count: 5, proxyType: 'http' });
+  assert.deepEqual([rows[0].host, rows[0].port, rows[0].type], ['11.55.11.0', 10385, 'HTTP']);
+});
+
+test('a SOCKS5 pull of an HTTPS-only order names the protocol instead of "no proxies"', async () => {
+  const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [HTTPS_ONLY_ITEM] }) });
+  await assert.rejects(
+    a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', count: 5, proxyType: 'socks5' }),
+    (e) => /no SOCKS5 port/.test(e.message) && /protocol is HTTPS/.test(e.message) && /Pull them as HTTP/.test(e.message) && !/no active/.test(e.message)
+  );
+});
+
+test('an HTTP pull of a SOCKS5-only order points the other way', async () => {
+  const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [{ ...IPV6_ITEM, protocol: 'SOCKS5', port_http: '' }] }) });
+  await assert.rejects(a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', proxyType: 'http' }), /no HTTP port.*Pull them as SOCKS5/);
+});
+
 test('an order that returns nothing is reported, not imported as blank', async () => {
   const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [] }) });
   await assert.rejects(a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', orderId: 'nosuchorder' }), /no active IPv6 proxies in that order/);
