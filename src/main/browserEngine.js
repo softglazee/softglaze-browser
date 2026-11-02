@@ -747,7 +747,12 @@ function buildAntidetectFlags(profile, fpConfig, seed, timezoneId, hasProxy) {
 // --- PID TRACKING FOR ORPHAN CLEANUP ---
 const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
 
-function trackPid(pid) {
+// Each entry is { pid, dir } - the profile's user-data-dir is recorded with the PID so
+// the next start can verify a leftover PID really is THIS profile's browser before
+// killing it (orphanCleanup.js). Old files with bare numbers are still read there.
+const pidOf = (p) => (p && typeof p === 'object' ? p.pid : p);
+
+function trackPid(pid, userDataDir = null) {
   try {
     let pids = [];
     if (fsSync.existsSync(PID_FILE)) {
@@ -755,11 +760,12 @@ function trackPid(pid) {
       if (content) pids = JSON.parse(content);
     }
     if (!Array.isArray(pids)) pids = []; // Fallback if JSON is an object instead of an array
-    
-    if (!pids.includes(pid)) pids.push(pid);
+
+    pids = pids.filter((p) => pidOf(p) !== pid);
+    pids.push({ pid, dir: userDataDir ? String(userDataDir) : null });
     fsSync.writeFileSync(PID_FILE, JSON.stringify(pids));
-  } catch (e) { 
-    console.error('[PID Tracker] Failed to track PID', e.message); 
+  } catch (e) {
+    console.error('[PID Tracker] Failed to track PID', e.message);
   }
 }
 
@@ -768,14 +774,14 @@ function untrackPid(pid) {
     if (!fsSync.existsSync(PID_FILE)) return;
     const content = fsSync.readFileSync(PID_FILE, 'utf8').trim();
     if (!content) return; // Skip if file is empty
-    
+
     let pids = JSON.parse(content);
     if (!Array.isArray(pids)) return;
-    
-    pids = pids.filter(p => p !== pid);
+
+    pids = pids.filter((p) => pidOf(p) !== pid);
     fsSync.writeFileSync(PID_FILE, JSON.stringify(pids));
-  } catch (e) { 
-    console.error('[PID Tracker] Failed to untrack PID', e.message); 
+  } catch (e) {
+    console.error('[PID Tracker] Failed to untrack PID', e.message);
   }
 }
 // ----------------------------------------
@@ -3644,7 +3650,7 @@ const rootCdp = await browser.target().createCDPSession();
   const browserProcess = browser.process();
   if (browserProcess) {
     const pid = browserProcess.pid;
-    trackPid(pid);
+    trackPid(pid, userDataDir);
     // DIAGNOSTIC: a profile browser that "closes by itself" is otherwise silent
     // because every CDP path is .catch()'d and Chrome's own stderr is never read.
     // Surface (a) Chrome's stderr crash lines and (b) the real exit code/signal so

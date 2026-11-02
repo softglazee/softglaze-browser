@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const { app, BrowserWindow, shell, session, protocol, ipcMain } = require('electron');
 const { attachContextMenu } = require('./contextMenu');
+const { killTrackedOrphans } = require('./orphanCleanup');
 
 // The production renderer is an ES-module bundle. Chromium refuses to load
 // `type="module"` scripts over file:// (the null origin fails CORS) - that leaves a
@@ -88,21 +89,15 @@ process.on('uncaughtException', (err) => {
 // profile processes, so the user's personal Chrome is never touched, and it runs
 // before any profile of THIS instance launches, so it can't kill a live session.
 async function killOrphanedBrowsers() {
-  const PID_FILE = path.join(os.tmpdir(), 'softglaze_active_pids.json');
-  if (fs.existsSync(PID_FILE)) {
-    try {
-      const content = fs.readFileSync(PID_FILE, 'utf8').trim();
-      const pids = content ? JSON.parse(content) : []; // Safely parse or default to empty array
-      
-      if (Array.isArray(pids) && pids.length) {
-        console.log(`[Startup] Found ${pids.length} tracked browser process(es). Cleaning up...`);
-        pids.forEach(pid => { try { process.kill(pid, 9); } catch (e) { /* already gone */ } });
-      }
-      fs.unlinkSync(PID_FILE); // Clear the file after cleanup
-    } catch (e) {
-      console.error('[Startup] Failed to parse PID file. Resetting it.', e.message);
-      try { fs.unlinkSync(PID_FILE); } catch(err) {} // Delete corrupted file
-    }
+  // audit 2 Nov 2026: the PID-file fast path used to process.kill(pid, 9) EVERY listed
+  // PID without checking what holds it now. After a crash or power cut Windows reuses
+  // PIDs, so unrelated programs could be force-closed. Each PID is now verified first:
+  // it must be a browser executable whose command line points at that profile's data
+  // folder (see orphanCleanup.js). Unverified PIDs are left alone.
+  try {
+    await killTrackedOrphans();
+  } catch (e) {
+    console.error('[Startup] Tracked-PID cleanup failed:', e && e.message);
   }
   await killOrphanedBrowsersByCommandLine();
 }
