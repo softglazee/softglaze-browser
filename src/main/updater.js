@@ -68,37 +68,53 @@ function resolveFeed() {
 // runtime that the current executable carries a Valid signature; if not, the whole
 // updater stays disabled. Windows-only target; anything else is treated as unsigned.
 let _signedCache = null;
+// Asynchronous (it shells out to PowerShell): the check runs once, in the background,
+// so it never blocks the main process while the app starts.
 function isSignedBuild() {
-  if (_signedCache !== null) return _signedCache;
-  _signedCache = false;
-  if (process.platform !== 'win32') return _signedCache;
-  try {
+  if (_signedCache !== null) return Promise.resolve(_signedCache);
+  if (process.platform !== 'win32') { _signedCache = false; return Promise.resolve(false); }
+  return new Promise((resolve) => {
     const exe = process.execPath.replace(/'/g, "''");
     const psCmd = `(Get-AuthenticodeSignature -FilePath '${exe}').Status`;
-    const out = require('node:child_process').execFileSync(
+    require('node:child_process').execFile(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-Command', psCmd],
-      { encoding: 'utf8', timeout: 10000, windowsHide: true }
+      { encoding: 'utf8', timeout: 10000, windowsHide: true },
+      (err, out) => {
+        if (err) console.warn('[updater] signature check failed; treating build as unsigned:', err && err.message);
+        _signedCache = !err && String(out || '').trim() === 'Valid';
+        resolve(_signedCache);
+      }
     );
-    _signedCache = out.trim() === 'Valid';
-  } catch (e) {
-    console.warn('[updater] signature check failed; treating build as unsigned:', e && e.message);
-    _signedCache = false;
-  }
-  return _signedCache;
+  });
 }
 
-function initAutoUpdater(mainWindow) {
-  if (!app.isPackaged) return;
+// Why automatic updates are off in this build, so the in-app banner / "Check for
+// updates" can say it plainly instead of a bare "not active".
+function disable(reason, message) {
+  sendEvent({ status: 'disabled', disabledReason: reason, error: null, message });
+}
+
+// Wired from main.js once the window exists (audit 2 Nov 2026: it was never called, so
+// no build ever checked for updates). Every safety gate below still applies: it only
+// goes live on a packaged, Authenticode-signed build with an update feed configured.
+async function initAutoUpdater(mainWindow) {
+  if (autoUpdaterRef) return; // once per run
+  if (!app.isPackaged) { disable('dev', 'Automatic updates only run in the installed app.'); return; }
 
   // Hard gate (audit C3): never auto-update an unsigned build.
-  if (!isSignedBuild()) {
+  if (!(await isSignedBuild())) {
     console.warn('[updater] build is not code-signed - auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');
+    disable('unsigned', 'Automatic updates are off because this build is not code-signed. Download new versions from the website.');
     return;
   }
 
   const feed = resolveFeed();
-  if (!feed) { console.log('[updater] no update feed configured - auto-update disabled.'); return; }
+  if (!feed) {
+    console.log('[updater] no update feed configured - auto-update disabled.');
+    disable('no-feed', 'Automatic updates are not set up for this build. Download new versions from the website.');
+    return;
+  }
 
   let autoUpdater;
   try {
@@ -150,7 +166,7 @@ function installDownloadedUpdate() {
 
 // Manual re-check (optional; the banner can offer "Check again").
 function checkForUpdatesNow() {
-  if (!autoUpdaterRef) return { ok: false, active: false, error: 'Automatic updates are not enabled in this build.' };
+  if (!autoUpdaterRef) return { ok: false, active: false, error: lastState.message || 'Automatic updates are not enabled in this build.' };
   autoUpdaterRef.checkForUpdates().catch((e) => console.warn('[updater] check failed:', e && e.message));
   return { ok: true, active: true };
 }

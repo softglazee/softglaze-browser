@@ -344,6 +344,15 @@ try {
 
   createMainWindow();
 
+  // Automatic updates (audit 2 Nov 2026: initAutoUpdater was never called, so no build
+  // ever checked for updates). It stays off unless the build is packaged, code-signed
+  // and has an update feed - see updater.js - and runs in the background, a few seconds
+  // after start, so it never delays the window.
+  setTimeout(() => {
+    require('./updater').initAutoUpdater(mainWindow)
+      .catch((e) => console.warn('[updater] init failed:', e && e.message));
+  }, 8000);
+
   // One-time, best-effort: auto-install the recommended team extensions (download +
   // unzip) then run the one-time reconcile that force-enables any recommended
   // extension left dormant by an older `enable:false` default. Background so the
