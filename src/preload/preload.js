@@ -587,7 +587,11 @@ const api = Object.freeze({
   }),
   batch: Object.freeze({
     previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),
-    commitProfileImport: (token, options = {}) => invoke(CHANNELS.BATCH_COMMIT_PROFILE_IMPORT, { token, autoBindByCountry: Boolean(options.autoBindByCountry) }),
+    commitProfileImport: (token, options = {}) => invoke(CHANNELS.BATCH_COMMIT_PROFILE_IMPORT, {
+      token,
+      autoBindByCountry: Boolean(options.autoBindByCountry),
+      autoBindSource: options.autoBindSource === 'free' ? 'free' : 'paid'
+    }),
     exportProfiles: () => invoke(CHANNELS.BATCH_EXPORT_PROFILES),
     exportProfilesToFile: (options = {}) => invoke(CHANNELS.BATCH_EXPORT_PROFILES_FILE, options),
     onImportProgress: (callback) => {

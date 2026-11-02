@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
   ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
-  CreditCard, Link2, Plug, ClipboardList } from 'lucide-react';
+  CreditCard, Link2, Plug, ClipboardList, Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { renderFooterNodes } from '@/lib/footerText.jsx';
@@ -52,6 +52,7 @@ const SECTIONS = [
       { path: '/groups', labelKey: 'nav.groups', icon: Layers, featureKey: 'groups' },
       { path: '/proxy-providers', labelKey: 'nav.proxyProviders', icon: Plug, badgeKey: 'providers', featureKey: 'proxies' },
       { path: '/proxies', labelKey: 'nav.proxies', icon: Globe, featureKey: 'proxies' },
+      { path: '/free-proxies', labelKey: 'nav.freeProxies', icon: Gift, featureKey: 'proxies' },
       { path: '/browsers', labelKey: 'nav.browsers', icon: MonitorDown, featureKey: 'browsers' },
       { path: '/extensions', labelKey: 'nav.extensions', icon: Puzzle, featureKey: 'extensions' }
     ]
