@@ -7233,6 +7233,38 @@ async function setGlobalSettings(payload) {
   return next;
 }
 
+// Provider trial notes record the Super Admin's own vendor testing, so the IPC read leaves them out
+// and the IPC write refuses them for everyone else. Internal callers use the functions above.
+const SUPER_ONLY_GLOBAL_KEYS = Object.freeze(['proxyProviderTrials']);
+
+async function activeIsSuperAdmin() {
+  const m = await getActiveMember();
+  return Boolean(m && m.role === 'SUPER_ADMIN');
+}
+
+function withoutSuperOnlyKeys(settings) {
+  const out = { ...settings };
+  for (const k of SUPER_ONLY_GLOBAL_KEYS) delete out[k];
+  return out;
+}
+
+async function getGlobalSettingsForActor() {
+  const all = await getGlobalSettings();
+  return (await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all);
+}
+
+async function setGlobalSettingsForActor(payload) {
+  const input = requireObject(payload);
+  const isSuper = await activeIsSuperAdmin();
+  if (!isSuper && SUPER_ONLY_GLOBAL_KEYS.some((k) => Object.prototype.hasOwnProperty.call(input, k))) {
+    const err = new Error('Only the Super Admin can track provider trials.');
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+  const next = await setGlobalSettings(input);
+  return isSuper ? next : withoutSuperOnlyKeys(next);
+}
+
 // Saved proxy provider credentials, one workspace-wide Setting blob keyed by provider; secret
 // fields are DPAPI-sealed via secretStore. apiUrl is secret: a Live Proxies link carries the access code.
 const PROXY_CRED_SECRET_FIELDS = ['password', 'token', 'apiToken', 'apiUrl'];
@@ -12178,8 +12210,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.SYSTEM_HUMAN_TYPE, systemHumanType);
   registerHandler(CHANNELS.SETTINGS_GET_SCHEDULER, getProxyScheduler);
   registerHandler(CHANNELS.SETTINGS_SET_SCHEDULER, setProxyScheduler);
-  registerHandler(CHANNELS.SETTINGS_GET_GLOBAL, getGlobalSettings);
-  registerHandler(CHANNELS.SETTINGS_SET_GLOBAL, setGlobalSettings);
+  registerHandler(CHANNELS.SETTINGS_GET_GLOBAL, getGlobalSettingsForActor);
+  registerHandler(CHANNELS.SETTINGS_SET_GLOBAL, setGlobalSettingsForActor);
   registerHandler(CHANNELS.SETTINGS_GET_PROXY_POLICY, getProxyPolicy);
   registerHandler(CHANNELS.SETTINGS_SET_PROXY_POLICY, setProxyPolicy);
 
