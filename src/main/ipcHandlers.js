@@ -52,6 +52,7 @@ const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
 const profileData = require('./profileData');
+const captchaScore = require('./captchaScore');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
 const licensePolicy = require('./licensePolicy');
@@ -178,6 +179,8 @@ const CHANNELS = Object.freeze({
   TEMPLATE_DELETE: 'template:delete',
   TEMPLATE_CREATE_PROFILE: 'template:create-profile',
   PROFILE_LIVE_LEAK: 'profile:live-leak',
+  PROFILE_CAPTCHA_SCORES: 'profile:captcha-scores',
+  PROFILE_CAPTCHA_FIX: 'profile:captcha-fix',
   PROFILE_ACTIVITY: 'profile:activity',
   // Softglaze Premium
   PROFILE_GET_2FA_TOKEN: 'profile:get-2fa-token',
@@ -6807,6 +6810,119 @@ async function liveProfileLeak(payload) {
   return { profileId: id, running: true, env, webrtcIps, exit, checks, summary: score.summary, score };
 }
 
+// ---- CAPTCHA score ----
+
+const HOST_OS_LABEL = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' };
+
+// Size of a profile's cookie store (plus its write-ahead log), or null when it has never been opened.
+async function profileCookieBytes(profile, root) {
+  if (!profile.dataDirName) return null;
+  const files = profile.browserCore === 'Firefox'
+    ? [path.join(root, 'firefox', profileData.firefoxDirName(profile.dataDirName), 'cookies.sqlite')]
+    : [path.join(root, profile.dataDirName, 'Default', 'Network', 'Cookies'), path.join(root, profile.dataDirName, 'Default', 'Cookies')];
+  let total = null;
+  for (const file of files) {
+    for (const suffix of ['', '-wal', '-journal']) {
+      try { total = (total || 0) + (await fs.stat(file + suffix)).size; } catch (e) { /* not there */ }
+    }
+  }
+  return total;
+}
+
+// Everything the score needs besides the profile row, for a batch of rows (with their proxy).
+async function captchaContexts(db, rows) {
+  const proxyIds = [...new Set(rows.map((r) => r.proxyId).filter(Boolean))];
+  const usage = new Map();
+  if (proxyIds.length) {
+    const users = await db.profile.findMany({ where: { proxyId: { in: proxyIds }, deletedAt: null }, select: { proxyId: true } });
+    for (const u of users) usage.set(u.proxyId, (usage.get(u.proxyId) || 0) + 1);
+  }
+  const settings = (await getGlobalSettings().catch(() => ({}))).browser || {};
+  const root = path.resolve(getRuntimeConfig().profileRoot);
+  const hostOs = HOST_OS_LABEL[process.platform] || 'Linux';
+  const out = new Map();
+  for (const r of rows) {
+    out.set(r.id, {
+      proxy: r.proxy,
+      sharedWith: r.proxyId ? Math.max(0, (usage.get(r.proxyId) || 1) - 1) : 0,
+      settings,
+      hostOs,
+      cookieBytes: await profileCookieBytes(r, root)
+    });
+  }
+  return out;
+}
+
+// Scores up to 500 profiles from stored data only (no network), for the Profiles list.
+async function captchaScores(payload) {
+  const input = requireObject(payload);
+  const ids = parseIdArray(input.ids).slice(0, 500);
+  if (!ids.length) return { scores: {} };
+  const { allowed } = await partitionAccessibleProfileIds(ids);
+  const db = getPrisma();
+  const rows = await db.profile.findMany({ where: { id: { in: allowed } }, include: { proxy: true } });
+  const contexts = await captchaContexts(db, rows);
+  const scores = {};
+  for (const r of rows) scores[r.id] = captchaScore.scoreProfile(r, contexts.get(r.id));
+  return { scores };
+}
+
+// Applies one fix from a CAPTCHA score. Profile fixes need edit rights on that profile; the
+// third-party cookie switch is workspace-wide, so only the Owner may flip it.
+async function captchaFix(payload) {
+  const input = requireObject(payload);
+  const action = String(input.action || '');
+  if (action === 'allow-3p-cookies') {
+    await requireOwnerOrSuper('change workspace browser settings');
+    await setGlobalSettings({ browser: { blockThirdPartyCookies: false } });
+    await logAudit('settings.third-party-cookies', { detail: 'Allowed from the CAPTCHA score' });
+    return { ok: true, scope: 'workspace' };
+  }
+  await requirePermission('profiles.edit');
+  const id = parseId(input.id);
+  await assertCanAccessProfile(id, { requireEdit: true });
+  const db = getPrisma();
+  const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
+  if (!profile) throw new Error('Profile not found.');
+
+  const fields = captchaScore.PROFILE_FIELD_FIXES[action];
+  if (fields) {
+    await db.profile.update({ where: { id }, data: fields });
+    return { ok: true };
+  }
+  if (action === 'check-proxy') {
+    if (!profile.proxy) throw new Error('This profile has no proxy to check.');
+    await assertCanAccessProxy(profile.proxy.id);
+    const p = profile.proxy;
+    const result = await deepCheckProxy({ type: p.type, host: p.host, port: p.port, username: p.username, password: p.password });
+    await persistProxyHealth(db, p.id, result);
+    return { ok: Boolean(result.success), error: result.success ? null : (result.error || 'The proxy did not answer.') };
+  }
+  if (action === 'swap-proxy' || action === 'assign-proxy') {
+    // Only proxies no other profile uses, from the pool this member may use, and only one that
+    // scores better than what the profile has now.
+    const candidates = await db.proxy.findMany({ where: await scopedProxyWhere({ lastStatus: 'ok', profiles: { none: {} } }) });
+    if (!captchaScore.pickReplacementProxy(candidates, profile.proxy)) {
+      const e = new Error('No spare proxy: every working, clean proxy in your pool is already used by a profile. Add or check more proxies, then try again.');
+      e.code = 'NO_SPARE_PROXY';
+      throw e;
+    }
+    const ctx = (await captchaContexts(db, [profile])).get(id);
+    const best = captchaScore.bestReplacement(profile, ctx, candidates);
+    if (!best) {
+      const e = new Error('No better proxy: none of your spare proxies would lower this profile\'s CAPTCHA risk.');
+      e.code = 'NO_BETTER_PROXY';
+      throw e;
+    }
+    await db.profile.update({
+      where: { id },
+      data: { ...best.profileFields, proxyId: best.proxy.id, proxyInfoString: buildProxyInfoString(best.proxy), systemProxyBehavior: 'PROFILE_PROXY' }
+    });
+    return { ok: true, proxyName: best.proxy.name, score: best.score };
+  }
+  throw new Error('Unknown fix.');
+}
+
 // ---- Proxy health: persistence and scheduler ----
 
 // Build a human geo label from a check result, e.g. "US Kirkland, Washington 98033".
@@ -6839,6 +6955,9 @@ async function persistProxyHealth(db, id, result) {
     lastCity: result.city || null,
     lastCheckedAt: new Date()
   };
+  // The exit network's owner tells a datacenter IP from a home one (CAPTCHA score). A failed check
+  // keeps the last known value.
+  if (result.success && result.isp) data.lastIsp = String(result.isp).slice(0, 200);
   // Store the DNSBL verdict only when the deep check reached it, so the blacklisted/clean filter
   // survives a reload.
   if (result.blacklist && result.blacklist.checked) data.lastBlacklisted = !!result.blacklist.listed;
@@ -12048,6 +12167,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.TEMPLATE_DELETE, deleteTemplate);
   registerHandler(CHANNELS.TEMPLATE_CREATE_PROFILE, createProfileFromTemplate);
   registerHandler(CHANNELS.PROFILE_LIVE_LEAK, liveProfileLeak);
+  registerHandler(CHANNELS.PROFILE_CAPTCHA_SCORES, captchaScores);
+  registerHandler(CHANNELS.PROFILE_CAPTCHA_FIX, captchaFix);
   registerHandler(CHANNELS.PROFILE_ACTIVITY, listActivity);
   registerHandler(CHANNELS.PROFILE_GET_2FA_TOKEN, getProfile2faToken);
   registerHandler(CHANNELS.PROFILE_BULK_SYNCHRONIZE, bulkSynchronize);

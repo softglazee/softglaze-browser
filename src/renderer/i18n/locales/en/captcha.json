@@ -1,0 +1,128 @@
+{
+  "badgeTitle": "CAPTCHA risk {{score}}/100. Click for the reasons and fixes.",
+  "title": "CAPTCHA score",
+  "subtitle": "How likely sites are to challenge this profile, and what lowers it",
+  "outOf100": "of 100",
+  "level": {
+    "low": "Low risk",
+    "some": "Some risk",
+    "high": "High risk",
+    "veryHigh": "Very high risk"
+  },
+  "issues_zero": "No issues found",
+  "issues_one": "1 issue",
+  "issues_other": "{{count}} issues",
+  "fixable_one": "Fix all handles 1",
+  "fixable_other": "Fix all handles {{count}}",
+  "leakTest": "Leak test",
+  "leakTestTitle": "Open the detailed leak check, including a live test of the running profile",
+  "loadFailed": "Could not score this profile.",
+  "fixAll": "Fix all",
+  "fixAllTitle": "Apply every fix that changes only this profile's settings or proxy",
+  "rescore": "Score again",
+  "done": "Done",
+  "runningNote": "This profile is open. Changes apply the next time it launches.",
+  "adviceOnly": "Change this in the profile editor; a fix here would change the device sites already know.",
+  "status": {
+    "pass": "OK",
+    "warn": "Risk",
+    "fail": "High risk"
+  },
+  "fix": {
+    "assign-proxy": "Give it a spare proxy",
+    "swap-proxy": "Switch to a spare proxy",
+    "check-proxy": "Check the proxy now",
+    "tz-auto": "Use the proxy's timezone",
+    "lang-auto": "Use the proxy's language",
+    "geo-auto": "Use the proxy's location",
+    "webrtc-safe": "Set WebRTC to Forward",
+    "allow-3p-cookies": "Allow third-party cookies",
+    "warm-up": "Warm it up"
+  },
+  "result": {
+    "swapped": "Now using {{name}}.",
+    "checked": "Proxy checked.",
+    "checkFailed": "The proxy did not pass: {{error}}",
+    "warming": "Warm-up started: the profile opens and browses a few popular sites. Follow it on the Automation page.",
+    "cookies": "Third-party cookies are now allowed for every profile.",
+    "applied": "Done."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Proxy health",
+    "blocklist": "Spam blocklists",
+    "freeProxy": "Free proxy",
+    "ipType": "IP type",
+    "sharedProxy": "Shared proxy",
+    "timezone": "Timezone",
+    "language": "Language",
+    "geolocation": "Location",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Third-party cookies",
+    "history": "Browsing history",
+    "device": "Device",
+    "osMismatch": "Operating system"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "Uses {{name}}.",
+      "warn": "No proxy: this profile uses your own connection, which every profile without a proxy shares."
+    },
+    "proxyHealth": {
+      "pass": "Passed its last check.",
+      "fail": "Failed its last check, so pages time out or show errors.",
+      "never": "Never checked, so its health and blocklist status are unknown.",
+      "stale": "Last checked {{days}} days ago."
+    },
+    "blocklist": {
+      "pass": "Not on any checked spam blocklist.",
+      "warn": "Not checked against spam blocklists yet.",
+      "fail": "The exit IP is on a spam blocklist. Google and Cloudflare challenge listed IPs far more often."
+    },
+    "freeProxy": {
+      "fail": "A free public proxy. Most are flagged, so expect frequent CAPTCHAs."
+    },
+    "ipType": {
+      "pass": "Home or mobile network{{isp}}.",
+      "warn": "Datacenter IP{{isp}}. Sites challenge hosting-company IPs far more than home ones."
+    },
+    "sharedProxy": {
+      "msg_one": "1 other profile uses this proxy, so they share one IP and can be linked.",
+      "msg_other": "{{count}} other profiles use this proxy, so they share one IP and can be linked."
+    },
+    "timezone": {
+      "pass": "Follows the proxy's IP.",
+      "warn": "Set by hand ({{zone}}), so it may not match the proxy.",
+      "fail": "Uses this computer's timezone, which does not match the proxy's country."
+    },
+    "language": {
+      "pass": "Matches the proxy's country.",
+      "warn": "Language region {{region}} does not match the proxy's country {{country}}.",
+      "unverified": "Set by hand ({{lang}}); the proxy's country is not known yet, so they cannot be compared."
+    },
+    "geolocation": {
+      "pass": "Follows the proxy's IP, or is blocked.",
+      "warn": "Set by hand, so it may not match the proxy."
+    },
+    "webrtc": {
+      "pass": "Mode {{mode}} keeps your real IP hidden.",
+      "warn": "WebRTC is disabled, which few real browsers do.",
+      "fail": "Set to Real, which shows your real IP behind the proxy."
+    },
+    "thirdPartyCookies": {
+      "pass": "Allowed, as in normal Chrome.",
+      "warn": "Blocked for every profile in Settings. reCAPTCHA and hCaptcha rely on them."
+    },
+    "history": {
+      "pass": "Has browsing history and cookies.",
+      "warn": "Almost no cookies or history yet. Sites trust a profile that has been used."
+    },
+    "device": {
+      "warn": "The graphics card (WebGL) may not fit this device or system.",
+      "fail": "The graphics card (WebGL) does not fit this device or system."
+    },
+    "osMismatch": {
+      "warn": "Claims {{claimed}} but runs on {{host}}; fonts and other details can show the real system."
+    }
+  }
+}
