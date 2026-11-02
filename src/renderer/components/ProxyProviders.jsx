@@ -1162,13 +1162,13 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                   {!provider.geoSync.noCountry && provider.geoSync.count && (
                     <div>
                       <label className={labelCls}>{t('proxyProviders.geo.howMany')}</label>
-                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={provider.geoSync.list ? t('proxyProviders.geo.howManyAll', 'All') : '5'} title={provider.geoSync.list ? t('proxyProviders.geo.howManyListTitle') : t('proxyProviders.geo.howManyCapTitle', 'How many proxies to add. Each provider has its own maximum per pull (usually 100).')} />
+                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} className={inputCls + ' font-mono'} placeholder={provider.geoSync.list ? t('proxyProviders.geo.howManyAll', 'All') : '5'} title={provider.geoSync.list ? t('proxyProviders.geo.howManyListTitle') : t('proxyProviders.geo.howManyCapTitle', 'How many proxies to add. Each provider has its own maximum per pull (usually 100).')} />
                     </div>
                   )}
                   {provider.geoSync.noCountry && provider.geoSync.count && (
                     <div>
                       <label className={labelCls}>{t('proxyProviders.geo.howMany')}</label>
-                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.howManyAll', 'All')} title={t('proxyProviders.geo.howManyListTitle', 'How many of the proxies on your account to import. Leave blank for all.')} />
+                      <input inputMode="numeric" value={form.count} onChange={(e) => set('count', e.target.value.replace(/[^0-9]/g, '').slice(0, 4))} className={inputCls + ' font-mono'} placeholder={t('proxyProviders.geo.howManyAll', 'All')} title={t('proxyProviders.geo.howManyListTitle', 'How many of the proxies on your account to import. Leave blank for all.')} />
                     </div>
                   )}
                   {provider.geoSync.proto && (

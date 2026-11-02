@@ -1674,6 +1674,8 @@ function randSession(len = 8) {
 // Gateways that mint sessions locally (the username carries the session) have no vendor-side limit
 // on how many a pull makes, so they share this cap; list APIs use the vendor's documented maximum.
 const MINTED_PULL_MAX = 1000;
+// Proxies a list API reports as already owned (dedicated, static or ported lists).
+const LIST_IMPORT_MAX = 5000;
 
 function clampPoolCount(value, def = 5, max = 500) {
   const n = Number.parseInt(String(value), 10);
@@ -2625,7 +2627,8 @@ const AIRPROXY_API = 'https://airproxy.io/api/proxy';
 function limitListRows(rows, count) {
   const raw = String(count == null ? '' : count).trim();
   if (!raw || !/^\d+$/.test(raw) || Number(raw) <= 0) return rows;
-  return rows.slice(0, clampPoolCount(raw, rows.length, 500));
+  // A list import is bounded by what the account owns; the cap only guards a runaway count.
+  return rows.slice(0, clampPoolCount(raw, rows.length, LIST_IMPORT_MAX));
 }
 
 async function fetchAirproxyPool({ token, count }) {
