@@ -76,7 +76,6 @@ module.exports = {
   FORCELIST_KEY,
   CWS_UPDATE_URL,
   parseRegValues,
-  hasSubkeys,
   ownedForcelistValues,
   removeLegacyExtensionForcelist
 };

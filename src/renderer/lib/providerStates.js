@@ -9,7 +9,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const DAY = 86400000;
 
-export function kindOf(p) {
+function kindOf(p) {
   if (p.unavailable) return 'unavailable';
   if (p.tokenSync) return 'tokenSync';
   if (p.geoSync) return 'geoPull';

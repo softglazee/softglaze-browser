@@ -49,4 +49,4 @@ async function wipeProfileData(root, name, { rm = fsp.rm } = {}) {
   return { clean: leftover.length === 0, leftover };
 }
 
-module.exports = { firefoxDirName, profileDataPaths, folderExists, uniqueDataDirName, wipeProfileData };
+module.exports = { firefoxDirName, profileDataPaths, uniqueDataDirName, wipeProfileData };

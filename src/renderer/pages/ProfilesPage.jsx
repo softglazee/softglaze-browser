@@ -143,8 +143,6 @@ const generateCpuCores = () => {
 const generateRamGb = (cores) => (Number(cores) >= 12 ? pickOne(['16', '32']) : pickOne(['8', '16']));
 
 // --- DYNAMIC DATA GENERATORS & CONSTANTS ---
-const CHROME_VERSIONS = ['Auto', ...Array.from({ length: 30 }, (_, i) => String(149 - i))];
-const FIREFOX_VERSIONS = ['Auto', ...Array.from({ length: 32 }, (_, i) => String(151 - i))];
 
 // iOS is deliberately NOT offered. Every real iOS browser is WebKit and this engine is
 // Blink, so an iOS profile is betrayed by JS-engine behaviour, CSS support and missing
@@ -374,11 +372,6 @@ const initialProfileData = {
   randomFingerprint: false,
 };
 
-const MOCK_SAVED_PROXIES = [
-  { id: '1', name: 'US Rotating - SmartProxy', host: 'proxy.smartproxy.com', port: '10000', tags: 'US, Unused' },
-  { id: '2', name: 'UK Datacenter - Oxylabs', host: 'uk.oxylabs.io', port: '8000', tags: 'UK, Unused' }
-];
-
 // Bulk-tag dialog for the current selection. Markup is unchanged from its former
 // inline form; useDialog adds Escape/focus-trap/scroll-lock without altering it.
 function TagModal({ onClose, count, tagInput, setTagInput, allTags, bulkBusy, onAssign }) {
@@ -541,7 +534,6 @@ export default function ProfilesPage() {
   // The search the CURRENT `profiles` list was loaded for. Search is server-side, so the
   // selection prune must run when the new rows arrive, not when the input changes.
   const [loadedSearch, setLoadedSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   
@@ -659,27 +651,16 @@ export default function ProfilesPage() {
   const isEditing = Boolean(pd.id);
   const tabs = ['General', 'Proxy', 'Platform', 'Fingerprint', 'Advanced']; 
 
-  const currentOsObj = OS_PLATFORMS.find(o => o.id === pd.os) || OS_PLATFORMS[0];
   // Host OS comes from preload as a plain value (no IPC). Warn when the profile
   // claims a different OS than the machine it runs on - the generator defaults to
   // the host for exactly this reason.
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
   const crossOsWarning = Boolean(pd.os) && pd.os !== hostOs;
-  // Prefer the real installed Chrome majors (newest first) for Chromium; fall
-  // back to the static list when none are detected on disk.
-  const installedMajors = useMemo(() => {
-    const set = new Set(installedBrowsers.map((b) => String(b.major)));
-    return ['Auto', ...Array.from(set).sort((a, b) => Number(b) - Number(a))];
-  }, [installedBrowsers]);
-  const browserVersionsList = pd.browserCore === 'Chromium'
-    ? (installedMajors.length > 1 ? installedMajors : CHROME_VERSIONS)
-    : FIREFOX_VERSIONS;
   const filteredUAGroups = USER_AGENT_GROUPS.filter(g => g.platforms.includes(pd.os));
 
   const loadSeq = useRef(0);
   const loadData = useCallback(async () => {
     const seq = ++loadSeq.current;
-    setLoading(true);
     try {
       const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
         softglazeApi.profiles.list({ search }),
@@ -702,7 +683,6 @@ export default function ProfilesPage() {
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
     } catch (err) { if (seq === loadSeq.current) setError(err.message); }
-    finally { if (seq === loadSeq.current) setLoading(false); }
   }, [search]);
 
   // audit: debounce the search-driven reload (each keystroke fired 7 IPC calls with no

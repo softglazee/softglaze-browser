@@ -59,4 +59,4 @@ function tenantConfig() { if (!cached) cached = load(); return cached; }
 // Test seam: drop the memoized value so a test can re-read after changing env.
 function _reset() { cached = null; }
 
-module.exports = { tenantConfig, _reset, isPackagedApp };
+module.exports = { tenantConfig, _reset };

@@ -388,13 +388,10 @@ async function removeRetiredExtensions({ db = getPrisma(), root = extensionsRoot
 module.exports = {
   assertSafeZipEntry,
   assertNoLinksUnder,
-  CHROME_ID_RE,
   RECOMMENDED_EXTENSIONS,
   RETIRED_EXTENSION_IDS,
   SOFTGLAZE_RECORDER_ID,
-  extensionsRoot,
   parseChromeId,
-  downloadAndExtract,
   installById,
   seedRecommendedExtensions,
   reconcileRecommendedExtensions,

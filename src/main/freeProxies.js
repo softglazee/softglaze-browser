@@ -296,12 +296,9 @@ function fetchTextDirect(url, { timeoutMs = 15000, maxBytes = 4 * 1024 * 1024, r
 module.exports = {
   fetchTextDirect,
   SOURCES,
-  PROTOCOLS,
   isPublicIPv4,
   parseProxyLines,
   parseGeonode,
-  collectCandidates,
   revealsClient,
-  checkCandidate,
   harvestFreeProxies
 };

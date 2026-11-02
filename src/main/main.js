@@ -1,7 +1,6 @@
 'use strict';
 const path = require('node:path');
 const fs = require('node:fs');
-const os = require('node:os');
 const { app, BrowserWindow, shell, session, protocol, ipcMain } = require('electron');
 const { attachContextMenu } = require('./contextMenu');
 const { killTrackedOrphans } = require('./orphanCleanup');
@@ -139,10 +138,6 @@ function killOrphanedBrowsersByCommandLine() {
 
 function getPreloadPath() {
   return path.join(__dirname, '../preload/preload.js');
-}
-
-function getProductionIndexPath() {
-  return path.join(__dirname, '../../dist/index.html');
 }
 
 // Resolve the SoftGlaze app icon for the BrowserWindow (taskbar + title bar).

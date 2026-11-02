@@ -17,8 +17,6 @@ const fs = require('node:fs');
 const P = { WIN: 'win32', MAC: 'darwin', LINUX: 'linux' };
 
 function isWindows(platform = process.platform) { return platform === P.WIN; }
-function isMac(platform = process.platform) { return platform === P.MAC; }
-function isLinux(platform = process.platform) { return platform === P.LINUX; }
 
 // ---------------------------------------------------------------------------
 // Chrome for Testing (browserDownloader.js + browserEngine.js)
@@ -48,12 +46,6 @@ function chromeBinaryRel(platform = process.platform) {
 // e.g. 'chrome-win64/chrome.exe'. Used for install-completeness checks.
 function chromeBinaryFromInstallDir(platform = process.platform, arch = process.arch) {
   return `${chromeExtractDir(platform, arch)}/${chromeBinaryRel(platform)}`;
-}
-
-// The bare on-disk name of an anti-detect / CfT Chrome binary (no path),
-// used when scanning a folder for a loose binary.
-function chromeExeName(platform = process.platform) {
-  return platform === P.WIN ? 'chrome.exe' : 'chrome';
 }
 
 // Naming for our managed CfT install dirs: '<cftPlatform>-<version>'. Existing
@@ -91,13 +83,6 @@ function realChromeCandidates(platform = process.platform) {
     path.join(pfx86, 'Google/Chrome/Application/chrome.exe'),
     local ? path.join(local, 'Google/Chrome/Application/chrome.exe') : null
   ].filter(Boolean);
-}
-
-// Executable names to look up on PATH (linux/mac) when nothing else resolves.
-function chromePathLookupNames(platform = process.platform) {
-  if (platform === P.WIN) return [];
-  if (platform === P.MAC) return ['google-chrome', 'chromium'];
-  return ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'];
 }
 
 // fingerprint-chromium (ungoogled-chromium fork) extracts to different layouts
@@ -199,21 +184,16 @@ function firefoxSystemCandidates(platform = process.platform) {
 module.exports = {
   P,
   isWindows,
-  isMac,
-  isLinux,
   // Chrome
   cftPlatform,
   chromeExtractDir,
   chromeBinaryRel,
   chromeBinaryFromInstallDir,
-  chromeExeName,
   chromeInstallDirName,
   CHROME_INSTALL_DIR_RE,
   realChromeCandidates,
-  chromePathLookupNames,
   findFpChromiumBinary,
   // Firefox
-  firefoxMozDir,
   firefoxArtifactName,
   firefoxInstallerUrl,
   firefoxSha256Key,

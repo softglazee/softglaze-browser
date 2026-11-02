@@ -4,7 +4,6 @@ const fsSync = require('node:fs'); // Added for synchronous PID tracking
 const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const http = require('node:http');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGenerator');
@@ -4471,14 +4470,6 @@ function syncCaptureClientScript(rpc) {
   } catch (e) { /* ignore */ }
 }
 
-function stopSyncGroup(masterSessionId) {
-  const group = syncGroups.get(String(masterSessionId));
-  if (!group) return { stopped: false };
-  group.dispose().catch(() => {});
-  syncGroups.delete(String(masterSessionId));
-  return { stopped: true };
-}
-
 // Close a browser but NEVER hang the caller (audit: close() had no timeout and
 // never force-killed). A wedged Chrome can leave close() pending forever, which
 // would block app quit. Race close() against a timeout; if it doesn't finish,
@@ -5207,7 +5198,6 @@ function listSessionPids() {
 }
 
 module.exports = {
-  DEFAULT_PROFILE_ROOT,
   PUPPETEER_DEFAULT_ARGS_TO_DROP,
   // Shared with the Firefox engine (and tests): how a profile browser ended.
   classifyBrowserExit,
@@ -5259,12 +5249,10 @@ module.exports = {
   normalizeMacroSteps,
   VALID_MACRO_STEPS,
   MACRO_STEP_FIELDS,
-  MACRO_STEP_ENUMS,
   startMacroRecording,
   stopMacroRecording,
   humanType,
   launchSynchronizedSessions,
-  stopSyncGroup,
   exportSessionCookies,
   importSessionCookies,
   liveLeakTest,
@@ -5276,15 +5264,9 @@ module.exports = {
   // bundle. Tests assert the coherence guard clamps the reported major to the launched
   // binary (guarding against the "reported 149 vs real 150+" TLS mismatch).
   buildUserAgentBundle,
-  // Debug hook (used by test harnesses) - returns the live puppeteer Browser.
-  // Test hook: the isolated-world autofill attach + its password probes.
-  __attachPersonaAutofill: attachPersonaAutofill,
+  // Test hooks for the autofill password probes.
   __personaPickPasswordTarget: personaPickPasswordTarget,
   __personaPrepareTarget: personaPrepareTarget,
   __personaSetSelect: personaSetSelect,
-  __siteKeyOf: siteKeyOf,
-  __browserFor: (sessionId) => {
-    const s = activeSessions.get(String(sessionId));
-    return s ? s.browser : null;
-  }
+  __siteKeyOf: siteKeyOf
 };

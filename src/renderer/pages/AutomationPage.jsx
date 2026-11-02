@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Wand2, Bot, Flame, History, Plus, Loader2, Play, Pause, Square, X, Search,
-  Trash2, Clock, CheckCircle2, Workflow, Sparkles, GripVertical, Pencil, MousePointer2,
+  Trash2, Clock, CheckCircle2, Workflow, GripVertical, Pencil, MousePointer2,
   Layers, FileSpreadsheet, XCircle, AlertTriangle, Save, Copy, Download, Check, Eraser
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
@@ -75,7 +75,6 @@ const MACRO_STEP_TYPES = [
   { type: 'check', label: 'Check / uncheck', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="terms"]' }, { key: 'state', label: 'State', kind: 'choice', options: ['checked', 'unchecked'] }] },
   { type: 'clear', label: 'Clear field', fields: [{ key: 'selector', label: 'Selector', placeholder: 'input[name="email"]' }] }
 ];
-const STEP_LABEL = Object.fromEntries(MACRO_STEP_TYPES.map((s) => [s.type, s.label]));
 
 function defaultStep(type) {
   const step = { type };

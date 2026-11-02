@@ -103,4 +103,4 @@ async function killTrackedOrphans({ pidFile = PID_FILE, execFile = require('node
   return { killed, skipped: entries.length - killed.length };
 }
 
-module.exports = { PID_FILE, parseTrackedPids, selectVerifiedPids, queryProcesses, killTrackedOrphans };
+module.exports = { PID_FILE, parseTrackedPids, selectVerifiedPids, killTrackedOrphans };

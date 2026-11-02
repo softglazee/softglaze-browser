@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
-  Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
+  ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
   CreditCard, Link2, Plug, ClipboardList } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';

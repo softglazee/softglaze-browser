@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MonitorDown, Download, Check, Loader2, RefreshCcw, Cloud, Globe, Flame, HardDrive, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Download, Check, Loader2, RefreshCcw, Cloud, Globe, Flame, HardDrive, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 

@@ -44,7 +44,6 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [exportContent, setExportContent] = useState('');
-  const [exportCount, setExportCount] = useState(null);
   const [exportHealth, setExportHealth] = useState(null);
   const [importHealth, setImportHealth] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -56,11 +55,10 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
   const reset = () => { setError(''); setInfo(''); };
 
   const handleExport = async () => {
-    reset(); setBusy(true); setExportContent(''); setExportCount(null); setExportHealth(null);
+    reset(); setBusy(true); setExportContent(''); setExportHealth(null);
     try {
       const res = await softglazeApi.profiles.exportCookies(profileId, format);
       setExportContent(res.content);
-      setExportCount(res.count);
       setExportHealth(res.health || null);
       setInfo(t('cookieManager.infoExported', { count: res.count }));
     } catch (err) { setError(err.message); }

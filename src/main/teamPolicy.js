@@ -110,13 +110,10 @@ function lockBlocks(existing, requesterMemberId, liveSessionIds, now = Date.now(
 }
 
 module.exports = {
-  SEATS_BY_TYPE,
-  DEFAULT_SEATS,
   seatsForLicense,
   activeSeatIds,
   seatUsage,
   csvEscape,
-  ACTIVITY_CSV_COLUMNS,
   activityToCsv,
   lockBlocks,
   PENDING_LOCK,

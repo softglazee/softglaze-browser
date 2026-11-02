@@ -568,7 +568,6 @@ module.exports = {
   initResumableState,
   CHROME_ROOT,
   FP_CHROMIUM_ROOT,
-  fpChromiumInstalled,
   startFpChromiumDownload,
   getFpChromiumStatus,
   FP_CHROMIUM_ASSET,

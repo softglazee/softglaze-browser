@@ -17,7 +17,6 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const { t } = useTranslation('cmpModalsC');
   const [count, setCount] = useState(5);
   const [baseName, setBaseName] = useState('Profile');
-  const [startIndex, setStartIndex] = useState(1);
   const [groupId, setGroupId] = useState('ungrouped');
   const [newGroupName, setNewGroupName] = useState('');
   const [os, setOs] = useState(osPlatforms[0]?.id || 'Windows');
@@ -41,7 +40,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     { id: 'pool', label: t('quickGenerate.proxyModePool', { count: proxies.length }), icon: Server },
     { id: 'paste', label: t('quickGenerate.proxyModePaste'), icon: ListPlus }
   ];
-  const start = Number(startIndex) || 1;
+  const start = 1;
   const pad = (x) => String(x).padStart(3, '0');
 
   // Distinct providers present in the pool (for "create from <provider> proxies").

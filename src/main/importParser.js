@@ -558,7 +558,6 @@ function parseDataRows(filePath) {
 module.exports = {
   parseWorkbookFile,
   parseDataRows,
-  parseBooleanInt,
   parseSystemProxyBehavior,
   BROWSER_CORE,
   normalizeBrowserCore,

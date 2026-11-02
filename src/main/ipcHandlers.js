@@ -46,7 +46,7 @@ const totp = require('./totp');
 const permissions = require('./permissions');
 const rbacPolicy = require('./rbacPolicy');
 const payments = require('./payments');
-const { parseWorkbookFile, parseDataRows, parseBooleanInt, parseSystemProxyBehavior, BROWSER_CORE, normalizeBrowserCore, toStoredBrowserCore } = require('./importParser');
+const { parseWorkbookFile, parseDataRows, parseSystemProxyBehavior, BROWSER_CORE, normalizeBrowserCore, toStoredBrowserCore } = require('./importParser');
 const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSignature, CHROME_VERSIONS } = require('./fingerprintGenerator');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
@@ -68,7 +68,7 @@ const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
-const { SECRET_MASK, maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
+const { maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, maskProxySellerKey, proxySellerListItems, proxySellerListGeo, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
@@ -86,14 +86,14 @@ const {
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
   ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
   medianMs,
-  twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
+  twoExtractBaseUser, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
   coroniumRows,
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
   proxyBonanzaRows,
-  proxy6Page, proxy6ErrorMessage,
+  proxy6Page,
   catProxiesIspRows, catProxiesDatacenterRows
 } = require('./proxyVendorUtils');
 
@@ -7243,7 +7243,6 @@ function isPrivateIp(ip) {
 
 async function liveProfileLeak(payload) {
   const input = requireObject(payload);
-  const db = getPrisma();
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
   const data = await liveLeakTest(String(id));

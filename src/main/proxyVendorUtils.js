@@ -1616,7 +1616,6 @@ function catProxiesDatacenterRows(json, { socks = false } = {}) {
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
-  IPBURGER_MAX_SESSTIME,
   proxy302Token,
   proxy302CountryId,
   proxy302Row,
@@ -1630,7 +1629,6 @@ module.exports = {
   pickGeoConsensus,
   mobileProxySpaceRows,
   proxySolutionsPage,
-  camelPlace,
   rapidProxyUsername,
   NOVADA_ZONES,
   novadaUsername,
@@ -1667,10 +1665,8 @@ module.exports = {
   marsProxiesLocation,
   parseMarsProxiesList,
   nodeMavenTtl,
-  nodeMavenToken,
   nodeMavenUsername,
   froxyType,
-  froxyField,
   froxyPassword,
   packetStreamPassword, packetStreamCountry,
   airproxyRows,
@@ -1680,8 +1676,8 @@ module.exports = {
   parseProxidizePerProxy,
   proxidizeGeoToken,
   proxidizePerGbUsername,
-  PROXMINT_PRODUCTS, proxmintUsername, proxmintPickProduct,
-  DATABAY_ZONES, databayUsername,
+  proxmintUsername, proxmintPickProduct,
+  databayUsername,
   ipfoxyUsername, mangoProxyRows,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
@@ -1690,6 +1686,6 @@ module.exports = {
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
   proxyBonanzaRows,
-  proxy6Page, proxy6ErrorMessage,
-  CATPROXIES_DATACENTER_PORTS, catProxiesIspRows, catProxiesDatacenterRows
+  proxy6Page, 
+  catProxiesIspRows, catProxiesDatacenterRows
 };

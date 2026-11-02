@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Folder, FolderOpen, Plus, Edit2, Trash2,
+  Folder, Plus, Edit2, Trash2,
   Search, Monitor, Check, X, Tag as TagIcon, Loader2, ChevronDown
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
-import { Card, CardContent } from '@/components/ui/Card.jsx';
+import { Card } from '@/components/ui/Card.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 

@@ -16,7 +16,6 @@
 const net = require('node:net');
 
 // SOCKS5 reply codes.
-const REP_OK = 0x00;
 const REP_GENERAL_FAIL = 0x01;
 const REP_CMD_NOT_SUPPORTED = 0x07;
 const REP_ATYP_NOT_SUPPORTED = 0x08;

@@ -13,8 +13,3 @@ export function formatDateTime(value) {
     return String(value);
   }
 }
-
-export function safeText(value, fallback = '-') {
-  if (value === null || value === undefined || value === '') return fallback;
-  return String(value);
-}

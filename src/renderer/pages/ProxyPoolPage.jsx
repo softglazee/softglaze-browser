@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, GripVertical, FolderInput, AlertTriangle, Zap, Turtle } from 'lucide-react';
+import { Activity, Copy, Check, Edit, Loader2, Plus, RefreshCcw, Search, Trash2, Upload, ChevronDown, X, Globe, Wifi, ShieldCheck, ShieldOff, Server, Boxes, FolderPlus, Folder, Tag, FolderInput, AlertTriangle, Zap, Turtle } from 'lucide-react';
 
 // Live-checker log level → colour, health grade → colour, and a short duration format.
 const CHECK_LEVEL_COLOR = { INFO: 'text-sky-300', SUCCESS: 'text-emerald-400', WARN: 'text-amber-400', ERROR: 'text-red-400' };
@@ -14,7 +14,7 @@ function fmtDuration(ms) {
 
 import EmptyState from '@/components/EmptyState.jsx';
 import { AreaChart } from '@/components/charts/Charts.jsx';
-import { Clock, BarChart3, History, RotateCw, ArrowUpRight } from 'lucide-react';
+import { Clock, History, RotateCw, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import FreeProxiesDialog from '@/components/FreeProxiesDialog.jsx';
 import { Gift } from 'lucide-react';

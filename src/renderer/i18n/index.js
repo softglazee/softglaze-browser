@@ -77,7 +77,7 @@ export const SUPPORTED_LANGS = [
 
 const CODES = SUPPORTED_LANGS.map((l) => l.code);
 
-export const NAMESPACES = [
+const NAMESPACES = [
   'common', 'proxies', 'groups', 'extensions', 'browsers', 'trash', 'personas',
   'batchImport', 'account', 'members', 'billing', 'automation', 'gate', 'profiles',
   'settingsExtra',

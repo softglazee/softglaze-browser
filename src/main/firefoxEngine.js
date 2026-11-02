@@ -1045,8 +1045,6 @@ function getFirefoxDownloadStatus() {
 
 module.exports = {
   findFirefoxBinary,
-  resolveFirefoxBinary,
-  isFirefoxVersionInstalled,
   listFirefoxDownloadable,
   startFirefoxDownload,
   pauseFirefoxDownload,
@@ -1064,8 +1062,6 @@ module.exports = {
   managedStoragePath,
   // Exported for tests: the user.js builder and its proxy prefs (stale-pref fix).
   buildUserJs,
-  firefoxProxyPrefs,
   // Exported for tests: the Windows TZ mapping (Firefox ignores most IANA names there).
   firefoxTzEnv,
-  FIREFOX_ROOT
 };

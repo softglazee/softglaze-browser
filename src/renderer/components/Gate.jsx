@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
-  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, Crown, AlertTriangle, Check,
+  Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, AlertTriangle, Check,
   Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

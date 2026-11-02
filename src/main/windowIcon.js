@@ -169,4 +169,4 @@ function applyBrandWindowIcon(pid, brand) {
   } catch (e) { /* best-effort */ }
 }
 
-module.exports = { ensureBrandIcon, applyWindowIcon, applyBrandWindowIcon, normalizeBrand };
+module.exports = { applyBrandWindowIcon, normalizeBrand };

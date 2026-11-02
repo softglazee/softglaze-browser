@@ -94,4 +94,4 @@ function assertCanReveal(role, kind) {
   }
 }
 
-module.exports = { ROLE_RANK, RAW_VALUE_MIN_RANK, rankOf, canReadRaw, redactForRole, assertCanReveal };
+module.exports = { ROLE_RANK, RAW_VALUE_MIN_RANK, rankOf, redactForRole, assertCanReveal };

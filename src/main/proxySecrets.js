@@ -242,15 +242,11 @@ async function listUnreadableProxyPasswords(db) {
 
 module.exports = {
   listUnreadableProxyPasswords,
-  KEY_SETTING,
   extendClient,
   migrateProxyPasswords,
   hashPassword,
   loadHashKey,
   resetHashKeyCache,
-  openPassword,
   // exported for tests
   hashWithKey,
-  sealProxyData,
-  rewriteWhere
 };

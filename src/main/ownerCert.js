@@ -86,13 +86,10 @@ function isCertifiedSuperAdmin(member, certOk) {
 
 module.exports = {
   OWNER_PUBLIC_KEY_PEM,
-  CERT_FILE_NAME,
-  certPayload,
   signOwnerCert,
   isTenantBuild,
   verifyOwnerCert,
   ownerCertPath,
-  readOwnerCert,
   checkOwnerCertFile,
   isCertifiedSuperAdmin
 };

@@ -160,4 +160,4 @@ async function runParallelMacro(opts, deps) {
   return summary;
 }
 
-module.exports = { runParallelMacro, applyVariables, streamKey, firstError };
+module.exports = { runParallelMacro, applyVariables };

@@ -18,12 +18,6 @@ function canManageTeam(me) {
 
 const ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'OPERATOR'];
 const ROLE_LABEL = { SUPER_ADMIN: 'Super Admin', OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATOR: 'Operator' };
-const ROLE_DESC = {
-  OWNER: 'Full control, including members and the vault.',
-  ADMIN: 'Manage profiles, proxies, groups and the managers/operators they create.',
-  MANAGER: 'Create, edit and launch profiles, and add operators.',
-  OPERATOR: 'Launch and use assigned profiles only.'
-};
 const COLORS = ['#6366f1', '#3B82F6', '#8B5CF6', '#2FB8A0', '#E2A93C', '#22C55E', '#EF4444', '#a1a1aa'];
 
 const ROLE_CONFIG = {

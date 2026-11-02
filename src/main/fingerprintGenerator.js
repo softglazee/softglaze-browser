@@ -188,16 +188,6 @@ const MEDIA_LABELS = {
 // look. The vendor DISPLAY versions are approximate maps off the Chromium major
 // (the only cosmetic value here); keep them centralized for easy bumping.
 // ---------------------------------------------------------------------------
-const CHROMIUM_BRANDS = [
-  { id: 'Chrome', label: 'Google Chrome', accent: '#4285F4' },
-  { id: 'Edge', label: 'Microsoft Edge', accent: '#0F8AE0' },
-  { id: 'Brave', label: 'Brave', accent: '#FB542B' },
-  { id: 'Opera', label: 'Opera', accent: '#FF1B2D' },
-  { id: 'Vivaldi', label: 'Vivaldi', accent: '#EF3939' },
-  { id: 'Yandex', label: 'Yandex Browser', accent: '#FF0000' }
-];
-const CHROMIUM_BRAND_IDS = CHROMIUM_BRANDS.map((b) => b.id);
-
 function normalizeBrand(brand) {
   const t = String(brand || '').toLowerCase();
   if (t.includes('edge') || t === 'edg') return 'Edge';
@@ -551,10 +541,7 @@ module.exports = {
   generateMediaDevices,
   deviceGpuCoherence,
   fingerprintSignature,
-  pickChromeVersion,
   CHROME_VERSIONS,
-  CHROMIUM_BRANDS,
-  CHROMIUM_BRAND_IDS,
   normalizeBrand,
   buildBrandIdentity
 };

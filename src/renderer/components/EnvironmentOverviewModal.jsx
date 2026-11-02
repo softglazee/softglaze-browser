@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Fingerprint, X, Cpu, MemoryStick, Monitor, Globe, ShieldCheck, Languages, Clock, MapPin, Network } from 'lucide-react';
+import { Fingerprint, X, Cpu, Monitor, Globe, ShieldCheck, Clock, Network } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 
 // Build a representative User-Agent string from the profile's OS + version, so

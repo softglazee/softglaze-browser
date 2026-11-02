@@ -190,6 +190,5 @@ module.exports = {
   stop,
   setEnabled,
   getStatus,
-  isRunning,
   startIfEnabled
 };

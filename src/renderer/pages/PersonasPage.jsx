@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  IdCard, Users, Sparkles, CheckCircle2, Hash, Plus, Upload, RefreshCcw, Search,
+  Users, Sparkles, CheckCircle2, Hash, Plus, Upload, RefreshCcw, Search,
   Trash2, Edit, Loader2, X, RotateCcw, FileSpreadsheet, ChevronDown, ArrowLeft, Eye, EyeOff
 } from 'lucide-react';
 
@@ -48,7 +48,6 @@ const FIELD_DEFS = [
   { key: 'companyAddress', label: 'Company address', aliases: ['company address', 'companyaddress', 'business address', 'office address', 'work address', 'company street', 'organization address', 'organisation address'] },
   { key: 'label', label: 'Batch label', aliases: ['label', 'batch', 'batch label', 'tag', 'group'] }
 ];
-const FIELD_LABEL = Object.fromEntries(FIELD_DEFS.map((f) => [f.key, f.label]));
 
 // Form layout - fields grouped into sections (mirrors the schema's natural shape).
 const FORM_GROUPS = [

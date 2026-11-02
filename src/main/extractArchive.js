@@ -118,8 +118,6 @@ module.exports = {
   run,
   extractZipCrossPlatform,
   assertSafeZipEntry,
-  extractTarXz,
-  extractDmgApps,
   extractFirefox,
   extractFpChromium,
   ensureExecutable

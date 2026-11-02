@@ -202,4 +202,4 @@ function release() {
 }
 function getToken() { return TOKEN; }
 
-module.exports = { configure, start, stop, acquire, release, getStatus, getToken, TOKEN, PORT_RANGE };
+module.exports = { configure, start, stop, acquire, release, getStatus, getToken, TOKEN };

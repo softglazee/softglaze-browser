@@ -13,7 +13,6 @@
 // never see each other.
 
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
-const VALID_MEMBER_ROLES = ['OPERATOR', 'MANAGER', 'ADMIN', 'OWNER']; // SUPER_ADMIN is virtual, never a DB row
 
 // Which roles a given role is allowed to create beneath it (subject to per-member flags).
 const ROLES_BELOW = {
@@ -62,15 +61,6 @@ const ACTION_CATALOG = [
   { key: 'members.delete', label: 'Delete members / change roles', category: 'Team', minRank: 4 }
 ];
 const ACTION_MIN_RANK = ACTION_CATALOG.reduce((m, a) => { m[a.key] = a.minRank; return m; }, {});
-
-// Default per-action allow map for a role: an action is on iff the role meets the
-// baseline rank. Stored overrides may only turn within-rank actions OFF.
-function defaultActionsFor(role) {
-  const r = rankOf(role);
-  const out = {};
-  for (const a of ACTION_CATALOG) out[a.key] = r >= a.minRank;
-  return out;
-}
 
 // -1 means "unlimited" for any numeric limit.
 function defaultPermissionsFor(role) {
@@ -282,20 +272,15 @@ function profileRowAccessible(visibleSet, row, requireEdit = false) {
 
 module.exports = {
   ROLE_RANK,
-  VALID_MEMBER_ROLES,
   ROLES_BELOW,
   FEATURE_KEYS,
   ACTION_CATALOG,
   ACTION_MIN_RANK,
-  defaultActionsFor,
   rankOf,
-  allFeaturesOn,
   defaultPermissionsFor,
   effectivePermissions,
   canCreateRole,
-  createFlagFor,
   childCapFor,
-  descendantIds,
   visibleMemberIds,
   accessLevelRank,
   profileRowAccessible,

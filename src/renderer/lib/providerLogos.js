@@ -21,22 +21,13 @@ const modules = import.meta.glob(
 );
 
 /** @type {Record<string, string>} key -> bundled asset URL */
-export const PROVIDER_LOGOS = {};
+const PROVIDER_LOGOS = {};
 
 for (const [filePath, url] of Object.entries(modules)) {
   // '../assets/providers/proxmint.png' -> 'proxmint'
   const file = filePath.split('/').pop() || '';
   const key = file.replace(/\.[^.]+$/, '');
   if (key) PROVIDER_LOGOS[key] = url;
-}
-
-/**
- * True when a bundled logo asset exists for this provider key.
- * @param {string} key
- * @returns {boolean}
- */
-export function hasLogo(key) {
-  return !!key && Object.prototype.hasOwnProperty.call(PROVIDER_LOGOS, key);
 }
 
 /**
@@ -47,5 +38,3 @@ export function hasLogo(key) {
 export function getLogo(key) {
   return key ? PROVIDER_LOGOS[key] : undefined;
 }
-
-export default PROVIDER_LOGOS;
