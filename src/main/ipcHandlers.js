@@ -134,6 +134,9 @@ const CHANNELS = Object.freeze({
   PROXY_CHECK_STREAM: 'proxy:check-stream',
   PROXY_CHECK_STOP: 'proxy:check-stop',
   PROXY_CHECK_PROGRESS: 'proxy:check-progress', // main → renderer stream
+  PROXY_FREE_HARVEST: 'proxy:free-harvest', // find + test free public proxies, add the good ones
+  PROXY_FREE_CANCEL: 'proxy:free-cancel',
+  PROXY_FREE_PROGRESS: 'proxy:free-progress', // main → renderer stream
   PROXY_GROUP_LIST: 'proxy-group:list',
   PROXY_GROUP_CREATE: 'proxy-group:create',
   PROXY_GROUP_UPDATE: 'proxy-group:update',
@@ -1423,6 +1426,148 @@ async function batchAddProxies(payload) {
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Free public proxies (opt-in). For users with no proxy account: fetch the public
+// lists free-proxy projects publish, test every candidate, and add only the ones that
+// work AND do not pass the user's real IP to websites. They go into their own "Free
+// proxies" group with provider 'free', and Quick generate never picks them unless that
+// group or provider is chosen on purpose. See freeProxies.js for the checks.
+// ---------------------------------------------------------------------------
+const freeProxies = require('./freeProxies');
+let freeHarvestRun = null; // { controller, ownerMemberId } while a search runs (one at a time)
+
+const freeProxyKey = (p) => `${String(p.type).toLowerCase()}://${p.host}:${p.port}`;
+const freeTypeOf = (c) => (c.type === 'socks5' ? 'SOCKS5' : 'HTTP');
+
+async function ensureFreeProxyGroup(db) {
+  const where = await scopedProxyGroupWhereForFree();
+  const existing = await db.proxyGroup.findFirst({ where });
+  if (existing) return existing;
+  // autoCreated: the group removes itself once its last free proxy is deleted.
+  return db.proxyGroup.create({ data: { name: 'Free proxies', color: '#f59e0b', autoCreated: true, ownerMemberId: ownerStampId() } });
+}
+
+async function scopedProxyGroupWhereForFree() {
+  const base = { name: 'Free proxies' };
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return base;
+  return { ...base, ownerMemberId: ownerStampId() };
+}
+
+async function harvestFreeProxiesHandler(payload, event) {
+  await requirePermission('proxies.manage');
+  if (freeHarvestRun) { const e = new Error('A free-proxy search is already running.'); e.code = 'BUSY'; throw e; }
+  const input = requireObject(payload);
+  const protocol = String(input.protocol || 'http').toLowerCase() === 'socks5' ? 'socks5' : 'http';
+  const country = optionalString(input.country);
+  if (country && !/^[A-Za-z]{2}$/.test(country)) throw new Error('Country must be a two-letter code such as US or DE.');
+  const limit = Math.max(1, Math.min(100, Number.parseInt(input.limit, 10) || 10));
+  await assertWithinLimit('proxies');
+  const db = getPrisma();
+
+  // Free proxies already in the pool are not re-tested or re-added.
+  const have = await db.proxy.findMany({ where: { provider: 'free' }, select: { type: true, host: true, port: true } });
+  const exclude = new Set(have.map(freeProxyKey));
+
+  const controller = new AbortController();
+  freeHarvestRun = { controller, ownerMemberId: currentMemberId };
+  const runId = `free-${Date.now()}`;
+  const sender = event && event.sender ? event.sender : null;
+  let lastSent = 0;
+  const send = (data, force = false) => {
+    const now = Date.now();
+    if (!force && now - lastSent < 250) return; // throttle the per-check frames
+    lastSent = now;
+    try { if (sender) sender.send(CHANNELS.PROXY_FREE_PROGRESS, { runId, ts: now, ...data }); } catch (e) { /* renderer gone */ }
+  };
+
+  const deps = {
+    fetchText: (url) => freeProxies.fetchTextDirect(url),
+    // The user's own public IP, fetched directly (no proxy), for the anonymity check.
+    getRealIp: async () => {
+      try { const d = await httpGetJson('https://api.ipify.org?format=json', undefined, 8000); if (d && d.ip) return String(d.ip); } catch (e) { /* try the next */ }
+      const d2 = await httpGetJson('https://ipinfo.io/json', undefined, 8000);
+      return d2 && d2.ip ? String(d2.ip) : null;
+    },
+    // Live HTTPS request through the proxy; the first of two IP services to answer wins.
+    checkExit: async (c) => {
+      const agent = buildProxyAgent({ type: freeTypeOf(c), host: c.host, port: c.port });
+      if (!agent) throw new Error('Proxy agent module unavailable.');
+      const started = Date.now();
+      const viaIpinfo = httpGetJson('https://ipinfo.io/json', agent, 8000).then((d) => {
+        if (!d || !d.ip) throw new Error('no ip');
+        return { ip: String(d.ip), country: d.country || null };
+      });
+      const viaGeojs = httpGetJson(GEOJS_URL, agent, 8000).then((raw) => {
+        const g = normalizeGeoJs(raw);
+        if (!g || !g.ip) throw new Error('no ip');
+        return { ip: String(g.ip), country: g.country || null };
+      });
+      const r = await Promise.any([viaIpinfo, viaGeojs]);
+      return { ...r, latencyMs: Date.now() - started };
+    },
+    // Plain-HTTP header echo through an HTTP proxy (the anonymity check).
+    judgeHeaders: async (c) => {
+      const agent = buildProxyAgent({ type: 'HTTP', host: c.host, port: c.port });
+      const d = await httpGetJson('http://httpbin.org/headers', agent, 8000);
+      if (!d || !d.headers) throw new Error('no echo');
+      return d.headers;
+    }
+  };
+
+  try {
+    const res = await freeProxies.harvestFreeProxies({
+      // 48 checks at a time, 6 s per step: most free proxies are dead, so the search is
+      // bounded by how fast dead ones are given up on (measured live, 2 Nov 2026).
+      protocol, country, limit, concurrency: 48, stepTimeoutMs: 6000, timeBudgetMs: 3 * 60000, exclude,
+      signal: controller.signal,
+      onProgress: (p) => send(p, p.phase !== 'check')
+    }, deps);
+    if (res.stopped === 'no-real-ip') {
+      const e = new Error('Could not read your own public IP, which the anonymity check needs. Check your internet connection and try again.');
+      e.code = 'NO_REAL_IP'; throw e;
+    }
+
+    const added = [];
+    let limitReached = false;
+    if (res.found.length) {
+      const group = await ensureFreeProxyGroup(db);
+      for (const f of res.found) {
+        try { await assertWithinLimit('proxies'); } catch (e) { limitReached = true; break; }
+        const type = freeTypeOf(f);
+        const dup = await db.proxy.findFirst({ where: proxyIdentityWhere({ type, host: f.host, port: f.port, username: null, password: null }), select: { id: true } });
+        if (dup) continue;
+        const created = await db.proxy.create({
+          data: {
+            name: `Free ${f.country || '??'} ${f.host}:${f.port}`,
+            type, host: f.host, port: f.port, username: null, password: null,
+            provider: 'free', proxyGroupId: group ? group.id : null, ownerMemberId: ownerStampId(),
+            lastStatus: 'ok', lastCountry: f.country || null, lastLatencyMs: f.latencyMs || null, lastCheckedAt: new Date()
+          }
+        });
+        added.push(serializeProxy(created));
+      }
+    }
+    const summary = {
+      runId, added: added.length, requested: limit, checked: res.checked, total: res.total,
+      stopped: res.stopped, rejected: res.rejected, sources: res.sources, limitReached
+    };
+    send({ phase: 'done', ...summary }, true);
+    await logAudit('proxy.free-harvest', { detail: { protocol, country: country || null, limit, added: added.length, checked: res.checked } });
+    return { ...summary, proxies: added };
+  } finally {
+    freeHarvestRun = null;
+  }
+}
+
+async function cancelFreeProxyHarvest() {
+  await requirePermission('proxies.manage');
+  if (!freeHarvestRun) return { cancelled: false };
+  await assertCanControlRun(freeHarvestRun.ownerMemberId);
+  freeHarvestRun.controller.abort();
+  return { cancelled: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -5183,6 +5328,9 @@ async function batchGenerateProfiles(payload) {
       filter.proxyGroupId = input.proxyGroupId === 'none' ? null : parseId(input.proxyGroupId, 'proxyGroupId');
     }
     if (optionalString(input.provider)) filter.provider = optionalString(input.provider).toLowerCase();
+    // Free public proxies are only used when the user picks them on purpose (their
+    // provider or a group): never mixed into "all proxies" for real profiles.
+    else if (filter.proxyGroupId === undefined) filter.OR = [{ provider: null }, { provider: { not: 'free' } }];
     const cc = normCountryCode(input.country);
     if (cc) filter.lastCountry = cc;
     // Quality filters (from the generate modal): pre-narrow the candidate pool by the
@@ -12659,6 +12807,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_UPDATE, updateProxy);
   registerHandler(CHANNELS.PROXY_DELETE, deleteProxy);
   registerHandler(CHANNELS.PROXY_BATCH_ADD, batchAddProxies);
+  registerHandler(CHANNELS.PROXY_FREE_HARVEST, harvestFreeProxiesHandler);
+  registerHandler(CHANNELS.PROXY_FREE_CANCEL, cancelFreeProxyHarvest);
   registerHandler(CHANNELS.PROXY_CHECK, checkProxy);
   registerHandler(CHANNELS.PROXY_BULK_DELETE, bulkDeleteProxies);
   registerHandler(CHANNELS.PROXY_ROTATION_GET, getProxyRotation);

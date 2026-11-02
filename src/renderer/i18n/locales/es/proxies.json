@@ -27,6 +27,47 @@
     "checkNew": "Comprobar nuevos",
     "checkNewTooltip": "Comprueba solo los proxies recién añadidos que nunca se han comprobado."
   },
+  "free": {
+    "button": "Proxies gratis",
+    "buttonTooltip": "Busca, prueba y añade proxies públicos gratuitos (sin cuenta de proxy)",
+    "title": "Proxies públicos gratuitos",
+    "description": "SoftGlaze descarga las listas públicas que publican los proyectos de proxies gratuitos, prueba cada proxy y añade solo los que funcionan al grupo \"Free proxies\".",
+    "warn": {
+      "strangers": "Los proxies gratuitos los gestionan desconocidos. No los uses para iniciar sesión en cuentas, escribir contraseñas ni pagar: el dueño del proxy puede ver el tráfico que no está cifrado.",
+      "quality": "Son lentos, suelen dejar de funcionar en pocas horas y muchos están en listas de bloqueo, así que verás más CAPTCHA que con un proxy de pago. Para trabajar con cuentas reales, usa un proveedor de proxies.",
+      "legal": "Úsalos solo donde esté permitido. La generación rápida nunca elige proxies gratuitos salvo que elijas el grupo \"Free proxies\"."
+    },
+    "checks": "Cada proxy se prueba en directo y se rechazan los proxies HTTP que pasan tu IP real a los sitios web.",
+    "protocol": "Protocolo",
+    "country": "País (opcional)",
+    "countryPlaceholder": "p. ej. US",
+    "limit": "Cuántos añadir",
+    "start": "Buscar proxies gratis",
+    "again": "Buscar más",
+    "cancel": "Detener",
+    "close": "Cerrar",
+    "done": "Listo",
+    "progress": {
+      "fetching": "Descargando las listas públicas…",
+      "checking": "Probados {{checked}} de {{total}} · {{found}} buenos"
+    },
+    "result": {
+      "added": "Añadidos {{added}} de {{requested}} solicitados.",
+      "checked": "Probados {{checked}} de {{total}} candidatos",
+      "rejected": "{{dead}} no funcionan, {{leak}} filtraban tu IP, {{country}} de otro país",
+      "planLimit": "Se alcanzó el límite de proxies de tu plan, así que algunos proxies buenos no se añadieron."
+    },
+    "stopped": {
+      "limit": "Detenido: se alcanzó la cantidad que pediste.",
+      "time": "Detenido tras 3 minutos. Vuelve a ejecutarlo para encontrar más.",
+      "cancelled": "Detenido por ti.",
+      "exhausted": "Se probaron todos los candidatos de las listas."
+    },
+    "errors": {
+      "country": "Usa un código de país de dos letras, como US o DE.",
+      "failed": "No se pudo terminar la búsqueda."
+    }
+  },
   "tabs": {
     "custom": "Proxies personalizados",
     "providers": "Proveedores de proxy",

@@ -16,6 +16,8 @@ import EmptyState from '@/components/EmptyState.jsx';
 import { AreaChart } from '@/components/charts/Charts.jsx';
 import { Clock, BarChart3, History, RotateCw, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
+import FreeProxiesDialog from '@/components/FreeProxiesDialog.jsx';
+import { Gift } from 'lucide-react';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
@@ -134,6 +136,7 @@ export default function ProxyPoolPage() {
   const [search, setSearch] = useState('');
   const [proxyOpen, setProxyOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
   const [proxyForm, setProxyForm] = useState(initialProxyForm);
   const [batchRaw, setBatchRaw] = useState('');
   const [batchType, setBatchType] = useState('HTTP');
@@ -843,6 +846,10 @@ export default function ProxyPoolPage() {
                 <Upload className="h-4 w-4" />
                 {t('actions.batchAdd')}
               </Button>
+              <Button variant="secondary" onClick={() => setFreeOpen(true)} title={t('free.buttonTooltip')}>
+                <Gift className="h-4 w-4" />
+                {t('free.button')}
+              </Button>
               <Button variant="primary" onClick={openCreate}>
                 <Plus className="h-4 w-4" />
                 {t('actions.newProxy')}
@@ -1492,6 +1499,8 @@ export default function ProxyPoolPage() {
       </Dialog>
 
       {/* --- BATCH IMPORT MODAL --- */}
+      <FreeProxiesDialog open={freeOpen} onOpenChange={setFreeOpen} onAdded={loadProxies} />
+
       <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
         <DialogContent title={t('batch.dialogTitle')} className="rounded border-border bg-card">
           <form onSubmit={handleBatchAdd}>

@@ -39,6 +39,9 @@ const CHANNELS = Object.freeze({
   PROXY_CHECK_STREAM: 'proxy:check-stream',
   PROXY_CHECK_STOP: 'proxy:check-stop',
   PROXY_CHECK_PROGRESS: 'proxy:check-progress',
+  PROXY_FREE_HARVEST: 'proxy:free-harvest',
+  PROXY_FREE_CANCEL: 'proxy:free-cancel',
+  PROXY_FREE_PROGRESS: 'proxy:free-progress',
   PROXY_GROUP_LIST: 'proxy-group:list',
   PROXY_GROUP_CREATE: 'proxy-group:create',
   PROXY_GROUP_UPDATE: 'proxy-group:update',
@@ -327,6 +330,14 @@ const api = Object.freeze({
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL),
     checkStream: (payload) => invoke(CHANNELS.PROXY_CHECK_STREAM, payload),
     stopCheck: (payload) => invoke(CHANNELS.PROXY_CHECK_STOP, payload),
+    // Free public proxies: search + test + add (long-running; progress on the stream).
+    freeHarvest: (payload) => invoke(CHANNELS.PROXY_FREE_HARVEST, payload),
+    freeCancel: () => invoke(CHANNELS.PROXY_FREE_CANCEL),
+    onFreeProgress: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.PROXY_FREE_PROGRESS, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.PROXY_FREE_PROGRESS, listener);
+    },
     onCheckProgress: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.PROXY_CHECK_PROGRESS, listener);
