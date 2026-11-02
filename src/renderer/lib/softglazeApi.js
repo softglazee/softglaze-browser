@@ -317,6 +317,7 @@ export const softglazeApi = {
     getSchedule: () => getSoftglazeApi().automation.getSchedule(),
     setSchedule: (payload) => getSoftglazeApi().automation.setSchedule(payload),
     runParallel: (payload) => getSoftglazeApi().automation.runParallel(payload),
+    parallelStatus: (runId) => getSoftglazeApi().automation.parallelStatus(runId),
     pickDataFile: () => getSoftglazeApi().automation.pickDataFile(),
     onWarmerProgress: (callback) => getSoftglazeApi().automation.onWarmerProgress(callback),
     onMacroProgress: (callback) => getSoftglazeApi().automation.onMacroProgress(callback),

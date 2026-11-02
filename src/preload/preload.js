@@ -235,6 +235,7 @@ const CHANNELS = Object.freeze({
   AUTOMATION_GET_SCHEDULE: 'automation:get-schedule',
   AUTOMATION_SET_SCHEDULE: 'automation:set-schedule',
   AUTOMATION_RUN_PARALLEL: 'automation:run-parallel',
+  AUTOMATION_PARALLEL_STATUS: 'automation:parallel-status',
   AUTOMATION_RUN_PROGRESS: 'automation:run-progress',
   AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
 
@@ -596,6 +597,7 @@ const api = Object.freeze({
     getSchedule: () => invoke(CHANNELS.AUTOMATION_GET_SCHEDULE),
     setSchedule: (payload) => invoke(CHANNELS.AUTOMATION_SET_SCHEDULE, payload),
     runParallel: (payload) => invoke(CHANNELS.AUTOMATION_RUN_PARALLEL, payload),
+    parallelStatus: (runId) => invoke(CHANNELS.AUTOMATION_PARALLEL_STATUS, { runId }),
     pickDataFile: () => invoke(CHANNELS.AUTOMATION_PICK_DATA_FILE),
     // Subscribe to live warm-up progress; returns an unsubscribe function.
     onWarmerProgress: (callback) => {

@@ -328,6 +328,7 @@ const CHANNELS = Object.freeze({
   AUTOMATION_GET_SCHEDULE: 'automation:get-schedule',
   AUTOMATION_SET_SCHEDULE: 'automation:set-schedule',
   AUTOMATION_RUN_PARALLEL: 'automation:run-parallel',
+  AUTOMATION_PARALLEL_STATUS: 'automation:parallel-status', // is a parallel run still going (backstop for a lost 'done' frame)
   AUTOMATION_RUN_PROGRESS: 'automation:run-progress', // main -> renderer stream
   AUTOMATION_PICK_DATA_FILE: 'automation:pick-data-file',
 
@@ -12188,7 +12189,17 @@ async function runParallelMacroHandler(payload, event) {
     vars: rows[i] || null
   }));
 
+  // audit 2 Nov 2026: one parallel run per profile at a time. The panel used to report
+  // "finished" 1.5 s after starting (the handler returns at once), so a second click
+  // started an overlapping run on the same browsers; refuse that here as well.
+  const busy = profileIds.filter((pid) => profilesInParallelRun().has(pid));
+  if (busy.length) {
+    const e = new Error(`${busy.length} of the selected profile(s) are still running a parallel macro. Wait for it to finish or stop it first.`);
+    e.code = 'RUN_IN_PROGRESS'; throw e;
+  }
+
   const runId = `par-${Date.now()}`;
+  parallelRuns.set(runId, { runId, ownerMemberId: currentMemberId, profileIds, startedAt: Date.now(), done: false, summary: null });
 
   // Bridge sanitized relay frames for THIS run to the renderer. One global
   // listener, filtered by runId, that removes itself on the run-level 'done'
@@ -12226,6 +12237,7 @@ async function runParallelMacroHandler(payload, event) {
       } catch (_) { /* ignore */ }
     } finally {
       try { relay.off('frame', onFrame); } catch (_) { /* ignore */ }
+      finishParallelRun(runId, summary || { total: items.length, passed: 0, failed: items.length });
     }
     const s = summary || { total: items.length, passed: 0, failed: items.length };
     const level = s.failed === 0 ? 'SUCCESS' : (s.passed === 0 ? 'ERROR' : 'WARN');
@@ -12242,6 +12254,38 @@ async function runParallelMacroHandler(payload, event) {
   })();
 
   return { started: true, runId, profileIds, concurrency, dataRows: rows.length };
+}
+
+// Parallel runs by runId: running ones, plus finished ones kept for 10 minutes so a
+// panel that missed the single 'done' frame can still learn the result.
+const parallelRuns = new Map();
+const PARALLEL_DONE_KEEP_MS = 10 * 60 * 1000;
+
+function profilesInParallelRun() {
+  const ids = new Set();
+  for (const r of parallelRuns.values()) if (!r.done) r.profileIds.forEach((id) => ids.add(id));
+  return ids;
+}
+
+function finishParallelRun(runId, summary) {
+  const r = parallelRuns.get(runId);
+  if (!r) return;
+  r.done = true;
+  r.summary = { total: summary.total, passed: summary.passed, failed: summary.failed };
+  r.finishedAt = Date.now();
+  // Drop old finished entries so the map cannot grow without bound.
+  for (const [id, x] of parallelRuns) if (x.done && Date.now() - x.finishedAt > PARALLEL_DONE_KEEP_MS) parallelRuns.delete(id);
+}
+
+// Is this parallel run still going? The panel polls this while it shows "Running", so
+// it clears only when the run has really ended, even if the 'done' frame was lost.
+async function getParallelRunStatus(payload) {
+  await requirePermission('automation.run');
+  const input = requireObject(payload);
+  const r = parallelRuns.get(String(input.runId || ''));
+  if (!r) return { known: false, running: false };
+  await assertCanControlRun(r.ownerMemberId);
+  return { known: true, running: !r.done, summary: r.summary, startedAt: r.startedAt, finishedAt: r.finishedAt || null };
 }
 
 // Active warm-up runs, keyed by runId, so a run can be stopped or force-stopped
@@ -12831,6 +12875,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.AUTOMATION_GET_SCHEDULE, getMacroSchedule);
   registerHandler(CHANNELS.AUTOMATION_SET_SCHEDULE, setMacroSchedule);
   registerHandler(CHANNELS.AUTOMATION_RUN_PARALLEL, runParallelMacroHandler);
+  registerHandler(CHANNELS.AUTOMATION_PARALLEL_STATUS, getParallelRunStatus);
   registerHandler(CHANNELS.AUTOMATION_PICK_DATA_FILE, pickDataFile);
 
   // Softglaze Pro - local developer API

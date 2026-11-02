@@ -837,6 +837,24 @@ function ParallelPanel() {
   const [dataBinding, setDataBinding] = useState(null); // { token, fileName, headers, rowCount }
   const [err, setErr] = useState('');
   const logRef = useRef(null);
+  // This panel's run. Frames from any other run (another window, an older run) are
+  // ignored. Frames that arrive while the start call is still in flight - before the
+  // runId is known - are held and replayed once it is, instead of guessing.
+  const runIdRef = useRef(null);
+  const pendingFramesRef = useRef(null);
+
+  // Apply one progress frame of THIS run (uses only state setters, so it is safe to
+  // call from the long-lived listener below).
+  function applyFrame(frame) {
+    const p = frame.payload;
+    setLogs((prev) => [...prev.slice(-400), { ...p, ts: frame.ts }]);
+    if (p.state === 'done' && p.profileId == null) {
+      setRunning(false);
+      setSummary({ total: p.total, passed: p.passed, failed: p.failed, error: p.error });
+      return;
+    }
+    if (p.profileId != null) setStatuses((prev) => ({ ...prev, [p.profileId]: p }));
+  }
 
   useEffect(() => {
     softglazeApi.automation.getMacros().then((rows) => setMacros(Array.isArray(rows) ? rows : [])).catch(() => setMacros([]));
@@ -853,17 +871,31 @@ function ParallelPanel() {
   useEffect(() => {
     const off = softglazeApi.automation.onRunProgress((frame) => {
       if (!frame || !frame.payload) return;
-      const p = frame.payload;
-      setLogs((prev) => [...prev.slice(-400), { ...p, ts: frame.ts }]);
-      if (p.state === 'done' && p.profileId == null) {
-        setRunning(false);
-        setSummary({ total: p.total, passed: p.passed, failed: p.failed, error: p.error });
-        return;
-      }
-      if (p.profileId != null) setStatuses((prev) => ({ ...prev, [p.profileId]: p }));
+      if (pendingFramesRef.current) { pendingFramesRef.current.push(frame); return; }
+      if (!runIdRef.current || frame.payload.runId !== runIdRef.current) return;
+      applyFrame(frame);
     });
     return () => { try { off && off(); } catch (e) { /* ignore */ } };
   }, []);
+
+  // While "Running", ask main every few seconds whether the run has really ended.
+  // This replaces the old 1.5 s timer, which cleared "Running" while the run was still
+  // going (the start call returns at once), re-enabling Run for an overlapping run.
+  useEffect(() => {
+    if (!running) return undefined;
+    const timer = setInterval(async () => {
+      const id = runIdRef.current;
+      if (!id) return;
+      try {
+        const st = await softglazeApi.automation.parallelStatus(id);
+        if (!st || !st.running) {
+          setRunning(false);
+          if (st && st.summary) setSummary((prev) => prev || st.summary);
+        }
+      } catch (e) { /* keep the current state; the next tick retries */ }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [running]);
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
 
@@ -895,8 +927,10 @@ function ParallelPanel() {
     if (!macroId) { setErr(t('parallel.errors.chooseMacro')); return; }
     if (ids.length === 0) { setErr(t('parallel.errors.selectProfile')); return; }
     setRunning(true); setLogs([]); setStatuses({}); setSummary(null);
+    runIdRef.current = null;
+    pendingFramesRef.current = [];
     try {
-      await softglazeApi.automation.runParallel({
+      const res = await softglazeApi.automation.runParallel({
         macroId: Number(macroId),
         profileIds: ids,
         concurrency: Number(concurrency) || 3,
@@ -904,11 +938,15 @@ function ParallelPanel() {
         closeWhenDone: true,
         dataToken: dataBinding ? dataBinding.token : undefined
       });
-      // audit: `running` is normally cleared by the terminal 'done' progress frame.
-      // If that single at-most-once frame is dropped, the spinner would stick forever.
-      // The run has resolved here, so backstop it - idempotent if the frame arrives.
-      setTimeout(() => setRunning(false), 1500);
+      // `running` is cleared by this run's terminal 'done' frame, with the status poll
+      // above as the backstop if that frame is ever lost.
+      runIdRef.current = res && res.runId ? String(res.runId) : null;
+      const held = pendingFramesRef.current || [];
+      pendingFramesRef.current = null;
+      for (const f of held) if (f.payload && f.payload.runId === runIdRef.current) applyFrame(f);
+      if (!runIdRef.current) setRunning(false);
     } catch (e) {
+      pendingFramesRef.current = null;
       setErr(e.message || t('parallel.errors.startRun'));
       setRunning(false);
     }
