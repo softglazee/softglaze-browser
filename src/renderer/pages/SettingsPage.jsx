@@ -66,7 +66,7 @@ function buildSections(t, tx) {
   add('platform', 'general', tx('platform.title'), tx('platform.description'), 'icon serial number taskbar');
 
   add('fingerprint', 'browser', tx('fingerprint.title'), tx('fingerprint.description'), 'anti-detect fingerprint canvas webgl geolocation timezone cdp camera mobile webrtc chromium');
-  add('behaviour', 'browser', tx('behaviour.title'), tx('behaviour.description'), 'chrome sign-in translate devtools extensions https videos images bandwidth');
+  add('behaviour', 'browser', tx('behaviour.title'), tx('behaviour.description'), 'chrome sign-in translate devtools extensions https videos images bandwidth cookies third-party launch check mismatch');
   add('website', 'browser', tx('website.title'), tx('website.description'), 'block allowlist blocklist facebook local network url');
   add('ipsetting', 'browser', tx('ipSetting.title'), tx('ipSetting.description'), 'ip asn city region country checker ipinfo');
   add('autofill', 'browser', tx('smartAutofill.title'), tx('smartAutofill.description'), 'autofill vault persona firefox form');
@@ -905,6 +905,7 @@ function BehaviourSection({ sec, s, apply }) {
           <SwitchRow wired title={tx('browser.disableDevtools.title')} description={tx('browser.disableDevtools.desc')} checked={s.browser.disableDevtools} onChange={(v) => apply({ browser: { disableDevtools: v } })} />
           <SwitchRow wired title={tx('browser.lockExtensions.title')} description={tx('browser.lockExtensions.desc')} checked={s.browser.lockExtensions} onChange={(v) => apply({ browser: { lockExtensions: v } })} />
           <SwitchRow wired title={tx('browser.blockThirdPartyCookies.title')} description={tx('browser.blockThirdPartyCookies.desc')} checked={Boolean(s.browser.blockThirdPartyCookies)} onChange={(v) => apply({ browser: { blockThirdPartyCookies: v } })} />
+          <SwitchRow wired title={tx('browser.checkBeforeLaunch.title')} description={tx('browser.checkBeforeLaunch.desc')} checked={s.browser.checkBeforeLaunch !== false} onChange={(v) => apply({ browser: { checkBeforeLaunch: v } })} />
           <SwitchRow wired title={tx('browser.secureAccess.title')} description={tx('browser.secureAccess.desc')} checked={s.browser.secureAccess} onChange={(v) => apply({ browser: { secureAccess: v } })} />
           <SwitchRow wired title={tx('browser.disableVideos.title')} description={tx('browser.disableVideos.desc')} checked={s.browser.disableVideos} onChange={(v) => apply({ browser: { disableVideos: v } })} />
           <SwitchRow

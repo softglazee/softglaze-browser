@@ -6,7 +6,8 @@ import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import LeakCheckModal from '@/components/LeakCheckModal.jsx';
-import CaptchaScoreModal, { CaptchaBadge } from '@/components/CaptchaScore.jsx';
+import CaptchaScoreModal, { CaptchaBadge, fixAllActions } from '@/components/CaptchaScore.jsx';
+import PreLaunchCheckModal from '@/components/PreLaunchCheck.jsx';
 import CookieManagerModal from '@/components/CookieManagerModal.jsx';
 import BrowserManagerModal from '@/components/BrowserManagerModal.jsx';
 import BrowserVersionSelect from '@/components/BrowserVersionSelect.jsx';
@@ -51,12 +52,13 @@ function relTime(iso) {
   } catch (e) { return tr('relTime.never'); }
 }
 
-const CustomSelect = ({ value, onChange, className = '', children, disabled }) => (
+const CustomSelect = ({ value, onChange, className = '', children, disabled, ariaLabel }) => (
   <div className={`relative flex items-center ${className}`}>
     <select
       value={value}
       onChange={onChange}
       disabled={disabled}
+      aria-label={ariaLabel}
       className="w-full appearance-none bg-background border border-border rounded pl-3 pr-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
     >
       {children}
@@ -498,6 +500,7 @@ function ProxyReassignModal({ onClose, count, allProxies, proxyGroups, bulkBusy,
 
 export default function ProfilesPage() {
   const { t } = useTranslation('profiles');
+  const { t: tc } = useTranslation('captcha');
   const [profiles, setProfiles] = useState([]);
   const [search, setSearch] = useState('');
   // The search the current `profiles` list was loaded for. Search is server-side, so the selection
@@ -505,6 +508,7 @@ export default function ProfilesPage() {
   const [loadedSearch, setLoadedSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   
   const [view, setView] = useState('list');
   const [activeTab, setActiveTab] = useState('General');
@@ -549,6 +553,9 @@ export default function ProfilesPage() {
   const [filterTag, setFilterTag] = useState('');
   const [filterProxy, setFilterProxy] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [captchaFilter, setCaptchaFilter] = useState('all');
+  const [captchaSort, setCaptchaSort] = useState('');
+  const [preLaunch, setPreLaunch] = useState(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
@@ -572,8 +579,25 @@ export default function ProfilesPage() {
     else if (filterStatus === 'direct') list = list.filter((p) => !p.proxyId);
     else if (filterStatus === 'used') list = list.filter((p) => (p.launchCount > 0 || p.lastUsedAt));
     else if (filterStatus === 'unused') list = list.filter((p) => !(p.launchCount > 0 || p.lastUsedAt));
+    if (captchaFilter !== 'all') {
+      list = list.filter((p) => {
+        const s = captchaScores[p.id];
+        if (!s) return false;
+        return captchaFilter === 'fixable' ? fixAllActions(s).length > 0 : s.level === captchaFilter;
+      });
+    }
+    if (captchaSort) {
+      // Highest risk = lowest score. Profiles not scored yet go last either way.
+      const dir = captchaSort === 'risk-desc' ? 1 : -1;
+      list = [...list].sort((a, b) => {
+        const sa = captchaScores[a.id];
+        const sb = captchaScores[b.id];
+        if (!sa || !sb) return (sa ? -1 : 0) + (sb ? 1 : 0);
+        return dir * (sa.score - sb.score);
+      });
+    }
     return list;
-  }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds]);
+  }, [profiles, filterGroup, filterTag, filterProxy, filterStatus, runningIds, captchaFilter, captchaSort, captchaScores]);
 
   // When the filter changes, drop selected ids that are no longer visible, so a bulk action never
   // touches hidden rows. Keyed on filter inputs only, so a background refresh keeps the selection.
@@ -587,7 +611,7 @@ export default function ProfilesPage() {
       prev.forEach((id) => { if (visible.has(id)) next.add(id); });
       return next.size === prev.size ? prev : next;
     });
-  }, [filterGroup, filterTag, filterProxy, filterStatus, loadedSearch]);
+  }, [filterGroup, filterTag, filterProxy, filterStatus, captchaFilter, loadedSearch]);
 
   // Selected ids still visible under the current filters and search, in table order. Bulk handlers
   // use this, never the raw set, so hidden rows are never launched, tagged or deleted.
@@ -600,18 +624,26 @@ export default function ProfilesPage() {
   const pageCount = pageSize === Infinity ? 1 : Math.max(1, Math.ceil(filteredProfiles.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const pagedProfiles = pageSize === Infinity ? filteredProfiles : filteredProfiles.slice((safePage - 1) * pageSize, safePage * pageSize);
-  useEffect(() => { setPage(1); }, [filterGroup, filterTag, filterProxy, filterStatus, pageSize]);
+  useEffect(() => { setPage(1); }, [filterGroup, filterTag, filterProxy, filterStatus, captchaFilter, captchaSort, pageSize]);
 
-  // CAPTCHA scores for the rows on screen, refreshed whenever the list reloads.
-  const pagedIdsKey = pagedProfiles.map((p) => p.id).join(',');
+  // CAPTCHA scores for the rows on screen, or for every profile while filtering or sorting by risk;
+  // refreshed whenever the list reloads.
+  const needAllScores = captchaFilter !== 'all' || captchaSort !== '';
+  const scoreIdsKey = (needAllScores ? profiles : pagedProfiles).map((p) => p.id).join(',');
   useEffect(() => {
-    if (!pagedIdsKey) return undefined;
+    if (!scoreIdsKey) return undefined;
     let cancelled = false;
-    softglazeApi.profiles.captchaScores(pagedIdsKey.split(',').map(Number))
-      .then((res) => { if (!cancelled && res && res.scores) setCaptchaScores((prev) => ({ ...prev, ...res.scores })); })
-      .catch(() => {});
+    const ids = scoreIdsKey.split(',').map(Number);
+    (async () => {
+      for (let i = 0; i < ids.length && !cancelled; i += 500) {
+        try {
+          const res = await softglazeApi.profiles.captchaScores(ids.slice(i, i + 500));
+          if (!cancelled && res && res.scores) setCaptchaScores((prev) => ({ ...prev, ...res.scores }));
+        } catch (e) { /* an unscored row keeps the plain shield */ }
+      }
+    })();
     return () => { cancelled = true; };
-  }, [pagedIdsKey, profiles]);
+  }, [scoreIdsKey, profiles]);
 
   const totalCount = profiles.length;
   const runningCount = useMemo(
@@ -956,7 +988,38 @@ export default function ProfilesPage() {
     finally { setSaving(false); }
   }
 
+  // Lists clear mismatches before a launch and lets the user fix them, launch anyway or cancel.
+  // Resolves true when the launch should go ahead. A failed check never blocks a launch.
+  async function passPreLaunch(ids) {
+    let res;
+    try { res = await softglazeApi.profiles.prelaunchCheck(ids); } catch (e) { return true; }
+    const issues = (res && res.issues) || {};
+    const items = ids.filter((id) => issues[id]).map((id) => ({
+      profile: { id, title: (profiles.find((p) => p.id === id) || {}).title || `#${id}` },
+      issues: issues[id]
+    }));
+    if (!items.length) return true;
+    const decision = await new Promise((resolve) => setPreLaunch({ items, resolve }));
+    if (decision.stopAsking) {
+      try { await softglazeApi.settings.setGlobal({ browser: { checkBeforeLaunch: false } }); } catch (e) { /* the launch still goes ahead */ }
+    }
+    if (decision.launch && decision.fix) {
+      const failures = [];
+      for (const it of items) {
+        for (const action of [...new Set(it.issues.map((i) => i.fix).filter(Boolean))]) {
+          try { await softglazeApi.profiles.captchaFix(it.profile.id, action); }
+          catch (err) { failures.push(`${it.profile.title}: ${err.message}`); }
+        }
+      }
+      if (failures.length) setError(failures.join(' · '));
+      await loadData();
+    }
+    setPreLaunch(null);
+    return decision.launch;
+  }
+
   async function handleLaunch(profileId) {
+    if (!(await passPreLaunch([profileId]))) return;
     try {
       const res = await softglazeApi.profiles.launch(profileId, { startUrl: 'about:blank' });
       // The browser opened without the proxy's timezone: warn, do not block.
@@ -994,6 +1057,7 @@ export default function ProfilesPage() {
   async function handleBulkLaunch() {
     const ids = visibleSelectedIds();
     if (ids.length === 0) return;
+    if (!(await passPreLaunch(ids))) return;
     setBulkBusy(true); setError('');
     // Queue mode holds launchQueueWidth profiles open and opens the next as each closes; otherwise main
     // uses the launch-concurrency cap. The 'done' event clears progress, so a background queue keeps it.
@@ -1015,6 +1079,24 @@ export default function ProfilesPage() {
   async function stopQueue() {
     try { if (softglazeApi.profiles.bulkLaunchControl) await softglazeApi.profiles.bulkLaunchControl('stop'); } catch (e) { /* ignore */ }
     setLaunchProgress(null); setLaunchPaused(false);
+  }
+  async function handleBulkCaptchaFix() {
+    const ids = visibleSelectedIds();
+    if (ids.length === 0) return;
+    if (!window.confirm(tc('bulk.confirm', { count: ids.length }))) return;
+    setBulkBusy(true); setError(''); setNotice('');
+    try {
+      const res = await softglazeApi.profiles.captchaFixBulk(ids);
+      const noBetter = res.results.filter((r) => r.errorCode === 'NO_SPARE_PROXY' || r.errorCode === 'NO_BETTER_PROXY').length;
+      const failed = res.results.filter((r) => r.error && r.errorCode !== 'NO_SPARE_PROXY' && r.errorCode !== 'NO_BETTER_PROXY');
+      const parts = [tc('bulk.done', { changed: res.changed, total: ids.length, swapped: res.swapped })];
+      if (noBetter) parts.push(tc('bulk.noBetter', { count: noBetter }));
+      setNotice(parts.join(' '));
+      if (failed.length) setError(failed.map((r) => `#${r.id}: ${r.error}`).join(' · '));
+      setCaptchaScores({});
+      await loadData();
+    } catch (err) { setError(err.message); }
+    finally { setBulkBusy(false); }
   }
   async function handleBulkClose(ids) {
     // No argument uses the selection; a row's Stop button passes [id].
@@ -2024,6 +2106,7 @@ export default function ProfilesPage() {
         </div>
       </div>
       {error && <div className="mb-5 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
+      {notice && <div role="status" className="mb-5 rounded border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">{notice}</div>}
       {Object.keys(geoWarnings).length > 0 && (
         <div role="status" className="mb-5 flex items-start gap-3 rounded border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
           <ul className="flex-1 space-y-1">
@@ -2091,6 +2174,7 @@ export default function ProfilesPage() {
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 mr-1" /> {t('bulk.tag')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 mr-1" /> {t('bulk.rename')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowReassignModal(true)} title={t('bulk.reassignProxyTitle')}><Link2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.reassignProxy')}</Button>
+            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkCaptchaFix} title={tc('bulk.fixTitle')}><ShieldCheck className="w-3.5 h-3.5 mr-1" /> {tc('bulk.fix')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.share')}</Button>
             <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title={t('bulk.compareTitle')}><GitCompare className="w-3.5 h-3.5 mr-1" /> {t('bulk.compare')}</Button>
             <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</Button>
@@ -2131,8 +2215,23 @@ export default function ProfilesPage() {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('filters.searchPlaceholder')} className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
         </div>
-        {(filterGroup !== 'all' || filterTag || filterProxy || filterStatus !== 'all' || search) && (
-          <Button variant="ghost" size="sm" onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setSearch(''); }}>{t('filters.clearFilters')}</Button>
+        <CustomSelect value={captchaFilter} onChange={(e) => setCaptchaFilter(e.target.value)} className="w-auto" ariaLabel={tc('filter.any')}>
+          <option value="all">{tc('filter.any')}</option>
+          <option value="veryHigh">{tc('filter.veryHigh')}</option>
+          <option value="high">{tc('filter.high')}</option>
+          <option value="some">{tc('filter.some')}</option>
+          <option value="low">{tc('filter.low')}</option>
+          <option value="fixable">{tc('filter.fixable')}</option>
+        </CustomSelect>
+
+        <CustomSelect value={captchaSort} onChange={(e) => setCaptchaSort(e.target.value)} className="w-auto" ariaLabel={tc('sort.default')}>
+          <option value="">{tc('sort.default')}</option>
+          <option value="risk-desc">{tc('sort.riskDesc')}</option>
+          <option value="risk-asc">{tc('sort.riskAsc')}</option>
+        </CustomSelect>
+
+        {(filterGroup !== 'all' || filterTag || filterProxy || filterStatus !== 'all' || captchaFilter !== 'all' || captchaSort || search) && (
+          <Button variant="ghost" size="sm" onClick={() => { setFilterGroup('all'); setFilterTag(''); setFilterProxy(''); setFilterStatus('all'); setCaptchaFilter('all'); setCaptchaSort(''); setSearch(''); }}>{t('filters.clearFilters')}</Button>
         )}
         {filterPresets.length > 0 && (
           <CustomSelect value="" onChange={(e) => applyPreset(filterPresets.find((x) => x.name === e.target.value))} className="w-auto">
@@ -2320,6 +2419,7 @@ export default function ProfilesPage() {
         )}
       </Card>
 
+      {preLaunch && <PreLaunchCheckModal items={preLaunch.items} onDecide={preLaunch.resolve} />}
       {captchaProfile && (
         <CaptchaScoreModal
           profile={captchaProfile}

@@ -209,6 +209,10 @@
       "title": "Bloquear cookies de terceros",
       "desc": "Desactivado (recomendado): los perfiles guardan y envían cookies de terceros como una ventana normal de Chrome, que reCAPTCHA, hCaptcha y Cloudflare usan para confiar en un visitante, así que los CAPTCHA son más fáciles. Activado: los perfiles basados en Chrome las bloquean. Se aplica a los perfiles que se abran después del cambio."
     },
+    "checkBeforeLaunch": {
+      "title": "Revisar los perfiles antes de abrirlos",
+      "desc": "Antes de abrir un perfil desde la página Perfiles, muestra las incoherencias claras (sistema, tarjeta gráfica, pantalla, idioma, zona horaria, WebRTC, un proxy caído) y ofrece arreglarlas primero."
+    },
     "lockExtensions": {
       "title": "Desactivar la instalación/eliminación de extensiones",
       "desc": "En los perfiles basados en Chrome, la página de extensiones y Chrome Web Store se cierran en cuanto se abren, así que no se pueden añadir, quitar ni desactivar extensiones. Las extensiones que instales desde la página Extensiones de SoftGlaze se siguen cargando. Se aplica a los perfiles que se abran después del cambio."

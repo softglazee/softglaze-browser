@@ -124,5 +124,54 @@
     "osMismatch": {
       "warn": "Claims {{claimed}} but runs on {{host}}; fonts and other details can show the real system."
     }
+  },
+  "prelaunch": {
+    "title_one": "Check this profile before it opens",
+    "title_other": "Check {{count}} profiles before they open",
+    "subtitle": "Sites can see these mismatches as soon as a profile opens.",
+    "issue": {
+      "uaOs": "The user agent says {{ua}}, but the profile is set to {{os}}.",
+      "gpuOs": "The graphics card (WebGL) does not fit {{os}}.",
+      "screen": {
+        "mobile": "A phone with a {{width}}x{{height}} screen; phone screens are narrow and upright.",
+        "desktop": "A computer with a {{width}}x{{height}} screen; computer screens are at least 1024x600."
+      },
+      "language": "Language region {{region}} does not match the proxy's country {{country}}.",
+      "timezone": "The timezone comes from this computer, not from the proxy.",
+      "webrtc": "WebRTC is set to Real, which shows your real IP behind the proxy.",
+      "proxyDead": "The proxy failed its last check."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(change it in the profile editor)",
+    "stopAsking": "Don't check before launching again (turn it back on in Settings)",
+    "cancel": "Cancel",
+    "launchAnyway": "Launch anyway",
+    "fixAndLaunch": "Fix and launch"
+  },
+  "bulk": {
+    "fix": "Fix CAPTCHA issues",
+    "fixTitle": "Apply the safe CAPTCHA fixes to the selected profiles: timezone, language, location, WebRTC, and a spare proxy when it lowers the risk",
+    "confirm": "Fix CAPTCHA issues on {{count}} profiles? Only settings and proxies that lower the risk are changed.",
+    "done": "Fixed {{changed}} of {{total}} profiles; {{swapped}} moved to a spare proxy.",
+    "noBetter": "{{count}} could not get a better proxy."
+  },
+  "filter": {
+    "any": "Any CAPTCHA risk",
+    "low": "Low risk",
+    "some": "Some risk",
+    "high": "High risk",
+    "veryHigh": "Very high risk",
+    "fixable": "Has one-click fixes"
+  },
+  "sort": {
+    "default": "Default order",
+    "riskDesc": "Highest CAPTCHA risk first",
+    "riskAsc": "Lowest CAPTCHA risk first"
   }
 }

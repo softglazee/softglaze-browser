@@ -124,5 +124,54 @@
     "osMismatch": {
       "warn": "Dice ser {{claimed}} pero se ejecuta en {{host}}; las fuentes y otros detalles pueden mostrar el sistema real."
     }
+  },
+  "prelaunch": {
+    "title_one": "Revisa este perfil antes de abrirlo",
+    "title_other": "Revisa {{count}} perfiles antes de abrirlos",
+    "subtitle": "Los sitios ven estas incoherencias en cuanto se abre un perfil.",
+    "issue": {
+      "uaOs": "El user agent dice {{ua}}, pero el perfil está configurado como {{os}}.",
+      "gpuOs": "La tarjeta gráfica (WebGL) no encaja con {{os}}.",
+      "screen": {
+        "mobile": "Un teléfono con pantalla de {{width}}x{{height}}; las pantallas de teléfono son estrechas y verticales.",
+        "desktop": "Un ordenador con pantalla de {{width}}x{{height}}; las pantallas de ordenador miden al menos 1024x600."
+      },
+      "language": "La región del idioma {{region}} no coincide con el país del proxy {{country}}.",
+      "timezone": "La zona horaria viene de este ordenador, no del proxy.",
+      "webrtc": "WebRTC está en Real, lo que muestra tu IP real detrás del proxy.",
+      "proxyDead": "El proxy falló su última comprobación."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(cámbialo en el editor del perfil)",
+    "stopAsking": "No volver a revisar antes de abrir (se puede reactivar en Ajustes)",
+    "cancel": "Cancelar",
+    "launchAnyway": "Abrir de todos modos",
+    "fixAndLaunch": "Arreglar y abrir"
+  },
+  "bulk": {
+    "fix": "Arreglar problemas de CAPTCHA",
+    "fixTitle": "Aplica las soluciones seguras de CAPTCHA a los perfiles seleccionados: zona horaria, idioma, ubicación, WebRTC y un proxy libre cuando reduce el riesgo",
+    "confirm": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian ajustes y proxies que reducen el riesgo.",
+    "done": "Arreglados {{changed}} de {{total}} perfiles; {{swapped}} pasaron a un proxy libre.",
+    "noBetter": "{{count}} no pudieron obtener un proxy mejor."
+  },
+  "filter": {
+    "any": "Cualquier riesgo de CAPTCHA",
+    "low": "Riesgo bajo",
+    "some": "Algo de riesgo",
+    "high": "Riesgo alto",
+    "veryHigh": "Riesgo muy alto",
+    "fixable": "Con soluciones de un clic"
+  },
+  "sort": {
+    "default": "Orden predeterminado",
+    "riskDesc": "Mayor riesgo de CAPTCHA primero",
+    "riskAsc": "Menor riesgo de CAPTCHA primero"
   }
 }

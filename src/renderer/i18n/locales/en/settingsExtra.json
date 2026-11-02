@@ -209,6 +209,10 @@
       "title": "Block third-party cookies",
       "desc": "Off (recommended): profiles keep and send third-party cookies like a normal Chrome window, which reCAPTCHA, hCaptcha and Cloudflare use to trust a visitor, so CAPTCHAs are easier. On: Chrome-based profiles block them. Applies to profiles launched after you change it."
     },
+    "checkBeforeLaunch": {
+      "title": "Check profiles before they open",
+      "desc": "Before a profile opens from the Profiles page, list clear mismatches (system, graphics card, screen, language, timezone, WebRTC, a dead proxy) and offer to fix them first."
+    },
     "lockExtensions": {
       "title": "Disable installing/removing extensions",
       "desc": "In Chrome-based profiles, the Extensions page and the Chrome Web Store are closed as soon as they open, so extensions cannot be added, removed or turned off. Extensions you install from the Extensions page in SoftGlaze still load. Applies to profiles launched after you change it."
