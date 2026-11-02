@@ -52,6 +52,8 @@ import cmpUiEn from './locales/en/cmpUi.json';
 import cmpUiEs from './locales/es/cmpUi.json';
 import captchaEn from './locales/en/captcha.json';
 import captchaEs from './locales/es/captcha.json';
+import scoreboardEn from './locales/en/scoreboard.json';
+import scoreboardEs from './locales/es/scoreboard.json';
 
 export const LANG_KEY = 'softglaze-lang';
 
@@ -70,7 +72,7 @@ const NAMESPACES = [
   'settingsExtra',
   // Shared components
   'cmpModalsA', 'cmpModalsB', 'cmpModalsC', 'cmpOverlays', 'cmpSettingsA',
-  'cmpSettingsB', 'cmpSettingsC', 'cmpUi', 'captcha',
+  'cmpSettingsB', 'cmpSettingsC', 'cmpUi', 'captcha', 'scoreboard',
 ];
 
 export function readStoredLang() {
@@ -94,7 +96,7 @@ i18n.use(initReactI18next).init({
       gate: gateEn, profiles: profilesEn, settingsExtra: settingsExtraEn,
       cmpModalsA: cmpModalsAEn, cmpModalsB: cmpModalsBEn, cmpModalsC: cmpModalsCEn,
       cmpOverlays: cmpOverlaysEn, cmpSettingsA: cmpSettingsAEn, cmpSettingsB: cmpSettingsBEn,
-      cmpSettingsC: cmpSettingsCEn, cmpUi: cmpUiEn, captcha: captchaEn,
+      cmpSettingsC: cmpSettingsCEn, cmpUi: cmpUiEn, captcha: captchaEn, scoreboard: scoreboardEn,
     },
     es: {
       common: commonEs, proxies: proxiesEs, groups: groupsEs, extensions: extensionsEs,
@@ -103,7 +105,7 @@ i18n.use(initReactI18next).init({
       gate: gateEs, profiles: profilesEs, settingsExtra: settingsExtraEs,
       cmpModalsA: cmpModalsAEs, cmpModalsB: cmpModalsBEs, cmpModalsC: cmpModalsCEs,
       cmpOverlays: cmpOverlaysEs, cmpSettingsA: cmpSettingsAEs, cmpSettingsB: cmpSettingsBEs,
-      cmpSettingsC: cmpSettingsCEs, cmpUi: cmpUiEs, captcha: captchaEs,
+      cmpSettingsC: cmpSettingsCEs, cmpUi: cmpUiEs, captcha: captchaEs, scoreboard: scoreboardEs,
     },
   },
   lng,

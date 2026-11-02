@@ -53,6 +53,7 @@ const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
 const profileData = require('./profileData');
 const captchaScore = require('./captchaScore');
+const vendorScoreboard = require('./vendorScoreboard');
 const dbCrypto = require('./dbCrypto');
 const database = require('./database');
 const licensePolicy = require('./licensePolicy');
@@ -146,6 +147,7 @@ const CHANNELS = Object.freeze({
   PROXY_AUTO_GROUP: 'proxy:auto-group',
   PROXY_HEALTH_HISTORY: 'proxy:health-history',
   PROXY_RECENT_HEALTH: 'proxy:recent-health',
+  PROXY_VENDOR_SCOREBOARD: 'proxy:vendor-scoreboard',
 
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
@@ -7040,6 +7042,47 @@ async function getRecentProxyHealth(payload) {
   return cards.slice(0, maxProxies);
 }
 
+// ---- Vendor scoreboard ----
+// Success rate, speed and blocklist rate per proxy vendor from this workspace's own checks. Scoped
+// like the pool: a member sees only the proxies they may use, and only those proxies' checks and
+// blocks. The event window is bounded so a large pool still answers quickly.
+const SCOREBOARD_MAX_EVENTS = 50000;
+const SCOREBOARD_MAX_BLOCKS = 20000;
+
+async function getVendorScoreboard() {
+  await requirePermission('proxies.manage');
+  const db = getPrisma();
+  const now = Date.now();
+  const since = new Date(now - vendorScoreboard.WINDOW_MS);
+  const scope = await scopedProxyWhere(undefined);
+  const proxies = await db.proxy.findMany({
+    where: scope,
+    select: { id: true, name: true, provider: true, lastStatus: true, lastBlacklisted: true, lastIsp: true, lastCheckedAt: true }
+  });
+  if (!proxies.length) return { ...vendorScoreboard.buildScoreboard({ now }), truncated: false, maxEvents: SCOREBOARD_MAX_EVENTS };
+  // Unscoped (Owner, Super Admin, single user), every event belongs to a listed proxy or to a
+  // deleted one that buildScoreboard drops, so no id list is sent. A member's query names their ids.
+  const ids = proxies.map((p) => p.id);
+  const eventWhere = scope ? { proxyId: { in: ids }, ts: { gte: since } } : { ts: { gte: since } };
+  const [events, blocks] = await Promise.all([
+    db.proxyHealthEvent.findMany({
+      where: eventWhere,
+      orderBy: { ts: 'desc' },
+      take: SCOREBOARD_MAX_EVENTS,
+      select: { proxyId: true, status: true, latencyMs: true, ts: true }
+    }).catch(() => []),
+    // A block names its proxy inside the JSON detail; buildScoreboard keeps only the listed proxies'.
+    db.activityLog.findMany({
+      where: { action: 'proxy.blocked', createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: SCOREBOARD_MAX_BLOCKS,
+      select: { detail: true, createdAt: true }
+    }).catch(() => [])
+  ]);
+  const board = vendorScoreboard.buildScoreboard({ proxies, events, blocks, now, vendors: PROXY_VENDORS });
+  return { ...board, truncated: events.length >= SCOREBOARD_MAX_EVENTS, maxEvents: SCOREBOARD_MAX_EVENTS };
+}
+
 async function readSetting(key, fallback) {
   try {
     const row = await getPrisma().setting.findUnique({ where: { key } });
@@ -12135,6 +12178,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_AUTO_GROUP, autoGroupProxies);
   registerHandler(CHANNELS.PROXY_HEALTH_HISTORY, getProxyHealthHistory);
   registerHandler(CHANNELS.PROXY_RECENT_HEALTH, getRecentProxyHealth);
+  registerHandler(CHANNELS.PROXY_VENDOR_SCOREBOARD, getVendorScoreboard);
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);

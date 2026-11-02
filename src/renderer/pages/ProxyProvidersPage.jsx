@@ -8,6 +8,7 @@ import {
 
 import ProxyProviders, { PROVIDERS, ProviderLogo } from '@/components/ProxyProviders.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
+import VendorScoreboard from '@/components/VendorScoreboard.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card } from '@/components/ui/Card.jsx';
 import Input from '@/components/ui/Input.jsx';
@@ -217,6 +218,8 @@ export default function ProxyProvidersPage() {
       />
 
       {loadErr && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm" style={toneText('danger')}>{t('loadError', { message: loadErr })}</div>}
+
+      <VendorScoreboard onSelect={(key) => openProvider(key, 'pool', true)} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 items-start">
         <Card className="overflow-hidden">
