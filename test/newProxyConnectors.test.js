@@ -108,13 +108,16 @@ test('parseProxidizePerProxy maps the per-proxy list to pool rows', () => {
   assert.equal(U.parseProxidizePerProxy(data, { socks: true })[0].type, 'SOCKS5');
 });
 
+// help.proxidize.com "Per GB Connection Details and Username Format": the country is a two-letter
+// code, state and city are names without spaces, and -s- comes first, in the dashboard's order.
 test('proxidize per-GB username carries the geo + sticky tokens', () => {
-  assert.equal(U.proxidizeGeoToken({ country: 'USA', state: 'TX', city: 'Dallas' }), '-co-USA-st-TX-ci-Dallas');
-  assert.equal(U.proxidizeGeoToken({ country: 'usa' }), '-co-USA');
+  assert.equal(U.proxidizeGeoToken({ country: 'US', state: 'Texas', city: 'Dallas' }), '-co-US-st-Texas-ci-Dallas');
+  assert.equal(U.proxidizeGeoToken({ country: 'us' }), '-co-US');
+  assert.equal(U.proxidizeGeoToken({ country: 'USA' }), '', 'a three-letter code is not a country code');
   assert.equal(U.proxidizeGeoToken({ state: 'TX' }), '', 'state without country is dropped');
-  assert.equal(U.proxidizePerGbUsername('user', { country: 'USA', state: 'TX', city: 'Dallas', session: 'abc' }),
-    'user-co-USA-st-TX-ci-Dallas-s-abc');
-  assert.equal(U.proxidizePerGbUsername('', { country: 'USA' }), '');
+  assert.equal(U.proxidizePerGbUsername('user', { country: 'US', state: 'Texas', city: 'Dallas', session: 'abc' }),
+    'user-s-abc-co-US-st-Texas-ci-Dallas');
+  assert.equal(U.proxidizePerGbUsername('', { country: 'US' }), '');
 });
 
 // --- Wiring: adapters, registry and UI entries must all exist --------------------------

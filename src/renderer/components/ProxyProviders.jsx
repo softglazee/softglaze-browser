@@ -16,6 +16,19 @@ import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
 if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
 if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
+// PacketStream's dashboard Location list. Its password takes the country's dashboard name, and an
+// unknown one is ignored (the exit lands anywhere), so the picker offers only these. Mirrors
+// PACKETSTREAM_COUNTRIES in src/main/proxyVendorUtils.js.
+const PACKETSTREAM_COUNTRY_CODES = [
+  'US', 'CA', 'AF', 'AL', 'DZ', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ', 'BS', 'BH', 'BD', 'BY', 'BE', 'BA', 'BR', 'VG', 'BN',
+  'BG', 'KH', 'CM', 'CL', 'CN', 'CO', 'CR', 'HR', 'CU', 'CY', 'CZ', 'DK', 'DO', 'EC', 'EG', 'SV', 'EE', 'ET', 'FI', 'FR',
+  'GE', 'DE', 'GH', 'GR', 'GT', 'GY', 'JO', 'HK', 'HU', 'IN', 'ID', 'IR', 'IQ', 'IE', 'IL', 'IT', 'JM', 'JP', 'KZ', 'KE',
+  'KW', 'LV', 'LI', 'LU', 'MK', 'MG', 'MY', 'MU', 'MX', 'MN', 'ME', 'MA', 'MZ', 'MM', 'NP', 'NL', 'NZ', 'NG', 'NO', 'OM',
+  'PK', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH', 'PL', 'PT', 'PR', 'QA', 'LT', 'MD', 'RO', 'RU', 'SA', 'SN', 'RS', 'SC', 'SG',
+  'SK', 'SI', 'SO', 'ZA', 'KR', 'ES', 'LK', 'SD', 'SR', 'SE', 'CH', 'SY', 'TW', 'TJ', 'TH', 'TT', 'TN', 'TR', 'UG', 'UA',
+  'AE', 'GB', 'UZ', 'VE', 'VN', 'ZM'
+];
+
 // Static partner-vendor catalog. tokenSync providers show a Proxy Token + Sync form instead of
 // the host form; cards use initials tiles because lucide has no brand logos.
 // TODO: replace the ?ref=softglaze placeholders with real affiliate URLs once programs are live.
@@ -51,23 +64,25 @@ export const PROVIDERS = [
   // targeting in the username. Proxy username + password come from the dashboard (Proxy Setup).
   { key: 'nodemaven', name: 'NodeMaven', initials: 'NM', color: '#6366f1', referral: 'https://nodemaven.com/?ref=softglaze', gateway: { host: 'gate.nodemaven.com', port: 8080, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: true, geo: true, life: true, proto: true } },
   // Froxy (SOAX reseller): login + password from the dashboard Export Proxy List, targeting in
-  // the password against proxy.froxy.com:9000. wifi = residential, or pick Mobile.
+  // the password against proxy.froxy.com. wifi = residential, or pick Mobile. Each port from 9000
+  // up is its own sticky exit IP, so there is no session field.
   { key: 'froxy', name: 'Froxy', initials: 'FX', color: '#7c3aed', referral: 'https://froxy.com/?ref=softglaze', gateway: { host: 'proxy.froxy.com', port: 9000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], geo: true, noSession: true, proto: true } },
   // Proxidize: a Bearer token. Per-Proxy plans return ready credentials for a per-proxy
-  // username; Per-GB plans build from an access point against the gateway host from Proxy Details.
-  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], noCountry: true, count: true, poolType: true, gateway: true, proto: true } },
+  // username; Per-GB plans build from an access point on pg.proxi.es, with country, state, city
+  // and a sticky session in the username.
+  { key: 'proxidize', name: 'Proxidize', initials: 'PX', color: '#0ea5e9', referral: 'https://proxidize.com/?ref=softglaze', gateway: { host: 'pg.proxi.es', port: 20000, type: 'HTTP' }, geoSync: { creds: ['token', 'username'], count: true, geo: true, poolType: true, gateway: true, proto: true } },
   // Live Proxies: the dashboard gives each plan its own proxy list link (the access code is
   // already inside that URL), so the pull takes the link rather than a guessed endpoint.
   // Credentials come back as username:password@host:port, which the shared parser handles.
   { key: 'liveproxies', name: 'Live Proxies', initials: 'LV', color: '#10b981', referral: 'https://liveproxies.io/dashboard/overview', gateway: null, geoSync: { creds: ['username', 'password'], count: true, session: true, poolType: [['residential', 'Rotating residential'], ['static', 'Static residential'], ['mobile', 'Rotating mobile']], proto: true } },
   // PacketStream: one residential gateway. Username + proxy password from the dashboard
   // Network Access page; country + sticky session ride in the password. No state/city.
-  { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true, proto: true } },
+  { key: 'packetstream', name: 'PacketStream', initials: 'PK', color: '#3b82f6', referral: 'https://packetstream.io/', gateway: { host: 'proxy.packetstream.io', port: 31112, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, session: true, proto: true, countries: PACKETSTREAM_COUNTRY_CODES } },
   // Airproxy: dedicated mobile proxies. The API key lists the proxies already on the account
   // (GET /api/proxy/list/); location is fixed by the SIM, so no country/count controls.
   { key: 'airproxy', name: 'Airproxy', initials: 'AR', color: '#fb923c', referral: 'https://airproxy.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true } },
   // CatProxies: the cp_ API key + a Plan ID (from Active Plans) fetch that plan's proxy
-  // credentials; targeting rides in the username. Standard Residential + Rotating Mobile, US.
+  // credentials; targeting rides in the username. Standard Residential + Rotating Mobile.
   // ISP and Datacenter plans have fixed IPs and import as a list; Datacenter can filter by country.
   { key: 'catproxies', name: 'CatProxies', initials: 'CP', color: '#eab308', referral: 'https://catproxies.com/', gateway: null, geoSync: { creds: ['token'], planId: true, poolType: [['residential', 'Standard Residential'], ['mobile', 'Rotating Mobile'], ['isp', 'Dedicated or Custom ISP'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, proto: true } },
   // RapidProxy: no management API, so rows are minted on us.rapidproxy.io:5001 from a dashboard
@@ -158,7 +173,7 @@ export const PROXY_COUNTRIES = [
 const FORM_DRAFTS = new Map();
 
 const GEO_HINTS = {
-  liveproxies: 'Live Proxies builds every proxy on its gateway (b2b.liveproxies.io:7383). Enter the Username (for example LV58712) and Password shown under Proxy Information on the dashboard, and pick a country. How many 1 with no session gives one rotating proxy; more than 1 gives that many sticky proxies, each with its own 60 minute session. A sticky session is digits only.',
+  liveproxies: 'Live Proxies builds every proxy on its gateway (b2b.liveproxies.io:7383). Enter the Username (for example LV58712) and Password shown under Proxy Information on the dashboard, and pick a country. How many 1 with no session gives one rotating proxy; more than 1 gives that many sticky proxies (up to 1000), each with its own 60 minute session. A sticky session is digits only.',
   apify: 'Apify residential routes through one gateway (proxy.apify.com:8000); the country and a sticky session are encoded into the username. Each pull mints that many sticky residential IPs you can assign to profiles. Use the password from Apify Console → Proxy → HTTP settings. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.',
   shopsocks5: 'ShopSocks5 pulls your purchased SOCKS5 (or HTTPS) list via its API, filtered to the chosen country/state/city. The API authenticates with your account username/email + API token TOGETHER - token alone returns “User or Api Token incorrect”. Pick the Plan that matches your subscription (Premium / List / Daily).',
   anyip: 'anyip.io routes through one gateway (portal.anyip.io:1080) and encodes the pool type (Residential/Mobile), country, an optional sticky-session name and lifetime into the proxy username. Connect either by pasting your proxy Username (user_…) + Password from the dashboard (Get Proxy Details), OR by entering an API key + Team ID to auto-provision an account. A blank session with “Different each time” mints rotating IPs; a fixed session name pins one IP. Override the gateway host/port if your dashboard shows a custom port. Note: this vendor publishes no IPv6 option, so every exit is IPv4. Oxylabs is the one configured provider with a documented IPv6 selector.'
