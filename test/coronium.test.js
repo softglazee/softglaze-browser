@@ -73,6 +73,17 @@ test('bad bodies give no rows, never invented ones', () => {
   assert.equal(U.coroniumRows({ data: [{ name: 'x' }] }, { now: NOW }).rows.length, 0);
 });
 
+// The documented endpoint returns every proxy at once (no pagination), so How many only trims it.
+test('How many trims the account list with no 500 cap; blank imports all', async () => {
+  const ipcFunction = (name) => new RegExp(`(?:async )?function ${name}\\([\\s\\S]*?\\r?\\n\\}\\r?\\n`).exec(IPC)[0];
+  const data = Array.from({ length: 800 }, (_, i) => ({ ...CLASSIC, _id: String(i), http_port: String(10000 + i), tariff_expired_at: 0 }));
+  const fetchCoroniumPool = new Function('httpRequestText', 'coroniumRows', 'CORONIUM_API',
+    `${['clampPoolCount', 'limitListRows', 'fetchCoroniumPool'].map(ipcFunction).join('\n')}\nreturn fetchCoroniumPool;`
+  )(async () => JSON.stringify({ data }), U.coroniumRows, 'https://api.coronium.io/api/v3');
+  assert.equal((await fetchCoroniumPool({ token: 'k', count: '750' })).length, 750);
+  assert.equal((await fetchCoroniumPool({ token: 'k', count: '' })).length, 800);
+});
+
 test('Coronium is wired, reads only the documented endpoint and stores no rotation link', () => {
   const body = /async function fetchCoroniumPool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
   assert.match(body, /Authorization: `Bearer \$\{key\}`/);

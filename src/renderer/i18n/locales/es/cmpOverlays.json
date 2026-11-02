@@ -11,6 +11,7 @@
       "profiles": "Perfiles",
       "groups": "Grupos",
       "proxies": "Grupo de proxies",
+      "freeProxies": "Proxies gratis",
       "proxyProviders": "Proveedores de proxies",
       "browsers": "Navegadores",
       "extensions": "Extensiones",

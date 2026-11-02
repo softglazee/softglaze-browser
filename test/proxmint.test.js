@@ -45,6 +45,17 @@ test('proxmintPickProduct: returns the gateway and login of the wanted active pr
   assert.throws(() => U.proxmintPickProduct({ products: [] }, 'residential'), /no products yet/);
 });
 
+test('proxmintPickProduct: Premium residential matches the API name premium-residential', () => {
+  // proxmint.com/docs/api: product is residential, premium-residential, datacenter or mobile.
+  const json = { products: [
+    { product: 'premium-residential', name: 'Premium Residential', status: 'active', proxy: { host: 'gw.proxmint.com', httpPort: 823, socks5Port: 824, username: 'pu', password: 'pp' } }
+  ] };
+  const r = U.proxmintPickProduct(json, 'residential_premium');
+  assert.equal(r.username, 'pu');
+  assert.equal(r.name, 'Premium Residential');
+  assert.throws(() => U.proxmintPickProduct(json, 'residential'), /no active residential product.*Premium Residential \(active\)/);
+});
+
 test('Proxmint is wired: adapter, registry and panel entry', () => {
   assert.match(IPC, /async function fetchProxmintPool\(/);
   assert.match(IPC, /proxmint: fetchProxmintPool/);

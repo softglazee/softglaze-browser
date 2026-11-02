@@ -53,6 +53,54 @@ test('a status "no" reply with HTTP 200 becomes a clear error', () => {
   assert.match(U.proxy6Page('<html>').error, /did not return JSON/);
 });
 
+// Runs the real adapter against a fake account of `pages` (proxies per page; 1000 is a full page).
+function ipcFunction(name) {
+  return new RegExp(`(?:async )?function ${name}\\([\\s\\S]*?\\r?\\n\\}\\r?\\n`).exec(IPC)[0];
+}
+function adapter(pages, countryOf = () => 'us') {
+  const urls = [];
+  const sleeps = [];
+  let id = 0;
+  const httpRequestText = async (url) => {
+    urls.push(url);
+    const page = Number(/&page=(\d+)$/.exec(url)[1]);
+    const list = Array.from({ length: pages[page - 1] || 0 }, () => {
+      id += 1;
+      return { ...ROW, id: String(id), port: String(10000 + id), country: countryOf(id) };
+    });
+    return JSON.stringify(ok(list));
+  };
+  const constant = (name) => new RegExp(`^const ${name} = (.+?);`, 'm').exec(IPC)[1];
+  const fn = new Function(
+    'httpRequestText', 'proxy6Page', 'sleepMs',
+    `const PROXY6_API = ${constant('PROXY6_API')};\nconst PROXY6_PAGE_SIZE = ${constant('PROXY6_PAGE_SIZE')};\nconst PROXY6_PAGE_GAP_MS = ${constant('PROXY6_PAGE_GAP_MS')};\n`
+    + `${['normCountryCode', 'clampPoolCount', 'limitListRows', 'fetchProxy6Pool'].map(ipcFunction).join('\n')}\nreturn fetchProxy6Pool;`
+  )(httpRequestText, (body, opts) => U.proxy6Page(body, { ...opts, now: NOW }), async (ms) => { sleeps.push(ms); });
+  return { fetchProxy6Pool: fn, urls, sleeps };
+}
+
+test('pages of 1000 are followed to the end, with a pause for the 3-a-second limit', async () => {
+  const a = adapter([1000, 1000, 300]);
+  const rows = await a.fetchProxy6Pool({ token: 'abcdef12', count: '' });
+  assert.equal(rows.length, 2300);
+  assert.equal(a.urls.length, 3);
+  assert.ok(a.urls.every((u) => /limit=1000&page=\d$/.test(u)));
+  assert.deepEqual(a.sleeps, [350, 350], 'no more than 3 requests a second');
+});
+
+test('paging stops once How many is reached, counting only the chosen country', async () => {
+  const a = adapter([1000, 1000, 300]);
+  assert.equal((await a.fetchProxy6Pool({ token: 'abcdef12', count: '1200' })).length, 1200);
+  assert.equal(a.urls.length, 2);
+  const b = adapter([1000, 1000, 300]);
+  assert.equal((await b.fetchProxy6Pool({ token: 'abcdef12', count: '750' })).length, 750, 'no 500 cap');
+  assert.equal(b.urls.length, 1);
+  const c = adapter([1000, 1000, 300], (i) => (i % 100 === 0 ? 'de' : 'us'));
+  const de = await c.fetchProxy6Pool({ token: 'abcdef12', country: 'DE', count: '15' });
+  assert.deepEqual([de.length, c.urls.length], [15, 2]);
+  assert.ok(de.every((r) => r.country === 'DE'));
+});
+
 test('PROXY6 is wired, read-only, and uses the documented method', () => {
   const body = /async function fetchProxy6Pool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
   assert.match(body, /\/getproxy\/\?state=active&nokey&limit=/);

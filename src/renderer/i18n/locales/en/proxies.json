@@ -29,13 +29,13 @@
   },
   "free": {
     "button": "Free proxies",
-    "buttonTooltip": "Find, test and add free public proxies (no proxy account needed)",
+    "buttonTooltip": "Find, test and keep free public proxies on their own page, apart from your paid proxies",
     "title": "Free public proxies",
-    "description": "SoftGlaze downloads the public lists that free-proxy projects publish, tests every proxy, and adds only the ones that work to a \"Free proxies\" group.",
+    "description": "SoftGlaze downloads the public lists that free-proxy projects publish, tests every proxy, and keeps only the ones that work, on this page and apart from your paid proxies.",
     "warn": {
       "strangers": "Free proxies are run by unknown people. Do not use them to sign in to accounts, enter passwords or pay: the owner of a proxy can see traffic that is not encrypted.",
       "quality": "They are slow, often stop working within hours, and many are on blocklists, so expect more CAPTCHAs than with a paid proxy. For real account work, use a proxy provider.",
-      "legal": "Only use them where that is allowed. Quick generate never picks free proxies unless you choose the \"Free proxies\" group."
+      "legal": "Only use them where that is allowed. Quick generate never picks free proxies unless you choose \"Free proxies\" as its proxy source."
     },
     "checks": "Each proxy is tested live, and HTTP proxies that pass your real IP on to websites are rejected.",
     "protocol": "Protocol",
@@ -66,6 +66,91 @@
     "errors": {
       "country": "Use a two-letter country code, such as US or DE.",
       "failed": "Could not finish the search."
+    }
+  },
+  "freePage": {
+    "eyebrow": "Proxies",
+    "title": "Free proxies",
+    "description": "Free public proxies live here, apart from your paid proxies. They never show in the Proxy pool, its counts or its groups, and a profile uses one only when you pick it.",
+    "openPool": "Proxy pool",
+    "refresh": "Refresh",
+    "warnTitle": "Read this before you use a free proxy",
+    "searchTitle": "Find free proxies",
+    "busy": "A free-proxy search is already running.",
+    "stopIt": "Stop it",
+    "listTitle": "Saved free proxies",
+    "listCount": "{{shown}} of {{total}}",
+    "filters": {
+      "protocol": "Protocol",
+      "protocolAll": "Any protocol",
+      "country": "Country",
+      "countryAll": "Any country",
+      "countryUnknown": "Country not known",
+      "status": "Status",
+      "statusAll": "Any status",
+      "reset": "Reset filters"
+    },
+    "status": {
+      "working": "Working",
+      "dead": "Not working",
+      "unchecked": "Not checked",
+      "checking": "Checking…"
+    },
+    "table": {
+      "address": "Address",
+      "protocol": "Protocol",
+      "country": "Country",
+      "speed": "Speed",
+      "lastCheck": "Last check",
+      "status": "Status",
+      "usedBy": "Used by",
+      "actions": "Actions",
+      "selectAll": "Select all shown",
+      "selectRow": "Select {{address}}",
+      "loading": "Loading free proxies…",
+      "never": "Never",
+      "notUsed": "No profile",
+      "usedByCount_one": "{{count}} profile",
+      "usedByCount_other": "{{count}} profiles"
+    },
+    "actions": {
+      "check": "Check now",
+      "checkAria": "Check {{address}} now",
+      "delete": "Delete",
+      "deleteAria": "Delete {{address}}",
+      "checkAll": "Check all shown",
+      "deleteDead": "Delete the dead ones",
+      "checkSelected": "Check selected",
+      "deleteSelected": "Delete selected",
+      "clear": "Clear",
+      "selected": "{{count}} selected"
+    },
+    "confirm": {
+      "delete": "Delete the free proxy {{address}}?",
+      "deleteUsed_one": "Delete the free proxy {{address}}? {{count}} profile uses it and will lose its proxy.",
+      "deleteUsed_other": "Delete the free proxy {{address}}? {{count}} profiles use it and will lose their proxy.",
+      "deleteSelected_one": "Delete {{count}} selected free proxy?",
+      "deleteSelected_other": "Delete {{count}} selected free proxies?",
+      "deleteDead_one": "Delete {{count}} free proxy that failed its last check?",
+      "deleteDead_other": "Delete {{count}} free proxies that failed their last check?"
+    },
+    "checkRun": {
+      "running": "Checking {{done}} of {{total}} · {{ok}} working, {{fail}} not working",
+      "done": "Checked {{total}} · {{ok}} working, {{fail}} not working",
+      "stop": "Stop"
+    },
+    "empty": {
+      "title": "No free proxies yet",
+      "description": "Use the search above to find, test and save free public proxies. Only the ones that work and hide your IP are kept."
+    },
+    "noMatch": {
+      "title": "No free proxies match these filters",
+      "description": "Change or reset the filters to see the others."
+    },
+    "errors": {
+      "load": "Could not load the free proxies.",
+      "delete": "Could not delete the free proxies.",
+      "check": "Could not check the free proxies."
     }
   },
   "tabs": {

@@ -27,6 +27,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
+import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
@@ -546,7 +547,8 @@ export default function ProfilesPage() {
   const [activityProfile, setActivityProfile] = useState(null);
   const [groups, setGroups] = useState([]);
   const [allTags, setAllTags] = useState([]);
-  const [allProxies, setAllProxies] = useState([]);
+  const [allProxies, setAllProxies] = useState([]); // the paid pool
+  const [freeProxies, setFreeProxies] = useState([]); // free public proxies, listed apart from the pool
   const [proxyGroups, setProxyGroups] = useState([]);
   const [runningIds, setRunningIds] = useState(() => new Set());
   const [locks, setLocks] = useState({}); // profileId -> { memberName, mine } (in-use-by-another-member)
@@ -681,14 +683,15 @@ export default function ProfilesPage() {
   const loadData = useCallback(async () => {
     const seq = ++loadSeq.current;
     try {
-      const [profs, grps, tgs, pxs, sess, lockMap, pgs] = await Promise.all([
+      const [profs, grps, tgs, pxs, sess, lockMap, pgs, freePxs] = await Promise.all([
         softglazeApi.profiles.list({ search }),
         softglazeApi.groups.list(),
         softglazeApi.tags.list(),
-        softglazeApi.proxies.list({}),
+        softglazeApi.proxies.list({ scope: 'paid' }),
         softglazeApi.sessions.list(),
         softglazeApi.profiles.getLocks().catch(() => ({})),
-        softglazeApi.proxyGroups.list().catch(() => [])
+        softglazeApi.proxyGroups.list().catch(() => []),
+        softglazeApi.proxies.list({ scope: 'free' }).catch(() => [])
       ]);
       // Ignore a stale response: a slow broad search can resolve after a faster narrow one.
       if (seq !== loadSeq.current) return;
@@ -697,13 +700,14 @@ export default function ProfilesPage() {
       setGroups(grps);
       setAllTags(tgs);
       setAllProxies(pxs);
+      setFreeProxies(Array.isArray(freePxs) ? freePxs : []);
       setProxyGroups(Array.isArray(pgs) ? pgs : []);
       setRunningIds(new Set((sess || []).map((sx) => Number(sx.id))));
       setLocks(lockMap || {});
     } catch (err) { if (seq === loadSeq.current) setError(err.message); }
   }, [search]);
 
-  // Debounce only the search-driven reload (each reload makes 7 IPC calls); direct loadData() calls
+  // Debounce only the search-driven reload (each reload makes 8 IPC calls); direct loadData() calls
   // after mutations stay immediate, and loadSeq drops stragglers.
   useEffect(() => {
     const h = setTimeout(() => { loadData(); }, 200);
@@ -795,10 +799,8 @@ export default function ProfilesPage() {
   async function handleQuickGenerate(config, onProgress) {
     const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
-    // proxySource (pool mode only): '' = all, 'group:<id>', or 'provider:<key>'.
-    const src = String(proxySource || '');
-    const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
-    const provider = src.startsWith('provider:') ? src.slice(9) : undefined;
+    // proxySource: '' = the paid pool, 'group:<id>', 'provider:<key>', or 'free' (free proxies only).
+    const { proxySource: source, proxyGroupId, provider } = quickGenProxyFields(proxySource);
     // The server-side generator enforces batch invariants: a unique proxy per profile (capped at
     // availability), unique fingerprints, and an even Chrome-version spread.
     const result = await softglazeApi.profiles.batchGenerate({
@@ -813,6 +815,7 @@ export default function ProfilesPage() {
       groupId: groupId && groupId !== 'ungrouped' ? groupId : null,
       newGroupName: newGroupName || null,
       proxyMode, // 'direct' | 'unique' | 'pool' | 'paste'
+      proxySource: source, // 'paid' | 'free'
       proxyGroupId,
       provider,
       proxySpeed, // 'any' | 'fast' | 'slow' (pool/unique: pre-filter by latency)
@@ -1521,9 +1524,21 @@ export default function ProfilesPage() {
                       <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.selectProxy')}</label>
                       <CustomSelect value={pd.selectedSavedProxy} onChange={e => updatePd('selectedSavedProxy', e.target.value)} className="w-full max-w-md">
                         <option value="">{t('proxy.chooseSaved')}</option>
-                        {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
+                        {allProxies.length > 0 && (
+                          <optgroup label={t('proxy.optgroupPaid')}>
+                            {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
+                          </optgroup>
+                        )}
+                        {freeProxies.length > 0 && (
+                          <optgroup label={t('proxy.optgroupFree')}>
+                            {freeProxies.map(p => <option key={p.id} value={p.id}>{p.host}:{p.port} ({p.type}{p.lastCountry ? ` · ${p.lastCountry}` : ''})</option>)}
+                          </optgroup>
+                        )}
                       </CustomSelect>
-                      {allProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
+                      {allProxies.length === 0 && freeProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
+                      {freeProxies.some(p => String(p.id) === String(pd.selectedSavedProxy)) && (
+                        <p role="note" className="flex items-start gap-1.5 text-xs text-warning mt-2 lg:col-start-2"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.freeWarning')}</p>
+                      )}
                     </div>
                   )}
 
@@ -2213,6 +2228,11 @@ export default function ProfilesPage() {
           <option value="">{t('filters.allProxies')}</option>
           <option value="none">{t('filters.directNoProxy')}</option>
           {allProxies.map((px) => <option key={px.id} value={px.id}>{px.name}</option>)}
+          {freeProxies.length > 0 && (
+            <optgroup label={t('proxy.optgroupFree')}>
+              {freeProxies.map((px) => <option key={px.id} value={px.id}>{px.host}:{px.port}</option>)}
+            </optgroup>
+          )}
         </CustomSelect>
 
         <CustomSelect value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto">
@@ -2269,15 +2289,16 @@ export default function ProfilesPage() {
                   </th>
                   <th className="px-5 py-4">{t('table.name')}</th>
                   <th className="px-5 py-4">{t('table.proxy')}</th>
-                  <th className="px-5 py-4">{t('table.created')}</th>
-                  <th className="px-5 py-4">{t('table.lastUsed')}</th>
+                  <th className="px-3 py-4">{t('table.created')}</th>
+                  <th className="px-2 py-4 whitespace-nowrap">{tc('column')}</th>
+                  <th className="px-3 py-4">{t('table.lastUsed')}</th>
                   <th className="px-5 py-4 text-right">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredProfiles.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="p-12">
+                    <td colSpan="7" className="p-12">
                        <EmptyState title={t('table.emptyTitle')} description={t('table.emptyDesc')} icon={<Monitor className="w-10 h-10 text-muted" />} />
                     </td>
                   </tr>
@@ -2367,13 +2388,16 @@ export default function ProfilesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground text-xs">
+                    <td className="px-3 py-3.5 text-muted-foreground text-xs">
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span title={formatDateTime(p.createdAt)}>{formatDate(p.createdAt)}</span>
                         <ProfileAgeBadge createdAt={p.createdAt} stat={warmStats[p.id]} formatAgo={relTime} />
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
+                    <td className="px-2 py-3.5">
+                      <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title })} />
+                    </td>
+                    <td className="px-3 py-3.5 text-muted-foreground">
                       <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title={t('row.viewActivity')}>
                         <History className="h-3.5 w-3.5" />
                         <span title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.neverUsed')}>{p.lastUsedAt ? relTime(p.lastUsedAt) : t('relTime.never')}</span>
@@ -2381,7 +2405,7 @@ export default function ProfilesPage() {
                       </button>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
+                      <div className="flex justify-end gap-1">
                         {runningIds.has(p.id) ? (
                           <Button size="sm" variant="danger" onClick={() => handleBulkClose([p.id])} className="px-3" title={t('actions.stop')}>
                             <Square className="w-3.5 h-3.5 mr-1" /> {t('actions.stop')}
@@ -2398,23 +2422,22 @@ export default function ProfilesPage() {
 
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
 
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setEnvProfile(p)} title={t('actions.environmentOverview')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setEnvProfile(p)} title={t('actions.environmentOverview')}>
                           <Fingerprint className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
                           <Settings2 className="w-4 h-4" />
                         </Button>
-                        <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title })} />
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
                           <Cookie className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')}>
                           <Shuffle className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')}>
                           <Copy className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')}>
+                        <Button size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')}>
                           <Dices className="w-4 h-4" />
                         </Button>
 
@@ -2486,7 +2509,7 @@ export default function ProfilesPage() {
         <TemplatesModal onClose={() => setShowTemplates(false)} onProfilesChanged={loadData} />
       )}
       {showQuickGen && (
-        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} onCreateGroup={async (name) => { const g = await softglazeApi.groups.create({ name }); await loadData(); return g; }} />
+        <QuickGenerateModal osPlatforms={OS_PLATFORMS} groups={groups} proxies={allProxies} freeProxies={freeProxies} proxyGroups={proxyGroups} onClose={() => setShowQuickGen(false)} onGenerate={handleQuickGenerate} onCreateGroup={async (name) => { const g = await softglazeApi.groups.create({ name }); await loadData(); return g; }} />
       )}
       {showBrowserManager && (
         <BrowserManagerModal onClose={() => setShowBrowserManager(false)} onInstalled={refreshInstalledBrowsers} />

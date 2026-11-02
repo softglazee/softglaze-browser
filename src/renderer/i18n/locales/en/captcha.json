@@ -5,10 +5,17 @@
   "outOf100": "of 100",
   "level": {
     "low": "Low risk",
-    "some": "Some risk",
+    "some": "Medium risk",
     "high": "High risk",
     "veryHigh": "Very high risk"
   },
+  "levelShort": {
+    "low": "Low",
+    "some": "Medium",
+    "high": "High",
+    "veryHigh": "Very high"
+  },
+  "column": "CAPTCHA risk",
   "issues_zero": "No issues found",
   "issues_one": "1 issue",
   "issues_other": "{{count}} issues",

@@ -15,7 +15,6 @@ import EmptyState from '@/components/EmptyState.jsx';
 import { AreaChart } from '@/components/charts/Charts.jsx';
 import { Clock, History, RotateCw, ArrowUpRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
-import FreeProxiesDialog from '@/components/FreeProxiesDialog.jsx';
 import { Gift } from 'lucide-react';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -130,7 +129,6 @@ export default function ProxyPoolPage() {
   const [search, setSearch] = useState('');
   const [proxyOpen, setProxyOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
-  const [freeOpen, setFreeOpen] = useState(false);
   const [proxyForm, setProxyForm] = useState(initialProxyForm);
   const [batchRaw, setBatchRaw] = useState('');
   const [batchType, setBatchType] = useState('HTTP');
@@ -317,7 +315,7 @@ export default function ProxyPoolPage() {
     try {
       // Fetch the full pool once; search + category filtering happen client-side so
       // the sidebar counts stay accurate and switching categories never refetches.
-      const list = await softglazeApi.proxies.list({});
+      const list = await softglazeApi.proxies.list({ scope: 'paid' });
       setProxies(Array.isArray(list) ? list : []);
       // Drop any selected ids that no longer exist after a reload.
       setSelectedIds((prev) => {
@@ -568,7 +566,7 @@ export default function ProxyPoolPage() {
     try {
       const summary = await softglazeApi.proxies.testAll();
       setTestSummary(summary);
-      const list = await softglazeApi.proxies.list({});
+      const list = await softglazeApi.proxies.list({ scope: 'paid' });
       const rows = Array.isArray(list) ? list : [];
       setProxies(rows);
       const next = {};
@@ -811,10 +809,6 @@ export default function ProxyPoolPage() {
                 <Upload className="h-4 w-4" />
                 {t('actions.batchAdd')}
               </Button>
-              <Button variant="secondary" onClick={() => setFreeOpen(true)} title={t('free.buttonTooltip')}>
-                <Gift className="h-4 w-4" />
-                {t('free.button')}
-              </Button>
               <Button variant="primary" onClick={openCreate}>
                 <Plus className="h-4 w-4" />
                 {t('actions.newProxy')}
@@ -883,6 +877,10 @@ export default function ProxyPoolPage() {
       </div>
       <Link to="/proxy-providers" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold border border-border bg-card text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors">
         <Boxes className="w-4 h-4" /> {t('tabs.providers')} <ArrowUpRight className="w-3.5 h-3.5" />
+      </Link>
+      {/* Free public proxies have their own page and never show in this pool */}
+      <Link to="/free-proxies" title={t('free.buttonTooltip')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold border border-border bg-card text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors">
+        <Gift className="w-4 h-4" /> {t('free.button')} <ArrowUpRight className="w-3.5 h-3.5" />
       </Link>
       </div>
 
@@ -1444,8 +1442,6 @@ export default function ProxyPoolPage() {
           </form>
         </DialogContent>
       </Dialog>
-
-      <FreeProxiesDialog open={freeOpen} onOpenChange={setFreeOpen} onAdded={loadProxies} />
 
       <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
         <DialogContent title={t('batch.dialogTitle')} className="rounded border-border bg-card">

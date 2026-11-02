@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card.jsx';
 import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
 
 // OS choices for the shared Quick Generate modal (expects [{ id }]).
 const QUICK_OS_PLATFORMS = [{ id: 'Windows' }, { id: 'macOS' }, { id: 'Linux' }, { id: 'Android' }, { id: 'iOS' }];
@@ -23,6 +24,7 @@ export default function BatchImportPage() {
   const [importResult, setImportResult] = useState(null);
   const [fileError, setFileError] = useState('');
   const [autoBind, setAutoBind] = useState(false);
+  const [autoBindSource, setAutoBindSource] = useState('paid'); // 'paid' | 'free' (working free proxies)
   const [importProgress, setImportProgress] = useState(null); // { pct, index, total }
   const [importLog, setImportLog] = useState([]);
   const [exporting, setExporting] = useState(false);
@@ -35,13 +37,15 @@ export default function BatchImportPage() {
   // Quick Generate uses the shared modal, identical to the Profiles page.
   const [showQuickGen, setShowQuickGen] = useState(false);
   const [savedProxies, setSavedProxies] = useState([]);
+  const [freeProxies, setFreeProxies] = useState([]);
   const [groups, setGroups] = useState([]);
   const [proxyGroups, setProxyGroups] = useState([]);
 
   // Quick Generate needs proxies (unique assignment), profile groups (target or create inline)
   // and proxy groups / providers as a source.
   const loadGenData = () => {
-    softglazeApi.proxies.list({}).then((p) => setSavedProxies(Array.isArray(p) ? p : (p?.items || []))).catch(() => {});
+    softglazeApi.proxies.list({ scope: 'paid' }).then((p) => setSavedProxies(Array.isArray(p) ? p : (p?.items || []))).catch(() => {});
+    softglazeApi.proxies.list({ scope: 'free' }).then((p) => setFreeProxies(Array.isArray(p) ? p : [])).catch(() => {});
     softglazeApi.groups.list().then((g) => setGroups(Array.isArray(g) ? g : [])).catch(() => {});
     softglazeApi.proxyGroups.list().then((pg) => setProxyGroups(Array.isArray(pg) ? pg : [])).catch(() => {});
   };
@@ -76,7 +80,7 @@ export default function BatchImportPage() {
     });
 
     try {
-      const result = await softglazeApi.batch.commitProfileImport(previewData.token, { autoBindByCountry: autoBind });
+      const result = await softglazeApi.batch.commitProfileImport(previewData.token, { autoBindByCountry: autoBind, autoBindSource });
       setImportResult(result);
       setPreviewData(null);
     } catch (err) {
@@ -157,14 +161,12 @@ export default function BatchImportPage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  // Same contract as the Profiles page: proxySource ('group:<id>' | 'provider:<key>') maps to
-  // proxyGroupId/provider so only that selection is assigned.
+  // Same contract as the Profiles page: proxySource ('group:<id>' | 'provider:<key>' | 'free') maps
+  // to proxyGroupId/provider or the free source so only that selection is assigned.
   const handleQuickGenerate = async (config, onProgress) => {
     const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
-    const src = String(proxySource || '');
-    const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
-    const provider = src.startsWith('provider:') ? src.slice(9) : undefined;
+    const { proxySource: source, proxyGroupId, provider } = quickGenProxyFields(proxySource);
     const result = await softglazeApi.profiles.batchGenerate({
       count,
       prefix: baseName,
@@ -177,6 +179,7 @@ export default function BatchImportPage() {
       groupId: groupId && groupId !== 'ungrouped' ? groupId : null,
       newGroupName: newGroupName || null,
       proxyMode,
+      proxySource: source, // 'paid' | 'free'
       proxyGroupId,
       provider,
       proxySpeed, // same pre-filters as the Profiles page
@@ -369,6 +372,18 @@ export default function BatchImportPage() {
                               <strong className="text-muted-foreground">{t('autoBind.label')}</strong> {t('autoBind.descPrefix')} <code className="text-emerald-400">Country</code> {t('autoBind.descSuffix')}
                             </span>
                           </label>
+                          {autoBind && (
+                            <div className="flex flex-wrap items-center gap-2 pl-6 text-[12px] text-muted-foreground">
+                              <label htmlFor="auto-bind-source">{t('autoBind.sourceLabel')}</label>
+                              <select id="auto-bind-source" value={autoBindSource} onChange={(e) => setAutoBindSource(e.target.value)} className="h-8 rounded border border-border bg-card px-2 text-[12px] text-foreground focus:border-primary focus:outline-none">
+                                <option value="paid">{t('autoBind.sourcePaid')}</option>
+                                <option value="free">{t('autoBind.sourceFree')}</option>
+                              </select>
+                              {autoBindSource === 'free' && (
+                                <p role="note" className="flex w-full items-start gap-1.5 text-warning"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('autoBind.freeWarn')}</p>
+                              )}
+                            </div>
+                          )}
                           <Button
                             onClick={handleCommitImport}
                             disabled={importing}
@@ -430,6 +445,7 @@ export default function BatchImportPage() {
           osPlatforms={QUICK_OS_PLATFORMS}
           groups={groups}
           proxies={savedProxies}
+          freeProxies={freeProxies}
           proxyGroups={proxyGroups}
           onClose={() => setShowQuickGen(false)}
           onGenerate={handleQuickGenerate}

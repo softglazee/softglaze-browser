@@ -49,7 +49,11 @@
   "autoBind": {
     "label": "Auto-bind proxies by country",
     "descPrefix": "- for rows without their own proxy, assign a saved proxy whose health-checked country matches the row's",
-    "descSuffix": "column (round-robin across matches)."
+    "descSuffix": "column (round-robin across matches).",
+    "sourceLabel": "Bind from",
+    "sourcePaid": "Your proxies",
+    "sourceFree": "Free proxies (working only)",
+    "freeWarn": "Free proxies are run by strangers: never sign in to accounts or pay with these profiles."
   },
   "commitButton_one": "Commit {{count}} Profile",
   "commitButton_other": "Commit {{count}} Profiles",

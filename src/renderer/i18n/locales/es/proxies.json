@@ -29,13 +29,13 @@
   },
   "free": {
     "button": "Proxies gratis",
-    "buttonTooltip": "Busca, prueba y añade proxies públicos gratuitos (sin cuenta de proxy)",
+    "buttonTooltip": "Busca, prueba y guarda proxies públicos gratuitos en su propia página, separados de tus proxies de pago",
     "title": "Proxies públicos gratuitos",
-    "description": "SoftGlaze descarga las listas públicas que publican los proyectos de proxies gratuitos, prueba cada proxy y añade solo los que funcionan al grupo \"Free proxies\".",
+    "description": "SoftGlaze descarga las listas públicas que publican los proyectos de proxies gratuitos, prueba cada proxy y guarda solo los que funcionan, en esta página y separados de tus proxies de pago.",
     "warn": {
       "strangers": "Los proxies gratuitos los gestionan desconocidos. No los uses para iniciar sesión en cuentas, escribir contraseñas ni pagar: el dueño del proxy puede ver el tráfico que no está cifrado.",
       "quality": "Son lentos, suelen dejar de funcionar en pocas horas y muchos están en listas de bloqueo, así que verás más CAPTCHA que con un proxy de pago. Para trabajar con cuentas reales, usa un proveedor de proxies.",
-      "legal": "Úsalos solo donde esté permitido. La generación rápida nunca elige proxies gratuitos salvo que elijas el grupo \"Free proxies\"."
+      "legal": "Úsalos solo donde esté permitido. La generación rápida nunca elige proxies gratuitos salvo que elijas \"Proxies gratis\" como origen de proxies."
     },
     "checks": "Cada proxy se prueba en directo y se rechazan los proxies HTTP que pasan tu IP real a los sitios web.",
     "protocol": "Protocolo",
@@ -66,6 +66,91 @@
     "errors": {
       "country": "Usa un código de país de dos letras, como US o DE.",
       "failed": "No se pudo terminar la búsqueda."
+    }
+  },
+  "freePage": {
+    "eyebrow": "Proxies",
+    "title": "Proxies gratis",
+    "description": "Los proxies públicos gratuitos viven aquí, separados de tus proxies de pago. Nunca aparecen en el grupo de proxies, en sus recuentos ni en sus grupos, y un perfil usa uno solo cuando tú lo eliges.",
+    "openPool": "Grupo de proxies",
+    "refresh": "Actualizar",
+    "warnTitle": "Lee esto antes de usar un proxy gratuito",
+    "searchTitle": "Buscar proxies gratis",
+    "busy": "Ya hay una búsqueda de proxies gratuitos en curso.",
+    "stopIt": "Detenerla",
+    "listTitle": "Proxies gratuitos guardados",
+    "listCount": "{{shown}} de {{total}}",
+    "filters": {
+      "protocol": "Protocolo",
+      "protocolAll": "Cualquier protocolo",
+      "country": "País",
+      "countryAll": "Cualquier país",
+      "countryUnknown": "País desconocido",
+      "status": "Estado",
+      "statusAll": "Cualquier estado",
+      "reset": "Restablecer filtros"
+    },
+    "status": {
+      "working": "Funciona",
+      "dead": "No funciona",
+      "unchecked": "Sin comprobar",
+      "checking": "Comprobando…"
+    },
+    "table": {
+      "address": "Dirección",
+      "protocol": "Protocolo",
+      "country": "País",
+      "speed": "Velocidad",
+      "lastCheck": "Última comprobación",
+      "status": "Estado",
+      "usedBy": "Usado por",
+      "actions": "Acciones",
+      "selectAll": "Seleccionar todos los mostrados",
+      "selectRow": "Seleccionar {{address}}",
+      "loading": "Cargando proxies gratuitos…",
+      "never": "Nunca",
+      "notUsed": "Ningún perfil",
+      "usedByCount_one": "{{count}} perfil",
+      "usedByCount_other": "{{count}} perfiles"
+    },
+    "actions": {
+      "check": "Comprobar ahora",
+      "checkAria": "Comprobar {{address}} ahora",
+      "delete": "Eliminar",
+      "deleteAria": "Eliminar {{address}}",
+      "checkAll": "Comprobar los mostrados",
+      "deleteDead": "Eliminar los que no funcionan",
+      "checkSelected": "Comprobar seleccionados",
+      "deleteSelected": "Eliminar seleccionados",
+      "clear": "Limpiar",
+      "selected": "{{count}} seleccionados"
+    },
+    "confirm": {
+      "delete": "¿Eliminar el proxy gratuito {{address}}?",
+      "deleteUsed_one": "¿Eliminar el proxy gratuito {{address}}? {{count}} perfil lo usa y se quedará sin proxy.",
+      "deleteUsed_other": "¿Eliminar el proxy gratuito {{address}}? {{count}} perfiles lo usan y se quedarán sin proxy.",
+      "deleteSelected_one": "¿Eliminar {{count}} proxy gratuito seleccionado?",
+      "deleteSelected_other": "¿Eliminar {{count}} proxies gratuitos seleccionados?",
+      "deleteDead_one": "¿Eliminar {{count}} proxy gratuito que falló su última comprobación?",
+      "deleteDead_other": "¿Eliminar {{count}} proxies gratuitos que fallaron su última comprobación?"
+    },
+    "checkRun": {
+      "running": "Comprobando {{done}} de {{total}} · {{ok}} funcionan, {{fail}} no funcionan",
+      "done": "Comprobados {{total}} · {{ok}} funcionan, {{fail}} no funcionan",
+      "stop": "Detener"
+    },
+    "empty": {
+      "title": "Aún no hay proxies gratuitos",
+      "description": "Usa la búsqueda de arriba para encontrar, probar y guardar proxies públicos gratuitos. Solo se guardan los que funcionan y ocultan tu IP."
+    },
+    "noMatch": {
+      "title": "Ningún proxy gratuito coincide con estos filtros",
+      "description": "Cambia o restablece los filtros para ver los demás."
+    },
+    "errors": {
+      "load": "No se pudieron cargar los proxies gratuitos.",
+      "delete": "No se pudieron eliminar los proxies gratuitos.",
+      "check": "No se pudieron comprobar los proxies gratuitos."
     }
   },
   "tabs": {
