@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, CheckCircle2, Clock, ExternalLink, Globe, KeyRound, Loader2, Plug, RefreshCw,
+  AlertTriangle, CheckCircle2, ExternalLink, Globe, KeyRound, Loader2, Plug, RefreshCw,
   Search, Server, Activity, CalendarClock, History, Pencil
 } from 'lucide-react';
 
@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/Card.jsx';
 import Input from '@/components/ui/Input.jsx';
 import Switch from '@/components/ui/Switch.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { TONE, daysUntil, parseDay, shortDate, toneText, useProviderStates } from '@/lib/providerStates.js';
 import { cn, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import providersPageEn from '@/i18n/locales/en/providersPage.json';
@@ -28,16 +29,12 @@ if (!i18n.hasResourceBundle('es', 'providersPage')) i18n.addResourceBundle('es',
 // The connector forms themselves (geo, count, protocol, sticky, creds, pull) are the
 // existing ProxyProviders component rendered in `embedded` mode, so every IPC call,
 // FORM_DRAFTS, persistCreds and syncVendorPool path is the same code the Proxy Pool
-// tab used. This page adds the shell around it, built only from real data:
-//   - the pool (proxies.list, each row tagged with the provider it was pulled from),
-//   - which providers have a saved key (proxies.getProviderCreds, secrets never kept),
-//   - trials the operator records here (globalSettings.proxyProviderTrials).
+// tab used. This page adds the shell around it, built from useProviderStates. Needs attention
+// and Trials are on the Super Admin's Provider status page, not here.
 // ---------------------------------------------------------------------------
 
 const TEST_AFTER_KEY = 'sg.providers.testAfterImport';
-const ATTENTION_PREVIEW = 5;
 const POOL_PREVIEW = 50;
-const DAY = 86400000;
 
 function readTestAfter() {
   try { return window.localStorage.getItem(TEST_AFTER_KEY) !== '0'; } catch (e) { return true; }
@@ -45,41 +42,6 @@ function readTestAfter() {
 function writeTestAfter(on) {
   try { window.localStorage.setItem(TEST_AFTER_KEY, on ? '1' : '0'); } catch (e) { /* storage blocked */ }
 }
-
-function kindOf(p) {
-  if (p.unavailable) return 'unavailable';
-  if (p.tokenSync) return 'tokenSync';
-  if (p.geoSync) return 'geoPull';
-  if (p.apiSync) return 'apiSync';
-  return 'gateway';
-}
-
-// 'YYYY-MM-DD' -> local midnight Date (null when blank or malformed).
-function parseDay(s) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-function daysUntil(day) {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  return Math.round((day.getTime() - today.getTime()) / DAY);
-}
-function shortDate(day, lang) {
-  try { return day.toLocaleDateString(lang, { day: 'numeric', month: 'short', year: day.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); }
-  catch (e) { return day.toDateString(); }
-}
-
-// Status colours come from the theme tokens. Text tinted toward the foreground keeps
-// contrast in both light and dark (pure amber/red on white is too faint).
-const TONE = {
-  success: 'var(--success)',
-  trial: 'var(--chart-2)',
-  warning: 'var(--warning)',
-  danger: 'var(--destructive)',
-  muted: 'var(--muted-foreground)'
-};
-const toneText = (tone) => ({ color: `color-mix(in srgb, ${TONE[tone]} 70%, var(--foreground))` });
 
 const STATE_TONE = { connected: 'success', trial: 'trial', needsKey: 'warning', notSetUp: 'muted', unavailable: 'muted' };
 
@@ -103,16 +65,6 @@ function LogoTile({ p, size = 'sm' }) {
   );
 }
 
-function CardHead({ title, count, aside }) {
-  return (
-    <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
-      <h2 className="text-[14px] font-semibold text-foreground font-display">{title}</h2>
-      {count != null && <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{count}</span>}
-      {aside && <span className="ml-auto text-[12px] text-muted-foreground">{aside}</span>}
-    </div>
-  );
-}
-
 function maskedLine(px) {
   const scheme = String(px.type || 'HTTP').toLowerCase();
   const auth = px.username ? `${px.username}:${px.hasPassword || px.password ? '••••' : ''}@` : '';
@@ -124,19 +76,18 @@ export default function ProxyProvidersPage() {
   const navigate = useNavigate();
   const lang = inst.language || 'en';
 
-  const [loading, setLoading] = useState(true);
-  const [loadErr, setLoadErr] = useState('');
-  const [proxies, setProxies] = useState([]);
-  const [creds, setCreds] = useState({}); // key -> { found, hasKey } (no secret values kept)
-  const [credsHidden, setCredsHidden] = useState(false);
-  const [trials, setTrials] = useState({});
+  const { loading, setLoading, loadErr, proxies, credsHidden, load, rows, isSuper } = useProviderStates();
   const [links, setLinks] = useState({});
 
-  const [selectedKey, setSelectedKey] = useState(null);
+  // The Provider status page links here with ?provider=<key>&tab=<pull|pool>.
+  const [params] = useSearchParams();
+  const [selectedKey, setSelectedKey] = useState(() => {
+    const wanted = params.get('provider');
+    return wanted && PROVIDERS.some((p) => p.key === wanted) ? wanted : null;
+  });
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
-  const [tab, setTab] = useState('pull');
-  const [showAllAttention, setShowAllAttention] = useState(false);
+  const [tab, setTab] = useState(() => (params.get('tab') === 'pool' ? 'pool' : 'pull'));
 
   const [testAfter, setTestAfter] = useState(readTestAfter);
   const [lastPull, setLastPull] = useState(null); // { key, created: [] }
@@ -149,38 +100,6 @@ export default function ProxyProvidersPage() {
   const [savingTrial, setSavingTrial] = useState(false);
   const detailRef = useRef(null);
 
-  const load = useCallback(async () => {
-    setLoadErr('');
-    try {
-      const [list, cfg, credPairs] = await Promise.all([
-        softglazeApi.proxies.list(),
-        softglazeApi.settings.getGlobal().catch(() => null),
-        Promise.all(PROVIDERS.map((p) => Promise.resolve()
-          .then(() => softglazeApi.proxies.getProviderCreds(p.key))
-          .then((c) => [p.key, c, null])
-          .catch((e) => [p.key, null, e])))
-      ]);
-      setProxies(Array.isArray(list) ? list : []);
-      const next = {};
-      let denied = 0;
-      for (const [key, c, e] of credPairs) {
-        if (e) { denied += 1; continue; }
-        next[key] = { found: Boolean(c && c.found), hasKey: Boolean(c && (c.token || c.apiToken || c.password || c.apiUrl)) };
-      }
-      setCreds(next);
-      setCredsHidden(denied === PROVIDERS.length);
-      const raw = cfg && cfg.proxyProviderTrials && typeof cfg.proxyProviderTrials === 'object' ? cfg.proxyProviderTrials : {};
-      const tr = {};
-      for (const [k, v] of Object.entries(raw)) if (v && typeof v === 'object') tr[k] = v;
-      setTrials(tr);
-    } catch (e) {
-      setLoadErr(e && e.message ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     softglazeApi.monetization.getLinks().then((r) => setLinks(r && r.links ? r.links : {})).catch(() => {});
   }, []);
@@ -206,36 +125,6 @@ export default function ProxyProvidersPage() {
     return () => { if (typeof off === 'function') off(); };
   }, [load]);
 
-  // ---- derived per-provider state ------------------------------------------------
-  const poolBy = useMemo(() => {
-    const m = {};
-    for (const px of proxies) {
-      const k = px && px.provider ? String(px.provider).toLowerCase() : null;
-      if (!k) continue;
-      const s = m[k] || (m[k] = { total: 0, ok: 0, fail: 0, unchecked: 0, last: null, rows: [] });
-      s.total += 1;
-      if (px.lastStatus === 'ok') s.ok += 1; else if (px.lastStatus === 'fail') s.fail += 1; else s.unchecked += 1;
-      const at = px.createdAt ? new Date(px.createdAt).getTime() : 0;
-      if (at && (!s.last || at > s.last)) s.last = at;
-      s.rows.push(px);
-    }
-    return m;
-  }, [proxies]);
-
-  const rows = useMemo(() => PROVIDERS.map((p) => {
-    const pool = poolBy[p.key] || { total: 0, ok: 0, fail: 0, unchecked: 0, last: null, rows: [] };
-    const c = creds[p.key];
-    const keySaved = Boolean(c && c.found);
-    const trial = trials[p.key] || null;
-    let state;
-    if (p.unavailable) state = 'unavailable';
-    else if (trial) state = 'trial';
-    else if (pool.total > 0 && !keySaved && !credsHidden) state = 'needsKey';
-    else if (keySaved || pool.total > 0) state = 'connected';
-    else state = 'notSetUp';
-    return { p, pool, keySaved, trial, state, kind: kindOf(p) };
-  }), [poolBy, creds, trials, credsHidden]);
-
   const byKey = useMemo(() => Object.fromEntries(rows.map((r) => [r.p.key, r])), [rows]);
 
   const counts = useMemo(() => {
@@ -245,42 +134,6 @@ export default function ProxyProvidersPage() {
     }
     return c;
   }, [rows]);
-
-  const attention = useMemo(() => {
-    const items = [];
-    for (const r of rows) {
-      if (r.state === 'unavailable') continue;
-      const name = r.p.name;
-      const day = r.trial ? parseDay(r.trial.endsAt) : null;
-      if (day) {
-        const left = daysUntil(day);
-        if (left <= 14) {
-          items.push({
-            id: `${r.p.key}-trial`, key: r.p.key, name, icon: Clock, rank: 0, sort: day.getTime(),
-            tone: left <= 3 ? 'danger' : 'warning',
-            text: left < 0 ? t('attention.trialEnded', { date: shortDate(day, lang) }) : t('attention.trialEnds', { date: shortDate(day, lang) }),
-            emphasis: left < 0 ? null : left === 0 ? t('attention.endsToday') : t('attention.daysLeft', { count: left }),
-            action: t('attention.actionPull'), tab: 'pull'
-          });
-        }
-      }
-      if (r.pool.fail > 0) {
-        items.push({ id: `${r.p.key}-fail`, key: r.p.key, name, icon: AlertTriangle, rank: 1, sort: -r.pool.fail, tone: 'danger', text: t('attention.failing', { failed: r.pool.fail, total: r.pool.total }), action: t('attention.actionReview'), tab: 'pool' });
-      }
-      if (r.state === 'needsKey') {
-        items.push({ id: `${r.p.key}-key`, key: r.p.key, name, icon: KeyRound, rank: 2, sort: -r.pool.total, tone: 'warning', text: t('attention.needsKey', { count: r.pool.total }), action: t('attention.actionAddKey'), tab: 'pull' });
-      } else if (r.keySaved && r.pool.total === 0) {
-        items.push({ id: `${r.p.key}-empty`, key: r.p.key, name, icon: AlertTriangle, rank: 3, sort: 0, tone: 'warning', text: t('attention.keyNoPool'), action: t('attention.actionPull'), tab: 'pull' });
-      }
-    }
-    items.sort((a, b) => a.rank - b.rank || a.sort - b.sort || a.name.localeCompare(b.name));
-    return items;
-  }, [rows, t, lang]);
-
-  const trialRows = useMemo(() => rows
-    .filter((r) => r.trial)
-    .map((r) => ({ r, day: parseDay(r.trial.endsAt) }))
-    .sort((a, b) => (a.day ? a.day.getTime() : Infinity) - (b.day ? b.day.getTime() : Infinity)), [rows]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -293,12 +146,12 @@ export default function ProxyProvidersPage() {
     });
   }, [rows, filter, query]);
 
-  // First paint: open the provider that most needs a look, else the first live one.
+  // First paint: open the first live provider.
   useEffect(() => {
     if (loading || selectedKey) return;
-    const first = attention[0]?.key || rows.find((r) => r.state === 'connected' || r.state === 'trial')?.p.key || PROVIDERS.find((p) => !p.unavailable)?.key || PROVIDERS[0].key;
+    const first = rows.find((r) => r.state === 'connected' || r.state === 'trial')?.p.key || PROVIDERS.find((p) => !p.unavailable)?.key || PROVIDERS[0].key;
     setSelectedKey(first);
-  }, [loading, selectedKey, attention, rows]);
+  }, [loading, selectedKey, rows]);
 
   const sel = selectedKey ? byKey[selectedKey] : null;
 
@@ -346,12 +199,11 @@ export default function ProxyProvidersPage() {
   const poolTotal = proxies.length;
   const active = rows.filter((r) => r.state === 'connected' || r.state === 'trial' || r.state === 'needsKey').length;
   const supplying = rows.filter((r) => r.pool.total > 0).length;
-  const shownAttention = showAllAttention ? attention : attention.slice(0, ATTENTION_PREVIEW);
 
   const FILTERS = [
     ['all', t('table.all')],
     ['connected', t('states.connected')],
-    ['trial', t('states.trial')],
+    ...(isSuper ? [['trial', t('states.trial')]] : []),
     ['needsKey', t('states.needsKey')],
     ['notSetUp', t('states.notSetUp')]
   ];
@@ -375,66 +227,6 @@ export default function ProxyProvidersPage() {
       />
 
       {loadErr && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm" style={toneText('danger')}>{t('loadError', { message: loadErr })}</div>}
-
-      {/* Needs attention + trials */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4 items-start">
-        <Card className="overflow-hidden">
-          <CardHead title={t('attention.title')} count={attention.length} aside={attention.length > 1 ? t('attention.order') : null} />
-          {attention.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-muted-foreground flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: TONE.success }} />{loading ? t('loading') : t('attention.none')}</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {shownAttention.map((a) => {
-                const Icon = a.icon;
-                return (
-                  <li key={a.id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 px-5 py-3">
-                    <Icon className="w-4 h-4 shrink-0 self-start mt-0.5 sm:self-center sm:mt-0" style={{ color: TONE[a.tone] }} aria-hidden="true" />
-                    <span className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-0.5 min-w-0 flex-1 basis-[calc(100%-28px)] sm:basis-auto">
-                      <span className="text-[13px] font-semibold text-foreground sm:w-28 shrink-0 truncate" title={a.name}>{a.name}</span>
-                      <span className="text-[12.5px] text-muted-foreground min-w-0">
-                        {a.text}
-                        {a.emphasis && <span className="ml-2 font-semibold whitespace-nowrap" style={toneText(a.tone)}>{a.emphasis}</span>}
-                      </span>
-                    </span>
-                    <Button variant="secondary" size="sm" className="shrink-0 ml-7 sm:ml-auto" onClick={() => openProvider(a.key, a.tab, true)}>{a.action}</Button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {attention.length > ATTENTION_PREVIEW && (
-            <button type="button" onClick={() => setShowAllAttention((v) => !v)} className="w-full px-5 py-2.5 border-t border-border text-[12.5px] font-medium text-primary hover:bg-secondary text-left">
-              {showAllAttention ? t('attention.showLess') : t('attention.showAll', { count: attention.length })}
-            </button>
-          )}
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardHead title={t('trials.title')} count={trialRows.length} />
-          {trialRows.length === 0 ? (
-            <p className="px-5 py-4 text-[13px] text-muted-foreground">{t('trials.empty')}</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {trialRows.map(({ r, day }) => {
-                const left = day ? daysUntil(day) : null;
-                return (
-                  <li key={r.p.key}>
-                    <button type="button" onClick={() => openProvider(r.p.key, 'pull', true)} className="w-full grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-0.5 px-5 py-3 text-left hover:bg-secondary/60 transition-colors">
-                      <span className="text-[13px] font-semibold text-foreground truncate">{r.p.name}</span>
-                      <span className="text-[12.5px] text-foreground text-right">{r.trial.allowance || <span className="text-muted-foreground">{t('trials.noAllowance')}</span>}</span>
-                      <span className="text-[12px] col-span-2 sm:col-span-1 sm:text-right" style={left != null && left <= 3 ? toneText('danger') : undefined}>
-                        <span className={left != null && left <= 3 ? '' : 'text-muted-foreground'}>
-                          {day ? (left < 0 ? t('trials.ended', { date: shortDate(day, lang) }) : t('trials.ends', { date: shortDate(day, lang) })) : t('trials.noEnd')}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
-      </div>
 
       {/* Integrations table + detail panel */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 items-start">
@@ -506,6 +298,7 @@ export default function ProxyProvidersPage() {
               lang={lang}
               sel={sel}
               credsHidden={credsHidden}
+              isSuper={isSuper}
               referral={links[sel.p.key] || sel.p.referral}
               tab={tab}
               setTab={setTab}
@@ -538,7 +331,7 @@ function Row({ icon: Icon, label, children }) {
   );
 }
 
-function DetailPanel({ t, lang, sel, credsHidden, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, openPool }) {
+function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, openPool }) {
   const { p, pool, keySaved, trial, state, kind } = sel;
   const gw = p.gateway ? `${p.gateway.host}:${p.gateway.port}` : null;
   const trialDay = trial ? parseDay(trial.endsAt) : null;
@@ -588,7 +381,7 @@ function DetailPanel({ t, lang, sel, credsHidden, referral, tab, setTab, trialEd
             ) : <span className="text-muted-foreground">{t('detail.healthEmpty')}</span>}
           </Row>
           <Row icon={History} label={t('detail.lastPull')}>{pool.last ? formatDateTime(pool.last) : <span className="text-muted-foreground">{t('detail.never')}</span>}</Row>
-          {!p.unavailable && (
+          {!p.unavailable && isSuper && (
             <Row icon={CalendarClock} label={t('detail.trial')}>
               {trialEdit ? (
                 <div className="flex flex-col gap-2.5">

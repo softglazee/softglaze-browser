@@ -2,6 +2,7 @@
   "title": "Proveedores de proxies",
   "summary": "{{total}} integraciones. {{active}} están activas y {{supplying}} de ellas aportan los {{pool}} proxies de tu grupo.",
   "summaryEmpty": "{{total}} integraciones. Conecta una para traer proxies directamente a tu grupo.",
+  "status": {"title": "Estado de proveedores", "description": "Solo para el administrador, para nuestras pruebas con proveedores. Los clientes nunca ven esta pagina."},
   "refresh": "Actualizar",
   "openPool": "Abrir grupo de proxies",
   "loading": "Cargando proveedores...",

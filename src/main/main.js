@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const { app, BrowserWindow, shell, session, protocol, ipcMain } = require('electron');
+const { attachContextMenu } = require('./contextMenu');
 
 // The production renderer is an ES-module bundle. Chromium refuses to load
 // `type="module"` scripts over file:// (the null origin fails CORS) - that leaves a
@@ -207,6 +208,8 @@ function createMainWindow() {
       devTools: isDev
     }
   });
+
+  attachContextMenu(mainWindow.webContents);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();

@@ -110,6 +110,29 @@ test('an account with no residential package still gets the IPv6 view', async ()
   assert.equal(out.products[0].active, 1);
 });
 
+// Live, 2 Nov 2026: an account holding only IPv6 got this v2 wording from resident/package,
+// and Load account failed because only the v1 "Tarif not found" was recognised.
+test('an IPv6-only account still loads with the v2 "no package" wording', async () => {
+  const a = adapter({ 'GET proxy/list': ok({ ipv6: [IPV6_ITEM] }), 'GET resident/package': fail('Make order with resident first') });
+  const out = await a.lookupProxySeller({ token: KEY });
+  assert.equal(out.residential, false);
+  assert.deepEqual(out.lists, []);
+  assert.equal(out.products[0].active, 1);
+  assert.ok(!a.calls.some((c) => c.rel === 'resident/lists'), 'no list lookup without a package');
+});
+
+test('the geo database reads as the v2 JSON envelope (live shape, 2 Nov 2026)', async () => {
+  const a = adapter({ 'GET proxy/list': ok({}), 'GET resident/package': fail('Make order with resident first'), 'GET resident/geo': ok(GEO_DB) });
+  const out = await a.lookupProxySeller({ token: KEY, groupby: 'country' });
+  assert.deepEqual(out.geo, [{ key: 'AD', label: 'Andorra' }]);
+});
+
+test('a residential pull without a package names the reason under the v2 wording', async () => {
+  const a = adapter({ 'GET resident/package': fail('Make order with resident first') });
+  await assert.rejects(a.fetchProxySellerPool({ token: KEY, country: 'US', count: 1 }), /no active residential package/);
+  assert.equal(a.calls.length, 1, 'nothing is created');
+});
+
 test('a new list is created as documented and its array geo still labels the rows', async () => {
   const a = adapter({ 'GET resident/package': ok(PACKAGE), 'POST resident/list/add': ok(CREATED), 'GET proxy/download/resident': DOWNLOAD });
   const rows = await a.fetchProxySellerPool({ token: KEY, country: 'ad', state: 'Andorra la Vella', city: 'Andorra la Vella', count: 2, poolType: 'sticky' });
@@ -165,6 +188,28 @@ test('an IPv6 pull can filter by the numeric order id or the order number', asyn
     await a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', orderId, proxyType: 'socks5' });
     assert.equal(a.calls[0].url, `${BASE}/proxy/list/ipv6?orderId=${orderId}`);
   }
+});
+
+// Live shape, 2 Nov 2026: an IPv6 order bought as HTTPS. Ports are strings and port_socks is empty.
+const HTTPS_ONLY_ITEM = { ...IPV6_ITEM, ip: '11.55.11.0:10385', protocol: 'HTTPS', port_socks: '', port_http: '10385' };
+
+test('an HTTPS-only order pulls over HTTP with string ports', async () => {
+  const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [HTTPS_ONLY_ITEM] }) });
+  const rows = await a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', count: 5, proxyType: 'http' });
+  assert.deepEqual([rows[0].host, rows[0].port, rows[0].type], ['11.55.11.0', 10385, 'HTTP']);
+});
+
+test('a SOCKS5 pull of an HTTPS-only order names the protocol instead of "no proxies"', async () => {
+  const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [HTTPS_ONLY_ITEM] }) });
+  await assert.rejects(
+    a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', count: 5, proxyType: 'socks5' }),
+    (e) => /no SOCKS5 port/.test(e.message) && /protocol is HTTPS/.test(e.message) && /Pull them as HTTP/.test(e.message) && !/no active/.test(e.message)
+  );
+});
+
+test('an HTTP pull of a SOCKS5-only order points the other way', async () => {
+  const a = adapter({ 'GET proxy/list/ipv6': ok({ items: [{ ...IPV6_ITEM, protocol: 'SOCKS5', port_http: '' }] }) });
+  await assert.rejects(a.fetchProxySellerPool({ token: KEY, plan: 'ipv6', proxyType: 'http' }), /no HTTP port.*Pull them as SOCKS5/);
 });
 
 test('an order that returns nothing is reported, not imported as blank', async () => {

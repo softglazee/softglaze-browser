@@ -25,6 +25,7 @@ import NumberInput from '@/components/ui/NumberInput.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
@@ -35,37 +36,6 @@ const PROVIDER_LABELS = {
   smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom'
 };
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
-
-// A proxy's health bucket: a live check result wins; otherwise fall back to the
-// persisted lastStatus. Drives both the stat-card counts and the status filter.
-function proxyHealthOf(p, checkResults) {
-  const r = checkResults[p.id];
-  if (r) return r.success ? 'verified' : 'failed';
-  if (p.lastStatus === 'ok') return 'verified';
-  if (p.lastStatus === 'fail') return 'failed';
-  return 'unknown';
-}
-
-// A proxy's blocklist bucket: a fresh check result wins over the persisted snapshot;
-// 'unknown' if it was never DNSBL-checked.
-function blacklistOf(p, checkResults) {
-  const r = checkResults[p.id];
-  if (r && r.blacklist && r.blacklist.checked) return r.blacklist.listed ? 'blacklisted' : 'clean';
-  if (typeof p.lastBlacklisted === 'boolean') return p.lastBlacklisted ? 'blacklisted' : 'clean';
-  return 'unknown';
-}
-
-// A proxy's speed bucket from its measured latency (a fresh check wins over the
-// stored snapshot). 'fast' ≤ 1.5s, 'slow' above; 'unknown' when never measured
-// (so it's excluded from an explicit Fast/Slow filter rather than mislabelled).
-const SPEED_FAST_MAX_MS = 1500;
-function speedOf(p, checkResults) {
-  const r = checkResults[p.id];
-  const live = r ? (typeof r.avgMs === 'number' ? r.avgMs : (typeof r.latencyMs === 'number' ? r.latencyMs : null)) : null;
-  const ms = live != null ? live : (typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null);
-  if (ms == null) return 'unknown';
-  return ms <= SPEED_FAST_MAX_MS ? 'fast' : 'slow';
-}
 
 // Short relative-time label for the "Last check" card (accurate, locale-strings via i18n).
 function timeAgo(ms, t) {
@@ -264,13 +234,7 @@ export default function ProxyPoolPage() {
   // Latency sort (live check result wins over the stored snapshot; unknown sinks last).
   const sortedProxies = useMemo(() => {
     if (sortBy === 'default') return filteredProxies;
-    const lat = (p) => {
-      const r = checkResults[p.id];
-      const v = (r && typeof r.latencyMs === 'number') ? r.latencyMs : (typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null);
-      return v == null ? Infinity : v;
-    };
-    const arr = filteredProxies.slice().sort((a, b) => lat(a) - lat(b));
-    return sortBy === 'slowest' ? arr.reverse() : arr;
+    return sortByLatency(filteredProxies, checkResults, sortBy === 'slowest');
   }, [filteredProxies, sortBy, checkResults]);
 
   // Geo breakdown of the whole pool by verified country (for the toggle-able panel).
@@ -281,18 +245,11 @@ export default function ProxyPoolPage() {
   }, [proxies]);
 
   // Blocklist tallies for the filter chips (a fresh check wins over the stored value).
-  const blCounts = useMemo(() => {
-    let clean = 0, listed = 0;
-    for (const p of proxies) { const b = blacklistOf(p, checkResults); if (b === 'clean') clean += 1; else if (b === 'blacklisted') listed += 1; }
-    return { clean, listed };
-  }, [proxies, checkResults]);
+  const bucketCounts = useMemo(() => countBuckets(proxies, checkResults), [proxies, checkResults]);
+  const blCounts = { clean: bucketCounts.clean, listed: bucketCounts.blacklisted };
 
   // Speed tallies for the Fast/Slow filter chips (fresh check wins over the snapshot).
-  const spdCounts = useMemo(() => {
-    let fast = 0, slow = 0;
-    for (const p of proxies) { const s = speedOf(p, checkResults); if (s === 'fast') fast += 1; else if (s === 'slow') slow += 1; }
-    return { fast, slow };
-  }, [proxies, checkResults]);
+  const spdCounts = { fast: bucketCounts.fast, slow: bucketCounts.slow };
 
   // Proxies that have NEVER been checked - no live result and no persisted health. These
   // are what a fresh import adds; because the health/speed/blacklist filters treat them
@@ -364,8 +321,9 @@ export default function ProxyPoolPage() {
   const allSelected = filteredProxies.length > 0 && filteredProxies.every((p) => selectedIds.has(p.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
 
+  const groupsLoadedRef = useRef(false);
   const loadGroups = useCallback(async () => {
-    try { const g = await softglazeApi.proxyGroups.list(); setGroups(Array.isArray(g) ? g : []); }
+    try { const g = await softglazeApi.proxyGroups.list(); groupsLoadedRef.current = true; setGroups(Array.isArray(g) ? g : []); }
     catch (e) { /* groups are optional UI sugar - never block the pool */ }
   }, []);
 
@@ -466,6 +424,11 @@ export default function ProxyPoolPage() {
   }
 
   useEffect(() => { loadProxies(); loadGroups(); loadHealthCards(); }, [loadProxies, loadGroups, loadHealthCards]);
+  // An auto group disappears with its last proxy. Don't stay on a filter for a group that is gone.
+  useEffect(() => {
+    if (activeGroup === 'all' || activeGroup === 'none' || String(activeGroup).startsWith('provider:')) return;
+    if (groupsLoadedRef.current && !groups.some((g) => String(g.id) === String(activeGroup))) setActiveGroup('all');
+  }, [groups, activeGroup]);
   useEffect(() => { loadProxiesRef.current = loadProxies; }, [loadProxies]);
 
   // Subscribe once to the streamed proxy-checker progress. Each event updates the
@@ -725,7 +688,7 @@ export default function ProxyPoolPage() {
     const r = checkResults[id];
     if (r) {
       if (r.success) {
-        const ms = r.avgMs ?? r.latencyMs;
+        const ms = r.latencyMs;
         const grade = r.health && r.health.grade;
         return (
           <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium">
@@ -757,9 +720,7 @@ export default function ProxyPoolPage() {
   function renderSpeedCell(proxy) {
     const s = speedOf(proxy, checkResults);
     if (s === 'unknown') return <span className="text-muted-dark text-xs">-</span>;
-    const r = checkResults[proxy.id];
-    const live = r ? (typeof r.avgMs === 'number' ? r.avgMs : (typeof r.latencyMs === 'number' ? r.latencyMs : null)) : null;
-    const ms = live != null ? live : (typeof proxy.lastLatencyMs === 'number' ? proxy.lastLatencyMs : null);
+    const ms = measuredMs(proxy, checkResults);
     const fast = s === 'fast';
     return (
       <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${fast ? 'bg-sky-500/12 text-sky-400' : 'bg-orange-500/12 text-orange-400'}`} title={ms != null ? `${ms}ms` : undefined}>
@@ -811,8 +772,8 @@ export default function ProxyPoolPage() {
   // REAL stats derived from the proxy list + any check results. verified/failed use
   // the same health resolution as the filter so card counts match the filtered rows,
   // and the leftover is the never-checked ('unknown') bucket - all three sum to the total.
-  const verifiedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'verified').length;
-  const failedCount = proxies.filter((p) => proxyHealthOf(p, checkResults) === 'failed').length;
+  const verifiedCount = bucketCounts.verified;
+  const failedCount = bucketCounts.failed;
   const uncheckedCount = Math.max(0, proxies.length - verifiedCount - failedCount);
   const verifiedPct = proxies.length ? Math.round((verifiedCount / proxies.length) * 100) : 0;
   // Protocol mix: HTTP vs SOCKS (any SOCKS4/5), everything else counted as "other".

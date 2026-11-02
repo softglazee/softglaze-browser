@@ -80,11 +80,11 @@ export const softglazeApi = {
     delete: (id, options) => getSoftglazeApi().profiles.delete(id, options),
     launch: (id, options) => getSoftglazeApi().profiles.launch(id, options),
     restore: (id) => getSoftglazeApi().profiles.restore(id),
-    purge: (id, options) => getSoftglazeApi().profiles.purge(id, options),
+    purge: (id) => getSoftglazeApi().profiles.purge(id),
     listTrash: () => getSoftglazeApi().profiles.listTrash(),
     bulkDelete: (ids) => getSoftglazeApi().profiles.bulkDelete(ids),
     bulkRestore: (ids) => getSoftglazeApi().profiles.bulkRestore(ids),
-    bulkPurge: (ids, options) => getSoftglazeApi().profiles.bulkPurge(ids, options),
+    bulkPurge: (ids) => getSoftglazeApi().profiles.bulkPurge(ids),
     bulkLaunch: (ids, opts) => getSoftglazeApi().profiles.bulkLaunch(ids, opts),
     bulkLaunchControl: (action) => getSoftglazeApi().profiles.bulkLaunchControl(action),
     // Re-attach to a bulk queue already in flight. Tolerates an older preload that

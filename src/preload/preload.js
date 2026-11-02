@@ -350,11 +350,11 @@ const api = Object.freeze({
     delete: (id, options = {}) => invoke(CHANNELS.PROFILE_DELETE, { id, removeLocalData: Boolean(options.removeLocalData) }),
     launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' }),
     restore: (id) => invoke(CHANNELS.PROFILE_RESTORE, { id }),
-    purge: (id, options = {}) => invoke(CHANNELS.PROFILE_PURGE, { id, removeLocalData: Boolean(options.removeLocalData) }),
+    purge: (id) => invoke(CHANNELS.PROFILE_PURGE, { id }),
     listTrash: () => invoke(CHANNELS.PROFILE_LIST_TRASH),
     bulkDelete: (ids) => invoke(CHANNELS.PROFILE_BULK_DELETE, { ids }),
     bulkRestore: (ids) => invoke(CHANNELS.PROFILE_BULK_RESTORE, { ids }),
-    bulkPurge: (ids, options = {}) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids, removeLocalData: Boolean(options.removeLocalData) }),
+    bulkPurge: (ids) => invoke(CHANNELS.PROFILE_BULK_PURGE, { ids }),
     bulkLaunch: (ids, opts) => invoke(CHANNELS.PROFILE_BULK_LAUNCH, { ids, ...(opts && typeof opts === 'object' ? opts : {}) }),
     bulkLaunchControl: (action) => invoke(CHANNELS.PROFILE_BULK_LAUNCH_CONTROL, { action }),
     // Re-attach to a bulk queue already running in main (page remounted after the

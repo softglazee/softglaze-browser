@@ -1,5 +1,5 @@
 'use strict';
-// LumiProxy and Smartproxy.org were removed from the supported providers before launch.
+// LumiProxy, Smartproxy.org and kookeey were removed from the supported providers before launch.
 // Do not add them back without a new provider review.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,8 +19,8 @@ const SOURCES = [
 ];
 
 for (const file of SOURCES) {
-  test(`${file} has no LumiProxy or Smartproxy.org`, () => {
-    assert.doesNotMatch(read(file), /lumiproxy|smartproxyorg|smartproxy\.org|smartproxy\.net/i);
+  test(`${file} has no removed provider`, () => {
+    assert.doesNotMatch(read(file), /lumiproxy|smartproxyorg|smartproxy\.org|smartproxy\.net|kookeey/i);
   });
 }
 

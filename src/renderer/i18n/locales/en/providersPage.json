@@ -2,6 +2,7 @@
   "title": "Proxy providers",
   "summary": "{{total}} integrations. {{active}} are active, and {{supplying}} of them supply the {{pool}} proxies in your pool.",
   "summaryEmpty": "{{total}} integrations. Connect one to pull proxies straight into your pool.",
+  "status": {"title": "Provider status", "description": "Admin only, for our own vendor testing. Customers never see this page."},
   "refresh": "Refresh",
   "openPool": "Open proxy pool",
   "loading": "Loading providers...",

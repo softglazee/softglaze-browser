@@ -4,8 +4,7 @@ import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
   Shield, ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
-  CreditCard, Link2, Plug
-} from 'lucide-react';
+  CreditCard, Link2, Plug, ClipboardList } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { renderFooterNodes } from '@/lib/footerText.jsx';
@@ -71,6 +70,11 @@ const SECTIONS = [
   {
     labelKey: 'nav.sectionTeam',
     items: [{ path: '/members', labelKey: 'nav.members', icon: Users, featureKey: 'members' }]
+  },
+  {
+    // Our own vendor testing. The Super Admin role exists only on the source owner's machine.
+    labelKey: 'nav.sectionAdmin',
+    items: [{ path: '/provider-status', labelKey: 'nav.providerStatus', icon: ClipboardList, superOnly: true }]
   }
 ];
 
@@ -278,7 +282,7 @@ export default function AppShell({ children }) {
 
         <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3">
           {SECTIONS.map((section) => {
-            const items = section.items.filter((item) => canSee(item.featureKey));
+            const items = section.items.filter((item) => (item.superOnly ? me?.role === 'SUPER_ADMIN' : canSee(item.featureKey)));
             if (items.length === 0) return null;
             return (
               <div key={section.labelKey} className="mt-3">

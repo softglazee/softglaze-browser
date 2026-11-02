@@ -391,8 +391,10 @@ async function applyMigrations(db) {
 
   // 2. BASELINING LOGIC: Check if this is an older database that already has tables
   // but no migration history. This prevents the "table Proxy already exists" crash.
-  const existingTables = await db.$queryRawUnsafe(`SELECT name FROM sqlite_master WHERE type='table' AND name='Proxy';`);
-  const appliedRecords = await db.$queryRawUnsafe(`SELECT "id" FROM "_AppMigrations";`);
+  const existingTables = await db.$queryRawUnsafe(`SELECT name AS "name" FROM sqlite_master WHERE type='table' AND name='Proxy';`);
+  // AS on every raw read: SQLite does not guarantee result column names without it, and a
+  // key of "id" with its quotes would make every migration look unapplied.
+  const appliedRecords = await db.$queryRawUnsafe(`SELECT "id" AS "id" FROM "_AppMigrations";`);
   const appliedSet = new Set(appliedRecords.map(r => r.id));
 
   if (existingTables.length > 0 && appliedSet.size === 0) {

@@ -5,6 +5,7 @@
 // WebRTC-off (so the real IP can't leak). Authenticated HTTP proxies are handled
 // by a tiny local relay (Firefox can't store proxy creds in prefs).
 const fs = require('node:fs');
+const { firefoxDirName } = require('./profileData');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const net = require('node:net');
@@ -363,7 +364,7 @@ async function launchFirefoxProfileNow(options = {}) {
   if (!ff) throw new Error('Firefox is not installed. Download a Firefox version from the browser selector (or install Firefox on this machine) to launch this profile.');
 
   const root = path.resolve(profileRoot || path.resolve(process.cwd(), 'softglaze_profiles'));
-  const safe = String(dataDirName || title || `ff-${profileId || crypto.randomUUID()}`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safe = firefoxDirName(dataDirName || title || `ff-${profileId || crypto.randomUUID()}`);
   const userDataDir = path.join(root, 'firefox', safe);
   await fsp.mkdir(userDataDir, { recursive: true });
 

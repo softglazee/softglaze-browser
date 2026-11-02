@@ -70,7 +70,7 @@ test.after(async () => {
   try { fs.rmSync(userData, { recursive: true, force: true }); } catch (e) { /* noop */ }
 });
 
-const rawRow = async (id) => (await db.$queryRawUnsafe('SELECT "password", "passwordHash" FROM "Proxy" WHERE "id" = ?', id))[0];
+const rawRow = async (id) => (await db.$queryRawUnsafe('SELECT "password" AS "password", "passwordHash" AS "passwordHash" FROM "Proxy" WHERE "id" = ?', id))[0];
 
 test('secretStore seal/open round trip', () => {
   const sealed = secretStore.seal('s3cr:et@pw');
@@ -145,7 +145,7 @@ test('data migration: mixed sealed/plain rows, idempotent, empty-safe, never los
 
   const first = await proxySecrets.migrateProxyPasswords(db, quietLog);
   assert.ok(first.sealed >= 1 && first.failed === 0, JSON.stringify(first));
-  const rows = await db.$queryRawUnsafe('SELECT "name","password","passwordHash" FROM "Proxy" WHERE "host" = ?', 'legacy.example');
+  const rows = await db.$queryRawUnsafe('SELECT "name" AS "name", "password" AS "password", "passwordHash" AS "passwordHash" FROM "Proxy" WHERE "host" = ?', 'legacy.example');
   const by = Object.fromEntries(rows.map((r) => [r.name, r]));
   const { key } = await proxySecrets.loadHashKey(db);
   assert.ok(secretStore.isSealed(by['plain-a'].password));
@@ -162,7 +162,7 @@ test('data migration: mixed sealed/plain rows, idempotent, empty-safe, never los
   assert.equal(second.sealed, 0);
   assert.equal(second.hashed, 0);
   assert.equal(second.failed, 0);
-  const rows2 = await db.$queryRawUnsafe('SELECT "name","password","passwordHash" FROM "Proxy" WHERE "host" = ?', 'legacy.example');
+  const rows2 = await db.$queryRawUnsafe('SELECT "name" AS "name", "password" AS "password", "passwordHash" AS "passwordHash" FROM "Proxy" WHERE "host" = ?', 'legacy.example');
   assert.deepEqual(rows2, rows, 'a second run changes nothing');
 
   // The app reads the converted row as plaintext.
@@ -184,11 +184,11 @@ test('data migration keeps plaintext and still hashes when OS encryption is unav
     const r = await proxySecrets.migrateProxyPasswords(db, log);
     assert.equal(r.failed, 0);
   } finally { fakeSafeStorage.available = true; }
-  const row = (await db.$queryRawUnsafe('SELECT "password","passwordHash" FROM "Proxy" WHERE "name" = ?', 'noenc'))[0];
+  const row = (await db.$queryRawUnsafe('SELECT "password" AS "password", "passwordHash" AS "passwordHash" FROM "Proxy" WHERE "name" = ?', 'noenc'))[0];
   assert.equal(row.password, 'keep-me', 'never lost');
   assert.ok(row.passwordHash);
   await proxySecrets.migrateProxyPasswords(db, quietLog);
-  const row2 = (await db.$queryRawUnsafe('SELECT "password" FROM "Proxy" WHERE "name" = ?', 'noenc'))[0];
+  const row2 = (await db.$queryRawUnsafe('SELECT "password" AS "password" FROM "Proxy" WHERE "name" = ?', 'noenc'))[0];
   assert.equal(secretStore.open(row2.password), 'keep-me', 'sealed on the next run once encryption is back');
 });
 
