@@ -91,7 +91,7 @@ export default function FreeProxiesDialog({ open, onOpenChange, onAdded }) {
             <span>{t('free.checks')}</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className={labelCls} htmlFor="free-protocol">{t('free.protocol')}</label>
               <select id="free-protocol" className={selectCls} value={protocol} onChange={(e) => setProtocol(e.target.value)} disabled={running}>

@@ -12,6 +12,14 @@ const { killTrackedOrphans } = require('./orphanCleanup');
 // privileged scheme `app://` (standard + secure + corsEnabled), where modules load
 // normally and CSP 'self' still scopes everything to the app origin. This MUST be
 // registered before app 'ready', hence at module top level.
+// Development/testing only: run an unpackaged build against a SEPARATE data folder
+// (database, profiles, settings), so a test run never opens the real workspace. Electron
+// on Windows ignores the APPDATA environment variable, so this is the only safe way. An
+// installed (packaged) build never honours it. Must run before anything reads userData.
+if (!app.isPackaged && process.env.SG_USER_DATA_DIR) {
+  app.setPath('userData', path.resolve(process.env.SG_USER_DATA_DIR));
+}
+
 const APP_SCHEME = 'app';
 protocol.registerSchemesAsPrivileged([
   { scheme: APP_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }

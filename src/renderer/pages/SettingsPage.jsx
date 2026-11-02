@@ -942,8 +942,8 @@ function BehaviourSection({ sec, s, apply }) {
         <>
           <SwitchRow title={tx('browser.chromeSignin.title')} description={tx('browser.chromeSignin.desc')} checked={s.browser.allowChromeSignin} onChange={(v) => apply({ browser: { allowChromeSignin: v } })} />
           <SwitchRow title={tx('browser.offerTranslate.title')} description={tx('browser.offerTranslate.desc')} checked={s.browser.offerTranslate} onChange={(v) => apply({ browser: { offerTranslate: v } })} />
-          <SwitchRow title={tx('browser.disableDevtools.title')} description={tx('browser.disableDevtools.desc')} checked={s.browser.disableDevtools} onChange={(v) => apply({ browser: { disableDevtools: v } })} />
-          <SwitchRow title={tx('browser.lockExtensions.title')} description={tx('browser.lockExtensions.desc')} checked={s.browser.lockExtensions} onChange={(v) => apply({ browser: { lockExtensions: v } })} />
+          <SwitchRow wired title={tx('browser.disableDevtools.title')} description={tx('browser.disableDevtools.desc')} checked={s.browser.disableDevtools} onChange={(v) => apply({ browser: { disableDevtools: v } })} />
+          <SwitchRow wired title={tx('browser.lockExtensions.title')} description={tx('browser.lockExtensions.desc')} checked={s.browser.lockExtensions} onChange={(v) => apply({ browser: { lockExtensions: v } })} />
           <SwitchRow wired title={tx('browser.blockThirdPartyCookies.title')} description={tx('browser.blockThirdPartyCookies.desc')} checked={Boolean(s.browser.blockThirdPartyCookies)} onChange={(v) => apply({ browser: { blockThirdPartyCookies: v } })} />
           <SwitchRow wired title={tx('browser.secureAccess.title')} description={tx('browser.secureAccess.desc')} checked={s.browser.secureAccess} onChange={(v) => apply({ browser: { secureAccess: v } })} />
           <SwitchRow wired title={tx('browser.disableVideos.title')} description={tx('browser.disableVideos.desc')} checked={s.browser.disableVideos} onChange={(v) => apply({ browser: { disableVideos: v } })} />
