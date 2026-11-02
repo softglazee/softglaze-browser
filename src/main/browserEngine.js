@@ -1320,6 +1320,49 @@ async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
   } catch (e) { /* best-effort - DNT is not worth failing a launch over */ }
 }
 
+// Third-party cookie policy, written into the profile before every Chromium launch.
+// Chrome's pref profile.cookie_controls_mode: 0 = allow all, 1 = block third-party
+// cookies, 2 = block them in Incognito only (real Chrome's default for a normal window).
+// Checked live (2 Nov 2026) on a fresh profile: Chrome for Testing 157 defaults to 2,
+// but the anti-detect engine (fingerprint-chromium / ungoogled-chromium 148) defaults
+// to 1 and BLOCKS every third-party cookie. reCAPTCHA, hCaptcha and Cloudflare
+// Turnstile all run in third-party frames and use their cookies to score the visitor,
+// so a profile that blocks them gets harder CAPTCHAs - and blocking them at all is
+// itself unlike a normal Chrome. So every profile now gets Chrome's normal default (2),
+// unless the workspace turns "Block third-party cookies" on (then 1).
+const COOKIE_MODE_CHROME_DEFAULT = 2;
+const COOKIE_MODE_BLOCK_THIRD_PARTY = 1;
+
+function cookieControlsModeFor(browserSettings) {
+  return browserSettings && browserSettings.blockThirdPartyCookies === true
+    ? COOKIE_MODE_BLOCK_THIRD_PARTY
+    : COOKIE_MODE_CHROME_DEFAULT;
+}
+
+async function ensureCookiePolicyPref(userDataDir, browserSettings) {
+  try {
+    const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
+    let prefs = {};
+    let hadFile = false;
+    try {
+      prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8'));
+      hadFile = true;
+    } catch (e) {
+      // Same rule as ensureNativeProfilePrefs: never overwrite a Preferences file that
+      // exists but did not parse (that would wipe the profile's whole settings).
+      if (e && e.code !== 'ENOENT') return;
+      prefs = {};
+    }
+    if (hadFile && (!prefs || typeof prefs !== 'object' || Array.isArray(prefs))) return;
+    const mode = cookieControlsModeFor(browserSettings);
+    if (!prefs.profile || typeof prefs.profile !== 'object' || Array.isArray(prefs.profile)) prefs.profile = {};
+    if (prefs.profile.cookie_controls_mode === mode) return; // already right: no write
+    prefs.profile.cookie_controls_mode = mode;
+    await fs.mkdir(path.dirname(prefsPath), { recursive: true });
+    await fs.writeFile(prefsPath, JSON.stringify(prefs));
+  } catch (e) { /* best-effort - a cookie preference is not worth failing a launch over */ }
+}
+
 function fingerprintScript(fp) {
   // Native anti-detect engine (fingerprint-chromium) spoofs the fingerprint at the
   // binary level from launch flags. When it is driving, this JS layer must NOT run: a
@@ -3209,6 +3252,9 @@ async function launchProfileSessionNow(options = {}) {
   // ships none) AND the profile Do Not Track choice, which has no native flag and would
   // otherwise be dropped. Both land in Default/Preferences before launch.
   if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
+  // Third-party cookies: Chrome's normal default for every engine (the anti-detect
+  // build blocks them by default, which hurts CAPTCHA scoring) - see ensureCookiePolicyPref.
+  await ensureCookiePolicyPref(userDataDir, browserSettings);
 
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   // CAREFUL: `usingCft` does NOT mean Chrome-for-Testing. It means "not real Chrome",
@@ -5166,6 +5212,9 @@ module.exports = {
   // Shared with the Firefox engine (and tests): how a profile browser ended.
   classifyBrowserExit,
   waitForProcessExit,
+  // Exported for tests: the third-party cookie preference written before launch.
+  cookieControlsModeFor,
+  ensureCookiePolicyPref,
   parseProxyInput,
   formatProxyHost,
   // Pure helper exported for regression tests: maps a proxy type to its --proxy-server

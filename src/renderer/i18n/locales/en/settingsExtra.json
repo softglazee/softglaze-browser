@@ -205,6 +205,10 @@
       "shortTitle": "Minimize CDP footprint",
       "desc": "Drops the persistent CDP Runtime.enable - the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles."
     },
+    "blockThirdPartyCookies": {
+      "title": "Block third-party cookies",
+      "desc": "Off (recommended): profiles keep and send third-party cookies like a normal Chrome window, which reCAPTCHA, hCaptcha and Cloudflare use to trust a visitor, so CAPTCHAs are easier. On: Chrome-based profiles block them. Applies to profiles launched after you change it."
+    },
     "lockExtensions": {
       "title": "Disable installing/removing extensions",
       "desc": "In Chrome-based profiles, the Extensions page and the Chrome Web Store are closed as soon as they open, so extensions cannot be added, removed or turned off. Extensions you install from the Extensions page in SoftGlaze still load. Applies to profiles launched after you change it."

@@ -7377,6 +7377,9 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     offerTranslate: false,
     disableDevtools: false,
     lockExtensions: false,
+    // Off = Chrome's normal default (third-party cookies allowed outside Incognito),
+    // which CAPTCHA providers rely on. See browserEngine.ensureCookiePolicyPref.
+    blockThirdPartyCookies: false,
     enableVirtualCamera: false,
     mobileSimulation: false,
     secureAccess: false,

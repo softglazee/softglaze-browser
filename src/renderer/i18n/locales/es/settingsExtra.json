@@ -205,6 +205,10 @@
       "shortTitle": "Minimizar la huella de CDP",
       "desc": "Elimina el Runtime.enable persistente de CDP, la principal señal de automatización que detectan Cloudflare/Turnstile. CONTRAPARTIDA mientras está activo: el autorrelleno de personas, los enlaces de comprobación de la página de inicio y el espejo de sesiones sincronizadas dejan de funcionar (necesitan el binding de CDP). Desactivado por defecto; actívalo para comparar si reduce los CAPTCHA y luego relanza los perfiles."
     },
+    "blockThirdPartyCookies": {
+      "title": "Bloquear cookies de terceros",
+      "desc": "Desactivado (recomendado): los perfiles guardan y envían cookies de terceros como una ventana normal de Chrome, que reCAPTCHA, hCaptcha y Cloudflare usan para confiar en un visitante, así que los CAPTCHA son más fáciles. Activado: los perfiles basados en Chrome las bloquean. Se aplica a los perfiles que se abran después del cambio."
+    },
     "lockExtensions": {
       "title": "Desactivar la instalación/eliminación de extensiones",
       "desc": "En los perfiles basados en Chrome, la página de extensiones y Chrome Web Store se cierran en cuanto se abren, así que no se pueden añadir, quitar ni desactivar extensiones. Las extensiones que instales desde la página Extensiones de SoftGlaze se siguen cargando. Se aplica a los perfiles que se abran después del cambio."
