@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, CornerDownLeft, LayoutDashboard, Fingerprint, Layers, Globe, Puzzle,
-  FileSpreadsheet, Trash2, Settings, Users, MonitorDown, Wand2, UserCog, Plug
+  FileSpreadsheet, Trash2, Settings, Users, MonitorDown, Wand2, UserCog, Plug, Gift
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import i18n from '@/i18n/index.js';
@@ -22,6 +22,7 @@ const NAV = [
   { path: '/profiles', labelKey: 'palette.nav.profiles', icon: Fingerprint },
   { path: '/groups', labelKey: 'palette.nav.groups', icon: Layers },
   { path: '/proxies', labelKey: 'palette.nav.proxies', icon: Globe },
+  { path: '/free-proxies', labelKey: 'palette.nav.freeProxies', icon: Gift },
   { path: '/proxy-providers', labelKey: 'palette.nav.proxyProviders', icon: Plug },
   { path: '/browsers', labelKey: 'palette.nav.browsers', icon: MonitorDown },
   { path: '/extensions', labelKey: 'palette.nav.extensions', icon: Puzzle },

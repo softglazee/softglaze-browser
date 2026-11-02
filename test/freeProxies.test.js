@@ -112,7 +112,9 @@ test('main: gated, one search at a time, free group, audit, and channels wired',
   assert.match(IPC, /registerHandler\(CHANNELS\.PROXY_FREE_CANCEL, cancelFreeProxyHarvest\);/);
   assert.match(IPC, /sender\.send\(CHANNELS\.PROXY_FREE_PROGRESS/);
   assert.match(PRELOAD, /freeHarvest: \(payload\) => invoke\(CHANNELS\.PROXY_FREE_HARVEST, payload\),/);
-  assert.match(POOL, /<FreeProxiesDialog open=\{freeOpen\} onOpenChange=\{setFreeOpen\} onAdded=\{loadProxies\} \/>/);
+  // The search moved to its own page; the pool only links there.
+  assert.match(POOL, /<Link to="\/free-proxies"/);
+  assert.doesNotMatch(POOL, /FreeProxiesDialog/);
 });
 
 test('Quick generate never mixes free proxies into "all proxies"', () => {
