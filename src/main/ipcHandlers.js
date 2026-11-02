@@ -84,7 +84,7 @@ const {
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword, froxyBasePassword,
   packetStreamPassword, packetStreamCountry, airproxyRows,
   proxmintUsername, proxmintPickProduct, databayUsername,
-  ipfoxyUsername, mangoProxyPlace, mangoProxyAsn, mangoProxyCollect,
+  ipfoxyUsername, mangoProxyPlace, mangoProxyAsn, mangoProxyCollect, mangoProxyCountryPage,
   catProxiesResiUsername, catProxiesMobileUsername, catProxiesCreds,
   rapidProxyUsername, NOVADA_ZONES, novadaUsername,
   PROXIESSX_POOLS, proxiesSxSid, proxiesSxUsername, proxiesSxProxyCreds,
@@ -3151,6 +3151,30 @@ async function fetchMangoProxyPool({ token, username, poolType, country, state, 
   return rows;
 }
 
+// Countries the chosen pool can target, for the country picker. Read-only; the list endpoint
+// documents no maximum page size (only count on /upstream/json has one), and meta says when to stop.
+const MANGOPROXY_COUNTRY_PAGE = 100;
+async function lookupMangoProxy({ token, groupby, poolType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('MangoProxy: paste your API key (dashboard, API).');
+  if (groupby !== 'country') throw new Error('MangoProxy: only the country list can be loaded here.');
+  const trafficType = MANGOPROXY_TRAFFIC.includes(String(poolType || '').toLowerCase()) ? String(poolType).toLowerCase() : 'residential';
+  const geo = [];
+  const seen = new Set();
+  for (let page = 1; page <= 10; page += 1) {
+    const res = mangoProxyCountryPage(await mangoCall(key, 'GET', `/locations/countries?trafficType=${trafficType}&limit=${MANGOPROXY_COUNTRY_PAGE}&page=${page}`));
+    for (const c of res.countries) {
+      if (seen.has(c.key)) continue;
+      seen.add(c.key);
+      geo.push(c);
+    }
+    if (!res.more) break;
+  }
+  if (!geo.length) throw new Error(`MangoProxy lists no countries for ${trafficType.replace('_', ' ')} on this account.`);
+  geo.sort((a, b) => a.label.localeCompare(b.label));
+  return { provider: 'mangoproxy', geo };
+}
+
 // ---- Proxidize (api.proxidize.com/api/v1, Bearer JWT) ----
 // Per-Proxy plans return ready credentials. Per-GB plans give a sub-user with a sticky "-s-<session>"
 // token on the Proxy Details gateway (20000 HTTP / 20002 SOCKS5). Not live-key tested.
@@ -3297,7 +3321,8 @@ function mintLiveProxiesRows({ username, password, country, session, count, prox
 const VENDOR_LOOKUPS = Object.freeze({
   dataimpulse: lookupDataImpulse,
   proxyseller: lookupProxySeller,
-  iproyal: lookupIpRoyal
+  iproyal: lookupIpRoyal,
+  mangoproxy: lookupMangoProxy
 });
 
 // Read-only account view for the provider panel; never creates anything on the vendor side.
@@ -3312,7 +3337,9 @@ async function vendorLookup(payload) {
     username: optionalString(input.username),
     password: input.password != null ? String(input.password) : '',
     country: optionalString(input.country),
-    groupby: optionalString(input.groupby)
+    groupby: optionalString(input.groupby),
+    // MangoProxy's country list depends on the pool.
+    poolType: optionalString(input.poolType)
   });
 }
 

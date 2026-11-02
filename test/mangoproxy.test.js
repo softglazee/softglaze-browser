@@ -98,6 +98,50 @@ test('state, city and ASN are sent in the documented forms', async () => {
   await assert.rejects(adapter().fetchMangoProxyPool({ token: 'k', asn: '7922' }), /ASN targeting needs a country/);
 });
 
+test('a country page reads code and title, and meta says whether more follow', () => {
+  // The OpenAPI examples: ListCountryItemDto and PaginationMetaDto.
+  const page = U.mangoProxyCountryPage({ data: [{ id: 1, code: 'US', title: 'United States', server: 'EU' }, { id: 2, code: 'x' }], meta: { total: 100, perPage: 10, currentPage: 1, lastPage: 10, next: 2 } });
+  assert.deepEqual(page, { countries: [{ key: 'US', label: 'United States' }], more: true });
+  assert.equal(U.mangoProxyCountryPage({ data: [], meta: { currentPage: 3, lastPage: 3 } }).more, false);
+  assert.deepEqual(U.mangoProxyCountryPage(null), { countries: [], more: false });
+});
+
+test('the country lookup pages through the chosen pool and sorts by name', async () => {
+  const urls = [];
+  const pages = {
+    1: { data: [{ code: 'US', title: 'United States' }, { code: 'DE', title: 'Germany' }], meta: { currentPage: 1, lastPage: 2 } },
+    2: { data: [{ code: 'BR', title: 'Brazil' }, { code: 'DE', title: 'Germany' }], meta: { currentPage: 2, lastPage: 2 } }
+  };
+  const httpRequestText = async (url) => {
+    urls.push(url);
+    return JSON.stringify(pages[Number(/&page=(\d+)$/.exec(url)[1])]);
+  };
+  const lookupMangoProxy = new Function('httpRequestText', 'MANGOPROXY_API', 'MANGOPROXY_TRAFFIC', 'mangoProxyCountryPage',
+    `const MANGOPROXY_COUNTRY_PAGE = ${/const MANGOPROXY_COUNTRY_PAGE = (\d+);/.exec(IPC)[1]};\n${['mangoCall', 'lookupMangoProxy'].map(ipcFunction).join('\n')}\nreturn lookupMangoProxy;`
+  )(httpRequestText, 'https://backend.mangoproxy.com/public-api/v1', ['residential', 'residential_light', 'datacenter', 'isp'], U.mangoProxyCountryPage);
+  const r = await lookupMangoProxy({ token: 'k', groupby: 'country', poolType: 'isp' });
+  assert.deepEqual(r.geo.map((c) => c.key), ['BR', 'DE', 'US']);
+  assert.equal(r.provider, 'mangoproxy');
+  assert.deepEqual(urls, [1, 2].map((p) => `https://backend.mangoproxy.com/public-api/v1/locations/countries?trafficType=isp&limit=100&page=${p}`));
+  await assert.rejects(lookupMangoProxy({ token: 'k', groupby: 'region' }), /only the country list/);
+});
+
+test('the lookup is gated, registered and offered on the panel', () => {
+  const lookup = /async function vendorLookup\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
+  assert.match(lookup, /await requirePermission\('proxies\.manage'\)/);
+  assert.match(lookup, /poolType: optionalString\(input\.poolType\)/);
+  assert.match(IPC, /mangoproxy: lookupMangoProxy/);
+  assert.match(UI, /key: 'mangoproxy'.*countryLookup: true/);
+  assert.match(UI, /countryOptions\(provider, i18n\.language, geoOptions\.country\)/);
+  assert.match(UI, /provider\.geoSync\.countryLookup && \(\r?\n\s*<button type="button" onClick=\{\(\) => handleLookup\('country'\)\}/);
+  const en = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales', 'en', 'cmpSettingsC.json'), 'utf8'));
+  const es = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales', 'es', 'cmpSettingsC.json'), 'utf8'));
+  for (const k of ['countriesLoaded', 'countriesLoaded_one', 'countriesLoaded_other', 'zipOneLabel', 'asnOneLabel']) {
+    assert.equal(typeof en.proxyProviders.geo[k], 'string', k);
+    assert.equal(typeof es.proxyProviders.geo[k], 'string', k);
+  }
+});
+
 test('MangoProxy is wired with an ASN field and hints that state the new cap', () => {
   assert.match(UI, /key: 'mangoproxy'.*geo: true, asn: true/);
   for (const loc of ['en', 'es']) {

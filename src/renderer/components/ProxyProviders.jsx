@@ -27,7 +27,7 @@ export const PROVIDERS = [
   // Proxy302: real Open API. The API sub-account key (name + password) signs in; Country filters
   // the pull; each proxy comes back ready on proxy.proxy302.com:2222. No state/city or session.
   { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'proxy.proxy302.com', port: 2222, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, proto: true } },
-  { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, asn: true, noSession: true, life: true, maxLife: 120, proto: true } },
+  { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, asn: true, countryLookup: true, noSession: true, life: true, maxLife: 120, proto: true } },
   // IP Burger: rotating residential, gateway-minted on residential.ipb.cloud:7777 (HTTP only -
   // no SOCKS5 on their residential network). Country (or one city/state narrowing token) and a
   // sticky session (up to 30 min) ride in the username.
@@ -211,6 +211,11 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     setErr('');
   }, [provider]);
 
+  // A country list loaded from the vendor belongs to one pool, so another pool drops it.
+  useEffect(() => {
+    if (provider.geoSync && provider.geoSync.countryLookup) setGeoOptions((o) => (o.country.length ? { ...o, country: [] } : o));
+  }, [form.poolType, provider]);
+
   // Pre-fill DPAPI-sealed saved credentials. Runs after the reset above so saved values win; the
   // live guard stops a fast provider switch from applying stale creds.
   useEffect(() => {
@@ -390,7 +395,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   async function handleLookup(groupby = '') {
     setErr('');
     const g = provider.geoSync || {};
-    if ((g.ps || g.ipr) && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
+    if ((g.ps || g.ipr || g.countryLookup) && !form.token.trim()) { setErr(t('proxyProviders.errors.enterApiToken')); return; }
     if (g.di && (!form.username.trim() || !form.password)) { setErr(t('proxyProviders.geo.diNeedCreds', 'Enter the plan login and password first.')); return; }
     if ((groupby === 'state' || groupby === 'city' || groupby === 'region') && !form.country) {
       setErr(t('proxyProviders.geo.pickCountryFirst', 'Pick a country first.'));
@@ -404,7 +409,8 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
         username: form.username.trim(),
         password: form.password,
         country: form.country,
-        groupby
+        groupby,
+        poolType: form.poolType
       });
       setAccount(r);
       if (groupby) {
@@ -1114,8 +1120,13 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                       <label className={labelCls}><Globe2 className="w-3.5 h-3.5 text-sky-400" /> {t('proxyProviders.geo.country')}</label>
                       <select value={form.country} onChange={(e) => set('country', e.target.value)} className={selectCls} style={chevronStyle}>
                         <option value="">{t('proxyProviders.countries.any', 'Any / Random')}</option>
-{countryOptions(provider, i18n.language).map(([code, name]) => <option key={code} value={code}>{`${name} (${code})`}</option>)}
+{countryOptions(provider, i18n.language, geoOptions.country).map(([code, name]) => <option key={code} value={code}>{`${name} (${code})`}</option>)}
                       </select>
+                      {provider.geoSync.countryLookup && (
+                        <button type="button" onClick={() => handleLookup('country')} disabled={Boolean(lookingUp) || !form.token.trim()} className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-medium text-primary hover:underline disabled:opacity-60 disabled:no-underline">
+                          {spin('country') || <Globe2 className="w-3.5 h-3.5" />} {geoOptions.country.length ? t('proxyProviders.geo.countriesLoaded', { count: geoOptions.country.length, defaultValue: '{{count}} countries for this pool' }) : t('proxyProviders.ps.loadCountries', 'Load all countries')}
+                        </button>
+                      )}
                     </div>
                   )}
                   {provider.geoSync.geo && (

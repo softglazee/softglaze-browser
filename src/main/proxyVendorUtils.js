@@ -1022,6 +1022,19 @@ async function mangoProxyCollect(want, fetchBatch, { socks = false } = {}) {
   }
   return rows;
 }
+// GET /locations/countries -> { data: [{ code, title }], meta: { currentPage, lastPage } }.
+function mangoProxyCountryPage(json) {
+  const list = Array.isArray(json && json.data) ? json.data : [];
+  const countries = [];
+  for (const c of list) {
+    const code = String((c && c.code) || '').trim().toUpperCase();
+    if (/^[A-Z]{2}$/.test(code)) countries.push({ key: code, label: String((c && c.title) || '').trim() || code });
+  }
+  const meta = (json && json.meta) || {};
+  const current = Number(meta.currentPage);
+  const last = Number(meta.lastPage);
+  return { countries, more: Number.isInteger(current) && Number.isInteger(last) && current < last };
+}
 
 // IP Burger: residential.ipb.cloud:7777, HTTP only (no residential SOCKS5). Username: customer-<id>
 // plus one geo token, cc-<CC> or a city-/state- token instead (never both), e.g. customer-x-cc-US or
@@ -1565,7 +1578,7 @@ module.exports = {
   proxmintUsername, proxmintPickProduct,
   databayUsername,
   ipfoxyUsername, mangoProxyRows,
-  mangoProxyPlace, mangoProxyAsn, mangoProxyCollect, MANGOPROXY_BATCH_MAX,
+  mangoProxyPlace, mangoProxyAsn, mangoProxyCollect, MANGOPROXY_BATCH_MAX, mangoProxyCountryPage,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername, gonzoProxyTtl,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
