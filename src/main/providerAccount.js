@@ -309,7 +309,8 @@ ADAPTERS.catproxies = {
 };
 
 // ---- MobileProxy.Space: get_balance (no currency in the docs) and get_my_proxy (per-proxy proxy_exp) ----
-const MOBILEPROXYSPACE_API = 'https://mobileproxy.space/api.html';
+// The API moved to mpsapi.com; mobileproxy.space/api.html was announced to stop after 31 Aug 2026.
+const MOBILEPROXYSPACE_API = 'https://mpsapi.com/api.html';
 
 function mpsBody(body, what) {
   const j = parseJson(body);

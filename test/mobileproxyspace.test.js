@@ -42,10 +42,29 @@ test('mobileProxySpaceRows surfaces the vendor error message', () => {
   assert.equal(U.mobileProxySpaceRows('oops').error, 'bad-json');
 });
 
+test('mobileProxySpaceRows takes the bare-array sample and an upper-case OK status', () => {
+  // mobileproxy.space/en/user.html?api shows get_my_proxy as a bare array; some commands answer "OK".
+  const bare = JSON.stringify([{ proxy_id: 123, proxy_host_ip: '1.2.3.4', proxy_http_port: 5000, proxy_socks5_port: 5001, proxy_login: 'abc123', proxy_pass: 'xyz789', proxy_geo: 'Moscow, Russia', proxy_operator: 'MTS' }]);
+  const a = U.mobileProxySpaceRows(bare, { socks: true });
+  assert.equal(a.error, '');
+  assert.deepEqual([a.rows[0].host, a.rows[0].port, a.rows[0].username], ['1.2.3.4', 5001, 'abc123']);
+  const b = U.mobileProxySpaceRows(JSON.stringify({ status: 'OK', list: JSON.parse(bare) }));
+  assert.equal(b.error, '');
+  assert.equal(b.rows.length, 1);
+});
+
 test('MobileProxy.Space is wired: adapter, both registries and a UI entry', () => {
   assert.ok(IPC.includes('async function fetchMobileProxySpacePool'));
   assert.match(IPC, /mobileproxyspace:\s*fetchMobileProxySpacePool/);
   assert.match(IPC, /mobileproxyspace:\s*'MobileProxy\.Space'/);
   assert.ok(IPC.includes('?command=get_my_proxy'));
   assert.match(UI, /key:\s*'mobileproxyspace'/);
+});
+
+test('MobileProxy.Space calls the API on mpsapi.com, its current host', () => {
+  const ACC = fs.readFileSync(path.join(ROOT, 'src', 'main', 'providerAccount.js'), 'utf8');
+  for (const src of [IPC, ACC]) {
+    assert.match(src, /const MOBILEPROXYSPACE_API = 'https:\/\/mpsapi\.com\/api\.html';/);
+    assert.doesNotMatch(src, /'https:\/\/mobileproxy\.space\/api\.html'/);
+  }
 });

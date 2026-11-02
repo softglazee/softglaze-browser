@@ -35,6 +35,17 @@ test('databayUsername: sticky session, length capped at 120', () => {
   assert.equal(U.databayUsername('u1', { country: 'US', session: 'a', lengthMin: 999 }), 'u1-zone-residential-countryCode-US-sessionId-a-sessionLength-120');
 });
 
+test('Residential Flex: zone residential_FLEX, country only, sessions capped at 30', () => {
+  // docs.databay.com/fundamentals/network-types: Residential Flex, zone residential_FLEX, 30 minutes, country.
+  assert.equal(U.databayZone('residential_flex'), 'residential_FLEX');
+  assert.equal(U.databayZone('Mobile'), 'mobile');
+  assert.equal(U.databayZone(''), 'residential');
+  assert.equal(U.databayUsername('u1', { zone: 'residential_FLEX', country: 'us', city: 'Miami' }), 'u1-zone-residential_FLEX-countryCode-US');
+  assert.equal(U.databayUsername('u1', { zone: 'residential_FLEX', session: 'a', lengthMin: 120 }), 'u1-zone-residential_FLEX-sessionId-a-sessionLength-30');
+  assert.match(UI, /key: 'databay'.*\['residential_FLEX', 'Residential Flex'\]/);
+  assert.match(IPC, /const zone = databayZone\(poolType\);/);
+});
+
 test('Databay is wired: adapter, gateway, registry and panel entry', () => {
   assert.match(IPC, /async function fetchDatabayPool\(/);
   assert.match(IPC, /databay: fetchDatabayPool/);

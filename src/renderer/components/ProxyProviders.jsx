@@ -20,13 +20,13 @@ if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 
 // the host form; cards use initials tiles because lucide has no brand logos.
 // TODO: replace the ?ref=softglaze placeholders with real affiliate URLs once programs are live.
 export const PROVIDERS = [
-  { key: 'ipfoxy', name: 'IPFoxy', initials: 'IF', color: '#f97316', referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: { host: 'gate-us.ipfoxy.io', port: 58688, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
+  { key: 'ipfoxy', name: 'IPFoxy', initials: 'IF', color: '#f97316', referral: 'https://www.ipfoxy.com/?ref=softglaze', gateway: { host: 'gate-us.ipfoxy.io', port: 58688, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 60, proto: true, gateway: true } },
   { key: 'brightdata', name: 'Bright Data', initials: 'BD', color: '#00b4d8', bdpm: true, apiSync: true, referral: 'https://brightdata.com/?ref=softglaze', gateway: { host: 'brd.superproxy.io', port: 44445, type: 'HTTP' } },
   { key: 'oxylabs', name: 'Oxylabs', initials: 'OX', color: '#7c5cff', apiSync: true, ipv6: true, referral: 'https://oxylabs.io/?ref=softglaze', gateway: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' } },
   { key: 'smartproxy', name: 'Smartproxy', initials: 'SP', color: '#ff6b35', apiSync: true, referral: 'https://smartproxy.com/?ref=softglaze', gateway: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' } },
-  // Proxy302: real Open API. The API sub-account key (name + password) signs in; Country filters
-  // the pull; each proxy comes back ready on proxy.proxy302.com:2222. No state/city or session.
-  { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'proxy.proxy302.com', port: 2222, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, proto: true } },
+  // Proxy302: real Open API. The API key (id + secret) signs in; each proxy is bought ready on
+  // proxy.proxy302.com. Premium line takes state/city; Standard line takes rotating or a sticky time.
+  { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'proxy.proxy302.com', port: 2222, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['premium', 'Premium line'], ['standard', 'Standard line']], count: true, geo: true, noSession: true, life: true, maxLife: 120, proto: true } },
   { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, noSession: true, life: true, maxLife: 120, proto: true } },
   // IP Burger: rotating residential, gateway-minted on residential.ipb.cloud:7777 (HTTP only -
   // no SOCKS5 on their residential network). Country (or one city/state narrowing token) and a
@@ -77,8 +77,10 @@ export const PROVIDERS = [
   // city and a sticky session (up to 120 min) ride in the username. Regional host overridable.
   { key: 'novada', name: 'NOVADA', initials: 'NV', color: '#2563eb', referral: 'https://dashboard.novada.com/', gateway: { host: 'super.novada.pro', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['isp', 'Rotating ISP'], ['mobile', 'Mobile']], count: true, geo: true, life: true, maxLife: 120, gateway: true } },
   // Proxies.sx: the API key reads the gateway login + proxy password; rows pin one pool and
-  // failover-strict so a country without stock fails instead of exiting elsewhere.
-  { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#7c3aed', referral: 'https://client.proxies.sx/', gateway: null, geoSync: { creds: ['token'], poolType: [['mobile', 'Mobile (modems)'], ['residential', 'Residential (peers)']], count: true, session: true } },
+  // failover-strict so a country without stock fails instead of exiting elsewhere. State (2-letter
+  // code) and city are Residential only; SOCKS5 is port 7001. Residential is listed first because a
+  // new form starts on poolType 'residential', so the select shows what a pull will use.
+  { key: 'proxiessx', name: 'Proxies.sx', initials: 'SX', color: '#7c3aed', referral: 'https://client.proxies.sx/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential (peers)'], ['mobile', 'Mobile (modems)']], count: true, geo: true, session: true, proto: true } },
   // MobileProxy.Space: dedicated mobile proxies listed from the account with an API token.
   { key: 'mobileproxyspace', name: 'MobileProxy.Space', initials: 'MS', color: '#16a34a', referral: 'https://mobileproxy.space/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, poolType: [['http', 'HTTP'], ['socks5', 'SOCKS5']] } },
   // Proxy-Solutions: the Integration token (API for developers page, not the API key) lists the
@@ -89,7 +91,7 @@ export const PROVIDERS = [
   { key: 'proxmint', name: 'Proxmint', initials: 'PM', color: '#10b981', referral: 'https://proxmint.com/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential'], ['residential_premium', 'Premium residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true } },
   // Databay: proxy user + password on gw.databay.co:8888 (HTTP and SOCKS5 on one port); zone,
   // country, state or city and a sticky session (max 120 min) ride in the username.
-  { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
+  { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['residential_FLEX', 'Residential Flex'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
   // 2extract: the proxy username + password from Connection Details on proxy.2extract.net:5555;
   // country, state, city and a sticky session ride in the username. Built from the docs, no API call.
   { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } },
