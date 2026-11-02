@@ -5132,13 +5132,10 @@ async function batchGenerateProfiles(payload) {
   const startupUrls = normalizeStartupUrls(input.startupUrls);
   const notes = optionalString(input.notes) || 'Auto-generated batch';
 
-  // ---- Resolve the target profile group (existing id, or create a new one) ----
+  // ---- Resolve the target profile group (existing id; a NEW group is created only
+  // after the proxy plan below, so a run that creates nothing leaves no empty group) ----
   let groupId = input.groupId ? parseId(input.groupId, 'groupId') : null;
   const newGroupName = optionalString(input.newGroupName);
-  if (!groupId && newGroupName) {
-    const g = await db.group.create({ data: { name: newGroupName.slice(0, 80) } });
-    groupId = g.id;
-  }
 
   // ---- Build the per-profile proxy assignment plan ----
   const proxyMode = (optionalString(input.proxyMode) || 'direct').toLowerCase(); // unique | pool | paste | direct
@@ -5147,6 +5144,12 @@ async function batchGenerateProfiles(payload) {
   let availableProxies = 0;
   let effectiveCount = count;
   let proxyVerifyExcluded = 0;
+  // Why a proxy-backed run created nothing: 'no-match' (no proxy matches the filters)
+  // or 'none-healthy' (proxies matched but none passed the live check). Never fall back
+  // to DIRECT silently - a profile the user asked to put behind a proxy must not open
+  // on their real IP. "No proxy" stays available as its own explicit mode.
+  let noProxyReason = null;
+  let poolMatched = 0;
 
   if (proxyMode === 'unique' || proxyMode === 'pool') {
     const filter = {};
@@ -5176,6 +5179,7 @@ async function batchGenerateProfiles(payload) {
       orderBy: { createdAt: 'asc' },
       select: { id: true, type: true, host: true, port: true, username: true, password: true, lastStatus: true, lastCheckedAt: true }
     });
+    poolMatched = pool.length;
 
     // STRICT VERIFICATION GATE (default on): only attach proxies that pass a LIVE
     // health check. Proxies verified 'ok' within the last 30 min are trusted as-is
@@ -5214,14 +5218,19 @@ async function batchGenerateProfiles(payload) {
       for (let i = 0; i < effectiveCount; i += 1) assignments.push({ proxyId: healthy[i].id });
     } else {
       // Pool: round-robin over the healthy subset (reuse allowed). Need at most
-      // `count` distinct healthy proxies. If none pass, profiles are created direct.
+      // `count` distinct healthy proxies. If none pass, NOTHING is created (see
+      // noProxyReason) - never a silent fall back to the real IP.
       const { healthy, checked } = await collectHealthy(pool, count);
       availableProxies = healthy.length;
       proxyVerifyExcluded = Math.max(0, checked - healthy.length);
-      for (let i = 0; i < count; i += 1) {
-        assignments.push(healthy.length ? { proxyId: healthy[i % healthy.length].id } : {});
+      if (healthy.length) {
+        for (let i = 0; i < count; i += 1) assignments.push({ proxyId: healthy[i % healthy.length].id });
+      } else {
+        effectiveCount = 0;
+        proxyLimited = true;
       }
     }
+    if (effectiveCount === 0) noProxyReason = poolMatched === 0 ? 'no-match' : 'none-healthy';
   } else if (proxyMode === 'paste') {
     const lines = Array.from(new Set(
       String(input.proxyList || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
@@ -5234,6 +5243,12 @@ async function batchGenerateProfiles(payload) {
     }
   }
   // 'direct' → assignments empty, effectiveCount = count, no proxy bound.
+
+  // Create the requested new group only now that at least one profile will go in it.
+  if (!groupId && newGroupName && effectiveCount > 0) {
+    const g = await db.group.create({ data: { name: newGroupName.slice(0, 80) } });
+    groupId = g.id;
+  }
 
   // ---- Even Chrome-version distribution across the run ----
   let versionPlan = null;
@@ -5292,7 +5307,11 @@ async function batchGenerateProfiles(payload) {
   }
 
   let message;
-  if (proxyLimited) {
+  if (noProxyReason === 'no-match') {
+    message = `Nothing was created: no proxy in your pool matches the selected source, country, speed or blocklist filter. Change the filters or add proxies. To create profiles without a proxy, choose "No proxy".`;
+  } else if (noProxyReason === 'none-healthy') {
+    message = `Nothing was created: none of the ${poolMatched} matching prox${poolMatched === 1 ? 'y' : 'ies'} passed the live check, and profiles are never created on your real IP by mistake. Check the proxies on the Proxy Pool page, or choose "No proxy" to create profiles without one.`;
+  } else if (proxyLimited) {
     if (proxyMode === 'paste') {
       message = `Created ${created.length} of ${count} requested - you have ${availableProxies} unique proxy line(s). Add ${count - availableProxies} more to create the remaining ${count - effectiveCount}.`;
     } else {
@@ -5312,6 +5331,7 @@ async function batchGenerateProfiles(payload) {
     availableProxies,
     proxyVerifyExcluded,
     proxyMode,
+    noProxyReason,
     groupId,
     errors,
     message

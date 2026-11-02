@@ -168,7 +168,7 @@ export default function BatchImportPage() {
   // maps to proxyGroupId/provider so only that selection is assigned; the modal owns
   // progress + result display and inline group creation.
   const handleQuickGenerate = async (config, onProgress) => {
-    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource } = config;
+    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
     const src = String(proxySource || '');
     const proxyGroupId = src.startsWith('group:') ? src.slice(6) : undefined;
@@ -187,6 +187,8 @@ export default function BatchImportPage() {
       proxyMode,
       proxyGroupId,
       provider,
+      proxySpeed, // same pre-filters as the Profiles page (were silently dropped here)
+      proxyBlacklist,
       proxyList: pasted
     });
     if (onProgress) onProgress(result?.createdCount ?? count, count);
