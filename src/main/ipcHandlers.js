@@ -11868,21 +11868,48 @@ async function ensureProfileSession(profileId) {
 // Active macro runs, keyed by runId, so a run can be paused / resumed / stopped.
 const macroRuns = new Map();
 
+// A step as it may be streamed to the renderer: typed text (often a password recorded
+// by the macro recorder) never leaves the main process in a progress frame. The run
+// window only needs the step's position and kind; the macro's owner can still read the
+// full steps in the macro editor.
+function redactStepForProgress(step) {
+  if (!step || typeof step !== 'object') return step;
+  const out = { ...step };
+  if (out.type === 'type' && out.value != null && out.value !== '') out.value = '••••••';
+  return out;
+}
+function redactProgressEvent(ev) {
+  if (!ev || typeof ev !== 'object' || !ev.step) return ev;
+  return { ...ev, step: redactStepForProgress(ev.step) };
+}
+
+// Who may pause/stop/close a run: the member who started it, anyone above them in the
+// team tree, the Super Admin, or anyone in single-user mode. Not a sibling.
+async function assertCanControlRun(ownerMemberId) {
+  const me = await getActiveMember();
+  if (!me || me.role === 'SUPER_ADMIN' || ownerMemberId == null) return;
+  if (Number(me.id) === Number(ownerMemberId)) return;
+  const all = await getPrisma().member.findMany();
+  if (permissions.visibleMemberIds(all, me).has(Number(ownerMemberId))) return;
+  const e = new Error('This run was started by another member.'); e.code = 'FORBIDDEN'; throw e;
+}
+
 async function runMacroOnProfile(payload, event) {
   await requirePermission('automation.run');
   const input = requireObject(payload);
   const macroId = parseId(input.macroId);
   const profileId = parseId(input.profileId);
   const db = getPrisma();
-  const macro = await db.macro.findUnique({ where: { id: macroId } });
-  if (!macro) throw new Error('Macro not found.');
+  // audit 2 Nov 2026: was db.macro.findUnique - any member could run (and stream the
+  // typed values of) another member's macro by id. Same ownership rule as the editor.
+  const macro = await loadAccessibleMacro(macroId);
   let steps = [];
   try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
   if (!Array.isArray(steps) || steps.length === 0) throw new Error('This macro has no steps to run yet.');
 
   const { sessionId, launched } = await ensureProfileSession(profileId);
   const runId = `macro-${Date.now()}`;
-  const control = { paused: false, aborted: false };
+  const control = { paused: false, aborted: false, ownerMemberId: currentMemberId };
   macroRuns.set(runId, control);
 
   // Live progress stream (mirrors the warmer-progress pattern). The scheduler runs
@@ -11890,7 +11917,7 @@ async function runMacroOnProfile(payload, event) {
   const sender = event && event.sender ? event.sender : null;
   const send = (data) => { if (sender) { try { sender.send(CHANNELS.AUTOMATION_MACRO_PROGRESS, data); } catch (e) { /* renderer gone */ } } };
   send({ runId, kind: 'start', macroId, profileId, name: macro.name, total: steps.length, ts: Date.now() });
-  const onStep = (ev) => send({ runId, kind: 'step', ...ev, ts: Date.now() });
+  const onStep = (ev) => send({ runId, kind: 'step', ...redactProgressEvent(ev), ts: Date.now() });
 
   let result;
   try {
@@ -11918,11 +11945,13 @@ async function runMacroOnProfile(payload, event) {
 
 // Pause / resume / stop a running macro by runId.
 async function controlMacro(payload) {
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const runId = String(input.runId || '');
   const action = String(input.action || '').toLowerCase();
   const control = macroRuns.get(runId);
   if (!control) return { ok: false, reason: 'not-running' };
+  await assertCanControlRun(control.ownerMemberId);
   if (action === 'pause') control.paused = true;
   else if (action === 'resume') control.paused = false;
   else if (action === 'stop') { control.aborted = true; control.paused = false; }
@@ -11931,6 +11960,7 @@ async function controlMacro(payload) {
 }
 
 async function startMacroRecordingOnProfile(payload) {
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const profileId = parseId(input.profileId);
   const { sessionId } = await ensureProfileSession(profileId);
@@ -11939,9 +11969,18 @@ async function startMacroRecordingOnProfile(payload) {
 }
 
 async function stopMacroRecordingOnProfile(payload) {
+  // audit 2 Nov 2026: this had no permission or profile check and took any sessionId,
+  // so a member could stop another session's recording and receive its captured steps
+  // (typed passwords included). The session is now always the profile's own, and the
+  // caller must have access to that profile.
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const profileId = parseId(input.profileId);
-  const sessionId = String(input.sessionId || profileId);
+  await assertCanAccessProfile(profileId);
+  const sessionId = String(profileId);
+  if (input.sessionId != null && input.sessionId !== '' && String(input.sessionId) !== sessionId) {
+    const e = new Error('That recording belongs to a different profile.'); e.code = 'FORBIDDEN'; throw e;
+  }
   const res = await stopMacroRecording(sessionId);
   const captured = Array.isArray(res.steps) ? res.steps : [];
   // Canonicalise what the recorder captured, but LENIENTLY: a recording cannot be
@@ -11968,18 +12007,57 @@ async function stopMacroRecordingOnProfile(payload) {
 // --- Macro scheduler (mirrors the proxy health-sweep timer) ----------------
 let macroSchedulerTimer = null;
 
+// The schedule runs with whoever happens to be signed in when the timer fires - often
+// nobody, which passes every access check. So each run is checked against the member
+// who SET the schedule (stored with it): that member must still exist and be active,
+// still see the macro, and still have access to each profile. Anything else is skipped.
+// Returns the subset of profileIds that may run, or [] with a reason.
+async function scheduleAllowedProfiles(cfg) {
+  if (cfg.ownerMemberId == null) return { allowed: cfg.profileIds, reason: null }; // single-user / pre-fix schedule
+  const db = getPrisma();
+  const all = await db.member.findMany();
+  const owner = all.find((m) => Number(m.id) === Number(cfg.ownerMemberId))
+    || (Number(cfg.ownerMemberId) === permissions.SUPER_ADMIN_ID ? { ...permissions.SUPER_ADMIN } : null);
+  if (!owner) return { allowed: [], reason: 'the member who set this schedule no longer exists' };
+  if (owner.status === 'banned' || owner.status === 'suspended') return { allowed: [], reason: 'the member who set this schedule is not active' };
+  if (owner.role === 'SUPER_ADMIN') return { allowed: cfg.profileIds, reason: null };
+  const visible = permissions.visibleMemberIds(all, owner);
+  const macro = await db.macro.findUnique({ where: { id: cfg.macroId } });
+  if (!macro || !macroVisible({ member: owner, visible }, macro)) return { allowed: [], reason: 'that member can no longer use this macro' };
+  const rows = await db.profile.findMany({ where: { id: { in: cfg.profileIds } }, select: PROFILE_ACCESS_SELECT });
+  const ok = new Set(rows.filter((r) => permissions.profileRowAccessible(visible, r, false)).map((r) => r.id));
+  return { allowed: cfg.profileIds.filter((id) => ok.has(id)), reason: null };
+}
+
+// One scheduled pass at a time: a pass that takes longer than the interval used to
+// start a second, overlapping loop on the same profiles every tick.
+let macroScheduleBusy = false;
+
 async function runDueMacroSchedule() {
   const cfg = await readSetting('macroSchedule', null);
   if (!cfg || !cfg.enabled || !cfg.macroId || !Array.isArray(cfg.profileIds) || cfg.profileIds.length === 0) return;
-  for (const pid of cfg.profileIds) {
-    try {
-      await runMacroOnProfile({ macroId: cfg.macroId, profileId: pid, continueOnError: true });
-    } catch (e) {
+  if (macroScheduleBusy) return;
+  macroScheduleBusy = true;
+  try {
+    const { allowed, reason } = await scheduleAllowedProfiles(cfg);
+    if (reason || allowed.length < cfg.profileIds.length) {
       await appendWarmerHistory({
-        type: 'macro', profileId: pid, at: new Date().toISOString(),
-        level: 'ERROR', detail: `Scheduled macro failed: ${(e && e.message) || 'error'}`
+        type: 'macro', at: new Date().toISOString(), level: 'WARN',
+        detail: reason ? `Scheduled macro skipped: ${reason}.` : `Scheduled macro skipped ${cfg.profileIds.length - allowed.length} profile(s) the member who set it can no longer access.`
       }).catch(() => {});
     }
+    for (const pid of allowed) {
+      try {
+        await runMacroOnProfile({ macroId: cfg.macroId, profileId: pid, continueOnError: true });
+      } catch (e) {
+        await appendWarmerHistory({
+          type: 'macro', profileId: pid, at: new Date().toISOString(),
+          level: 'ERROR', detail: `Scheduled macro failed: ${(e && e.message) || 'error'}`
+        }).catch(() => {});
+      }
+    }
+  } finally {
+    macroScheduleBusy = false;
   }
 }
 
@@ -12006,6 +12084,13 @@ async function getMacroSchedule() {
 }
 
 async function setMacroSchedule(payload) {
+  // audit 2 Nov 2026: this had no permission, macro or profile check, so any member could
+  // point the schedule at any macro and any profiles (or switch off the Owner's schedule),
+  // and the run later executed as whoever was signed in. It is now gated like a manual
+  // run, may only be replaced by the member who set it or someone above them, and records
+  // that member so every scheduled run is re-checked against them (see
+  // scheduleAllowedProfiles).
+  await requirePermission('automation.run');
   const input = requireObject(payload);
   const enabled = Boolean(input.enabled);
   const everyMinutes = Math.max(1, Number.parseInt(input.everyMinutes, 10) || 60);
@@ -12016,7 +12101,11 @@ async function setMacroSchedule(payload) {
   if (enabled && (!macroId || profileIds.length === 0)) {
     throw new Error('Choose a macro and at least one profile before enabling the schedule.');
   }
-  const cfg = { enabled, macroId, everyMinutes, profileIds };
+  const existing = await readSetting('macroSchedule', null);
+  if (existing && existing.ownerMemberId != null) await assertCanControlRun(existing.ownerMemberId);
+  if (macroId) await loadAccessibleMacro(macroId);
+  for (const pid of profileIds) await assertCanAccessProfile(pid);
+  const cfg = { enabled, macroId, everyMinutes, profileIds, ownerMemberId: currentMemberId };
   await writeSetting('macroSchedule', cfg);
   if (enabled) startMacroScheduler(everyMinutes); else stopMacroScheduler();
   return { ...cfg, running: Boolean(macroSchedulerTimer) };
@@ -12077,8 +12166,9 @@ async function runParallelMacroHandler(payload, event) {
   const closeWhenDone = input.closeWhenDone !== false;
 
   const db = getPrisma();
-  const macro = await db.macro.findUnique({ where: { id: macroId } });
-  if (!macro) throw new Error('Macro not found.');
+  // audit 2 Nov 2026: was db.macro.findUnique - the same macro-ownership rule as a
+  // single run now applies to a parallel run.
+  const macro = await loadAccessibleMacro(macroId);
   let steps = [];
   try { steps = JSON.parse(macro.stepsJson || '[]'); } catch (e) { steps = []; }
   if (!Array.isArray(steps) || steps.length === 0) throw new Error('This macro has no steps to run yet.');
@@ -12290,7 +12380,8 @@ async function startWarmer(payload, event) {
     // re-attach to (and stop) the still-running job instead of orphaning it.
     // `active` = profiles warming RIGHT NOW; total/done drive the live progress counter.
     profileIds: ids, total: ids.length, done: 0, active: new Set(), concurrency,
-    loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: []
+    loop: opts.loop, headless: opts.headless, sitesCount: sites.length, startedAt: Date.now(), logs: [],
+    ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
   };
   warmerRuns.set(runId, run);
 
@@ -12359,10 +12450,18 @@ function listActiveWarmers() {
 // Stop a running warm-up. `force` also closes the sessions this run launched.
 // With no runId, stops every active run.
 async function stopWarmer(payload) {
+  // audit 2 Nov 2026: any member could stop or force-close (closing the browsers of)
+  // anyone's warm-up. Gated like startWarmer, and limited to runs the caller may control.
+  await requirePermission('automation.run');
   const input = (payload && typeof payload === 'object') ? payload : {};
   const force = Boolean(input.force);
   const runId = input.runId ? String(input.runId) : null;
-  const targets = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()];
+  const candidates = runId ? (warmerRuns.has(runId) ? [warmerRuns.get(runId)] : []) : [...warmerRuns.values()];
+  const targets = [];
+  for (const run of candidates) {
+    try { await assertCanControlRun(run.ownerMemberId); targets.push(run); }
+    catch (e) { if (runId) throw e; /* "stop all" just skips other members' runs */ }
+  }
   if (!targets.length) return { stopped: false };
   for (const run of targets) {
     run.aborted = true;
