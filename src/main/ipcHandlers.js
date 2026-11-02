@@ -83,16 +83,17 @@ const {
   parseIpRoyalLine, ipRoyalLifetime, ipRoyalLocation, pickIpRoyalPort, ipRoyalCountriesView, ipRoyalErrorMessage,
   marsProxiesLocation, parseMarsProxiesList, nodeMavenUsername, nodeMavenTtl, froxyPassword, froxyBasePassword,
   packetStreamPassword, packetStreamCountry, airproxyRows,
-  proxmintUsername, proxmintPickProduct, databayUsername,
+  proxmintUsername, proxmintPickProduct, databayUsername, databayZone,
   ipfoxyUsername, mangoProxyPlace, mangoProxyAsn, mangoProxyCollect, mangoProxyCountryPage,
   catProxiesResiUsername, catProxiesMobileUsername, catProxiesCreds,
   rapidProxySid, rapidProxyUsername, NOVADA_ZONES, novadaUsername,
   PROXIESSX_POOLS, proxiesSxSid, proxiesSxUsername, proxiesSxProxyCreds,
+  proxiesSxStock, PROXIESSX_MOBILE_COUNTRIES, PROXIESSX_MAX_SESSIONS,
   mobileProxySpaceRows, proxySolutionsPage,
   collectProxidizePerProxy, proxidizePerGbUsername,
   liveProxiesListUrl, liveProxiesRows, liveProxiesPlanLabel,
   LIVEPROXIES_GATEWAY, liveProxiesBaseUser, liveProxiesUsername, liveProxiesStickyHost,
-  ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row,
+  ipBurgerUsername, proxy302Token, proxy302CountryId, proxy302Row, proxy302AreaId, proxy302PurchaseQuery,
   medianMs,
   twoExtractBaseUser, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername,
@@ -2768,8 +2769,8 @@ function gatewayOverride(host, port, def, label) {
 
 // Mint `count` sticky rows (one session id each) or a single rotating row, for vendors whose
 // targeting lives in the username. buildUser(sid) returns the full username for that session.
-// `max` caps one pull; a caller passes MINTED_PULL_MAX when the vendor documents no lower limit.
-function mintGatewayRows({ type, host, port, password, session, count, buildUser, label, max = 100 }) {
+// `max` is lower than MINTED_PULL_MAX only for a vendor that documents a session limit.
+function mintGatewayRows({ type, host, port, password, session, count, buildUser, label, max = MINTED_PULL_MAX }) {
   // A blank session with How many > 1 mints that many sticky sessions; with 1 it stays rotating.
   const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
@@ -2847,17 +2848,31 @@ async function fetchNovadaPool({ username, password, poolType, country, state, c
   return rows;
 }
 
-// Proxies.sx: the X-API-Key reads the gateway login (the account password never works there).
-// A country is required and each row is failover-strict on one pool, so out of stock fails
-// (E_NO_STOCK_COUNTRY) instead of exiting elsewhere. Sticky rows pin a sid; rotating rows have none.
+// Proxies.sx: the X-API-Key reads the gateway login with GET /account/proxy-password (scope
+// account:read; the account password never works there). A country is required and each row is
+// failover-strict on one pool, so out of stock fails (E_NO_STOCK_COUNTRY) instead of exiting
+// elsewhere. Sticky rows pin a sid; rotating rows ask for a new endpoint per connection.
 const PROXIESSX_API = 'https://api.proxies.sx/v1';
 const PROXIESSX_GATEWAY = Object.freeze({ host: 'gw.proxies.sx', http: 7000, socks: 7001 });
 
-async function fetchProxiesSxPool({ token, poolType, country, session, count }) {
+async function fetchProxiesSxPool({ token, poolType, country, state, city, session, count, proxyType }) {
   const key = String(token || '').trim();
   if (!key || /\s/.test(key)) throw new Error('Proxies.sx: enter your API key (client.proxies.sx → API keys).');
   const cc = normCountryCode(country);
   if (!cc) throw new Error('Proxies.sx: pick a country. The pool never picks one for you, so a country with no stock fails instead of exiting somewhere else.');
+  const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] ? String(poolType).toLowerCase() : 'mobile';
+  const st = String(state || '').trim();
+  const ct = String(city || '').trim();
+  if (pool === 'mobile' && !PROXIESSX_MOBILE_COUNTRIES.includes(cc)) {
+    throw new Error(`Proxies.sx: the Mobile pool runs only in ${PROXIESSX_MOBILE_COUNTRIES.join(', ')} (GE is Georgia). Pick one of those, or Residential for ${cc}.`);
+  }
+  if (pool === 'mobile' && (st || ct)) throw new Error('Proxies.sx: State and City work on the Residential pool only. Clear them, or switch to Residential.');
+  if (st && !/^[A-Za-z]{2}$/.test(st)) throw new Error('Proxies.sx: State takes the 2-letter region code, for example CA or NY, not the full name.');
+  // Public stock counts (no key needed): refuse a country with no endpoints now rather than build
+  // proxies that fail on first use. If the stock read fails, the pull goes ahead.
+  let stock = null;
+  try { stock = proxiesSxStock(await httpRequestText(`${PROXIESSX_API}/gateway/pool/stock`, { headers: { Accept: 'application/json' } }), pool, cc); } catch { stock = null; }
+  if (stock === 0) throw new Error(`Proxies.sx has no ${pool === 'mobile' ? 'Mobile' : 'Residential'} stock in ${cc} right now. Pick another country${pool === 'mobile' ? '' : ' or the Mobile pool'}.`);
   let creds;
   try {
     const text = await httpRequestText(`${PROXIESSX_API}/account/proxy-password`, { headers: { 'X-API-Key': key, Accept: 'application/json' } });
@@ -2870,11 +2885,12 @@ async function fetchProxiesSxPool({ token, poolType, country, session, count }) 
   if (!/^psx_[a-z0-9]+$/i.test(creds.username) || !creds.password) {
     throw new Error('Proxies.sx: the account has no proxy password yet. Set one in the dashboard (Proxy password), then pull again.');
   }
-  const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] ? String(poolType).toLowerCase() : 'mobile';
   const kind = pool === 'mobile' ? 'Mobile' : 'Residential';
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const rows = mintGatewayRows({
-    type: 'HTTP', host: PROXIESSX_GATEWAY.host, port: PROXIESSX_GATEWAY.http, password: creds.password, session, count,
-    buildUser: (sid) => proxiesSxUsername(creds.username, { poolType: pool, country: cc, sid: sid ? proxiesSxSid(sid) : '' }),
+    type: socks ? 'SOCKS5' : 'HTTP', host: PROXIESSX_GATEWAY.host, port: socks ? PROXIESSX_GATEWAY.socks : PROXIESSX_GATEWAY.http,
+    password: creds.password, session, count, max: PROXIESSX_MAX_SESSIONS,
+    buildUser: (sid) => proxiesSxUsername(creds.username, { poolType: pool, country: cc, state: st, city: ct, sid: sid ? proxiesSxSid(sid) : '' }),
     label: `Proxies.sx • ${kind} • ${cc}`
   }).map((r) => ({ ...r, country: cc }));
   if (!rows.length) throw new Error('Proxies.sx: could not build any proxies.');
@@ -2883,8 +2899,10 @@ async function fetchProxiesSxPool({ token, poolType, country, session, count }) 
 
 // ---- MobileProxy.Space (dedicated mobile, list pull) ----
 // Rotation is the per-proxy change-IP link in the vendor dashboard and is not stored here.
-// The API allows one identical request per ~5 s, so a quick second pull gets a "wait" message.
-const MOBILEPROXYSPACE_API = 'https://mobileproxy.space/api.html';
+// get_my_proxy returns every active proxy in one answer (no paging). The API allows one identical
+// request every few seconds (HTTP 429), so a quick second pull gets a "wait" message. The API moved
+// to mpsapi.com; the old mobileproxy.space/api.html address was announced to stop after 31 Aug 2026.
+const MOBILEPROXYSPACE_API = 'https://mpsapi.com/api.html';
 
 async function fetchMobileProxySpacePool({ token, poolType, count }) {
   const key = String(token || '').trim();
@@ -2895,7 +2913,7 @@ async function fetchMobileProxySpacePool({ token, poolType, count }) {
   } catch (error) {
     const status = error && error.status;
     const msg = String(error && error.message || '');
-    if (/too many/i.test(msg)) throw new Error('MobileProxy.Space: too many requests. Wait a few seconds and pull again.');
+    if (status === 429 || /too many/i.test(msg)) throw new Error('MobileProxy.Space: too many requests. Wait a few seconds and pull again.');
     if (status === 401 || status === 403) throw new Error('MobileProxy.Space rejected the API token. Copy it again from your personal account.');
     throw new Error('MobileProxy.Space: could not read your proxies. Check your connection and try again.');
   }
@@ -2910,18 +2928,24 @@ async function fetchMobileProxySpacePool({ token, poolType, count }) {
 }
 
 // ---- Proxy-Solutions (anti-detect integration endpoint) ----
-// The provider key is issued per account for anti-detect browsers. Pages of 200 are all read (up
-// to a cap) and expired proxies are skipped.
+// The provider key is issued per account for anti-detect browsers. Pages of 200 (the size in the
+// vendor's contract) are read until How many is met in the chosen country or the list ends, up to
+// 25 pages; expired proxies are skipped.
 const PROXYSOLUTIONS_API = 'https://proxy-solutions.net/api/proxies';
+const PROXYSOLUTIONS_MAX_PAGES = 25;
 
 async function fetchProxySolutionsPool({ token, poolType, country, count }) {
   const key = String(token || '').trim();
   if (!key || !/^[A-Za-z0-9_-]{6,200}$/.test(key)) throw new Error('Proxy-Solutions: paste the Integration token from the API for developers page (not the API key).');
   const proto = String(poolType || '').toLowerCase() === 'socks5' ? 'socks' : 'http';
+  const cc = normCountryCode(country);
+  const raw = String(count == null ? '' : count).trim();
+  const want = /^\d+$/.test(raw) && Number(raw) > 0 ? Number(raw) : Infinity;
   const rows = [];
   const seen = new Set();
+  let matched = 0;
   let totalPages = 1;
-  for (let page = 1; page <= Math.min(totalPages, 25); page++) {
+  for (let page = 1; page <= Math.min(totalPages, PROXYSOLUTIONS_MAX_PAGES) && matched < want; page++) {
     let text;
     try {
       text = await httpRequestText(`${PROXYSOLUTIONS_API}/${encodeURIComponent(key)}?format=object&proto=${proto}&page=${page}&per_page=200`, { headers: { Accept: 'application/json' } });
@@ -2937,10 +2961,10 @@ async function fetchProxySolutionsPool({ token, poolType, country, count }) {
       if (seen.has(k)) continue;
       seen.add(k);
       rows.push(r);
+      if (!cc || r.country === cc) matched += 1;
     }
   }
   if (!rows.length) throw new Error('Proxy-Solutions: no active proxies on this account.');
-  const cc = normCountryCode(country);
   const picked = cc ? rows.filter((r) => r.country === cc) : rows;
   if (!picked.length) {
     const have = [...new Set(rows.map((r) => r.country).filter(Boolean))].join(', ');
@@ -3005,64 +3029,88 @@ async function fetchIpBurgerPool({ username, password, country, state, city, ses
 }
 
 // ---- Proxy302 (dynamic residential, Open API; endpoints in proxyVendorUtils.js) ----
-// Sign in with the API sub-account key, map the country to its numeric id, then request one proxy
-// per call (each a distinct session); a run of duplicates stops the loop early.
-const PROXY302_API = 'https://open.proxy302.com/open_api/v3';
+// Sign in with the API key, map country (and on the premium line state/city) to numeric ids, then
+// buy one proxy per call (each its own credential). The calls run a few at a time; the first failure
+// stops new calls and keeps what was built, and a run of duplicates stops the pull early.
+const PROXY302_API = 'https://proxy302.com/open_api/v3';
+const PROXY302_PARALLEL = 4;
 
-async function fetchProxy302Pool({ username, password, country, count, proxyType }) {
+function proxy302Failure(error, fallback) {
+  const msg = String((error && error.message) || '');
+  if (/invalid API credential/i.test(msg)) return new Error('Proxy302 rejected the API key. Paste the key id as the username and the key secret as the password (console, API keys).');
+  return new Error(/^Proxy302/.test(msg) ? msg : fallback);
+}
+
+async function fetchProxy302Pool({ username, password, poolType, country, state, city, life, count, proxyType }) {
   const keyName = String(username || '').trim();
   const keyPass = password != null ? String(password) : '';
-  if (!keyName) throw new Error('Proxy302: enter the API key name from the Proxy302 backend (API, not your login email).');
-  if (!keyPass) throw new Error('Proxy302: enter the API key password from the Proxy302 backend.');
+  if (!keyName) throw new Error('Proxy302: enter the API key id from the Proxy302 console (API keys, not your login email).');
+  if (!keyPass) throw new Error('Proxy302: enter the API key secret from the Proxy302 console.');
+  const line = String(poolType || '').toLowerCase() === 'standard' ? 'standard' : 'premium';
+  const cc = normCountryCode(country);
+  const st = String(state || '').trim();
+  const ct = String(city || '').trim();
+  if ((st || ct) && line === 'standard') throw new Error('Proxy302: State and City work on the Premium line only. Clear them, or switch to Premium.');
+  if (st && !cc) throw new Error('Proxy302: pick a country before a state.');
+  if (ct && !st) throw new Error('Proxy302: city targeting needs its state as well (for example State California, City Los Angeles).');
   let token;
   try {
     const text = await httpRequestText(`${PROXY302_API}/user/users/token?username=${encodeURIComponent(keyName)}&password=${encodeURIComponent(keyPass)}`, { headers: { Accept: 'application/json' } });
     token = proxy302Token(text);
   } catch (error) {
-    if (error && error.status === 401) throw new Error('Proxy302 rejected the API key. Generate a sub-account key in the backend and paste its name and password.');
-    throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: could not sign in to the API. Check your connection and the key.');
+    throw proxy302Failure(error, 'Proxy302: could not sign in to the API. Check your connection and the key.');
   }
-  const cc = normCountryCode(country);
-  let countryId = 0;
-  if (cc) {
+  const auth = { Authorization: token, Accept: 'application/json' };
+  const areaId = async (type, pid, place, missing) => {
+    let id;
     try {
-      const text = await httpRequestText(`${PROXY302_API}/proxy/area/country`, { headers: { Authorization: token, Accept: 'application/json' } });
-      countryId = proxy302CountryId(text, cc);
+      const query = pid ? `?pid=${encodeURIComponent(pid)}` : '';
+      // A big state's city list can pass the default 2 MB response cap.
+      const text = await httpRequestText(`${PROXY302_API}/proxy/area/${type}${query}`, { headers: auth, maxBytes: 8_000_000 });
+      id = type === 'country' ? proxy302CountryId(text, place) : proxy302AreaId(text, place);
     } catch (error) {
-      throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: could not read the country list to resolve the location.');
+      throw proxy302Failure(error, `Proxy302: could not read the ${type} list to resolve the location.`);
     }
-    if (countryId == null) throw new Error(`Proxy302 does not list ${cc} in its country database. Pick another country, or leave it on Any.`);
-  }
+    if (id == null) throw new Error(missing);
+    return id;
+  };
+  const countryId = cc ? await areaId('country', '', cc, `Proxy302 does not list ${cc} in its country database. Pick another country, or leave it on Any.`) : 0;
+  const stateId = st ? await areaId('state', countryId, st, `Proxy302 does not list the state "${st}" in ${cc}. Check the spelling, or leave State blank.`) : 0;
+  const cityId = ct ? await areaId('city', stateId, ct, `Proxy302 does not list the city "${ct}" in ${st}. Check the spelling, or leave City blank.`) : 0;
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
-  const proto = socks ? 'socks5' : 'http';
-  const n = clampPoolCount(count, 5, 50);
-  const url = `${PROXY302_API}/proxy/api/proxy/dynamic/traffic?s=1&protocol=${proto}&country_id=${countryId}&state_id=0&city_id=0`;
+  const n = clampPoolCount(count, 5, MINTED_PULL_MAX);
+  const url = `${PROXY302_API}/proxy/api/proxy/dynamic/traffic?${proxy302PurchaseQuery({ line, socks, countryId, stateId, cityId, lifeMin: life })}`;
   const rows = [];
   const seen = new Set();
+  let started = 0;
   let dupes = 0;
-  for (let i = 0; i < n && dupes < 3; i += 1) {
-    let text;
-    try {
-      text = await httpRequestText(url, { method: 'POST', headers: { Authorization: token, Accept: 'application/json' } });
-    } catch (error) {
-      if (!rows.length) throw new Error(error && /^Proxy302/.test(String(error.message)) ? error.message : 'Proxy302: the proxy request failed. Check the key has API access and traffic left.');
-      break; // keep the proxies already built
+  let failure = null;
+  const worker = async () => {
+    while (!failure && started < n && rows.length < n && dupes < 3) {
+      started += 1;
+      let row;
+      try {
+        const text = await httpRequestText(url, { method: 'POST', headers: auth });
+        row = proxy302Row(text, { socks, country: cc });
+      } catch (error) {
+        failure = failure || error;
+        return;
+      }
+      if (!row) continue;
+      const key = `${row.host}:${row.port}:${row.username}`;
+      if (seen.has(key)) { dupes += 1; continue; }
+      seen.add(key); rows.push(row); dupes = 0;
     }
-    let row;
-    try { row = proxy302Row(text, { socks, country: cc }); } catch (error) {
-      if (!rows.length) throw error;
-      break;
-    }
-    if (!row) continue;
-    const key = `${row.host}:${row.port}:${row.username}`;
-    if (seen.has(key)) { dupes += 1; continue; }
-    seen.add(key); rows.push(row); dupes = 0;
+  };
+  await Promise.all(Array.from({ length: Math.min(PROXY302_PARALLEL, n) }, worker));
+  if (!rows.length) {
+    if (failure) throw proxy302Failure(failure, 'Proxy302: the proxy request failed. Check the key has API access and traffic left.');
+    throw new Error('Proxy302: the API returned no usable proxy. Check the key has traffic and API permission.');
   }
-  if (!rows.length) throw new Error('Proxy302: the API returned no usable proxy. Check the key has traffic and API permission.');
-  return rows;
+  return rows.slice(0, n);
 }
 
-// ---- Databay (residential / mobile / datacenter) ----
+// ---- Databay (residential / residential flex / mobile / datacenter) ----
 // One gateway port carries HTTP and SOCKS5; zone, location and sticky session ride in the username.
 const DATABAY_GATEWAY = Object.freeze({ host: 'gw.databay.co', port: 8888 });
 
@@ -3073,10 +3121,10 @@ async function fetchDatabayPool({ username, password, poolType, country, state, 
   if (/@/.test(user)) throw new Error('Databay: that looks like the account email. Use the proxy user from the dashboard, Proxy Users.');
   if (!pw) throw new Error('Databay: enter the proxy user password.');
   const gw = gatewayOverride(host, port, DATABAY_GATEWAY, 'Databay');
-  const zone = ['residential', 'mobile', 'datacenter'].includes(String(poolType || '').toLowerCase()) ? String(poolType).toLowerCase() : 'residential';
+  const zone = databayZone(poolType);
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const cc = normCountryCode(country);
-  const kind = zone.charAt(0).toUpperCase() + zone.slice(1);
+  const kind = { residential: 'Residential', residential_FLEX: 'Residential Flex', mobile: 'Mobile', datacenter: 'Datacenter' }[zone];
   const rows = mintGatewayRows({
     type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
     buildUser: (sid) => databayUsername(user, { zone, country: cc, state, city, session: sid, lengthMin: life }),
@@ -3087,7 +3135,8 @@ async function fetchDatabayPool({ username, password, poolType, country, state, 
 }
 
 // ---- IPFoxy (rotating residential, gateway-minted) ----
-// Targeting rides in the username; gate-sg.ipfoxy.io (Asia-Pacific) goes through the override.
+// Targeting rides in the username; gate.ipfoxy.io, gate-sg.ipfoxy.io (Asia-Pacific) and
+// gate-de.ipfoxy.io (Europe) go through the override. Every route reaches every exit country.
 const IPFOXY_GATEWAY = Object.freeze({ host: 'gate-us.ipfoxy.io', port: 58688 });
 
 async function fetchIpfoxyPool({ username, password, country, state, city, session, life, count, proxyType, host, port }) {

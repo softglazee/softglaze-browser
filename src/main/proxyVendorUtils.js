@@ -815,9 +815,15 @@ function novadaUsername(base, { poolType, country, state, city, session, lifeMin
 }
 
 // Proxies.sx (gw.proxies.sx, 7000 HTTP, 7001 SOCKS5) lowercases the username and splits it on '-':
-// psx_<acct>-<mbl|peer>-<cc>[-sid-<id>-rot-sticky]-failover-strict. Never best/any (they cross pools);
-// failover-strict errors on an out-of-stock country instead of exiting elsewhere.
+// psx_<acct>-<mbl|peer>-<cc>[-state-<xx>][-city-<name>](-sid-<id>-rot-sticky|-rot-ondemand)-failover-strict.
+// Never best/any (they cross pools); failover-strict errors on an out-of-stock country instead of
+// exiting elsewhere. Without a rot token the gateway moves the exit every 10 minutes (auto10), so a
+// rotating row asks for ondemand: a new endpoint on each connection. State and city are peer-only.
 const PROXIESSX_POOLS = Object.freeze({ mobile: 'mbl', residential: 'peer' });
+// The carrier-modem pool (mbl) runs in these six countries only; GE is Georgia.
+const PROXIESSX_MOBILE_COUNTRIES = Object.freeze(['US', 'GB', 'FR', 'NL', 'PL', 'GE']);
+// The gateway refuses more than 250 concurrent sessions (distinct sids) per account (E_SESSION_LIMIT).
+const PROXIESSX_MAX_SESSIONS = 250;
 function proxiesSxSid(prefix, index) {
   // Pad short ids on the left: callers number sessions ('ab1', 'ab10'), and right-padding would make
   // them collide. Minimum total length 8.
@@ -826,15 +832,34 @@ function proxiesSxSid(prefix, index) {
   if (core.length >= 8) return core.slice(0, 64);
   return `sg_${core.padStart(5, '0')}`.slice(0, 64);
 }
-function proxiesSxUsername(login, { poolType, country, sid } = {}) {
+function proxiesSxUsername(login, { poolType, country, sid, state, city } = {}) {
   const acct = String(login || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] || PROXIESSX_POOLS.mobile;
   const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
   if (!acct || !/^[a-z]{2}$/.test(cc)) return '';
   let user = `${acct}-${pool}-${cc}`;
+  if (pool === PROXIESSX_POOLS.residential) {
+    // State is the 2-letter region code (-state-ca, never -state-california).
+    const st = String(state || '').trim().toLowerCase();
+    if (/^[a-z]{2}$/.test(st)) user += `-state-${st}`;
+    const ct = String(city || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 64);
+    if (ct) user += `-city-${ct}`;
+  }
   const s = String(sid || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
-  if (s) user += `-sid-${s}-rot-sticky`;
+  user += s ? `-sid-${s}-rot-sticky` : '-rot-ondemand';
   return `${user}-failover-strict`;
+}
+// Routable endpoints for one pool and country from GET /v1/gateway/pool/stock (public, counts only):
+// { pools: { mbl: { us: 27 }, peer: { de: 310 } } }. A country with no stock is left out, so a missing
+// entry is 0. Returns null when the body is not that shape, so the caller can skip the check.
+function proxiesSxStock(body, poolType, country) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return null; }
+  const pools = data && typeof data === 'object' ? data.pools : null;
+  const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] || PROXIESSX_POOLS.mobile;
+  if (!pools || typeof pools !== 'object' || !pools[pool] || typeof pools[pool] !== 'object') return null;
+  const n = Number(pools[pool][String(country || '').trim().toLowerCase()]);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 // GET /v1/account/proxy-password. Field names differ between the docs and the reference
 // client, so accept the common shapes and an optional { data: {...} } envelope.
@@ -849,15 +874,16 @@ function proxiesSxProxyCreds(body) {
   };
 }
 
-// MobileProxy.Space: GET mobileproxy.space/api.html?command=get_my_proxy (Bearer) -> { status: 'ok',
-// list }; errors are { status: 'err', message }. Each proxy has one login, separate HTTP/SOCKS5 ports;
-// numbers may be strings, and proxy_exp stays vendor text (Moscow time).
+// MobileProxy.Space: GET mpsapi.com/api.html?command=get_my_proxy (Bearer) -> { status: 'ok', list };
+// one docs sample is a bare array instead. Errors are { status: 'err', message }, and some commands
+// answer 'OK', so status is compared without case. Each proxy has one login, separate HTTP/SOCKS5
+// ports; numbers may be strings, and proxy_exp stays vendor text (Moscow time).
 function mobileProxySpaceRows(body, { socks = false } = {}) {
   let data;
   try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { error: 'bad-json', rows: [] }; }
   if (!data || typeof data !== 'object') return { error: 'bad-json', rows: [] };
-  if (data.status && data.status !== 'ok') return { error: String(data.message || data.status), rows: [] };
-  const list = Array.isArray(data.list) ? data.list : [];
+  if (!Array.isArray(data) && data.status && String(data.status).toLowerCase() !== 'ok') return { error: String(data.message || data.status), rows: [] };
+  const list = Array.isArray(data) ? data : (Array.isArray(data.list) ? data.list : []);
   const rows = [];
   const seen = new Set();
   for (const p of list) {
@@ -917,6 +943,14 @@ function proxySolutionsPage(body, { now = Date.now() } = {}) {
 // follows "__" in the username, ';'-joined: cr.<cc>; state.<words joined, lowercase>; city.<name>
 // (without state); sessid.<id>;sessttl.<1-120 min>. Underscores fail. Rotating ports 823/824 (SOCKS5).
 const PROXMINT_PRODUCTS = Object.freeze(['residential', 'residential_premium', 'mobile', 'datacenter']);
+// The API names premium residential 'premium-residential' (proxmint.com/docs/api); the form keeps
+// its own key, which is accepted too.
+const PROXMINT_API_PRODUCTS = Object.freeze({
+  residential: ['residential'],
+  residential_premium: ['premium-residential', 'residential_premium'],
+  mobile: ['mobile'],
+  datacenter: ['datacenter']
+});
 function proxmintGeoToken(v) {
   return String(v || '').trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
 }
@@ -944,7 +978,7 @@ function proxmintUsername(base, { country, state, city, session, ttlMin } = {}) 
 function proxmintPickProduct(json, poolType) {
   const products = Array.isArray(json && json.products) ? json.products : [];
   const want = PROXMINT_PRODUCTS.includes(String(poolType || '').toLowerCase()) ? String(poolType).toLowerCase() : 'residential';
-  const match = products.find((p) => p && p.product === want && p.status === 'active');
+  const match = products.find((p) => p && PROXMINT_API_PRODUCTS[want].includes(p.product) && p.status === 'active');
   if (!match) {
     const have = products.map((p) => `${p.name || p.product} (${p.status})`).join(', ');
     const err = new Error(have ? `Proxmint: no active ${want.replace('_', ' ')} product on this account. It has: ${have}.` : 'Proxmint: this account has no products yet. Buy or claim bandwidth first.');
@@ -966,9 +1000,15 @@ function proxmintPickProduct(json, poolType) {
 }
 
 // Databay gateway gw.databay.co:8888 (HTTP and SOCKS5). Username: <user>-zone-<zone>-countryCode-US
-// -stateName-<s>-cityName-<c>-sessionId-<id>-sessionLength-<max 120 min>. Only the most specific
-// location is sent; state and city exist on Residential only.
-const DATABAY_ZONES = Object.freeze(['residential', 'mobile', 'datacenter']);
+// -stateName-<s>-cityName-<c>-sessionId-<id>-sessionLength-<min>. Only the most specific location is
+// sent; state and city exist on Residential only. Sticky sessions last up to 120 minutes, 30 on
+// Residential Flex (zone residential_FLEX, country only) (docs.databay.com, Network Types).
+const DATABAY_ZONES = Object.freeze(['residential', 'residential_FLEX', 'mobile', 'datacenter']);
+const DATABAY_MAX_SESSION = Object.freeze({ residential: 120, residential_FLEX: 30, mobile: 120, datacenter: 120 });
+function databayZone(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return DATABAY_ZONES.find((z) => z.toLowerCase() === v) || 'residential';
+}
 function databayGeoValue(v) {
   // Hyphen is the parameter separator, so it can never appear inside a value.
   return String(v || '').trim().replace(/[-_]+/g, ' ').replace(/[^\p{L}\p{N} .']/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60);
@@ -976,7 +1016,7 @@ function databayGeoValue(v) {
 function databayUsername(base, { zone, country, state, city, session, lengthMin } = {}) {
   const user = String(base || '').trim().replace(/-zone-.*$/i, '');
   if (!user) return '';
-  const z = DATABAY_ZONES.includes(String(zone || '').toLowerCase()) ? String(zone).toLowerCase() : 'residential';
+  const z = databayZone(zone);
   let u = `${user}-zone-${z}`;
   const cc = String(country || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
   if (/^[A-Z]{2}$/.test(cc)) {
@@ -988,15 +1028,21 @@ function databayUsername(base, { zone, country, state, city, session, lengthMin 
   }
   const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '').slice(0, 32);
   if (sid) {
-    const len = Math.min(120, Math.max(1, Number.parseInt(String(lengthMin), 10) || 30));
+    const len = Math.min(DATABAY_MAX_SESSION[z], Math.max(1, Number.parseInt(String(lengthMin), 10) || 30));
     u += `-sessionId-${sid}-sessionLength-${len}`;
   }
   return u;
 }
 
-// IPFoxy rotating residential: gate-us/gate-sg.ipfoxy.io:58688 (HTTP and SOCKS5). Username:
-// customer-<user>-cc-US-st-Florida-city-Miami-sessid-<id>-ttl-<min>; -ttl- goes last, sticky only.
-// Built from the docs; not tested with a live key.
+// IPFoxy rotating residential: gate.ipfoxy.io and the gate-us/-sg/-de routes, port 58688 (HTTP and
+// SOCKS5). Username: customer-<user>-cc-US-st-Florida-city-Miami-sessid-<id>-ttl-<min>; -ttl- goes
+// last, sticky only, and takes 30 (the default) or 60 (ipfoxy.com/help/docs/session-time), so other
+// lifetimes snap to one of those. Built from the docs; not tested with a live key.
+function ipfoxyTtl(min) {
+  const m = Number.parseInt(String(min), 10);
+  if (!Number.isInteger(m) || m <= 0) return 0;
+  return m > 30 ? 60 : 30;
+}
 function ipfoxyGeo(v) { return String(v || '').trim().replace(/[^\p{L}\p{N}]+/gu, ''); }
 function ipfoxyUsername(account, { country, state, city, session, ttlMin } = {}) {
   let user = String(account || '').trim();
@@ -1014,8 +1060,8 @@ function ipfoxyUsername(account, { country, state, city, session, ttlMin } = {})
   const sid = String(session || '').trim().replace(/[^A-Za-z0-9_]/g, '').slice(0, 40);
   if (sid) {
     user += `-sessid-${sid}`;
-    const ttl = Number.parseInt(String(ttlMin), 10);
-    if (Number.isInteger(ttl) && ttl > 0) user += `-ttl-${ttl}`;
+    const ttl = ipfoxyTtl(ttlMin);
+    if (ttl) user += `-ttl-${ttl}`;
   }
   return user;
 }
@@ -1124,9 +1170,11 @@ function ipBurgerUsername(base, { country, state, city, session, sesstimeMin } =
   return parts.join('-');
 }
 
-// Proxy302 Open API v3. GET /user/users/token (API sub-account, not the login) returns the full
-// Authorization value ("Basic ..."). /proxy/area/country maps ISO-2 to country_id; POST
-// /proxy/api/proxy/dynamic/traffic gives one proxy. A nonzero code in { code, msg, data } is an error.
+// Proxy302 Open API v3 on https://proxy302.com/open_api/v3 (proxy302.com/llms-full.txt). GET
+// /user/users/token (API key id + secret, not the login) returns the full Authorization value
+// ("Basic ..."). /proxy/area/{country|state|city} maps names to ids; POST
+// /proxy/api/proxy/dynamic/traffic buys one proxy. Every answer is HTTP 200 with { code, msg, data };
+// a nonzero code is an error.
 function proxy302Body(text, what) {
   let body;
   try { body = JSON.parse(String(text)); } catch (e) { throw new Error(`Proxy302 ${what}: the API did not return JSON.`); }
@@ -1152,11 +1200,50 @@ function proxy302CountryId(text, code) {
   const id = Number(hit.id);
   return Number.isInteger(id) ? id : null;
 }
+// Id of a state or city from /proxy/area/{state|city}?pid=<parent id>, matched on its name or code
+// without case, spaces or punctuation. null when the parent lists no such place.
+function proxy302AreaId(text, place) {
+  const want = String(place || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  if (!want) return 0;
+  const data = proxy302Body(text, 'area list');
+  const list = Array.isArray(data && data.data) ? data.data : (Array.isArray(data) ? data : []);
+  const norm = (v) => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  const hit = list.find((a) => a && (norm(a.name) === want || (a.code && norm(a.code) === want)));
+  if (!hit) return null;
+  const id = Number(hit.id);
+  return Number.isInteger(id) ? id : null;
+}
+// Product line s: 1-2 premium, 3-4 standard. Premium takes state/city but only sticky sessions of a
+// fixed length; standard takes rotating, or sticky with session_duration 10/30/60/120 minutes.
+const PROXY302_LINES = Object.freeze({ premium: 1, standard: 3 });
+const PROXY302_DURATIONS = Object.freeze([10, 30, 60, 120]);
+function proxy302PurchaseQuery({ line, socks = false, countryId = 0, stateId = 0, cityId = 0, lifeMin } = {}) {
+  const standard = String(line || '').toLowerCase() === 'standard';
+  const q = new URLSearchParams({
+    s: String(standard ? PROXY302_LINES.standard : PROXY302_LINES.premium),
+    protocol: socks ? 'socks5' : 'http',
+    country_id: String(Number(countryId) || 0),
+    state_id: String(standard ? 0 : Number(stateId) || 0),
+    city_id: String(standard ? 0 : Number(cityId) || 0)
+  });
+  if (standard) {
+    const m = Number.parseInt(String(lifeMin), 10);
+    if (Number.isInteger(m) && m > 0) {
+      q.set('session_mode', 'sticky');
+      q.set('session_duration', String(PROXY302_DURATIONS.find((d) => d >= m) || 120));
+    } else {
+      q.set('session_mode', 'rotating');
+    }
+  }
+  return q.toString();
+}
 function proxy302Row(text, { socks = false, country = '' } = {}) {
   const data = proxy302Body(text, 'proxy');
   const host = String((data && data.host) || '').trim();
   const port = Number.parseInt(String(data && data.port), 10);
-  const username = data && data.user_name != null ? String(data.user_name) : '';
+  // The purchase answer names the login `username` (llms-full.txt); one Apifox sample spells it `user_name`.
+  const login = data && (data.username != null ? data.username : data.user_name);
+  const username = login != null ? String(login) : '';
   const password = data && data.password != null ? String(data.password) : '';
   if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username) return null;
   const cc = String(country || '').trim().toUpperCase();
@@ -1577,7 +1664,7 @@ module.exports = {
   ipBurgerUsername,
   proxy302Token,
   proxy302CountryId,
-  proxy302Row,
+  proxy302Row, proxy302AreaId, proxy302PurchaseQuery,
   rapidProxySid,
   froxyBasePassword,
   medianMs,
@@ -1594,7 +1681,7 @@ module.exports = {
   PROXIESSX_POOLS,
   proxiesSxSid,
   proxiesSxUsername,
-  proxiesSxProxyCreds,
+  proxiesSxProxyCreds, proxiesSxStock, PROXIESSX_MOBILE_COUNTRIES, PROXIESSX_MAX_SESSIONS,
   liveProxiesListUrl,
   liveProxiesRows,
   liveProxiesPlanLabel,
@@ -1638,7 +1725,7 @@ module.exports = {
   proxidizeGeoToken,
   proxidizePerGbUsername,
   proxmintUsername, proxmintPickProduct,
-  databayUsername,
+  databayUsername, databayZone,
   ipfoxyUsername, mangoProxyRows,
   mangoProxyPlace, mangoProxyAsn, mangoProxyCollect, MANGOPROXY_BATCH_MAX, mangoProxyCountryPage,
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,

@@ -51,11 +51,11 @@ function load(route = () => { throw new Error('no network in this test'); }) {
   return { ...api, calls };
 }
 
-test('MINTED_PULL_MAX is 1000 and the shared minter still defaults to 100 for other vendors', () => {
+test('MINTED_PULL_MAX is 1000 and the shared minter uses it unless a vendor documents less', () => {
   const a = load();
   assert.equal(a.MINTED_PULL_MAX, 1000);
   const rows = a.mintGatewayRows({ type: 'HTTP', host: 'h', port: 1, password: 'p', session: 's', count: 500, buildUser: (sid) => `u-${sid}`, label: 'X' });
-  assert.equal(rows.length, 100, 'vendors that pass no max keep their old cap');
+  assert.equal(rows.length, 500, 'a vendor that passes no max gets MINTED_PULL_MAX');
   const more = a.mintGatewayRows({ type: 'HTTP', host: 'h', port: 1, password: 'p', session: 's', count: 1500, buildUser: (sid) => `u-${sid}`, label: 'X', max: a.MINTED_PULL_MAX });
   assert.equal(more.length, 1000);
 });

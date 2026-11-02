@@ -17,6 +17,15 @@ test('ipfoxyUsername follows the documented grammar', () => {
   assert.equal(U.ipfoxyUsername('customer-a', { country: 'US', city: 'Los Angeles' }), 'customer-a-cc-US-city-LosAngeles');
 });
 
+test('IPFoxy sticky time is 30 or 60 minutes, so other picks snap to one of them', () => {
+  // ipfoxy.com/help/docs/session-time: ttl-30 (the default) or ttl-60.
+  for (const [ttl, want] of [[5, 30], [10, 30], [30, 30], [45, 60], [60, 60], [120, 60]]) {
+    assert.equal(U.ipfoxyUsername('customer-a', { session: 's1', ttlMin: ttl }), `customer-a-sessid-s1-ttl-${want}`, `ttl ${ttl}`);
+  }
+  assert.equal(U.ipfoxyUsername('customer-a', { session: 's1' }), 'customer-a-sessid-s1', 'no ttl keeps the 30 minute default');
+  assert.match(UI, /key: 'ipfoxy'.*life: true, maxLife: 60/);
+});
+
 test('mangoProxyRows parses the ProxyUrlDto array', () => {
   const json = [{ http: 'http://a1-zone-custom:pw%40x@p2.mangoproxy.com:2334', socks5: 'socks5://a1-zone-custom:pw%40x@p3.mangoproxy.com:2333' }, { http: 'not a url' }];
   assert.deepEqual(U.mangoProxyRows(json), [{ type: 'HTTP', host: 'p2.mangoproxy.com', port: 2334, username: 'a1-zone-custom', password: 'pw@x' }]);
