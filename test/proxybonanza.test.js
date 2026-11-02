@@ -43,6 +43,20 @@ test('an unavailable country is an error that names what the account has', () =>
   assert.match(body, /is not a country code/);
 });
 
+// The documented list is not paginated, so How many only trims it.
+test('How many trims the plan list with no 500 cap, after the country filter', async () => {
+  const ipcFunction = (name) => new RegExp(`(?:async )?function ${name}\\([\\s\\S]*?\\r?\\n\\}\\r?\\n`).exec(IPC)[0];
+  const data = Array.from({ length: 800 }, (_, i) => ({ ...ROW, ip: `203.0.${Math.floor(i / 250)}.${i % 250}`, countrycode: i % 2 ? 'PL' : 'DE' }));
+  const fetchProxyBonanzaPool = new Function('httpRequestText', 'proxyBonanzaRows', 'PROXYBONANZA_API',
+    `${['normCountryCode', 'clampPoolCount', 'limitListRows', 'fetchProxyBonanzaPool'].map(ipcFunction).join('\n')}\nreturn fetchProxyBonanzaPool;`
+  )(async () => JSON.stringify({ success: true, data }), U.proxyBonanzaRows, 'https://proxybonanza.com/api/v1');
+  const key = `${'a'.repeat(50)}!42`;
+  assert.equal((await fetchProxyBonanzaPool({ token: key, count: '750' })).length, 750);
+  assert.equal((await fetchProxyBonanzaPool({ token: key, count: '' })).length, 800);
+  const pl = await fetchProxyBonanzaPool({ token: key, country: 'PL', count: '' });
+  assert.deepEqual([pl.length, pl.every((r) => r.country === 'PL')], [400, true]);
+});
+
 test('Proxy Bonanza is wired: key in the header, adapter, registry, panel entry and hints', () => {
   const body = /async function fetchProxyBonanzaPool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
   assert.match(body, /Authorization: key/);

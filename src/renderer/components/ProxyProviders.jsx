@@ -27,7 +27,7 @@ export const PROVIDERS = [
   // Proxy302: real Open API. The API sub-account key (name + password) signs in; Country filters
   // the pull; each proxy comes back ready on proxy.proxy302.com:2222. No state/city or session.
   { key: 'proxy302', name: 'Proxy302', initials: '302', color: '#3b82f6', referral: 'https://www.proxy302.com/?ref=softglaze', gateway: { host: 'proxy.proxy302.com', port: 2222, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, proto: true } },
-  { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, noSession: true, life: true, maxLife: 120, proto: true } },
+  { key: 'mangoproxy', name: 'MangoProxy', initials: 'MP', color: '#f59e0b', referral: 'https://www.mangoproxy.com/?ref=softglaze', gateway: null, geoSync: { creds: ['token', 'username'], poolType: [['residential', 'Residential'], ['residential_light', 'Residential light'], ['datacenter', 'Datacenter'], ['isp', 'ISP']], count: true, geo: true, asn: true, noSession: true, life: true, maxLife: 120, proto: true } },
   // IP Burger: rotating residential, gateway-minted on residential.ipb.cloud:7777 (HTTP only -
   // no SOCKS5 on their residential network). Country (or one city/state narrowing token) and a
   // sticky session (up to 30 min) ride in the username.
@@ -91,11 +91,12 @@ export const PROVIDERS = [
   // country, state or city and a sticky session (max 120 min) ride in the username.
   { key: 'databay', name: 'Databay', initials: 'DB', color: '#0ea5e9', referral: 'https://app.databay.com/', gateway: { host: 'gw.databay.co', port: 8888, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile'], ['datacenter', 'Datacenter']], count: true, geo: true, session: true, life: true, maxLife: 120, proto: true, gateway: true } },
   // 2extract: the proxy username + password from Connection Details on proxy.2extract.net:5555;
-  // country, state, city and a sticky session ride in the username. Built from the docs, no API call.
-  { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } },
+  // country, state, city, ZIP or an ASN and a sticky session ride in the username. Built from the
+  // docs, no API call. Countries: docs.2extract.com/data/countries, less "en" (England, not ISO; GB covers it).
+  { key: 'twoextract', name: '2extract', initials: '2X', color: '#14b8a6', referral: 'https://2extract.com/', gateway: { host: 'proxy.2extract.net', port: 5555, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, zip: true, asn: true, session: true, life: true, proto: true, gateway: true, countries: 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ') } },
   // GonzoProxy: login + password on connect.gonzoproxy.app:10000 (HTTP and SOCKS5 on one port);
-  // country, numeric region, city and a sticky session ride in the login. Sticky rows only.
-  { key: 'gonzoproxy', name: 'GonzoProxy', initials: 'GZ', color: '#f43f5e', referral: 'https://gonzoproxy.com/', gateway: { host: 'connect.gonzoproxy.app', port: 10000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, proto: true, gateway: true } },
+  // country, numeric region, city and a sticky session (up to 7 days) ride in the login.
+  { key: 'gonzoproxy', name: 'GonzoProxy', initials: 'GZ', color: '#f43f5e', referral: 'https://gonzoproxy.com/', gateway: { host: 'connect.gonzoproxy.app', port: 10000, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, proto: true, gateway: true } },
   // Simply Proxies: UK mobile, no customer API. Username + password on proxy.simplyproxies.com:6890
   // (SOCKS5); the network and a sticky session (5 min to 12 h) ride in the username.
   { key: 'simplyproxies', name: 'Simply Proxies', initials: 'SY', color: '#8b5cf6', referral: 'https://simplyproxies.com/', gateway: { host: 'proxy.simplyproxies.com', port: 6890, type: 'SOCKS5' }, geoSync: { creds: ['username', 'password'], noCountry: true, count: true, poolType: [['any', 'Any network'], ['ee', 'EE'], ['o2', 'O2'], ['vodafone', 'Vodafone'], ['three', 'Three']], session: true, life: true, maxLife: 720 } },
@@ -137,21 +138,6 @@ function formatBytes(n) {
   if (v >= 1024 ** 2) return `${(v / 1024 ** 2).toFixed(1)} MB`;
   return `${Math.round(v / 1024)} KB`;
 }
-
-// ISO 3166-1 alpha-2 codes: Apify takes them as country-XX, ShopSocks5 as its country filter.
-export const PROXY_COUNTRIES = [
-  ['', 'Any / Random'],
-  ['US', 'United States'], ['GB', 'United Kingdom'], ['CA', 'Canada'], ['AU', 'Australia'],
-  ['DE', 'Germany'], ['FR', 'France'], ['ES', 'Spain'], ['IT', 'Italy'], ['NL', 'Netherlands'],
-  ['SE', 'Sweden'], ['NO', 'Norway'], ['DK', 'Denmark'], ['FI', 'Finland'], ['IE', 'Ireland'],
-  ['PL', 'Poland'], ['PT', 'Portugal'], ['CH', 'Switzerland'], ['AT', 'Austria'], ['BE', 'Belgium'],
-  ['CZ', 'Czechia'], ['RO', 'Romania'], ['GR', 'Greece'], ['TR', 'Turkey'], ['RU', 'Russia'],
-  ['UA', 'Ukraine'], ['IN', 'India'], ['PK', 'Pakistan'], ['BD', 'Bangladesh'], ['JP', 'Japan'],
-  ['KR', 'South Korea'], ['CN', 'China'], ['HK', 'Hong Kong'], ['TW', 'Taiwan'], ['SG', 'Singapore'],
-  ['MY', 'Malaysia'], ['TH', 'Thailand'], ['VN', 'Vietnam'], ['PH', 'Philippines'], ['ID', 'Indonesia'],
-  ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['IL', 'Israel'], ['EG', 'Egypt'], ['ZA', 'South Africa'],
-  ['BR', 'Brazil'], ['MX', 'Mexico'], ['AR', 'Argentina'], ['CL', 'Chile'], ['CO', 'Colombia'], ['NZ', 'New Zealand']
-];
 
 // Per-provider form drafts for this app session. Module scope, so they survive the panel
 // unmounting when the user opens another tab, and switching between providers.
@@ -1142,6 +1128,18 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
                     <div>
                       <label className={labelCls}>{t('proxyProviders.geo.cityLabel')} {optMarker}</label>
                       <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls + ' font-mono'} placeholder="NewYork" />
+                    </div>
+                  )}
+                  {provider.geoSync.zip && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.zipOneLabel', 'ZIP code')} {optMarker}</label>
+                      <input value={form.zip} onChange={(e) => set('zip', e.target.value)} className={inputCls + ' font-mono'} placeholder="90210" />
+                    </div>
+                  )}
+                  {provider.geoSync.asn && (
+                    <div>
+                      <label className={labelCls}>{t('proxyProviders.geo.asnOneLabel', 'ASN')} {optMarker}</label>
+                      <input value={form.asn} onChange={(e) => set('asn', e.target.value)} className={inputCls + ' font-mono'} placeholder="7922" />
                     </div>
                   )}
                   {!provider.geoSync.noCountry && provider.geoSync.count && (
