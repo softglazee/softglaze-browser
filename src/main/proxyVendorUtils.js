@@ -263,6 +263,20 @@ function summarizeProxySellerOrders(data) {
   return out;
 }
 
+// GET proxy/list/{type} pages with page and per_page (default 100) and reports total_pages.
+// A response without paging fields is the whole list.
+const PROXY_SELLER_PAGE_SIZE = 100;
+function proxySellerPageInfo(data) {
+  const items = data && Array.isArray(data.items) ? data.items : [];
+  const num = (v) => { const n = Number.parseInt(String(v), 10); return Number.isInteger(n) && n > 0 ? n : null; };
+  return {
+    items,
+    page: num(data && data.page),
+    perPage: num(data && data.per_page),
+    totalPages: num(data && data.total_pages)
+  };
+}
+
 // IPRoyal residential: resi-api.iproyal.com/v1 (OpenAPI spec served at /docs).
 
 // Parses one generate-proxy-list line in {hostname}:{port}:{username}:{password} form. Only the
@@ -340,6 +354,172 @@ function ipRoyalErrorMessage(text) {
   if (/HTTP 429\b/.test(s)) return 'the API rate limit was reached. Wait a minute and try again.';
   const m = /"message"\s*:\s*"([^"]+)"/.exec(s);
   return m ? m[1] : null;
+}
+
+// The generate call caps proxy_count at a server setting the spec does not publish. A request over
+// it fails validation as "The proxy count field must not be greater than N.", so read N back.
+function ipRoyalMaxCount(message) {
+  const m = /proxy[ _]count[^.]*?greater than (\d+)/i.exec(String(message || ''));
+  const n = m ? Number.parseInt(m[1], 10) : NaN;
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+// ---- Session-minting gateways (Oxylabs, Decodo, Bright Data, Apify, AnyIP) ----
+// Each vendor reads targeting and the sticky session from the proxy username.
+
+// A place name as a username token: plain ASCII, lower case, words joined by `joiner`. Hyphens and
+// commas are dropped because they start the next flag.
+function placeToken(value, joiner = '_') {
+  const out = String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .trim().toLowerCase().replace(/[\s_-]+/g, joiner);
+  return out.replace(joiner ? /[^a-z0-9_]/g : /[^a-z0-9]/g, '').replace(/^_+|_+$/g, '');
+}
+
+function isoCountry(value) {
+  const v = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(v) ? v : '';
+}
+
+// Oxylabs residential (pr.oxylabs.io:7777): customer-USER-cc-US-city-los_angeles-sessid-x-sesstime-30.
+// The docs pair a city with cc, and give st (US states only, us_ prefix) on its own.
+const OXYLABS_FLAGS = /-(?:cc|city|st|cn|postalcode|sessid|sesstime|asn|geohash|geohash_fallback)-[^-]*/gi;
+const OXYLABS_MAX_SESSTIME = 1440;
+function oxylabsBaseUser(raw) {
+  const user = String(raw || '').trim().replace(OXYLABS_FLAGS, '');
+  if (!user) return '';
+  return /^customer-/i.test(user) ? user : `customer-${user}`;
+}
+function oxylabsUsername(base, { country, state, city, session, minutes } = {}) {
+  const parts = [base];
+  const cc = isoCountry(country);
+  const ct = placeToken(city, '_');
+  const st = placeToken(state, '_').replace(/^us_/, '');
+  if (cc && ct) parts.push(`cc-${cc}`, `city-${ct}`);
+  else if (st && (!cc || cc === 'US')) parts.push(`st-us_${st}`);
+  else if (cc) parts.push(`cc-${cc}`);
+  if (session) {
+    parts.push(`sessid-${session}`);
+    const m = Number.parseInt(String(minutes), 10);
+    if (Number.isFinite(m) && m > 0) parts.push(`sesstime-${Math.min(OXYLABS_MAX_SESSTIME, m)}`);
+  }
+  return parts.join('-');
+}
+
+// Decodo, formerly Smartproxy (gate.decodo.com:7000, HTTP and SOCKS5):
+// user-USER-country-us-city-new_york-session-x-sessionduration-30. state is US only (us_ prefix);
+// the docs ask for one of city or state.
+const DECODO_FLAGS = /-(?:country|state|city|zip|asn|continent|session|sessionduration|geohash)-[^-]*/gi;
+const DECODO_MAX_DURATION = 1440;
+function decodoBaseUser(raw) {
+  const user = String(raw || '').trim().replace(DECODO_FLAGS, '');
+  if (!user) return '';
+  return /^user-/i.test(user) ? user : `user-${user}`;
+}
+function decodoUsername(base, { country, state, city, session, minutes } = {}) {
+  const parts = [base];
+  const cc = isoCountry(country).toLowerCase();
+  const ct = placeToken(city, '_');
+  const st = placeToken(state, '_').replace(/^us_/, '');
+  if (cc) parts.push(`country-${cc}`);
+  if (cc && ct) parts.push(`city-${ct}`);
+  else if (st && cc === 'us') parts.push(`state-us_${st}`);
+  if (session) {
+    parts.push(`session-${session}`);
+    const m = Number.parseInt(String(minutes), 10);
+    if (Number.isFinite(m) && m > 0) parts.push(`sessionduration-${Math.min(DECODO_MAX_DURATION, m)}`);
+  }
+  return parts.join('-');
+}
+
+// Bright Data: brd-customer-<id>-zone-<zone>[-key-value...]. Pasted targeting and session flags are
+// dropped so each row sets its own; other flags (os, for one) are kept.
+const BRIGHTDATA_OWN_FLAGS = new Set(['country', 'state', 'city', 'zip', 'asn', 'session', 'ip']);
+function brightDataZoneUser(raw) {
+  const m = /^(brd-customer-[^-\s]+-zone-[^-\s]+)((?:-[^-\s]+)*)$/.exec(String(raw || '').trim());
+  if (!m) return null;
+  const tokens = m[2].split('-').filter(Boolean);
+  const kept = [];
+  for (let i = 0; i + 1 < tokens.length; i += 2) {
+    if (!BRIGHTDATA_OWN_FLAGS.has(tokens[i].toLowerCase())) kept.push(tokens[i], tokens[i + 1]);
+  }
+  return { base: [m[1], ...kept].join('-'), zone: m[1].split('-zone-')[1] };
+}
+// Country works on every network; state (US) and city are residential only and need the country.
+function brightDataUsername(base, { country, state, city, session } = {}) {
+  const parts = [base];
+  const cc = isoCountry(country).toLowerCase();
+  const ct = placeToken(city, '');
+  const st = placeToken(state, '');
+  if (cc) parts.push(`country-${cc}`);
+  if (cc && ct) parts.push(`city-${ct}`);
+  else if (cc === 'us' && st) parts.push(`state-${st}`);
+  if (session) parts.push(`session-${session}`);
+  return parts.join('-');
+}
+// GET /zone/route_ips: one IP per line, or [{ ip, country }] with list_countries=true.
+function brightDataRouteIps(text) {
+  const raw = String(text || '').trim();
+  let items = [];
+  if (raw.startsWith('[')) {
+    try {
+      items = JSON.parse(raw);
+    } catch (e) {
+      // The docs example ends the array with a trailing comma, which JSON.parse refuses.
+      items = [...raw.matchAll(/\{[^{}]*\}/g)].map((m) => { try { return JSON.parse(m[0]); } catch (err) { return null; } });
+    }
+  } else {
+    items = raw.split(/\r?\n/).map((ip) => ({ ip }));
+  }
+  const out = [];
+  const seen = new Set();
+  for (const it of Array.isArray(items) ? items : []) {
+    const ip = String((it && (typeof it === 'string' ? it : it.ip)) || '').trim();
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) || seen.has(ip)) continue;
+    seen.add(ip);
+    out.push({ ip, country: isoCountry(it && it.country) || null });
+  }
+  return out;
+}
+
+// Apify residential (proxy.apify.com:8000): groups-RESIDENTIAL,country-JP,session-x, and a US state
+// as country-US_CA. Session names allow letters, digits, '.', '_' and '~', up to 50 characters.
+function apifyUsername({ country, state, session } = {}) {
+  const parts = ['groups-RESIDENTIAL'];
+  const cc = isoCountry(country);
+  const st = String(state || '').trim().toUpperCase();
+  if (cc) parts.push(cc === 'US' && /^[A-Z]{2}$/.test(st) ? `country-US_${st}` : `country-${cc}`);
+  const sid = String(session || '').replace(/[^A-Za-z0-9._~]/g, '').slice(0, 50);
+  if (sid) parts.push(`session-${sid}`);
+  return parts.join(',');
+}
+
+// AnyIP region and city values are lower case with the spaces removed ("newyork",
+// "districtofcolumbia"), as dashboard.anyip.io/api/data/region and /city list them.
+function anyIpPlace(value) {
+  return placeToken(value, '');
+}
+
+// ShopSocks5 (shopsocks5.com/document): POST /socks/all_plan is the documented pull and takes
+// sock_type from GET /socks/type_sock. premium, list and daily are older routes the server
+// still answers, kept for accounts set up on them.
+const SHOPSOCKS5_PLANS = Object.freeze({ all: 'all_plan', premium: 'premium', list: 'list', daily: 'daily' });
+const SHOPSOCKS5_SOCK_TYPES = Object.freeze(['residential', 'business', 'cellular', 'hosting']);
+function shopSocks5Request({ user, token, plan, qty, country, state, city, sockType, proxyType } = {}) {
+  const key = String(plan || 'all').toLowerCase();
+  const route = SHOPSOCKS5_PLANS[key] || SHOPSOCKS5_PLANS.all;
+  const form = new URLSearchParams();
+  form.set('user_name', String(user || ''));
+  form.set('api_token', String(token || ''));
+  form.set('qty', String(qty));
+  const cc = isoCountry(country);
+  if (cc) form.set('country', cc);
+  if (String(state || '').trim()) form.set('state', String(state).trim());
+  if (String(city || '').trim()) form.set('city', String(city).trim());
+  const type = String(sockType || '').toLowerCase();
+  if (route === 'premium') form.set('proxy_type', String(proxyType || 'proxy_sock_5'));
+  else if (route === 'all_plan') { if (SHOPSOCKS5_SOCK_TYPES.includes(type)) form.set('sock_type', type); }
+  else form.set('sock_type', 'residential');
+  return { path: `/socks/${route}`, form };
 }
 
 // Splits a bare "host:port" (IPv6-bracket aware), as the Proxidize per-proxy API returns it.
@@ -1691,11 +1871,20 @@ module.exports = {
   pickIpRoyalPort,
   ipRoyalCountriesView,
   ipRoyalErrorMessage,
+  ipRoyalMaxCount,
+  placeToken,
+  oxylabsBaseUser, oxylabsUsername, OXYLABS_MAX_SESSTIME,
+  decodoBaseUser, decodoUsername, DECODO_MAX_DURATION,
+  brightDataZoneUser, brightDataUsername, brightDataRouteIps,
+  apifyUsername,
+  anyIpPlace,
+  SHOPSOCKS5_PLANS, SHOPSOCKS5_SOCK_TYPES, shopSocks5Request,
   GEOJS_URL,
   normalizeGeoJs,
   PROXY_SELLER_ORDER_TYPES,
   proxySellerOrderRows,
   summarizeProxySellerOrders,
+  PROXY_SELLER_PAGE_SIZE, proxySellerPageInfo,
   parseLoginLine,
   parseLoginList,
   csvFilter,

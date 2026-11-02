@@ -1557,7 +1557,8 @@ const PROXY_VENDORS = Object.freeze({
 // and it resolves in DNS.
 const VENDOR_GATEWAYS = Object.freeze({
   oxylabs: { host: 'pr.oxylabs.io', port: 7777, type: 'HTTP' },
-  smartproxy: { host: 'gate.smartproxy.com', port: 7000, type: 'HTTP' },
+  // Smartproxy is now Decodo; its docs name gate.decodo.com (HTTP and SOCKS5 on 7000).
+  smartproxy: { host: 'gate.decodo.com', port: 7000, type: 'HTTP' },
   apify: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }
   // DataImpulse is deliberately absent: GET /api/list returns the real host and port for every row,
   // so a hardcoded gateway would only add an unverified host.
@@ -1607,64 +1608,139 @@ function httpRequestText(url, options = {}) {
   });
 }
 
+const {
+  ipRoyalMaxCount, oxylabsBaseUser, oxylabsUsername, decodoBaseUser, decodoUsername,
+  brightDataZoneUser, brightDataUsername, brightDataRouteIps, apifyUsername, anyIpPlace,
+  shopSocks5Request, PROXY_SELLER_PAGE_SIZE, proxySellerPageInfo
+} = require('./proxyVendorUtils');
+
+// ---- Session gateways: Bright Data, Oxylabs, Smartproxy (Decodo) ----
+// Each username carries the targeting and, for a sticky row, its own session ID (one ID, one exit
+// IP). A sticky pull mints `count` rows; a rotating pull is one row whose IP changes per request.
+// The first row is proven with a live request, so a wrong login fails the pull instead of filling
+// the pool with rows that can never connect.
+async function mintVerifiedGatewayRows(label, gateway, { sticky, count, password, socks, country, place, build }) {
+  const n = sticky ? clampPoolCount(count, 5, MINTED_PULL_MAX) : 1;
+  const type = socks ? 'SOCKS5' : gateway.type;
+  const where = [country || 'Global', place].filter(Boolean).join(' ');
+  const rows = [];
+  for (let i = 1; i <= n; i += 1) {
+    const sid = sticky ? randSession(10) : '';
+    rows.push({
+      type, host: gateway.host, port: gateway.port,
+      username: build(sid), password,
+      label: `${label} • ${where} • ${sticky ? `sticky ${sid}` : 'rotating gateway'}`,
+      country: country || null
+    });
+  }
+  const probe = await testProxyConnectivity(rows[0]);
+  if (!probe.success) throw new Error(`${label} credential check failed: ${probe.error || 'could not authenticate against the gateway.'}`);
+  if (probe.ip) rows[0].label += ` • verified ${probe.ip}`;
+  return rows;
+}
+
+// State and city need the country their docs pair them with; say so instead of sending a username
+// the gateway would reject or quietly widen.
+function gatewayGeo(label, { country, state, city, stateNeedsUs = true }) {
+  const cc = normCountryCode(country);
+  const st = String(state || '').trim();
+  const ct = String(city || '').trim();
+  if (ct && !cc) throw new Error(`${label}: pick a country to target a city.`);
+  if (st && !ct && stateNeedsUs && cc !== 'US') throw new Error(`${label}: state targeting covers US states only, so pick United States.`);
+  if (st && !ct && cc && cc !== 'US') throw new Error(`${label}: state targeting covers US states only.`);
+  return { cc, st, ct, place: ct || st };
+}
+
 // ---- Bright Data ----
-// GET /zone/route_ips lists a zone's exit IPs for a Bearer token; each is pinned to the super-proxy
-// gateway via the `-ip-<ip>` username suffix.
-async function fetchBrightDataPool({ token, username, password, zone }) {
+// brd.superproxy.io:44445 is the port in every current docs example. Three ways to pull:
+//  zone: GET /zone/route_ips lists a zone's dedicated datacenter or ISP IPs (no paging); each is
+//        pinned with `-ip-<ip>`, which the docs allow only for zones with dedicated IPs.
+//  sticky / rotating: minted usernames with -country-, -state- (US), -city- and -session-.
+const BRIGHTDATA_GATEWAY = Object.freeze({ host: 'brd.superproxy.io', port: 44445, type: 'HTTP' });
+const BRIGHTDATA_ZONE_MAX = 5000;
+
+async function fetchBrightDataPool({ token, username, password, zone, poolType, country, state, city, count }) {
+  const mode = String(poolType || '').toLowerCase();
+  const zoneUser = brightDataZoneUser(username);
+  const pw = String(password || '');
+  if (mode === 'sticky' || mode === 'rotating') {
+    if (!zoneUser) throw new Error('Bright Data: enter the proxy username from the zone (brd-customer-<id>-zone-<name>).');
+    if (!pw) throw new Error('Bright Data: enter the zone password.');
+    const geo = gatewayGeo('Bright Data', { country, state, city });
+    return mintVerifiedGatewayRows(`Bright Data • ${zoneUser.zone}`, BRIGHTDATA_GATEWAY, {
+      sticky: mode === 'sticky', count, password: pw, country: geo.cc, place: geo.place,
+      build: (sid) => brightDataUsername(zoneUser.base, { country: geo.cc, state: geo.st, city: geo.ct, session: sid })
+    });
+  }
+
   const apiToken = String(token || '').trim();
   if (!apiToken) throw new Error('Bright Data API token is required to sync.');
-  const baseUser = String(username || '').trim();
-  const z = String(zone || '').trim() || (baseUser.match(/-zone-([^-\s]+)/) || [])[1] || '';
+  const z = String(zone || '').trim() || (zoneUser ? zoneUser.zone : '');
   if (!z) throw new Error('Bright Data zone is required (provide it, or use a username like brd-customer-<id>-zone-<zone>).');
 
+  const qs = new URLSearchParams({ zone: z, list_countries: 'true' });
+  const cc = normCountryCode(country);
+  if (cc) qs.set('country', cc.toLowerCase());
   let text;
   try {
-    text = await httpRequestText(`https://api.brightdata.com/zone/route_ips?zone=${encodeURIComponent(z)}`, {
-      headers: { Authorization: `Bearer ${apiToken}` }
+    text = await httpRequestText(`https://api.brightdata.com/zone/route_ips?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${apiToken}` },
+      maxBytes: 8_000_000
     });
   } catch (e) {
     throw new Error(`Bright Data API error: ${e.message}`);
   }
 
-  const ips = String(text).split(/\r?\n/).map((s) => s.trim()).filter((ip) => /^\d{1,3}(\.\d{1,3}){3}$/.test(ip));
-  if (!ips.length) throw new Error('Bright Data returned no routable IPs for this zone (check the token has access to it).');
+  const ips = brightDataRouteIps(text);
+  if (!ips.length) {
+    throw new Error(cc
+      ? `Bright Data returned no routable IPs in ${cc} for this zone. Try Any country, or use Sticky sessions for a residential zone.`
+      : 'Bright Data returned no routable IPs for this zone. A residential zone has none to list: use Sticky sessions instead.');
+  }
 
   // A pinned IP needs the full brd-customer-<id>-zone-<zone> login; without the customer id
   // every row would be refused, so stop here instead of storing dead proxies.
-  if (!/^brd-customer-[^-]+-zone-/.test(baseUser || '')) throw new Error('Bright Data: enter the proxy username from the zone (brd-customer-<id>-zone-<name>) as well as the API token.');
-  const userBase = baseUser;
-  // Bright Data retired ports 22225 and 33335; 44445 is current.
-  return ips.slice(0, 200).map((ip) => ({
-    type: 'HTTP', host: 'brd.superproxy.io', port: 44445,
-    username: `${userBase}-ip-${ip}`, password: String(password || ''),
-    label: `Bright Data • ${z} • ${ip}`
+  if (!zoneUser) throw new Error('Bright Data: enter the proxy username from the zone (brd-customer-<id>-zone-<name>) as well as the API token.');
+  return ips.slice(0, BRIGHTDATA_ZONE_MAX).map(({ ip, country: ipCc }) => ({
+    type: BRIGHTDATA_GATEWAY.type, host: BRIGHTDATA_GATEWAY.host, port: BRIGHTDATA_GATEWAY.port,
+    username: `${zoneUser.base}-ip-${ip}`, password: pw,
+    label: `Bright Data • ${z} • ${ipCc ? `${ipCc} • ` : ''}${ip}`,
+    country: ipCc || cc || null
   }));
 }
 
-// ---- Oxylabs / Smartproxy ----
-// Gateway-based, so there is no per-IP list: sync makes a live authenticated request through the
-// vendor gateway and stores only a working endpoint; bad credentials surface as an error.
-async function fetchGatewayVerifiedPool(label, gateway, { username, password }) {
-  const user = String(username || '').trim();
-  if (!user) throw new Error(`${label}: a proxy username is required to sync.`);
-  const probe = await testProxyConnectivity({ type: gateway.type, host: gateway.host, port: gateway.port, username: user, password: String(password || '') });
-  if (!probe.success) throw new Error(`${label} credential check failed: ${probe.error || 'could not authenticate against the gateway.'}`);
-  return [{
-    type: gateway.type, host: gateway.host, port: gateway.port,
-    username: user, password: String(password || ''),
-    label: `${label} • ${gateway.host}${probe.ip ? ` • verified ${probe.ip}` : ' • verified'}`
-  }];
+// ---- Oxylabs residential ----
+// pr.oxylabs.io:7777 serves HTTP, HTTPS and SOCKS5. The username needs the customer- prefix; cc,
+// city (with cc) or st (US), and sessid with sesstime (up to 1440 minutes) follow it.
+// IPv6 is `-ipversion-6`: a host without AAAA silently falls back to IPv4 (522 if that fallback is
+// disabled), and the account may need the feature enabled first.
+async function fetchOxylabsPool({ username, password, ipVersion, poolType, country, state, city, count, life, proxyType } = {}) {
+  const base = oxylabsBaseUser(username);
+  if (!base) throw new Error('Oxylabs: a proxy username is required to sync.');
+  const want6 = String(ipVersion || '') === '6';
+  const user = want6 && !/-ipversion-\d/.test(base) ? `${base}-ipversion-6` : base;
+  const geo = gatewayGeo('Oxylabs', { country, state, city, stateNeedsUs: false });
+  return mintVerifiedGatewayRows(want6 ? 'Oxylabs IPv6' : 'Oxylabs', VENDOR_GATEWAYS.oxylabs, {
+    sticky: String(poolType || '').toLowerCase() === 'sticky', count, password: String(password || ''),
+    socks: String(proxyType || '').toLowerCase() === 'socks5', country: geo.cc || (geo.st ? 'US' : ''), place: geo.place,
+    build: (sid) => oxylabsUsername(user, { country: geo.cc, state: geo.st, city: geo.ct, session: sid, minutes: life })
+  });
 }
-// Oxylabs selects IPv6 via `-ipversion-6` in the username on the same gateway. Per their docs, a host
-// without AAAA silently falls back to IPv4 (522 if that fallback is disabled), and the account may
-// need the feature enabled first.
-function fetchOxylabsPool(creds) {
-  const user = String((creds && creds.username) || '').trim();
-  const want6 = String((creds && creds.ipVersion) || '') === '6';
-  const username = (want6 && user && !/-ipversion-\d/.test(user)) ? `${user}-ipversion-6` : user;
-  return fetchGatewayVerifiedPool(want6 ? 'Oxylabs IPv6' : 'Oxylabs', VENDOR_GATEWAYS.oxylabs, { ...creds, username });
+
+// ---- Smartproxy, now Decodo ----
+// gate.decodo.com:7000 serves HTTP and SOCKS5 (country endpoints do not take SOCKS5, so the
+// targeting rides in the username). The username needs the user- prefix; country, city or a US
+// state, and session with sessionduration (1 to 1440 minutes) follow it.
+async function fetchSmartproxyPool({ username, password, poolType, country, state, city, count, life, proxyType } = {}) {
+  const base = decodoBaseUser(username);
+  if (!base) throw new Error('Smartproxy: a proxy username is required to sync.');
+  const geo = gatewayGeo('Smartproxy', { country, state, city });
+  return mintVerifiedGatewayRows('Smartproxy', VENDOR_GATEWAYS.smartproxy, {
+    sticky: String(poolType || '').toLowerCase() === 'sticky', count, password: String(password || ''),
+    socks: String(proxyType || '').toLowerCase() === 'socks5', country: geo.cc, place: geo.place,
+    build: (sid) => decodoUsername(base, { country: geo.cc, state: geo.st, city: geo.ct, session: sid, minutes: life })
+  });
 }
-function fetchSmartproxyPool(creds) { return fetchGatewayVerifiedPool('Smartproxy', VENDOR_GATEWAYS.smartproxy, creds); }
 
 // ---- Country / session helpers (country-aware adapters) ----
 function normCountryCode(value) {
@@ -1691,33 +1767,40 @@ function clampPoolCount(value, def = 5, max = 500) {
 }
 
 // ---- Apify Residential ----
-// One gateway (proxy.apify.com:8000); the username picks pool (groups-RESIDENTIAL), country
-// (country-XX) and stickiness (session-<id>). No list to pull, so `count` sessions are minted.
-async function fetchApifyPool({ password, country, count }) {
+// One HTTP gateway (proxy.apify.com:8000); the username picks pool (groups-RESIDENTIAL), country
+// (country-XX, or country-US_CA for a US state) and stickiness (session-<id>, about 30 minutes on
+// residential). No list to pull, so `count` sessions are minted.
+async function fetchApifyPool({ password, country, state, count }) {
   const pw = String(password || '').trim();
   if (!pw) throw new Error('Apify: your proxy password is required (Apify Console → Proxy → HTTP settings → password).');
   const cc = normCountryCode(country);
+  const st = String(state || '').trim();
+  if (st && cc !== 'US') throw new Error('Apify: state targeting covers US states only, so pick United States.');
+  if (st && !/^[A-Za-z]{2}$/.test(st)) throw new Error('Apify: enter the US state as its two-letter code, for example CA for California.');
   const gw = VENDOR_GATEWAYS.apify;
-  const n = clampPoolCount(count);
+  const n = clampPoolCount(count, 5, MINTED_PULL_MAX);
+  const where = [cc || 'Global', st.toUpperCase()].filter(Boolean).join(' ');
   const rows = [];
   for (let i = 1; i <= n; i += 1) {
-    const parts = ['groups-RESIDENTIAL'];
-    if (cc) parts.push(`country-${cc}`);
-    parts.push(`session-${randSession()}`);
     rows.push({
       type: gw.type, host: gw.host, port: gw.port,
-      username: parts.join(','), password: pw,
-      label: `Apify • ${cc || 'Global'} • #${i}`, country: cc || null
+      username: apifyUsername({ country: cc, state: st, session: randSession() }), password: pw,
+      label: `Apify • ${where} • #${i}`, country: cc || null
     });
   }
   return rows;
 }
 
 // anyip.io: one gateway (portal.anyip.io:1080, overridable); flags go in the username, comma-separated:
-// user_X,type_residential,country_US,sesstime_60,session_ab12. A fixed session pins one IP.
+// user_X,type_residential,country_US,region_texas,city_dallas,sesstime_60,session_ab12. A city needs a
+// region and a region needs a country. A fixed session pins one IP. HTTP and SOCKS5 share the port.
 // Creds are pasted (the API key is not the proxy password) or provisioned via API key + Team ID.
 
-// Creates an anyip proxy account; the API never returns the password, so the one supplied here is kept.
+// The API lives on dashboard.anyip.io (the old api. host no longer resolves). The docs give
+// POST /api/v1/teams/{team_id}/proxy_accounts with an Api-Key header and an optional password
+// (6+ letters, digits or _); the server still answers the older /api/teams/{team_id}/proxy_accounts,
+// so that is the fallback when the v1 route is not there.
+const ANYIP_API = 'https://dashboard.anyip.io';
 async function anyipProvisionAccount(apiKey, teamId) {
   const key = String(apiKey || '').trim();
   const team = String(teamId || '').trim();
@@ -1727,26 +1810,35 @@ async function anyipProvisionAccount(apiKey, teamId) {
   const suffix = nodeCrypto.randomBytes(4).toString('hex');
   const genUser = `sg${suffix}`;                                   // >= 6 chars, alnum
   const plainPassword = ('sg' + nodeCrypto.randomBytes(6).toString('hex')).slice(0, 16); // >= 6 alnum
-  const url = `https://api.anyip.io/api/teams/${encodeURIComponent(team)}/proxy_accounts`;
+  // password is the documented field; username and plain_password are what the older route took.
+  const body = JSON.stringify({ username: genUser, password: plainPassword, plain_password: plainPassword, description: 'SoftGlaze auto-provisioned', enabled: true });
+  const post = (route) => httpRequestText(`${ANYIP_API}${route}`, {
+    method: 'POST',
+    headers: { 'Api-Key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body,
+    timeoutMs: 20000
+  });
+  const teamPath = encodeURIComponent(team);
   let text;
   try {
-    text = await httpRequestText(url, {
-      method: 'POST',
-      headers: { 'api-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ username: genUser, plain_password: plainPassword, description: 'SoftGlaze auto-provisioned', enabled: true }),
-      timeoutMs: 20000
-    });
+    try {
+      text = await post(`/api/v1/teams/${teamPath}/proxy_accounts`);
+    } catch (e) {
+      if (!e || e.status !== 404) throw e;
+      text = await post(`/api/teams/${teamPath}/proxy_accounts`);
+    }
   } catch (e) {
-    throw new Error(`AnyIP provisioning failed: ${e.message} - verify the API key and Team ID (dashboard → Settings).`);
+    throw new Error(`AnyIP provisioning failed: ${scrubProxySecrets(e.message, { password: plainPassword })} - verify the API key and Team ID (dashboard → Settings).`);
   }
-  // The password is already known (supplied on create); prefer the API's returned username.
+  // The password is the one sent; the username is assigned by the server, so prefer its answer.
   let acct = null;
   try { acct = JSON.parse(text); } catch (e) { acct = null; }
   const finalUser = (acct && typeof acct.username === 'string' && acct.username) ? acct.username : genUser;
-  return { username: finalUser, password: plainPassword };
+  const finalPassword = (acct && typeof acct.password === 'string' && acct.password) ? acct.password : plainPassword;
+  return { username: finalUser, password: finalPassword };
 }
 
-async function fetchAnyIpPool({ username, password, country, session, count, host, port, life, poolType, token, teamId }) {
+async function fetchAnyIpPool({ username, password, country, state, city, session, count, host, port, life, poolType, proxyType, token, teamId }) {
   let user = String(username || '').trim();
   let pw = String(password || '');
   // Auto-provision: no direct creds, but an API key and Team ID were supplied.
@@ -1758,15 +1850,21 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   if (!user) throw new Error('AnyIP: enter your proxy Username (user_…) + Password from the dashboard, or an API key + Team ID to auto-provision.');
   if (!pw) throw new Error('AnyIP: a proxy password is required (or supply an API key + Team ID to auto-provision one).');
   const cc = normCountryCode(country);
+  const region = anyIpPlace(state);
+  const town = anyIpPlace(city);
+  if (region && !cc) throw new Error('AnyIP: pick a country to target a state or region.');
+  if (town && !region) throw new Error('AnyIP: a city needs its state or region as well (for example Texas and Dallas).');
   // Default to the documented gateway; honor an explicit override (custom port).
   const gwHost = String(host || '').trim() || 'portal.anyip.io';
   const gwPort = Number.parseInt(String(port), 10) || 1080;
+  const rowType = String(proxyType || '').toLowerCase() === 'socks5' ? 'SOCKS5' : 'HTTP';
+  // Session names are 1 to 32 letters or digits.
   const fixedSession = String(session || '').trim().replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
-  // sesstime = minutes to keep the exit IP (1..10080); blank/0 rotates per request. The UI tops out at
-  // 1440, but the full range is accepted.
+  // sesstime = minutes to keep the exit IP (1..10080). Blank keeps AnyIP's own default for a
+  // session, 7 days. The UI tops out at 1440, but the full range is accepted.
   const lifeMin = Math.min(10080, Math.max(0, Number.parseInt(String(life), 10) || 0));
   const ptype = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
-  const n = fixedSession ? 1 : clampPoolCount(count);
+  const n = fixedSession ? 1 : clampPoolCount(count, 5, MINTED_PULL_MAX);
   // Operators often paste the whole gateway username (with session_/sesstime_ flags). Duplicate keys
   // leave it to the gateway which one wins, which could collapse every profile onto one IP. Keep the
   // bare account id, treat pasted flags as defaults, and emit each key once.
@@ -1781,7 +1879,13 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
   for (let i = 1; i <= n; i += 1) {
     const own = new Map(flags);
     own.set('type', `type_${ptype}`);
-    if (cc) own.set('country', `country_${cc}`);
+    if (cc) {
+      // A country picked here replaces any pasted location, which could name another country.
+      for (const k of ['country', 'pool', 'region', 'city', 'lat', 'lon']) own.delete(k);
+      own.set('country', `country_${cc}`);
+      if (region) own.set('region', `region_${region}`);
+      if (town) own.set('city', `city_${town}`);
+    }
     if (lifeMin) own.set('sesstime', `sesstime_${lifeMin}`);
     // session goes last, the layout known to work against the live gateway; delete first because
     // Map.set keeps an existing key's position.
@@ -1789,18 +1893,20 @@ async function fetchAnyIpPool({ username, password, country, session, count, hos
     own.set('session', `session_${fixedSession || randSession()}`);
     const parts = [baseUser, ...own.values()];
     rows.push({
-      type: 'HTTP', host: gwHost, port: gwPort,
+      type: rowType, host: gwHost, port: gwPort,
       username: parts.join(','), password: pw,
-      label: `AnyIP • ${ptype === 'mobile' ? 'Mobile' : 'Res'} • ${cc || 'Global'} • #${i}`, country: cc || null
+      label: `AnyIP • ${ptype === 'mobile' ? 'Mobile' : 'Res'} • ${[cc || 'Global', town || region].filter(Boolean).join(' ')} • #${i}`, country: cc || null
     });
   }
   return rows;
 }
 
 // ---- ShopSocks5 ----
-// POST form-urlencoded to /socks/{premium|list|daily}; needs both user_name and api_token (the token
-// alone fails). proxy_type is proxy_sock_5 or proxy_https; rows come back under `response`.
-async function fetchShopSocks5Pool({ token, username, country, count, state, city, plan, proxyType }) {
+// POST form-urlencoded (helper shopSocks5Request); needs both user_name and api_token (the token
+// alone fails). Rows come back under `response`. qty has no documented maximum and no paging, so
+// one request asks for the whole amount, bounded by the shared cap.
+const SHOPSOCKS5_MAX_QTY = MINTED_PULL_MAX;
+async function fetchShopSocks5Pool({ token, username, country, count, state, city, plan, proxyType, poolType }) {
   const tok = String(token || '').trim();
   if (!tok) throw new Error('ShopSocks5: your API token is required.');
   const user = String(username || '').trim();
@@ -1808,23 +1914,14 @@ async function fetchShopSocks5Pool({ token, username, country, count, state, cit
   const cc = normCountryCode(country);
 
   // API docs: https://shopsocks5.com/document. Returns { success, response: [...], message }.
-  const ep = (String(plan || 'premium').toLowerCase().match(/^(premium|list|daily)$/) || [])[1] || 'premium';
   const ptype = String(proxyType || 'proxy_sock_5').trim() || 'proxy_sock_5';
   const isHttps = ptype === 'proxy_https';
-  const qty = clampPoolCount(count, 5, 100);
-
-  const form = new URLSearchParams();
-  form.set('user_name', user);
-  form.set('api_token', tok);
-  form.set('qty', String(qty));
-  if (cc) form.set('country', cc);
-  if (String(state || '').trim()) form.set('state', String(state).trim());
-  if (String(city || '').trim()) form.set('city', String(city).trim());
-  if (ep === 'premium') form.set('proxy_type', ptype); else form.set('sock_type', 'residential');
+  const qty = clampPoolCount(count, 5, SHOPSOCKS5_MAX_QTY);
+  const { path: route, form } = shopSocks5Request({ user, token: tok, plan, qty, country: cc, state, city, sockType: poolType, proxyType: ptype });
 
   let text;
   try {
-    text = await httpRequestText(`https://shopsocks5.com/socks/${ep}`, {
+    text = await httpRequestText(`https://shopsocks5.com${route}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: form.toString(),
@@ -1876,13 +1973,16 @@ async function fetchShopSocks5Pool({ token, username, country, count, state, cit
     });
   }
   if (!rows.length) throw new Error('ShopSocks5: the API returned no usable proxies (try a different country/state, or check your stock).');
-  return rows.slice(0, 200);
+  return rows.slice(0, qty);
 }
 
 // ---- DataImpulse ----
 // GET /api/list (Basic Auth) returns ready `login:password@host:port` lines with targeting applied,
 // stored as-is. Each plan has its own login, so `plan` only labels rows; it is not an API parameter.
 const DI_API = 'https://gw.dataimpulse.com:777/api';
+// Sticky ports run from 10000 to 20000 and keep an IP for 1 to 120 minutes (docs.dataimpulse.com).
+const DI_STICKY_PORTS = 10001;
+const DI_MAX_TTL = 120;
 const DI_PRODUCTS = Object.freeze({
   residential: 'Residential', residential_premium: 'Residential Premium',
   mobile: 'Mobile', datacenter: 'Datacenter'
@@ -1921,11 +2021,12 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   }
 
   const cc = normCountryCode(country);
-  const n = clampPoolCount(count, 5, 200);
+  // Sticky sessions are ports, so a pull mints them like a gateway would and shares that cap.
+  const n = clampPoolCount(count, 5, MINTED_PULL_MAX);
   const sticky = String(poolType || '').toLowerCase() === 'sticky';
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const rowType = socks ? 'SOCKS5' : 'HTTP';
-  const ttl = Number.parseInt(String(life), 10);
+  const ttl = Math.min(DI_MAX_TTL, Number.parseInt(String(life), 10));
   const product = DI_PRODUCTS[String(plan || '').toLowerCase()] || DI_PRODUCTS.residential;
 
   // A rotating pull returns the same endpoint N times (the IP changes per request), so ask for one row.
@@ -1977,8 +2078,11 @@ async function fetchDataImpulsePool({ username, password, country, state, city, 
   if (sticky && typeof existingPorts === 'function') {
     const first = parsed[0];
     have = await existingPorts({ host: first.host, login: first.username.split('__')[0] });
+    if (have.size >= DI_STICKY_PORTS) {
+      throw new Error(`DataImpulse has ${DI_STICKY_PORTS} sticky ports per login (10000 to 20000), and the pool already holds them all.`);
+    }
     if (have.size > 0) {
-      qs.set('quantity', String(have.size + n));
+      qs.set('quantity', String(Math.min(DI_STICKY_PORTS, have.size + n)));
       parsed = await pullList();
     }
   }
@@ -2052,7 +2156,8 @@ async function lookupDataImpulse({ username, password, country, groupby }) {
   if (DI_GROUPBY.has(by)) {
     const qs = new URLSearchParams({ groupby: by, limit: '500' });
     const cc = normCountryCode(country);
-    if (cc) qs.set('countries', cc.toLowerCase());
+    // The country list is the whole pool; only a state, city, ASN or ZIP list narrows to a country.
+    if (cc && by !== 'country') qs.set('countries', cc.toLowerCase());
     let pool = null;
     try {
       pool = JSON.parse(await httpRequestText(`${DI_API}/pool_stats_with_parameters?${qs.toString()}`, { headers }));
@@ -2115,40 +2220,74 @@ function psRotationLabel(rotation) {
 
 // Per-IP products (IPv6, IPv4, ISP, Mobile, Mix) are orders of N addresses, each with its own HTTP
 // and SOCKS5 port on the entry host. Nothing is created: the pull reads proxy/list/{type}.
+const PS_ORDER_MAX = 5000;
+const PS_ORDER_MAX_PAGES = 100;
 async function fetchProxySellerOrderPool(key, { product, proxyType, orderId, count, existingPorts }) {
   const label = PROXY_SELLER_ORDER_TYPES[product];
-  const qs = new URLSearchParams();
   const oid = String(orderId || '').trim();
-  if (/^[A-Za-z0-9_-]{1,40}$/.test(oid)) qs.set('orderId', oid);
-  const query = qs.toString();
-  const data = await psCall(key, 'GET', `proxy/list/${product}${query ? `?${query}` : ''}`, `${label} list`);
+  const listPath = (page, perPage) => {
+    const qs = new URLSearchParams();
+    if (/^[A-Za-z0-9_-]{1,40}$/.test(oid)) qs.set('orderId', oid);
+    if (page) { qs.set('page', String(page)); qs.set('per_page', String(perPage)); }
+    const query = qs.toString();
+    return `proxy/list/${product}${query ? `?${query}` : ''}`;
+  };
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
-  const rows = proxySellerOrderRows(data && data.items, { socks, label: `Proxy-Seller • ${label}` });
-  if (!rows.length) {
+  const rowLabel = `Proxy-Seller • ${label}`;
+  // An order can hold hundreds of addresses: skip those already pooled and take the next "How many".
+  // A blank count imports the whole order.
+  const wanted = count != null && String(count).trim() !== '' ? clampPoolCount(count, 5, PS_ORDER_MAX) : PS_ORDER_MAX;
+  const held = new Map();
+  const items = [];
+  const seen = new Set();
+  const fresh = [];
+  const take = async (pageItems) => {
+    const added = [];
+    for (const it of pageItems) {
+      if (!it || typeof it !== 'object') continue;
+      const id = it.id != null ? String(it.id) : `${it.ip}|${it.port_http}|${it.port_socks}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      added.push(it);
+    }
+    items.push(...added);
+    for (const r of proxySellerOrderRows(added, { socks, label: rowLabel })) {
+      if (typeof existingPorts === 'function') {
+        const k = `${r.host}\u0000${r.username}`;
+        if (!held.has(k)) held.set(k, await existingPorts({ host: r.host, login: r.username }).catch(() => new Set()));
+        if (held.get(k).has(r.port)) continue;
+      }
+      fresh.push(r);
+    }
+    return added.length;
+  };
+
+  // GET proxy/list/{type} pages with page and per_page (100 by default) and reports total_pages. A
+  // reply without paging fields that holds a full default page may still be cut short, so keep
+  // asking until a page adds nothing new.
+  const first = proxySellerPageInfo(await psCall(key, 'GET', listPath(0), `${label} list`));
+  await take(first.items);
+  const perPage = first.perPage || PROXY_SELLER_PAGE_SIZE;
+  let page = first.page || 1;
+  let more = first.totalPages ? page < first.totalPages : first.items.length >= PROXY_SELLER_PAGE_SIZE;
+  while (more && fresh.length < wanted && page < PS_ORDER_MAX_PAGES) {
+    page += 1;
+    const next = proxySellerPageInfo(await psCall(key, 'GET', listPath(page, perPage), `${label} list`));
+    const added = await take(next.items);
+    more = added > 0 && (next.totalPages ? page < next.totalPages : next.items.length >= perPage);
+  }
+
+  if (!proxySellerOrderRows(items, { socks }).length) {
     // An order serves one protocol (an HTTPS order has an empty port_socks), so name the mismatch.
-    const other = proxySellerOrderRows(data && data.items, { socks: !socks });
+    const other = proxySellerOrderRows(items, { socks: !socks });
     if (other.length) {
       const want = socks ? 'SOCKS5' : 'HTTP';
-      const protos = [...new Set((data.items || []).map((it) => it && it.protocol).filter(Boolean).map(String))].join(', ');
+      const protos = [...new Set(items.map((it) => it && it.protocol).filter(Boolean).map(String))].join(', ');
       throw new Error(`Proxy-Seller: these ${label} proxies have no ${want} port${protos ? ` (the order's protocol is ${protos})` : ''}. Pull them as ${socks ? 'HTTP' : 'SOCKS5'} instead.`);
     }
     throw new Error(`Proxy-Seller: this account has no active ${label} proxies${oid ? ' in that order' : ''}.`);
   }
-  // An order can hold hundreds of addresses: skip those already pooled and take the next "How many".
-  // A blank count imports the whole order.
-  let fresh = rows;
-  if (typeof existingPorts === 'function') {
-    const held = new Map();
-    const kept = [];
-    for (const r of rows) {
-      const k = `${r.host}\u0000${r.username}`;
-      if (!held.has(k)) held.set(k, await existingPorts({ host: r.host, login: r.username }).catch(() => new Set()));
-      if (!held.get(k).has(r.port)) kept.push(r);
-    }
-    fresh = kept;
-  }
   if (!fresh.length) throw new Error(`Proxy-Seller: every ${label} proxy on this account is already in your pool.`);
-  const wanted = count != null && String(count).trim() !== '' ? clampPoolCount(count, 5, 5000) : 5000;
   return fresh.slice(0, wanted).map((r) => ({
     type: r.type, host: r.host, port: r.port, username: r.username, password: r.password,
     label: r.label, country: null, rotationUrl: r.rotationUrl
@@ -2301,7 +2440,14 @@ async function lookupProxySeller({ token, country, groupby }) {
 // Targeting and the sticky session live in the password (_country-us_session-..._lifetime-30m), so
 // sticky rows differ only by password. Random rotation lines are all one endpoint, so ask for one.
 const IPR_API = 'https://resi-api.iproyal.com/v1';
-const IPR_MAX_COUNT = 500;
+// proxy_count runs from 1 to a server maximum the spec does not publish. Each generate call mints
+// new random sessions, so a large sticky pull is made in batches of this size, or smaller when the
+// server names a lower maximum.
+const IPR_BATCH = 500;
+const IPR_MAX_CALLS = 50;
+// GET /residential-subusers pages with page and per_page and reports meta.last_page.
+const IPR_SUBUSER_PAGE = 100;
+const IPR_SUBUSER_MAX_PAGES = 50;
 
 async function iprCall(token, method, pathAndQuery, what, body) {
   const t = String(token || '').trim();
@@ -2338,7 +2484,7 @@ async function fetchIpRoyalPool({ token, username, password, subuserHash, countr
   const port = pickIpRoyalPort(nodes, socks);
   if (!port) throw new Error(`IPRoyal: the account lists no ${socks ? 'SOCKS5' : 'HTTP'} entry port.`);
 
-  const n = clampPoolCount(count, 5, IPR_MAX_COUNT);
+  const n = clampPoolCount(count, 5, MINTED_PULL_MAX);
   const lifetime = ipRoyalLifetime(life);
   const body = {
     format: '{hostname}:{port}:{username}:{password}',
@@ -2360,35 +2506,55 @@ async function fetchIpRoyalPool({ token, username, password, subuserHash, countr
     body.password = pw;
   }
 
-  const lines = await iprCall(token, 'POST', '/access/generate-proxy-list', 'proxy list', body);
   const cc = normCountryCode(country);
+  const want = body.proxy_count;
+  let batch = Math.min(IPR_BATCH, want);
   const rows = [];
   const seen = new Set();
-  for (const line of Array.isArray(lines) ? lines : []) {
-    const r = parseIpRoyalLine(line);
-    if (!r) continue;
-    const key = `${r.host}:${r.port}:${r.username}:${r.password}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    rows.push({
-      type: socks ? 'SOCKS5' : 'HTTP',
-      host: r.host, port: r.port, username: r.username, password: r.password,
-      label: sticky
-        ? `IPRoyal • Residential • ${cc || 'Global'} • sticky ${lifetime}${r.session ? ` • ${r.session}` : ''}`
-        : `IPRoyal • Residential • ${cc || 'Global'} • rotating gateway`,
-      country: cc || null,
-      // Sticky rows differ only by password, so the pool must compare it when deduping.
-      dedupeOnPassword: true
-    });
+  for (let calls = 0; rows.length < want && calls < IPR_MAX_CALLS; calls += 1) {
+    let lines;
+    try {
+      lines = await iprCall(token, 'POST', '/access/generate-proxy-list', 'proxy list', { ...body, proxy_count: Math.min(batch, want - rows.length) });
+    } catch (e) {
+      const max = ipRoyalMaxCount(e && e.message);
+      if (max && max < batch) { batch = max; continue; }
+      throw e;
+    }
+    const before = rows.length;
+    for (const line of Array.isArray(lines) ? lines : []) {
+      const r = parseIpRoyalLine(line);
+      if (!r) continue;
+      const key = `${r.host}:${r.port}:${r.username}:${r.password}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({
+        type: socks ? 'SOCKS5' : 'HTTP',
+        host: r.host, port: r.port, username: r.username, password: r.password,
+        label: sticky
+          ? `IPRoyal • Residential • ${cc || 'Global'} • sticky ${lifetime}${r.session ? ` • ${r.session}` : ''}`
+          : `IPRoyal • Residential • ${cc || 'Global'} • rotating gateway`,
+        country: cc || null,
+        // Sticky rows differ only by password, so the pool must compare it when deduping.
+        dedupeOnPassword: true
+      });
+    }
+    if (rows.length === before) break;
   }
   if (!rows.length) throw new Error('IPRoyal returned no usable proxies. Try another location, or check the account still has traffic.');
-  return rows;
+  return rows.slice(0, want);
 }
 
 let iprCountriesCache = { key: '', at: 0, data: null };
 async function lookupIpRoyal({ token, country, groupby }) {
   const me = await iprCall(token, 'GET', '/residential/me', 'account check');
-  const subs = await iprCall(token, 'GET', '/residential-subusers?page=1&per_page=100', 'sub-user list');
+  const subs = { data: [] };
+  for (let page = 1; page <= IPR_SUBUSER_MAX_PAGES; page += 1) {
+    const res = await iprCall(token, 'GET', `/residential-subusers?page=${page}&per_page=${IPR_SUBUSER_PAGE}`, 'sub-user list');
+    const data = res && Array.isArray(res.data) ? res.data : [];
+    subs.data.push(...data);
+    const last = Number(res && res.meta && res.meta.last_page);
+    if (!data.length || !(Number.isFinite(last) && page < last)) break;
+  }
   const gb = Number(me && me.available_traffic) || 0;
   const out = {
     provider: 'iproyal',
