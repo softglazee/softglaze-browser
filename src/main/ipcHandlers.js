@@ -10682,6 +10682,9 @@ async function licenseView(lic) {
     adminBlocked: banned && !st.isBanned, // banned by an admin, not by license lapse
     clockTamper: tampered,
     purchaseCode: lic.purchaseCode || null,
+    // The workspace already had its free trial (or a paid term): the Billing page
+    // shows "Free trial used" instead of a Start button that would be refused.
+    trialUsed: licenseTrialUsed(lic),
     plan: PLAN
   };
 }
@@ -10990,11 +10993,23 @@ async function resetLicense(payload) {
   return licenseView(updated);
 }
 
-// Start (or restart) the full-access free trial for an owner workspace. The owner
-// can call this for themselves; the Super Admin may target any owner. Best-effort
-// and local - a normal owner who has never paid can re-enter the trial (the system
-// is explicitly local-first; durable enforcement needs the backend). Tier + length
-// come from the catalog's trial plan (defaults: enterprise, 7 days).
+// Has this licence already had its free trial (or a paid term)? Every workspace gets
+// its trial when the licence row is created (ensureLicense), so a set trialEndsAt means
+// the trial was given; a paid type or purchase code means it went past the trial.
+function licenseTrialUsed(lic) {
+  if (!lic) return false;
+  return lic.type === 'paid' || Boolean(lic.purchaseCode) || lic.trialEndsAt != null;
+}
+
+// Start the full-access free trial for an owner workspace. Tier + length come from the
+// catalog's trial plan (defaults: enterprise, 7 days).
+// audit 2 Nov 2026: this used to RESTART the trial for anyone whose plan was not
+// currently paid - an expired trial, a lapsed paid term, even a running trial (a fresh 7
+// days each click), from any role - so paid plans could be skipped forever. Now:
+//   - only the workspace Owner (or the certified Super Admin, for any owner) may call it;
+//   - a running trial is returned unchanged (no extension);
+//   - a workspace that already had its trial or a paid term is refused.
+// The Super Admin keeps the ability to grant a fresh trial to any owner (support tool).
 async function startTrial(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   const me = await getActiveMember();
@@ -11003,10 +11018,17 @@ async function startTrial(payload) {
     throw new Error('Choose which owner workspace to start the trial for.');
   }
   if (!isSuper && me && me.role === 'SUPER_ADMIN') throw new Error('This Super Admin has no owner certificate on this machine, so it cannot manage trials.');
+  if (!isSuper && me && me.role !== 'OWNER') {
+    const err = new Error('Only the workspace Owner can start the free trial.'); err.code = 'FORBIDDEN'; throw err;
+  }
   const ownerId = (isSuper && input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
   const view = await licenseView(lic);
   if (!isSuper && view.isPaid) throw new Error('You are on a paid plan - the free trial does not apply.');
+  if (!isSuper && view.isTrial) return view; // already running: never extended by a click
+  if (!isSuper && licenseTrialUsed(lic)) {
+    const err = new Error('The free trial has already been used for this workspace. Choose a plan to continue.'); err.code = 'TRIAL_USED'; throw err;
+  }
   const trialPlan = (await readBillingPlans()).find((p) => p.kind === 'trial' && p.active) || (await readBillingPlans()).find((p) => p.kind === 'trial');
   const days = trialPlan && trialPlan.trialDays ? trialPlan.trialDays : TRIAL_DAYS;
   const tier = trialPlan ? trialPlan.tier : 'enterprise';
@@ -11015,7 +11037,9 @@ async function startTrial(payload) {
     data: { type: 'trial', status: 'active', tier, purchaseCode: null, trialEndsAt: new Date(Date.now() + days * 86400000) }
   });
   await syncOwnerBanState(ownerId, false);
-  try { await logActivity(getPrisma(), null, 'trial-start', `Free trial started (${days}d)`); } catch (_) { /* best-effort */ }
+  // logAudit (profileId 0 = system): the old logActivity(db, null, ...) violated the
+  // NOT NULL profileId column, so trial starts were never recorded.
+  await logAudit('license.trial-start', { detail: { ownerId, days, bySuperAdmin: isSuper } });
   return licenseView(updated);
 }
 
@@ -11050,7 +11074,7 @@ async function terminateLicense(payload) {
   const lic = await ensureLicense(ownerId);
   const past = new Date(Date.now() - (GRACE_DAYS + 1) * 86400000);
   const updated = await getPrisma().license.update({ where: { id: lic.id }, data: { status: 'expired', trialEndsAt: past, purchaseCode: null } });
-  try { await logActivity(getPrisma(), null, 'terminate', `Subscription terminated for owner #${ownerId}`); } catch (_) { /* best-effort */ }
+  await logAudit('license.terminate', { detail: { ownerId } }); // was a NOT NULL-violating logActivity(db, null, ...)
   return licenseView(updated);
 }
 

@@ -168,6 +168,8 @@ export default function BillingPage() {
       if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown, trial: true };
       if (isPaid) return { label: t('cta.onPaidPlan'), disabled: true, icon: Check, trial: true };
       if (license?.isTrial) return { label: t('cta.trialActiveDaysLeft', { days: license.daysLeftTrial ?? '' }), disabled: true, icon: Sparkles, trial: true };
+      // One free trial per workspace: once used (or after a paid term) it cannot restart.
+      if (license?.trialUsed) return { label: t('cta.trialUsed'), disabled: true, icon: Sparkles, trial: true };
       return { label: t('cta.startFreeTrial'), disabled: false, icon: Sparkles, trial: true };
     }
     if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown };

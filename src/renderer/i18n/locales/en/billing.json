@@ -68,6 +68,7 @@
     "onPaidPlan": "On a paid plan",
     "trialActiveDaysLeft": "Trial active · {{days}}d left",
     "startFreeTrial": "Start free trial",
+    "trialUsed": "Free trial used",
     "currentPlan": "Current plan",
     "upgradeEnterprise": "Upgrade to Enterprise",
     "downgradePro": "Downgrade to Pro",
