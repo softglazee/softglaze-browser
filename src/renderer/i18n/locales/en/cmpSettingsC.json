@@ -148,7 +148,7 @@
       "howManyListTitle": "How many of the proxies on your account to import. Leave blank for all.",
       "gatewayHintGeneric": "Pre-filled with the {{provider}} default gateway ({{gateway}}). Change it only if your {{provider}} dashboard gives you a different host or port.",
       "gatewayHintNone": "Paste the gateway host shown in your {{provider}} dashboard; the port is filled in for you when it is standard.",
-      "howManyCapTitle": "How many proxies to add. Each provider has its own maximum per pull (usually 100)."
+      "howManyCapTitle": "How many proxies to add. Most gateways allow up to 1000 per pull; providers that list proxies you already own add all of them when this is blank."
     },
     "creds": {
       "connectionTitle": "Connection",

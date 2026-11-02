@@ -169,6 +169,12 @@ const GEO_HINTS = {
 
 // `selectedKey` + `embedded` let the Proxy providers page drive which connector is on screen
 // and render only the connector workspace (it draws its own provider list and header).
+// The pool a fresh form starts on: the vendor's first listed pool, so the select shows what a pull uses.
+function firstPoolType(provider) {
+  const pools = provider && provider.geoSync && provider.geoSync.poolType;
+  return Array.isArray(pools) && pools.length ? pools[0][0] : 'residential';
+}
+
 export default function ProxyProviders({ onSynced, selectedKey: controlledKey, embedded = false }) {
   const { t, i18n } = useTranslation('cmpSettingsC');
   const [ownSelectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
@@ -217,7 +223,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
     // before a failed pull.
     const draft = FORM_DRAFTS.get(provider.key);
     if (draft) setForm({ ...draft });
-    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: provider.geoSync && provider.geoSync.list ? '' : '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di || (provider.geoSync && provider.geoSync.proto) ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
+    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', bdpm: false, apiToken: '', zone: '', country: '', count: provider.geoSync && provider.geoSync.list ? '' : '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: di || (provider.geoSync && provider.geoSync.proto) ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : firstPoolType(provider), teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });

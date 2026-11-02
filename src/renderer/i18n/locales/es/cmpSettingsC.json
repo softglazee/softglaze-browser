@@ -148,7 +148,7 @@
       "howManyListTitle": "Cuántos de los proxies de tu cuenta importar. Déjalo vacío para importarlos todos.",
       "gatewayHintGeneric": "Se rellena con el gateway por defecto de {{provider}} ({{gateway}}). Cámbialo solo si tu panel de {{provider}} te da otro host o puerto.",
       "gatewayHintNone": "Pega el host del gateway que muestra tu panel de {{provider}}; el puerto se rellena solo cuando es el estándar.",
-      "howManyCapTitle": "Cuántos proxies añadir. Cada proveedor tiene su propio máximo por descarga (normalmente 100)."
+      "howManyCapTitle": "Cuántos proxies añadir. La mayoría de gateways permiten hasta 1000 por descarga; los proveedores que listan proxies que ya tienes los añaden todos si lo dejas en blanco."
     },
     "creds": {
       "connectionTitle": "Conexión",

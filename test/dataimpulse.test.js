@@ -144,7 +144,7 @@ test('the DataImpulse selects are seeded with values its own options carry', () 
   assert.match(UI, /plan: di \? 'residential' : 'premium'/, 'product must default to residential');
   assert.match(UI, /proxyType: di \|\| \(provider\.geoSync && provider\.geoSync\.proto\) \? 'http' : 'proxy_sock_5'/, 'protocol must default to http');
   // Sticky, because a profile needs an exit IP that stays put and rotating adds one proxy.
-  assert.match(UI, /poolType: di \? 'sticky' : 'residential'/, 'session must default to sticky');
+  assert.match(UI, /poolType: di \? 'sticky' : firstPoolType\(provider\)/, 'session must default to sticky');
 });
 
 test('the documented extra filters reach /api/list', () => {
