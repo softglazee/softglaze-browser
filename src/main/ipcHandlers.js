@@ -3448,8 +3448,9 @@ async function fetchCoroniumPool({ token, count, proxyType }) {
 }
 
 // ---- Singapore Mobile Proxy (dedicated mobile, list pull) ----
-// Rotation is not wired and rotation_link is never stored. Rows carry no country (other locations
-// are sold too), so the health check fills it. Not live-key tested.
+// One proxy per modem the account owns, each with its own data allowance; more IPs come from
+// rotating a modem (its rotation link), more proxies only from buying more on the vendor's site.
+// Rows carry no country (other locations are sold too), so the health check fills it.
 const SINGAPOREMOBILEPROXY_API = 'https://singaporemobileproxy.com/api/v1';
 
 async function fetchSingaporeMobileProxyPool({ token, count, proxyType }) {
@@ -3730,9 +3731,14 @@ async function syncVendorPool(payload) {
       // Sticky IPRoyal-style rows differ only in the password (the session id), which is sealed,
       // so compare its keyed hash.
       where: { type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { passwordHash: await proxySecrets.hashPassword(db, row.password) } : {}) },
-      select: { id: true }
+      select: { id: true, rotationUrl: true }
     });
-    if (existing) { result.skipped.push(row.label); continue; }
+    if (existing) {
+      // A re-pull gives a proxy saved before its vendor link was supported its Rotate IP link.
+      if (row.rotationUrl && !existing.rotationUrl) await db.proxy.update({ where: { id: existing.id }, data: { rotationUrl: row.rotationUrl } }).catch(() => {});
+      result.skipped.push(row.label);
+      continue;
+    }
     const created = await db.proxy.create({
       data: {
         name: row.label, type: row.type, host: row.host, port: row.port,

@@ -103,7 +103,7 @@ export const PROVIDERS = [
   // location, and no rotation link is stored (a fetch of one changes the IP).
   { key: 'coronium', name: 'Coronium', initials: 'CO', color: '#0891b2', referral: 'https://coronium.io/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } },
   // Singapore Mobile Proxy: dedicated mobile proxies listed from the account with a client API key
-  // (GET /api/v1/proxies/my). No rotation link is stored.
+  // (GET /api/v1/proxies/my); each keeps its modem rotation link for Rotate IP.
   { key: 'singaporemobileproxy', name: 'Singapore Mobile Proxy', initials: 'SG', color: '#e11d48', referral: 'https://singaporemobileproxy.com/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } },
   // Gsocks: an API key lists the residential or mobile proxies on the account and imports each one's
   // text export. Read-only; targeting is set when the list is created in the Gsocks panel.

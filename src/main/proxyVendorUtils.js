@@ -1217,8 +1217,9 @@ function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
 }
 
 // Singapore Mobile Proxy: GET /api/v1/proxies/my (x-api-key) -> { proxyList }; authentication_user is
-// "user:password". rotation_link changes the IP when fetched, so it is never copied. Lines without a
-// login (IP allow-list only) are counted and left out. Not tested with a live key.
+// "user:password". Each row is one dedicated modem. Its rotation_link changes the IP when opened (at
+// most every few minutes), so it becomes the proxy's Rotate IP link and is never fetched here. Lines
+// without a login (IP allow-list only) are counted and left out.
 function singaporeMobileProxyRows(body, { socks = false } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, inactive: 0, noLogin: 0 }; }
@@ -1242,11 +1243,16 @@ function singaporeMobileProxyRows(body, { socks = false } = {}) {
     if (seen.has(key)) continue;
     seen.add(key);
     const plan = String(p.package_name || '').trim();
+    const used = Number(p.bandwidth_used_gb);
+    const limit = Number(p.bandwidth_limit_gb);
+    const data = Number.isFinite(used) && Number.isFinite(limit) && limit > 0 ? ` • ${Math.round(used * 10) / 10}/${limit} GB` : '';
+    const rotation = String(p.rotation_link || '').trim();
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
-      label: `Singapore Mobile Proxy${plan ? ` • ${plan}` : ''} • ${port}`,
-      country: null
+      label: `Singapore Mobile Proxy${plan ? ` • ${plan}` : ''} • ${port}${data}`,
+      country: null,
+      rotationUrl: /^https:\/\//i.test(rotation) ? rotation : null
     });
   }
   return { rows, total: list.length, inactive, noLogin };

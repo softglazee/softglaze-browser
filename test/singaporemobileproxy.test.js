@@ -30,9 +30,18 @@ test('a password may itself contain a colon', () => {
   assert.deepEqual([r.username, r.password], ['u', 'p:q']);
 });
 
-test('the rotation link never leaves the parser', () => {
-  const out = JSON.stringify(U.singaporeMobileProxyRows({ proxyList: [ROW] }).rows);
-  assert.doesNotMatch(out, /SECRET|rotate|rotationUrl/);
+test('each modem keeps its rotation link for Rotate IP, https only', () => {
+  const r = U.singaporeMobileProxyRows({ proxyList: [ROW] }).rows[0];
+  assert.equal(r.rotationUrl, 'https://example.net/rotate/SECRET');
+  const plain = U.singaporeMobileProxyRows({ proxyList: [{ ...ROW, rotation_link: 'http://example.net/rotate/x' }] }).rows[0];
+  assert.equal(plain.rotationUrl, null, 'a link that is not https is not kept');
+  assert.equal(U.singaporeMobileProxyRows({ proxyList: [{ ...ROW, rotation_link: '' }] }).rows[0].rotationUrl, null);
+});
+
+test('the label shows the data used from the modem allowance', () => {
+  const r = U.singaporeMobileProxyRows({ proxyList: [{ ...ROW, bandwidth_used_gb: 45.23, bandwidth_limit_gb: 300 }] }).rows[0];
+  assert.match(r.label, /45\.2\/300 GB$/);
+  assert.doesNotMatch(U.singaporeMobileProxyRows({ proxyList: [ROW] }).rows[0].label, /GB$/);
 });
 
 test('inactive and login-less lines are counted, not imported', () => {
@@ -45,10 +54,14 @@ test('bad bodies give no rows, never invented ones', () => {
   assert.equal(U.singaporeMobileProxyRows({}).rows.length, 0);
 });
 
-test('Singapore Mobile Proxy is wired and stores no rotation link', () => {
+test('a re-pull adds a missing rotation link to a proxy already saved', () => {
+  assert.match(IPC, /if \(row\.rotationUrl && !existing\.rotationUrl\) await db\.proxy\.update\(\{ where: \{ id: existing\.id \}, data: \{ rotationUrl: row\.rotationUrl \} \}\)/);
+});
+
+test('Singapore Mobile Proxy is wired and never opens the rotation link itself', () => {
   const body = /async function fetchSingaporeMobileProxyPool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
   assert.match(body, /'x-api-key': key/);
-  assert.doesNotMatch(body, /rotationUrl|rotation_link\s*:/);
+  assert.doesNotMatch(body, /rotation_link|rotationUrl/, 'the pull only reads the list');
   assert.match(IPC, /https:\/\/singaporemobileproxy\.com\/api\/v1/);
   assert.match(IPC, /singaporemobileproxy: fetchSingaporeMobileProxyPool/);
   assert.match(IPC, /singaporemobileproxy: 'Singapore Mobile Proxy'/);
