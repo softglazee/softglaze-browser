@@ -26,6 +26,31 @@ const { startSocksAuthRelay } = require('./socksRelay');
 const { startHttpAuthRelay } = require('./httpRelay');
 const { GEOJS_URL, normalizeGeoJs, pickGeoConsensus } = require('./proxyVendorUtils');
 
+// Puppeteer's own default switches that a web page can observe, so they are dropped
+// from every profile launch (puppeteer-core 22 ChromeLauncher.defaultArgs):
+//   --enable-automation          infobar + navigator.webdriver=true
+//   --disable-popup-blocking     window.open() without a user click returns a Window
+//                                instead of null - a one-line bot check
+//   --disable-ipc-flooding-protection  lets a page flood history.pushState/navigation
+//                                with no throttling, which real Chrome never allows
+//   --force-color-profile=srgb   overrides the display colour profile real Chrome uses
+//   --disable-component-extensions-with-background-pages  removes Chrome's built-in
+//                                component extensions that every real install has
+// KEPT on purpose: the three background-throttling switches. Without them a covered or
+// minimised profile window pauses requestAnimationFrame and throttles timers, and the
+// macro / warmer / parallel runners (waitForSelector polling) would stall in any window
+// the user is not looking at. The puppeteer --disable-features defaults (Translate,
+// MediaRouter, OptimizationHints, AcceptCHFrame, process-model features) are not
+// page-observable and are MERGED with ours into one switch by puppeteer itself, so they
+// cannot be dropped here without also dropping the app's own --disable-features list.
+const PUPPETEER_DEFAULT_ARGS_TO_DROP = Object.freeze([
+  '--enable-automation',
+  '--disable-popup-blocking',
+  '--disable-ipc-flooding-protection',
+  '--force-color-profile=srgb',
+  '--disable-component-extensions-with-background-pages'
+]);
+
 // A free loopback TCP port, found by binding port 0 and releasing it. Used for Chrome's
 // DevTools port, because an auto-assigned (0) port puts Chrome into automation mode.
 function getFreeLocalPort() {
@@ -3383,7 +3408,9 @@ async function launchProfileSessionNow(options = {}) {
     userDataDir,
     defaultViewport: null,
     args,
-    ignoreDefaultArgs: ['--enable-automation'],
+    // A fresh array each launch: puppeteer-extra's stealth defaultArgs evasion push()es
+    // into this list, which would throw on the frozen constant.
+    ignoreDefaultArgs: [...PUPPETEER_DEFAULT_ARGS_TO_DROP],
     // Give CDP longer to attach/initialize new targets. The browser-level auto-attach
     // (waitForDebuggerOnStart) can hold a "+"-tab / worker target briefly before it
     // resumes, and puppeteer's own Network.enable on that target was hitting the default
@@ -5080,6 +5107,7 @@ function listSessionPids() {
 
 module.exports = {
   DEFAULT_PROFILE_ROOT,
+  PUPPETEER_DEFAULT_ARGS_TO_DROP,
   parseProxyInput,
   formatProxyHost,
   // Pure helper exported for regression tests: maps a proxy type to its --proxy-server

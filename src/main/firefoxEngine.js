@@ -299,26 +299,88 @@ function buildUserJs(opts) {
   // already swapped it to point at a local no-auth relay when the upstream needs
   // credentials (Firefox prefs can carry NO proxy auth, for HTTP or SOCKS), so this
   // just maps host/port/type onto the right prefs.
-  if (opts.proxy) {
-    const p = opts.proxy;
-    const isSocks = /socks/i.test(p.type);
-    pref('network.proxy.type', 1);
-    pref('network.proxy.no_proxies_on', '');
-    if (isSocks) {
-      pref('network.proxy.socks', p.host);
-      pref('network.proxy.socks_port', Number(p.port));
-      pref('network.proxy.socks_version', /4/.test(p.type) ? 4 : 5);
-      pref('network.proxy.socks_remote_dns', true);
-    } else {
-      pref('network.proxy.http', p.host);
-      pref('network.proxy.http_port', Number(p.port));
-      pref('network.proxy.ssl', p.host);
-      pref('network.proxy.ssl_port', Number(p.port));
-      pref('network.proxy.share_proxy_settings', true);
-    }
-  }
+  for (const [k, v] of firefoxProxyPrefs(opts.proxy)) pref(k, v);
 
   return lines.join('\n') + '\n';
+}
+
+// Firefox takes its time zone from the TZ environment variable. On Linux and macOS any
+// IANA name works. On WINDOWS, SpiderMonkey only accepts the few TZ values that are both
+// valid for the Windows C runtime and real IANA ids - EST5EDT, CST6CDT, MST7MDT, PST8PDT,
+// UTC/UCT and GMT variants - and silently ignores everything else ("America/New_York",
+// "Asia/Tokyo", ":Area/City", "JST-9"), leaving the PC's own zone in Date and Intl.
+// Verified live with Firefox 157 on Windows 11 (2 Nov 2026): TZ=America/New_York and
+// TZ=Asia/Tokyo both reported Asia/Karachi; TZ=EST5EDT reported America/New_York.
+// So on Windows each zone is mapped to the accepted id with the SAME offsets and DST
+// rules (the US ids follow US DST rules); a zone with no such id returns null and the
+// launch warns instead of pretending.
+const FIREFOX_WIN_TZ_EXACT = new Set(['EST5EDT', 'CST6CDT', 'MST7MDT', 'PST8PDT', 'UTC', 'UCT', 'GMT', 'GMT0', 'GMT+0', 'GMT-0']);
+const FIREFOX_WIN_TZ_MAP = (() => {
+  const m = new Map();
+  const add = (id, zones) => zones.forEach((z) => m.set(z, id));
+  add('EST5EDT', ['America/New_York', 'US/Eastern', 'America/Detroit', 'US/Michigan', 'America/Toronto', 'America/Montreal',
+    'America/Nipigon', 'America/Thunder_Bay', 'America/Iqaluit', 'America/Nassau', 'America/Indiana/Indianapolis',
+    'America/Indianapolis', 'America/Fort_Wayne', 'US/East-Indiana', 'America/Indiana/Marengo', 'America/Indiana/Petersburg',
+    'America/Indiana/Vevay', 'America/Indiana/Vincennes', 'America/Indiana/Winamac', 'America/Kentucky/Louisville',
+    'America/Louisville', 'America/Kentucky/Monticello', 'Canada/Eastern']);
+  add('CST6CDT', ['America/Chicago', 'US/Central', 'America/Indiana/Knox', 'America/Knox_IN', 'US/Indiana-Starke',
+    'America/Indiana/Tell_City', 'America/Menominee', 'America/North_Dakota/Center', 'America/North_Dakota/New_Salem',
+    'America/North_Dakota/Beulah', 'America/Winnipeg', 'America/Rainy_River', 'America/Rankin_Inlet', 'America/Resolute',
+    'America/Matamoros', 'Canada/Central']);
+  add('MST7MDT', ['America/Denver', 'US/Mountain', 'America/Shiprock', 'Navajo', 'America/Boise', 'America/Edmonton',
+    'America/Cambridge_Bay', 'America/Inuvik', 'America/Yellowknife', 'America/Ciudad_Juarez', 'America/Ojinaga', 'Canada/Mountain']);
+  add('PST8PDT', ['America/Los_Angeles', 'US/Pacific', 'America/Vancouver', 'America/Tijuana', 'America/Ensenada',
+    'America/Santa_Isabel', 'Mexico/BajaNorte', 'Canada/Pacific']);
+  // Zero offset all year, no DST.
+  add('UTC', ['Etc/UTC', 'Etc/UCT', 'Etc/Universal', 'Etc/Zulu', 'Universal', 'Zulu', 'Etc/GMT', 'Etc/GMT0', 'Etc/GMT+0',
+    'Etc/GMT-0', 'Etc/Greenwich', 'Greenwich', 'Africa/Abidjan', 'Africa/Accra', 'Africa/Bamako', 'Africa/Banjul',
+    'Africa/Bissau', 'Africa/Conakry', 'Africa/Dakar', 'Africa/Freetown', 'Africa/Lome', 'Africa/Monrovia',
+    'Africa/Nouakchott', 'Africa/Ouagadougou', 'Africa/Timbuktu', 'Atlantic/Reykjavik', 'Iceland', 'Atlantic/St_Helena',
+    'America/Danmarkshavn']);
+  return m;
+})();
+
+function firefoxTzEnv(timezoneId, osPlatform = process.platform) {
+  const tz = String(timezoneId || '').trim();
+  if (!tz) return null;
+  if (osPlatform !== 'win32') return tz;
+  if (FIREFOX_WIN_TZ_EXACT.has(tz)) return tz;
+  return FIREFOX_WIN_TZ_MAP.get(tz) || null;
+}
+
+function firefoxTzUnsupportedWarning(timezoneId) {
+  return `Firefox on Windows cannot use the ${timezoneId} time zone (it only supports the US Eastern, Central, Mountain and Pacific zones and UTC), so this profile shows your PC's time zone. Use a Chrome-based browser for this profile to match the proxy's time zone.`;
+}
+
+// Every proxy pref is written on EVERY launch, including the ones this launch does not
+// use. Firefox copies user.js values into prefs.js and keeps them after a line
+// disappears from user.js, so writing only the active ones left the previous launch's
+// values behind:
+//   - switching a profile to "No proxy" kept network.proxy.type=1 and the old relay
+//     host/port, so every request went to a dead port;
+//   - switching HTTP -> SOCKS kept network.proxy.http/ssl = 127.0.0.1:<old relay>,
+//     which win for http/https over the SOCKS settings, so traffic went to a dead port
+//     or, if another profile's relay now owned that port, out through ANOTHER profile's
+//     proxy (linking the two profiles' IPs).
+// No proxy = type 5 ("use system proxy settings"), Firefox's own default and the same
+// thing a Chromium profile does when it gets no --proxy-server switch.
+function firefoxProxyPrefs(proxy) {
+  const out = [];
+  const isSocks = Boolean(proxy) && /socks/i.test(String(proxy.type || ''));
+  const host = proxy ? String(proxy.host) : '';
+  const port = proxy ? Number(proxy.port) || 0 : 0;
+  out.push(['network.proxy.type', proxy ? 1 : 5]);
+  out.push(['network.proxy.no_proxies_on', '']);
+  out.push(['network.proxy.socks', isSocks ? host : '']);
+  out.push(['network.proxy.socks_port', isSocks ? port : 0]);
+  out.push(['network.proxy.socks_version', isSocks && /4/.test(String(proxy.type)) ? 4 : 5]);
+  out.push(['network.proxy.socks_remote_dns', true]);
+  out.push(['network.proxy.http', proxy && !isSocks ? host : '']);
+  out.push(['network.proxy.http_port', proxy && !isSocks ? port : 0]);
+  out.push(['network.proxy.ssl', proxy && !isSocks ? host : '']);
+  out.push(['network.proxy.ssl_port', proxy && !isSocks ? port : 0]);
+  out.push(['network.proxy.share_proxy_settings', Boolean(proxy) && !isSocks]);
+  return out;
 }
 
 // Map a proxy-geo result (from browserEngine.lookupProxyGeoNodeCached) to a Firefox
@@ -429,6 +491,10 @@ async function launchFirefoxProfileNow(options = {}) {
   if (proxy && !timezoneId && profile.timezoneType !== 'Real') {
     try { geoWarning = require('./browserEngine').GEO_DEGRADED_WARNING; } catch (e) { geoWarning = 'The proxy location could not be looked up.'; }
   }
+  // The TZ value Firefox will actually honor on this OS (see firefoxTzEnv). On Windows
+  // most zones cannot be applied; say so instead of silently showing the PC's zone.
+  const tzEnv = timezoneId ? firefoxTzEnv(timezoneId) : null;
+  if (timezoneId && !tzEnv && !geoWarning) geoWarning = firefoxTzUnsupportedWarning(timezoneId);
 
   // Smart Autofill - install the WebExtension into the profile (and only enable
   // the supporting prefs if it actually landed). Gated by the caller's setting;
@@ -478,7 +544,7 @@ async function launchFirefoxProfileNow(options = {}) {
   }
 
   const env = { ...process.env };
-  if (timezoneId) env.TZ = timezoneId; // Firefox honors TZ for Date/Intl on all platforms
+  if (tzEnv) env.TZ = tzEnv;
 
   // Open the SoftGlaze start page (proxy IP / geo card + quick links) - the same page the
   // Chrome engine shows - unless the caller passed a concrete URL. Generated INTO the
@@ -992,5 +1058,10 @@ module.exports = {
   // audit E3: exported for tests (the token handoff to the extension).
   buildManagedStorageManifest,
   managedStoragePath,
+  // Exported for tests: the user.js builder and its proxy prefs (stale-pref fix).
+  buildUserJs,
+  firefoxProxyPrefs,
+  // Exported for tests: the Windows TZ mapping (Firefox ignores most IANA names there).
+  firefoxTzEnv,
   FIREFOX_ROOT
 };
