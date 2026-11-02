@@ -27,7 +27,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
-import { formatDateTime } from '@/lib/utils.js';
+import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
 import profilesEs from '@/i18n/locales/es/profiles.json';
@@ -2309,7 +2309,7 @@ export default function ProfilesPage() {
                           </span>
                         )}
                         {/* Capped so the name, its badges and the age tag fit at 1440 px with no sideways scroll */}
-                        <span className="truncate max-w-[160px]" title={p.title}>{p.title}</span>
+                        <span className="truncate max-w-[200px]" title={p.title}>{p.title}</span>
                         {(p.launchCount > 0 || p.lastUsedAt) && (
                           <span
                             title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.used', { defaultValue: 'Used' })}
@@ -2318,7 +2318,6 @@ export default function ProfilesPage() {
                             ✓ {t('row.used', { defaultValue: 'Used' })}
                           </span>
                         )}
-                        <ProfileAgeBadge createdAt={p.createdAt} stat={warmStats[p.id]} formatAgo={relTime} />
                         {(p.deviceClass === 'mobile' || /android/i.test(p.os || '')) && (
                           <span
                             title={t('row.mobileTitle')}
@@ -2368,7 +2367,12 @@ export default function ProfilesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <span title={formatDateTime(p.createdAt)}>{formatDate(p.createdAt)}</span>
+                        <ProfileAgeBadge createdAt={p.createdAt} stat={warmStats[p.id]} formatAgo={relTime} />
+                      </div>
+                    </td>
                     <td className="px-5 py-3.5 text-muted-foreground">
                       <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title={t('row.viewActivity')}>
                         <History className="h-3.5 w-3.5" />

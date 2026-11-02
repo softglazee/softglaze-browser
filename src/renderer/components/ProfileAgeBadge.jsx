@@ -3,7 +3,7 @@ import { ageParts, isWarmed, warmRuns } from '@/lib/profileAge.mjs';
 
 const AGE_KEY = { d: 'row.ageDays', mo: 'row.ageMonths', y: 'row.ageYears' };
 
-// Small age tag next to a profile's name. It turns green once the warm-up has run often enough to
+// Small age tag beside a profile's creation date. It turns green once the warm-up has run often enough to
 // count as browsing history; the tooltip says how often and when it last ran.
 export default function ProfileAgeBadge({ createdAt, stat, formatAgo }) {
   const { t } = useTranslation('profiles');

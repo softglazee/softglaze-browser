@@ -159,7 +159,8 @@
   "bulk": {
     "fix": "Arreglar problemas de CAPTCHA",
     "fixTitle": "Aplica las soluciones seguras de CAPTCHA a los perfiles seleccionados: zona horaria, idioma, ubicación, WebRTC y un proxy libre cuando reduce el riesgo",
-    "confirm": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian ajustes y proxies que reducen el riesgo.",
+    "confirm_one": "¿Arreglar los problemas de CAPTCHA de este perfil? Solo se cambian ajustes y proxies que reducen el riesgo.",
+    "confirm_other": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian ajustes y proxies que reducen el riesgo.",
     "done": "Arreglados {{changed}} de {{total}} perfiles; {{swapped}} pasaron a un proxy libre.",
     "noBetter": "{{count}} no pudieron obtener un proxy mejor."
   },
@@ -173,7 +174,7 @@
   },
   "sort": {
     "default": "Orden predeterminado",
-    "riskDesc": "Mayor riesgo de CAPTCHA primero",
-    "riskAsc": "Menor riesgo de CAPTCHA primero"
+    "riskDesc": "Más riesgo primero",
+    "riskAsc": "Menos riesgo primero"
   }
 }

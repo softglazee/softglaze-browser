@@ -159,7 +159,8 @@
   "bulk": {
     "fix": "Fix CAPTCHA issues",
     "fixTitle": "Apply the safe CAPTCHA fixes to the selected profiles: timezone, language, location, WebRTC, and a spare proxy when it lowers the risk",
-    "confirm": "Fix CAPTCHA issues on {{count}} profiles? Only settings and proxies that lower the risk are changed.",
+    "confirm_one": "Fix CAPTCHA issues on this profile? Only settings and proxies that lower the risk are changed.",
+    "confirm_other": "Fix CAPTCHA issues on {{count}} profiles? Only settings and proxies that lower the risk are changed.",
     "done": "Fixed {{changed}} of {{total}} profiles; {{swapped}} moved to a spare proxy.",
     "noBetter": "{{count}} could not get a better proxy."
   },
@@ -173,7 +174,7 @@
   },
   "sort": {
     "default": "Default order",
-    "riskDesc": "Highest CAPTCHA risk first",
-    "riskAsc": "Lowest CAPTCHA risk first"
+    "riskDesc": "Riskiest first",
+    "riskAsc": "Safest first"
   }
 }
