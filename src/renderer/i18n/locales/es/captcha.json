@@ -1,0 +1,128 @@
+{
+  "badgeTitle": "Riesgo de CAPTCHA {{score}}/100. Haz clic para ver los motivos y las soluciones.",
+  "title": "Puntuación CAPTCHA",
+  "subtitle": "Qué probabilidad hay de que los sitios desafíen este perfil y qué la reduce",
+  "outOf100": "de 100",
+  "level": {
+    "low": "Riesgo bajo",
+    "some": "Algo de riesgo",
+    "high": "Riesgo alto",
+    "veryHigh": "Riesgo muy alto"
+  },
+  "issues_zero": "No se encontraron problemas",
+  "issues_one": "1 problema",
+  "issues_other": "{{count}} problemas",
+  "fixable_one": "Arreglar todo resuelve 1",
+  "fixable_other": "Arreglar todo resuelve {{count}}",
+  "leakTest": "Prueba de fugas",
+  "leakTestTitle": "Abre la comprobación de fugas detallada, con una prueba en vivo del perfil abierto",
+  "loadFailed": "No se pudo puntuar este perfil.",
+  "fixAll": "Arreglar todo",
+  "fixAllTitle": "Aplica todas las soluciones que solo cambian los ajustes o el proxy de este perfil",
+  "rescore": "Puntuar de nuevo",
+  "done": "Listo",
+  "runningNote": "Este perfil está abierto. Los cambios se aplican la próxima vez que se inicie.",
+  "adviceOnly": "Cámbialo en el editor del perfil; arreglarlo aquí cambiaría el dispositivo que los sitios ya conocen.",
+  "status": {
+    "pass": "Bien",
+    "warn": "Riesgo",
+    "fail": "Riesgo alto"
+  },
+  "fix": {
+    "assign-proxy": "Darle un proxy libre",
+    "swap-proxy": "Cambiar a un proxy libre",
+    "check-proxy": "Comprobar el proxy ahora",
+    "tz-auto": "Usar la zona horaria del proxy",
+    "lang-auto": "Usar el idioma del proxy",
+    "geo-auto": "Usar la ubicación del proxy",
+    "webrtc-safe": "Poner WebRTC en Forward",
+    "allow-3p-cookies": "Permitir cookies de terceros",
+    "warm-up": "Calentarlo"
+  },
+  "result": {
+    "swapped": "Ahora usa {{name}}.",
+    "checked": "Proxy comprobado.",
+    "checkFailed": "El proxy no pasó la prueba: {{error}}",
+    "warming": "Calentamiento iniciado: el perfil se abre y visita algunos sitios populares. Síguelo en la página Automatización.",
+    "cookies": "Las cookies de terceros ya están permitidas en todos los perfiles.",
+    "applied": "Hecho."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Estado del proxy",
+    "blocklist": "Listas negras de spam",
+    "freeProxy": "Proxy gratuito",
+    "ipType": "Tipo de IP",
+    "sharedProxy": "Proxy compartido",
+    "timezone": "Zona horaria",
+    "language": "Idioma",
+    "geolocation": "Ubicación",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Cookies de terceros",
+    "history": "Historial de navegación",
+    "device": "Dispositivo",
+    "osMismatch": "Sistema operativo"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "Usa {{name}}.",
+      "warn": "Sin proxy: este perfil usa tu propia conexión, que comparten todos los perfiles sin proxy."
+    },
+    "proxyHealth": {
+      "pass": "Pasó su última comprobación.",
+      "fail": "Falló su última comprobación, así que las páginas tardan o muestran errores.",
+      "never": "Nunca se ha comprobado, así que no se sabe su estado ni si está en listas negras.",
+      "stale": "Comprobado por última vez hace {{days}} días."
+    },
+    "blocklist": {
+      "pass": "No está en ninguna lista negra de spam comprobada.",
+      "warn": "Todavía no se ha comprobado en las listas negras de spam.",
+      "fail": "La IP de salida está en una lista negra de spam. Google y Cloudflare desafían mucho más a las IP listadas."
+    },
+    "freeProxy": {
+      "fail": "Un proxy público gratuito. La mayoría están marcados, así que habrá muchos CAPTCHA."
+    },
+    "ipType": {
+      "pass": "Red doméstica o móvil{{isp}}.",
+      "warn": "IP de centro de datos{{isp}}. Los sitios desafían mucho más a las IP de empresas de hosting que a las domésticas."
+    },
+    "sharedProxy": {
+      "msg_one": "Otro perfil usa este proxy, así que comparten una IP y se pueden vincular.",
+      "msg_other": "Otros {{count}} perfiles usan este proxy, así que comparten una IP y se pueden vincular."
+    },
+    "timezone": {
+      "pass": "Sigue la IP del proxy.",
+      "warn": "Fijada a mano ({{zone}}), así que puede no coincidir con el proxy.",
+      "fail": "Usa la zona horaria de este ordenador, que no coincide con el país del proxy."
+    },
+    "language": {
+      "pass": "Coincide con el país del proxy.",
+      "warn": "La región del idioma {{region}} no coincide con el país del proxy {{country}}.",
+      "unverified": "Fijado a mano ({{lang}}); aún no se conoce el país del proxy, así que no se pueden comparar."
+    },
+    "geolocation": {
+      "pass": "Sigue la IP del proxy o está bloqueada.",
+      "warn": "Fijada a mano, así que puede no coincidir con el proxy."
+    },
+    "webrtc": {
+      "pass": "El modo {{mode}} mantiene oculta tu IP real.",
+      "warn": "WebRTC está desactivado, algo que pocos navegadores reales hacen.",
+      "fail": "Está en Real, lo que muestra tu IP real detrás del proxy."
+    },
+    "thirdPartyCookies": {
+      "pass": "Permitidas, como en Chrome normal.",
+      "warn": "Bloqueadas para todos los perfiles en Ajustes. reCAPTCHA y hCaptcha dependen de ellas."
+    },
+    "history": {
+      "pass": "Tiene historial de navegación y cookies.",
+      "warn": "Casi sin cookies ni historial todavía. Los sitios confían en un perfil que se ha usado."
+    },
+    "device": {
+      "warn": "La tarjeta gráfica (WebGL) puede no encajar con este dispositivo o sistema.",
+      "fail": "La tarjeta gráfica (WebGL) no encaja con este dispositivo o sistema."
+    },
+    "osMismatch": {
+      "warn": "Dice ser {{claimed}} pero se ejecuta en {{host}}; las fuentes y otros detalles pueden mostrar el sistema real."
+    }
+  }
+}

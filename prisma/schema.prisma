@@ -41,6 +41,7 @@ model Proxy {
   lastRegion    String? // verified exit region/state (for auto-grouping)
   lastCity      String? // verified exit city (for auto-grouping)
   lastBlacklisted Boolean? // last DNSBL result: true = on a blocklist, false = clean, null = never checked
+  lastIsp       String? // exit network owner from the last passing check (datacenter vs home IP)
   lastError     String? // why the last check failed (gateway message); null when it passed
   lastCheckedAt DateTime?
 

@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import LeakCheckModal from '@/components/LeakCheckModal.jsx';
+import CaptchaScoreModal, { CaptchaBadge } from '@/components/CaptchaScore.jsx';
 import CookieManagerModal from '@/components/CookieManagerModal.jsx';
 import BrowserManagerModal from '@/components/BrowserManagerModal.jsx';
 import BrowserVersionSelect from '@/components/BrowserVersionSelect.jsx';
@@ -525,6 +526,8 @@ export default function ProfilesPage() {
   const [geoWarnings, setGeoWarnings] = useState({});
   const [copied2fa, setCopied2fa] = useState(null); // profileId whose code was just copied
   const [leakProfile, setLeakProfile] = useState(null);
+  const [captchaProfile, setCaptchaProfile] = useState(null);
+  const [captchaScores, setCaptchaScores] = useState({});
   const [cookieProfile, setCookieProfile] = useState(null);
   const [loadingCookies, setLoadingCookies] = useState(false);
   const [showBrowserManager, setShowBrowserManager] = useState(false);
@@ -598,6 +601,17 @@ export default function ProfilesPage() {
   const safePage = Math.min(page, pageCount);
   const pagedProfiles = pageSize === Infinity ? filteredProfiles : filteredProfiles.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { setPage(1); }, [filterGroup, filterTag, filterProxy, filterStatus, pageSize]);
+
+  // CAPTCHA scores for the rows on screen, refreshed whenever the list reloads.
+  const pagedIdsKey = pagedProfiles.map((p) => p.id).join(',');
+  useEffect(() => {
+    if (!pagedIdsKey) return undefined;
+    let cancelled = false;
+    softglazeApi.profiles.captchaScores(pagedIdsKey.split(',').map(Number))
+      .then((res) => { if (!cancelled && res && res.scores) setCaptchaScores((prev) => ({ ...prev, ...res.scores })); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [pagedIdsKey, profiles]);
 
   const totalCount = profiles.length;
   const runningCount = useMemo(
@@ -2272,9 +2286,7 @@ export default function ProfilesPage() {
                         <Button size="sm" variant="ghost" className="px-2.5" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
                           <Settings2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setLeakProfile({ id: p.id, title: p.title })} title={t('actions.leakCheck')}>
-                          <ShieldCheck className="w-4 h-4" />
-                        </Button>
+                        <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title })} />
                         <Button size="sm" variant="ghost" className="px-2.5" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
                           <Cookie className="w-4 h-4" />
                         </Button>
@@ -2308,6 +2320,15 @@ export default function ProfilesPage() {
         )}
       </Card>
 
+      {captchaProfile && (
+        <CaptchaScoreModal
+          profile={captchaProfile}
+          running={runningIds.has(captchaProfile.id)}
+          onClose={() => setCaptchaProfile(null)}
+          onLeakCheck={() => { setLeakProfile(captchaProfile); setCaptchaProfile(null); }}
+          onChanged={(id, fresh) => { if (fresh) setCaptchaScores((prev) => ({ ...prev, [id]: fresh })); loadData(); }}
+        />
+      )}
       {leakProfile && (
         <LeakCheckModal
           profileId={leakProfile.id}
