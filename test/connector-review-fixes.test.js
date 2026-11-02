@@ -43,7 +43,9 @@ test('CatProxies Rotating Mobile refuses SOCKS5 instead of returning HTTP rows',
 
 test('panel flags match what the adapters read', () => {
   assert.match(UI, /key: 'shopsocks5'.*noSession: true/, 'ShopSocks5 never reads a session');
-  assert.match(UI, /key: 'proxidize'.*noCountry: true/, 'Proxidize ignores country/state/city');
+  // Per-GB usernames carry -co-/-st-/-ci- (help.proxidize.com), so Proxidize now shows the geo fields.
+  assert.doesNotMatch(UI, /key: 'proxidize'.*noCountry: true/, 'Proxidize Per-GB reads country/state/city');
+  assert.match(UI, /key: 'proxidize'.*geo: true/);
   for (const k of ['airproxy', 'mobileproxyspace', 'proxysolutions']) assert.match(UI, new RegExp(`key: '${k}'.*list: true`), k);
   for (const [k, m] of [['novada', 120], ['rapidproxy', 180], ['proxmint', 120], ['databay', 120]]) assert.match(UI, new RegExp(`key: '${k}'.*maxLife: ${m}`), k);
   assert.match(UI, /\.filter\(\(m\) => !provider\.geoSync\.maxLife \|\| m <= provider\.geoSync\.maxLife\)/);
