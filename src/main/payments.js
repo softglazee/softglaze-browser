@@ -276,39 +276,33 @@ async function paypalValidate(cfg) {
 }
 
 // ---------------------------------------------------------------------------
-// Self-verifying purchase codes - BASE / STANDALONE BUILD ONLY.
+// Receipt references.
 //
-// A code carries its own short HMAC, validated OFFLINE with a shipped secret.
-// This is inherently best-effort: the secret ships in the binary, so a base build
-// can't make it un-forgeable (that's a property of any fully-offline activation).
+// This file used to also hold a self-verifying offline purchase-code scheme:
+// `SGP-MM-RRRRRRRR-SSSSSSSS`, where the signature was sha256(sharedSecret+payload)
+// truncated to 32 bits, with the secret hard-coded here. It is gone, per decision
+// A4. Two things were wrong with it beyond the weak signature:
 //
-// Tenant-provisioned (licensing-backend) builds DO NOT use this path at all -
-// when tenantConfig().enabled is true, redeem/checkout route to the backend and
-// entitlement comes from a server-signed Ed25519 lease (licenseClient.verifyLease),
-// where the private key never ships. So for production/sold builds, ship a
-// tenant-provisioned build and this code is dead. It remains only so the base
-// build keeps a working offline trial/activation path.
+//   - the secret shipped in the binary, so anyone with a copy could mint codes
+//     valid on every other base build and *sell* them — buyers would then arrive
+//     for support on licences that were never issued;
+//   - every grant, completed checkout and approved manual payment filed its
+//     invoice under a freshly minted code, so each receipt was itself a
+//     redeemable, transferable licence.
 //
-// TODO(phase 4+): if the base build is retired, delete this block entirely.
+// Activation codes are now issued by the licensing server (`POST /v1/tenant/codes`,
+// stored server-side) and redeemed through `POST /v1/redeem`, and entitlement comes
+// from a server-signed Ed25519 lease that the desktop can only verify, never mint
+// (see licenseClient.verifyLease). No signing secret ships in the client.
 // ---------------------------------------------------------------------------
-const LICENSE_SECRET = 'SoftGlaze::license::v1::9f3a7c21';
 
-function purchaseSig(payloadStr) {
-  return crypto.createHash('sha256').update(`${LICENSE_SECRET}:${payloadStr}`).digest('hex').slice(0, 8).toUpperCase();
-}
-
-function generatePurchaseCode(months) {
-  const m = String(Math.max(1, Number(months) || 1)).padStart(2, '0');
-  const rand = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 hex chars
-  const payload = `${m}-${rand}`;
-  return `SGP-${payload}-${purchaseSig(payload)}`;
-}
-
-function verifyPurchaseCode(code) {
-  const m = /^SGP-(\d{2})-([0-9A-F]{8})-([0-9A-F]{8})$/.exec(String(code || '').trim().toUpperCase());
-  if (!m) return { valid: false };
-  if (purchaseSig(`${m[1]}-${m[2]}`) !== m[3]) return { valid: false };
-  return { valid: true, months: parseInt(m[1], 10) || 1 };
+// A receipt reference — deliberately NOT a credential. Grants, completed checkouts
+// and approved manual payments apply the paid months directly and then only need
+// something to file the invoice under. Nothing in the app redeems an `SGR-` string.
+function newReceiptRef() {
+  const a = crypto.randomBytes(4).toString('hex').toUpperCase();
+  const b = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `SGR-${a}-${b}`;
 }
 
 // Runtime adapters. `automated` providers implement createInvoice/getStatus/
@@ -374,6 +368,5 @@ module.exports = {
   stripeForm,
   paypalBase,
   cryptomusSign,
-  generatePurchaseCode,
-  verifyPurchaseCode
+  newReceiptRef
 };

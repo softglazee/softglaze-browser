@@ -319,7 +319,7 @@ export default function BillingPage() {
         <div className="rounded-xl bg-card border border-border p-5">
           <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('redeem.label')}</label>
           <div className="flex items-center gap-2 flex-wrap">
-            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SGP-XX-XXXXXXXX-XXXXXXXX" className="flex-1 min-w-[220px] h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] font-mono text-foreground outline-none focus:border-primary" onKeyDown={(e) => { if (e.key === 'Enter') redeem(); }} />
+            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="SG-XXXXXXXXXXXX" className="flex-1 min-w-[220px] h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] font-mono text-foreground outline-none focus:border-primary" onKeyDown={(e) => { if (e.key === 'Enter') redeem(); }} />
             <button onClick={redeem} disabled={busy === 'redeem'} className="h-10 px-4 rounded-lg text-[12.5px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
               {busy === 'redeem' ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} {t('redeem.apply')}
             </button>

@@ -10795,7 +10795,8 @@ async function assignPlan(payload) {
   const plan = await findPlan(input.planId);
   const months = Math.max(1, Number.parseInt(input.months, 10) || plan.months || 1);
   const lic = await ensureLicense(ownerId);
-  const code = optionalString(input.code) || payments.generatePurchaseCode(months);
+  // A grant applies the months directly below; this is only the invoice reference.
+  const code = optionalString(input.code) || payments.newReceiptRef();
   const updated = await applyPaidMonths(lic, months, code, plan.tier);
   await recordInvoice({
     ownerId: ownerId ?? null,
@@ -11543,7 +11544,7 @@ async function pollCheckout(payload) {
 
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
-  const code = payments.generatePurchaseCode(months);
+  const code = payments.newReceiptRef();
   const updated = await applyPaidMonths(lic, months, code, tier);
   // Mark the order processed BEFORE the (best-effort) invoice write so a re-poll
   // can't re-grant even if the receipt write fails.
@@ -11554,7 +11555,7 @@ async function pollCheckout(payload) {
   try {
     const db = getPrisma();
     const owner = ownerId ? await db.member.findUnique({ where: { id: ownerId } }) : null;
-    if (owner && owner.email) await deliverPurchaseCode(owner.email, owner.name, code);
+    if (owner && owner.email) await deliverPaymentReceipt(owner.email, owner.name, code, months);
   } catch (e) { /* email is best-effort */ }
   return { status: st.status, paid: true, license: await licenseView(updated), purchaseCode: code };
 }
@@ -11620,7 +11621,7 @@ async function resolveManualPayment(payload) {
   if (action === 'approve') {
     const lic = await ensureLicense(entry.ownerId ?? null);
     const months = Math.max(1, Number(entry.months) || 1);
-    const code = payments.generatePurchaseCode(months);
+    const code = payments.newReceiptRef();
     await applyPaidMonths(lic, months, code, entry.tier || 'pro');
     await recordInvoice({ ownerId: entry.ownerId ?? null, provider: entry.provider, amount: entry.amount, currency: entry.currency, tier: entry.tier || 'pro', months, reference: code, note: entry.reference || null, status: 'paid', source: 'auto' });
     entry.status = 'approved';
@@ -11629,7 +11630,7 @@ async function resolveManualPayment(payload) {
     try {
       const db = getPrisma();
       const owner = entry.ownerId != null ? await db.member.findUnique({ where: { id: entry.ownerId } }) : null;
-      if (owner && owner.email) await deliverPurchaseCode(owner.email, owner.name, code);
+      if (owner && owner.email) await deliverPaymentReceipt(owner.email, owner.name, code, months);
     } catch (_) { /* email is best-effort */ }
   } else if (action === 'reject') {
     entry.status = 'rejected';
@@ -11793,20 +11794,26 @@ async function deleteInvoice(payload) {
   return { deleted: true, id };
 }
 
-async function deliverPurchaseCode(email, name, code) {
+// Payment receipt. Both callers have already applied the paid months to the
+// workspace licence, so there is nothing for the buyer to enter — this used to mail
+// a redeemable purchase code and tell them to type it in, which was both a needless
+// step and a transferable credential (see payments.js, decision A4).
+async function deliverPaymentReceipt(email, name, reference, months) {
   const cfg = await resolveSmtpConfig();
   if (!cfg.configured) return false;
   const transporter = nodemailer.createTransport({ host: cfg.host, port: cfg.port, secure: cfg.secure, auth: { user: cfg.user, pass: cfg.pass } });
+  const term = Math.max(1, Number(months) || 1);
+  const termText = term === 1 ? '1 month' : `${term} months`;
   try {
     await transporter.sendMail({
       from: `"${cfg.fromName}" <${cfg.user}>`,
       to: email,
-      subject: 'Your SoftGlaze Browser purchase code',
-      text: `Hi ${name}, thanks for your payment. Your purchase code is: ${code}. It activates 1 month - enter it under Settings -> Subscription.`,
-      html: `<div style="font-family:sans-serif;max-width:28rem;margin:0 auto;"><h2>Payment received</h2><p>Hi ${name}, thanks for your payment.</p><p>Your purchase code:</p><h1 style="background:#f4f4f5;padding:10px;text-align:center;letter-spacing:3px;">${code}</h1><p style="font-size:12px;color:#666;">Activates 1 month. Enter it under Settings &rarr; Subscription.</p></div>`
+      subject: 'Your SoftGlaze Browser payment receipt',
+      text: `Hi ${name}, thanks for your payment. ${termText} has been added to your workspace - there is nothing to enter, it is already active. Reference: ${reference}. You can see the term and your invoices under Settings -> Subscription.`,
+      html: `<div style="font-family:sans-serif;max-width:28rem;margin:0 auto;"><h2>Payment received</h2><p>Hi ${name}, thanks for your payment.</p><p><strong>${termText}</strong> has been added to your workspace. There is nothing to enter - it is already active.</p><p style="font-size:12px;color:#666;">Reference: <code>${reference}</code><br/>The term and your invoices are under Settings &rarr; Subscription.</p></div>`
     });
     return true;
-  } catch (e) { console.error('[Purchase code email]', e); return false; }
+  } catch (e) { console.error('[Payment receipt email]', e); return false; }
 }
 
 // ---- IP provider integrations (Super Admin only) ----

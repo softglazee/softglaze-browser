@@ -1,10 +1,12 @@
 'use strict';
 // Phase: multi-provider payments. payments.js is pure (node:https + node:crypto,
 // no Electron), so node:test drives it directly. Covers request-shaping (Stripe
-// form-encoding), provider metadata, and the self-verifying purchase codes.
+// form-encoding), provider metadata, and receipt references.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const fs = require('node:fs');
+const path = require('node:path');
 const payments = require('../src/main/payments');
 
 test('stripeForm encodes nested objects and arrays with bracket syntax', () => {
@@ -58,13 +60,30 @@ test('paypalBase selects sandbox vs live by env', () => {
   assert.equal(payments.paypalBase({}), 'https://api-m.paypal.com'); // defaults to live
 });
 
-test('purchase codes round-trip and reject tampering', () => {
-  const code = payments.generatePurchaseCode(3);
-  const v = payments.verifyPurchaseCode(code);
-  assert.equal(v.valid, true);
-  assert.equal(v.months, 3);
-  // Flip a payload character → signature must fail.
-  const broken = code.replace(/^SGP-03/, 'SGP-12');
-  assert.equal(payments.verifyPurchaseCode(broken).valid, false);
-  assert.equal(payments.verifyPurchaseCode('not-a-code').valid, false);
+// Decision A4: the offline purchase-code scheme is gone. It signed codes with a
+// secret shipped in the binary, so anyone with a copy could mint licences valid on
+// every build and sell them. Codes are server-issued and server-checked now. These
+// assertions exist so the scheme cannot quietly come back.
+test('no offline purchase-code signing or verification ships in the client', () => {
+  assert.equal(typeof payments.generatePurchaseCode, 'undefined');
+  assert.equal(typeof payments.verifyPurchaseCode, 'undefined');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'payments.js'), 'utf8');
+  // The literal that used to be the shared signing secret, and the code shape it
+  // signed. A comment may mention them; a live declaration may not.
+  assert.ok(!/^\s*const LICENSE_SECRET\s*=/m.test(src), 'LICENSE_SECRET is declared again');
+  assert.ok(!/^\s*function purchaseSig/m.test(src), 'purchaseSig is defined again');
+  assert.ok(!/\/\^SGP-/.test(src), 'a SGP- redemption pattern is back');
+});
+
+test('receipt references are random and not redeemable-looking', () => {
+  const a = payments.newReceiptRef();
+  const b = payments.newReceiptRef();
+  assert.match(a, /^SGR-[0-9A-F]{8}-[0-9A-F]{8}$/);
+  assert.notEqual(a, b);                       // not derived from anything guessable
+  assert.ok(!a.startsWith('SGP-'));            // can never be mistaken for a code
+  const handlers = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'ipcHandlers.js'), 'utf8');
+  // Grants, completed checkouts and approved manual payments must file their
+  // invoice under a receipt, never mint something a buyer could pass on.
+  assert.ok(!/generatePurchaseCode/.test(handlers), 'a call site mints purchase codes again');
+  assert.equal((handlers.match(/payments\.newReceiptRef\(\)/g) || []).length, 3);
 });
