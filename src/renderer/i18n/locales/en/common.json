@@ -24,7 +24,7 @@
     "settings": "Settings"
   },
   "shell": {
-    "antiDetect": "Anti-Detect",
+    "antiDetect": "Multi-Profile",
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
     "switchToLight": "Switch to light mode",
@@ -86,7 +86,7 @@
     "overview": "Overview",
     "commandCenter": "Command Center",
     "liveMonitoring": "Live monitoring · auto-refreshes every 10s",
-    "antiDetectActive": "Anti-detect engine active",
+    "antiDetectActive": "Profile isolation active",
     "systemStatus": "System Status",
     "loadingCenter": "Loading command center…",
     "statTotalProfiles": "Total Profiles",

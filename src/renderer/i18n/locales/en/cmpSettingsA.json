@@ -131,7 +131,7 @@
   "migration": {
     "title": "Transfer Profiles",
     "ownerOnly": "Owner only",
-    "description": "Import your existing profiles from another anti-detect platform via its API.",
+    "description": "Import your existing profiles from another multi-profile browser via its API.",
     "sourcePlatform": "Source platform",
     "noteLabel": "Note:",
     "instructions": "Instructions",

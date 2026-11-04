@@ -271,8 +271,8 @@
       "kb": "KB"
     },
     "antidetectEngine": {
-      "title": "Native anti-detect engine (fingerprint-chromium)",
-      "desc": "Launch Chrome profiles on fingerprint-chromium - a source-patched Chromium that spoofs the fingerprint (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively, with no JS-injection race for sites to catch. Requires the fingerprint-chromium binary; falls back to stock Chrome when it is not present. This engine drops the CDP binding the page-to-app bridge used to rely on, so SoftGlaze routes those calls over a binding-free channel instead - Data Vault autofill, the macro recorder, start-page links and session mirroring all work on it. Off by default - turn on and relaunch profiles."
+      "title": "Native fingerprint engine (fingerprint-chromium)",
+      "desc": "Launch Chrome profiles on fingerprint-chromium - a source-patched Chromium that applies each profile's fingerprint settings (canvas, WebGL, audio, UA, platform, timezone) at the binary level, hides navigator.webdriver + the HeadlessChrome UA, and blocks the WebRTC real-IP leak natively, with no JS-injection race for sites to catch. Requires the fingerprint-chromium binary; falls back to stock Chrome when it is not present. This engine drops the CDP binding the page-to-app bridge used to rely on, so SoftGlaze routes those calls over a binding-free channel instead - Data Vault autofill, the macro recorder, start-page links and session mirroring all work on it. Off by default - turn on and relaunch profiles."
     }
   },
   "performance": {

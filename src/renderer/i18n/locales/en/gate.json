@@ -9,7 +9,7 @@
     "unavailable": "This device can't securely store a login (OS encryption is unavailable), so you'll be asked to sign in again next launch."
   },
   "brand": {
-    "tagline": "Anti-Detect",
+    "tagline": "Multi-Profile",
     "bullets": {
       "fingerprints": "Unique, consistent fingerprints per profile",
       "proxy": "A dedicated proxy for every identity",
@@ -17,7 +17,7 @@
     },
     "heroLine1": "Run hundreds of identities.",
     "heroLine2": "Keep every one separate.",
-    "heroBody": "A local-first anti-detect browser. Every profile gets a unique, consistent fingerprint and its own network identity.",
+    "heroBody": "A local-first multi-profile browser for teams. Every profile keeps its own cookies, storage, proxy and fingerprint settings.",
     "footer": "© {{year}} SoftGlaze · Local workspace",
     "trust": {
       "local": "Local-first",
@@ -162,7 +162,7 @@
     "confirmPassword": "Confirm password",
     "confirmPasswordPlaceholder": "Re-enter password",
     "createCredentials": "Create credentials",
-    "loginSubtitle": "Source-owner access. Bypasses registration and unlocks the full workspace.",
+    "loginSubtitle": "Source-owner access. Skips registration and unlocks the full workspace.",
     "usernameOrEmail": "Username or email",
     "loginPasswordPlaceholder": "Password",
     "enterWorkspace": "Enter workspace"

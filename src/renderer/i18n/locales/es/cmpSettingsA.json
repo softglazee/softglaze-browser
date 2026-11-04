@@ -131,7 +131,7 @@
   "migration": {
     "title": "Transferir perfiles",
     "ownerOnly": "Solo propietario",
-    "description": "Importa tus perfiles existentes desde otra plataforma antidetección a través de su API.",
+    "description": "Importa tus perfiles existentes desde otro navegador multiperfil a través de su API.",
     "sourcePlatform": "Plataforma de origen",
     "noteLabel": "Nota:",
     "instructions": "Instrucciones",

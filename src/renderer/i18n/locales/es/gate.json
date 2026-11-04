@@ -9,7 +9,7 @@
     "unavailable": "Este dispositivo no puede guardar un inicio de sesión de forma segura (el cifrado del sistema no está disponible), así que se te pedirá que inicies sesión de nuevo en el próximo arranque."
   },
   "brand": {
-    "tagline": "Anti-Detect",
+    "tagline": "Multiperfil",
     "bullets": {
       "fingerprints": "Huellas digitales únicas y consistentes por perfil",
       "proxy": "Un proxy dedicado para cada identidad",
@@ -17,7 +17,7 @@
     },
     "heroLine1": "Ejecuta cientos de identidades.",
     "heroLine2": "Cada una, por separado.",
-    "heroBody": "Un navegador anti-detect que prioriza lo local. Cada perfil obtiene una huella digital única y consistente y su propia identidad de red.",
+    "heroBody": "Un navegador multiperfil para equipos que prioriza lo local. Cada perfil mantiene sus propias cookies, almacenamiento, proxy y ajustes de huella digital.",
     "footer": "© {{year}} SoftGlaze · Espacio de trabajo local",
     "trust": {
       "local": "Local primero",

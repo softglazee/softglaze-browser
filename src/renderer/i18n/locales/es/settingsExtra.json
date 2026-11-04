@@ -271,8 +271,8 @@
       "kb": "KB"
     },
     "antidetectEngine": {
-      "title": "Motor anti-detección nativo (fingerprint-chromium)",
-      "desc": "Inicia los perfiles de Chrome en fingerprint-chromium, un Chromium parcheado en el código fuente que falsea la huella (canvas, WebGL, audio, UA, plataforma, zona horaria) a nivel de binario, oculta navigator.webdriver y el UA HeadlessChrome, y bloquea de forma nativa la fuga de la IP real por WebRTC, sin una carrera de inyección de JS que los sitios puedan detectar. Requiere el binario de fingerprint-chromium; si no está presente, vuelve a Chrome estándar. Este motor elimina el enlace CDP del que dependía el puente entre la página y la aplicación, así que SoftGlaze envía esas llamadas por un canal sin enlace: el autorrelleno del Data Vault, la grabadora de macros, los enlaces de la página de inicio y la duplicación de sesiones funcionan con él. Desactivado por defecto: actívalo y vuelve a iniciar los perfiles."
+      "title": "Motor de huella digital nativo (fingerprint-chromium)",
+      "desc": "Inicia los perfiles de Chrome en fingerprint-chromium, un Chromium parcheado en el código fuente que aplica la configuración de huella de cada perfil (canvas, WebGL, audio, UA, plataforma, zona horaria) a nivel de binario, oculta navigator.webdriver y el UA HeadlessChrome, y bloquea de forma nativa la fuga de la IP real por WebRTC, sin una carrera de inyección de JS que los sitios puedan detectar. Requiere el binario de fingerprint-chromium; si no está presente, vuelve a Chrome estándar. Este motor elimina el enlace CDP del que dependía el puente entre la página y la aplicación, así que SoftGlaze envía esas llamadas por un canal sin enlace: el autorrelleno del Data Vault, la grabadora de macros, los enlaces de la página de inicio y la duplicación de sesiones funcionan con él. Desactivado por defecto: actívalo y vuelve a iniciar los perfiles."
     }
   },
   "performance": {
