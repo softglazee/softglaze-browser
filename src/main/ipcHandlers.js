@@ -11804,13 +11804,15 @@ async function deliverPaymentReceipt(email, name, reference, months) {
   const transporter = nodemailer.createTransport({ host: cfg.host, port: cfg.port, secure: cfg.secure, auth: { user: cfg.user, pass: cfg.pass } });
   const term = Math.max(1, Number(months) || 1);
   const termText = term === 1 ? '1 month' : `${term} months`;
+  // The member name is user-entered, so it is escaped before it goes into the HTML body.
+  const safeName = String(name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   try {
     await transporter.sendMail({
       from: `"${cfg.fromName}" <${cfg.user}>`,
       to: email,
       subject: 'Your SoftGlaze Browser payment receipt',
       text: `Hi ${name}, thanks for your payment. ${termText} has been added to your workspace - there is nothing to enter, it is already active. Reference: ${reference}. You can see the term and your invoices under Settings -> Subscription.`,
-      html: `<div style="font-family:sans-serif;max-width:28rem;margin:0 auto;"><h2>Payment received</h2><p>Hi ${name}, thanks for your payment.</p><p><strong>${termText}</strong> has been added to your workspace. There is nothing to enter - it is already active.</p><p style="font-size:12px;color:#666;">Reference: <code>${reference}</code><br/>The term and your invoices are under Settings &rarr; Subscription.</p></div>`
+      html: `<div style="font-family:sans-serif;max-width:28rem;margin:0 auto;"><h2>Payment received</h2><p>Hi ${safeName}, thanks for your payment.</p><p><strong>${termText}</strong> has been added to your workspace. There is nothing to enter - it is already active.</p><p style="font-size:12px;color:#666;">Reference: <code>${reference}</code><br/>The term and your invoices are under Settings &rarr; Subscription.</p></div>`
     });
     return true;
   } catch (e) { console.error('[Payment receipt email]', e); return false; }
