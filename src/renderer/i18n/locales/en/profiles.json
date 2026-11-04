@@ -116,8 +116,8 @@
     "remarksPlaceholder": "Optional notes for this profile...",
     "crossOsWarning": "This profile claims {{os}} but runs on {{host}}. Host fonts, canvas raster and the real TLS/JS-engine behaviour still say {{host}}, so scanners can spot the mismatch. Use {{host}} unless you specifically need a cross-OS profile.",
     "engine": "Engine",
-    "antidetectLabel": "Anti-detect engine (fingerprint-chromium)",
-    "antidetectHelp": "Launch this profile on the native anti-detect Chromium - spoofs canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off."
+    "antidetectLabel": "Fingerprint engine (fingerprint-chromium)",
+    "antidetectHelp": "Launch this profile on the native fingerprint-chromium engine - applies per-profile canvas / WebGL / UA / platform / timezone settings at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off."
   },
   "proxy": {
     "setting": "Proxy setting",
@@ -196,7 +196,7 @@
     "speechVoicesNoise": "SpeechVoices Noise",
     "mediaDevice": "Media Device",
     "webglMetadata": "WebGL Metadata",
-    "webglMetadataDesc": "Real (recommended) reports your true GPU consistently across the page, workers AND service worker - no mismatch. Custom spoofs the GPU string but a service worker still shows the real one, which detectors flag.",
+    "webglMetadataDesc": "Real (recommended) reports your true GPU consistently across the page, workers AND service worker - no mismatch. Custom sets a different GPU string but a service worker still shows the real one, which detectors flag.",
     "configureGpu": "Configure Custom GPU",
     "autoRandomize": "Auto Randomize",
     "vendor": "Vendor",

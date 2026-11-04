@@ -1344,7 +1344,7 @@ export default function ProfilesPage() {
                             onClick={() => updatePd('antidetectEngine', !pd.antidetectEngine)}
                             className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 mt-0.5"
                             style={{ background: pd.antidetectEngine ? '#06b6d4' : 'var(--switch-background, #3f3f46)' }}
-                            title="Toggle the native anti-detect engine for this profile"
+                            title="Toggle the native fingerprint engine for this profile"
                           >
                             <span
                               className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.antidetectEngine ? 'translate-x-5' : 'translate-x-1'}`}
@@ -1352,9 +1352,9 @@ export default function ProfilesPage() {
                             />
                           </button>
                           <div className="min-w-0">
-                            <span className="text-sm font-medium text-foreground">{t('general.antidetectLabel', 'Anti-detect engine (fingerprint-chromium)')}</span>
+                            <span className="text-sm font-medium text-foreground">{t('general.antidetectLabel', 'Fingerprint engine (fingerprint-chromium)')}</span>
                             <p className="text-xs text-muted mt-1 leading-relaxed">
-                              {t('general.antidetectHelp', 'Launch this profile on the native anti-detect Chromium - spoofs canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.')}
+                              {t('general.antidetectHelp', 'Launch this profile on the native fingerprint-chromium engine - applies per-profile canvas / WebGL / UA / platform / timezone at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.')}
                             </p>
                           </div>
                         </div>

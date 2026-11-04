@@ -65,7 +65,7 @@ function buildSections(t, tx) {
   add('updates', 'general', tx('updates.title'), tx('updates.description'), 'update version upgrade install');
   add('platform', 'general', tx('platform.title'), tx('platform.description'), 'icon serial number taskbar');
 
-  add('fingerprint', 'browser', tx('fingerprint.title'), tx('fingerprint.description'), 'anti-detect fingerprint canvas webgl geolocation timezone cdp camera mobile webrtc chromium');
+  add('fingerprint', 'browser', tx('fingerprint.title'), tx('fingerprint.description'), 'multi-profile fingerprint canvas webgl geolocation timezone cdp camera mobile webrtc chromium');
   add('behaviour', 'browser', tx('behaviour.title'), tx('behaviour.description'), 'chrome sign-in translate devtools extensions https videos images bandwidth cookies third-party launch check mismatch');
   add('website', 'browser', tx('website.title'), tx('website.description'), 'block allowlist blocklist facebook local network url');
   add('ipsetting', 'browser', tx('ipSetting.title'), tx('ipSetting.description'), 'ip asn city region country checker ipinfo');
@@ -871,7 +871,7 @@ function FingerprintSection({ sec, s, apply }) {
       {!s ? <LoadingRow label={tx('globalPreferences.loading')} /> : (
         <>
           <SwitchRow
-            title={tx('browser.antidetectEngine.title', 'Native anti-detect engine (fingerprint-chromium)')}
+            title={tx('browser.antidetectEngine.title', 'Native fingerprint engine (fingerprint-chromium)')}
             description={tx('browser.antidetectEngine.desc')}
             checked={!!s.browser.antidetectEngine}
             onChange={(v) => apply({ browser: { antidetectEngine: v } })}

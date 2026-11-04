@@ -116,8 +116,8 @@
     "remarksPlaceholder": "Notas opcionales para este perfil...",
     "crossOsWarning": "Este perfil declara {{os}} pero se ejecuta en {{host}}. Las fuentes del host, el renderizado de canvas y el comportamiento real de TLS/motor JS siguen indicando {{host}}, por lo que los escáneres pueden detectar la discrepancia. Usa {{host}} salvo que necesites un perfil multiplataforma.",
     "engine": "Motor",
-    "antidetectLabel": "Motor anti-detección (fingerprint-chromium)",
-    "antidetectHelp": "Inicia este perfil en el Chromium anti-detección nativo: falsea canvas / WebGL / UA / plataforma / zona horaria a nivel de binario, oculta navigator.webdriver y bloquea la fuga de WebRTC. Requiere el motor instalado (página Navegadores). Desactivado = Chrome estándar. El interruptor global de Ajustes sigue aplicándose a los perfiles que lo dejen desactivado."
+    "antidetectLabel": "Motor de huella digital (fingerprint-chromium)",
+    "antidetectHelp": "Inicia este perfil en el motor nativo fingerprint-chromium: aplica la configuración de canvas / WebGL / UA / plataforma / zona horaria a nivel de binario, oculta navigator.webdriver y bloquea la fuga de WebRTC. Requiere el motor instalado (página Navegadores). Desactivado = Chrome estándar. El interruptor global de Ajustes sigue aplicándose a los perfiles que lo dejen desactivado."
   },
   "proxy": {
     "setting": "Configuración del proxy",
