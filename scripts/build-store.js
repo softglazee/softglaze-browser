@@ -47,8 +47,11 @@ function bakeTenant() {
   }
   // No updateFeedUrl: Store installs are updated by the Store.
   const baked = { tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem, updateFeedUrl: '' };
+  // Payment providers enabled for this tenant on the licensing server (in-app checkout offers these).
+  if (Array.isArray(cfg.checkoutProviders) && cfg.checkoutProviders.length) baked.checkoutProviders = cfg.checkoutProviders;
   fs.writeFileSync(TENANT_TARGET, JSON.stringify(baked, null, 2) + '\n');
-  console.log(`Baked tenant ${cfg.tenantId} (${cfg.apiBaseUrl}) into src/main/tenant.config.json`);
+  console.log(`Baked tenant ${cfg.tenantId} (${cfg.apiBaseUrl}) into src/main/tenant.config.json`
+    + (baked.checkoutProviders ? `, checkout: ${baked.checkoutProviders.join(', ')}` : ', no checkout providers'));
 }
 
 function newestAppx() {

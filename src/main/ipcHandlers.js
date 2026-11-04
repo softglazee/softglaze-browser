@@ -11448,6 +11448,16 @@ async function validatePaymentConfig(payload) {
 // Enabled checkout methods (no secrets). Automated ones appear only once fully configured; manual
 // ones carry their public instructions or pay link.
 async function listPaymentMethods() {
+  // A tenant build sells through the licensing server, which holds the provider keys. A customer's
+  // fresh install has no local gateway config, so offer the providers baked for this tenant instead
+  // of the (empty) local store - otherwise every buyer would see "no payment methods".
+  if (tenantConfig().enabled) {
+    const methods = tenantConfig().checkoutProviders.map((id) => {
+      const def = payments.getProviderDef(id);
+      return { id, label: def ? def.label : id, kind: 'automated' };
+    });
+    return { methods };
+  }
   const store = await readPaymentStore();
   const methods = [];
   for (const def of payments.PROVIDER_DEFS) {
@@ -11486,10 +11496,15 @@ async function startCheckout(payload) {
   const input = (payload && typeof payload === 'object') ? payload : {};
   if (tenantConfig().enabled) {
     const plan = await findPlanOrThrow(input.planId);
+    // Default to this tenant's first provider (the trial-ended screen sends none); never let the
+    // server fall back to a provider the tenant hasn't switched on.
+    const offered = tenantConfig().checkoutProviders;
+    const provider = String(input.provider || offered[0] || '').trim().toLowerCase();
+    if (!provider || !offered.includes(provider)) throw new Error('That payment method is not available for this app.');
     const install = await ensureBackendInstall();
     if (!install) throw new Error('Could not register this install with the licensing server.');
-    const r = await licenseClient.api.checkout({ planKey: plan.id, installId: install.installId, provider: input.provider });
-    return { url: r.url, ref: r.ref, provider: r.provider || 'stripe', planId: plan.id, planName: plan.name, backend: true };
+    const r = await licenseClient.api.checkout({ planKey: plan.id, installId: install.installId, provider });
+    return { url: r.url, ref: r.ref, provider: r.provider || provider, planId: plan.id, planName: plan.name, backend: true };
   }
   const plan = await findPlanOrThrow(input.planId);
   const { provider, def } = await loadCheckoutProvider(input.provider);
