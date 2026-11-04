@@ -93,7 +93,7 @@
   "pay": {
     "received": "Pago recibido - ¡tu plan ya está activo!",
     "errors": {
-      "noMethods": "Aún no hay métodos de pago habilitados - contacta con tu administrador.",
+      "noMethods": "La compra dentro de la aplicación está en pausa mientras añadimos un nuevo proveedor de pago. Escribe a support@softglaze.com para comprar con factura y luego introduce tu código de compra abajo.",
       "checkoutFailed": "No se pudo iniciar el pago.",
       "submitFailed": "No se pudo enviar tu pago."
     }

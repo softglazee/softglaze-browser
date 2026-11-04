@@ -93,7 +93,7 @@
   "pay": {
     "received": "Payment received - your plan is now active!",
     "errors": {
-      "noMethods": "No payment methods are enabled yet - please contact your administrator.",
+      "noMethods": "Buying inside the app is paused while we add a new payment provider. Email support@softglaze.com to buy by invoice, then enter your purchase code below.",
       "checkoutFailed": "Could not start checkout.",
       "submitFailed": "Could not submit your payment."
     }
