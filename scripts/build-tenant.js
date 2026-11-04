@@ -32,8 +32,12 @@ for (const k of ['tenantId', 'apiBaseUrl', 'publicKeyPem']) {
 }
 
 const original = fs.existsSync(TARGET) ? fs.readFileSync(TARGET, 'utf8') : (JSON.stringify(EMPTY, null, 2) + '\n');
-writeConfig({ tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem, updateFeedUrl: cfg.updateFeedUrl || '' });
-console.log(`Baked tenant ${cfg.tenantId} into src/main/tenant.config.json${cfg.updateFeedUrl ? ' (with update feed)' : ''}`);
+const baked = { tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem, updateFeedUrl: cfg.updateFeedUrl || '' };
+// The payment providers enabled for this tenant on the licensing server (e.g. ["cryptomus"]).
+if (Array.isArray(cfg.checkoutProviders) && cfg.checkoutProviders.length) baked.checkoutProviders = cfg.checkoutProviders;
+writeConfig(baked);
+console.log(`Baked tenant ${cfg.tenantId} into src/main/tenant.config.json${cfg.updateFeedUrl ? ' (with update feed)' : ''}`
+  + (baked.checkoutProviders ? ` (checkout: ${baked.checkoutProviders.join(', ')})` : ' (no checkout providers: in-app buying shows no methods)'));
 
 if (args.includes('--bake-only')) {
   console.log('Bake-only: build skipped. Restore with: node scripts/build-tenant.js --reset');

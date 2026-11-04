@@ -19,6 +19,9 @@ function sanitizeSecureUrl(raw, label) {
   return '';
 }
 
+// Providers the licensing server can run a checkout for (licensing-server/src/routes/checkout.js).
+const CHECKOUT_PROVIDERS = ['cryptomus', 'stripe', 'paypal'];
+
 // Guarded: under plain node (tests) require('electron') is the binary path, not the API.
 function isPackagedApp() {
   try { const { app } = require('electron'); return Boolean(app && app.isPackaged); } catch (_) { return false; }
@@ -34,11 +37,21 @@ function load() {
   const publicKeyPem = String(env.SG_TENANT_PUBLIC_KEY || fileCfg.publicKeyPem || '').trim();
   // Buyer-owned update feed (generic URL with latest.yml and installers); empty keeps auto-update off.
   const updateFeedUrl = sanitizeSecureUrl(env.SG_UPDATE_FEED_URL || fileCfg.updateFeedUrl || '', 'updateFeedUrl');
+  // Payment providers switched on for this tenant on the licensing server. A customer's fresh install
+  // has no local gateway config, so a tenant build offers exactly these at checkout. Unknown names are
+  // dropped; the server still refuses any provider it hasn't enabled.
+  const rawProviders = env.SG_CHECKOUT_PROVIDERS
+    ? String(env.SG_CHECKOUT_PROVIDERS).split(',')
+    : (Array.isArray(fileCfg.checkoutProviders) ? fileCfg.checkoutProviders : []);
+  const checkoutProviders = [...new Set(rawProviders
+    .map((p) => String(p).trim().toLowerCase())
+    .filter((p) => CHECKOUT_PROVIDERS.includes(p)))];
   return {
     tenantId,
     apiBaseUrl,
     publicKeyPem,
     updateFeedUrl,
+    checkoutProviders,
     enabled: Boolean(tenantId && apiBaseUrl && publicKeyPem)
   };
 }
