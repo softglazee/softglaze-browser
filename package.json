@@ -3,7 +3,7 @@
   "version": "1.0.19",
   "description": "Local-first desktop app for isolated browser profiles, each with its own fingerprint, proxy and storage",
   "license": "BUSL-1.1",
-  "author": "SoftGlaze LLC <https://softglaze.com>",
+  "author": "SOFTGLAZE (SMC-PRIVATE) LIMITED <https://softglaze.com>",
   "homepage": "https://softglaze.com",
   "repository": {
     "type": "git",
@@ -73,7 +73,7 @@
   "build": {
     "appId": "com.softglaze.browser",
     "productName": "SoftGlaze Browser",
-    "copyright": "Copyright © 2026 SoftGlaze LLC",
+    "copyright": "Copyright © 2026 SOFTGLAZE (SMC-PRIVATE) LIMITED",
     "electronLanguages": [
       "en-US"
     ],
@@ -127,7 +127,7 @@
         "deb"
       ],
       "category": "Network",
-      "maintainer": "SoftGlaze LLC <https://softglaze.com>",
+      "maintainer": "SOFTGLAZE (SMC-PRIVATE) LIMITED <https://softglaze.com>",
       "icon": "public/logos/app-source-512.png"
     },
     "nsis": {
