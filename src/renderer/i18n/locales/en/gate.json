@@ -52,7 +52,7 @@
     "trialChip_other": "Trial · {{count}} days left"
   },
   "pay": {
-    "noMethods": "No payment methods are enabled yet - use a purchase code or contact your administrator.",
+    "noMethods": "Buying inside the app is paused while we add a new payment provider. Email support@softglaze.com to buy by invoice, then enter your purchase code.",
     "submitted": "Payment submitted - an administrator will review it and activate your plan shortly.",
     "manualBadge": "Manual",
     "continueTo": "Continue to {{label}}",

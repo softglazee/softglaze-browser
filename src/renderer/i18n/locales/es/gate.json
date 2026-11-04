@@ -52,7 +52,7 @@
     "trialChip_other": "Prueba · quedan {{count}} días"
   },
   "pay": {
-    "noMethods": "Aún no hay métodos de pago habilitados - usa un código de compra o contacta con tu administrador.",
+    "noMethods": "La compra dentro de la aplicación está en pausa mientras añadimos un nuevo proveedor de pago. Escribe a support@softglaze.com para comprar con factura y luego introduce tu código de compra.",
     "submitted": "Pago enviado - un administrador lo revisará y activará tu plan en breve.",
     "manualBadge": "Manual",
     "continueTo": "Continuar a {{label}}",
