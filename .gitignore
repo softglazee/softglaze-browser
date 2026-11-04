@@ -2,6 +2,7 @@
 dist/
 dist_installer/
 dist_installer_testing/
+dist_store/
 .env
 softglaze.sqlite
 softglaze.sqlite-journal
@@ -25,6 +26,7 @@ build/*
 !build/entitlements.mac.plist
 !build/afterPack.js
 !build/installer.nsh
+!build/appx/
 out/
 
 # Local/large engine data — reference copies, never shipped or committed.

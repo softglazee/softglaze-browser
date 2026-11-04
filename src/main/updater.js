@@ -74,6 +74,8 @@ function disable(reason, message) {
 async function initAutoUpdater(mainWindow) {
   if (autoUpdaterRef) return; // once per run
   if (!app.isPackaged) { disable('dev', 'Automatic updates only run in the installed app.'); return; }
+  // Store packages are signed by Microsoft (so the check below would pass) but must be updated by the Store.
+  if (process.windowsStore) { disable('store', 'Updates for this version come from the Microsoft Store.'); return; }
 
   if (!(await isSignedBuild())) {
     console.warn('[updater] build is not code-signed - auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');

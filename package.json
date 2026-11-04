@@ -24,7 +24,8 @@
     "check:tenant": "node scripts/check-tenant-baked.js",
     "test": "node --test \"test/**/*.test.js\"",
     "postinstall": "prisma generate",
-    "build:testing": "node scripts/check-tenant-baked.js && prisma generate && electron-builder --win --x64 --config electron-builder.testing.js"
+    "build:testing": "node scripts/check-tenant-baked.js && prisma generate && electron-builder --win --x64 --config electron-builder.testing.js",
+    "build:store": "node scripts/build-store.js"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
