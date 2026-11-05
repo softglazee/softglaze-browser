@@ -124,11 +124,11 @@ test('U5 GlobalPreferences.apply guards stale responses, reverts on failure, tra
   assert.match(body, /if \(inFlight\.current !== 0\) return;\s*setSaving\(false\);/, 'saving clears only when idle');
 });
 
-test('U5 the captcha API key is not persisted per keystroke', () => {
+test('U5 no CAPTCHA solver settings remain, and drafts are not persisted per keystroke', () => {
   const src = PAGE('SettingsPage');
-  assert.doesNotMatch(src, /onChange=\{\(e\) => apply\(\{ captcha: \{ apiKey/);
-  assert.match(src, /<DraftTextInput\s+id="set-captcha-apikey"/);
-  assert.match(src, /onCommit=\{\(v\) => apply\(\{ captcha: \{ apiKey: v \} \}\)\}/);
+  // The 2Captcha / Anti-Captcha integration was removed (payment provider rules).
+  assert.doesNotMatch(src, /apply\(\{ captcha: \{/);
+  assert.doesNotMatch(src, /2captcha|anticaptcha/i);
   assert.match(src, /onBlur=\{\(\) => \{ focused\.current = false; commit\(draft\); \}\}/);
   assert.doesNotMatch(src, /onChange=\{\(e\) => apply\(\{ \w+: \{ \w+: (Math\.max\()?Number\(e\.target\.value\)/,
     'no number field persists (and clamps) on every keystroke');
@@ -262,4 +262,12 @@ test('U13 new and previously default-only keys exist in en and es', () => {
       assert.notEqual(get(es, k), get(en, k), `es ${ns}:${k} must be translated`);
     }
   }
+});
+
+test('U5b the browser engine no longer contacts CAPTCHA solving services', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const engine = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'browserEngine.js'), 'utf8');
+  assert.doesNotMatch(engine, /2captcha\.com|anti-captcha\.com/);
+  assert.doesNotMatch(engine, /attachCaptchaSolver/);
 });

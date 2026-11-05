@@ -6493,7 +6493,6 @@ async function launchProfileNow(payload) {
       headless: Boolean(input.headless), // Cookie Warmer warm-ups run headless
       profile, // full fingerprint config applied at launch
       browserSettings,
-      captcha: globalSettings.captcha,
       globalExtensionDirs,
       loadExtensions,
       geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false),
@@ -7834,13 +7833,6 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
     onlyOpenWithProxy: false,
     onlyOpenWhenExtensionLoaded: false,
     blockIfCountryChanged: false
-  },
-  captcha: {
-    enabled: false,
-    provider: '2captcha', // 2captcha | anticaptcha
-    apiKey: '',
-    solveRecaptchaV2: true,
-    solveHcaptcha: true
   },
   // Derive each profile's timezone, locale and WebRTC IP from its proxy's geo at launch; off means
   // only the manually configured values apply.

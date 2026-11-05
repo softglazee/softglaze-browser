@@ -360,22 +360,6 @@
       "desc": "No abrir el perfil si el país/región difiere de la última vez que se abrió."
     }
   },
-  "captcha": {
-    "title": "Resolución automática de captchas",
-    "description": "Resuelve automáticamente reCAPTCHA v2 y hCaptcha durante la navegación usando un solucionador de terceros de pago. Esto es independiente de las huellas digitales: una huella limpia reduce la frecuencia con la que aparecen los captchas, pero resolverlos requiere un servicio de pago facturado por resolución por el proveedor (no por SoftGlaze).",
-    "enable": {
-      "title": "Activar la resolución automática de captchas",
-      "desc": "Cuando está activado, los perfiles iniciados detectan los captchas compatibles y los envían a tu solucionador automáticamente."
-    },
-    "providerLabel": "Proveedor de resolución",
-    "apiKeyLabel": "Clave de API",
-    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
-    "apiKeyPlaceholder2captcha": "Clave de API de 2captcha",
-    "billedAnticaptcha": "Se almacena localmente en tu base de datos de configuración. Anti-Captcha te factura por resolución.",
-    "billed2captcha": "Se almacena localmente en tu base de datos de configuración. 2captcha te factura por resolución.",
-    "solveRecaptchaV2": "Resolver reCAPTCHA v2",
-    "solveHcaptcha": "Resolver hCaptcha"
-  },
   "email": {
     "title": "Correo electrónico (códigos de verificación)",
     "configured": "Configurado",

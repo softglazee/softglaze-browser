@@ -2096,149 +2096,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   return `file://${startPagePath}`;
 }
 
-// ---- Captcha auto-solving (2captcha / anti-captcha) ----
-// Needs the user's own paid solver key, billed by that provider. Token-grant captchas only.
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function httpJson(url, init) {
-  if (typeof fetch !== 'function') throw new Error('fetch unavailable in this runtime');
-  const res = await fetch(url, init);
-  return res.json();
-}
-
-// Submit a token job to 2captcha and poll until solved. Returns the token string.
-async function solveWith2captcha(apiKey, job) {
-  let method = 'userrecaptcha';
-  if (job.type === 'hcaptcha') method = 'hcaptcha';
-  else if (job.type === 'turnstile') method = 'turnstile';
-
-  const inParams = new URLSearchParams({
-    key: apiKey, json: '1', method, sitekey: job.sitekey, pageurl: job.pageurl
-  });
-  const submit = await httpJson('https://2captcha.com/in.php', { method: 'POST', body: inParams });
-  if (String(submit.status) !== '1') throw new Error(`2captcha submit failed: ${submit.request}`);
-  const id = submit.request;
-  for (let i = 0; i < 30; i += 1) {
-    await sleep(5000);
-    const poll = await httpJson(`https://2captcha.com/res.php?key=${encodeURIComponent(apiKey)}&action=get&json=1&id=${encodeURIComponent(id)}`);
-    if (String(poll.status) === '1') return poll.request;
-    if (poll.request && poll.request !== 'CAPCHA_NOT_READY') throw new Error(`2captcha: ${poll.request}`);
-  }
-  throw new Error('2captcha timed out');
-}
-
-// anti-captcha JSON task API (createTask -> getTaskResult).
-async function solveWithAnticaptcha(apiKey, job) {
-  let taskType = 'RecaptchaV2TaskProxyless';
-  if (job.type === 'hcaptcha') taskType = 'HCaptchaTaskProxyless';
-  else if (job.type === 'turnstile') taskType = 'TurnstileTaskProxyless';
-
-  const create = await httpJson('https://api.anti-captcha.com/createTask', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientKey: apiKey, task: { type: taskType, websiteURL: job.pageurl, websiteKey: job.sitekey } })
-  });
-  if (create.errorId) throw new Error(`anti-captcha createTask: ${create.errorDescription || create.errorCode}`);
-  const taskId = create.taskId;
-  for (let i = 0; i < 30; i += 1) {
-    await sleep(5000);
-    const poll = await httpJson('https://api.anti-captcha.com/getTaskResult', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientKey: apiKey, taskId })
-    });
-    if (poll.errorId) throw new Error(`anti-captcha: ${poll.errorDescription || poll.errorCode}`);
-    if (poll.status === 'ready') {
-      return (poll.solution && (poll.solution.gRecaptchaResponse || poll.solution.token)) || '';
-    }
-  }
-  throw new Error('anti-captcha timed out');
-}
-
-async function solveCaptchaJob(cfg, job) {
-  if (cfg.provider === 'anticaptcha') return solveWithAnticaptcha(cfg.apiKey, job);
-  return solveWith2captcha(cfg.apiKey, job);
-}
-
-// On every navigation, scan for supported captcha widgets, solve new ones and inject the token.
-// Best-effort: a solver or network failure never breaks the page.
-function attachCaptchaSolver(page, cfg) {
-  if (!cfg || !cfg.enabled || !cfg.apiKey) return;
-  const solvedKeys = new Set();
-  const handle = async () => {
-    let pageurl = '';
-    try { pageurl = page.url(); } catch (e) { return; }
-    if (!pageurl || pageurl.startsWith('about:') || pageurl.startsWith('file:')) return;
-    let found = [];
-    try {
-      found = await page.evaluate(() => {
-        const out = [];
-        const push = (type, sitekey) => { if (sitekey) out.push({ type, sitekey }); };
-document.querySelectorAll('.g-recaptcha[data-sitekey],[data-sitekey],.cf-turnstile').forEach((el) => {
-          const k = el.getAttribute('data-sitekey');
-          const isH = el.classList.contains('h-captcha');
-          const isCF = el.classList.contains('cf-turnstile');
-          if (isCF) push('turnstile', k);
-          else push(isH ? 'hcaptcha' : 'recaptcha', k);
-        });
-        document.querySelectorAll('iframe[src*="/recaptcha/"]').forEach((f) => {
-          const m = /[?&]k=([^&]+)/.exec(f.src || ''); if (m) push('recaptcha', decodeURIComponent(m[1]));
-        });
-        document.querySelectorAll('iframe[src*="hcaptcha.com"]').forEach((f) => {
-          const m = /[?&]sitekey=([^&]+)/.exec(f.src || ''); if (m) push('hcaptcha', decodeURIComponent(m[1]));
-        });
-        // Turnstile can also be loaded via cloudflare challenges iframe
-        document.querySelectorAll('iframe[src*="challenges.cloudflare.com"]').forEach((f) => {
-          const m = /[?&]sitekey=([^&]+)/.exec(f.src || ''); if (m) push('turnstile', decodeURIComponent(m[1]));
-        });
-        return out;
-      });
-    } catch (e) { return; }
-    for (const job of found) {
-      if (job.type === 'recaptcha' && cfg.solveRecaptchaV2 === false) continue;
-      if (job.type === 'hcaptcha' && cfg.solveHcaptcha === false) continue;
-      const dedupeKey = `${job.type}:${job.sitekey}`;
-      if (solvedKeys.has(dedupeKey)) continue;
-      solvedKeys.add(dedupeKey);
-      try {
-        const token = await solveCaptchaJob(cfg, { type: job.type, sitekey: job.sitekey, pageurl });
-        if (!token) continue;
-        await page.evaluate((tok) => {
-          const fill = (sel) => document.querySelectorAll(sel).forEach((el) => {
-            el.value = tok; el.innerHTML = tok;
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-          });
-          fill('textarea#g-recaptcha-response');
-          fill('textarea[name="g-recaptcha-response"]');
-          fill('textarea[name="h-captcha-response"]');
-          fill('textarea#h-captcha-response');
-          fill('[name="cf-turnstile-response"]');
-          fill('[name="g-recaptcha-response"]');
-          // Best-effort: call any registered reCAPTCHA callback so the form reacts as if solved by hand.
-          try {
-            const cfgObj = window.___grecaptcha_cfg;
-            if (cfgObj && cfgObj.clients) {
-              Object.values(cfgObj.clients).forEach((client) => {
-                Object.values(client || {}).forEach((maybe) => {
-                  Object.values(maybe || {}).forEach((leaf) => {
-                    if (leaf && typeof leaf.callback === 'function') { try { leaf.callback(tok); } catch (e) {} }
-                  });
-                });
-              });
-            }
-          } catch (e) {}
-        }, token).catch(() => {});
-      } catch (e) {
-        // Allow a retry on the next navigation if this attempt failed.
-        solvedKeys.delete(dedupeKey);
-      }
-    }
-  };
-  page.on('framenavigated', (frame) => { try { if (frame === page.mainFrame()) handle(); } catch (e) {} });
-  // Also run once shortly after attach for captchas already present on load.
-  setTimeout(() => { handle().catch(() => {}); }, 3500);
-}
 
 // ---- Proxy geo lookup ----
 // In-page fallback for when the pre-launch Node lookup returns null: resolve the exit location
@@ -2623,7 +2481,6 @@ async function launchProfileSessionNow(options = {}) {
     headless = false,
     profile = {},
     browserSettings = {},
-    captcha = null,
     globalExtensionDirs = [],
     // Per-profile opt-in: load SoftGlaze/team extensions (prefers Chrome-for-Testing so
     // --load-extension actually mounts them). Off = prefer real Chrome (stealthier).
@@ -3217,8 +3074,6 @@ const rootCdp = await browser.target().createCDPSession();
       }
       // DNT belongs on the wire as an HTTP header, not just navigator.
       if (dnt === '1') await targetPage.setExtraHTTPHeaders({ DNT: '1', 'Sec-GPC': '1' }).catch(() => {});
-      // Captcha auto-solver (paid 2captcha/anti-captcha; user-supplied API key).
-      try { attachCaptchaSolver(targetPage, captcha); } catch (e) {}
       // One interception handler, enabled only when needed: disableVideos aborts media (saves proxy
       // traffic), localNetworkAccess blocks LAN/loopback probing, blockAccess applies the host list.
       const webRules = buildWebsiteRules(browserSettings);
