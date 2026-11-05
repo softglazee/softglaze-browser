@@ -360,22 +360,6 @@
       "desc": "Don't open the profile if the country/region differs from the last time it was opened."
     }
   },
-  "captcha": {
-    "title": "Captcha Auto-Solving",
-    "description": "Automatically solve reCAPTCHA v2 and hCaptcha during browsing using a paid third-party solver. This is separate from fingerprinting - a clean fingerprint reduces how often captchas appear, but solving them needs a paid service billed per solve by the provider (not by SoftGlaze).",
-    "enable": {
-      "title": "Enable captcha auto-solving",
-      "desc": "When on, launched profiles detect supported captchas and submit them to your solver automatically."
-    },
-    "providerLabel": "Solver provider",
-    "apiKeyLabel": "API key",
-    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
-    "apiKeyPlaceholder2captcha": "2captcha API key",
-    "billedAnticaptcha": "Stored locally in your settings DB. You are billed per solve by Anti-Captcha.",
-    "billed2captcha": "Stored locally in your settings DB. You are billed per solve by 2captcha.",
-    "solveRecaptchaV2": "Solve reCAPTCHA v2",
-    "solveHcaptcha": "Solve hCaptcha"
-  },
   "email": {
     "title": "Email (verification codes)",
     "configured": "Configured",

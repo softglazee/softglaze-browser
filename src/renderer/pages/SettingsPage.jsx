@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound, Languages, Search, FlaskConical, AlertCircle } from 'lucide-react';
+import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, Languages, Search, FlaskConical, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import BillingSettings from '@/components/BillingSettings.jsx';
@@ -70,7 +70,6 @@ function buildSections(t, tx) {
   add('website', 'browser', tx('website.title'), tx('website.description'), 'block allowlist blocklist facebook local network url');
   add('ipsetting', 'browser', tx('ipSetting.title'), tx('ipSetting.description'), 'ip asn city region country checker ipinfo');
   add('autofill', 'browser', tx('smartAutofill.title'), tx('smartAutofill.description'), 'autofill vault persona firefox form');
-  add('captcha', 'browser', tx('captcha.title'), tx('captcha.description'), 'captcha recaptcha hcaptcha 2captcha anticaptcha solver api key');
 
   add('localruntime', 'runtime', tx('localRuntime.title'), tx('localRuntime.description'), 'sqlite database path profile root');
   add('performance', 'runtime', tx('performance.title'), tx('performance.description'), 'parallel launch concurrency max running memory');
@@ -95,7 +94,7 @@ function buildSections(t, tx) {
 
   const order = [
     'language', 'onstartup', 'updates', 'platform',
-    'fingerprint', 'behaviour', 'website', 'ipsetting', 'autofill', 'captcha',
+    'fingerprint', 'behaviour', 'website', 'ipsetting', 'autofill',
     'localruntime', 'performance', 'reliability', 'sessions', 'scheduler', 'datasync',
     'security', 'multidevice', 'audit', 'email',
     'billing', 'monetization', 'migration', 'workspacesync', 'branding', 'dbencryption', 'workspacebackup', 'developerapi'
@@ -293,7 +292,6 @@ export default function SettingsPage() {
               <WebsiteSection sec={SEC.website} s={s} apply={apply} />
               <IpSettingSection sec={SEC.ipsetting} s={s} apply={apply} />
               <AutofillSection sec={SEC.autofill} s={s} apply={apply} />
-              <CaptchaSection sec={SEC.captcha} s={s} apply={apply} />
             </GroupBlock>
 
             <GroupBlock group={sections.groups[2]} map={SEC}>
@@ -619,8 +617,7 @@ function withGlobalDefaults(cfg) {
     website: { blockAccess: {}, ...(c.website || {}) },
     platform: { ...(c.platform || {}) },
     ipSetting: { autoConfig: {}, ...(c.ipSetting || {}) },
-    dataSync: { ...(c.dataSync || {}) },
-    captcha: { ...(c.captcha || {}) }
+    dataSync: { ...(c.dataSync || {}) }
   };
 }
 
@@ -1009,42 +1006,6 @@ function AutofillSection({ sec, s, apply }) {
             disabled={s.smartAutofill && s.smartAutofill.enabled === false}
             onChange={(v) => apply({ smartAutofill: { firefox: v } })}
           />
-        </>
-      )}
-    </SectionBox>
-  );
-}
-
-function CaptchaSection({ sec, s, apply }) {
-  const { t: tx } = useTranslation('settingsExtra');
-  return (
-    <SectionBox sec={sec} icon={KeyRound} accent="#10b981">
-      {!s ? <LoadingRow label={tx('globalPreferences.loading')} /> : (
-        <>
-          <SwitchRow wired title={tx('captcha.enable.title')} description={tx('captcha.enable.desc')} checked={s.captcha.enabled} onChange={(v) => apply({ captcha: { enabled: v } })} />
-          <div className="px-5 py-3.5 border-b border-border">
-            <label htmlFor="set-captcha-provider" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{tx('captcha.providerLabel')}</label>
-            <CustomSelect id="set-captcha-provider" className="w-full sm:w-72" value={s.captcha.provider} onChange={(e) => apply({ captcha: { provider: e.target.value } })}>
-              <option value="2captcha">2captcha</option>
-              <option value="anticaptcha">Anti-Captcha</option>
-            </CustomSelect>
-          </div>
-          <div className="px-5 py-3.5 border-b border-border">
-            <label htmlFor="set-captcha-apikey" className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{tx('captcha.apiKeyLabel')}</label>
-            <DraftTextInput
-              id="set-captcha-apikey"
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={s.captcha.provider === 'anticaptcha' ? tx('captcha.apiKeyPlaceholderAnticaptcha') : tx('captcha.apiKeyPlaceholder2captcha')}
-              value={s.captcha.apiKey || ''}
-              onCommit={(v) => apply({ captcha: { apiKey: v } })}
-              className="w-full max-w-md bg-input-background border border-border rounded px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground mt-2">{s.captcha.provider === 'anticaptcha' ? tx('captcha.billedAnticaptcha') : tx('captcha.billed2captcha')}</p>
-          </div>
-          <SwitchRow title={tx('captcha.solveRecaptchaV2')} checked={s.captcha.solveRecaptchaV2} onChange={(v) => apply({ captcha: { solveRecaptchaV2: v } })} />
-          <SwitchRow title={tx('captcha.solveHcaptcha')} checked={s.captcha.solveHcaptcha} onChange={(v) => apply({ captcha: { solveHcaptcha: v } })} />
         </>
       )}
     </SectionBox>
