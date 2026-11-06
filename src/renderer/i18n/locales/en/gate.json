@@ -44,12 +44,7 @@
     }
   },
   "license": {
-    "machineMismatch": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it.",
-    "graceMessage_one": "Your subscription has ended - {{count}} day of grace left. Renew to keep access.",
-    "graceMessage_other": "Your subscription has ended - {{count}} days of grace left. Renew to keep access.",
-    "renew": "Renew",
-    "trialChip_one": "Trial · {{count}} day left",
-    "trialChip_other": "Trial · {{count}} days left"
+    "machineMismatch": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
   },
   "pay": {
     "noMethods": "Buying inside the app is paused while we add a new payment provider. Email support@softglaze.com to buy by invoice, then enter your purchase code.",

@@ -228,41 +228,9 @@ function ThemeLangControls() {
   );
 }
 
-// Non-blocking overlay: a grace banner with renew CTA and countdown, or a trial-days chip.
-// Module scope so Gate re-renders do not remount it.
-function LicenseBanner({ license, busy, onPay }) {
-  const { t } = useTranslation('gate');
-  if (!license || license.isExempt) return null;
-  // The lease belongs to another computer (licences are machine-bound).
-  if (license.reason === 'machine_mismatch') {
-    return (
-      <div role="alert" className="fixed top-0 inset-x-0 z-[90] bg-amber-500/95 text-black px-4 py-2 flex items-center justify-center gap-3 text-[12.5px] font-medium shadow">
-        <AlertTriangle className="w-4 h-4 shrink-0" />
-        <span>{t('license.machineMismatch')}</span>
-      </div>
-    );
-  }
-  if (license.isGrace) {
-    return (
-      <div className="fixed top-0 inset-x-0 z-[90] bg-amber-500/95 text-black px-4 py-2 flex items-center justify-center gap-3 text-[12.5px] font-medium shadow">
-        <AlertTriangle className="w-4 h-4 shrink-0" />
-        <span>{t('license.graceMessage', { count: license.daysLeftGrace })}</span>
-        <button onClick={onPay} disabled={busy} className="ml-2 shrink-0 inline-flex items-center gap-1.5 rounded-md bg-black/85 text-white px-3 py-1 font-semibold disabled:opacity-60">
-          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />} {t('license.renew')}
-        </button>
-      </div>
-    );
-  }
-  if (license.isTrial && license.daysLeftTrial != null) {
-    return (
-      <div className="fixed bottom-4 right-4 z-[90] inline-flex items-center gap-2 rounded-full bg-card border border-border px-3 py-1.5 text-[11.5px] text-muted-foreground shadow pointer-events-none">
-        <Clock className="w-3.5 h-3.5 text-primary" />
-        {t('license.trialChip', { count: license.daysLeftTrial })}
-      </div>
-    );
-  }
-  return null;
-}
+// Licence notices (machine mismatch, grace, trial ending, trial days) are drawn once, by AppShell
+// (components/LicenseNotice.jsx), in the page flow. Gate draws none, so they never stack or cover
+// the page; it only blocks the app with BannedScreen when the licence has fully ended.
 
 // Shows only the methods the admin enabled: automated opens hosted checkout (caller polls),
 // manual submits a reference for admin approval.
@@ -622,15 +590,6 @@ export default function Gate({ children }) {
     }, 5000);
   }
 
-  async function buyPlan() {
-    setErr(''); setBusy(true);
-    try {
-      const inv = await softglazeApi.payments.startCheckout();
-      if (inv && inv.url) window.open(inv.url, '_blank');
-      pollPurchase(inv);
-    } catch (e) { setErr(e.message || t('errors.noPaymentMethod')); setBusy(false); }
-  }
-
   // Method-aware variants used by the <PayMethods> chooser (banned screen + plan step).
   async function buyWith(method) {
     setErr(''); setBusy(true);
@@ -664,7 +623,7 @@ export default function Gate({ children }) {
     </p>
   );
 
-  if (phase === 'ready') return <>{children}<LicenseBanner license={license} busy={busy} onPay={buyPlan} /></>;
+  if (phase === 'ready') return children;
   if (phase === 'loading' || phase === 'licensing') {
     return <div className="h-screen w-full bg-background grid place-items-center"><Loader2 className="w-6 h-6 text-muted animate-spin" /></div>;
   }
