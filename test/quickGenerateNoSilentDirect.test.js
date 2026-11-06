@@ -13,7 +13,7 @@ const ROOT = path.join(__dirname, '..');
 const IPC = fs.readFileSync(path.join(ROOT, 'src', 'main', 'ipcHandlers.js'), 'utf8');
 const BATCH = fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'pages', 'BatchImportPage.jsx'), 'utf8');
 const body = (() => {
-  const m = /async function batchGenerateProfiles\(payload\) \{[\s\S]*?\r?\n\}/.exec(IPC);
+  const m = /async function batchGenerateProfiles\([^)]*\) \{[\s\S]*?\r?\n\}/.exec(IPC);
   assert.ok(m, 'batchGenerateProfiles must exist');
   return m[0];
 })();

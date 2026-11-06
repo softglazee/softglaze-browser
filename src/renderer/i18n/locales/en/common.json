@@ -54,7 +54,14 @@
     "trialEndingDays_one": "Free trial ends in {{count}} day. Subscribe for $5/month to keep going.",
     "trialEndingDays_other": "Free trial ends in {{count}} days. Subscribe for $5/month to keep going.",
     "trialEnded": "Your free trial has ended. Subscribe ($5/month) before the grace period runs out, or the app will lock until you do. Your profiles and data stay on this device.",
-    "subscriptionEnded": "Your subscription has ended. Renew ($5/month) before the grace period runs out, or the app will lock until you do. Your profiles and data stay on this device."
+    "subscriptionEnded": "Your subscription has ended. Renew ($5/month) before the grace period runs out, or the app will lock until you do. Your profiles and data stay on this device.",
+    "renew": "Renew",
+    "graceDaysLeft_one": "{{count}} day of grace left.",
+    "graceDaysLeft_other": "{{count}} days of grace left.",
+    "accessEnded": "Your trial and grace period have ended. Subscribe to keep using the app; your profiles and data stay on this device.",
+    "licenceOtherComputer": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it.",
+    "trialChip_one": "Trial · {{count}} day left",
+    "trialChip_other": "Trial · {{count}} days left"
   },
   "roles": {
     "OWNER": "Owner",

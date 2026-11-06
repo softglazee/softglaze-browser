@@ -44,12 +44,7 @@
     }
   },
   "license": {
-    "machineMismatch": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca.",
-    "graceMessage_one": "Tu suscripción ha terminado - queda {{count}} día de gracia. Renueva para mantener el acceso.",
-    "graceMessage_other": "Tu suscripción ha terminado - quedan {{count}} días de gracia. Renueva para mantener el acceso.",
-    "renew": "Renovar",
-    "trialChip_one": "Prueba · queda {{count}} día",
-    "trialChip_other": "Prueba · quedan {{count}} días"
+    "machineMismatch": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca."
   },
   "pay": {
     "noMethods": "La compra dentro de la aplicación está en pausa mientras añadimos un nuevo proveedor de pago. Escribe a support@softglaze.com para comprar con factura y luego introduce tu código de compra.",

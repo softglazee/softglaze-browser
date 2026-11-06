@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
-  ChevronLeft, ChevronRight, Activity, MonitorDown, AlertTriangle, Sparkles, X, Wand2,
+  ChevronLeft, ChevronRight, Activity, MonitorDown, Wand2,
   CreditCard, Link2, Plug, ClipboardList, Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -14,6 +14,8 @@ import CommandPalette from '@/components/CommandPalette.jsx';
 import OnboardingWizard from '@/components/OnboardingWizard.jsx';
 import UserMenuPopover from '@/components/UserMenuPopover.jsx';
 import { PROVIDERS } from '@/components/ProxyProviders.jsx';
+import { LicenseNoticeBanner, LicenseTrialChip } from '@/components/LicenseNotice.jsx';
+import { pickLicenseNotice } from '@/lib/licenseNotice.mjs';
 
 function ThemeToggle({ collapsed }) {
   const { t } = useTranslation();
@@ -123,6 +125,7 @@ function NavItem({ path, label, icon: Icon, collapsed, badge }) {
 
 export default function AppShell({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   // Falls back to the English label, then the raw role (SUPER_ADMIN or roles missing from locales).
   const roleLabel = (r) => (r ? t(`roles.${r}`, { defaultValue: ROLE_LABEL[r] || r }) : t('shell.noMember'));
@@ -145,6 +148,7 @@ export default function AppShell({ children }) {
   const userBtnRef = useRef(null);
 
   const closeMenu = () => { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); };
+  const licenseNotice = pickLicenseNotice(license, { dismissed: bannerDismissed, path: location.pathname });
 
   useEffect(() => {
     let live = true;
@@ -292,6 +296,7 @@ export default function AppShell({ children }) {
 
         <div className="px-3 pb-3 mt-auto">
           <div className="border-t border-sidebar-border pt-2.5 space-y-0.5 relative" ref={ref}>
+            <LicenseTrialChip notice={licenseNotice} collapsed={collapsed} onOpen={() => navigate('/billing')} />
             <ThemeToggle collapsed={collapsed} />
             {canSee('billing') && <NavItem path="/billing" label={t('nav.billing')} icon={CreditCard} collapsed={collapsed} />}
             {canSee('settings') && <NavItem path="/settings" label={t('nav.settings')} icon={Settings} collapsed={collapsed} />}
@@ -345,18 +350,9 @@ export default function AppShell({ children }) {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-        {license && !bannerDismissed && me?.role !== 'SUPER_ADMIN' && (license.isExpired || (license.isTrial && license.daysLeft <= 3)) && (
-          <div className="flex items-center gap-3 px-7 py-2.5 border-b" style={{ background: license.isExpired ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)', borderColor: license.isExpired ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)' }}>
-            {license.isExpired ? <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" /> : <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />}
-            <span className="text-[12.5px] flex-1 min-w-0" style={{ color: license.isExpired ? 'var(--color-red-400, #f87171)' : '#fbbf24' }}>
-              {license.isExpired
-                ? (license.isTrial ? t('shell.trialEnded') : t('shell.subscriptionEnded'))
-                : t('shell.trialEndingDays', { count: license.daysLeft })}
-            </span>
-            <button onClick={() => navigate('/billing')} className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow shadow-blue-500/25">{t('shell.subscribe')}</button>
-            <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground" title={t('shell.dismiss')}><X className="w-4 h-4" /></button>
-          </div>
-        )}
+        {/* The one licence notice (lib/licenseNotice.mjs picks it by priority). It sits in the
+            column flow above the scrolling page, so it never covers page content. */}
+        <LicenseNoticeBanner notice={licenseNotice} onAction={() => navigate('/billing')} onDismiss={() => setBannerDismissed(true)} />
         <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-6">{children}</div>
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>

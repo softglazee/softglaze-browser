@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2, Zap, Turtle, ShieldCheck, ShieldAlert, Gift } from 'lucide-react';
+import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCircle2, Zap, Turtle, ShieldCheck, ShieldAlert, Gift, Square } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import { countBuckets } from '@/lib/proxyBuckets.mjs';
 import { healthyFreeProxies } from '@/lib/freeProxies.mjs';
+import { quickGenProgressView } from '@/lib/quickGenProgress.mjs';
+import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -33,9 +35,25 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [busy, setBusy] = useState(false);
   const { dialogRef } = useDialog({ onClose, closeOnEscape: !busy });
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  // Live frames from main while the run checks proxies and creates profiles (see batchGenerateHandler).
+  const [frame, setFrame] = useState(null);
+  const [stopping, setStopping] = useState(false);
+  const runIdRef = useRef(null);
+  const offProgressRef = useRef(null);
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
   const [savingGroup, setSavingGroup] = useState(false);
+
+  const stopListening = () => { if (offProgressRef.current) { offProgressRef.current(); offProgressRef.current = null; } };
+  useEffect(() => stopListening, []);
+
+  // Stops the proxy check at once, or the creation before its next profile; what was already
+  // created is kept and the result says so.
+  function stop() {
+    if (!busy || stopping || !runIdRef.current) return;
+    setStopping(true);
+    softglazeApi.profiles.cancelBatchGenerate(runIdRef.current).catch(() => {});
+  }
 
   // Free proxies whose last check passed; the server checks them live again before use.
   const healthyFree = healthyFreeProxies(freeProxies);
@@ -84,10 +102,18 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     if (proxyMode === 'pool' && proxies.length === 0) return setErr(t('quickGenerate.errNoPoolProxies'));
     if (proxyMode === 'free' && healthyFree.length === 0) return setErr(t('quickGenerate.errNoFreeProxies'));
     if (proxyMode === 'paste' && !pasted.trim()) return setErr(t('quickGenerate.errNoPasted'));
+    const runId = `qgen-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    runIdRef.current = runId;
+    setFrame(null); setStopping(false);
+    // Listen before the run starts so its first frames are not missed; only this run's frames count.
+    stopListening();
+    const off = softglazeApi.profiles.onBatchGenerateProgress((f) => { if (f && f.runId === runId) setFrame(f); });
+    offProgressRef.current = typeof off === 'function' ? off : null;
     setBusy(true); setProgress({ done: 0, total: n });
     try {
       const r = await onGenerate(
         {
+          runId,
           count: n,
           baseName: baseName.trim(),
           startIndex: start,
@@ -104,23 +130,27 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
         },
         (done, total) => setProgress({ done, total })
       );
-      // Show the result (notably the "capped at N proxies" notice) instead of closing silently.
-      if (r && (r.proxyLimited || (Array.isArray(r.errors) && r.errors.length))) {
+      // Show the result (the shortfall, a cancel, failures) instead of closing silently.
+      if (r && (r.proxyLimited || r.cancelled || (Array.isArray(r.errors) && r.errors.length))) {
         setResult(r); setBusy(false);
       } else {
         onClose();
       }
     } catch (e) { setErr(e.message || t('quickGenerate.errGeneration')); setBusy(false); }
+    finally { setStopping(false); stopListening(); }
   }
 
-  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  // Until the first frame arrives the view is 'start': 0 of the N requested.
+  const view = quickGenProgressView(frame, { requested: progress.total, uniqueProxies: (proxyMode === 'pool' || proxyMode === 'free') && assignUnique });
+  const pct = view.percent;
+  const resultWarn = result && (result.proxyLimited || result.cancelled || (Array.isArray(result.errors) && result.errors.length));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4" onMouseDown={() => !busy && onClose()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('quickGenerate.ariaLabel')} tabIndex={-1} className="w-[500px] max-h-[92vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t('quickGenerate.ariaLabel')} tabIndex={-1} className="w-full max-w-[500px] max-h-[92vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl shadow-black/50" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card z-10">
           <div className="flex items-center gap-2"><Wand2 className="w-4 h-4 text-primary" /><h2 className="font-display text-[15px] font-semibold">{t('quickGenerate.title')}</h2></div>
-          <button onClick={() => !busy && onClose()} className="w-8 h-8 grid place-items-center rounded-lg text-muted hover:bg-secondary hover:text-foreground"><X className="w-4 h-4" /></button>
+          <button onClick={() => (busy ? stop() : onClose())} disabled={stopping} aria-label={busy ? t('quickGenerate.stop') : t('quickGenerate.cancel')} title={busy ? t('quickGenerate.stop') : undefined} className="w-8 h-8 grid place-items-center rounded-lg text-muted hover:bg-secondary hover:text-foreground disabled:opacity-50"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -274,22 +304,36 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           {err && <p className="text-[12px] text-red-400">{err}</p>}
 
           {result && (
-            <div className={`flex items-start gap-2 rounded-lg px-3 py-2.5 text-[12px] ${result.proxyLimited ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'}`}>
-              {result.proxyLimited ? <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />}
+            <div role="status" className={`flex items-start gap-2 rounded-lg px-3 py-2.5 text-[12px] ${resultWarn ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'}`}>
+              {resultWarn ? <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> : <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />}
               <span>{result.message}</span>
             </div>
           )}
 
           {busy && (
-            <div>
-              <div className="flex items-center justify-between text-[11.5px] text-muted mb-1.5"><span>{t('quickGenerate.creatingProfiles')}</span><span className="font-mono">{progress.done}/{progress.total}</span></div>
+            <div role="status" aria-live="polite">
+              <div className="flex items-center justify-between gap-3 text-[11.5px] text-muted mb-1.5">
+                <span>{stopping ? t('quickGenerate.stopping') : view.phase === 'check' ? t('quickGenerate.checkingProxies') : view.phase === 'start' ? t('quickGenerate.generating') : t('quickGenerate.creatingProfiles')}</span>
+                <span className="font-mono">{view.phase === 'check'
+                  ? t('quickGenerate.checkCounter', { checked: view.checked, total: view.total, working: view.working })
+                  : `${view.done}/${view.total}`}</span>
+              </div>
               <div className="h-1.5 rounded-full bg-background overflow-hidden"><div className="h-full bg-primary transition-all duration-200" style={{ width: `${pct}%` }} /></div>
+              {view.shortfall && (
+                <p className="mt-2 flex items-start gap-1.5 text-[11.5px] text-amber-300"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('quickGenerate.shortfall', { requested: view.shortfall.requested, available: view.shortfall.available })}</p>
+              )}
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border sticky bottom-0 bg-card">
-          <button onClick={() => !busy && onClose()} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-secondary disabled:opacity-50">{result ? t('quickGenerate.done') : t('quickGenerate.cancel')}</button>
+          {busy ? (
+            <button onClick={stop} disabled={stopping} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1.5">
+              {stopping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5" />}{stopping ? t('quickGenerate.stopping') : t('quickGenerate.stop')}
+            </button>
+          ) : (
+            <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted hover:bg-secondary">{result ? t('quickGenerate.done') : t('quickGenerate.cancel')}</button>
+          )}
           {!result && (
             <button onClick={submit} disabled={busy} className="h-9 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-glow transition-colors">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}{busy ? t('quickGenerate.generating') : t('quickGenerate.generate', { count: Number(count) || 0 })}

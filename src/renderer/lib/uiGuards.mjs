@@ -26,3 +26,11 @@ export function createSeqGuard() {
     isLatest(ticket) { return ticket === seq; }
   };
 }
+
+// A Chromium profile cannot launch through a SOCKS4 proxy: Chromium resolves hostnames locally for
+// SOCKS4 (a DNS leak), so the launch refuses it. Firefox sends DNS through the proxy. Mirrors
+// socks4DnsLeak in src/main/launchCheck.js; anything that is not Firefox opens in Chromium.
+export function socks4LeaksDns(proxyType, browserCore) {
+  if (String(proxyType || '').toUpperCase() !== 'SOCKS4') return false;
+  return String(browserCore || '').trim().toLowerCase() !== 'firefox';
+}

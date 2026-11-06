@@ -59,6 +59,7 @@ const captchaScore = require('./captchaScore');
 const launchCheck = require('./launchCheck');
 const vendorScoreboard = require('./vendorScoreboard');
 const proxyScope = require('./proxyScope');
+const proxyGate = require('./proxyGate');
 const warmAutopilot = require('./warmAutopilot');
 const providerAccount = require('./providerAccount');
 const dbCrypto = require('./dbCrypto');
@@ -161,6 +162,8 @@ const CHANNELS = Object.freeze({
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
   PROFILE_BATCH_GENERATE: 'profile:batch-generate',
+  PROFILE_BATCH_GENERATE_CANCEL: 'profile:batch-generate-cancel', // renderer -> main (stop a Quick generate run)
+  PROFILE_BATCH_GENERATE_PROGRESS: 'profile:batch-generate-progress', // main -> renderer stream
   PROFILE_UPDATE: 'profile:update',
   PROFILE_DELETE: 'profile:delete',
   PROFILE_LAUNCH: 'profile:launch',
@@ -495,6 +498,14 @@ function parseProxyType(value) {
     .replace(/^SOCKS$/, 'SOCKS5');
   if (!VALID_PROXY_TYPES.has(normalized)) throw new Error('Proxy type must be HTTP, SOCKS5, or SOCKS4.');
   return normalized;
+}
+
+// The type the profile editor picked for a raw "host:port:user:pass" proxy. A scheme written in the
+// string itself (socks5://...) wins, and a label that is not a proxy protocol (the editor's "Local")
+// leaves the string's own default.
+function proxyTypeHintFor(raw, type) {
+  if (!type || /^[a-z0-9]+:\/\//i.test(String(raw || '').trim())) return null;
+  try { return parseProxyType(type); } catch (e) { return null; }
 }
 
 function validateSystemProxyBehavior(value) {
@@ -1026,8 +1037,10 @@ function proxyIdentityWhere(parsed) {
 async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint = null) {
   const parsed = parseProxyInput(proxyInput);
   if (!parsed) return null;
-  // An explicit "Proxy Type" column (HTTP/HTTPS/SOCKS5) overrides the default.
-  if (typeHint) parsed.type = typeHint;
+  // An explicit "Proxy Type" column (HTTP/HTTPS/SOCKS5/SOCKS4) overrides the default. Both go through
+  // parseProxyType, so the stored value is always one the ProxyType enum accepts (HTTPS -> HTTP,
+  // SOCKS4A -> SOCKS4) instead of failing the database write.
+  parsed.type = parseProxyType(typeHint || parsed.type);
 
   // Reuse a row only when every credential matches, so nothing is revealed or changed; a different
   // password is a different sticky session or account. No member-scope query: this also runs inside
@@ -4194,8 +4207,11 @@ function proxyAgentScheme(type) {
 }
 
 // Routes a request to an IP/geo service through the proxy; returns { success, ip, country, city,
-// isp, latencyMs } or { success: false, error }.
-async function testProxyConnectivity(proxy) {
+// isp, latencyMs } or { success: false, error }. opts.timeoutMs / opts.fallbackTimeoutMs shorten the
+// two stages (15 s each by default); only Quick generate's gate passes them (proxyGate.js).
+async function testProxyConnectivity(proxy, opts = {}) {
+  const primaryMs = Number(opts.timeoutMs) > 0 ? Number(opts.timeoutMs) : 15000;
+  const fallbackMs = Number(opts.fallbackTimeoutMs) > 0 ? Number(opts.fallbackTimeoutMs) : 15000;
   let ProxyAgent;
   try {
     ({ ProxyAgent } = require('proxy-agent'));
@@ -4214,11 +4230,11 @@ async function testProxyConnectivity(proxy) {
 
   // Race two HTTPS services; the first answer wins. ipinfo.io has no AAAA record, so an IPv6-only
   // exit can only reach get.geojs.io, and trying them in turn made IPv6 checks wait out ipinfo.
-  const viaIpinfo = httpGetJson('https://ipinfo.io/json', agent, 15000).then((data) => {
+  const viaIpinfo = httpGetJson('https://ipinfo.io/json', agent, primaryMs).then((data) => {
     if (!data || !data.ip) throw new Error('ipinfo.io returned no IP.');
     return { ip: data.ip, country: data.country || null, region: data.region || null, city: data.city || null, zip: data.postal || null, isp: data.org || null, timezone: data.timezone || null };
   });
-  const viaGeojs = httpGetJson(GEOJS_URL, agent, 15000).then((raw) => {
+  const viaGeojs = httpGetJson(GEOJS_URL, agent, primaryMs).then((raw) => {
     const geo = normalizeGeoJs(raw);
     if (!geo) throw new Error('get.geojs.io returned no IP.');
     return { ip: geo.ip, country: geo.country, region: geo.region, city: geo.city, zip: null, isp: geo.isp, timezone: geo.timezone };
@@ -4233,7 +4249,7 @@ async function testProxyConnectivity(proxy) {
       const data = await httpGetJson(
         'http://ip-api.com/json/?fields=status,message,query,country,countryCode,regionName,city,zip,isp,timezone',
         agent,
-        15000
+        fallbackMs
       );
       if (data.status && data.status !== 'success') {
         return { success: false, error: scrubProxySecrets(data.message || 'Proxy check failed.', proxy), latencyMs: Date.now() - started };
@@ -5165,7 +5181,7 @@ async function createProfile(payload) {
   let proxyId = input.proxyId ? parseId(input.proxyId, 'proxyId') : null;
 
   if (input.proxyRaw) {
-    proxy = await findOrCreateProxy(db, input.proxyRaw, `${title} Proxy`);
+    proxy = await findOrCreateProxy(db, input.proxyRaw, `${title} Proxy`, proxyTypeHintFor(input.proxyRaw, input.proxyType));
     proxyId = proxy.id;
   } else if (proxyId) {
     proxy = await db.proxy.findUnique({ where: { id: proxyId } });
@@ -5298,12 +5314,60 @@ function parseStartupUrls(value) {
     .slice(0, MAX_STARTUP_TABS);
 }
 
+// Quick generate runs in flight, by runId, so the modal's Cancel can stop one. A cancel that arrives
+// before its run has registered is remembered (bounded) and applied when the run starts.
+const batchGenerateRuns = new Map();
+const batchGenerateEarlyCancels = new Set();
+
+// IPC entry for Quick generate. Registers the run for Cancel and streams progress frames on
+// PROFILE_BATCH_GENERATE_PROGRESS: { runId, phase: 'check' | 'create' | 'done', ... }.
+async function batchGenerateHandler(payload, event) {
+  const input = requireObject(payload);
+  const runId = String(optionalString(input.runId) || `qgen-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`).slice(0, 80);
+  const controller = new AbortController();
+  batchGenerateRuns.set(runId, controller);
+  if (batchGenerateEarlyCancels.delete(runId)) controller.abort();
+  const send = (frame) => {
+    const sender = event && event.sender;
+    if (!sender || (typeof sender.isDestroyed === 'function' && sender.isDestroyed())) return;
+    sender.send(CHANNELS.PROFILE_BATCH_GENERATE_PROGRESS, { runId, ts: Date.now(), ...frame });
+  };
+  try {
+    return { runId, ...(await batchGenerateProfiles(input, { signal: controller.signal, progress: proxyGate.createThrottledEmitter(send) })) };
+  } finally {
+    batchGenerateRuns.delete(runId);
+  }
+}
+
+// Stops the proxy check at once and the profile creation before its next profile; profiles already
+// created are kept.
+async function cancelBatchGenerate(payload) {
+  const runId = payload && payload.runId ? String(payload.runId).slice(0, 80) : null;
+  if (runId && !batchGenerateRuns.has(runId)) {
+    batchGenerateEarlyCancels.add(runId);
+    if (batchGenerateEarlyCancels.size > 50) batchGenerateEarlyCancels.delete(batchGenerateEarlyCancels.values().next().value);
+    return { cancelled: 0, pending: true };
+  }
+  const runs = runId ? [batchGenerateRuns.get(runId)] : [...batchGenerateRuns.values()];
+  runs.forEach((c) => c.abort());
+  return { cancelled: runs.length };
+}
+
+// Proxy types a Chromium profile can launch with. Chromium's SOCKS4 client resolves hostnames
+// locally (a DNS leak), so the launch refuses SOCKS4 and Quick generate (which makes Chromium
+// profiles) never assigns one.
+const CHROMIUM_PROXY_TYPES = Object.freeze(['HTTP', 'SOCKS5']);
+
 // Server-side batch generator. It owns what per-profile create() cannot: a unique proxy per profile
 // (the run is capped at available proxies), unique visible fingerprints and an even Chrome-version
 // spread. createProfile does the persistence, so limits, ownership and data dirs stay identical.
-async function batchGenerateProfiles(payload) {
+// run.signal cancels it (see cancelBatchGenerate); run.progress(frame, force) receives progress.
+async function batchGenerateProfiles(payload, run = {}) {
   const input = requireObject(payload);
+  await requirePermission('profiles.create');
   const db = getPrisma();
+  const signal = run.signal || null;
+  const progress = typeof run.progress === 'function' ? run.progress : () => {};
 
   const count = Math.max(1, Math.min(500, Number.parseInt(String(input.count), 10) || 1));
   const prefix = (optionalString(input.prefix) || optionalString(input.baseName) || 'Profile').slice(0, 60);
@@ -5332,6 +5396,8 @@ async function batchGenerateProfiles(payload) {
   let noProxyReason = null;
   let poolMatched = 0;
   let freeSource = false;
+  let proxyChecked = 0; // live checks that finished
+  let socks4Skipped = 0; // SOCKS4 proxies left out (Chromium cannot use them without a DNS leak)
 
   if (proxyMode === 'unique' || proxyMode === 'pool') {
     const filter = {};
@@ -5358,6 +5424,11 @@ async function batchGenerateProfiles(payload) {
     if (speedSel !== 'any' || blSel !== 'any') filter.lastStatus = 'ok';
     // Unique mode: only proxies not bound to a live (non-deleted) profile.
     if (proxyMode === 'unique') filter.profiles = { none: { deletedAt: null } };
+    // Generated profiles are Chromium, which cannot use SOCKS4 without leaking DNS.
+    try {
+      socks4Skipped = await db.proxy.count({ where: await scopedProxyWhere(proxyScope.andWhere(sourceWhere, { ...filter, type: 'SOCKS4' })) });
+    } catch (e) { socks4Skipped = 0; }
+    filter.type = { in: CHROMIUM_PROXY_TYPES };
 
     const pool = await db.proxy.findMany({
       where: await scopedProxyWhere(proxyScope.andWhere(sourceWhere, filter)),
@@ -5370,42 +5441,60 @@ async function batchGenerateProfiles(payload) {
     // are trusted as is. verifyProxies: false bypasses the gate, except for free proxies, which die
     // within hours.
     const verify = input.verifyProxies !== false || freeSource;
-    const FRESH_MS = 30 * 60 * 1000;
+    if (proxyMode === 'unique') shuffleInPlace(pool); // so the same proxies aren't always picked first
+    // Recently verified proxies first: they need no network check.
+    const candidates = verify ? proxyGate.orderForCheck(pool) : pool;
     const isHealthy = async (p) => {
-      if (!verify) return true;
-      if (p.lastStatus === 'ok' && p.lastCheckedAt && (Date.now() - new Date(p.lastCheckedAt).getTime()) < FRESH_MS) return true;
-      try {
-        const result = await testProxyConnectivity({ type: p.type, host: p.host, port: p.port, username: p.username, password: p.password });
-        await persistProxyHealth(db, p.id, result).catch(() => {});
-        return Boolean(result && result.success);
-      } catch (e) { return false; }
+      if (!verify || proxyGate.isFreshlyVerified(p)) return true;
+      const result = await testProxyConnectivity({ type: p.type, host: p.host, port: p.port, username: p.username, password: p.password }, proxyGate.QUICK_CHECK_TIMEOUTS);
+      // A timeout inside the gate's shorter budget is not stored; the full check may still pass it.
+      if (!proxyGate.isGateTimeout(result)) await persistProxyHealth(db, p.id, result).catch(() => {});
+      return Boolean(result && result.success);
     };
-    // Bounded-concurrency scan; stops once `limit` healthy proxies are found.
-    const collectHealthy = async (candidates, limit) => {
-      const healthy = [];
-      let checked = 0;
-      const CONC = 8;
-      for (let i = 0; i < candidates.length && healthy.length < limit; i += CONC) {
-        const slice = candidates.slice(i, i + CONC);
-        const res = await Promise.all(slice.map(async (p) => ({ p, ok: await isHealthy(p) })));
-        for (const r of res) { checked += 1; if (r.ok && healthy.length < limit) healthy.push(r.p); }
-      }
-      return { healthy, checked };
-    };
+    // Worker pool: the next proxy starts as soon as one finishes; stops once `count` work or on cancel.
+    progress({ phase: 'check', checked: 0, total: candidates.length, working: 0, failed: 0, needed: count }, true);
+    const scan = await proxyGate.collectWorkingProxies({
+      candidates,
+      limit: count,
+      check: isHealthy,
+      signal,
+      onProgress: (s) => progress({ phase: 'check', ...s, needed: count })
+    });
+    progress({ phase: 'check', checked: scan.checked, total: candidates.length, working: scan.working.length, failed: scan.failed, needed: count }, true);
+    proxyChecked = scan.checked;
 
+    if (scan.cancelled) {
+      progress({ phase: 'done', cancelled: true, created: 0, requested: count }, true);
+      return {
+        requested: count,
+        createdCount: 0,
+        profiles: [],
+        cancelled: true,
+        proxyLimited: false,
+        availableProxies: scan.working.length,
+        proxyVerifyExcluded: scan.failed,
+        proxyChecked,
+        socks4Skipped,
+        proxyMode,
+        proxySource: freeSource ? 'free' : 'paid',
+        noProxyReason: null,
+        groupId,
+        errors: [],
+        message: `Cancelled while checking proxies (${scan.checked} of ${candidates.length} checked). Nothing was created.`
+      };
+    }
+
+    const healthy = scan.working;
     if (proxyMode === 'unique') {
-      shuffleInPlace(pool); // so the same proxies aren't always picked first
-      const { healthy, checked } = await collectHealthy(pool, count);
       availableProxies = healthy.length;
       effectiveCount = Math.min(count, healthy.length);
-      if (effectiveCount < count) { proxyLimited = true; proxyVerifyExcluded = Math.max(0, checked - healthy.length); }
+      if (effectiveCount < count) { proxyLimited = true; proxyVerifyExcluded = scan.failed; }
       for (let i = 0; i < effectiveCount; i += 1) assignments.push({ proxyId: healthy[i].id });
     } else {
       // Pool: round-robin over the healthy subset, reuse allowed. If none pass, nothing is created
       // (see noProxyReason).
-      const { healthy, checked } = await collectHealthy(pool, count);
       availableProxies = healthy.length;
-      proxyVerifyExcluded = Math.max(0, checked - healthy.length);
+      proxyVerifyExcluded = scan.failed;
       if (healthy.length) {
         for (let i = 0; i < count; i += 1) assignments.push({ proxyId: healthy[i % healthy.length].id });
       } else {
@@ -5415,9 +5504,13 @@ async function batchGenerateProfiles(payload) {
     }
     if (effectiveCount === 0) noProxyReason = poolMatched === 0 ? 'no-match' : 'none-healthy';
   } else if (proxyMode === 'paste') {
-    const lines = Array.from(new Set(
+    const pastedLines = Array.from(new Set(
       String(input.proxyList || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
     ));
+    // A SOCKS4 line (socks4:// or the SOCKS4 type) would give a Chromium profile a DNS leak.
+    const pasteSocks4 = /^socks4/i.test(String(input.proxyType || ''));
+    const lines = pastedLines.filter((s) => !(/^socks4a?:\/\//i.test(s) || (pasteSocks4 && !/^[a-z0-9]+:\/\//i.test(s))));
+    socks4Skipped = pastedLines.length - lines.length;
     availableProxies = lines.length;
     effectiveCount = Math.min(count, availableProxies);
     if (effectiveCount < count) proxyLimited = true;
@@ -5428,9 +5521,11 @@ async function batchGenerateProfiles(payload) {
   // 'direct' → assignments empty, effectiveCount = count, no proxy bound.
 
   // Create the requested new group only now that at least one profile will go in it.
+  let newGroupId = null;
   if (!groupId && newGroupName && effectiveCount > 0) {
     const g = await db.group.create({ data: { name: newGroupName.slice(0, 80) } });
     groupId = g.id;
+    newGroupId = g.id;
   }
 
   let versionPlan = null;
@@ -5443,8 +5538,12 @@ async function batchGenerateProfiles(payload) {
   const errors = [];
   const usedSignatures = new Set();
   const padLen = String(startIndex + Math.max(effectiveCount, 1) - 1).length;
+  let cancelled = false;
 
+  if (effectiveCount > 0) progress({ phase: 'create', created: 0, done: 0, toCreate: effectiveCount, requested: count, failed: 0 }, true);
   for (let i = 0; i < effectiveCount; i += 1) {
+    // Cancel stops before the next profile; the ones already created are kept.
+    if (signal && signal.aborted) { cancelled = true; break; }
     const num = String(startIndex + i).padStart(padLen, '0');
     const title = `${prefix}-${num}`;
     const assign = assignments[i] || {};
@@ -5484,10 +5583,18 @@ async function batchGenerateProfiles(payload) {
     } catch (e) {
       errors.push({ title, message: (e && e.message) || 'create failed' });
     }
+    progress({ phase: 'create', created: created.length, done: i + 1, toCreate: effectiveCount, requested: count, failed: errors.length });
+  }
+  // A group made for this run is removed again if a cancel left it empty.
+  if (cancelled && newGroupId != null && created.length === 0) {
+    await db.group.delete({ where: { id: newGroupId } }).catch(() => {});
+    groupId = null;
   }
 
   let message;
-  if (noProxyReason === 'no-match' && freeSource) {
+  if (cancelled) {
+    message = `Stopped: created ${created.length} of ${effectiveCount} profile${effectiveCount === 1 ? '' : 's'} before you cancelled. The ones already created were kept.`;
+  } else if (noProxyReason === 'no-match' && freeSource) {
     message = `Nothing was created: there is no working free proxy${proxyMode === 'unique' ? ' that no profile uses yet' : ''}. Find or check some on the Free proxies page, or choose another proxy source.`;
   } else if (noProxyReason === 'no-match') {
     message = `Nothing was created: no proxy in your pool matches the selected source, country, speed or blocklist filter. Change the filters or add proxies. To create profiles without a proxy, choose "No proxy".`;
@@ -5497,21 +5604,31 @@ async function batchGenerateProfiles(payload) {
     if (proxyMode === 'paste') {
       message = `Created ${created.length} of ${count} requested - you have ${availableProxies} unique proxy line(s). Add ${count - availableProxies} more to create the remaining ${count - effectiveCount}.`;
     } else {
-      const failNote = proxyVerifyExcluded ? ` (${proxyVerifyExcluded} failed the live health check and were skipped)` : '';
-      message = `Created ${created.length} of ${count} requested - only ${availableProxies} proxy(ies) passed verification${failNote}. Add more working proxies to create the remaining ${count - effectiveCount}.`;
+      // Says the shortfall first: "80 requested, only 61 working proxies".
+      const missing = count - effectiveCount;
+      const failNote = proxyVerifyExcluded ? ` ${proxyVerifyExcluded} of the ${proxyChecked} proxies checked did not work and were skipped.` : '';
+      message = `${count} requested, only ${availableProxies} working prox${availableProxies === 1 ? 'y' : 'ies'}: created ${created.length} profile${created.length === 1 ? '' : 's'}.${failNote} Add ${missing} more working prox${missing === 1 ? 'y' : 'ies'} to create the rest.`;
     }
   } else {
     const failNote = proxyVerifyExcluded ? ` - ${proxyVerifyExcluded} unhealthy prox${proxyVerifyExcluded === 1 ? 'y was' : 'ies were'} skipped` : '';
     message = `Created ${created.length} profile${created.length === 1 ? '' : 's'}${groupId ? ' in the selected group' : ''}${failNote}.`;
   }
+  // Only worth saying when it cost profiles.
+  if (socks4Skipped && (proxyLimited || noProxyReason)) message += ` ${socks4Skipped} SOCKS4 prox${socks4Skipped === 1 ? 'y was' : 'ies were'} left out: Chromium profiles cannot send DNS lookups through SOCKS4.`;
+  if (errors.length) message += ` ${errors.length} profile${errors.length === 1 ? '' : 's'} could not be created: ${errors[0].message}`;
+  progress({ phase: 'done', cancelled, created: created.length, requested: count }, true);
 
   return {
     requested: count,
     createdCount: created.length,
     profiles: created,
+    cancelled,
+    toCreate: effectiveCount,
     proxyLimited,
     availableProxies,
     proxyVerifyExcluded,
+    proxyChecked,
+    socks4Skipped,
     proxyMode,
     proxySource: freeSource ? 'free' : 'paid',
     noProxyReason,
@@ -5583,7 +5700,7 @@ async function updateProfile(payload) {
   }
 
   if (input.proxyRaw) {
-    const proxy = await findOrCreateProxy(db, input.proxyRaw, `${existing.title} Proxy`);
+    const proxy = await findOrCreateProxy(db, input.proxyRaw, `${existing.title} Proxy`, proxyTypeHintFor(input.proxyRaw, input.proxyType));
     data.proxyId = proxy.id;
     data.proxyInfoString = buildProxyInfoString(proxy);
   }
@@ -6112,7 +6229,9 @@ async function bulkAssignProxies(payload) {
   const ids = parseIdArray(input.ids);
   const mode = (optionalString(input.mode) || 'unique').toLowerCase();
   const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
-  const result = { mode, updated: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
+  // socks4Chromium: profiles that got a SOCKS4 proxy but open in Chromium, which refuses to launch
+  // through SOCKS4 (DNS leak); the renderer says so instead of letting the launch fail later.
+  const result = { mode, updated: [], socks4Chromium: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
   const finish = (extra = {}) => ({ ...result, assigned: result.updated.length, ...extra });
   if (!allowed.length) return finish({ source: 0 });
 
@@ -6121,7 +6240,8 @@ async function bulkAssignProxies(payload) {
     const data = proxy
       ? { proxyId: proxy.id, proxyInfoString: buildProxyInfoString(proxy), systemProxyBehavior: 'PROFILE_PROXY' }
       : { proxyId: null, proxyInfoString: null, systemProxyBehavior: 'DIRECT' };
-    await db.profile.update({ where: { id: profileId }, data });
+    const row = await db.profile.update({ where: { id: profileId }, data, select: { id: true, browserCore: true } });
+    if (proxy && launchCheck.socks4DnsLeak({ proxyType: proxy.type, browserCore: row && row.browserCore })) result.socks4Chromium.push(profileId);
     await logActivity(db, profileId, 'proxy-reassign', proxy ? `proxy → ${proxy.name || `${proxy.host}:${proxy.port}`}` : 'proxy cleared');
     result.updated.push(profileId);
   };
@@ -10599,6 +10719,8 @@ async function pushSyncIndex(engine, profiles) {
 const TRIAL_DAYS = 7;
 const GRACE_DAYS = 3; // after the trial/paid term lapses: app still works but nags, then bans
 const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months: 1, days: 30, label: '$5 / month' });
+// Enterprise list price in USD per month (Pro is PLAN.amount).
+const ENTERPRISE_AMOUNT = '29';
 
 // Built-in default plans. The live catalog lives in Setting['billingPlans']; the Super Admin can edit
 // it and add packages. These defaults apply when no override is saved. `pro` mirrors PLAN.
@@ -10649,7 +10771,7 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
     id: 'enterprise',
     tier: 'enterprise',
     name: 'Enterprise',
-    amount: '15',
+    amount: ENTERPRISE_AMOUNT,
     currency: PLAN.currency,
     months: 1,
     period: 'month',
@@ -13087,7 +13209,8 @@ function registerIpcHandlers() {
 
   registerHandler(CHANNELS.PROFILE_LIST, listProfiles);
   registerHandler(CHANNELS.PROFILE_CREATE, createProfile);
-  registerHandler(CHANNELS.PROFILE_BATCH_GENERATE, batchGenerateProfiles);
+  registerHandler(CHANNELS.PROFILE_BATCH_GENERATE, batchGenerateHandler);
+  registerHandler(CHANNELS.PROFILE_BATCH_GENERATE_CANCEL, cancelBatchGenerate);
   registerHandler(CHANNELS.PROFILE_UPDATE, updateProfile);
   registerHandler(CHANNELS.PROFILE_DELETE, deleteProfile);
   registerHandler(CHANNELS.PROFILE_LAUNCH, launchProfile);

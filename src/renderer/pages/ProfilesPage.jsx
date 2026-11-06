@@ -26,7 +26,7 @@ import { Pencil, GitCompare, Bookmark, Share2, Eye, EyeOff } from 'lucide-react'
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
-import { intersectSelection } from '@/lib/uiGuards.mjs';
+import { intersectSelection, socks4LeaksDns } from '@/lib/uiGuards.mjs';
 import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
@@ -797,13 +797,14 @@ export default function ProfilesPage() {
   useEffect(() => { refreshInstalledBrowsers(); }, [refreshInstalledBrowsers]);
 
   async function handleQuickGenerate(config, onProgress) {
-    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
+    const { runId, count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
     // proxySource: '' = the paid pool, 'group:<id>', 'provider:<key>', or 'free' (free proxies only).
     const { proxySource: source, proxyGroupId, provider } = quickGenProxyFields(proxySource);
     // The server-side generator enforces batch invariants: a unique proxy per profile (capped at
     // availability), unique fingerprints, and an even Chrome-version spread.
     const result = await softglazeApi.profiles.batchGenerate({
+      runId, // progress frames and Cancel are matched to this run
       count,
       prefix: baseName,
       startIndex,
@@ -1172,9 +1173,11 @@ export default function ProfilesPage() {
       const res = await softglazeApi.profiles.bulkAssignProxy({ ids, ...payload });
       setShowReassignModal(false);
       await loadData();
-      if (res && res.limited && res.skipped > 0) {
-        setError(t('reassignModal.limited', { assigned: res.assigned, skipped: res.skipped }));
-      }
+      const notes = [];
+      if (res && res.limited && res.skipped > 0) notes.push(t('reassignModal.limited', { assigned: res.assigned, skipped: res.skipped }));
+      // Assigned, but Chromium will refuse to open these through SOCKS4; say so now, not at launch.
+      if (res && Array.isArray(res.socks4Chromium) && res.socks4Chromium.length) notes.push(t('reassignModal.socks4Chromium', { count: res.socks4Chromium.length }));
+      if (notes.length) setError(notes.join(' '));
     } catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
@@ -1485,6 +1488,9 @@ export default function ProfilesPage() {
                               {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? t('proxy.checking') : t('proxy.checkNetwork')}
                             </Button>
                           </div>
+                          {socks4LeaksDns(pd.proxyType, pd.browserCore) && (
+                            <p role="note" className="flex items-start gap-1.5 text-xs text-warning max-w-xl"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.socks4Chromium')}</p>
+                          )}
                           {proxyResult && (
                             <div className="text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded w-full max-w-xl">
                               <div className="font-semibold flex items-center gap-2 mb-3"><Check className="w-4 h-4"/> {t('proxy.connectionOk')}</div>
@@ -1538,6 +1544,9 @@ export default function ProfilesPage() {
                       {allProxies.length === 0 && freeProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
                       {freeProxies.some(p => String(p.id) === String(pd.selectedSavedProxy)) && (
                         <p role="note" className="flex items-start gap-1.5 text-xs text-warning mt-2 lg:col-start-2"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.freeWarning')}</p>
+                      )}
+                      {socks4LeaksDns((allProxies.concat(freeProxies).find(p => String(p.id) === String(pd.selectedSavedProxy)) || {}).type, pd.browserCore) && (
+                        <p role="note" className="flex items-start gap-1.5 text-xs text-warning mt-2 lg:col-start-2"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.socks4Chromium')}</p>
                       )}
                     </div>
                   )}

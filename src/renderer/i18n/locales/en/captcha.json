@@ -148,7 +148,8 @@
       "language": "Language region {{region}} does not match the proxy's country {{country}}.",
       "timezone": "The timezone comes from this computer, not from the proxy.",
       "webrtc": "WebRTC is set to Real, which shows your real IP behind the proxy.",
-      "proxyDead": "The proxy failed its last check."
+      "proxyDead": "The proxy failed its last check.",
+      "socks4Dns": "Uses the SOCKS4 proxy {{proxy}}. Chromium cannot send DNS lookups through SOCKS4, so every site would be looked up outside the proxy (a DNS leak), and the profile will not open. Open it in Firefox, or give it a SOCKS5 or HTTP proxy."
     },
     "os": {
       "windows": "Windows",
@@ -158,6 +159,7 @@
       "ios": "iOS"
     },
     "editorOnly": "(change it in the profile editor)",
+    "blocking": "(this profile will not open until you change it in the profile editor)",
     "stopAsking": "Don't check before launching again (turn it back on in Settings)",
     "cancel": "Cancel",
     "launchAnyway": "Launch anyway",

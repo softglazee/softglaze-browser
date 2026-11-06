@@ -122,7 +122,8 @@ test('a healthy IPv6-only proxy is not reported dead by the health check', () =>
   // ipinfo.io and ip-api.com publish no AAAA record (checked 15 Sep 2026), so an IPv6 exit
   // cannot reach either. The check and the launch geo lookup must fall back to a dual-stack service.
   const check = fnBody('testProxyConnectivity');
-  assert.match(check, /httpGetJson\(GEOJS_URL, agent, 15000\)/);
+  assert.match(check, /httpGetJson\(GEOJS_URL, agent, primaryMs\)/);
+  assert.match(check, /const primaryMs = [^;]*: 15000;/, 'the full check keeps its 15 s budget unless a caller passes a shorter one');
   const engine = fs.readFileSync(path.join(ROOT, 'src', 'main', 'browserEngine.js'), 'utf8');
   assert.match(engine, /require\('\.\/proxyVendorUtils'\)/);
   assert.match(engine, /attempt\(GEOJS_URL,/, 'lookupProxyGeoNode must retry on the dual-stack service');

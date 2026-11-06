@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   CreditCard, ShieldCheck, Loader2, Check, ExternalLink,
-  AlertTriangle, Sparkles, Users, ArrowUpRight, X, Clock, Wallet
+  Users, ArrowUpRight, X, Clock, Wallet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -76,21 +76,8 @@ function SubscriptionCard({ license, seats }) {
         </span>
       </div>
 
-      {license?.isGrace && (
-        <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[12px] text-amber-400">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{t('billing.grace.message', { what: license.type === 'trial' ? t('billing.grace.freeTrial') : t('billing.grace.subscription'), count: license.daysLeftGrace })}</span>
-        </div>
-      )}
-      {license?.isBanned && (
-        <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{t('billing.banned.message')}</span>
-        </div>
-      )}
-      {license?.isTrial && !license?.isGrace && (
-        <p className="mt-4 text-[12px] text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-400" /> {t('billing.trial.message', { count: license.daysLeftTrial })}</p>
-      )}
+      {/* The trial / grace / ended warning itself is the app-wide notice above the page (AppShell);
+          this card only shows the state pill, so the same warning never appears twice. */}
 
       {seats && seats.total >= 0 && (
         <div className="mt-4 flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-elevated/50 border border-border">

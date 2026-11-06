@@ -56,6 +56,8 @@ const CHANNELS = Object.freeze({
   PROFILE_LIST: 'profile:list',
   PROFILE_CREATE: 'profile:create',
   PROFILE_BATCH_GENERATE: 'profile:batch-generate',
+  PROFILE_BATCH_GENERATE_CANCEL: 'profile:batch-generate-cancel',
+  PROFILE_BATCH_GENERATE_PROGRESS: 'profile:batch-generate-progress',
   PROFILE_UPDATE: 'profile:update',
   PROFILE_DELETE: 'profile:delete',
   PROFILE_LAUNCH: 'profile:launch',
@@ -365,6 +367,14 @@ const api = Object.freeze({
     list: (params = {}) => invoke(CHANNELS.PROFILE_LIST, params),
     create: (payload) => invoke(CHANNELS.PROFILE_CREATE, payload),
     batchGenerate: (payload) => invoke(CHANNELS.PROFILE_BATCH_GENERATE, payload),
+    // Quick generate: stop a run by the runId passed to batchGenerate (profiles already made are kept).
+    cancelBatchGenerate: (runId) => invoke(CHANNELS.PROFILE_BATCH_GENERATE_CANCEL, { runId }),
+    // Progress frames { runId, phase: 'check' | 'create' | 'done', ... } while batchGenerate runs.
+    onBatchGenerateProgress: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.PROFILE_BATCH_GENERATE_PROGRESS, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.PROFILE_BATCH_GENERATE_PROGRESS, listener);
+    },
     update: (payload) => invoke(CHANNELS.PROFILE_UPDATE, payload),
     delete: (id, options = {}) => invoke(CHANNELS.PROFILE_DELETE, { id, removeLocalData: Boolean(options.removeLocalData) }),
     launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' }),

@@ -123,6 +123,16 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
   </div>
 );
 
+// SOCKS4 saves and works in Firefox profiles; Chromium profiles refuse it at launch (DNS leak).
+function Socks4Note({ text }) {
+  return (
+    <p role="note" className="flex items-start gap-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span>{text}</span>
+    </p>
+  );
+}
+
 export default function ProxyPoolPage() {
   const { t } = useTranslation('proxies');
   const [proxies, setProxies] = useState([]);
@@ -1416,6 +1426,7 @@ export default function ProxyPoolPage() {
                   </CustomSelect>
                 </Field>
               </div>
+              {proxyForm.type === 'SOCKS4' && <Socks4Note text={t('form.socks4Note')} />}
               <div className="grid gap-4 lg:grid-cols-[1fr_160px]">
                 <Field label={t('form.host')}>
                   <Input value={proxyForm.host} onChange={(event) => updateProxyForm('host', event.target.value)} onPaste={handleProxyPaste} placeholder="127.0.0.1" required />
@@ -1458,6 +1469,7 @@ export default function ProxyPoolPage() {
                   <option value="SOCKS4">SOCKS4</option>
                 </CustomSelect>
               </Field>
+              {batchType === 'SOCKS4' && <Socks4Note text={t('form.socks4Note')} />}
               <Field label={t('batch.proxyLines')}>
                 <Textarea
                   value={batchRaw}

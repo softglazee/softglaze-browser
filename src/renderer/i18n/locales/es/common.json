@@ -54,7 +54,14 @@
     "trialEndingDays_one": "La prueba gratuita termina en {{count}} día. Suscríbete por $5/mes para continuar.",
     "trialEndingDays_other": "La prueba gratuita termina en {{count}} días. Suscríbete por $5/mes para continuar.",
     "trialEnded": "Tu prueba gratuita ha terminado. Suscríbete ($5/mes) antes de que termine el periodo de gracia o la aplicación se bloqueará hasta que lo hagas. Tus perfiles y datos siguen en este dispositivo.",
-    "subscriptionEnded": "Tu suscripción ha terminado. Renuévala ($5/mes) antes de que termine el periodo de gracia o la aplicación se bloqueará hasta que lo hagas. Tus perfiles y datos siguen en este dispositivo."
+    "subscriptionEnded": "Tu suscripción ha terminado. Renuévala ($5/mes) antes de que termine el periodo de gracia o la aplicación se bloqueará hasta que lo hagas. Tus perfiles y datos siguen en este dispositivo.",
+    "renew": "Renovar",
+    "graceDaysLeft_one": "Queda {{count}} día de gracia.",
+    "graceDaysLeft_other": "Quedan {{count}} días de gracia.",
+    "accessEnded": "Tu prueba y el periodo de gracia han terminado. Suscríbete para seguir usando la aplicación; tus perfiles y datos siguen en este dispositivo.",
+    "licenceOtherComputer": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca.",
+    "trialChip_one": "Prueba · queda {{count}} día",
+    "trialChip_other": "Prueba · quedan {{count}} días"
   },
   "roles": {
     "OWNER": "Propietario",

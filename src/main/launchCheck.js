@@ -4,6 +4,7 @@
 
 const { scoreProfile } = require('./captchaScore');
 const { deviceGpuCoherence } = require('./fingerprintGenerator');
+const { BROWSER_CORE, normalizeBrowserCore } = require('./importParser');
 
 function uaOsFamily(ua) {
   const s = String(ua || '');
@@ -37,10 +38,24 @@ function screenMismatch(profile) {
   return null;
 }
 
+// Chromium's SOCKS4 client resolves every hostname with the computer's own DNS, so sites would be
+// looked up outside the proxy; the Chromium launch refuses it. Firefox sends DNS through SOCKS4
+// (SOCKS4a) and launches normally. Shared by the pre-launch check and bulk proxy assignment.
+function socks4DnsLeak({ proxyType, browserCore } = {}) {
+  if (String(proxyType || '').toUpperCase() !== 'SOCKS4') return false;
+  // Same engine choice as the launcher: only Firefox opens in Firefox, anything else in Chromium.
+  return normalizeBrowserCore(browserCore) !== BROWSER_CORE.FIREFOX;
+}
+
 // Returns [{ key, severity: 'fail' | 'warn', params, fix }]; 'fail' issues are worth stopping for.
 function preLaunchIssues(profile, ctx = {}) {
   const p = profile || {};
   const issues = [];
+
+  // Checked first: this one cannot be launched past, the browser refuses it.
+  if (p.proxy && socks4DnsLeak({ proxyType: p.proxy.type, browserCore: p.browserCore })) {
+    issues.push({ key: 'socks4Dns', severity: 'fail', params: { proxy: p.proxy.name || `${p.proxy.host}:${p.proxy.port}` }, fix: null, blocking: true });
+  }
 
   const ua = String(p.userAgent || '').trim();
   if (ua && ua !== 'Auto') {
@@ -69,4 +84,4 @@ function preLaunchIssues(profile, ctx = {}) {
   return issues;
 }
 
-module.exports = { preLaunchIssues, uaOsFamily, profileOsFamily, screenMismatch };
+module.exports = { preLaunchIssues, socks4DnsLeak, uaOsFamily, profileOsFamily, screenMismatch };
