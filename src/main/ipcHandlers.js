@@ -10599,6 +10599,8 @@ async function pushSyncIndex(engine, profiles) {
 const TRIAL_DAYS = 7;
 const GRACE_DAYS = 3; // after the trial/paid term lapses: app still works but nags, then bans
 const PLAN = Object.freeze({ id: 'monthly', amount: '5', currency: 'USD', months: 1, days: 30, label: '$5 / month' });
+// Enterprise list price in USD per month (Pro is PLAN.amount).
+const ENTERPRISE_AMOUNT = '29';
 
 // Built-in default plans. The live catalog lives in Setting['billingPlans']; the Super Admin can edit
 // it and add packages. These defaults apply when no override is saved. `pro` mirrors PLAN.
@@ -10649,7 +10651,7 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
     id: 'enterprise',
     tier: 'enterprise',
     name: 'Enterprise',
-    amount: '15',
+    amount: ENTERPRISE_AMOUNT,
     currency: PLAN.currency,
     months: 1,
     period: 'month',
