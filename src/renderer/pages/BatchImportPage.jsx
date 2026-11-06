@@ -164,10 +164,11 @@ export default function BatchImportPage() {
   // Same contract as the Profiles page: proxySource ('group:<id>' | 'provider:<key>' | 'free') maps
   // to proxyGroupId/provider or the free source so only that selection is assigned.
   const handleQuickGenerate = async (config, onProgress) => {
-    const { count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
+    const { runId, count, baseName, startIndex, groupId, newGroupName, os, randomize, proxyMode, pasted, startupUrls, proxySource, proxySpeed, proxyBlacklist } = config;
     if (onProgress) onProgress(0, count);
     const { proxySource: source, proxyGroupId, provider } = quickGenProxyFields(proxySource);
     const result = await softglazeApi.profiles.batchGenerate({
+      runId, // progress frames and Cancel are matched to this run
       count,
       prefix: baseName,
       startIndex,

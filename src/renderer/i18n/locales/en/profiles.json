@@ -59,7 +59,8 @@
     "shuffleNote": "Each selected profile swaps to another selected profile's proxy. Needs at least two proxied profiles.",
     "clearNote": "Removes the proxy from every selected profile (they connect directly).",
     "apply": "Apply",
-    "limited": "Assigned {{assigned}} - {{skipped}} profile(s) had no proxy left in the source."
+    "limited": "Assigned {{assigned}} - {{skipped}} profile(s) had no proxy left in the source.",
+    "socks4Chromium": "{{count}} profile(s) open in Chromium, which will not launch through a SOCKS4 proxy (DNS would leak). Switch them to Firefox or give them a SOCKS5 or HTTP proxy."
   },
   "tabs": {
     "general": "General",
@@ -139,6 +140,7 @@
     "optgroupPaid": "Your proxies",
     "optgroupFree": "Free proxies",
     "freeWarning": "Free proxy, run by a stranger: never use this profile to sign in to accounts, enter passwords or pay.",
+    "socks4Chromium": "Chromium cannot send DNS lookups through SOCKS4, so this profile will not open with this proxy (every site would be looked up outside it). Choose Firefox on the General tab, or use a SOCKS5 or HTTP proxy. The proxy itself is saved either way.",
     "network": "Network",
     "quicDisableTitle": "Disable HTTP/3 (QUIC)",
     "quicEnableTitle": "Enable HTTP/3 (QUIC)",

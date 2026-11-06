@@ -59,7 +59,8 @@
     "shuffleNote": "Cada perfil seleccionado cambia al proxy de otro perfil seleccionado. Requiere al menos dos perfiles con proxy.",
     "clearNote": "Quita el proxy de todos los perfiles seleccionados (se conectan directamente).",
     "apply": "Aplicar",
-    "limited": "Asignados {{assigned}} - {{skipped}} perfil(es) se quedaron sin proxy en la fuente."
+    "limited": "Asignados {{assigned}} - {{skipped}} perfil(es) se quedaron sin proxy en la fuente.",
+    "socks4Chromium": "{{count}} perfil(es) se abren en Chromium, que no se iniciará a través de un proxy SOCKS4 (el DNS se filtraría). Cámbialos a Firefox o asígnales un proxy SOCKS5 o HTTP."
   },
   "tabs": {
     "general": "General",
@@ -139,6 +140,7 @@
     "optgroupPaid": "Tus proxies",
     "optgroupFree": "Proxies gratis",
     "freeWarning": "Proxy gratuito, gestionado por un desconocido: nunca uses este perfil para iniciar sesión en cuentas, escribir contraseñas ni pagar.",
+    "socks4Chromium": "Chromium no puede enviar las consultas DNS a través de SOCKS4, así que este perfil no se abrirá con este proxy (cada sitio se consultaría fuera de él). Elige Firefox en la pestaña General o usa un proxy SOCKS5 o HTTP. El proxy se guarda de todos modos.",
     "network": "Red",
     "quicDisableTitle": "Desactivar HTTP/3 (QUIC)",
     "quicEnableTitle": "Activar HTTP/3 (QUIC)",

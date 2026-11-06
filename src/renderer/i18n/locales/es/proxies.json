@@ -376,7 +376,8 @@
     "cancel": "Cancelar",
     "saving": "Guardando...",
     "saveChanges": "Guardar cambios",
-    "createProxy": "Crear proxy"
+    "createProxy": "Crear proxy",
+    "socks4Note": "SOCKS4 funciona en perfiles de Firefox. Los perfiles de Chromium no se abrirán con él: Chromium no puede enviar las consultas DNS a través de SOCKS4, así que cada sitio se consultaría fuera del proxy. Usa SOCKS5 o HTTP para los perfiles de Chromium."
   },
   "batch": {
     "dialogTitle": "Añadir proxies en lote",

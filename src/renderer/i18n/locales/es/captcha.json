@@ -148,7 +148,8 @@
       "language": "La región del idioma {{region}} no coincide con el país del proxy {{country}}.",
       "timezone": "La zona horaria viene de este ordenador, no del proxy.",
       "webrtc": "WebRTC está en Real, lo que muestra tu IP real detrás del proxy.",
-      "proxyDead": "El proxy falló su última comprobación."
+      "proxyDead": "El proxy falló su última comprobación.",
+      "socks4Dns": "Usa el proxy SOCKS4 {{proxy}}. Chromium no puede enviar las consultas DNS a través de SOCKS4, así que cada sitio se consultaría fuera del proxy (una fuga de DNS) y el perfil no se abrirá. Ábrelo en Firefox o asígnale un proxy SOCKS5 o HTTP."
     },
     "os": {
       "windows": "Windows",
@@ -158,6 +159,7 @@
       "ios": "iOS"
     },
     "editorOnly": "(cámbialo en el editor del perfil)",
+    "blocking": "(este perfil no se abrirá hasta que lo cambies en el editor de perfiles)",
     "stopAsking": "No volver a revisar antes de abrir (se puede reactivar en Ajustes)",
     "cancel": "Cancelar",
     "launchAnyway": "Abrir de todos modos",

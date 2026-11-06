@@ -77,6 +77,17 @@ export const softglazeApi = {
     list: (params) => getSoftglazeApi().profiles.list(params),
     create: (payload) => getSoftglazeApi().profiles.create(payload),
     batchGenerate: (payload) => getSoftglazeApi().profiles.batchGenerate(payload),
+    // Older preloads lack these; Cancel then resolves to nothing and progress never arrives.
+    cancelBatchGenerate: (runId) => {
+      const api = getSoftglazeApi().profiles;
+      if (typeof api.cancelBatchGenerate !== 'function') return Promise.resolve({ cancelled: 0 });
+      return api.cancelBatchGenerate(runId);
+    },
+    onBatchGenerateProgress: (cb) => {
+      const api = getSoftglazeApi().profiles;
+      if (typeof api.onBatchGenerateProgress !== 'function') return () => {};
+      return api.onBatchGenerateProgress(cb);
+    },
     update: (payload) => getSoftglazeApi().profiles.update(payload),
     delete: (id, options) => getSoftglazeApi().profiles.delete(id, options),
     launch: (id, options) => getSoftglazeApi().profiles.launch(id, options),

@@ -11,9 +11,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Stored as TEXT in SQLite (no CHECK constraint), so adding a value needs no table rebuild. SOCKS4
+// works in Firefox profiles; the Chromium launch refuses it because Chromium resolves DNS locally
+// for SOCKS4 (see launchCheck.socks4DnsLeak).
 enum ProxyType {
   HTTP
   SOCKS5
+  SOCKS4
 }
 
 enum SystemProxyBehavior {

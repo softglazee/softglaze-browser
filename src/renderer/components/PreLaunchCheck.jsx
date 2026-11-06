@@ -20,6 +20,9 @@ export default function PreLaunchCheckModal({ items, onDecide }) {
   const cancel = () => { if (!busy) onDecide({ launch: false, fix: false, stopAsking }); };
   const { dialogRef } = useDialog({ onClose: cancel });
   const fixable = items.some((it) => it.issues.some((i) => i.fix));
+  // A blocking issue (a SOCKS4 proxy on Chromium) is refused by the browser itself, so when every
+  // profile has one there is nothing to launch anyway.
+  const launchable = items.some((it) => !it.issues.some((i) => i.blocking));
   const decide = (fix) => { setBusy(true); onDecide({ launch: true, fix, stopAsking }); };
 
   return (
@@ -54,7 +57,9 @@ export default function PreLaunchCheckModal({ items, onDecide }) {
                 {it.issues.map((issue) => (
                   <li key={issue.key}>
                     {issueText(t, issue)}
-                    {!issue.fix && <span className="text-muted-foreground/80"> {t('prelaunch.editorOnly')}</span>}
+                    {issue.blocking
+                      ? <span className="font-medium text-warning"> {t('prelaunch.blocking')}</span>
+                      : !issue.fix && <span className="text-muted-foreground/80"> {t('prelaunch.editorOnly')}</span>}
                   </li>
                 ))}
               </ul>
@@ -68,10 +73,12 @@ export default function PreLaunchCheckModal({ items, onDecide }) {
 
         <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface px-5 py-4">
           <Button size="sm" variant="ghost" disabled={busy} onClick={cancel}>{t('prelaunch.cancel')}</Button>
-          <Button size="sm" variant="secondary" disabled={busy} onClick={() => decide(false)}>
-            <Play className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('prelaunch.launchAnyway')}
-          </Button>
-          {fixable && (
+          {launchable && (
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => decide(false)}>
+              <Play className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('prelaunch.launchAnyway')}
+            </Button>
+          )}
+          {fixable && launchable && (
             <Button size="sm" variant="primary" disabled={busy} onClick={() => decide(true)}>
               {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
               {t('prelaunch.fixAndLaunch')}
