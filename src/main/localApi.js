@@ -27,6 +27,7 @@ let ai = null; // src/main/ai/index.js, set by configure()
 let readConfigFn = async () => ({ enabled: false, port: DEFAULT_PORT });
 let writeConfigFn = async () => {};
 let syncChain = Promise.resolve();
+let lastStartError = null; // why the server could not start (port in use), for the status
 const authFailures = [];
 
 function configure(deps = {}) {
@@ -158,10 +159,16 @@ async function handleRequest(req, res) {
     }
     if (!path.startsWith('/api/v1/')) return sendError(res, 404, 'NotFound', 'Unknown endpoint.');
 
-    const cfg = (await readConfigFn().catch(() => ({}))) || {};
-    if (!cfg.enabled) return sendError(res, 403, 'ApiOff', 'The Developer API is switched off in SoftGlaze (Settings > Developer API).');
+    // Each kind of token follows its own switch: Developer API tokens (sg_) need the Developer
+    // API on, SoftGlaze AI tokens (sgai_) need SoftGlaze AI on. Both go through the tool registry.
     const auth = await authenticate(req, res, 'rest');
     if (!auth) return undefined;
+    if (auth.token.kind === 'ai') {
+      if (!ai.isEnabled()) return sendError(res, 503, 'AiOff', 'SoftGlaze AI is switched off. Switch it on from the SoftGlaze AI page in the app.');
+    } else {
+      const cfg = (await readConfigFn().catch(() => ({}))) || {};
+      if (!cfg.enabled) return sendError(res, 403, 'ApiOff', 'The Developer API is switched off in SoftGlaze (Settings > Developer API).');
+    }
     const parts = path.split('/').filter(Boolean); // ['api','v1',...]
 
     // GET /api/v1/profiles?page=&pageSize=&group=&search=&status=&tag=
@@ -294,9 +301,12 @@ function sync() {
     try { cfg = (await readConfigFn()) || {}; } catch (e) { cfg = {}; }
     const port = cfg.port === 0 ? 0 : (Number(cfg.port) || DEFAULT_PORT); // 0 = any free port (tests)
     const want = Boolean(cfg.enabled) || Boolean(ai && ai.isEnabled());
-    if (!want) { if (server) await stop(); return; }
+    if (!want) { lastStartError = null; if (server) await stop(); return; }
     if (server && port !== 0 && runningPort !== port) await stop();
-    if (!server) await start(port);
+    if (!server) {
+      try { await start(port); lastStartError = null; }
+      catch (e) { lastStartError = e; throw e; }
+    }
   });
   return syncChain;
 }
@@ -332,8 +342,15 @@ async function getStatus() {
     port,
     host: HOST,
     url: `http://${HOST}:${port}`,
-    aiEnabled: Boolean(ai && ai.isEnabled())
+    aiEnabled: Boolean(ai && ai.isEnabled()),
+    error: !server && lastStartError ? startErrorMessage(lastStartError, port) : null
   };
+}
+
+function startErrorMessage(e, port) {
+  if (e && e.code === 'EADDRINUSE') return `Port ${port} is already in use by another program. Close it, or choose another port in SoftGlaze AI settings.`;
+  if (e && e.code === 'EACCES') return `SoftGlaze is not allowed to use port ${port}. Choose another port in SoftGlaze AI settings.`;
+  return `The local server could not start: ${(e && e.message) || 'unknown error'}.`;
 }
 
 // Start at boot if the Developer API or SoftGlaze AI is on. Never throws.

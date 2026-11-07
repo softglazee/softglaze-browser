@@ -118,6 +118,7 @@ async function authenticate(bearer, { transport = 'mcp' } = {}) {
         groupIds: aiTokens.groupIdsOf(row),
         preApproved: aiTokens.preApprovedOf(row),
         memberId: member.memberId,
+        memberName: member.memberName,
         lastClientName: row.lastClientName || null
       }
     }
@@ -131,14 +132,14 @@ async function resolveTokenMember(db, row) {
     const m = await db.member.findUnique({ where: { id: row.memberId } }).catch(() => null);
     if (!m) return { ok: false, status: 403, code: 'MEMBER_GONE', message: 'The member this token acts as no longer exists. Create a new token.' };
     if (m.status === 'suspended' || m.status === 'banned') return { ok: false, status: 403, code: 'MEMBER_BLOCKED', message: `The member this token acts as is ${m.status}.` };
-    return { ok: true, memberId: m.id, role: m.role };
+    return { ok: true, memberId: m.id, role: m.role, memberName: m.name || null };
   }
   const count = await db.member.count().catch(() => 0);
-  if (!count) return { ok: true, memberId: null, role: 'OWNER' };
+  if (!count) return { ok: true, memberId: null, role: 'OWNER', memberName: 'Workspace owner' };
   const owner = await db.member.findFirst({ where: { role: 'OWNER' }, orderBy: { id: 'asc' } }).catch(() => null);
   if (!owner) return { ok: false, status: 403, code: 'NO_OWNER', message: 'This token has no member and the workspace has no Owner. Create a new token.' };
   if (owner.status === 'suspended' || owner.status === 'banned') return { ok: false, status: 403, code: 'MEMBER_BLOCKED', message: `The workspace owner is ${owner.status}.` };
-  return { ok: true, memberId: owner.id, role: 'OWNER' };
+  return { ok: true, memberId: owner.id, role: 'OWNER', memberName: owner.name || null };
 }
 
 // ---- Status, enable, settings ----
@@ -159,7 +160,11 @@ async function status() {
     clients: state.mcp ? state.mcp.clients().map((c) => ({ tokenId: c.tokenId, tokenName: c.tokenName, clientName: c.clientName, lastSeenAt: c.lastSeenAt, transport: c.transport })) : [],
     pendingApprovals: state.approvals ? state.approvals.pendingCount() : 0,
     runningAiSessions,
-    lastStopAll: state.lastStop
+    lastStopAll: state.lastStop,
+    // Switched on but not listening, e.g. the port is used by another program at start-up.
+    error: isEnabled() && !api.running
+      ? (api.error || 'SoftGlaze AI is on, but its server is not running. Switch it off and on again, or choose another port.')
+      : null
   };
 }
 
@@ -265,17 +270,27 @@ function respondApproval(id, decision) {
 // ---- Audit, memories, prompts, snippets ----
 function listAudit(q) { return aiAudit.list(host().getPrisma(), q || {}); }
 
-async function memoryGet() {
-  const m = await state.memory.get();
-  return { markdown: m.markdown, updatedAt: m.updatedAt, defaultMarkdown: m.defaultMarkdown };
+// The built-in, read-only guides, shown on the AI page's Memory tab.
+function guides() {
+  return [
+    { uri: memories.URIS.howItWorks, title: 'How SoftGlaze works', markdown: memories.HOW_SOFTGLAZE_WORKS },
+    { uri: memories.URIS.acceptableUse, title: 'Acceptable use', markdown: memories.ACCEPTABLE_USE }
+  ];
 }
-async function memorySet(md) {
-  const m = await state.memory.set(md);
-  return { markdown: m.markdown, updatedAt: m.updatedAt, defaultMarkdown: m.defaultMarkdown };
+function memoryView(m) {
+  return { markdown: m.markdown, updatedAt: m.updatedAt, defaultMarkdown: m.defaultMarkdown, guides: guides() };
 }
-async function memoryReset() {
-  const m = await state.memory.reset();
-  return { markdown: m.markdown, updatedAt: m.updatedAt, defaultMarkdown: m.defaultMarkdown };
+async function memoryGet() { return memoryView(await state.memory.get()); }
+async function memorySet(md) { return memoryView(await state.memory.set(md)); }
+async function memoryReset() { return memoryView(await state.memory.reset()); }
+
+// Tools an automation token may pre-approve: operate scope only, never Expert, never anything on
+// the never-exposed list (the registry refuses those outright).
+function preApprovableTools() {
+  const names = new Set(state.registry.preApprovableNames());
+  return state.registry.describe()
+    .filter((t) => names.has(t.name))
+    .map((t) => ({ name: t.name, title: t.title, scope: t.scope, destructive: Boolean(t.annotations && t.annotations.destructiveHint) }));
 }
 
 function listPrompts() { return prompts.listPrompts(); }
@@ -320,6 +335,8 @@ module.exports = {
   memorySet,
   memoryReset,
   listPrompts,
+  guides,
+  preApprovableTools,
   bridgeInfo,
   getSnippets,
   onProfileClosed,
