@@ -13296,6 +13296,19 @@ function emitToAllWindows(channel, data) {
   try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(channel, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
 }
 
+// AI events for the window. An approval dialog goes only to a window whose signed-in member may
+// answer it: the Owner, an Admin, the Super Admin, single-user mode, or the member the token acts
+// as. Reads currentMemberId directly: this runs inside the AI call, where the actor is the token.
+function emitAiEvent(channel, data) {
+  if (channel !== 'ai:approval-requested') { emitToAllWindows(channel, data); return; }
+  const windowMemberId = currentMemberId;
+  if (windowMemberId == null || permissions.isSuperAdminId(windowMemberId)) { emitToAllWindows(channel, data); return; }
+  if (data && data.memberId != null && Number(data.memberId) === Number(windowMemberId)) { emitToAllWindows(channel, data); return; }
+  getPrisma().member.findUnique({ where: { id: windowMemberId }, select: { role: true, status: true } })
+    .then((m) => { if (m && m.status === 'active' && (m.role === 'OWNER' || m.role === 'ADMIN')) emitToAllWindows(channel, data); })
+    .catch(() => {});
+}
+
 // Where the stdio bridge lives and how to start it: the app's own executable in Node mode, so AI
 // apps that only start local commands (Claude Desktop) need no separate Node.js.
 function aiBridgeInfo() {
@@ -13314,7 +13327,7 @@ function buildAiHost() {
     getPrisma,
     readSetting,
     writeSetting,
-    emit: emitToAllWindows,
+    emit: emitAiEvent,
     appVersion,
     isWorkspaceLocked: () => Boolean(vaultLocked) || !database.isDbUnlocked(),
     getLicense,

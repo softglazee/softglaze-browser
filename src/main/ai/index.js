@@ -52,7 +52,11 @@ function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
       settings: () => state.settings,
       isEnabled: () => state.settings.enabled,
       approvals: state.approvals,
-      audit: { record: (entry) => aiAudit.record(h.getPrisma(), entry) },
+      audit: {
+        record: (entry) => {
+          try { return aiAudit.record(h.getPrisma(), entry); } catch (e) { return Promise.resolve(null); } // database locked
+        }
+      },
       memory: state.memory,
       tracker: state.tracker,
       jobs: state.jobs,
@@ -65,7 +69,7 @@ function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
     appVersion: h.appVersion,
     onClientSeen: (tokenId, clientName) => {
       if (!clientName) return;
-      aiTokens.touchToken(h.getPrisma(), { id: tokenId }, clientName).catch(() => {});
+      try { aiTokens.touchToken(h.getPrisma(), { id: tokenId }, clientName).catch(() => {}); } catch (e) { /* database locked */ }
       emit('ai:status-changed', { at: new Date().toISOString() });
     }
   });
