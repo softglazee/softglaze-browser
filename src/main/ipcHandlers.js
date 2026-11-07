@@ -77,6 +77,9 @@ const proxySecrets = require('./proxySecrets');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
+const tenantSignup = require('./tenantSignup');
+const tenantTrial = require('./tenantTrial');
+const planCatalog = require('./planCatalog');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
 const { maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
@@ -10149,9 +10152,12 @@ function otpKey(scope) {
 // The master-account bootstrap creates the first Owner and sets the vault password, so it runs only
 // at first run. Otherwise anyone with renderer access could register a new Owner and overwrite the
 // vault password. Later owners come through member management.
+// Any member refuses, from any caller. The certified Super Admin is not a member row (virtual id -1)
+// and has its own path (superAdminSetup / superLogin), so a workspace where only the Super Admin has
+// signed in can still register its first Owner. An unreadable member count refuses (fails closed).
 async function assertFirstRunSetup() {
   let memberCount = 0;
-  try { memberCount = await getPrisma().member.count(); } catch (e) { memberCount = 0; }
+  try { memberCount = await getPrisma().member.count(); } catch (e) { memberCount = Infinity; }
   const vault = await readSetting('vault', null);
   if (memberCount > 0 || (vault && vault.enabled)) {
     const err = new Error('This workspace is already set up - registration is only available on first run.');
@@ -10164,6 +10170,18 @@ async function accountSendOtp(payload) {
   await assertFirstRunSetup();
   const input = requireObject(payload);
   const email = requiredString(input.email, 'Email').toLowerCase();
+  // Tenant builds: our licensing server emails the code (never shown here) and refuses disposable or
+  // undeliverable addresses. Marketing consent is sent only when the box was ticked.
+  if (tenantConfig().enabled) {
+    return tenantSignup.startVerification({
+      ensureInstall: ensureBackendInstall,
+      api: licenseClient.api,
+      email,
+      name: `${String(input.firstName || '').trim()} ${String(input.lastName || '').trim()}`.trim(),
+      consentMarketing: input.consentMarketing === true,
+      lang: input.lang
+    });
+  }
   const code = String(crypto.randomInt(100000, 1000000));
   const { salt, hash } = hashSecret(code);
   await writeSetting(otpKey(`reg:${email}`), { email, salt, hash, expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0 });
@@ -10204,14 +10222,21 @@ async function accountRegister(payload) {
 
   // 1) Verify the OTP without clearing it yet.
   const key = otpKey(`reg:${email}`);
-  const rec = await readSetting(key, null);
-  if (!rec || !rec.hash) throw new Error('No verification code was requested.');
-  if (rec.email !== email) throw new Error('Email does not match the requested code.');
-  if (Date.now() > Number(rec.expiresAt || 0)) { await writeSetting(key, null); throw new Error('Verification code expired. Request a new one.'); }
-  if (Number(rec.attempts || 0) >= 6) { await writeSetting(key, null); throw new Error('Too many attempts. Request a new code.'); }
-  if (!verifySecret(code, rec.salt, rec.hash)) {
-    await writeSetting(key, { ...rec, attempts: Number(rec.attempts || 0) + 1 });
-    throw new Error('Incorrect code.');
+  let serverCheck = null;
+  if (tenantConfig().enabled) {
+    // Tenant builds: the code was emailed by our licensing server, which checks it and links this
+    // install to the verified customer.
+    serverCheck = await tenantSignup.checkVerification({ ensureInstall: ensureBackendInstall, api: licenseClient.api, email, code });
+  } else {
+    const rec = await readSetting(key, null);
+    if (!rec || !rec.hash) throw new Error('No verification code was requested.');
+    if (rec.email !== email) throw new Error('Email does not match the requested code.');
+    if (Date.now() > Number(rec.expiresAt || 0)) { await writeSetting(key, null); throw new Error('Verification code expired. Request a new one.'); }
+    if (Number(rec.attempts || 0) >= 6) { await writeSetting(key, null); throw new Error('Too many attempts. Request a new code.'); }
+    if (!verifySecret(code, rec.salt, rec.hash)) {
+      await writeSetting(key, { ...rec, attempts: Number(rec.attempts || 0) + 1 });
+      throw new Error('Incorrect code.');
+    }
   }
 
   // 2) Create the master account as OWNER (always - this is the workspace owner).
@@ -10242,6 +10267,7 @@ async function accountRegister(payload) {
   await writeSetting('account', {
     firstName, lastName, email, phone, verified: true, createdAt: new Date().toISOString()
   });
+  if (serverCheck) await writeSetting('tenantCustomer', { email, customerId: serverCheck.customerId, verifiedAt: new Date().toISOString() }).catch(() => {});
 
   // 6) Everything succeeded - now it is safe to consume the OTP.
   await writeSetting(key, null);
@@ -10869,12 +10895,30 @@ async function findPlanOrThrow(planId) {
   return plan;
 }
 
+// Tenant builds read plans and prices from the licensing server (planCatalog.js: cached for an hour,
+// the built-in DEFAULT_BILLING_PLANS when it cannot be reached). Base builds keep the local catalog.
+const serverPlanCatalog = planCatalog.createPlanCatalog({ fetchPlans: () => licenseClient.api.plans() });
+async function effectiveBillingPlans() {
+  if (!tenantConfig().enabled) return readBillingPlans();
+  const fallback = DEFAULT_BILLING_PLANS.map((p, i) => normalizePlan(p, i));
+  return (await serverPlanCatalog.get({ fallback })).plans;
+}
+
+// Tenant checkout: a paid plan from the server's list (its key, exact spelling); no id = the first one.
+async function findTenantPlanOrThrow(planId) {
+  const requested = String(planId == null ? '' : planId).trim().toLowerCase();
+  const paid = (await effectiveBillingPlans()).filter((p) => p.active && p.kind !== 'trial');
+  const plan = requested ? paid.find((p) => String(p.id).toLowerCase() === requested) : paid[0];
+  if (!plan) throw new Error('That plan is no longer available - refresh and choose a current plan.');
+  return plan;
+}
+
 // Plans plus the viewer's tier and state, so the Billing page can mark the active plan and pick
 // its CTA. `canManage` reveals the plan editor, subscribers and assign controls.
 async function getBillingPlans() {
   const lic = await getLicense();
   const me = await getActiveMember();
-  const all = await readBillingPlans();
+  const all = await effectiveBillingPlans();
   return {
     plans: all.filter((p) => p.active),
     currency: PLAN.currency,
@@ -11022,15 +11066,35 @@ async function resolveLicenseOwnerId() {
 
 async function ensureLicense(ownerId) {
   const db = getPrisma();
+  // Tenant builds: record the trials that predate server trials before any new licence row exists.
+  if (tenantConfig().enabled) await tenantTrialCutover();
   let lic = await db.license.findFirst({ where: { ownerMemberId: ownerId ?? null }, orderBy: { createdAt: 'desc' } });
   if (!lic) {
     // New workspaces start on the full-access free trial so every feature can be
-    // tested out of the box. Tier 'enterprise' for the trial term.
+    // tested out of the box. Tier 'enterprise' for the trial term. In tenant builds the trial comes
+    // from the licensing server instead (startTrial), so the row starts with no trial.
     lic = await db.license.create({
-      data: { ownerMemberId: ownerId ?? null, type: 'trial', tier: 'enterprise', status: 'active', trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86400000) }
+      data: { ownerMemberId: ownerId ?? null, type: 'trial', tier: 'enterprise', status: 'active', trialEndsAt: tenantConfig().enabled ? null : new Date(Date.now() + TRIAL_DAYS * 86400000) }
     });
   }
   return lic;
+}
+
+// Tenant builds: Setting[tenantTrial.CUTOVER_SETTING], written once, lists the local trials that were
+// already running or used when trials moved to the server; only those are honoured from the local row.
+async function tenantTrialCutover() {
+  // Read directly (readSetting hides errors as "missing", which would re-record later trials as old).
+  const row = await getPrisma().setting.findUnique({ where: { key: tenantTrial.CUTOVER_SETTING } });
+  if (row) {
+    let saved = null;
+    try { saved = JSON.parse(row.value); } catch (_) { saved = null; }
+    // An unreadable record honours no local trial (fails closed).
+    return saved && typeof saved === 'object' && saved.legacy && typeof saved.legacy === 'object' ? saved : { v: 1, at: null, legacy: {} };
+  }
+  const rows = await getPrisma().license.findMany({ where: { type: 'trial' }, select: { id: true, type: true, trialEndsAt: true } });
+  const cut = tenantTrial.buildCutover(rows, new Date().toISOString());
+  await writeSetting(tenantTrial.CUTOVER_SETTING, cut);
+  return cut;
 }
 
 // Best-effort clock-tamper clamp persisted in Setting. A rolled-back system clock
@@ -11072,6 +11136,16 @@ async function syncOwnerBanState(ownerId, licenseBanned) {
 // The effective ban is a licence lapse or a Super Admin block on the owner.
 async function licenseView(lic) {
   const { effectiveNow, tampered } = await clampLicenseNow();
+  // Tenant builds: a local trial row grants nothing by itself (only the signed trial lease, read in
+  // getLicense, does), except a trial that was already running before trials moved to the server.
+  if (tenantConfig().enabled) {
+    const d = tenantTrial.localDecision(lic, await tenantTrialCutover(), effectiveNow);
+    if (d.kind === 'none') {
+      const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, false);
+      return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: ownerStatus === 'banned', clockTamper: tampered, plan: PLAN });
+    }
+    lic = d.lic;
+  }
   const st = licensePolicy.computeLicenseState({ type: lic.type, trialEndsAt: lic.trialEndsAt, now: effectiveNow, graceDays: GRACE_DAYS });
   const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, st.isBanned);
   const banned = st.isBanned || ownerStatus === 'banned';
@@ -11180,16 +11254,21 @@ async function refreshBackendLease() {
     if (!install) return null;
     const res = await licenseClient.api.license({ installId: install.installId, installSecret: install.installSecret });
     if (!res || !res.lease) {
-      await writeSetting('backendLease', null).catch(() => {}); // no active license server-side
+      // No active licence server-side. A still-valid trial lease is kept: it ends on its own, and this
+      // endpoint may list only paid licences.
+      const cur = await getBackendEntitlement();
+      if (!(cur && cur.type === 'trial')) await writeSetting('backendLease', null).catch(() => {});
       return null;
     }
     const { effectiveNow } = await clampLicenseNow();
     const ent = licenseClient.verifyLease(res.lease, { nowMs: effectiveNow });
     if (!ent) return null;
+    // A trial lease stays a trial (the signed claim, or the server marking it; a mark can only downgrade).
+    const type = ent.type === 'trial' || res.type === 'trial' ? 'trial' : 'paid';
     await writeSetting('backendLease', secretStore.seal(JSON.stringify({
-      token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, fetchedAt: Date.now()
+      token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, type, fetchedAt: Date.now()
     })));
-    return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: res.currentPeriodEnd || null };
+    return { tier: ent.tier, type, exp: ent.exp, currentPeriodEnd: res.currentPeriodEnd || null };
   } catch (e) { return null; } // offline / backend down → keep using the cached lease
 }
 
@@ -11206,12 +11285,14 @@ async function getBackendEntitlement() {
   const { effectiveNow } = await clampLicenseNow();
   const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow });
   if (!ent) return null;
-  return { tier: ent.tier, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
+  const type = ent.type === 'trial' || cached.type === 'trial' ? 'trial' : 'paid';
+  return { tier: ent.tier, type, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
 }
 
 // Render a "paid" license view from a verified backend entitlement. endsAt is the
-// subscription period end (not the short lease exp).
+// subscription period end (not the short lease exp). A trial lease renders as the free trial.
 function licenseViewFromLease(ent) {
+  if (ent && ent.type === 'trial') return tenantTrial.trialViewFromLease(ent, Date.now(), PLAN);
   const endsAt = ent.currentPeriodEnd || (ent.exp ? new Date(ent.exp * 1000).toISOString() : null);
   return {
     type: 'paid', tier: ent.tier === 'enterprise' ? 'enterprise' : 'pro',
@@ -11230,7 +11311,7 @@ async function backendLicenseInfo() {
   const ent = await getBackendEntitlement();
   return {
     enabled: true, tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, installId: installId || null,
-    lease: ent ? { tier: ent.tier, exp: ent.exp, currentPeriodEnd: ent.currentPeriodEnd } : null
+    lease: ent ? { tier: ent.tier, type: ent.type, exp: ent.exp, currentPeriodEnd: ent.currentPeriodEnd } : null
   };
 }
 
@@ -11272,7 +11353,11 @@ async function getLicense() {
   const issueOf = () => ((licenseClient.licenseIssue && licenseClient.licenseIssue()) || {}).reason || null;
   if (tenantConfig().enabled) {
     const ent = await getBackendEntitlement();
-    if (ent && issueOf() !== 'machine_mismatch') return withPlanLimits({ ...licenseViewFromLease(ent), reason: issueOf() });
+    if (ent && issueOf() !== 'machine_mismatch') {
+      // A valid lease lifts a licence-lapse ban left by the local trial (an admin block stays).
+      await syncOwnerBanState(await resolveLicenseOwnerId(), false);
+      return withPlanLimits({ ...licenseViewFromLease(ent), reason: issueOf() });
+    }
   }
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
@@ -11294,11 +11379,15 @@ function withLicenseReason(view, reason) {
 async function assertNotBanned() {
   const m = await getActiveMember();
   if (await isCertifiedSuperAdmin(m)) return;
+  // Tenant builds: a verified lease on this machine (paid or trial) is the licence.
+  if (tenantConfig().enabled && await getBackendEntitlement() && ((licenseClient.licenseIssue() || {}).reason !== 'machine_mismatch')) return;
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
   const view = await licenseView(lic);
   if (view.isBanned) {
-    const e = new Error('Your subscription has ended - renew it to launch profiles.');
+    const e = new Error(view.needsPlan
+      ? 'Start the free trial or choose a plan to launch profiles.'
+      : 'Your subscription has ended - renew it to launch profiles.');
     e.code = 'LICENSE_BANNED';
     throw e;
   }
@@ -11313,7 +11402,8 @@ async function redeemPurchaseCode(payload) {
     if (!install) throw new Error('Could not register this install with the licensing server.');
     await licenseClient.api.redeem({ code: code.trim().toUpperCase(), installId: install.installId, installSecret: install.installSecret });
     const ent = await refreshBackendLease();
-    if (!ent) throw new Error('Code accepted, but no active license yet - try again in a moment.');
+    // A trial lease still in force is not the redeemed licence.
+    if (!ent || ent.type === 'trial') throw new Error('Code accepted, but no active license yet - try again in a moment.');
     return licenseViewFromLease(ent);
   }
   // No offline fallback: codes are issued and checked server-side (see payments.js), since a secret
@@ -11420,6 +11510,8 @@ async function startTrial(payload) {
     const err = new Error('Only the workspace Owner can start the free trial.'); err.code = 'FORBIDDEN'; throw err;
   }
   const ownerId = (isSuper && input.ownerId != null && input.ownerId !== '') ? parseId(input.ownerId) : await resolveLicenseOwnerId();
+  // Tenant builds: the licensing server's trial ledger decides (one trial per computer and email).
+  if (!isSuper && tenantConfig().enabled) return startTenantTrial(ownerId, input);
   const lic = await ensureLicense(ownerId);
   const view = await licenseView(lic);
   if (!isSuper && view.isPaid) throw new Error('You are on a paid plan - the free trial does not apply.');
@@ -11437,6 +11529,49 @@ async function startTrial(payload) {
   await syncOwnerBanState(ownerId, false);
   await logAudit('license.trial-start', { detail: { ownerId, days, bySuperAdmin: isSuper } });
   return licenseView(updated);
+}
+
+// Tenant builds: starts the trial on the licensing server and stores its signed lease the way
+// refreshBackendLease does, so the plan shows Trial (Enterprise limits, 3 seats) to the server's end
+// date. The local row records that end (the trial counts as used; grace and lock follow it) but never
+// grants the trial by itself. input.code confirms the owner's email first when the server asks for it.
+async function startTenantTrial(ownerId, input) {
+  const view = await getLicense();
+  if (view.isPaid) throw new Error('You are on a paid plan - the free trial does not apply.');
+  if (view.isTrial) return view; // already running: never extended by a click
+  const lic = await ensureLicense(ownerId);
+  const { effectiveNow } = await clampLicenseNow();
+  // A trial from before server trials (or a paid term) used this computer's trial. Anything else the
+  // server decides every time, so a trial an owner resets in the admin can start again.
+  const local = tenantTrial.localDecision(lic, await tenantTrialCutover(), effectiveNow);
+  if (local.legacy || lic.type === 'paid' || lic.purchaseCode) throw tenantTrialUsedError();
+  const owner = ownerId != null ? await getPrisma().member.findUnique({ where: { id: ownerId } }).catch(() => null) : null;
+  const account = (await readSetting('account', null)) || {};
+  const r = await tenantTrial.startServerTrial({
+    ensureInstall: ensureBackendInstall,
+    api: licenseClient.api,
+    verifyLease: licenseClient.verifyLease,
+    nowMs: effectiveNow,
+    email: (owner && owner.email) || account.email || '',
+    code: optionalString(input && input.code)
+  });
+  await writeSetting('backendLease', secretStore.seal(JSON.stringify({
+    token: r.token, currentPeriodEnd: r.endsAt, tier: r.tier, type: 'trial', fetchedAt: Date.now()
+  })));
+  await getPrisma().license.update({
+    where: { id: lic.id },
+    data: { type: 'trial', status: 'active', tier: r.tier, purchaseCode: null, trialEndsAt: new Date(r.endsAt) }
+  });
+  await syncOwnerBanState(ownerId, false);
+  await logAudit('license.trial-start', { detail: { ownerId, endsAt: r.endsAt, server: true } });
+  return getLicense();
+}
+
+// This computer's trial already ran (a local trial from before server trials) or a plan was bought.
+function tenantTrialUsedError() {
+  const err = new Error('A free trial has already been used on this computer or email. Choose a plan or enter a purchase code.');
+  err.code = 'TRIAL_USED';
+  return err;
 }
 
 // Super-Admin: set a license's exact state - type (trial/paid), tier (pro/enterprise),
@@ -11648,7 +11783,7 @@ async function startCheckout(payload) {
   await requirePurchaser('purchase a subscription');
   const input = (payload && typeof payload === 'object') ? payload : {};
   if (tenantConfig().enabled) {
-    const plan = await findPlanOrThrow(input.planId);
+    const plan = await findTenantPlanOrThrow(input.planId);
     // Default to this tenant's first provider (the trial-ended screen sends none); never let the
     // server fall back to a provider the tenant hasn't switched on.
     const offered = tenantConfig().checkoutProviders;
@@ -11676,7 +11811,8 @@ async function pollCheckout(payload) {
   const input = requireObject(payload || {});
   if (tenantConfig().enabled) {
     const ent = await refreshBackendLease();
-    if (ent) return { status: 'paid', paid: true, license: licenseViewFromLease(ent) };
+    // A running trial lease is not a payment.
+    if (ent && ent.type !== 'trial') return { status: 'paid', paid: true, license: licenseViewFromLease(ent) };
     return { status: 'pending', paid: false };
   }
   const pending = (await readSetting('pendingCheckout', null)) || {};

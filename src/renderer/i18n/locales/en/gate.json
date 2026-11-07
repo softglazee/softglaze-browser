@@ -82,7 +82,10 @@
     "continue": "Continue",
     "storedLocally": "Stored locally and encrypted on this device",
     "haveAccount": "Already have an account?",
-    "logIn": "Log in"
+    "logIn": "Log in",
+    "consent": "Email me product news and tips",
+    "consentNote": "Your code, trial reminders and account emails are always sent. Product news only if you tick the box.",
+    "checkedByServer": "We email you a code to confirm this address. Your profiles and data stay on this device."
   },
   "verify": {
     "title": "Verify your email",
@@ -92,7 +95,8 @@
     "devModeSuffix": ".",
     "verifyCreate": "Verify & create account",
     "resendIn": "Resend code in {{count}}s",
-    "resend": "Resend code"
+    "resend": "Resend code",
+    "checkSpam": "The code can take a minute to arrive. Check your spam folder if you don't see it."
   },
   "plan": {
     "title": "You're all set",
@@ -103,7 +107,14 @@
     "startTrialSubtitle": "No payment now - explore everything.",
     "activatePaid": "Activate a paid plan now",
     "haveCode": "Have a purchase code?",
-    "skip": "Skip - start the trial"
+    "skip": "Skip - start the trial",
+    "tenantTitle": "Your account is ready",
+    "tenantSubtitle": "Start your free trial, or choose a plan.",
+    "tenantTrialSubtitle": "Full access, no payment. One free trial per computer and email.",
+    "choosePlan": "Or choose a plan",
+    "verifyTitle": "Confirm your email",
+    "verifyBody": "We sent a 6-digit code to {{email}}. Enter it to start the free trial.",
+    "verifyStart": "Confirm and start the trial"
   },
   "login": {
     "welcomeBackNamed": "Welcome back, {{name}}",
@@ -207,6 +218,23 @@
     "dbStillLocked": "The database is still locked - please try again.",
     "dbMissing": "The encrypted database file is missing. Restore from a workspace backup to recover.",
     "dbUnlockFailed": "Incorrect password - or the file is corrupted.",
-    "couldNotUnlockDb": "Could not unlock the database."
+    "couldNotUnlockDb": "Could not unlock the database.",
+    "trialFailed": "Could not start the free trial."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Enter a valid email address.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Please use a permanent email address.",
+    "SIGNUP_NO_MX": "We couldn't find a mail server for that address.",
+    "SIGNUP_BAD_CODE": "That code isn't right or has expired. Check the email or ask for a new code.",
+    "SIGNUP_OFFLINE": "Connect to the internet to create your account.",
+    "SIGNUP_FAILED": "We couldn't check that email right now. Try again in a few minutes.",
+    "RATE_LIMITED": "Too many attempts, try again in a few minutes.",
+    "TRIAL_USED": "A free trial has already been used on this computer or email. Choose a plan or enter a purchase code.",
+    "TRIAL_OFFLINE": "Connect to the internet to start the free trial.",
+    "TRIAL_VERIFY_EMAIL": "Confirm your email address to start the free trial. We sent you a 6-digit code.",
+    "TRIAL_NO_EMAIL": "Add an email address to the owner account first, then start the free trial.",
+    "TRIAL_FAILED": "The free trial couldn't be started right now. Try again in a few minutes.",
+    "SERVER_UNAVAILABLE": "Our licensing server isn't answering right now. Try again in a few minutes.",
+    "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
   }
 }

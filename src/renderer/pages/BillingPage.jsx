@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import billingEn from '@/i18n/locales/en/billing.json';
+import { errorText } from '@/lib/signupFlow.mjs';
 
 // The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
 // show in the UI language through billing.planText, matched on the exact English text; anything the
@@ -103,7 +104,7 @@ export default function BillingPage() {
       const d = lic?.daysLeftTrial ?? '';
       setMsg(d ? t('trial.startedWithDays', { days: d }) : t('trial.started'));
       load();
-    } catch (e) { setErr(e.message || t('trial.errors.failed')); }
+    } catch (e) { setErr(errorText(t, e, 'trial.errors.failed')); }
     finally { setBusy(''); }
   }
 
@@ -195,9 +196,11 @@ export default function BillingPage() {
         <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg" style={{ background: 'color-mix(in srgb, #10b981 8%, transparent)', border: '1px solid color-mix(in srgb, #10b981 22%, transparent)' }}>
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="text-[12.5px] text-foreground">
-            {backend.lease
-              ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
-              : <>{t('backend.noLicense')}</>}
+            {backend.lease && backend.lease.type === 'trial'
+              ? <>{t('backend.trialVerified')}{backend.lease.currentPeriodEnd ? ` · ${t('backend.trialEnds', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
+              : backend.lease
+                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
+                : <>{t('backend.noLicense')}</>}
           </span>
           <span className="ml-auto text-[10.5px] text-muted-foreground font-mono">{backend.tenantId}</span>
         </div>
