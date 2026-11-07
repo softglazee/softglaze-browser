@@ -7,12 +7,18 @@ of truth** for who has paid and what they're entitled to — the desktop app onl
 > **Status.** Tenant provisioning, hosted checkout and signature-verified webhooks
 > for **Stripe, PayPal and Cryptomus**, Ed25519 license leases, backend-issued redeem
 > codes, per-tenant key rotation and recurring Stripe subscriptions are all
-> implemented and covered by `npm test` (23 unit tests) plus an end-to-end check
-> against a running server (`scripts/e2e-local.js`, 18 checks). What is **not** done
-> is operational: this is not hosted anywhere, no tenant's provider keys are set, and
-> the recurring-subscription path has not been exercised against a live Stripe test
-> account. It also sends no email, so a purchase made anywhere other than inside the
-> app has no way to reach the buyer.
+> implemented and covered by `npm test` plus an end-to-end check against a running
+> server (`scripts/e2e-local.js`). Live at https://api.softglaze.com since October 2026.
+> The recurring-subscription path has not been exercised against a live Stripe test account.
+>
+> **November 2026:** customers (one per person, Gmail aliases folded), email verification
+> by us, the server-side trial ledger (one trial per machine, per email and at most 2 per
+> network in 30 days), plans as the single price source (`GET /v1/plans/public`), the email
+> engine (templates, automations, outbox with retries and a daily cap, one-click unsubscribe),
+> the admin API (`/v1/admin/*`) with investor metrics and an audit log, and the cron
+> (`scripts/run-cron.js`). Endpoints, parameters and the metric maths: **docs/ADMIN-API.md**.
+> How to deploy it, the cron command and the owner's one-time steps: **docs/DEPLOY.md**.
+> An opt-in test runs the whole flow on a real MySQL/MariaDB: `test/integration.mysql.test.js`.
 
 ## Why this exists
 The desktop app alone can't enforce licensing: a shipped signing secret can be
@@ -206,6 +212,11 @@ Legitimate PC change, two ways:
 | POST | `/v1/tenant/codes` | tenant API key | mint activation codes |
 | POST | `/v1/tenant/rotate-key` | tenant API key | rotate the tenant Ed25519 keypair |
 | POST | `/v1/tenant/installs/:installId/reset-machine` | tenant API key | clear an install's machine binding |
+| POST | `/v1/account/verify/start`, `/v1/account/verify/check` | install secret | email verification by us (6-digit code) |
+| POST | `/v1/trial/start` | install secret + machine hash | server-side trial: signed trial lease or 409 `trial_used` |
+| GET | `/v1/plans/public?tenantId=` | none (CORS open, 60 s cache) | active plans and prices (cents) |
+| GET/POST | `/v1/email/unsubscribe?t=` | signed token | unsubscribe page and RFC 8058 one-click |
+| * | `/v1/admin/*` | tenant API key or scoped admin key | customers, licences, payments, plans, email, metrics, audit: docs/ADMIN-API.md |
 
 ### Provider credentials (`/v1/tenant/payment-config`)
 All keys are sealed at rest; configure the webhook URL it returns in the provider dashboard.
@@ -294,8 +305,9 @@ deliberately, and ship the new public key in a build first.
   that cannot be verified offline, so treat it as untested until it has been.
 - Decide how a buyer who paid outside the app receives their licence. Right now a
   licence binds to an `installId` and leases are issued only for that install, so
-  the working purchase flow is in-app. A web purchase would need this server to
-  email an activation code, and it has no mail transport.
+  the working purchase flow is in-app. For sales outside the app, an admin records the
+  payment and grants the licence to the customer (`POST /v1/admin/payments` with `grant`);
+  it attaches to the customer's PC when they verify their email in the app.
 
 ## What this does NOT do
 Any client-side license can ultimately be patched out of an open desktop binary.

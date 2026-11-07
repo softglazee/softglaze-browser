@@ -12,6 +12,8 @@ const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
 // opts.mid: the install's machine hash. The desktop refuses a lease whose mid is not its own,
 // so a copied lease does not activate elsewhere.
+// opts.type: 'paid' (default) or 'trial'. A trial lease is the same signed format with type 'trial',
+// plan 'trial' and currentPeriodEnd = the trial's end, so the app verifies it offline the same way.
 function issueLease(tenant, license, nowMs, opts = {}) {
   const now = Number.isFinite(nowMs) ? nowMs : Date.now();
   const periodEnd = license.currentPeriodEnd ? new Date(license.currentPeriodEnd).getTime() : 0;
@@ -19,6 +21,7 @@ function issueLease(tenant, license, nowMs, opts = {}) {
   const exp = periodEnd ? Math.min(cap, periodEnd) : cap;
   const payload = {
     v: 1,
+    type: opts.type === 'trial' ? 'trial' : 'paid',
     tenant: tenant.id,
     sub: license.installId || null,
     account: license.account || null,
@@ -32,7 +35,7 @@ function issueLease(tenant, license, nowMs, opts = {}) {
   const payloadB64 = b64url(JSON.stringify(payload));
   const privatePem = open(tenant.privateKeySealed);
   const sig = signEd25519(privatePem, Buffer.from(payloadB64));
-  return { token: `${payloadB64}.${b64url(sig)}`, exp: payload.exp, tier: payload.tier };
+  return { token: `${payloadB64}.${b64url(sig)}`, exp: payload.exp, tier: payload.tier, type: payload.type };
 }
 
 module.exports = { issueLease };

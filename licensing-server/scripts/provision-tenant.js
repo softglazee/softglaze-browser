@@ -9,6 +9,7 @@ const prisma = require('../src/db');
 const { generateTenantKeypair, newApiKey, sha256Hex } = require('../src/crypto/keys');
 const { seal } = require('../src/crypto/secrets');
 const { publicBaseUrl } = require('../src/env');
+const { ensureDefaultTemplates } = require('../src/email/templates');
 
 async function main() {
   const name = process.argv.slice(2).join(' ').trim();
@@ -27,6 +28,8 @@ async function main() {
       apiKeyHash: sha256Hex(apiKey)
     }
   });
+  // The built-in email templates (verification code, trial emails), editable in the admin.
+  await ensureDefaultTemplates(prisma, tenant.id);
 
   const config = { tenantId: tenant.id, apiBaseUrl: publicBaseUrl, publicKeyPem };
   const outDir = path.join(__dirname, '..', 'tenants');

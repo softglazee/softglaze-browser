@@ -6,6 +6,7 @@ const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
 const { authenticateInstall } = require('../installAuth');
+const { syncInstall } = require('../customers/sync');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -48,6 +49,8 @@ router.post('/', asyncHandler(async (req, res) => {
   }
   // (the code was already marked redeemed by the atomic claim above)
 
+  // Best effort: the customer record (status paid, paid until) follows the new licence.
+  await syncInstall(prisma, tenant.id, install.id).catch((e) => console.warn('[redeem] customer sync skipped:', e && e.message));
   res.json({ ok: true, tier: rec.tier, months: rec.months });
 }));
 

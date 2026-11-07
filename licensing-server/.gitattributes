@@ -1,0 +1,6 @@
+# Files that run or are applied on the Linux host keep LF even in a Windows checkout: shell scripts
+# (cron, migrations), and the November 2026 migrations, whose seeded email copy would otherwise be
+# stored with CRLF. The migrations applied before them are left as they are.
+*.sh text eol=lf
+prisma/migrations/20261107120000_customers_trials_email/migration.sql text eol=lf
+prisma/migrations/20261107120100_backfill_customers_and_seed/migration.sql text eol=lf

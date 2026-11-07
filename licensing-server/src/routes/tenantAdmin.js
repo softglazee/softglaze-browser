@@ -11,6 +11,7 @@ const { generateTenantKeypair } = require('../crypto/keys');
 const { publicBaseUrl } = require('../env');
 const { buildProviderSecrets } = require('../providers/configFields');
 const { resetMachine } = require('../machineBinding');
+const { upsertPlan } = require('../plans/service');
 
 const router = express.Router();
 router.use(tenantApiAuth);
@@ -47,11 +48,9 @@ router.post('/plans', asyncHandler(async (req, res) => {
     recurring: Boolean(b.recurring),
     active: b.active === undefined ? true : Boolean(b.active)
   };
-  const plan = await prisma.plan.upsert({
-    where: { tenantId_key: { tenantId: req.tenant.id, key: String(b.key) } },
-    update: data,
-    create: { tenantId: req.tenant.id, key: String(b.key), ...data }
-  });
+  // Through the plan service so price changes land in the price history and the public price cache
+  // refreshes at once.
+  const { plan } = await upsertPlan(prisma, req.tenant.id, { key: String(b.key), ...data }, { actor: 'tenant-key' });
   res.json(plan);
 }));
 

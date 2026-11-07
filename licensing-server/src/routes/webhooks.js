@@ -9,6 +9,7 @@ const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
 const { provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund } = require('../licensing');
+const { syncRecentLicences } = require('../customers/sync');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -54,6 +55,9 @@ async function handleOnce(tenantId, provider, eventId, type, prepare) {
     if (id) await prisma.webhookEvent.delete({ where: { id } }).catch(() => {});
     throw e;
   }
+  // After the commit, outside the provider's response path: bring the customer records up to date
+  // (status paid, paid until). Best effort; the cron reconcile catches anything missed.
+  setImmediate(() => { syncRecentLicences(prisma, tenantId).catch(() => {}); });
   return true;
 }
 
