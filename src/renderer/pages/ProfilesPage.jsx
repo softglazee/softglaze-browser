@@ -87,11 +87,13 @@ const ButtonTabs = ({ value, onChange, options, className = '' }) => (
   </div>
 );
 
-const ToggleSwitch = ({ checked, onChange }) => (
+const ToggleSwitch = ({ checked, onChange, labelledBy, describedBy }) => (
   <button
     type="button"
     role="switch"
     aria-checked={checked}
+    aria-labelledby={labelledBy}
+    aria-describedby={describedBy}
     onClick={() => onChange(!checked)}
     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${checked ? 'bg-primary' : 'bg-muted-dark'}`}
   >
@@ -1727,9 +1729,15 @@ export default function ProfilesPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                    <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
-                      <span className="text-foreground text-sm font-medium">{t('fp.canvasNoise')}</span>
-                      <ToggleSwitch checked={pd.canvasNoise} onChange={v => updatePd('canvasNoise', v)} />
+                    {/* The standard engine leaves 2D canvas alone on purpose (JS canvas tampering is
+                        detectable, see browserEngine.js); only fingerprint-chromium changes canvas,
+                        from the seed. The stored value is kept as-is for import/export. */}
+                    <div className="flex items-center justify-between gap-4 bg-background p-4 rounded border border-border shadow-sm">
+                      <div className="min-w-0">
+                        <span id="fp-canvas-noise-label" className="text-foreground text-sm font-medium">{t('fp.canvasNoise')}</span>
+                        <p id="fp-canvas-noise-help" className="text-muted text-xs mt-1 leading-relaxed">{t('fp.canvasNoiseDesc')}</p>
+                      </div>
+                      <ToggleSwitch checked={pd.canvasNoise} onChange={v => updatePd('canvasNoise', v)} labelledBy="fp-canvas-noise-label" describedBy="fp-canvas-noise-help" />
                     </div>
                     <div className="flex items-center justify-between bg-background p-4 rounded border border-border shadow-sm">
                       <span className="text-foreground text-sm font-medium">{t('fp.webglImageNoise')}</span>
@@ -2055,6 +2063,7 @@ export default function ProfilesPage() {
 
                     <EnvHead>{t('env.headNoise')}</EnvHead>
                     <EnvRow k={t('env.canvas')} v={noiseTag(pd.canvasNoise)} />
+                    <p className="text-[11px] text-muted leading-snug pb-1">{t('env.canvasEngineNote')}</p>
                     <EnvRow k={t('env.webglImage')} v={noiseTag(pd.webglImageNoise)} />
                     <EnvRow k={t('env.audioContext')} v={noiseTag(pd.audioContextNoise)} />
                     <EnvRow k={t('env.clientRects')} v={noiseTag(pd.clientRectsNoise)} />

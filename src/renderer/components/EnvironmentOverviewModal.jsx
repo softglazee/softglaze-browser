@@ -32,11 +32,14 @@ function buildUa(p) {
   return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/‹engine›.0.0.0 Safari/537.36`;
 }
 
-function Row({ label, value, mono, accent }) {
+function Row({ label, value, mono, accent, note }) {
   return (
     <div className="flex gap-3 py-2 border-b border-border/50 last:border-b-0 text-sm">
       <div className="w-40 shrink-0 text-muted">{label}</div>
-      <div className={`flex-1 break-all ${accent || 'text-foreground'} ${mono ? 'font-mono text-xs' : 'font-medium'}`}>{value ?? '-'}</div>
+      <div className="flex-1 min-w-0">
+        <div className={`break-all ${accent || 'text-foreground'} ${mono ? 'font-mono text-xs' : 'font-medium'}`}>{value ?? '-'}</div>
+        {note && <p className="mt-0.5 text-xs text-muted leading-snug">{note}</p>}
+      </div>
     </div>
   );
 }
@@ -110,7 +113,8 @@ export default function EnvironmentOverviewModal({ profile, onClose }) {
           <Section icon={Monitor} title={t('envOverview.sectionScreen')}>
             <Row label={t('envOverview.rowResolution')} value={res} />
             <Row label={t('envOverview.rowFonts')} value={p.fontsType || t('envOverview.valDefault')} />
-            <Row label={t('envOverview.rowCanvas')} value={noise(t, p.canvasNoise)} accent={p.canvasNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
+            {/* No green/amber here: on the standard engine 2D canvas is the same either way. */}
+            <Row label={t('envOverview.rowCanvas')} value={noise(t, p.canvasNoise)} note={t('envOverview.canvasEngineNote')} />
             <Row label={t('envOverview.rowWebglImage')} value={noise(t, p.webglImageNoise)} accent={p.webglImageNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
             <Row label={t('envOverview.rowAudioContext')} value={noise(t, p.audioContextNoise)} accent={p.audioContextNoise === false ? 'text-amber-400' : 'text-emerald-400'} />
             <Row label={t('envOverview.rowClientRects')} value={noise(t, p.clientRectsNoise)} accent={p.clientRectsNoise === false ? 'text-amber-400' : 'text-emerald-400'} />

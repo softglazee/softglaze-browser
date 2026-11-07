@@ -66,8 +66,10 @@ member's permissions, and is written to the app's audit log.
 - A profile is a separate browser: its own folder of cookies, storage, history and saved logins.
   Profiles never share these, and a new profile always gets a folder that was never used before.
 - SoftGlaze generates each profile's fingerprint (operating system, browser version, screen, GPU,
-  CPU, memory, fonts, canvas/WebGL/audio noise) so the parts agree with each other. You choose the
+  CPU, memory, fonts, WebGL/audio noise) so the parts agree with each other. You choose the
   operating system and engine; you do not edit fingerprint internals.
+- The Canvas Noise setting does not change 2D canvas on the standard engine. Only the optional
+  fingerprint-chromium engine changes canvas, whatever that setting says.
 - Timezone, language and geolocation default to "Based on IP": they follow the profile's proxy.
   A custom value that disagrees with the proxy's country is a common cause of CAPTCHAs.
 - Engines: Chromium (default) and Firefox. Page tools and macros work on Chromium profiles only.
