@@ -544,6 +544,9 @@ test('worker prelude: the time zone is set only when the worker differs from the
   run(sb, { ...FP, timezone: tz });
   assert.equal(vm.runInContext('new Intl.DateTimeFormat().resolvedOptions().timeZone', sb), tz);
   assert.equal(vm.runInContext("new Intl.DateTimeFormat('en-US', { timeZone: 'UTC' }).resolvedOptions().timeZone", sb), 'UTC');
+  // Asking explicitly for the machine's own zone returns that zone, on any machine (CI runs in UTC).
+  assert.equal(vm.runInContext(`new Intl.DateTimeFormat('en-US', { timeZone: ${JSON.stringify(host)} }).resolvedOptions().timeZone`, sb), host);
+  assert.equal(vm.runInContext("new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Karachi' }).resolvedOptions().timeZone", sb), 'Asia/Karachi');
 
   const same = workerSandbox({ deviceMemory: 8 });
   run(same, { ...FP, timezone: host });

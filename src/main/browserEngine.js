@@ -2676,10 +2676,15 @@ function workerPreludeScript(o) {
         const v = offsetFor(this);
         return Number.isFinite(v) ? v : origOffset.call(this);
       }, 'getTimezoneOffset');
+      // Formatters made through the wrapper: they already have the zone they asked for, or the
+      // profile's when they asked for none, so resolvedOptions must report them unchanged.
+      const made = new WeakSet();
       const Wrapped = mark(function (locales, options) {
         const opts = Object.assign({}, options);
         if (!opts.timeZone) opts.timeZone = TZ;
-        return new OrigDTF(locales, opts);
+        const f = new OrigDTF(locales, opts);
+        try { made.add(f); } catch (e) {}
+        return f;
       }, 'DateTimeFormat');
       Wrapped.prototype = OrigDTF.prototype;
       try { Object.defineProperty(OrigDTF.prototype, 'constructor', { value: Wrapped, configurable: true, writable: true }); } catch (e) {}
@@ -2687,8 +2692,10 @@ function workerPreludeScript(o) {
       const origResolved = OrigDTF.prototype.resolvedOptions;
       OrigDTF.prototype.resolvedOptions = mark(function () {
         const r = origResolved.apply(this, arguments);
-        // Only a formatter that fell back to the host zone; an explicit timeZone stays as asked.
-        try { if (r && r.timeZone === hostTz) r.timeZone = TZ; } catch (e) {}
+        // Only a formatter made some other way that fell back to the host zone is moved to the
+        // profile's. One that explicitly asked for the host's own zone (say "UTC" on a UTC
+        // machine) keeps it: rewriting that would be a lie a page can see.
+        try { if (r && !made.has(this) && r.timeZone === hostTz) r.timeZone = TZ; } catch (e) {}
         return r;
       }, 'resolvedOptions');
       Intl.DateTimeFormat = Wrapped;
