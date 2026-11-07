@@ -87,7 +87,8 @@
       "node_modules/.prisma/**/*",
       "node_modules/@prisma/client/**/*",
       "node_modules/@prisma/engines/**/*",
-      "prisma/**/*"
+      "prisma/**/*",
+      "src/main/ai/bridge/**/*"
     ],
     "files": [
       "dist/**/*",
