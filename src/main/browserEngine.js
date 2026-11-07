@@ -821,12 +821,43 @@ const COUNTRY_LOCALE = {
   PK: 'en-PK', JP: 'ja-JP', CN: 'zh-CN', KR: 'ko-KR', MX: 'es-MX'
 };
 
-function localeToAcceptLanguage(locale) {
-  const base = locale.split('-')[0];
-  const parts = [locale];
-  if (base !== locale) parts.push(`${base};q=0.9`);
-  if (base !== 'en') parts.push('en;q=0.8');
-  return parts.join(',');
+// The acceptLanguage value for Emulation.setUserAgentOverride. Chrome uses it twice: navigator.languages
+// is the string split on commas with nothing removed (Blink ParseAndSanitize), and the Accept-Language
+// header is built from it by net::HttpUtil::GenerateAcceptLanguageHeader, which adds the q-values
+// itself. So it must be the plain list: "en-US,en" gives navigator.languages ["en-US","en"] and the
+// header "en-US,en;q=0.9". A q-value here ends up in navigator.languages ("en;q=0.9") and twice in the
+// header ("en;q=0.9;q=0.9"). Workers read the same override.
+function acceptLanguageOverride(langs) {
+  const list = (Array.isArray(langs) ? langs : String(langs || '').split(','))
+    .map((l) => String(l == null ? '' : l).split(';')[0].trim())
+    .filter(Boolean);
+  const unique = [...new Set(list)];
+  return (unique.length ? unique : ['en-US']).join(',');
+}
+
+// The screen a profile reports, or null when its resolution is "Real" (no screen override anywhere,
+// so the real screen stays consistent everywhere). A blank type keeps the old 1920x1080 default.
+function profileScreenSize(profile = {}) {
+  const type = String(profile.resolutionType || '').trim();
+  if (/^real$/i.test(type)) return null;
+  if (!type) return { width: 1920, height: 1080 };
+  return { width: toInt(profile.resolutionW, 1920), height: toInt(profile.resolutionH, 1080) };
+}
+
+// Emulation.setDeviceMetricsOverride parameters for a profile, or null for none. Desktop leaves the
+// window, viewport and devicePixelRatio real (0 = no override) and replaces only the screen, so
+// window.screen, the device-width/device-height media features and resolution/devicePixelRatio
+// agree. Android also sets the phone viewport and DPR. The anti-detect build spoofs everything but
+// the screen natively, so it only gets the screen.
+function deviceMetricsOverride({ screenW, screenH, mobileMetrics = null, nativeEngine = false } = {}) {
+  if (mobileMetrics && !nativeEngine) {
+    const m = mobileMetrics;
+    return { width: m.width, height: m.height, deviceScaleFactor: m.deviceScaleFactor, mobile: true, screenWidth: m.width, screenHeight: m.height };
+  }
+  const w = toInt(screenW, 0);
+  const h = toInt(screenH, 0);
+  if (!w || !h) return null;
+  return { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: w, screenHeight: h };
 }
 
 function osTokens(os) {
@@ -1118,6 +1149,11 @@ function fingerprintScript(fp) {
   // fingerprint-chromium spoofs at the binary level, so this JS layer must not run: a second,
   // differently derived spoof would contradict it, which is itself a detection signal.
   if (fp && fp.nativeEngine) return;
+  // Chrome's own pages (new tab page, settings, DevTools, extension pages) are not websites: the
+  // auto-attach registers this script on every tab, so leave those documents alone.
+  try {
+    if (/^(chrome|chrome-extension|chrome-search|chrome-untrusted|devtools|edge|brave|opera|vivaldi):$/i.test(location.protocol)) return;
+  } catch (e) { /* no location (test sandbox): carry on */ }
   // Run once per document: the script lands via both evaluateOnNewDocument and CDP auto-attach, and
   // running twice double-wraps Worker. The marker is a non-enumerable window property with a random
   // per-launch name (fp.guard), so no key listing or fixed-name probe can detect SoftGlaze.
@@ -1298,7 +1334,11 @@ function fingerprintScript(fp) {
 
   // ---- Web Worker spoofing ----
   // Workers start a fresh realm that reports the real cores and memory, and CreepJS flags the mismatch.
-  // Worker/SharedWorker are wrapped so each worker first runs a prelude with the same overrides.
+  // Worker/SharedWorker are wrapped so each worker first runs a prelude with the same overrides; the
+  // wrapper loads the worker from a blob: URL, which a site can see in the worker's location. When the
+  // launcher's CDP auto-attach covers dedicated workers (fp.dedicatedWorkersViaCdp), it sets their
+  // values before they start (see attachFingerprintToNewTargets) and Worker stays native. Chrome does
+  // not hold shared workers for that auto-attach, so SharedWorker keeps the wrapper.
   try {
     var workerData = {
       hardwareConcurrency: fp.cores || undefined,
@@ -1311,7 +1351,10 @@ function fingerprintScript(fp) {
       webglRenderer: (fp.noise && fp.noise.webgl) ? (fp.webglRenderer || undefined) : undefined,
       // The worker realm reads timezone from the OS too - spoof it there as well
       // so the worker's zone matches the main thread / proxy.
-      timezone: fp.timezone || undefined
+      timezone: fp.timezone || undefined,
+      // The page's UA is already the CDP override here. Shared workers keep the real UA string under
+      // that override (their Client Hints follow it), so the prelude sets it when it differs.
+      userAgent: (function () { try { return navigator.userAgent || undefined; } catch (e) { return undefined; } })()
     };
     // Runs first in every worker realm; must be a self-contained literal.
     var prelude = '(function(){' +
@@ -1326,6 +1369,7 @@ function fingerprintScript(fp) {
       'var d=function(p,v){if(v===undefined||v===null)return;var pr=Object.getPrototypeOf(navigator)||navigator;try{Object.defineProperty(pr,p,{get:mk(function(){return v;},"get "+p),configurable:true});}catch(e){}};' +
       'd("hardwareConcurrency",o.hardwareConcurrency);d("deviceMemory",o.deviceMemory);' +
       'd("languages",o.languages);d("language",o.language);d("platform",o.platform);' +
+      'if(o.userAgent&&navigator.userAgent!==o.userAgent){d("userAgent",o.userAgent);d("appVersion",o.userAgent.slice(o.userAgent.indexOf("/")+1));}' +
       'try{var pg=function(proto){if(!proto)return;var g=proto.getParameter;proto.getParameter=mk(function(p){' +
       'if(o.webglVendor&&p===37445)return o.webglVendor;if(o.webglRenderer&&p===37446)return o.webglRenderer;' +
       'return g.apply(this,arguments);},"getParameter");};' +
@@ -1370,7 +1414,7 @@ function fingerprintScript(fp) {
       return Wrapped;
     };
 
-    if (typeof Worker !== 'undefined') window.Worker = wrapWorker(window.Worker);
+    if (typeof Worker !== 'undefined' && !fp.dedicatedWorkersViaCdp) window.Worker = wrapWorker(window.Worker);
     if (typeof SharedWorker !== 'undefined') window.SharedWorker = wrapWorker(window.SharedWorker);
   } catch (e) {}
 
@@ -2531,6 +2575,326 @@ function buildFingerprintConfig(profile, opts) {
   };
 }
 
+// ---- Workers ----
+// Runs inside a dedicated or service worker through Runtime.evaluate while the worker is paused at
+// start, before its own script (the worker's global scope exists by then). CDP already gives workers
+// the profile's Client Hints, languages and hardwareConcurrency natively; this covers what CDP does not
+// (deviceMemory, the UA string in service workers, platform for a cross-OS profile, a custom WebGL GPU,
+// the time zone). It changes only values that differ from the profile, so a worker whose values already
+// match is left untouched. Self-contained: it is serialized with toString().
+function workerPreludeScript(o) {
+  // Never read self.location here: it is not set up while the worker is paused at start, and reading it
+  // then crashes the renderer (checked on Chrome 156). Browser-internal workers are skipped by the caller.
+  try {
+    if (o.guard) {
+      if (Object.getOwnPropertyDescriptor(self, o.guard)) return;
+      Object.defineProperty(self, o.guard, { value: 1, enumerable: false, configurable: false, writable: false });
+    }
+    const nav = self.navigator;
+    if (!nav) return;
+    const props = [];
+    const want = (name, value) => {
+      // Only properties this worker has (deviceMemory is secure-context only), and only when different.
+      if (value === undefined || value === null || !(name in nav)) return;
+      let current;
+      try { current = nav[name]; } catch (e) { current = undefined; }
+      if (String(current) !== String(value)) props.push([name, value]);
+    };
+    want('deviceMemory', o.deviceMemory);
+    want('hardwareConcurrency', o.hardwareConcurrency);
+    want('platform', o.platform);
+    // Shared and service workers keep the real UA string even under the CDP override (their Client
+    // Hints do follow it); dedicated workers inherit the page's.
+    if (o.userAgent) {
+      want('userAgent', o.userAgent);
+      want('appVersion', o.userAgent.slice(o.userAgent.indexOf('/') + 1));
+    }
+    if (Array.isArray(o.languages) && o.languages.length) {
+      want('languages', Object.freeze(o.languages.slice()));
+      want('language', o.languages[0]);
+    }
+    let hostTz = '';
+    try { hostTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+    const tzNeeded = Boolean(o.timezone) && hostTz !== o.timezone;
+    const glNeeded = Boolean(o.webglVendor || o.webglRenderer);
+    if (!props.length && !tzNeeded && !glNeeded) return;
+
+    // Same native-looking functions as the page script: [native code] from toString, the right name,
+    // getters on the prototype (hasOwnProperty stays false) with no .prototype and not constructible.
+    const origToString = Function.prototype.toString;
+    const patched = new WeakSet();
+    const toStr = ({ toString() {
+      return patched.has(this) ? 'function ' + (this.name || '') + '() { [native code] }' : origToString.call(this);
+    } }).toString;
+    try { Object.defineProperty(toStr, 'name', { value: 'toString', configurable: true }); } catch (e) {}
+    try {
+      Object.defineProperty(Function.prototype, 'toString', { value: toStr, configurable: true, writable: true });
+      patched.add(toStr);
+    } catch (e) {}
+    const mark = (fn, name) => {
+      try { if (name) Object.defineProperty(fn, 'name', { value: name, configurable: true }); } catch (e) {}
+      try { patched.add(fn); } catch (e) {}
+      return fn;
+    };
+
+    const proto = Object.getPrototypeOf(nav) || nav;
+    props.forEach(([name, value]) => {
+      try {
+        const existing = Object.getOwnPropertyDescriptor(proto, name);
+        const getter = mark(Object.getOwnPropertyDescriptor({ get [name]() { return value; } }, name).get, 'get ' + name);
+        Object.defineProperty(proto, name, { get: getter, configurable: true, enumerable: existing ? existing.enumerable : true });
+      } catch (e) {}
+    });
+
+    if (glNeeded) {
+      const wrapGl = (P) => {
+        if (!P || !P.getParameter) return;
+        const orig = P.getParameter;
+        P.getParameter = mark(function getParameter(p) {
+          if (o.webglVendor && p === 37445) return o.webglVendor;
+          if (o.webglRenderer && p === 37446) return o.webglRenderer;
+          return orig.apply(this, arguments);
+        }, 'getParameter');
+      };
+      try { if (typeof WebGLRenderingContext !== 'undefined') wrapGl(WebGLRenderingContext.prototype); } catch (e) {}
+      try { if (typeof WebGL2RenderingContext !== 'undefined') wrapGl(WebGL2RenderingContext.prototype); } catch (e) {}
+    }
+
+    if (tzNeeded) {
+      const TZ = o.timezone;
+      const OrigDTF = Intl.DateTimeFormat;
+      const partFmt = new OrigDTF('en-US', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const offsetFor = (date) => {
+        try {
+          const p = {};
+          partFmt.formatToParts(date).forEach((x) => { if (x.type !== 'literal') p[x.type] = x.value; });
+          return Math.round((date.getTime() - Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second)) / 60000);
+        } catch (e) { return 0; }
+      };
+      const origOffset = Date.prototype.getTimezoneOffset;
+      Date.prototype.getTimezoneOffset = mark(function () {
+        const v = offsetFor(this);
+        return Number.isFinite(v) ? v : origOffset.call(this);
+      }, 'getTimezoneOffset');
+      // Formatters made through the wrapper: they already have the zone they asked for, or the
+      // profile's when they asked for none, so resolvedOptions must report them unchanged.
+      const made = new WeakSet();
+      const Wrapped = mark(function (locales, options) {
+        const opts = Object.assign({}, options);
+        if (!opts.timeZone) opts.timeZone = TZ;
+        const f = new OrigDTF(locales, opts);
+        try { made.add(f); } catch (e) {}
+        return f;
+      }, 'DateTimeFormat');
+      Wrapped.prototype = OrigDTF.prototype;
+      try { Object.defineProperty(OrigDTF.prototype, 'constructor', { value: Wrapped, configurable: true, writable: true }); } catch (e) {}
+      Wrapped.supportedLocalesOf = mark(OrigDTF.supportedLocalesOf.bind(OrigDTF), 'supportedLocalesOf');
+      const origResolved = OrigDTF.prototype.resolvedOptions;
+      OrigDTF.prototype.resolvedOptions = mark(function () {
+        const r = origResolved.apply(this, arguments);
+        // Only a formatter made some other way that fell back to the host zone is moved to the
+        // profile's. One that explicitly asked for the host's own zone (say "UTC" on a UTC
+        // machine) keeps it: rewriting that would be a lie a page can see.
+        try { if (r && !made.has(this) && r.timeZone === hostTz) r.timeZone = TZ; } catch (e) {}
+        return r;
+      }, 'resolvedOptions');
+      Intl.DateTimeFormat = Wrapped;
+    }
+  } catch (e) { /* never break the worker */ }
+}
+
+// The Runtime.evaluate source for workers, or null when the anti-detect build spoofs workers itself.
+// ua is the launch's UA bundle once known (buildUserAgentBundle).
+function workerPreludeSource(fp, ua = null) {
+  if (!fp || fp.nativeEngine) return null;
+  const langs = Array.isArray(fp.langs) && fp.langs.length ? fp.langs.slice() : undefined;
+  const gpu = Boolean(fp.noise && fp.noise.webgl);
+  const data = {
+    guard: (typeof fp.guard === 'string' && fp.guard) || undefined,
+    userAgent: (ua && ua.userAgent) || undefined,
+    deviceMemory: fp.mem || undefined,
+    hardwareConcurrency: fp.cores || undefined,
+    platform: fp.navPlatform || undefined,
+    languages: langs,
+    timezone: fp.timezone || undefined,
+    webglVendor: gpu ? (fp.webglVendor || undefined) : undefined,
+    webglRenderer: gpu ? (fp.webglRenderer || undefined) : undefined
+  };
+  return `(${workerPreludeScript.toString()})(${JSON.stringify(data)});`;
+}
+
+// The CDP commands one target needs, in order, so the first tab, later tabs, popups, frames and
+// workers all report the same values. kind is the CDP target type; late holds the values known only
+// after launch (UA bundle, Accept-Language, time zone, metrics, geolocation, worker prelude).
+// Registering the page script and resuming the target are left to the caller.
+function targetFingerprintCommands(kind, fp = {}, late = {}) {
+  const cmds = [];
+  const isPage = kind === 'page';
+  const isFrame = isPage || kind === 'iframe';
+  const isWorker = kind === 'worker' || kind === 'shared_worker' || kind === 'service_worker';
+  if (!isFrame && !isWorker) return cmds;
+  // The anti-detect build sets UA, Client Hints, cores and time zone from its launch flags; a CDP value
+  // disagreeing with them would itself be a tell.
+  const native = Boolean(fp.nativeEngine);
+  if (!native && late.ua) {
+    cmds.push({
+      method: 'Emulation.setUserAgentOverride',
+      params: {
+        userAgent: late.ua.userAgent,
+        acceptLanguage: late.acceptLanguage,
+        platform: late.ua.navPlatform,
+        userAgentMetadata: late.ua.userAgentMetadata
+      },
+      critical: true
+    });
+  }
+  if (!native && fp.cores) cmds.push({ method: 'Emulation.setHardwareConcurrencyOverride', params: { hardwareConcurrency: fp.cores } });
+  if (isWorker) {
+    // Not for shared workers: Chrome does not hold a shared worker for a second auto-attach client, so
+    // the prelude arrives after the worker's own script has run (checked on Chrome 156: 0 of 8). The
+    // page script's SharedWorker wrapper covers them instead.
+    if (late.workerSource && kind !== 'shared_worker') {
+      cmds.push({ method: 'Runtime.evaluate', params: { expression: late.workerSource, silent: true, returnByValue: true } });
+    }
+    return cmds;
+  }
+  if (!native && late.timezoneId) cmds.push({ method: 'Emulation.setTimezoneOverride', params: { timezoneId: late.timezoneId } });
+  // Device metrics are top-level only (Chrome rejects them on a frame target).
+  if (isPage && late.deviceMetrics) cmds.push({ method: 'Emulation.setDeviceMetricsOverride', params: late.deviceMetrics });
+  if (isPage && !native && late.mobileMetrics) {
+    cmds.push({ method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: late.mobileMetrics.maxTouchPoints } });
+    cmds.push({ method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } });
+  }
+  if (late.geoLat != null && late.geoLng != null) {
+    cmds.push({ method: 'Browser.grantPermissions', params: { permissions: ['geolocation'] } });
+    cmds.push({ method: 'Emulation.setGeolocationOverride', params: { latitude: late.geoLat, longitude: late.geoLng, accuracy: late.geoAcc } });
+  }
+  return cmds;
+}
+
+// A CDP error that a retry cannot fix: the method does not exist in this Chrome or for this target
+// type, the parameters are refused, or the target is gone.
+function isPermanentCdpError(e) {
+  const msg = String((e && e.message) || e || '');
+  return /wasn't found|not found|invalid param|only available|not supported|not allowed|does not support|closed|detached/i.test(msg);
+}
+
+const AUTO_ATTACH_PARAMS = Object.freeze({ autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
+
+// Gives every target Chrome opens the profile's fingerprint before the target runs anything: tabs,
+// popups, window.open, target=_blank, new windows, out-of-process frames and dedicated, shared and
+// service workers. The session auto-attaches with waitForDebuggerOnStart, so each new target waits
+// (its navigation or worker start is held) until this handler resumes it.
+// Page targets need Page.enable: without it Chrome stores the addScriptToEvaluateOnNewDocument script
+// but never runs it (Blink injects from InspectorPageAgent::DidCreateMainWorldContext, which only
+// fires for an enabled agent). Page, frame and worker sessions auto-attach their own children
+// (frames, dedicated workers) through the same handler.
+function attachFingerprintToNewTargets(session, conn, ctx = {}) {
+  const {
+    fpConfig = {},
+    fpLate = {},
+    injectSource = '',
+    onInjectFailed = null,
+    // A tab waits at most this long for the setup replies before it is resumed anyway.
+    resumeAfterMs = 1500,
+    callTimeoutMs = 4000
+  } = ctx;
+
+  const onAttached = async (ev) => {
+    const info = (ev && ev.targetInfo) || {};
+    const kind = info.type || '';
+    // A DevTools window is a page target too, but never a website: it is only resumed.
+    const isPageish = (kind === 'page' || kind === 'iframe') && !/^devtools:/i.test(String(info.url || ''));
+    // Service workers cannot start workers, so only these watch for children.
+    const hasChildren = isPageish || kind === 'worker' || kind === 'shared_worker';
+
+    // With flatten:true, puppeteer's Connection has already created the child session when this event
+    // fires. Sending on it (not Target.sendMessageToTarget) routes correctly and lets failures reject.
+    const child = conn && ev && ev.sessionId ? conn.session(ev.sessionId) : null;
+    // Bound every call so a stalled command can never hold up the handler.
+    const withTimeout = (p, ms) => {
+      let timer = null;
+      const limit = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('cdp call timed out')), ms); });
+      return Promise.race([p, limit]).finally(() => clearTimeout(timer));
+    };
+    const send = (method, params = {}) => (child
+      ? withTimeout(child.send(method, params), callTimeoutMs)
+      : Promise.reject(new Error('no flat child CDP session for ' + (ev && ev.sessionId))));
+
+    // Listen on the child before asking it to auto-attach, so no frame or worker is missed.
+    if (child && hasChildren && typeof child.on === 'function') child.on('Target.attachedToTarget', onAttached);
+
+    const steps = [];
+    if (isPageish) {
+      steps.push({ method: 'Page.enable', params: {}, critical: true });
+      steps.push({ method: 'Page.addScriptToEvaluateOnNewDocument', params: { source: injectSource }, critical: true });
+    }
+    // Extension workers, DevTools and other browser-internal targets belong to no website: leave them as
+    // they are. (A tab's chrome:// URL is not checked: a new tab starts on chrome://newtab and then goes
+    // to sites. The page script skips Chrome's own pages itself.)
+    const internalTarget = !isPageish && /^(chrome|chrome-extension|chrome-untrusted|devtools):/i.test(String(info.url || ''));
+    // fpLate is read now, not when the handler was made: it fills in after launch.
+    if (!internalTarget) steps.push(...targetFingerprintCommands(kind, fpConfig, fpLate));
+    if (hasChildren) steps.push({ method: 'Target.setAutoAttach', params: { ...AUTO_ATTACH_PARAMS } });
+
+    // waitForDebuggerOnStart holds every new target; it must be resumed or the tab hangs at about:blank.
+    const resume = async () => {
+      try {
+        if (child) { await send('Runtime.runIfWaitingForDebugger'); return; }
+      } catch (e) { /* fall through to a best-effort resume below */ }
+      // No flat child session (detached early or a non-routable type): best-effort legacy resume.
+      try {
+        await session.send('Target.sendMessageToTarget', {
+          sessionId: ev.sessionId,
+          message: JSON.stringify({ id: Math.floor(Math.random() * 1e6), method: 'Runtime.runIfWaitingForDebugger', params: {} })
+        });
+      } catch (e2) { /* target already gone */ }
+    };
+
+    // Send every step at once, in order. Chrome delivers one session's commands to the target in
+    // order, so everything sent before the resume is applied before the target runs, also when Chrome
+    // holds this session's messages until the target starts. A new service worker does that: waiting
+    // for each reply before resuming stalled it, and the prelude then ran after the worker's own script.
+    // Workers are therefore resumed at once; tabs and frames wait for the replies (never longer than
+    // resumeAfterMs) so a failed step can still be retried before the page loads.
+    const sendAll = (list) => Promise.all(list.map((step) => send(step.method, step.params).then(() => null, (e) => e)));
+    let errors = [];
+    if (isPageish) {
+      const deadline = Date.now() + resumeAfterMs;
+      const beforeDeadline = (p) => {
+        let timer = null;
+        const cap = new Promise((r) => { timer = setTimeout(() => r(null), Math.max(0, deadline - Date.now())); });
+        return Promise.race([p, cap]).finally(() => clearTimeout(timer));
+      };
+      const replies = sendAll(steps);
+      errors = (await beforeDeadline(replies)) || [];
+      // One more try for steps that failed for a passing reason (a permanent error will not change).
+      const retry = steps.filter((s, i) => errors[i] && !isPermanentCdpError(errors[i]));
+      if (retry.length && child) {
+        const again = await beforeDeadline(sendAll(retry));
+        if (again) retry.forEach((s, j) => { errors[steps.indexOf(s)] = again[j]; });
+      }
+      await resume();
+      if (!errors.length) errors = await replies; // replies that came after the cap, for the report
+    } else {
+      const replies = sendAll(steps);
+      await resume();
+      errors = await replies;
+    }
+
+    // Report tabs and frames only, and not when the target is simply gone (a closed tab exposes nothing).
+    const criticalFailed = steps
+      .filter((s, i) => s.critical && errors[i] && !/closed|detached|not found/i.test(String(errors[i].message || errors[i])))
+      .map((s) => s.method);
+    if (isPageish && criticalFailed.length && typeof onInjectFailed === 'function') {
+      try { onInjectFailed(info, criticalFailed); } catch (e) { /* logging only */ }
+    }
+  };
+
+  if (session && typeof session.on === 'function') session.on('Target.attachedToTarget', onAttached);
+  return onAttached;
+}
+
 // Writes the MAIN-world content-script extension into the profile; returns its --load-extension path.
 async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
   const extDir = path.join(userDataDir, 'sg-fp-ext');
@@ -2698,8 +3062,10 @@ async function launchProfileSessionNow(options = {}) {
 
   const seed = seedFromString(safeDirName);
 
-  const resW = profile.resolutionType && profile.resolutionType !== 'Real' ? toInt(profile.resolutionW, 1920) : 1920;
-  const resH = profile.resolutionType && profile.resolutionType !== 'Real' ? toInt(profile.resolutionH, 1080) : 1080;
+  // null for a "Real" resolution: then nothing overrides the screen, in JS or CDP.
+  const screenSize = profileScreenSize(profile);
+  const resW = screenSize ? screenSize.width : null;
+  const resH = screenSize ? screenSize.height : null;
   const winW = toInt(profile.resolutionW, DEFAULT_WINDOW_SIZE.width);
   const winH = toInt(profile.resolutionH, DEFAULT_WINDOW_SIZE.height);
 
@@ -2964,126 +3330,45 @@ async function launchProfileSessionNow(options = {}) {
 
   // ---- Cross-channel fingerprint injection ----
   // Real Chrome ignores --load-extension and evaluateOnNewDocument races browser-opened tabs, so a
-  // browser-level auto-attach (waitForDebuggerOnStart) pauses each target until the script is set.
+  // browser-level auto-attach (waitForDebuggerOnStart) holds each new tab, popup, frame and worker
+  // until its fingerprint is set (attachFingerprintToNewTargets). Dedicated workers are covered there
+  // too, so the in-page Worker wrapper stays off unless the auto-attach cannot be set up.
+  fpConfig.dedicatedWorkersViaCdp = !fpConfig.nativeEngine;
   const fpInjectSource = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)});`;
-  // Values the auto-attach handler needs for new tabs. Declared here for the closure, filled once
-  // ua/timezone/geo are known; until then a harmless no-op (applyToPage covers the first page).
-  const fpLate = {};
+  // Android profiles also need a small high-DPR viewport and touch: CDP device emulation makes
+  // maxTouchPoints, ontouchstart, devicePixelRatio and the viewport match the Android UA.
+  const isMobile = String(profile.deviceClass || '').toLowerCase() === 'mobile'
+    || /android/i.test(String(profile.os || ''));
+  const mobileMetrics = isMobile ? {
+    width: toInt(profile.resolutionW, 412),
+    height: toInt(profile.resolutionH, 915),
+    deviceScaleFactor: 2.625, // Pixel 7 DPR
+    maxTouchPoints: 5
+  } : null;
+  // Values the auto-attach handler reads for each new target. The screen metrics and the worker
+  // prelude are known now; UA, Accept-Language, time zone and geolocation are filled in below once
+  // known (applyToPage covers the first page).
+  const fpLate = {
+    mobileMetrics,
+    deviceMetrics: deviceMetricsOverride({ screenW: fpConfig.screenW, screenH: fpConfig.screenH, mobileMetrics, nativeEngine: fpConfig.nativeEngine }),
+    workerSource: workerPreludeSource(fpConfig)
+  };
+  let cdpAutoAttach = false;
   try {
-const rootCdp = await browser.target().createCDPSession();
-    // puppeteer's Connection (shared by every flat child session). We address each
-    // auto-attached child target through its REAL CDPSession on this connection.
-    const conn = rootCdp.connection();
-    rootCdp.on('Target.attachedToTarget', async (ev) => {
-      const info = ev.targetInfo || {};
-      const isPageish = info.type === 'page' || info.type === 'iframe';
-      const isWorker = /worker/i.test(info.type || '');
-      
-      let scriptAdded = false;
-
-      // With flatten:true, puppeteer's Connection has already created the child CDPSession when this
-      // event fires, so conn.session() resolves it. Sending on the child (not Target.sendMessageToTarget)
-      // routes correctly and lets real failures reject, so inject() can report and retry.
-      const child = conn ? conn.session(ev.sessionId) : null;
-      // Bound every child CDP call so a stalled command can never block the resume below (a new tab
-      // must never hang at about:blank). A timeout rejects; inject() catches it and resume still fires.
-      const withTimeout = (p, ms) => Promise.race([
-        p, new Promise((_, rej) => setTimeout(() => rej(new Error('cdp call timed out')), ms))
-      ]);
-      const sendMsg = (method, params = {}) => (child
-        ? withTimeout(child.send(method, params), 4000)
-        : Promise.reject(new Error('no flat child CDP session for ' + ev.sessionId)));
-
-      const inject = async () => {
-        try {
-          if (isPageish) {
-            if (!scriptAdded) {
-              await sendMsg('Page.addScriptToEvaluateOnNewDocument', { source: fpInjectSource });
-              scriptAdded = true;
-            }
-            // Native engine sets UA/timezone/cores/metrics from launch flags; a CDP UA disagreeing with the
-            // native Sec-CH-UA headers is a tell. Geolocation is not native, so it still runs.
-            if (!fpConfig.nativeEngine) {
-            if (fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
-            if (fpLate.ua) {
-              await sendMsg('Emulation.setUserAgentOverride', {
-                userAgent: fpLate.ua.userAgent,
-                acceptLanguage: fpLate.acceptLanguage,
-                platform: fpLate.ua.navPlatform,
-                userAgentMetadata: fpLate.ua.userAgentMetadata
-              });
-            }
-            if (fpLate.timezoneId) await sendMsg('Emulation.setTimezoneOverride', { timezoneId: fpLate.timezoneId });
-            if (fpLate.mobileMetrics) {
-              const m = fpLate.mobileMetrics;
-              await sendMsg('Emulation.setDeviceMetricsOverride', { width: m.width, height: m.height, deviceScaleFactor: m.deviceScaleFactor, mobile: true, screenWidth: m.width, screenHeight: m.height });
-              await sendMsg('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: m.maxTouchPoints });
-              await sendMsg('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
-            }
-            } // end !nativeEngine
-            // Native engine: spoof screen.* to the profile resolution (fingerprint-chromium
-            // has no screen flag, so it would leak the real monitor across every profile).
-            if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
-              await sendMsg('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: fpConfig.screenW, screenHeight: fpConfig.screenH });
-            }
-            if (fpLate.geoLat != null && fpLate.geoLng != null) {
-              await sendMsg('Browser.grantPermissions', { permissions: ['geolocation'] });
-              await sendMsg('Emulation.setGeolocationOverride', { latitude: fpLate.geoLat, longitude: fpLate.geoLng, accuracy: fpLate.geoAcc });
-            }
-            return true;
-          }
-          if (isWorker) {
-            // Native engine already reports the spoofed core count inside workers.
-            if (!fpConfig.nativeEngine && fpConfig.cores) await sendMsg('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores });
-            return true;
-          }
-          return true; // 'other'/'browser' target
-        } catch (e) {
-          return false;
-        }
-      };
-
-      let resumed = false;
-      const resume = async () => {
-        if (resumed) return; // idempotent: the guard timer AND the final call may both fire
-        resumed = true;
-        // waitForDebuggerOnStart pauses every new target; it must be resumed or the tab hangs at about:blank.
-        try {
-          if (child) { await withTimeout(child.send('Runtime.runIfWaitingForDebugger'), 4000); return; }
-        } catch (e) { /* fall through to a best-effort resume below */ }
-        // No flat child session (detached early or a non-routable type): best-effort legacy resume.
-        // Failure here means the target is already gone.
-        try {
-          await rootCdp.send('Target.sendMessageToTarget', {
-            sessionId: ev.sessionId,
-            message: JSON.stringify({ id: Math.floor(Math.random() * 1e6), method: 'Runtime.runIfWaitingForDebugger', params: {} })
-          });
-        } catch (e2) { /* target already gone */ }
-      };
-
-      // Arm a resume timer before awaiting injection so a stalled CDP call can never leave a new tab
-      // hung at about:blank. Injection normally takes <100ms and clearTimeout cancels the timer.
-      const resumeGuard = setTimeout(() => { resume().catch(() => {}); }, 1500);
-      let injected = false;
-      try {
-        injected = await inject();
-        for (let i = 0; i < 20 && !injected && child; i += 1) {
-          await new Promise(r => setTimeout(r, 25));
-          injected = await inject();
-        }
-      } catch (e) { /* inject self-catches; guard the loop too so resume always runs */ }
-      clearTimeout(resumeGuard);
-
-      if (isPageish && !injected) {
-        console.error('[SG][fingerprint] new-tab injection FAILED - this tab may expose the REAL GPU/RAM/WebRTC. profile',
-          profileId, title || '', '- target', info.url || info.targetId || info.type);
-      }
-
-      // Always resume (idempotent), even if injection failed, so the tab never hangs.
-      await resume();
+    const rootCdp = await browser.target().createCDPSession();
+    attachFingerprintToNewTargets(rootCdp, rootCdp.connection(), {
+      fpConfig,
+      fpLate,
+      injectSource: fpInjectSource,
+      onInjectFailed: (info, methods) => console.error('[SG][fingerprint] new-tab injection FAILED (' + methods.join(', ') + ') - this tab may expose the REAL GPU/RAM/WebRTC. profile',
+        profileId, title || '', '- target', info.url || info.targetId || info.type)
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
-  } catch (e) { /* fall back to per-page evaluateOnNewDocument in applyToPage */ }
+    cdpAutoAttach = true;
+  } catch (e) {
+    // Fall back to per-page evaluateOnNewDocument in applyToPage and the in-page Worker wrapper.
+    fpConfig.dedicatedWorkersViaCdp = false;
+  }
 
   // Track PID to prevent orphaned processes
   const browserProcess = browser.process();
@@ -3135,27 +3420,17 @@ const rootCdp = await browser.target().createCDPSession();
   const manualLat = profile.locationType === 'Custom' ? Number.parseFloat(profile.locationLat) : NaN;
   const manualLng = profile.locationType === 'Custom' ? Number.parseFloat(profile.locationLng) : NaN;
 
-  // Give the auto-attach handler the UA, Client Hints, Accept-Language and mobile identity before the
-  // slow geo lookup, so a tab opened meanwhile can't leak the real UA. Timezone/geolocation follow.
-  // Accept-Language follows fpConfig.langs so headers and JS never disagree.
-  const acceptLanguage = localeToAcceptLanguage(fpConfig.langs[0] || 'en-US');
+  // Give the auto-attach handler the UA, Client Hints and Accept-Language before the slow geo lookup,
+  // so a tab opened meanwhile can't leak the real UA. Timezone/geolocation follow.
+  // Accept-Language is the plain fpConfig.langs list, so navigator.languages (pages and workers) is
+  // exactly fpConfig.langs and Chrome adds the header's q-values itself (see acceptLanguageOverride).
+  const acceptLanguage = acceptLanguageOverride(fpConfig.langs);
   const dnt = fpConfig.dnt; // reused for the DNT request header in applyToPage
   const ua = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
 
-  // Android profiles also need a small high-DPR viewport and touch: CDP device emulation makes
-  // maxTouchPoints, ontouchstart, devicePixelRatio and the viewport match the Android UA.
-  const isMobile = String(profile.deviceClass || '').toLowerCase() === 'mobile'
-    || /android/i.test(String(profile.os || ''));
-  const mobileMetrics = isMobile ? {
-    width: toInt(profile.resolutionW, 412),
-    height: toInt(profile.resolutionH, 915),
-    deviceScaleFactor: 2.625, // Pixel 7 DPR
-    maxTouchPoints: 5
-  } : null;
-
   fpLate.ua = ua;
   fpLate.acceptLanguage = acceptLanguage;
-  fpLate.mobileMetrics = mobileMetrics;
+  fpLate.workerSource = workerPreludeSource(fpConfig, ua);
 
   // Fallback when the pre-launch lookup failed: resolve geo in-page so timezone and geolocation still
   // apply via CDP. Authenticate first, or an authenticated proxy answers 407 and the lookup fails.
@@ -3180,10 +3455,18 @@ const rootCdp = await browser.target().createCDPSession();
 
   // Apply the full fingerprint to one page: the first tab and every later tab or popup. Idempotent.
   const appliedPages = new WeakSet();
+  // Pages whose puppeteer session already carries the fingerprint script (registered once per page).
+  const scriptPages = new WeakSet();
+  const registerFingerprintScript = async (targetPage) => {
+    if (scriptPages.has(targetPage)) return;
+    scriptPages.add(targetPage);
+    await targetPage.evaluateOnNewDocument(fingerprintScript, fpConfig).catch(() => {});
+  };
   // Track whether identity setup on the primary tab completed, so a profile never reports
   // "launched" while running with the real identity.
   let injectionDegraded = false;
-  const applyToPage = async (targetPage, isNewTab = false) => {
+  // opts.ownTab: a tab the app opened itself (hOpenTab), a plain about:blank page like the first tab.
+  const applyToPage = async (targetPage, isNewTab = false, opts = {}) => {
     if (!targetPage || appliedPages.has(targetPage)) return;
     // Attach the omnibox guard before the early returns: a "+" tab is blank at targetcreated and returns
     // early, yet it is the tab users type into. Safe: it only adds a listener (no CDP, auth or
@@ -3193,57 +3476,30 @@ const rootCdp = await browser.target().createCDPSession();
     let pageUrl = '';
     try { pageUrl = targetPage.url(); } catch (e) {}
     const isInternal = /^(chrome|chrome-extension|devtools|edge|view-source):/i.test(pageUrl);
-    const isBlank = pageUrl === '' || pageUrl === 'about:blank';
+    // Only a browser-opened tab's transient blank state is deferred; our own about:blank tab is safe.
+    const isBlank = !opts.ownTab && (pageUrl === '' || pageUrl === 'about:blank');
+    // A blank new tab still gets the fingerprint script before the rest is deferred: its first real
+    // document would otherwise load before framenavigated re-applies. This only adds a script to the
+    // tab's existing session (no new session, auth or interception). The auto-attach session registers
+    // it too; the per-launch guard makes the second copy a no-op.
+    if (isNewTab && isBlank && !isInternal) await registerFingerprintScript(targetPage);
     // Skip internal pages and a new tab's transient ''/about:blank state: CDP or proxy-auth work there
-    // crashes the browser. The extension already fingerprints new tabs; CDP extras apply on real http(s).
+    // crashes the browser. The CDP extras apply once the tab reaches a real http(s) page.
     if (isNewTab && (isInternal || isBlank)) return;
     if (isInternal) return;
     appliedPages.add(targetPage);
     try {
       // Register the init script before any other await: a target=_blank popup navigates immediately
       // and would otherwise commit its first document with the real navigator.
-      await targetPage.evaluateOnNewDocument(fingerprintScript, fpConfig).catch(() => {});
+      await registerFingerprintScript(targetPage);
       // Proxy auth for HTTP(S) proxies - version-agnostic, no MV2 extension.
       if (proxyCreds) await targetPage.authenticate(proxyCreds).catch(() => {});
       const cdp = await targetPage.target().createCDPSession();
-      // Native engine sets UA/timezone/cores/metrics from launch flags; CDP would fight it.
-      // Geolocation, DNT and request filtering below are not native, so they still run.
-      if (!fpConfig.nativeEngine) {
-      await cdp.send('Emulation.setUserAgentOverride', {
-        userAgent: ua.userAgent,
-        acceptLanguage,
-        platform: ua.navPlatform,
-        userAgentMetadata: ua.userAgentMetadata
-      }).catch(() => {});
-      if (timezoneId) await cdp.send('Emulation.setTimezoneOverride', { timezoneId }).catch(() => {});
-      // Android: high-DPR viewport, screen size and touch (maxTouchPoints, ontouchstart) to match the UA.
-      if (mobileMetrics) {
-        await cdp.send('Emulation.setDeviceMetricsOverride', {
-          width: mobileMetrics.width,
-          height: mobileMetrics.height,
-          deviceScaleFactor: mobileMetrics.deviceScaleFactor,
-          mobile: true,
-          screenWidth: mobileMetrics.width,
-          screenHeight: mobileMetrics.height
-        }).catch(() => {});
-        await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: mobileMetrics.maxTouchPoints }).catch(() => {});
-        await cdp.send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' }).catch(() => {});
-      }
-      // CDP cores override also covers workers before their script runs; backs up the in-page override.
-      if (fpConfig.cores) await cdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
-      } // end !nativeEngine
-      // Native engine: spoof screen.* (fingerprint-chromium has no screen flag, so the real monitor leaks).
-      // deviceScaleFactor:0 keeps the real DPR; width/height:0 leaves the viewport intact.
-      if (fpConfig.nativeEngine && fpConfig.screenW && fpConfig.screenH) {
-        await cdp.send('Emulation.setDeviceMetricsOverride', { width: 0, height: 0, deviceScaleFactor: 0, mobile: false, screenWidth: fpConfig.screenW, screenHeight: fpConfig.screenH }).catch(() => {});
-      }
-      if (geoLat !== null && geoLng !== null) {
-        await cdp.send('Browser.grantPermissions', { permissions: ['geolocation'] }).catch(() => {});
-        await cdp.send('Emulation.setGeolocationOverride', {
-          latitude: geoLat,
-          longitude: geoLng,
-          accuracy: toInt(profile.locationAcc, 100)
-        }).catch(() => {});
+      // The same overrides, in the same order, as the auto-attach gives every new target: UA, Client
+      // Hints and Accept-Language, cores, time zone, screen (desktop and Android), touch, geolocation.
+      // The anti-detect build sets UA/time zone/cores itself, so it only gets the screen and geolocation.
+      for (const c of targetFingerprintCommands('page', fpConfig, fpLate)) {
+        await cdp.send(c.method, c.params).catch(() => {});
       }
       // DNT belongs on the wire as an HTTP header, not just navigator.
       if (dnt === '1') await targetPage.setExtraHTTPHeaders({ DNT: '1', 'Sec-GPC': '1' }).catch(() => {});
@@ -3297,13 +3553,15 @@ const rootCdp = await browser.target().createCDPSession();
   browser.on('targetcreated', async (target) => {
    try {
     const targetType = target.type();
-    // Workers are separate realms where CreepJS rereads hardwareConcurrency. A service worker script
-    // can't be wrapped like dedicated/shared workers, so apply the CDP cores override to its target.
+    // Workers are separate realms where CreepJS rereads the navigator. The auto-attach already set them
+    // up before they started; this late pass is only the fallback when it could not be set up.
     if (targetType === 'service_worker' || targetType === 'shared_worker' || targetType === 'worker') {
+      if (cdpAutoAttach) return;
       try {
         const wcdp = await target.createCDPSession();
-        // Native engine already reports the spoofed core count inside workers.
-        if (!fpConfig.nativeEngine && fpConfig.cores) await wcdp.send('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: fpConfig.cores }).catch(() => {});
+        for (const c of targetFingerprintCommands(targetType, fpConfig, fpLate)) {
+          await wcdp.send(c.method, c.params).catch(() => {});
+        }
       } catch (e) { /* worker target may close immediately */ }
       return;
     }
@@ -3331,6 +3589,9 @@ const rootCdp = await browser.target().createCDPSession();
       try {
         if (typeof url !== 'string' || !/^https?:/i.test(url)) return;
         const np = await browser.newPage();
+        // The whole fingerprint goes on before the first navigation, as on the first tab: the blank-tab
+        // deferral in applyToPage is for browser-opened tabs, not this one.
+        await applyToPage(np, true, { ownTab: true }).catch(() => {});
         if (proxyCreds) await np.authenticate(proxyCreds).catch(() => {});
         await np.bringToFront().catch(() => {});
         await np.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
@@ -4565,6 +4826,14 @@ module.exports = {
   // exported for tests
   randomGuardName,
   nativeGapScript,
+  // Exported for tests: what every new tab, popup, frame and worker gets, and in which order.
+  acceptLanguageOverride,
+  profileScreenSize,
+  deviceMetricsOverride,
+  workerPreludeScript,
+  workerPreludeSource,
+  targetFingerprintCommands,
+  attachFingerprintToNewTargets,
   macroRecorderClientScript,
   syncCaptureClientScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
