@@ -18,6 +18,7 @@ import NumberInput from '@/components/ui/NumberInput.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
+import { SHOW_UNAPPLIED_SETTINGS, visibleSectionOrder } from '@/lib/unappliedSettings.mjs';
 import i18n from '@/i18n/index.js';
 import settingsExtraEn from '@/i18n/locales/en/settingsExtra.json';
 import settingsExtraEs from '@/i18n/locales/es/settingsExtra.json';
@@ -61,13 +62,15 @@ function buildSections(t, tx) {
   };
 
   add('language', 'general', t('settings.language.title'), t('settings.language.description'), 'language locale translate interface');
-  add('onstartup', 'general', tx('onStartup.title'), tx('onStartup.description'), 'start page proxy extension country launch');
+  // Keywords name only controls on screen; the unapplied ones (lib/unappliedSettings.mjs) add theirs when shown.
+  const unapplied = (kw) => (SHOW_UNAPPLIED_SETTINGS ? ` ${kw}` : '');
+  add('onstartup', 'general', tx('onStartup.title'), tx('onStartup.description'), `start page proxy launch${unapplied('extension country')}`);
   add('updates', 'general', tx('updates.title'), tx('updates.description'), 'update version upgrade install');
   add('platform', 'general', tx('platform.title'), tx('platform.description'), 'icon serial number taskbar');
 
-  add('fingerprint', 'browser', tx('fingerprint.title'), tx('fingerprint.description'), 'multi-profile fingerprint canvas webgl geolocation timezone cdp camera mobile webrtc chromium');
+  add('fingerprint', 'browser', tx('fingerprint.title'), tx('fingerprint.description'), `multi-profile fingerprint canvas webgl geolocation timezone cdp webrtc chromium${unapplied('camera mobile')}`);
   add('behaviour', 'browser', tx('behaviour.title'), tx('behaviour.description'), 'chrome sign-in translate devtools extensions https videos images bandwidth cookies third-party launch check mismatch');
-  add('website', 'browser', tx('website.title'), tx('website.description'), 'block allowlist blocklist facebook local network url');
+  add('website', 'browser', tx('website.title'), tx('website.description'), `local network url${unapplied('block allowlist blocklist facebook')}`);
   add('ipsetting', 'browser', tx('ipSetting.title'), tx('ipSetting.description'), 'ip asn city region country checker ipinfo');
   add('autofill', 'browser', tx('smartAutofill.title'), tx('smartAutofill.description'), 'autofill vault persona firefox form');
   add('captcha', 'browser', tx('captcha.title'), tx('captcha.description'), 'captcha recaptcha hcaptcha 2captcha anticaptcha solver api key');
@@ -93,13 +96,14 @@ function buildSections(t, tx) {
   add('workspacebackup', 'account', tx('nav.workspaceBackup'), '', 'backup restore export');
   add('developerapi', 'account', tx('nav.developerApi'), '', 'developer api token local');
 
-  const order = [
+  // Sections whose every control is unapplied drop out of the nav, search and page here.
+  const order = visibleSectionOrder([
     'language', 'onstartup', 'updates', 'platform',
     'fingerprint', 'behaviour', 'website', 'ipsetting', 'autofill', 'captcha',
     'localruntime', 'performance', 'reliability', 'sessions', 'scheduler', 'datasync',
     'security', 'multidevice', 'audit', 'email',
     'billing', 'monetization', 'migration', 'workspacesync', 'branding', 'dbencryption', 'workspacebackup', 'developerapi'
-  ];
+  ]);
   const groupLabels = {
     general: tx('groups.general'),
     browser: tx('groups.browser'),
@@ -284,14 +288,14 @@ export default function SettingsPage() {
               <LanguageSection sec={SEC.language} />
               <OnStartupSection sec={SEC.onstartup} s={s} apply={apply} />
               <UpdatesSection sec={SEC.updates} />
-              <PlatformSection sec={SEC.platform} s={s} apply={apply} />
+              {SHOW_UNAPPLIED_SETTINGS && <PlatformSection sec={SEC.platform} s={s} apply={apply} />}
             </GroupBlock>
 
             <GroupBlock group={sections.groups[1]} map={SEC}>
               <FingerprintSection sec={SEC.fingerprint} s={s} apply={apply} />
               <BehaviourSection sec={SEC.behaviour} s={s} apply={apply} />
               <WebsiteSection sec={SEC.website} s={s} apply={apply} />
-              <IpSettingSection sec={SEC.ipsetting} s={s} apply={apply} />
+              {SHOW_UNAPPLIED_SETTINGS && <IpSettingSection sec={SEC.ipsetting} s={s} apply={apply} />}
               <AutofillSection sec={SEC.autofill} s={s} apply={apply} />
               <CaptchaSection sec={SEC.captcha} s={s} apply={apply} />
             </GroupBlock>
@@ -302,12 +306,12 @@ export default function SettingsPage() {
               <ReliabilitySection sec={SEC.reliability} s={s} apply={apply} />
               <SessionsSection sec={SEC.sessions} loading={loading} sessions={sessions} onClose={handleCloseSession} />
               <SchedulerSection sec={SEC.scheduler} scheduler={scheduler} savingSched={savingSched} saveScheduler={saveScheduler} setScheduler={setScheduler} />
-              <DataSyncSection sec={SEC.datasync} s={s} apply={apply} />
+              {SHOW_UNAPPLIED_SETTINGS && <DataSyncSection sec={SEC.datasync} s={s} apply={apply} />}
             </GroupBlock>
 
             <GroupBlock group={sections.groups[3]} map={SEC}>
-              <SecuritySection sec={SEC.security} s={s} apply={apply} />
-              <MultiDeviceSection sec={SEC.multidevice} s={s} apply={apply} />
+              {SHOW_UNAPPLIED_SETTINGS && <SecuritySection sec={SEC.security} s={s} apply={apply} />}
+              {SHOW_UNAPPLIED_SETTINGS && <MultiDeviceSection sec={SEC.multidevice} s={s} apply={apply} />}
               <AuditSection sec={SEC.audit} s={s} apply={apply} />
               <EmailSection sec={SEC.email} />
             </GroupBlock>
@@ -731,18 +735,22 @@ function OnStartupSection({ sec, s, apply }) {
             checked={s.onStartup.onlyOpenWithProxy}
             onChange={(v) => apply({ onStartup: { onlyOpenWithProxy: v } })}
           />
-          <SwitchRow
-            title={tx('onStartup.onlyWhenExtensionLoaded.title')}
-            description={tx('onStartup.onlyWhenExtensionLoaded.desc')}
-            checked={s.onStartup.onlyOpenWhenExtensionLoaded}
-            onChange={(v) => apply({ onStartup: { onlyOpenWhenExtensionLoaded: v } })}
-          />
-          <SwitchRow
-            title={tx('onStartup.blockIfCountryChanged.title')}
-            description={tx('onStartup.blockIfCountryChanged.desc')}
-            checked={s.onStartup.blockIfCountryChanged}
-            onChange={(v) => apply({ onStartup: { blockIfCountryChanged: v } })}
-          />
+          {SHOW_UNAPPLIED_SETTINGS && (
+            <>
+              <SwitchRow
+                title={tx('onStartup.onlyWhenExtensionLoaded.title')}
+                description={tx('onStartup.onlyWhenExtensionLoaded.desc')}
+                checked={s.onStartup.onlyOpenWhenExtensionLoaded}
+                onChange={(v) => apply({ onStartup: { onlyOpenWhenExtensionLoaded: v } })}
+              />
+              <SwitchRow
+                title={tx('onStartup.blockIfCountryChanged.title')}
+                description={tx('onStartup.blockIfCountryChanged.desc')}
+                checked={s.onStartup.blockIfCountryChanged}
+                onChange={(v) => apply({ onStartup: { blockIfCountryChanged: v } })}
+              />
+            </>
+          )}
         </>
       )}
     </SectionBox>
@@ -878,7 +886,9 @@ function FingerprintSection({ sec, s, apply }) {
           />
           <AntidetectEngineInstaller />
           <SwitchRow title={tx('browser.geoMatch.title')} description={tx('browser.geoMatch.desc')} checked={!(s.geoMatch && s.geoMatch.enabled === false)} onChange={(v) => apply({ geoMatch: { enabled: v } })} />
-          <SwitchRow title={tx('browser.realtimeTimezone.title')} description={tx('browser.realtimeTimezone.desc')} checked={s.browser.matchTimezoneOnIpChange} onChange={(v) => apply({ browser: { matchTimezoneOnIpChange: v } })} />
+          {SHOW_UNAPPLIED_SETTINGS && (
+            <SwitchRow title={tx('browser.realtimeTimezone.title')} description={tx('browser.realtimeTimezone.desc')} checked={s.browser.matchTimezoneOnIpChange} onChange={(v) => apply({ browser: { matchTimezoneOnIpChange: v } })} />
+          )}
           <SwitchRow
             experimental
             title={tx('browser.minimizeCdpFootprint.shortTitle', 'Minimize CDP footprint')}
@@ -886,8 +896,12 @@ function FingerprintSection({ sec, s, apply }) {
             checked={!!s.browser.minimizeCdpFootprint}
             onChange={(v) => apply({ browser: { minimizeCdpFootprint: v } })}
           />
-          <SwitchRow title={tx('browser.virtualCamera.title')} description={tx('browser.virtualCamera.desc')} checked={s.browser.enableVirtualCamera} onChange={(v) => apply({ browser: { enableVirtualCamera: v } })} />
-          <SwitchRow title={tx('browser.mobileSimulation.title')} description={tx('browser.mobileSimulation.desc')} checked={s.browser.mobileSimulation} onChange={(v) => apply({ browser: { mobileSimulation: v } })} />
+          {SHOW_UNAPPLIED_SETTINGS && (
+            <>
+              <SwitchRow title={tx('browser.virtualCamera.title')} description={tx('browser.virtualCamera.desc')} checked={s.browser.enableVirtualCamera} onChange={(v) => apply({ browser: { enableVirtualCamera: v } })} />
+              <SwitchRow title={tx('browser.mobileSimulation.title')} description={tx('browser.mobileSimulation.desc')} checked={s.browser.mobileSimulation} onChange={(v) => apply({ browser: { mobileSimulation: v } })} />
+            </>
+          )}
         </>
       )}
     </SectionBox>
@@ -936,22 +950,28 @@ function WebsiteSection({ sec, s, apply }) {
     <SectionBox sec={sec} icon={Globe2} accent="#8b5cf6">
       {!s ? <LoadingRow label={tx('globalPreferences.loading')} /> : (
         <>
-          <SwitchRow
-            title={tx('website.blockAccess.title')}
-            description={tx('website.blockAccess.desc')}
-            checked={s.website.blockAccess.enabled}
-            onChange={(v) => apply({ website: { blockAccess: { enabled: v } } })}
-          >
-            {s.website.blockAccess.enabled && (
-              <div className="mt-3">
-                <CustomSelect className="w-full sm:w-48" value={s.website.blockAccess.mode} onChange={(e) => apply({ website: { blockAccess: { mode: e.target.value } } })}>
-                  <option value="blocklist">{tx('website.blockAccess.blocklist')}</option>
-                  <option value="allowlist">{tx('website.blockAccess.allowlist')}</option>
-                </CustomSelect>
-              </div>
-            )}
-          </SwitchRow>
-          <SwitchRow title={tx('website.fbStatic.title')} description={tx('website.fbStatic.desc')} checked={s.website.fbStaticLocal} onChange={(v) => apply({ website: { fbStaticLocal: v } })} />
+          {/* Block access: the engine filters only when website.blockAccess.list has entries, and no
+              screen lets anyone enter that list, so the switch alone never blocks anything. */}
+          {SHOW_UNAPPLIED_SETTINGS && (
+            <>
+              <SwitchRow
+                title={tx('website.blockAccess.title')}
+                description={tx('website.blockAccess.desc')}
+                checked={s.website.blockAccess.enabled}
+                onChange={(v) => apply({ website: { blockAccess: { enabled: v } } })}
+              >
+                {s.website.blockAccess.enabled && (
+                  <div className="mt-3">
+                    <CustomSelect className="w-full sm:w-48" value={s.website.blockAccess.mode} onChange={(e) => apply({ website: { blockAccess: { mode: e.target.value } } })}>
+                      <option value="blocklist">{tx('website.blockAccess.blocklist')}</option>
+                      <option value="allowlist">{tx('website.blockAccess.allowlist')}</option>
+                    </CustomSelect>
+                  </div>
+                )}
+              </SwitchRow>
+              <SwitchRow title={tx('website.fbStatic.title')} description={tx('website.fbStatic.desc')} checked={s.website.fbStaticLocal} onChange={(v) => apply({ website: { fbStaticLocal: v } })} />
+            </>
+          )}
           <SwitchRow title={tx('website.localNetwork.title')} description={tx('website.localNetwork.desc')} checked={s.website.localNetworkAccess} onChange={(v) => apply({ website: { localNetworkAccess: v } })} />
         </>
       )}

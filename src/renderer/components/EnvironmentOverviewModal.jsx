@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Fingerprint, X, Cpu, Monitor, Globe, ShieldCheck, Clock, Network } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
+import { SHOW_UNAPPLIED_SETTINGS } from '@/lib/unappliedSettings.mjs';
 
 // Build a representative User-Agent string from the profile's OS + version, so
 // the overview shows what sites will see. Mirrors the launch engine's logic.
@@ -127,8 +128,9 @@ export default function EnvironmentOverviewModal({ profile, onClose }) {
           </Section>
 
           <Section icon={ShieldCheck} title={t('envOverview.sectionDevice')}>
-            <Row label={t('envOverview.rowDeviceName')} value={p.deviceName || t('envOverview.valAuto')} />
-            <Row label={t('envOverview.rowMacAddress')} value={p.macAddress || t('envOverview.valAuto')} mono />
+            {/* Saved but never applied at launch, so not shown as part of the environment. */}
+            {SHOW_UNAPPLIED_SETTINGS && <Row label={t('envOverview.rowDeviceName')} value={p.deviceName || t('envOverview.valAuto')} />}
+            {SHOW_UNAPPLIED_SETTINGS && <Row label={t('envOverview.rowMacAddress')} value={p.macAddress || t('envOverview.valAuto')} mono />}
             <Row label={t('envOverview.rowDoNotTrack')} value={p.doNotTrack || t('envOverview.valDefault')} />
             <Row label={t('envOverview.rowHardwareAccel')} value={p.hardwareAcceleration || t('envOverview.valDefault')} />
             <Row label={t('envOverview.rowDisableTls')} value={p.disableTls || t('envOverview.valClose')} />

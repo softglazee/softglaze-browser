@@ -206,7 +206,7 @@
     "webgpu": "WebGPU",
     "webgpuDesc": "Reemplazo moderno de WebGL en navegadores más recientes.",
     "hardwareConfig": "Configuración de hardware",
-    "hardwareConfigSub": "CPU, RAM, nombre del dispositivo y dirección MAC",
+    "hardwareConfigSub": "Núcleos de CPU y RAM",
     "cpuCores": "Núcleos de CPU",
     "coresUnit_one": "{{count}} núcleo",
     "coresUnit_other": "{{count}} núcleos",
@@ -230,7 +230,7 @@
   },
   "advanced": {
     "coreSettings": "Ajustes principales",
-    "coreSettingsSub": "Extensiones, sincronización de datos y comportamiento del navegador",
+    "coreSettingsSub": "Extensiones y comportamiento del navegador",
     "extension": "Extensión",
     "extensionDesc": "Las extensiones habilitadas en [Extensiones - Extensiones del equipo] se instalarán en el perfil.",
     "teamExtensions": "Extensiones del equipo",
@@ -263,7 +263,7 @@
     "disableImagesOver": "Desactivar la carga de imágenes mayores de",
     "disableImagesUnit": "KB (0 KB significa que no se cargan imágenes)",
     "randomFingerprint": "Huella digital aleatoria",
-    "randomFingerprintDesc": "Se generará una nueva huella digital de forma aleatoria en cada inicio, ignorando algunos ajustes existentes.",
+    "randomFingerprintDesc": "Solo para perfiles nuevos: al guardar, el perfil parte de una huella digital recién generada y encima se aplican los valores de estas pestañas. Los inicios y las ediciones posteriores conservan la misma huella.",
     "loadExtensions": "Cargar extensiones de SoftGlaze (usa Chrome-for-Testing)"
   },
   "env": {
@@ -318,7 +318,7 @@
     "queueWidth": "a la vez",
     "queueWidthTitle": "Cuántos perfiles permanecen abiertos al mismo tiempo. El siguiente se abre en cuanto cierras uno.",
     "synchronize": "Sincronizar",
-    "synchronizeTitle": "Iniciar como ventanas reflejadas Maestro + Esclavo (Premium)",
+    "synchronizeTitle": "Iniciar como ventanas reflejadas Maestro + Esclavo",
     "close": "Cerrar",
     "tag": "Etiquetar",
     "tagTitle": "Añadir o quitar una etiqueta",
