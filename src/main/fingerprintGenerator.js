@@ -163,6 +163,10 @@ const NOT_A_BRAND = { brand: 'Not_A Brand', version: '24', full: '24.0.0.0' };
 
 // uaInfix goes before " Safari/537.36" (Yandex), uaSuffix after it (Edge/Opera); `inject` lists
 // vendor globals for the page script. vendor/inject ignore the major, so JS-only callers may pass 0.
+// `gpc` is true only for a brand that sends Global Privacy Control by itself, out of the box: Brave
+// (Sec-GPC: 1 on every request, navigator.globalPrivacyControl true in pages and workers, whatever the
+// Do Not Track setting). Stock Chrome, Edge, Opera, Vivaldi and Yandex ship no GPC at all, so a profile
+// claiming one of them must not show it.
 function buildBrandIdentity(brand, chromiumMajor, chromiumFull) {
   const M = Number(chromiumMajor) || 0;
   const full = chromiumFull && /^\d+\.\d/.test(chromiumFull) ? chromiumFull : `${M}.0.0.0`;
@@ -181,11 +185,12 @@ function buildBrandIdentity(brand, chromiumMajor, chromiumFull) {
     }
     case 'Brave': {
       // Brave deliberately mirrors Chrome's UA + client hints to shed entropy; the
-      // only honest signal is navigator.brave.isBrave().
+      // only honest signal is navigator.brave.isBrave(). GPC is on by default in Brave.
       return {
         id, vendor: 'Google Inc.', uaInfix: '', uaSuffix: '',
         brands: [chromiumBrand, chromeBrand, NOT_A_BRAND],
-        inject: ['brave']
+        inject: ['brave'],
+        gpc: true
       };
     }
     case 'Opera': {

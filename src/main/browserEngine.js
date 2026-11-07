@@ -1354,7 +1354,9 @@ function fingerprintScript(fp) {
       timezone: fp.timezone || undefined,
       // The page's UA is already the CDP override here. Shared workers keep the real UA string under
       // that override (their Client Hints follow it), so the prelude sets it when it differs.
-      userAgent: (function () { try { return navigator.userAgent || undefined; } catch (e) { return undefined; } })()
+      userAgent: (function () { try { return navigator.userAgent || undefined; } catch (e) { return undefined; } })(),
+      // Brave reports GPC in workers too (WorkerNavigator), so a worker matches its page.
+      globalPrivacyControl: fp.gpc ? true : undefined
     };
     // Runs first in every worker realm; must be a self-contained literal.
     var prelude = '(function(){' +
@@ -1370,6 +1372,9 @@ function fingerprintScript(fp) {
       'd("hardwareConcurrency",o.hardwareConcurrency);d("deviceMemory",o.deviceMemory);' +
       'd("languages",o.languages);d("language",o.language);d("platform",o.platform);' +
       'if(o.userAgent&&navigator.userAgent!==o.userAgent){d("userAgent",o.userAgent);d("appVersion",o.userAgent.slice(o.userAgent.indexOf("/")+1));}' +
+      // A new attribute (Chrome workers have none): enumerable, with a non-constructible getter, as in Brave.
+      'if(o.globalPrivacyControl===true&&navigator.globalPrivacyControl!==true){try{Object.defineProperty(Object.getPrototypeOf(navigator)||navigator,"globalPrivacyControl",' +
+      '{get:mk(Object.getOwnPropertyDescriptor({get globalPrivacyControl(){return true;}},"globalPrivacyControl").get,"get globalPrivacyControl"),configurable:true,enumerable:true});}catch(e){}}' +
       'try{var pg=function(proto){if(!proto)return;var g=proto.getParameter;proto.getParameter=mk(function(p){' +
       'if(o.webglVendor&&p===37445)return o.webglVendor;if(o.webglRenderer&&p===37446)return o.webglRenderer;' +
       'return g.apply(this,arguments);},"getParameter");};' +
@@ -1658,7 +1663,20 @@ if (fp.noise.canvas) {
   if (fp.dnt === '1' || fp.dnt === '0') {
     define(navigator, 'doNotTrack', fp.dnt);
     try { define(window, 'doNotTrack', fp.dnt); } catch (e) {}
-    if (fp.dnt === '1') { try { define(navigator, 'globalPrivacyControl', true); } catch (e) {} }
+  }
+
+  // Global Privacy Control is not tied to Do Not Track: only a brand that sends it by itself shows it
+  // (fp.gpc, Brave: on by default). Stock Chrome, Edge, Opera, Vivaldi and Yandex have no
+  // navigator.globalPrivacyControl at all, so for them it stays absent, whatever the DNT choice.
+  // Brave's is an IDL attribute: an enumerable accessor on Navigator.prototype, not an own property.
+  if (fp.gpc) {
+    try {
+      const navProto = Object.getPrototypeOf(navigator);
+      if (navProto && navigator.globalPrivacyControl !== true) {
+        const gpcGetter = markNative(Object.getOwnPropertyDescriptor({ get globalPrivacyControl() { return true; } }, 'globalPrivacyControl').get, 'get globalPrivacyControl');
+        Object.defineProperty(navProto, 'globalPrivacyControl', { get: gpcGetter, configurable: true, enumerable: true });
+      }
+    } catch (e) {}
   }
 
   // WebGPU - when disabled, hide navigator.gpu so sites can't read the real
@@ -2544,6 +2562,8 @@ function buildFingerprintConfig(profile, opts) {
     brand: brandIdent.id,
     brandVendor: brandIdent.vendor,
     brandInject: brandIdent.inject,
+    // Global Privacy Control comes from the brand (Brave sends it by itself), never from Do Not Track.
+    gpc: Boolean(brandIdent.gpc),
     timezone: timezone || null,
     navPlatform: osTok.navPlatform,
     // null ⇒ no override (report the real value) - only when the user picks "Real".
@@ -2612,6 +2632,13 @@ function workerPreludeScript(o) {
     if (Array.isArray(o.languages) && o.languages.length) {
       want('languages', Object.freeze(o.languages.slice()));
       want('language', o.languages[0]);
+    }
+    // Brave has navigator.globalPrivacyControl in workers too (WorkerNavigator). Chrome's workers have no
+    // such property, so it is added here (want() only changes properties that exist) for a GPC brand.
+    if (o.gpc === true) {
+      let gpcNow;
+      try { gpcNow = nav.globalPrivacyControl; } catch (e) { gpcNow = undefined; }
+      if (gpcNow !== true) props.push(['globalPrivacyControl', true]);
     }
     let hostTz = '';
     try { hostTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
@@ -2718,9 +2745,21 @@ function workerPreludeSource(fp, ua = null) {
     languages: langs,
     timezone: fp.timezone || undefined,
     webglVendor: gpu ? (fp.webglVendor || undefined) : undefined,
-    webglRenderer: gpu ? (fp.webglRenderer || undefined) : undefined
+    webglRenderer: gpu ? (fp.webglRenderer || undefined) : undefined,
+    gpc: fp.gpc ? true : undefined
   };
   return `(${workerPreludeScript.toString()})(${JSON.stringify(data)});`;
+}
+
+// The privacy request headers every tab of a profile sends: DNT: 1 when the profile turns Do Not Track
+// on, Sec-GPC: 1 only when the claimed brand sends Global Privacy Control by itself (fp.gpc, Brave). The
+// anti-detect build has no Brave identity (Chrome/Edge/Opera/Vivaldi) and runs no page script, so it
+// never gets GPC. An empty object means nothing to set.
+function privacyRequestHeaders(fp = {}) {
+  const headers = {};
+  if (fp && fp.dnt === '1') headers.DNT = '1';
+  if (fp && fp.gpc && !fp.nativeEngine) headers['Sec-GPC'] = '1';
+  return headers;
 }
 
 // The CDP commands one target needs, in order, so the first tab, later tabs, popups, frames and
@@ -3425,7 +3464,8 @@ async function launchProfileSessionNow(options = {}) {
   // Accept-Language is the plain fpConfig.langs list, so navigator.languages (pages and workers) is
   // exactly fpConfig.langs and Chrome adds the header's q-values itself (see acceptLanguageOverride).
   const acceptLanguage = acceptLanguageOverride(fpConfig.langs);
-  const dnt = fpConfig.dnt; // reused for the DNT request header in applyToPage
+  // DNT / Sec-GPC request headers for applyToPage (every tab); see privacyRequestHeaders.
+  const privacyHeaders = privacyRequestHeaders(fpConfig);
   const ua = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
 
   fpLate.ua = ua;
@@ -3501,8 +3541,9 @@ async function launchProfileSessionNow(options = {}) {
       for (const c of targetFingerprintCommands('page', fpConfig, fpLate)) {
         await cdp.send(c.method, c.params).catch(() => {});
       }
-      // DNT belongs on the wire as an HTTP header, not just navigator.
-      if (dnt === '1') await targetPage.setExtraHTTPHeaders({ DNT: '1', 'Sec-GPC': '1' }).catch(() => {});
+      // DNT and GPC belong on the wire as HTTP headers, not just navigator. Sec-GPC only for a brand that
+      // sends it by itself (Brave), never because DNT is on.
+      if (Object.keys(privacyHeaders).length) await targetPage.setExtraHTTPHeaders(privacyHeaders).catch(() => {});
       // Captcha auto-solver (paid 2captcha/anti-captcha; user-supplied API key).
       try { attachCaptchaSolver(targetPage, captcha); } catch (e) {}
       // One interception handler, enabled only when needed: disableVideos aborts media (saves proxy
@@ -4833,6 +4874,9 @@ module.exports = {
   workerPreludeScript,
   workerPreludeSource,
   targetFingerprintCommands,
+  // Exported for tests: the profile's fingerprint values, and the DNT / Sec-GPC headers every tab sends.
+  buildFingerprintConfig,
+  privacyRequestHeaders,
   attachFingerprintToNewTargets,
   macroRecorderClientScript,
   syncCaptureClientScript,
