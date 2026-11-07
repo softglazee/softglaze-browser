@@ -1,0 +1,58 @@
+{
+  "manifest_version": "0.3",
+  "name": "softglaze",
+  "display_name": "SoftGlaze Browser",
+  "version": "1.0.0",
+  "description": "Work with your SoftGlaze Browser profiles, proxies, macros and pages from Claude. Every change asks you for approval inside SoftGlaze.",
+  "long_description": "Connects Claude Desktop to the SoftGlaze Browser app on this computer (127.0.0.1 only). Claude can list and check profiles and proxies, explain CAPTCHA risk, start and stop profiles, run macros and act inside a running profile's pages through its own proxy and fingerprint. Anything that changes something asks you in the SoftGlaze app first, and every call is audited. You need SoftGlaze Browser running with SoftGlaze AI switched on, and a token from the SoftGlaze AI page.",
+  "author": {
+    "name": "SOFTGLAZE (SMC-PRIVATE) LIMITED",
+    "url": "https://softglaze.com"
+  },
+  "homepage": "https://browser.softglaze.com/features/ai-agents",
+  "documentation": "https://browser.softglaze.com/docs",
+  "support": "https://browser.softglaze.com/contact",
+  "license": "BUSL-1.1",
+  "keywords": ["softglaze", "browser profiles", "proxies", "automation", "mcp"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/softglaze-mcp-bridge.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/softglaze-mcp-bridge.js"],
+      "env": {
+        "SOFTGLAZE_TOKEN": "${user_config.token}",
+        "SOFTGLAZE_MCP_URL": "${user_config.url}"
+      }
+    }
+  },
+  "user_config": {
+    "token": {
+      "type": "string",
+      "title": "SoftGlaze AI token",
+      "description": "Create one in SoftGlaze Browser: SoftGlaze AI page, Tokens, New token. It starts with sgai_.",
+      "sensitive": true,
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "title": "SoftGlaze AI address",
+      "description": "Shown on the SoftGlaze AI page. Change it only if you changed the port.",
+      "default": "http://127.0.0.1:8080/mcp",
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "workspace_summary", "description": "Counts, running profiles, plan limits and this token's scope." },
+    { "name": "list_profiles", "description": "List profiles with group, proxy country and status." },
+    { "name": "profile_health", "description": "Explain a profile's CAPTCHA risk and how to fix it." },
+    { "name": "start_profile", "description": "Open a profile through its own proxy and fingerprint (asks first)." },
+    { "name": "page_snapshot", "description": "Read the structure of the page in a running profile." }
+  ],
+  "tools_generated": true,
+  "prompts_generated": true,
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": { "node": ">=18.0.0" }
+  }
+}

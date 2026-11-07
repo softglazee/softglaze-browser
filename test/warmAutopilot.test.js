@@ -187,7 +187,7 @@ test('the settings handlers are gated and owned like the macro schedule', () => 
   const set = fnBody('setWarmAutopilot');
   assert.match(set, /await requirePermission\('automation\.run'\);/);
   assert.match(set, /if \(existing\) await assertCanChangeWarmAutopilot\(existing\.ownerMemberId\);/);
-  assert.match(set, /ownerMemberId: currentMemberId \};/, 'the caller becomes the owner');
+  assert.match(set, /ownerMemberId: actingMemberId\(\) \};/, 'the caller becomes the owner');
   assert.match(set, /warmAutopilot\.configProblem\(cfg\)/);
   assert.match(set, /group\.findUnique\(\{ where: \{ id: cfg\.groupId \}/, 'the group must exist');
   assert.ok(set.indexOf('assertCanChangeWarmAutopilot') < set.indexOf("writeSetting('warmAutopilot'"), 'checked before it is stored');

@@ -46,7 +46,7 @@ test('the schedule is gated, owned, and re-checked against its owner on every ru
   assert.match(set, /if \(existing && existing\.ownerMemberId != null\) await assertCanControlRun\(existing\.ownerMemberId\);/);
   assert.match(set, /if \(macroId\) await loadAccessibleMacro\(macroId\);/);
   assert.match(set, /for \(const pid of profileIds\) await assertCanAccessProfile\(pid\);/);
-  assert.match(set, /ownerMemberId: currentMemberId \};/);
+  assert.match(set, /ownerMemberId: actingMemberId\(\) \};/);
   const due = fnBody('runDueMacroSchedule');
   assert.match(due, /const \{ allowed, reason \} = await scheduleAllowedProfiles\(cfg\);/);
   assert.match(due, /for \(const pid of allowed\)/);
@@ -75,11 +75,11 @@ test('pause/stop of macro runs and warm-ups are limited to who may control them'
   const ctl = fnBody('controlMacro');
   assert.match(ctl, /await requirePermission\('automation\.run'\);/);
   assert.match(ctl, /await assertCanControlRun\(control\.ownerMemberId\);/);
-  assert.match(fnBody('runMacroOnProfile'), /ownerMemberId: currentMemberId \};/);
+  assert.match(fnBody('runMacroOnProfile'), /ownerMemberId: actingMemberId\(\) \};/);
   const stop = fnBody('stopWarmer');
   assert.match(stop, /await requirePermission\('automation\.run'\);/);
   assert.match(stop, /await assertCanControlRun\(run\.ownerMemberId\)/);
-  assert.match(IPC, /ownerMemberId: currentMemberId \/\/ who may stop \/ force-close it/);
+  assert.match(IPC, /ownerMemberId: actingMemberId\(\) \/\/ who may stop \/ force-close it/);
   const who = fnBody('assertCanControlRun');
   assert.match(who, /permissions\.visibleMemberIds\(all, me\)\.has\(Number\(ownerMemberId\)\)/);
 });

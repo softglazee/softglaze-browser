@@ -91,5 +91,9 @@ test('serializeProfile, updateProfile, createProfile and the local API use the r
   assert.match(ser, /redactPlatformAccounts\(/);
   assert.match(/async function updateProfile\(payload\) \{[\s\S]*?\n\}/.exec(IPC)[0], /input = restoreMaskedSecrets\(input, existing\)/);
   assert.match(/async function createProfile\(payload\) \{[\s\S]*?\n\}/.exec(IPC)[0], /restoreMaskedSecrets\(requireObject\(payload\), null\)/);
-  assert.match(IPC, /proxy: p\.proxyInfoString \? maskProxyInfoString\(p\.proxyInfoString, null\) : null/);
+  // The Local API and SoftGlaze AI list profiles through src/main/ai/tools.js, whose views never
+  // carry the raw proxy string, platform accounts or the 2FA seed.
+  const AI_TOOLS = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'ai', 'tools.js'), 'utf8');
+  const compact = /function compactProfile\(p, running\) \{[\s\S]*?\n\}/.exec(AI_TOOLS)[0];
+  for (const secret of ['proxyInfoString', 'platformAccounts', 'twoFactorSeed', 'password']) assert.ok(!compact.includes(secret), `compactProfile never returns ${secret}`);
 });
