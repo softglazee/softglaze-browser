@@ -55,6 +55,7 @@ const rbacPolicy = require('./rbacPolicy');
 const payments = require('./payments');
 const { parseWorkbookFile, parseDataRows, parseSystemProxyBehavior, BROWSER_CORE, normalizeBrowserCore, toStoredBrowserCore } = require('./importParser');
 const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSignature, CHROME_VERSIONS } = require('./fingerprintGenerator');
+const { doNotTrackChoice } = require('./doNotTrack');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
@@ -902,7 +903,8 @@ function extractFingerprintData(input) {
     macAddressType: input.macAddressType,
     macAddress: input.macAddress,
     
-    doNotTrack: input.doNotTrack,
+    // Stored as the editor's word: 'Open' / 'Close' / 'Default' (the API may send on/off, 1/0, true/false).
+    doNotTrack: input.doNotTrack === undefined ? undefined : doNotTrackChoice(input.doNotTrack),
     portScanProtection: input.portScanProtection,
     hardwareAcceleration: input.hardwareAcceleration,
     disableTls: input.disableTls,
@@ -7179,7 +7181,7 @@ async function commitProfileImport(payload, event) {
       if (item.webglRenderer) { fp.webglMetadata = 'Custom'; fp.webglRenderer = item.webglRenderer; }
       if (item.cpuCores) { fp.cpuType = 'Custom'; fp.cpuCores = String(item.cpuCores); }
       if (item.ramGb) { fp.ramType = 'Custom'; fp.ramGb = String(item.ramGb); }
-      if (item.doNotTrack !== undefined && item.doNotTrack !== null) fp.doNotTrack = item.doNotTrack;
+      if (item.doNotTrack !== undefined && item.doNotTrack !== null) fp.doNotTrack = doNotTrackChoice(item.doNotTrack);
       if (item.timezoneType) fp.timezoneType = item.timezoneType;
       if (item.timezoneCustom) fp.timezoneCustom = item.timezoneCustom;
       if (item.languageType) fp.languageType = item.languageType;
@@ -7351,7 +7353,8 @@ const EXPORT_COLUMNS = [
   ['AudioContext', (p) => (p.audioContextNoise === false ? 'Real' : 'Noise')],
   ['CPU Cores', (p) => p.cpuCores || ''],
   ['Memory (GB)', (p) => p.ramGb || ''],
-  ['Do Not Track', (p) => (p.doNotTrack === '1' ? '1' : '0')],
+  // The editor's word, which batch import reads back unchanged (older exports wrote 1 / 0; still read).
+  ['Do Not Track', (p) => doNotTrackChoice(p.doNotTrack)],
   ['Timezone Mode', (p) => (p.timezoneType === 'Custom' ? 'Manual' : 'Auto')],
   ['Timezone', (p) => p.timezoneCustom || ''],
   ['Locale Mode', (p) => (p.languageType === 'Custom' ? 'Manual' : 'Auto')],

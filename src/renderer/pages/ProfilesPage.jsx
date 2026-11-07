@@ -28,6 +28,7 @@ import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import { intersectSelection, socks4LeaksDns } from '@/lib/uiGuards.mjs';
 import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
+import { doNotTrackChoice } from '@/lib/doNotTrack.mjs';
 import { SHOW_UNAPPLIED_SETTINGS } from '@/lib/unappliedSettings.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
@@ -867,6 +868,8 @@ export default function ProfilesPage() {
       platformAccounts: profile.platformAccounts || [],
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
       proxyType: profile.proxyType || 'HTTP',
+      // Older or imported profiles may store on/off or 1/0 (or nothing): show and save the editor's word.
+      doNotTrack: doNotTrackChoice(profile.doNotTrack),
       // Merge over the defaults so newly added keys (e.g. loadExtensions) always have a boolean,
       // keeping checkboxes controlled and letting the flag round-trip on save.
       browserSettings: { ...initialProfileData.browserSettings, ...(profile.browserSettings || {}) },

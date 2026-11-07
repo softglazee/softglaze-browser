@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGenerator');
+const { doNotTrackFlag, dntPrefToWrite } = require('./doNotTrack');
 const { applyBrandWindowIcon } = require('./windowIcon');
 const platform = require('./platform');
 // Shared with browserDownloader so the binary resolver reads exactly where the downloader writes
@@ -1079,14 +1080,16 @@ function nativeGapScript(fp) {
   }
 }
 
-// Seeds a native-engine profile with the Do-Not-Track preference. The default search provider cannot
-// be seeded: it is a MAC-protected pref, so Chromium drops planted values. Only enterprise policy
-// works, and that shows "Managed by your organization", itself a detection signal.
-async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
+// Do Not Track is Chromium's own profile setting (pref enable_do_not_track, the "Send a Do Not Track
+// request" switch; not one of the MAC-protected prefs, so a value written before launch is kept). With
+// it on, Chromium itself sends DNT: 1 on navigations, subresources and dedicated, shared and service
+// worker requests, and reports navigator.doNotTrack "1"; with it off, no header and null. Written for
+// every Chromium engine. `value` is dntPrefToWrite's answer: '1', '0', or null to write nothing.
+// (The default search provider cannot be seeded the same way: it is MAC-protected, so Chromium drops
+// planted values; only enterprise policy works, and that shows "Managed by your organization".)
+async function ensureDoNotTrackPref(userDataDir, value) {
   try {
-    // Nothing to write unless the profile states a DNT preference. null means "leave
-    // alone", matching stock Chrome's default of not sending the header at all.
-    if (!(fpConfig && (fpConfig.dnt === '1' || fpConfig.dnt === '0'))) return;
+    if (value !== '1' && value !== '0') return;
 
     const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
     let prefs = {};
@@ -1102,7 +1105,9 @@ async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
     }
     if (hadFile && (!prefs || typeof prefs !== 'object' || Array.isArray(prefs))) return;
 
-    prefs.enable_do_not_track = fpConfig.dnt === '1';
+    const on = value === '1';
+    if (hadFile && prefs.enable_do_not_track === on) return; // already right: no write
+    prefs.enable_do_not_track = on;
 
     await fs.mkdir(path.dirname(prefsPath), { recursive: true });
     await fs.writeFile(prefsPath, JSON.stringify(prefs));
@@ -1130,7 +1135,7 @@ async function ensureCookiePolicyPref(userDataDir, browserSettings) {
       prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8'));
       hadFile = true;
     } catch (e) {
-      // Same rule as ensureNativeProfilePrefs: never overwrite a Preferences file that
+      // Same rule as ensureDoNotTrackPref: never overwrite a Preferences file that
       // exists but did not parse (that would wipe the profile's whole settings).
       if (e && e.code !== 'ENOENT') return;
       prefs = {};
@@ -1190,7 +1195,7 @@ function fingerprintScript(fp) {
 
   // Spoofed accessors go on the prototype, as in real Chrome, with a getter that reports [native code]
   // and is named "get <prop>"; instance properties leak via Object.getOwnPropertyNames(navigator).
-  // Falls back to the instance when the prototype lacks the property (e.g. window.doNotTrack).
+  // Falls back to the instance when the prototype lacks the property.
   const define = (obj, prop, value) => {
     try {
       const proto = Object.getPrototypeOf(obj);
@@ -1659,10 +1664,13 @@ if (fp.noise.canvas) {
     }
   }
 
-  // Do Not Track - '1' / '0' / null (leave native untouched when not configured).
-  if (fp.dnt === '1' || fp.dnt === '0') {
-    define(navigator, 'doNotTrack', fp.dnt);
-    try { define(window, 'doNotTrack', fp.dnt); } catch (e) {}
+  // Do Not Track is Chromium's own setting, written before launch (ensureDoNotTrackPref), so the browser
+  // itself reports navigator.doNotTrack "1" and sends DNT: 1 everywhere. This is only the fallback for a
+  // launch where that setting could not be written: DNT on and the native value is not "1" already.
+  // DNT off and Default define nothing: Chromium then reports null (never "0") and has no
+  // window.doNotTrack.
+  if (fp.dnt === '1') {
+    try { if (navigator.doNotTrack !== '1') define(navigator, 'doNotTrack', '1'); } catch (e) {}
   }
 
   // Global Privacy Control is not tied to Do Not Track: only a brand that sends it by itself shows it
@@ -2086,7 +2094,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   $('cores').textContent=navigator.hardwareConcurrency+' cores';
   $('mem').textContent=(navigator.deviceMemory||'n/a')+(navigator.deviceMemory?' GB':'');
   $('screen').textContent=screen.width+'x'+screen.height+' ('+screen.availWidth+'x'+screen.availHeight+')';
-  $('dnt').textContent=(navigator.doNotTrack==='1'?'Enabled':(navigator.doNotTrack==='0'?'Disabled':'Default'));
+  $('dnt').textContent=(navigator.doNotTrack==='1'?'Enabled':'Off');
   try{
     var c=document.createElement('canvas'),x=c.getContext('webgl')||c.getContext('experimental-webgl');
     var dbg=x&&x.getExtension('WEBGL_debug_renderer_info');
@@ -2541,9 +2549,8 @@ function buildFingerprintConfig(profile, opts) {
     console.log(`[SG][fp] cross-OS profile (claims ${claimedOs} on ${HOST_OS_NAME}) - forcing a coherent GPU instead of the host's: ${webglRenderer}`);
   }
 
-  const dntRaw = String(profile.doNotTrack || '').toLowerCase();
-  const dnt = /^(on|enable|enabled|1|true|yes)$/.test(dntRaw) ? '1'
-    : (/^(off|disable|disabled|0|false|no)$/.test(dntRaw) ? '0' : null);
+  // '1' on (editor "Open"), '0' off ("Close"), null for "Default" (see doNotTrack.js).
+  const dnt = doNotTrackFlag(profile.doNotTrack);
 
   // CPU cores and RAM are spoofed unless the user picks "Real"; blank still spoofs (stable seeded pick).
   // navigator.deviceMemory caps at 8 in real Chrome, so RAM GB maps to {1,2,4,8}.
@@ -2752,9 +2759,10 @@ function workerPreludeSource(fp, ua = null) {
 }
 
 // The privacy request headers every tab of a profile sends: DNT: 1 when the profile turns Do Not Track
-// on, Sec-GPC: 1 only when the claimed brand sends Global Privacy Control by itself (fp.gpc, Brave). The
-// anti-detect build has no Brave identity (Chrome/Edge/Opera/Vivaldi) and runs no page script, so it
-// never gets GPC. An empty object means nothing to set.
+// on (the same header Chromium sends from its own setting, see ensureDoNotTrackPref; this covers a launch
+// where that setting could not be written), Sec-GPC: 1 only when the claimed brand sends Global Privacy
+// Control by itself (fp.gpc, Brave). The anti-detect build has no Brave identity (Chrome/Edge/Opera/
+// Vivaldi) and runs no page script, so it never gets GPC. An empty object means nothing to set.
 function privacyRequestHeaders(fp = {}) {
   const headers = {};
   if (fp && fp.dnt === '1') headers.DNT = '1';
@@ -3162,9 +3170,9 @@ async function launchProfileSessionNow(options = {}) {
       throw new Error('No Chrome or Chromium was found on this device. Open the Browsers page and download a browser version (or install Google Chrome) before launching Chrome profiles.');
     }
   }
-  // Seed Default/Preferences before launch: an address-bar search engine (ungoogled ships none)
-  // and the Do Not Track choice, which has no native flag.
-  if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
+  // Do Not Track goes into Chromium's own setting before launch, for every Chromium engine, so the
+  // browser itself sends DNT: 1 and reports navigator.doNotTrack in every tab, frame and worker.
+  await ensureDoNotTrackPref(userDataDir, await dntPrefToWrite(userDataDir, fpConfig.dnt));
   // Third-party cookies: Chrome's normal default for every engine (the anti-detect
   // build blocks them by default, which hurts CAPTCHA scoring) - see ensureCookiePolicyPref.
   await ensureCookiePolicyPref(userDataDir, browserSettings);
@@ -4857,6 +4865,8 @@ module.exports = {
   // Exported for tests: the third-party cookie preference written before launch.
   cookieControlsModeFor,
   ensureCookiePolicyPref,
+  // Exported for tests: Do Not Track as Chromium's own setting, written before launch.
+  ensureDoNotTrackPref,
   parseProxyInput,
   formatProxyHost,
   // Exported for tests: proxy type to --proxy-server scheme (SOCKS4 -> socks4://, not http://).

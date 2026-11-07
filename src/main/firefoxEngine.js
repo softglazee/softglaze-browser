@@ -3,6 +3,7 @@
 // off (no real-IP leak). Authenticated proxies go through a local relay; prefs cannot hold creds.
 const fs = require('node:fs');
 const { firefoxDirName } = require('./profileData');
+const { doNotTrackFlag, dntPrefToWrite } = require('./doNotTrack');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const net = require('node:net');
@@ -247,6 +248,11 @@ function buildUserJs(opts) {
 
   if (opts.userAgent) pref('general.useragent.override', opts.userAgent);
 
+  // Do Not Track through Firefox's own pref: with it on, Firefox itself sends DNT: 1 and reports
+  // navigator.doNotTrack "1"; off, no header and "unspecified". '1' / '0' from dntPrefToWrite; null
+  // writes nothing (Firefox keeps its own value, off by default).
+  if (opts.doNotTrack === '1' || opts.doNotTrack === '0') pref('privacy.donottrackheader.enabled', opts.doNotTrack === '1');
+
   if (opts.acceptLanguages) {
     pref('intl.accept_languages', opts.acceptLanguages);
     pref('intl.locale.requested', opts.acceptLanguages.split(',')[0]);
@@ -459,7 +465,8 @@ async function launchFirefoxProfileNow(options = {}) {
     proxy: effectiveProxy,
     userAgent: firefoxUserAgent,
     acceptLanguages,
-    autofill: autofillInstalled
+    autofill: autofillInstalled,
+    doNotTrack: await dntPrefToWrite(userDataDir, doNotTrackFlag(profile.doNotTrack))
   });
   // Until exit handlers are wired, a throw would leave the authenticated relay listening; close it.
   try {
