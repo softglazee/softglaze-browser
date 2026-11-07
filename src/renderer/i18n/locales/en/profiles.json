@@ -160,7 +160,6 @@
     "usernamePlaceholder": "Username / Email",
     "passwordPlaceholder": "Password",
     "twoFactor": "2FA Secret",
-    "premium": "Premium",
     "twoFactorPlaceholder": "Base32 authenticator seed, e.g. JBSWY3DPEHPK3PXP",
     "twoFactorHint": "Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes - copy them with one click from the Profiles list (🔑 2FA badge)."
   },
@@ -206,7 +205,7 @@
     "webgpu": "WebGPU",
     "webgpuDesc": "Modern replacement for WebGL in newer browsers.",
     "hardwareConfig": "Hardware Configuration",
-    "hardwareConfigSub": "CPU, RAM, device name & MAC address",
+    "hardwareConfigSub": "CPU cores & RAM",
     "cpuCores": "CPU Cores",
     "coresUnit_one": "{{count}} core",
     "coresUnit_other": "{{count}} cores",
@@ -230,7 +229,7 @@
   },
   "advanced": {
     "coreSettings": "Core Settings",
-    "coreSettingsSub": "Extensions, data sync & browser behavior",
+    "coreSettingsSub": "Extensions & browser behavior",
     "extension": "Extension",
     "extensionDesc": "The enabled extensions from [Extensions - Team's Extensions] will be installed in the profile.",
     "teamExtensions": "Team's Extensions",
@@ -263,7 +262,7 @@
     "disableImagesOver": "Disable loading images over",
     "disableImagesUnit": "KB (0 KB means no images loaded)",
     "randomFingerprint": "Random Fingerprint",
-    "randomFingerprintDesc": "New fingerprint will be randomly generated on each startup, ignoring some existing settings.",
+    "randomFingerprintDesc": "New profiles only: saving builds the profile on a freshly generated fingerprint, then applies the values on these tabs on top. Launches and later edits keep the same fingerprint.",
     "loadExtensions": "Load SoftGlaze extensions (uses Chrome-for-Testing)"
   },
   "env": {
@@ -318,7 +317,7 @@
     "queueWidth": "at a time",
     "queueWidthTitle": "How many profiles stay open at the same time. The next one opens as soon as you close one.",
     "synchronize": "Synchronize",
-    "synchronizeTitle": "Launch as Master + Slave mirrored windows (Premium)",
+    "synchronizeTitle": "Launch as Master + Slave mirrored windows",
     "close": "Close",
     "tag": "Tag",
     "tagTitle": "Add or remove a tag",

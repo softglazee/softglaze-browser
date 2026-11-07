@@ -28,6 +28,7 @@ import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import { intersectSelection, socks4LeaksDns } from '@/lib/uiGuards.mjs';
 import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
+import { SHOW_UNAPPLIED_SETTINGS } from '@/lib/unappliedSettings.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
@@ -1483,7 +1484,8 @@ export default function ProfilesPage() {
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-wrap gap-3">
                             <CustomSelect value={pd.proxyType} onChange={e => updatePd('proxyType', e.target.value)} className="w-[140px]"><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="SOCKS5">SOCKS5</option><option value="SOCKS4">SOCKS4</option><option value="Local">Local</option></CustomSelect>
-                            <CustomSelect value={pd.ipChecker} onChange={e => updatePd('ipChecker', e.target.value)} className="w-[180px]"><option value="IP2Location">IP2Location</option><option value="IPinfo">IPinfo</option></CustomSelect>
+                            {/* The IP checker choice is not saved (extractFingerprintData has no ipChecker) and the network check does not use it. */}
+                            {SHOW_UNAPPLIED_SETTINGS && <CustomSelect value={pd.ipChecker} onChange={e => updatePd('ipChecker', e.target.value)} className="w-[180px]"><option value="IP2Location">IP2Location</option><option value="IPinfo">IPinfo</option></CustomSelect>}
                             <Button variant="secondary" onClick={handleCheckProxy} disabled={checkingProxy} className="gap-2">
                               {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? t('proxy.checking') : t('proxy.checkNetwork')}
                             </Button>
@@ -1619,7 +1621,6 @@ export default function ProfilesPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <div className="text-left lg:text-right mt-2">
                       <label htmlFor="pf-platform-2fa" className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('platform.twoFactor')}</label>
-                      <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider text-violet-400/80">{t('platform.premium')}</span>
                     </div>
                     <div className="w-full">
                       <input
@@ -1816,33 +1817,39 @@ export default function ProfilesPage() {
                     </div>
                   </FpRow>
 
-                  <FpRow label={t('fp.deviceName')} description={t('fp.deviceNameDesc')}>
-                    <div className="flex flex-col gap-4">
-                      <ButtonTabs value={pd.deviceNameType} onChange={v => updatePd('deviceNameType', v)} options={['Real', 'Custom']} />
-                      {pd.deviceNameType === 'Custom' && (
-                        <div className="flex items-center gap-3">
-                          <input type="text" value={pd.deviceName} onChange={e => updatePd('deviceName', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
-                          <Button size="sm" variant="secondary" onClick={() => updatePd('deviceName', generateDeviceName())} title={t('fp.genDeviceName')} className="px-3 py-2">
-                            <RefreshCcw className="w-4 h-4" />
-                          </Button>
+                  {/* Device Name and MAC Address are saved (and generated for new profiles), but no engine
+                      applies them and browsers never expose either to a website. */}
+                  {SHOW_UNAPPLIED_SETTINGS && (
+                    <>
+                      <FpRow label={t('fp.deviceName')} description={t('fp.deviceNameDesc')}>
+                        <div className="flex flex-col gap-4">
+                          <ButtonTabs value={pd.deviceNameType} onChange={v => updatePd('deviceNameType', v)} options={['Real', 'Custom']} />
+                          {pd.deviceNameType === 'Custom' && (
+                            <div className="flex items-center gap-3">
+                              <input type="text" value={pd.deviceName} onChange={e => updatePd('deviceName', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
+                              <Button size="sm" variant="secondary" onClick={() => updatePd('deviceName', generateDeviceName())} title={t('fp.genDeviceName')} className="px-3 py-2">
+                                <RefreshCcw className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </FpRow>
+                      </FpRow>
 
-                  <FpRow label={t('fp.macAddress')} description={t('fp.macAddressDesc')}>
-                    <div className="flex flex-col gap-4">
-                      <ButtonTabs value={pd.macAddressType} onChange={v => updatePd('macAddressType', v)} options={['Real', 'Custom']} />
-                      {pd.macAddressType === 'Custom' && (
-                        <div className="flex items-center gap-3">
-                          <input type="text" value={pd.macAddress} onChange={e => updatePd('macAddress', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
-                          <Button size="sm" variant="secondary" onClick={() => updatePd('macAddress', generateMac())} title={t('fp.genMac')} className="px-3 py-2">
-                            <RefreshCcw className="w-4 h-4" />
-                          </Button>
+                      <FpRow label={t('fp.macAddress')} description={t('fp.macAddressDesc')}>
+                        <div className="flex flex-col gap-4">
+                          <ButtonTabs value={pd.macAddressType} onChange={v => updatePd('macAddressType', v)} options={['Real', 'Custom']} />
+                          {pd.macAddressType === 'Custom' && (
+                            <div className="flex items-center gap-3">
+                              <input type="text" value={pd.macAddress} onChange={e => updatePd('macAddress', e.target.value)} className="w-[280px] bg-background border border-border rounded px-4 py-2 text-foreground outline-none focus:border-primary font-mono text-sm shadow-sm" />
+                              <Button size="sm" variant="secondary" onClick={() => updatePd('macAddress', generateMac())} title={t('fp.genMac')} className="px-3 py-2">
+                                <RefreshCcw className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </FpRow>
+                      </FpRow>
+                    </>
+                  )}
 
                   <div className="flex items-center gap-2.5 mt-10 mb-6">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #8b5cf6 14%, transparent)' }}>
@@ -1898,72 +1905,90 @@ export default function ProfilesPage() {
                     </div>
                   </div>
 
-                  <FpRow label={t('advanced.extension')} description={t('advanced.extensionDesc')}>
-                    <CustomSelect value={pd.advancedExt} onChange={e => updatePd('advancedExt', e.target.value)} className="w-[220px]">
-                      <option value="Team">{t('advanced.teamExtensions')}</option>
-                      <option value="None">{t('advanced.noExtensions')}</option>
-                    </CustomSelect>
-                  </FpRow>
+                  {/* Extension (advancedExt) is saved but never read: team extensions load only through
+                      "Load SoftGlaze extensions" below. */}
+                  {SHOW_UNAPPLIED_SETTINGS && (
+                    <FpRow label={t('advanced.extension')} description={t('advanced.extensionDesc')}>
+                      <CustomSelect value={pd.advancedExt} onChange={e => updatePd('advancedExt', e.target.value)} className="w-[220px]">
+                        <option value="Team">{t('advanced.teamExtensions')}</option>
+                        <option value="None">{t('advanced.noExtensions')}</option>
+                      </CustomSelect>
+                    </FpRow>
+                  )}
 
-                  <FpRow label={t('advanced.dataSync')} description={t('advanced.dataSyncDesc')}>
-                    <div className="space-y-4">
-                      <ButtonTabs value={pd.advancedSync} onChange={v => updatePd('advancedSync', v)} options={['Global', 'Customize']} />
-                      {pd.advancedSync === 'Customize' && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 bg-background p-6 rounded border border-border shadow-sm">
-                          <CustomCheckbox label={t('advanced.syncCookie')} checked={pd.syncItems.cookie} onChange={v => updateNestedPd('syncItems', 'cookie', v)} />
-                          <CustomCheckbox label={t('advanced.syncPasswords')} checked={pd.syncItems.passwords} onChange={v => updateNestedPd('syncItems', 'passwords', v)} />
-                          <CustomCheckbox label={t('advanced.syncBookmarks')} checked={pd.syncItems.bookmarks} onChange={v => updateNestedPd('syncItems', 'bookmarks', v)} />
-                          <CustomCheckbox label={t('advanced.syncLocalStorage')} checked={pd.syncItems.localStorage} onChange={v => updateNestedPd('syncItems', 'localStorage', v)} />
-                          <CustomCheckbox label={t('advanced.syncIndexedDB')} checked={pd.syncItems.indexedDB} onChange={v => updateNestedPd('syncItems', 'indexedDB', v)} />
-                          <CustomCheckbox label={t('advanced.syncExtensionData')} checked={pd.syncItems.extensionData} onChange={v => updateNestedPd('syncItems', 'extensionData', v)} />
-                          <CustomCheckbox label={t('advanced.syncHistory')} checked={pd.syncItems.history} onChange={v => updateNestedPd('syncItems', 'history', v)} />
-                        </div>
-                      )}
-                    </div>
-                  </FpRow>
-
-                  <FpRow label={t('advanced.browserSettings')} description={t('advanced.browserSettingsDesc')}>
-                    <div className="space-y-4">
-                      <ButtonTabs value={pd.advancedBrowser} onChange={v => updatePd('advancedBrowser', v)} options={['Global', 'Customize']} />
-                      {pd.advancedBrowser === 'Customize' && (
-                        <div className="space-y-5 bg-background p-6 rounded border border-border shadow-sm">
-                          <CustomCheckbox label={t('advanced.matchTimezone')} checked={pd.browserSettings.matchTimezone} onChange={v => updateNestedPd('browserSettings', 'matchTimezone', v)} />
-                          <CustomCheckbox label={t('advanced.allowChromeSignIn')} checked={pd.browserSettings.allowChromeSignIn} onChange={v => updateNestedPd('browserSettings', 'allowChromeSignIn', v)} />
-                          <CustomCheckbox label={t('advanced.offerTranslate')} checked={pd.browserSettings.offerTranslate} onChange={v => updateNestedPd('browserSettings', 'offerTranslate', v)} />
-                          <CustomCheckbox label={t('advanced.disableDevTools')} checked={pd.browserSettings.disableDevTools} onChange={v => updateNestedPd('browserSettings', 'disableDevTools', v)} />
-                          <CustomCheckbox label={t('advanced.disableExtInstall')} checked={pd.browserSettings.disableExtInstall} onChange={v => updateNestedPd('browserSettings', 'disableExtInstall', v)} />
-                          <CustomCheckbox label={t('advanced.loadExtensions', 'Load SoftGlaze extensions (uses Chrome-for-Testing)')} checked={pd.browserSettings.loadExtensions} onChange={v => updateNestedPd('browserSettings', 'loadExtensions', v)} />
-                          <CustomCheckbox label={t('advanced.enableVirtualCamera')} checked={pd.browserSettings.enableVirtualCamera} onChange={v => updateNestedPd('browserSettings', 'enableVirtualCamera', v)} />
-                          <CustomCheckbox label={t('advanced.enableMobileSim')} checked={pd.browserSettings.enableMobileSim} onChange={v => updateNestedPd('browserSettings', 'enableMobileSim', v)} />
-
-                          <div className="border-t border-border my-6 pt-6">
-                            <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-3">{t('advanced.onStartup')}</label>
-                            <CustomSelect value={pd.browserSettings.startupAction} onChange={e => updateNestedPd('browserSettings', 'startupAction', e.target.value)} className="w-full sm:w-[320px] mb-5">
-                              <option value="lastPage">{t('advanced.startupLastPage')}</option>
-                              <option value="blank">{t('advanced.startupBlank')}</option>
-                            </CustomSelect>
-
-                            <div className="space-y-4">
-                              <CustomCheckbox label={t('advanced.onlyOpenWithProxy')} checked={pd.browserSettings.onlyOpenWithProxy} onChange={v => updateNestedPd('browserSettings', 'onlyOpenWithProxy', v)} />
-                              <CustomCheckbox label={t('advanced.onlyOpenExtLoaded')} checked={pd.browserSettings.onlyOpenExtLoaded} onChange={v => updateNestedPd('browserSettings', 'onlyOpenExtLoaded', v)} />
-                              <CustomCheckbox label={t('advanced.secureAccess')} checked={pd.browserSettings.secureAccess} onChange={v => updateNestedPd('browserSettings', 'secureAccess', v)} />
-                              <CustomCheckbox label={t('advanced.disableVideos')} checked={pd.browserSettings.disableVideos} onChange={v => updateNestedPd('browserSettings', 'disableVideos', v)} />
-                            </div>
-
-                            <div className="flex items-center gap-3 mt-6 p-4 bg-surface rounded border border-border">
-                              <span className="text-sm text-foreground">{t('advanced.disableImagesOver')}</span>
-                              <input type="text" value={pd.browserSettings.disableImagesLimit} onChange={e => updateNestedPd('browserSettings', 'disableImagesLimit', e.target.value)} className="w-[80px] bg-background border border-border rounded px-3 py-1.5 text-center text-foreground outline-none focus:border-primary text-sm shadow-sm" />
-                              <span className="text-sm text-foreground">{t('advanced.disableImagesUnit')}</span>
-                            </div>
+                  {/* Per-profile Data Sync is saved (syncItemsJson) but nothing reads it. */}
+                  {SHOW_UNAPPLIED_SETTINGS && (
+                    <FpRow label={t('advanced.dataSync')} description={t('advanced.dataSyncDesc')}>
+                      <div className="space-y-4">
+                        <ButtonTabs value={pd.advancedSync} onChange={v => updatePd('advancedSync', v)} options={['Global', 'Customize']} />
+                        {pd.advancedSync === 'Customize' && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 bg-background p-6 rounded border border-border shadow-sm">
+                            <CustomCheckbox label={t('advanced.syncCookie')} checked={pd.syncItems.cookie} onChange={v => updateNestedPd('syncItems', 'cookie', v)} />
+                            <CustomCheckbox label={t('advanced.syncPasswords')} checked={pd.syncItems.passwords} onChange={v => updateNestedPd('syncItems', 'passwords', v)} />
+                            <CustomCheckbox label={t('advanced.syncBookmarks')} checked={pd.syncItems.bookmarks} onChange={v => updateNestedPd('syncItems', 'bookmarks', v)} />
+                            <CustomCheckbox label={t('advanced.syncLocalStorage')} checked={pd.syncItems.localStorage} onChange={v => updateNestedPd('syncItems', 'localStorage', v)} />
+                            <CustomCheckbox label={t('advanced.syncIndexedDB')} checked={pd.syncItems.indexedDB} onChange={v => updateNestedPd('syncItems', 'indexedDB', v)} />
+                            <CustomCheckbox label={t('advanced.syncExtensionData')} checked={pd.syncItems.extensionData} onChange={v => updateNestedPd('syncItems', 'extensionData', v)} />
+                            <CustomCheckbox label={t('advanced.syncHistory')} checked={pd.syncItems.history} onChange={v => updateNestedPd('syncItems', 'history', v)} />
                           </div>
-                        </div>
+                        )}
+                      </div>
+                    </FpRow>
+                  )}
+
+                  <FpRow label={t('advanced.browserSettings')} description={SHOW_UNAPPLIED_SETTINGS ? t('advanced.browserSettingsDesc') : undefined}>
+                    <div className="space-y-4">
+                      {/* launchProfile reads loadExtensions whatever the Global/Customize choice, so it
+                          stands on its own; the other per-profile switches are saved but never read. */}
+                      <CustomCheckbox label={t('advanced.loadExtensions', 'Load SoftGlaze extensions (uses Chrome-for-Testing)')} checked={pd.browserSettings.loadExtensions} onChange={v => updateNestedPd('browserSettings', 'loadExtensions', v)} />
+                      {SHOW_UNAPPLIED_SETTINGS && (
+                        <>
+                          <ButtonTabs value={pd.advancedBrowser} onChange={v => updatePd('advancedBrowser', v)} options={['Global', 'Customize']} />
+                          {pd.advancedBrowser === 'Customize' && (
+                            <div className="space-y-5 bg-background p-6 rounded border border-border shadow-sm">
+                              <CustomCheckbox label={t('advanced.matchTimezone')} checked={pd.browserSettings.matchTimezone} onChange={v => updateNestedPd('browserSettings', 'matchTimezone', v)} />
+                              <CustomCheckbox label={t('advanced.allowChromeSignIn')} checked={pd.browserSettings.allowChromeSignIn} onChange={v => updateNestedPd('browserSettings', 'allowChromeSignIn', v)} />
+                              <CustomCheckbox label={t('advanced.offerTranslate')} checked={pd.browserSettings.offerTranslate} onChange={v => updateNestedPd('browserSettings', 'offerTranslate', v)} />
+                              <CustomCheckbox label={t('advanced.disableDevTools')} checked={pd.browserSettings.disableDevTools} onChange={v => updateNestedPd('browserSettings', 'disableDevTools', v)} />
+                              <CustomCheckbox label={t('advanced.disableExtInstall')} checked={pd.browserSettings.disableExtInstall} onChange={v => updateNestedPd('browserSettings', 'disableExtInstall', v)} />
+                              <CustomCheckbox label={t('advanced.enableVirtualCamera')} checked={pd.browserSettings.enableVirtualCamera} onChange={v => updateNestedPd('browserSettings', 'enableVirtualCamera', v)} />
+                              <CustomCheckbox label={t('advanced.enableMobileSim')} checked={pd.browserSettings.enableMobileSim} onChange={v => updateNestedPd('browserSettings', 'enableMobileSim', v)} />
+
+                              <div className="border-t border-border my-6 pt-6">
+                                <label className="text-muted text-xs uppercase tracking-wider font-semibold block mb-3">{t('advanced.onStartup')}</label>
+                                <CustomSelect value={pd.browserSettings.startupAction} onChange={e => updateNestedPd('browserSettings', 'startupAction', e.target.value)} className="w-full sm:w-[320px] mb-5">
+                                  <option value="lastPage">{t('advanced.startupLastPage')}</option>
+                                  <option value="blank">{t('advanced.startupBlank')}</option>
+                                </CustomSelect>
+
+                                <div className="space-y-4">
+                                  <CustomCheckbox label={t('advanced.onlyOpenWithProxy')} checked={pd.browserSettings.onlyOpenWithProxy} onChange={v => updateNestedPd('browserSettings', 'onlyOpenWithProxy', v)} />
+                                  <CustomCheckbox label={t('advanced.onlyOpenExtLoaded')} checked={pd.browserSettings.onlyOpenExtLoaded} onChange={v => updateNestedPd('browserSettings', 'onlyOpenExtLoaded', v)} />
+                                  <CustomCheckbox label={t('advanced.secureAccess')} checked={pd.browserSettings.secureAccess} onChange={v => updateNestedPd('browserSettings', 'secureAccess', v)} />
+                                  <CustomCheckbox label={t('advanced.disableVideos')} checked={pd.browserSettings.disableVideos} onChange={v => updateNestedPd('browserSettings', 'disableVideos', v)} />
+                                </div>
+
+                                <div className="flex items-center gap-3 mt-6 p-4 bg-surface rounded border border-border">
+                                  <span className="text-sm text-foreground">{t('advanced.disableImagesOver')}</span>
+                                  <input type="text" value={pd.browserSettings.disableImagesLimit} onChange={e => updateNestedPd('browserSettings', 'disableImagesLimit', e.target.value)} className="w-[80px] bg-background border border-border rounded px-3 py-1.5 text-center text-foreground outline-none focus:border-primary text-sm shadow-sm" />
+                                  <span className="text-sm text-foreground">{t('advanced.disableImagesUnit')}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </FpRow>
 
-                  <FpRow label={t('advanced.randomFingerprint')} description={t('advanced.randomFingerprintDesc')}>
-                    <ToggleSwitch checked={pd.randomFingerprint} onChange={v => updatePd('randomFingerprint', v)} />
-                  </FpRow>
+                  {/* Random Fingerprint: createProfile builds on a generated fingerprint, but this editor sends
+                      every fingerprint field and they override the whole generated base, so the switch
+                      changes nothing here. Quick generate and the onboarding wizard do randomise. */}
+                  {SHOW_UNAPPLIED_SETTINGS && (
+                    <FpRow label={t('advanced.randomFingerprint')} description={t('advanced.randomFingerprintDesc')}>
+                      <ToggleSwitch checked={pd.randomFingerprint} onChange={v => updatePd('randomFingerprint', v)} />
+                    </FpRow>
+                  )}
                 </div>
               )}
             </div>
@@ -2040,8 +2065,8 @@ export default function ProfilesPage() {
                     <EnvHead>{t('env.headNetworkDevice')}</EnvHead>
                     <EnvRow k={t('env.proxy')} v={proxyText} mono />
                     <EnvRow k={t('env.webrtc')} v={pd.webrtc} />
-                    <EnvRow k={t('env.deviceName')} v={pd.deviceName} mono />
-                    <EnvRow k={t('env.mac')} v={pd.macAddress} mono />
+                    {SHOW_UNAPPLIED_SETTINGS && <EnvRow k={t('env.deviceName')} v={pd.deviceName} mono />}
+                    {SHOW_UNAPPLIED_SETTINGS && <EnvRow k={t('env.mac')} v={pd.macAddress} mono />}
                   </>
                 );
               })()}
