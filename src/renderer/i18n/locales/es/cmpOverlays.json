@@ -8,6 +8,7 @@
     "noMatches": "Sin coincidencias.",
     "nav": {
       "dashboard": "Panel",
+      "ai": "SoftGlaze AI",
       "profiles": "Perfiles",
       "groups": "Grupos",
       "proxies": "Grupo de proxies",
@@ -26,12 +27,16 @@
       "page": "Página",
       "profile": "Perfil",
       "proxy": "Proxy",
-      "member": "Miembro"
+      "member": "Miembro",
+      "action": "Acción"
     },
     "fallback": {
       "profile": "Perfil n.º {{id}}",
       "proxy": "Proxy n.º {{id}}",
       "member": "Miembro n.º {{id}}"
+    },
+    "action": {
+      "stopAi": "Detener toda la IA"
     }
   },
   "wizard": {

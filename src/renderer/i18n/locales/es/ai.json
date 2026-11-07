@@ -1,0 +1,571 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "Deja que apps de IA como Claude, Cursor y ChatGPT trabajen con tus perfiles. Cada cambio te pide permiso primero y todo queda registrado.",
+  "loading": "Cargando SoftGlaze AI…",
+  "refresh": "Actualizar",
+  "retry": "Reintentar",
+  "learnMore": "Leer la guía",
+  "opensInBrowser": "(se abre en tu navegador)",
+  "copy": "Copiar",
+  "copied": "Copiado",
+  "copyFailed": "No se pudo copiar. Selecciona el texto y cópialo a mano.",
+  "cancel": "Cancelar",
+  "close": "Cerrar",
+  "save": "Guardar",
+  "saving": "Guardando…",
+  "saved": "Guardado",
+  "saveFailed": "No guardado",
+  "never": "Nunca",
+  "unknown": "Desconocido",
+  "roles": {
+    "OWNER": "Propietario",
+    "ADMIN": "Administrador",
+    "MANAGER": "Gestor",
+    "OPERATOR": "Operador",
+    "SUPER_ADMIN": "Superadministrador"
+  },
+  "states": {
+    "unavailableTitle": "SoftGlaze AI no está disponible en esta versión",
+    "unavailableBody": "Esta versión de SoftGlaze Browser todavía no incluye el servidor de IA. Llegará con una actualización. Tu espacio de trabajo está bien.",
+    "forbiddenTitle": "Solo el Propietario o un Administrador pueden gestionar SoftGlaze AI",
+    "forbiddenBody": "Pide acceso al Propietario del espacio de trabajo. Cuando una app de IA use un token que actúa como tú, sus solicitudes te seguirán apareciendo en cualquier página para que las permitas o las rechaces.",
+    "errorTitle": "SoftGlaze AI no se pudo cargar"
+  },
+  "header": {
+    "switchLabel": "Servidor de SoftGlaze AI",
+    "switchShort": "Servidor de IA",
+    "on": "Encendido",
+    "off": "Apagado",
+    "turningOn": "Encendiendo…",
+    "turningOff": "Apagando…",
+    "stopAll": "Detener toda la IA",
+    "toggleError": "No se pudo cambiar el servidor de IA: {{message}}"
+  },
+  "status": {
+    "server": "Servidor de IA",
+    "running": "En marcha",
+    "error": "No funciona",
+    "off": "Apagado",
+    "offHint": "Enciéndelo para que las apps de IA puedan conectarse.",
+    "errorHint": "Está encendido pero no funciona: {{message}}",
+    "errorHintNoMessage": "Está encendido pero no funciona. Puede que el puerto esté en uso; cámbialo en Ajustes.",
+    "apps": "Apps conectadas",
+    "appsNone": "Todavía no hay ninguna app conectada",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "y {{count}} más",
+    "appsMore_other": "y {{count}} más",
+    "waiting": "Esperan respuesta",
+    "waitingNone": "Nada que responder",
+    "waitingSome_one": "{{count}} solicitud por responder",
+    "waitingSome_other": "{{count}} solicitudes por responder",
+    "openApprovals": "abrir Aprobaciones",
+    "sessions": "Sesiones de IA",
+    "sessionsHint": "En marcha, iniciadas por apps de IA"
+  },
+  "tabs": {
+    "label": "Secciones de SoftGlaze AI",
+    "connect": "Conectar",
+    "tokens": "Tokens",
+    "approvals": "Aprobaciones",
+    "activity": "Actividad",
+    "memory": "Memoria",
+    "prompts": "Prompts",
+    "settings": "Ajustes",
+    "waiting": "en espera"
+  },
+  "stop": {
+    "title": "¿Detener toda la IA?",
+    "body": "Úsalo si una app de IA está haciendo algo que no esperabas.",
+    "point1": "Se detiene ahora cada ejecución y cada perfil que inició una app de IA.",
+    "point2": "Se desconecta cada app de IA conectada y se cancelan las llamadas en curso.",
+    "point3": "Se rechaza cada solicitud que espera tu respuesta.",
+    "point4": "SoftGlaze AI se apaga. Los tokens siguen siendo válidos; vuelve a encenderlo cuando quieras.",
+    "confirm": "Detener toda la IA",
+    "error": "No se pudo detener todo: {{message}}",
+    "result": "Hecho. Ejecuciones detenidas: {{runs}}. Perfiles detenidos: {{profiles}}. Llamadas canceladas: {{calls}}. Sesiones cerradas: {{sessions}}. Solicitudes rechazadas: {{approvals}}.",
+    "nowOff": "SoftGlaze AI está apagado. Las apps de IA no pueden conectarse hasta que lo enciendas.",
+    "turnOn": "Encender"
+  },
+  "start": {
+    "title": "Empieza en tres pasos",
+    "step1": "Enciende el servidor de IA",
+    "step2": "Crea un token para tu app de IA",
+    "step3": "Conecta tu app de IA",
+    "done": "Hecho",
+    "turnOn": "Encender"
+  },
+  "connect": {
+    "loadError": "No se pudo cargar la configuración para las apps de IA: {{message}}",
+    "empty": "Todavía no hay configuración que mostrar",
+    "emptyOn": "El servidor de IA no envió ninguna configuración. Prueba con Actualizar.",
+    "emptyBody": "Enciende el servidor de IA para ver cómo conectar cada app.",
+    "appsLabel": "Apps de IA",
+    "guide": "Guía completa",
+    "appDocs": "Documentación de la app",
+    "where": "Dónde va",
+    "steps": "Cómo conectar",
+    "kind": {
+      "command": "Comando",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "Flujo de trabajo"
+    },
+    "snippet": "Configuración para {{app}}",
+    "placeholderHint": "<YOUR_TOKEN> es donde va tu token. Solo verás un token una vez, al crearlo.",
+    "noSnippet": "Esta app no tiene una configuración lista. Sigue los pasos de arriba.",
+    "createToken": "Crear un token para esta app",
+    "createTokenHint": "Da a cada app su propio token. Así ves lo que hace cada una y puedes desactivar una sin tocar las demás.",
+    "envVar": {
+      "title": "Guarda el token para Codex",
+      "body": "Codex lee el token de una variable de entorno llamada SOFTGLAZE_TOKEN. Ejecuta esto una vez con tu token y luego abre una terminal nueva.",
+      "windows": "Windows (Símbolo del sistema o PowerShell)",
+      "unix": "macOS o Linux (añádelo al perfil de tu shell)"
+    },
+    "bridge": {
+      "title": "Puente para apps que inician un programa local",
+      "body": "Algunas apps no pueden conectarse a una dirección web. En su lugar inician el puente de SoftGlaze, que pasa todo al servidor de IA de este PC. Mismo token, mismas aprobaciones.",
+      "unavailable": "El puente no está incluido en esta versión.",
+      "mcpb": "Archivo de instalación con un clic para Claude Desktop",
+      "command": "Comando",
+      "args": "Argumentos",
+      "env": "Variables de entorno"
+    },
+    "clients": {
+      "claude-desktop": {
+        "title": "Claude Desktop",
+        "step1": "Crea un token para Claude Desktop con el botón de abajo.",
+        "step2": "Lo más fácil: instala el archivo SoftGlaze.mcpb que aparece abajo (Settings > Extensions > Advanced settings > Install Extension) e introduce tu token cuando Claude te lo pida. O abre Settings > Developer > Edit Config y pega la configuración en claude_desktop_config.json, con tu token en lugar de <YOUR_TOKEN>.",
+        "step2NoMcpb": "Abre Settings > Developer > Edit Config y pega la configuración en claude_desktop_config.json, con tu token en lugar de <YOUR_TOKEN>. Inicia el puente de SoftGlaze, porque Claude Desktop ejecuta servidores locales.",
+        "step3": "Cierra y vuelve a abrir Claude Desktop. SoftGlaze aparece en el botón + debajo del chat, en Connectors."
+      },
+      "claude-code": {
+        "title": "Claude Code",
+        "step1": "Crea un token para Claude Code con el botón de abajo.",
+        "step2": "Ejecuta el comando en una terminal, con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "Inicia Claude Code y escribe /mcp. SoftGlaze debería aparecer como conectado."
+      },
+      "cursor": {
+        "title": "Cursor",
+        "step1": "Crea un token para Cursor con el botón de abajo.",
+        "step2": "Abre ~/.cursor/mcp.json (o .cursor/mcp.json en un proyecto) y pega la configuración, con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "En los ajustes de Cursor, comprueba que SoftGlaze aparece y está activado. Después pide al chat que liste tus perfiles de SoftGlaze."
+      },
+      "vscode": {
+        "title": "VS Code (Copilot)",
+        "step1": "Crea un token para VS Code con el botón de abajo.",
+        "step2": "Añade la configuración a .vscode/mcp.json en tu espacio de trabajo (o ejecuta MCP: Open User Configuration). La primera vez que SoftGlaze se inicia, VS Code te pide el token y lo guarda de forma segura, así que nunca queda en el archivo.",
+        "step3": "Abre Copilot Chat y pídele que liste tus perfiles de SoftGlaze. Permite la herramienta cuando VS Code te lo pida."
+      },
+      "gemini-cli": {
+        "title": "Gemini CLI",
+        "step1": "Crea un token para Gemini CLI con el botón de abajo.",
+        "step2": "Añade la configuración dentro de \"mcpServers\" en ~/.gemini/settings.json, con tu token en lugar de <YOUR_TOKEN>. Deja \"trust\" desactivado: SoftGlaze te pregunta antes de cada cambio de todas formas.",
+        "step3": "Inicia gemini y escribe /mcp. Deberían aparecer SoftGlaze y sus herramientas."
+      },
+      "codex": {
+        "title": "ChatGPT de escritorio / Codex",
+        "step1": "Crea un token para Codex con el botón de abajo y guárdalo en la variable de entorno SOFTGLAZE_TOKEN (comando más abajo).",
+        "step2": "Añade la configuración a ~/.codex/config.toml. Codex lee el token de SOFTGLAZE_TOKEN, así que el archivo nunca lo contiene.",
+        "step3": "Abre una terminal nueva, inicia Codex y escribe /mcp. SoftGlaze debería aparecer."
+      },
+      "windsurf": {
+        "title": "Windsurf",
+        "step1": "Crea un token para Windsurf con el botón de abajo.",
+        "step2": "Pega la configuración en el archivo de configuración MCP de Windsurf (ver Dónde va), con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "Actualiza los servidores MCP en Windsurf y comprueba que SoftGlaze aparece."
+      },
+      "cline": {
+        "title": "Cline",
+        "step1": "Crea un token para Cline con el botón de abajo.",
+        "step2": "En Cline, abre MCP Servers > Configure y pega la configuración en cline_mcp_settings.json, con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "Comprueba que SoftGlaze aparece como conectado en la lista MCP Servers de Cline."
+      },
+      "n8n": {
+        "title": "n8n"
+      },
+      "other": {
+        "title": "Otras apps",
+        "step1": "Crea un token para la app con el botón de abajo.",
+        "step2": "Abre los ajustes MCP de la app y añade un servidor con esta dirección y una cabecera Authorization: Bearer, un espacio y tu token.",
+        "step3": "Si la app solo puede iniciar un programa local (stdio), usa el puente de SoftGlaze de abajo en lugar de la dirección."
+      },
+      "custom": {
+        "step1": "Crea un token para esta app con el botón de abajo.",
+        "step2": "Pega la configuración donde la app guarda sus servidores MCP, con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "Reinicia la app y comprueba que SoftGlaze aparece en sus ajustes de MCP o de herramientas."
+      }
+    },
+    "n8n": {
+      "subtitle": "Usa SoftGlaze desde flujos de n8n en este PC.",
+      "selfHosted": "n8n debe ejecutarse en este PC (npx o Docker). n8n Cloud todavía no puede llegar a tu PC.",
+      "noPort": "Enciende el servidor de IA para ver la dirección para n8n.",
+      "a": {
+        "title": "Deja que un AI Agent de n8n use SoftGlaze",
+        "step1": "Añade un nodo AI Agent y luego un nodo MCP Client Tool como una de sus herramientas.",
+        "step2": "Pon en SSE Endpoint la dirección de abajo. Si n8n se ejecuta en Docker, usa la dirección para Docker.",
+        "step3": "Pon Authentication en Bearer y pega tu token. En Tools to Include, elige All o solo las herramientas que necesites.",
+        "sse": "Endpoint SSE (n8n en este PC)",
+        "sseDocker": "Endpoint SSE (n8n en Docker)",
+        "dockerNote": "Con Docker, añade también host.docker.internal en Nombres de host permitidos adicionales, en la pestaña Ajustes."
+      },
+      "b": {
+        "title": "Pasos fijos con el nodo HTTP Request",
+        "body": "Para pasos que nunca cambian, como iniciar un perfil a las 9:00, un nodo HTTP Request puede llamar directamente a la API local. Envía el token en la cabecera Authorization.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Usa un token de automatización para flujos programados",
+        "body": "Un flujo que se ejecuta según un horario no tiene a nadie que pulse Permitir. Un token de automatización aprueba de antemano solo las herramientas que elijas, solo para los grupos que elijas, con límites por llamada y por hora. Todo lo demás sigue preguntando.",
+        "create": "Crear un token de automatización",
+        "ownerOnly": "Solo el Propietario puede crear tokens de automatización."
+      }
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Solo lectura",
+      "body": "Puede ver perfiles, proxies, grupos y actividad. No puede cambiar ni iniciar nada."
+    },
+    "operate": {
+      "title": "Operar",
+      "body": "También puede crear e iniciar perfiles, ejecutar macros y trabajar dentro de páginas. Los cambios te siguen pidiendo permiso, según lo que indiques en Ajustes. Elígelo a propósito."
+    },
+    "full": {
+      "title": "Completo",
+      "body": "Todo lo de Operar, más las herramientas expertas cuando el Modo experto está activado. Solo para apps en las que confíes por completo."
+    }
+  },
+  "create": {
+    "title": "Crear un token",
+    "titleFor": "Crear un token para {{app}}",
+    "description": "Un token permite conectarse a una app de IA. Actúa como un miembro de tu equipo y solo puede hacer lo que ese miembro tiene permitido.",
+    "revealTitle": "Tu nuevo token",
+    "revealDescription": "Cópialo ahora en tu app de IA.",
+    "name": "Nombre",
+    "nameHint": "Indica qué app y qué ordenador, para reconocerlo más adelante.",
+    "namePlaceholder": "Claude Desktop en mi PC",
+    "member": "Actúa como",
+    "memberHint": "La IA trabaja como este miembro, con sus permisos y sus perfiles.",
+    "you": "tú",
+    "scope": "Qué puede hacer",
+    "expiry": "Caduca después de",
+    "expiryNever": "Nunca",
+    "expiryDays_one": "{{count}} día",
+    "expiryDays_other": "{{count}} días",
+    "expiryNeverWarn": "Un token que nunca caduca sigue siendo válido hasta que lo revoques.",
+    "profiles": "Perfiles que puede usar",
+    "profilesAll": "Todos",
+    "profilesSome": "Solo algunos grupos",
+    "profilesAllHint": "Todos los perfiles que el miembro puede abrir.",
+    "profilesSomeHint": "Solo los perfiles de los grupos que marques.",
+    "noGroups": "Todavía no hay grupos. Crea uno primero en la página Grupos.",
+    "pickGroups": "Grupos",
+    "submit": "Crear token",
+    "onceWarning": "Copia este token ahora. SoftGlaze solo lo muestra esta vez. Si lo pierdes, revócalo y crea uno nuevo.",
+    "yourToken": "Token",
+    "filledSetup": "Configuración para {{app}}, con tu token ya incluido",
+    "n8nHint": "En n8n, pon Authentication en Bearer y pega este token.",
+    "acknowledge": "He guardado este token en un lugar seguro",
+    "closeWarning": "Copia el token o marca la casilla primero. No podrás volver a ver este token.",
+    "done": "Hecho"
+  },
+  "errors": {
+    "nameRequired": "Escribe un nombre.",
+    "nameTooLong": "Usa como máximo {{max}} caracteres.",
+    "memberRequired": "Elige un miembro.",
+    "scopeRequired": "Elige qué puede hacer el token.",
+    "expiryRequired": "Elige cuándo caduca.",
+    "groupsRequired": "Marca al menos un grupo o elige Todos.",
+    "groupsRequiredAutomation": "Un token de automatización debe limitarse a grupos. Marca al menos un grupo.",
+    "toolNotAllowed": "Una de las herramientas no se puede aprobar de antemano.",
+    "limitRange": "Escribe un número entero de {{min}} a {{max}}.",
+    "create": "No se creó el token.",
+    "noToken": "El servidor de IA no devolvió ningún token. Inténtalo de nuevo.",
+    "createFailed": "No se creó el token: {{message}}"
+  },
+  "automation": {
+    "title": "Token de automatización (para n8n, tareas programadas y scripts)",
+    "ownerOnly": "Solo el Propietario",
+    "count_one": "{{count}} aprobada de antemano",
+    "count_other": "{{count}} aprobadas de antemano",
+    "intro": "Para flujos que se ejecutan sin ti, elige las herramientas que pueden ejecutarse sin preguntar.",
+    "needsOperate": "Elige Operar o Completo arriba para aprobar herramientas de antemano.",
+    "warning": "Estas herramientas se ejecutarán sin preguntarte. Siguen limitadas a los grupos elegidos, quedan registradas y se detienen con Detener toda la IA.",
+    "tools": "Herramientas que se ejecutan sin preguntar",
+    "destructive": "No se puede deshacer",
+    "groups": {
+      "profiles": "Perfiles",
+      "sessions": "Iniciar y detener",
+      "proxies": "Proxies",
+      "groups": "Grupos",
+      "automation": "Automatización",
+      "page": "Dentro de páginas",
+      "other": "Otras"
+    },
+    "maxProfiles": "Máximo de perfiles por llamada",
+    "maxProfilesHint": "Por defecto, 5.",
+    "maxCalls": "Máximo de llamadas por hora",
+    "maxCallsHint": "Por defecto, 60.",
+    "groupsNote": "Las herramientas aprobadas de antemano solo funcionan en los grupos marcados en Perfiles que puede usar. Todas las demás herramientas te siguen preguntando."
+  },
+  "tools": {
+    "create_profile": "Crear un perfil",
+    "update_profile": "Cambiar un perfil (nombre, grupo, etiquetas, notas, página de inicio, proxy)",
+    "batch_generate_profiles": "Crear muchos perfiles a la vez",
+    "start_profile": "Iniciar un perfil",
+    "stop_profile": "Detener un perfil",
+    "assign_proxy": "Asignar un proxy a un perfil",
+    "rotate_proxy_ip": "Obtener una IP nueva del proxy",
+    "create_group": "Crear un grupo",
+    "move_profiles_to_group": "Mover perfiles a un grupo",
+    "save_macro": "Guardar una macro",
+    "run_macro": "Ejecutar una macro",
+    "stop_run": "Detener una ejecución",
+    "start_warmer": "Iniciar un calentamiento",
+    "page_navigate": "Abrir una página web",
+    "page_snapshot": "Leer la estructura de la página",
+    "page_click": "Hacer clic en una página",
+    "page_type": "Escribir en una página",
+    "page_press_key": "Pulsar una tecla en una página",
+    "page_scroll": "Desplazarse por una página",
+    "page_screenshot": "Hacer una captura de pantalla",
+    "page_extract_text": "Copiar texto de una página",
+    "page_wait_for": "Esperar algo en una página"
+  },
+  "tokens": {
+    "search": "Buscar tokens",
+    "showRevoked": "Mostrar tokens revocados",
+    "showRevokedCount_one": "Mostrar {{count}} revocado",
+    "showRevokedCount_other": "Mostrar {{count}} revocados",
+    "create": "Crear token",
+    "intro": "Cada app de IA se conecta con su propio token. Un token actúa como un miembro y puede limitarse a algunos grupos. Revoca un token para cortar el acceso de esa app al momento.",
+    "loadError": "No se pudieron cargar los tokens: {{message}}",
+    "emptyTitle": "Todavía no hay tokens",
+    "emptyBody": "Crea un token y pégalo en tu app de IA. La pestaña Conectar muestra dónde va.",
+    "caption": "Tokens de IA",
+    "colName": "Nombre",
+    "colMember": "Actúa como",
+    "colScope": "Acceso",
+    "colGroups": "Perfiles",
+    "colExpires": "Caduca",
+    "colLastUsed": "Último uso",
+    "colActions": "Acciones",
+    "state": {
+      "revoked": "Revocado",
+      "expired": "Caducado",
+      "expiring": "Caduca pronto"
+    },
+    "automation_one": "Automatización · {{count}} aprobada de antemano",
+    "automation_other": "Automatización · {{count}} aprobadas de antemano",
+    "allProfiles": "Todos los perfiles",
+    "groupsMore_one": "{{names}} y {{count}} más",
+    "groupsMore_other": "{{names}} y {{count}} más",
+    "neverUsed": "Sin usar todavía",
+    "revoke": "Revocar",
+    "revokeAria": "Revocar {{name}}",
+    "noMatch": "Ningún token coincide.",
+    "revokeTitle": "¿Revocar «{{name}}»?",
+    "revokeBody": "La app de IA que usa este token pierde el acceso al momento. No se puede deshacer.",
+    "revokeError": "No se pudo revocar el token: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "Solicitud de IA",
+    "eyebrowMany": "Solicitud de IA {{position}} de {{total}}",
+    "title": "{{app}} pide permiso",
+    "tokenOnly": "Token: {{token}}",
+    "tokenAndMember": "Token: {{token}} · actúa como {{member}}",
+    "noSummary": "Usar la herramienta {{tool}}",
+    "unknownApp": "Una app de IA",
+    "timeLeft": "para responder. Sin respuesta, la solicitud se rechaza.",
+    "timeLeftHint": "Tiempo que queda antes de rechazar la solicitud",
+    "timeLeftSr": "Quedan {{time}} antes de rechazar la solicitud",
+    "secondsLeftAnnounce": "Quedan {{seconds}} segundos para responder a la solicitud de IA",
+    "showDetails": "Ver detalles",
+    "hideDetails": "Ocultar detalles",
+    "tool": "Herramienta",
+    "token": "Token",
+    "argsLabel": "Detalles de la solicitud",
+    "noArgs": "Esta solicitud no tiene más detalles.",
+    "redactedNote": "Las contraseñas y otros secretos se ocultan aquí.",
+    "deny": "Rechazar",
+    "allowHour": "Permitir durante 1 hora",
+    "allowHourHint": "No volver a preguntar por este tipo de acción de {{token}} durante la próxima hora.",
+    "allowOnce": "Permitir una vez",
+    "footnote": "SoftGlaze pregunta dentro de la app, digan lo que digan los ajustes de la app de IA. Cada respuesta queda registrada en Actividad.",
+    "later": "Decidir más tarde (se rechaza cuando se acabe el tiempo)",
+    "respondError": "No se guardó tu respuesta: {{message}}",
+    "waitingChip_one": "{{count}} solicitud de IA en espera",
+    "waitingChip_other": "{{count}} solicitudes de IA en espera",
+    "timedOut": "La solicitud de {{app}} caducó y se rechazó.",
+    "gone": "Esa solicitud ya se respondió o se canceló."
+  },
+  "approvals": {
+    "intro": "Cada acción que cambia algo espera aquí hasta que respondas. Una solicitud sin respuesta se rechaza a los 2 minutos. La misma solicitud aparece también en cualquier página.",
+    "changeRules": "Cambiar cuándo pregunta SoftGlaze",
+    "emptyTitle": "No hay nada esperando tu respuesta",
+    "emptyBody": "Cuando una app de IA quiera cambiar algo, la solicitud aparecerá aquí y como ventana emergente en cualquier página.",
+    "listLabel": "Solicitudes que esperan tu respuesta",
+    "meta": "{{app}} · token {{token}} · {{when}}",
+    "actsAs": "actúa como {{member}}"
+  },
+  "activity": {
+    "search": "Buscar herramienta, solicitud o token",
+    "outcome": "Resultado",
+    "all": "Todos",
+    "outcomes": {
+      "ok": "Correcto",
+      "denied": "Rechazado",
+      "error": "Error",
+      "pending": "En espera"
+    },
+    "app": "App",
+    "allApps": "Todas las apps",
+    "loadError": "No se pudo cargar la actividad: {{message}}",
+    "noMatchTitle": "Nada coincide con estos filtros",
+    "noMatchBody": "Prueba con otro resultado, otra app u otra búsqueda.",
+    "emptyTitle": "Todavía no hay actividad de IA",
+    "emptyBody": "Aquí aparece todo lo que hace una app de IA a través de SoftGlaze: qué pidió, qué respondiste y cómo salió.",
+    "caption": "Actividad de IA",
+    "colTime": "Hora",
+    "colApp": "App y token",
+    "colTool": "Herramienta",
+    "colSummary": "Qué pasó",
+    "colOutcome": "Resultado",
+    "colDuration": "Duración",
+    "approval": {
+      "none": "No necesitaba aprobación",
+      "asked": "Te preguntó",
+      "pre-approved": "Aprobada de antemano",
+      "allow-once": "Permitida una vez",
+      "hour-grant": "Permitida durante 1 hora",
+      "deny": "Rechazada por ti",
+      "timeout": "Sin respuesta en 2 minutos",
+      "cancelled": "Detenida con Detener toda la IA",
+      "started-by-this-token": "Un perfil que inició esta app",
+      "developer-token": "Token de la API para desarrolladores"
+    },
+    "pageEmpty": "No hay más entradas.",
+    "runId": "Ejecución",
+    "pageInfo": "Página {{page}} · {{size}} por página",
+    "newer": "Más recientes",
+    "older": "Más antiguas"
+  },
+  "memory": {
+    "title": "Memoria del espacio de trabajo",
+    "description": "Notas que cada app de IA lee antes de empezar: cómo nombras las cosas, para qué es cada grupo, reglas de proxies, horario de trabajo y lo que nunca debe hacer. Markdown simple.",
+    "updated": "Guardado {{when}}",
+    "loadError": "No se pudo cargar la memoria: {{message}}",
+    "editorLabel": "Memoria del espacio de trabajo (Markdown)",
+    "placeholder": "Escribe aquí notas para las apps de IA, en Markdown.",
+    "usage": "{{used}} KB de {{limit}} KB · {{chars}} caracteres",
+    "over": "Supera el límite. Acórtalo para guardar.",
+    "discard": "Descartar cambios",
+    "reset": "Restablecer",
+    "unsaved": "Cambios sin guardar",
+    "tip": "Consejo: pulsa Ctrl+S para guardar. Sé breve y concreto: las apps de IA lo leen entero cada vez.",
+    "guidesTitle": "Guías incluidas",
+    "guidesDescription": "SoftGlaze también entrega estas guías a cada app de IA. Son de solo lectura.",
+    "resetTitle": "¿Restablecer la memoria a la versión por defecto?",
+    "resetBody": "Tus notas se sustituyen por la plantilla de SoftGlaze. No se puede deshacer.",
+    "guides": {
+      "howItWorks": {
+        "title": "Cómo funciona SoftGlaze",
+        "body": "Perfiles, huellas digitales, proxies, grupos, sesiones, macros y límites del plan, y cómo usar bien las herramientas."
+      },
+      "acceptableUse": {
+        "title": "Uso aceptable",
+        "body": "Para qué se puede y para qué no se puede usar SoftGlaze. Las apps de IA tienen instrucciones de negarse a todo lo prohibido."
+      }
+    },
+    "readGuide": "Leer la guía",
+    "hideGuide": "Ocultar",
+    "guideReadOnly": "Solo lectura. SoftGlaze la mantiene al día."
+  },
+  "prompts": {
+    "loadError": "No se pudieron cargar los prompts: {{message}}",
+    "emptyTitle": "Todavía no hay prompts",
+    "emptyBody": "Los prompts listos para usar aparecen aquí cuando el servidor de IA está disponible.",
+    "search": "Buscar prompts",
+    "listLabel": "Prompts",
+    "noMatch": "Ningún prompt coincide.",
+    "inClaudeCode": "En Claude Code:",
+    "arguments": "Datos que rellenas",
+    "noArguments": "Este prompt no necesita datos.",
+    "argName": "Nombre",
+    "argRequired": "Necesario",
+    "argDescription": "Qué es",
+    "required": "Obligatorio",
+    "optional": "Opcional",
+    "text": "Texto del prompt",
+    "howTitle": "Cómo usar los prompts",
+    "howIntro": "Los prompts son tareas listas para usar. Tu app de IA rellena los datos y las lleva a cabo con SoftGlaze.",
+    "howClaudeCode": "escribe / y elige un prompt de softglaze.",
+    "howClaudeDesktop": "haz clic en + debajo del chat y busca SoftGlaze.",
+    "howVsCode": "escribe / en Copilot Chat y elige un prompt de SoftGlaze.",
+    "howCursor": "si no aparecen los prompts, copia el texto de abajo.",
+    "howOther": "Cualquier app: copia el texto del prompt, pégalo en el chat y rellena los datos."
+  },
+  "settings": {
+    "loadError": "No se pudieron cargar los ajustes: {{message}}",
+    "ownerOnly": "Solo el Propietario",
+    "ownerOnlyHint": "Solo el Propietario del espacio de trabajo puede cambiar esto.",
+    "remove": "Quitar {{value}}",
+    "approvals": {
+      "title": "Cuándo te pregunta SoftGlaze",
+      "description": "SoftGlaze te pregunta dentro de la app antes de que una app de IA haga algo, digan lo que digan los ajustes de la app de IA.",
+      "read": {
+        "title": "Herramientas de solo lectura",
+        "body": "Ver perfiles, proxies, grupos y actividad."
+      },
+      "operate": {
+        "title": "Herramientas de operación",
+        "body": "Crear e iniciar perfiles, ejecutar macros, trabajar dentro de páginas."
+      },
+      "full": {
+        "title": "Herramientas completas",
+        "body": "Herramientas expertas, solo con el Modo experto activado."
+      },
+      "alwaysAsk": "Algunas acciones preguntan siempre, como iniciar o detener muchos perfiles a la vez, y las herramientas expertas."
+    },
+    "modes": {
+      "never": "No preguntar",
+      "ask-hour": "Preguntar una vez por hora",
+      "ask-always": "Preguntar siempre"
+    },
+    "domains": {
+      "title": "Sitios en los que puede trabajar la IA",
+      "description": "Las herramientas de página (abrir una página, hacer clic, escribir, leer texto) solo funcionan en los sitios de esta lista y sus subdominios.",
+      "placeholder": "ejemplo.com",
+      "invalid": "Escribe un nombre de sitio como ejemplo.com.",
+      "empty": "Todavía no hay sitios. Las herramientas de página pueden abrir cualquier sitio, y se te sigue preguntando primero.",
+      "add": "Añadir sitio"
+    },
+    "hosts": {
+      "title": "Nombres de host permitidos adicionales",
+      "description": "El servidor de IA solo responde a solicitudes dirigidas a 127.0.0.1. Para n8n u otras herramientas que se ejecutan en Docker, añade host.docker.internal.",
+      "invalid": "Escribe un nombre de host como host.docker.internal, sin puerto ni ruta.",
+      "empty": "Ninguno. Solo se permite 127.0.0.1.",
+      "add": "Añadir host"
+    },
+    "expert": {
+      "title": "Modo experto",
+      "description": "Permite que una app de IA tome el control de un perfil en marcha con Playwright, Puppeteer o Chrome DevTools.",
+      "warning": "Detectable. Las herramientas externas controlan el navegador de una forma que los sitios web pueden notar, así que los perfiles pueden ser marcados o bloqueados. Desactivado por defecto. Solo el Propietario.",
+      "switch": "Modo experto",
+      "isOn": "Activado. Las apps de IA con un token Completo pueden pedir el control de un perfil en marcha. Cada vez te pregunta.",
+      "isOff": "Desactivado. Ninguna app de IA puede tomar el control de un perfil en marcha.",
+      "confirmTitle": "¿Activar el Modo experto?",
+      "confirmBody": "Las apps de IA con un token Completo podrán pedir el control directo de perfiles en marcha. Los sitios web pueden detectarlo y las cuentas de esos perfiles pueden ser marcadas.",
+      "confirm": "Activar",
+      "ack": "Entiendo que esto se puede detectar y que los perfiles pueden ser marcados."
+    },
+    "port": {
+      "title": "Puerto del servidor",
+      "description": "Las apps de IA se conectan a http://127.0.0.1 en este puerto.",
+      "label": "Puerto",
+      "invalid": "Usa un número de {{min}} a {{max}}.",
+      "hint": "Si lo cambias, actualiza la dirección en cada app de IA conectada. La pestaña Conectar muestra la nueva configuración."
+    }
+  }
+}

@@ -266,7 +266,36 @@ const CHANNELS = Object.freeze({
   UPDATER_CHECK: 'updater:check'
 });
 
-const ALLOWED_CHANNELS = new Set(Object.values(CHANNELS));
+// SoftGlaze AI (spec §10). A separate map, not part of CHANNELS: main registers these from
+// src/main/ai/ipc.js, and test/ipcParity.test.js compares CHANNELS with ipcHandlers.js only.
+const AI_CHANNELS = Object.freeze({
+  STATUS: 'ai:status',
+  SET_ENABLED: 'ai:set-enabled',
+  SETTINGS_GET: 'ai:settings-get',
+  SETTINGS_SET: 'ai:settings-set',
+  TOKENS_LIST: 'ai:tokens-list',
+  TOKENS_CREATE: 'ai:tokens-create',
+  TOKENS_REVOKE: 'ai:tokens-revoke',
+  APPROVALS_LIST: 'ai:approvals-list',
+  APPROVALS_RESPOND: 'ai:approvals-respond',
+  APPROVAL_REQUESTED: 'ai:approval-requested',
+  // Additive events from the engine: an approval was answered/expired/cancelled elsewhere (for
+  // example Stop all AI from the tray), and the server status changed.
+  APPROVALS_CHANGED: 'ai:approvals-changed',
+  STATUS_CHANGED: 'ai:status-changed',
+  STOP_ALL: 'ai:stop-all',
+  AUDIT_LIST: 'ai:audit-list',
+  MEMORY_GET: 'ai:memory-get',
+  MEMORY_SET: 'ai:memory-set',
+  MEMORY_RESET: 'ai:memory-reset',
+  PROMPTS_LIST: 'ai:prompts-list',
+  SNIPPETS: 'ai:snippets',
+  BRIDGE_INFO: 'ai:bridge-info',
+  // Additive (engine PR #38): the operate tools an Owner may pre-approve on an Automation token.
+  PREAPPROVABLE_TOOLS: 'ai:preapprovable-tools'
+});
+
+const ALLOWED_CHANNELS = new Set([...Object.values(CHANNELS), ...Object.values(AI_CHANNELS)]);
 
 // One-way message, not an invoke(): main re-focuses the window after a native
 // alert()/confirm()/prompt() closes. Must match REFOCUS_CHANNEL in src/main/dialogFocus.js.
@@ -283,6 +312,21 @@ async function invoke(channel, payload = undefined) {
     throw error;
   }
   return response.data;
+}
+
+// A build without the AI engine has no ai:* handlers, and Electron rejects with "No handler
+// registered". The renderer turns AI_UNAVAILABLE into "not available in this build", not an error.
+async function invokeAi(channel, payload = undefined) {
+  try {
+    return await invoke(channel, payload);
+  } catch (e) {
+    if (/No handler registered/i.test(String(e && e.message))) {
+      const err = new Error('SoftGlaze AI is not available in this build.');
+      err.code = 'AI_UNAVAILABLE';
+      throw err;
+    }
+    throw e;
+  }
 }
 
 const api = Object.freeze({
@@ -659,6 +703,57 @@ const api = Object.freeze({
     revokeToken: (id) => invoke(CHANNELS.API_TOKEN_REVOKE, { id }),
     serverStatus: () => invoke(CHANNELS.API_SERVER_STATUS),
     setServerEnabled: (enabled) => invoke(CHANNELS.API_SERVER_SET_ENABLED, { enabled })
+  }),
+  // SoftGlaze AI page and approvals (spec §10). Payloads: objects, like the rest of this file.
+  ai: Object.freeze({
+    getStatus: () => invokeAi(AI_CHANNELS.STATUS),
+    setEnabled: (on) => invokeAi(AI_CHANNELS.SET_ENABLED, { enabled: Boolean(on) }),
+    getSettings: () => invokeAi(AI_CHANNELS.SETTINGS_GET),
+    setSettings: (patch) => invokeAi(AI_CHANNELS.SETTINGS_SET, patch || {}),
+    tokens: Object.freeze({
+      list: () => invokeAi(AI_CHANNELS.TOKENS_LIST),
+      // input { name, memberId, scope, expiresInDays|null, groupIds[], preApprovedTools?, maxProfilesPerCall?, maxCallsPerHour? }
+      create: (input) => invokeAi(AI_CHANNELS.TOKENS_CREATE, input),
+      revoke: (id) => invokeAi(AI_CHANNELS.TOKENS_REVOKE, { id })
+    }),
+    approvals: Object.freeze({
+      list: () => invokeAi(AI_CHANNELS.APPROVALS_LIST),
+      // decision: 'allow-once' | 'allow-hour' | 'deny'
+      respond: (id, decision) => invokeAi(AI_CHANNELS.APPROVALS_RESPOND, { id, decision })
+    }),
+    // One approval object per event; the app-wide dialog listens on every page.
+    onApprovalRequested: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(AI_CHANNELS.APPROVAL_REQUESTED, listener);
+      return () => ipcRenderer.removeListener(AI_CHANNELS.APPROVAL_REQUESTED, listener);
+    },
+    onApprovalsChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(AI_CHANNELS.APPROVALS_CHANGED, listener);
+      return () => ipcRenderer.removeListener(AI_CHANNELS.APPROVALS_CHANGED, listener);
+    },
+    onStatusChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(AI_CHANNELS.STATUS_CHANGED, listener);
+      return () => ipcRenderer.removeListener(AI_CHANNELS.STATUS_CHANGED, listener);
+    },
+    stopAll: () => invokeAi(AI_CHANNELS.STOP_ALL),
+    audit: Object.freeze({
+      // q { limit, cursor?, outcome?, clientName?, search? } -> { items, nextCursor }
+      list: (q) => invokeAi(AI_CHANNELS.AUDIT_LIST, q || {})
+    }),
+    memories: Object.freeze({
+      get: () => invokeAi(AI_CHANNELS.MEMORY_GET),
+      set: (markdown) => invokeAi(AI_CHANNELS.MEMORY_SET, { markdown: String(markdown == null ? '' : markdown) }),
+      reset: () => invokeAi(AI_CHANNELS.MEMORY_RESET)
+    }),
+    prompts: Object.freeze({
+      list: () => invokeAi(AI_CHANNELS.PROMPTS_LIST)
+    }),
+    snippets: () => invokeAi(AI_CHANNELS.SNIPPETS),
+    bridgeInfo: () => invokeAi(AI_CHANNELS.BRIDGE_INFO),
+    // -> [{ name, title, scope, destructive }]
+    preapprovableTools: () => invokeAi(AI_CHANNELS.PREAPPROVABLE_TOOLS)
   }),
   updater: Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),
