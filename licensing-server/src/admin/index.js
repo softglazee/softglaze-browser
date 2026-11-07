@@ -19,9 +19,10 @@ const transport = require('../email/transport');
 const { forwardedChain, clientIp, trustHops, isPublicIp } = require('../net/clientIp');
 
 const router = express.Router();
+// The key is checked from the headers before any large body is read.
+router.use(adminAuth);
 router.use(express.json({ limit: '10mb' }));
 router.use(express.text({ type: ['text/csv', 'text/plain'], limit: '10mb' }));
-router.use(adminAuth);
 router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
 router.use('/customers', require('./routes/customers'));
