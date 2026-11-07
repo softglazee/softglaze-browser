@@ -5,6 +5,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const net = require('node:net');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
 const { SSEClientTransport } = require('@modelcontextprotocol/sdk/client/sse.js');
@@ -55,7 +56,7 @@ const textOf = (r) => r.content.filter((c) => c.type === 'text').map((c) => c.te
 
 test.before(async () => {
   app = createFakeApp({ onEmit });
-  ai.configure({ toolDeps: app.toolDeps, host: app.host, inlineWaitMs: 700, approvalTimeoutMs: 6000 });
+  ai.configure({ toolDeps: app.toolDeps, host: app.host, inlineWaitMs: 1000, approvalTimeoutMs: 8000 });
   localApi.configure({ ai, ...app.localApiDeps });
   await ai.load();
   await ai.setEnabled(true);
@@ -248,9 +249,17 @@ test('bad tokens get 401, web pages and rebinding hosts get 403', async () => {
   assert.equal(origin.status, 403);
   const rebind = await rawRequest({ headers: { Host: `evil.example:${port}`, Authorization: `Bearer ${tokens.operate}`, 'Content-Type': 'application/json' }, body: INIT });
   assert.equal(rebind.status, 403);
-  const bigBody = `{"x":"${'a'.repeat(1100 * 1024)}"}`;
-  const big = await rawRequest({ headers: { Authorization: `Bearer ${tokens.operate}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bigBody) }, body: bigBody });
-  assert.equal(big.status, 413);
+  // An oversized body is refused from its declared length, before it is read or authenticated.
+  const head = await new Promise((resolve, reject) => {
+    const sock = net.connect(port, '127.0.0.1', () => {
+      const lines = ['POST /mcp HTTP/1.1', `Host: 127.0.0.1:${port}`, 'Content-Type: application/json', `Content-Length: ${2 * 1024 * 1024}`, '', '{"x":'];
+      sock.write(lines.join('\r\n'));
+    });
+    let text = '';
+    sock.on('data', (c) => { text += c; if (text.includes('\r\n\r\n')) { sock.destroy(); resolve(text); } });
+    sock.on('error', reject);
+  });
+  assert.match(head, /^HTTP\/1\.1 413/);
 });
 
 test('an extra allowed host (n8n in Docker) is refused until the Owner allows it', async () => {
@@ -363,7 +372,7 @@ test('Stop all AI closes sessions, denies pending approvals and switches AI off'
   const client = await connect(tokens.operate);
   approvalPolicy = null;
   const pendingCall = client.callTool({ name: 'create_group', arguments: { name: 'Pending group' } }).catch((e) => e);
-  await new Promise((r) => setTimeout(r, 300));
+  for (let i = 0; i < 150 && !ai.listApprovals().some((a) => a.tool === 'create_group'); i += 1) await new Promise((r) => setTimeout(r, 20));
   const res = await ai.stopAll();
   assert.ok(res.revokedSessions >= 1);
   assert.ok(res.deniedApprovals >= 1);

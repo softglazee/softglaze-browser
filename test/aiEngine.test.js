@@ -192,7 +192,7 @@ test('a job that outlasts the request returns a runId and finishes in the backgr
   const r = await jobs.start(7, 'demo', 'Demo job', () => new Promise((res) => setTimeout(() => res({ summary: 'done', data: { n: 1 } }), 80)));
   assert.match(r.data.runId, /^job-/);
   assert.equal(jobs.get(r.data.runId, 8), null, 'another token cannot read it');
-  await new Promise((res) => setTimeout(res, 120));
+  for (let i = 0; i < 100 && jobs.get(r.data.runId, 7).running; i += 1) await new Promise((res) => setTimeout(res, 20));
   const v = jobs.get(r.data.runId, 7);
   assert.equal(v.running, false);
   assert.deepEqual(v.result, { n: 1 });
