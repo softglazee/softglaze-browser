@@ -1484,7 +1484,8 @@ export default function ProfilesPage() {
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-wrap gap-3">
                             <CustomSelect value={pd.proxyType} onChange={e => updatePd('proxyType', e.target.value)} className="w-[140px]"><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="SOCKS5">SOCKS5</option><option value="SOCKS4">SOCKS4</option><option value="Local">Local</option></CustomSelect>
-                            <CustomSelect value={pd.ipChecker} onChange={e => updatePd('ipChecker', e.target.value)} className="w-[180px]"><option value="IP2Location">IP2Location</option><option value="IPinfo">IPinfo</option></CustomSelect>
+                            {/* The IP checker choice is not saved (extractFingerprintData has no ipChecker) and the network check does not use it. */}
+                            {SHOW_UNAPPLIED_SETTINGS && <CustomSelect value={pd.ipChecker} onChange={e => updatePd('ipChecker', e.target.value)} className="w-[180px]"><option value="IP2Location">IP2Location</option><option value="IPinfo">IPinfo</option></CustomSelect>}
                             <Button variant="secondary" onClick={handleCheckProxy} disabled={checkingProxy} className="gap-2">
                               {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? t('proxy.checking') : t('proxy.checkNetwork')}
                             </Button>
@@ -1620,7 +1621,6 @@ export default function ProfilesPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <div className="text-left lg:text-right mt-2">
                       <label htmlFor="pf-platform-2fa" className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('platform.twoFactor')}</label>
-                      <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider text-violet-400/80">{t('platform.premium')}</span>
                     </div>
                     <div className="w-full">
                       <input
@@ -1905,12 +1905,16 @@ export default function ProfilesPage() {
                     </div>
                   </div>
 
-                  <FpRow label={t('advanced.extension')} description={t('advanced.extensionDesc')}>
-                    <CustomSelect value={pd.advancedExt} onChange={e => updatePd('advancedExt', e.target.value)} className="w-[220px]">
-                      <option value="Team">{t('advanced.teamExtensions')}</option>
-                      <option value="None">{t('advanced.noExtensions')}</option>
-                    </CustomSelect>
-                  </FpRow>
+                  {/* Extension (advancedExt) is saved but never read: team extensions load only through
+                      "Load SoftGlaze extensions" below. */}
+                  {SHOW_UNAPPLIED_SETTINGS && (
+                    <FpRow label={t('advanced.extension')} description={t('advanced.extensionDesc')}>
+                      <CustomSelect value={pd.advancedExt} onChange={e => updatePd('advancedExt', e.target.value)} className="w-[220px]">
+                        <option value="Team">{t('advanced.teamExtensions')}</option>
+                        <option value="None">{t('advanced.noExtensions')}</option>
+                      </CustomSelect>
+                    </FpRow>
+                  )}
 
                   {/* Per-profile Data Sync is saved (syncItemsJson) but nothing reads it. */}
                   {SHOW_UNAPPLIED_SETTINGS && (
@@ -1977,9 +1981,14 @@ export default function ProfilesPage() {
                     </div>
                   </FpRow>
 
-                  <FpRow label={t('advanced.randomFingerprint')} description={t('advanced.randomFingerprintDesc')}>
-                    <ToggleSwitch checked={pd.randomFingerprint} onChange={v => updatePd('randomFingerprint', v)} />
-                  </FpRow>
+                  {/* Random Fingerprint: createProfile builds on a generated fingerprint, but this editor sends
+                      every fingerprint field and they override the whole generated base, so the switch
+                      changes nothing here. Quick generate and the onboarding wizard do randomise. */}
+                  {SHOW_UNAPPLIED_SETTINGS && (
+                    <FpRow label={t('advanced.randomFingerprint')} description={t('advanced.randomFingerprintDesc')}>
+                      <ToggleSwitch checked={pd.randomFingerprint} onChange={v => updatePd('randomFingerprint', v)} />
+                    </FpRow>
+                  )}
                 </div>
               )}
             </div>

@@ -136,6 +136,9 @@ test('Profile editor: Device Name, MAC Address, Data Sync and the unread browser
     "t('env.deviceName')", "t('env.mac')",
     "updatePd('advancedSync'", "updateNestedPd('syncItems'",
     "updatePd('advancedBrowser'",
+    // Advanced: Extension (advancedExt) is never read; Random Fingerprint is overridden by the
+    // editor's own fields. Proxy tab: the IP checker choice is not even saved.
+    "updatePd('advancedExt'", "updatePd('randomFingerprint'", "updatePd('ipChecker'",
     ...['matchTimezone', 'allowChromeSignIn', 'offerTranslate', 'disableDevTools', 'disableExtInstall',
       'enableVirtualCamera', 'enableMobileSim', 'startupAction', 'onlyOpenWithProxy', 'onlyOpenExtLoaded',
       'secureAccess', 'disableVideos', 'disableImagesLimit'].map((k) => `updateNestedPd('browserSettings', '${k}'`)
@@ -188,6 +191,37 @@ test('main applies no Device Name, MAC Address or per-profile switch but loadExt
   assert.deepEqual([...new Set(reads)], ['loadExtensions'], 'launch reads only loadExtensions from the per-profile switches');
 });
 
+test('main never reads advancedExt and never saves the editor IP checker', () => {
+  const mainDir = path.join(ROOT, 'src', 'main');
+  for (const f of fs.readdirSync(mainDir).filter((x) => x.endsWith('.js'))) {
+    let src = fs.readFileSync(path.join(mainDir, f), 'utf8');
+    if (f === 'ipcHandlers.js') {
+      // The one place it is written: extractFingerprintData copies it into the profile row.
+      assert.match(src, /advancedExt: input\.advancedExt,/);
+      src = src.replace('advancedExt: input.advancedExt,', '');
+    }
+    assert.doesNotMatch(src, /\badvancedExt\b/, `${f} now reads advancedExt: show the Extension choice again`);
+  }
+  const start = IPC.indexOf('function extractFingerprintData(');
+  assert.ok(start > 0, 'extractFingerprintData must exist');
+  const body = IPC.slice(start, IPC.indexOf('\n}', start));
+  assert.doesNotMatch(body, /ipChecker/, 'the profile IP checker is saved now: show it again');
+});
+
+test('Random Fingerprint has no effect from the editor: it sends every field the generator sets', () => {
+  // createProfile lets explicit fields override the generated base (buildFingerprintFields). The
+  // editor's initial data carries every key generateFingerprint returns, so nothing generated survives.
+  const gen = require(path.join(ROOT, 'src', 'main', 'fingerprintGenerator.js'));
+  const generated = Object.keys(gen.generateFingerprint({ deviceClass: 'desktop' }));
+  assert.ok(generated.length > 10, 'generator output');
+  const i = PROFILES.indexOf('const initialProfileData = {');
+  assert.ok(i > 0, 'initialProfileData must exist');
+  const block = PROFILES.slice(i, PROFILES.indexOf('\n};', i));
+  const missing = generated.filter((k) => !new RegExp(`\\n\\s+${k}:`).test(block));
+  assert.deepEqual(missing, [], 'the editor no longer sends these, so Random Fingerprint may randomise them: show it again');
+  assert.match(IPC, /function buildFingerprintFields\(input\) \{[\s\S]*?if \(value !== undefined\) merged\[key\] = value;/, 'explicit fields still win');
+});
+
 test('Block access never filters without a list, and nothing in the app fills the list', () => {
   const engine = read('src', 'main', 'browserEngine.js');
   assert.match(engine, /accessEnabled: Boolean\(block\.enabled\) && list\.length > 0/);
@@ -199,7 +233,7 @@ test('Block access never filters without a list, and nothing in the app fills th
   });
   for (const file of walk(rendererDir)) {
     const src = fs.readFileSync(file, 'utf8');
-    assert.doesNotMatch(src, /blockAccess: \{[^}]*\blist\s*:/,`${path.relative(ROOT, file)} writes the block list: show the switch again`);
+    assert.doesNotMatch(src, /blockAccess: \{[^}]*\blist\s*:/, `${path.relative(ROOT, file)} writes the block list: show the switch again`);
   }
 });
 
@@ -207,12 +241,15 @@ test('Block access never filters without a list, and nothing in the app fills th
 
 test('Synchronize is not labelled Premium, and Random Fingerprint says when it really applies', () => {
   for (const lang of ['en', 'es']) {
-    const prof = JSON.parse(read('src', 'renderer', 'i18n', 'locales', lang, 'profiles.json').replace(/^﻿/, ''));
+    const prof = JSON.parse(read('src', 'renderer', 'i18n', 'locales', lang, 'profiles.json').trim()); // trim() also drops a BOM
     assert.doesNotMatch(prof.bulk.synchronizeTitle, /premium/i, `${lang}: no plan restricts Synchronize`);
+    assert.equal(prof.platform.premium, undefined, `${lang}: the 2FA Secret "Premium" badge label is gone`);
     assert.doesNotMatch(prof.advanced.randomFingerprintDesc, /each startup|on each launch|cada inicio/i, `${lang}: it is generated on save, not at launch`);
     // Headings over the hidden fields do not promise them.
     assert.doesNotMatch(prof.fp.hardwareConfigSub, /MAC|device name|dispositivo/i, `${lang}: hardware heading`);
     assert.doesNotMatch(prof.advanced.coreSettingsSub, /sync|sincroniz/i, `${lang}: core settings heading`);
   }
   assert.doesNotMatch(read('src', 'main', 'tierPolicy.js'), /synchron/i, 'if a plan ever restricts Synchronize, the label can return');
+  assert.doesNotMatch(read('src', 'main', 'tierPolicy.js'), /2fa|twoFactor|totp/i, 'if a plan ever restricts the 2FA vault, the badge can return');
+  assert.doesNotMatch(PROFILES, /t\('platform\.premium'\)/, 'no Premium badge on the 2FA Secret field');
 });

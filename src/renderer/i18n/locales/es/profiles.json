@@ -160,7 +160,6 @@
     "usernamePlaceholder": "Usuario / Correo electrónico",
     "passwordPlaceholder": "Contraseña",
     "twoFactor": "Secreto 2FA",
-    "premium": "Premium",
     "twoFactorPlaceholder": "Semilla de autenticador en Base32, p. ej. JBSWY3DPEHPK3PXP",
     "twoFactorHint": "Pega la semilla del secreto 2FA de esta cuenta. Softglaze genera códigos de 6 dígitos en vivo: cópialos con un clic desde la lista de Perfiles (insignia 🔑 2FA)."
   },

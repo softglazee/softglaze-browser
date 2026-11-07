@@ -160,7 +160,6 @@
     "usernamePlaceholder": "Username / Email",
     "passwordPlaceholder": "Password",
     "twoFactor": "2FA Secret",
-    "premium": "Premium",
     "twoFactorPlaceholder": "Base32 authenticator seed, e.g. JBSWY3DPEHPK3PXP",
     "twoFactorHint": "Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes - copy them with one click from the Profiles list (🔑 2FA badge)."
   },
