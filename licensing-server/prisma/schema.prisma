@@ -1,7 +1,9 @@
-// SoftGlaze Licensing Server — data model (Postgres).
+// SoftGlaze Licensing Server: data model (MySQL / MariaDB).
 // Multi-tenant: one backend serves many buyer-merchants (tenants). Each tenant
 // has its own Ed25519 keypair (private key sealed at rest), its own payment
 // provider credentials (sealed), its own plans, and its own installs/licenses.
+// Since November 2026 it also keeps the tenant's customers, the trial ledger,
+// email verification, the email outbox and the admin audit log.
 
 generator client {
   provider = "prisma-client-js"
@@ -28,6 +30,19 @@ model Tenant {
   licenses       License[]
   payments       Payment[]
   codes          LicenseCode[]
+  customers      Customer[]
+  verifications  EmailVerification[]
+  trials         Trial[]
+  trialAttempts  TrialAttempt[]
+  emailTemplates EmailTemplate[]
+  outbox         EmailOutbox[]
+  settings       Setting[]
+  adminKeys      AdminKey[]
+  adminAudit     AdminAudit[]
+  priceHistory   PlanPriceHistory[]
+  segments       Segment[]
+  snapshots      MetricSnapshot[]
+  customerEvents CustomerEvent[]
 }
 
 model TenantPaymentConfig {
@@ -43,18 +58,26 @@ model TenantPaymentConfig {
   @@unique([tenantId, provider])
 }
 
+// The single source of prices: the app and the website read GET /v1/plans/public.
 model Plan {
-  id       String  @id @default(cuid())
-  tenantId String
-  key      String // stable id used by the client, e.g. "pro"
-  name     String
-  tier     String  @default("pro") // pro | enterprise (feature tier the client enforces)
-  amount   Int // price in minor units (cents)
-  currency String  @default("USD")
-  interval  String  @default("month")
-  months    Int     @default(1) // term granted per successful one-time payment
-  recurring Boolean @default(false) // true => Stripe subscription (auto-renews each interval)
-  active    Boolean @default(true)
+  id          String   @id @default(cuid())
+  tenantId    String
+  key         String // stable id used by the client, e.g. "pro"
+  name        String
+  tier        String   @default("pro") // pro | enterprise (feature tier the client enforces)
+  amount      Int // price in minor units (cents)
+  currency    String   @default("USD")
+  interval    String   @default("month")
+  months      Int      @default(1) // term granted per successful one-time payment
+  recurring   Boolean  @default(false) // true => Stripe subscription (auto-renews each interval)
+  active      Boolean  @default(true)
+  description String?  @db.Text
+  highlight   Boolean  @default(false) // the plan the pricing page features
+  features    Json? // ["Unlimited profiles", ...]
+  limits      Json? // { seats, maxParallel, auditExport }; null = the tier defaults
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -76,10 +99,16 @@ model Install {
   machineBoundAt DateTime?
   createdAt  DateTime  @default(now())
   lastSeenAt DateTime?
+  // The customer this install belongs to: set when its email is verified by us (or matched at
+  // register / by the November 2026 backfill, unverified).
+  customerId String?
+  appVersion String?   @db.VarChar(40)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, machineId])
+  @@index([tenantId, customerId])
 }
 
 model License {
@@ -97,29 +126,46 @@ model License {
   rebindWindowStart DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  customerId       String?
+  complimentary    Boolean   @default(false) // free licence (partner, press): never counted as revenue or MRR
+  source           String?   @db.VarChar(20) // manual (admin grant); null = checkout or activation code
+  note             String?   @db.Text // why an admin granted / extended it
+  revokedAt        DateTime?
+  revokedReason    String?   @db.Text
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, account])
   @@index([tenantId, installId])
+  @@index([tenantId, customerId])
 }
 
 model Payment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   tenantId    String
-  provider    String
-  providerRef String? // session / payment-intent / order id
+  provider    String // stripe | paypal | cryptomus | manual
+  providerRef String? // session / payment-intent / order id; for manual payments the invoice or transfer reference
   amount      Int
-  currency    String   @default("USD")
-  status      String   @default("pending") // pending | paid | failed | refunded
+  currency    String    @default("USD")
+  status      String    @default("pending") // pending | paid | failed | refunded
   account     String?
   plan        String?
   installId   String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  customerId  String?
+  method      String?   @db.VarChar(30) // manual payments: invoice | bank_transfer | payoneer | 2checkout | other
+  note        String?   @db.Text
+  paidAt      DateTime?
+  refundedAt  DateTime?
+  recordedBy  String?   @db.VarChar(160)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, providerRef])
+  @@index([tenantId, customerId])
+  @@index([tenantId, paidAt])
 }
 
 // Idempotency / replay guard for inbound provider webhooks. The row is inserted
@@ -150,4 +196,309 @@ model LicenseCode {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, code])
+}
+
+// One row per person per tenant. `emailKey` is the uniqueness key: lowercase, and for
+// gmail.com / googlemail.com the dots and +tag of the local part are folded. `status` is what
+// the admin shows (statusOverride when set, else statusAuto); statusAuto is recomputed from
+// licences, payments and trials and drives the metrics.
+model Customer {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  email              String    @db.VarChar(254)
+  emailKey           String    @db.VarChar(254)
+  emailVerifiedAt    DateTime?
+  name               String?   @db.VarChar(200)
+  company            String?   @db.VarChar(200)
+  country            String?   @db.VarChar(2) // ISO 3166-1 alpha-2
+  phone              String?   @db.VarChar(40)
+  lang               String?   @db.VarChar(10)
+  source             String    @default("app") @db.VarChar(20) // app | manual | import | invoice | website
+  status             String    @default("lead") @db.VarChar(20) // lead | trial | trial_expired | paid | cancelled | churned
+  statusAuto         String    @default("lead") @db.VarChar(20)
+  statusOverride     String?   @db.VarChar(20)
+  statusNote         String?   @db.Text
+  tier               String?   @db.VarChar(20)
+  firstSeenAt        DateTime  @default(now())
+  lastSeenAt         DateTime?
+  appVersion         String?   @db.VarChar(40)
+  trialStartedAt     DateTime?
+  trialEndsAt        DateTime?
+  paidSince          DateTime?
+  paidUntil          DateTime?
+  complimentaryUntil DateTime?
+  totalPaidCents     Int       @default(0)
+  currency           String?   @db.VarChar(3)
+  marketingConsent   Boolean   @default(false)
+  consentAt          DateTime?
+  consentSource      String?   @db.VarChar(40)
+  unsubscribedAt     DateTime?
+  notes              String?   @db.Text
+  tags               Json?
+  tagIndex           String?   @db.VarChar(1000) // ",tag1,tag2," for filtering; mirrors tags
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  installs Install[]
+  licenses License[]
+  payments Payment[]
+
+  @@unique([tenantId, emailKey])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, lastSeenAt])
+  @@index([tenantId, deletedAt])
+}
+
+// Timeline + status history. `status` events ({ from, to }) drive churn and paying-customer
+// history; on a privacy erase they are kept under an anonymous id so past metrics do not change.
+model CustomerEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  customerId String   @db.VarChar(40)
+  type       String   @db.VarChar(40)
+  at         DateTime @default(now())
+  data       Json?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, type, at])
+  @@index([tenantId, customerId, at])
+}
+
+// One row per code sent (POST /v1/account/verify/start). Only an HMAC of the code is stored.
+model EmailVerification {
+  id               String    @id @default(cuid())
+  tenantId         String
+  installId        String    @db.VarChar(40)
+  customerId       String?   @db.VarChar(40)
+  email            String    @db.VarChar(254)
+  emailKey         String    @db.VarChar(254)
+  name             String?   @db.VarChar(200)
+  lang             String?   @db.VarChar(10)
+  country          String?   @db.VarChar(2)
+  consentMarketing Boolean   @default(false)
+  codeHash         String    @db.VarChar(64)
+  attempts         Int       @default(0)
+  expiresAt        DateTime
+  verifiedAt       DateTime?
+  ipHash           String?   @db.VarChar(64)
+  createdAt        DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, installId, emailKey])
+  @@index([tenantId, emailKey, createdAt])
+  @@index([tenantId, ipHash, createdAt])
+  @@index([createdAt])
+}
+
+// The trial ledger: one row per granted trial. machineLock / emailLock hold the machine hash and
+// the HMAC of the email key while they block a new trial; an admin reset sets them to NULL, so the
+// unique indexes make "one trial per machine / per email" race-safe while the history stays.
+model Trial {
+  id             String    @id @default(cuid())
+  tenantId       String
+  customerId     String?   @db.VarChar(40)
+  installId      String?   @db.VarChar(40)
+  machineHash    String    @db.VarChar(64)
+  emailKeyHash   String    @db.VarChar(64)
+  ipHash         String?   @db.VarChar(64)
+  machineLock    String?   @db.VarChar(64)
+  emailLock      String?   @db.VarChar(64)
+  networkCounted Boolean   @default(true)
+  tier           String    @default("enterprise") @db.VarChar(20)
+  startedAt      DateTime  @default(now())
+  endsAt         DateTime
+  convertedAt    DateTime?
+  resetAt        DateTime?
+  resetReason    String?   @db.Text
+  resetBy        String?   @db.VarChar(160)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, machineLock])
+  @@unique([tenantId, emailLock])
+  @@index([tenantId, ipHash, startedAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, installId])
+  @@index([tenantId, startedAt])
+}
+
+// Every POST /v1/trial/start outcome, granted or refused (anti-abuse reporting).
+model TrialAttempt {
+  id        String   @id @default(cuid())
+  tenantId  String
+  installId String?  @db.VarChar(40)
+  outcome   String   @db.VarChar(30) // granted | repeat | used_machine | used_email | used_network | not_verified | already_licensed
+  ipHash    String?  @db.VarChar(64)
+  at        DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, at])
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String   @db.VarChar(60)
+  lang      String   @default("en") @db.VarChar(10)
+  name      String   @db.VarChar(120)
+  category  String   @db.VarChar(20) // essential | lifecycle | marketing
+  subject   String   @db.VarChar(255)
+  html      String   @db.Text // body fragment; the layout, footer and unsubscribe link are added when sending
+  text      String   @db.Text
+  builtIn   Boolean  @default(false) // one of the built-in keys: cannot be deleted, can be reset
+  isDefault Boolean  @default(false) // still the built-in copy
+  updatedBy String?  @db.VarChar(160)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key, lang])
+}
+
+// Outbox and send log in one table. dedupeKey makes automations and campaigns idempotent.
+model EmailOutbox {
+  id            String    @id @default(cuid())
+  tenantId      String
+  customerId    String?   @db.VarChar(40)
+  toEmail       String    @db.VarChar(254)
+  templateKey   String?   @db.VarChar(60)
+  category      String    @db.VarChar(20)
+  campaignId    String?   @db.VarChar(40)
+  dedupeKey     String?   @db.VarChar(191)
+  subject       String    @db.VarChar(255)
+  html          String?   @db.MediumText
+  text          String?   @db.MediumText
+  priority      Int       @default(0)
+  status        String    @default("queued") @db.VarChar(20) // queued | sending | sent | failed | skipped | cancelled
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(5)
+  nextAttemptAt DateTime  @default(now())
+  lockedAt      DateTime?
+  lastError     String?   @db.Text
+  messageId     String?   @db.VarChar(255)
+  sentAt        DateTime?
+  createdBy     String?   @db.VarChar(160)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, status, nextAttemptAt])
+  @@index([tenantId, customerId])
+  @@index([tenantId, campaignId])
+  @@index([tenantId, sentAt])
+}
+
+// Tenant settings by section (trial, verify, email, billing, automations, privacy), merged over the
+// built-in defaults in src/settings.js.
+model Setting {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String   @db.VarChar(60)
+  value     Json
+  updatedBy String?  @db.VarChar(160)
+  updatedAt DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+}
+
+// Scoped admin keys for /v1/admin/* (for example the website's own key). The tenant admin key keeps
+// working there too; these keys cannot call /v1/tenant/*. Only the SHA-256 is stored.
+model AdminKey {
+  id         String    @id @default(cuid())
+  tenantId   String
+  label      String    @db.VarChar(60)
+  keyHash    String    @unique @db.VarChar(64)
+  scopes     Json
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, label])
+}
+
+model AdminAudit {
+  id         String   @id @default(cuid())
+  tenantId   String
+  at         DateTime @default(now())
+  actor      String   @db.VarChar(160)
+  keyId      String?  @db.VarChar(40)
+  action     String   @db.VarChar(60)
+  targetType String?  @db.VarChar(30)
+  targetId   String?  @db.VarChar(64)
+  detail     Json?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, at])
+  @@index([tenantId, targetType, targetId])
+}
+
+model PlanPriceHistory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  planKey     String
+  oldAmount   Int?
+  newAmount   Int
+  oldCurrency String?  @db.VarChar(3)
+  newCurrency String   @db.VarChar(3)
+  changedAt   DateTime @default(now())
+  changedBy   String?  @db.VarChar(160)
+  note        String?  @db.Text
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, planKey, changedAt])
+}
+
+// Saved customer filters for the admin and for custom email sends.
+model Segment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String   @db.VarChar(120)
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+}
+
+// Daily business snapshot written by the cron (MRR, paying customers, status counts), so monthly
+// MRR history is exact from the day this shipped.
+model MetricSnapshot {
+  id        String   @id @default(cuid())
+  tenantId  String
+  day       String   @db.VarChar(10) // YYYY-MM-DD, UTC
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, day])
+}
+
+// Cross-process lock + last-run record for scripts/run-cron.js.
+model JobLock {
+  name           String    @id @db.VarChar(60)
+  lockedUntil    DateTime?
+  holder         String?   @db.VarChar(80)
+  lastStartedAt  DateTime?
+  lastFinishedAt DateTime?
+  lastResult     Json?
 }

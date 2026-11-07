@@ -45,8 +45,9 @@ async function claimPendingPayment(tenant, provider, providerRef, db = prisma) {
     orderBy: { createdAt: 'desc' }
   });
   if (!payment || payment.status !== 'pending') return null;
-  const won = await db.payment.updateMany({ where: { id: payment.id, status: 'pending' }, data: { status: 'paid' } });
-  return won && won.count === 1 ? { ...payment, status: 'paid' } : null;
+  const paidAt = new Date();
+  const won = await db.payment.updateMany({ where: { id: payment.id, status: 'pending' }, data: { status: 'paid', paidAt } });
+  return won && won.count === 1 ? { ...payment, status: 'paid', paidAt } : null;
 }
 
 // Recover grant details from the Payment recorded at checkout (uniform across
@@ -111,7 +112,7 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
       orderBy: { createdAt: 'desc' }
     });
     if (payment) {
-      const won = await db.payment.updateMany({ where: { id: payment.id, status: 'paid' }, data: { status: 'refunded' } });
+      const won = await db.payment.updateMany({ where: { id: payment.id, status: 'paid' }, data: { status: 'refunded', refundedAt: new Date(now) } });
       if (!won || won.count !== 1) return { changed: false };
       const plan = payment.plan
         ? await db.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: payment.plan } } })

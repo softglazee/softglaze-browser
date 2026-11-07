@@ -1,18 +1,22 @@
 'use strict';
-// POST /v1/license { tenantId, installId, installSecret, machineHash } -> { lease, exp, tier,
-// currentPeriodEnd } | { lease: null, status }; 401 bad install/secret, 400 machine_required,
+// POST /v1/license { tenantId, installId, installSecret, machineHash, appVersion? } -> { lease, exp, tier,
+// currentPeriodEnd, type: 'paid' } | the running trial { lease, exp, tier, type: 'trial', trialEndsAt,
+// currentPeriodEnd } | { lease: null, status, trialEndsAt? }; 401 bad install/secret, 400 machine_required,
 // 403 machine_mismatch. The licence is found only by the authenticated installId, never by email.
+// appVersion (optional) is recorded so the admin shows which version each customer runs.
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
 const { issueLease } = require('../lease');
 const { authenticateInstall } = require('../installAuth');
 const { checkMachine, transferMachine } = require('../machineBinding');
+const { trialLeaseFor } = require('../trials/ledger');
+const { touchInstall } = require('../customers/sync');
 
 const router = express.Router();
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { tenantId, installId, installSecret, machineHash } = req.body || {};
+  const { tenantId, installId, installSecret, machineHash, appVersion } = req.body || {};
   if (!tenantId) return res.status(400).json({ error: 'tenantId is required.' });
   if (!installId || !installSecret) return res.status(400).json({ error: 'installId and installSecret are required.' });
 
@@ -25,15 +29,20 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!bound.ok) return res.status(bound.status).json({ error: bound.error });
   const install = bound.install;
 
+  const now = Date.now();
+  await touchInstall(prisma, install, appVersion, now).catch(() => {});
   const lic = await prisma.license.findFirst({ where: { tenantId: tenant.id, installId: install.id }, orderBy: { updatedAt: 'desc' } });
 
-  const now = Date.now();
   const active = lic && lic.status === 'active' && lic.currentPeriodEnd && new Date(lic.currentPeriodEnd).getTime() > now;
-  if (!active) return res.json({ lease: null, status: lic ? lic.status : 'none' });
+  if (!active) {
+    // No paid licence: a running server-side trial keeps the app licensed with a trial lease.
+    const trial = await trialLeaseFor(prisma, tenant, install, now);
+    if (trial.active) return res.json(trial.active);
+    return res.json({ lease: null, status: lic ? lic.status : 'none', ...(trial.last ? { trialEndsAt: trial.last.endsAt } : {}) });
+  }
 
-  await prisma.install.update({ where: { id: install.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
   const lease = issueLease(tenant, lic, now, { mid: install.machineHash });
-  res.json({ lease: lease.token, exp: lease.exp, tier: lease.tier, currentPeriodEnd: lic.currentPeriodEnd });
+  res.json({ lease: lease.token, exp: lease.exp, tier: lease.tier, currentPeriodEnd: lic.currentPeriodEnd, type: 'paid' });
 }));
 
 // POST /v1/license/transfer { tenantId, installId, installSecret, machineHash, proof }
