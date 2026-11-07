@@ -22,7 +22,9 @@
   "backend": {
     "licensedVerified": "Licensed & verified",
     "renews": "renews {{date}}",
-    "noLicense": "Licensing active - no paid license yet for this install."
+    "noLicense": "Licensing active - no paid license yet for this install.",
+    "trialVerified": "Free trial, verified",
+    "trialEnds": "ends {{date}}"
   },
   "current": {
     "title": "Current plan",
@@ -275,5 +277,21 @@
     "entParallel": "Parallel runner, up to 10 profiles at once, with live run console",
     "entAuditExport": "Audit-log export (CSV / JSON)",
     "entSupport": "Priority email support"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Enter a valid email address.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Please use a permanent email address.",
+    "SIGNUP_NO_MX": "We couldn't find a mail server for that address.",
+    "SIGNUP_BAD_CODE": "That code isn't right or has expired. Check the email or ask for a new code.",
+    "SIGNUP_OFFLINE": "Connect to the internet to create your account.",
+    "SIGNUP_FAILED": "We couldn't check that email right now. Try again in a few minutes.",
+    "RATE_LIMITED": "Too many attempts, try again in a few minutes.",
+    "TRIAL_USED": "A free trial has already been used on this computer or email. Choose a plan or enter a purchase code.",
+    "TRIAL_OFFLINE": "Connect to the internet to start the free trial.",
+    "TRIAL_VERIFY_EMAIL": "Confirm your email address to start the free trial. We sent you a 6-digit code.",
+    "TRIAL_NO_EMAIL": "Add an email address to the owner account first, then start the free trial.",
+    "TRIAL_FAILED": "The free trial couldn't be started right now. Try again in a few minutes.",
+    "SERVER_UNAVAILABLE": "Our licensing server isn't answering right now. Try again in a few minutes.",
+    "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
   }
 }

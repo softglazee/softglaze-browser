@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredTheme, setTheme } from '@/lib/theme.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
+import { errorText, otpExtras, phaseForLicense, trialNeedsCode, trialPayload, paidPlans, defaultPlanId, formatPrice } from '@/lib/signupFlow.mjs';
+import billingEn from '@/i18n/locales/en/billing.json';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -74,6 +76,70 @@ function RememberToggle({ checked, onChange }) {
           {t('remember.unavailable', "This device can't securely store a login (OS encryption is unavailable), so you'll be asked to sign in again next launch.")}
         </p>
       )}
+    </div>
+  );
+}
+
+// Tenant sign-up: marketing emails only with this box ticked (unticked by default). Account and trial
+// emails are transactional and always sent, which the note says.
+function ConsentToggle({ checked, onChange }) {
+  const { t } = useTranslation('gate');
+  return (
+    <div className="mt-4">
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 w-4 h-4 shrink-0 accent-primary cursor-pointer" />
+        <span className="text-[12px] text-muted">{t('register.consent')}</span>
+      </label>
+      <p className="mt-1.5 text-[11px] text-muted-dark leading-relaxed">{t('register.consentNote')}</p>
+    </div>
+  );
+}
+
+// The built-in plan texts are English data; show them in the UI language (as the Billing page does).
+const PLAN_TEXT_KEY = new Map(Object.entries(billingEn.planText || {}).map(([key, text]) => [text, key]));
+
+// Tenant plan step: the paid plans with their prices and main features, from the licensing server
+// (or the built-in list when it cannot be reached).
+function PlanPicker({ plans, selected, onSelect }) {
+  const { t } = useTranslation('gate');
+  const { t: tb } = useTranslation('billing');
+  const text = (s) => { const k = PLAN_TEXT_KEY.get(s); return k ? tb(`planText.${k}`) : s; };
+  return (
+    <div role="radiogroup" aria-label={t('plan.choosePlan')} className="grid grid-cols-2 gap-2">
+      {plans.map((p) => {
+        const active = p.id === selected;
+        return (
+          <button
+            key={p.id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onSelect(p.id)}
+            className="relative flex flex-col justify-start text-left rounded-lg border px-3 py-2.5 transition-colors"
+            style={active
+              ? { borderColor: 'color-mix(in srgb, var(--primary) 55%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }
+              : { borderColor: 'var(--border)' }}
+          >
+            <span className="flex w-full items-center justify-between gap-2 min-h-[18px]">
+              <span className="text-[12.5px] font-semibold text-foreground truncate">{p.name}</span>
+              {active ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : (p.highlight && <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">{tb('plans.bestValue')}</span>)}
+            </span>
+            <span className="block mt-1">
+              <span className="font-display text-[18px] font-semibold text-foreground">{formatPrice(p.amount, p.currency)}</span>
+              <span className="text-[11px] text-muted-dark"> / {p.period}</span>
+            </span>
+            {Array.isArray(p.features) && p.features.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5">
+                {p.features.slice(0, 3).map((f, i) => (
+                  <li key={i} className="flex items-start gap-1 text-[10.5px] leading-snug text-muted">
+                    <Check className="w-3 h-3 mt-px text-emerald-500 shrink-0" /><span className="min-w-0">{text(f)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -303,7 +369,7 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
 
 // Full-screen blocking gate when the owner tree is banned (trial + grace lapsed).
 // No workspace access - only renew / redeem / contact / sign out.
-function BannedScreen({ account, license, methods, planCode, setPlanCode, busy, err, onRedeem, onAutomated, onManual, onSignOut }) {
+function BannedScreen({ account, license, methods, plans = [], selPlanId, onSelectPlan, planCode, setPlanCode, busy, err, onRedeem, onAutomated, onManual, onSignOut }) {
   const { t } = useTranslation('gate');
   const adminBlocked = Boolean(license?.adminBlocked);
   return (
@@ -321,6 +387,7 @@ function BannedScreen({ account, license, methods, planCode, setPlanCode, busy, 
 
         {!adminBlocked && (
           <>
+            {plans.length > 0 && <div className="mb-3"><PlanPicker plans={plans} selected={selPlanId} onSelect={onSelectPlan} /></div>}
             <PayMethods methods={methods} busy={busy} onAutomated={onAutomated} onManual={onManual} />
             <div className="mt-5">
               <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('banned.haveCode')}</label>
@@ -366,6 +433,16 @@ export default function Gate({ children }) {
   const [devCode, setDevCode] = useState('');
   const [resendIn, setResendIn] = useState(0);
 
+  // Tenant (sellable) builds: our licensing server sends and checks the code and starts the trial.
+  const [tenant, setTenant] = useState(false);
+  const [consent, setConsent] = useState(false); // "Email me product news and tips": unticked by default
+  const [plans, setPlans] = useState([]); // paid plans with server prices (built-in list when offline)
+  const [selPlanId, setSelPlanId] = useState(null);
+  const [trialBusy, setTrialBusy] = useState(false);
+  const [trialErr, setTrialErr] = useState('');
+  const [trialCodeFor, setTrialCodeFor] = useState(''); // email the server sent a confirmation code to
+  const [trialCode, setTrialCode] = useState('');
+
   // login / pick
   const [loginPass, setLoginPass] = useState('');
   const [remember, setRemember] = useState(true); // default on; DPAPI-sealed to this Windows account, cleared on opt-out or sign-out
@@ -388,15 +465,18 @@ export default function Gate({ children }) {
 
   async function evaluate() {
     try {
-      const [vs, acct, cur, list] = await Promise.all([
+      const [vs, acct, cur, list, backend] = await Promise.all([
         // Fail closed: an unreadable vault status counts as locked, so a read error never skips the gate.
         softglazeApi.vault.status().catch(() => ({ enabled: true, locked: true })),
         softglazeApi.account.get().catch(() => null),
         softglazeApi.members.current().catch(() => null),
-        softglazeApi.members.list().catch(() => [])
+        softglazeApi.members.list().catch(() => []),
+        // Readable before sign-in only on a fresh workspace, which is when sign-up needs it.
+        softglazeApi.license.backendInfo().catch(() => null)
       ]);
       const ms = Array.isArray(list) ? list : [];
       setMembers(ms); setAccount(acct);
+      if (backend && backend.enabled) setTenant(true);
       if (acct?.email) setEmail(acct.email);
       if (vs && vs.locked) { setPhase('login'); return; }
       // Check the signed-in member before the empty-list branch: SUPER_ADMIN (id -1) is not in
@@ -437,17 +517,17 @@ export default function Gate({ children }) {
     if (password !== confirm) return setErr(t('errors.passwordsNoMatch'));
     setBusy(true);
     try {
-      const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase());
+      const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase(), otpExtras({ tenant, firstName, lastName, consent, lang: getStoredLang() }));
       setDevCode(res?.devCode || ''); setResendIn(30); setOtp(''); setStep('verify');
-    } catch (e) { setErr(e.message || t('errors.couldNotSendCode')); }
+    } catch (e) { setErr(errorText(t, e, 'errors.couldNotSendCode')); }
     finally { setBusy(false); }
   }
 
   async function resend() {
     if (resendIn > 0) return;
     setBusy(true); setErr('');
-    try { const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase()); setDevCode(res?.devCode || ''); setResendIn(30); }
-    catch (e) { setErr(e.message || t('errors.couldNotResendCode')); }
+    try { const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase(), otpExtras({ tenant, firstName, lastName, consent, lang: getStoredLang() })); setDevCode(res?.devCode || ''); setResendIn(30); }
+    catch (e) { setErr(errorText(t, e, 'errors.couldNotResendCode')); }
     finally { setBusy(false); }
   }
 
@@ -468,8 +548,9 @@ export default function Gate({ children }) {
         code: c
       });
       // Account and 7-day trial exist at this point; offer the plan step (trial / redeem / buy) first.
+      // In tenant builds the trial is started from that step, on the licensing server.
       setBusy(false); setErr(''); setPlanCode(''); setPhase('plan');
-    } catch (e) { setErr(e.message || t('errors.verificationFailed')); setBusy(false); }
+    } catch (e) { setErr(errorText(t, e, 'errors.verificationFailed')); setBusy(false); }
   }
 
   async function login() {
@@ -554,13 +635,52 @@ export default function Gate({ children }) {
         const lic = await softglazeApi.license.get();
         if (!live) return;
         setLicense(lic);
-        setPhase(lic && lic.isBanned ? 'banned' : 'ready');
+        // No plan yet (tenant builds only): back to the plan step to start the trial, buy or redeem.
+        if (lic && lic.needsPlan) { setTenant(true); setBusy(false); }
+        setPhase(phaseForLicense(lic));
       } catch (e) { if (live) setPhase('ready'); }
     })();
     return () => { live = false; };
   }, [phase]);
 
-  function startTrial() { setErr(''); setPhase('licensing'); } // trial already created at registration
+  // Tenant builds: the plan step and the ended screen offer the paid plans at the server's prices.
+  useEffect(() => {
+    if (!tenant || (phase !== 'plan' && phase !== 'banned')) return undefined;
+    let live = true;
+    softglazeApi.billing.getPlans()
+      .then((info) => {
+        if (!live) return;
+        const list = paidPlans(info);
+        setPlans(list);
+        setSelPlanId((cur) => (cur && list.some((p) => p.id === cur) ? cur : defaultPlanId(list)));
+      })
+      .catch(() => { if (live) setPlans([]); });
+    return () => { live = false; };
+  }, [tenant, phase]);
+
+  async function startTrial() {
+    // Base builds: the trial was already created at registration.
+    if (!tenant) { setErr(''); setPhase('licensing'); return; }
+    // Tenant builds: the licensing server starts it (one trial per computer and email).
+    if (trialBusy) return;
+    setTrialErr(''); setErr(''); setTrialBusy(true);
+    try {
+      await softglazeApi.license.startTrial(trialPayload({ codeFor: trialCodeFor, code: trialCode }));
+      setTrialCodeFor(''); setTrialCode(''); setTrialBusy(false); setPhase('licensing');
+    } catch (e) {
+      // The code box explains itself; only real failures show in red.
+      if (trialNeedsCode(e)) { setTrialCodeFor(account?.email || email.trim().toLowerCase()); setTrialCode(''); setTrialBusy(false); return; }
+      setTrialErr(errorText(t, e, 'errors.trialFailed')); setTrialBusy(false);
+    }
+  }
+
+  // Asks the server for a fresh confirmation code: a trial start without a code sends one.
+  async function resendTrialCode() {
+    if (trialBusy) return;
+    setTrialErr(''); setTrialBusy(true);
+    try { await softglazeApi.license.startTrial(); setTrialCodeFor(''); setTrialBusy(false); setPhase('licensing'); }
+    catch (e) { setTrialCode(''); setTrialErr(trialNeedsCode(e) ? '' : errorText(t, e, 'errors.trialFailed')); setTrialBusy(false); }
+  }
 
   async function redeemPlan() {
     setErr('');
@@ -594,7 +714,8 @@ export default function Gate({ children }) {
   async function buyWith(method) {
     setErr(''); setBusy(true);
     try {
-      const inv = await softglazeApi.payments.startCheckout({ provider: method.id });
+      // Tenant builds send the chosen plan; without one the server's first paid plan is used.
+      const inv = await softglazeApi.payments.startCheckout(tenant && selPlanId ? { provider: method.id, planId: selPlanId } : { provider: method.id });
       if (inv && inv.url) window.open(inv.url, '_blank');
       pollPurchase(inv);
     } catch (e) { setErr(e.message || t('errors.paymentNotStarted')); setBusy(false); }
@@ -633,6 +754,9 @@ export default function Gate({ children }) {
         account={account}
         license={license}
         methods={methods}
+        plans={tenant ? plans : []}
+        selPlanId={selPlanId}
+        onSelectPlan={setSelPlanId}
         planCode={planCode}
         setPlanCode={setPlanCode}
         busy={busy}
@@ -677,11 +801,12 @@ export default function Gate({ children }) {
                   <div><label className={labelCls}>{t('register.confirm')}</label><PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t('register.confirmPlaceholder')} onKeyDown={(e) => { if (e.key === 'Enter') sendCode(); }} /></div>
                 </div>
               </div>
-              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              {tenant && <ConsentToggle checked={consent} onChange={setConsent} />}
+              {err && <p role="alert" className="text-[12px] text-red-400 mt-3">{err}</p>}
               <button disabled={busy} onClick={sendCode} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('register.continue')} <ArrowRight className="w-4 h-4" /></>}
               </button>
-              <p className="text-[11px] text-muted-dark mt-4 flex items-center justify-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> {t('register.storedLocally')}</p>
+              <p className="text-[11px] text-muted-dark mt-4 flex items-center justify-center gap-1.5 text-center"><ShieldCheck className="w-3.5 h-3.5 shrink-0" /> {tenant ? t('register.checkedByServer') : t('register.storedLocally')}</p>
               <div className="mt-6 pt-4 border-t border-border text-center text-[12.5px]">
                 <span className="text-muted">{t('register.haveAccount')} </span>
                 <button onClick={() => { setPhase('login'); setErr(''); }} className="font-semibold text-primary hover:text-primary-hover">{t('register.logIn')}</button>
@@ -697,12 +822,13 @@ export default function Gate({ children }) {
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('verify.title')}</h1>
               <p className="text-[12.5px] text-muted mt-1 mb-6">{t('verify.subtitlePrefix')} <span className="text-foreground">{email}</span>{t('verify.subtitleSuffix')}</p>
               <OtpInput value={otp} onChange={setOtp} onComplete={(c) => verifyAndCreate(c)} />
-              {devCode && (
+              {devCode && !tenant && (
                 <div className="mt-4 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-[12px] text-primary">
                   {t('verify.devModePrefix')} <span className="font-mono font-semibold">{devCode}</span>{t('verify.devModeSuffix')}
                 </div>
               )}
-              {err && <p className="text-[12px] text-red-400 mt-3">{err}</p>}
+              {tenant && <p className="mt-4 text-[11.5px] text-muted-dark leading-relaxed">{t('verify.checkSpam')}</p>}
+              {err && <p role="alert" className="text-[12px] text-red-400 mt-3">{err}</p>}
               <button disabled={busy} onClick={() => verifyAndCreate()} className={primaryBtn}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('verify.verifyCreate')}
               </button>
@@ -712,7 +838,49 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {phase === 'plan' && (
+          {phase === 'plan' && tenant && (
+            <>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Sparkles className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('plan.tenantTitle')}</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">{t('plan.tenantSubtitle')}</p>
+              {trialCodeFor ? (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3.5">
+                  <span className="block text-[13px] font-semibold">{t('plan.verifyTitle')}</span>
+                  <span className="block text-[11.5px] text-muted mt-0.5 mb-3">{t('plan.verifyBody', { email: trialCodeFor })}</span>
+                  <OtpInput value={trialCode} onChange={setTrialCode} />
+                  <button disabled={trialBusy || trialCode.replace(/\D/g, '').length !== 6} onClick={startTrial} className="mt-3 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60">
+                    {trialBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('plan.verifyStart')}
+                  </button>
+                  <button onClick={resendTrialCode} disabled={trialBusy} className="mt-2 w-full text-[12px] text-muted-dark hover:text-muted">{t('verify.resend')}</button>
+                </div>
+              ) : (
+                <button onClick={startTrial} disabled={trialBusy} aria-busy={trialBusy} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-left disabled:opacity-70">
+                  {trialBusy ? <Loader2 className="w-5 h-5 text-primary shrink-0 animate-spin" /> : <Clock className="w-5 h-5 text-primary shrink-0" />}
+                  <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">{t('plan.startTrialTitle')}</span><span className="block text-[11.5px] text-muted-dark">{t('plan.tenantTrialSubtitle')}</span></span>
+                  <ArrowRight className="w-4 h-4 text-muted-dark" />
+                </button>
+              )}
+              {trialErr && <p role="alert" className="text-[12px] text-red-400 mt-2.5 leading-relaxed">{trialErr}</p>}
+              {plans.length > 0 && (
+                <div className="mt-4 rounded-lg border border-border p-3 space-y-2.5">
+                  <span className="block text-[12px] font-semibold text-foreground flex items-center gap-1.5"><CreditCard className="w-4 h-4 text-primary" /> {t('plan.choosePlan')}</span>
+                  <PlanPicker plans={plans} selected={selPlanId} onSelect={setSelPlanId} />
+                  <PayMethods methods={methods} busy={busy} onAutomated={buyWith} onManual={submitManualPay} />
+                </div>
+              )}
+              <div className="mt-4">
+                <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('plan.haveCode')}</label>
+                <div className="flex items-center gap-2">
+                  <input value={planCode} onChange={(e) => setPlanCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" className={inputCls + ' font-mono tracking-widest'} onKeyDown={(e) => { if (e.key === 'Enter') redeemPlan(); }} />
+                  <button onClick={redeemPlan} disabled={busy || !planCode.trim()} className="h-10 px-4 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">{t('common.redeem')}</button>
+                </div>
+              </div>
+              {err && <p role="alert" className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <button onClick={signOut} className="mt-5 w-full text-[12px] text-muted-dark hover:text-muted inline-flex items-center justify-center gap-1.5"><LogOut className="w-3.5 h-3.5" /> {t('banned.signOut')}</button>
+            </>
+          )}
+
+          {phase === 'plan' && !tenant && (
             <>
               <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Sparkles className="w-5 h-5" /></div>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('plan.title')}</h1>

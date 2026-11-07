@@ -22,7 +22,9 @@
   "backend": {
     "licensedVerified": "Con licencia y verificado",
     "renews": "se renueva el {{date}}",
-    "noLicense": "Licencia activa - aún no hay una licencia de pago para esta instalación."
+    "noLicense": "Licencia activa - aún no hay una licencia de pago para esta instalación.",
+    "trialVerified": "Prueba gratuita verificada",
+    "trialEnds": "termina el {{date}}"
   },
   "current": {
     "title": "Plan actual",
@@ -275,5 +277,21 @@
     "entParallel": "Ejecutor en paralelo, hasta 10 perfiles a la vez, con consola de ejecución en vivo",
     "entAuditExport": "Exportación del registro de auditoría (CSV / JSON)",
     "entSupport": "Soporte prioritario por correo electrónico"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Introduce una dirección de correo electrónico válida.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Usa una dirección de correo electrónico permanente.",
+    "SIGNUP_NO_MX": "No encontramos un servidor de correo para esa dirección.",
+    "SIGNUP_BAD_CODE": "Ese código no es correcto o ha caducado. Revisa el correo o pide un código nuevo.",
+    "SIGNUP_OFFLINE": "Conéctate a internet para crear tu cuenta.",
+    "SIGNUP_FAILED": "Ahora mismo no podemos comprobar ese correo. Inténtalo de nuevo en unos minutos.",
+    "RATE_LIMITED": "Demasiados intentos, inténtalo de nuevo en unos minutos.",
+    "TRIAL_USED": "Ya se ha usado una prueba gratuita en este equipo o con este correo. Elige un plan o introduce un código de compra.",
+    "TRIAL_OFFLINE": "Conéctate a internet para iniciar la prueba gratuita.",
+    "TRIAL_VERIFY_EMAIL": "Confirma tu correo electrónico para iniciar la prueba gratuita. Te hemos enviado un código de 6 dígitos.",
+    "TRIAL_NO_EMAIL": "Primero añade un correo electrónico a la cuenta del propietario y después inicia la prueba gratuita.",
+    "TRIAL_FAILED": "Ahora mismo no se pudo iniciar la prueba gratuita. Inténtalo de nuevo en unos minutos.",
+    "SERVER_UNAVAILABLE": "Nuestro servidor de licencias no responde ahora mismo. Inténtalo de nuevo en unos minutos.",
+    "MACHINE_MISMATCH": "Esta licencia está registrada en otro equipo. Muévela a este PC o pide a tu administrador que la restablezca."
   }
 }

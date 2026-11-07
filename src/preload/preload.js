@@ -635,7 +635,8 @@ const api = Object.freeze({
   account: Object.freeze({
     get: () => invoke(CHANNELS.ACCOUNT_GET),
     save: (payload) => invoke(CHANNELS.ACCOUNT_SAVE, payload),
-    sendOtp: (email) => invoke(CHANNELS.ACCOUNT_SEND_OTP, { email }),
+    // extra (tenant builds): { firstName, lastName, consentMarketing, lang } for the server-sent code.
+    sendOtp: (email, extra) => invoke(CHANNELS.ACCOUNT_SEND_OTP, { ...(extra && typeof extra === 'object' ? extra : {}), email }),
     verifyOtp: (email, code) => invoke(CHANNELS.ACCOUNT_VERIFY_OTP, { email, code }),
     register: (payload) => invoke(CHANNELS.ACCOUNT_REGISTER, payload)
   }),

@@ -51,8 +51,28 @@ function noteIssue(reason) { lastIssue = { reason, at: Date.now() }; }
 function licenseIssue() { return lastIssue ? { ...lastIssue } : null; }
 function clearLicenseIssue() { lastIssue = null; }
 
+// A lease issued for the server's free trial says so with a signed `type: 'trial'` claim (a trial plan
+// key is accepted too); every other lease is a paid term.
+function leaseType(payload) {
+  if (String(payload.type || '').toLowerCase() === 'trial') return 'trial';
+  if (/^(free-)?trial$/i.test(String(payload.plan || ''))) return 'trial';
+  return 'paid';
+}
+
+// The installed app version, sent with licence calls so the owner's admin shows it.
+let cachedAppVersion = null;
+function appVersion() {
+  if (cachedAppVersion !== null) return cachedAppVersion;
+  let v = '';
+  // Guarded: under plain node (tests) require('electron') is the binary path, not the API.
+  try { const { app } = require('electron'); if (app && typeof app.getVersion === 'function') v = app.getVersion(); } catch (_) {}
+  if (!v) { try { v = require('../../package.json').version; } catch (_) {} }
+  cachedAppVersion = String(v || '').slice(0, 32);
+  return cachedAppVersion;
+}
+
 // Verify a lease "<payloadB64url>.<sigB64url>". Returns
-// { tenant, tier, exp, iat, account, plan, sub, mid, legacy } or null when invalid/expired.
+// { tenant, tier, type, exp, iat, account, plan, sub, mid, legacy } or null when invalid/expired.
 // opts.machineHash overrides this machine's hash (tests).
 function verifyLease(token, opts = {}) {
   const cfg = tenantConfig();
@@ -91,6 +111,7 @@ function verifyLease(token, opts = {}) {
   return {
     tenant: payload.tenant || null,
     tier: payload.tier || 'pro',
+    type: leaseType(payload),
     exp: payload.exp,
     iat: payload.iat || null,
     account: payload.account || null,
@@ -109,18 +130,20 @@ const ERROR_TEXT = {
   no_license: 'There is no licence on this install to move.'
 };
 
-function postJson(pathName, body) {
+function requestJson(method, pathName, body, opts = {}) {
   const cfg = tenantConfig();
   if (!cfg.enabled) return Promise.reject(new Error('Licensing backend is not configured for this build.'));
   const url = new URL(cfg.apiBaseUrl + pathName);
   const lib = url.protocol === 'http:' ? http : https;
-  const payload = Buffer.from(JSON.stringify(body || {}));
+  const payload = method === 'GET' ? null : Buffer.from(JSON.stringify(body || {}));
   const options = {
-    method: 'POST',
+    method,
     hostname: url.hostname,
     port: url.port || (url.protocol === 'http:' ? 80 : 443),
     path: url.pathname + url.search,
-    headers: { 'content-type': 'application/json', 'content-length': payload.length }
+    headers: payload
+      ? { 'content-type': 'application/json', 'content-length': payload.length }
+      : { accept: 'application/json' }
   };
   return new Promise((resolve, reject) => {
     const req = lib.request(options, (res) => {
@@ -136,16 +159,21 @@ function postJson(pathName, body) {
         const err = new Error(code ? (ERROR_TEXT[code] || code) : (json.error || `Licensing backend error (${res.statusCode}).`));
         if (code) err.code = code;
         err.status = res.statusCode;
+        // e.g. trial_used carries reason 'machine' | 'email' | 'network'.
+        if (typeof json.reason === 'string') err.reason = json.reason;
         if (code === 'machine_mismatch') noteIssue('machine_mismatch');
         reject(err);
       });
     });
-    req.on('error', reject);
-    req.setTimeout(15000, () => req.destroy(new Error('Licensing backend timed out.')));
-    req.write(payload);
+    // No HTTP answer at all (offline, DNS, refused, timed out): flagged so callers can say "offline".
+    req.on('error', (e) => { if (e && typeof e === 'object') e.network = true; reject(e); });
+    req.setTimeout(Number(opts.timeoutMs) || 15000, () => req.destroy(new Error('Licensing backend timed out.')));
+    if (payload) req.write(payload);
     req.end();
   });
 }
+
+function postJson(pathName, body) { return requestJson('POST', pathName, body); }
 
 // The licensing server issues a per-install secret at first registration and requires it for
 // license and redeem. An email is never a credential.
@@ -153,13 +181,24 @@ const api = {
   register: (machineId, account, installSecret) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account, installSecret, machineHash: machineHash() }),
   checkout: ({ planKey, installId, account, provider }) => postJson('/v1/checkout', { tenantId: tenantConfig().tenantId, planKey, installId, account, provider }),
   // license() resolving means this machine is accepted, so any machine_mismatch is cleared.
-  license: ({ installId, installSecret }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash() })
+  license: ({ installId, installSecret }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), appVersion: appVersion() })
     .then((r) => { clearLicenseIssue(); return r; }),
   // Self-service move to this PC: install secret + proof of purchase (redeemed code or
   // payment reference), at most 2 per licence per 30 days (server-enforced).
   transfer: ({ installId, installSecret, proof }) => postJson('/v1/license/transfer', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), proof })
     .then((r) => { clearLicenseIssue(); return r; }),
-  redeem: ({ code, installId, installSecret }) => postJson('/v1/redeem', { tenantId: tenantConfig().tenantId, code, installId, installSecret })
+  redeem: ({ code, installId, installSecret }) => postJson('/v1/redeem', { tenantId: tenantConfig().tenantId, code, installId, installSecret }),
+  // Sign-up email check by the licensing server: it emails a 6-digit code from its own address
+  // (never shown in-app) and refuses invalid_email, disposable_email, no_mx and rate_limited.
+  verifyStart: ({ installId, installSecret, email, name, consentMarketing, lang }) => postJson('/v1/account/verify/start', {
+    tenantId: tenantConfig().tenantId, installId, installSecret, email, name: name || undefined, consentMarketing: consentMarketing === true, lang: lang || 'en', appVersion: appVersion()
+  }),
+  // -> { verified: true, customerId }; links this install to the verified customer.
+  verifyCheck: ({ installId, installSecret, email, code }) => postJson('/v1/account/verify/check', { tenantId: tenantConfig().tenantId, installId, installSecret, email, code }),
+  // The trial ledger: one free trial per computer and per email. -> the signed trial lease, or 409 trial_used.
+  trialStart: ({ installId, installSecret, email }) => postJson('/v1/trial/start', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), email, appVersion: appVersion() }),
+  // Public price list (no auth): the active plans and their prices.
+  plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 })
 };
 
-module.exports = { verifyLease, api, postJson, machineHash, licenseIssue, clearLicenseIssue };
+module.exports = { verifyLease, api, postJson, machineHash, appVersion, licenseIssue, clearLicenseIssue };

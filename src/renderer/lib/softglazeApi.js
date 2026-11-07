@@ -319,7 +319,7 @@ export const softglazeApi = {
   account: {
     get: () => getSoftglazeApi().account.get(),
     save: (payload) => getSoftglazeApi().account.save(payload),
-    sendOtp: (email) => getSoftglazeApi().account.sendOtp(email),
+    sendOtp: (email, extra) => getSoftglazeApi().account.sendOtp(email, extra),
     verifyOtp: (email, code) => getSoftglazeApi().account.verifyOtp(email, code),
     register: (payload) => getSoftglazeApi().account.register(payload)
   },
