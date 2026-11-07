@@ -304,9 +304,9 @@
       "other": "Other"
     },
     "maxProfiles": "Most profiles per call",
-    "maxProfilesHint": "Default 5.",
+    "maxProfilesHint": "Default 5, up to 50.",
     "maxCalls": "Most calls per hour",
-    "maxCallsHint": "Default 60.",
+    "maxCallsHint": "Default 60, up to 1000.",
     "groupsNote": "Pre-approved tools only work on the groups ticked under Profiles it may use. Every other tool still asks you."
   },
   "tools": {
@@ -317,6 +317,7 @@
     "stop_profile": "Stop a profile",
     "assign_proxy": "Give a profile a proxy",
     "rotate_proxy_ip": "Get a new IP from the proxy",
+    "find_free_proxies": "Find and test free proxies",
     "create_group": "Create a group",
     "move_profiles_to_group": "Move profiles to a group",
     "save_macro": "Save a macro",
@@ -438,6 +439,7 @@
       "asked": "Asked you",
       "pre-approved": "Pre-approved",
       "allow-once": "Allowed once",
+      "allow-hour": "You allowed it for 1 hour",
       "hour-grant": "Allowed for 1 hour",
       "deny": "Denied by you",
       "timeout": "No answer in 2 minutes",

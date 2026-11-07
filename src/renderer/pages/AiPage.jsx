@@ -350,7 +350,7 @@ export default function AiPage() {
               />
             )}
             {key === 'approvals' && <AiApprovalsTab lang={lang} onOpenSettings={() => setTab('settings')} />}
-            {key === 'activity' && <AiActivityTab lang={lang} clients={Array.isArray(status && status.clients) ? status.clients : []} />}
+            {key === 'activity' && <AiActivityTab lang={lang} active={tab === 'activity'} clients={Array.isArray(status && status.clients) ? status.clients : []} />}
             {key === 'memory' && <AiMemoryTab lang={lang} />}
             {key === 'prompts' && <AiPromptsTab />}
             {key === 'settings' && <AiSettingsTab isOwner={owner} status={status} onPortChanged={() => { loadStatus(); }} />}

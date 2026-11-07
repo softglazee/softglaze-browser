@@ -20,8 +20,12 @@ const memories = require('./memories');
 const prompts = require('./prompts');
 const { NEVER_EXPOSED } = require('./toolRegistry');
 
+// At the cap, a new client takes the place of the least recently used idle session: SDK clients
+// that quit without a DELETE leave theirs behind until the idle sweep (IDLE_MS).
 const MAX_SESSIONS = 64;
 const IDLE_MS = 30 * 60 * 1000;
+// "Connected apps" on the AI page: a session with an open stream, or one used this recently.
+const ACTIVE_MS = 2 * 60 * 1000;
 
 const INSTRUCTIONS = `SoftGlaze Browser runs isolated browser profiles, each with its own fingerprint, proxy and storage. You are connected to the SoftGlaze app on this computer; everything you do runs as the team member your token belongs to and is audited.
 
@@ -168,7 +172,7 @@ class McpHttpHandler {
     if (req.method !== 'POST' || !isInitializeRequest(parsedBody)) {
       return jsonRpcError(res, 400, -32000, 'Bad Request: send an initialize request first.');
     }
-    if (this.sessions.size >= MAX_SESSIONS) return jsonRpcError(res, 503, -32000, 'Too many open AI sessions. Close an AI app and try again.');
+    if (!(await this.makeRoom())) return jsonRpcError(res, 503, -32000, 'Too many open AI sessions. Close an AI app and try again.');
     const ref = { id: null, kind: 'mcp', tokenId: auth.token.id, tokenName: auth.token.name, clientName: null, createdAt: Date.now(), lastActive: Date.now(), open: 0, transport: null, server: null };
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
@@ -184,7 +188,7 @@ class McpHttpHandler {
   }
 
   async handleSseOpen(req, res, auth) {
-    if (this.sessions.size >= MAX_SESSIONS) { res.writeHead(503, { 'Content-Type': 'text/plain' }); res.end('Too many open AI sessions.'); return; }
+    if (!(await this.makeRoom())) { res.writeHead(503, { 'Content-Type': 'text/plain' }); res.end('Too many open AI sessions.'); return; }
     const transport = new SSEServerTransport('/mcp/messages', res);
     const ref = { id: transport.sessionId, kind: 'sse', tokenId: auth.token.id, tokenName: auth.token.name, clientName: null, createdAt: Date.now(), lastActive: Date.now(), open: 0, transport, server: null };
     this.sessions.set(ref.id, ref);
@@ -203,9 +207,24 @@ class McpHttpHandler {
     await ref.transport.handlePostMessage(req, res, parsedBody);
   }
 
-  // Clients connected now, for the AI page's status.
-  clients() {
-    return [...this.sessions.values()].map((s) => ({
+  // Below the cap there is room. At the cap, closes the least recently used session with no open
+  // request or stream; refuses (false) only when every session is busy.
+  async makeRoom() {
+    if (this.sessions.size < MAX_SESSIONS) return true;
+    let oldest = null;
+    for (const s of this.sessions.values()) {
+      if (s.open === 0 && (!oldest || s.lastActive < oldest.lastActive)) oldest = s;
+    }
+    if (!oldest) return false;
+    await this.closeSession(oldest);
+    return this.sessions.size < MAX_SESSIONS;
+  }
+
+  // Clients connected now, for the AI page's status: a session with an open request or stream, or
+  // one used in the last ACTIVE_MS. activeOnly: false lists every session the server still holds.
+  clients({ activeOnly = true, now = Date.now() } = {}) {
+    const recent = now - ACTIVE_MS;
+    return [...this.sessions.values()].filter((s) => !activeOnly || s.open > 0 || s.lastActive >= recent).map((s) => ({
       sessionId: s.id,
       transport: s.kind,
       tokenId: s.tokenId,
@@ -253,4 +272,4 @@ function jsonRpcError(res, status, code, message) {
   res.end(body);
 }
 
-module.exports = { McpHttpHandler, INSTRUCTIONS, toCallToolResult, jsonRpcError };
+module.exports = { McpHttpHandler, INSTRUCTIONS, toCallToolResult, jsonRpcError, MAX_SESSIONS, IDLE_MS, ACTIVE_MS };

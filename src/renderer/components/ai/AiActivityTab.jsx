@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react';
 
@@ -7,12 +7,14 @@ import Input from '@/components/ui/Input.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import { InlineError, SUBTLE_TEXT, Segmented, TonePill, clientLabel, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { AUDIT_PAGE_SIZE, approvalPath, buildAuditQuery, errorText, extractRunId, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
+import { ACTIVITY_REFRESH_DEBOUNCE_MS, AUDIT_PAGE_SIZE, approvalPath, buildAuditQuery, createDebounced, errorText, extractRunId, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 
 const OUTCOME_TONE = { ok: 'success', denied: 'warning', error: 'danger', pending: 'info' };
 
-export default function AiActivityTab({ lang, clients }) {
+// `active`: this tab is the one shown. The AI page keeps a visited panel mounted while another tab
+// is shown, so the table reloads when it is shown again and, while shown, on AI events.
+export default function AiActivityTab({ lang, clients, active = true }) {
   const { t } = useTranslation('ai');
   const [filters, setFilters] = useState({ outcome: 'all', client: '', search: '' });
   const [searchDraft, setSearchDraft] = useState('');
@@ -22,6 +24,7 @@ export default function AiActivityTab({ lang, clients }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [seenClients, setSeenClients] = useState([]);
+  const seq = useRef(0); // only the newest request may update the table
 
   // Debounce the search box so typing does not fire a request per key.
   useEffect(() => {
@@ -29,11 +32,14 @@ export default function AiActivityTab({ lang, clients }) {
     return () => clearTimeout(id);
   }, [searchDraft]);
 
-  const load = useCallback(async (cursor) => {
-    setLoading(true);
+  // quiet: a background refresh keeps the rows as they are (no dimming) until the answer arrives.
+  const load = useCallback(async (cursor, { quiet = false } = {}) => {
+    const mine = ++seq.current;
+    if (!quiet) setLoading(true);
     setError('');
     try {
       const r = await softglazeApi.ai.audit.list(buildAuditQuery(filters, cursor));
+      if (mine !== seq.current) return;
       const items = Array.isArray(r) ? r : (r && Array.isArray(r.items) ? r.items : []);
       setData({ items, nextCursor: r && !Array.isArray(r) ? (r.nextCursor ?? null) : null });
       setSeenClients((prev) => {
@@ -42,14 +48,41 @@ export default function AiActivityTab({ lang, clients }) {
         return s.size === prev.length ? prev : [...s].sort();
       });
     } catch (e) {
-      setError(errorText(e));
+      if (mine === seq.current) setError(errorText(e));
     } finally {
-      setLoading(false);
+      if (mine === seq.current) setLoading(false);
     }
   }, [filters]);
 
   // New filters start again at the newest page.
   useEffect(() => { setCursors([null]); setPageIdx(0); load(null); }, [load]);
+
+  // The page on screen, for refreshes started by events.
+  const shown = useRef({ load, cursor: null });
+  useEffect(() => { shown.current = { load, cursor: cursors[pageIdx] ?? null }; }, [load, cursors, pageIdx]);
+  const refreshShown = useCallback(() => { shown.current.load(shown.current.cursor, { quiet: true }); }, []);
+
+  // Shown again after another tab: reload (the first show already loaded above).
+  const wasActive = useRef(active);
+  useEffect(() => {
+    const was = wasActive.current;
+    wasActive.current = active;
+    if (active && !was) refreshShown();
+  }, [active, refreshShown]);
+
+  // While shown: a status change (an app connects, Stop all AI) or an approval change means new
+  // entries; a burst reloads once.
+  useEffect(() => {
+    if (!active) return undefined;
+    const refresh = createDebounced(refreshShown, ACTIVITY_REFRESH_DEBOUNCE_MS);
+    const offStatus = softglazeApi.ai.onStatusChanged(refresh.call);
+    const offApprovals = softglazeApi.ai.onApprovalsChanged(refresh.call);
+    return () => {
+      refresh.cancel();
+      if (typeof offStatus === 'function') offStatus();
+      if (typeof offApprovals === 'function') offApprovals();
+    };
+  }, [active, refreshShown]);
 
   const rows = filterAuditItems(data.items, { ...filters, outcome: filters.outcome === 'all' ? '' : filters.outcome });
   const clientOptions = useMemo(() => {

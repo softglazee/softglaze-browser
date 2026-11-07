@@ -178,7 +178,7 @@ const TOOLS = [
       const memory = await ctx.services.memory.get();
       const settings = ctx.settings();
       return {
-        summary: `${plural(profiles, 'profile')}, ${plural(running.size, 'running')}, ${plural(proxies, 'proxy', 'proxies')} (${failing} failing), ${plural(groups.length, 'group')}; plan ${license.tier}.`,
+        summary: `${plural(profiles, 'profile')}, ${running.size} running, ${plural(proxies, 'proxy', 'proxies')} (${failing} failing), ${plural(groups.length, 'group')}; plan ${license.tier}.`,
         data: {
           counts: { profiles, runningProfiles: running.size, groups: groups.length, proxies, failingProxies: failing, freeProxies },
           running: runningRows.map((r) => ({ id: r.id, name: r.title, startedByAi: ctx.tracker.isAiStartedProfile(r.id) })),

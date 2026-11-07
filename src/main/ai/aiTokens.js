@@ -17,6 +17,9 @@ const SCOPE_RANK = Object.freeze({ read: 1, operate: 2, full: 3 });
 const EXPIRY_CHOICES = Object.freeze([7, 30, 90]);
 const MAX_EXPIRY_DAYS = 3650;
 const PRE_APPROVED_DEFAULTS = Object.freeze({ maxProfilesPerCall: 5, maxCallsPerHour: 60 });
+// Upper limits of the automation caps (the AI page's token form uses the same numbers).
+const MAX_PROFILES_PER_CALL = 50;
+const MAX_CALLS_PER_HOUR = 1000;
 // lastUsedAt / lastClientName are written at most this often per token.
 const TOUCH_EVERY_MS = 30 * 1000;
 
@@ -58,10 +61,11 @@ function preApprovedOf(row) {
   try {
     const v = JSON.parse(row.preApprovedJson);
     if (!v || !Array.isArray(v.tools) || !v.tools.length) return null;
+    // A stored cap never exceeds the limits a new token can have.
     return {
       tools: v.tools.map(String),
-      maxProfilesPerCall: Number(v.maxProfilesPerCall) || PRE_APPROVED_DEFAULTS.maxProfilesPerCall,
-      maxCallsPerHour: Number(v.maxCallsPerHour) || PRE_APPROVED_DEFAULTS.maxCallsPerHour
+      maxProfilesPerCall: Math.min(MAX_PROFILES_PER_CALL, Number(v.maxProfilesPerCall) || PRE_APPROVED_DEFAULTS.maxProfilesPerCall),
+      maxCallsPerHour: Math.min(MAX_CALLS_PER_HOUR, Number(v.maxCallsPerHour) || PRE_APPROVED_DEFAULTS.maxCallsPerHour)
     };
   } catch (e) { return null; }
 }
@@ -113,10 +117,10 @@ function normalizeCreateInput(input, { allowedPreApprovedTools = [], callerIsOwn
       tools,
       maxProfilesPerCall: src.maxProfilesPerCall == null || src.maxProfilesPerCall === ''
         ? PRE_APPROVED_DEFAULTS.maxProfilesPerCall
-        : positiveInt(src.maxProfilesPerCall, 'Profiles per call', { max: 50 }),
+        : positiveInt(src.maxProfilesPerCall, 'Profiles per call', { max: MAX_PROFILES_PER_CALL }),
       maxCallsPerHour: src.maxCallsPerHour == null || src.maxCallsPerHour === ''
         ? PRE_APPROVED_DEFAULTS.maxCallsPerHour
-        : positiveInt(src.maxCallsPerHour, 'Calls per hour', { max: 1000 })
+        : positiveInt(src.maxCallsPerHour, 'Calls per hour', { max: MAX_CALLS_PER_HOUR })
     };
   }
   return { name, scope, memberId, expiresInDays, groupIds, preApproved };
@@ -220,6 +224,8 @@ module.exports = {
   SCOPE_RANK,
   EXPIRY_CHOICES,
   PRE_APPROVED_DEFAULTS,
+  MAX_PROFILES_PER_CALL,
+  MAX_CALLS_PER_HOUR,
   generateToken,
   hashToken,
   looksLikeToken,

@@ -50,10 +50,41 @@ async function pageState(page) {
   return { url: currentUrl(page), title: clip(title, 200) };
 }
 
+const LOCAL_NETWORK_BLOCKED = 'This address is on your local network, which profiles block by default. Turn on Local network access in Settings if you need it.';
+
+// Hosts on this computer or the LAN: the same rule as browserEngine.isPrivateHost, which aborts
+// requests to them while Settings > Local network access is off (the default).
+function isLocalNetworkHost(host) {
+  if (!host) return false;
+  const h = String(host).replace(/^\[|\]$/g, '').toLowerCase();
+  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.localhost')) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (m) {
+    const a = +m[1], b = +m[2];
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+  }
+  if (h === '::1') return true;
+  if (/^(fc|fd|fe80)/.test(h)) return true; // IPv6 ULA / link-local
+  return false;
+}
+
+function hostOf(url) {
+  try { return new URL(String(url || '')).hostname; } catch (e) { return ''; }
+}
+
 function friendlyStepError(step, raw) {
   const msg = String(raw || 'The step failed.');
   if (/waiting (for selector|failed)|exceeded|timeout/i.test(msg) && step.selector) {
     return `No element matched "${clip(step.selector, 120)}" in time. Take a page_snapshot to find the right selector (CSS, or aria/Name[role="button"]).`;
+  }
+  // The profile's request filter aborts a local address, which Chromium reports as a bare
+  // net::ERR_FAILED; say why instead.
+  if (step.type === 'goto' && /net::ERR_(FAILED|BLOCKED_BY_CLIENT)\b/.test(msg) && isLocalNetworkHost(hostOf(step.url))) {
+    return LOCAL_NETWORK_BLOCKED;
   }
   if (/net::|ERR_/i.test(msg)) return `The page did not load: ${clip(msg, 200)}`;
   return clip(msg, 300);
@@ -138,12 +169,16 @@ const PAGE_TOOLS = [
     async handler(a, ctx) {
       const { page } = await livePage(ctx, a.profileId);
       ctx.assertDomainAllowed(a.url);
+      const started = Date.now();
       await runStep(ctx, a.profileId, { type: 'goto', url: a.url, timeout: a.timeoutMs || 30000 });
+      // How long the navigation itself took, apart from approval and reading the title (the audit's
+      // duration covers the whole call).
+      const loadMs = Date.now() - started;
       const state = await pageState(page);
       if (state.url && /^https?:/i.test(state.url)) {
         try { ctx.assertDomainAllowed(state.url); } catch (e) { throw ctx.userError(`The page redirected to ${clip(state.url, 120)}, which is not in the page-domain allow list. Further page actions there are refused.`); }
       }
-      return { summary: `Opened "${state.title || state.url}".`, data: state };
+      return { summary: `Opened "${state.title || state.url}".`, data: { ...state, loadMs } };
     }
   },
   {
@@ -346,4 +381,4 @@ const PAGE_TOOLS = [
   }
 ];
 
-module.exports = { PAGE_TOOLS, flattenAx, sensitiveNode, ariaSelector, friendlyStepError, UNTRUSTED, KEYS, MAX_TYPE_CHARS };
+module.exports = { PAGE_TOOLS, flattenAx, sensitiveNode, ariaSelector, friendlyStepError, isLocalNetworkHost, LOCAL_NETWORK_BLOCKED, UNTRUSTED, KEYS, MAX_TYPE_CHARS };

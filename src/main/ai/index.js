@@ -157,7 +157,9 @@ async function status() {
     url: `http://127.0.0.1:${api.port}/mcp`,
     sseUrl: `http://127.0.0.1:${api.port}/mcp/sse`,
     plan,
-    clients: state.mcp ? state.mcp.clients().map((c) => ({ tokenId: c.tokenId, tokenName: c.tokenName, clientName: c.clientName, lastSeenAt: c.lastSeenAt, transport: c.transport })) : [],
+    // Only apps active in the last two minutes (or holding a stream open): a client that quit
+    // without closing its session is not "connected" for the 30 minutes before the idle sweep.
+    clients: state.mcp ? state.mcp.clients({ activeOnly: true }).map((c) => ({ tokenId: c.tokenId, tokenName: c.tokenName, clientName: c.clientName, lastSeenAt: c.lastSeenAt, transport: c.transport })) : [],
     pendingApprovals: state.approvals ? state.approvals.pendingCount() : 0,
     runningAiSessions,
     lastStopAll: state.lastStop,
