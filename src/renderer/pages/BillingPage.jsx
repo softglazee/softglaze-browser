@@ -8,6 +8,16 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import billingEn from '@/i18n/locales/en/billing.json';
+
+// The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
+// show in the UI language through billing.planText, matched on the exact English text; anything the
+// Super Admin typed into an edited catalog shows as typed.
+const PLAN_TEXT_KEY = new Map(Object.entries(billingEn.planText || {}).map(([key, text]) => [text, key]));
+function planText(t, text) {
+  const key = PLAN_TEXT_KEY.get(text);
+  return key ? t(`planText.${key}`) : text;
+}
 
 function money(amount, currency) {
   const a = String(amount ?? '');
@@ -283,13 +293,13 @@ export default function BillingPage() {
                     <span className="text-[26px] font-display font-semibold text-foreground">{money(plan.amount, plan.currency)}</span>
                     <span className="text-[12px] text-muted-foreground">/ {plan.period}</span>
                   </div>
-                  <p className="mt-1 text-[12px] text-muted-foreground">{plan.tagline}</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">{planText(t, plan.tagline)}</p>
 
                   <ul className="mt-4 space-y-1.5 flex-1">
                     {(plan.features || []).map((f, i) => (
                       <li key={i} className="flex items-start gap-2 text-[12.5px] text-foreground/90">
                         <Check className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
-                        <span>{f}</span>
+                        <span>{planText(t, f)}</span>
                       </li>
                     ))}
                   </ul>

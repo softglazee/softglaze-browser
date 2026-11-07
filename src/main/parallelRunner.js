@@ -1,6 +1,7 @@
 'use strict';
 // Runs one macro across many profiles with a concurrency cap. Side effects come in through `deps`,
 // and status frames carry only whitelisted fields, so they never leak credentials.
+const { MAX_PARALLEL } = require('./tierPolicy');
 
 function streamKey(runId, profileId) {
   return `${runId}::p${profileId}`;
@@ -33,7 +34,8 @@ function applyVariables(steps, vars) {
 }
 
 // deps: isOpen(id), launch(id) -> { sessionId }, runMacro(sid, steps, o) -> { ok, ran, total, log },
-// close(sid), emit(key, type, payload). Concurrency is clamped to [1, 10].
+// close(sid), emit(key, type, payload). Concurrency is clamped to [1, MAX_PARALLEL] (10); the caller
+// applies the plan's lower cap first (tierPolicy.clampConcurrency).
 // Frames carry only safe metadata, never step values, cookies or credentials.
 async function runParallelMacro(opts, deps) {
   const o = opts || {};
@@ -47,7 +49,7 @@ async function runParallelMacro(opts, deps) {
     return true;
   });
   const steps = Array.isArray(o.steps) ? o.steps : [];
-  const cap = Math.max(1, Math.min(10, Number(o.concurrency) || 1));
+  const cap = Math.max(1, Math.min(MAX_PARALLEL, Number(o.concurrency) || 1));
   const continueOnError = o.continueOnError !== false;
   const closeWhenDone = o.closeWhenDone !== false;
 

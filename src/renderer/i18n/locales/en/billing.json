@@ -248,5 +248,32 @@
       "choosePlan": "Choose a plan.",
       "assignFailed": "Could not assign plan."
     }
+  },
+  "planText": {
+    "trialTagline": "Test every feature free - full access, no card required.",
+    "trialFullAccess": "Full access to every feature",
+    "trialTools": "All fingerprint, proxy & leak tools",
+    "trialMacros": "Macros, cookie warmer & mobile profiles",
+    "trialBackupSeats": "Encrypted backup & team seats",
+    "trialNoCard": "No credit card required",
+    "trialUpgrade": "Upgrade to a paid plan anytime",
+    "proTagline": "Everything a solo operator needs to run profiles at scale.",
+    "proProfiles": "Unlimited local browser profiles",
+    "proFingerprint": "Full fingerprint engine + leak checks",
+    "proProxies": "Proxy pool, rotation policy & geo auto-match",
+    "proMacros": "Macro recorder, scheduler & data-driven runs",
+    "proCookieWarmer": "Cookie warmer",
+    "proMobile": "Mobile / Android device profiles",
+    "proBackup": "Encrypted workspace backup & restore",
+    "proDbEncryption": "Full at-rest database encryption",
+    "proPalette": "Command palette + onboarding",
+    "proSeats": "Up to 3 team members",
+    "proParallel": "Parallel runner, up to 3 profiles at once, with live run console",
+    "entTagline": "For teams - up to 25 members, 10 profiles at once and audit-log export.",
+    "entEverythingInPro": "Everything in Pro, plus:",
+    "entSeats": "Up to 25 team members",
+    "entParallel": "Parallel runner, up to 10 profiles at once, with live run console",
+    "entAuditExport": "Audit-log export (CSV / JSON)",
+    "entSupport": "Priority email support"
   }
 }

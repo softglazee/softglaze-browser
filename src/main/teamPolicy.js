@@ -2,14 +2,12 @@
 // Pure team helpers (seats, audit-log CSV export, profile locks): no Electron, DB or globals.
 // ipcHandlers.js injects the live members, license and session data.
 
-// Seats derive from the license type; there is no DB column for them.
-const SEATS_BY_TYPE = Object.freeze({ trial: 3, paid: 25 });
-const DEFAULT_SEATS = 3;
+const tierPolicy = require('./tierPolicy');
 
+// Seats derive from the licence type and tier (tierPolicy.js); there is no DB column for them.
+// Trial 3, Pro 3, Enterprise 25; a missing or unknown licence gets 3.
 function seatsForLicense(license) {
-  if (!license) return DEFAULT_SEATS;
-  const type = String(license.type || 'trial').toLowerCase();
-  return SEATS_BY_TYPE[type] != null ? SEATS_BY_TYPE[type] : DEFAULT_SEATS;
+  return tierPolicy.limitsForLicense(license).seats;
 }
 
 function notSuspended(m) {
@@ -54,9 +52,28 @@ function seatUsage(members, ownerId, license) {
     used,
     total,
     type: String((license && license.type) || 'trial').toLowerCase(),
+    tier: tierPolicy.limitsForLicense(license).tier,
     remaining: Math.max(0, total - used),
     full: used >= total
   };
+}
+
+// Whether one more member may take a seat: a new member or invite, or (reactivateId) a suspended
+// member being made active again. Nobody is ever removed or suspended for being over the limit:
+// after a downgrade the team keeps everyone, and only new seats are refused until it is back under
+// the limit. Returns { ok, usage }.
+function canTakeSeat(members, ownerId, license, opts = {}) {
+  const list = Array.isArray(members) ? members : [];
+  const usage = seatUsage(list, ownerId, license);
+  if (opts.reactivateId == null) return { ok: !usage.full, usage };
+  const target = String(opts.reactivateId);
+  const after = activeSeatIds(
+    list.map((m) => (String(m.id) === target ? { ...m, status: 'active' } : m)),
+    ownerId
+  ).size;
+  // Reactivating someone outside this owner's tree, or who already holds a seat, takes no new seat.
+  if (after <= usage.used) return { ok: true, usage };
+  return { ok: after <= usage.total, usage };
 }
 
 function csvEscape(value) {
@@ -94,6 +111,7 @@ module.exports = {
   seatsForLicense,
   activeSeatIds,
   seatUsage,
+  canTakeSeat,
   csvEscape,
   activityToCsv,
   lockBlocks,

@@ -5,15 +5,27 @@ import {
   Download, FolderInput, Search, Lock, CreditCard, RotateCcw, Layers,
   Sparkles, Settings2, Ban, AlertTriangle
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+
+// Plan-limit refusals from main (SEAT_LIMIT, ENTERPRISE_REQUIRED) in the UI language; anything else
+// keeps main's message.
+function memberErrorText(e, t, fallback) {
+  if (e && e.code === 'SEAT_LIMIT') return t('seats.limitError');
+  if (e && e.code === 'ENTERPRISE_REQUIRED') return t('activity.exportEnterpriseOnly');
+  return (e && e.message) || fallback;
+}
 
 // UI gate only; mirrors main's `members.manage` check, and the backend re-checks regardless.
 function canManageTeam(me) {
   if (!me) return true; // single-user mode == owner
   return ['OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(me.role);
 }
+
+// Enterprise team members; mirrors main's tierPolicy.js (main enforces it).
+const ENTERPRISE_SEATS = 25;
 
 const ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'OPERATOR'];
 const ROLE_LABEL = { SUPER_ADMIN: 'Super Admin', OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATOR: 'Operator' };
@@ -115,8 +127,10 @@ function NumLimit({ k, label, value, granter, set, t }) {
 
 export default function MembersPage() {
   const { t } = useTranslation('members');
+  const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [me, setMe] = useState(null);
+  const [seats, setSeats] = useState(null); // { used, total, full } from main; total -1 = exempt
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);
@@ -125,18 +139,31 @@ export default function MembersPage() {
   async function load() {
     setLoading(true); setError('');
     try {
-      const [list, cur] = await Promise.all([
+      const [list, cur, seatUsage] = await Promise.all([
         softglazeApi.members.list(),
-        softglazeApi.members.current().catch(() => null)
+        softglazeApi.members.current().catch(() => null),
+        softglazeApi.team.seatUsage().catch(() => null)
       ]);
       setMembers(Array.isArray(list) ? list : []);
       setMe(cur);
+      setSeats(seatUsage);
     } catch (e) { setError(e.message || t('errors.loadMembers')); }
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
 
+  // Main refuses a new member past the plan's seats; the UI shows the cap and disables Invite.
+  const hasSeatCap = Boolean(seats && seats.total >= 0);
+  const seatsFull = hasSeatCap && Boolean(seats.full);
   const canCreate = creatableRoles(me).length > 0;
+  const canInvite = canCreate && !seatsFull;
+  const topPlan = Boolean(seats && seats.tier === 'enterprise' && seats.type === 'paid');
+  let seatNotice = '';
+  if (seatsFull) {
+    if (seats.used > seats.total) seatNotice = t('seats.overNotice', { used: seats.used, total: seats.total });
+    else if (topPlan) seatNotice = t('seats.fullNoticeTop', { total: seats.total });
+    else seatNotice = t('seats.fullNotice', { total: seats.total, enterpriseSeats: ENTERPRISE_SEATS });
+  }
   const workspaceProfiles = members[0]?.workspaceProfiles ?? 0;
   const workspaceProxies = members[0]?.workspaceProxies ?? 0;
 
@@ -149,16 +176,29 @@ export default function MembersPage() {
           <p className="text-xs text-muted-foreground mt-1">
             {t('header.manageCount', { count: members.length })}
             {members[0] && <> · {t('header.workspaceStats', { profiles: workspaceProfiles, proxies: workspaceProxies })}</>}
+            {hasSeatCap && <> · <span className={seatsFull ? 'text-amber-400 font-semibold' : ''}>{t('seats.usage', { used: seats.used, total: seats.total })}</span></>}
           </p>
         </div>
         {canCreate && (
-          <button onClick={() => setEditing({})} className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
+          <button onClick={() => setEditing({})} disabled={!canInvite} title={seatsFull ? seatNotice : undefined} className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-500 disabled:hover:to-blue-600">
             <Plus className="w-3.5 h-3.5" />{t('actions.inviteMember')}
           </button>
         )}
       </div>
 
       {error && <div className="mb-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12.5px] text-red-400">{error}</div>}
+
+      {seatsFull && canCreate && (
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[12.5px] text-amber-400">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="min-w-0 flex-1">{seatNotice}</span>
+          {!topPlan && (
+            <button onClick={() => navigate('/billing')} className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11.5px] font-semibold bg-card border border-border text-foreground hover:border-primary">
+              <CreditCard className="w-3.5 h-3.5" />{t('seats.seeBilling')}
+            </button>
+          )}
+        </div>
+      )}
 
       {!loading && members.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
@@ -201,7 +241,7 @@ export default function MembersPage() {
           <Users className="w-7 h-7 text-muted-foreground mb-3" />
           <p className="text-[13px] text-foreground font-medium">{t('empty.title')}</p>
           <p className="text-[12px] text-muted-foreground mt-1 mb-4">{canCreate ? t('empty.canCreate') : t('empty.noMembers')}</p>
-          {canCreate && <button onClick={() => setEditing({})} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25"><Plus className="w-3.5 h-3.5" />{t('actions.inviteMember')}</button>}
+          {canCreate && <button onClick={() => setEditing({})} disabled={!canInvite} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="w-3.5 h-3.5" />{t('actions.inviteMember')}</button>}
         </div>
       ) : tab === 'members' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -255,7 +295,7 @@ export default function MembersPage() {
             );
           })}
 
-          {canCreate && (
+          {canInvite && (
             <button onClick={() => setEditing({})} className="rounded-xl p-5 flex flex-col items-center justify-center gap-3 min-h-[160px] transition-colors animate-fade-up" style={{ background: 'color-mix(in srgb, #3b82f6 4%, transparent)', border: '1px dashed color-mix(in srgb, #3b82f6 28%, transparent)' }}>
               <span className="w-10 h-10 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, #3b82f6 12%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 24%, transparent)' }}><Plus className="w-4 h-4 text-blue-400" /></span>
               <p className="text-xs font-medium text-blue-400">{t('actions.inviteTeamMember')}</p>
@@ -488,7 +528,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
   async function changeStatus(status, reason) {
     setStatusBusy(true); setErr('');
     try { await softglazeApi.members.setStatus({ id: member.id, status, reason }); onSaved(); }
-    catch (e) { setErr(e.message || t('errors.changeStatus')); setStatusBusy(false); }
+    catch (e) { setErr(memberErrorText(e, t, t('errors.changeStatus'))); setStatusBusy(false); }
   }
 
   const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2';
@@ -519,7 +559,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         await softglazeApi.members.setInstructions(member.id, instructions.trim());
         onSaved();
       }
-    } catch (e) { setErr(e.message || t('errors.saveMember')); setBusy(false); }
+    } catch (e) { setErr(memberErrorText(e, t, t('errors.saveMember'))); setBusy(false); }
   }
 
   // Reset this member's limits + features to their role's built-in defaults.
@@ -1056,18 +1096,23 @@ function TeamActivityFeed() {
   const [to, setTo] = useState('');
   const [exporting, setExporting] = useState('');
   const [notice, setNotice] = useState('');
+  // Audit-log export is Enterprise only (main refuses it on Pro); unknown until the licence loads.
+  const [exportAllowed, setExportAllowed] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [r, mem] = await Promise.all([
+        const [r, mem, lic] = await Promise.all([
           softglazeApi.team.activity(200),
-          softglazeApi.members.list().catch(() => [])
+          softglazeApi.members.list().catch(() => []),
+          softglazeApi.license.get().catch(() => null)
         ]);
         if (!alive) return;
         setRows(Array.isArray(r) ? r : []);
         setMembers(Array.isArray(mem) ? mem : []);
+        setExportAllowed(!(lic && lic.limits && lic.limits.auditExport === false));
       } catch (e) { if (alive) setErr(e.message || ''); }
       finally { if (alive) setLoading(false); }
     })();
@@ -1105,7 +1150,10 @@ function TeamActivityFeed() {
       });
       if (res && res.cancelled) return;
       if (res && res.ok) setNotice(t('activity.exported', { count: res.count, path: res.path }));
-    } catch (e) { setErr(e.message || t('activity.exportError')); }
+    } catch (e) {
+      if (e && e.code === 'ENTERPRISE_REQUIRED') setExportAllowed(false);
+      setErr(memberErrorText(e, t, t('activity.exportError')));
+    }
     finally { setExporting(''); }
   }
 
@@ -1116,11 +1164,17 @@ function TeamActivityFeed() {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <span className="w-7 h-7 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 16%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 28%, transparent)' }}><Activity className="w-3.5 h-3.5 text-blue-400" /></span>
         <div className="mr-auto"><h2 className="text-sm font-semibold text-foreground">{t('activity.title')}</h2><p className="text-xs text-muted-foreground">{t('activity.subtitle')}</p></div>
-        <button onClick={() => doExport('csv')} disabled={!!exporting} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
-          {exporting === 'csv' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} CSV
+        {!exportAllowed && (
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
+            <Crown className="w-3.5 h-3.5 text-violet-400" />{t('activity.enterpriseFeature')}
+            <button onClick={() => navigate('/billing')} className="font-semibold text-primary hover:underline">{t('activity.seeBilling')}</button>
+          </span>
+        )}
+        <button onClick={() => doExport('csv')} disabled={!!exporting || !exportAllowed} title={exportAllowed ? undefined : t('activity.exportEnterpriseOnly')} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+          {exporting === 'csv' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : !exportAllowed ? <Lock className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />} CSV
         </button>
-        <button onClick={() => doExport('json')} disabled={!!exporting} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">
-          {exporting === 'json' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} JSON
+        <button onClick={() => doExport('json')} disabled={!!exporting || !exportAllowed} title={exportAllowed ? undefined : t('activity.exportEnterpriseOnly')} className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+          {exporting === 'json' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : !exportAllowed ? <Lock className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />} JSON
         </button>
       </div>
 

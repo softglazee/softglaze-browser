@@ -810,6 +810,9 @@ const PAR_LEVEL_COLOR = {
   passed: 'text-emerald-400', failed: 'text-red-400', done: 'text-violet-300'
 };
 
+// Most profiles one parallel run may drive at once (Enterprise); main's tierPolicy.js is the source.
+const PAR_MAX = 10;
+
 function ParallelPanel() {
   const { t } = useTranslation('automation');
   const [macros, setMacros] = useState([]);
@@ -817,6 +820,8 @@ function ParallelPanel() {
   const [macroId, setMacroId] = useState('');
   const [selected, setSelected] = useState(() => new Set());
   const [concurrency, setConcurrency] = useState(3);
+  // The plan's cap on profiles at once (Pro 3, Enterprise 10); main clamps to the same number.
+  const [maxParallel, setMaxParallel] = useState(PAR_MAX);
   const [search, setSearch] = useState('');
   const [running, setRunning] = useState(false);
   const [statuses, setStatuses] = useState({}); // profileId -> last payload
@@ -849,7 +854,16 @@ function ParallelPanel() {
       const list = Array.isArray(rows) ? rows : (rows && (rows.profiles || rows.rows)) || [];
       setProfiles(list);
     }).catch(() => setProfiles([]));
+    softglazeApi.license.get().then((lic) => {
+      const cap = Number(lic && lic.limits && lic.limits.maxParallel);
+      if (cap > 0) {
+        setMaxParallel(Math.min(cap, PAR_MAX));
+        setConcurrency((c) => Math.min(Number(c) || 1, cap));
+      }
+    }).catch(() => { /* main still applies the plan's cap */ });
   }, []);
+
+  const clampConcurrency = (v) => Math.max(1, Math.min(maxParallel, Number.parseInt(v, 10) || 1));
 
   // Default the macro selector to the first macro once loaded.
   useEffect(() => { setMacroId((cur) => cur || (macros.length ? String(macros[0].id) : '')); }, [macros]);
@@ -919,7 +933,7 @@ function ParallelPanel() {
       const res = await softglazeApi.automation.runParallel({
         macroId: Number(macroId),
         profileIds: ids,
-        concurrency: Number(concurrency) || 3,
+        concurrency: clampConcurrency(concurrency),
         continueOnError: true,
         closeWhenDone: true,
         dataToken: dataBinding ? dataBinding.token : undefined
@@ -983,9 +997,14 @@ function ParallelPanel() {
           </div>
           <div className="w-24 shrink-0">
             <label className="block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{t('parallel.concurrency')}</label>
-            <input type="number" min={1} max={10} value={concurrency} onChange={(e) => setConcurrency(e.target.value)} className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
+            <input type="number" min={1} max={maxParallel} value={concurrency} onChange={(e) => setConcurrency(e.target.value)} onBlur={() => setConcurrency((c) => clampConcurrency(c))} aria-describedby="par-concurrency-cap" className="w-full h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
           </div>
         </div>
+        <p id="par-concurrency-cap" className="-mt-2 text-[11px] text-muted-foreground">
+          {maxParallel < PAR_MAX
+            ? t('parallel.concurrencyCapUpgrade', { max: maxParallel, enterpriseMax: PAR_MAX })
+            : t('parallel.concurrencyCap', { max: maxParallel })}
+        </p>
 
         <div className="rounded-lg border border-border bg-elevated/40 p-3">
           <div className="flex items-center justify-between gap-2">

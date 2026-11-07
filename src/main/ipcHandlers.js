@@ -68,6 +68,7 @@ const licensePolicy = require('./licensePolicy');
 const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
+const tierPolicy = require('./tierPolicy');
 const { CloudSyncEngine, resolveWorkspaceSalt } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
@@ -9232,6 +9233,8 @@ async function updateMember(payload) {
   if (input.color !== undefined) data.color = optionalString(input.color) || '#3DC6DA';
   if (input.initials !== undefined) data.initials = optionalString(input.initials) || initialsFrom(input.name || target.name);
   if (input.status !== undefined) data.status = String(input.status).toLowerCase() === 'suspended' ? 'suspended' : 'active';
+  // Making a suspended member active again takes a seat, so it is refused when the plan is full.
+  if (data.status === 'active' && target.status === 'suspended') await assertSeatAvailable(id);
   if (input.role !== undefined) {
     const role = String(input.role).toUpperCase();
     if (!VALID_ROLES.includes(role)) throw new Error('Invalid role.');
@@ -10326,40 +10329,57 @@ async function reassignProfiles(payload) {
   return { reassigned: res.count, memberId: targetId, memberName: targetName };
 }
 
-// Seat accounting: seats are derived from the owner-tree's license type. The
-// Super Admin (source owner) is exempt; single-user mode is unrestricted.
+// Seat accounting: the seat count comes from the plan limits (tierPolicy.js) of the effective
+// licence, the same view license:get returns (the local licence, or a verified backend lease).
+// The certified Super Admin (source owner) is exempt and uncounted, as before; single-user mode is
+// unrestricted.
 async function getSeatUsage() {
   const m = await getActiveMember();
   if (await isCertifiedSuperAdmin(m)) {
-    return { used: 0, total: -1, type: 'source-owner', remaining: -1, full: false, exempt: true };
+    return { used: 0, total: -1, type: 'source-owner', tier: 'enterprise', remaining: -1, full: false, exempt: true };
   }
   const db = getPrisma();
   const ownerId = await resolveLicenseOwnerId();
-  const lic = await ensureLicense(ownerId);
+  const lic = await getLicense();
   const members = await db.member.findMany({ select: { id: true, status: true, parentMemberId: true } });
   return teamPolicy.seatUsage(members, ownerId, lic);
 }
 
-// Called from createMember, never on the first-Owner bootstrap. Super Admin and single-user mode
-// are unrestricted.
-async function assertSeatAvailable() {
+// Refuses a new seat past the plan's limit. Called from createMember (never on the first-Owner
+// bootstrap) and, with reactivateId, when a suspended member is made active again. A team that is
+// over the limit (after a downgrade) keeps every member; only new seats are refused until it is
+// back under the limit. Super Admin and single-user mode are unrestricted.
+async function assertSeatAvailable(reactivateId) {
   const m = await getActiveMember();
   if (!m || await isCertifiedSuperAdmin(m)) return; // the seat exemption needs the owner certificate
   const db = getPrisma();
   const ownerId = await resolveLicenseOwnerId();
-  const lic = await ensureLicense(ownerId);
+  const lic = await getLicense();
   const members = await db.member.findMany({ select: { id: true, status: true, parentMemberId: true } });
-  const usage = teamPolicy.seatUsage(members, ownerId, lic);
-  if (usage.full) {
-    const e = new Error(`Your plan includes ${usage.total} seat(s) and all are in use. Upgrade your subscription to add more team members.`);
+  const { ok, usage } = teamPolicy.canTakeSeat(members, ownerId, lic, { reactivateId });
+  if (!ok) {
+    const e = new Error(seatLimitMessage(usage));
     e.code = 'SEAT_LIMIT';
     throw e;
   }
 }
 
-// CSV/JSON export of the activity feed, filterable by member/action/date range.
+function seatLimitMessage(usage) {
+  const head = `Your plan includes up to ${usage.total} team members (the owner counts as one), and ${usage.used} are in use.`;
+  if (usage.tier === 'enterprise' && usage.type === 'paid') return `${head} Suspend a member to free a seat.`;
+  const most = tierPolicy.TIER_LIMITS.enterprise.seats;
+  return `${head} Enterprise includes up to ${most} team members: upgrade on the Billing page, or suspend a member to free a seat.`;
+}
+
+// CSV/JSON export of the activity feed, filterable by member/action/date range. Enterprise only
+// (tierPolicy.js); viewing the activity log is open to every plan.
 async function exportTeamActivity(payload) {
   await requirePermission('members.manage');
+  if (!tierPolicy.limitsForLicense(await getLicense()).auditExport) {
+    const e = new Error('Audit-log export (CSV / JSON) is an Enterprise feature. Upgrade on the Billing page to export the activity log.');
+    e.code = 'ENTERPRISE_REQUIRED';
+    throw e;
+  }
   const input = (payload && typeof payload === 'object') ? payload : {};
   const isJson = String(input.format || 'csv').toLowerCase() === 'json';
   const db = getPrisma();
@@ -10756,6 +10776,7 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
     period: 'month',
     tagline: 'Everything a solo operator needs to run profiles at scale.',
     highlight: false,
+    // Limits shown here are enforced in main from tierPolicy.js.
     features: Object.freeze([
       'Unlimited local browser profiles',
       'Full fingerprint engine + leak checks',
@@ -10764,7 +10785,10 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
       'Cookie warmer',
       'Mobile / Android device profiles',
       'Encrypted workspace backup & restore',
-      'Command palette + onboarding'
+      'Full at-rest database encryption',
+      'Command palette + onboarding',
+      'Up to 3 team members',
+      'Parallel runner, up to 3 profiles at once, with live run console'
     ])
   }),
   Object.freeze({
@@ -10775,16 +10799,14 @@ const DEFAULT_BILLING_PLANS = Object.freeze([
     currency: PLAN.currency,
     months: 1,
     period: 'month',
-    tagline: 'For teams - seats, audit export, database encryption and self-hosted sync.',
+    tagline: 'For teams - up to 25 members, 10 profiles at once and audit-log export.',
     highlight: true,
     features: Object.freeze([
       'Everything in Pro, plus:',
-      'Parallel runner (up to 10 profiles at once) + live run console',
-      'Team seats, profile lock & handoff',
+      'Up to 25 team members',
+      'Parallel runner, up to 10 profiles at once, with live run console',
       'Audit-log export (CSV / JSON)',
-      'End-to-end encrypted sync to a server you host',
-      'Full at-rest database encryption',
-      'Priority support'
+      'Priority email support'
     ])
   })
 ]);
@@ -11212,12 +11234,19 @@ async function backendLicenseInfo() {
   };
 }
 
+// The licence view plus the plan limits it unlocks (tierPolicy.js), so the renderer shows the same
+// caps main enforces.
+function withPlanLimits(view) {
+  const l = tierPolicy.limitsForLicense(view);
+  return { ...view, limits: { tier: l.tier, seats: l.seats, maxParallel: l.maxParallel, auditExport: l.auditExport } };
+}
+
 async function getLicense() {
   // The certified Super Admin (valid owner certificate, base build) is exempt from the trial and
-  // subscription system; otherwise a SUPER_ADMIN is licensed like any Owner.
+  // subscription system and gets Enterprise limits; otherwise a SUPER_ADMIN is licensed like any Owner.
   const m = await getActiveMember();
   if (await isCertifiedSuperAdmin(m)) {
-    return {
+    return withPlanLimits({
       type: 'source-owner',
       tier: 'enterprise',
       state: 'paid',
@@ -11235,7 +11264,7 @@ async function getLicense() {
       clockTamper: false,
       purchaseCode: null,
       plan: PLAN
-    };
+    });
   }
   // Backend-licensed builds: a verified, unexpired lease means paid; otherwise use the local model.
   // `reason` explains a licensing problem (e.g. the lease is bound to another computer); a machine
@@ -11243,11 +11272,11 @@ async function getLicense() {
   const issueOf = () => ((licenseClient.licenseIssue && licenseClient.licenseIssue()) || {}).reason || null;
   if (tenantConfig().enabled) {
     const ent = await getBackendEntitlement();
-    if (ent && issueOf() !== 'machine_mismatch') return { ...licenseViewFromLease(ent), reason: issueOf() };
+    if (ent && issueOf() !== 'machine_mismatch') return withPlanLimits({ ...licenseViewFromLease(ent), reason: issueOf() });
   }
   const ownerId = await resolveLicenseOwnerId();
   const lic = await ensureLicense(ownerId);
-  return withLicenseReason(await licenseView(lic), issueOf());
+  return withPlanLimits(withLicenseReason(await licenseView(lic), issueOf()));
 }
 
 // Attach the licensing problem reason; a machine mismatch turns a paid view into an
@@ -11320,6 +11349,8 @@ async function setMemberStatus(payload) {
   if (target.role === 'OWNER' && status !== 'active' && !(await isCertifiedSuperAdmin(actor))) {
     throw new Error('Only the Super Admin can block or suspend an owner.');
   }
+  // A suspended member holds no seat; any other status does, so leaving 'suspended' needs a free seat.
+  if (target.status === 'suspended' && status !== 'suspended') await assertSeatAvailable(id);
   const data = { status };
   data.banReason = status === 'banned' ? (optionalString(input.reason) || 'Blocked by administrator.') : null;
   const updated = await db.member.update({ where: { id }, data });
@@ -12484,7 +12515,8 @@ async function runParallelMacroHandler(payload, event) {
   // Check access to every target profile: the parallel path reuses open sessions and would otherwise
   // skip the launch-time access check.
   for (const pid of profileIds) await assertCanAccessProfile(pid);
-  const concurrency = Math.max(1, Math.min(10, Number.parseInt(input.concurrency, 10) || 3));
+  // Profiles at once is capped by the plan: Pro 3, Enterprise (and the trial) 10 (tierPolicy.js).
+  const concurrency = tierPolicy.clampConcurrency(input.concurrency, tierPolicy.limitsForLicense(await getLicense()));
   const continueOnError = input.continueOnError !== false;
   const closeWhenDone = input.closeWhenDone !== false;
 
