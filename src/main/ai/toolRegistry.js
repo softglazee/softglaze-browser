@@ -373,6 +373,7 @@ class ToolRegistry {
         tokenId: token.id,
         tokenName: token.name,
         memberId: token.memberId,
+        memberName: token.memberName || null,
         clientName: cc.clientName || null,
         tool: tool.name,
         summary: `${cc.clientName || token.name} wants to: ${summary}`,

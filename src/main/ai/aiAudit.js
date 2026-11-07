@@ -68,7 +68,8 @@ function serialize(row) {
 }
 
 // Pages newest first. q: { cursor (an id from nextCursor), limit (1-200, default 50), tokenId,
-// tool, outcome }. Returns { items, nextCursor } (nextCursor null on the last page).
+// tool, outcome, clientName (exact), search (text in the tool, summary or token name) }. Filters
+// apply before paging. Returns { items, nextCursor } (nextCursor null on the last page).
 async function list(db, q = {}) {
   const input = (q && typeof q === 'object') ? q : {};
   const limit = Math.max(1, Math.min(200, Number.parseInt(input.limit, 10) || 50));
@@ -76,6 +77,9 @@ async function list(db, q = {}) {
   if (input.tokenId != null && input.tokenId !== '') where.tokenId = Number(input.tokenId);
   if (input.tool) where.tool = String(input.tool);
   if (input.outcome && OUTCOMES.includes(String(input.outcome))) where.outcome = String(input.outcome);
+  if (input.clientName) where.clientName = String(input.clientName).slice(0, 80);
+  const search = input.search == null ? '' : String(input.search).trim().slice(0, 100);
+  if (search) where.OR = [{ tool: { contains: search } }, { summary: { contains: search } }, { tokenName: { contains: search } }];
   const cursor = Number.parseInt(input.cursor, 10);
   if (Number.isInteger(cursor) && cursor > 0) where.id = { lt: cursor };
   const rows = await db.aiAuditLog.findMany({ where, orderBy: { id: 'desc' }, take: limit + 1 });
