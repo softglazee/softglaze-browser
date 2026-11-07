@@ -7,7 +7,7 @@ import {
 import Button from '@/components/ui/Button.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import { AI_TONE, CodeBlock, CopyField, InlineError, PrimaryButton, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
-import { STDIO_CLIENTS, envVarCommand, n8nEndpoints } from '@/lib/aiCore.mjs';
+import { STDIO_CLIENTS, envVarCommand, hasPlaceholder, n8nEndpoints } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
 
 const ICONS = {
@@ -195,7 +195,9 @@ function Steps({ items, title }) {
 function ClientPanel({ entry, bridge, onCreateToken }) {
   const { t } = useTranslation('ai');
   const base = entry.known ? `connect.clients.${entry.key}` : 'connect.clients.custom';
-  const steps = [t(`${base}.step1`), t(`${base}.step2`), t(`${base}.step3`)];
+  // Claude Desktop: mention the one-click .mcpb only when this build ships one.
+  const step2Key = entry.key === 'claude-desktop' && !(bridge && bridge.mcpbPath) ? `${base}.step2NoMcpb` : `${base}.step2`;
+  const steps = [t(`${base}.step1`), t(step2Key), t(`${base}.step3`)];
   const kindLabel = t(`connect.kind.${entry.kind}`, { defaultValue: entry.kind });
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
   const showBridge = STDIO_CLIENTS.has(entry.key) || !entry.known;
@@ -232,7 +234,7 @@ function ClientPanel({ entry, bridge, onCreateToken }) {
         {entry.text ? (
           <div className="space-y-2">
             <CodeBlock text={entry.text} label={t('connect.snippet', { app: clientTitle(t, entry) })} kindLabel={kindLabel} />
-            <p className="text-[12px] text-muted-foreground">{t('connect.placeholderHint')}</p>
+            {hasPlaceholder(entry.text) && <p className="text-[12px] text-muted-foreground">{t('connect.placeholderHint')}</p>}
           </div>
         ) : (
           <p className="text-[12.5px] text-muted-foreground">{t('connect.noSnippet')}</p>

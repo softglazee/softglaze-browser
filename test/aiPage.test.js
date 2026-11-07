@@ -297,6 +297,39 @@ test('approvals: decisions and "already gone" errors', async () => {
   assert.equal(isGoneError(null), false);
 });
 
+test('engine shapes (PR #38): allowHour, expired flag, pending outcome, run ids, Stop all switches AI off', async () => {
+  const core = await loadCore();
+  assert.equal(core.canAllowHour({ id: 1 }), true, 'shown unless the engine says no');
+  assert.equal(core.canAllowHour({ id: 1, allowHour: true }), true);
+  assert.equal(core.canAllowHour({ id: 1, allowHour: false }), false);
+  const dialog = read('src', 'renderer', 'components', 'ai', 'AiApprovalDialog.jsx');
+  assert.match(dialog, /\{canAllowHour\(approval\) && \(\s*<Button variant="secondary"[^\n]*onDecide\('allow-hour'\)/, '"Allow for 1 hour" is hidden when allowHour is false');
+
+  assert.equal(core.tokenState({ expired: true, expiresAt: null }), 'expired', 'the engine flag wins');
+  assert.equal(core.tokenState({ revoked: true, expired: true }), 'revoked');
+
+  assert.deepEqual(core.buildAuditQuery({ outcome: 'pending' }), { limit: 50, outcome: 'pending' });
+  assert.deepEqual(core.filterAuditItems([{ outcome: 'pending' }, { outcome: 'ok' }], { outcome: 'pending' }).length, 1);
+  assert.equal(core.extractRunId({ summary: 'Started a run of "Login" on 5 profiles (job-7f3a_b2).' }), 'job-7f3a_b2');
+  assert.equal(core.extractRunId({ runId: 'job-x1' }), 'job-x1');
+  assert.equal(core.extractRunId({ args: { runId: 'job-9' } }), 'job-9');
+  assert.equal(core.extractRunId({ summary: 'Listed 40 profiles' }), null);
+  const activity = read('src', 'renderer', 'components', 'ai', 'AiActivityTab.jsx');
+  assert.match(activity, /\{ value: 'pending', label: t\('activity\.outcomes\.pending'\) \}/);
+  assert.match(activity, /pending: 'info'/, 'its own badge colour');
+
+  const page = read('src', 'renderer', 'pages', 'AiPage.jsx');
+  assert.doesNotMatch(page, /alsoOff/, 'no "also turn off" choice: the engine always switches AI off');
+  assert.match(page, /stoppedProfiles/);
+  assert.match(page, /abortedCalls/);
+  assert.match(page, /t\('stop\.nowOff'\)/);
+  assert.match(page, /onClick=\{async \(\) => \{ await toggleServer\(true\);/, '"Turn on" right after Stop all AI');
+
+  const connect = read('src', 'renderer', 'components', 'ai', 'AiConnectTab.jsx');
+  assert.match(connect, /\{hasPlaceholder\(entry\.text\) && <p/, 'no "<YOUR_TOKEN>" hint for snippets without it (VS Code prompts for the token)');
+  assert.match(connect, /!\(bridge && bridge\.mcpbPath\) \? `\$\{base\}\.step2NoMcpb`/, 'the .mcpb is only mentioned when the build ships one');
+});
+
 // ---- not available / permissions ---------------------------------------------------------
 
 test('not available: a build without the engine reads as "unavailable", never as a crash', async () => {

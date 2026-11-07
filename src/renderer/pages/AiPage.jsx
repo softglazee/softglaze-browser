@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button.jsx';
 import Switch from '@/components/ui/Switch.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import {
-  AI_TONE, BetaPill, ConfirmDialog, DangerButton, SUBTLE_TEXT, StatusDot, clientLabel, toneSurface, toneText
+  AI_TONE, BetaPill, ConfirmDialog, DangerButton, PrimaryButton, SUBTLE_TEXT, StatusDot, clientLabel, toneSurface, toneText
 } from '@/components/ai/AiShared.jsx';
 import AiConnectTab from '@/components/ai/AiConnectTab.jsx';
 import AiTokensTab from '@/components/ai/AiTokensTab.jsx';
@@ -54,7 +54,7 @@ export default function AiPage() {
   const [connectErr, setConnectErr] = useState('');
   const [toggling, setToggling] = useState(false);
   const [toggleErr, setToggleErr] = useState('');
-  const [stop, setStop] = useState({ open: false, alsoOff: true, busy: false, result: null, error: '' });
+  const [stop, setStop] = useState({ open: false, busy: false, result: null, error: '' });
   const [flow, dispatch] = useReducer(tokenFlowReducer, initialTokenFlow);
 
   const tabParam = params.get('tab');
@@ -172,13 +172,11 @@ export default function AiPage() {
   async function stopAll() {
     setStop((s) => ({ ...s, busy: true, error: '' }));
     try {
+      // Stop all AI also switches SoftGlaze AI off (engine); the banner below offers "Turn on".
       const r = await softglazeApi.ai.stopAll();
       approvals.clearAll();
-      if (stop.alsoOff && status && status.enabled) {
-        try { const s = await softglazeApi.ai.setEnabled(false); if (s && typeof s === 'object') setStatus(s); } catch (e) { /* the stop itself worked */ }
-      }
       await loadStatus();
-      setStop({ open: false, alsoOff: true, busy: false, result: r || {}, error: '' });
+      setStop({ open: false, busy: false, result: r || {}, error: '' });
     } catch (e) {
       setStop((s) => ({ ...s, busy: false, error: errorText(e) }));
     }
@@ -256,16 +254,28 @@ export default function AiPage() {
 
       {toggleErr && <p role="alert" className="mb-4 text-[12.5px]" style={toneText('danger')}>{toggleErr}</p>}
       {stop.result && (
-        <div role="status" className="mb-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-[13px]" style={{ ...toneSurface('success', 10, 30) }}>
-          <span className="inline-flex items-center gap-2 text-foreground">
-            <Check className="h-4 w-4 shrink-0" style={{ color: AI_TONE.success }} />
-            {t('stop.result', {
-              runs: Number(stop.result.stoppedRuns) || 0,
-              sessions: Number(stop.result.revokedSessions) || 0,
-              approvals: Number(stop.result.deniedApprovals) || 0
-            })}
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-[13px]" style={{ ...toneSurface('success', 10, 30) }}>
+          <span className="flex min-w-0 flex-1 items-start gap-2 text-foreground">
+            <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: AI_TONE.success }} />
+            <span className="min-w-0">
+              <span className="block">{t('stop.result', {
+                runs: Number(stop.result.stoppedRuns) || 0,
+                profiles: Number(stop.result.stoppedProfiles) || 0,
+                calls: Number(stop.result.abortedCalls) || 0,
+                sessions: Number(stop.result.revokedSessions) || 0,
+                approvals: Number(stop.result.deniedApprovals) || 0
+              })}</span>
+              {!(status && status.enabled) && <span className="mt-0.5 block font-semibold">{t('stop.nowOff')}</span>}
+            </span>
           </span>
-          <button type="button" className="text-[12px] text-muted-foreground hover:text-foreground" onClick={() => setStop((s) => ({ ...s, result: null }))}>{t('close')}</button>
+          <span className="flex items-center gap-2">
+            {!(status && status.enabled) && (
+              <PrimaryButton size="sm" isLoading={toggling} onClick={async () => { await toggleServer(true); setStop((s) => ({ ...s, result: null })); }}>
+                {t('stop.turnOn')}
+              </PrimaryButton>
+            )}
+            <button type="button" className="text-[12px] text-muted-foreground hover:text-foreground" onClick={() => setStop((s) => ({ ...s, result: null }))}>{t('close')}</button>
+          </span>
         </div>
       )}
 
@@ -369,14 +379,8 @@ export default function AiPage() {
           <li>{t('stop.point1')}</li>
           <li>{t('stop.point2')}</li>
           <li>{t('stop.point3')}</li>
+          <li>{t('stop.point4')}</li>
         </ul>
-        <label className="flex items-start gap-2.5 rounded-lg border border-border bg-background/40 px-3 py-2.5 text-[13px] text-foreground">
-          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--destructive)]" checked={stop.alsoOff} onChange={(e) => setStop((s) => ({ ...s, alsoOff: e.target.checked }))} />
-          <span>
-            <span className="block font-medium">{t('stop.alsoOff')}</span>
-            <span className="block text-[12px] text-muted-foreground">{t('stop.alsoOffHint')}</span>
-          </span>
-        </label>
         {stop.error && <p role="alert" className="text-[12.5px]" style={toneText('danger')}>{t('stop.error', { message: stop.error })}</p>}
       </ConfirmDialog>
     </div>

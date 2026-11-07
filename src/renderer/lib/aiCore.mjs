@@ -340,6 +340,7 @@ function ms(v) {
 export function tokenState(tok, now = Date.now()) {
   if (!tok) return 'active';
   if (tok.revoked) return 'revoked';
+  if (tok.expired === true) return 'expired';
   const exp = ms(tok.expiresAt);
   if (Number.isFinite(exp)) {
     if (exp <= now) return 'expired';
@@ -456,7 +457,8 @@ export function formatKb(bytes) {
 // ---- Activity -------------------------------------------------------------------------------
 
 export const AUDIT_PAGE_SIZE = 50;
-export const OUTCOMES = ['ok', 'denied', 'error'];
+// 'pending': the call returned while its approval was still waiting.
+export const OUTCOMES = ['ok', 'denied', 'error', 'pending'];
 
 export function buildAuditQuery(filters = {}, cursor = null, limit = AUDIT_PAGE_SIZE) {
   const q = { limit };
@@ -505,6 +507,21 @@ export function relativeTime(value, now = Date.now(), lang = 'en') {
     if (abs >= size || unit === 'second') return fmt.format(Math.round(diff / size), unit);
   }
   return '';
+}
+
+// Long tools hand back a run id ("job-..."); the activity row shows it so it can be looked up.
+export function extractRunId(item) {
+  if (!item) return null;
+  if (typeof item.runId === 'string' && item.runId) return item.runId;
+  const m = /\bjob-[A-Za-z0-9][A-Za-z0-9_-]*/.exec(String(item.summary || ''));
+  if (m) return m[0];
+  const a = item.args && typeof item.args === 'object' ? item.args.runId : null;
+  return typeof a === 'string' && /^job-/.test(a) ? a : null;
+}
+
+// The engine leaves "Allow for 1 hour" out for actions that must ask every time.
+export function canAllowHour(approval) {
+  return Boolean(approval) && approval.allowHour !== false;
 }
 
 // How a call got through (engine audit `approval`), in words the activity table can show.

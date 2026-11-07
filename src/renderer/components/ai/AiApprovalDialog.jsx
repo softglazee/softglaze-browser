@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import { AI_TONE, PrimaryButton, clientLabel, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
 import { crossedThreshold, currentApproval, formatCountdown, fractionLeft, secondsLeft, urgency } from '@/lib/aiApprovals.mjs';
-import { prettyArgs } from '@/lib/aiCore.mjs';
+import { canAllowHour, prettyArgs } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
 
 const URGENCY_TONE = { calm: 'info', soon: 'warning', urgent: 'danger' };
@@ -89,9 +89,11 @@ export function DecisionButtons({ approval, busy, armed = true, onDecide, denyRe
   );
   const allows = (
     <>
-      <Button variant="secondary" size={size} disabled={disabled} onClick={() => onDecide('allow-hour')} title={t('approval.allowHourHint', { token: approval.tokenName || approval.clientName || '' })}>
-        {t('approval.allowHour')}
-      </Button>
+      {canAllowHour(approval) && (
+        <Button variant="secondary" size={size} disabled={disabled} onClick={() => onDecide('allow-hour')} title={t('approval.allowHourHint', { token: approval.tokenName || approval.clientName || '' })}>
+          {t('approval.allowHour')}
+        </Button>
+      )}
       <PrimaryButton size={size} disabled={disabled} onClick={() => onDecide('allow-once')} isLoading={busy}>
         {t('approval.allowOnce')}
       </PrimaryButton>

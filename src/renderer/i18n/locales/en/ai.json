@@ -77,14 +77,15 @@
   "stop": {
     "title": "Stop all AI?",
     "body": "Use this if an AI app is doing something you did not expect.",
-    "point1": "Every run an AI app started stops now.",
-    "point2": "Every connected AI app is disconnected.",
+    "point1": "Every run and profile an AI app started stops now.",
+    "point2": "Every connected AI app is disconnected, and calls in progress are cancelled.",
     "point3": "Every request waiting for your answer is denied.",
-    "alsoOff": "Also turn the AI server off",
-    "alsoOffHint": "AI apps cannot reconnect until you turn it on again. Tokens stay valid.",
+    "point4": "SoftGlaze AI is switched off. Tokens stay valid; turn it on again when you are ready.",
     "confirm": "Stop all AI",
     "error": "Could not stop everything: {{message}}",
-    "result": "Done. Runs stopped: {{runs}}. Sessions ended: {{sessions}}. Requests denied: {{approvals}}."
+    "result": "Done. Runs stopped: {{runs}}. Profiles stopped: {{profiles}}. Calls cancelled: {{calls}}. Sessions ended: {{sessions}}. Requests denied: {{approvals}}.",
+    "nowOff": "SoftGlaze AI is off. AI apps cannot connect until you turn it on.",
+    "turnOn": "Turn on"
   },
   "start": {
     "title": "Get started in three steps",
@@ -134,7 +135,8 @@
       "claude-desktop": {
         "title": "Claude Desktop",
         "step1": "Create a token for Claude Desktop with the button below.",
-        "step2": "Easiest: install the SoftGlaze.mcpb file shown below (Settings > Extensions > Advanced settings > Install Extension) and enter your token when asked. Or open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>.",
+        "step2": "Easiest: install the SoftGlaze.mcpb file shown below (Settings > Extensions > Advanced settings > Install Extension) and enter your token when Claude asks. Or open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>.",
+        "step2NoMcpb": "Open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>. It starts the SoftGlaze bridge, because Claude Desktop runs local servers.",
         "step3": "Quit and reopen Claude Desktop. SoftGlaze shows up under the + button below the chat box, in Connectors."
       },
       "claude-code": {
@@ -152,7 +154,7 @@
       "vscode": {
         "title": "VS Code (Copilot)",
         "step1": "Create a token for VS Code with the button below.",
-        "step2": "Add the setup to .vscode/mcp.json in your project (or run MCP: Add Server from the Command Palette), with your token in place of <YOUR_TOKEN>.",
+        "step2": "Add the setup to .vscode/mcp.json in your workspace (or run MCP: Open User Configuration). The first time SoftGlaze starts, VS Code asks for your token and stores it securely, so it never sits in the file.",
         "step3": "Open Copilot Chat and ask it to list your SoftGlaze profiles. Allow the tool when VS Code asks."
       },
       "gemini-cli": {
@@ -441,6 +443,7 @@
       "developer-token": "Developer API token"
     },
     "pageEmpty": "No more entries.",
+    "runId": "Run",
     "pageInfo": "Page {{page}} · {{size}} per page",
     "newer": "Newer",
     "older": "Older"

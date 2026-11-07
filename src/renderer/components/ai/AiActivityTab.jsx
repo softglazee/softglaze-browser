@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import { InlineError, SUBTLE_TEXT, Segmented, TonePill, clientLabel, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { AUDIT_PAGE_SIZE, approvalPath, buildAuditQuery, errorText, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
+import { AUDIT_PAGE_SIZE, approvalPath, buildAuditQuery, errorText, extractRunId, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 
 const OUTCOME_TONE = { ok: 'success', denied: 'warning', error: 'danger', pending: 'info' };
@@ -88,7 +88,8 @@ export default function AiActivityTab({ lang, clients }) {
             { value: 'all', label: t('activity.all') },
             { value: 'ok', label: t('activity.outcomes.ok') },
             { value: 'denied', label: t('activity.outcomes.denied') },
-            { value: 'error', label: t('activity.outcomes.error') }
+            { value: 'error', label: t('activity.outcomes.error') },
+            { value: 'pending', label: t('activity.outcomes.pending') }
           ]}
         />
         <label className={`flex items-center gap-2 text-[12.5px] ${SUBTLE_TEXT}`}>
@@ -149,6 +150,11 @@ export default function AiActivityTab({ lang, clients }) {
                       <td className="px-4 py-2.5"><code className="block truncate font-mono text-[12px] text-foreground" title={it.tool || ''}>{it.tool || '-'}</code></td>
                       <td className="px-4 py-2.5 text-[12.5px] text-foreground">
                         <span className="line-clamp-2 break-words" title={it.summary || ''}>{it.summary || ''}</span>
+                        {extractRunId(it) && (
+                          <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
+                            {t('activity.runId')} <code className="select-all font-mono text-foreground" title={extractRunId(it)}>{extractRunId(it)}</code>
+                          </span>
+                        )}
                         {it.outcome === 'error' && it.error && <span className="mt-0.5 block truncate text-[11.5px]" style={toneText('danger')} title={String(it.error)}>{String(it.error)}</span>}
                       </td>
                       <td className="px-4 py-2.5">

@@ -77,14 +77,15 @@
   "stop": {
     "title": "¿Detener toda la IA?",
     "body": "Úsalo si una app de IA está haciendo algo que no esperabas.",
-    "point1": "Se detiene ahora cada ejecución que inició una app de IA.",
-    "point2": "Se desconecta cada app de IA conectada.",
+    "point1": "Se detiene ahora cada ejecución y cada perfil que inició una app de IA.",
+    "point2": "Se desconecta cada app de IA conectada y se cancelan las llamadas en curso.",
     "point3": "Se rechaza cada solicitud que espera tu respuesta.",
-    "alsoOff": "Apagar también el servidor de IA",
-    "alsoOffHint": "Las apps de IA no podrán volver a conectarse hasta que lo enciendas. Los tokens siguen siendo válidos.",
+    "point4": "SoftGlaze AI se apaga. Los tokens siguen siendo válidos; vuelve a encenderlo cuando quieras.",
     "confirm": "Detener toda la IA",
     "error": "No se pudo detener todo: {{message}}",
-    "result": "Hecho. Ejecuciones detenidas: {{runs}}. Sesiones cerradas: {{sessions}}. Solicitudes rechazadas: {{approvals}}."
+    "result": "Hecho. Ejecuciones detenidas: {{runs}}. Perfiles detenidos: {{profiles}}. Llamadas canceladas: {{calls}}. Sesiones cerradas: {{sessions}}. Solicitudes rechazadas: {{approvals}}.",
+    "nowOff": "SoftGlaze AI está apagado. Las apps de IA no pueden conectarse hasta que lo enciendas.",
+    "turnOn": "Encender"
   },
   "start": {
     "title": "Empieza en tres pasos",
@@ -134,7 +135,8 @@
       "claude-desktop": {
         "title": "Claude Desktop",
         "step1": "Crea un token para Claude Desktop con el botón de abajo.",
-        "step2": "Lo más fácil: instala el archivo SoftGlaze.mcpb que aparece abajo (Settings > Extensions > Advanced settings > Install Extension) e introduce tu token cuando te lo pida. O abre Settings > Developer > Edit Config y pega la configuración en claude_desktop_config.json, con tu token en lugar de <YOUR_TOKEN>.",
+        "step2": "Lo más fácil: instala el archivo SoftGlaze.mcpb que aparece abajo (Settings > Extensions > Advanced settings > Install Extension) e introduce tu token cuando Claude te lo pida. O abre Settings > Developer > Edit Config y pega la configuración en claude_desktop_config.json, con tu token en lugar de <YOUR_TOKEN>.",
+        "step2NoMcpb": "Abre Settings > Developer > Edit Config y pega la configuración en claude_desktop_config.json, con tu token en lugar de <YOUR_TOKEN>. Inicia el puente de SoftGlaze, porque Claude Desktop ejecuta servidores locales.",
         "step3": "Cierra y vuelve a abrir Claude Desktop. SoftGlaze aparece en el botón + debajo del chat, en Connectors."
       },
       "claude-code": {
@@ -152,7 +154,7 @@
       "vscode": {
         "title": "VS Code (Copilot)",
         "step1": "Crea un token para VS Code con el botón de abajo.",
-        "step2": "Añade la configuración a .vscode/mcp.json en tu proyecto (o ejecuta MCP: Add Server desde la paleta de comandos), con tu token en lugar de <YOUR_TOKEN>.",
+        "step2": "Añade la configuración a .vscode/mcp.json en tu espacio de trabajo (o ejecuta MCP: Open User Configuration). La primera vez que SoftGlaze se inicia, VS Code te pide el token y lo guarda de forma segura, así que nunca queda en el archivo.",
         "step3": "Abre Copilot Chat y pídele que liste tus perfiles de SoftGlaze. Permite la herramienta cuando VS Code te lo pida."
       },
       "gemini-cli": {
@@ -441,6 +443,7 @@
       "developer-token": "Token de la API para desarrolladores"
     },
     "pageEmpty": "No hay más entradas.",
+    "runId": "Ejecución",
     "pageInfo": "Página {{page}} · {{size}} por página",
     "newer": "Más recientes",
     "older": "Más antiguas"
