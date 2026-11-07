@@ -47,7 +47,7 @@ const ALLOWED_DEPS = Object.freeze([
   'getMacros', 'saveMacro', 'normalizeMacroSteps', 'runParallelMacro', 'getParallelRunStatus', 'stopParallelRun',
   'startWarmer', 'stopWarmer', 'listActiveWarmers',
   'captchaScores', 'prelaunchCheck', 'analyzeProfileLeaks',
-  'runMacro', 'humanType', 'getAutomationPage'
+  'runMacro', 'humanType', 'getAutomationPage', 'reapplyScreenMetrics'
 ]);
 const FORBIDDEN_DEP = /cookie|totp|2fa|twoFactor|delete|purge|trash|password|vault|persona|billing|invoice|payment|redeem|(create|update|switch|remove|set)Member|role|setGlobal|setSetting|writeSetting|restore|backup|export/i;
 

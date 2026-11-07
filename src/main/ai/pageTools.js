@@ -309,9 +309,23 @@ const PAGE_TOOLS = [
     input: { profileId: id(), fullPage: z.boolean().optional() },
     summarize: (a) => `Screenshot profile #${a.profileId}`,
     async handler(a, ctx) {
-      const { page } = await livePage(ctx, a.profileId);
+      const { page, screenMetrics } = await livePage(ctx, a.profileId);
       assertPageAllowed(ctx, page);
-      let data = await page.screenshot({ type: 'jpeg', quality: 60, fullPage: Boolean(a.fullPage), encoding: 'base64' });
+      const fullPage = Boolean(a.fullPage);
+      // A full-page capture resets the tab's device metrics, which drops the profile's screen from the
+      // CSS media queries (device-width/height) until the next page. Put it back right after the
+      // capture, also when the capture fails (reapplyScreenMetrics in browserEngine).
+      const keepScreen = async () => {
+        if (fullPage && screenMetrics && typeof ctx.deps.reapplyScreenMetrics === 'function') {
+          await ctx.deps.reapplyScreenMetrics(page, screenMetrics).catch(() => false);
+        }
+      };
+      let data;
+      try {
+        data = await page.screenshot({ type: 'jpeg', quality: 60, fullPage, encoding: 'base64' });
+      } finally {
+        await keepScreen();
+      }
       if (String(data).length > 2500000) data = await page.screenshot({ type: 'jpeg', quality: 35, fullPage: false, encoding: 'base64' });
       const state = await pageState(page);
       return {

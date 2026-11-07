@@ -37,7 +37,8 @@ const {
   setSessionEventSink,
   retryBlockedPage,
   isRecordingMacro,
-  getAutomationPage
+  getAutomationPage,
+  reapplyScreenMetrics
 } = require('./browserEngine');
 const blockDetect = require('./blockDetect');
 const browserDownloader = require('./browserDownloader');
@@ -857,7 +858,9 @@ function extractFingerprintData(input) {
     osVersion: input.osVersion,
     deviceClass: input.deviceClass === 'mobile' ? 'mobile' : (input.deviceClass === 'desktop' ? 'desktop' : undefined),
     userAgent: input.userAgent || 'Auto',
-    startupUrls: input.startupUrls,
+    // Stored as newline-joined text. The editor sends that text as typed (kept as is); a list from an
+    // API caller is joined the same way, each entry whole (an array here was a database error).
+    startupUrls: Array.isArray(input.startupUrls) ? normalizeStartupUrls(input.startupUrls) : input.startupUrls,
     platformAccounts: input.platformAccounts ? JSON.stringify(input.platformAccounts) : null,
     // 2FA seed: undefined leaves it unchanged, '' clears it, otherwise the trimmed base32 secret is
     // sealed at rest and decrypted only to mint a live token.
@@ -13429,7 +13432,8 @@ function buildAiToolDeps() {
     analyzeProfileLeaks,
     runMacro,
     humanType,
-    getAutomationPage
+    getAutomationPage,
+    reapplyScreenMetrics
   };
 }
 

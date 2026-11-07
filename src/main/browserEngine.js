@@ -2842,10 +2842,17 @@ function attachFingerprintToNewTargets(session, conn, ctx = {}) {
     fpLate = {},
     injectSource = '',
     onInjectFailed = null,
+    // Called with a tab's targetId once its setup is in place, just before it is resumed. The
+    // document hold (holdNewTabDocuments) releases that tab's first page on it.
+    onPrepared = null,
     // A tab waits at most this long for the setup replies before it is resumed anyway.
     resumeAfterMs = 1500,
     callTimeoutMs = 4000
   } = ctx;
+  const prepared = (info) => {
+    if (info.type !== 'page' || typeof onPrepared !== 'function') return;
+    try { onPrepared(info.targetId); } catch (e) { /* the hold times out on its own */ }
+  };
 
   const onAttached = async (ev) => {
     const info = (ev && ev.targetInfo) || {};
@@ -2921,10 +2928,12 @@ function attachFingerprintToNewTargets(session, conn, ctx = {}) {
         const again = await beforeDeadline(sendAll(retry));
         if (again) retry.forEach((s, j) => { errors[steps.indexOf(s)] = again[j]; });
       }
+      prepared(info);
       await resume();
       if (!errors.length) errors = await replies; // replies that came after the cap, for the report
     } else {
       const replies = sendAll(steps);
+      prepared(info); // a DevTools window: nothing to set up
       await resume();
       errors = await replies;
     }
@@ -2940,6 +2949,85 @@ function attachFingerprintToNewTargets(session, conn, ctx = {}) {
 
   if (session && typeof session.on === 'function') session.on('Target.attachedToTarget', onAttached);
   return onAttached;
+}
+
+// Tabs whose setup is in place (targetId of the tab = frameId of its main frame), and a wait for one.
+function createPreparedTargets() {
+  const ready = new Set();
+  const waiters = new Map();
+  return {
+    mark(id) {
+      if (!id) return;
+      const key = String(id);
+      ready.add(key);
+      const list = waiters.get(key);
+      if (list) { waiters.delete(key); list.forEach((fn) => fn(true)); }
+    },
+    has(id) { return Boolean(id) && ready.has(String(id)); },
+    forget(id) { if (id) ready.delete(String(id)); },
+    // Resolves true once the tab is marked, or false after ms.
+    wait(id, ms) {
+      const key = String(id);
+      if (ready.has(key)) return Promise.resolve(true);
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = (v) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          const list = waiters.get(key);
+          if (list) { const i = list.indexOf(finish); if (i >= 0) list.splice(i, 1); if (!list.length) waiters.delete(key); }
+          resolve(v);
+        };
+        const timer = setTimeout(() => finish(false), ms);
+        const list = waiters.get(key) || [];
+        list.push(finish);
+        waiters.set(key, list);
+      });
+    }
+  };
+}
+
+// Only page loads (main frames and frames), held before the request is sent.
+const DOCUMENT_HOLD_PATTERNS = Object.freeze([{ urlPattern: '*', resourceType: 'Document', requestStage: 'Request' }]);
+
+// Tabs opened with Ctrl+click, middle click, Shift+click (new window) or "Open link in new tab" are
+// created by the browser together with their first navigation. Chrome loads that first page before the
+// auto-attach reaches the new tab, so waitForDebuggerOnStart holds nothing and
+// addScriptToEvaluateOnNewDocument only reaches the tab's second page (checked on Chrome 156: the tab's
+// frame is already on the link's URL when it is attached, and its inline scripts have run). popups,
+// target=_blank and "+" tabs start on an empty page, so they never had this gap.
+// This holds a tab's own page request (frameId = targetId of a page target) until attachFingerprintToNewTargets
+// has set the tab up, then lets it go, so the page script runs before the page's own scripts. Prepared
+// tabs and frames are let through at once; nothing is ever held longer than waitMs, and every request
+// is continued, whatever happens.
+function holdNewTabDocuments(session, preparedTargets, { waitMs = 1500, onHeld = null } = {}) {
+  const NOT_TAB_TYPES = new Set(['iframe', 'worker', 'shared_worker', 'service_worker', 'other']);
+  const notTabs = new Set(); // out-of-process frames seen, so their next loads skip the lookup
+  const isUnpreparedTab = async (frameId) => {
+    if (!frameId || preparedTargets.has(frameId) || notTabs.has(frameId)) return false;
+    let type = '';
+    try {
+      const r = await session.send('Target.getTargetInfo', { targetId: frameId });
+      type = r && r.targetInfo ? String(r.targetInfo.type || '') : '';
+    } catch (e) { return false; } // not a target: a frame inside a tab
+    if (NOT_TAB_TYPES.has(type)) { if (notTabs.size > 5000) notTabs.clear(); notTabs.add(frameId); return false; }
+    return type === 'page' && !preparedTargets.has(frameId);
+  };
+  const onPaused = async (ev) => {
+    const requestId = ev && ev.requestId;
+    try {
+      const frameId = ev && ev.frameId;
+      if (await isUnpreparedTab(frameId)) {
+        const started = Date.now();
+        const ready = await preparedTargets.wait(frameId, waitMs);
+        if (typeof onHeld === 'function') { try { onHeld({ frameId, url: ev.request && ev.request.url, ms: Date.now() - started, ready }); } catch (e) { /* logging only */ } }
+      }
+    } catch (e) { /* never keep a page waiting on our own error */ }
+    if (requestId) await session.send('Fetch.continueRequest', { requestId }).catch(() => {});
+  };
+  if (session && typeof session.on === 'function') session.on('Fetch.requestPaused', onPaused);
+  return { onPaused, enable: () => session.send('Fetch.enable', { patterns: DOCUMENT_HOLD_PATTERNS.map((p) => ({ ...p })) }) };
 }
 
 // Writes the MAIN-world content-script extension into the profile; returns its --load-extension path.
@@ -3403,15 +3491,29 @@ async function launchProfileSessionNow(options = {}) {
   let cdpAutoAttach = false;
   try {
     const rootCdp = await browser.target().createCDPSession();
+    const preparedTabs = createPreparedTargets();
     attachFingerprintToNewTargets(rootCdp, rootCdp.connection(), {
       fpConfig,
       fpLate,
       injectSource: fpInjectSource,
+      onPrepared: (targetId) => preparedTabs.mark(targetId),
       onInjectFailed: (info, methods) => console.error('[SG][fingerprint] new-tab injection FAILED (' + methods.join(', ') + ') - this tab may expose the REAL GPU/RAM/WebRTC. profile',
         profileId, title || '', '- target', info.url || info.targetId || info.type)
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
     cdpAutoAttach = true;
+    // Ctrl+click / middle-click / Shift+click / "Open link in new tab": hold the new tab's first page
+    // until the handler above has set the tab up (see holdNewTabDocuments). Optional: without it those
+    // tabs get the page script from their second page on, as before.
+    try {
+      rootCdp.on('Target.detachedFromTarget', (ev) => preparedTabs.forget(ev && ev.targetId));
+      const hold = holdNewTabDocuments(rootCdp, preparedTabs, {
+        onHeld: ({ url, ms, ready }) => { if (!ready) console.warn('[SG][fingerprint] a new tab was not set up within', ms, 'ms; its first page loads anyway:', String(url || '').slice(0, 120)); }
+      });
+      await hold.enable();
+    } catch (e) {
+      console.warn('[SG][fingerprint] new-tab page hold unavailable:', e && e.message ? e.message : e);
+    }
   } catch (e) {
     // Fall back to per-page evaluateOnNewDocument in applyToPage and the in-page Worker wrapper.
     fpConfig.dedicatedWorkersViaCdp = false;
@@ -3702,6 +3804,9 @@ async function launchProfileSessionNow(options = {}) {
     geoWarning,
     socksRelay, // local auth relay (or null), closed when the session ends
     openTab: hOpenTab, // opens a page in a new tab with proxy auth (retryBlockedPage)
+    // The profile's screen (and Android viewport) override, or null: a full-page screenshot resets
+    // device metrics, and the AI page tools put this back (reapplyScreenMetrics).
+    screenMetrics: fpLate.deviceMetrics || null,
     createdAt: new Date()
   });
   sessionRegistered = true;
@@ -4832,7 +4937,23 @@ async function getAutomationPage(sessionId) {
     if (!next) return null;
     session.page = next;
   }
-  return { page: session.page, browser: session.browser, wsEndpoint: session.wsEndpoint || null };
+  return { page: session.page, browser: session.browser, wsEndpoint: session.wsEndpoint || null, screenMetrics: session.screenMetrics || null };
+}
+
+// Puts the profile's screen override back after a full-page screenshot. Chrome captures beyond the
+// viewport by swapping the device metrics of the session that asks (puppeteer's own session of the tab)
+// and then restores that session's own state, which has no screen: the CSS device-width/height fall
+// back to the real monitor while window.screen keeps the profile's. Sending the override again on the
+// session that first set it does nothing (Chrome skips unchanged values) and a temporary session would
+// clear it when it detaches, so it goes on the screenshot's own session, where it stays: later
+// full-page screenshots then return to it. Width, height and DPR 0 leave the window and viewport alone.
+// Checked on Chrome 156. Returns true when sent.
+async function reapplyScreenMetrics(page, metrics) {
+  if (!page || !metrics) return false;
+  let client = null;
+  try { client = typeof page._client === 'function' ? page._client() : null; } catch (e) { client = null; }
+  if (!client || typeof client.send !== 'function') return false;
+  try { await client.send('Emulation.setDeviceMetricsOverride', metrics); return true; } catch (e) { return false; }
 }
 
 function listActiveSessions() {
@@ -4888,6 +5009,9 @@ module.exports = {
   buildFingerprintConfig,
   privacyRequestHeaders,
   attachFingerprintToNewTargets,
+  createPreparedTargets,
+  holdNewTabDocuments,
+  DOCUMENT_HOLD_PATTERNS,
   macroRecorderClientScript,
   syncCaptureClientScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
@@ -4913,6 +5037,7 @@ module.exports = {
   retryBlockedPage,
   isRecordingMacro,
   getAutomationPage,
+  reapplyScreenMetrics,
   runCookieRobot,
   warmInteract,
   runMacro,
