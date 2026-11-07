@@ -240,17 +240,51 @@ model Macro {
   @@index([ownerMemberId])
 }
 
-// --- Softglaze Pro: Local Developer API tokens ---
-// Only the SHA-256 hash of a token is stored; the plaintext `sg_…` value is
-// shown to the user exactly once at generation time and never persisted.
+// --- Softglaze Pro: Local Developer API and SoftGlaze AI tokens ---
+// Only the SHA-256 hash of a token is stored; the plaintext value (`sg_…` for the Developer API,
+// `sgai_…` for SoftGlaze AI) is shown to the user exactly once at creation and never persisted.
+// Every token acts as one member, with that member's permissions, limited further by its scope,
+// its optional allowed groups and its expiry (see src/main/ai/aiTokens.js).
 model ApiToken {
-  id         Int       @id @default(autoincrement())
-  name       String
-  tokenHash  String    @unique
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
+  id              Int       @id @default(autoincrement())
+  name            String
+  tokenHash       String    @unique
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  kind            String    @default("api") // api (Developer API, sg_) | ai (SoftGlaze AI, sgai_)
+  memberId        Int? // member the token acts as; null = the workspace owner (older tokens, single-user mode)
+  scope           String    @default("read") // read | operate | full
+  groupIdsJson    String? // JSON array of group ids the token is limited to; null = no group limit
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  lastClientName  String? // MCP clientInfo name of the last client that used it
+  createdById     Int? // member who created it
+  preApprovedJson String? // automation tokens: { tools, maxProfilesPerCall, maxCallsPerHour }
 
   @@index([tokenHash])
+  @@index([memberId])
+}
+
+// --- SoftGlaze AI audit trail: one row per tool call from an AI client or Local API token ---
+// Arguments are stored redacted (never secrets, typed text or page content).
+model AiAuditLog {
+  id         Int      @id @default(autoincrement())
+  at         DateTime @default(now())
+  tokenId    Int?
+  tokenName  String?
+  memberId   Int?
+  clientName String?
+  transport  String? // mcp | sse | rest
+  tool       String
+  summary    String?
+  argsJson   String?
+  outcome    String // ok | denied | error | pending
+  approval   String? // none | asked | allow-once | allow-hour | hour-grant | pre-approved | deny | timeout
+  error      String?
+  durationMs Int      @default(0)
+
+  @@index([at])
+  @@index([tokenId, at])
 }
 
 // --- Team Extensions: Chrome Web Store extensions downloaded as raw .crx,
