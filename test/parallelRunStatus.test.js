@@ -42,7 +42,7 @@ test('main tracks parallel runs, answers the status call, and refuses overlappin
   const h = fnBody('runParallelMacroHandler');
   assert.match(h, /const busy = profileIds\.filter\(\(pid\) => profilesInParallelRun\(\)\.has\(pid\)\);/);
   assert.match(h, /RUN_IN_PROGRESS/);
-  assert.match(h, /parallelRuns\.set\(runId, \{ runId, ownerMemberId: currentMemberId, profileIds, startedAt: Date\.now\(\), done: false, summary: null \}\);/);
+  assert.match(h, /parallelRuns\.set\(runId, \{ runId, ownerMemberId: actingMemberId\(\), profileIds, startedAt: Date\.now\(\), done: false, summary: null, control \}\);/);
   assert.match(h, /finally \{[\s\S]*?finishParallelRun\(runId, summary \|\| /);
   const st = fnBody('getParallelRunStatus');
   assert.match(st, /await requirePermission\('automation\.run'\);/);

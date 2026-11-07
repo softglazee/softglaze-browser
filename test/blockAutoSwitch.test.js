@@ -219,8 +219,8 @@ test('the switch reads the setting, the loop guard and the automation guard', ()
   for (const src of ['apiDrivenProfiles', 'profilesInParallelRun()', 'macroRuns.values()', 'warmerRuns.values()', 'isRecordingMacro(']) {
     assert.ok(busy.includes(src), `busy check covers ${src}`);
   }
-  assert.match(IPC, /const control = \{ paused: false, aborted: false, profileId, ownerMemberId: currentMemberId \};/, 'macro runs record their profile');
-  assert.match(IPC, /apiDrivenProfiles\.add\(Number\(id\)\)/, 'Local API launches are tracked');
+  assert.match(IPC, /const control = \{ paused: false, aborted: false, profileId, ownerMemberId: actingMemberId\(\) \};/, 'macro runs record their profile');
+  assert.match(IPC, /apiDrivenProfiles\.add\(Number\(payload\.id\)\)/, 'Local API and AI launches are tracked');
 });
 
 test('a swap uses the CAPTCHA score\'s spare-proxy choice and permission checks', () => {

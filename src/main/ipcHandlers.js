@@ -36,12 +36,16 @@ const {
   listSessionPids,
   setSessionEventSink,
   retryBlockedPage,
-  isRecordingMacro
+  isRecordingMacro,
+  getAutomationPage
 } = require('./browserEngine');
 const blockDetect = require('./blockDetect');
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
+const aiActor = require('./ai/actor');
+const ai = require('./ai');
+const { registerAiIpc } = require('./ai/ipc');
 const autofillBridge = require('./autofillBridge');
 const { siteKeyOf } = require('./siteKey');
 const updater = require('./updater');
@@ -79,7 +83,7 @@ const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
-const { maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
+const { redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, maskProxySellerKey, proxySellerListItems, proxySellerListGeo, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
@@ -391,6 +395,12 @@ let currentMemberId = null;
 // Cached by getActiveMember() so the synchronous proxy serializer can decide redaction.
 // Single-user mode (no member) counts as owner, so full reveal.
 let currentMemberCanRevealProxy = true;
+// The member a call acts as: an AI or Local API token's member inside aiActor.run() (see
+// src/main/ai/actor.js), otherwise the member signed in to the window.
+function actingMemberId() {
+  const a = aiActor.current();
+  return a ? a.memberId : currentMemberId;
+}
 let vaultLocked = false;
 // How the workspace was last unlocked: 'vault' (Owner password), 'member', 'super', 'none' (no vault)
 // or null (locked). Only 'vault' or 'none' lets the member picker open a password-less identity such
@@ -469,17 +479,17 @@ function parseIdArray(value) {
 }
 
 async function logActivity(db, profileId, action, detail = null) {
-  try { await db.activityLog.create({ data: { profileId, action, detail, memberId: currentMemberId } }); } catch (e) { /* non-fatal */ }
+  try { await db.activityLog.create({ data: { profileId, action, detail: aiActor.tagDetail(detail), memberId: actingMemberId() } }); } catch (e) { /* non-fatal */ }
 }
 
 // Audit-log entry for security/team events with no profile, stored under profileId 0 (shown as
 // System). Object details are stored as compact JSON. Never throws, so logging cannot break the action.
 async function logAudit(action, opts = {}) {
   try {
-    const raw = opts && opts.detail;
+    const raw = aiActor.tagDetail(opts && opts.detail);
     const detail = (raw && typeof raw === 'object') ? JSON.stringify(raw) : (raw || null);
     await getPrisma().activityLog.create({
-      data: { profileId: (opts && opts.profileId) || 0, action, detail, memberId: currentMemberId }
+      data: { profileId: (opts && opts.profileId) || 0, action, detail, memberId: actingMemberId() }
     });
   } catch (e) { /* non-fatal */ }
 }
@@ -1447,7 +1457,7 @@ async function harvestFreeProxiesHandler(payload, event) {
   const exclude = new Set(have.map(freeProxyKey));
 
   const controller = new AbortController();
-  freeHarvestRun = { controller, ownerMemberId: currentMemberId };
+  freeHarvestRun = { controller, ownerMemberId: actingMemberId() };
   const runId = `free-${Date.now()}`;
   const sender = event && event.sender ? event.sender : null;
   let lastSent = 0;
@@ -6442,7 +6452,7 @@ function assertProfileLaunchable(profileId, member) {
   reconcileProfileLocks();
   const existing = profileLocks.get(Number(profileId));
   const live = new Set(listAllSessions().map((s) => String(s.sessionId)));
-  const requesterId = (member && member.id != null) ? member.id : currentMemberId;
+  const requesterId = (member && member.id != null) ? member.id : actingMemberId();
   if (teamPolicy.lockBlocks(existing, requesterId, live)) {
     const when = existing.at ? new Date(existing.at).toLocaleString() : 'now';
     const e = new Error(`This profile is in use by ${existing.memberName || 'another member'} (since ${when}). Ask them to close it first.`);
@@ -6453,7 +6463,7 @@ function assertProfileLaunchable(profileId, member) {
 
 function acquireProfileLock(profileId, sessionId, member) {
   profileLocks.set(Number(profileId), {
-    memberId: (member && member.id != null) ? member.id : currentMemberId,
+    memberId: (member && member.id != null) ? member.id : actingMemberId(),
     memberName: (member && member.name) || 'You',
     sessionId: String(sessionId),
     at: Date.now()
@@ -6464,7 +6474,7 @@ function acquireProfileLock(profileId, sessionId, member) {
 // on failure. releaseReservedLock removes only this reservation object, never another launch's lock.
 function reserveProfileLock(profileId, member) {
   const reservation = {
-    memberId: (member && member.id != null) ? member.id : currentMemberId,
+    memberId: (member && member.id != null) ? member.id : actingMemberId(),
     memberName: (member && member.name) || 'You',
     sessionId: PENDING_LOCK,
     at: Date.now()
@@ -6716,7 +6726,10 @@ function handleSessionEvent(evt) {
   const pid = (evt.profileId != null) ? Number(evt.profileId) : (Number.isFinite(Number(evt.sessionId)) ? Number(evt.sessionId) : null);
   if (evt.type === 'launched') { markSessionLaunched(pid, evt.engine).catch(() => {}); return; }
   if (evt.type === 'blocked') { onSessionBlocked(evt).catch(() => {}); return; }
-  if (pid != null) apiDrivenProfiles.delete(pid); // closed or crashed: no script drives it any more
+  // A script or AI app that drives a profile over its DevTools endpoint can close the browser
+  // itself; that ending is a close, not a crash (no crash toast, no auto-restart).
+  if (evt.type === 'crashed' && pid != null && apiDrivenProfiles.has(pid)) evt = { ...evt, type: 'closed', reason: 'api-client' };
+  if (pid != null) { apiDrivenProfiles.delete(pid); ai.onProfileClosed(pid); } // closed or crashed: no script drives it any more
   if (evt.type === 'closed') {
     if (evt.reason === 'shutdown') return; // app quitting - leave the row 'running' so it can be restored next launch
     markSessionClosed(pid).catch(() => {});
@@ -8720,18 +8733,31 @@ async function assertWithinLimit(kind) {
 
 // The id to stamp onto member-owned resources (null for super admin / no member).
 function ownerStampId() {
-  return (currentMemberId != null && currentMemberId >= 0) ? currentMemberId : null;
+  const id = actingMemberId();
+  return (id != null && id >= 0) ? id : null;
 }
 
 async function getActiveMember() {
-  if (currentMemberId == null) { currentMemberCanRevealProxy = true; return null; } // single-user == owner
-  if (permissions.isSuperAdminId(currentMemberId)) { currentMemberCanRevealProxy = true; return { ...permissions.SUPER_ADMIN }; }
+  // Inside an AI or Local API call the token's member acts, and the window's cached redaction
+  // flag is left alone. A token's member that cannot be read fails closed instead of reading as
+  // single-user mode.
+  const viaToken = aiActor.current() != null;
+  const id = actingMemberId();
+  if (id == null) { if (!viaToken) currentMemberCanRevealProxy = true; return null; } // single-user == owner
+  if (permissions.isSuperAdminId(id)) { if (!viaToken) currentMemberCanRevealProxy = true; return { ...permissions.SUPER_ADMIN }; }
   try {
-    const m = await getPrisma().member.findUnique({ where: { id: currentMemberId } });
+    const m = await getPrisma().member.findUnique({ where: { id } });
+    if (viaToken) {
+      if (!m) { const e = new Error('The member this token acts as no longer exists.'); e.code = 'FORBIDDEN'; throw e; }
+      return m;
+    }
     // Refresh the cached redaction capability (rank baseline + any per-member revoke).
     currentMemberCanRevealProxy = m ? (permissions.effectivePermissions(m).actions['proxies.reveal'] !== false) : true;
     return m;
-  } catch (e) { return null; }
+  } catch (e) {
+    if (viaToken) throw e;
+    return null;
+  }
 }
 
 // In single-user mode (no active member) everything is allowed so the app keeps working
@@ -9671,6 +9697,7 @@ async function afterDbReady() {
   try { await seedStarters(); } catch (e) { /* best-effort */ }
   // First-run browser fleet - fire-and-forget so the window opens immediately.
   maybeSeedBrowsers().catch(() => {});
+  try { await ai.load(); } catch (e) { /* AI stays off */ }
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
   // Licensing backend (when a tenant config is baked): refresh the signed lease on
   // startup + every 6h. Best-effort - offline keeps running on the cached lease.
@@ -12282,7 +12309,7 @@ async function runMacroOnProfile(payload, event) {
 
   const { sessionId, launched } = await ensureProfileSession(profileId);
   const runId = `macro-${Date.now()}`;
-  const control = { paused: false, aborted: false, profileId, ownerMemberId: currentMemberId };
+  const control = { paused: false, aborted: false, profileId, ownerMemberId: actingMemberId() };
   macroRuns.set(runId, control);
 
   // Live progress stream (mirrors the warmer-progress pattern). The scheduler runs
@@ -12466,7 +12493,7 @@ async function setMacroSchedule(payload) {
   if (existing && existing.ownerMemberId != null) await assertCanControlRun(existing.ownerMemberId);
   if (macroId) await loadAccessibleMacro(macroId);
   for (const pid of profileIds) await assertCanAccessProfile(pid);
-  const cfg = { enabled, macroId, everyMinutes, profileIds, ownerMemberId: currentMemberId };
+  const cfg = { enabled, macroId, everyMinutes, profileIds, ownerMemberId: actingMemberId() };
   await writeSetting('macroSchedule', cfg);
   if (enabled) startMacroScheduler(everyMinutes); else stopMacroScheduler();
   return { ...cfg, running: Boolean(macroSchedulerTimer) };
@@ -12551,7 +12578,10 @@ async function runParallelMacroHandler(payload, event) {
   }
 
   const runId = `par-${Date.now()}`;
-  parallelRuns.set(runId, { runId, ownerMemberId: currentMemberId, profileIds, startedAt: Date.now(), done: false, summary: null });
+  // control.aborted stops each profile's macro between steps and keeps queued profiles from
+  // launching (stopParallelRun; used by SoftGlaze AI's stop_run and Stop all AI).
+  const control = { paused: false, aborted: false };
+  parallelRuns.set(runId, { runId, ownerMemberId: actingMemberId(), profileIds, startedAt: Date.now(), done: false, summary: null, control });
 
   // Bridge this run's sanitized relay frames to the renderer: one listener filtered by runId that
   // removes itself on the run-level 'done' frame (finally is the backstop). relay.emitFrame already
@@ -12566,8 +12596,11 @@ async function runParallelMacroHandler(payload, event) {
 
   const deps = {
     isOpen: (pid) => listActiveSessions().some((s) => String(s.sessionId) === String(pid)),
-    launch: (pid) => launchProfileById(pid, 'about:blank'),
-    runMacro: (sid, s, opts) => runMacro(sid, s, opts),
+    launch: (pid) => {
+      if (control.aborted) throw new Error('Run stopped.');
+      return launchProfileById(pid, 'about:blank');
+    },
+    runMacro: (sid, s, opts) => runMacro(sid, s, { ...opts, control }),
     close: (sid) => closeProfileSession(String(sid)),
     emit: (key, type, p) => relay.emitFrame(key, type, p)
   };
@@ -12626,6 +12659,18 @@ function finishParallelRun(runId, summary) {
   r.finishedAt = Date.now();
   // Drop old finished entries so the map cannot grow without bound.
   for (const [id, x] of parallelRuns) if (x.done && Date.now() - x.finishedAt > PARALLEL_DONE_KEEP_MS) parallelRuns.delete(id);
+}
+
+// Stops a parallel run: the current step of each profile finishes, nothing after it runs, and
+// profiles not started yet are skipped. Only whoever may control the run can stop it.
+async function stopParallelRun(payload) {
+  await requirePermission('automation.run');
+  const input = requireObject(payload);
+  const r = parallelRuns.get(String(input.runId || ''));
+  if (!r || r.done) return { stopped: false };
+  await assertCanControlRun(r.ownerMemberId);
+  if (r.control) { r.control.aborted = true; r.control.paused = false; }
+  return { stopped: true };
 }
 
 // Is this parallel run still going? The panel polls this while it shows "Running", so
@@ -12771,7 +12816,7 @@ async function startWarmer(payload, event) {
   const run = await beginWarmerRun({
     ids, sites, opts, concurrency,
     push: (frame) => { try { event.sender.send(CHANNELS.AUTOMATION_WARMER_PROGRESS, frame); } catch (e) { /* renderer gone */ } },
-    ownerMemberId: currentMemberId // who may stop / force-close it (see stopWarmer)
+    ownerMemberId: actingMemberId() // who may stop / force-close it (see stopWarmer)
   });
   return { started: true, runId: run.id, profileIds: ids, sites: sites.length, loop: opts.loop, concurrency };
 }
@@ -13053,7 +13098,7 @@ async function setWarmAutopilot(payload) {
   const input = requireObject(payload);
   const existing = await readSetting('warmAutopilot', null);
   if (existing) await assertCanChangeWarmAutopilot(existing.ownerMemberId);
-  const cfg = { ...warmAutopilot.normalizeConfig(input), ownerMemberId: currentMemberId };
+  const cfg = { ...warmAutopilot.normalizeConfig(input), ownerMemberId: actingMemberId() };
   if (warmAutopilot.configProblem(cfg)) throw new Error('Choose a group for the autopilot to warm.');
   // Groups belong to the whole workspace (the group list is not scoped per member), so any existing
   // group is one the member can see; the profiles in it are still checked one by one on each tick.
@@ -13100,7 +13145,7 @@ function serializeApiToken(t) {
 
 async function listApiTokens() {
   await requireOwnerOrSuper();
-  const rows = await getPrisma().apiToken.findMany({ orderBy: { createdAt: 'desc' } });
+  const rows = await getPrisma().apiToken.findMany({ where: { kind: 'api' }, orderBy: { createdAt: 'desc' } });
   return rows.map(serializeApiToken);
 }
 
@@ -13111,7 +13156,9 @@ async function createApiToken(payload) {
   // High-entropy, URL-safe token. Only its hash is persisted.
   const token = `sg_${crypto.randomBytes(24).toString('base64url')}`;
   const tokenHash = sha256Hex(token);
-  const created = await getPrisma().apiToken.create({ data: { name, tokenHash } });
+  // Developer API tokens act as their creator (null = the workspace owner) with the operate scope:
+  // list, start and stop profiles. SoftGlaze AI tokens are made on the AI page (src/main/ai).
+  const created = await getPrisma().apiToken.create({ data: { name, tokenHash, kind: 'api', scope: 'operate', memberId: ownerStampId(), createdById: ownerStampId() } });
   // `token` is returned exactly once - the renderer must show it now or never.
   return { ...serializeApiToken(created), token };
 }
@@ -13119,7 +13166,7 @@ async function createApiToken(payload) {
 async function revokeApiToken(payload) {
   await requireOwnerOrSuper();
   const id = parseId(requireObject(payload).id);
-  await getPrisma().apiToken.delete({ where: { id } }).catch(() => {});
+  await getPrisma().apiToken.deleteMany({ where: { id, kind: 'api' } }).catch(() => {});
   return { revoked: true };
 }
 
@@ -13180,6 +13227,115 @@ async function bulkSynchronize(payload) {
   const result = await launchSynchronizedSessions(ids, launchProfileById);
   await logActivity(getPrisma(), ids[0], 'synchronize', `master + ${ids.length - 1} slave(s)`).catch(() => {});
   return result;
+}
+
+// ---- SoftGlaze AI wiring (src/main/ai) ----
+// The only app functions AI tools may call (toolRegistry.ALLOWED_DEPS refuses anything else). Each
+// runs inside aiActor.run(), so its own permission, access and ownership checks apply to the
+// token's member. Nothing here exports cookies, reveals secrets, deletes, bills or changes members.
+function buildAiToolDeps() {
+  return {
+    getPrisma,
+    requirePermission,
+    getActiveMember,
+    getLicense,
+    scopedProfileWhere,
+    scopedProxyWhere,
+    assertCanAccessProfile,
+    assertCanAccessProxy,
+    partitionAccessibleProfileIds,
+    listAllSessions,
+    isFirefoxSession: (sid) => firefoxEngine.isFirefoxSession(String(sid)),
+    // A profile an AI app or script started is driven by it: no proxy switch on a block page, and
+    // its browser closing is not a crash.
+    launchProfile: async (payload) => {
+      const res = await launchProfile(payload);
+      apiDrivenProfiles.add(Number(payload.id));
+      return res;
+    },
+    closeSession: async (profileId) => {
+      await requirePermission('profiles.launch');
+      await assertCanAccessProfile(parseId(profileId));
+      const r = await closeAnySession(String(profileId));
+      reconcileProfileLocks();
+      return r;
+    },
+    markAutomationDriven: (profileId) => { apiDrivenProfiles.add(Number(profileId)); },
+    createProfile,
+    updateProfile,
+    batchGenerateProfiles,
+    createGroup,
+    assignProfilesToGroup,
+    checkProxy,
+    getProxyHealthHistory,
+    getRecentProxyHealth,
+    getVendorScoreboard,
+    rotateProxyIp: (payload) => rotateProxyIp({ id: payload.id }), // the stored rotation link only
+    bulkAssignProxies,
+    harvestFreeProxies: (payload) => harvestFreeProxiesHandler(payload, null),
+    cancelFreeProxyHarvest,
+    getMacros,
+    saveMacro,
+    normalizeMacroSteps,
+    runParallelMacro: (payload) => runParallelMacroHandler(payload, null),
+    getParallelRunStatus,
+    stopParallelRun,
+    startWarmer: (payload) => startWarmer(payload, null),
+    stopWarmer,
+    listActiveWarmers,
+    captchaScores,
+    prelaunchCheck,
+    analyzeProfileLeaks,
+    runMacro,
+    humanType,
+    getAutomationPage
+  };
+}
+
+function emitToAllWindows(channel, data) {
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(channel, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
+}
+
+// Where the stdio bridge lives and how to start it: the app's own executable in Node mode, so AI
+// apps that only start local commands (Claude Desktop) need no separate Node.js.
+function aiBridgeInfo() {
+  const { app } = require('electron');
+  const packaged = Boolean(app && app.isPackaged);
+  const script = packaged
+    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'ai', 'bridge', 'softglaze-mcp-bridge.js')
+    : path.join(__dirname, 'ai', 'bridge', 'softglaze-mcp-bridge.js');
+  return { command: process.execPath, args: [script], env: { ELECTRON_RUN_AS_NODE: '1' }, mcpbPath: null };
+}
+
+function buildAiHost() {
+  let appVersion = '1.0.0';
+  try { appVersion = require('../../package.json').version || appVersion; } catch (e) { /* keep default */ }
+  return {
+    getPrisma,
+    readSetting,
+    writeSetting,
+    emit: emitToAllWindows,
+    appVersion,
+    isWorkspaceLocked: () => Boolean(vaultLocked) || !database.isDbUnlocked(),
+    getLicense,
+    localApi,
+    bridgeInfo: aiBridgeInfo,
+    listAllSessions,
+    closeSession: async (profileId) => { const r = await closeAnySession(String(profileId)); reconcileProfileLocks(); return r; },
+    stopParallelRun: async ({ runId }) => {
+      const r = parallelRuns.get(String(runId || ''));
+      if (!r || r.done || !r.control) return { stopped: false };
+      r.control.aborted = true;
+      return { stopped: true };
+    },
+    stopWarmer: async ({ runId, force }) => {
+      const run = warmerRuns.get(String(runId || ''));
+      if (!run) return { stopped: false };
+      run.aborted = true;
+      if (force) for (const sid of run.launched) await closeAnySession(sid).catch(() => {});
+      return { stopped: true };
+    }
+  };
 }
 
 function registerIpcHandlers() {
@@ -13534,32 +13690,17 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.EMAIL_SET_CONFIG, setEmailConfig);
   registerHandler(CHANNELS.EMAIL_TEST, testEmail);
 
-  // Softglaze Pro - wire the local REST API to the launch pipeline + settings,
-  // then start it if the user has it enabled. Loopback-only; off by default.
+  // Softglaze Pro - the loopback server for the Developer API (/api/v1) and SoftGlaze AI (/mcp).
+  // Both go through the AI tool registry, acting as the token's member. Off by default.
+  ai.configure({ toolDeps: buildAiToolDeps(), host: buildAiHost() });
   localApi.configure({
-    // A profile started over the API is driven by the caller's script, so a block must not switch it.
-    launchProfileById: async (id, startUrl, opts) => {
-      const res = await launchProfileById(id, startUrl, opts);
-      apiDrivenProfiles.add(Number(id));
-      return res;
-    },
-    // Slim, non-secret profile list for GET /api/v1/profiles (no proxy passwords).
-    readProfiles: async () => {
-      const rows = await getPrisma().profile.findMany({ where: { deletedAt: null }, orderBy: { id: 'asc' } });
-      return rows.map((p) => ({
-        id: p.id,
-        title: p.title,
-        os: p.os || null,
-        browserVersion: p.browserVersion || null,
-        userAgent: p.userAgent || null,
-        // proxyInfoString is host:port:user:pass; mask it so the API never returns the password.
-        proxy: p.proxyInfoString ? maskProxyInfoString(p.proxyInfoString, null) : null,
-        groupId: p.groupId || null,
-        lastUsedAt: p.lastUsedAt instanceof Date ? p.lastUsedAt.toISOString() : (p.lastUsedAt || null)
-      }));
-    },
+    ai,
     readConfig: () => readSetting('localApi', { enabled: false, port: localApi.DEFAULT_PORT }),
     writeConfig: (cfg) => writeSetting('localApi', cfg)
+  });
+  registerAiIpc(registerHandler, ai, {
+    getWindowMember: () => getActiveMember(),
+    visibleMemberIds: async (member) => permissions.visibleMemberIds(await getPrisma().member.findMany(), member)
   });
   // Bring the session online only when the DB is readable. With at-rest encryption the DB starts
   // locked, and db:unlock runs afterDbReady() itself.
@@ -13575,6 +13716,7 @@ async function shutdownIpcHandlers() {
   stopMacroScheduler();
   stopWarmAutopilotTimer();
   if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
+  try { const mcp = ai.mcpHandler(); if (mcp) await mcp.dispose(); } catch (e) { /* not configured */ }
   await localApi.stop().catch(() => {});
   await autofillBridge.stop().catch(() => {});
   await closeAllProfileSessions();
