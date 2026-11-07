@@ -354,10 +354,10 @@ test('tokens: pre-approved tools need the Owner, the operate scope, groups and a
 test('tokens: the service resolves the member a token acts as and refuses blocked members', async () => {
   const ai = require('../src/main/ai');
   const db = createFakePrisma({ member: [{ id: 1, name: 'O', role: 'OWNER', status: 'active' }, { id: 2, name: 'S', role: 'OPERATOR', status: 'suspended' }] });
-  assert.deepEqual(await ai.resolveTokenMember(db, { memberId: null }), { ok: true, memberId: 1, role: 'OWNER' });
+  assert.deepEqual(await ai.resolveTokenMember(db, { memberId: null }), { ok: true, memberId: 1, role: 'OWNER', memberName: 'O' });
   assert.equal((await ai.resolveTokenMember(db, { memberId: 2 })).code, 'MEMBER_BLOCKED');
   assert.equal((await ai.resolveTokenMember(db, { memberId: 9 })).code, 'MEMBER_GONE');
-  assert.deepEqual(await ai.resolveTokenMember(createFakePrisma(), { memberId: null }), { ok: true, memberId: null, role: 'OWNER' }, 'single-user mode');
+  assert.deepEqual(await ai.resolveTokenMember(createFakePrisma(), { memberId: null }), { ok: true, memberId: null, role: 'OWNER', memberName: 'Workspace owner' }, 'single-user mode');
 });
 
 // ---- Host / Origin ----
@@ -515,6 +515,38 @@ test('audit: rows are redacted and paged newest first with a cursor', async () =
   assert.equal(p3.nextCursor, null);
   assert.equal(p1.items[0].args.text, '[11 characters hidden]');
   assert.equal(p1.items[0].args.id, 5);
+});
+
+test('audit: clientName and search filter before paging', async () => {
+  const db = createFakePrisma();
+  const rows = [
+    { tool: 'start_profile', clientName: 'Claude Code', tokenName: 'Laptop', summary: 'Start profile #1 (US-01)' },
+    { tool: 'list_profiles', clientName: 'Cursor', tokenName: 'Laptop', summary: 'List profiles' },
+    { tool: 'start_profile', clientName: 'Cursor', tokenName: 'n8n nightly', summary: 'Start profile #2 (DE-02)' },
+    { tool: 'page_click', clientName: 'Claude Code', tokenName: 'Laptop', summary: 'Click #buy in profile #1' }
+  ];
+  for (const r of rows) await aiAudit.record(db, { ...r, outcome: 'ok' });
+  const byClient = await aiAudit.list(db, { clientName: 'Cursor' });
+  assert.deepEqual(byClient.items.map((x) => x.tool), ['start_profile', 'list_profiles']);
+  const bySearch = await aiAudit.list(db, { search: 'start' });
+  assert.deepEqual(bySearch.items.map((x) => x.summary), ['Start profile #2 (DE-02)', 'Start profile #1 (US-01)']);
+  assert.deepEqual((await aiAudit.list(db, { search: 'nightly' })).items.map((x) => x.tokenName), ['n8n nightly'], 'searches token names');
+  assert.deepEqual((await aiAudit.list(db, { search: 'US-01' })).items.map((x) => x.tool), ['start_profile'], 'searches summaries');
+  const paged = await aiAudit.list(db, { clientName: 'Claude Code', limit: 1 });
+  assert.equal(paged.items[0].tool, 'page_click');
+  const next = await aiAudit.list(db, { clientName: 'Claude Code', limit: 1, cursor: paged.nextCursor });
+  assert.deepEqual(next.items.map((x) => x.tool), ['start_profile'], 'the filter holds on the next page');
+  assert.equal(next.nextCursor, null);
+  assert.equal((await aiAudit.list(db, { search: '   ' })).items.length, 4, 'blank search filters nothing');
+});
+
+test('approvals name the member the token acts as', async () => {
+  const seen = [];
+  const h = harness({ onEmit: (c, d) => { if (c === 'ai:approval-requested') seen.push(d); } });
+  h.approvals.emit = (c, d) => { if (c === 'ai:approval-requested') { seen.push(d); setTimeout(() => h.approvals.respond(d.id, 'deny'), 10); } };
+  await h.call('create_group', { name: 'G' }, { memberId: 2, memberName: 'Operator Omar' });
+  assert.equal(seen[0].memberId, 2);
+  assert.equal(seen[0].memberName, 'Operator Omar');
 });
 
 test('makeToken helper produces working AI tokens for the fake workspace', async () => {

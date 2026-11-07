@@ -368,6 +368,64 @@ test('the Developer API: scoped profile list, start returns the DevTools endpoin
   assert.ok(logged.some((r) => r.tool === 'start_profile' && r.approval === 'developer-token'));
 });
 
+test('the Memory tab gets the built-in guides with the workspace memory', async () => {
+  const m = await ai.memoryGet();
+  assert.deepEqual(m.guides.map((g) => g.uri), ['softglaze://guide/how-softglaze-works', 'softglaze://guide/acceptable-use']);
+  assert.deepEqual(m.guides.map((g) => g.title), ['How SoftGlaze works', 'Acceptable use']);
+  assert.match(m.guides[1].markdown, /Refuse these/);
+  assert.ok(typeof m.markdown === 'string' && typeof m.defaultMarkdown === 'string');
+});
+
+test('pre-approvable tools: operate scope only, never Expert, never read tools', () => {
+  const list = ai.preApprovableTools();
+  assert.ok(list.length >= 20);
+  for (const t of list) {
+    assert.deepEqual(Object.keys(t), ['name', 'title', 'scope', 'destructive']);
+    assert.equal(t.scope, 'operate', t.name);
+    assert.equal(t.destructive, false, t.name);
+  }
+  const names = list.map((t) => t.name);
+  assert.ok(names.includes('start_profile') && names.includes('page_navigate'));
+  assert.ok(!names.includes('get_cdp_endpoint') && !names.includes('list_profiles'));
+});
+
+test('REST /api/v1 shares the port with /mcp and applies AI token scopes and approvals', async () => {
+  const before = requested.length;
+  const readStart = await rawRequest({ method: 'POST', path: '/api/v1/profiles/2/start', headers: { Authorization: `Bearer ${tokens.read}` } });
+  assert.equal(readStart.status, 403);
+  assert.match(readStart.text, /read scope; start_profile needs operate/);
+  // start_profile already has this token's "Allow for 1 hour" grant from the MCP test above:
+  // REST honours the same grants.
+  const start = await rawRequest({ method: 'POST', path: '/api/v1/profiles/3/start', headers: { Authorization: `Bearer ${tokens.operate}`, 'Content-Type': 'application/json' }, body: { url: 'https://example.com/' } });
+  assert.equal(start.status, 200, start.text);
+  assert.equal(JSON.parse(start.text).wsEndpoint, null, 'an operate AI token gets no DevTools endpoint');
+  assert.equal(requested.length, before, 'covered by the hour grant');
+  approvalPolicy = (a) => (a.tool === 'create_group' ? 'allow-once' : null);
+  const group = await rawRequest({ method: 'POST', path: '/api/v1/tools/create_group', headers: { Authorization: `Bearer ${tokens.operate}`, 'Content-Type': 'application/json' }, body: { name: 'REST group' } });
+  assert.equal(group.status, 200, group.text);
+  assert.equal(requested.length, before + 1, 'the REST call asked for approval');
+  assert.equal(requested[requested.length - 1].memberName, 'Owner Sara', 'approvals name the member the token acts as');
+  approvalPolicy = (a) => (a.tool === 'create_group' ? 'deny' : null);
+  const deniedGroup = await rawRequest({ method: 'POST', path: '/api/v1/tools/create_group', headers: { Authorization: `Bearer ${tokens.operate}`, 'Content-Type': 'application/json' }, body: { name: 'Denied group' } });
+  assert.equal(deniedGroup.status, 403);
+  assert.match(deniedGroup.text, /denied this in SoftGlaze/);
+  approvalPolicy = null;
+  await rawRequest({ method: 'POST', path: '/api/v1/profiles/3/stop', headers: { Authorization: `Bearer ${tokens.operate}` } });
+  // Each kind of token follows its own switch.
+  app.setApiConfig({ ...app.apiConfig(), enabled: false });
+  const aiToken = await rawRequest({ method: 'GET', path: '/api/v1/profiles', headers: { Authorization: `Bearer ${tokens.read}` } });
+  assert.equal(aiToken.status, 200, 'AI tokens work while SoftGlaze AI is on');
+  const devToken = await rawRequest({ method: 'GET', path: '/api/v1/profiles', headers: { Authorization: `Bearer ${tokens.api}` } });
+  assert.equal(devToken.status, 403);
+  assert.match(devToken.text, /Developer API is switched off/);
+  app.setApiConfig({ ...app.apiConfig(), enabled: true });
+  const audit = await ai.listAudit({ tool: 'start_profile', search: 'profile #3' });
+  assert.equal(audit.items[0].transport, 'rest');
+  assert.equal(audit.items[0].approval, 'hour-grant');
+  const groupAudit = await ai.listAudit({ search: 'REST group' });
+  assert.equal(groupAudit.items[0].approval, 'allow-once');
+});
+
 test('Stop all AI closes sessions, denies pending approvals and switches AI off', async () => {
   const client = await connect(tokens.operate);
   approvalPolicy = null;
@@ -384,4 +442,22 @@ test('Stop all AI closes sessions, denies pending approvals and switches AI off'
   assert.equal(after.status, 503);
   assert.match(after.text, /switched off/);
   await ai.setEnabled(true);
+});
+
+test('status reports an error when SoftGlaze AI is on but its port is taken', async () => {
+  const blocker = net.createServer();
+  await new Promise((r) => blocker.listen(0, '127.0.0.1', r));
+  const busy = blocker.address().port;
+  app.setApiConfig({ ...app.apiConfig(), port: busy });
+  await assert.rejects(() => localApi.sync(), /EADDRINUSE/);
+  const st = await ai.status();
+  assert.equal(st.enabled, true);
+  assert.equal(st.running, false);
+  assert.match(st.error, new RegExp(`Port ${busy} is already in use`));
+  await new Promise((r) => blocker.close(r));
+  app.setApiConfig({ ...app.apiConfig(), port: 0 });
+  await localApi.sync();
+  const again = await ai.status();
+  assert.equal(again.running, true);
+  assert.equal(again.error, null);
 });

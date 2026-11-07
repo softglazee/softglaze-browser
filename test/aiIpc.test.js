@@ -5,7 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { AI_CHANNELS, registerAiIpc } = require('../src/main/ai/ipc');
+const { AI_CHANNELS, registerAiIpc, canAnswerApproval, createWindowEmitter } = require('../src/main/ai/ipc');
 
 const IPC = fs.readFileSync(path.join(__dirname, '..', 'src', 'main', 'ipcHandlers.js'), 'utf8');
 const fnBody = (name) => {
@@ -15,6 +15,8 @@ const fnBody = (name) => {
 };
 
 const SPEC_CHANNELS = ['ai:status', 'ai:set-enabled', 'ai:settings-get', 'ai:settings-set', 'ai:tokens-list', 'ai:tokens-create', 'ai:tokens-revoke', 'ai:approvals-list', 'ai:approvals-respond', 'ai:stop-all', 'ai:audit-list', 'ai:memory-get', 'ai:memory-set', 'ai:memory-reset', 'ai:prompts-list', 'ai:snippets', 'ai:bridge-info'];
+// Added after §10 for the AI page's automation-token form.
+const EXTRA_CHANNELS = ['ai:preapprovable-tools'];
 
 function wire(windowMember, visible = new Set()) {
   const handlers = new Map();
@@ -41,7 +43,8 @@ function wire(windowMember, visible = new Set()) {
     memoryReset: async () => ({}),
     listPrompts: () => [],
     getSnippets: async () => [],
-    bridgeInfo: () => ({ command: 'x', args: [], mcpbPath: null })
+    bridgeInfo: () => ({ command: 'x', args: [], mcpbPath: null }),
+    preApprovableTools: () => [{ name: 'start_profile', title: 'Start a profile', scope: 'operate', destructive: false }]
   };
   registerAiIpc((channel, fn) => handlers.set(channel, fn), ai, {
     getWindowMember: async () => windowMember,
@@ -53,14 +56,14 @@ function wire(windowMember, visible = new Set()) {
 
 test('every channel of the spec\'s IPC contract is registered', () => {
   const { handlers } = wire(null);
-  assert.deepEqual([...handlers.keys()].sort(), [...SPEC_CHANNELS].sort());
+  assert.deepEqual([...handlers.keys()].sort(), [...SPEC_CHANNELS, ...EXTRA_CHANNELS].sort());
   for (const c of SPEC_CHANNELS) assert.ok(Object.values(AI_CHANNELS).includes(c));
   assert.equal(AI_CHANNELS.APPROVAL_REQUESTED, 'ai:approval-requested');
 });
 
 test('the AI page needs the Owner or an Admin (single-user mode counts as the Owner)', async () => {
   const op = wire({ id: 2, role: 'OPERATOR', status: 'active' });
-  for (const c of ['ai:status', 'ai:set-enabled', 'ai:tokens-list', 'ai:tokens-create', 'ai:stop-all', 'ai:audit-list', 'ai:memory-set', 'ai:snippets', 'ai:bridge-info']) {
+  for (const c of ['ai:status', 'ai:set-enabled', 'ai:tokens-list', 'ai:tokens-create', 'ai:stop-all', 'ai:audit-list', 'ai:memory-set', 'ai:snippets', 'ai:bridge-info', 'ai:preapprovable-tools']) {
     await assert.rejects(() => op.call(c, {}), /Only the Owner or an Admin/, c);
   }
   const admin = wire({ id: 3, role: 'ADMIN', status: 'active' });
@@ -83,6 +86,56 @@ test('members answer only approvals from tokens that act as themselves', async (
   assert.equal((await admin.call('ai:approvals-list')).length, 2);
   assert.deepEqual(await admin.call('ai:approvals-respond', { id: 'a2', decision: 'deny' }), { ok: true, decision: 'deny' });
   assert.deepEqual(await admin.call('ai:approvals-respond', { id: 'gone', decision: 'deny' }), { ok: false });
+});
+
+test('one rule decides who may answer an approval, for the list, the answer and the event', async () => {
+  const approval = { id: 'a', memberId: 2 };
+  assert.equal(canAnswerApproval(null, approval), true, 'single-user mode');
+  assert.equal(canAnswerApproval({ id: 1, role: 'OWNER', status: 'active' }, approval), true);
+  assert.equal(canAnswerApproval({ id: 3, role: 'ADMIN', status: 'active' }, approval), true);
+  assert.equal(canAnswerApproval({ id: -1, role: 'SUPER_ADMIN', status: 'active' }, approval), true);
+  assert.equal(canAnswerApproval({ id: 2, role: 'OPERATOR', status: 'active' }, approval), true, 'the member the token acts as');
+  assert.equal(canAnswerApproval({ id: 4, role: 'OPERATOR', status: 'active' }, approval), false);
+  assert.equal(canAnswerApproval({ id: 5, role: 'MANAGER', status: 'active' }, approval), false);
+  assert.equal(canAnswerApproval({ id: 3, role: 'ADMIN', status: 'suspended' }, approval), false);
+  assert.equal(canAnswerApproval({ id: 9, role: 'NONE', status: 'missing' }, approval), false, 'a removed member');
+  assert.equal(canAnswerApproval({ id: 4, role: 'OPERATOR', status: 'active' }, { id: 'b', memberId: null }), false, 'owner-token approvals go to Owner/Admin only');
+});
+
+test('the ai:approval-requested event reaches only a window whose member may answer it', async () => {
+  const flush = () => new Promise((r) => setTimeout(r, 10));
+  const run = async (member, approval) => {
+    const sent = [];
+    const emit = createWindowEmitter({ getWindowMember: async () => member, send: (c, d) => sent.push([c, d]) });
+    emit('ai:approval-requested', approval);
+    emit('ai:approvals-changed', { pending: 1 });
+    await flush();
+    return sent;
+  };
+  const own = { id: 'x', memberId: 2 };
+  const other = { id: 'y', memberId: 7 };
+  const operator = { id: 2, role: 'OPERATOR', status: 'active' };
+  assert.deepEqual((await run(operator, own)).map((s) => s[0]), ['ai:approvals-changed', 'ai:approval-requested']);
+  assert.deepEqual((await run(operator, other)).map((s) => s[0]), ['ai:approvals-changed'], 'not another member\'s approval; other events still flow');
+  assert.equal((await run({ id: 3, role: 'ADMIN', status: 'active' }, other)).length, 2);
+  assert.equal((await run(null, other)).length, 2, 'single-user mode');
+  assert.equal((await run({ id: 9, role: 'NONE', status: 'missing' }, other)).length, 1);
+  const failing = [];
+  createWindowEmitter({ getWindowMember: async () => { throw new Error('db locked'); }, send: (c) => failing.push(c) })('ai:approval-requested', own);
+  await flush();
+  assert.deepEqual(failing, [], 'a lookup failure sends nothing');
+  // ipcHandlers routes AI events through this filter with the window's member, not the AI actor.
+  assert.match(IPC, /const emitAiEvent = createWindowEmitter\(\{ getWindowMember: windowMemberForAiEvents, send: emitToAllWindows \}\);/);
+  const wm = fnBody('windowMemberForAiEvents');
+  assert.match(wm, /const id = currentMemberId;/);
+  assert.ok(!/getActiveMember/.test(wm), 'must not resolve the AI actor');
+  assert.match(fnBody('buildAiHost'), /emit: emitAiEvent,/);
+});
+
+test('ai:preapprovable-tools needs the Owner or an Admin', async () => {
+  const admin = wire({ id: 3, role: 'ADMIN', status: 'active' });
+  assert.deepEqual(await admin.call('ai:preapprovable-tools'), [{ name: 'start_profile', title: 'Start a profile', scope: 'operate', destructive: false }]);
+  assert.equal(AI_CHANNELS.PREAPPROVABLE_TOOLS, 'ai:preapprovable-tools');
 });
 
 test('token creation: no Admin token that acts as the Owner, only managed members, full scope for the Owner', async () => {
