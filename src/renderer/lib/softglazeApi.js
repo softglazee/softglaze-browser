@@ -14,6 +14,25 @@ function getSoftglazeApi() {
   return window.softglaze;
 }
 
+// An older preload has no `ai` namespace (or a partial one): every call rejects with
+// AI_UNAVAILABLE instead of throwing a sync TypeError, so the AI page shows "not available in
+// this build" rather than crashing.
+function aiUnavailable() {
+  const e = new Error('SoftGlaze AI is not available in this build.');
+  e.code = 'AI_UNAVAILABLE';
+  return Promise.reject(e);
+}
+function aiCall(run) {
+  const ai = window.softglaze && window.softglaze.ai;
+  if (!ai) return aiUnavailable();
+  try {
+    const p = run(ai);
+    return p && typeof p.then === 'function' ? p : Promise.resolve(p);
+  } catch (e) {
+    return e instanceof TypeError ? aiUnavailable() : Promise.reject(e);
+  }
+}
+
 export const softglazeApi = {
   system: {
     getInfo: () => getSoftglazeApi().system.getInfo(),
@@ -346,6 +365,36 @@ export const softglazeApi = {
     revokeToken: (id) => getSoftglazeApi().developerApi.revokeToken(id),
     serverStatus: () => getSoftglazeApi().developerApi.serverStatus(),
     setServerEnabled: (enabled) => getSoftglazeApi().developerApi.setServerEnabled(enabled)
+  },
+  ai: {
+    getStatus: () => aiCall((ai) => ai.getStatus()),
+    setEnabled: (on) => aiCall((ai) => ai.setEnabled(on)),
+    getSettings: () => aiCall((ai) => ai.getSettings()),
+    setSettings: (patch) => aiCall((ai) => ai.setSettings(patch)),
+    tokens: {
+      list: () => aiCall((ai) => ai.tokens.list()),
+      create: (input) => aiCall((ai) => ai.tokens.create(input)),
+      revoke: (id) => aiCall((ai) => ai.tokens.revoke(id))
+    },
+    approvals: {
+      list: () => aiCall((ai) => ai.approvals.list()),
+      respond: (id, decision) => aiCall((ai) => ai.approvals.respond(id, decision))
+    },
+    onApprovalRequested: (cb) => {
+      const ai = window.softglaze && window.softglaze.ai;
+      if (!ai || typeof ai.onApprovalRequested !== 'function') return () => {};
+      return ai.onApprovalRequested(cb);
+    },
+    stopAll: () => aiCall((ai) => ai.stopAll()),
+    audit: { list: (q) => aiCall((ai) => ai.audit.list(q)) },
+    memories: {
+      get: () => aiCall((ai) => ai.memories.get()),
+      set: (markdown) => aiCall((ai) => ai.memories.set(markdown)),
+      reset: () => aiCall((ai) => ai.memories.reset())
+    },
+    prompts: { list: () => aiCall((ai) => ai.prompts.list()) },
+    snippets: () => aiCall((ai) => ai.snippets()),
+    bridgeInfo: () => aiCall((ai) => ai.bridgeInfo())
   },
   updater: {
     getState: () => getSoftglazeApi().updater.getState(),
