@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, CircleCheck, Eye, ShieldAlert, TriangleAlert, Workflow, Zap } from 'lucide-react';
 
@@ -9,15 +9,15 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { AI_TONE, CodeBlock, CopyButton, PrimaryButton, Segmented, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import {
-  AUTOMATION_LIMITS, EXPIRY_OPTIONS, NAME_MAX, PREAPPROVABLE_TOOLS, SCOPES, automationActive, buildTokenInput,
-  canFinishReveal, envVarCommand, fillToken, hasPlaceholder, validateTokenForm
+  AUTOMATION_LIMITS, EXPIRY_OPTIONS, NAME_MAX, SCOPES, automationActive, buildTokenInput,
+  canFinishReveal, envVarCommand, fillToken, groupPreapprovable, hasPlaceholder, preapprovableNames, validateTokenForm
 } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
 
 const SCOPE_ICON = { read: Eye, operate: Zap, full: ShieldAlert };
 const numCls = 'w-24 rounded border border-border bg-input-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary';
 
-export default function CreateTokenDialog({ flow, dispatch, me, members, groups, isOwner, hostOs, onCreated }) {
+export default function CreateTokenDialog({ flow, dispatch, me, members, groups, isOwner, preTools = null, hostOs, onCreated }) {
   const { t } = useTranslation('ai');
   const open = flow.step !== 'closed';
   const reveal = flow.step === 'reveal';
@@ -28,7 +28,9 @@ export default function CreateTokenDialog({ flow, dispatch, me, members, groups,
   const activeMembers = (Array.isArray(members) ? members : []).filter((m) => m && m.status !== 'banned' && m.status !== 'suspended');
   const hasMembers = activeMembers.length > 0;
   const form = flow.form;
-  const errors = form ? validateTokenForm(form, { isOwner, hasMembers }) : {};
+  const toolGroups = useMemo(() => groupPreapprovable(preTools), [preTools]);
+  const allowedTools = useMemo(() => preapprovableNames(toolGroups), [toolGroups]);
+  const errors = form ? validateTokenForm(form, { isOwner, hasMembers, allowedTools }) : {};
   const hasErrors = Object.keys(errors).length > 0;
   const clientName = !flow.client ? ''
     : flow.client.known ? t(`connect.clients.${flow.client.key}.title`, { defaultValue: flow.client.title }) : flow.client.title;
@@ -38,7 +40,7 @@ export default function CreateTokenDialog({ flow, dispatch, me, members, groups,
     if (hasErrors || !form) return;
     dispatch({ type: 'submit' });
     try {
-      const r = await softglazeApi.ai.tokens.create(buildTokenInput(form, { isOwner }));
+      const r = await softglazeApi.ai.tokens.create(buildTokenInput(form, { isOwner, allowedTools }));
       dispatch({ type: 'created', token: r && r.token, id: r && r.id });
       if (onCreated) onCreated();
     } catch (e) {
@@ -178,7 +180,7 @@ export default function CreateTokenDialog({ flow, dispatch, me, members, groups,
                 {showErrors && errors.groupIds && <p role="alert" className="text-[12px]" style={toneText('danger')}>{t(errors.groupIds)}</p>}
               </div>
 
-              {isOwner && <AutomationSection form={form} edit={edit} errors={showErrors ? errors : {}} />}
+              {isOwner && <AutomationSection form={form} edit={edit} errors={showErrors ? errors : {}} toolGroups={toolGroups} />}
 
               {flow.error && (
                 <p role="alert" className="text-[12.5px]" style={toneText('danger')}>
@@ -216,7 +218,7 @@ function Field({ label, hint, error, children }) {
   );
 }
 
-function AutomationSection({ form, edit, errors }) {
+function AutomationSection({ form, edit, errors, toolGroups }) {
   const { t } = useTranslation('ai');
   const panelId = useId();
   const readOnly = form.scope === 'read';
@@ -258,16 +260,19 @@ function AutomationSection({ form, edit, errors }) {
               <fieldset>
                 <legend className="mb-2 text-[13px] font-medium text-foreground">{t('automation.tools')}</legend>
                 <div className="space-y-3">
-                  {PREAPPROVABLE_TOOLS.map((g) => (
+                  {toolGroups.map((g) => (
                     <div key={g.group}>
                       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t(`automation.groups.${g.group}`)}</p>
                       <div className="grid grid-cols-1 gap-x-3 gap-y-0.5 sm:grid-cols-2">
                         {g.tools.map((tool) => (
-                          <label key={tool} className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 hover:bg-secondary">
-                            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" checked={form.preApprovedTools.includes(tool)} onChange={() => toggleTool(tool)} />
+                          <label key={tool.name} className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 hover:bg-secondary">
+                            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" checked={form.preApprovedTools.includes(tool.name)} onChange={() => toggleTool(tool.name)} />
                             <span className="min-w-0">
-                              <span className="block text-[12.5px] text-foreground">{t(`tools.${tool}`, { defaultValue: tool })}</span>
-                              <span className="block font-mono text-[11px] text-muted-foreground">{tool}</span>
+                              <span className="block text-[12.5px] text-foreground">
+                                {t(`tools.${tool.name}`, { defaultValue: tool.title || tool.name })}
+                                {tool.destructive && <TonePill tone="warning" className="ml-1.5 align-middle">{t('automation.destructive')}</TonePill>}
+                              </span>
+                              <span className="block font-mono text-[11px] text-muted-foreground">{tool.name}</span>
                             </span>
                           </label>
                         ))}

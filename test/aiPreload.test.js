@@ -17,8 +17,9 @@ const CONTRACT = [
   'ai:tokens-revoke', 'ai:approvals-list', 'ai:approvals-respond', 'ai:approval-requested', 'ai:stop-all',
   'ai:audit-list', 'ai:memory-get', 'ai:memory-set', 'ai:memory-reset', 'ai:prompts-list', 'ai:snippets', 'ai:bridge-info'
 ];
-// Additive events the engine emits (src/main/ai/ipc.js): approvals changed elsewhere, status changed.
-const ENGINE_EVENTS = ['ai:approvals-changed', 'ai:status-changed'];
+// Additive channels from the engine (PR #38): two events (approvals changed elsewhere, status
+// changed) and the pre-approvable tool list for Automation tokens.
+const ENGINE_EVENTS = ['ai:approvals-changed', 'ai:status-changed', 'ai:preapprovable-tools'];
 
 // Loads preload.js against a stubbed electron. `reply(channel, payload)` decides what invoke returns.
 function loadPreload(reply = () => ({ ok: true, data: { ok: true } })) {
@@ -71,7 +72,8 @@ test('every window.softglaze.ai call invokes its spec §10 channel with an objec
     [() => ai.memories.reset(), 'ai:memory-reset', undefined],
     [() => ai.prompts.list(), 'ai:prompts-list', undefined],
     [() => ai.snippets(), 'ai:snippets', undefined],
-    [() => ai.bridgeInfo(), 'ai:bridge-info', undefined]
+    [() => ai.bridgeInfo(), 'ai:bridge-info', undefined],
+    [() => ai.preapprovableTools(), 'ai:preapprovable-tools', undefined]
   ];
   for (const [call, channel, payload] of run) {
     calls.length = 0;
@@ -128,7 +130,7 @@ test('ai:* channels live in AI_CHANNELS, not in the CHANNELS map that ipcParity 
   const ai = src.match(/const AI_CHANNELS = Object\.freeze\(\{([\s\S]*?)\}\)/);
   assert.ok(ai, 'AI_CHANNELS map');
   const values = [...ai[1].matchAll(/'(ai:[^']+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(values, [...CONTRACT, ...ENGINE_EVENTS].sort(), 'the spec §10 channels plus the engine events');
+  assert.deepEqual(values, [...CONTRACT, ...ENGINE_EVENTS].sort(), 'the spec §10 channels plus the engine additions');
   assert.match(src, /const ALLOWED_CHANNELS = new Set\(\[\.\.\.Object\.values\(CHANNELS\), \.\.\.Object\.values\(AI_CHANNELS\)\]\);/);
 });
 

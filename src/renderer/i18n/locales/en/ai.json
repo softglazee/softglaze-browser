@@ -229,7 +229,7 @@
     },
     "operate": {
       "title": "Operate",
-      "body": "Can also create and start profiles, run macros and work inside pages. Changes still ask you first, as set in Settings."
+      "body": "Can also create and start profiles, run macros and work inside pages. Changes still ask you first, as set in Settings. Choose this on purpose."
     },
     "full": {
       "title": "Full",
@@ -293,13 +293,15 @@
     "needsOperate": "Choose Operate or Full above to pre-approve tools.",
     "warning": "These tools will run without asking you. They stay limited to the chosen groups, are logged, and stop with Stop all AI.",
     "tools": "Tools that run without asking",
+    "destructive": "Cannot be undone",
     "groups": {
       "profiles": "Profiles",
       "sessions": "Start and stop",
       "proxies": "Proxies",
       "groups": "Groups",
       "automation": "Automation",
-      "page": "Inside pages"
+      "page": "Inside pages",
+      "other": "Other"
     },
     "maxProfiles": "Most profiles per call",
     "maxProfilesHint": "Default 5.",
@@ -404,7 +406,8 @@
     "emptyTitle": "Nothing is waiting for you",
     "emptyBody": "When an AI app wants to change something, the request appears here and as a pop-up on any page.",
     "listLabel": "Requests waiting for you",
-    "meta": "{{app}} · token {{token}} · {{when}}"
+    "meta": "{{app}} · token {{token}} · {{when}}",
+    "actsAs": "acts as {{member}}"
   },
   "activity": {
     "search": "Search tool, request or token",

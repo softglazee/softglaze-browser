@@ -47,6 +47,7 @@ export default function AiApprovalsTab({ lang, onOpenSettings }) {
                       token: a.tokenName || '-',
                       when: relativeTime(a._createdMs, now, lang)
                     })}
+                    {a.memberName ? ` · ${t('approvals.actsAs', { member: a.memberName })}` : ''}
                   </p>
                 </div>
                 <Countdown approval={a} now={now} compact />

@@ -229,7 +229,7 @@
     },
     "operate": {
       "title": "Operar",
-      "body": "También puede crear e iniciar perfiles, ejecutar macros y trabajar dentro de páginas. Los cambios te siguen pidiendo permiso, según lo que indiques en Ajustes."
+      "body": "También puede crear e iniciar perfiles, ejecutar macros y trabajar dentro de páginas. Los cambios te siguen pidiendo permiso, según lo que indiques en Ajustes. Elígelo a propósito."
     },
     "full": {
       "title": "Completo",
@@ -293,13 +293,15 @@
     "needsOperate": "Elige Operar o Completo arriba para aprobar herramientas de antemano.",
     "warning": "Estas herramientas se ejecutarán sin preguntarte. Siguen limitadas a los grupos elegidos, quedan registradas y se detienen con Detener toda la IA.",
     "tools": "Herramientas que se ejecutan sin preguntar",
+    "destructive": "No se puede deshacer",
     "groups": {
       "profiles": "Perfiles",
       "sessions": "Iniciar y detener",
       "proxies": "Proxies",
       "groups": "Grupos",
       "automation": "Automatización",
-      "page": "Dentro de páginas"
+      "page": "Dentro de páginas",
+      "other": "Otras"
     },
     "maxProfiles": "Máximo de perfiles por llamada",
     "maxProfilesHint": "Por defecto, 5.",
@@ -404,7 +406,8 @@
     "emptyTitle": "No hay nada esperando tu respuesta",
     "emptyBody": "Cuando una app de IA quiera cambiar algo, la solicitud aparecerá aquí y como ventana emergente en cualquier página.",
     "listLabel": "Solicitudes que esperan tu respuesta",
-    "meta": "{{app}} · token {{token}} · {{when}}"
+    "meta": "{{app}} · token {{token}} · {{when}}",
+    "actsAs": "actúa como {{member}}"
   },
   "activity": {
     "search": "Buscar herramienta, solicitud o token",

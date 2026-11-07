@@ -220,6 +220,33 @@ export const PREAPPROVABLE_TOOLS = Object.freeze([
 ]);
 export const PREAPPROVABLE_SET = new Set(PREAPPROVABLE_TOOLS.flatMap((g) => g.tools));
 
+const TOOL_GROUP = new Map(PREAPPROVABLE_TOOLS.flatMap((g) => g.tools.map((name) => [name, g.group])));
+
+// The list the Automation section shows: ai:preapprovable-tools ([{ name, title, scope, destructive }])
+// when the engine answers, grouped like the built-in list (unknown tools under "other"); the
+// built-in list when it does not. Only operate-scope tools are ever offered.
+export function groupPreapprovable(list) {
+  const fromEngine = Array.isArray(list)
+    ? list.filter((x) => x && typeof x.name === 'string' && x.name && (x.scope == null || x.scope === 'operate'))
+    : null;
+  if (!fromEngine || fromEngine.length === 0) {
+    return PREAPPROVABLE_TOOLS.map((g) => ({ group: g.group, tools: g.tools.map((name) => ({ name, title: null, destructive: false })) }));
+  }
+  const order = [...PREAPPROVABLE_TOOLS.map((g) => g.group), 'other'];
+  const groups = new Map(order.map((g) => [g, []]));
+  const seen = new Set();
+  for (const x of fromEngine) {
+    if (seen.has(x.name)) continue;
+    seen.add(x.name);
+    groups.get(TOOL_GROUP.get(x.name) || 'other').push({ name: x.name, title: x.title ? String(x.title) : null, destructive: x.destructive === true });
+  }
+  return order.filter((g) => groups.get(g).length).map((g) => ({ group: g, tools: groups.get(g) }));
+}
+
+export function preapprovableNames(groups) {
+  return new Set((groups || []).flatMap((g) => g.tools.map((x) => x.name)));
+}
+
 export function defaultTokenForm({ me, members, clientTitle, automation = false } = {}) {
   const list = Array.isArray(members) ? members.filter((m) => m && m.status !== 'banned' && m.status !== 'suspended') : [];
   const mine = me && list.find((m) => m.id === me.id);
@@ -227,7 +254,8 @@ export function defaultTokenForm({ me, members, clientTitle, automation = false 
   return {
     name: clientTitle ? `${clientTitle} on this PC` : '',
     memberId: mine ? mine.id : (fallback ? fallback.id : null),
-    scope: 'operate',
+    // Read only unless the user picks more on purpose; an Automation token needs Operate.
+    scope: automation ? 'operate' : 'read',
     expiresInDays: 30,
     groupMode: automation ? 'some' : 'all',
     groupIds: [],
@@ -245,7 +273,7 @@ export function automationActive(form, { isOwner } = {}) {
 }
 
 // Returns { field: i18nKey } for every problem; an empty object means the form can be sent.
-export function validateTokenForm(form, { isOwner = false, hasMembers = true } = {}) {
+export function validateTokenForm(form, { isOwner = false, hasMembers = true, allowedTools = PREAPPROVABLE_SET } = {}) {
   const errors = {};
   const name = String((form && form.name) || '').trim();
   if (!name) errors.name = 'errors.nameRequired';
@@ -258,7 +286,7 @@ export function validateTokenForm(form, { isOwner = false, hasMembers = true } =
   if (form.groupMode === 'some' && groups.length === 0) errors.groupIds = auto ? 'errors.groupsRequiredAutomation' : 'errors.groupsRequired';
   if (auto && form.groupMode !== 'some') errors.groupIds = 'errors.groupsRequiredAutomation';
   if (auto) {
-    const bad = form.preApprovedTools.filter((t) => !PREAPPROVABLE_SET.has(t));
+    const bad = form.preApprovedTools.filter((t) => !allowedTools.has(t));
     if (bad.length) errors.preApprovedTools = 'errors.toolNotAllowed';
     for (const k of ['maxProfilesPerCall', 'maxCallsPerHour']) {
       const [lo, hi] = AUTOMATION_LIMITS[k];
@@ -270,7 +298,7 @@ export function validateTokenForm(form, { isOwner = false, hasMembers = true } =
 }
 
 // The ai.tokens.create() input (spec §10 + §11). Automation fields only when automation is active.
-export function buildTokenInput(form, { isOwner = false } = {}) {
+export function buildTokenInput(form, { isOwner = false, allowedTools = PREAPPROVABLE_SET } = {}) {
   const input = {
     name: String(form.name || '').trim(),
     memberId: form.memberId == null || form.memberId === '' ? null : form.memberId,
@@ -279,7 +307,7 @@ export function buildTokenInput(form, { isOwner = false } = {}) {
     groupIds: form.groupMode === 'some' && Array.isArray(form.groupIds) ? form.groupIds.slice() : []
   };
   if (automationActive(form, { isOwner })) {
-    input.preApprovedTools = form.preApprovedTools.filter((t) => PREAPPROVABLE_SET.has(t));
+    input.preApprovedTools = form.preApprovedTools.filter((t) => allowedTools.has(t));
     input.maxProfilesPerCall = Number(form.maxProfilesPerCall);
     input.maxCallsPerHour = Number(form.maxCallsPerHour);
   }

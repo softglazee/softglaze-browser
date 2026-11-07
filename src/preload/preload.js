@@ -290,7 +290,9 @@ const AI_CHANNELS = Object.freeze({
   MEMORY_RESET: 'ai:memory-reset',
   PROMPTS_LIST: 'ai:prompts-list',
   SNIPPETS: 'ai:snippets',
-  BRIDGE_INFO: 'ai:bridge-info'
+  BRIDGE_INFO: 'ai:bridge-info',
+  // Additive (engine PR #38): the operate tools an Owner may pre-approve on an Automation token.
+  PREAPPROVABLE_TOOLS: 'ai:preapprovable-tools'
 });
 
 const ALLOWED_CHANNELS = new Set([...Object.values(CHANNELS), ...Object.values(AI_CHANNELS)]);
@@ -749,7 +751,9 @@ const api = Object.freeze({
       list: () => invokeAi(AI_CHANNELS.PROMPTS_LIST)
     }),
     snippets: () => invokeAi(AI_CHANNELS.SNIPPETS),
-    bridgeInfo: () => invokeAi(AI_CHANNELS.BRIDGE_INFO)
+    bridgeInfo: () => invokeAi(AI_CHANNELS.BRIDGE_INFO),
+    // -> [{ name, title, scope, destructive }]
+    preapprovableTools: () => invokeAi(AI_CHANNELS.PREAPPROVABLE_TOOLS)
   }),
   updater: Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),

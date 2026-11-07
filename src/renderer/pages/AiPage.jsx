@@ -51,6 +51,7 @@ export default function AiPage() {
   const [snippets, setSnippets] = useState([]);
   const [bridge, setBridge] = useState(null);
   const [connectLoaded, setConnectLoaded] = useState(false);
+  const [preTools, setPreTools] = useState(null); // engine list, or null = built-in fallback
   const [connectErr, setConnectErr] = useState('');
   const [toggling, setToggling] = useState(false);
   const [toggleErr, setToggleErr] = useState('');
@@ -120,6 +121,8 @@ export default function AiPage() {
       loadConnect();
       softglazeApi.members.list().then((l) => { if (live) setMembers(asArray(l)); }).catch(() => {});
       softglazeApi.groups.list().then((l) => { if (live) setGroups(asArray(l)); }).catch(() => {});
+      // Automation tokens are Owner only; an engine without the channel keeps the built-in list.
+      if (isAiOwner(me)) softglazeApi.ai.preapprovableTools().then((l) => { if (live) setPreTools(Array.isArray(l) ? l : null); }).catch(() => { if (live) setPreTools(null); });
     })();
     return () => { live = false; };
   }, [me, allowed, loadStatus, loadTokens, loadConnect]);
@@ -362,6 +365,7 @@ export default function AiPage() {
         members={members}
         groups={groups}
         isOwner={owner}
+        preTools={preTools}
         hostOs={(typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows'}
         onCreated={loadTokens}
       />

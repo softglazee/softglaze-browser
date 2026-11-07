@@ -404,7 +404,8 @@ export const softglazeApi = {
     },
     prompts: { list: () => aiCall((ai) => ai.prompts.list()) },
     snippets: () => aiCall((ai) => ai.snippets()),
-    bridgeInfo: () => aiCall((ai) => ai.bridgeInfo())
+    bridgeInfo: () => aiCall((ai) => ai.bridgeInfo()),
+    preapprovableTools: () => aiCall((ai) => ai.preapprovableTools())
   },
   updater: {
     getState: () => getSoftglazeApi().updater.getState(),

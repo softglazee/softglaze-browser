@@ -150,10 +150,11 @@ test('token form: validation and the create input (spec §10), automation only f
   const f = defaultTokenForm({ me: { id: 2, role: 'ADMIN' }, members, clientTitle: 'Cursor' });
   assert.equal(f.name, 'Cursor on this PC');
   assert.equal(f.memberId, 2, 'defaults to the signed-in member');
-  assert.equal(f.scope, 'operate');
+  assert.equal(f.scope, 'read', 'Read only by default; Operate is picked on purpose');
+  assert.equal(defaultTokenForm({ members, automation: true }).scope, 'operate', 'an Automation token starts at Operate');
   assert.equal(f.expiresInDays, 30);
   assert.deepEqual(validateTokenForm(f), {});
-  assert.deepEqual(buildTokenInput(f), { name: 'Cursor on this PC', memberId: 2, scope: 'operate', expiresInDays: 30, groupIds: [] });
+  assert.deepEqual(buildTokenInput(f), { name: 'Cursor on this PC', memberId: 2, scope: 'read', expiresInDays: 30, groupIds: [] });
 
   assert.equal(validateTokenForm({ ...f, name: '  ' }).name, 'errors.nameRequired');
   assert.equal(validateTokenForm({ ...f, name: 'x'.repeat(61) }).name, 'errors.nameTooLong');
@@ -164,7 +165,7 @@ test('token form: validation and the create input (spec §10), automation only f
   assert.equal(buildTokenInput({ ...f, expiresInDays: null }).expiresInDays, null, 'never expires');
   assert.deepEqual(buildTokenInput({ ...f, groupMode: 'all', groupIds: [4] }).groupIds, [], '"All" sends no group limit');
 
-  const auto = { ...f, automation: true, preApprovedTools: ['start_profile', 'run_macro'], groupMode: 'all' };
+  const auto = { ...f, scope: 'operate', automation: true, preApprovedTools: ['start_profile', 'run_macro'], groupMode: 'all' };
   assert.equal(automationActive(auto, { isOwner: true }), true);
   assert.equal(validateTokenForm(auto, { isOwner: true }).groupIds, 'errors.groupsRequiredAutomation', 'automation needs groups');
   const ok = { ...auto, groupMode: 'some', groupIds: [9] };
@@ -178,6 +179,32 @@ test('token form: validation and the create input (spec §10), automation only f
   assert.equal(validateTokenForm({ ...ok, preApprovedTools: ['get_cdp_endpoint'] }, { isOwner: true }).preApprovedTools, 'errors.toolNotAllowed');
   assert.equal(validateTokenForm({ ...ok, maxCallsPerHour: 0 }, { isOwner: true }).maxCallsPerHour, 'errors.limitRange');
   assert.equal(validateTokenForm({ ...ok, maxProfilesPerCall: 101 }, { isOwner: true }).maxProfilesPerCall, 'errors.limitRange');
+});
+
+test('token form: the pre-approvable list comes from ai:preapprovable-tools, with the built-in list as fallback', async () => {
+  const { groupPreapprovable, preapprovableNames, validateTokenForm, buildTokenInput, PREAPPROVABLE_SET } = await loadCore();
+  const fallback = groupPreapprovable(null);
+  assert.deepEqual([...preapprovableNames(fallback)].sort(), [...PREAPPROVABLE_SET].sort(), 'no list from the engine: the built-in one');
+  assert.deepEqual(groupPreapprovable([]).map((g) => g.group), fallback.map((g) => g.group), 'an empty list also falls back');
+  const engine = [
+    { name: 'start_profile', title: 'Start a profile', scope: 'operate', destructive: false },
+    { name: 'bulk_tag_profiles', title: 'Tag profiles', scope: 'operate', destructive: false },
+    { name: 'stop_profile', title: 'Stop a profile', scope: 'operate', destructive: true },
+    { name: 'get_cdp_endpoint', title: 'CDP', scope: 'full', destructive: false },
+    { name: 'start_profile', title: 'dup', scope: 'operate' },
+    null
+  ];
+  const groups = groupPreapprovable(engine);
+  assert.deepEqual(groups.map((g) => [g.group, g.tools.map((x) => x.name)]), [['sessions', ['start_profile', 'stop_profile']], ['other', ['bulk_tag_profiles']]], 'grouped, deduped, operate only');
+  assert.equal(groups[0].tools[1].destructive, true);
+  assert.equal(groups[1].tools[0].title, 'Tag profiles');
+  const allowedTools = preapprovableNames(groups);
+  const form = { name: 'n8n', memberId: 1, scope: 'operate', expiresInDays: 30, groupMode: 'some', groupIds: [1], automation: true, preApprovedTools: ['bulk_tag_profiles'], maxProfilesPerCall: 5, maxCallsPerHour: 60 };
+  assert.deepEqual(validateTokenForm(form, { isOwner: true, allowedTools }), {}, 'a tool the engine offers is accepted');
+  assert.deepEqual(buildTokenInput(form, { isOwner: true, allowedTools }).preApprovedTools, ['bulk_tag_profiles']);
+  assert.equal(validateTokenForm({ ...form, preApprovedTools: ['run_macro'] }, { isOwner: true, allowedTools }).preApprovedTools, 'errors.toolNotAllowed', 'one it does not offer is refused');
+  const page = read('src', 'renderer', 'pages', 'AiPage.jsx');
+  assert.match(page, /softglazeApi\.ai\.preapprovableTools\(\)\.then\(\(l\) => \{ if \(live\) setPreTools\(Array\.isArray\(l\) \? l : null\); \}\)\.catch\(\(\) => \{ if \(live\) setPreTools\(null\); \}\)/, 'a rejected channel keeps the built-in list');
 });
 
 test('token form: pre-approvable tools are operate tools only, never expert or never-exposed ones', async () => {
@@ -328,6 +355,12 @@ test('engine shapes (PR #38): allowHour, expired flag, pending outcome, run ids,
   const connect = read('src', 'renderer', 'components', 'ai', 'AiConnectTab.jsx');
   assert.match(connect, /\{hasPlaceholder\(entry\.text\) && <p/, 'no "<YOUR_TOKEN>" hint for snippets without it (VS Code prompts for the token)');
   assert.match(connect, /!\(bridge && bridge\.mcpbPath\) \? `\$\{base\}\.step2NoMcpb`/, 'the .mcpb is only mentioned when the build ships one');
+  assert.match(read('src', 'renderer', 'components', 'ai', 'AiApprovalsTab.jsx'), /a\.memberName \? ` · \$\{t\('approvals\.actsAs', \{ member: a\.memberName \}\)\}` : ''/, '"acts as" in the list too');
+  assert.match(dialog, /current\.memberName\s*\? t\('approval\.tokenAndMember'/, '"acts as" in the dialog');
+  assert.match(page, /status && status\.error \? t\('status\.errorHint', \{ message: status\.error \}\)/, 'the engine status error is shown');
+  const memory = read('src', 'renderer', 'components', 'ai', 'AiMemoryTab.jsx');
+  assert.match(memory, /const guides = mem && Array\.isArray\(mem\.guides\) && mem\.guides\.length \? mem\.guides : null;/, 'the guides from ai:memory-get are shown');
+  assert.match(memory, /typeof guide\.markdown === 'string' \? guide\.markdown/, 'with their Markdown text');
 });
 
 // ---- not available / permissions ---------------------------------------------------------
