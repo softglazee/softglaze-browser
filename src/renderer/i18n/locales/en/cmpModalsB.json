@@ -57,6 +57,7 @@
     "rowResolution": "Resolution",
     "rowFonts": "Fonts",
     "rowCanvas": "Canvas",
+    "canvasEngineNote": "Standard engine: 2D canvas is not changed. Only fingerprint-chromium changes it.",
     "rowWebglImage": "WebGL image",
     "rowAudioContext": "AudioContext",
     "rowClientRects": "ClientRects",

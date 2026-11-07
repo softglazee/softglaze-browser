@@ -57,6 +57,7 @@
     "rowResolution": "Resolución",
     "rowFonts": "Fuentes",
     "rowCanvas": "Canvas",
+    "canvasEngineNote": "Motor estándar: el canvas 2D no se cambia. Solo fingerprint-chromium lo cambia.",
     "rowWebglImage": "Imagen WebGL",
     "rowAudioContext": "AudioContext",
     "rowClientRects": "ClientRects",

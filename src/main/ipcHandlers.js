@@ -4388,10 +4388,12 @@ async function probeUrl(agent, target) {
 // DNSBL check of the exit IP: a 127.0.0.x answer means listed. Errors, timeouts and sentinels such
 // as Spamhaus's 127.255.255.x (public resolver blocked) count as not listed, to avoid false positives.
 // v6: whether the zone answers IPv6 nibble queries; zones without it are skipped for IPv6.
+// SORBS is gone: Proofpoint shut it down on 5 June 2024 and its zone no longer resolves (NXDOMAIN),
+// so it only cost a lookup. Do not add it back: if the domain were ever re-registered, a wildcard
+// answer would mark every proxy as listed.
 const DNSBL_ZONES = [
   { zone: 'zen.spamhaus.org', name: 'Spamhaus', v6: true },
   { zone: 'bl.spamcop.net', name: 'SpamCop', v6: false },
-  { zone: 'dnsbl.sorbs.net', name: 'SORBS', v6: true },
   { zone: 'b.barracudacentral.org', name: 'Barracuda', v6: false }
 ];
 
