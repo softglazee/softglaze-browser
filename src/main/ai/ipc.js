@@ -8,8 +8,8 @@
 //   ai:approvals-respond  any signed-in member may answer approvals from tokens that act as
 //                         themselves; Owner and Admin may answer all.
 //   ai:approvals-list     filtered the same way, so a member's dialog can show their own approvals.
-// Events main -> renderer: ai:approval-requested (one approval), ai:approvals-changed
-// ({ pending }), ai:status-changed ({ at }).
+// Events main -> renderer: ai:approval-requested (one approval, only to a window whose member may
+// answer it), ai:approvals-changed ({ pending }), ai:status-changed ({ at }).
 
 const AI_CHANNELS = Object.freeze({
   STATUS: 'ai:status',
@@ -29,6 +29,7 @@ const AI_CHANNELS = Object.freeze({
   PROMPTS_LIST: 'ai:prompts-list',
   SNIPPETS: 'ai:snippets',
   BRIDGE_INFO: 'ai:bridge-info',
+  PREAPPROVABLE_TOOLS: 'ai:preapprovable-tools',
   // main -> renderer events
   APPROVAL_REQUESTED: 'ai:approval-requested',
   APPROVALS_CHANGED: 'ai:approvals-changed',
@@ -42,6 +43,29 @@ function forbidden(message) {
   const e = new Error(message);
   e.code = 'FORBIDDEN';
   return e;
+}
+
+// Who may answer an approval: single-user mode, the Owner, an Admin or the Super Admin, or the
+// member the token acts as. Suspended, banned or unknown members answer nothing. Used for
+// ai:approvals-list, ai:approvals-respond and the ai:approval-requested event alike.
+function canAnswerApproval(member, approval) {
+  if (!member) return true; // single-user mode == Owner
+  if (member.status && member.status !== 'active') return false;
+  if (ADMIN_ROLES.has(member.role)) return true;
+  return Boolean(approval && approval.memberId != null && member.id != null && Number(approval.memberId) === Number(member.id));
+}
+
+// Wraps the window sender for AI events: an approval dialog reaches the window only when the
+// member signed in to it may answer it; other events go through. getWindowMember must read the
+// window's member, not the AI actor (this runs inside the AI call).
+function createWindowEmitter({ getWindowMember, send }) {
+  return (channel, data) => {
+    if (channel !== AI_CHANNELS.APPROVAL_REQUESTED) { send(channel, data); return; }
+    Promise.resolve()
+      .then(() => getWindowMember())
+      .then((m) => { if (canAnswerApproval(m, data)) send(channel, data); })
+      .catch(() => {});
+  };
 }
 
 function activeOrThrow(m) {
@@ -59,7 +83,7 @@ function registerAiIpc(registerHandler, ai, host) {
     return m;
   };
   const isOwner = (m) => !m || OWNER_ROLES.has(m.role);
-  const canAnswer = (m, approval) => !m || ADMIN_ROLES.has(m.role) || (approval && approval.memberId != null && Number(approval.memberId) === Number(m.id));
+  const canAnswer = canAnswerApproval;
 
   registerHandler(AI_CHANNELS.STATUS, async () => { await requireAdmin(); return ai.status(); });
   registerHandler(AI_CHANNELS.SET_ENABLED, async (payload) => {
@@ -125,6 +149,7 @@ function registerAiIpc(registerHandler, ai, host) {
   registerHandler(AI_CHANNELS.PROMPTS_LIST, async () => { await requireAdmin(); return ai.listPrompts(); });
   registerHandler(AI_CHANNELS.SNIPPETS, async () => { await requireAdmin(); return ai.getSnippets(); });
   registerHandler(AI_CHANNELS.BRIDGE_INFO, async () => { await requireAdmin(); return ai.bridgeInfo(); });
+  registerHandler(AI_CHANNELS.PREAPPROVABLE_TOOLS, async () => { await requireAdmin(); return ai.preApprovableTools(); });
 }
 
-module.exports = { AI_CHANNELS, registerAiIpc };
+module.exports = { AI_CHANNELS, registerAiIpc, canAnswerApproval, createWindowEmitter };

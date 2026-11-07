@@ -45,7 +45,7 @@ const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
 const aiActor = require('./ai/actor');
 const ai = require('./ai');
-const { registerAiIpc } = require('./ai/ipc');
+const { registerAiIpc, createWindowEmitter } = require('./ai/ipc');
 const autofillBridge = require('./autofillBridge');
 const { siteKeyOf } = require('./siteKey');
 const updater = require('./updater');
@@ -13296,18 +13296,20 @@ function emitToAllWindows(channel, data) {
   try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(channel, data); } catch (e) { /* window gone */ } } } catch (e) { /* ignore */ }
 }
 
-// AI events for the window. An approval dialog goes only to a window whose signed-in member may
-// answer it: the Owner, an Admin, the Super Admin, single-user mode, or the member the token acts
-// as. Reads currentMemberId directly: this runs inside the AI call, where the actor is the token.
-function emitAiEvent(channel, data) {
-  if (channel !== 'ai:approval-requested') { emitToAllWindows(channel, data); return; }
-  const windowMemberId = currentMemberId;
-  if (windowMemberId == null || permissions.isSuperAdminId(windowMemberId)) { emitToAllWindows(channel, data); return; }
-  if (data && data.memberId != null && Number(data.memberId) === Number(windowMemberId)) { emitToAllWindows(channel, data); return; }
-  getPrisma().member.findUnique({ where: { id: windowMemberId }, select: { role: true, status: true } })
-    .then((m) => { if (m && m.status === 'active' && (m.role === 'OWNER' || m.role === 'ADMIN')) emitToAllWindows(channel, data); })
-    .catch(() => {});
+// The member signed in to the window, for routing AI events. Reads currentMemberId directly:
+// AI events are emitted inside the AI call, where getActiveMember() would answer with the token's
+// member. A signed-in id that no longer exists answers nothing.
+async function windowMemberForAiEvents() {
+  const id = currentMemberId;
+  if (id == null) return null;
+  if (permissions.isSuperAdminId(id)) return { ...permissions.SUPER_ADMIN };
+  const m = await getPrisma().member.findUnique({ where: { id } });
+  return m || { id, role: 'NONE', status: 'missing' };
 }
+
+// AI events for the window; approval dialogs only reach a member who may answer them
+// (ai/ipc.js canAnswerApproval, the same rule as ai:approvals-list).
+const emitAiEvent = createWindowEmitter({ getWindowMember: windowMemberForAiEvents, send: emitToAllWindows });
 
 // Where the stdio bridge lives and how to start it: the app's own executable in Node mode, so AI
 // apps that only start local commands (Claude Desktop) need no separate Node.js.
