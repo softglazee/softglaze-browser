@@ -4438,6 +4438,26 @@ function isRecordingMacro(sessionId) {
   return Boolean(rec && !rec.stopped);
 }
 
+// The live main tab of a running Chromium session, on the connection SoftGlaze already holds (for
+// SoftGlaze AI's page tools; no second debugger is attached). When the stored tab was closed, the
+// first open tab takes its place, so page tools and macros keep working. Null when not running.
+async function getAutomationPage(sessionId) {
+  const session = activeSessions.get(String(sessionId || '').trim());
+  if (!session || !session.page) return null;
+  let closed = false;
+  try { closed = session.page.isClosed(); } catch (e) { closed = true; }
+  if (closed) {
+    let next = null;
+    try {
+      const pages = await session.browser.pages();
+      next = pages.find((p) => { try { return !p.isClosed(); } catch (e) { return false; } }) || null;
+    } catch (e) { next = null; }
+    if (!next) return null;
+    session.page = next;
+  }
+  return { page: session.page, browser: session.browser, wsEndpoint: session.wsEndpoint || null };
+}
+
 function listActiveSessions() {
   return Array.from(activeSessions.entries()).map(([sessionId, session]) => ({
     id: sessionId,
@@ -4502,6 +4522,7 @@ module.exports = {
   navigateSession,
   retryBlockedPage,
   isRecordingMacro,
+  getAutomationPage,
   runCookieRobot,
   warmInteract,
   runMacro,
