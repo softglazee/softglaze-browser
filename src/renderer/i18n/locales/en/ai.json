@@ -101,6 +101,7 @@
     "emptyBody": "Turn on the AI server to see how to connect each app.",
     "appsLabel": "AI apps",
     "guide": "Full guide",
+    "appDocs": "App's own docs",
     "where": "Where it goes",
     "steps": "How to connect",
     "kind": {
@@ -165,6 +166,18 @@
         "step1": "Create a token for Codex with the button below, then save it in the SOFTGLAZE_TOKEN environment variable (command below).",
         "step2": "Add the setup to ~/.codex/config.toml. Codex reads the token from SOFTGLAZE_TOKEN, so the file never holds it.",
         "step3": "Open a new terminal, start Codex and type /mcp. SoftGlaze should be listed."
+      },
+      "windsurf": {
+        "title": "Windsurf",
+        "step1": "Create a token for Windsurf with the button below.",
+        "step2": "Paste the setup into Windsurf's MCP config file (see Where it goes), with your token in place of <YOUR_TOKEN>.",
+        "step3": "Refresh the MCP servers in Windsurf and check that SoftGlaze is listed."
+      },
+      "cline": {
+        "title": "Cline",
+        "step1": "Create a token for Cline with the button below.",
+        "step2": "In Cline, open MCP Servers > Configure and paste the setup into cline_mcp_settings.json, with your token in place of <YOUR_TOKEN>.",
+        "step3": "Check that SoftGlaze shows as connected in Cline's MCP Servers list."
       },
       "n8n": {
         "title": "n8n"
@@ -398,7 +411,8 @@
     "outcomes": {
       "ok": "OK",
       "denied": "Denied",
-      "error": "Error"
+      "error": "Error",
+      "pending": "Waiting"
     },
     "app": "App",
     "allApps": "All apps",
@@ -414,7 +428,18 @@
     "colSummary": "What happened",
     "colOutcome": "Result",
     "colDuration": "Took",
-    "preApproved": "Pre-approved",
+    "approval": {
+      "none": "No approval needed",
+      "asked": "Asked you",
+      "pre-approved": "Pre-approved",
+      "allow-once": "Allowed once",
+      "hour-grant": "Allowed for 1 hour",
+      "deny": "Denied by you",
+      "timeout": "No answer in 2 minutes",
+      "cancelled": "Stopped by Stop all AI",
+      "started-by-this-token": "A profile this app started",
+      "developer-token": "Developer API token"
+    },
     "pageEmpty": "No more entries.",
     "pageInfo": "Page {{page}} · {{size}} per page",
     "newer": "Newer",

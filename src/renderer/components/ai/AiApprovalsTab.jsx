@@ -4,7 +4,7 @@ import { ShieldCheck } from 'lucide-react';
 
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import { ApprovalDetails, Countdown, DecisionButtons } from '@/components/ai/AiApprovalDialog.jsx';
-import { AI_TONE, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
+import { AI_TONE, SUBTLE_TEXT, clientLabel, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
 import { relativeTime } from '@/lib/aiCore.mjs';
 
 // The same queue as the pop-up dialog, as a list. Answering here clears the dialog too.
@@ -22,7 +22,7 @@ export default function AiApprovalsTab({ lang, onOpenSettings }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-3xl text-[12.5px] leading-relaxed text-muted-foreground">{t('approvals.intro')}</p>
+        <p className={`max-w-3xl text-[12.5px] leading-relaxed ${SUBTLE_TEXT}`}>{t('approvals.intro')}</p>
         <button type="button" onClick={onOpenSettings} className="text-[12.5px] font-medium text-primary hover:underline">{t('approvals.changeRules')}</button>
       </div>
 
@@ -43,7 +43,7 @@ export default function AiApprovalsTab({ lang, onOpenSettings }) {
                   <p className="text-[14.5px] font-semibold leading-snug text-foreground break-words">{a.summary || t('approval.noSummary', { tool: a.tool || '' })}</p>
                   <p className="mt-1 text-[12px] text-muted-foreground break-words">
                     {t('approvals.meta', {
-                      app: a.clientName || t('approval.unknownApp'),
+                      app: clientLabel(t, a.clientName) || t('approval.unknownApp'),
                       token: a.tokenName || '-',
                       when: relativeTime(a._createdMs, now, lang)
                     })}

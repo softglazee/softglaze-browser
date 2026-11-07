@@ -55,13 +55,13 @@
     "appSeen": "{{name}} · {{when}}",
     "appsMore_one": "y {{count}} más",
     "appsMore_other": "y {{count}} más",
-    "waiting": "Esperando tu respuesta",
+    "waiting": "Esperan respuesta",
     "waitingNone": "Nada que responder",
     "waitingSome_one": "{{count}} solicitud por responder",
     "waitingSome_other": "{{count}} solicitudes por responder",
     "openApprovals": "abrir Aprobaciones",
-    "sessions": "Sesiones de IA en marcha",
-    "sessionsHint": "Iniciadas por apps de IA"
+    "sessions": "Sesiones de IA",
+    "sessionsHint": "En marcha, iniciadas por apps de IA"
   },
   "tabs": {
     "label": "Secciones de SoftGlaze AI",
@@ -101,6 +101,7 @@
     "emptyBody": "Enciende el servidor de IA para ver cómo conectar cada app.",
     "appsLabel": "Apps de IA",
     "guide": "Guía completa",
+    "appDocs": "Documentación de la app",
     "where": "Dónde va",
     "steps": "Cómo conectar",
     "kind": {
@@ -165,6 +166,18 @@
         "step1": "Crea un token para Codex con el botón de abajo y guárdalo en la variable de entorno SOFTGLAZE_TOKEN (comando más abajo).",
         "step2": "Añade la configuración a ~/.codex/config.toml. Codex lee el token de SOFTGLAZE_TOKEN, así que el archivo nunca lo contiene.",
         "step3": "Abre una terminal nueva, inicia Codex y escribe /mcp. SoftGlaze debería aparecer."
+      },
+      "windsurf": {
+        "title": "Windsurf",
+        "step1": "Crea un token para Windsurf con el botón de abajo.",
+        "step2": "Pega la configuración en el archivo de configuración MCP de Windsurf (ver Dónde va), con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "Actualiza los servidores MCP en Windsurf y comprueba que SoftGlaze aparece."
+      },
+      "cline": {
+        "title": "Cline",
+        "step1": "Crea un token para Cline con el botón de abajo.",
+        "step2": "En Cline, abre MCP Servers > Configure y pega la configuración en cline_mcp_settings.json, con tu token en lugar de <YOUR_TOKEN>.",
+        "step3": "Comprueba que SoftGlaze aparece como conectado en la lista MCP Servers de Cline."
       },
       "n8n": {
         "title": "n8n"
@@ -398,7 +411,8 @@
     "outcomes": {
       "ok": "Correcto",
       "denied": "Rechazado",
-      "error": "Error"
+      "error": "Error",
+      "pending": "En espera"
     },
     "app": "App",
     "allApps": "Todas las apps",
@@ -414,7 +428,18 @@
     "colSummary": "Qué pasó",
     "colOutcome": "Resultado",
     "colDuration": "Duración",
-    "preApproved": "Aprobada de antemano",
+    "approval": {
+      "none": "No necesitaba aprobación",
+      "asked": "Te preguntó",
+      "pre-approved": "Aprobada de antemano",
+      "allow-once": "Permitida una vez",
+      "hour-grant": "Permitida durante 1 hora",
+      "deny": "Rechazada por ti",
+      "timeout": "Sin respuesta en 2 minutos",
+      "cancelled": "Detenida con Detener toda la IA",
+      "started-by-this-token": "Un perfil que inició esta app",
+      "developer-token": "Token de la API para desarrolladores"
+    },
     "pageEmpty": "No hay más entradas.",
     "pageInfo": "Página {{page}} · {{size}} por página",
     "newer": "Más recientes",

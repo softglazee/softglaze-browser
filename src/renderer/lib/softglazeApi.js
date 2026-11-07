@@ -385,6 +385,16 @@ export const softglazeApi = {
       if (!ai || typeof ai.onApprovalRequested !== 'function') return () => {};
       return ai.onApprovalRequested(cb);
     },
+    onApprovalsChanged: (cb) => {
+      const ai = window.softglaze && window.softglaze.ai;
+      if (!ai || typeof ai.onApprovalsChanged !== 'function') return () => {};
+      return ai.onApprovalsChanged(cb);
+    },
+    onStatusChanged: (cb) => {
+      const ai = window.softglaze && window.softglaze.ai;
+      if (!ai || typeof ai.onStatusChanged !== 'function') return () => {};
+      return ai.onStatusChanged(cb);
+    },
     stopAll: () => aiCall((ai) => ai.stopAll()),
     audit: { list: (q) => aiCall((ai) => ai.audit.list(q)) },
     memories: {

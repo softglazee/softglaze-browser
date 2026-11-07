@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AppWindow, Cable, Check, CodeXml, ExternalLink, FileCode2, KeyRound, Plug, RefreshCw, SquareTerminal, TriangleAlert, Workflow
+  AppWindow, Cable, Check, CodeXml, ExternalLink, FileCode2, KeyRound, Plug, RefreshCw, SquareTerminal, TriangleAlert, Wind, Workflow
 } from 'lucide-react';
 
 import Button from '@/components/ui/Button.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
-import { AI_TONE, CodeBlock, CopyField, InlineError, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
+import { AI_TONE, CodeBlock, CopyField, InlineError, PrimaryButton, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
 import { STDIO_CLIENTS, envVarCommand, n8nEndpoints } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
 
@@ -17,20 +17,25 @@ const ICONS = {
   vscode: CodeXml,
   'gemini-cli': SquareTerminal,
   codex: SquareTerminal,
+  windsurf: Wind,
+  cline: CodeXml,
   n8n: Workflow,
   other: Plug
 };
 const iconFor = (key) => ICONS[key] || Plug;
 
-export default function AiConnectTab({ status, clients, bridge, error, onRetry, isOwner, tokensCount, onToggleServer, toggling, onCreateToken }) {
+export default function AiConnectTab({ status, clients, loading, bridge, error, onRetry, isOwner, tokensCount, tokensLoaded = true, onToggleServer, toggling, onCreateToken }) {
   const { t } = useTranslation('ai');
   const [selected, setSelected] = useState(null);
+  const picked = useRef(false);
   const refs = useRef({});
+  const pick = (key) => { picked.current = true; setSelected(key); };
 
+  // Until the user picks an app, the first one in the list is shown.
   useEffect(() => {
-    if (!clients.length) return;
-    if (!selected || !clients.some((c) => c.key === selected)) setSelected(clients[0].key);
-  }, [clients, selected]);
+    if (loading || !clients.length) return;
+    if (!picked.current || !clients.some((c) => c.key === selected)) setSelected(clients[0].key);
+  }, [clients, selected, loading]);
 
   const enabled = Boolean(status && status.enabled);
   const connected = Array.isArray(status && status.clients) && status.clients.length > 0;
@@ -43,7 +48,8 @@ export default function AiConnectTab({ status, clients, bridge, error, onRetry, 
   const current = clients.find((c) => c.key === selected) || null;
 
   function onListKey(e) {
-    const i = clients.findIndex((c) => c.key === selected);
+    const focused = String((e.target && e.target.id) || '').replace('ai-client-', '');
+    const i = Math.max(0, clients.findIndex((c) => c.key === (focused || selected)));
     let n = null;
     if (e.key === 'ArrowDown') n = (i + 1) % clients.length;
     else if (e.key === 'ArrowUp') n = (i - 1 + clients.length) % clients.length;
@@ -52,24 +58,24 @@ export default function AiConnectTab({ status, clients, bridge, error, onRetry, 
     if (n == null) return;
     e.preventDefault();
     const key = clients[n].key;
-    setSelected(key);
-    requestAnimationFrame(() => { if (refs.current[key]) refs.current[key].focus(); });
+    if (refs.current[key]) refs.current[key].focus();
+    pick(key);
   }
 
   return (
     <div className="space-y-5">
-      {!allDone && (
+      {!allDone && tokensLoaded && (
         <section aria-labelledby="ai-start-title" className="rounded-xl border p-4" style={toneSurface('info', 6, 22)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="ai-start-title" className="text-[14px] font-semibold text-foreground">{t('start.title')}</h2>
-            {!enabled && <Button size="sm" onClick={onToggleServer} isLoading={toggling}>{t('start.turnOn')}</Button>}
+            {!enabled && <PrimaryButton size="sm" onClick={onToggleServer} isLoading={toggling}>{t('start.turnOn')}</PrimaryButton>}
           </div>
           <ol className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
             {steps.map((s, i) => (
               <li key={i} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-[13px]">
                 <span
                   className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11.5px] font-bold"
-                  style={s.done ? { background: AI_TONE.success, color: '#fff' } : { ...toneSurface('muted', 14, 30), color: 'var(--foreground)', border: '1px solid' }}
+                  style={s.done ? { background: AI_TONE.success, color: 'var(--background)' } : { ...toneSurface('muted', 14, 30), color: 'var(--foreground)', border: '1px solid' }}
                 >
                   {s.done ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
                 </span>
@@ -90,12 +96,17 @@ export default function AiConnectTab({ status, clients, bridge, error, onRetry, 
         </InlineError>
       )}
 
-      {clients.length === 0 ? (
+      {loading ? (
+        <div key="skeleton" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[230px_minmax(0,1fr)]" aria-busy="true">
+          <div className="h-[330px] animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" />
+          <div className="h-[520px] animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" />
+        </div>
+      ) : clients.length === 0 ? (
         !error && (
           <EmptyState title={t('connect.empty')} description={enabled ? t('connect.emptyOn') : t('connect.emptyBody')} />
         )
       ) : (
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <div key="clients" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div role="tablist" aria-orientation="vertical" aria-label={t('connect.appsLabel')} onKeyDown={onListKey} className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 lg:flex-col lg:overflow-visible">
             {clients.map((c) => {
               const Icon = iconFor(c.key);
@@ -110,7 +121,7 @@ export default function AiConnectTab({ status, clients, bridge, error, onRetry, 
                   aria-selected={on}
                   aria-controls="ai-client-panel"
                   tabIndex={on ? 0 : -1}
-                  onClick={() => setSelected(c.key)}
+                  onClick={() => pick(c.key)}
                   className={cn('flex shrink-0 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-[13px] font-medium transition-colors',
                     on ? 'text-foreground' : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground')}
                   style={on ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)' } : undefined}
@@ -149,10 +160,18 @@ function PanelHeader({ entry, children }) {
         <h2 className="text-[16px] font-semibold text-foreground font-display break-words">{clientTitle(t, entry)}</h2>
         {children}
       </div>
-      <a href={entry.docsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-elevated">
-        {t('connect.guide')} <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="sr-only">{t('opensInBrowser')}</span>
-      </a>
+      <div className="flex flex-wrap items-center gap-2">
+        {entry.appDocsUrl && (
+          <a href={entry.appDocsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-primary hover:underline">
+            {t('connect.appDocs')} <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            <span className="sr-only">{t('opensInBrowser')}</span>
+          </a>
+        )}
+        <a href={entry.docsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-elevated">
+          {t('connect.guide')} <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">{t('opensInBrowser')}</span>
+        </a>
+      </div>
     </div>
   );
 }
@@ -164,7 +183,7 @@ function Steps({ items, title }) {
       <ol className="space-y-2">
         {items.map((s, i) => (
           <li key={i} className="flex items-start gap-3 text-[13px] leading-relaxed text-foreground">
-            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold" style={{ ...toneSurface('info', 14, 0), color: AI_TONE.info }}>{i + 1}</span>
+            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold" style={{ ...toneSurface('info', 14, 0), ...toneText('info') }}>{i + 1}</span>
             <span className="min-w-0 break-words">{s}</span>
           </li>
         ))}
@@ -186,22 +205,33 @@ function ClientPanel({ entry, bridge, onCreateToken }) {
       <PanelHeader entry={entry}>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <TonePill tone="muted">{kindLabel}</TonePill>
-          {entry.where && (
-            <span className="inline-flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
-              <FileCode2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span className="sr-only">{t('connect.where')}: </span>
-              <code className="truncate font-mono" title={entry.where}>{entry.where}</code>
-            </span>
-          )}
         </div>
       </PanelHeader>
 
       <div className="space-y-5 px-5 py-4">
         <Steps items={steps} title={t('connect.steps')} />
 
+        {/* Step 1 points at this button, so it sits right under the steps, above the snippet. */}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 px-4 py-3">
+          <PrimaryButton onClick={() => onCreateToken({ client: entry })}>
+            <KeyRound className="h-4 w-4" /> {t('connect.createToken')}
+          </PrimaryButton>
+          <p className="min-w-[14rem] flex-1 text-[12.5px] text-muted-foreground">{t('connect.createTokenHint')}</p>
+        </div>
+
+        {entry.where && (
+          <div className="flex items-start gap-2 text-[12.5px]">
+            <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <p className="min-w-0 break-words text-foreground">
+              <span className="font-semibold">{t('connect.where')}: </span>
+              {/\s/.test(entry.where) ? entry.where : <code className="font-mono text-[12px]">{entry.where}</code>}
+            </p>
+          </div>
+        )}
+
         {entry.text ? (
           <div className="space-y-2">
-            <CodeBlock text={entry.text} label={t('connect.snippet', { app: clientTitle(t, entry) })} kindLabel={`${kindLabel}${entry.where ? ` · ${entry.where}` : ''}`} />
+            <CodeBlock text={entry.text} label={t('connect.snippet', { app: clientTitle(t, entry) })} kindLabel={kindLabel} />
             <p className="text-[12px] text-muted-foreground">{t('connect.placeholderHint')}</p>
           </div>
         ) : (
@@ -216,14 +246,7 @@ function ClientPanel({ entry, bridge, onCreateToken }) {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 px-4 py-3">
-          <Button onClick={() => onCreateToken({ client: entry })}>
-            <KeyRound className="h-4 w-4" /> {t('connect.createToken')}
-          </Button>
-          <p className="min-w-[14rem] flex-1 text-[12.5px] text-muted-foreground">{t('connect.createTokenHint')}</p>
-        </div>
-
-        {showBridge && <BridgeBox bridge={bridge} claudeDesktop={entry.key === 'claude-desktop'} />}
+        {showBridge &&<BridgeBox bridge={bridge} claudeDesktop={entry.key === 'claude-desktop'} />}
       </div>
     </>
   );
@@ -281,7 +304,7 @@ function N8nPanel({ status, entry, isOwner, onCreateToken }) {
           <h3 id="n8n-a" className="text-[14px] font-semibold text-foreground">{t('connect.n8n.a.title')}</h3>
           <Steps items={[t('connect.n8n.a.step1'), t('connect.n8n.a.step2'), t('connect.n8n.a.step3')]} title={t('connect.steps')} />
           {ep ? (
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
               <CopyField label={t('connect.n8n.a.sse')} value={ep.sse} />
               <CopyField label={t('connect.n8n.a.sseDocker')} value={ep.sseDocker} />
             </div>
@@ -299,9 +322,9 @@ function N8nPanel({ status, entry, isOwner, onCreateToken }) {
           <h3 id="n8n-c" className="text-[14px] font-semibold text-foreground">{t('connect.n8n.c.title')}</h3>
           <p className="text-[12.5px] leading-relaxed text-muted-foreground">{t('connect.n8n.c.body')}</p>
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => onCreateToken({ client: entry, automation: isOwner })}>
+            <PrimaryButton onClick={() => onCreateToken({ client: entry, automation: isOwner })}>
               <KeyRound className="h-4 w-4" /> {isOwner ? t('connect.n8n.c.create') : t('connect.createToken')}
-            </Button>
+            </PrimaryButton>
             {!isOwner && <span className="text-[12px]" style={toneText('muted')}>{t('connect.n8n.c.ownerOnly')}</span>}
           </div>
         </section>

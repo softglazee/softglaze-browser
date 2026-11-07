@@ -279,6 +279,10 @@ const AI_CHANNELS = Object.freeze({
   APPROVALS_LIST: 'ai:approvals-list',
   APPROVALS_RESPOND: 'ai:approvals-respond',
   APPROVAL_REQUESTED: 'ai:approval-requested',
+  // Additive events from the engine: an approval was answered/expired/cancelled elsewhere (for
+  // example Stop all AI from the tray), and the server status changed.
+  APPROVALS_CHANGED: 'ai:approvals-changed',
+  STATUS_CHANGED: 'ai:status-changed',
   STOP_ALL: 'ai:stop-all',
   AUDIT_LIST: 'ai:audit-list',
   MEMORY_GET: 'ai:memory-get',
@@ -720,6 +724,16 @@ const api = Object.freeze({
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(AI_CHANNELS.APPROVAL_REQUESTED, listener);
       return () => ipcRenderer.removeListener(AI_CHANNELS.APPROVAL_REQUESTED, listener);
+    },
+    onApprovalsChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(AI_CHANNELS.APPROVALS_CHANGED, listener);
+      return () => ipcRenderer.removeListener(AI_CHANNELS.APPROVALS_CHANGED, listener);
+    },
+    onStatusChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(AI_CHANNELS.STATUS_CHANGED, listener);
+      return () => ipcRenderer.removeListener(AI_CHANNELS.STATUS_CHANGED, listener);
     },
     stopAll: () => invokeAi(AI_CHANNELS.STOP_ALL),
     audit: Object.freeze({

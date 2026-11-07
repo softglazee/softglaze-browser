@@ -39,11 +39,11 @@ test('snippets: the token placeholder is split out for highlighting and filled o
 });
 
 test('snippets: clients come in a fixed order, n8n is added, unknown ones keep their title before "Other apps"', async () => {
-  const { buildClientList, normalizeClientKey, docsUrlFor, DOCS_BASE } = await loadCore();
+  const { buildClientList, normalizeClientKey, docsUrlFor, appDocsUrl, DOCS_BASE } = await loadCore();
   const status = { enabled: true, running: true, port: 47321, url: 'http://127.0.0.1:47321/mcp' };
   const snippets = [
     { client: 'others', title: 'Windsurf, Cline, others', kind: 'json', where: 'MCP settings', text: '{}', docsUrl: '' },
-    { client: 'cursor', title: 'Cursor', kind: 'json', where: '~/.cursor/mcp.json', text: '{"url":"<YOUR_TOKEN>"}', docsUrl: 'https://browser.softglaze.com/docs/ai-agents#cursor' },
+    { client: 'cursor', title: 'Cursor', kind: 'json', where: '~/.cursor/mcp.json', text: '{"url":"<YOUR_TOKEN>"}', docsUrl: 'https://cursor.com/docs/context/mcp' },
     { client: 'Claude Code', title: 'Claude Code', kind: 'command', where: 'Terminal', text: 'claude mcp add', docsUrl: null },
     { client: 'zed', title: 'Zed', kind: 'json', where: 'settings.json', text: '{}' },
     { client: 'claude_desktop', title: 'Claude Desktop', kind: 'json', where: 'claude_desktop_config.json', text: '{}' },
@@ -54,15 +54,24 @@ test('snippets: clients come in a fixed order, n8n is added, unknown ones keep t
   const list = buildClientList(snippets, status);
   assert.deepEqual(list.map((c) => c.key), ['claude-desktop', 'claude-code', 'cursor', 'codex', 'n8n', 'custom:zed', 'other']);
   assert.equal(list.find((c) => c.key === 'cursor').title, 'Cursor', 'the first snippet for a client wins');
-  assert.equal(list.find((c) => c.key === 'claude-code').docsUrl, `${DOCS_BASE}#claude-code`, 'missing docsUrl falls back to the client anchor');
+  const cursor = list.find((c) => c.key === 'cursor');
+  assert.equal(cursor.docsUrl, `${DOCS_BASE}#cursor`, 'the guide button is always our own page, with the client anchor');
+  assert.equal(cursor.appDocsUrl, 'https://cursor.com/docs/context/mcp', "the app's own docs are a separate link");
+  assert.equal(list.find((c) => c.key === 'claude-code').docsUrl, `${DOCS_BASE}#claude-code`);
+  assert.equal(list.find((c) => c.key === 'claude-code').appDocsUrl, null);
   assert.equal(list.find((c) => c.key === 'n8n').docsUrl, `${DOCS_BASE}#n8n`);
   assert.equal(list.find((c) => c.key === 'custom:zed').known, false);
   assert.equal(docsUrlFor('custom:zed'), DOCS_BASE);
-  assert.equal(docsUrlFor('cursor', 'javascript:alert(1)'), `${DOCS_BASE}#cursor`, 'only https links from the engine are used');
-  for (const [raw, key] of [['VS Code', 'vscode'], ['vscode-copilot', 'vscode'], ['gemini', 'gemini-cli'], ['Codex', 'codex'], ['n8n', 'n8n'], ['Windsurf', 'other'], ['nope', null]]) {
+  assert.equal(appDocsUrl('javascript:alert(1)'), null, 'only https links');
+  assert.equal(appDocsUrl('https://browser.softglaze.com/docs/ai-agents#x'), null, 'never our own site twice');
+  for (const [raw, key] of [['VS Code', 'vscode'], ['vscode-copilot', 'vscode'], ['gemini', 'gemini-cli'], ['Codex', 'codex'], ['n8n', 'n8n'], ['Windsurf', 'windsurf'], ['cline', 'cline'], ['generic', 'other'], ['nope', null]]) {
     assert.equal(normalizeClientKey(raw), key, raw);
   }
   assert.deepEqual(buildClientList([], { enabled: false }), [], 'no port, no n8n card, no crash');
+  // The engine's own client ids (src/main/ai/snippets.js) all get a card, in the page's order.
+  const engineIds = ['claude-code', 'claude-desktop', 'cursor', 'vscode', 'gemini-cli', 'codex', 'windsurf', 'cline', 'n8n', 'generic'];
+  assert.deepEqual(buildClientList(engineIds.map((client) => ({ client, title: client, kind: 'json', text: '{}' })), status).map((c) => c.key),
+    ['claude-desktop', 'claude-code', 'cursor', 'vscode', 'gemini-cli', 'codex', 'windsurf', 'cline', 'n8n', 'other']);
   assert.deepEqual(buildClientList(undefined, null), []);
 });
 
@@ -331,7 +340,9 @@ test('permissions: the page is Owner/Admin only, Owner-only parts stay with the 
 
   const shell = read('src', 'renderer', 'components', 'AppShell.jsx');
   assert.match(shell, /\{ path: '\/ai', labelKey: 'nav\.ai', icon: Sparkles, aiOnly: true, pillKey: 'nav\.beta', badgeKey: 'aiApprovals', badgeTone: 'warning' \}/);
-  assert.match(shell, /\.filter\(\(item\) => !item\.aiOnly \|\| \(meLoaded && canManageAi\(me\)\)\)/, 'hidden until the member is known, then Owner/Admin only');
+  assert.match(shell, /\.filter\(\(item\) => !item\.aiOnly \|\| !meLoaded \|\| canManageAi\(me\)\)/, 'Owner/Admin only once the member is known');
+  assert.match(shell, /reserved=\{item\.aiOnly && !meLoaded\}/, 'until then its slot is kept but invisible (no layout shift for owners)');
+  assert.match(shell, /className=\{reserved \? 'block invisible' : 'block'\} aria-hidden=\{reserved \|\| undefined\} tabIndex=\{reserved \? -1 : undefined\}/, 'a reserved item is not visible, read or focusable');
   assert.match(shell, /<AiApprovalDialog \/>/, 'every member gets the approval dialog, on every page');
 
   const page = read('src', 'renderer', 'pages', 'AiPage.jsx');
@@ -400,6 +411,11 @@ test('memory and activity helpers: 20 KB counted in bytes, audit query, duration
   assert.equal(core.relativeTime(new Date(now + 3 * 86400000).toISOString(), now, 'en'), 'in 3 days');
   assert.equal(core.relativeTime('not a date', now, 'en'), '');
   assert.equal(core.prettyArgs({ a: 1 }), '{\n  "a": 1\n}');
+  assert.equal(core.approvalPath({ approval: 'pre-approved' }), 'pre-approved');
+  assert.equal(core.approvalPath({ approval: 'hour-grant' }), 'hour-grant');
+  assert.equal(core.approvalPath({ preApproved: true }), 'pre-approved');
+  assert.equal(core.approvalPath({ approval: 'something-new' }), null, 'unknown paths are not guessed');
+  assert.equal(core.approvalPath(null), null);
   assert.ok(core.prettyArgs({ big: 'x'.repeat(9000) }).length <= 4002, 'huge args are capped');
 });
 
@@ -436,7 +452,7 @@ test('strings: en and es carry the same keys, and every literal t() key used by 
   assert.deepEqual(esKeys.filter((k) => !enKeys.includes(k)), [], 'es has keys en lacks');
   assert.deepEqual(enKeys.filter((k) => !esKeys.includes(k)), [], 'en has keys es lacks');
   // Product and node names stay in English in both languages.
-  const brandNames = new Set(['connect.clients.claude-code.title', 'connect.clients.claude-desktop.title', 'connect.clients.gemini-cli.title', 'connect.n8n.b.kind']);
+  const brandNames = new Set(['connect.clients.claude-code.title', 'connect.clients.claude-desktop.title', 'connect.clients.gemini-cli.title', 'connect.clients.windsurf.title', 'connect.clients.cline.title', 'connect.n8n.b.kind']);
   const sameAsEnglish = enKeys.filter((k) => !brandNames.has(k)).filter((k) => {
     const a = k.split('.').reduce((o, p) => o[p], en);
     const b = k.split('.').reduce((o, p) => o[p], es);

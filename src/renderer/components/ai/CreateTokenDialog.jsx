@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button.jsx';
 import Input from '@/components/ui/Input.jsx';
 import NumberInput from '@/components/ui/NumberInput.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
-import { AI_TONE, CodeBlock, CopyButton, Segmented, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
+import { AI_TONE, CodeBlock, CopyButton, PrimaryButton, Segmented, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import {
   AUTOMATION_LIMITS, EXPIRY_OPTIONS, NAME_MAX, PREAPPROVABLE_TOOLS, SCOPES, automationActive, buildTokenInput,
@@ -188,7 +188,7 @@ export default function CreateTokenDialog({ flow, dispatch, me, members, groups,
             </DialogBody>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => dispatch({ type: 'close' })}>{t('cancel')}</Button>
-              <Button type="submit" isLoading={flow.step === 'saving'}>{t('create.submit')}</Button>
+              <PrimaryButton type="submit" isLoading={flow.step === 'saving'}>{t('create.submit')}</PrimaryButton>
             </DialogFooter>
           </form>
         )}
@@ -340,7 +340,7 @@ function RevealStep({ flow, dispatch, clientName, hostOs }) {
         {filled && (
           <div className="space-y-1.5">
             <span className="block text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{t('create.filledSetup', { app: clientName })}</span>
-            <CodeBlock text={filled} label={t('create.filledSetup', { app: clientName })} kindLabel={client.where || t(`connect.kind.${client.kind}`, { defaultValue: client.kind })} onCopied={() => dispatch({ type: 'copied' })} />
+            <CodeBlock text={filled} label={t('create.filledSetup', { app: clientName })} kindLabel={t(`connect.kind.${client.kind}`, { defaultValue: client.kind })} onCopied={() => dispatch({ type: 'copied' })} />
           </div>
         )}
         {client && client.key === 'codex' && (
@@ -358,7 +358,7 @@ function RevealStep({ flow, dispatch, clientName, hostOs }) {
         {flow.closeWarning && <p role="alert" className="text-[12.5px] font-medium" style={toneText('danger')}>{t('create.closeWarning')}</p>}
       </DialogBody>
       <DialogFooter>
-        <Button onClick={() => dispatch({ type: 'close' })} disabled={!canFinish}>{t('create.done')}</Button>
+        <PrimaryButton onClick={() => dispatch({ type: 'close' })} disabled={!canFinish}>{t('create.done')}</PrimaryButton>
       </DialogFooter>
     </>
   );

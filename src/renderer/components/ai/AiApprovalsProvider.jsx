@@ -75,8 +75,13 @@ export function AiApprovalsProvider({ children }) {
       setAvailable(true);
       setQueue((q) => enqueue(q, raw, Date.now()));
     });
+    // Answered, timed out or cancelled elsewhere (another window, the tray's Stop all AI): re-sync.
+    const offChanged = softglazeApi.ai.onApprovalsChanged(() => { if (live.current) refresh(); });
     refresh();
-    return () => { if (typeof off === 'function') off(); };
+    return () => {
+      if (typeof off === 'function') off();
+      if (typeof offChanged === 'function') offChanged();
+    };
   }, [refresh]);
 
   // Re-sync when the window comes back to the front (answers may have happened while away).

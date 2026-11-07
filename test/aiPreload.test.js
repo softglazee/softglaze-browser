@@ -17,6 +17,8 @@ const CONTRACT = [
   'ai:tokens-revoke', 'ai:approvals-list', 'ai:approvals-respond', 'ai:approval-requested', 'ai:stop-all',
   'ai:audit-list', 'ai:memory-get', 'ai:memory-set', 'ai:memory-reset', 'ai:prompts-list', 'ai:snippets', 'ai:bridge-info'
 ];
+// Additive events the engine emits (src/main/ai/ipc.js): approvals changed elsewhere, status changed.
+const ENGINE_EVENTS = ['ai:approvals-changed', 'ai:status-changed'];
 
 // Loads preload.js against a stubbed electron. `reply(channel, payload)` decides what invoke returns.
 function loadPreload(reply = () => ({ ok: true, data: { ok: true } })) {
@@ -95,6 +97,19 @@ test('the approval event reaches the renderer and unsubscribes cleanly', () => {
   assert.equal(listeners.has('ai:approval-requested'), false);
 });
 
+test('the engine events "approvals changed" and "status changed" reach the renderer', () => {
+  const { api, listeners } = loadPreload();
+  const seen = [];
+  const offA = api.ai.onApprovalsChanged((d) => seen.push(['a', d]));
+  const offS = api.ai.onStatusChanged((d) => seen.push(['s', d]));
+  listeners.get('ai:approvals-changed')({}, { pending: 2 });
+  listeners.get('ai:status-changed')({}, { at: 1 });
+  assert.deepEqual(seen, [['a', { pending: 2 }], ['s', { at: 1 }]]);
+  offA(); offS();
+  assert.equal(listeners.has('ai:approvals-changed'), false);
+  assert.equal(listeners.has('ai:status-changed'), false);
+});
+
 test('a build without the engine rejects with AI_UNAVAILABLE; main errors keep their code', async () => {
   const noEngine = loadPreload(async (ch) => { throw new Error(`Error invoking remote method '${ch}': Error: No handler registered for '${ch}'`); });
   await assert.rejects(noEngine.api.ai.getStatus(), (e) => e.code === 'AI_UNAVAILABLE');
@@ -113,7 +128,7 @@ test('ai:* channels live in AI_CHANNELS, not in the CHANNELS map that ipcParity 
   const ai = src.match(/const AI_CHANNELS = Object\.freeze\(\{([\s\S]*?)\}\)/);
   assert.ok(ai, 'AI_CHANNELS map');
   const values = [...ai[1].matchAll(/'(ai:[^']+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(values, CONTRACT.slice().sort(), 'exactly the spec §10 channels');
+  assert.deepEqual(values, [...CONTRACT, ...ENGINE_EVENTS].sort(), 'the spec §10 channels plus the engine events');
   assert.match(src, /const ALLOWED_CHANNELS = new Set\(\[\.\.\.Object\.values\(CHANNELS\), \.\.\.Object\.values\(AI_CHANNELS\)\]\);/);
 });
 
@@ -124,6 +139,6 @@ test('once the engine is merged, main knows every channel the page calls', (t) =
     ...fs.readdirSync(dir).filter((f) => f.endsWith('.js')).map((f) => fs.readFileSync(path.join(dir, f), 'utf8')),
     fs.readFileSync(path.join(ROOT, 'src', 'main', 'ipcHandlers.js'), 'utf8')
   ].join('\n');
-  const missing = CONTRACT.filter((ch) => !mainText.includes(`'${ch}'`) && !mainText.includes(`"${ch}"`));
+  const missing = [...CONTRACT, ...ENGINE_EVENTS].filter((ch) => !mainText.includes(`'${ch}'`) && !mainText.includes(`"${ch}"`));
   assert.deepEqual(missing, [], 'channels the preload calls but main never names');
 });

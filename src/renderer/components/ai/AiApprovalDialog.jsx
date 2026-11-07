@@ -1,11 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { BellRing, ChevronDown, ChevronRight, Clock, ShieldAlert, X } from 'lucide-react';
 
 import Button from '@/components/ui/Button.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
-import { AI_TONE, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
+import { AI_TONE, PrimaryButton, clientLabel, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
 import { crossedThreshold, currentApproval, formatCountdown, fractionLeft, secondsLeft, urgency } from '@/lib/aiApprovals.mjs';
 import { prettyArgs } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
@@ -91,9 +92,9 @@ export function DecisionButtons({ approval, busy, armed = true, onDecide, denyRe
       <Button variant="secondary" size={size} disabled={disabled} onClick={() => onDecide('allow-hour')} title={t('approval.allowHourHint', { token: approval.tokenName || approval.clientName || '' })}>
         {t('approval.allowHour')}
       </Button>
-      <Button variant="primary" size={size} disabled={disabled} onClick={() => onDecide('allow-once')} isLoading={busy}>
+      <PrimaryButton size={size} disabled={disabled} onClick={() => onDecide('allow-once')} isLoading={busy}>
         {t('approval.allowOnce')}
-      </Button>
+      </PrimaryButton>
     </>
   );
   if (layout === 'row') return <div className="flex flex-wrap items-center justify-end gap-2">{deny}{allows}</div>;
@@ -116,6 +117,8 @@ export default function AiApprovalDialog() {
   const denyRef = useRef(null);
   const prevSec = useRef(null);
   const summaryId = useId();
+  const location = useLocation();
+  const onApprovalsTab = location.pathname === '/ai' && new URLSearchParams(location.search).get('tab') === 'approvals';
 
   // New request on screen: clear the old error, disarm, then arm and focus Deny (the safe default).
   useEffect(() => {
@@ -148,7 +151,7 @@ export default function AiApprovalDialog() {
   const position = current ? queue.findIndex((a) => a._key === current._key) + 1 : 0;
   const hiddenCount = queue.filter((a) => hidden.has(a._key)).length;
   const isBusy = current ? busy.has(current._key) : false;
-  const client = current ? (current.clientName || t('approval.unknownApp')) : '';
+  const client = current ? (clientLabel(t, current.clientName) || t('approval.unknownApp')) : '';
 
   return (
     <>
@@ -212,7 +215,7 @@ export default function AiApprovalDialog() {
       </DialogPrimitive.Root>
 
       <div className="pointer-events-none fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 flex-col items-center gap-2">
-        {!current && hiddenCount > 0 && (
+        {!current && hiddenCount > 0 && !onApprovalsTab && (
           <button
             type="button"
             onClick={showAll}
@@ -229,7 +232,7 @@ export default function AiApprovalDialog() {
               <Clock className="mt-0.5 h-4 w-4 shrink-0" style={{ color: AI_TONE.warning }} aria-hidden="true" />
               <p className="text-[12.5px] text-foreground">
                 {n.kind === 'timeout'
-                  ? t('approval.timedOut', { app: n.clientName || t('approval.unknownApp') })
+                  ? t('approval.timedOut', { app: clientLabel(t, n.clientName) || t('approval.unknownApp') })
                   : t('approval.gone')}
               </p>
               <button type="button" onClick={() => dismissNotice(n.id)} className="ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground" aria-label={t('close')}>

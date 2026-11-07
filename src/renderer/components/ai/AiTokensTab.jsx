@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import Switch from '@/components/ui/Switch.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
-import { ConfirmDialog, InlineError, TonePill, toneText } from '@/components/ai/AiShared.jsx';
+import { ConfirmDialog, InlineError, PrimaryButton, SUBTLE_TEXT, TonePill, clientLabel, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { filterTokens, isAutomationToken, relativeTime, sortTokens, tokenState } from '@/lib/aiCore.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
@@ -57,18 +57,18 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
           <Input icon={Search} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder={t('tokens.search')} aria-label={t('tokens.search')} />
         </div>
         {revokedCount > 0 && (
-          <label className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+          <label className={cn('flex items-center gap-2 text-[12.5px]', SUBTLE_TEXT)}>
             <Switch checked={showRevoked} onChange={(v) => { setShowRevoked(v); setPage(1); }} label={t('tokens.showRevoked')} />
             {t('tokens.showRevokedCount', { count: revokedCount })}
           </label>
         )}
         <div className="ml-auto flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={onReload}><RefreshCw className="h-3.5 w-3.5" /> {t('refresh')}</Button>
-          <Button size="sm" onClick={onCreate}><Plus className="h-4 w-4" /> {t('tokens.create')}</Button>
+          <PrimaryButton size="sm" onClick={onCreate}><Plus className="h-4 w-4" /> {t('tokens.create')}</PrimaryButton>
         </div>
       </div>
 
-      <p className="text-[12.5px] text-muted-foreground">{t('tokens.intro')}</p>
+      <p className={cn('text-[12.5px]', SUBTLE_TEXT)}>{t('tokens.intro')}</p>
 
       {state.error && <InlineError>{t('tokens.loadError', { message: state.error })}</InlineError>}
 
@@ -85,13 +85,13 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
               <caption className="sr-only">{t('tokens.caption')}</caption>
               <thead className="bg-surface text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shadow-[inset_0_-1px_0_var(--border)]">
                 <tr>
-                  <th scope="col" className="px-4 py-3">{t('tokens.colName')}</th>
-                  <th scope="col" className="px-4 py-3">{t('tokens.colMember')}</th>
-                  <th scope="col" className="px-4 py-3">{t('tokens.colScope')}</th>
-                  <th scope="col" className="px-4 py-3">{t('tokens.colGroups')}</th>
-                  <th scope="col" className="px-4 py-3">{t('tokens.colExpires')}</th>
-                  <th scope="col" className="px-4 py-3">{t('tokens.colLastUsed')}</th>
-                  <th scope="col" className="px-4 py-3 text-right"><span className="sr-only">{t('tokens.colActions')}</span></th>
+                  <th scope="col" className="px-3 py-3">{t('tokens.colName')}</th>
+                  <th scope="col" className="px-3 py-3">{t('tokens.colMember')}</th>
+                  <th scope="col" className="px-3 py-3">{t('tokens.colScope')}</th>
+                  <th scope="col" className="px-3 py-3">{t('tokens.colGroups')}</th>
+                  <th scope="col" className="px-3 py-3">{t('tokens.colExpires')}</th>
+                  <th scope="col" className="px-3 py-3">{t('tokens.colLastUsed')}</th>
+                  <th scope="col" className="px-3 py-3 text-right"><span className="sr-only">{t('tokens.colActions')}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -101,7 +101,7 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
                   const auto = isAutomationToken(tok);
                   return (
                     <tr key={tok.id} className={cn('align-top', dead && 'opacity-60')}>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
                           <KeyRound className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                           <span className="max-w-[14rem] truncate text-[13px] font-medium text-foreground" title={tok.name}>{tok.name}</span>
@@ -116,23 +116,23 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-[13px] text-foreground"><span className="block max-w-[10rem] truncate" title={tok.memberName || ''}>{tok.memberName || '-'}</span></td>
-                      <td className="px-4 py-3"><TonePill tone={SCOPE_TONE[tok.scope] || 'muted'}>{t(`scope.${tok.scope}.title`, { defaultValue: tok.scope })}</TonePill></td>
-                      <td className="px-4 py-3 text-[12.5px] text-muted-foreground"><span className="block max-w-[12rem] truncate" title={groupsText(tok)}>{groupsText(tok)}</span></td>
-                      <td className="whitespace-nowrap px-4 py-3 text-[12.5px]" style={st === 'expiring' || st === 'expired' ? toneText(STATE_TONE[st]) : undefined}>
+                      <td className="px-3 py-3 text-[13px] text-foreground"><span className="block max-w-[10rem] truncate" title={tok.memberName || ''}>{tok.memberName || '-'}</span></td>
+                      <td className="px-3 py-3"><TonePill tone={SCOPE_TONE[tok.scope] || 'muted'}>{t(`scope.${tok.scope}.title`, { defaultValue: tok.scope })}</TonePill></td>
+                      <td className="px-3 py-3 text-[12.5px] text-muted-foreground"><span className="block max-w-[12rem] truncate" title={groupsText(tok)}>{groupsText(tok)}</span></td>
+                      <td className="px-3 py-3 text-[12.5px]" style={st === 'expiring' || st === 'expired' ? toneText(STATE_TONE[st]) : undefined}>
                         {tok.expiresAt
                           ? <span title={formatDateTime(tok.expiresAt)}>{st === 'expired' ? formatDate(tok.expiresAt) : relativeTime(tok.expiresAt, now, lang)}</span>
                           : <span className="text-muted-foreground">{t('never')}</span>}
                       </td>
-                      <td className="px-4 py-3 text-[12.5px]">
+                      <td className="px-3 py-3 text-[12.5px]">
                         {tok.lastUsedAt ? (
                           <>
-                            <span className="block whitespace-nowrap text-foreground" title={formatDateTime(tok.lastUsedAt)}>{relativeTime(tok.lastUsedAt, now, lang)}</span>
-                            {tok.lastClientName && <span className="block max-w-[10rem] truncate text-[11.5px] text-muted-foreground" title={tok.lastClientName}>{tok.lastClientName}</span>}
+                            <span className="block text-foreground" title={formatDateTime(tok.lastUsedAt)}>{relativeTime(tok.lastUsedAt, now, lang)}</span>
+                            {tok.lastClientName && <span className="block max-w-[10rem] truncate text-[11.5px] text-muted-foreground" title={tok.lastClientName}>{clientLabel(t, tok.lastClientName)}</span>}
                           </>
                         ) : <span className="text-muted-foreground">{t('tokens.neverUsed')}</span>}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 py-3 text-right">
                         {st !== 'revoked' && (
                           <Button size="sm" variant="danger" onClick={() => setRevoke({ token: tok, busy: false, error: '' })} aria-label={t('tokens.revokeAria', { name: tok.name })}>
                             {t('tokens.revoke')}

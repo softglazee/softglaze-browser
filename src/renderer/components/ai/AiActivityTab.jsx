@@ -5,12 +5,12 @@ import { ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import Input from '@/components/ui/Input.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
-import { InlineError, Segmented, TonePill } from '@/components/ai/AiShared.jsx';
+import { InlineError, SUBTLE_TEXT, Segmented, TonePill, clientLabel, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { AUDIT_PAGE_SIZE, buildAuditQuery, errorText, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
+import { AUDIT_PAGE_SIZE, approvalPath, buildAuditQuery, errorText, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 
-const OUTCOME_TONE = { ok: 'success', denied: 'warning', error: 'danger' };
+const OUTCOME_TONE = { ok: 'success', denied: 'warning', error: 'danger', pending: 'info' };
 
 export default function AiActivityTab({ lang, clients }) {
   const { t } = useTranslation('ai');
@@ -91,7 +91,7 @@ export default function AiActivityTab({ lang, clients }) {
             { value: 'error', label: t('activity.outcomes.error') }
           ]}
         />
-        <label className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+        <label className={`flex items-center gap-2 text-[12.5px] ${SUBTLE_TEXT}`}>
           {t('activity.app')}
           <select
             value={filters.client}
@@ -99,7 +99,7 @@ export default function AiActivityTab({ lang, clients }) {
             className="h-9 max-w-[12rem] cursor-pointer rounded border border-border bg-input-background px-2 text-[13px] text-foreground outline-none focus:border-primary"
           >
             <option value="">{t('activity.allApps')}</option>
-            {clientOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            {clientOptions.map((c) => <option key={c} value={c}>{clientLabel(t, c)}</option>)}
           </select>
         </label>
         <Button className="ml-auto" variant="secondary" size="sm" onClick={() => load(cursors[pageIdx])} disabled={loading}>
@@ -114,8 +114,16 @@ export default function AiActivityTab({ lang, clients }) {
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm" aria-busy={loading}>
+            <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm" aria-busy={loading}>
               <caption className="sr-only">{t('activity.caption')}</caption>
+              <colgroup>
+                <col className="w-[12%]" />
+                <col className="w-[17%]" />
+                <col className="w-[14%]" />
+                <col />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
+              </colgroup>
               <thead className="bg-surface text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shadow-[inset_0_-1px_0_var(--border)]">
                 <tr>
                   <th scope="col" className="px-4 py-3">{t('activity.colTime')}</th>
@@ -128,23 +136,26 @@ export default function AiActivityTab({ lang, clients }) {
               </thead>
               <tbody className="divide-y divide-border">
                 {loading && rows.length === 0
-                  ? Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={`s${i}`} aria-hidden="true"><td colSpan={6} className="px-4 py-3"><div className="h-5 animate-pulse rounded bg-secondary motion-reduce:animate-none" /></td></tr>
+                  ? Array.from({ length: 12 }).map((_, i) => (
+                    <tr key={`s${i}`} aria-hidden="true"><td colSpan={6} className="h-[54px] px-4 py-2"><div className="h-5 animate-pulse rounded bg-secondary motion-reduce:animate-none" /></td></tr>
                   ))
                   : rows.map((it, i) => (
                     <tr key={it.id ?? `${it.at}-${i}`} className={loading ? 'opacity-60' : ''}>
                       <td className="whitespace-nowrap px-4 py-2.5 text-[12.5px] text-foreground" title={formatDateTime(it.at)}>{relativeTime(it.at, now, lang) || '-'}</td>
                       <td className="px-4 py-2.5 text-[12.5px]">
-                        <span className="block max-w-[11rem] truncate text-foreground" title={it.clientName || ''}>{it.clientName || '-'}</span>
+                        <span className="block max-w-[11rem] truncate text-foreground" title={it.clientName || ''}>{clientLabel(t, it.clientName) || '-'}</span>
                         <span className="block max-w-[11rem] truncate text-[11.5px] text-muted-foreground" title={it.tokenName || ''}>{it.tokenName || ''}</span>
                       </td>
-                      <td className="px-4 py-2.5"><code className="whitespace-nowrap font-mono text-[12px] text-foreground">{it.tool || '-'}</code></td>
-                      <td className="px-4 py-2.5 text-[12.5px] text-foreground"><span className="line-clamp-2 min-w-[12rem] break-words">{it.summary || ''}</span></td>
+                      <td className="px-4 py-2.5"><code className="block truncate font-mono text-[12px] text-foreground" title={it.tool || ''}>{it.tool || '-'}</code></td>
+                      <td className="px-4 py-2.5 text-[12.5px] text-foreground">
+                        <span className="line-clamp-2 break-words" title={it.summary || ''}>{it.summary || ''}</span>
+                        {it.outcome === 'error' && it.error && <span className="mt-0.5 block truncate text-[11.5px]" style={toneText('danger')} title={String(it.error)}>{String(it.error)}</span>}
+                      </td>
                       <td className="px-4 py-2.5">
                         <TonePill tone={OUTCOME_TONE[it.outcome] || 'muted'}>{t(`activity.outcomes.${it.outcome}`, { defaultValue: it.outcome || '-' })}</TonePill>
-                        {it.preApproved && <span className="mt-1 block text-[11px] text-muted-foreground">{t('activity.preApproved')}</span>}
+                        {approvalPath(it) && <span className="mt-1 block text-[11px] text-muted-foreground">{t(`activity.approval.${approvalPath(it)}`)}</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right font-mono text-[12px] tabular-nums text-muted-foreground">{formatDuration(it.durationMs)}</td>
+                      <td className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right font-mono text-[12px] tabular-nums text-muted-foreground">{formatDuration(it.durationMs)}</td>
                     </tr>
                   ))}
                 {!loading && rows.length === 0 && (

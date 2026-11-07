@@ -5,7 +5,7 @@ import { Info, MessageSquareText, Search } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import Input from '@/components/ui/Input.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
-import { CodeBlock, InlineError, TonePill } from '@/components/ai/AiShared.jsx';
+import { CodeBlock, InlineError, SUBTLE_TEXT, TonePill } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { errorText } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
@@ -56,11 +56,14 @@ export default function AiPromptsTab() {
       )}
 
       {loading ? (
-        <div className="h-80 animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" aria-busy="true" />
+        <div key="skeleton" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]" aria-busy="true">
+          <div className="h-[420px] animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" />
+          <div className="h-[420px] animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" />
+        </div>
       ) : prompts.length === 0 ? (
         !error && <EmptyState title={t('prompts.emptyTitle')} description={t('prompts.emptyBody')} />
       ) : (
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div key="prompts" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <div className="rounded-xl border border-border bg-card">
             <div className="border-b border-border p-2.5">
               <Input icon={Search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('prompts.search')} aria-label={t('prompts.search')} />
@@ -77,8 +80,8 @@ export default function AiPromptsTab() {
                       className={cn('w-full rounded-lg border px-3 py-2 text-left transition-colors', on ? '' : 'border-transparent hover:bg-secondary')}
                       style={on ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)' } : undefined}
                     >
-                      <span className={cn('block truncate text-[13px] font-medium', on ? 'text-primary' : 'text-foreground')}>{p.title || p.name}</span>
-                      <span className="block truncate font-mono text-[11px] text-muted-foreground">{p.name}</span>
+                      <span className="block truncate text-[13px] font-medium text-foreground">{p.title || p.name}</span>
+                      <span className={cn('block truncate font-mono text-[11px]', SUBTLE_TEXT)}>{p.name}</span>
                     </button>
                   </li>
                 );

@@ -4,7 +4,7 @@ import { BookOpen, ChevronDown, ChevronRight, Lock, RotateCcw, Save, Undo2 } fro
 
 import Button from '@/components/ui/Button.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
-import { AI_TONE, ConfirmDialog, InlineError, SaveNote, SectionCard, toneText } from '@/components/ai/AiShared.jsx';
+import { AI_TONE, ConfirmDialog, InlineError, PrimaryButton, SaveNote, SectionCard, toneText } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { MEMORY_LIMIT_BYTES, errorText, formatKb, memoryUsage, relativeTime } from '@/lib/aiCore.mjs';
 import { formatDateTime } from '@/lib/utils.js';
@@ -82,7 +82,7 @@ export default function AiMemoryTab({ lang }) {
   const guides = mem && Array.isArray(mem.guides) && mem.guides.length ? mem.guides : null;
 
   return (
-    <div className="grid grid-cols-1 items-start gap-4 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
       <SectionCard
         icon={BookOpen}
         title={t('memory.title')}
@@ -121,7 +121,7 @@ export default function AiMemoryTab({ lang }) {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={doSave} disabled={!dirty || usage.over || loading} isLoading={save.state === 'saving'}><Save className="h-4 w-4" /> {t('save')}</Button>
+              <PrimaryButton onClick={doSave} disabled={!dirty || usage.over || loading} isLoading={save.state === 'saving'}><Save className="h-4 w-4" /> {t('save')}</PrimaryButton>
               <Button variant="secondary" onClick={() => { setDraft(saved); setSave({ state: '', error: '' }); }} disabled={!dirty}><Undo2 className="h-4 w-4" /> {t('memory.discard')}</Button>
               <Button variant="ghost" onClick={() => setResetOpen(true)} disabled={loading || !mem}><RotateCcw className="h-4 w-4" /> {t('memory.reset')}</Button>
               <span className="ml-auto inline-flex items-center gap-3">

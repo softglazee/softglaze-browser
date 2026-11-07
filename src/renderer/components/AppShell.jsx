@@ -107,10 +107,11 @@ function FooterBar({ text }) {
   );
 }
 
-function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill }) {
+function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill, reserved = false }) {
   const attention = badgeTone === 'warning' && badge != null && badge !== '';
+  // `reserved`: the slot is kept but invisible (and out of the tab order) until we know the member may see it.
   return (
-    <NavLink to={path} className="block" title={collapsed ? label : undefined}>
+    <NavLink to={path} className={reserved ? 'block invisible' : 'block'} aria-hidden={reserved || undefined} tabIndex={reserved ? -1 : undefined} title={collapsed ? label : undefined}>
       {({ isActive }) => (
         <div
           className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
@@ -121,11 +122,12 @@ function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill })
           <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-primary' : ''}`} strokeWidth={1.75} />
           {collapsed && attention && <span className="absolute left-7 top-2 h-2 w-2 rounded-full" style={{ background: 'var(--warning)' }} aria-hidden="true" />}
           {!collapsed && <span className="flex-1 truncate">{label}</span>}
-          {!collapsed && pill && (
+          {/* With requests waiting, the count matters more than the Beta pill (and both do not fit). */}
+          {!collapsed && pill && !attention && (
             <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--chart-2) 14%, transparent)', color: 'color-mix(in srgb, var(--chart-2) 72%, var(--foreground))' }}>{pill}</span>
           )}
           {!collapsed && badge != null && badge !== '' && (attention
-            ? <span className="min-w-[1.25rem] text-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--warning)' }}>{badge}</span>
+            ? <span className="min-w-[1.25rem] text-center text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--warning)', color: '#111827' }}>{badge}</span>
             : <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{badge}</span>
           )}
         </div>
@@ -301,14 +303,14 @@ export default function AppShell({ children }) {
         <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3">
           {SECTIONS.map((section) => {
             const items = section.items
-              .filter((item) => !item.aiOnly || (meLoaded && canManageAi(me)))
+              .filter((item) => !item.aiOnly || !meLoaded || canManageAi(me))
               .filter((item) => (item.superOnly ? me?.role === 'SUPER_ADMIN' : canSee(item.featureKey)));
             if (items.length === 0) return null;
             return (
               <div key={section.labelKey} className="mt-3">
                 {!collapsed && <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/70">{t(section.labelKey)}</div>}
                 <div className="space-y-0.5">
-                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} pill={item.pillKey ? t(item.pillKey) : undefined} />)}
+                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} pill={item.pillKey ? t(item.pillKey) : undefined} reserved={item.aiOnly && !meLoaded} />)}
                 </div>
               </div>
             );

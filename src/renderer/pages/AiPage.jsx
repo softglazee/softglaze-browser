@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button.jsx';
 import Switch from '@/components/ui/Switch.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import {
-  AI_TONE, BetaPill, ConfirmDialog, DangerButton, StatusDot, toneSurface, toneText
+  AI_TONE, BetaPill, ConfirmDialog, DangerButton, SUBTLE_TEXT, StatusDot, clientLabel, toneSurface, toneText
 } from '@/components/ai/AiShared.jsx';
 import AiConnectTab from '@/components/ai/AiConnectTab.jsx';
 import AiTokensTab from '@/components/ai/AiTokensTab.jsx';
@@ -50,6 +50,7 @@ export default function AiPage() {
   const [groups, setGroups] = useState([]);
   const [snippets, setSnippets] = useState([]);
   const [bridge, setBridge] = useState(null);
+  const [connectLoaded, setConnectLoaded] = useState(false);
   const [connectErr, setConnectErr] = useState('');
   const [toggling, setToggling] = useState(false);
   const [toggleErr, setToggleErr] = useState('');
@@ -98,6 +99,7 @@ export default function AiPage() {
     if (sn.status === 'fulfilled') setSnippets(asArray(sn.value));
     else setConnectErr(errorText(sn.reason));
     setBridge(br.status === 'fulfilled' ? (br.value || null) : null);
+    setConnectLoaded(true);
   }, []);
 
   // Who is signed in decides whether the page opens at all.
@@ -127,6 +129,13 @@ export default function AiPage() {
     if (phase !== 'ready') return undefined;
     const id = setInterval(() => { if (document.visibilityState === 'visible') loadStatus(); }, STATUS_POLL_MS);
     return () => clearInterval(id);
+  }, [phase, loadStatus]);
+
+  // Main tells us when the server status changes (on/off, a client connects, Stop all AI).
+  useEffect(() => {
+    if (phase !== 'ready') return undefined;
+    const off = softglazeApi.ai.onStatusChanged(() => { loadStatus(); });
+    return () => { if (typeof off === 'function') off(); };
   }, [phase, loadStatus]);
 
   // The port can change in Settings; the snippets carry it.
@@ -190,7 +199,7 @@ export default function AiPage() {
     <PageHeader
       className="mb-5"
       title={<span className="inline-flex items-center gap-2.5">{t('title')}<BetaPill /></span>}
-      description={t('description')}
+      description={<span className={SUBTLE_TEXT}>{t('description')}</span>}
       actions={phase === 'ready' ? (
         <>
           <ServerSwitch status={status} busy={toggling} onToggle={toggleServer} />
@@ -260,7 +269,7 @@ export default function AiPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile
           icon={Cpu}
           label={t('status.server')}
@@ -296,7 +305,7 @@ export default function AiPage() {
         />
       </div>
 
-      <TabBar tab={tab} setTab={setTab} counts={{ tokens: liveTokens, approvals: pending }} />
+      <TabBar tab={tab} setTab={setTab} counts={{ approvals: pending }} />
 
       <div className="mt-5">
         {TABS.map((key) => (visited.has(key) || key === tab) && (
@@ -305,11 +314,13 @@ export default function AiPage() {
               <AiConnectTab
                 status={status}
                 clients={clients}
+                loading={!connectLoaded}
                 bridge={bridge}
                 error={connectErr}
                 onRetry={loadConnect}
                 isOwner={owner}
                 tokensCount={liveTokens}
+                tokensLoaded={!tokensState.loading}
                 onToggleServer={() => toggleServer(true)}
                 toggling={toggling}
                 onCreateToken={openCreate}
@@ -389,16 +400,16 @@ function Tile({ icon: Icon, label, value, sub, tone = 'muted', onClick, actionLa
   const inner = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="min-w-0 truncate text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground" title={label}>{label}</span>
         <span className="grid h-8 w-8 place-items-center rounded-lg" style={{ ...toneSurface(tone, 14, 0), color: AI_TONE[tone] }}>
           <Icon className="h-4 w-4" strokeWidth={1.75} />
         </span>
       </div>
       <div className="mt-2 font-display text-[22px] font-semibold leading-tight text-foreground">{value}</div>
-      <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-muted-foreground">{sub}</div>
+      <div className="mt-1 line-clamp-3 text-[12px] leading-snug text-muted-foreground">{sub}</div>
     </>
   );
-  const cls = 'block h-full min-h-[118px] w-full rounded-xl border border-border bg-card p-4 text-left';
+  const cls = 'flex h-full min-h-[150px] w-full flex-col justify-start rounded-xl border border-border bg-card p-4 text-left';
   if (onClick) {
     return (
       <button type="button" onClick={onClick} aria-label={`${label}: ${actionLabel}`} className={cn(cls, 'transition-colors hover:border-border-strong hover:bg-elevated/40')}>
@@ -423,8 +434,8 @@ function ConnectedAppsTile({ clients, lang }) {
       sub={clients.length === 0 ? t('status.appsNone') : (
         <span className="block">
           {shown.map((c, i) => (
-            <span key={`${c.tokenId}-${i}`} className="block truncate" title={`${c.clientName || t('approval.unknownApp')} (${c.tokenName || '-'})`}>
-              {t('status.appSeen', { name: c.clientName || c.tokenName || t('approval.unknownApp'), when: relativeTime(c.lastSeenAt, now, lang) || t('unknown') })}
+            <span key={`${c.tokenId}-${i}`} className="block truncate" title={`${clientLabel(t, c.clientName) || t('approval.unknownApp')} (${c.tokenName || '-'})`}>
+              {t('status.appSeen', { name: clientLabel(t, c.clientName) || c.tokenName || t('approval.unknownApp'), when: relativeTime(c.lastSeenAt, now, lang) || t('unknown') })}
             </span>
           ))}
           {more > 0 && <span className="block">{t('status.appsMore', { count: more })}</span>}
@@ -438,7 +449,9 @@ function TabBar({ tab, setTab, counts }) {
   const { t } = useTranslation('ai');
   const refs = useRef({});
   function onKey(e) {
-    const i = TABS.indexOf(tab);
+    // From the focused tab, not the `tab` prop: fast repeats can arrive before the re-render.
+    const focused = String((e.target && e.target.id) || '').replace('ai-tab-', '');
+    const i = TABS.includes(focused) ? TABS.indexOf(focused) : TABS.indexOf(tab);
     let next = null;
     if (e.key === 'ArrowRight') next = TABS[(i + 1) % TABS.length];
     else if (e.key === 'ArrowLeft') next = TABS[(i - 1 + TABS.length) % TABS.length];
@@ -446,8 +459,9 @@ function TabBar({ tab, setTab, counts }) {
     else if (e.key === 'End') next = TABS[TABS.length - 1];
     if (!next) return;
     e.preventDefault();
+    // Every tab button is always mounted, so focus can move right away.
+    if (refs.current[next]) refs.current[next].focus();
     setTab(next);
-    requestAnimationFrame(() => { if (refs.current[next]) refs.current[next].focus(); });
   }
   return (
     <div role="tablist" aria-label={t('tabs.label')} className="mt-6 flex items-center gap-1 overflow-x-auto border-b border-border" onKeyDown={onKey}>
@@ -466,17 +480,18 @@ function TabBar({ tab, setTab, counts }) {
             aria-controls={`ai-panel-${key}`}
             tabIndex={on ? 0 : -1}
             onClick={() => setTab(key)}
-            className={cn('-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors',
-              on ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
+            className={cn('relative -mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors',
+              key === 'approvals' && 'pr-10',
+              on ? 'border-primary text-foreground' : cn('border-transparent hover:text-foreground', SUBTLE_TEXT))}
           >
             <Icon className={cn('h-4 w-4', on && 'text-primary')} strokeWidth={1.75} />
             {t(`tabs.${key}`)}
+            {/* The count sits in a slot the tab always reserves (pr-10), so it never pushes the other tabs. */}
             {key === 'approvals' && count > 0 && (
-              <span className="min-w-[1.25rem] rounded-full px-1.5 text-center text-[10.5px] font-bold leading-[18px] text-white" style={{ background: AI_TONE.warning }}>
+              <span className="absolute right-3 top-1/2 min-w-[1.25rem] -translate-y-1/2 rounded-full px-1.5 text-center text-[10.5px] font-bold leading-[18px]" style={{ background: AI_TONE.warning, color: '#111827' }}>
                 {count}<span className="sr-only"> {t('tabs.waiting')}</span>
               </span>
             )}
-            {key === 'tokens' && count > 0 && <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">{count}</span>}
           </button>
         );
       })}
@@ -501,8 +516,8 @@ function LoadingSkeleton({ label }) {
   return (
     <div aria-busy="true" aria-live="polite">
       <span className="sr-only">{label}</span>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-hidden="true">
-        {[0, 1, 2, 3].map((i) => <div key={i} className="h-[118px] animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" />)}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => <div key={i} className="h-[150px] animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" />)}
       </div>
       <div className="mt-6 h-11 animate-pulse rounded-lg bg-card motion-reduce:animate-none" aria-hidden="true" />
       <div className="mt-5 h-72 animate-pulse rounded-xl border border-border bg-card motion-reduce:animate-none" aria-hidden="true" />

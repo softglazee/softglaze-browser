@@ -5,7 +5,7 @@ import { Check, Copy, Loader2, X } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import { cn } from '@/lib/utils.js';
-import { splitSnippet } from '@/lib/aiCore.mjs';
+import { normalizeClientKey, splitSnippet } from '@/lib/aiCore.mjs';
 
 // Status colours from the theme tokens; text is tinted toward the foreground so it keeps contrast
 // in light and dark (same approach as lib/providerStates.js).
@@ -22,6 +22,13 @@ export const toneSurface = (tone, bg = 10, border = 28) => ({
   background: `color-mix(in srgb, ${AI_TONE[tone] || AI_TONE.muted} ${bg}%, transparent)`,
   borderColor: `color-mix(in srgb, ${AI_TONE[tone] || AI_TONE.muted} ${border}%, transparent)`
 });
+
+// AI apps report raw ids ("claude-code"); show the name people know ("Claude Code").
+export function clientLabel(t, name) {
+  if (!name) return '';
+  const key = normalizeClientKey(name);
+  return key && key !== 'other' ? t(`connect.clients.${key}.title`, { defaultValue: String(name) }) : String(name);
+}
 
 export function TonePill({ tone = 'muted', className = '', children, ...rest }) {
   return (
@@ -88,9 +95,10 @@ export function CopyButton({ text, tag = 'x', label, size = 'sm', variant = 'sec
   const { t } = useTranslation('ai');
   const { copied, failed, copy } = useCopy();
   const done = copied === tag;
+  const Btn = variant === 'primary' ? PrimaryButton : Button;
   return (
     <>
-      <Button
+      <Btn
         type="button"
         size={size}
         variant={variant}
@@ -100,7 +108,7 @@ export function CopyButton({ text, tag = 'x', label, size = 'sm', variant = 'sec
       >
         {done ? <Check className="h-3.5 w-3.5" style={{ color: AI_TONE.success }} /> : <Copy className="h-3.5 w-3.5" />}
         {done ? t('copied') : t('copy')}
-      </Button>
+      </Btn>
       <span className="sr-only" role="status" aria-live="polite">{done ? t('copied') : failed ? t('copyFailed') : ''}</span>
       {failed && <span className="text-[11.5px]" style={toneText('danger')}>{t('copyFailed')}</span>}
     </>
@@ -118,7 +126,7 @@ export function CodeBlock({ text, label, kindLabel, copyText, onCopied, classNam
       </div>
       <pre tabIndex={0} aria-label={label} className="max-h-72 overflow-auto whitespace-pre px-3.5 py-3 font-mono text-[12px] leading-relaxed text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary">
         {segs.map((s, i) => (s.placeholder
-          ? <mark key={i} className="rounded px-0.5 font-semibold" style={{ ...toneSurface('warning', 22, 0), ...toneText('warning') }}>{s.text}</mark>
+          ? <mark key={i} className="rounded px-0.5 font-semibold" style={{ ...toneSurface('warning', 22, 0), color: 'color-mix(in srgb, var(--warning) 42%, var(--foreground))' }}>{s.text}</mark>
           : <span key={i}>{s.text}</span>))}
       </pre>
     </div>
@@ -168,7 +176,7 @@ export function Segmented({ value, options, onChange, label, disabled = false, c
             onKeyDown={onKey}
             onClick={() => onChange(o.value)}
             className={cn('rounded-md px-3 py-1.5 text-[12.5px] font-semibold transition-colors whitespace-nowrap',
-              on ? 'bg-card text-foreground shadow-sm border border-border' : 'border border-transparent text-muted-foreground hover:text-foreground')}
+              on ? 'bg-card text-foreground shadow-sm border border-border' : cn('border border-transparent hover:text-foreground', SUBTLE_TEXT))}
           >
             {o.label}
           </button>
@@ -196,6 +204,27 @@ export function ChipList({ items, onRemove, removeLabel, disabled = false, empty
   );
 }
 
+// Secondary text that sits on the page background (not inside a card). The app's muted grey is
+// 4.4:1 on the light page background; this keeps AA in both themes.
+export const SUBTLE_TEXT = 'text-[color-mix(in_srgb,var(--muted-foreground)_78%,var(--foreground))]';
+
+// The main action on the AI page (Allow once, Create token, Save). Same shape as the Button
+// primitive's primary variant, a shade darker so white text keeps AA contrast in dark mode too.
+export function PrimaryButton({ children, isLoading = false, disabled = false, size = 'md', type = 'button', className = '', ...rest }) {
+  const sizes = { sm: 'text-xs px-3 py-1.5 gap-1.5', md: 'text-sm px-4 py-2 gap-2', lg: 'text-base px-5 py-2.5 gap-2' };
+  return (
+    <button
+      type={type}
+      disabled={isLoading || disabled}
+      className={cn('inline-flex items-center justify-center rounded font-medium text-white shadow-glow transition-[filter] duration-200 hover:brightness-110 disabled:pointer-events-none disabled:opacity-50', sizes[size], className)}
+      style={{ background: 'color-mix(in srgb, var(--primary) 84%, #000)' }}
+      {...rest}
+    >
+      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
+    </button>
+  );
+}
+
 // Solid red action (Stop all AI, Revoke). The Button primitive's danger variant is a soft tint.
 export function DangerButton({ children, busy = false, disabled = false, size = 'md', className = '', ...rest }) {
   const sizes = { sm: 'text-xs px-3 py-1.5 gap-1.5', md: 'text-sm px-4 py-2 gap-2', lg: 'text-[14px] px-4 py-2.5 gap-2' };
@@ -204,7 +233,8 @@ export function DangerButton({ children, busy = false, disabled = false, size = 
       type="button"
       disabled={busy || disabled}
       className={cn('inline-flex items-center justify-center rounded font-semibold text-white transition-[filter,background-color] duration-150 hover:brightness-110 disabled:pointer-events-none disabled:opacity-50', sizes[size], className)}
-      style={{ background: 'var(--destructive)' }}
+      // Darkened so white text keeps AA contrast in both themes (plain --destructive is 3.8:1 in dark).
+      style={{ background: 'color-mix(in srgb, var(--destructive) 82%, #000)' }}
       {...rest}
     >
       {busy && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -229,7 +259,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, to
           <Button variant="ghost" onClick={onCancel} disabled={busy}>{cancelLabel || t('cancel')}</Button>
           {tone === 'danger'
             ? <DangerButton onClick={onConfirm} busy={busy} disabled={confirmDisabled}>{confirmLabel}</DangerButton>
-            : <Button onClick={onConfirm} isLoading={busy} disabled={confirmDisabled}>{confirmLabel}</Button>}
+            : <PrimaryButton onClick={onConfirm} isLoading={busy} disabled={confirmDisabled}>{confirmLabel}</PrimaryButton>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

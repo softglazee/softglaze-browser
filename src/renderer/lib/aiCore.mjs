@@ -40,7 +40,7 @@ export function errorText(e) {
 
 export const TOKEN_PLACEHOLDER = '<YOUR_TOKEN>';
 export const DOCS_BASE = 'https://browser.softglaze.com/docs/ai-agents';
-export const CLIENT_ORDER = ['claude-desktop', 'claude-code', 'cursor', 'vscode', 'gemini-cli', 'codex', 'n8n', 'other'];
+export const CLIENT_ORDER = ['claude-desktop', 'claude-code', 'cursor', 'vscode', 'gemini-cli', 'codex', 'windsurf', 'cline', 'n8n', 'other'];
 // Clients that start a local program (stdio) and so need the bridge.
 export const STDIO_CLIENTS = new Set(['claude-desktop', 'other']);
 
@@ -67,8 +67,10 @@ const CLIENT_ALIASES = {
   other: 'other',
   others: 'other',
   generic: 'other',
-  windsurf: 'other',
-  cline: 'other',
+  windsurf: 'windsurf',
+  devin: 'windsurf',
+  devindesktop: 'windsurf',
+  cline: 'cline',
   windsurfclineothers: 'other',
   otherapps: 'other'
 };
@@ -80,10 +82,17 @@ export function normalizeClientKey(client, title) {
   return CLIENT_ALIASES[compact(client)] || CLIENT_ALIASES[compact(title)] || null;
 }
 
-export function docsUrlFor(key, given) {
-  if (given && /^https:\/\//i.test(String(given))) return String(given);
-  const anchor = key && CLIENT_ORDER.includes(key) ? key : null;
-  return anchor ? `${DOCS_BASE}#${anchor}` : DOCS_BASE;
+// Our own guide on browser.softglaze.com, one anchor per client (the website adds them).
+export function docsUrlFor(key) {
+  return key && CLIENT_ORDER.includes(key) ? `${DOCS_BASE}#${key}` : DOCS_BASE;
+}
+
+// The AI app's own documentation when the engine links it (https only, never our own site again).
+export function appDocsUrl(given) {
+  const s = String(given || '');
+  if (!/^https:\/\//i.test(s)) return null;
+  try { if (new URL(s).hostname === 'browser.softglaze.com') return null; } catch (e) { return null; }
+  return s;
 }
 
 // Base URL of the local server, from status.url when the engine gives one.
@@ -147,13 +156,14 @@ export function buildClientList(snippets, status) {
       kind: ['command', 'json', 'toml'].includes(s.kind) ? s.kind : 'json',
       where: s.where || '',
       text: typeof s.text === 'string' ? s.text : '',
-      docsUrl: docsUrlFor(key, s.docsUrl)
+      docsUrl: docsUrlFor(key),
+      appDocsUrl: appDocsUrl(s.docsUrl)
     };
     if (!key) unknown.push(entry);
     else if (!byKey.has(key)) byKey.set(key, entry);
   }
   if (!byKey.has('n8n') && n8nEndpoints(status)) {
-    byKey.set('n8n', { key: 'n8n', known: true, title: 'n8n', kind: 'n8n', where: '', text: '', docsUrl: docsUrlFor('n8n') });
+    byKey.set('n8n', { key: 'n8n', known: true, title: 'n8n', kind: 'n8n', where: '', text: '', docsUrl: docsUrlFor('n8n'), appDocsUrl: null });
   }
   const ordered = CLIENT_ORDER.filter((k) => k !== 'other' && byKey.has(k)).map((k) => byKey.get(k));
   return [...ordered, ...unknown, ...(byKey.has('other') ? [byKey.get('other')] : [])];
@@ -495,6 +505,14 @@ export function relativeTime(value, now = Date.now(), lang = 'en') {
     if (abs >= size || unit === 'second') return fmt.format(Math.round(diff / size), unit);
   }
   return '';
+}
+
+// How a call got through (engine audit `approval`), in words the activity table can show.
+export const APPROVAL_PATHS = ['none', 'asked', 'pre-approved', 'allow-once', 'hour-grant', 'deny', 'timeout', 'cancelled', 'started-by-this-token', 'developer-token'];
+export function approvalPath(item) {
+  if (!item) return null;
+  if (item.preApproved === true) return 'pre-approved';
+  return APPROVAL_PATHS.includes(item.approval) ? item.approval : null;
 }
 
 // Plain "Pretty JSON" for the redacted approval args, capped so a huge payload cannot flood the dialog.
