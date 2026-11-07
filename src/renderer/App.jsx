@@ -5,6 +5,7 @@ import AppShell from '@/components/AppShell.jsx';
 import DbGate from '@/components/DbGate.jsx';
 import ErrorBoundary from '@/components/ErrorBoundary.jsx';
 import Gate from '@/components/Gate.jsx';
+import { AiApprovalsProvider } from '@/components/ai/AiApprovalsProvider.jsx';
 import DashboardPage from '@/pages/DashboardPage.jsx';
 import ProxyPoolPage from '@/pages/ProxyPoolPage.jsx';
 import GroupsPage from '@/pages/GroupsPage.jsx';
@@ -25,6 +26,7 @@ const PersonasPage = lazy(() => import('@/pages/PersonasPage.jsx'));
 const ProxyProvidersPage = lazy(() => import('@/pages/ProxyProvidersPage.jsx'));
 const FreeProxiesPage = lazy(() => import('@/pages/FreeProxiesPage.jsx'));
 const ProviderStatusPage = lazy(() => import('@/pages/ProviderStatusPage.jsx'));
+const AiPage = lazy(() => import('@/pages/AiPage.jsx'));
 
 function PageFallback() {
   return (
@@ -39,33 +41,37 @@ export default function App() {
   return (
     <DbGate>
       <Gate>
-        <AppShell>
-          <ErrorBoundary resetKey={location.pathname}>
-            <Suspense fallback={<PageFallback />}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/start-links" element={<StartLinksPage />} />
-                <Route path="/profiles" element={<ProfilesPage />} />
-                <Route path="/groups" element={<GroupsPage />} />
-                <Route path="/proxies" element={<ProxyPoolPage />} />
-                <Route path="/free-proxies" element={<FreeProxiesPage />} />
-                <Route path="/proxy-providers" element={<ProxyProvidersPage />} />
-                <Route path="/provider-status" element={<ProviderStatusPage />} />
-                <Route path="/extensions" element={<ExtensionsPage />} />
-                <Route path="/personas" element={<PersonasPage />} />
-                <Route path="/browsers" element={<BrowsersPage />} />
-                <Route path="/trash" element={<TrashPage />} />
-                <Route path="/batch-import" element={<BatchImportPage />} />
-                <Route path="/automation" element={<AutomationPage />} />
-                <Route path="/members" element={<MembersPage />} />
-                <Route path="/account" element={<AccountSettingsPage />} />
-                <Route path="/billing" element={<BillingPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-              </Routes>
-            </Suspense>
-          </ErrorBoundary>
-        </AppShell>
+        {/* One AI approvals queue for the whole app: the dialog pops up on any page. */}
+        <AiApprovalsProvider>
+          <AppShell>
+            <ErrorBoundary resetKey={location.pathname}>
+              <Suspense fallback={<PageFallback />}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/ai" element={<AiPage />} />
+                  <Route path="/start-links" element={<StartLinksPage />} />
+                  <Route path="/profiles" element={<ProfilesPage />} />
+                  <Route path="/groups" element={<GroupsPage />} />
+                  <Route path="/proxies" element={<ProxyPoolPage />} />
+                  <Route path="/free-proxies" element={<FreeProxiesPage />} />
+                  <Route path="/proxy-providers" element={<ProxyProvidersPage />} />
+                  <Route path="/provider-status" element={<ProviderStatusPage />} />
+                  <Route path="/extensions" element={<ExtensionsPage />} />
+                  <Route path="/personas" element={<PersonasPage />} />
+                  <Route path="/browsers" element={<BrowsersPage />} />
+                  <Route path="/trash" element={<TrashPage />} />
+                  <Route path="/batch-import" element={<BatchImportPage />} />
+                  <Route path="/automation" element={<AutomationPage />} />
+                  <Route path="/members" element={<MembersPage />} />
+                  <Route path="/account" element={<AccountSettingsPage />} />
+                  <Route path="/billing" element={<BillingPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </AppShell>
+        </AiApprovalsProvider>
       </Gate>
     </DbGate>
   );

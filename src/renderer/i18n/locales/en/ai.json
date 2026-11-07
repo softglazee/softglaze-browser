@@ -1,0 +1,540 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "Let AI apps like Claude, Cursor and ChatGPT work with your profiles. Every change asks you first, and everything is logged.",
+  "loading": "Loading SoftGlaze AI…",
+  "refresh": "Refresh",
+  "retry": "Try again",
+  "learnMore": "Read the guide",
+  "opensInBrowser": "(opens in your browser)",
+  "copy": "Copy",
+  "copied": "Copied",
+  "copyFailed": "Could not copy. Select the text and copy it by hand.",
+  "cancel": "Cancel",
+  "close": "Close",
+  "save": "Save",
+  "saving": "Saving…",
+  "saved": "Saved",
+  "saveFailed": "Not saved",
+  "never": "Never",
+  "unknown": "Unknown",
+  "roles": {
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Operator",
+    "SUPER_ADMIN": "Super Admin"
+  },
+  "states": {
+    "unavailableTitle": "SoftGlaze AI is not available in this build",
+    "unavailableBody": "This version of SoftGlaze Browser does not include the AI server yet. It comes with an update. Nothing is wrong with your workspace.",
+    "forbiddenTitle": "Only the Owner or an Admin can manage SoftGlaze AI",
+    "forbiddenBody": "Ask the workspace Owner for access. When an AI app uses a token that acts as you, its requests still pop up for you to allow or deny, on any page.",
+    "errorTitle": "SoftGlaze AI could not load"
+  },
+  "header": {
+    "switchLabel": "SoftGlaze AI server",
+    "switchShort": "AI server",
+    "on": "On",
+    "off": "Off",
+    "turningOn": "Turning on…",
+    "turningOff": "Turning off…",
+    "stopAll": "Stop all AI",
+    "toggleError": "Could not change the AI server: {{message}}"
+  },
+  "status": {
+    "server": "AI server",
+    "running": "Running",
+    "error": "Not running",
+    "off": "Off",
+    "offHint": "Turn it on so AI apps can connect.",
+    "errorHint": "It is on but not running: {{message}}",
+    "errorHintNoMessage": "It is on but not running. The port may be in use; change it under Settings.",
+    "apps": "Connected apps",
+    "appsNone": "No app connected yet",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "and {{count}} more",
+    "appsMore_other": "and {{count}} more",
+    "waiting": "Waiting for you",
+    "waitingNone": "Nothing to answer",
+    "waitingSome_one": "{{count}} request to answer",
+    "waitingSome_other": "{{count}} requests to answer",
+    "openApprovals": "open Approvals",
+    "sessions": "AI sessions running",
+    "sessionsHint": "Started by AI apps"
+  },
+  "tabs": {
+    "label": "SoftGlaze AI sections",
+    "connect": "Connect",
+    "tokens": "Tokens",
+    "approvals": "Approvals",
+    "activity": "Activity",
+    "memory": "Memory",
+    "prompts": "Prompts",
+    "settings": "Settings",
+    "waiting": "waiting"
+  },
+  "stop": {
+    "title": "Stop all AI?",
+    "body": "Use this if an AI app is doing something you did not expect.",
+    "point1": "Every run an AI app started stops now.",
+    "point2": "Every connected AI app is disconnected.",
+    "point3": "Every request waiting for your answer is denied.",
+    "alsoOff": "Also turn the AI server off",
+    "alsoOffHint": "AI apps cannot reconnect until you turn it on again. Tokens stay valid.",
+    "confirm": "Stop all AI",
+    "error": "Could not stop everything: {{message}}",
+    "result": "Done. Runs stopped: {{runs}}. Sessions ended: {{sessions}}. Requests denied: {{approvals}}."
+  },
+  "start": {
+    "title": "Get started in three steps",
+    "step1": "Turn on the AI server",
+    "step2": "Create a token for your AI app",
+    "step3": "Connect your AI app",
+    "done": "Done",
+    "turnOn": "Turn on"
+  },
+  "connect": {
+    "loadError": "Could not load the setup for AI apps: {{message}}",
+    "empty": "No setup to show yet",
+    "emptyOn": "The AI server sent no setup. Try Refresh.",
+    "emptyBody": "Turn on the AI server to see how to connect each app.",
+    "appsLabel": "AI apps",
+    "guide": "Full guide",
+    "where": "Where it goes",
+    "steps": "How to connect",
+    "kind": {
+      "command": "Command",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "Workflow"
+    },
+    "snippet": "Setup for {{app}}",
+    "placeholderHint": "<YOUR_TOKEN> is where your token goes. You see a token only once, when you create it.",
+    "noSnippet": "This app has no ready-made setup. Follow the steps above.",
+    "createToken": "Create a token for this app",
+    "createTokenHint": "Give each app its own token. Then you can see what each one does and switch one off without touching the others.",
+    "envVar": {
+      "title": "Save the token for Codex",
+      "body": "Codex reads the token from an environment variable named SOFTGLAZE_TOKEN. Run this once with your token, then open a new terminal.",
+      "windows": "Windows (Command Prompt or PowerShell)",
+      "unix": "macOS or Linux (add it to your shell profile)"
+    },
+    "bridge": {
+      "title": "Bridge for apps that start a local program",
+      "body": "Some apps cannot connect to a web address. They start the SoftGlaze bridge instead, and the bridge passes everything to the AI server on this PC. Same token, same approvals.",
+      "unavailable": "The bridge is not included in this build.",
+      "mcpb": "One-click install file for Claude Desktop",
+      "command": "Command",
+      "args": "Arguments",
+      "env": "Environment variables"
+    },
+    "clients": {
+      "claude-desktop": {
+        "title": "Claude Desktop",
+        "step1": "Create a token for Claude Desktop with the button below.",
+        "step2": "Easiest: install the SoftGlaze.mcpb file shown below (Settings > Extensions > Advanced settings > Install Extension) and enter your token when asked. Or open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>.",
+        "step3": "Quit and reopen Claude Desktop. SoftGlaze shows up under the + button below the chat box, in Connectors."
+      },
+      "claude-code": {
+        "title": "Claude Code",
+        "step1": "Create a token for Claude Code with the button below.",
+        "step2": "Run the command in a terminal, with your token in place of <YOUR_TOKEN>.",
+        "step3": "Start Claude Code and type /mcp. SoftGlaze should show as connected."
+      },
+      "cursor": {
+        "title": "Cursor",
+        "step1": "Create a token for Cursor with the button below.",
+        "step2": "Open ~/.cursor/mcp.json (or .cursor/mcp.json in one project) and paste the setup, with your token in place of <YOUR_TOKEN>.",
+        "step3": "In Cursor's settings, check that SoftGlaze is listed and switched on. Then ask the chat to list your SoftGlaze profiles."
+      },
+      "vscode": {
+        "title": "VS Code (Copilot)",
+        "step1": "Create a token for VS Code with the button below.",
+        "step2": "Add the setup to .vscode/mcp.json in your project (or run MCP: Add Server from the Command Palette), with your token in place of <YOUR_TOKEN>.",
+        "step3": "Open Copilot Chat and ask it to list your SoftGlaze profiles. Allow the tool when VS Code asks."
+      },
+      "gemini-cli": {
+        "title": "Gemini CLI",
+        "step1": "Create a token for Gemini CLI with the button below.",
+        "step2": "Add the setup inside \"mcpServers\" in ~/.gemini/settings.json, with your token in place of <YOUR_TOKEN>. Leave \"trust\" off: SoftGlaze asks you before every change anyway.",
+        "step3": "Start gemini and type /mcp. SoftGlaze and its tools should be listed."
+      },
+      "codex": {
+        "title": "ChatGPT desktop / Codex",
+        "step1": "Create a token for Codex with the button below, then save it in the SOFTGLAZE_TOKEN environment variable (command below).",
+        "step2": "Add the setup to ~/.codex/config.toml. Codex reads the token from SOFTGLAZE_TOKEN, so the file never holds it.",
+        "step3": "Open a new terminal, start Codex and type /mcp. SoftGlaze should be listed."
+      },
+      "n8n": {
+        "title": "n8n"
+      },
+      "other": {
+        "title": "Other apps",
+        "step1": "Create a token for the app with the button below.",
+        "step2": "Open the app's MCP settings and add a server with this address and an Authorization header: Bearer, a space, then your token.",
+        "step3": "If the app can only start a local program (stdio), use the SoftGlaze bridge below instead of the address."
+      },
+      "custom": {
+        "step1": "Create a token for this app with the button below.",
+        "step2": "Paste the setup where the app keeps its MCP servers, with your token in place of <YOUR_TOKEN>.",
+        "step3": "Restart the app and check that SoftGlaze is listed in its MCP or tools settings."
+      }
+    },
+    "n8n": {
+      "subtitle": "Run SoftGlaze from n8n workflows on this PC.",
+      "selfHosted": "n8n must run on this PC (npx or Docker). n8n Cloud cannot reach your PC yet.",
+      "noPort": "Turn on the AI server to see the n8n address.",
+      "a": {
+        "title": "Let an n8n AI Agent use SoftGlaze",
+        "step1": "Add an AI Agent node, then add an MCP Client Tool node as one of its tools.",
+        "step2": "Set SSE Endpoint to the address below. If n8n runs in Docker, use the Docker address.",
+        "step3": "Set Authentication to Bearer and paste your token. Under Tools to Include, pick All or only the tools you need.",
+        "sse": "SSE endpoint (n8n on this PC)",
+        "sseDocker": "SSE endpoint (n8n in Docker)",
+        "dockerNote": "For Docker, also add host.docker.internal under Extra allowed host names on the Settings tab."
+      },
+      "b": {
+        "title": "Fixed steps with the HTTP Request node",
+        "body": "For steps that never change, such as starting one profile at 9:00, an HTTP Request node can call the Local API directly. Send the token in the Authorization header.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Use an Automation token for scheduled workflows",
+        "body": "A workflow that runs on a schedule has nobody to click Allow. An Automation token pre-approves only the tools you pick, only for the groups you pick, with limits per call and per hour. Everything else still asks.",
+        "create": "Create an Automation token",
+        "ownerOnly": "Only the Owner can create Automation tokens."
+      }
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Read only",
+      "body": "Can look at profiles, proxies, groups and activity. Cannot change or start anything."
+    },
+    "operate": {
+      "title": "Operate",
+      "body": "Can also create and start profiles, run macros and work inside pages. Changes still ask you first, as set in Settings."
+    },
+    "full": {
+      "title": "Full",
+      "body": "Everything in Operate, plus expert tools when Expert mode is on. Only for apps you fully trust."
+    }
+  },
+  "create": {
+    "title": "Create a token",
+    "titleFor": "Create a token for {{app}}",
+    "description": "A token lets one AI app connect. It acts as a member of your team and can only do what that member may do.",
+    "revealTitle": "Your new token",
+    "revealDescription": "Copy it into your AI app now.",
+    "name": "Name",
+    "nameHint": "Say which app and which computer, so you can recognise it later.",
+    "namePlaceholder": "Claude Desktop on my PC",
+    "member": "Acts as",
+    "memberHint": "The AI works as this member, with this member's permissions and profiles.",
+    "you": "you",
+    "scope": "What it may do",
+    "expiry": "Expires after",
+    "expiryNever": "Never",
+    "expiryDays_one": "{{count}} day",
+    "expiryDays_other": "{{count}} days",
+    "expiryNeverWarn": "A token that never expires stays valid until you revoke it.",
+    "profiles": "Profiles it may use",
+    "profilesAll": "All",
+    "profilesSome": "Only some groups",
+    "profilesAllHint": "Every profile the member can open.",
+    "profilesSomeHint": "Only profiles in the groups you tick.",
+    "noGroups": "There are no groups yet. Create one on the Groups page first.",
+    "pickGroups": "Groups",
+    "submit": "Create token",
+    "onceWarning": "Copy this token now. SoftGlaze shows it only this once. If you lose it, revoke it and create a new one.",
+    "yourToken": "Token",
+    "filledSetup": "Setup for {{app}}, with your token filled in",
+    "n8nHint": "In n8n, set Authentication to Bearer and paste this token.",
+    "acknowledge": "I have saved this token somewhere safe",
+    "closeWarning": "Copy the token or tick the box first. You cannot see this token again.",
+    "done": "Done"
+  },
+  "errors": {
+    "nameRequired": "Enter a name.",
+    "nameTooLong": "Keep the name to {{max}} characters or fewer.",
+    "memberRequired": "Choose a member.",
+    "scopeRequired": "Choose what the token may do.",
+    "expiryRequired": "Choose when it expires.",
+    "groupsRequired": "Tick at least one group, or choose All.",
+    "groupsRequiredAutomation": "An Automation token must be limited to groups. Tick at least one group.",
+    "toolNotAllowed": "One of the tools cannot be pre-approved.",
+    "limitRange": "Enter a whole number from {{min}} to {{max}}.",
+    "create": "The token was not created.",
+    "noToken": "The AI server did not return a token. Try again.",
+    "createFailed": "The token was not created: {{message}}"
+  },
+  "automation": {
+    "title": "Automation token (for n8n, schedules and scripts)",
+    "ownerOnly": "Owner only",
+    "count_one": "{{count}} pre-approved",
+    "count_other": "{{count}} pre-approved",
+    "intro": "For workflows that run without you, pick the tools that may run without asking.",
+    "needsOperate": "Choose Operate or Full above to pre-approve tools.",
+    "warning": "These tools will run without asking you. They stay limited to the chosen groups, are logged, and stop with Stop all AI.",
+    "tools": "Tools that run without asking",
+    "groups": {
+      "profiles": "Profiles",
+      "sessions": "Start and stop",
+      "proxies": "Proxies",
+      "groups": "Groups",
+      "automation": "Automation",
+      "page": "Inside pages"
+    },
+    "maxProfiles": "Most profiles per call",
+    "maxProfilesHint": "Default 5.",
+    "maxCalls": "Most calls per hour",
+    "maxCallsHint": "Default 60.",
+    "groupsNote": "Pre-approved tools only work on the groups ticked under Profiles it may use. Every other tool still asks you."
+  },
+  "tools": {
+    "create_profile": "Create a profile",
+    "update_profile": "Change a profile (name, group, tags, notes, start page, proxy)",
+    "batch_generate_profiles": "Create many profiles at once",
+    "start_profile": "Start a profile",
+    "stop_profile": "Stop a profile",
+    "assign_proxy": "Give a profile a proxy",
+    "rotate_proxy_ip": "Get a new IP from the proxy",
+    "create_group": "Create a group",
+    "move_profiles_to_group": "Move profiles to a group",
+    "save_macro": "Save a macro",
+    "run_macro": "Run a macro",
+    "stop_run": "Stop a run",
+    "start_warmer": "Start a warm-up",
+    "page_navigate": "Open a web page",
+    "page_snapshot": "Read the page layout",
+    "page_click": "Click on a page",
+    "page_type": "Type on a page",
+    "page_press_key": "Press a key on a page",
+    "page_scroll": "Scroll a page",
+    "page_screenshot": "Take a screenshot",
+    "page_extract_text": "Copy text from a page",
+    "page_wait_for": "Wait for something on a page"
+  },
+  "tokens": {
+    "search": "Search tokens",
+    "showRevoked": "Show revoked tokens",
+    "showRevokedCount_one": "Show {{count}} revoked",
+    "showRevokedCount_other": "Show {{count}} revoked",
+    "create": "Create token",
+    "intro": "Each AI app connects with its own token. A token acts as one member and can be limited to some groups. Revoke a token to cut that app off at once.",
+    "loadError": "Could not load tokens: {{message}}",
+    "emptyTitle": "No tokens yet",
+    "emptyBody": "Create a token, then paste it into your AI app. The Connect tab shows where it goes.",
+    "caption": "AI tokens",
+    "colName": "Name",
+    "colMember": "Acts as",
+    "colScope": "Access",
+    "colGroups": "Profiles",
+    "colExpires": "Expires",
+    "colLastUsed": "Last used",
+    "colActions": "Actions",
+    "state": {
+      "revoked": "Revoked",
+      "expired": "Expired",
+      "expiring": "Expires soon"
+    },
+    "automation_one": "Automation · {{count}} pre-approved",
+    "automation_other": "Automation · {{count}} pre-approved",
+    "allProfiles": "All profiles",
+    "groupsMore_one": "{{names}} and {{count}} more",
+    "groupsMore_other": "{{names}} and {{count}} more",
+    "neverUsed": "Not used yet",
+    "revoke": "Revoke",
+    "revokeAria": "Revoke {{name}}",
+    "noMatch": "No tokens match.",
+    "revokeTitle": "Revoke “{{name}}”?",
+    "revokeBody": "The AI app using this token loses access right away. This cannot be undone.",
+    "revokeError": "Could not revoke the token: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "AI request",
+    "eyebrowMany": "AI request {{position}} of {{total}}",
+    "title": "{{app}} is asking for permission",
+    "tokenOnly": "Token: {{token}}",
+    "tokenAndMember": "Token: {{token}} · acts as {{member}}",
+    "noSummary": "Run the tool {{tool}}",
+    "unknownApp": "An AI app",
+    "timeLeft": "left to answer. With no answer, the request is denied.",
+    "timeLeftHint": "Time left before the request is denied",
+    "timeLeftSr": "{{time}} left before the request is denied",
+    "secondsLeftAnnounce": "{{seconds}} seconds left to answer the AI request",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "tool": "Tool",
+    "token": "Token",
+    "argsLabel": "Request details",
+    "noArgs": "This request has no extra details.",
+    "redactedNote": "Passwords and other secrets are hidden here.",
+    "deny": "Deny",
+    "allowHour": "Allow for 1 hour",
+    "allowHourHint": "Do not ask again for this kind of action from {{token}} for the next hour.",
+    "allowOnce": "Allow once",
+    "footnote": "SoftGlaze asks inside the app, whatever the AI app's own settings say. Every answer is logged under Activity.",
+    "later": "Decide later (it is denied when time runs out)",
+    "respondError": "Your answer was not saved: {{message}}",
+    "waitingChip_one": "{{count}} AI request waiting",
+    "waitingChip_other": "{{count}} AI requests waiting",
+    "timedOut": "The request from {{app}} timed out and was denied.",
+    "gone": "That request was already answered or cancelled."
+  },
+  "approvals": {
+    "intro": "Every action that changes something waits here until you answer. A request with no answer is denied after 2 minutes. The same request also pops up on any page.",
+    "changeRules": "Change when SoftGlaze asks",
+    "emptyTitle": "Nothing is waiting for you",
+    "emptyBody": "When an AI app wants to change something, the request appears here and as a pop-up on any page.",
+    "listLabel": "Requests waiting for you",
+    "meta": "{{app}} · token {{token}} · {{when}}"
+  },
+  "activity": {
+    "search": "Search tool, request or token",
+    "outcome": "Result",
+    "all": "All",
+    "outcomes": {
+      "ok": "OK",
+      "denied": "Denied",
+      "error": "Error"
+    },
+    "app": "App",
+    "allApps": "All apps",
+    "loadError": "Could not load activity: {{message}}",
+    "noMatchTitle": "Nothing matches these filters",
+    "noMatchBody": "Try another result, app or search.",
+    "emptyTitle": "No AI activity yet",
+    "emptyBody": "Everything an AI app does through SoftGlaze is listed here: what it asked for, your answer and how it went.",
+    "caption": "AI activity",
+    "colTime": "Time",
+    "colApp": "App and token",
+    "colTool": "Tool",
+    "colSummary": "What happened",
+    "colOutcome": "Result",
+    "colDuration": "Took",
+    "preApproved": "Pre-approved",
+    "pageEmpty": "No more entries.",
+    "pageInfo": "Page {{page}} · {{size}} per page",
+    "newer": "Newer",
+    "older": "Older"
+  },
+  "memory": {
+    "title": "Workspace memory",
+    "description": "Notes every AI app reads before it starts: how you name things, what each group is for, proxy rules, working hours and what it must never do. Plain Markdown.",
+    "updated": "Saved {{when}}",
+    "loadError": "Could not load the memory: {{message}}",
+    "editorLabel": "Workspace memory (Markdown)",
+    "placeholder": "Write notes for AI apps here, in Markdown.",
+    "usage": "{{used}} KB of {{limit}} KB · {{chars}} characters",
+    "over": "That is over the limit. Shorten it to save.",
+    "discard": "Discard changes",
+    "reset": "Reset to default",
+    "unsaved": "Unsaved changes",
+    "tip": "Tip: press Ctrl+S to save. Keep it short and specific: AI apps read all of it every time.",
+    "guidesTitle": "Built-in guides",
+    "guidesDescription": "SoftGlaze gives every AI app these guides too. They are read-only.",
+    "resetTitle": "Reset the memory to the default?",
+    "resetBody": "Your notes are replaced with the SoftGlaze template. This cannot be undone.",
+    "guides": {
+      "howItWorks": {
+        "title": "How SoftGlaze works",
+        "body": "Profiles, fingerprints, proxies, groups, sessions, macros and plan limits, and how to use the tools well."
+      },
+      "acceptableUse": {
+        "title": "Acceptable use",
+        "body": "What SoftGlaze may and may not be used for. AI apps are told to refuse anything prohibited."
+      }
+    },
+    "readGuide": "Read the guide",
+    "hideGuide": "Hide",
+    "guideReadOnly": "Read-only. Kept up to date by SoftGlaze."
+  },
+  "prompts": {
+    "loadError": "Could not load prompts: {{message}}",
+    "emptyTitle": "No prompts yet",
+    "emptyBody": "Ready-made prompts appear here when the AI server is available.",
+    "search": "Search prompts",
+    "listLabel": "Prompts",
+    "noMatch": "No prompts match.",
+    "inClaudeCode": "In Claude Code:",
+    "arguments": "Details you fill in",
+    "noArguments": "This prompt needs no details.",
+    "argName": "Name",
+    "argRequired": "Needed",
+    "argDescription": "What it is",
+    "required": "Required",
+    "optional": "Optional",
+    "text": "Prompt text",
+    "howTitle": "How to use prompts",
+    "howIntro": "Prompts are ready-made tasks. Your AI app fills in the details and carries them out with SoftGlaze.",
+    "howClaudeCode": "type / and pick a softglaze prompt.",
+    "howClaudeDesktop": "click + below the chat box and look for SoftGlaze.",
+    "howVsCode": "type / in Copilot Chat and pick a SoftGlaze prompt.",
+    "howCursor": "if prompts are not listed, copy the text below.",
+    "howOther": "Any app: copy the prompt text, paste it into the chat and fill in the details."
+  },
+  "settings": {
+    "loadError": "Could not load settings: {{message}}",
+    "ownerOnly": "Owner only",
+    "ownerOnlyHint": "Only the workspace Owner can change this.",
+    "remove": "Remove {{value}}",
+    "approvals": {
+      "title": "When SoftGlaze asks you",
+      "description": "SoftGlaze asks inside the app before an AI app does something, whatever the AI app's own settings say.",
+      "read": {
+        "title": "Read-only tools",
+        "body": "Looking at profiles, proxies, groups and activity."
+      },
+      "operate": {
+        "title": "Operate tools",
+        "body": "Creating and starting profiles, running macros, working inside pages."
+      },
+      "full": {
+        "title": "Full tools",
+        "body": "Expert tools, only when Expert mode is on."
+      },
+      "alwaysAsk": "Some actions always ask every time, such as starting or stopping many profiles at once, and expert tools."
+    },
+    "modes": {
+      "never": "Never ask",
+      "ask-hour": "Ask once an hour",
+      "ask-always": "Ask every time"
+    },
+    "domains": {
+      "title": "Sites the AI may work on",
+      "description": "Page tools (open a page, click, type, read text) only work on the sites in this list and their subdomains.",
+      "placeholder": "example.com",
+      "invalid": "Enter a site name like example.com.",
+      "empty": "No sites yet. Page tools may open any site, and you are still asked first.",
+      "add": "Add site"
+    },
+    "hosts": {
+      "title": "Extra allowed host names",
+      "description": "The AI server only answers requests addressed to 127.0.0.1. For n8n or other tools running in Docker, add host.docker.internal.",
+      "invalid": "Enter a host name like host.docker.internal, with no port or path.",
+      "empty": "None. Only 127.0.0.1 is allowed.",
+      "add": "Add host"
+    },
+    "expert": {
+      "title": "Expert mode",
+      "description": "Lets an AI app take over a running profile with Playwright, Puppeteer or Chrome DevTools.",
+      "warning": "Detectable. Outside tools control the browser in a way websites can spot, so profiles may be flagged or blocked. Off by default. Owner only.",
+      "switch": "Expert mode",
+      "isOn": "On. AI apps with a Full token can ask to take over a running profile. Each time asks you.",
+      "isOff": "Off. No AI app can take over a running profile.",
+      "confirmTitle": "Turn on Expert mode?",
+      "confirmBody": "AI apps with a Full token can then ask to control running profiles directly. Websites can detect this, and accounts in those profiles may be flagged.",
+      "confirm": "Turn on",
+      "ack": "I understand that this can be detected and may get profiles flagged."
+    },
+    "port": {
+      "title": "Server port",
+      "description": "AI apps connect to http://127.0.0.1 on this port.",
+      "label": "Port",
+      "invalid": "Use a number from {{min}} to {{max}}.",
+      "hint": "After you change it, update the address in every connected AI app. The Connect tab shows the new setup."
+    }
+  }
+}

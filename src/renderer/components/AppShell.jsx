@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Fingerprint, Layers, Globe, Puzzle, FileSpreadsheet, IdCard,
   Trash2, Settings, Users, ChevronsUpDown, Sun, Moon,
   ChevronLeft, ChevronRight, Activity, MonitorDown, Wand2,
-  CreditCard, Link2, Plug, ClipboardList, Gift } from 'lucide-react';
+  CreditCard, Link2, Plug, ClipboardList, Gift, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { renderFooterNodes } from '@/lib/footerText.jsx';
@@ -16,6 +16,9 @@ import UserMenuPopover from '@/components/UserMenuPopover.jsx';
 import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 import { LicenseNoticeBanner, LicenseTrialChip } from '@/components/LicenseNotice.jsx';
 import { pickLicenseNotice } from '@/lib/licenseNotice.mjs';
+import AiApprovalDialog from '@/components/ai/AiApprovalDialog.jsx';
+import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
+import { canManageAi } from '@/lib/aiCore.mjs';
 
 function ThemeToggle({ collapsed }) {
   const { t } = useTranslation();
@@ -49,6 +52,8 @@ const SECTIONS = [
     labelKey: 'nav.sectionWorkspace',
     items: [
       { path: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, featureKey: 'dashboard' },
+      // SoftGlaze AI: Owner/Admin only (spec §10). The pill marks the beta; the badge counts requests waiting.
+      { path: '/ai', labelKey: 'nav.ai', icon: Sparkles, aiOnly: true, pillKey: 'nav.beta', badgeKey: 'aiApprovals', badgeTone: 'warning' },
       { path: '/start-links', labelKey: 'nav.startLinks', icon: Link2 },
       { path: '/profiles', labelKey: 'nav.profiles', icon: Fingerprint, badgeKey: 'profiles', featureKey: 'profiles' },
       { path: '/groups', labelKey: 'nav.groups', icon: Layers, featureKey: 'groups' },
@@ -102,7 +107,8 @@ function FooterBar({ text }) {
   );
 }
 
-function NavItem({ path, label, icon: Icon, collapsed, badge }) {
+function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill }) {
+  const attention = badgeTone === 'warning' && badge != null && badge !== '';
   return (
     <NavLink to={path} className="block" title={collapsed ? label : undefined}>
       {({ isActive }) => (
@@ -113,9 +119,14 @@ function NavItem({ path, label, icon: Icon, collapsed, badge }) {
           style={isActive ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 24%, transparent)' } : { border: '1px solid transparent' }}
         >
           <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-primary' : ''}`} strokeWidth={1.75} />
+          {collapsed && attention && <span className="absolute left-7 top-2 h-2 w-2 rounded-full" style={{ background: 'var(--warning)' }} aria-hidden="true" />}
           {!collapsed && <span className="flex-1 truncate">{label}</span>}
-          {!collapsed && badge != null && badge !== '' && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{badge}</span>
+          {!collapsed && pill && (
+            <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--chart-2) 14%, transparent)', color: 'color-mix(in srgb, var(--chart-2) 72%, var(--foreground))' }}>{pill}</span>
+          )}
+          {!collapsed && badge != null && badge !== '' && (attention
+            ? <span className="min-w-[1.25rem] text-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: 'var(--warning)' }}>{badge}</span>
+            : <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{badge}</span>
           )}
         </div>
       )}
@@ -133,6 +144,9 @@ export default function AppShell({ children }) {
   // Narrow windows start with the icon-only sidebar so pages keep usable width.
   const [collapsed, setCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [me, setMe] = useState(null);
+  // Role-gated items (SoftGlaze AI) stay hidden until the member is known, so they never flash.
+  const [meLoaded, setMeLoaded] = useState(false);
+  const aiApprovals = useAiApprovals();
   const [members, setMembers] = useState([]);
   const [vault, setVault] = useState({ enabled: false });
   const [license, setLicense] = useState(null);
@@ -169,6 +183,7 @@ export default function AppShell({ children }) {
         const b = (cfg && cfg.branding) || {};
         setFooter({ text: b.footerText != null ? b.footerText : '', enabled: b.footerEnabled !== false });
       } catch (e) { /* members API unavailable on older builds */ }
+      finally { if (live) setMeLoaded(true); }
     })();
     return () => { live = false; };
   }, []);
@@ -239,7 +254,11 @@ export default function AppShell({ children }) {
   const name = me?.name || t('shell.localWorkspace');
   const role = roleLabel(me?.role);
   // Proxy providers: the number of vendor integrations the app ships.
-  const badges = { profiles: counts.profiles ? String(counts.profiles) : '', providers: String(PROVIDERS.length) };
+  const badges = {
+    profiles: counts.profiles ? String(counts.profiles) : '',
+    providers: String(PROVIDERS.length),
+    aiApprovals: aiApprovals.queue.length ? String(aiApprovals.queue.length) : ''
+  };
   const canSee = makeCanSee(me);
 
   return (
@@ -281,13 +300,15 @@ export default function AppShell({ children }) {
 
         <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3">
           {SECTIONS.map((section) => {
-            const items = section.items.filter((item) => (item.superOnly ? me?.role === 'SUPER_ADMIN' : canSee(item.featureKey)));
+            const items = section.items
+              .filter((item) => !item.aiOnly || (meLoaded && canManageAi(me)))
+              .filter((item) => (item.superOnly ? me?.role === 'SUPER_ADMIN' : canSee(item.featureKey)));
             if (items.length === 0) return null;
             return (
               <div key={section.labelKey} className="mt-3">
                 {!collapsed && <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/70">{t(section.labelKey)}</div>}
                 <div className="space-y-0.5">
-                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} />)}
+                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} pill={item.pillKey ? t(item.pillKey) : undefined} />)}
                 </div>
               </div>
             );
@@ -357,6 +378,7 @@ export default function AppShell({ children }) {
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>
       <ResilienceToasts />
+      <AiApprovalDialog />
       <CommandPalette />
       <OnboardingWizard />
     </div>

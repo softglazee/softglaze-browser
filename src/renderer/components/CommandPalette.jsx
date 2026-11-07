@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, CornerDownLeft, LayoutDashboard, Fingerprint, Layers, Globe, Puzzle,
-  FileSpreadsheet, Trash2, Settings, Users, MonitorDown, Wand2, UserCog, Plug, Gift
+  FileSpreadsheet, Trash2, Settings, Users, MonitorDown, Wand2, UserCog, Plug, Gift, Sparkles, OctagonX
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { canManageAi } from '@/lib/aiCore.mjs';
 import i18n from '@/i18n/index.js';
 import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
 import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
@@ -19,6 +20,7 @@ if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', '
 // proxies and members. labelKey is translated at render time (module scope cannot call the hook).
 const NAV = [
   { path: '/dashboard', labelKey: 'palette.nav.dashboard', icon: LayoutDashboard },
+  { path: '/ai', labelKey: 'palette.nav.ai', icon: Sparkles, aiOnly: true },
   { path: '/profiles', labelKey: 'palette.nav.profiles', icon: Fingerprint },
   { path: '/groups', labelKey: 'palette.nav.groups', icon: Layers },
   { path: '/proxies', labelKey: 'palette.nav.proxies', icon: Globe },
@@ -48,6 +50,8 @@ export default function CommandPalette() {
   const [query, setQuery] = useState('');
   const [sel, setSel] = useState(0);
   const [data, setData] = useState({ profiles: [], proxies: [], members: [] });
+  // undefined until loaded: SoftGlaze AI entries are Owner/Admin only.
+  const [me, setMe] = useState(undefined);
   const inputRef = useRef(null);
 
   const close = useCallback(() => { setOpen(false); setQuery(''); setSel(0); }, []);
@@ -70,15 +74,18 @@ export default function CommandPalette() {
   useEffect(() => {
     if (!open) return undefined;
     let live = true;
+    setMe(undefined);
     setTimeout(() => { if (inputRef.current) inputRef.current.focus(); }, 0);
     (async () => {
-      const [pf, px, mb] = await Promise.all([
+      const [pf, px, mb, cur] = await Promise.all([
         softglazeApi.profiles.list().catch(() => []),
         softglazeApi.proxies.list().catch(() => []),
-        softglazeApi.members.list().catch(() => [])
+        softglazeApi.members.list().catch(() => []),
+        softglazeApi.members.current().catch(() => null)
       ]);
       if (!live) return;
       setData({ profiles: asArray(pf), proxies: asArray(px), members: asArray(mb) });
+      setMe(cur || null);
     })();
     return () => { live = false; };
   }, [open]);
@@ -86,10 +93,17 @@ export default function CommandPalette() {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = [];
+    const ai = canManageAi(me);
     for (const n of NAV) {
+      if (n.aiOnly && !ai) continue;
       // Match the translated label so search works in any UI language.
       const label = t(n.labelKey);
       if (!q || label.toLowerCase().includes(q)) out.push({ icon: n.icon, label, hint: t('palette.hint.page'), run: () => navigate(n.path) });
+    }
+    // Stop all AI opens the AI page's confirm dialog; it never stops anything straight from here.
+    if (ai && q) {
+      const label = t('palette.action.stopAi');
+      if (label.toLowerCase().includes(q)) out.push({ icon: OctagonX, label, hint: t('palette.hint.action'), run: () => navigate('/ai?confirmStop=1') });
     }
     if (q) {
       for (const p of data.profiles) {
@@ -108,7 +122,7 @@ export default function CommandPalette() {
       }
     }
     return out;
-  }, [query, data, navigate, t]);
+  }, [query, data, me, navigate, t]);
 
   useEffect(() => { setSel((s) => Math.min(s, Math.max(0, results.length - 1))); }, [results.length]);
 
