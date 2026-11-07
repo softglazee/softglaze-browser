@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGenerator');
+const { doNotTrackFlag, dntPrefToWrite } = require('./doNotTrack');
 const { applyBrandWindowIcon } = require('./windowIcon');
 const platform = require('./platform');
 // Shared with browserDownloader so the binary resolver reads exactly where the downloader writes
@@ -1079,14 +1080,16 @@ function nativeGapScript(fp) {
   }
 }
 
-// Seeds a native-engine profile with the Do-Not-Track preference. The default search provider cannot
-// be seeded: it is a MAC-protected pref, so Chromium drops planted values. Only enterprise policy
-// works, and that shows "Managed by your organization", itself a detection signal.
-async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
+// Do Not Track is Chromium's own profile setting (pref enable_do_not_track, the "Send a Do Not Track
+// request" switch; not one of the MAC-protected prefs, so a value written before launch is kept). With
+// it on, Chromium itself sends DNT: 1 on navigations, subresources and dedicated, shared and service
+// worker requests, and reports navigator.doNotTrack "1"; with it off, no header and null. Written for
+// every Chromium engine. `value` is dntPrefToWrite's answer: '1', '0', or null to write nothing.
+// (The default search provider cannot be seeded the same way: it is MAC-protected, so Chromium drops
+// planted values; only enterprise policy works, and that shows "Managed by your organization".)
+async function ensureDoNotTrackPref(userDataDir, value) {
   try {
-    // Nothing to write unless the profile states a DNT preference. null means "leave
-    // alone", matching stock Chrome's default of not sending the header at all.
-    if (!(fpConfig && (fpConfig.dnt === '1' || fpConfig.dnt === '0'))) return;
+    if (value !== '1' && value !== '0') return;
 
     const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
     let prefs = {};
@@ -1102,7 +1105,9 @@ async function ensureNativeProfilePrefs(userDataDir, fpConfig) {
     }
     if (hadFile && (!prefs || typeof prefs !== 'object' || Array.isArray(prefs))) return;
 
-    prefs.enable_do_not_track = fpConfig.dnt === '1';
+    const on = value === '1';
+    if (hadFile && prefs.enable_do_not_track === on) return; // already right: no write
+    prefs.enable_do_not_track = on;
 
     await fs.mkdir(path.dirname(prefsPath), { recursive: true });
     await fs.writeFile(prefsPath, JSON.stringify(prefs));
@@ -1130,7 +1135,7 @@ async function ensureCookiePolicyPref(userDataDir, browserSettings) {
       prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8'));
       hadFile = true;
     } catch (e) {
-      // Same rule as ensureNativeProfilePrefs: never overwrite a Preferences file that
+      // Same rule as ensureDoNotTrackPref: never overwrite a Preferences file that
       // exists but did not parse (that would wipe the profile's whole settings).
       if (e && e.code !== 'ENOENT') return;
       prefs = {};
@@ -1190,7 +1195,7 @@ function fingerprintScript(fp) {
 
   // Spoofed accessors go on the prototype, as in real Chrome, with a getter that reports [native code]
   // and is named "get <prop>"; instance properties leak via Object.getOwnPropertyNames(navigator).
-  // Falls back to the instance when the prototype lacks the property (e.g. window.doNotTrack).
+  // Falls back to the instance when the prototype lacks the property.
   const define = (obj, prop, value) => {
     try {
       const proto = Object.getPrototypeOf(obj);
@@ -1354,7 +1359,9 @@ function fingerprintScript(fp) {
       timezone: fp.timezone || undefined,
       // The page's UA is already the CDP override here. Shared workers keep the real UA string under
       // that override (their Client Hints follow it), so the prelude sets it when it differs.
-      userAgent: (function () { try { return navigator.userAgent || undefined; } catch (e) { return undefined; } })()
+      userAgent: (function () { try { return navigator.userAgent || undefined; } catch (e) { return undefined; } })(),
+      // Brave reports GPC in workers too (WorkerNavigator), so a worker matches its page.
+      globalPrivacyControl: fp.gpc ? true : undefined
     };
     // Runs first in every worker realm; must be a self-contained literal.
     var prelude = '(function(){' +
@@ -1370,6 +1377,9 @@ function fingerprintScript(fp) {
       'd("hardwareConcurrency",o.hardwareConcurrency);d("deviceMemory",o.deviceMemory);' +
       'd("languages",o.languages);d("language",o.language);d("platform",o.platform);' +
       'if(o.userAgent&&navigator.userAgent!==o.userAgent){d("userAgent",o.userAgent);d("appVersion",o.userAgent.slice(o.userAgent.indexOf("/")+1));}' +
+      // A new attribute (Chrome workers have none): enumerable, with a non-constructible getter, as in Brave.
+      'if(o.globalPrivacyControl===true&&navigator.globalPrivacyControl!==true){try{Object.defineProperty(Object.getPrototypeOf(navigator)||navigator,"globalPrivacyControl",' +
+      '{get:mk(Object.getOwnPropertyDescriptor({get globalPrivacyControl(){return true;}},"globalPrivacyControl").get,"get globalPrivacyControl"),configurable:true,enumerable:true});}catch(e){}}' +
       'try{var pg=function(proto){if(!proto)return;var g=proto.getParameter;proto.getParameter=mk(function(p){' +
       'if(o.webglVendor&&p===37445)return o.webglVendor;if(o.webglRenderer&&p===37446)return o.webglRenderer;' +
       'return g.apply(this,arguments);},"getParameter");};' +
@@ -1654,11 +1664,27 @@ if (fp.noise.canvas) {
     }
   }
 
-  // Do Not Track - '1' / '0' / null (leave native untouched when not configured).
-  if (fp.dnt === '1' || fp.dnt === '0') {
-    define(navigator, 'doNotTrack', fp.dnt);
-    try { define(window, 'doNotTrack', fp.dnt); } catch (e) {}
-    if (fp.dnt === '1') { try { define(navigator, 'globalPrivacyControl', true); } catch (e) {} }
+  // Do Not Track is Chromium's own setting, written before launch (ensureDoNotTrackPref), so the browser
+  // itself reports navigator.doNotTrack "1" and sends DNT: 1 everywhere. This is only the fallback for a
+  // launch where that setting could not be written: DNT on and the native value is not "1" already.
+  // DNT off and Default define nothing: Chromium then reports null (never "0") and has no
+  // window.doNotTrack.
+  if (fp.dnt === '1') {
+    try { if (navigator.doNotTrack !== '1') define(navigator, 'doNotTrack', '1'); } catch (e) {}
+  }
+
+  // Global Privacy Control is not tied to Do Not Track: only a brand that sends it by itself shows it
+  // (fp.gpc, Brave: on by default). Stock Chrome, Edge, Opera, Vivaldi and Yandex have no
+  // navigator.globalPrivacyControl at all, so for them it stays absent, whatever the DNT choice.
+  // Brave's is an IDL attribute: an enumerable accessor on Navigator.prototype, not an own property.
+  if (fp.gpc) {
+    try {
+      const navProto = Object.getPrototypeOf(navigator);
+      if (navProto && navigator.globalPrivacyControl !== true) {
+        const gpcGetter = markNative(Object.getOwnPropertyDescriptor({ get globalPrivacyControl() { return true; } }, 'globalPrivacyControl').get, 'get globalPrivacyControl');
+        Object.defineProperty(navProto, 'globalPrivacyControl', { get: gpcGetter, configurable: true, enumerable: true });
+      }
+    } catch (e) {}
   }
 
   // WebGPU - when disabled, hide navigator.gpu so sites can't read the real
@@ -2068,7 +2094,7 @@ body{background:radial-gradient(1200px 600px at 20% -10%,#13233b 0%,#0b0f17 55%)
   $('cores').textContent=navigator.hardwareConcurrency+' cores';
   $('mem').textContent=(navigator.deviceMemory||'n/a')+(navigator.deviceMemory?' GB':'');
   $('screen').textContent=screen.width+'x'+screen.height+' ('+screen.availWidth+'x'+screen.availHeight+')';
-  $('dnt').textContent=(navigator.doNotTrack==='1'?'Enabled':(navigator.doNotTrack==='0'?'Disabled':'Default'));
+  $('dnt').textContent=(navigator.doNotTrack==='1'?'Enabled':'Off');
   try{
     var c=document.createElement('canvas'),x=c.getContext('webgl')||c.getContext('experimental-webgl');
     var dbg=x&&x.getExtension('WEBGL_debug_renderer_info');
@@ -2523,9 +2549,8 @@ function buildFingerprintConfig(profile, opts) {
     console.log(`[SG][fp] cross-OS profile (claims ${claimedOs} on ${HOST_OS_NAME}) - forcing a coherent GPU instead of the host's: ${webglRenderer}`);
   }
 
-  const dntRaw = String(profile.doNotTrack || '').toLowerCase();
-  const dnt = /^(on|enable|enabled|1|true|yes)$/.test(dntRaw) ? '1'
-    : (/^(off|disable|disabled|0|false|no)$/.test(dntRaw) ? '0' : null);
+  // '1' on (editor "Open"), '0' off ("Close"), null for "Default" (see doNotTrack.js).
+  const dnt = doNotTrackFlag(profile.doNotTrack);
 
   // CPU cores and RAM are spoofed unless the user picks "Real"; blank still spoofs (stable seeded pick).
   // navigator.deviceMemory caps at 8 in real Chrome, so RAM GB maps to {1,2,4,8}.
@@ -2544,6 +2569,8 @@ function buildFingerprintConfig(profile, opts) {
     brand: brandIdent.id,
     brandVendor: brandIdent.vendor,
     brandInject: brandIdent.inject,
+    // Global Privacy Control comes from the brand (Brave sends it by itself), never from Do Not Track.
+    gpc: Boolean(brandIdent.gpc),
     timezone: timezone || null,
     navPlatform: osTok.navPlatform,
     // null ⇒ no override (report the real value) - only when the user picks "Real".
@@ -2612,6 +2639,13 @@ function workerPreludeScript(o) {
     if (Array.isArray(o.languages) && o.languages.length) {
       want('languages', Object.freeze(o.languages.slice()));
       want('language', o.languages[0]);
+    }
+    // Brave has navigator.globalPrivacyControl in workers too (WorkerNavigator). Chrome's workers have no
+    // such property, so it is added here (want() only changes properties that exist) for a GPC brand.
+    if (o.gpc === true) {
+      let gpcNow;
+      try { gpcNow = nav.globalPrivacyControl; } catch (e) { gpcNow = undefined; }
+      if (gpcNow !== true) props.push(['globalPrivacyControl', true]);
     }
     let hostTz = '';
     try { hostTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
@@ -2718,9 +2752,22 @@ function workerPreludeSource(fp, ua = null) {
     languages: langs,
     timezone: fp.timezone || undefined,
     webglVendor: gpu ? (fp.webglVendor || undefined) : undefined,
-    webglRenderer: gpu ? (fp.webglRenderer || undefined) : undefined
+    webglRenderer: gpu ? (fp.webglRenderer || undefined) : undefined,
+    gpc: fp.gpc ? true : undefined
   };
   return `(${workerPreludeScript.toString()})(${JSON.stringify(data)});`;
+}
+
+// The privacy request headers every tab of a profile sends: DNT: 1 when the profile turns Do Not Track
+// on (the same header Chromium sends from its own setting, see ensureDoNotTrackPref; this covers a launch
+// where that setting could not be written), Sec-GPC: 1 only when the claimed brand sends Global Privacy
+// Control by itself (fp.gpc, Brave). The anti-detect build has no Brave identity (Chrome/Edge/Opera/
+// Vivaldi) and runs no page script, so it never gets GPC. An empty object means nothing to set.
+function privacyRequestHeaders(fp = {}) {
+  const headers = {};
+  if (fp && fp.dnt === '1') headers.DNT = '1';
+  if (fp && fp.gpc && !fp.nativeEngine) headers['Sec-GPC'] = '1';
+  return headers;
 }
 
 // The CDP commands one target needs, in order, so the first tab, later tabs, popups, frames and
@@ -2795,10 +2842,17 @@ function attachFingerprintToNewTargets(session, conn, ctx = {}) {
     fpLate = {},
     injectSource = '',
     onInjectFailed = null,
+    // Called with a tab's targetId once its setup is in place, just before it is resumed. The
+    // document hold (holdNewTabDocuments) releases that tab's first page on it.
+    onPrepared = null,
     // A tab waits at most this long for the setup replies before it is resumed anyway.
     resumeAfterMs = 1500,
     callTimeoutMs = 4000
   } = ctx;
+  const prepared = (info) => {
+    if (info.type !== 'page' || typeof onPrepared !== 'function') return;
+    try { onPrepared(info.targetId); } catch (e) { /* the hold times out on its own */ }
+  };
 
   const onAttached = async (ev) => {
     const info = (ev && ev.targetInfo) || {};
@@ -2874,10 +2928,12 @@ function attachFingerprintToNewTargets(session, conn, ctx = {}) {
         const again = await beforeDeadline(sendAll(retry));
         if (again) retry.forEach((s, j) => { errors[steps.indexOf(s)] = again[j]; });
       }
+      prepared(info);
       await resume();
       if (!errors.length) errors = await replies; // replies that came after the cap, for the report
     } else {
       const replies = sendAll(steps);
+      prepared(info); // a DevTools window: nothing to set up
       await resume();
       errors = await replies;
     }
@@ -2893,6 +2949,85 @@ function attachFingerprintToNewTargets(session, conn, ctx = {}) {
 
   if (session && typeof session.on === 'function') session.on('Target.attachedToTarget', onAttached);
   return onAttached;
+}
+
+// Tabs whose setup is in place (targetId of the tab = frameId of its main frame), and a wait for one.
+function createPreparedTargets() {
+  const ready = new Set();
+  const waiters = new Map();
+  return {
+    mark(id) {
+      if (!id) return;
+      const key = String(id);
+      ready.add(key);
+      const list = waiters.get(key);
+      if (list) { waiters.delete(key); list.forEach((fn) => fn(true)); }
+    },
+    has(id) { return Boolean(id) && ready.has(String(id)); },
+    forget(id) { if (id) ready.delete(String(id)); },
+    // Resolves true once the tab is marked, or false after ms.
+    wait(id, ms) {
+      const key = String(id);
+      if (ready.has(key)) return Promise.resolve(true);
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = (v) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          const list = waiters.get(key);
+          if (list) { const i = list.indexOf(finish); if (i >= 0) list.splice(i, 1); if (!list.length) waiters.delete(key); }
+          resolve(v);
+        };
+        const timer = setTimeout(() => finish(false), ms);
+        const list = waiters.get(key) || [];
+        list.push(finish);
+        waiters.set(key, list);
+      });
+    }
+  };
+}
+
+// Only page loads (main frames and frames), held before the request is sent.
+const DOCUMENT_HOLD_PATTERNS = Object.freeze([{ urlPattern: '*', resourceType: 'Document', requestStage: 'Request' }]);
+
+// Tabs opened with Ctrl+click, middle click, Shift+click (new window) or "Open link in new tab" are
+// created by the browser together with their first navigation. Chrome loads that first page before the
+// auto-attach reaches the new tab, so waitForDebuggerOnStart holds nothing and
+// addScriptToEvaluateOnNewDocument only reaches the tab's second page (checked on Chrome 156: the tab's
+// frame is already on the link's URL when it is attached, and its inline scripts have run). popups,
+// target=_blank and "+" tabs start on an empty page, so they never had this gap.
+// This holds a tab's own page request (frameId = targetId of a page target) until attachFingerprintToNewTargets
+// has set the tab up, then lets it go, so the page script runs before the page's own scripts. Prepared
+// tabs and frames are let through at once; nothing is ever held longer than waitMs, and every request
+// is continued, whatever happens.
+function holdNewTabDocuments(session, preparedTargets, { waitMs = 1500, onHeld = null } = {}) {
+  const NOT_TAB_TYPES = new Set(['iframe', 'worker', 'shared_worker', 'service_worker', 'other']);
+  const notTabs = new Set(); // out-of-process frames seen, so their next loads skip the lookup
+  const isUnpreparedTab = async (frameId) => {
+    if (!frameId || preparedTargets.has(frameId) || notTabs.has(frameId)) return false;
+    let type = '';
+    try {
+      const r = await session.send('Target.getTargetInfo', { targetId: frameId });
+      type = r && r.targetInfo ? String(r.targetInfo.type || '') : '';
+    } catch (e) { return false; } // not a target: a frame inside a tab
+    if (NOT_TAB_TYPES.has(type)) { if (notTabs.size > 5000) notTabs.clear(); notTabs.add(frameId); return false; }
+    return type === 'page' && !preparedTargets.has(frameId);
+  };
+  const onPaused = async (ev) => {
+    const requestId = ev && ev.requestId;
+    try {
+      const frameId = ev && ev.frameId;
+      if (await isUnpreparedTab(frameId)) {
+        const started = Date.now();
+        const ready = await preparedTargets.wait(frameId, waitMs);
+        if (typeof onHeld === 'function') { try { onHeld({ frameId, url: ev.request && ev.request.url, ms: Date.now() - started, ready }); } catch (e) { /* logging only */ } }
+      }
+    } catch (e) { /* never keep a page waiting on our own error */ }
+    if (requestId) await session.send('Fetch.continueRequest', { requestId }).catch(() => {});
+  };
+  if (session && typeof session.on === 'function') session.on('Fetch.requestPaused', onPaused);
+  return { onPaused, enable: () => session.send('Fetch.enable', { patterns: DOCUMENT_HOLD_PATTERNS.map((p) => ({ ...p })) }) };
 }
 
 // Writes the MAIN-world content-script extension into the profile; returns its --load-extension path.
@@ -3123,9 +3258,9 @@ async function launchProfileSessionNow(options = {}) {
       throw new Error('No Chrome or Chromium was found on this device. Open the Browsers page and download a browser version (or install Google Chrome) before launching Chrome profiles.');
     }
   }
-  // Seed Default/Preferences before launch: an address-bar search engine (ungoogled ships none)
-  // and the Do Not Track choice, which has no native flag.
-  if (usingAntidetect) await ensureNativeProfilePrefs(userDataDir, fpConfig);
+  // Do Not Track goes into Chromium's own setting before launch, for every Chromium engine, so the
+  // browser itself sends DNT: 1 and reports navigator.doNotTrack in every tab, frame and worker.
+  await ensureDoNotTrackPref(userDataDir, await dntPrefToWrite(userDataDir, fpConfig.dnt));
   // Third-party cookies: Chrome's normal default for every engine (the anti-detect
   // build blocks them by default, which hurts CAPTCHA scoring) - see ensureCookiePolicyPref.
   await ensureCookiePolicyPref(userDataDir, browserSettings);
@@ -3356,15 +3491,29 @@ async function launchProfileSessionNow(options = {}) {
   let cdpAutoAttach = false;
   try {
     const rootCdp = await browser.target().createCDPSession();
+    const preparedTabs = createPreparedTargets();
     attachFingerprintToNewTargets(rootCdp, rootCdp.connection(), {
       fpConfig,
       fpLate,
       injectSource: fpInjectSource,
+      onPrepared: (targetId) => preparedTabs.mark(targetId),
       onInjectFailed: (info, methods) => console.error('[SG][fingerprint] new-tab injection FAILED (' + methods.join(', ') + ') - this tab may expose the REAL GPU/RAM/WebRTC. profile',
         profileId, title || '', '- target', info.url || info.targetId || info.type)
     });
     await rootCdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
     cdpAutoAttach = true;
+    // Ctrl+click / middle-click / Shift+click / "Open link in new tab": hold the new tab's first page
+    // until the handler above has set the tab up (see holdNewTabDocuments). Optional: without it those
+    // tabs get the page script from their second page on, as before.
+    try {
+      rootCdp.on('Target.detachedFromTarget', (ev) => preparedTabs.forget(ev && ev.targetId));
+      const hold = holdNewTabDocuments(rootCdp, preparedTabs, {
+        onHeld: ({ url, ms, ready }) => { if (!ready) console.warn('[SG][fingerprint] a new tab was not set up within', ms, 'ms; its first page loads anyway:', String(url || '').slice(0, 120)); }
+      });
+      await hold.enable();
+    } catch (e) {
+      console.warn('[SG][fingerprint] new-tab page hold unavailable:', e && e.message ? e.message : e);
+    }
   } catch (e) {
     // Fall back to per-page evaluateOnNewDocument in applyToPage and the in-page Worker wrapper.
     fpConfig.dedicatedWorkersViaCdp = false;
@@ -3425,7 +3574,8 @@ async function launchProfileSessionNow(options = {}) {
   // Accept-Language is the plain fpConfig.langs list, so navigator.languages (pages and workers) is
   // exactly fpConfig.langs and Chrome adds the header's q-values itself (see acceptLanguageOverride).
   const acceptLanguage = acceptLanguageOverride(fpConfig.langs);
-  const dnt = fpConfig.dnt; // reused for the DNT request header in applyToPage
+  // DNT / Sec-GPC request headers for applyToPage (every tab); see privacyRequestHeaders.
+  const privacyHeaders = privacyRequestHeaders(fpConfig);
   const ua = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
 
   fpLate.ua = ua;
@@ -3501,8 +3651,9 @@ async function launchProfileSessionNow(options = {}) {
       for (const c of targetFingerprintCommands('page', fpConfig, fpLate)) {
         await cdp.send(c.method, c.params).catch(() => {});
       }
-      // DNT belongs on the wire as an HTTP header, not just navigator.
-      if (dnt === '1') await targetPage.setExtraHTTPHeaders({ DNT: '1', 'Sec-GPC': '1' }).catch(() => {});
+      // DNT and GPC belong on the wire as HTTP headers, not just navigator. Sec-GPC only for a brand that
+      // sends it by itself (Brave), never because DNT is on.
+      if (Object.keys(privacyHeaders).length) await targetPage.setExtraHTTPHeaders(privacyHeaders).catch(() => {});
       // Captcha auto-solver (paid 2captcha/anti-captcha; user-supplied API key).
       try { attachCaptchaSolver(targetPage, captcha); } catch (e) {}
       // One interception handler, enabled only when needed: disableVideos aborts media (saves proxy
@@ -3653,6 +3804,9 @@ async function launchProfileSessionNow(options = {}) {
     geoWarning,
     socksRelay, // local auth relay (or null), closed when the session ends
     openTab: hOpenTab, // opens a page in a new tab with proxy auth (retryBlockedPage)
+    // The profile's screen (and Android viewport) override, or null: a full-page screenshot resets
+    // device metrics, and the AI page tools put this back (reapplyScreenMetrics).
+    screenMetrics: fpLate.deviceMetrics || null,
     createdAt: new Date()
   });
   sessionRegistered = true;
@@ -4783,7 +4937,23 @@ async function getAutomationPage(sessionId) {
     if (!next) return null;
     session.page = next;
   }
-  return { page: session.page, browser: session.browser, wsEndpoint: session.wsEndpoint || null };
+  return { page: session.page, browser: session.browser, wsEndpoint: session.wsEndpoint || null, screenMetrics: session.screenMetrics || null };
+}
+
+// Puts the profile's screen override back after a full-page screenshot. Chrome captures beyond the
+// viewport by swapping the device metrics of the session that asks (puppeteer's own session of the tab)
+// and then restores that session's own state, which has no screen: the CSS device-width/height fall
+// back to the real monitor while window.screen keeps the profile's. Sending the override again on the
+// session that first set it does nothing (Chrome skips unchanged values) and a temporary session would
+// clear it when it detaches, so it goes on the screenshot's own session, where it stays: later
+// full-page screenshots then return to it. Width, height and DPR 0 leave the window and viewport alone.
+// Checked on Chrome 156. Returns true when sent.
+async function reapplyScreenMetrics(page, metrics) {
+  if (!page || !metrics) return false;
+  let client = null;
+  try { client = typeof page._client === 'function' ? page._client() : null; } catch (e) { client = null; }
+  if (!client || typeof client.send !== 'function') return false;
+  try { await client.send('Emulation.setDeviceMetricsOverride', metrics); return true; } catch (e) { return false; }
 }
 
 function listActiveSessions() {
@@ -4816,6 +4986,8 @@ module.exports = {
   // Exported for tests: the third-party cookie preference written before launch.
   cookieControlsModeFor,
   ensureCookiePolicyPref,
+  // Exported for tests: Do Not Track as Chromium's own setting, written before launch.
+  ensureDoNotTrackPref,
   parseProxyInput,
   formatProxyHost,
   // Exported for tests: proxy type to --proxy-server scheme (SOCKS4 -> socks4://, not http://).
@@ -4833,7 +5005,13 @@ module.exports = {
   workerPreludeScript,
   workerPreludeSource,
   targetFingerprintCommands,
+  // Exported for tests: the profile's fingerprint values, and the DNT / Sec-GPC headers every tab sends.
+  buildFingerprintConfig,
+  privacyRequestHeaders,
   attachFingerprintToNewTargets,
+  createPreparedTargets,
+  holdNewTabDocuments,
+  DOCUMENT_HOLD_PATTERNS,
   macroRecorderClientScript,
   syncCaptureClientScript,
   // Reused by the Firefox engine so both engines open the same SoftGlaze start page.
@@ -4859,6 +5037,7 @@ module.exports = {
   retryBlockedPage,
   isRecordingMacro,
   getAutomationPage,
+  reapplyScreenMetrics,
   runCookieRobot,
   warmInteract,
   runMacro,

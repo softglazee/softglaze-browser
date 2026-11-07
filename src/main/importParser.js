@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const XLSX = require('xlsx');
+const { parseDoNotTrack } = require('./doNotTrack');
 
 function cellText(value) {
   if (value === null || value === undefined) return '';
@@ -229,12 +230,10 @@ function normalizeWebrtc(value) {
   return null;
 }
 
+// The editor's word ('Open' / 'Close' / 'Default') for any understood cell, so an imported profile shows
+// the right choice and launches with it; undefined (keep the default) for an empty or unknown cell.
 function normalizeDnt(value) {
-  const t = normalizeHeader(value);
-  if (!t) return undefined;
-  if (t === '1' || t.includes('enable') || t.includes('on') || t === 'true' || t === 'yes') return '1';
-  if (t === '0' || t.includes('disable') || t.includes('off') || t === 'false' || t === 'no') return '0';
-  return undefined;
+  return parseDoNotTrack(cellText(value)) || undefined;
 }
 
 // "Auto / Based on IP" vs "Manual / Custom" for timezone + locale.
