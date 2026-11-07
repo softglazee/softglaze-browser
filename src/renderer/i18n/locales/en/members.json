@@ -201,7 +201,10 @@
     "fromDate": "From date",
     "toDate": "To date",
     "empty": "No activity recorded yet.",
-    "noMatch": "No activity matches these filters."
+    "noMatch": "No activity matches these filters.",
+    "enterpriseFeature": "Enterprise feature",
+    "seeBilling": "See Billing",
+    "exportEnterpriseOnly": "Audit-log export (CSV / JSON) is an Enterprise feature. Upgrade on the Billing page to export the activity log."
   },
   "activityActions": {
     "launched": "launched",
@@ -288,5 +291,13 @@
       "load": "Could not load licenses.",
       "action": "Action failed."
     }
+  },
+  "seats": {
+    "usage": "{{used}} of {{total}} members",
+    "fullNotice": "All {{total}} team seats on your plan are in use, so no one new can be added. Suspend a member to free a seat, or upgrade to Enterprise for up to {{enterpriseSeats}} team members.",
+    "fullNoticeTop": "All {{total}} team seats on your plan are in use, so no one new can be added. Suspend a member to free a seat.",
+    "overNotice": "This team has {{used}} members and your plan includes {{total}}. Everyone keeps access; new members can be added once the team is under the limit.",
+    "seeBilling": "See Billing",
+    "limitError": "All team seats on your plan are in use. Suspend a member to free a seat, or see Billing for your plan options."
   }
 }

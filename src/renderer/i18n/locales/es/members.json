@@ -201,7 +201,10 @@
     "fromDate": "Desde la fecha",
     "toDate": "Hasta la fecha",
     "empty": "Aún no se ha registrado actividad.",
-    "noMatch": "Ninguna actividad coincide con estos filtros."
+    "noMatch": "Ninguna actividad coincide con estos filtros.",
+    "enterpriseFeature": "Función de Enterprise",
+    "seeBilling": "Ver facturación",
+    "exportEnterpriseOnly": "La exportación del registro de auditoría (CSV / JSON) es una función de Enterprise. Mejora tu plan en la página de Facturación para exportar el registro de actividad."
   },
   "activityActions": {
     "launched": "abrió",
@@ -288,5 +291,13 @@
       "load": "No se pudieron cargar las licencias.",
       "action": "La acción falló."
     }
+  },
+  "seats": {
+    "usage": "{{used}} de {{total}} miembros",
+    "fullNotice": "Los {{total}} asientos del equipo de tu plan están en uso, así que no se puede añadir a nadie más. Suspende a un miembro para liberar un asiento, o mejora a Enterprise para tener hasta {{enterpriseSeats}} miembros del equipo.",
+    "fullNoticeTop": "Los {{total}} asientos del equipo de tu plan están en uso, así que no se puede añadir a nadie más. Suspende a un miembro para liberar un asiento.",
+    "overNotice": "Este equipo tiene {{used}} miembros y tu plan incluye {{total}}. Todos conservan el acceso; podrás añadir miembros nuevos cuando el equipo esté por debajo del límite.",
+    "seeBilling": "Ver facturación",
+    "limitError": "Todos los asientos del equipo de tu plan están en uso. Suspende a un miembro para liberar un asiento, o consulta Facturación para ver las opciones de tu plan."
   }
 }

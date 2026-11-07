@@ -248,5 +248,32 @@
       "choosePlan": "Elige un plan.",
       "assignFailed": "No se pudo asignar el plan."
     }
+  },
+  "planText": {
+    "trialTagline": "Prueba todas las funciones gratis: acceso completo, sin tarjeta.",
+    "trialFullAccess": "Acceso completo a todas las funciones",
+    "trialTools": "Todas las herramientas de huella digital, proxy y fugas",
+    "trialMacros": "Macros, calentador de cookies y perfiles móviles",
+    "trialBackupSeats": "Copia de seguridad cifrada y asientos del equipo",
+    "trialNoCard": "No se necesita tarjeta de crédito",
+    "trialUpgrade": "Cambia a un plan de pago cuando quieras",
+    "proTagline": "Todo lo que un operador individual necesita para gestionar perfiles a escala.",
+    "proProfiles": "Perfiles de navegador locales ilimitados",
+    "proFingerprint": "Motor de huella digital completo + comprobación de fugas",
+    "proProxies": "Grupo de proxies, política de rotación y ajuste geográfico automático",
+    "proMacros": "Grabador de macros, programador y ejecuciones con datos",
+    "proCookieWarmer": "Calentador de cookies",
+    "proMobile": "Perfiles de dispositivo móvil / Android",
+    "proBackup": "Copia de seguridad y restauración cifradas del espacio de trabajo",
+    "proDbEncryption": "Cifrado completo de la base de datos en reposo",
+    "proPalette": "Paleta de comandos + guía de inicio",
+    "proSeats": "Hasta 3 miembros del equipo",
+    "proParallel": "Ejecutor en paralelo, hasta 3 perfiles a la vez, con consola de ejecución en vivo",
+    "entTagline": "Para equipos: hasta 25 miembros, 10 perfiles a la vez y exportación del registro de auditoría.",
+    "entEverythingInPro": "Todo lo de Pro, y además:",
+    "entSeats": "Hasta 25 miembros del equipo",
+    "entParallel": "Ejecutor en paralelo, hasta 10 perfiles a la vez, con consola de ejecución en vivo",
+    "entAuditExport": "Exportación del registro de auditoría (CSV / JSON)",
+    "entSupport": "Soporte prioritario por correo electrónico"
   }
 }

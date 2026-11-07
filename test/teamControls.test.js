@@ -9,9 +9,12 @@ const {
 } = require('../src/main/teamPolicy.js');
 
 // --- Seats -----------------------------------------------------------------
-test('seatsForLicense derives the cap from the license type', () => {
+test('seatsForLicense derives the cap from the license type and tier', () => {
   assert.equal(seatsForLicense({ type: 'trial' }), 3);
-  assert.equal(seatsForLicense({ type: 'paid' }), 25);
+  assert.equal(seatsForLicense({ type: 'trial', tier: 'enterprise' }), 3); // the trial keeps 3 seats
+  assert.equal(seatsForLicense({ type: 'paid', tier: 'enterprise' }), 25);
+  assert.equal(seatsForLicense({ type: 'paid', tier: 'pro' }), 3);
+  assert.equal(seatsForLicense({ type: 'paid' }), 3);  // no tier => Pro
   assert.equal(seatsForLicense(null), 3);            // missing => default
   assert.equal(seatsForLicense({ type: 'weird' }), 3); // unknown => default
 });
@@ -42,7 +45,7 @@ test('seatUsage reports used/total/remaining/full at the boundary', () => {
   assert.equal(u.remaining, 0);
   assert.equal(u.full, true);
 
-  const u2 = seatUsage(members, 1, { type: 'paid' }); // 3 / 25
+  const u2 = seatUsage(members, 1, { type: 'paid', tier: 'enterprise' }); // 3 / 25
   assert.equal(u2.full, false);
   assert.equal(u2.remaining, 22);
 });

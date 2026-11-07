@@ -143,7 +143,7 @@ test('L1: getLicense does not exempt a SUPER_ADMIN without a certificate', () =>
 test('L1: assertNotBanned, seats and the licence-management powers need the certificate', () => {
   assert.match(fnBody(IPC, 'async function assertNotBanned()'), /if \(await isCertifiedSuperAdmin\(m\)\) return;/);
   assert.match(fnBody(IPC, 'async function getSeatUsage()'), /await isCertifiedSuperAdmin\(m\)/);
-  assert.match(fnBody(IPC, 'async function assertSeatAvailable()'), /await isCertifiedSuperAdmin\(m\)/);
+  assert.match(fnBody(IPC, 'async function assertSeatAvailable('), /await isCertifiedSuperAdmin\(m\)/);
   assert.match(fnBody(IPC, 'async function requireSuperAdmin()'), /isCertifiedSuperAdmin\(m\)[\s\S]*OWNER_CERT_REQUIRED/);
   assert.match(fnBody(IPC, 'async function setMemberStatus('), /target\.role === 'OWNER'[^\n]*isCertifiedSuperAdmin\(actor\)/);
   assert.match(fnBody(IPC, 'async function startTrial('), /const isSuper = await isCertifiedSuperAdmin\(me\)/);

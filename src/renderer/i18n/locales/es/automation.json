@@ -224,6 +224,8 @@
     "noMacros": "Aún no hay macros",
     "macroOption": "{{name}} · {{count}} pasos",
     "concurrency": "Concurrencia",
+    "concurrencyCap": "Tu plan ejecuta hasta {{max}} perfiles a la vez.",
+    "concurrencyCapUpgrade": "Tu plan ejecuta hasta {{max}} perfiles a la vez. Enterprise ejecuta hasta {{enterpriseMax}}.",
     "dataBound_one": "{{fileName}} · {{count}} fila",
     "dataBound_other": "{{fileName}} · {{count}} filas",
     "dataHint": "Opcional: vincula una hoja de cálculo (fila → perfil, en orden)",

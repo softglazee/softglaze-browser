@@ -224,6 +224,8 @@
     "noMacros": "No macros yet",
     "macroOption": "{{name}} · {{count}} steps",
     "concurrency": "Concurrency",
+    "concurrencyCap": "Your plan runs up to {{max}} profiles at once.",
+    "concurrencyCapUpgrade": "Your plan runs up to {{max}} profiles at once. Enterprise runs up to {{enterpriseMax}}.",
     "dataBound_one": "{{fileName}} · {{count}} row",
     "dataBound_other": "{{fileName}} · {{count}} rows",
     "dataHint": "Optional: bind a spreadsheet (row → profile, in order)",
