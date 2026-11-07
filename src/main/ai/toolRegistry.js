@@ -279,7 +279,11 @@ class ToolRegistry {
 
     const tool = this.tools.get(name);
     if (!tool) return refuse('UNKNOWN_TOOL', `There is no SoftGlaze tool named "${name}".`, 'error');
-    if (!this.services.isEnabled()) return refuse('AI_OFF', 'SoftGlaze AI is switched off in the app. Ask the user to switch it on from the SoftGlaze AI page.');
+    // The SoftGlaze AI switch governs AI tokens (sgai_) and every MCP connection. A Developer API
+    // key (sg_) on the REST API follows the Developer API switch instead, which localApi checks
+    // before it calls the registry, so scripts keep working with SoftGlaze AI off (as in 1.0.21).
+    const devApiOverRest = token.kind === 'api' && cc.transport === 'rest';
+    if (!devApiOverRest && !this.services.isEnabled()) return refuse('AI_OFF', 'SoftGlaze AI is switched off in the app. Ask the user to switch it on from the SoftGlaze AI page.');
     if (!aiTokens.scopeAllows(token.scope, tool.scope)) {
       return refuse('SCOPE', `This token has the ${token.scope} scope; ${name} needs ${tool.scope}. The Owner or an Admin can create a token with the ${tool.scope} scope on the SoftGlaze AI page.`);
     }

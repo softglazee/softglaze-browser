@@ -422,6 +422,14 @@ test('REST /api/v1 shares the port with /mcp and applies AI token scopes and app
   assert.equal(devToken.status, 403);
   assert.match(devToken.text, /Developer API is switched off/);
   app.setApiConfig({ ...app.apiConfig(), enabled: true });
+  // And the other way round: with SoftGlaze AI off, Developer API keys keep working (as in
+  // 1.0.21) while AI tokens get 503.
+  await ai.setEnabled(false);
+  const devAiOff = await rawRequest({ method: 'GET', path: '/api/v1/profiles', headers: { Authorization: `Bearer ${tokens.api}` } });
+  assert.equal(devAiOff.status, 200, `Developer API key with SoftGlaze AI off: ${devAiOff.status} ${devAiOff.text}`);
+  const aiAiOff = await rawRequest({ method: 'GET', path: '/api/v1/profiles', headers: { Authorization: `Bearer ${tokens.read}` } });
+  assert.equal(aiAiOff.status, 503);
+  await ai.setEnabled(true);
   const audit = await ai.listAudit({ tool: 'start_profile', search: 'profile #3' });
   assert.equal(audit.items[0].transport, 'rest');
   assert.equal(audit.items[0].approval, 'hour-grant');

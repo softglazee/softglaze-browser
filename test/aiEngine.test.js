@@ -291,6 +291,18 @@ test('registry: SoftGlaze AI switched off refuses every call', async () => {
   assert.equal(r.code, 'AI_OFF');
 });
 
+test('registry: with SoftGlaze AI off, a Developer API key on REST still works; AI tokens and MCP do not', async () => {
+  const h = harness({ settings: { enabled: false } });
+  const devRest = await h.call('list_profiles', {}, { kind: 'api', name: 'Script key' }, { transport: 'rest', clientName: 'Local API: Script key' });
+  assert.equal(devRest.ok, true, `Developer API key over REST: ${devRest.code} ${devRest.error}`);
+  const aiRest = await h.call('list_profiles', {}, { kind: 'ai' }, { transport: 'rest' });
+  assert.equal(aiRest.code, 'AI_OFF');
+  const devMcp = await h.call('list_profiles', {}, { kind: 'api' }, { transport: 'mcp' });
+  assert.equal(devMcp.code, 'AI_OFF');
+  const aiMcp = await h.call('list_profiles', {}, { kind: 'ai' }, { transport: 'mcp' });
+  assert.equal(aiMcp.code, 'AI_OFF');
+});
+
 test('registry: Expert tools need Expert mode and an Owner token', async () => {
   const h = harness();
   const off = await h.call('get_cdp_endpoint', { profileId: 1 }, { scope: 'full' });
