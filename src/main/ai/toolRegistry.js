@@ -53,6 +53,10 @@ const FORBIDDEN_DEP = /cookie|totp|2fa|twoFactor|delete|purge|trash|password|vau
 
 const SCOPES = aiTokens.SCOPES;
 const APPROVAL_RULES = ['none', 'ask', 'always', 'page', 'self'];
+// Operate tools an automation token can never pre-approve, even within its caps: stop_all_profiles
+// reaches every running profile (too broad for an unattended run) and update_memory rewrites the
+// instructions every AI app reads. A token stored with one of them still asks for it.
+const NOT_PREAPPROVABLE = Object.freeze(['stop_all_profiles', 'update_memory']);
 const MODES = ['never', 'ask-hour', 'ask-always'];
 const DEFAULT_INLINE_WAIT_MS = 50 * 1000; // MCP clients time a request out after 60 s by default
 const PROGRESS_EVERY_MS = 10 * 1000;
@@ -229,9 +233,14 @@ class ToolRegistry {
 
   names() { return [...this.tools.keys()]; }
 
-  // Tools that may be pre-approved on an automation token: operate scope, never Expert.
+  // Tools that may be pre-approved on an automation token: operate scope, never Expert, never a
+  // tool that asks every time, never one on NOT_PREAPPROVABLE.
+  isPreApprovable(tool) {
+    return Boolean(tool) && tool.scope === 'operate' && !tool.expert && tool.approval !== 'always' && !NOT_PREAPPROVABLE.includes(tool.name);
+  }
+
   preApprovableNames() {
-    return [...this.tools.values()].filter((t) => t.scope === 'operate' && !t.expert).map((t) => t.name);
+    return [...this.tools.values()].filter((t) => this.isPreApprovable(t)).map((t) => t.name);
   }
 
   // Tools a token may see: within its scope; Expert tools only with Expert mode on.
@@ -358,9 +367,12 @@ class ToolRegistry {
     const fingerprint = ApprovalManager.fingerprint(tool.name, args);
 
     // Automation tokens: pre-approved tools skip the dialog within their caps; over a cap they ask.
+    // This runs before the ask-every-time rules, so a multi-profile call is pre-approved only up to
+    // maxProfilesPerCall profiles, and a tool that may never be pre-approved always asks (also on a
+    // token stored before it was taken off the list).
     const pre = token.preApproved;
-    if (pre && pre.tools.includes(tool.name) && !tool.expert && token.groupIds.length) {
-      const withinProfiles = info.count <= pre.maxProfilesPerCall;
+    if (pre && pre.tools.includes(tool.name) && this.isPreApprovable(tool) && token.groupIds.length) {
+      const withinProfiles = info.count <= Math.min(pre.maxProfilesPerCall, aiTokens.MAX_PROFILES_PER_CALL);
       if (withinProfiles && this.services.limiter.usePreApproved(token.id, pre.maxCallsPerHour)) return { approval: 'pre-approved' };
     }
     if (approvals.consumeLateGrant(token.id, fingerprint)) return { approval: 'allow-once' };

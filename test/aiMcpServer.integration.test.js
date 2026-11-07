@@ -405,6 +405,9 @@ test('REST /api/v1 shares the port with /mcp and applies AI token scopes and app
   assert.equal(group.status, 200, group.text);
   assert.equal(requested.length, before + 1, 'the REST call asked for approval');
   assert.equal(requested[requested.length - 1].memberName, 'Owner Sara', 'approvals name the member the token acts as');
+  // The token was last used by an MCP app ("integration-test"); a REST call must not borrow its name.
+  assert.equal(requested[requested.length - 1].clientName, 'REST API (Claude Code on test PC)');
+  assert.match(requested[requested.length - 1].summary, /^REST API \(Claude Code on test PC\) wants to: /);
   approvalPolicy = (a) => (a.tool === 'create_group' ? 'deny' : null);
   const deniedGroup = await rawRequest({ method: 'POST', path: '/api/v1/tools/create_group', headers: { Authorization: `Bearer ${tokens.operate}`, 'Content-Type': 'application/json' }, body: { name: 'Denied group' } });
   assert.equal(deniedGroup.status, 403);

@@ -2614,6 +2614,35 @@ function launchProfileSession(options = {}) {
   return p;
 }
 
+// The start URL given for one launch (SoftGlaze AI start_profile {url}, REST start {startUrl},
+// profiles.launch(id, { startUrl })). Only a valid http(s) URL counts; anything else, including the
+// callers' 'about:blank' default, means "none" and the normal start page stays.
+function launchStartUrl(raw) {
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!/^https?:\/\/[^\s]+$/i.test(s)) return null;
+  try {
+    const u = new URL(s);
+    return (u.protocol === 'http:' || u.protocol === 'https:') && u.hostname ? u.href : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Opens the launch's start URL in the main tab, so page tools, macros and the Cookie Warmer (which
+// all drive session.page) act on it. Authenticates first, or an authenticated proxy stalls the
+// navigation on a 407. Best-effort: a slow or failing site never fails the launch.
+async function openLaunchUrl(page, url, proxyCreds) {
+  if (!page || !url) return false;
+  if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function launchProfileSessionNow(options = {}) {
   const {
     profileId,
@@ -2636,6 +2665,7 @@ async function launchProfileSessionNow(options = {}) {
     // startPageLinks are global anchors on the start page.
     startupUrls = []
   } = options;
+  const launchUrl = launchStartUrl(options.startUrl);
 
   // One session per profile: a double-launch would open a second Chrome on the same userDataDir
   // (singleton-lock conflict) and orphan the first. Return the running session instead.
@@ -3321,13 +3351,16 @@ const rootCdp = await browser.target().createCDPSession();
   // falling back to stock Chrome (which happens when its binary isn't downloaded yet).
   console.log(`[SG][launch] antidetect=${usingAntidetect} cft=${usingCft} realChrome=${Boolean(chosenBrowser && chosenBrowser.isReal)} minCdp=${browserSettings.minimizeCdpFootprint === true} binary=${String((chosenBrowser && chosenBrowser.exePath) || '').split(/[\\/]/).pop()}`);
   await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+  // A start URL given for this launch then opens in the main tab (Back returns to the start page).
+  if (launchUrl) await openLaunchUrl(page, launchUrl, proxyCreds);
 
   // Open this profile's saved start links through hOpenTab, which authenticates before each
   // navigation; a bare newPage() would stall each tab on a 407.
   if (Array.isArray(startupUrls) && startupUrls.length) {
     let rest = startupUrls;
-    // Without the detection page the first tab is a throwaway about:blank, so reuse it for the first link.
-    if (startupMode !== 'detection') {
+    // Without the detection page the first tab is a throwaway about:blank, so reuse it for the first
+    // link, unless this launch's start URL already holds it.
+    if (startupMode !== 'detection' && !launchUrl) {
       const first = startupUrls[0];
       if (typeof first === 'string' && /^https?:/i.test(first)) {
         if (proxyCreds) await page.authenticate(proxyCreds).catch(() => {});
@@ -4089,8 +4122,24 @@ async function elementCenter(page, selector) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
+// How often a running macro checks control.aborted while a step waits.
+const MACRO_STOP_POLL_MS = 200;
+
+// Sleeps up to ms in short slices and returns early (true) once isAborted() says the run was
+// stopped, so Stop never waits out a long wait or hover step.
+async function sleepUnlessAborted(ms, isAborted) {
+  const end = Date.now() + Math.max(0, Number(ms) || 0);
+  for (;;) {
+    if (isAborted && isAborted()) return true;
+    const left = end - Date.now();
+    if (left <= 0) return false;
+    await sleep(Math.min(MACRO_STOP_POLL_MS, left));
+  }
+}
+
 // Run macro steps in a live session. opts: continueOnError; control { paused, aborted }, mutated by
-// the caller and checked between steps; onStep({ index, total, type, status, step?, error? }).
+// the caller and checked between steps and during a step's waits; onStep({ index, total, type,
+// status, step?, error? }).
 async function runMacro(sessionId, steps, opts = {}) {
   const id = String(sessionId || '').trim();
   const session = activeSessions.get(id);
@@ -4104,6 +4153,16 @@ async function runMacro(sessionId, steps, opts = {}) {
   const isAborted = () => Boolean(control && control.aborted);
   const waitWhilePaused = async () => { while (control && control.paused && !control.aborted) await sleep(150); };
 
+  // A stop during a step ends its wait at once: selector waits get an AbortSignal (puppeteer cancels
+  // them, so the click or typing after the wait never runs), a navigation stops being awaited.
+  const stopper = control ? new AbortController() : null;
+  // Cleared when the run ends (finally below).
+  const stopPoll = stopper ? setInterval(() => { if (control.aborted) stopper.abort(); }, MACRO_STOP_POLL_MS) : null;
+  const stopped = stopper ? new Promise((resolve) => stopper.signal.addEventListener('abort', resolve, { once: true })) : null;
+  const untilStop = (o) => (stopper ? { ...o, signal: stopper.signal } : o);
+  const orStop = (p) => (stopped ? Promise.race([p, stopped.then(() => { throw new Error('Stopped.'); })]) : p);
+
+  try {
   for (let i = 0; i < list.length; i += 1) {
     if (isAborted()) break;
     await waitWhilePaused();
@@ -4116,20 +4175,20 @@ async function runMacro(sessionId, steps, opts = {}) {
     try {
       switch (type) {
         case 'goto':
-          await page.goto(String(step.url || step.value || 'about:blank'), {
+          await orStop(page.goto(String(step.url || step.value || 'about:blank'), {
             waitUntil: 'domcontentloaded',
             timeout: stepTimeout(step, 30000)
-          });
+          }));
           break;
         case 'click':
           if (!step.selector) throw new Error('click step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           { const c = await elementCenter(page, step.selector); if (c) await page.mouse.move(c.x, c.y, { steps: 10 }); }
           await page.click(step.selector, { delay: 30 });
           break;
         case 'type':
           if (!step.selector) throw new Error('type step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           await page.type(step.selector, String(step.value == null ? '' : step.value), { delay: 40 });
           break;
         case 'keypress':
@@ -4139,11 +4198,15 @@ async function runMacro(sessionId, steps, opts = {}) {
           await humanScroll(page, { steps: Number(step.steps) || 4 });
           break;
         case 'wait':
-          await sleep(Math.max(0, Math.min(60000, Number(step.ms) || 1000)));
+          await sleepUnlessAborted(Math.max(0, Math.min(60000, Number(step.ms) || 1000)), isAborted);
           break;
         case 'move': {
           let pt = null;
-          if (step.selector) { await page.waitForSelector(step.selector, { timeout: stepTimeout(step) }).catch(() => {}); pt = await elementCenter(page, step.selector); }
+          if (step.selector) {
+            await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) })).catch(() => {});
+            if (isAborted()) throw new Error('Stopped.');
+            pt = await elementCenter(page, step.selector);
+          }
           else if (step.x != null && step.y != null) pt = { x: Number(step.x), y: Number(step.y) };
           if (!pt) throw new Error('move step needs a valid selector or x/y');
           await page.mouse.move(pt.x, pt.y, { steps: 12 });
@@ -4151,18 +4214,18 @@ async function runMacro(sessionId, steps, opts = {}) {
         }
         case 'hover': {
           if (!step.selector) throw new Error('hover step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           const pt = await elementCenter(page, step.selector);
           if (!pt) throw new Error('hover target is not visible');
           await page.mouse.move(pt.x, pt.y, { steps: 12 });
-          await sleep(Math.max(0, Math.min(60000, Number(step.ms) || 800)));
+          await sleepUnlessAborted(Math.max(0, Math.min(60000, Number(step.ms) || 800)), isAborted);
           break;
         }
         // page.select() matches only option values, which are often opaque ids, so resolve the option
         // in-page (value, then label, then index) and pass its value to select(), which fires input/change.
         case 'select': {
           if (!step.selector) throw new Error('select step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           const wanted = String(step.value == null ? '' : step.value);
           const by = String(step.by || 'auto').toLowerCase();
           const resolved = await page.$eval(step.selector, (el, want, mode) => {
@@ -4206,14 +4269,14 @@ async function runMacro(sessionId, steps, opts = {}) {
           const waitOpts = { timeout: stepTimeout(step, WAIT_FOR_TIMEOUT_DEFAULT) };
           if (String(step.state || 'visible').toLowerCase() === 'hidden') waitOpts.hidden = true;
           else waitOpts.visible = true;
-          await page.waitForSelector(step.selector, waitOpts);
+          await page.waitForSelector(step.selector, untilStop(waitOpts));
           break;
         }
         // requestSubmit() fires the submit event AND native validation; the bare
         // form.submit() skips both, which silently breaks React/validated forms.
         case 'submit': {
           if (!step.selector) throw new Error('submit step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           const submitted = await page.$eval(step.selector, (el) => {
             const form = el.tagName === 'FORM' ? el : (el.form || (el.closest ? el.closest('form') : null));
             if (!form) return false;
@@ -4228,7 +4291,7 @@ async function runMacro(sessionId, steps, opts = {}) {
         // so a re-run (or a box the site pre-ticked) would silently invert it.
         case 'check': {
           if (!step.selector) throw new Error('check step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           const want = String(step.state || 'checked').toLowerCase() !== 'unchecked';
           const info = await page.$eval(step.selector, (el) => (
             typeof el.checked === 'boolean'
@@ -4250,7 +4313,7 @@ async function runMacro(sessionId, steps, opts = {}) {
         // would concatenate onto the old value.
         case 'clear': {
           if (!step.selector) throw new Error('clear step requires a selector');
-          await page.waitForSelector(step.selector, { timeout: stepTimeout(step) });
+          await page.waitForSelector(step.selector, untilStop({ timeout: stepTimeout(step) }));
           await page.click(step.selector, { clickCount: 3 }); // select the field's text
           await page.keyboard.press('Backspace');
           const left = await page.$eval(step.selector, (el) => String(el.value == null ? '' : el.value));
@@ -4272,7 +4335,8 @@ async function runMacro(sessionId, steps, opts = {}) {
       log.push({ index: i, type, ok: true });
       if (onStep) onStep({ index: i, total: list.length, type, status: 'ok' });
     } catch (e) {
-      const msg = (e && e.message) || String(e);
+      // A step cut short by Stop reads "Stopped.", not puppeteer's AbortError text.
+      const msg = isAborted() ? 'Stopped.' : ((e && e.message) || String(e));
       // A failed optional step is logged as skipped and counted as OK; it never aborts the run.
       if (step.optional) {
         log.push({ index: i, type, ok: true, skipped: true, error: msg });
@@ -4283,6 +4347,9 @@ async function runMacro(sessionId, steps, opts = {}) {
       if (onStep) onStep({ index: i, total: list.length, type, status: 'error', error: msg });
       if (!opts.continueOnError) break;
     }
+  }
+  } finally {
+    if (stopPoll) clearInterval(stopPoll);
   }
 
   return { ok: log.length > 0 && log.every((l) => l.ok), total: list.length, ran: log.length, log, aborted: isAborted() };

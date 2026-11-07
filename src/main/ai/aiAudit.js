@@ -6,6 +6,7 @@ const { redactArgs, scrubText } = require('./redact');
 
 const OUTCOMES = Object.freeze(['ok', 'denied', 'error', 'pending']);
 const KEEP_ROWS = 20000;
+const APPROVAL_MAX = 40;
 const PRUNE_EVERY = 500;
 let writesSincePrune = 0;
 
@@ -26,7 +27,8 @@ async function record(db, entry) {
         summary: e.summary ? scrubText(e.summary).slice(0, 300) : null,
         argsJson,
         outcome,
-        approval: e.approval ? String(e.approval).slice(0, 20) : null,
+        // 40 keeps the longest approval path ("started-by-this-token", 21) whole.
+        approval: e.approval ? String(e.approval).slice(0, APPROVAL_MAX) : null,
         error: e.error ? scrubText(e.error).slice(0, 500) : null,
         durationMs: Math.max(0, Math.round(Number(e.durationMs) || 0))
       }
@@ -88,4 +90,4 @@ async function list(db, q = {}) {
   return { items, nextCursor };
 }
 
-module.exports = { record, list, prune, serialize, OUTCOMES, KEEP_ROWS };
+module.exports = { record, list, prune, serialize, OUTCOMES, KEEP_ROWS, APPROVAL_MAX };

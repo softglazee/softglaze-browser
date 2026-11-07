@@ -205,15 +205,17 @@ export const SCOPES = ['read', 'operate', 'full'];
 export const EXPIRY_OPTIONS = [7, 30, 90, null];
 export const NAME_MAX = 60;
 export const AUTOMATION_DEFAULTS = Object.freeze({ maxProfilesPerCall: 5, maxCallsPerHour: 60 });
-export const AUTOMATION_LIMITS = Object.freeze({ maxProfilesPerCall: [1, 100], maxCallsPerHour: [1, 1000] });
+// The engine's limits (aiTokens MAX_PROFILES_PER_CALL / MAX_CALLS_PER_HOUR); a larger number would only fail there.
+export const AUTOMATION_LIMITS = Object.freeze({ maxProfilesPerCall: [1, 50], maxCallsPerHour: [1, 1000] });
 
-// Operate-scope tools an Owner may pre-approve on an Automation token (spec §11). Left out on
-// purpose: expert and never-exposed tools, stop_all_profiles (too broad for an unattended run) and
+// Operate-scope tools an Owner may pre-approve on an Automation token (spec §11), the same list the
+// engine answers on ai:preapprovable-tools (toolRegistry.preApprovableNames). Left out on purpose:
+// expert and never-exposed tools, stop_all_profiles (too broad for an unattended run) and
 // update_memory (it rewrites the instructions every AI reads).
 export const PREAPPROVABLE_TOOLS = Object.freeze([
   { group: 'profiles', tools: ['create_profile', 'update_profile', 'batch_generate_profiles'] },
   { group: 'sessions', tools: ['start_profile', 'stop_profile'] },
-  { group: 'proxies', tools: ['assign_proxy', 'rotate_proxy_ip'] },
+  { group: 'proxies', tools: ['assign_proxy', 'rotate_proxy_ip', 'find_free_proxies'] },
   { group: 'groups', tools: ['create_group', 'move_profiles_to_group'] },
   { group: 'automation', tools: ['save_macro', 'run_macro', 'stop_run', 'start_warmer'] },
   { group: 'page', tools: ['page_navigate', 'page_snapshot', 'page_click', 'page_type', 'page_press_key', 'page_scroll', 'page_screenshot', 'page_extract_text', 'page_wait_for'] }
@@ -487,6 +489,25 @@ export function formatKb(bytes) {
 export const AUDIT_PAGE_SIZE = 50;
 // 'pending': the call returned while its approval was still waiting.
 export const OUTCOMES = ['ok', 'denied', 'error', 'pending'];
+// A burst of status/approval events reloads the Activity tab once.
+export const ACTIVITY_REFRESH_DEBOUNCE_MS = 600;
+
+// Trailing-edge debounce: call() as often as you like, fn runs once ms after the last call.
+// cancel() drops a pending run (the tab is hidden or unmounted). Timers are injectable for tests.
+export function createDebounced(fn, ms, { setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+  let id = null;
+  return {
+    call: () => {
+      if (id != null) clearTimer(id);
+      id = setTimer(() => { id = null; fn(); }, ms);
+    },
+    cancel: () => {
+      if (id != null) clearTimer(id);
+      id = null;
+    },
+    pending: () => id != null
+  };
+}
 
 export function buildAuditQuery(filters = {}, cursor = null, limit = AUDIT_PAGE_SIZE) {
   const q = { limit };
@@ -553,7 +574,7 @@ export function canAllowHour(approval) {
 }
 
 // How a call got through (engine audit `approval`), in words the activity table can show.
-export const APPROVAL_PATHS = ['none', 'asked', 'pre-approved', 'allow-once', 'hour-grant', 'deny', 'timeout', 'cancelled', 'started-by-this-token', 'developer-token'];
+export const APPROVAL_PATHS = ['none', 'asked', 'pre-approved', 'allow-once', 'allow-hour', 'hour-grant', 'deny', 'timeout', 'cancelled', 'started-by-this-token', 'developer-token'];
 export function approvalPath(item) {
   if (!item) return null;
   if (item.preApproved === true) return 'pre-approved';

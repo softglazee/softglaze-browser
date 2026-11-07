@@ -473,9 +473,10 @@ async function launchFirefoxProfileNow(options = {}) {
   const env = { ...process.env };
   if (tzEnv) env.TZ = tzEnv;
 
-  // Default to the SoftGlaze start page (proxy IP/geo card), written into the profile dir.
-  // Firefox needs it as a proper file:/// URL.
-  let openUrl = (startUrl && startUrl !== 'about:blank') ? startUrl : null;
+  // A start URL given for this launch opens first (http(s) only, as on Chromium); otherwise the
+  // SoftGlaze start page (proxy IP/geo card), written into the profile dir. Firefox needs it as a
+  // proper file:/// URL.
+  let openUrl = (typeof startUrl === 'string' && /^https?:\/\/[^\s]+$/i.test(startUrl.trim())) ? startUrl.trim() : null;
   if (!openUrl) {
     try {
       const { generateStartPage } = require('./browserEngine');

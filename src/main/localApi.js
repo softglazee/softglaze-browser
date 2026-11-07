@@ -129,10 +129,16 @@ function statusForCode(code) {
   return 500;
 }
 
+// Who a REST call comes from, for the approval dialog and the audit. Never the token's last MCP
+// client name: an AI token used by a script over REST is not that AI app.
+function restClientName(token) {
+  return token.kind === 'api' ? `Local API: ${token.name}` : `REST API (${token.name})`;
+}
+
 async function callTool(res, auth, name, args) {
   const ctx = {
     token: auth.token,
-    clientName: auth.token.kind === 'api' ? `Local API: ${auth.token.name}` : (auth.token.lastClientName || auth.token.name),
+    clientName: restClientName(auth.token),
     transport: 'rest',
     waitForApproval: 'full',
     // Scripts attach Playwright/Puppeteer to a started profile; AI tokens need the full scope.
@@ -373,5 +379,6 @@ module.exports = {
   // exported for tests
   hostAllowed,
   originAllowed,
-  statusForCode
+  statusForCode,
+  restClientName
 };
