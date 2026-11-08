@@ -31,6 +31,8 @@ app.use('/v1/register', publicLimiter, require('./routes/register'));
 app.use('/v1/checkout', publicLimiter, require('./routes/checkout'));
 app.use('/v1/license', publicLimiter, require('./routes/license'));
 app.use('/v1/redeem', publicLimiter, require('./routes/redeem'));
+// Asked on every app start, so it has the general limit, not the code-sending one below.
+app.use('/v1/account/status', publicLimiter, require('./routes/accountStatus'));
 app.use('/v1/account', verifyLimiter, require('./routes/account'));
 app.use('/v1/trial', verifyLimiter, require('./routes/trial'));
 app.use('/v1/plans', publicLimiter, require('./routes/plansPublic'));

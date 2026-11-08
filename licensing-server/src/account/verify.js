@@ -2,6 +2,9 @@
 // Email verification by us (spec A2). start sends a 6-digit code from no-reply@ (10 min, 5 attempts,
 // resend throttle); check proves it, creates or updates the Customer and links the install.
 // Only an HMAC of the code (bound to the install and the email key) is stored.
+// From app 1.0.23 start also carries the lead details (phone, use case, company: src/account/lead.js);
+// they wait on the verification row and reach the Customer only once the code is proven.
+// status answers whether this install has a customer whose email we verified (the app asks on start).
 // Results are { status, body }; the route sends them as they are.
 const crypto = require('node:crypto');
 const { parseEmail } = require('../customers/emailAddress');
@@ -11,6 +14,7 @@ const { createCustomer, addEvent, claimUnboundLicences, linkInstallRecords, reco
 const { hmacHex, safeEqual } = require('../crypto/derive');
 const { renderFor, sendNow } = require('../email/outbox');
 const transport = require('../email/transport');
+const { cleanLead, leadUpdate } = require('./lead');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
 
@@ -36,6 +40,9 @@ function cleanCountry(country, lang) {
 async function startVerification(db, tenant, install, input, { ipHash = null, now = Date.now(), settings }) {
   const parsed = parseEmail(input.email);
   if (!parsed) return err(400, 'invalid_email', 'That email address does not look right.');
+  const lead = cleanLead(input);
+  if (lead.error === 'invalid_phone') return err(400, 'invalid_phone', 'Enter the phone number with + and the country code, or leave it empty.');
+  if (lead.error) return err(400, 'invalid_use_case', 'Choose what you will use SoftGlaze for from the list.');
   const em = settings.email;
   if (isDisposableDomain(parsed.domain, { allow: em.domainAllowlist, block: em.domainBlocklist })) {
     return err(400, 'disposable_email', 'Please use a permanent email address, not a temporary one.');
@@ -75,6 +82,7 @@ async function startVerification(db, tenant, install, input, { ipHash = null, no
     data: {
       tenantId, installId: install.id, email: parsed.email, emailKey: parsed.emailKey, name, lang,
       country: cleanCountry(input.country, input.lang), consentMarketing: input.consentMarketing === true,
+      ...lead.lead,
       codeHash: codeHash(code, install.id, parsed.emailKey), expiresAt: new Date(now + v.codeTtlMinutes * 60000), ipHash,
       createdAt: new Date(now)
     }
@@ -144,6 +152,8 @@ async function checkVerification(db, tenant, install, input, { now = Date.now(),
       lang: row.lang || c.lang,
       country: c.country || row.country,
       lastSeenAt: at,
+      // Phone, use case and company the person just typed (app 1.0.23+); empty fields keep what is stored.
+      ...leadUpdate(c, row),
       ...(consent && !c.marketingConsent ? { marketingConsent: true, consentAt: at, consentSource: 'app_signup', unsubscribedAt: null } : {})
     }
   });
@@ -160,4 +170,18 @@ async function checkVerification(db, tenant, install, input, { now = Date.now(),
   return { status: 200, body: { verified: true, customerId: c.id } };
 }
 
-module.exports = { startVerification, checkVerification, cleanCountry, cleanLang };
+// Does this install have a customer whose email we verified on it? The same test the trial ledger uses
+// (a proven code from this install for the customer the install is linked to), plus the customer still
+// exists, is verified and is not deleted. -> { verified: true, email } | { verified: false }.
+async function accountStatus(db, tenant, install) {
+  if (!install || !install.customerId) return { verified: false };
+  const row = await db.emailVerification.findFirst({
+    where: { tenantId: tenant.id, installId: install.id, customerId: install.customerId, NOT: { verifiedAt: null } }
+  });
+  if (!row) return { verified: false };
+  const c = await db.customer.findUnique({ where: { id: install.customerId } });
+  if (!c || c.tenantId !== tenant.id || !c.emailVerifiedAt || c.deletedAt) return { verified: false };
+  return { verified: true, email: c.email };
+}
+
+module.exports = { startVerification, checkVerification, accountStatus, cleanCountry, cleanLang };

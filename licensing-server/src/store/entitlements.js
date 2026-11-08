@@ -522,7 +522,7 @@ async function storeStatus(db, tenant, { settings, now = Date.now() }) {
   if (checkErrors) alerts.push('check_errors');
   if (unknownPlans.length) alerts.push('unknown_plans');
   return {
-    configured: Boolean(creds), acceptUnverified: cfg.acceptUnverified, unverifiedDays: cfg.unverifiedDays, productPlans: cfg.productPlans,
+    configured: Boolean(creds), salesEnabled: cfg.salesEnabled === true, acceptUnverified: cfg.acceptUnverified, unverifiedDays: cfg.unverifiedDays, productPlans: cfg.productPlans,
     counts, unverifiedActive, pendingReview, checkErrors, unknownPlans, alerts
   };
 }

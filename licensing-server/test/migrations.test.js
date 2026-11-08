@@ -109,3 +109,27 @@ test('the Store entitlements migration only creates its own table', () => {
   assert.deepEqual([...new Set(altered)], ['StoreEntitlement'], 'only the new table gets its foreign key');
   for (const t of EXISTING) assert.ok(!new RegExp('CREATE TABLE `' + t + '`').test(sql), `${t} is not re-created`);
 });
+
+// November 2026, app 1.0.23 sign-up lead details: six NULL columns on two existing tables, nothing else.
+test('the sign-up lead fields migration only adds NULL columns, after the Store entitlements one', () => {
+  const name = '20261108140000_signup_lead_fields';
+  const sql = read(name);
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|\bUPDATE\b|\bDELETE\b|\bTRUNCATE\b|\bCREATE\b/i.test(sql), 'additive only, no table or index');
+  const added = [...sql.matchAll(/ADD COLUMN `(\w+)` ([^,;]+)/g)].map((m) => [m[1], m[2].trim()]);
+  assert.deepEqual(added, [
+    ['useCase', 'VARCHAR(40) NULL'], ['useCaseOther', 'VARCHAR(200) NULL'],
+    ['phone', 'VARCHAR(40) NULL'], ['company', 'VARCHAR(200) NULL'], ['useCase', 'VARCHAR(40) NULL'], ['useCaseOther', 'VARCHAR(200) NULL']
+  ]);
+  for (const [, def] of added) assert.ok(!/NOT NULL/.test(def), def);
+  assert.deepEqual([...new Set([...sql.matchAll(/ALTER TABLE `(\w+)`/g)].map((m) => m[1]))], ['Customer', 'EmailVerification']);
+  const dirs = migrationDirs();
+  assert.equal(dirs.indexOf(name), dirs.indexOf('20261108130000_store_entitlements') + 1, 'runs right after the Store entitlements');
+  // The schema says the same thing as the SQL.
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8');
+  const block = (m) => (new RegExp(`model ${m} \\{([\\s\\S]*?)\\n\\}`).exec(schema.replace(/\r\n/g, '\n')) || [])[1] || '';
+  assert.match(block('Customer'), /\n\s+useCase\s+String\?\s+@db\.VarChar\(40\)/);
+  assert.match(block('Customer'), /\n\s+useCaseOther\s+String\?\s+@db\.VarChar\(200\)/);
+  for (const [col, n] of [['phone', 40], ['company', 200], ['useCase', 40], ['useCaseOther', 200]]) {
+    assert.match(block('EmailVerification'), new RegExp(`\\n\\s+${col}\\s+String\\?\\s+@db\\.VarChar\\(${n}\\)`), col);
+  }
+});

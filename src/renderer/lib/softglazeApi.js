@@ -327,7 +327,11 @@ export const softglazeApi = {
     save: (payload) => getSoftglazeApi().account.save(payload),
     sendOtp: (email, extra) => getSoftglazeApi().account.sendOtp(email, extra),
     verifyOtp: (email, code) => getSoftglazeApi().account.verifyOtp(email, code),
-    register: (payload) => getSoftglazeApi().account.register(payload)
+    register: (payload) => getSoftglazeApi().account.register(payload),
+    signupStatus: () => getSoftglazeApi().account.signupStatus(),
+    confirmStart: (payload) => getSoftglazeApi().account.confirmStart(payload),
+    confirmCheck: (payload) => getSoftglazeApi().account.confirmCheck(payload),
+    confirmLater: () => getSoftglazeApi().account.confirmLater()
   },
   batch: {
     previewProfilesFromSpreadsheet: () => getSoftglazeApi().batch.previewProfilesFromSpreadsheet(),

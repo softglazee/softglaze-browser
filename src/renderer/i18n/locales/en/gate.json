@@ -27,7 +27,7 @@
     "slides": {
       "security": {
         "title": "Robust data security",
-        "body": "Your workspace is stored on this device, and 2FA seeds and provider keys are sealed with your system keychain. Nothing syncs unless you connect your own server."
+        "body": "Your profiles, cookies and browsing data stay on this device, and 2FA seeds and provider keys are sealed with your system keychain."
       },
       "fingerprint": {
         "title": "Consistent fingerprints",
@@ -85,7 +85,10 @@
     "logIn": "Log in",
     "consent": "Email me product news and tips",
     "consentNote": "Your code, trial reminders and account emails are always sent. Product news only if you tick the box.",
-    "checkedByServer": "We email you a code to confirm this address. Your profiles and data stay on this device."
+    "checkedByServer": "We email you a code to confirm this address. Your profiles and data stay on this device.",
+    "phoneOptional": "Phone number (optional)",
+    "phoneIntlPlaceholder": "+44 20 7946 0958",
+    "phoneHint": "Start with + and your country code."
   },
   "verify": {
     "title": "Verify your email",
@@ -97,6 +100,37 @@
     "resendIn": "Resend code in {{count}}s",
     "resend": "Resend code",
     "checkSpam": "The code can take a minute to arrive. Check your spam folder if you don't see it."
+  },
+  "lead": {
+    "useCase": "What will you use SoftGlaze for?",
+    "useCasePlaceholder": "Choose one",
+    "useCases": {
+      "ecommerce": "Ecommerce stores and marketplaces",
+      "social_media": "Social media accounts",
+      "affiliate_marketing": "Affiliate marketing and media buying",
+      "agency": "Agency work for clients",
+      "web_research": "Web research and QA",
+      "other": "Something else"
+    },
+    "useCaseOther": "Tell us in a few words",
+    "useCaseOtherPlaceholder": "For example: price checks by country",
+    "company": "Company or website (optional)",
+    "companyPlaceholder": "Acme Ltd or acme.com"
+  },
+  "confirm": {
+    "title": "Confirm your email",
+    "subtitle": "Each SoftGlaze workspace now needs a confirmed email. Check your details and we will email you a 6-digit code.",
+    "sendCode": "Send the code",
+    "codeTitle": "Enter the code",
+    "codeBody": "We sent a 6-digit code to {{email}}. Enter it to confirm the email for this workspace.",
+    "confirmContinue": "Confirm and continue",
+    "changeDetails": "Change details",
+    "dataNote": "Your profiles and data stay on this computer. We keep these details to look after your account.",
+    "later": "Continue for now",
+    "laterNote": "We could not reach our server. You can use the app now, and we will ask again the next time it starts.",
+    "memberTitle": "The owner needs to confirm this workspace",
+    "memberBody": "Before this workspace can be used, its owner has to confirm their email. Ask the owner to sign in and do it, or sign in as the owner.",
+    "signInAsOwner": "Sign in as the owner"
   },
   "plan": {
     "title": "You're all set",
@@ -235,6 +269,10 @@
     "TRIAL_NO_EMAIL": "Add an email address to the owner account first, then start the free trial.",
     "TRIAL_FAILED": "The free trial couldn't be started right now. Try again in a few minutes.",
     "SERVER_UNAVAILABLE": "Our licensing server isn't answering right now. Try again in a few minutes.",
-    "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
+    "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it.",
+    "SIGNUP_INVALID_PHONE": "Enter the phone number with + and the country code, or leave it empty.",
+    "SIGNUP_USE_CASE": "Choose what you will use SoftGlaze for.",
+    "SIGNUP_USE_CASE_OTHER": "Tell us in a few words what you will use SoftGlaze for.",
+    "CONFIRM_OFFLINE": "Connect to the internet to confirm your email."
   }
 }

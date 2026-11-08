@@ -292,7 +292,11 @@
     "TRIAL_NO_EMAIL": "Add an email address to the owner account first, then start the free trial.",
     "TRIAL_FAILED": "The free trial couldn't be started right now. Try again in a few minutes.",
     "SERVER_UNAVAILABLE": "Our licensing server isn't answering right now. Try again in a few minutes.",
-    "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
+    "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it.",
+    "SIGNUP_INVALID_PHONE": "Enter the phone number with + and the country code, or leave it empty.",
+    "SIGNUP_USE_CASE": "Choose what you will use SoftGlaze for.",
+    "SIGNUP_USE_CASE_OTHER": "Tell us in a few words what you will use SoftGlaze for.",
+    "CONFIRM_OFFLINE": "Connect to the internet to confirm your email."
   },
   "store": {
     "cardTitle": "Microsoft Store subscription",

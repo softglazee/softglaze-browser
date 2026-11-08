@@ -207,6 +207,10 @@ const CHANNELS = Object.freeze({
   ACCOUNT_SEND_OTP: 'account:send-otp',
   ACCOUNT_VERIFY_OTP: 'account:verify-otp',
   ACCOUNT_REGISTER: 'account:register',
+  ACCOUNT_SIGNUP_STATUS: 'account:signup-status',
+  ACCOUNT_CONFIRM_START: 'account:confirm-start',
+  ACCOUNT_CONFIRM_CHECK: 'account:confirm-check',
+  ACCOUNT_CONFIRM_LATER: 'account:confirm-later',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -646,10 +650,17 @@ const api = Object.freeze({
   account: Object.freeze({
     get: () => invoke(CHANNELS.ACCOUNT_GET),
     save: (payload) => invoke(CHANNELS.ACCOUNT_SAVE, payload),
-    // extra (tenant builds): { firstName, lastName, consentMarketing, lang } for the server-sent code.
+    // extra (tenant builds): { firstName, lastName, consentMarketing, lang, phone, useCase, useCaseOther,
+    // company } for the server-sent code.
     sendOtp: (email, extra) => invoke(CHANNELS.ACCOUNT_SEND_OTP, { ...(extra && typeof extra === 'object' ? extra : {}), email }),
     verifyOtp: (email, code) => invoke(CHANNELS.ACCOUNT_VERIFY_OTP, { email, code }),
-    register: (payload) => invoke(CHANNELS.ACCOUNT_REGISTER, payload)
+    register: (payload) => invoke(CHANNELS.ACCOUNT_REGISTER, payload),
+    // Tenant builds, "Confirm your email" (1.0.23): -> { enabled, state, required, canConfirm, canDefer, prefill }
+    signupStatus: () => invoke(CHANNELS.ACCOUNT_SIGNUP_STATUS),
+    // { email, firstName, lastName, phone, useCase, useCaseOther, company, consentMarketing, lang }
+    confirmStart: (payload) => invoke(CHANNELS.ACCOUNT_CONFIRM_START, payload),
+    confirmCheck: (payload) => invoke(CHANNELS.ACCOUNT_CONFIRM_CHECK, payload),
+    confirmLater: () => invoke(CHANNELS.ACCOUNT_CONFIRM_LATER)
   }),
   batch: Object.freeze({
     previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),

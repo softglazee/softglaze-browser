@@ -39,13 +39,13 @@ const DEFAULTS = {
   license: () => ({ account: null, installId: null, tier: 'pro', plan: null, status: 'active', currentPeriodEnd: null, providerRef: null, rebindCount: 0, rebindWindowStart: null, customerId: null, complimentary: false, source: null, note: null, revokedAt: null, revokedReason: null }),
   payment: () => ({ providerRef: null, currency: 'USD', status: 'pending', account: null, plan: null, installId: null, customerId: null, method: null, note: null, paidAt: null, refundedAt: null, recordedBy: null }),
   customer: () => ({
-    emailVerifiedAt: null, name: null, company: null, country: null, phone: null, lang: null, source: 'app', status: 'lead', statusAuto: 'lead',
+    emailVerifiedAt: null, name: null, company: null, country: null, phone: null, useCase: null, useCaseOther: null, lang: null, source: 'app', status: 'lead', statusAuto: 'lead',
     statusOverride: null, statusNote: null, tier: null, firstSeenAt: new Date(), lastSeenAt: null, appVersion: null, firstChannel: null, trialStartedAt: null, trialEndsAt: null,
     paidSince: null, paidUntil: null, complimentaryUntil: null, totalPaidCents: 0, currency: null, marketingConsent: false, consentAt: null, consentSource: null,
     unsubscribedAt: null, notes: null, tags: null, tagIndex: null, deletedAt: null
   }),
   customerEvent: () => ({ data: null, at: new Date() }),
-  emailVerification: () => ({ customerId: null, name: null, lang: null, country: null, consentMarketing: false, attempts: 0, verifiedAt: null, ipHash: null }),
+  emailVerification: () => ({ customerId: null, name: null, lang: null, country: null, consentMarketing: false, phone: null, company: null, useCase: null, useCaseOther: null, attempts: 0, verifiedAt: null, ipHash: null }),
   trial: () => ({ customerId: null, installId: null, ipHash: null, machineLock: null, emailLock: null, networkCounted: true, tier: 'enterprise', startedAt: new Date(), convertedAt: null, resetAt: null, resetReason: null, resetBy: null }),
   trialAttempt: () => ({ installId: null, ipHash: null, at: new Date() }),
   emailTemplate: () => ({ lang: 'en', builtIn: false, isDefault: false, updatedBy: null }),

@@ -1,13 +1,16 @@
 'use strict';
 // Email verification by us (spec A2).
-// POST /v1/account/verify/start { tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, appVersion?, channel? }
+// POST /v1/account/verify/start { tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?,
+//   phone?, useCase?, useCaseOther?, company?, appVersion?, channel? }
 //   -> 200 { ok: true, sent: true, expiresInSec, resendAfterSec }
-//   errors: 400 invalid_email | disposable_email | no_mx, 429 rate_limited { retryAfterSec },
-//           503 email_unavailable, 502 email_failed, + the install errors in installRequest.js
+//   errors: 400 invalid_email | disposable_email | no_mx | invalid_phone | invalid_use_case,
+//           429 rate_limited { retryAfterSec }, 503 email_unavailable, 502 email_failed,
+//           + the install errors in installRequest.js
 // POST /v1/account/verify/check { tenantId, installId, installSecret, email, code }
 //   -> 200 { verified: true, customerId }
 //   errors: 400 invalid_email | invalid_code { attemptsLeft? }, 404 no_code, 410 code_expired,
 //           429 too_many_attempts
+// POST /v1/account/status is in accountStatus.js (mounted first, with the general rate limit).
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');

@@ -228,6 +228,11 @@ model Customer {
   lastSeenAt         DateTime?
   appVersion         String?   @db.VarChar(40)
   firstChannel       String?   @db.VarChar(16) // channel of the customer's earliest install that reported one
+  // What the person will use SoftGlaze for, from the app's sign-up (1.0.23+): ecommerce | social_media |
+  // affiliate_marketing | agency | web_research | other (src/account/lead.js). useCaseOther is their own
+  // words when they chose "other". Phone and company above are filled from the same form.
+  useCase            String?   @db.VarChar(40)
+  useCaseOther       String?   @db.VarChar(200)
   trialStartedAt     DateTime?
   trialEndsAt        DateTime?
   paidSince          DateTime?
@@ -287,6 +292,12 @@ model EmailVerification {
   lang             String?   @db.VarChar(10)
   country          String?   @db.VarChar(2)
   consentMarketing Boolean   @default(false)
+  // Lead details sent with the code request (app 1.0.23+). Copied to the Customer only when the code is
+  // proven; unconfirmed rows are deleted by the retention cron like the rest of the row.
+  phone            String?   @db.VarChar(40)
+  company          String?   @db.VarChar(200)
+  useCase          String?   @db.VarChar(40)
+  useCaseOther     String?   @db.VarChar(200)
   codeHash         String    @db.VarChar(64)
   attempts         Int       @default(0)
   expiresAt        DateTime

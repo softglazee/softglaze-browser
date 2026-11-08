@@ -10,7 +10,8 @@ const { isDisposableDomain } = require('./disposable');
 const { normalizeTags, tagIndexOf, SOURCES } = require('./query');
 const { asJson } = require('../util/json');
 
-const EXPORT_COLUMNS = ['id', 'email', 'name', 'company', 'country', 'phone', 'lang', 'source', 'status', 'statusAuto', 'statusOverride',
+// useCase / useCaseOther come from the app's sign-up (1.0.23+); the import reports them as ignored columns.
+const EXPORT_COLUMNS = ['id', 'email', 'name', 'company', 'country', 'phone', 'useCase', 'useCaseOther', 'lang', 'source', 'status', 'statusAuto', 'statusOverride',
   'statusNote', 'tier', 'emailVerifiedAt', 'firstSeenAt', 'lastSeenAt', 'appVersion', 'trialStartedAt', 'trialEndsAt', 'paidSince',
   'paidUntil', 'complimentaryUntil', 'totalPaidCents', 'currency', 'marketingConsent', 'consentAt', 'consentSource', 'unsubscribedAt',
   'tags', 'notes', 'createdAt', 'updatedAt', 'deletedAt'];

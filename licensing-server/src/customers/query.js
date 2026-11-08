@@ -3,11 +3,12 @@
 // flat object of strings (a query string) or a saved segment's filters; output is a Prisma `where`.
 const { STATUSES } = require('./state');
 const { asJson } = require('../util/json');
+const { USE_CASES } = require('../account/lead');
 
 const SOURCES = ['app', 'manual', 'import', 'invoice', 'website'];
-const SORTABLE = ['createdAt', 'updatedAt', 'firstSeenAt', 'lastSeenAt', 'email', 'name', 'company', 'country', 'status', 'tier',
+const SORTABLE = ['createdAt', 'updatedAt', 'firstSeenAt', 'lastSeenAt', 'email', 'name', 'company', 'country', 'useCase', 'status', 'tier',
   'paidUntil', 'paidSince', 'trialEndsAt', 'trialStartedAt', 'totalPaidCents', 'emailVerifiedAt'];
-const FILTER_KEYS = ['status', 'tier', 'source', 'country', 'consent', 'verified', 'unsubscribed', 'complimentary', 'tag', 'q',
+const FILTER_KEYS = ['status', 'tier', 'source', 'country', 'useCase', 'consent', 'verified', 'unsubscribed', 'complimentary', 'tag', 'q',
   'createdFrom', 'createdTo', 'lastSeenFrom', 'lastSeenTo', 'paidUntilFrom', 'paidUntilTo', 'trialEndsFrom', 'trialEndsTo', 'deleted', 'ids'];
 
 const list = (v) => (Array.isArray(v) ? v : String(v == null ? '' : v).split(',')).map((x) => String(x).trim()).filter(Boolean);
@@ -67,6 +68,13 @@ function buildWhere(tenantId, f = {}) {
     else if (c.includes('UNKNOWN')) and.push({ OR: [{ country: null }, { country: { in: c.filter((x) => x !== 'UNKNOWN') } }] });
     else where.country = { in: c };
   }
+  if (f.useCase) {
+    const u = list(f.useCase).map((x) => x.toLowerCase());
+    const named = u.filter((x) => x !== 'none');
+    if (named.some((x) => !USE_CASES.includes(x))) errors.useCase = 'unknown_use_case';
+    else if (u.includes('none')) and.push({ OR: [{ useCase: null }, ...(named.length ? [{ useCase: { in: named } }] : [])] });
+    else where.useCase = { in: named };
+  }
   for (const [key, field, cond] of [
     ['consent', 'marketingConsent', null], ['verified', 'emailVerifiedAt', 'date'], ['unsubscribed', 'unsubscribedAt', 'date'],
     ['complimentary', 'complimentaryUntil', 'date']
@@ -90,7 +98,7 @@ function buildWhere(tenantId, f = {}) {
   if (f.tag) for (const t of normalizeTags(f.tag)) and.push({ tagIndex: { contains: `,${t},` } });
   if (f.q) {
     const q = String(f.q).trim().slice(0, 100);
-    if (q) and.push({ OR: [{ email: { contains: q.toLowerCase() } }, { name: { contains: q } }, { company: { contains: q } }, { phone: { contains: q } }, { id: q }] });
+    if (q) and.push({ OR: [{ email: { contains: q.toLowerCase() } }, { name: { contains: q } }, { company: { contains: q } }, { phone: { contains: q } }, { useCaseOther: { contains: q } }, { id: q }] });
   }
   if (and.length) where.AND = and;
   return { where, errors: Object.keys(errors).length ? errors : null };

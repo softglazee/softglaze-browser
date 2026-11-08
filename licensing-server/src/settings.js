@@ -29,13 +29,20 @@ const DEFAULTS = Object.freeze({
   // purchase APIs are set up (POST /v1/tenant/payment-config provider microsoft_store), a purchase the
   // app reports is accepted UNVERIFIED for unverifiedDays at a time and shows as an alert in the admin;
   // acceptUnverified false records it for the owner to check by hand instead.
+  // salesEnabled: the app offers "Microsoft Store" as a payment method only when this is true AND the
+  // Store returns the add-ons' prices. Off by default, until the add-ons exist in Partner Center.
   store: {
+    salesEnabled: false,
     productPlans: { pro_monthly: 'pro', enterprise_monthly: 'enterprise' },
     acceptUnverified: true,
     unverifiedDays: 7,
     renewalGraceDays: 3,
     maxMovesPer30Days: 2
   },
+  // Website payment providers the app offers (GET /v1/checkout/methods, app 1.0.23+). providers null =
+  // every provider whose keys are saved and enabled (POST /v1/tenant/payment-config); a list = only those
+  // of them, in that order ([] offers none). labels renames a provider in the app, e.g. { "stripe": "Card" }.
+  checkout: { providers: null, labels: {} },
   privacy: { unverifiedRetentionDays: 30, outboxBodyRetentionDays: 90, trialAttemptRetentionDays: 180 },
   automations: {
     welcome: { enabled: true, offsetHours: 0 },
@@ -56,6 +63,11 @@ const domains = (v) => Array.isArray(v) && v.length <= 2000 && v.every((d) => ty
 const emailish = (v) => typeof v === 'string' && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const url = (v) => typeof v === 'string' && v.length <= 500 && /^https:\/\/\S+$/.test(v);
 // { "<add-on Product ID>": "<plan key>" }: Partner Center allows letters, digits, '.', '_' and '-'.
+// Payment provider ids: lower-case letters, digits, '_' and '-' (stripe, paypal, cryptomus, 2checkout, ...).
+const PROVIDER_ID = /^[a-z0-9][a-z0-9_-]{0,39}$/;
+const providerList = (v) => v === null || (Array.isArray(v) && v.length <= 20 && v.every((p) => typeof p === 'string' && PROVIDER_ID.test(p)));
+const providerLabels = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 20
+  && Object.entries(v).every(([k, l]) => PROVIDER_ID.test(k) && typeof l === 'string' && l.trim().length > 0 && l.length <= 60 && !/[<>]/.test(l));
 const productPlans = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 20
   && Object.entries(v).every(([k, p]) => /^[A-Za-z0-9._-]{1,100}$/.test(k) && typeof p === 'string' && /^[A-Za-z0-9._-]{1,60}$/.test(p));
 
@@ -70,7 +82,8 @@ const RULES = {
     companyName: str(120), companyAddress: str(300), downloadUrl: url, domainAllowlist: domains, domainBlocklist: domains, mxCheck: bool
   },
   billing: { renewalGraceDays: int(0, 60), reportingCurrency: (v) => typeof v === 'string' && /^[A-Z]{3}$/.test(v) },
-  store: { productPlans, acceptUnverified: bool, unverifiedDays: int(1, 35), renewalGraceDays: int(0, 30), maxMovesPer30Days: int(0, 20) },
+  store: { salesEnabled: bool, productPlans, acceptUnverified: bool, unverifiedDays: int(1, 35), renewalGraceDays: int(0, 30), maxMovesPer30Days: int(0, 20) },
+  checkout: { providers: providerList, labels: providerLabels },
   privacy: { unverifiedRetentionDays: int(1, 3650), outboxBodyRetentionDays: int(1, 3650), trialAttemptRetentionDays: int(1, 3650) }
 };
 

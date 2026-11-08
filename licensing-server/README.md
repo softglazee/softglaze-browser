@@ -213,8 +213,10 @@ Legitimate PC change, two ways:
 | POST | `/v1/tenant/rotate-key` | tenant API key | rotate the tenant Ed25519 keypair |
 | POST | `/v1/tenant/installs/:installId/reset-machine` | tenant API key | clear an install's machine binding |
 | POST | `/v1/account/verify/start`, `/v1/account/verify/check` | install secret | email verification by us (6-digit code) |
+| POST | `/v1/account/status` | install secret | does this install have a customer whose email we verified? (app 1.0.23 asks on every start) |
 | POST | `/v1/trial/start` | install secret + machine hash | server-side trial: signed trial lease or 409 `trial_used` |
 | GET | `/v1/plans/public?tenantId=` | none (CORS open, 60 s cache) | active plans and prices (cents) |
+| GET | `/v1/checkout/methods?tenantId=` | none (CORS open, 60 s cache) | payment providers the app offers, and the Microsoft Store sales switch |
 | GET/POST | `/v1/email/unsubscribe?t=` | signed token | unsubscribe page and RFC 8058 one-click |
 | * | `/v1/admin/*` | tenant API key or scoped admin key | customers, licences, payments, plans, email, metrics, audit: docs/ADMIN-API.md |
 

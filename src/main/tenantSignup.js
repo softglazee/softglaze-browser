@@ -19,8 +19,10 @@ async function installFor(ensureInstall, context) {
   return install;
 }
 
-// Asks the server to email a code. consentMarketing is true only when the box was ticked.
-async function startVerification({ ensureInstall, api, email, name, consentMarketing, lang, context = 'signup' }) {
+// Asks the server to email a code. consentMarketing is true only when the box was ticked. lead: the
+// checked lead details from signupLead.normalizeLead ({ phone, useCase, useCaseOther, company }); only
+// the filled ones are sent, and the server stores them on the customer once the code is proven.
+async function startVerification({ ensureInstall, api, email, name, consentMarketing, lang, lead = null, context = 'signup' }) {
   const addr = normalizeEmail(email);
   if (!EMAIL_RE.test(addr)) throw coded('SIGNUP_INVALID_EMAIL');
   const install = await installFor(ensureInstall, context);
@@ -31,7 +33,8 @@ async function startVerification({ ensureInstall, api, email, name, consentMarke
       email: addr,
       name: String(name || '').trim().slice(0, 120) || undefined,
       consentMarketing: consentMarketing === true,
-      lang: normalizeLang(lang)
+      lang: normalizeLang(lang),
+      ...leadFields(lead)
     });
   } catch (e) { throw mapServerError(e, context); }
   // Never a devCode: in tenant builds the code only travels by email.
@@ -52,4 +55,25 @@ async function checkVerification({ ensureInstall, api, email, code, context = 's
   return { verified: true, customerId: res.customerId ? String(res.customerId) : null };
 }
 
-module.exports = { EMAIL_RE, normalizeEmail, normalizeLang, installFor, startVerification, checkVerification };
+// The filled lead fields only (an empty one is not sent at all).
+function leadFields(lead) {
+  const out = {};
+  if (!lead || typeof lead !== 'object') return out;
+  for (const k of ['phone', 'useCase', 'useCaseOther', 'company']) {
+    if (typeof lead[k] === 'string' && lead[k]) out[k] = lead[k];
+  }
+  return out;
+}
+
+// Asks the server whether this install has a customer whose email it verified (signupConfirm.js).
+// Resolves { verified: boolean, email } or throws whatever the call threw (the caller treats any
+// failure as "could not ask"). An answer without a boolean `verified` counts as a failure too.
+async function accountStatus({ ensureInstall, api }) {
+  const install = await ensureInstall();
+  if (!install || !install.installId || !install.installSecret) throw coded('SERVER_UNAVAILABLE');
+  const res = await api.accountStatus({ installId: install.installId, installSecret: install.installSecret });
+  if (!res || typeof res.verified !== 'boolean') throw coded('SERVER_UNAVAILABLE');
+  return { verified: res.verified, email: typeof res.email === 'string' ? res.email : null, installId: install.installId };
+}
+
+module.exports = { EMAIL_RE, normalizeEmail, normalizeLang, installFor, leadFields, startVerification, checkVerification, accountStatus };

@@ -257,7 +257,7 @@ test('tenant: plans and prices come from the server, cached, with the built-in l
 
 test('tenant: the sign-up code is requested from the server with the consent box, never shown in-app', async () => {
   const m = buildMain({ tenant: true, api: { verifyStart: async () => ({ sent: true }) } });
-  const res = await m.fns.accountSendOtp({ email: ' New@Example.com ', firstName: 'New', lastName: 'Person', lang: 'es' });
+  const res = await m.fns.accountSendOtp({ email: ' New@Example.com ', firstName: 'New', lastName: 'Person', lang: 'es', useCase: 'agency' });
   assert.deepEqual(plain(res), { sent: true, devMode: false, via: 'server' });
   assert.equal('devCode' in res, false);
   const sent = m.calls[0].args[0];
@@ -265,9 +265,9 @@ test('tenant: the sign-up code is requested from the server with the consent box
   assert.equal(sent.name, 'New Person');
   assert.equal(sent.consentMarketing, false, 'unticked unless the box was ticked');
   assert.equal(sent.lang, 'es');
-  await m.fns.accountSendOtp({ email: 'new@example.com', consentMarketing: 'yes' });
+  await m.fns.accountSendOtp({ email: 'new@example.com', consentMarketing: 'yes', useCase: 'agency' });
   assert.equal(m.calls[1].args[0].consentMarketing, false, 'only a real true counts');
-  await m.fns.accountSendOtp({ email: 'new@example.com', consentMarketing: true });
+  await m.fns.accountSendOtp({ email: 'new@example.com', consentMarketing: true, useCase: 'agency' });
   assert.equal(m.calls[2].args[0].consentMarketing, true);
   assert.equal(m.settings.has('otp:reg:new@example.com'), false, 'no local code in tenant builds');
 });
@@ -281,7 +281,7 @@ test('tenant: disposable, no-MX, rate-limited and offline sign-ups get plain err
   ];
   for (const [err, code, message] of cases) {
     const m = buildMain({ tenant: true, api: { verifyStart: async () => { throw err; } } });
-    await assert.rejects(m.fns.accountSendOtp({ email: 'x@mailinator.com' }), (e) => e.code === code && e.message === message, code);
+    await assert.rejects(m.fns.accountSendOtp({ email: 'x@mailinator.com', useCase: 'ecommerce' }), (e) => e.code === code && e.message === message, code);
   }
 });
 

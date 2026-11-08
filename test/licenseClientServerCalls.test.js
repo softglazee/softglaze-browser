@@ -107,3 +107,34 @@ test('no answer at all is flagged as network (offline)', async () => {
     require('../src/main/tenantConfig')._reset();
   }
 });
+
+// ---- 1.0.23: lead fields, account status, checkout methods -------------------------------------------
+
+test('verify/start carries the lead details only when they are filled', async () => {
+  reply = () => [200, { sent: true }];
+  await client.api.verifyStart({ installId: 'i1', installSecret: 's1', email: 'a@b.co', consentMarketing: false, lang: 'en', phone: '+92 300 1234567', useCase: 'other', useCaseOther: 'QA', company: 'Acme' });
+  await client.api.verifyStart({ installId: 'i1', installSecret: 's1', email: 'a@b.co', useCase: 'agency', phone: '', company: '' });
+  const b0 = requests[0].body;
+  assert.deepEqual([b0.phone, b0.useCase, b0.useCaseOther, b0.company], ['+92 300 1234567', 'other', 'QA', 'Acme']);
+  const b1 = requests[1].body;
+  assert.equal(b1.useCase, 'agency');
+  for (const k of ['phone', 'useCaseOther', 'company']) assert.equal(k in b1, false, `${k} is left out when empty`);
+});
+
+test('account status asks the server with the install credentials, app version and channel', async () => {
+  reply = () => [200, { verified: false }];
+  const r = await client.api.accountStatus({ installId: 'i1', installSecret: 's1' });
+  assert.deepEqual(r, { verified: false });
+  assert.equal(requests[0].method, 'POST');
+  assert.equal(requests[0].url, '/v1/account/status');
+  assert.deepEqual(requests[0].body, { tenantId: 'tenant_test', installId: 'i1', installSecret: 's1', appVersion: VERSION, channel: 'website' });
+});
+
+test('checkout methods are read from the public endpoint, no credentials sent', async () => {
+  reply = () => [200, { providers: [{ id: 'stripe', label: 'Stripe (cards)', kind: 'automated' }], store: { salesEnabled: false } }];
+  const r = await client.api.checkoutMethods();
+  assert.equal(requests[0].method, 'GET');
+  assert.equal(requests[0].url, '/v1/checkout/methods?tenantId=tenant_test');
+  assert.equal(requests[0].body, null);
+  assert.equal(r.providers[0].id, 'stripe');
+});
