@@ -392,7 +392,10 @@ const CHANNELS = Object.freeze({
   UPDATER_EVENT: 'updater:event',
   UPDATER_GET_STATE: 'updater:get-state',
   UPDATER_INSTALL: 'updater:install',
-  UPDATER_CHECK: 'updater:check'
+  UPDATER_CHECK: 'updater:check',
+  // The website installer's "new version available" notice (no automatic updates there).
+  UPDATER_NOTICE_LATER: 'updater:notice-later',
+  UPDATER_NOTICE_DOWNLOAD: 'updater:notice-download'
 });
 
 const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5', 'SOCKS4']);
@@ -13714,6 +13717,10 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.UPDATER_GET_STATE, () => updater.getState());
   registerHandler(CHANNELS.UPDATER_INSTALL, () => updater.installDownloadedUpdate());
   registerHandler(CHANNELS.UPDATER_CHECK, () => updater.checkForUpdatesNow());
+  // The notice's "Later" (that version, until restart) and "Download" (main opens its own checked link;
+  // the renderer sends no URL).
+  registerHandler(CHANNELS.UPDATER_NOTICE_LATER, (payload) => updater.dismissNotice(payload && typeof payload === 'object' ? payload.version : undefined));
+  registerHandler(CHANNELS.UPDATER_NOTICE_DOWNLOAD, () => updater.openNoticeDownload());
   // Broadcast updater events to every window - owned here so the channel definition
   // and its emit live alongside the rest of the renderer comms.
   updater.setEventSink((payload) => {

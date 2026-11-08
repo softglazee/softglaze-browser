@@ -417,6 +417,8 @@ export const softglazeApi = {
     getState: () => getSoftglazeApi().updater.getState(),
     install: () => getSoftglazeApi().updater.install(),
     check: () => getSoftglazeApi().updater.check(),
+    noticeLater: (version) => getSoftglazeApi().updater.noticeLater(version),
+    noticeDownload: () => getSoftglazeApi().updater.noticeDownload(),
     onEvent: (callback) => getSoftglazeApi().updater.onEvent(callback)
   }
 };

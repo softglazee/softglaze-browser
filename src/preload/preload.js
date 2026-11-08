@@ -266,7 +266,9 @@ const CHANNELS = Object.freeze({
   UPDATER_EVENT: 'updater:event',
   UPDATER_GET_STATE: 'updater:get-state',
   UPDATER_INSTALL: 'updater:install',
-  UPDATER_CHECK: 'updater:check'
+  UPDATER_CHECK: 'updater:check',
+  UPDATER_NOTICE_LATER: 'updater:notice-later',
+  UPDATER_NOTICE_DOWNLOAD: 'updater:notice-download'
 });
 
 // SoftGlaze AI (spec §10). A separate map, not part of CHANNELS: main registers these from
@@ -769,7 +771,11 @@ const api = Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),
     install: () => invoke(CHANNELS.UPDATER_INSTALL),
     check: () => invoke(CHANNELS.UPDATER_CHECK),
-    // Updater events: available, downloading, downloaded.
+    // The website installer's new-version notice: "Later" for that version, "Download" opens the
+    // download page (main holds the checked link; nothing is passed from here but the version).
+    noticeLater: (version) => invoke(CHANNELS.UPDATER_NOTICE_LATER, { version: typeof version === 'string' ? version : '' }),
+    noticeDownload: () => invoke(CHANNELS.UPDATER_NOTICE_DOWNLOAD),
+    // Updater events: available, downloading, downloaded, notice.
     onEvent: (callback) => {
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(CHANNELS.UPDATER_EVENT, listener);
