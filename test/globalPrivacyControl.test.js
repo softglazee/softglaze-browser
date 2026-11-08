@@ -195,6 +195,122 @@ test('new tabs and workers get the GPC choice through the same auto-attach as th
   assert.doesNotMatch(engine.workerPreludeSource(chrome), /"gpc"/, 'nothing for Chrome');
 });
 
+// ---- Sec-GPC on worker requests (1.0.23) ----
+// 1.0.22 sent Sec-GPC per tab only (applyToPage, puppeteer's Network session), and puppeteer opens no
+// Network session on workers, so a Brave profile's worker requests went out without it. Chromium applies
+// Network.setExtraHTTPHeaders only for a session with Network enabled, so the auto-attach now sends both
+// to Brave workers before they run. Pages are unchanged (see the PR for why).
+
+const WORKER_KINDS = ['worker', 'shared_worker', 'service_worker'];
+const GPC_STEPS = [
+  { method: 'Network.enable', params: { maxTotalBufferSize: 0, maxResourceBufferSize: 0 } },
+  { method: 'Network.setExtraHTTPHeaders', params: { headers: { 'Sec-GPC': '1' } } }
+];
+
+test('worker header commands: Brave only, never Chrome-family, Firefox or the anti-detect build', () => {
+  for (const dnt of ['1', '0', 'Default']) {
+    assert.deepEqual(engine.workerPrivacyCommands(config('Brave', dnt)), GPC_STEPS, `Brave, DNT ${dnt}`);
+    for (const brand of [...NO_GPC_BRANDS, 'Firefox']) {
+      assert.deepEqual(engine.workerPrivacyCommands(config(brand, dnt)), [], `${brand}, DNT ${dnt}`);
+    }
+  }
+  assert.deepEqual(engine.workerPrivacyCommands({ ...config('Brave', '1'), nativeEngine: true }), [], 'anti-detect build');
+  assert.deepEqual(engine.workerPrivacyCommands({}), []);
+  assert.deepEqual(engine.workerPrivacyCommands(undefined), []);
+});
+
+test('Brave workers get Sec-GPC before their prelude; pages and frames get no Network commands from it', () => {
+  const brave = { ...config('Brave', 'Default'), guard: 'gGpcW1' };
+  const late = { workerSource: engine.workerPreludeSource(brave) };
+  for (const kind of WORKER_KINDS) {
+    const methods = engine.targetFingerprintCommands(kind, brave, late).map((c) => c.method);
+    const en = methods.indexOf('Network.enable');
+    const hdr = methods.indexOf('Network.setExtraHTTPHeaders');
+    assert.ok(en >= 0 && hdr === en + 1, `${kind}: enable, then the header`);
+    const prelude = methods.indexOf('Runtime.evaluate');
+    if (kind !== 'shared_worker') assert.ok(prelude > hdr, `${kind}: before the prelude`);
+  }
+  for (const brand of ['Brave', ...NO_GPC_BRANDS]) {
+    for (const kind of ['page', 'iframe']) {
+      const methods = engine.targetFingerprintCommands(kind, config(brand, '1'), late).map((c) => c.method);
+      assert.ok(!methods.some((m) => m.startsWith('Network.')), `${brand} ${kind}: unchanged`);
+    }
+  }
+  for (const brand of NO_GPC_BRANDS) {
+    for (const kind of WORKER_KINDS) {
+      const methods = engine.targetFingerprintCommands(kind, config(brand, '1'), late).map((c) => c.method);
+      assert.ok(!methods.some((m) => m.startsWith('Network.')), `${brand} ${kind}: no Network commands`);
+    }
+  }
+  const nativeFp = { ...config('Brave', '1'), nativeEngine: true };
+  const native = engine.targetFingerprintCommands('service_worker', nativeFp, { workerSource: engine.workerPreludeSource(nativeFp) });
+  assert.deepEqual(native, [], 'the anti-detect build sends nothing to workers');
+});
+
+// A minimal flat CDP connection: records every command per session; `hang` methods never answer.
+function fakeCdp(hang = new Set()) {
+  const sessions = new Map();
+  const log = [];
+  const make = (id) => {
+    const listeners = {};
+    const s = {
+      on(evt, fn) { (listeners[evt] = listeners[evt] || []).push(fn); },
+      emit(evt, data) { return Promise.all((listeners[evt] || []).map((fn) => fn(data))); },
+      send(method, params) { log.push([id, method, params]); return hang.has(method) ? new Promise(() => {}) : Promise.resolve({}); }
+    };
+    sessions.set(id, s);
+    return s;
+  };
+  return {
+    make,
+    conn: { session: (id) => sessions.get(id) || null },
+    methodsOf: (id) => log.filter((e) => e[0] === id).map((e) => e[1]),
+    paramsOf: (id, method) => (log.find((e) => e[0] === id && e[1] === method) || [])[2]
+  };
+}
+const attachTarget = (cdp, root, id, type, url = '') => {
+  cdp.make(id);
+  return root.emit('Target.attachedToTarget', { sessionId: id, targetInfo: { type, targetId: `T-${id}`, url }, waitingForDebugger: true });
+};
+
+test('auto-attach: a Brave service worker gets the header before it is resumed, without waiting for replies', async () => {
+  // A new service worker answers nothing until it starts; the commands still reach it in order first.
+  const cdp = fakeCdp(new Set(['Network.enable', 'Network.setExtraHTTPHeaders', 'Runtime.evaluate']));
+  const root = cdp.make('root');
+  const brave = { ...config('Brave', 'Default'), guard: 'gGpcA1' };
+  engine.attachFingerprintToNewTargets(root, cdp.conn, { fpConfig: brave, fpLate: { workerSource: engine.workerPreludeSource(brave) }, injectSource: 'S', callTimeoutMs: 40 });
+  const started = Date.now();
+  await attachTarget(cdp, root, 'sw1', 'service_worker', 'https://site.example/sw.js');
+  const m = cdp.methodsOf('sw1');
+  assert.deepEqual(m.slice(-1), ['Runtime.runIfWaitingForDebugger']);
+  assert.ok(m.indexOf('Network.setExtraHTTPHeaders') >= 0 && m.indexOf('Network.setExtraHTTPHeaders') < m.indexOf('Runtime.runIfWaitingForDebugger'));
+  assert.deepEqual(cdp.paramsOf('sw1', 'Network.setExtraHTTPHeaders'), { headers: { 'Sec-GPC': '1' } });
+  assert.ok(Date.now() - started < 1000, 'resumed at once');
+  // A dedicated worker under a tab is handled the same way.
+  await attachTarget(cdp, root, 'tab1', 'page', 'https://site.example/');
+  const tab = cdp.conn.session('tab1');
+  cdp.make('dw1');
+  await tab.emit('Target.attachedToTarget', { sessionId: 'dw1', targetInfo: { type: 'worker', targetId: 'T-dw1', url: 'https://site.example/w.js' }, waitingForDebugger: true });
+  assert.ok(cdp.methodsOf('dw1').includes('Network.setExtraHTTPHeaders'));
+  assert.ok(!cdp.methodsOf('tab1').some((x) => x.startsWith('Network.')), 'the tab itself is unchanged');
+});
+
+test('auto-attach: Chrome-family and extension workers get no Network commands', async () => {
+  const cdp = fakeCdp();
+  const root = cdp.make('root');
+  const chrome = { ...config('Chrome', '1'), guard: 'gGpcA2' };
+  engine.attachFingerprintToNewTargets(root, cdp.conn, { fpConfig: chrome, fpLate: { workerSource: engine.workerPreludeSource(chrome) }, injectSource: 'S' });
+  await attachTarget(cdp, root, 'sw1', 'service_worker', 'https://site.example/sw.js');
+  assert.ok(!cdp.methodsOf('sw1').some((x) => x.startsWith('Network.')));
+
+  const cdp2 = fakeCdp();
+  const root2 = cdp2.make('root');
+  const brave = { ...config('Brave', '1'), guard: 'gGpcA3' };
+  engine.attachFingerprintToNewTargets(root2, cdp2.conn, { fpConfig: brave, fpLate: {}, injectSource: 'S' });
+  await attachTarget(cdp2, root2, 'ext', 'service_worker', 'chrome-extension://abcdefghijklmnop/bg.js');
+  assert.deepEqual(cdp2.methodsOf('ext'), ['Runtime.runIfWaitingForDebugger'], 'browser-internal workers stay untouched');
+});
+
 // ---- Launch wiring ----
 
 test('every tab sends the brand-aware privacy headers; GPC is never tied to DNT any more', () => {

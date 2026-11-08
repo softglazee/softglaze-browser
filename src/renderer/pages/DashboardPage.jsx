@@ -188,7 +188,10 @@ function WelcomeBanner() {
 }
 
 // Also reads the updater state on mount, in case the event fired before this page mounted.
+// status 'notice': the website installer (no automatic updates) has a newer version on the website;
+// Download opens the download page from main, Later hides it for that version until the next start.
 function UpdateBanner() {
+  const { t } = useTranslation();
   const [state, setState] = useState(null);
   const [installing, setInstalling] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -208,7 +211,8 @@ function UpdateBanner() {
   const isError = status === 'error' && sawActive.current;
   const isChecking = status === 'checking' && sawActive.current;
   const actionable = status === 'available' || status === 'downloading' || status === 'downloaded';
-  if (!actionable && !isError && !isChecking) return null;
+  const notice = status === 'notice' && Boolean(version);
+  if (!actionable && !notice && !isError && !isChecking) return null;
   const downloaded = status === 'downloaded';
   const v = version ? `v${version}` : '';
   const accent = isError ? 'var(--destructive)' : 'var(--primary)';
@@ -219,13 +223,20 @@ function UpdateBanner() {
     catch (e) { setInstalling(false); }
   }
   function retry() { softglazeApi.updater.check().catch(() => {}); }
+  function openDownload() { softglazeApi.updater.noticeDownload().catch(() => {}); }
+  function later() {
+    setDismissed(true);
+    softglazeApi.updater.noticeLater(version).catch(() => {});
+  }
 
-  const title = isError ? `Update download failed${v ? ` (${v})` : ''}`
+  const title = notice ? t('dashboard.updateNoticeTitle', { version })
+    : isError ? `Update download failed${v ? ` (${v})` : ''}`
     : isChecking ? 'Checking for updates…'
     : downloaded ? `Update ready ${v}`
     : status === 'downloading' ? `Downloading update ${v}…`
     : `New update available ${v}`;
-  const subtitle = isError ? (state.error ? String(state.error).slice(0, 140) : 'Could not download the update. Check your connection and retry.')
+  const subtitle = notice ? t('dashboard.updateNoticeDesc')
+    : isError ? (state.error ? String(state.error).slice(0, 140) : 'Could not download the update. Check your connection and retry.')
     : isChecking ? 'Contacting the update server…'
     : downloaded ? 'Click install to restart and apply the new version.'
     : status === 'downloading' ? `${percent || 0}% downloaded`
@@ -251,14 +262,24 @@ function UpdateBanner() {
             <RefreshCw className="h-3.5 w-3.5" /> Retry
           </Button>
         )}
-        {(downloaded || status === 'available') && releaseNotes && (
+        {(downloaded || status === 'available' || notice) && releaseNotes && (
           <button onClick={() => setShowNotes((s) => !s)} className="shrink-0 px-1 text-[11px] text-primary hover:underline" title="What's new">
             {showNotes ? 'Hide notes' : "What's new"}
           </button>
         )}
-        <button onClick={() => setDismissed(true)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Dismiss update notice">
-          <X className="h-4 w-4" />
-        </button>
+        {notice && (
+          <>
+            <Button variant="primary" size="sm" onClick={openDownload}>
+              <ArrowUpRight className="h-3.5 w-3.5" /> {t('dashboard.updateNoticeDownload')}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={later}>{t('dashboard.updateNoticeLater')}</Button>
+          </>
+        )}
+        {!notice && (
+          <button onClick={() => setDismissed(true)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Dismiss update notice">
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
       {showNotes && releaseNotes && (
         <pre className="ml-12 mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">{releaseNotes}</pre>

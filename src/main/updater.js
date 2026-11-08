@@ -1,16 +1,22 @@
 'use strict';
 
-const { app } = require('electron');
+const { app, shell } = require('electron');
 const { tenantConfig } = require('./tenantConfig');
+const releaseNotice = require('./releaseNotice');
 
 // Inert unless an update feed is configured: tenant builds use their baked updateFeedUrl, the
 // seller's build opts in with SG_ENABLE_GITHUB_UPDATES=1. On Windows electron-updater checks the
 // installer's Authenticode signature, so updates are only safe on code-signed builds.
+// A website installer left without automatic updates (unsigned or no feed) gets a "new version
+// available" notice with a link to the download page instead (releaseNotice.js); it installs nothing.
 
 let autoUpdaterRef = null;
 let eventSink = null;
-// status: idle | checking | available | not-available | downloading | downloaded | error
+// status: idle | checking | available | not-available | downloading | downloaded | error | disabled
+//         | notice (a newer website version; automatic updates stay off)
 let lastState = { status: 'idle', version: null, percent: 0, error: null, releaseNotes: null, checkedAt: null };
+let releaseChecks = null;
+const noticeState = releaseNotice.createNoticeState();
 
 // ipcHandlers owns the broadcast to every window; the updater only pushes state into its sink.
 function setEventSink(fn) { eventSink = typeof fn === 'function' ? fn : null; }
@@ -70,6 +76,42 @@ function disable(reason, message) {
   sendEvent({ status: 'disabled', disabledReason: reason, error: null, message });
 }
 
+// The website installer with automatic updates off ('unsigned' / 'no-feed'): check the website's release
+// file now and every 12 hours, and show a notice for a newer version. Not for the Store package, base
+// builds or any other reason (see releaseNotice.noticeApplies). deps are for tests.
+function startReleaseNotice(reason, deps = {}) {
+  if (releaseChecks) return false;
+  const channel = deps.channel || require('./installChannel').installChannel();
+  if (!releaseNotice.noticeApplies({ channel, disabledReason: reason })) return false;
+  releaseChecks = releaseNotice.startReleaseChecks({
+    fetchText: deps.fetchText || (() => releaseNotice.fetchReleaseText()),
+    currentVersion: deps.currentVersion || (() => app.getVersion()),
+    onNotice: (release) => {
+      const patch = noticeState.offer(release);
+      if (patch) sendEvent(patch);
+    }
+  });
+  return true;
+}
+
+// "Later" on the notice: hidden for that version until the app restarts.
+function dismissNotice(version) {
+  if (lastState.status !== 'notice') return { ok: true };
+  if (noticeState.dismiss(typeof version === 'string' ? version : null)) {
+    sendEvent({ status: 'disabled', version: null, releaseNotes: null, releasedOn: null });
+  }
+  return { ok: true };
+}
+
+// "Download" on the notice: the website's download page in the default browser. The link comes from the
+// checked release file held here (never from the renderer) and is checked again before it is opened.
+async function openNoticeDownload(open = (url) => shell.openExternal(url)) {
+  const url = lastState.status === 'notice' ? noticeState.downloadUrl() : null;
+  if (!url) return { ok: false, error: 'There is no new version to download.' };
+  try { await open(url); return { ok: true }; }
+  catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+}
+
 // Called from main.js once the window exists; goes live only on a packaged, signed build with a feed.
 async function initAutoUpdater(mainWindow) {
   if (autoUpdaterRef) return; // once per run
@@ -80,6 +122,7 @@ async function initAutoUpdater(mainWindow) {
   if (!(await isSignedBuild())) {
     console.warn('[updater] build is not code-signed - auto-update disabled (an unsigned auto-update cannot be verified and would be an RCE vector).');
     disable('unsigned', 'Automatic updates are off because this build is not code-signed. Download new versions from the website.');
+    startReleaseNotice('unsigned');
     return;
   }
 
@@ -87,6 +130,7 @@ async function initAutoUpdater(mainWindow) {
   if (!feed) {
     console.log('[updater] no update feed configured - auto-update disabled.');
     disable('no-feed', 'Automatic updates are not set up for this build. Download new versions from the website.');
+    startReleaseNotice('no-feed');
     return;
   }
 
@@ -143,4 +187,7 @@ function checkForUpdatesNow() {
   return { ok: true, active: true };
 }
 
-module.exports = { initAutoUpdater, setEventSink, getState, installDownloadedUpdate, checkForUpdatesNow };
+module.exports = {
+  initAutoUpdater, setEventSink, getState, installDownloadedUpdate, checkForUpdatesNow,
+  dismissNotice, openNoticeDownload, startReleaseNotice
+};

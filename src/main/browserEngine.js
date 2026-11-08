@@ -2770,6 +2770,24 @@ function privacyRequestHeaders(fp = {}) {
   return headers;
 }
 
+// Sec-GPC on the requests a worker sends by itself (fetch, XHR, importScripts), for a brand that sends
+// GPC (Brave; never Chrome-family, never the anti-detect build). Tabs get it from applyToPage through
+// puppeteer's Network session, but puppeteer opens no Network session on workers, so dedicated, shared
+// and service workers sent their requests without it, while real Brave sends it on every request.
+// Chromium applies Network.setExtraHTTPHeaders only for a session whose Network domain is enabled
+// (devtools_instrumentation.cc ApplyNetworkRequestOverrides skips a disabled NetworkHandler; Blink's
+// InspectorNetworkAgent::PrepareRequest only runs once Network.enable registered the agent), so both
+// are sent, before the worker is resumed. Zero buffer sizes: nothing reads response bodies on this
+// session, so Chrome keeps none for it (by default it keeps up to 200 MB per agent). DNT is not needed
+// here: it is the browser's own setting since 1.0.22, which worker requests carry natively.
+function workerPrivacyCommands(fp = {}) {
+  if (!privacyRequestHeaders(fp)['Sec-GPC']) return [];
+  return [
+    { method: 'Network.enable', params: { maxTotalBufferSize: 0, maxResourceBufferSize: 0 } },
+    { method: 'Network.setExtraHTTPHeaders', params: { headers: { 'Sec-GPC': '1' } } }
+  ];
+}
+
 // The CDP commands one target needs, in order, so the first tab, later tabs, popups, frames and
 // workers all report the same values. kind is the CDP target type; late holds the values known only
 // after launch (UA bundle, Accept-Language, time zone, metrics, geolocation, worker prelude).
@@ -2797,6 +2815,9 @@ function targetFingerprintCommands(kind, fp = {}, late = {}) {
   }
   if (!native && fp.cores) cmds.push({ method: 'Emulation.setHardwareConcurrencyOverride', params: { hardwareConcurrency: fp.cores } });
   if (isWorker) {
+    // Brave only: Sec-GPC on the worker's own requests (see workerPrivacyCommands). A shared worker is
+    // not held for this session (below), so it carries the header from the request after this arrives.
+    cmds.push(...workerPrivacyCommands(fp));
     // Not for shared workers: Chrome does not hold a shared worker for a second auto-attach client, so
     // the prelude arrives after the worker's own script has run (checked on Chrome 156: 0 of 8). The
     // page script's SharedWorker wrapper covers them instead.
@@ -5008,6 +5029,7 @@ module.exports = {
   // Exported for tests: the profile's fingerprint values, and the DNT / Sec-GPC headers every tab sends.
   buildFingerprintConfig,
   privacyRequestHeaders,
+  workerPrivacyCommands,
   attachFingerprintToNewTargets,
   createPreparedTargets,
   holdNewTabDocuments,

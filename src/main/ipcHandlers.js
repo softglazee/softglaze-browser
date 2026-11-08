@@ -392,7 +392,10 @@ const CHANNELS = Object.freeze({
   UPDATER_EVENT: 'updater:event',
   UPDATER_GET_STATE: 'updater:get-state',
   UPDATER_INSTALL: 'updater:install',
-  UPDATER_CHECK: 'updater:check'
+  UPDATER_CHECK: 'updater:check',
+  // The website installer's "new version available" notice (no automatic updates there).
+  UPDATER_NOTICE_LATER: 'updater:notice-later',
+  UPDATER_NOTICE_DOWNLOAD: 'updater:notice-download'
 });
 
 const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5', 'SOCKS4']);
@@ -1506,12 +1509,14 @@ async function harvestFreeProxiesHandler(payload, event) {
       const r = await Promise.any([viaIpinfo, viaGeojs]);
       return { ...r, latencyMs: Date.now() - started };
     },
-    // Plain-HTTP header echo through an HTTP proxy (the anonymity check).
-    judgeHeaders: async (c) => {
+    // Plain-HTTP echo through an HTTP proxy (the anonymity check). /get, not /headers: httpbin leaves
+    // X-Forwarded-For, Via and X-Real-Ip out of its header list (ENV_HEADERS in httpbin's helpers.py)
+    // and reports the X-Forwarded-For chain only in `origin`, where a leaked real IP shows up.
+    judgeEcho: async (c) => {
       const agent = buildProxyAgent({ type: 'HTTP', host: c.host, port: c.port });
-      const d = await httpGetJson('http://httpbin.org/headers', agent, 8000);
-      if (!d || !d.headers) throw new Error('no echo');
-      return d.headers;
+      const d = await httpGetJson('http://httpbin.org/get', agent, 8000);
+      if (!d || !d.headers || typeof d.origin !== 'string') throw new Error('no echo');
+      return { headers: d.headers, origin: d.origin };
     }
   };
 
@@ -13712,6 +13717,10 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.UPDATER_GET_STATE, () => updater.getState());
   registerHandler(CHANNELS.UPDATER_INSTALL, () => updater.installDownloadedUpdate());
   registerHandler(CHANNELS.UPDATER_CHECK, () => updater.checkForUpdatesNow());
+  // The notice's "Later" (that version, until restart) and "Download" (main opens its own checked link;
+  // the renderer sends no URL).
+  registerHandler(CHANNELS.UPDATER_NOTICE_LATER, (payload) => updater.dismissNotice(payload && typeof payload === 'object' ? payload.version : undefined));
+  registerHandler(CHANNELS.UPDATER_NOTICE_DOWNLOAD, () => updater.openNoticeDownload());
   // Broadcast updater events to every window - owned here so the channel definition
   // and its emit live alongside the rest of the renderer comms.
   updater.setEventSink((payload) => {
