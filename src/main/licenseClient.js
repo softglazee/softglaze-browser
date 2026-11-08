@@ -9,6 +9,7 @@ const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 const { createPublicKey, createHash, verify: edVerify } = require('node:crypto');
 const { tenantConfig } = require('./tenantConfig');
+const { installChannel } = require('./installChannel');
 
 const fromB64url = (s) => Buffer.from(String(s), 'base64url');
 
@@ -178,10 +179,12 @@ function postJson(pathName, body) { return requestJson('POST', pathName, body); 
 // The licensing server issues a per-install secret at first registration and requires it for
 // license and redeem. An email is never a credential.
 const api = {
-  register: (machineId, account, installSecret) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account, installSecret, machineHash: machineHash() }),
+  // `channel` (store | website | base, see installChannel.js) rides on register, licence refresh,
+  // verify/start and trial/start, so the owner's admin can count installs by where they came from.
+  register: (machineId, account, installSecret) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account, installSecret, machineHash: machineHash(), channel: installChannel() }),
   checkout: ({ planKey, installId, account, provider }) => postJson('/v1/checkout', { tenantId: tenantConfig().tenantId, planKey, installId, account, provider }),
   // license() resolving means this machine is accepted, so any machine_mismatch is cleared.
-  license: ({ installId, installSecret }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), appVersion: appVersion() })
+  license: ({ installId, installSecret }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), appVersion: appVersion(), channel: installChannel() })
     .then((r) => { clearLicenseIssue(); return r; }),
   // Self-service move to this PC: install secret + proof of purchase (redeemed code or
   // payment reference), at most 2 per licence per 30 days (server-enforced).
@@ -191,12 +194,12 @@ const api = {
   // Sign-up email check by the licensing server: it emails a 6-digit code from its own address
   // (never shown in-app) and refuses invalid_email, disposable_email, no_mx and rate_limited.
   verifyStart: ({ installId, installSecret, email, name, consentMarketing, lang }) => postJson('/v1/account/verify/start', {
-    tenantId: tenantConfig().tenantId, installId, installSecret, email, name: name || undefined, consentMarketing: consentMarketing === true, lang: lang || 'en', appVersion: appVersion()
+    tenantId: tenantConfig().tenantId, installId, installSecret, email, name: name || undefined, consentMarketing: consentMarketing === true, lang: lang || 'en', appVersion: appVersion(), channel: installChannel()
   }),
   // -> { verified: true, customerId }; links this install to the verified customer.
   verifyCheck: ({ installId, installSecret, email, code }) => postJson('/v1/account/verify/check', { tenantId: tenantConfig().tenantId, installId, installSecret, email, code }),
   // The trial ledger: one free trial per computer and per email. -> the signed trial lease, or 409 trial_used.
-  trialStart: ({ installId, installSecret, email }) => postJson('/v1/trial/start', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), email, appVersion: appVersion() }),
+  trialStart: ({ installId, installSecret, email }) => postJson('/v1/trial/start', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), email, appVersion: appVersion(), channel: installChannel() }),
   // Public price list (no auth): the active plans and their prices.
   plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 })
 };

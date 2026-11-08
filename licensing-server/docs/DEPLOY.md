@@ -137,3 +137,28 @@ until its current `currentPeriodEnd` and are re-checked once this build is back.
 Redeploy the previous build. The schema changes are additive, so the old code runs on the new schema; a
 database restore from the step 3 backup is only needed if data must go back. Remove the cron job if the
 old build is kept.
+
+---
+
+# Deploy note: install channel (app 1.0.23)
+
+The app reports where it was installed from (`channel`: `store` | `website` | `base`, see
+[ADMIN-API.md, Install channel](ADMIN-API.md#install-channel)). Deploy only after the PR is merged.
+
+Order: **server first, then the 1.0.23 app** (website installer and Store package).
+
+1. Build and deploy the code as in step 2 above (`npm run build` regenerates the Prisma client).
+2. `bash scripts/migrate-deploy.sh` as in step 3 (backup first). One migration applies:
+   `20261108120000_install_channel`: nullable `Install.channel` and `Customer.firstChannel`
+   (`VARCHAR(16)`) and the index `Install_tenantId_channel_idx`. Nothing is dropped, renamed, retyped or
+   backfilled; existing installs stay `NULL` (`unknown` in the metrics) until they run 1.0.23.
+   Run it straight after the new build starts: the new build's Prisma client reads `Install.channel`,
+   so its install calls fail until the column exists (the old build runs fine on the migrated schema).
+3. Check: `GET /v1/admin/metrics` has `installsTotal` and `installsByChannel`;
+   `GET /v1/admin/installs?channel=unknown` lists the existing installs.
+4. Ship app 1.0.23.
+
+Why this order: the new code reads and writes the new columns, so it needs the migration; the server
+before this change already ignores `channel` in request bodies (routes pick their fields by name), so a
+1.0.23 app talking to it keeps working, it just records nothing. Rollback: redeploy the previous build; the
+two columns are ignored by the old code.

@@ -41,7 +41,7 @@ test('verify/start sends the email, name, consent (false unless true) and langua
   await client.api.verifyStart({ installId: 'i1', installSecret: 's1', email: 'a@b.co', consentMarketing: 'yes' });
   assert.equal(requests[0].method, 'POST');
   assert.equal(requests[0].url, '/v1/account/verify/start');
-  assert.deepEqual(requests[0].body, { tenantId: 'tenant_test', installId: 'i1', installSecret: 's1', email: 'a@b.co', name: 'Ada', consentMarketing: true, lang: 'es', appVersion: VERSION });
+  assert.deepEqual(requests[0].body, { tenantId: 'tenant_test', installId: 'i1', installSecret: 's1', email: 'a@b.co', name: 'Ada', consentMarketing: true, lang: 'es', appVersion: VERSION, channel: 'website' });
   assert.equal(requests[1].body.consentMarketing, false);
   assert.equal(requests[1].body.lang, 'en');
   assert.equal('name' in requests[1].body, false);
@@ -59,7 +59,7 @@ test('trial/start sends the install, machine hash, email and app version', async
   reply = () => [200, { lease: 'x.y' }];
   await client.api.trialStart({ installId: 'i1', installSecret: 's1', email: 'a@b.co' });
   assert.equal(requests[0].url, '/v1/trial/start');
-  assert.deepEqual(requests[0].body, { tenantId: 'tenant_test', installId: 'i1', installSecret: 's1', machineHash: client.machineHash(), email: 'a@b.co', appVersion: VERSION });
+  assert.deepEqual(requests[0].body, { tenantId: 'tenant_test', installId: 'i1', installSecret: 's1', machineHash: client.machineHash(), email: 'a@b.co', appVersion: VERSION, channel: 'website' });
 });
 
 test('a 409 trial_used rejects with the code, status and reason', async () => {
@@ -87,6 +87,7 @@ test('lease refresh sends the app version from package.json', async () => {
   await client.api.license({ installId: 'i1', installSecret: 's1' });
   assert.equal(requests[0].url, '/v1/license');
   assert.equal(requests[0].body.appVersion, VERSION);
+  assert.equal(requests[0].body.channel, 'website', 'a baked tenant outside an MSIX package is the website installer');
   assert.equal(client.appVersion(), VERSION);
   assert.match(VERSION, /^\d+\.\d+\.\d+/);
 });

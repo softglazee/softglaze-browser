@@ -66,7 +66,8 @@ into gmail), so `John.Smith+x@googlemail.com` and `johnsmith@gmail.com` are one 
   "emailVerifiedAt": "2026-11-20T10:01:00.000Z", "name": "Ana Lopez", "company": null, "country": "MX",
   "phone": null, "lang": "es", "source": "app",
   "status": "trial", "statusAuto": "trial", "statusOverride": null, "statusNote": null, "tier": "enterprise",
-  "firstSeenAt": "2026-11-20T09:58:00.000Z", "lastSeenAt": "2026-11-21T08:00:00.000Z", "appVersion": "1.0.22",
+  "firstSeenAt": "2026-11-20T09:58:00.000Z", "lastSeenAt": "2026-11-21T08:00:00.000Z", "appVersion": "1.0.23",
+  "firstChannel": "store",
   "trialStartedAt": "2026-11-20T10:02:00.000Z", "trialEndsAt": "2026-11-27T10:02:00.000Z",
   "paidSince": null, "paidUntil": null, "complimentaryUntil": null, "totalPaidCents": 0, "currency": null,
   "marketingConsent": true, "consentAt": "2026-11-20T10:01:00.000Z", "consentSource": "app_signup",
@@ -76,6 +77,9 @@ into gmail), so `John.Smith+x@googlemail.com` and `johnsmith@gmail.com` are one 
 ```
 
 - `source`: `app` | `manual` | `import` | `invoice` | `website`.
+- `firstChannel`: where the customer first installed the app from, `store` | `website` | `base`: the
+  [install channel](#install-channel) of their earliest install that reported one; `null` until an
+  install of theirs runs app 1.0.23 or later. Computed like `statusAuto` (read-only).
 - `status` is what to show: `statusOverride` when set, else `statusAuto`. `statusAuto` is computed from
   licences, payments and trials (cron every 15 minutes and right after each change):
 
@@ -171,7 +175,7 @@ Errors: `400 bad_request` (no file), `empty_file`, `missing_email_column`, `too_
 ```json
 {
   "customer": { "...": "Customer" },
-  "installs": [{ "id": "...", "machineId": "...", "appVersion": "1.0.22", "lastSeenAt": "...", "machineHash": "..." }],
+  "installs": [{ "id": "...", "machineId": "...", "appVersion": "1.0.23", "channel": "store", "lastSeenAt": "...", "machineHash": "..." }],
   "trials": [{ "id": "...", "startedAt": "...", "endsAt": "...", "convertedAt": null, "resetAt": null, "machineLocked": true, "emailLocked": true }],
   "licenses": [{ "id": "...", "tier": "enterprise", "status": "active", "currentPeriodEnd": "...", "complimentary": false, "source": "manual", "note": "..." }],
   "payments": [{ "id": "...", "provider": "manual", "method": "invoice", "providerRef": "INV-2026-014", "amount": 2900, "currency": "USD", "status": "paid", "paidAt": "..." }],
@@ -251,7 +255,18 @@ Every `POST /v1/trial/start` outcome: `granted`, `repeat` (same install asked ag
 
 ### GET /v1/admin/installs
 
-Params: `customerId`, `unlinked=1` (installs without a customer), paging. Items have no secret hash; `machineBound` says if a machine is bound.
+Params: `customerId`, `unlinked=1` (installs without a customer), `channel` (list of `store`, `website`,
+`base`, `unknown`; `unknown` = installs that never reported one, i.e. apps before 1.0.23; case-insensitive),
+paging. Items have no secret hash; `machineBound` says if a machine is bound; `channel` is the
+[install channel](#install-channel) (`null` when unknown).
+
+```json
+{ "items": [{ "id": "cm...", "machineId": "...", "account": null, "customerId": "cm...", "appVersion": "1.0.23",
+  "channel": "store", "createdAt": "...", "lastSeenAt": "...", "machineHash": "...", "machineBoundAt": "...",
+  "machineBound": true }], "total": 1, "page": 1, "pageSize": 50 }
+```
+
+Errors: `400 validation_failed` (`fields.channel`) for a value outside that list.
 
 ### POST /v1/admin/installs/:id/reset-machine
 
@@ -588,6 +603,8 @@ Params: `from`, `to` (`YYYY-MM`, default the last 12 months), `days` (1-366, def
   "mrr": [{ "currency": "USD", "mrrCents": 20100, "arrCents": 241200 }],
   "mrrCents": 20100, "arrCents": 241200, "currency": "USD", "arpaCents": 2233,
   "activeTrials": 14,
+  "installsTotal": 412,
+  "installsByChannel": { "store": 150, "website": 230, "base": 0, "unknown": 32 },
   "lifetimeNetRevenueCents": 31900, "customersEverPaid": 12, "lifetimeRevenuePerPayingCustomerCents": 2658,
   "trials": { "perDay": [{ "date": "2026-12-01", "trials": 3 }], "perWeek": [{ "weekStart": "2026-11-30", "trials": 9 }] },
   "trialRefusalsLast30Days": { "used_machine": 4, "used_email": 2, "used_network": 1, "not_verified": 7 },
@@ -633,6 +650,10 @@ revenuePerPayingCustomerCents, mrrEndCents, mrrSnapshotDay`. JSON: `{ asOf, curr
   how many of them pay; `unknown` when no country is known.
 - **mrrEndCents**: MRR from the last daily snapshot (written by the cron) in that month; `null` for months
   before snapshots existed (history starts on the deploy day).
+- **Installs**: `installsTotal` = every install row of the tenant (registered app installs, all time).
+  `installsByChannel` splits them by [install channel](#install-channel); `unknown` = installs that never
+  reported one (apps before 1.0.23 that have not updated). The four always add up to `installsTotal`.
+  Not in the daily snapshots.
 - Status history (and so churn and paying counts) starts on the deploy day: customers backfilled from
   existing installs start as `lead` from the day their install was first seen, and the first cron run records
   later statuses dated when they really happened (a paid licence at its start date).
@@ -664,9 +685,30 @@ These keep the shapes in spec section A (the desktop app PR depends on them). In
 endpoints answer `400 bad_request`, `404 unknown_tenant`, `401 invalid_install` (wrong install secret:
 the only 401), and with a machine hash `400 machine_required` / `403 machine_mismatch`.
 
+### Install channel
+
+From app 1.0.23, `POST /v1/register`, `/v1/license`, `/v1/account/verify/start` and `/v1/trial/start` also
+carry `channel`: where the app was installed from.
+
+| `channel` | meaning |
+|---|---|
+| `store` | the Microsoft Store package (AppX/MSIX) |
+| `website` | the website installer (a licensing tenant is baked in) |
+| `base` | a build with no licensing backend (never calls this server in practice) |
+
+- Optional. Requests without it (older apps) work exactly as before. A value outside the list (any case
+  and surrounding spaces are folded) is ignored, never refused.
+- Stored on the install (`Install.channel`); the latest valid value wins. The customer's `firstChannel`
+  is derived from their installs.
+- Shown in `GET /v1/admin/installs` (with a `channel` filter), `GET /v1/admin/customers*` (`firstChannel`)
+  and `GET /v1/admin/metrics` (`installsTotal`, `installsByChannel`).
+- Deploy order: this server (with `prisma migrate deploy`, migration `20261108120000_install_channel`)
+  before app 1.0.23. Servers before this change already ignore the unknown field, so the order is not
+  critical for the app, but the channel is only recorded once this server runs.
+
 ### POST /v1/account/verify/start
 
-`{ tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, appVersion? }`
+`{ tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, appVersion?, channel? }`
 → `200 { "ok": true, "sent": true, "expiresInSec": 600, "resendAfterSec": 60 }`. Sends a 6-digit code from
 no-reply@softglaze.com (10 minutes, 5 attempts). The code is never returned. `country` (ISO-2, optional)
 fills the customer's country; else the region of `lang` (`es-MX`) is used.
@@ -687,7 +729,7 @@ Errors: `400 invalid_email`, `400 invalid_code` (`attemptsLeft`), `404 no_code`,
 
 ### POST /v1/trial/start
 
-`{ tenantId, installId, installSecret, machineHash, email, appVersion? }` →
+`{ tenantId, installId, installSecret, machineHash, email, appVersion?, channel? }` →
 
 ```json
 { "lease": "<payload>.<signature>", "exp": 1795526400, "tier": "enterprise", "type": "trial",
@@ -722,13 +764,13 @@ errors `409 store_in_use`, `429 store_move_limit`, `404 store_not_owned`. The ap
 An install with several licences (for example an invoice licence and a Store subscription) is leased the
 active one with the best tier, then the latest end; with none active, the most recently updated as before.
 
-Also accepts `appVersion`. A paid answer adds `"type": "paid"`. With no active paid licence but a running
+Also accepts `appVersion` and `channel` ([install channel](#install-channel)). A paid answer adds `"type": "paid"`. With no active paid licence but a running
 trial it returns the trial lease (same shape as `/v1/trial/start`). After a trial: `{ "lease": null, "status": "none", "trialEndsAt": "..." }`.
 Every lease payload now has `type` (`paid` or `trial`).
 
 ### POST /v1/register (changed, compatible)
 
-Also accepts `appVersion`. An install that registers with an owner `account` email is linked to a
+Also accepts `appVersion` and `channel` ([install channel](#install-channel)). An install that registers with an owner `account` email is linked to a
 customer (`source: app`, unverified until verify/check).
 
 ### GET /v1/plans/public?tenantId=...

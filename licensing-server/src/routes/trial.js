@@ -1,5 +1,5 @@
 'use strict';
-// POST /v1/trial/start { tenantId, installId, installSecret, machineHash, email, appVersion? }
+// POST /v1/trial/start { tenantId, installId, installSecret, machineHash, email, appVersion?, channel? }
 //   -> 200 { lease, exp, tier: 'enterprise', type: 'trial', trialEndsAt, currentPeriodEnd }
 //      (the same signed lease format as /v1/license; asking again during the trial returns it again)
 //   -> 409 { error: 'trial_used', reason: 'machine' | 'email' | 'network' }

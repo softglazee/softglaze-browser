@@ -1,5 +1,6 @@
 'use strict';
-// Baked per-tenant config { tenantId, apiBaseUrl, publicKeyPem }; the base build ships it empty,
+// Baked per-tenant config { tenantId, apiBaseUrl, publicKeyPem, updateFeedUrl, checkoutProviders?,
+// distribution? }; the base build ships it empty,
 // which leaves licensing inactive. SG_* env vars override it only in unpackaged (dev) runs, so an
 // installed app cannot be pointed at another licensing backend or signing key.
 const fs = require('node:fs');
@@ -46,12 +47,15 @@ function load() {
   const checkoutProviders = [...new Set(rawProviders
     .map((p) => String(p).trim().toLowerCase())
     .filter((p) => CHECKOUT_PROVIDERS.includes(p)))];
+  // 'store' when scripts/build-store.js made this build (see installChannel.js). Baked only, no env.
+  const distribution = String(fileCfg.distribution || '').trim().toLowerCase() === 'store' ? 'store' : '';
   return {
     tenantId,
     apiBaseUrl,
     publicKeyPem,
     updateFeedUrl,
     checkoutProviders,
+    distribution,
     enabled: Boolean(tenantId && apiBaseUrl && publicKeyPem)
   };
 }

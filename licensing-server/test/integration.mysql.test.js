@@ -64,7 +64,7 @@ if (!URL) {
   });
 
   test('sign-up, trial, licence, admin, cron and erase work on a real MySQL/MariaDB', async () => {
-    const reg = await call('POST', '/v1/register', { tenantId: T, machineId: 'int-m1', account: 'Int.User+x@gmail.com', machineHash: mh('pc1'), appVersion: '1.0.22' });
+    const reg = await call('POST', '/v1/register', { tenantId: T, machineId: 'int-m1', account: 'Int.User+x@gmail.com', machineHash: mh('pc1'), appVersion: '1.0.22', channel: 'website' });
     assert.equal(reg.status, 200, reg.text);
     const inst = { installId: reg.json.installId, installSecret: reg.json.installSecret, machineHash: mh('pc1') };
     const lead = await prisma.customer.findUnique({ where: { tenantId_emailKey: { tenantId: T, emailKey: 'intuser@gmail.com' } } });
@@ -95,6 +95,16 @@ if (!URL) {
     assert.equal(r.json.total, 1);
     const cid = r.json.items[0].id;
     assert.equal(r.json.items[0].appVersion, '1.0.23');
+    assert.equal(r.json.items[0].firstChannel, 'website');
+    // Install channel: the first install said website, the second (no channel, an older app) is unknown.
+    const web = await admin('GET', '/installs?channel=website');
+    assert.equal(web.status, 200, web.text);
+    assert.deepEqual(web.json.items.map((i) => [i.id, i.channel]), [[inst.installId, 'website']]);
+    assert.deepEqual((await admin('GET', '/installs?channel=unknown')).json.items.map((i) => i.id), [inst2.installId]);
+    assert.equal((await admin('GET', '/installs?channel=store,unknown')).json.total, 1);
+    const met = await admin('GET', '/metrics');
+    assert.equal(met.json.installsTotal, 2);
+    assert.deepEqual(met.json.installsByChannel, { store: 0, website: 1, base: 0, unknown: 1 });
     assert.equal((await admin('PATCH', `/customers/${cid}`, { tags: ['beta', 'pk'], country: 'PK' })).status, 200);
     assert.equal((await admin('GET', '/customers?tag=beta&country=PK')).json.total, 1);
     assert.equal((await admin('GET', `/customers/${cid}`)).status, 200);

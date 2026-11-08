@@ -104,12 +104,16 @@ model Install {
   // register / by the November 2026 backfill, unverified).
   customerId String?
   appVersion String?   @db.VarChar(40)
+  // Where the app was installed from, as the app reports it (1.0.23+): store | website | base.
+  // NULL for installs that never sent it (older apps). The latest valid value is kept.
+  channel    String?   @db.VarChar(16)
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, machineId])
   @@index([tenantId, customerId])
+  @@index([tenantId, channel])
 }
 
 model License {
@@ -223,6 +227,7 @@ model Customer {
   firstSeenAt        DateTime  @default(now())
   lastSeenAt         DateTime?
   appVersion         String?   @db.VarChar(40)
+  firstChannel       String?   @db.VarChar(16) // channel of the customer's earliest install that reported one
   trialStartedAt     DateTime?
   trialEndsAt        DateTime?
   paidSince          DateTime?

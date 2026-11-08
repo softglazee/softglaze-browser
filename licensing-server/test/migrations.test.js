@@ -16,6 +16,8 @@ const MIG = path.join(__dirname, '..', 'prisma', 'migrations');
 const read = (d) => fs.readFileSync(path.join(MIG, d, 'migration.sql'), 'utf8').replace(/\r\n/g, '\n');
 const DDL = '20261107120000_customers_trials_email';
 const DATA = '20261107120100_backfill_customers_and_seed';
+const CHANNEL = '20261108120000_install_channel';
+const migrationDirs = () => fs.readdirSync(MIG).filter((d) => fs.statSync(path.join(MIG, d)).isDirectory()).sort();
 const EXISTING = ['Tenant', 'TenantPaymentConfig', 'Plan', 'Install', 'License', 'Payment', 'WebhookEvent', 'LicenseCode'];
 
 test('the schema migration only adds: no DROP, no RENAME, no type change of existing columns', () => {
@@ -46,10 +48,26 @@ test('the migrations cover every new model and the lock file is MySQL', () => {
   assert.match(sql, /UNIQUE INDEX `Trial_tenantId_machineLock_key`/);
   assert.match(sql, /UNIQUE INDEX `Trial_tenantId_emailLock_key`/);
   assert.match(sql, /UNIQUE INDEX `Customer_tenantId_emailKey_key`/);
-  const dirs = fs.readdirSync(MIG).filter((d) => fs.statSync(path.join(MIG, d)).isDirectory()).sort();
-  const at = dirs.indexOf(DDL);
-  assert.deepEqual(dirs.slice(at, at + 2), [DDL, DATA], 'applied in this order');
-  assert.ok(dirs.slice(0, at).every((d) => d < '20261107'), 'after every older migration');
+  const dirs = migrationDirs();
+  assert.equal(dirs.indexOf(DATA), dirs.indexOf(DDL) + 1, 'applied in this order');
+  assert.ok(dirs.indexOf(DDL) > dirs.indexOf('20261007120000_install_machine'), 'after the existing ones');
+});
+
+test('the install channel migration only adds two NULL columns and an index, after the November ones', () => {
+  const sql = read(CHANNEL);
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|\bUPDATE\b|\bDELETE\b|\bTRUNCATE\b/i.test(sql), 'additive only');
+  assert.match(sql, /ALTER TABLE `Install` ADD COLUMN `channel` VARCHAR\(16\) NULL;/);
+  assert.match(sql, /ALTER TABLE `Customer` ADD COLUMN `firstChannel` VARCHAR\(16\) NULL;/);
+  assert.match(sql, /CREATE INDEX `Install_tenantId_channel_idx` ON `Install`\(`tenantId`, `channel`\);/);
+  for (const [col] of sql.matchAll(/ADD COLUMN [^;]+;/g)) assert.ok(!/NOT NULL/.test(col), col);
+  const dirs = migrationDirs();
+  assert.ok(dirs.indexOf(CHANNEL) > dirs.indexOf(DATA), 'runs after the customers backfill');
+  // The schema says the same thing as the SQL.
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8');
+  const block = (name) => (new RegExp(`model ${name} \\{([\\s\\S]*?)\\n\\}`).exec(schema) || [])[1] || '';
+  assert.match(block('Install'), /\n\s+channel\s+String\?\s+@db\.VarChar\(16\)/);
+  assert.match(block('Install'), /@@index\(\[tenantId, channel\]\)/);
+  assert.match(block('Customer'), /\n\s+firstChannel\s+String\?\s+@db\.VarChar\(16\)/);
 });
 
 test('the data migration is the generator output, guarded, and seeds the built-in copy word for word', () => {

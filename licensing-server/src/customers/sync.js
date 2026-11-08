@@ -10,7 +10,7 @@ const { parseEmail } = require('./emailAddress');
 const { ms } = require('../util/time');
 
 const TRACKED = ['statusAuto', 'status', 'tier', 'trialStartedAt', 'trialEndsAt', 'paidSince', 'paidUntil', 'complimentaryUntil',
-  'totalPaidCents', 'currency', 'firstSeenAt', 'lastSeenAt', 'appVersion'];
+  'totalPaidCents', 'currency', 'firstSeenAt', 'lastSeenAt', 'appVersion', 'firstChannel'];
 
 const same = (a, b) => {
   if (a instanceof Date || b instanceof Date || (typeof a === 'string' && /^\d{4}-\d\d-\d\dT/.test(a))) return ms(a) === ms(b);
@@ -49,7 +49,8 @@ async function applyState(db, customer, rel, { now = Date.now(), graceDays = 3 }
     currency: st.currency || customer.currency || null,
     firstSeenAt: st.firstSeenAt && ms(st.firstSeenAt) < ms(customer.firstSeenAt) ? st.firstSeenAt : customer.firstSeenAt,
     lastSeenAt: st.lastSeenAt && (!customer.lastSeenAt || ms(st.lastSeenAt) > ms(customer.lastSeenAt)) ? st.lastSeenAt : customer.lastSeenAt,
-    appVersion: st.appVersion || customer.appVersion || null
+    appVersion: st.appVersion || customer.appVersion || null,
+    firstChannel: st.firstChannel || customer.firstChannel || null
   };
   next.status = effectiveStatus({ ...customer, statusAuto: next.statusAuto });
   const data = {};
@@ -161,11 +162,25 @@ async function syncRecentLicences(db, tenantId, sinceMs = 10 * 60000) {
 const VERSION_RE = /^[0-9A-Za-z][0-9A-Za-z.+_-]{0,39}$/;
 function cleanVersion(v) { return typeof v === 'string' && VERSION_RE.test(v.trim()) ? v.trim() : null; }
 
-// Seen now (licence refresh, register, trial): install + customer lastSeenAt and app version.
-async function touchInstall(db, install, appVersion, now = Date.now()) {
-  const v = cleanVersion(appVersion);
+// Where the app was installed from (sent by 1.0.23 and later). Anything else, or nothing (older apps),
+// is ignored: it never fails a request.
+const CHANNELS = ['store', 'website', 'base'];
+function cleanChannel(v) {
+  if (typeof v !== 'string') return null;
+  const c = v.trim().toLowerCase();
+  return CHANNELS.includes(c) ? c : null;
+}
+
+// Seen now (licence refresh, register, verify/start, trial): install + customer lastSeenAt and app
+// version, and the install's channel. `seen` = { appVersion, channel }, or just the app version string.
+// Invalid values are dropped; a valid channel replaces the stored one (the latest wins). The customer's
+// firstChannel is derived from its installs by applyState.
+async function touchInstall(db, install, seen, now = Date.now()) {
+  const s = seen && typeof seen === 'object' ? seen : { appVersion: seen };
+  const v = cleanVersion(s.appVersion);
+  const channel = cleanChannel(s.channel);
   const at = new Date(now);
-  await db.install.update({ where: { id: install.id }, data: { lastSeenAt: at, ...(v ? { appVersion: v } : {}) } });
+  await db.install.update({ where: { id: install.id }, data: { lastSeenAt: at, ...(v ? { appVersion: v } : {}), ...(channel ? { channel } : {}) } });
   if (install.customerId) {
     await db.customer.updateMany({ where: { id: install.customerId }, data: { lastSeenAt: at, ...(v ? { appVersion: v } : {}) } });
   }
@@ -219,5 +234,5 @@ async function reconcileTenant(db, tenant, { now = Date.now(), graceDays = 3 } =
 
 module.exports = {
   addEvent, applyState, recomputeCustomer, createCustomer, noteInstallAccount, claimUnboundLicences, linkInstallRecords,
-  syncInstall, syncRecentLicences, touchInstall, cleanVersion, reconcileTenant
+  syncInstall, syncRecentLicences, touchInstall, cleanVersion, cleanChannel, CHANNELS, reconcileTenant
 };

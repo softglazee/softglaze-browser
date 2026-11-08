@@ -1,6 +1,6 @@
 'use strict';
 // Email verification by us (spec A2).
-// POST /v1/account/verify/start { tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, appVersion? }
+// POST /v1/account/verify/start { tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, appVersion?, channel? }
 //   -> 200 { ok: true, sent: true, expiresInSec, resendAfterSec }
 //   errors: 400 invalid_email | disposable_email | no_mx, 429 rate_limited { retryAfterSec },
 //           503 email_unavailable, 502 email_failed, + the install errors in installRequest.js
