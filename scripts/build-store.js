@@ -4,9 +4,11 @@
 //
 //   node scripts/build-store.js --tenant <tenants/<id>.config.json>   sellable Store build
 //   node scripts/build-store.js --base                                 no licensing backend (test only)
+//   add --no-store-commerce to leave out Microsoft Store in-app purchases (the native Store addon)
 //
 // Steps: bake the tenant config (restored afterwards, even on failure) -> check-tenant-baked ->
-// prisma generate -> vite build -> electron-builder with electron-builder.store.js ->
+// prisma generate -> vite build -> the Store addon (scripts/build-store-native.js, needs Visual Studio
+// C++ tools) -> electron-builder with electron-builder.store.js ->
 // raise the manifest's Windows version floor (see fixManifest) -> print the identity to check.
 const { execSync, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -27,6 +29,7 @@ const args = process.argv.slice(2);
 const tenantIdx = args.indexOf('--tenant');
 const tenantPath = tenantIdx >= 0 ? args[tenantIdx + 1] : null;
 const baseBuild = args.includes('--base');
+const storeCommerce = !args.includes('--no-store-commerce');
 if (!tenantPath && !baseBuild) {
   console.error('Usage: node scripts/build-store.js --tenant <tenant.config.json> | --base');
   process.exit(1);
@@ -37,6 +40,8 @@ const childEnv = { ...process.env };
 for (const k of ['CSC_LINK', 'CSC_KEY_PASSWORD', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD', 'CSC_NAME']) delete childEnv[k];
 if (baseBuild) childEnv.SG_ALLOW_BASE_BUILD = '1';
 else delete childEnv.SG_ALLOW_BASE_BUILD;
+// electron-builder.store.js packs dist_store_native/softglaze_store.node only when this is not '0'.
+childEnv.SG_STORE_COMMERCE = storeCommerce ? '1' : '0';
 
 const run = (cmd) => execSync(cmd, { stdio: 'inherit', cwd: ROOT, env: childEnv });
 
@@ -91,6 +96,8 @@ async function fixManifest(appxPath) {
     run('node scripts/check-tenant-baked.js');
     run('npx prisma generate');
     run('npx vite build');
+    if (storeCommerce) run('node scripts/build-store-native.js');
+    else console.log('--no-store-commerce: the package will not offer Microsoft Store purchases.');
     run('npx electron-builder --win --x64 --config electron-builder.store.js');
     ok = true;
   } finally {

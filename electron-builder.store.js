@@ -16,12 +16,18 @@
 //   • publish: null strips the GitHub update feed. Store installs are updated by the Store;
 //     src/main/updater.js also switches itself off when process.windowsStore is true.
 //   • output goes to dist_store/, so the website installer in dist_installer/ is untouched.
+//   • extraResources adds the Microsoft Store purchase addon (dist_store_native/softglaze_store.node,
+//     built by scripts/build-store-native.js) as resources/store-native/softglaze_store.node. Only this
+//     config ships it; src/main/storeBridge.js loads it only when process.windowsStore is true.
+//     SG_STORE_COMMERCE=0 (build-store.js --no-store-commerce) leaves it out.
 //
 // Everything else (files, asarUnpack, afterPack, icons) is inherited from the `build` block
 // in package.json, so the Store and website builds cannot drift apart.
 //
 // Usage: npm run build:store -- --tenant <path to tenants/<id>.config.json>   ->   dist_store/
 
+const fs = require('node:fs');
+const path = require('node:path');
 const base = require('./package.json').build;
 
 const env = process.env;
@@ -32,8 +38,18 @@ const identity = {
   publisherDisplayName: env.SG_STORE_PUBLISHER_DISPLAY_NAME || 'Soft Glaze',
 };
 
+const STORE_ADDON = path.join(__dirname, 'dist_store_native', 'softglaze_store.node');
+const withCommerce = env.SG_STORE_COMMERCE !== '0';
+if (withCommerce && !fs.existsSync(STORE_ADDON)) {
+  throw new Error('dist_store_native/softglaze_store.node is missing: run node scripts/build-store-native.js, or build with --no-store-commerce.');
+}
+
 module.exports = {
   ...base,
+  extraResources: [
+    ...(base.extraResources || []),
+    ...(withCommerce ? [{ from: 'dist_store_native/softglaze_store.node', to: 'store-native/softglaze_store.node' }] : [])
+  ],
   extraMetadata: {
     name: 'softglaze-browser-store',
   },

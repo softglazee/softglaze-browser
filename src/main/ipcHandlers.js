@@ -83,6 +83,8 @@ const proxySecrets = require('./proxySecrets');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
+const storeBridge = require('./storeBridge');
+const storeCommerceLib = require('./storeCommerce');
 const tenantSignup = require('./tenantSignup');
 const tenantTrial = require('./tenantTrial');
 const planCatalog = require('./planCatalog');
@@ -285,6 +287,9 @@ const CHANNELS = Object.freeze({
   BILLING_PLAN_DELETE: 'billing:plan-delete',
   BILLING_ASSIGN: 'billing:assign',
   BILLING_SUBSCRIBERS: 'billing:subscribers',
+  STORE_STATUS: 'store:status',
+  STORE_PURCHASE: 'store:purchase',
+  STORE_RESTORE: 'store:restore',
   INVOICE_LIST: 'invoice:list',
   INVOICE_CREATE: 'invoice:create',
   INVOICE_UPDATE: 'invoice:update',
@@ -9716,6 +9721,12 @@ async function afterDbReady() {
     refreshBackendLease().catch(() => {});
     const t = setInterval(() => { refreshBackendLease().catch(() => {}); }, 6 * 60 * 60 * 1000);
     if (t.unref) t.unref();
+    // Microsoft Store build: report Store subscriptions (a purchase not yet sent, renewals, ends).
+    if (storeBridge.isStoreInstall()) {
+      getStoreCommerce().backgroundSync().catch(() => {});
+      const st = setInterval(() => { getStoreCommerce().backgroundSync().catch(() => {}); }, storeCommerceLib.SYNC_EVERY_MS);
+      if (st.unref) st.unref();
+    }
   }
 }
 
@@ -11779,6 +11790,8 @@ async function listPaymentMethods() {
       const def = payments.getProviderDef(id);
       return { id, label: def ? def.label : id, kind: 'automated' };
     });
+    // The Microsoft Store version sells through Microsoft's checkout (prices: store:status).
+    if (storeBridge.available()) methods.unshift({ id: STORE_METHOD_ID, label: 'Microsoft Store', kind: 'store' });
     return { methods };
   }
   const store = await readPaymentStore();
@@ -11897,6 +11910,65 @@ async function pollCheckout(payload) {
     if (owner && owner.email) await deliverPaymentReceipt(owner.email, owner.name, code, months);
   } catch (e) { /* email is best-effort */ }
   return { status: st.status, paid: true, license: await licenseView(updated), purchaseCode: code };
+}
+
+// ---- Microsoft Store purchases (Store build only) ----
+// The Store package buys Pro / Enterprise as Microsoft Store subscription add-ons; the licensing server
+// checks the purchase and issues the usual signed lease (src/main/storeCommerce.js). Website and base
+// builds never reach this: storeBridge only loads the addon when process.windowsStore is true.
+const STORE_METHOD_ID = 'microsoft_store';
+let storeCommerceInstance = null;
+function getStoreCommerce() {
+  if (!storeCommerceInstance) {
+    storeCommerceInstance = storeCommerceLib.createStoreCommerce({
+      bridge: storeBridge,
+      server: storeCommerceLib.createServerClient(licenseClient, tenantConfig),
+      ensureInstall: () => ensureBackendInstall(),
+      refreshLease: () => refreshBackendLease(),
+      readSetting,
+      writeSetting
+    });
+  }
+  return storeCommerceInstance;
+}
+
+async function storeStatus() {
+  if (!tenantConfig().enabled || !storeBridge.isStoreInstall()) return { available: false, reason: 'not_store_build' };
+  return getStoreCommerce().status();
+}
+
+// The app window that asked, as the owner of Microsoft's purchase dialog.
+function storeWindowHandle(event) {
+  let win = null;
+  try { win = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null; } catch (_) { win = null; }
+  return storeBridge.windowHandle(win || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]);
+}
+
+async function storeResultWithLicense(r, extra = {}) {
+  const out = { ...r, ...extra };
+  if (r.status === 'active') {
+    await logAudit('billing.store_purchase', { detail: { tier: r.tier || null, verified: Boolean(r.verified), plan: extra.planId || null } });
+    out.license = await getLicense();
+  }
+  return out;
+}
+
+async function storePurchase(payload, event) {
+  await requirePurchaser('purchase a subscription');
+  if (!tenantConfig().enabled || !storeBridge.isStoreInstall()) throw new Error('Microsoft Store purchases are only in the Microsoft Store version of the app.');
+  const input = requireObject(payload || {});
+  const plan = await findTenantPlanOrThrow(input.planId);
+  const r = await getStoreCommerce().purchase(plan.id, storeWindowHandle(event));
+  return storeResultWithLicense(r, { planId: plan.id, planName: plan.name });
+}
+
+// Restore purchases: re-read this PC's Store licences and report them. move: true takes a subscription
+// over from another computer (the server allows a few moves a month).
+async function storeRestore(payload) {
+  await requirePurchaser('restore purchases');
+  if (!tenantConfig().enabled || !storeBridge.isStoreInstall()) throw new Error('Microsoft Store purchases are only in the Microsoft Store version of the app.');
+  const input = (payload && typeof payload === 'object') ? payload : {};
+  return storeResultWithLicense(await getStoreCommerce().restore({ move: input.move === true }));
 }
 
 // ---- Manual payments (Wise / bank transfer / custom) ----
@@ -13812,6 +13884,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.BILLING_PLAN_DELETE, deleteBillingPlan);
   registerHandler(CHANNELS.BILLING_ASSIGN, assignPlan);
   registerHandler(CHANNELS.BILLING_SUBSCRIBERS, listSubscribers);
+  registerHandler(CHANNELS.STORE_STATUS, storeStatus);
+  registerHandler(CHANNELS.STORE_PURCHASE, storePurchase);
+  registerHandler(CHANNELS.STORE_RESTORE, storeRestore);
   registerHandler(CHANNELS.INVOICE_LIST, listInvoices);
   registerHandler(CHANNELS.INVOICE_CREATE, createInvoice);
   registerHandler(CHANNELS.INVOICE_UPDATE, updateInvoice);

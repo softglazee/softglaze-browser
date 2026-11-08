@@ -36,3 +36,5 @@ sunbrowser/
 
 # web-ext sign upload id (per-build artifact)
 src/firefox-extension/.amo-upload-uuid
+dist_store_native/
+native/store-addon/build/

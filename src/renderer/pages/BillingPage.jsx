@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CreditCard, ShieldCheck, Loader2, Check, ExternalLink, KeyRound, Wallet,
   AlertTriangle, Sparkles, Users, Crown, ArrowUpRight, Settings2, X, Landmark,
-  FileText, Plus, Pencil, Trash2, Package, UserPlus, Power, Star, Gift
+  FileText, Plus, Pencil, Trash2, Package, UserPlus, Power, Star, Gift, Store, RotateCcw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import billingEn from '@/i18n/locales/en/billing.json';
 import { errorText } from '@/lib/signupFlow.mjs';
+import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
 
 // The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
 // show in the UI language through billing.planText, matched on the exact English text; anything the
@@ -59,25 +60,35 @@ export default function BillingPage() {
   const [manualRef, setManualRef] = useState('');
   const [manualNote, setManualNote] = useState('');
   const [manualDone, setManualDone] = useState(false);
+  const [storeInfo, setStoreInfo] = useState(null); // Microsoft Store build: { available, plans: { <planId>: { price } } }
+  const [storeMove, setStoreMove] = useState(false); // the Store subscription is in use on another PC
+  const [storeWaiting, setStoreWaiting] = useState(false);
+  const [storeNote, setStoreNote] = useState(null); // { text, tone }: a restore result, shown in the Store card
   const pollRef = useRef(null);
+  const storePollRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
-      const [cur, lic, plans, seatUsage, methodList, backendInfo] = await Promise.all([
+      const [cur, lic, plans, seatUsage, methodList, backendInfo, store] = await Promise.all([
         softglazeApi.members.current().catch(() => null),
         softglazeApi.license.get().catch(() => null),
         softglazeApi.billing.getPlans().catch(() => null),
         softglazeApi.team.seatUsage().catch(() => null),
         softglazeApi.payments.listMethods().catch(() => ({ methods: [] })),
-        softglazeApi.license.backendInfo().catch(() => null)
+        softglazeApi.license.backendInfo().catch(() => null),
+        softglazeApi.store.status().catch(() => null)
       ]);
       setMe(cur); setLicense(lic); setPlansInfo(plans); setSeats(seatUsage); setBackend(backendInfo);
+      setStoreInfo(store && store.available ? store : null);
       setMethods(methodList && Array.isArray(methodList.methods) ? methodList.methods : []);
     } catch (e) { /* ignore - best-effort */ }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+  useEffect(() => () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (storePollRef.current) clearInterval(storePollRef.current);
+  }, []);
   useEffect(() => {
     if (!payFor) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); setPayFor(null); } };
@@ -117,6 +128,7 @@ export default function BillingPage() {
       return;
     }
     if (methods.length === 1 && autos.length === 1) { payAutomated(plan, autos[0]); return; }
+    if (methods.length === 1 && isStoreMethod(methods[0])) { payStore(plan); return; }
     setSelMethod(methods[0] ? methods[0].id : null);
     setPayFor(plan);
   }
@@ -145,6 +157,57 @@ export default function BillingPage() {
     finally { setBusy(''); }
   }
 
+  // Microsoft Store (Store build): Microsoft's own purchase dialog, then the licensing server confirms it.
+  function stopStorePoll() {
+    if (storePollRef.current) { clearInterval(storePollRef.current); storePollRef.current = null; }
+    setStoreWaiting(false);
+  }
+
+  // A purchase answers next to the plans (the page message); a restore answers in the Store card.
+  function showStoreOutcome(r, inCard = false) {
+    const o = storeOutcome(r);
+    const text = t(o.key, o.params || {});
+    if (inCard) setStoreNote({ text, tone: o.tone });
+    else if (o.tone === 'error') { setErr(text); setMsg(''); } else { setMsg(text); setErr(''); }
+    setStoreMove(Boolean(o.canMove));
+    if (o.done) { stopStorePoll(); setPayFor(null); load(); }
+    return o;
+  }
+
+  function pollStore() {
+    stopStorePoll();
+    setStoreWaiting(true);
+    let tries = 0;
+    storePollRef.current = setInterval(async () => {
+      tries += 1;
+      try {
+        const r = await softglazeApi.store.restore({});
+        if (r && r.status === 'active') { showStoreOutcome(r); return; }
+      } catch (e) { /* keep trying */ }
+      if (tries >= STORE_POLL.maxTries) { stopStorePoll(); setMsg(t('store.result.pendingLong')); }
+    }, STORE_POLL.everyMs);
+  }
+
+  async function payStore(plan) {
+    setErr(''); setMsg(''); setStoreNote(null); setStoreMove(false); setBusy(`${plan.id}:store`);
+    try {
+      const r = await softglazeApi.store.purchase({ planId: plan.id });
+      setPayFor(null);
+      const o = showStoreOutcome(r);
+      if (o.poll) pollStore();
+    } catch (e) { setErr(e.message || t('store.result.unavailable')); }
+    finally { setBusy(''); }
+  }
+
+  async function restoreStore(move) {
+    setErr(''); setMsg(''); setStoreNote(null); setBusy('store-restore');
+    try {
+      const o = showStoreOutcome(await softglazeApi.store.restore({ move: move === true }), true);
+      if (o.poll) pollStore();
+    } catch (e) { setStoreNote({ text: e.message || t('store.result.unavailable'), tone: 'error' }); }
+    finally { setBusy(''); }
+  }
+
   async function submitManual(plan, method) {
     setErr(''); setMsg(''); setBusy(`${plan.id}:${method.id}`);
     try {
@@ -166,6 +229,7 @@ export default function BillingPage() {
   const currentTier = plansInfo?.currentTier || license?.tier || 'pro';
   const isPaid = Boolean(license?.isPaid);
   const plans = (plansInfo && Array.isArray(plansInfo.plans)) ? plansInfo.plans : [];
+  const storeOnly = methods.length > 0 && methods.every(isStoreMethod);
 
   function planCta(plan) {
     if (plan.kind === 'trial') {
@@ -179,6 +243,7 @@ export default function BillingPage() {
     if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown };
     if (isPaid && plan.tier === currentTier) return { label: t('cta.currentPlan'), disabled: true, icon: Check };
     if (plan.tier === 'enterprise' && currentTier === 'pro') return { label: t('cta.upgradeEnterprise'), disabled: false, icon: ArrowUpRight };
+    if (storeDowngradeBlocked({ storeOnly, isPaid, currentTier, planTier: plan.tier })) return { label: t('cta.downgradePro'), disabled: true, icon: Wallet, note: t('store.downgradeNote') };
     if (plan.tier === 'pro' && currentTier === 'enterprise' && isPaid) return { label: t('cta.downgradePro'), disabled: false, icon: Wallet };
     return { label: t('cta.choosePlan', { name: plan.name }), disabled: false, icon: Wallet };
   }
@@ -266,6 +331,32 @@ export default function BillingPage() {
         </div>
       )}
 
+      {storeInfo && !isExempt && (
+        <div className="rounded-xl bg-card border border-border p-5">
+          <div className="flex items-start gap-3">
+            <span className="w-9 h-9 rounded-lg grid place-items-center shrink-0 bg-secondary"><Store className="w-4.5 h-4.5 text-foreground" /></span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-foreground">{t('store.cardTitle')}</h3>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{t('store.processedBy')}</p>
+              <p className="text-[12px] text-muted-foreground mt-1">{t('store.upgradeNote')}</p>
+              {storeWaiting && <p className="text-[12px] text-foreground mt-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> {t('store.result.pending')}</p>}
+              {storeNote && <p role="status" className={`text-[12px] mt-2 ${storeNote.tone === 'error' ? 'text-red-400' : storeNote.tone === 'success' ? 'text-emerald-400' : 'text-foreground'}`}>{storeNote.text}</p>}
+              <div className="flex items-center gap-2 flex-wrap mt-3">
+                <button onClick={() => restoreStore(false)} disabled={busy === 'store-restore'} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5 disabled:opacity-60">
+                  {busy === 'store-restore' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} {t('store.restore')}
+                </button>
+                {storeMove && (
+                  <button onClick={() => restoreStore(true)} disabled={busy === 'store-restore'} className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-white bg-primary hover:bg-primary-hover inline-flex items-center gap-1.5 disabled:opacity-60">
+                    <ArrowUpRight className="w-4 h-4" /> {t('store.moveHere')}
+                  </button>
+                )}
+                <a href={MANAGE_SUBSCRIPTIONS_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary hover:text-primary-hover"><ExternalLink className="w-3.5 h-3.5" /> {t('store.manage')}</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isExempt && plans.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t('plans.chooseHeading')}</h2>
@@ -274,6 +365,7 @@ export default function BillingPage() {
               const cta = planCta(plan);
               const isCurrent = isPaid && plan.tier === currentTier;
               const CtaIcon = cta.icon;
+              const storeText = plan.kind === 'trial' ? null : storePrice(storeInfo, plan.id);
               return (
                 <div
                   key={plan.id}
@@ -293,9 +385,10 @@ export default function BillingPage() {
                     {isCurrent && <span className="text-[10.5px] font-semibold text-primary inline-flex items-center gap-1"><Check className="w-3 h-3" /> {t('plans.current')}</span>}
                   </div>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-[26px] font-display font-semibold text-foreground">{money(plan.amount, plan.currency)}</span>
+                    <span className="text-[26px] font-display font-semibold text-foreground">{storeText || money(plan.amount, plan.currency)}</span>
                     <span className="text-[12px] text-muted-foreground">/ {plan.period}</span>
                   </div>
+                  {storeText && <p className="text-[11px] text-muted-foreground">{t('store.priceFrom')}</p>}
                   <p className="mt-1 text-[12px] text-muted-foreground">{planText(t, plan.tagline)}</p>
 
                   <ul className="mt-4 space-y-1.5 flex-1">
@@ -318,8 +411,9 @@ export default function BillingPage() {
                           : 'text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25'
                     }`}
                   >
-                    {cta.trial && busy === 'trial' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CtaIcon className="w-4 h-4" />} {cta.label}
+                    {(cta.trial && busy === 'trial') || busy === `${plan.id}:store` ? <Loader2 className="w-4 h-4 animate-spin" /> : <CtaIcon className="w-4 h-4" />} {cta.label}
                   </button>
+                  {cta.note && <p className="mt-2 text-[11px] text-muted-foreground">{cta.note}</p>}
                 </div>
               );
             })}
@@ -356,7 +450,7 @@ export default function BillingPage() {
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">{t('payModal.title', { name: payFor.name })}</h3>
-                  <p className="text-[12px] text-muted-foreground">{money(payFor.amount, payFor.currency)} / {payFor.period}</p>
+                  <p className="text-[12px] text-muted-foreground">{(sel && isStoreMethod(sel) && storePrice(storeInfo, payFor.id)) || money(payFor.amount, payFor.currency)} / {payFor.period}</p>
                 </div>
                 <button onClick={() => setPayFor(null)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
               </div>
@@ -370,7 +464,7 @@ export default function BillingPage() {
                   <div className="space-y-1.5">
                     {methods.map((m) => {
                       const active = m.id === selMethod;
-                      const Icon = m.kind === 'manual' ? Landmark : (m.id === 'cryptomus' ? Wallet : CreditCard);
+                      const Icon = m.kind === 'manual' ? Landmark : (isStoreMethod(m) ? Store : (m.id === 'cryptomus' ? Wallet : CreditCard));
                       return (
                         <button
                           key={m.id}
@@ -396,6 +490,17 @@ export default function BillingPage() {
                       className="mt-4 w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25 disabled:opacity-60"
                     >
                       {busy === `${payFor.id}:${sel.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} {t('payModal.continueTo', { method: sel.label })}
+                    </button>
+                  )}
+
+                  {sel && isStoreMethod(sel) && (
+                    <button
+                      onClick={() => payStore(payFor)}
+                      disabled={busy === `${payFor.id}:store`}
+                      className="mt-4 w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25 disabled:opacity-60"
+                    >
+                      {busy === `${payFor.id}:store` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Store className="w-4 h-4" />}
+                      {storePrice(storeInfo, payFor.id) ? t('store.buyWithPrice', { price: storePrice(storeInfo, payFor.id) }) : t('store.buyWith')}
                     </button>
                   )}
 

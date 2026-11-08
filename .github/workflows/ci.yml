@@ -65,3 +65,19 @@ jobs:
         # Unsigned smoke build: winCodeSign fails to extract on a fresh Windows runner.
         # Signed builds run locally with npm run build:electron.
         run: npx electron-builder --dir --publish never --config.win.signAndEditExecutable=false
+
+  store-native:
+    name: Build Microsoft Store addon (Windows)
+    # The Store build's Windows.Services.Store bridge (native/store-addon, C++/WinRT + Node-API).
+    # windows-2022 has Visual Studio 2022 with the C++ tools and Windows SDKs node-gyp knows.
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build the addon and load it outside a package
+        # The version of Electron's headers comes from package.json; no npm install is needed.
+        run: node scripts/build-store-native.js --check
