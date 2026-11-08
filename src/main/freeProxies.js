@@ -1,9 +1,11 @@
 'use strict';
 // Free proxies are run by strangers, often dead or blocklisted, so each candidate is tested live and
-// HTTP ones must also pass an anonymity check: one that forwards the real IP or Via/X-Forwarded-For
-// style headers is transparent and rejected. Network calls are injected (deps) for testing.
+// HTTP ones must also pass an anonymity check: one that forwards the real IP (in a header or in the
+// judge's `origin`) or Via/X-Forwarded-For style headers is transparent and rejected. IP addresses are
+// matched whole, never as substrings. Network calls are injected (deps) for testing.
 
 const crypto = require('node:crypto');
+const net = require('node:net');
 
 // The pool stores HTTP and SOCKS5 (Prisma enum ProxyType). SOCKS4 also resolves DNS on
 // the PC, which leaks it, so it is not offered.
@@ -143,12 +145,80 @@ async function collectCandidates({ protocol, country, exclude = new Set() }, dep
   return { candidates: merged, sources: results.map(({ list, ...rest }) => ({ ...rest, count: list.length })) };
 }
 
+// One IP address in a single written form, so the same address always compares equal: IPv4 as a
+// dotted quad, IPv6 lowercase and compressed, and an IPv4-mapped IPv6 address (::ffff:1.2.3.4) as
+// its IPv4. Brackets and a zone (%eth0) are dropped. Anything that is not one whole address: null.
+function canonicalIp(value) {
+  let s = String(value == null ? '' : value).trim();
+  if (s.startsWith('[') && s.endsWith(']')) s = s.slice(1, -1);
+  const zone = s.indexOf('%');
+  if (zone >= 0) s = s.slice(0, zone);
+  if (net.isIPv4(s)) return s;
+  if (!net.isIPv6(s)) return null;
+  let host;
+  try { host = new URL(`http://[${s}]/`).hostname.slice(1, -1); } catch (e) { return null; }
+  const mapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(host);
+  if (mapped) {
+    const hi = parseInt(mapped[1], 16);
+    const lo = parseInt(mapped[2], 16);
+    return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+  }
+  return host;
+}
+
+// Every whole IP address written in a header value, in canonical form: "1.2.3.4", a list such as
+// X-Forwarded-For "1.2.3.4, 5.6.7.8", Forwarded 'for=1.2.3.4' or 'for="[2001:db8::1]:4711"',
+// "1.2.3.4:8080", or an address inside text. An address must stand on its own: "11.2.3.45" and
+// "host1.2.3.4.example" do not contain 1.2.3.4.
+const IPV4_IN_TEXT = /(?<![0-9A-Za-z_.])\d{1,3}(?:\.\d{1,3}){3}(?![0-9A-Za-z_]|\.[0-9A-Za-z_])/g;
+const IPV6_IN_TEXT = /[0-9A-Fa-f:.]*:[0-9A-Fa-f:.]*:[0-9A-Fa-f:.]*/g; // a run with at least two colons
+function ipsIn(value) {
+  const s = String(value == null ? '' : value);
+  const out = new Set();
+  for (const m of s.matchAll(IPV4_IN_TEXT)) { const ip = canonicalIp(m[0]); if (ip) out.add(ip); }
+  for (const m of s.matchAll(IPV6_IN_TEXT)) {
+    const ip = canonicalIp(m[0]) || canonicalIp(m[0].replace(/\.+$/, '')); // "...::1." at a sentence end
+    if (ip) out.add(ip);
+  }
+  return out;
+}
+
+// Is this exact address written in the value? Whole addresses only, never a substring match.
+function containsIp(value, ip) {
+  const want = canonicalIp(ip);
+  return Boolean(want) && ipsIn(value).has(want);
+}
+
+function sameIp(a, b) {
+  const x = canonicalIp(a);
+  return Boolean(x) && x === canonicalIp(b);
+}
+
+// Headers that only a proxy adds. Their presence alone marks the proxy as transparent.
+const PROXY_HEADERS = ['via', 'x-forwarded-for', 'forwarded', 'x-real-ip', 'x-proxy-id', 'proxy-connection'];
+
 // Does an echoed header set reveal the user? `headers` is the judge's echo (case-insensitive).
 function revealsClient(headers, realIp) {
   const h = {};
   for (const [k, v] of Object.entries(headers || {})) h[String(k).toLowerCase()] = String(v);
-  if (realIp && Object.values(h).some((v) => v.includes(realIp))) return true;
-  return ['via', 'x-forwarded-for', 'forwarded', 'x-real-ip', 'x-proxy-id', 'proxy-connection'].some((k) => k in h);
+  if (realIp && Object.values(h).some((v) => containsIp(v, realIp))) return true;
+  return PROXY_HEADERS.some((k) => k in h);
+}
+
+// The judge's echo of one plain-HTTP request through the proxy: { headers, origin }. httpbin.org
+// (postmanlabs/httpbin, helpers.py) removes X-Forwarded-For, Via, X-Real-Ip and its other ENV_HEADERS
+// from `headers`, and reports the request's X-Forwarded-For chain in `origin` instead
+// ("1.2.3.4, 5.6.7.8"; the last entry is the address that reached httpbin). So a proxy that passes
+// the user's real IP on shows it in `origin`, not in `headers`. Without `origin` nothing is proven.
+function isJudgeEcho(echo) {
+  return Boolean(echo) && typeof echo === 'object'
+    && Boolean(echo.headers) && typeof echo.headers === 'object'
+    && typeof echo.origin === 'string' && echo.origin.trim() !== '';
+}
+
+function echoRevealsClient(echo, realIp) {
+  if (revealsClient(echo && echo.headers, realIp)) return true;
+  return Boolean(realIp) && containsIp(echo && echo.origin, realIp);
 }
 
 // A hard deadline for one network step. A dead proxy often never answers the TCP
@@ -163,23 +233,24 @@ function withTimeout(promise, ms) {
 }
 
 // Test one candidate. deps.checkExit(c) -> { ip, country, latencyMs } (throws if dead);
-// deps.judgeHeaders(c) -> echoed request headers for a plain-HTTP request via the proxy.
+// deps.judgeEcho(c) -> { headers, origin } echoed for a plain-HTTP request via the proxy (isJudgeEcho).
 async function checkCandidate(c, realIp, deps, stepMs = 10000) {
   let exit;
   try { exit = await withTimeout(Promise.resolve().then(() => deps.checkExit(c)), stepMs); } catch (e) { return { ok: false, reason: 'dead' }; }
   if (!exit || !exit.ip) return { ok: false, reason: 'dead' };
-  if (realIp && exit.ip === realIp) return { ok: false, reason: 'transparent' };
+  if (realIp && sameIp(exit.ip, realIp)) return { ok: false, reason: 'transparent' };
   if (c.type === 'http') {
-    let headers;
-    try { headers = await withTimeout(Promise.resolve().then(() => deps.judgeHeaders(c)), stepMs); } catch (e) { return { ok: false, reason: 'judge-failed' }; }
-    if (revealsClient(headers, realIp)) return { ok: false, reason: 'transparent' };
+    let echo;
+    try { echo = await withTimeout(Promise.resolve().then(() => deps.judgeEcho(c)), stepMs); } catch (e) { return { ok: false, reason: 'judge-failed' }; }
+    if (!isJudgeEcho(echo)) return { ok: false, reason: 'judge-failed' };
+    if (echoRevealsClient(echo, realIp)) return { ok: false, reason: 'transparent' };
   }
   return { ok: true, ip: exit.ip, country: exit.country ? String(exit.country).toUpperCase() : (c.country || null), latencyMs: exit.latencyMs || null };
 }
 
 // Find up to `limit` working, anonymous proxies.
 // opts: { protocol, country, limit, concurrency, timeBudgetMs, exclude, signal, onProgress }
-// deps: { fetchText, checkExit, judgeHeaders, getRealIp, now }
+// deps: { fetchText, checkExit, judgeEcho, getRealIp, now }
 async function harvestFreeProxies(opts, deps) {
   const limit = Math.max(1, Math.min(100, Number(opts.limit) || 10));
   const concurrency = Math.max(1, Math.min(64, Number(opts.concurrency) || 48));
@@ -190,7 +261,7 @@ async function harvestFreeProxies(opts, deps) {
   const aborted = () => Boolean(opts.signal && opts.signal.aborted);
 
   let realIp = null;
-  try { realIp = await deps.getRealIp(); } catch (e) { realIp = null; }
+  try { realIp = canonicalIp(await deps.getRealIp()); } catch (e) { realIp = null; }
   if (!realIp) {
     // Without the user's own IP the anonymity check cannot prove anything: refuse
     // rather than risk keeping a proxy that leaks it.
@@ -284,6 +355,10 @@ module.exports = {
   isPublicIPv4,
   parseProxyLines,
   parseGeonode,
+  canonicalIp,
+  containsIp,
   revealsClient,
+  isJudgeEcho,
+  echoRevealsClient,
   harvestFreeProxies
 };
