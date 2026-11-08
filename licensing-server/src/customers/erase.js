@@ -4,6 +4,8 @@
 //    customer link, account email and note are removed;
 //  - licences: term, tier, status (an active licence keeps working on its install); email, link
 //    and note removed;
+//  - Microsoft Store entitlements: product, status and dates (an active subscription keeps working);
+//    customer link, email and the sealed Store ID keys are removed (the app sends new keys later);
 //  - the trial ledger row: only hashes (machine, HMAC of the email key, HMAC of the IP), so the
 //    same person cannot take a second trial; the customer link is removed;
 //  - status history events, moved to a random anonymous id so past churn / paying counts stay true.
@@ -22,6 +24,8 @@ async function eraseCustomer(db, tenantId, customerId) {
     await tx.payment.updateMany({ where, data: { customerId: null, account: null, note: null } });
     await tx.license.updateMany({ where, data: { customerId: null, account: null, note: null } });
     await tx.install.updateMany({ where, data: { customerId: null, account: null } });
+    await tx.storeEntitlement.updateMany({ where, data: { customerId: null, account: null, collectionsKeySealed: null, purchaseKeySealed: null, keysIssuedAt: null } });
+    await tx.storeEntitlement.updateMany({ where: { tenantId, account: { in: [c.email, c.emailKey] } }, data: { account: null } });
     // Rows that carry the address without being linked (claimed at register or checkout).
     for (const model of ['install', 'license', 'payment']) {
       await tx[model].updateMany({ where: { tenantId, account: { in: [c.email, c.emailKey] } }, data: { account: null } });

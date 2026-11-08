@@ -28,7 +28,8 @@ const UNIQUE = {
   planPriceHistory: [],
   segment: [['tenantId', 'name']],
   metricSnapshot: [['tenantId', 'day']],
-  jobLock: []
+  jobLock: [],
+  storeEntitlement: [['tenantId', 'installId', 'productId']]
 };
 const ID_FIELD = { jobLock: 'name' };
 
@@ -56,11 +57,17 @@ const DEFAULTS = {
   jobLock: () => ({ lockedUntil: null, holder: null, lastStartedAt: null, lastFinishedAt: null, lastResult: null }),
   webhookEvent: () => ({ receivedAt: new Date(), processedAt: null }),
   licenseCode: () => ({ tier: 'pro', months: 1, redeemedAt: null, redeemedBy: null }),
-  tenantPaymentConfig: () => ({ enabled: false })
+  tenantPaymentConfig: () => ({ enabled: false }),
+  storeEntitlement: () => ({
+    customerId: null, licenseId: null, account: null, planKey: null, tier: 'pro', status: 'active', verified: false, verifyNote: null,
+    expiresAt: null, accessUntil: null, autoRenew: null, recurrenceId: null, recurrenceState: null, storeId: null, skuStoreId: null,
+    subscriptionKey: null, priceFormatted: null, currency: null, collectionsKeySealed: null, purchaseKeySealed: null, keysIssuedAt: null,
+    movedAt: null, firstClaimAt: new Date(), lastClaimAt: null, lastCheckedAt: null, lastCheckError: null
+  })
 };
-const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig']);
+const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement']);
 const HAS_CREATED_AT = new Set(['tenant', 'plan', 'install', 'license', 'payment', 'licenseCode', 'customer', 'customerEvent', 'emailVerification',
-  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot']);
+  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement']);
 
 const isObj = (v) => v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v);
 const val = (v) => (v instanceof Date ? v.getTime() : v);

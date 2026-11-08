@@ -12,6 +12,7 @@ const { authenticateInstall } = require('../installAuth');
 const { checkMachine, transferMachine } = require('../machineBinding');
 const { trialLeaseFor } = require('../trials/ledger');
 const { touchInstall } = require('../customers/sync');
+const { pickLeaseLicence } = require('../licensing');
 
 const router = express.Router();
 
@@ -31,7 +32,9 @@ router.post('/', asyncHandler(async (req, res) => {
 
   const now = Date.now();
   await touchInstall(prisma, install, appVersion, now).catch(() => {});
-  const lic = await prisma.license.findFirst({ where: { tenantId: tenant.id, installId: install.id }, orderBy: { updatedAt: 'desc' } });
+  // An install can hold more than one licence (an invoice licence and a Microsoft Store subscription,
+  // or Pro then Enterprise in the Store): the active one with the best tier wins.
+  const lic = pickLeaseLicence(await prisma.license.findMany({ where: { tenantId: tenant.id, installId: install.id } }), now);
 
   const active = lic && lic.status === 'active' && lic.currentPeriodEnd && new Date(lic.currentPeriodEnd).getTime() > now;
   if (!active) {

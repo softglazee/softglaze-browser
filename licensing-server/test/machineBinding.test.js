@@ -25,6 +25,7 @@ function fakeDb() {
       return tables[name].find((r) => matches(r, where[key])) || null;
     },
     findFirst: async ({ where }) => tables[name].filter((r) => matches(r, where)).slice(-1)[0] || null,
+    findMany: async ({ where }) => tables[name].filter((r) => matches(r, where)).map((r) => ({ ...r })),
     create: async ({ data }) => { const row = { id: `${name}_${++n}`, ...data }; tables[name].push(row); return { ...row }; },
     update: async ({ where, data }) => { const row = tables[name].find((r) => r.id === where.id); Object.assign(row, data); return { ...row }; },
     updateMany: async ({ where, data }) => {
@@ -192,6 +193,7 @@ test('transfers are limited to 2 per licence per 30 days', async () => {
 test('the license route checks the machine before looking up the licence', () => {
   const src = require('node:fs').readFileSync(require.resolve('../src/routes/license'), 'utf8');
   const route = src.slice(src.indexOf("router.post('/'"), src.indexOf("router.post('/transfer'"));
-  assert.ok(route.indexOf('checkMachine(') > 0 && route.indexOf('checkMachine(') < route.indexOf('prisma.license.findFirst'));
+  const lookup = route.indexOf('prisma.license.find');
+  assert.ok(lookup > 0 && route.indexOf('checkMachine(') > 0 && route.indexOf('checkMachine(') < lookup);
   assert.match(route, /issueLease\(tenant, lic, now, \{ mid: install\.machineHash \}\)/);
 });

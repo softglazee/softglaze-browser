@@ -18,7 +18,8 @@ router.use(tenantApiAuth);
 
 // POST /v1/tenant/payment-config { provider, enabled, ...fields }: seals the credentials and returns
 // the webhook URL. Fields per provider are in configFields.js (stripe: secretKey, webhookSecret;
-// paypal: clientId, clientSecret, webhookId, env?; cryptomus: merchantId, apiKey).
+// paypal: clientId, clientSecret, webhookId, env?; cryptomus: merchantId, apiKey; microsoft_store:
+// entraTenantId, clientId, clientSecret = the Entra ID app for the Microsoft Store APIs, no webhook).
 router.post('/payment-config', asyncHandler(async (req, res) => {
   const b = req.body || {};
   const provider = String(b.provider || '').toLowerCase();
@@ -30,6 +31,8 @@ router.post('/payment-config', asyncHandler(async (req, res) => {
     update: { enabled: Boolean(b.enabled), secretsSealed },
     create: { tenantId: req.tenant.id, provider, enabled: Boolean(b.enabled), secretsSealed }
   });
+  // microsoft_store holds API credentials, not a gateway: nothing calls a webhook for it.
+  if (provider === 'microsoft_store') return res.json({ ok: true, provider });
   res.json({ ok: true, provider, webhookUrl: `${publicBaseUrl}/v1/webhooks/${provider}/${req.tenant.id}` });
 }));
 

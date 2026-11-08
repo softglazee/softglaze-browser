@@ -47,7 +47,9 @@ test('the migrations cover every new model and the lock file is MySQL', () => {
   assert.match(sql, /UNIQUE INDEX `Trial_tenantId_emailLock_key`/);
   assert.match(sql, /UNIQUE INDEX `Customer_tenantId_emailKey_key`/);
   const dirs = fs.readdirSync(MIG).filter((d) => fs.statSync(path.join(MIG, d)).isDirectory()).sort();
-  assert.deepEqual(dirs.slice(-2), [DDL, DATA], 'applied in this order, after the existing ones');
+  const at = dirs.indexOf(DDL);
+  assert.deepEqual(dirs.slice(at, at + 2), [DDL, DATA], 'applied in this order');
+  assert.ok(dirs.slice(0, at).every((d) => d < '20261107'), 'after every older migration');
 });
 
 test('the data migration is the generator output, guarded, and seeds the built-in copy word for word', () => {
@@ -77,4 +79,15 @@ test('the built-in copy has no em or en dashes and no hype words', () => {
     assert.ok(!/[–—]/.test(all), `${r.key}/${r.lang}: no em/en dash`);
     assert.ok(!/\b(amazing|revolutionary|game.?changer|unlock|supercharge|best-in-class|cutting.?edge)\b/i.test(all), `${r.key}/${r.lang}: plain words`);
   }
+});
+
+// November 2026, Microsoft Store subscriptions: one new table, nothing else.
+test('the Store entitlements migration only creates its own table', () => {
+  const sql = read('20261108130000_store_entitlements');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b/i.test(sql));
+  assert.match(sql, /CREATE TABLE `StoreEntitlement`/);
+  assert.match(sql, /UNIQUE INDEX `StoreEntitlement_tenantId_installId_productId_key`/);
+  const altered = [...sql.matchAll(/ALTER TABLE `(\w+)`/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(altered)], ['StoreEntitlement'], 'only the new table gets its foreign key');
+  for (const t of EXISTING) assert.ok(!new RegExp('CREATE TABLE `' + t + '`').test(sql), `${t} is not re-created`);
 });

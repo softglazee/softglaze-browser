@@ -31,7 +31,15 @@ test('stripe requires secretKey and webhookSecret; unknown providers are refused
   assert.deepEqual(buildProviderSecrets('stripe', { secretKey: 'sk', webhookSecret: 'wh' }).secrets, { secretKey: 'sk', webhookSecret: 'wh' });
   assert.match(buildProviderSecrets('stripe', { secretKey: 'sk' }).error, /webhookSecret/);
   assert.equal(buildProviderSecrets('square', {}).error, 'Unknown provider.');
-  assert.deepEqual(Object.keys(PROVIDER_FIELDS).sort(), ['cryptomus', 'paypal', 'stripe']);
+  assert.deepEqual(Object.keys(PROVIDER_FIELDS).sort(), ['cryptomus', 'microsoft_store', 'paypal', 'stripe']);
+});
+
+test('microsoft_store holds the Entra ID app (two GUIDs and a secret), never a half-filled set', () => {
+  const ok = { entraTenantId: '11111111-2222-3333-4444-555555555555', clientId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', clientSecret: 's3cret' };
+  assert.deepEqual(buildProviderSecrets('microsoft_store', { ...ok, extra: 'x' }).secrets, ok);
+  assert.match(buildProviderSecrets('microsoft_store', { ...ok, clientSecret: '' }).error, /clientSecret/);
+  assert.match(buildProviderSecrets('microsoft_store', { ...ok, entraTenantId: 'contoso.onmicrosoft.com' }).error, /Directory \(tenant\) ID/);
+  assert.match(buildProviderSecrets('microsoft_store', { ...ok, clientId: 'not-a-guid' }).error, /Application \(client\) ID/);
 });
 
 test('the payment-config route seals the validated per-provider secrets', () => {

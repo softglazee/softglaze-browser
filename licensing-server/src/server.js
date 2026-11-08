@@ -34,6 +34,7 @@ app.use('/v1/redeem', publicLimiter, require('./routes/redeem'));
 app.use('/v1/account', verifyLimiter, require('./routes/account'));
 app.use('/v1/trial', verifyLimiter, require('./routes/trial'));
 app.use('/v1/plans', publicLimiter, require('./routes/plansPublic'));
+app.use('/v1/store', publicLimiter, require('./routes/store'));
 app.use('/v1/email', publicLimiter, require('./routes/emailPublic'));
 app.use('/v1/tenant', require('./routes/tenantAdmin'));
 
