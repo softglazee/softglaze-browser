@@ -14,7 +14,7 @@
   "step1": {
     "title": "Download Template",
     "description": "To ensure smooth parsing, please use our standardized Excel or CSV template. Fill in your profile names, proxies, and fingerprint rules.",
-    "downloadButton": "Download .XLSX Template"
+    "downloadButton": "Download .CSV Template"
   },
   "step2": {
     "title": "Upload & Preview",

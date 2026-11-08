@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card.j
 import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
+import { templateCsv } from '@/lib/profileImportTemplate.mjs';
 
 // OS choices for the shared Quick Generate modal (expects [{ id }]).
 const QUICK_OS_PLATFORMS = [{ id: 'Windows' }, { id: 'macOS' }, { id: 'Linux' }, { id: 'Android' }, { id: 'iOS' }];
@@ -109,46 +110,8 @@ export default function BatchImportPage() {
   };
 
   const handleDownloadTemplate = () => {
-    // Same columns as the exporter, so a template and an export are interchangeable.
-    const headers = [
-      'Profile Title', 'Group Name', 'Notes', 'Data Dir Name',
-      'Operating System', 'Browser Core', 'User-Agent', 'Screen Resolution',
-      'Proxy Method', 'Proxy Protocol', 'Proxy Info', 'Proxy Host', 'Proxy Port', 'Proxy Username', 'Proxy Password', 'Proxy Rotation URL',
-      'WebRTC', 'Canvas', 'WebGL', 'WebGL Vendor', 'WebGL Renderer', 'AudioContext', 'CPU Cores', 'Memory (GB)', 'Do Not Track',
-      'Timezone Mode', 'Timezone', 'Locale Mode', 'Locale', 'Geolocation Mode', 'Latitude', 'Longitude',
-      'Account Username', 'Account Password', '2FA Key', 'Cookie', 'Open The Specified URL'
-    ];
-    const rowObjs = [
-      {
-        'Profile Title': 'LeadGen_01', 'Group Name': 'Lead Gen', 'Notes': 'Batch 1',
-        'Operating System': 'Windows', 'Browser Core': 'Chrome', 'Screen Resolution': '1920x1080',
-        'Proxy Method': 'Custom', 'Proxy Protocol': 'HTTP', 'Proxy Info': 'proxy.example.com:3100:proxy-user:secret1',
-        'WebRTC': 'Forward', 'Canvas': 'Noise', 'WebGL': 'Noise', 'WebGL Vendor': 'Google Inc. (NVIDIA)',
-        'WebGL Renderer': 'ANGLE (NVIDIA GeForce RTX 4060)', 'AudioContext': 'Noise', 'CPU Cores': '8', 'Memory (GB)': '16',
-        'Do Not Track': '0', 'Timezone Mode': 'Auto', 'Locale Mode': 'Auto', 'Geolocation Mode': 'Prompt',
-        'Account Username': 'user01', 'Account Password': 'pass01', 'Open The Specified URL': 'https://example.com'
-      },
-      {
-        'Profile Title': 'LeadGen_02', 'Group Name': 'Lead Gen',
-        'Operating System': 'macOS', 'Browser Core': 'Firefox', 'Screen Resolution': '1440x900',
-        'Proxy Method': 'Custom', 'Proxy Protocol': 'SOCKS5', 'Proxy Info': 'proxy.example.com:3120:proxy-user:secret2',
-        'Proxy Rotation URL': 'https://provider.example/api/rotate?token=abc',
-        'WebRTC': 'Block', 'Canvas': 'Noise', 'WebGL': 'Real', 'AudioContext': 'Real', 'CPU Cores': '4', 'Memory (GB)': '8',
-        'Do Not Track': '1', 'Timezone Mode': 'Manual', 'Timezone': 'Europe/Berlin', 'Locale Mode': 'Manual', 'Locale': 'de-DE,de;q=0.9',
-        'Geolocation Mode': 'Custom', 'Latitude': '52.52', 'Longitude': '13.405',
-        'Account Username': 'user02', 'Account Password': 'pass02', '2FA Key': 'JBSWY3DPEHPK3PXP'
-      },
-      {
-        'Profile Title': 'Testing_03', 'Group Name': 'Testing', 'Notes': 'No proxy (direct)',
-        'Operating System': 'Windows', 'Browser Core': 'Chrome', 'Proxy Method': 'Direct'
-      }
-    ];
-    const esc = (v) => {
-      const s = String(v ?? '');
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const csv = [headers, ...rowObjs.map((o) => headers.map((h) => o[h] ?? ''))]
-      .map((row) => row.map(esc).join(',')).join('\r\n');
+    // Same columns as the exporter, with sample values the importer reads back (profileImportTemplate.mjs).
+    const csv = templateCsv();
     // Prepend a UTF-8 BOM so Excel opens it with correct encoding.
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

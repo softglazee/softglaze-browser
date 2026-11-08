@@ -14,7 +14,7 @@
   "step1": {
     "title": "Descargar plantilla",
     "description": "Para garantizar un análisis correcto, utiliza nuestra plantilla estandarizada de Excel o CSV. Completa los nombres de tus perfiles, proxies y reglas de huella digital.",
-    "downloadButton": "Descargar plantilla .XLSX"
+    "downloadButton": "Descargar plantilla .CSV"
   },
   "step2": {
     "title": "Subir y previsualizar",
