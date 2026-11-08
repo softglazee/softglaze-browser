@@ -1,6 +1,7 @@
 'use strict';
 // One scheduler pass (scripts/run-cron.js, every 15 minutes from a Hostinger cron job). Per active
-// tenant: reconcile customers with licences / payments / trials, queue due automations, send the
+// tenant: re-check Microsoft Store subscriptions (renewals, cancellations, refunds; at most every 6 hours
+// each), reconcile customers with licences / payments / trials, queue due automations, send the
 // outbox (daily cap), apply retention, write today's metric snapshot. A row in JobLock stops two
 // runs overlapping; a run that died is taken over after its lock expires (20 minutes).
 const os = require('node:os');
@@ -11,6 +12,7 @@ const { scheduleAutomations } = require('./email/automations');
 const { processOutbox } = require('./email/outbox');
 const { applyRetention } = require('./privacy/retention');
 const { writeSnapshot } = require('./metrics/compute');
+const { recheckTenant } = require('./store/entitlements');
 
 const LOCK = 'cron';
 const LOCK_MS = 20 * 60000;
@@ -49,6 +51,8 @@ async function runCron(db, { now = Date.now() } = {}) {
       const settings = await getSettings(db, tenant.id);
       const graceDays = settings.billing.renewalGraceDays;
       const t = {};
+      // Microsoft Store first, so the reconcile below already sees renewed or ended Store licences.
+      t.store = await step(errors, 'store', () => recheckTenant(db, tenant, { now, settings }));
       t.reconcile = await step(errors, 'reconcile', () => reconcileTenant(db, tenant, { now, graceDays }));
       t.automations = await step(errors, 'automations', () => scheduleAutomations(db, tenant, { now, settings }));
       t.outbox = await step(errors, 'outbox', () => processOutbox(db, tenant, { now, settings }));

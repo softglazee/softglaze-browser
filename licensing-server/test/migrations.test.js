@@ -98,3 +98,14 @@ test('the built-in copy has no em or en dashes and no hype words', () => {
     assert.ok(!/\b(amazing|revolutionary|game.?changer|unlock|supercharge|best-in-class|cutting.?edge)\b/i.test(all), `${r.key}/${r.lang}: plain words`);
   }
 });
+
+// November 2026, Microsoft Store subscriptions: one new table, nothing else.
+test('the Store entitlements migration only creates its own table', () => {
+  const sql = read('20261108130000_store_entitlements');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b/i.test(sql));
+  assert.match(sql, /CREATE TABLE `StoreEntitlement`/);
+  assert.match(sql, /UNIQUE INDEX `StoreEntitlement_tenantId_installId_productId_key`/);
+  const altered = [...sql.matchAll(/ALTER TABLE `(\w+)`/g)].map((m) => m[1]);
+  assert.deepEqual([...new Set(altered)], ['StoreEntitlement'], 'only the new table gets its foreign key');
+  for (const t of EXISTING) assert.ok(!new RegExp('CREATE TABLE `' + t + '`').test(sql), `${t} is not re-created`);
+});

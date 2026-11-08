@@ -18,6 +18,7 @@ const { asJson } = require('../util/json');
 const { listInfo } = require('../customers/disposable');
 const transport = require('../email/transport');
 const { forwardedChain, clientIp, trustHops, isPublicIp } = require('../net/clientIp');
+const { storeStatus } = require('../store/entitlements');
 
 const router = express.Router();
 // The key is checked from the headers before any large body is read.
@@ -32,6 +33,7 @@ router.use('/payments', require('./routes/payments'));
 router.use('/plans', require('./routes/plans'));
 router.use('/email', require('./routes/email'));
 router.use('/metrics', require('./routes/metrics'));
+router.use('/store', require('./routes/store'));
 
 // ---- trials ------------------------------------------------------------------------------------
 router.get('/trials', asyncHandler(async (req, res) => {
@@ -196,7 +198,9 @@ router.get('/diagnostics', asyncHandler(async (req, res) => {
     trialsLast30Days: trials.length,
     // If one network holds most trials, the client IP is probably a proxy's: check TRUST_PROXY_HOPS.
     busiestNetworksTrialCounts: busiest,
-    networkLimit: settings.trial.networkLimit
+    networkLimit: settings.trial.networkLimit,
+    // Microsoft Store subscriptions: alerts the owner must see (details: GET /v1/admin/store/status).
+    store: await storeStatus(prisma, req.tenant, { settings }).then((s) => ({ configured: s.configured, alerts: s.alerts, unverifiedActive: s.unverifiedActive, pendingReview: s.pendingReview })).catch(() => null)
   });
 }));
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
   Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, AlertTriangle, Check,
-  Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap
+  Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap, Store, RotateCcw
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -10,6 +10,7 @@ import { getStoredTheme, setTheme } from '@/lib/theme.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 import { errorText, otpExtras, phaseForLicense, trialNeedsCode, trialPayload, paidPlans, defaultPlanId, formatPrice } from '@/lib/signupFlow.mjs';
 import billingEn from '@/i18n/locales/en/billing.json';
+import { isStoreMethod, storeOutcome, storePrice, STORE_POLL } from '@/lib/storePurchase.mjs';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -100,7 +101,7 @@ const PLAN_TEXT_KEY = new Map(Object.entries(billingEn.planText || {}).map(([key
 
 // Tenant plan step: the paid plans with their prices and main features, from the licensing server
 // (or the built-in list when it cannot be reached).
-function PlanPicker({ plans, selected, onSelect }) {
+function PlanPicker({ plans, selected, onSelect, storeInfo = null }) {
   const { t } = useTranslation('gate');
   const { t: tb } = useTranslation('billing');
   const text = (s) => { const k = PLAN_TEXT_KEY.get(s); return k ? tb(`planText.${k}`) : s; };
@@ -125,7 +126,7 @@ function PlanPicker({ plans, selected, onSelect }) {
               {active ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : (p.highlight && <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">{tb('plans.bestValue')}</span>)}
             </span>
             <span className="block mt-1">
-              <span className="font-display text-[18px] font-semibold text-foreground">{formatPrice(p.amount, p.currency)}</span>
+              <span className="font-display text-[18px] font-semibold text-foreground">{storePrice(storeInfo, p.id) || formatPrice(p.amount, p.currency)}</span>
               <span className="text-[11px] text-muted-dark"> / {p.period}</span>
             </span>
             {Array.isArray(p.features) && p.features.length > 0 && (
@@ -300,8 +301,9 @@ function ThemeLangControls() {
 
 // Shows only the methods the admin enabled: automated opens hosted checkout (caller polls),
 // manual submits a reference for admin approval.
-function PayMethods({ methods, busy, onAutomated, onManual }) {
+function PayMethods({ methods, busy, onAutomated, onManual, store = null }) {
   const { t } = useTranslation('gate');
+  const { t: tb } = useTranslation('billing');
   const [sel, setSel] = useState(() => (methods[0] ? methods[0].id : null));
   const [reference, setReference] = useState('');
   const [done, setDone] = useState(false);
@@ -324,7 +326,7 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
       <div className="space-y-1.5">
         {methods.map((m) => {
           const active = m.id === sel;
-          const Icon = m.kind === 'manual' ? Landmark : CreditCard;
+          const Icon = m.kind === 'manual' ? Landmark : (isStoreMethod(m) ? Store : CreditCard);
           return (
             <button
               key={m.id}
@@ -342,6 +344,21 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
           );
         })}
       </div>
+
+      {cur && isStoreMethod(cur) && store && (
+        <div className="space-y-2">
+          <button onClick={() => store.onBuy(cur)} disabled={busy} className="w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Store className="w-4 h-4" />}
+            {store.price ? tb('store.buyWithPrice', { price: store.price }) : tb('store.buyWith')}
+          </button>
+          <p className="text-[11px] text-muted-dark">{tb('store.processedBy')}</p>
+          {store.message && <p role="status" className={`text-[12px] ${store.messageTone === 'error' ? 'text-red-400' : 'text-foreground'}`}>{store.message}</p>}
+          <div className="flex items-center gap-3 flex-wrap">
+            <button type="button" onClick={() => store.onRestore(false)} disabled={busy} className="inline-flex items-center gap-1 text-[12px] text-muted-dark hover:text-foreground disabled:opacity-60"><RotateCcw className="w-3.5 h-3.5" /> {tb('store.restore')}</button>
+            {store.canMove && <button type="button" onClick={() => store.onRestore(true)} disabled={busy} className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary disabled:opacity-60">{tb('store.moveHere')}</button>}
+          </div>
+        </div>
+      )}
 
       {cur && cur.kind === 'automated' && (
         <button onClick={() => onAutomated(cur)} disabled={busy} className="w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60">
@@ -369,7 +386,7 @@ function PayMethods({ methods, busy, onAutomated, onManual }) {
 
 // Full-screen blocking gate when the owner tree is banned (trial + grace lapsed).
 // No workspace access - only renew / redeem / contact / sign out.
-function BannedScreen({ account, license, methods, plans = [], selPlanId, onSelectPlan, planCode, setPlanCode, busy, err, onRedeem, onAutomated, onManual, onSignOut }) {
+function BannedScreen({ account, license, methods, plans = [], selPlanId, onSelectPlan, planCode, setPlanCode, busy, err, onRedeem, onAutomated, onManual, onSignOut, store = null, storeInfo = null }) {
   const { t } = useTranslation('gate');
   const adminBlocked = Boolean(license?.adminBlocked);
   return (
@@ -387,8 +404,8 @@ function BannedScreen({ account, license, methods, plans = [], selPlanId, onSele
 
         {!adminBlocked && (
           <>
-            {plans.length > 0 && <div className="mb-3"><PlanPicker plans={plans} selected={selPlanId} onSelect={onSelectPlan} /></div>}
-            <PayMethods methods={methods} busy={busy} onAutomated={onAutomated} onManual={onManual} />
+            {plans.length > 0 && <div className="mb-3"><PlanPicker plans={plans} selected={selPlanId} onSelect={onSelectPlan} storeInfo={storeInfo} /></div>}
+            <PayMethods methods={methods} busy={busy} onAutomated={onAutomated} onManual={onManual} store={store} />
             <div className="mt-5">
               <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('banned.haveCode')}</label>
               <div className="flex items-center gap-2">
@@ -412,6 +429,7 @@ function BannedScreen({ account, license, methods, plans = [], selPlanId, onSele
 
 export default function Gate({ children }) {
   const { t } = useTranslation('gate');
+  const { t: tb } = useTranslation('billing');
   const [phase, setPhase] = useState('loading'); // loading | register | login | pick | plan | licensing | banned | ready
   const [members, setMembers] = useState([]);
   const [account, setAccount] = useState(null);
@@ -441,6 +459,9 @@ export default function Gate({ children }) {
   const [trialBusy, setTrialBusy] = useState(false);
   const [trialErr, setTrialErr] = useState('');
   const [trialCodeFor, setTrialCodeFor] = useState(''); // email the server sent a confirmation code to
+  // Microsoft Store build: Store prices and the result of the last Store purchase / restore.
+  const [storeInfo, setStoreInfo] = useState(null);
+  const [storeMsg, setStoreMsg] = useState(null); // { text, tone, canMove }
   const [trialCode, setTrialCode] = useState('');
 
   // login / pick
@@ -655,6 +676,9 @@ export default function Gate({ children }) {
         setSelPlanId((cur) => (cur && list.some((p) => p.id === cur) ? cur : defaultPlanId(list)));
       })
       .catch(() => { if (live) setPlans([]); });
+    softglazeApi.store.status()
+      .then((s) => { if (live) setStoreInfo(s && s.available ? s : null); })
+      .catch(() => { if (live) setStoreInfo(null); });
     return () => { live = false; };
   }, [tenant, phase]);
 
@@ -721,6 +745,55 @@ export default function Gate({ children }) {
     } catch (e) { setErr(e.message || t('errors.paymentNotStarted')); setBusy(false); }
   }
 
+  // Microsoft Store: Microsoft's purchase dialog, then our licensing server confirms the subscription.
+  function applyStoreResult(r) {
+    const o = storeOutcome(r);
+    setStoreMsg({ text: tb(o.key, o.params || {}), tone: o.tone, canMove: Boolean(o.canMove) });
+    if (o.done) { stopPoll(); setBusy(false); setPhase('licensing'); }
+    return o;
+  }
+
+  function pollStore() {
+    stopPoll();
+    let tries = 0;
+    pollRef.current = setInterval(async () => {
+      tries += 1;
+      try {
+        const r = await softglazeApi.store.restore({});
+        // If the poll was stopped mid-flight (unmount or sign-out), never re-enter.
+        if (r && r.status === 'active' && pollRef.current) { applyStoreResult(r); return; }
+      } catch (e) { /* keep trying */ }
+      if (tries >= STORE_POLL.maxTries) { stopPoll(); setBusy(false); setStoreMsg({ text: tb('store.result.pendingLong'), tone: 'info', canMove: false }); }
+    }, STORE_POLL.everyMs);
+  }
+
+  async function buyWithStore() {
+    setErr(''); setStoreMsg(null); setBusy(true);
+    try {
+      const o = applyStoreResult(await softglazeApi.store.purchase(selPlanId ? { planId: selPlanId } : {}));
+      if (o.poll) { pollStore(); return; }
+      if (!o.done) setBusy(false);
+    } catch (e) { setErr(e.message || tb('store.result.unavailable')); setBusy(false); }
+  }
+
+  async function restoreStore(move) {
+    setErr(''); setStoreMsg(null); setBusy(true);
+    try {
+      const o = applyStoreResult(await softglazeApi.store.restore({ move: move === true }));
+      if (o.poll) { pollStore(); return; }
+      if (!o.done) setBusy(false);
+    } catch (e) { setErr(e.message || tb('store.result.unavailable')); setBusy(false); }
+  }
+
+  const storeControls = storeInfo ? {
+    price: storePrice(storeInfo, selPlanId),
+    onBuy: buyWithStore,
+    onRestore: restoreStore,
+    message: storeMsg ? storeMsg.text : '',
+    messageTone: storeMsg ? storeMsg.tone : 'info',
+    canMove: Boolean(storeMsg && storeMsg.canMove)
+  } : null;
+
   async function submitManualPay(method, { reference, note }) {
     setErr(''); setBusy(true);
     try {
@@ -765,6 +838,8 @@ export default function Gate({ children }) {
         onAutomated={buyWith}
         onManual={submitManualPay}
         onSignOut={signOut}
+        store={storeControls}
+        storeInfo={storeInfo}
       />
     );
   }
@@ -864,8 +939,8 @@ export default function Gate({ children }) {
               {plans.length > 0 && (
                 <div className="mt-4 rounded-lg border border-border p-3 space-y-2.5">
                   <span className="block text-[12px] font-semibold text-foreground flex items-center gap-1.5"><CreditCard className="w-4 h-4 text-primary" /> {t('plan.choosePlan')}</span>
-                  <PlanPicker plans={plans} selected={selPlanId} onSelect={setSelPlanId} />
-                  <PayMethods methods={methods} busy={busy} onAutomated={buyWith} onManual={submitManualPay} />
+                  <PlanPicker plans={plans} selected={selPlanId} onSelect={setSelPlanId} storeInfo={storeInfo} />
+                  <PayMethods methods={methods} busy={busy} onAutomated={buyWith} onManual={submitManualPay} store={storeControls} />
                 </div>
               )}
               <div className="mt-4">

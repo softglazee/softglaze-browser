@@ -110,6 +110,28 @@ metric snapshot. Check after 15 minutes: the log has a line, and `GET /v1/admin/
 Source: github.com/disposable-email-domains/disposable-email-domains, CC0 1.0 (public domain dedication,
 no conditions). Shipped: 10 143 domains at upstream commit a72c0ce (4 Nov 2026).
 
+## 9. Microsoft Store subscriptions (November 2026, migration 20261108130000_store_entitlements)
+
+Deploy this server build BEFORE the Store package that sells in-app (the app calls `/v1/store/*`).
+`scripts/migrate-deploy.sh` applies the migration (one new table, `StoreEntitlement`; nothing else changes).
+
+Then, in this order (the Partner Center add-ons and the Entra ID app are set up by the owner first, from
+the owner's Store commerce checklist):
+
+1. Check `GET /v1/admin/store/status`: `productPlans` must list the add-on Product IDs created in Partner
+   Center (default `pro_monthly`, `enterprise_monthly`); change them with
+   `PATCH /v1/admin/settings { "store": { "productPlans": { ... } } }`.
+2. When the Microsoft Entra ID app is registered and associated in Partner Center, save it with the tenant
+   key (secret typed by the owner, never pasted into chat):
+   `POST /v1/tenant/payment-config { "provider": "microsoft_store", "enabled": true, "entraTenantId": "<Directory (tenant) ID>", "clientId": "<Application (client) ID>", "clientSecret": "<secret value>" }`.
+   From then on every claim is verified and the cron re-checks subscriptions. The client secret expires
+   (Azure's maximum is 24 months): put the date in the calendar and save a new one before it.
+3. Until step 2: `store.acceptUnverified` (true) decides whether app-reported purchases get a bounded,
+   unverified licence (7 days at a time) or wait as `pending` for the owner. Watch `alerts` in diagnostics.
+
+Rollback: redeploy the previous build; the extra table is ignored. Store buyers then keep their licence
+until its current `currentPeriodEnd` and are re-checked once this build is back.
+
 ## Rollback
 
 Redeploy the previous build. The schema changes are additive, so the old code runs on the new schema; a

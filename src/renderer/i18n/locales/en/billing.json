@@ -293,5 +293,32 @@
     "TRIAL_FAILED": "The free trial couldn't be started right now. Try again in a few minutes.",
     "SERVER_UNAVAILABLE": "Our licensing server isn't answering right now. Try again in a few minutes.",
     "MACHINE_MISMATCH": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
+  },
+  "store": {
+    "cardTitle": "Microsoft Store subscription",
+    "processedBy": "In this version, Microsoft is the payment processor: you pay with your Microsoft account and Microsoft bills the subscription each month.",
+    "upgradeNote": "Moving from Pro to Enterprise starts a second subscription. Cancel Pro in your Microsoft account so it stops renewing.",
+    "downgradeNote": "To move from Enterprise to Pro, cancel Enterprise in your Microsoft account and buy Pro when it ends.",
+    "buyWith": "Buy with Microsoft Store",
+    "buyWithPrice": "Buy with Microsoft Store · {{price}}",
+    "priceFrom": "Price from the Microsoft Store, in your currency",
+    "restore": "Restore Microsoft Store purchases",
+    "moveHere": "Move it to this computer",
+    "manage": "Manage or cancel in your Microsoft account",
+    "result": {
+      "active": "Thank you. Your {{plan}} plan is active.",
+      "cancelled": "Purchase cancelled. Nothing was charged.",
+      "pending": "Microsoft has your purchase. We are confirming it, which can take a minute.",
+      "pendingLong": "Your purchase is not confirmed yet. Click Restore Microsoft Store purchases in a few minutes, or email support@softglaze.com.",
+      "pendingOffline": "Your purchase is saved on this computer. It will be activated as soon as the app can reach our server.",
+      "pendingReview": "We received your purchase and are checking it. Your plan will be activated as soon as it is approved.",
+      "none": "No active Microsoft Store subscription for this app was found in this Microsoft account.",
+      "inUse": "This subscription is in use on another computer. You can move it to this one.",
+      "moveLimit": "This subscription has already been moved to another computer twice in the last 30 days. Email support@softglaze.com for help.",
+      "unavailable": "Microsoft Store purchases are not available right now. Please try again later.",
+      "productMissing": "This plan is not available in the Microsoft Store yet.",
+      "network": "The Microsoft Store could not be reached. Check your internet connection and try again.",
+      "error": "The purchase could not be completed: {{message}}"
+    }
   }
 }

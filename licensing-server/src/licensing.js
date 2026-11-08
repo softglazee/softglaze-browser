@@ -141,4 +141,20 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
   return { changed: false };
 }
 
-module.exports = { grantMonths, claimPendingPayment, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription, revokeForRefund };
+// The licence /v1/license leases from an install's licences: an active one (status active, term not
+// ended) with the best tier, then the latest end; with none active, the most recently updated (its
+// status is reported). Before Microsoft Store purchases an install had one licence, so the result is
+// the same as the old "most recently updated" for every existing install.
+const TIER_RANK = { pro: 1, enterprise: 2 };
+function pickLeaseLicence(licences, now = Date.now()) {
+  const list = Array.isArray(licences) ? licences.filter(Boolean) : [];
+  if (!list.length) return null;
+  const end = (l) => (l.currentPeriodEnd ? new Date(l.currentPeriodEnd).getTime() : 0);
+  const active = list.filter((l) => l.status === 'active' && end(l) > now);
+  if (active.length) {
+    return active.sort((a, b) => ((TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0)) || (end(b) - end(a)))[0];
+  }
+  return list.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
+}
+
+module.exports = { pickLeaseLicence, grantMonths, claimPendingPayment, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription, revokeForRefund };

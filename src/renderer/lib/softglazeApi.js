@@ -256,6 +256,12 @@ export const softglazeApi = {
     manualList: () => getSoftglazeApi().payments.manualList(),
     manualResolve: (payload) => getSoftglazeApi().payments.manualResolve(payload)
   },
+  // Microsoft Store purchases. An older preload has no `store`: report "not available" instead of throwing.
+  store: {
+    status: () => (window.softglaze && window.softglaze.store ? window.softglaze.store.status() : Promise.resolve({ available: false, reason: 'not_store_build' })),
+    purchase: (payload) => getSoftglazeApi().store.purchase(payload),
+    restore: (payload) => getSoftglazeApi().store.restore(payload)
+  },
   billing: {
     getPlans: () => getSoftglazeApi().billing.getPlans(),
     plansAdmin: () => getSoftglazeApi().billing.plansAdmin(),

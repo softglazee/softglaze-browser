@@ -170,6 +170,9 @@ const CHANNELS = Object.freeze({
   BILLING_PLAN_DELETE: 'billing:plan-delete',
   BILLING_ASSIGN: 'billing:assign',
   BILLING_SUBSCRIBERS: 'billing:subscribers',
+  STORE_STATUS: 'store:status',
+  STORE_PURCHASE: 'store:purchase',
+  STORE_RESTORE: 'store:restore',
   INVOICE_LIST: 'invoice:list',
   INVOICE_CREATE: 'invoice:create',
   INVOICE_UPDATE: 'invoice:update',
@@ -587,6 +590,12 @@ const api = Object.freeze({
     deletePlan: (payload) => invoke(CHANNELS.BILLING_PLAN_DELETE, payload),
     assignPlan: (payload) => invoke(CHANNELS.BILLING_ASSIGN, payload),
     subscribers: () => invoke(CHANNELS.BILLING_SUBSCRIBERS)
+  }),
+  // Microsoft Store purchases (Store build only; elsewhere status() answers available: false).
+  store: Object.freeze({
+    status: () => invoke(CHANNELS.STORE_STATUS),
+    purchase: (payload) => invoke(CHANNELS.STORE_PURCHASE, payload),
+    restore: (payload) => invoke(CHANNELS.STORE_RESTORE, payload)
   }),
   invoices: Object.freeze({
     list: (payload) => invoke(CHANNELS.INVOICE_LIST, payload),

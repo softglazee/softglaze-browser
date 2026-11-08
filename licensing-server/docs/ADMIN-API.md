@@ -320,8 +320,15 @@ refresh and falls back to its offline grace. → `{ "license": License }`. Error
 
 ### GET /v1/admin/payments
 
-Params: `status` (`pending,paid,failed,refunded`), `provider` (`stripe,paypal,cryptomus,manual`),
+Params: `status` (`pending,paid,failed,refunded`), `provider` (`stripe,paypal,cryptomus,manual,microsoft_store`),
 `method`, `currency`, `customerId`, `from`, `to` (paid date), `sort` (`createdAt`, `paidAt`, `amount`), `order`, paging.
+
+Microsoft Store payments (`provider=microsoft_store`, `method: store`) are recorded by the server, one per
+billing period the Store reports active (`providerRef` = `msstore:<entitlementId>:<period end YYYY-MM-DD>`).
+`amount`/`currency` are the Store's gross price the customer saw, in their currency, before Microsoft's fee
+(15% for apps) and taxes; the money arrives as Microsoft's monthly payout, not per payment. `note` says
+whether the purchase was verified with the Microsoft Store or only reported by the app (UNVERIFIED).
+A Store refund marks the period's payment `refunded`; `POST /:id/refund` refuses them (`409 not_manual`).
 
 ### POST /v1/admin/payments (record a manual payment)
 
@@ -345,6 +352,66 @@ Errors: `400 validation_failed`, `404 not_found`, `409 duplicate_payment` (`paym
 Manual payments only: `{ "reason": "..." }` → `{ "payment": Payment }` (status `refunded`, `refundedAt`).
 The licence is not touched; revoke it separately if wanted. Gateway refunds arrive by webhook.
 Errors: `409 not_manual`, `409 not_paid`.
+
+---
+
+## Microsoft Store subscriptions
+
+The Store version of the app sells Pro and Enterprise as Microsoft Store subscription add-ons
+(Product IDs mapped to plans in `settings.store.productPlans`). Each add-on on each install is a
+**Store entitlement**; it drives one licence (`source: microsoft_store`, `providerRef: msstore:<id>`, see
+`GET /v1/admin/licenses?source=microsoft_store`) and one payment per billing period.
+
+**Verified vs unverified.** With the Microsoft Entra ID app saved for the tenant (`POST /v1/tenant/payment-config`
+`{ "provider": "microsoft_store", "enabled": true, "entraTenantId", "clientId", "clientSecret" }`, tenant key; no
+webhook), the server checks every claim with the Microsoft Store collection and purchase APIs and the cron
+re-checks active subscriptions every 6 hours (renewals, cancellations, refunds) and renews the customers'
+Store ID keys (valid 30 days) after 20 days. Without it, a purchase the app reports is accepted
+**unverified**: at most `store.unverifiedDays` (7) at a time, extended only by the app reporting again, and
+listed as an alert. `store.acceptUnverified: false` records such claims as `pending` instead, for the owner
+to approve or refuse.
+
+Entitlement fields: `id`, `installId`, `customerId`, `licenseId`, `productId` (Partner Center Product ID),
+`planKey`, `tier`, `status` (`active`, `grace` (renewal payment failed, our short grace), `pending` (waiting for
+the owner), `expired`, `canceled`, `refunded`, `revoked` (by the owner), `moved` (taken over by another
+computer), `replaced` (reinstall on the same computer), `not_owned` (Microsoft does not list it)), `verified`,
+`verifyNote` (`not_configured`, `no_keys`, `store_unreachable`, `store_auth`, `store_error`, `approved_by_admin`),
+`expiresAt` (end of the paid period at Microsoft), `accessUntil` (what the licence grants), `autoRenew`,
+`recurrenceId`, `recurrenceState`, `storeId`, `skuStoreId`, `subscriptionKey`, `priceFormatted`, `currency`,
+`hasKeys`, `keysIssuedAt`, `movedAt`, `firstClaimAt`, `lastClaimAt`, `lastCheckedAt`, `lastCheckError`. The
+sealed Store ID keys are never returned.
+
+One subscription works on one computer at a time, like a website licence: a claim from a second computer
+gets `409 store_in_use` until the customer chooses "Move it to this computer" (`store.maxMovesPer30Days`, 2;
+then `429 store_move_limit`). A reinstall on the same computer (same machine hash) takes over by itself.
+
+### GET /v1/admin/store/status
+
+→ `{ configured, acceptUnverified, unverifiedDays, productPlans, counts: { <status>: n }, unverifiedActive,
+pendingReview, checkErrors, unknownPlans: [{ productId, plan }], alerts }`. `alerts` lists
+`credentials_missing`, `unverified_entitlements`, `pending_review`, `check_errors`, `unknown_plans` (a mapped
+plan key that is missing or inactive). The same alerts are in `GET /v1/admin/diagnostics` under `store`.
+
+### GET /v1/admin/store/entitlements
+
+Params: `status` (comma list), `verified` (`1`/`0`), `productId` (comma list), `customerId`, `installId`,
+`alert=1` (unverified access, pending review, or a failed re-check), `sort` (`updatedAt`, `createdAt`,
+`accessUntil`, `lastClaimAt`), `order`, paging. → `{ items, total, page, pageSize }`.
+
+### POST /v1/admin/store/entitlements/:id/recheck
+
+Asks Microsoft now. → `{ entitlement }`. Errors: `409 not_configured`, `409 no_keys` (the app has not sent
+keys for it yet; they come with its next report), `502 <store error code>`.
+
+### POST /v1/admin/store/entitlements/:id/approve
+
+`{ "reason": "Seen in Partner Center acquisitions" }`: grants a `pending` claim until the period end the app
+reported (at most 35 days), still unverified. Errors: `409 not_pending`, `409 expired`.
+
+### POST /v1/admin/store/entitlements/:id/revoke
+
+`{ "reason": "..." }`: ends access now (status `revoked`, licence `canceled`). Microsoft is not told: refunds
+of Store purchases go through Microsoft. Errors: `409 not_active`.
 
 ---
 
@@ -506,6 +573,11 @@ Saved customer filters (the [customer list filters](#get-v1admincustomers)), usa
 | `email.mxCheck` | true | |
 | `billing.renewalGraceDays` | 3 | days a lapsed paid customer still counts as paid |
 | `billing.reportingCurrency` | USD | |
+| `store.productPlans` | `{ "pro_monthly": "pro", "enterprise_monthly": "enterprise" }` | Partner Center add-on Product ID -> plan key (replaced as a whole) |
+| `store.acceptUnverified` | true | accept app-reported Store purchases while the Store APIs are not set up |
+| `store.unverifiedDays` | 7 | 1-35: the most an unverified report grants at a time |
+| `store.renewalGraceDays` | 3 | 0-30: slack after a renewing period ends, and access during a failed renewal |
+| `store.maxMovesPer30Days` | 2 | 0-20: moves of one Store subscription to another computer |
 | `privacy.unverifiedRetentionDays` | 30 | |
 | `privacy.outboxBodyRetentionDays` | 90 | |
 | `privacy.trialAttemptRetentionDays` | 180 | |
@@ -596,11 +668,11 @@ Customer changes store the changed field names, never the values of personal fie
 
 Actions: `customer.create|update|delete|restore|erase`, `customers.export|import|bulk.*`, `license.grant|extend|revoke|assign`,
 `payment.record|refund`, `plan.create|update|delete`, `email.template.*`, `email.automation.update`, `email.send|test|retry|cancel`,
-`segment.*`, `settings.update`, `trial.reset`, `install.reset_machine`, `metrics.export`.
+`segment.*`, `settings.update`, `trial.reset`, `install.reset_machine`, `metrics.export`, `store.recheck|approve|revoke`.
 
 ## Diagnostics
 
-- `GET /v1/admin/diagnostics` → `{ smtp, cron: { lastStartedAt, lastFinishedAt, lastResult }, disposableList: { count, upstreamCommit, fetchedAt, licence }, trustProxyHops, trialsLast30Days, busiestNetworksTrialCounts, networkLimit }`.
+- `GET /v1/admin/diagnostics` → `{ smtp, cron: { lastStartedAt, lastFinishedAt, lastResult }, disposableList: { count, upstreamCommit, fetchedAt, licence }, trustProxyHops, trialsLast30Days, busiestNetworksTrialCounts, networkLimit, store: { configured, alerts, unverifiedActive, pendingReview } }`.
   If one network holds most trials, the server is probably counting a proxy's address: run `run.sh check-ip`.
 - `GET /v1/admin/diagnostics/request` → what the server received for this request: `{ chain, trustProxyHops, clientIp, isPublic }`
   (`chain` = socket address, then X-Forwarded-For from right to left). Used by `run.sh check-ip`.
@@ -673,7 +745,24 @@ install**, this machine never had a trial, this email key never had one, and thi
 Errors: `409 { "error": "trial_used", "reason": "machine" | "email" | "network" }`,
 `403 email_not_verified`, `409 already_licensed` (a running licence, or the customer already paid), `400 invalid_email`.
 
+### POST /v1/store/session and POST /v1/store/claim (Microsoft Store build)
+
+Install-authenticated, with the machine hash. `session` → `{ products: [{ productId, plan, tier, name }],
+verification }` where `verification` is `{ mode: "verified", collectionsTicket, purchaseTicket, publisherUserId }`
+(Entra ID tokens for the two key audiences; the app passes them to `StoreContext.GetCustomerCollectionsIdAsync`
+/ `GetCustomerPurchaseIdAsync`) or `{ mode: "unverified" | "pending_review" }`.
+
+`claim` body: `licenseRead` (the app could read its Store licence), `addOns: [{ inAppOfferToken, skuStoreId,
+isActive, expiresAtMs }]` (from `GetAppLicenseAsync().AddOnLicenses`), `prices: { <productId>: { formatted,
+formattedRecurrence, currencyCode } }`, optional `keys: { collections, purchase }` (Store ID keys), optional
+`purchase: { productId, status }`, `move`. → `{ ok, mode, verified, verifyNote, licensed, conflicts, entitlements }`;
+errors `409 store_in_use`, `429 store_move_limit`, `404 store_not_owned`. The app then fetches its lease from
+`/v1/license` as usual.
+
 ### POST /v1/license (changed, compatible)
+
+An install with several licences (for example an invoice licence and a Store subscription) is leased the
+active one with the best tier, then the latest end; with none active, the most recently updated as before.
 
 Also accepts `appVersion` and `channel` ([install channel](#install-channel)). A paid answer adds `"type": "paid"`. With no active paid licence but a running
 trial it returns the trial lease (same shape as `/v1/trial/start`). After a trial: `{ "lease": null, "status": "none", "trialEndsAt": "..." }`.

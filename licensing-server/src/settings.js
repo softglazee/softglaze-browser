@@ -24,6 +24,18 @@ const DEFAULTS = Object.freeze({
     mxCheck: true
   },
   billing: { renewalGraceDays: 3, reportingCurrency: 'USD' },
+  // Microsoft Store in-app subscriptions (src/store/). productPlans maps each add-on's Product ID
+  // (Partner Center, = StoreProduct.InAppOfferToken) to a plan key. Until the Store collection and
+  // purchase APIs are set up (POST /v1/tenant/payment-config provider microsoft_store), a purchase the
+  // app reports is accepted UNVERIFIED for unverifiedDays at a time and shows as an alert in the admin;
+  // acceptUnverified false records it for the owner to check by hand instead.
+  store: {
+    productPlans: { pro_monthly: 'pro', enterprise_monthly: 'enterprise' },
+    acceptUnverified: true,
+    unverifiedDays: 7,
+    renewalGraceDays: 3,
+    maxMovesPer30Days: 2
+  },
   privacy: { unverifiedRetentionDays: 30, outboxBodyRetentionDays: 90, trialAttemptRetentionDays: 180 },
   automations: {
     welcome: { enabled: true, offsetHours: 0 },
@@ -43,6 +55,9 @@ const bool = (v) => typeof v === 'boolean';
 const domains = (v) => Array.isArray(v) && v.length <= 2000 && v.every((d) => typeof d === 'string' && /^[a-z0-9.-]{3,253}$/i.test(d.replace(/^@/, '')));
 const emailish = (v) => typeof v === 'string' && v.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const url = (v) => typeof v === 'string' && v.length <= 500 && /^https:\/\/\S+$/.test(v);
+// { "<add-on Product ID>": "<plan key>" }: Partner Center allows letters, digits, '.', '_' and '-'.
+const productPlans = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 20
+  && Object.entries(v).every(([k, p]) => /^[A-Za-z0-9._-]{1,100}$/.test(k) && typeof p === 'string' && /^[A-Za-z0-9._-]{1,60}$/.test(p));
 
 const RULES = {
   trial: { days: int(1, 60), tier: (v) => v === 'pro' || v === 'enterprise', networkLimit: int(0, 100), networkWindowDays: int(1, 365) },
@@ -55,6 +70,7 @@ const RULES = {
     companyName: str(120), companyAddress: str(300), downloadUrl: url, domainAllowlist: domains, domainBlocklist: domains, mxCheck: bool
   },
   billing: { renewalGraceDays: int(0, 60), reportingCurrency: (v) => typeof v === 'string' && /^[A-Z]{3}$/.test(v) },
+  store: { productPlans, acceptUnverified: bool, unverifiedDays: int(1, 35), renewalGraceDays: int(0, 30), maxMovesPer30Days: int(0, 20) },
   privacy: { unverifiedRetentionDays: int(1, 3650), outboxBodyRetentionDays: int(1, 3650), trialAttemptRetentionDays: int(1, 3650) }
 };
 

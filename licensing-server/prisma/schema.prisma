@@ -43,6 +43,7 @@ model Tenant {
   segments       Segment[]
   snapshots      MetricSnapshot[]
   customerEvents CustomerEvent[]
+  storeEntitlements StoreEntitlement[]
 }
 
 model TenantPaymentConfig {
@@ -506,4 +507,53 @@ model JobLock {
   lastStartedAt  DateTime?
   lastFinishedAt DateTime?
   lastResult     Json?
+}
+
+// Microsoft Store subscriptions (src/store/): one row per add-on (Product ID = StoreProduct.InAppOfferToken,
+// e.g. pro_monthly) per install. `verified` = confirmed with the Microsoft Store collection and purchase
+// APIs; unverified rows come from what the app read and never grant more than settings.store.unverifiedDays
+// at a time. Each row drives one License (providerRef msstore:<id>, source microsoft_store); each billing
+// period it reports active is one Payment (provider microsoft_store). The Store ID keys (valid 30 days)
+// are sealed at rest like provider secrets.
+model StoreEntitlement {
+  id                   String    @id @default(cuid())
+  tenantId             String
+  installId            String    @db.VarChar(40)
+  customerId           String?   @db.VarChar(40)
+  licenseId            String?   @db.VarChar(40)
+  account              String?   @db.VarChar(254)
+  productId            String    @db.VarChar(100) // add-on Product ID in Partner Center
+  planKey              String?   @db.VarChar(60)
+  tier                 String    @default("pro") @db.VarChar(20)
+  status               String    @default("active") @db.VarChar(20) // active | grace | pending | expired | canceled | refunded | revoked | moved | replaced | not_owned
+  verified             Boolean   @default(false)
+  verifyNote           String?   @db.VarChar(60) // why unverified: not_configured | no_keys | store_unreachable | store_auth | store_error | approved_by_admin
+  expiresAt            DateTime? // the Store's end of the paid period
+  accessUntil          DateTime? // what the licence grants (expiresAt plus the renewal grace, or the unverified cap)
+  autoRenew            Boolean?
+  recurrenceId         String?   @db.VarChar(100)
+  recurrenceState      String?   @db.VarChar(30)
+  storeId              String?   @db.VarChar(64) // the add-on's Store ID (from Microsoft)
+  skuStoreId           String?   @db.VarChar(80)
+  subscriptionKey      String?   @db.VarChar(120) // rec:<recurrence id>: one computer per subscription
+  priceFormatted       String?   @db.VarChar(40) // the Store's price text the customer saw
+  currency             String?   @db.VarChar(3)
+  collectionsKeySealed String?   @db.Text
+  purchaseKeySealed    String?   @db.Text
+  keysIssuedAt         DateTime?
+  movedAt              DateTime?
+  firstClaimAt         DateTime  @default(now())
+  lastClaimAt          DateTime?
+  lastCheckedAt        DateTime?
+  lastCheckError       String?   @db.Text
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, installId, productId])
+  @@index([tenantId, status])
+  @@index([tenantId, verified, status])
+  @@index([tenantId, subscriptionKey])
+  @@index([tenantId, customerId])
 }
