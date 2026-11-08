@@ -7,6 +7,7 @@ Contents: [Conventions](#conventions) · [Auth](#authentication) · [Customers](
 [Trials and installs](#trials-and-installs) · [Licences](#licences) · [Payments](#payments) ·
 [Plans](#plans) · [Email](#email) · [Segments](#segments) · [Settings](#settings) ·
 [Metrics](#metrics) (with the maths) · [Audit log](#audit-log) · [Diagnostics](#diagnostics) ·
+[App 1.0.23: sign-up required, lead fields, payment switches](#app-1023-sign-up-required-lead-fields-payment-switches) ·
 [Public endpoints (app and website)](#public-endpoints-app-and-website) · [Privacy and retention](#privacy-and-retention)
 
 ## Conventions
@@ -63,8 +64,8 @@ into gmail), so `John.Smith+x@googlemail.com` and `johnsmith@gmail.com` are one 
 ```json
 {
   "id": "cm3x...", "email": "ana.lopez@example.com", "emailKey": "ana.lopez@example.com",
-  "emailVerifiedAt": "2026-11-20T10:01:00.000Z", "name": "Ana Lopez", "company": null, "country": "MX",
-  "phone": null, "lang": "es", "source": "app",
+  "emailVerifiedAt": "2026-11-20T10:01:00.000Z", "name": "Ana Lopez", "company": "lopez.example", "country": "MX",
+  "phone": "+52 55 1234 5678", "useCase": "ecommerce", "useCaseOther": null, "lang": "es", "source": "app",
   "status": "trial", "statusAuto": "trial", "statusOverride": null, "statusNote": null, "tier": "enterprise",
   "firstSeenAt": "2026-11-20T09:58:00.000Z", "lastSeenAt": "2026-11-21T08:00:00.000Z", "appVersion": "1.0.23",
   "firstChannel": "store",
@@ -77,6 +78,12 @@ into gmail), so `John.Smith+x@googlemail.com` and `johnsmith@gmail.com` are one 
 ```
 
 - `source`: `app` | `manual` | `import` | `invoice` | `website`.
+- `phone`, `company`, `useCase`, `useCaseOther`: what the person typed in the app's sign-up or
+  "Confirm your email" step (app 1.0.23 and later), stored once the code is proven. `useCase` is one of
+  `ecommerce` | `social_media` | `affiliate_marketing` | `agency` | `web_research` | `other` (the use cases on
+  the website home page); `useCaseOther` is their own words when they chose `other`, else `null`. A later
+  confirmation with a field filled in replaces it; an empty field keeps what is stored. `null` for customers
+  from older apps until they confirm.
 - `firstChannel`: where the customer first installed the app from, `store` | `website` | `base`: the
   [install channel](#install-channel) of their earliest install that reported one; `null` until an
   install of theirs runs app 1.0.23 or later. Computed like `statusAuto` (read-only).
@@ -106,16 +113,17 @@ Filters (all optional, combined with AND):
 | `tier` | `pro`, `enterprise`, `none` |
 | `source` | `app,manual,import,invoice,website` |
 | `country` | ISO codes, `unknown` for none: `PK,US,unknown` |
+| `useCase` | `ecommerce,social_media,affiliate_marketing,agency,web_research,other`, `none` for not given |
 | `consent` | marketing consent `1` / `0` |
 | `verified` | email verified by us `1` / `0` |
 | `unsubscribed` | `1` / `0` |
 | `complimentary` | has an active complimentary licence `1` / `0` |
 | `tag` | tags list; the customer must have all of them |
-| `q` | text search in email, name, company, phone; or an exact id |
+| `q` | text search in email, name, company, phone, the "other" use case text; or an exact id |
 | `createdFrom`, `createdTo`, `lastSeenFrom`, `lastSeenTo`, `paidUntilFrom`, `paidUntilTo`, `trialEndsFrom`, `trialEndsTo` | date ranges (inclusive) |
 | `deleted` | `include` (also soft-deleted) or `only`; default: soft-deleted are left out |
 | `ids` | comma-separated customer ids |
-| `sort` | `createdAt` (default), `updatedAt`, `firstSeenAt`, `lastSeenAt`, `email`, `name`, `company`, `country`, `status`, `tier`, `paidUntil`, `paidSince`, `trialEndsAt`, `trialStartedAt`, `totalPaidCents`, `emailVerifiedAt` |
+| `sort` | `createdAt` (default), `updatedAt`, `firstSeenAt`, `lastSeenAt`, `email`, `name`, `company`, `country`, `useCase`, `status`, `tier`, `paidUntil`, `paidSince`, `trialEndsAt`, `trialStartedAt`, `totalPaidCents`, `emailVerifiedAt` |
 | `order` | `desc` (default) or `asc` |
 
 Response: `{ "items": [Customer], "total": 2, "page": 1, "pageSize": 50 }`. Errors: `400 validation_failed`
@@ -125,7 +133,8 @@ Response: `{ "items": [Customer], "total": 2, "page": 1, "pageSize": 50 }`. Erro
 
 The same filters, `sort` and `order`. Answers `text/csv; charset=utf-8` (UTF-8 BOM, CRLF) as an
 attachment `customers-YYYY-MM-DD.csv` with every column:
-`id,email,name,company,country,phone,lang,source,status,statusAuto,statusOverride,statusNote,tier,emailVerifiedAt,firstSeenAt,lastSeenAt,appVersion,trialStartedAt,trialEndsAt,paidSince,paidUntil,complimentaryUntil,totalPaidCents,currency,marketingConsent,consentAt,consentSource,unsubscribedAt,tags,notes,createdAt,updatedAt,deletedAt`.
+`id,email,name,company,country,phone,useCase,useCaseOther,lang,source,status,statusAuto,statusOverride,statusNote,tier,emailVerifiedAt,firstSeenAt,lastSeenAt,appVersion,trialStartedAt,trialEndsAt,paidSince,paidUntil,complimentaryUntil,totalPaidCents,currency,marketingConsent,consentAt,consentSource,unsubscribedAt,tags,notes,createdAt,updatedAt,deletedAt`.
+`useCase` and `useCaseOther` come from the app; an import lists them under `ignoredColumns`.
 Tags are joined with `;`. Cells that start with `= + - @` are prefixed with `'` so spreadsheets do not run
 them as formulas; the import removes that prefix again. Audited as `customers.export`.
 
@@ -385,9 +394,14 @@ One subscription works on one computer at a time, like a website licence: a clai
 gets `409 store_in_use` until the customer chooses "Move it to this computer" (`store.maxMovesPer30Days`, 2;
 then `429 store_move_limit`). A reinstall on the same computer (same machine hash) takes over by itself.
 
+**Selling in the app.** The app offers "Microsoft Store" as a payment method only when
+`settings.store.salesEnabled` is `true` (default `false`) **and** the Microsoft Store returns the add-ons'
+prices. Turn it on once the add-ons exist in Partner Center and the Entra ID app is saved. With it off, a
+customer who already has a Store subscription can still restore and manage it.
+
 ### GET /v1/admin/store/status
 
-→ `{ configured, acceptUnverified, unverifiedDays, productPlans, counts: { <status>: n }, unverifiedActive,
+→ `{ configured, salesEnabled, acceptUnverified, unverifiedDays, productPlans, counts: { <status>: n }, unverifiedActive,
 pendingReview, checkErrors, unknownPlans: [{ productId, plan }], alerts }`. `alerts` lists
 `credentials_missing`, `unverified_entitlements`, `pending_review`, `check_errors`, `unknown_plans` (a mapped
 plan key that is missing or inactive). The same alerts are in `GET /v1/admin/diagnostics` under `store`.
@@ -573,11 +587,14 @@ Saved customer filters (the [customer list filters](#get-v1admincustomers)), usa
 | `email.mxCheck` | true | |
 | `billing.renewalGraceDays` | 3 | days a lapsed paid customer still counts as paid |
 | `billing.reportingCurrency` | USD | |
+| `store.salesEnabled` | false | the app offers "Microsoft Store" as a payment method (it also needs the Store's prices) |
 | `store.productPlans` | `{ "pro_monthly": "pro", "enterprise_monthly": "enterprise" }` | Partner Center add-on Product ID -> plan key (replaced as a whole) |
 | `store.acceptUnverified` | true | accept app-reported Store purchases while the Store APIs are not set up |
 | `store.unverifiedDays` | 7 | 1-35: the most an unverified report grants at a time |
 | `store.renewalGraceDays` | 3 | 0-30: slack after a renewing period ends, and access during a failed renewal |
 | `store.maxMovesPer30Days` | 2 | 0-20: moves of one Store subscription to another computer |
+| `checkout.providers` | null | website payment providers the app offers, in this order. `null` = every provider whose keys are saved and enabled; a list (ids such as `stripe`, `paypal`, `cryptomus`) = only those of them; `[]` = none |
+| `checkout.labels` | {} | the name the app shows for a provider, e.g. `{ "stripe": "Card" }` (at most 60 characters each; replaced as a whole) |
 | `privacy.unverifiedRetentionDays` | 30 | |
 | `privacy.outboxBodyRetentionDays` | 90 | |
 | `privacy.trialAttemptRetentionDays` | 180 | |
@@ -679,6 +696,39 @@ Actions: `customer.create|update|delete|restore|erase`, `customers.export|import
 
 ---
 
+## App 1.0.23: sign-up required, lead fields, payment switches
+
+**Every workspace confirms its email with this server.** From app 1.0.23 (website and Microsoft Store
+builds), the app asks [`POST /v1/account/status`](#post-v1accountstatus) on every start. While it answers
+`verified: false`, the app shows "Confirm your email" before it can be used: the Owner's name and email
+(editable), phone, use case and company, then the 6-digit code from
+[`verify/start`](#post-v1accountverifystart) and [`verify/check`](#post-v1accountverifycheck). Installs that
+signed up through app 1.0.22 already have a verified customer and are not asked. A team member who is not the
+Owner sees a message asking the Owner to do it. If this server cannot be reached the app lets them in and asks
+again at the next start, for at most 7 days (a paid licence is never locked out by the server being down).
+
+**What the website admin can add**
+
+| Where | What | API |
+|---|---|---|
+| Customers list | columns Phone, Use case, Company; a "Use case" filter | `useCase`, `useCaseOther`, `phone`, `company` on every customer; `?useCase=` filter, `sort=useCase` |
+| Customers export | the same columns in the CSV | `GET /v1/admin/customers/export` |
+| Settings, Microsoft Store | "Sell in the Microsoft Store app" switch (default off) | `PATCH /v1/admin/settings` `{ "store": { "salesEnabled": true } }` |
+| Settings, Payments | which website providers the app offers, their order and names | `PATCH /v1/admin/settings` `{ "checkout": { "providers": ["stripe", "paypal"], "labels": { "stripe": "Card" } } }`; `{ "checkout": { "providers": null } }` goes back to "every enabled provider" |
+| Store page | show the switch's state | `salesEnabled` in `GET /v1/admin/store/status` |
+
+A provider still needs its keys saved and enabled with the owner's key (`POST /v1/tenant/payment-config`,
+not the website key) before the app can list it. The app reads the list from
+[`GET /v1/checkout/methods`](#get-v1checkoutmethodstenantid) (cached 15 minutes in the app), so a provider
+added on this server later reaches the app without a new app version; offline, the app uses the providers
+baked into its build.
+
+**Deploy order**: this server first, then `prisma migrate deploy` (migration `20261108140000_signup_lead_fields`:
+six nullable columns on `Customer` and `EmailVerification`, nothing else), then app 1.0.23. An app 1.0.23 that
+meets an older server cannot ask for the status (`404`) and treats it like "server not reachable".
+
+---
+
 ## Public endpoints (app and website)
 
 These keep the shapes in spec section A (the desktop app PR depends on them). Install-authenticated
@@ -708,24 +758,54 @@ carry `channel`: where the app was installed from.
 
 ### POST /v1/account/verify/start
 
-`{ tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, appVersion?, channel? }`
+`{ tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?, phone?, useCase?, useCaseOther?, company?, appVersion?, channel? }`
 → `200 { "ok": true, "sent": true, "expiresInSec": 600, "resendAfterSec": 60 }`. Sends a 6-digit code from
 no-reply@softglaze.com (10 minutes, 5 attempts). The code is never returned. `country` (ISO-2, optional)
 fills the customer's country; else the region of `lang` (`es-MX`) is used.
 
-Errors: `400 invalid_email`, `400 disposable_email`, `400 no_mx`, `429 rate_limited` (`retryAfterSec`,
+Lead fields (app 1.0.23+, all optional here; the app requires `useCase`): `phone` starts with `+` (or `00`)
+and the country code, 7 to 15 digits, spaces ( ) . - allowed, at most 40 characters; `useCase` is one of the
+six values above; `useCaseOther` (at most 200 characters) is kept only with `useCase: "other"`; `company`
+(company or website, at most 200 characters). They wait on the code and reach the customer only when
+`verify/check` proves it.
+
+Errors: `400 invalid_email`, `400 disposable_email`, `400 no_mx`, `400 invalid_phone`, `400 invalid_use_case`, `429 rate_limited` (`retryAfterSec`,
 `Retry-After` header: 60 s between codes per install and address, 5 per address / 8 per install / 20 per
 network per hour), `503 email_unavailable`, `502 email_failed` (no throttle is charged).
 
 ### POST /v1/account/verify/check
 
 `{ tenantId, installId, installSecret, email, code }` → `200 { "verified": true, "customerId": "cm..." }`.
-Creates or updates the customer (verified, consent if ticked, name, language), links the install, and
+Creates or updates the customer (verified, consent if ticked, name, language, and the lead fields sent with
+the code), links the install, and
 attaches a licence an admin granted to this customer without an install. Asking again with the same code
 returns the same answer.
 
 Errors: `400 invalid_email`, `400 invalid_code` (`attemptsLeft`), `404 no_code`, `410 code_expired`
 (also for a code already used), `429 too_many_attempts`.
+
+### POST /v1/account/status
+
+`{ tenantId, installId, installSecret, appVersion?, channel? }` → `200 { "verified": true, "email": "ana@example.com" }`
+or `200 { "verified": false }`. `true` when a code was proven **on this install** for the customer the install
+is linked to, and that customer is verified and not deleted (the same test the trial ledger uses). An email
+only claimed at register (older apps) is not verified. `Cache-Control: no-store`. The general rate limit
+(120 per minute per IP), because every app start asks. Errors: the install errors above.
+
+### GET /v1/checkout/methods?tenantId=...
+
+No auth. CORS open, `Cache-Control: public, max-age=60`.
+
+```json
+{ "providers": [{ "id": "stripe", "label": "Stripe (cards)", "kind": "automated" }],
+  "store": { "salesEnabled": false } }
+```
+
+`providers`: the website payment providers whose keys are saved and enabled for the tenant, picked, ordered
+and renamed by `settings.checkout`; never `microsoft_store` (that is the Store's Entra ID app, not a checkout).
+Every provider is a hosted checkout: the app sends its `id` to `POST /v1/checkout` and opens the `url` it
+gets back. `store.salesEnabled` is `settings.store.salesEnabled`. Errors: `400 bad_request` (no tenantId),
+`404 unknown_tenant`.
 
 ### POST /v1/trial/start
 

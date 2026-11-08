@@ -1,6 +1,8 @@
 'use strict';
 // POST /v1/checkout { tenantId, planKey, installId?, account?, provider='stripe' } -> { url, ref }
 // Uses the tenant's own sealed provider keys and records a pending Payment for the webhook to claim.
+// GET /v1/checkout/methods?tenantId=... (no auth) -> { providers: [{ id, label, kind }], store: { salesEnabled } }:
+// the payment methods the app offers (src/providers/checkoutProviders.js). CORS open, cached 60 s.
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -9,9 +11,27 @@ const { publicBaseUrl } = require('../env');
 const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
+const { CHECKOUT_IDS, publicCheckoutMethods } = require('../providers/checkoutProviders');
+const { getSettings } = require('../settings');
 
 const router = express.Router();
-const SUPPORTED = new Set(['stripe', 'paypal', 'cryptomus']);
+const SUPPORTED = new Set(CHECKOUT_IDS);
+
+// Public and read-only: no secrets, only which methods are switched on and their names.
+router.options('/methods', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.status(204).end();
+});
+router.get('/methods', asyncHandler(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : '';
+  if (!tenantId || tenantId.length > 64) return res.status(400).json({ error: 'bad_request', message: 'tenantId is required.' });
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant || tenant.status !== 'active') return res.status(404).json({ error: 'unknown_tenant', message: 'Unknown tenant.' });
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json(await publicCheckoutMethods(prisma, tenant.id, await getSettings(prisma, tenant.id)));
+}));
 
 router.post('/', asyncHandler(async (req, res) => {
   const { tenantId, planKey, installId, account } = req.body || {};
