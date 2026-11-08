@@ -27,7 +27,7 @@
     "slides": {
       "security": {
         "title": "Seguridad de datos robusta",
-        "body": "Tu espacio de trabajo se guarda en este dispositivo, y las semillas 2FA y las claves de proveedores se sellan con el llavero del sistema. Nada se sincroniza a menos que conectes tu propio servidor."
+        "body": "Tus perfiles, cookies y datos de navegación se quedan en este dispositivo, y las semillas 2FA y las claves de proveedores se sellan con el llavero del sistema."
       },
       "fingerprint": {
         "title": "Huellas consistentes",

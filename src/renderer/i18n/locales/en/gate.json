@@ -27,7 +27,7 @@
     "slides": {
       "security": {
         "title": "Robust data security",
-        "body": "Your workspace is stored on this device, and 2FA seeds and provider keys are sealed with your system keychain. Nothing syncs unless you connect your own server."
+        "body": "Your profiles, cookies and browsing data stay on this device, and 2FA seeds and provider keys are sealed with your system keychain."
       },
       "fingerprint": {
         "title": "Consistent fingerprints",
