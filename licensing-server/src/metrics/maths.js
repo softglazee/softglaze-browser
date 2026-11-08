@@ -203,9 +203,20 @@ function countByStatus(customers, field = 'status') {
   return out;
 }
 
+// Installs by where the app was installed from. Apps before 1.0.23 never report it: `unknown`.
+function countInstallsByChannel(installs) {
+  const out = { store: 0, website: 0, base: 0, unknown: 0 };
+  for (const i of installs) {
+    const c = i.channel;
+    if (c === 'store' || c === 'website' || c === 'base') out[c] += 1;
+    else out.unknown += 1;
+  }
+  return out;
+}
+
 function round4(x) { return Math.round(x * 10000) / 10000; }
 
 module.exports = {
   termMonths, monthlyAmount, planForLicence, computeMrr, statusesAt, churnByMonth, payingDuring,
-  revenueByMonth, conversionByCohort, trialsPerDay, trialsPerWeek, topCountries, countByStatus, monthRange
+  revenueByMonth, conversionByCohort, trialsPerDay, trialsPerWeek, topCountries, countByStatus, countInstallsByChannel, monthRange
 };

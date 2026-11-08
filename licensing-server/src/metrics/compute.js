@@ -43,7 +43,11 @@ function summaryFrom(d, now) {
 
 // opts: { from: 'YYYY-MM', to: 'YYYY-MM', days: 30 }
 async function computeMetrics(db, tenantId, { now = Date.now(), from, to, days = 30 } = {}) {
-  const d = await loadAll(db, tenantId);
+  // Installs are read here only (one column), not in loadAll, so the cron snapshot does not load them.
+  const [d, installs] = await Promise.all([
+    loadAll(db, tenantId),
+    db.install.findMany({ where: { tenantId }, select: { channel: true } })
+  ]);
   const toKey = to || monthKey(now);
   const fromKey = from || monthKey(Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth() - 11, 1));
   const months = monthRange(fromKey, toKey);
@@ -96,6 +100,8 @@ async function computeMetrics(db, tenantId, { now = Date.now(), from, to, days =
   return {
     asOf: new Date(now).toISOString(),
     ...summary,
+    installsTotal: installs.length,
+    installsByChannel: M.countInstallsByChannel(installs),
     lifetimeNetRevenueCents: lifetimeNet,
     customersEverPaid: everPaid,
     lifetimeRevenuePerPayingCustomerCents: everPaid ? Math.round(lifetimeNet / everPaid) : null,

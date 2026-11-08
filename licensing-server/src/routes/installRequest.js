@@ -11,7 +11,7 @@ const { getSettings } = require('../settings');
 const { touchInstall } = require('../customers/sync');
 
 async function installRequest(req, res, { requireMachine = false } = {}) {
-  const { tenantId, installId, installSecret, machineHash, appVersion } = req.body || {};
+  const { tenantId, installId, installSecret, machineHash, appVersion, channel } = req.body || {};
   if (!tenantId || !installId || !installSecret) {
     res.status(400).json({ error: 'bad_request', message: 'tenantId, installId and installSecret are required.' });
     return null;
@@ -31,7 +31,8 @@ async function installRequest(req, res, { requireMachine = false } = {}) {
     if (!bound.ok) { res.status(bound.status).json({ error: bound.error }); return null; }
     install = bound.install;
   }
-  await touchInstall(prisma, install, appVersion).catch(() => {});
+  // appVersion and channel are optional and only recorded when valid (never a reason to refuse).
+  await touchInstall(prisma, install, { appVersion, channel }).catch(() => {});
   const ip = clientIp(req);
   return {
     tenant,

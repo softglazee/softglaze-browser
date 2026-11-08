@@ -13,8 +13,9 @@ const IPC = fs.readFileSync(path.join(ROOT, 'src', 'main', 'ipcHandlers.js'), 'u
 const CLIENT = fs.readFileSync(path.join(ROOT, 'src', 'main', 'licenseClient.js'), 'utf8');
 
 test('the client sends the install secret on license and redeem, and no email', () => {
-  // The app version rides along so the owner's admin shows which version each install runs.
-  assert.match(CLIENT, /license: \(\{ installId, installSecret \}\) => postJson\('\/v1\/license', \{ tenantId: tenantConfig\(\)\.tenantId, installId, installSecret, machineHash: machineHash\(\), appVersion: appVersion\(\) \}\)/);
+  // The app version and install channel ride along so the owner's admin shows which version each
+  // install runs and where it was installed from.
+  assert.match(CLIENT, /license: \(\{ installId, installSecret \}\) => postJson\('\/v1\/license', \{ tenantId: tenantConfig\(\)\.tenantId, installId, installSecret, machineHash: machineHash\(\), appVersion: appVersion\(\), channel: installChannel\(\) \}\)/);
   assert.match(CLIENT, /redeem: \(\{ code, installId, installSecret \}\) => postJson\('\/v1\/redeem', \{ tenantId: tenantConfig\(\)\.tenantId, code, installId, installSecret \}\)/);
 });
 

@@ -86,7 +86,9 @@ function computeCustomerState({ licences = [], payments = [], trials = [], insta
     currency,
     firstSeenAt: minDate(installs.map((i) => i.createdAt)),
     lastSeenAt: lastInstall ? lastInstall.lastSeenAt : null,
-    appVersion: lastInstall ? (lastInstall.appVersion || null) : (maxBy(installs.filter((i) => i.appVersion), (i) => ms(i.createdAt)) || {}).appVersion || null
+    appVersion: lastInstall ? (lastInstall.appVersion || null) : (maxBy(installs.filter((i) => i.appVersion), (i) => ms(i.createdAt)) || {}).appVersion || null,
+    // Where the customer first came from: the channel of their earliest install that reported one.
+    firstChannel: (maxBy(installs.filter((i) => i.channel), (i) => -(ms(i.createdAt) || 0)) || {}).channel || null
   };
 }
 
