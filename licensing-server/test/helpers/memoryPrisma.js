@@ -34,12 +34,12 @@ const ID_FIELD = { jobLock: 'name' };
 
 const DEFAULTS = {
   plan: () => ({ tier: 'pro', currency: 'USD', interval: 'month', months: 1, recurring: false, active: true, highlight: false, sortOrder: 0, features: null, limits: null, description: null }),
-  install: () => ({ account: null, secretHash: null, machineHash: null, machineBoundAt: null, lastSeenAt: null, customerId: null, appVersion: null }),
+  install: () => ({ account: null, secretHash: null, machineHash: null, machineBoundAt: null, lastSeenAt: null, customerId: null, appVersion: null, channel: null }),
   license: () => ({ account: null, installId: null, tier: 'pro', plan: null, status: 'active', currentPeriodEnd: null, providerRef: null, rebindCount: 0, rebindWindowStart: null, customerId: null, complimentary: false, source: null, note: null, revokedAt: null, revokedReason: null }),
   payment: () => ({ providerRef: null, currency: 'USD', status: 'pending', account: null, plan: null, installId: null, customerId: null, method: null, note: null, paidAt: null, refundedAt: null, recordedBy: null }),
   customer: () => ({
     emailVerifiedAt: null, name: null, company: null, country: null, phone: null, lang: null, source: 'app', status: 'lead', statusAuto: 'lead',
-    statusOverride: null, statusNote: null, tier: null, firstSeenAt: new Date(), lastSeenAt: null, appVersion: null, trialStartedAt: null, trialEndsAt: null,
+    statusOverride: null, statusNote: null, tier: null, firstSeenAt: new Date(), lastSeenAt: null, appVersion: null, firstChannel: null, trialStartedAt: null, trialEndsAt: null,
     paidSince: null, paidUntil: null, complimentaryUntil: null, totalPaidCents: 0, currency: null, marketingConsent: false, consentAt: null, consentSource: null,
     unsubscribedAt: null, notes: null, tags: null, tagIndex: null, deletedAt: null
   }),

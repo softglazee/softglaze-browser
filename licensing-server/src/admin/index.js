@@ -13,6 +13,7 @@ const { resetTrials } = require('./trialReset');
 const { getSettings, updateSettings } = require('../settings');
 const { pickFilters, buildWhere } = require('../customers/query');
 const { resetMachine } = require('../machineBinding');
+const { CHANNELS } = require('../customers/sync');
 const { asJson } = require('../util/json');
 const { listInfo } = require('../customers/disposable');
 const transport = require('../email/transport');
@@ -79,11 +80,22 @@ router.get('/trial-attempts', asyncHandler(async (req, res) => {
 }));
 
 // ---- installs ----------------------------------------------------------------------------------
+// ?channel=store,website,base,unknown filters by where the app was installed from (unknown = never
+// reported: apps before 1.0.23). Items carry `channel` (null when unknown).
+const CHANNEL_FILTERS = [...CHANNELS, 'unknown'];
 router.get('/installs', asyncHandler(async (req, res) => {
   const q = req.query;
   const where = { tenantId: req.tenant.id };
   if (q.customerId) where.customerId = String(q.customerId);
   if (q.unlinked === '1' || q.unlinked === 'true') where.customerId = null;
+  const want = [...new Set(csvList(q.channel).map((c) => c.toLowerCase()))];
+  if (want.length) {
+    if (want.some((c) => !CHANNEL_FILTERS.includes(c))) return invalid(res, { channel: 'store, website, base or unknown (comma separated)' });
+    const known = want.filter((c) => c !== 'unknown');
+    if (!want.includes('unknown')) where.channel = { in: known };
+    else if (!known.length) where.channel = null;
+    else where.OR = [{ channel: { in: known } }, { channel: null }];
+  }
   const p = pageParams(q);
   const [total, rows] = await Promise.all([
     prisma.install.count({ where }),

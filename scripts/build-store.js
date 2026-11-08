@@ -45,8 +45,9 @@ function bakeTenant() {
   for (const k of ['tenantId', 'apiBaseUrl', 'publicKeyPem']) {
     if (!cfg[k]) throw new Error(`Tenant config is missing "${k}".`);
   }
-  // No updateFeedUrl: Store installs are updated by the Store.
-  const baked = { tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem, updateFeedUrl: '' };
+  // No updateFeedUrl: Store installs are updated by the Store. distribution 'store' makes the app
+  // report channel 'store' to the licensing server (src/main/installChannel.js).
+  const baked = { tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, publicKeyPem: cfg.publicKeyPem, updateFeedUrl: '', distribution: 'store' };
   // Payment providers enabled for this tenant on the licensing server (in-app checkout offers these).
   if (Array.isArray(cfg.checkoutProviders) && cfg.checkoutProviders.length) baked.checkoutProviders = cfg.checkoutProviders;
   fs.writeFileSync(TENANT_TARGET, JSON.stringify(baked, null, 2) + '\n');
