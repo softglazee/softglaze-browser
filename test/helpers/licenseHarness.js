@@ -24,9 +24,9 @@ function extractFunction(name) {
   throw new Error(`unbalanced braces extracting ${name}`);
 }
 
-function constLine(name) {
-  const m = new RegExp(`^const ${name} = .*$`, 'm').exec(IPC);
-  if (!m) throw new Error(`could not find const ${name}`);
+function constLine(name, kind = 'const') {
+  const m = new RegExp(`^${kind} ${name} = .*$`, 'm').exec(IPC);
+  if (!m) throw new Error(`could not find ${kind} ${name}`);
   return m[0];
 }
 
@@ -36,7 +36,12 @@ const FUNCTIONS = [
   'licenseTrialUsed', 'getBackendEntitlement', 'refreshBackendLease', 'licenseViewFromLease',
   'withPlanLimits', 'getLicense', 'withLicenseReason', 'assertNotBanned', 'startTrial', 'startTenantTrial',
   'tenantTrialUsedError', 'optionalString', 'requiredString', 'requireObject', 'assertFirstRunSetup',
-  'accountSendOtp', 'accountRegister', 'otpKey', 'hashSecret', 'verifySecret', 'initialsFrom', 'getBillingPlans'
+  'accountSendOtp', 'accountRegister', 'otpKey', 'hashSecret', 'verifySecret', 'initialsFrom', 'getBillingPlans',
+  // Confirm your email (1.0.23) and payment methods from the server.
+  'readSignupCache', 'writeSignupCache', 'signupInstallKey', 'hasPaidLease', 'signupDecide', 'recordSignupVerified',
+  'signupDeferral', 'mayConfirmSignup', 'accountSignupStatus', 'requireTenantSignup', 'accountConfirmStart',
+  'accountConfirmCheck', 'syncOwnerAccount', 'accountConfirmLater', 'requirePurchaser',
+  'tenantCheckoutMethods', 'listPaymentMethods', 'startCheckout', 'storeSalesOpen', 'storeSubscriptionSeen', 'storeStatus', 'storePurchase'
 ];
 
 function billingConstants() {
@@ -49,9 +54,16 @@ const SOURCE = [
   billingConstants(),
   constLine('LICENSE_BAN_REASON'),
   constLine('serverPlanCatalog'),
+  constLine('serverCheckoutCatalog'),
+  constLine('STORE_METHOD_ID'),
+  constLine('signupDecision', 'let'),
+  constLine('signupFailedAt', 'let'),
+  constLine('SIGNUP_RECHECK_MS'),
+  constLine('SIGNUP_FAILURE_MS'),
   ...FUNCTIONS.map(extractFunction),
   'this.__fns = { ' + FUNCTIONS.join(', ') + ' };',
-  'this.__state = () => ({ currentMemberId, vaultLocked, vaultUnlockSource });'
+  'this.__state = () => ({ currentMemberId, vaultLocked, vaultUnlockSource, signupDecision, signupFailedAt });',
+  'this.__setSignup = (o) => { if (o && "decision" in o) signupDecision = o.decision; if (o && "failedAt" in o) signupFailedAt = o.failedAt; };'
 ].join('\n\n');
 
 // A tiny Prisma stand-in: just the calls the extracted functions make.
@@ -66,7 +78,10 @@ function fakeDb({ members = [], licenses = [], settings }) {
     member: {
       count: async function () { if (this.failCount) throw new Error('db down'); return members.length; },
       findUnique: async ({ where }) => members.find((m) => m.id === where.id) || null,
-      findFirst: async ({ where }) => members.filter((m) => !where || !where.role || m.role === where.role)[0] || null,
+      findFirst: async ({ where }) => members.filter((m) => !where
+        || ((!where.role || m.role === where.role)
+          && (where.email === undefined || String(m.email || '').toLowerCase() === where.email)
+          && (!where.id || !('not' in where.id) || m.id !== where.id.not)))[0] || null,
       update: async ({ where, data }) => { const m = members.find((x) => x.id === where.id); Object.assign(m, data); return { ...m }; },
       create: async ({ data }) => { const m = { id: nextMemberId++, createdAt: now(), ...data }; members.push(m); return { ...m }; }
     },
@@ -86,7 +101,8 @@ function fakeDb({ members = [], licenses = [], settings }) {
   };
 }
 
-// opts: { tenant, members, licenses, settings: {k: v}, api, activeMemberId, verifyLease, licenseIssue }
+// opts: { tenant, members, licenses, settings: {k: v}, api, activeMemberId, verifyLease, licenseIssue,
+//   checkoutProviders, store: { isStoreInstall, available, status } }
 function buildMain(opts = {}) {
   const settings = new Map(Object.entries(opts.settings || {}));
   const db = fakeDb({ members: opts.members || [], licenses: opts.licenses || [], settings });
@@ -108,7 +124,25 @@ function buildMain(opts = {}) {
   const install = { installId: 'inst_1', installSecret: 'secret_1' };
   const ctx = {
     console, Date, JSON, Math, Number, String, Boolean, Object, Array, Error, TypeError, Map, Set, Promise, Buffer, crypto,
-    tenantConfig: () => ({ enabled: Boolean(opts.tenant), tenantId: opts.tenant ? 'tenant_test' : '' }),
+    tenantConfig: () => ({ enabled: Boolean(opts.tenant), tenantId: opts.tenant ? 'tenant_test' : '', checkoutProviders: opts.checkoutProviders || [] }),
+    signupLead: require(path.join(ROOT, 'src', 'main', 'signupLead.js')),
+    signupConfirm: require(path.join(ROOT, 'src', 'main', 'signupConfirm.js')),
+    serverErrors: require(path.join(ROOT, 'src', 'main', 'serverErrors.js')),
+    checkoutMethods: require(path.join(ROOT, 'src', 'main', 'checkoutMethods.js')),
+    payments: require(path.join(ROOT, 'src', 'main', 'payments.js')),
+    storeCommerceLib: require(path.join(ROOT, 'src', 'main', 'storeCommerce.js')),
+    storeBridge: {
+      isStoreInstall: () => Boolean(opts.store && opts.store.isStoreInstall),
+      available: () => Boolean(opts.store && opts.store.available)
+    },
+    getStoreCommerce: () => ({
+      status: async () => (opts.store && opts.store.status ? opts.store.status() : { available: false }),
+      purchase: async () => { calls.push({ method: 'storeCommerce.purchase', args: [] }); return { status: 'active', tier: 'pro' }; }
+    }),
+    storeWindowHandle: () => '1',
+    storeResultWithLicense: async (r, extra = {}) => ({ ...r, ...extra }),
+    readPaymentStore: async () => ({}),
+    providerConfigured: () => false,
     tenantTrial: require(path.join(ROOT, 'src', 'main', 'tenantTrial.js')),
     tenantSignup: require(path.join(ROOT, 'src', 'main', 'tenantSignup.js')),
     planCatalog: require(path.join(ROOT, 'src', 'main', 'planCatalog.js')),
@@ -133,7 +167,7 @@ function buildMain(opts = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext(SOURCE, ctx, { filename: 'ipcHandlers-extract.js' });
-  return { fns: ctx.__fns, state: ctx.__state, settings, db, audits, calls, install };
+  return { fns: ctx.__fns, state: ctx.__state, setSignup: ctx.__setSignup, settings, db, audits, calls, install };
 }
 
 module.exports = { buildMain, extractFunction, IPC };

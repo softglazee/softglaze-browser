@@ -292,7 +292,11 @@
     "TRIAL_NO_EMAIL": "Primero añade un correo electrónico a la cuenta del propietario y después inicia la prueba gratuita.",
     "TRIAL_FAILED": "Ahora mismo no se pudo iniciar la prueba gratuita. Inténtalo de nuevo en unos minutos.",
     "SERVER_UNAVAILABLE": "Nuestro servidor de licencias no responde ahora mismo. Inténtalo de nuevo en unos minutos.",
-    "MACHINE_MISMATCH": "Esta licencia está registrada en otro equipo. Muévela a este PC o pide a tu administrador que la restablezca."
+    "MACHINE_MISMATCH": "Esta licencia está registrada en otro equipo. Muévela a este PC o pide a tu administrador que la restablezca.",
+    "SIGNUP_INVALID_PHONE": "Escribe el teléfono con + y el prefijo del país, o déjalo vacío.",
+    "SIGNUP_USE_CASE": "Elige para qué vas a usar SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Cuéntanos en pocas palabras para qué vas a usar SoftGlaze.",
+    "CONFIRM_OFFLINE": "Conéctate a internet para confirmar tu correo."
   },
   "store": {
     "cardTitle": "Suscripción de Microsoft Store",

@@ -193,15 +193,24 @@ const api = {
   redeem: ({ code, installId, installSecret }) => postJson('/v1/redeem', { tenantId: tenantConfig().tenantId, code, installId, installSecret }),
   // Sign-up email check by the licensing server: it emails a 6-digit code from its own address
   // (never shown in-app) and refuses invalid_email, disposable_email, no_mx and rate_limited.
-  verifyStart: ({ installId, installSecret, email, name, consentMarketing, lang }) => postJson('/v1/account/verify/start', {
-    tenantId: tenantConfig().tenantId, installId, installSecret, email, name: name || undefined, consentMarketing: consentMarketing === true, lang: lang || 'en', appVersion: appVersion(), channel: installChannel()
+  // From 1.0.23 also the lead details (phone, useCase, useCaseOther, company), each only when filled.
+  verifyStart: ({ installId, installSecret, email, name, consentMarketing, lang, phone, useCase, useCaseOther, company }) => postJson('/v1/account/verify/start', {
+    tenantId: tenantConfig().tenantId, installId, installSecret, email, name: name || undefined, consentMarketing: consentMarketing === true, lang: lang || 'en',
+    phone: phone || undefined, useCase: useCase || undefined, useCaseOther: useCaseOther || undefined, company: company || undefined,
+    appVersion: appVersion(), channel: installChannel()
   }),
   // -> { verified: true, customerId }; links this install to the verified customer.
   verifyCheck: ({ installId, installSecret, email, code }) => postJson('/v1/account/verify/check', { tenantId: tenantConfig().tenantId, installId, installSecret, email, code }),
   // The trial ledger: one free trial per computer and per email. -> the signed trial lease, or 409 trial_used.
   trialStart: ({ installId, installSecret, email }) => postJson('/v1/trial/start', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), email, appVersion: appVersion(), channel: installChannel() }),
+  // -> { verified, email? }: does this install have a customer whose email the server verified? Asked on
+  // every start (signupConfirm.js), so it gives up quickly when the server cannot be reached.
+  accountStatus: ({ installId, installSecret }) => requestJson('POST', '/v1/account/status', { tenantId: tenantConfig().tenantId, installId, installSecret, appVersion: appVersion(), channel: installChannel() }, { timeoutMs: 6000 }),
   // Public price list (no auth): the active plans and their prices.
-  plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 })
+  plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 }),
+  // Public (no auth): the website payment providers switched on for this tenant, with their names, and
+  // whether Microsoft Store sales are on. -> { providers: [{ id, label, kind }], store: { salesEnabled } }
+  checkoutMethods: () => requestJson('GET', `/v1/checkout/methods?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 })
 };
 
 module.exports = { verifyLease, api, postJson, machineHash, appVersion, licenseIssue, clearLicenseIssue };

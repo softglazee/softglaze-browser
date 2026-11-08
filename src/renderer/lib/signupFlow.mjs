@@ -11,6 +11,10 @@ export const SERVER_ERROR_CODES = Object.freeze([
   'SIGNUP_BAD_CODE',
   'SIGNUP_OFFLINE',
   'SIGNUP_FAILED',
+  'SIGNUP_INVALID_PHONE',
+  'SIGNUP_USE_CASE',
+  'SIGNUP_USE_CASE_OTHER',
+  'CONFIRM_OFFLINE',
   'RATE_LIMITED',
   'TRIAL_USED',
   'TRIAL_OFFLINE',
@@ -35,15 +39,31 @@ export function errorText(t, err, fallbackKey) {
 }
 
 // Extra fields for account.sendOtp. Only tenant builds send them: the name for the email greeting,
-// the marketing consent (true only when the box was ticked) and the email language.
-export function otpExtras({ tenant, firstName, lastName, consent, lang }) {
+// the marketing consent (true only when the box was ticked), the email language and, from 1.0.23, the
+// lead details (`lead`: leadPayload() from signupLead.mjs).
+export function otpExtras({ tenant, firstName, lastName, consent, lang, lead }) {
   if (!tenant) return undefined;
   return {
     firstName: String(firstName || '').trim(),
     lastName: String(lastName || '').trim(),
     consentMarketing: consent === true,
-    lang: lang || 'en'
+    lang: lang || 'en',
+    ...(lead && typeof lead === 'object' ? lead : {})
   };
+}
+
+// After sign-in, account.signupStatus() decides whether the "Confirm your email" step comes first
+// (tenant builds): 'confirm' for whoever may confirm (the Owner), 'confirmMember' for anyone else,
+// null to go on to the licence. A missing or failed status goes on (main checks before launches).
+export function confirmPhase(status) {
+  if (!status || status.enabled === false || status.required !== true) return null;
+  return status.canConfirm ? 'confirm' : 'confirmMember';
+}
+
+// App codes that mean our side failed (offline, server, email); the step may then offer "Continue for now".
+export const OUR_SIDE_CODES = Object.freeze(['CONFIRM_OFFLINE', 'SIGNUP_OFFLINE', 'SERVER_UNAVAILABLE', 'SIGNUP_FAILED']);
+export function isOurSideError(err) {
+  return Boolean(err && OUR_SIDE_CODES.includes(err.code));
 }
 
 // Where the Gate goes after license:get: no plan yet (tenant builds) -> the plan step; ended or

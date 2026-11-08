@@ -85,7 +85,10 @@
     "logIn": "Iniciar sesión",
     "consent": "Envíame novedades del producto y consejos por correo",
     "consentNote": "Tu código, los avisos de la prueba y los correos de la cuenta se envían siempre. Las novedades del producto, solo si marcas la casilla.",
-    "checkedByServer": "Te enviamos un código por correo para confirmar esta dirección. Tus perfiles y datos se quedan en este dispositivo."
+    "checkedByServer": "Te enviamos un código por correo para confirmar esta dirección. Tus perfiles y datos se quedan en este dispositivo.",
+    "phoneOptional": "Teléfono (opcional)",
+    "phoneIntlPlaceholder": "+34 912 345 678",
+    "phoneHint": "Empieza con + y el prefijo de tu país."
   },
   "verify": {
     "title": "Verifica tu correo electrónico",
@@ -97,6 +100,37 @@
     "resendIn": "Reenviar código en {{count}}s",
     "resend": "Reenviar código",
     "checkSpam": "El código puede tardar un minuto en llegar. Revisa la carpeta de spam si no lo ves."
+  },
+  "lead": {
+    "useCase": "¿Para qué vas a usar SoftGlaze?",
+    "useCasePlaceholder": "Elige una opción",
+    "useCases": {
+      "ecommerce": "Tiendas online y marketplaces",
+      "social_media": "Cuentas de redes sociales",
+      "affiliate_marketing": "Marketing de afiliados y compra de medios",
+      "agency": "Trabajo de agencia para clientes",
+      "web_research": "Investigación web y control de calidad",
+      "other": "Otra cosa"
+    },
+    "useCaseOther": "Cuéntanoslo en pocas palabras",
+    "useCaseOtherPlaceholder": "Por ejemplo: comparar precios por país",
+    "company": "Empresa o sitio web (opcional)",
+    "companyPlaceholder": "Acme S.L. o acme.com"
+  },
+  "confirm": {
+    "title": "Confirma tu correo",
+    "subtitle": "Ahora cada espacio de trabajo de SoftGlaze necesita un correo confirmado. Revisa tus datos y te enviaremos un código de 6 dígitos.",
+    "sendCode": "Enviar el código",
+    "codeTitle": "Introduce el código",
+    "codeBody": "Hemos enviado un código de 6 dígitos a {{email}}. Introdúcelo para confirmar el correo de este espacio de trabajo.",
+    "confirmContinue": "Confirmar y continuar",
+    "changeDetails": "Cambiar datos",
+    "dataNote": "Tus perfiles y datos se quedan en este equipo. Guardamos estos datos para atender tu cuenta.",
+    "later": "Continuar por ahora",
+    "laterNote": "No pudimos conectar con nuestro servidor. Puedes usar la aplicación ahora y te lo pediremos de nuevo la próxima vez que se abra.",
+    "memberTitle": "El propietario tiene que confirmar este espacio de trabajo",
+    "memberBody": "Antes de usar este espacio de trabajo, su propietario tiene que confirmar su correo. Pide al propietario que inicie sesión y lo haga, o inicia sesión como propietario.",
+    "signInAsOwner": "Iniciar sesión como propietario"
   },
   "plan": {
     "title": "Todo listo",
@@ -235,6 +269,10 @@
     "TRIAL_NO_EMAIL": "Primero añade un correo electrónico a la cuenta del propietario y después inicia la prueba gratuita.",
     "TRIAL_FAILED": "Ahora mismo no se pudo iniciar la prueba gratuita. Inténtalo de nuevo en unos minutos.",
     "SERVER_UNAVAILABLE": "Nuestro servidor de licencias no responde ahora mismo. Inténtalo de nuevo en unos minutos.",
-    "MACHINE_MISMATCH": "Esta licencia está registrada en otro equipo. Muévela a este PC o pide a tu administrador que la restablezca."
+    "MACHINE_MISMATCH": "Esta licencia está registrada en otro equipo. Muévela a este PC o pide a tu administrador que la restablezca.",
+    "SIGNUP_INVALID_PHONE": "Escribe el teléfono con + y el prefijo del país, o déjalo vacío.",
+    "SIGNUP_USE_CASE": "Elige para qué vas a usar SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Cuéntanos en pocas palabras para qué vas a usar SoftGlaze.",
+    "CONFIRM_OFFLINE": "Conéctate a internet para confirmar tu correo."
   }
 }

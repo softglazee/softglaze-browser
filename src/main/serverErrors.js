@@ -15,6 +15,10 @@ const MESSAGES = Object.freeze({
   SIGNUP_BAD_CODE: "That code isn't right or has expired. Check the email or ask for a new code.",
   SIGNUP_OFFLINE: 'Connect to the internet to create your account.',
   SIGNUP_FAILED: "We couldn't check that email right now. Try again in a few minutes.",
+  SIGNUP_INVALID_PHONE: 'Enter the phone number with + and the country code, or leave it empty.',
+  SIGNUP_USE_CASE: 'Choose what you will use SoftGlaze for.',
+  SIGNUP_USE_CASE_OTHER: 'Tell us in a few words what you will use SoftGlaze for.',
+  CONFIRM_OFFLINE: 'Connect to the internet to confirm your email.',
   RATE_LIMITED: 'Too many attempts, try again in a few minutes.',
   TRIAL_USED: 'A free trial has already been used on this computer or email. Choose a plan or enter a purchase code.',
   TRIAL_OFFLINE: 'Connect to the internet to start the free trial.',
@@ -43,6 +47,9 @@ const SIGNUP_CODES = Object.freeze({
   expired_code: 'SIGNUP_BAD_CODE',
   expired: 'SIGNUP_BAD_CODE',
   no_code: 'SIGNUP_BAD_CODE',
+  // Lead details (verify/start, server 1.0.23+). The app checks them first, so these are rare.
+  invalid_phone: 'SIGNUP_INVALID_PHONE',
+  invalid_use_case: 'SIGNUP_USE_CASE',
   machine_mismatch: 'MACHINE_MISMATCH'
 });
 
@@ -63,7 +70,10 @@ const CONTEXTS = Object.freeze({
   signupCheck: { offline: 'SIGNUP_OFFLINE', fallback: 'SIGNUP_FAILED', clientFallback: 'SIGNUP_BAD_CODE', codes: SIGNUP_CODES },
   trial: { offline: 'TRIAL_OFFLINE', fallback: 'TRIAL_FAILED', clientFallback: 'TRIAL_FAILED', codes: TRIAL_CODES },
   trialVerify: { offline: 'TRIAL_OFFLINE', fallback: 'TRIAL_FAILED', clientFallback: 'TRIAL_FAILED', codes: SIGNUP_CODES },
-  trialVerifyCheck: { offline: 'TRIAL_OFFLINE', fallback: 'TRIAL_FAILED', clientFallback: 'SIGNUP_BAD_CODE', codes: SIGNUP_CODES }
+  trialVerifyCheck: { offline: 'TRIAL_OFFLINE', fallback: 'TRIAL_FAILED', clientFallback: 'SIGNUP_BAD_CODE', codes: SIGNUP_CODES },
+  // "Confirm your email" for a workspace made before server sign-up (signupConfirm.js).
+  confirm: { offline: 'CONFIRM_OFFLINE', fallback: 'SIGNUP_FAILED', clientFallback: 'SIGNUP_FAILED', codes: SIGNUP_CODES },
+  confirmCheck: { offline: 'CONFIRM_OFFLINE', fallback: 'SIGNUP_FAILED', clientFallback: 'SIGNUP_BAD_CODE', codes: SIGNUP_CODES }
 });
 
 function coded(code, extra) {

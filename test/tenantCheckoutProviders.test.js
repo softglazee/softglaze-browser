@@ -40,12 +40,14 @@ const fnBody = (name) => {
   return handlers.slice(start, next === -1 ? undefined : next);
 };
 
-test('tenant builds list the baked providers, not the empty local store', () => {
+test('tenant builds list the server providers (baked ones as the fallback), not the empty local store', () => {
   const body = fnBody('listPaymentMethods');
   const tenantAt = body.indexOf('tenantConfig().enabled');
   const storeAt = body.indexOf('readPaymentStore()');
   assert.ok(tenantAt >= 0 && storeAt > tenantAt, 'the tenant branch must come before the local store is read');
-  assert.match(body, /checkoutProviders\.map/);
+  assert.match(body, /await tenantCheckoutMethods\(\)/);
+  // The fallback when the licensing server cannot be reached is still the baked list.
+  assert.match(fnBody('tenantCheckoutMethods'), /fallbackMethods\(tenantConfig\(\)\.checkoutProviders/);
 });
 
 test('tenant checkout only sends a provider this tenant offers', () => {

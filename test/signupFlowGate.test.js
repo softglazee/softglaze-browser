@@ -66,7 +66,8 @@ test('Gate wiring: tenant sign-up has an unticked consent box and never shows a 
   assert.match(GATE, /\{tenant && <ConsentToggle checked=\{consent\} onChange=\{setConsent\} \/>\}/);
   assert.match(GATE, /<input type="checkbox" checked=\{checked\}/, 'a real checkbox');
   assert.match(GATE, /\{devCode && !tenant && \(/, 'the dev-mode code box is base-only');
-  assert.match(GATE, /softglazeApi\.account\.sendOtp\(email\.trim\(\)\.toLowerCase\(\), otpExtras\(\{ tenant, firstName, lastName, consent, lang: getStoredLang\(\) \}\)\)/);
+  // From 1.0.23 the lead details ride along (tenant builds only: otpExtras drops them for base builds).
+  assert.match(GATE, /softglazeApi\.account\.sendOtp\(email\.trim\(\)\.toLowerCase\(\), otpExtras\(\{ tenant, firstName, lastName, consent, lang: getStoredLang\(\), lead: leadPayload\(\{ phone, useCase, useCaseOther, company \}\) \}\)\)/);
   assert.match(GATE, /softglazeApi\.license\.backendInfo\(\)\.catch\(\(\) => null\)/);
 });
 

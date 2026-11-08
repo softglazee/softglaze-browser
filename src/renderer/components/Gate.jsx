@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredTheme, setTheme } from '@/lib/theme.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
-import { errorText, otpExtras, phaseForLicense, trialNeedsCode, trialPayload, paidPlans, defaultPlanId, formatPrice } from '@/lib/signupFlow.mjs';
+import { errorText, otpExtras, phaseForLicense, trialNeedsCode, trialPayload, paidPlans, defaultPlanId, formatPrice, confirmPhase, isOurSideError } from '@/lib/signupFlow.mjs';
+import { USE_CASES, leadError, leadPayload, LEAD_LIMITS } from '@/lib/signupLead.mjs';
 import billingEn from '@/i18n/locales/en/billing.json';
 import { isStoreMethod, storeOutcome, storePrice, STORE_POLL } from '@/lib/storePurchase.mjs';
 
@@ -93,6 +94,42 @@ function ConsentToggle({ checked, onChange }) {
       </label>
       <p className="mt-1.5 text-[11px] text-muted-dark leading-relaxed">{t('register.consentNote')}</p>
     </div>
+  );
+}
+
+// Tenant sign-up and "Confirm your email": phone (optional, with the country code), what they will use
+// SoftGlaze for (required), and company or website (optional). Rules: src/renderer/lib/signupLead.mjs.
+function LeadFields({ idPrefix, phone, setPhone, useCase, setUseCase, useCaseOther, setUseCaseOther, company, setCompany }) {
+  const { t } = useTranslation('gate');
+  const id = (k) => `${idPrefix}-${k}`;
+  return (
+    <>
+      <div>
+        <label htmlFor={id('phone')} className={labelCls}>{t('register.phoneOptional')}</label>
+        <input id={id('phone')} type="tel" inputMode="tel" autoComplete="tel" maxLength={LEAD_LIMITS.phone} className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('register.phoneIntlPlaceholder')} aria-describedby={id('phone-hint')} />
+        <p id={id('phone-hint')} className="mt-1 text-[10.5px] text-muted-dark">{t('register.phoneHint')}</p>
+      </div>
+      <div>
+        <label htmlFor={id('usecase')} className={labelCls}>{t('lead.useCase')}</label>
+        <div className="relative">
+          <select id={id('usecase')} required aria-required="true" className={inputCls + ' appearance-none pr-9 cursor-pointer' + (useCase ? '' : ' text-muted-dark')} value={useCase} onChange={(e) => setUseCase(e.target.value)}>
+            <option value="" disabled className="bg-background text-muted-dark">{t('lead.useCasePlaceholder')}</option>
+            {USE_CASES.map((k) => <option key={k} value={k} className="bg-background text-foreground">{t(`lead.useCases.${k}`)}</option>)}
+          </select>
+          <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-dark" />
+        </div>
+      </div>
+      {useCase === 'other' && (
+        <div>
+          <label htmlFor={id('usecase-other')} className={labelCls}>{t('lead.useCaseOther')}</label>
+          <input id={id('usecase-other')} maxLength={LEAD_LIMITS.useCaseOther} className={inputCls} value={useCaseOther} onChange={(e) => setUseCaseOther(e.target.value)} placeholder={t('lead.useCaseOtherPlaceholder')} />
+        </div>
+      )}
+      <div>
+        <label htmlFor={id('company')} className={labelCls}>{t('lead.company')}</label>
+        <input id={id('company')} autoComplete="organization" maxLength={LEAD_LIMITS.company} className={inputCls} value={company} onChange={(e) => setCompany(e.target.value)} placeholder={t('lead.companyPlaceholder')} />
+      </div>
+    </>
   );
 }
 
@@ -430,7 +467,7 @@ function BannedScreen({ account, license, methods, plans = [], selPlanId, onSele
 export default function Gate({ children }) {
   const { t } = useTranslation('gate');
   const { t: tb } = useTranslation('billing');
-  const [phase, setPhase] = useState('loading'); // loading | register | login | pick | plan | licensing | banned | ready
+  const [phase, setPhase] = useState('loading'); // loading | register | login | pick | confirm | confirmMember | plan | licensing | banned | ready
   const [members, setMembers] = useState([]);
   const [account, setAccount] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -463,6 +500,13 @@ export default function Gate({ children }) {
   const [storeInfo, setStoreInfo] = useState(null);
   const [storeMsg, setStoreMsg] = useState(null); // { text, tone, canMove }
   const [trialCode, setTrialCode] = useState('');
+  // Lead details (tenant sign-up and the confirm step): what they will use SoftGlaze for, company.
+  const [useCase, setUseCase] = useState('');
+  const [useCaseOther, setUseCaseOther] = useState('');
+  const [company, setCompany] = useState('');
+  // "Confirm your email" (tenant builds, workspaces made before server sign-up): details | code.
+  const [confirmStep, setConfirmStep] = useState('details');
+  const [canDefer, setCanDefer] = useState(false);
 
   // login / pick
   const [loginPass, setLoginPass] = useState('');
@@ -533,12 +577,16 @@ export default function Gate({ children }) {
     setErr('');
     if (!firstName.trim() || !lastName.trim()) return setErr(t('errors.enterFirstLast'));
     if (!EMAIL_RE.test(email.trim())) return setErr(t('errors.validEmail'));
-    if (phone.replace(/\D/g, '').length < 6) return setErr(t('errors.validPhone'));
+    if (tenant) {
+      // Tenant builds: phone is optional (with the country code) and the use case is required.
+      const le = leadError({ phone, useCase, useCaseOther });
+      if (le) return setErr(t(`serverErrors.${le}`));
+    } else if (phone.replace(/\D/g, '').length < 6) return setErr(t('errors.validPhone'));
     if (password.length < 8) return setErr(t('errors.password8'));
     if (password !== confirm) return setErr(t('errors.passwordsNoMatch'));
     setBusy(true);
     try {
-      const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase(), otpExtras({ tenant, firstName, lastName, consent, lang: getStoredLang() }));
+      const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase(), otpExtras({ tenant, firstName, lastName, consent, lang: getStoredLang(), lead: leadPayload({ phone, useCase, useCaseOther, company }) }));
       setDevCode(res?.devCode || ''); setResendIn(30); setOtp(''); setStep('verify');
     } catch (e) { setErr(errorText(t, e, 'errors.couldNotSendCode')); }
     finally { setBusy(false); }
@@ -547,7 +595,7 @@ export default function Gate({ children }) {
   async function resend() {
     if (resendIn > 0) return;
     setBusy(true); setErr('');
-    try { const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase(), otpExtras({ tenant, firstName, lastName, consent, lang: getStoredLang() })); setDevCode(res?.devCode || ''); setResendIn(30); }
+    try { const res = await softglazeApi.account.sendOtp(email.trim().toLowerCase(), otpExtras({ tenant, firstName, lastName, consent, lang: getStoredLang(), lead: leadPayload({ phone, useCase, useCaseOther, company }) })); setDevCode(res?.devCode || ''); setResendIn(30); }
     catch (e) { setErr(errorText(t, e, 'errors.couldNotResendCode')); }
     finally { setBusy(false); }
   }
@@ -652,6 +700,12 @@ export default function Gate({ children }) {
     if (phase !== 'licensing') return undefined;
     let live = true;
     (async () => {
+      // Tenant builds: a workspace without an email confirmed by our server confirms it first. Main
+      // decides (the server is the truth); a failed status goes on, and main still checks launches.
+      const st = softglazeApi.account.signupStatus ? await softglazeApi.account.signupStatus().catch(() => null) : null;
+      if (!live) return;
+      const next = confirmPhase(st);
+      if (next) { openConfirm(st); setBusy(false); setPhase(next); return; }
       try {
         const lic = await softglazeApi.license.get();
         if (!live) return;
@@ -681,6 +735,72 @@ export default function Gate({ children }) {
       .catch(() => { if (live) setStoreInfo(null); });
     return () => { live = false; };
   }, [tenant, phase]);
+
+  // "Confirm your email": prefill the Owner's details (editable) once, on the details step.
+  function openConfirm(st) {
+    const p = (st && st.prefill) || {};
+    if (p.firstName) setFirstName((v) => v || p.firstName);
+    if (p.lastName) setLastName((v) => v || p.lastName);
+    if (p.email) setEmail((v) => v || p.email);
+    if (p.phone) setPhone((v) => v || p.phone);
+    setCanDefer(Boolean(st && st.canDefer));
+    setConfirmStep('details'); setOtp(''); setErr('');
+  }
+
+  // After our side failed (offline, server, email), main may allow "Continue for now".
+  async function refreshDefer() {
+    const st = await softglazeApi.account.signupStatus().catch(() => null);
+    setCanDefer(Boolean(st && st.canDefer));
+  }
+
+  function confirmDetailsError() {
+    if (!firstName.trim() || !lastName.trim()) return t('errors.enterFirstLast');
+    if (!EMAIL_RE.test(email.trim())) return t('errors.validEmail');
+    const le = leadError({ phone, useCase, useCaseOther });
+    return le ? t(`serverErrors.${le}`) : '';
+  }
+
+  async function sendConfirmCode() {
+    if (busy) return;
+    setErr('');
+    const bad = confirmDetailsError();
+    if (bad) return setErr(bad);
+    setBusy(true);
+    try {
+      await softglazeApi.account.confirmStart({
+        email: email.trim().toLowerCase(), firstName: firstName.trim(), lastName: lastName.trim(),
+        consentMarketing: consent === true, lang: getStoredLang(), ...leadPayload({ phone, useCase, useCaseOther, company })
+      });
+      setOtp(''); setResendIn(60); setConfirmStep('code');
+    } catch (e) {
+      setErr(errorText(t, e, 'errors.couldNotSendCode'));
+      if (isOurSideError(e)) refreshDefer();
+    } finally { setBusy(false); }
+  }
+
+  async function checkConfirmCode(code) {
+    if (busy) return; // OtpInput.onComplete can fire alongside the button
+    const c = (code || otp).replace(/\D/g, '');
+    if (c.length !== 6) return setErr(t('errors.enter6Digit'));
+    setErr(''); setBusy(true);
+    try {
+      await softglazeApi.account.confirmCheck({ email: email.trim().toLowerCase(), code: c, firstName: firstName.trim(), lastName: lastName.trim(), phone: phone.trim() });
+      const acct = await softglazeApi.account.get().catch(() => null);
+      if (acct) setAccount(acct);
+      setOtp(''); setBusy(false); setPhase('licensing');
+    } catch (e) {
+      setErr(errorText(t, e, 'errors.verificationFailed'));
+      if (isOurSideError(e)) refreshDefer();
+      setBusy(false);
+    }
+  }
+
+  async function confirmLater() {
+    if (busy) return;
+    setErr(''); setBusy(true);
+    try { await softglazeApi.account.confirmLater(); setBusy(false); setPhase('licensing'); }
+    catch (e) { setErr(e.message || t('errors.verificationFailed')); setCanDefer(false); setBusy(false); }
+  }
 
   async function startTrial() {
     // Base builds: the trial was already created at registration.
@@ -870,7 +990,9 @@ export default function Gate({ children }) {
                   <div><label className={labelCls}>{t('register.lastName')}</label><input className={inputCls} value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
                 </div>
                 <div><label className={labelCls}>{t('register.email')}</label><input className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('register.emailPlaceholder')} /></div>
-                <div><label className={labelCls}>{t('register.phone')}</label><input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('register.phonePlaceholder')} /></div>
+                {tenant
+                  ? <LeadFields idPrefix="reg" phone={phone} setPhone={setPhone} useCase={useCase} setUseCase={setUseCase} useCaseOther={useCaseOther} setUseCaseOther={setUseCaseOther} company={company} setCompany={setCompany} />
+                  : <div><label className={labelCls}>{t('register.phone')}</label><input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t('register.phonePlaceholder')} /></div>}
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className={labelCls}>{t('register.password')}</label><PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('register.passwordPlaceholder')} /></div>
                   <div><label className={labelCls}>{t('register.confirm')}</label><PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t('register.confirmPlaceholder')} onKeyDown={(e) => { if (e.key === 'Enter') sendCode(); }} /></div>
@@ -909,6 +1031,70 @@ export default function Gate({ children }) {
               </button>
               <button onClick={resend} disabled={resendIn > 0 || busy} className="mt-3 w-full text-[12px] text-muted-dark hover:text-muted disabled:hover:text-muted-dark">
                 {resendIn > 0 ? t('verify.resendIn', { count: resendIn }) : t('verify.resend')}
+              </button>
+            </>
+          )}
+
+          {phase === 'confirm' && confirmStep === 'details' && (
+            <>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Mail className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('confirm.title')}</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">{t('confirm.subtitle')}</p>
+              <form className="space-y-3.5" noValidate onSubmit={(e) => { e.preventDefault(); sendConfirmCode(); }}>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label htmlFor="cf-first" className={labelCls}>{t('register.firstName')}</label><input id="cf-first" autoComplete="given-name" className={inputCls} value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+                  <div><label htmlFor="cf-last" className={labelCls}>{t('register.lastName')}</label><input id="cf-last" autoComplete="family-name" className={inputCls} value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+                </div>
+                <div><label htmlFor="cf-email" className={labelCls}>{t('register.email')}</label><input id="cf-email" type="email" autoComplete="email" className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('register.emailPlaceholder')} /></div>
+                <LeadFields idPrefix="cf" phone={phone} setPhone={setPhone} useCase={useCase} setUseCase={setUseCase} useCaseOther={useCaseOther} setUseCaseOther={setUseCaseOther} company={company} setCompany={setCompany} />
+                <ConsentToggle checked={consent} onChange={setConsent} />
+                {err && <p role="alert" className="text-[12px] text-red-400">{err}</p>}
+                <button type="submit" disabled={busy} className={primaryBtn}>
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('confirm.sendCode')} <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+              {canDefer && (
+                <div className="mt-4 rounded-lg border border-border p-3">
+                  <p className="text-[11.5px] text-muted leading-relaxed">{t('confirm.laterNote')}</p>
+                  <button type="button" onClick={confirmLater} disabled={busy} className="mt-2 w-full h-9 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">{t('confirm.later')}</button>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-dark mt-4 flex items-center justify-center gap-1.5 text-center"><ShieldCheck className="w-3.5 h-3.5 shrink-0" /> {t('confirm.dataNote')}</p>
+              <button type="button" onClick={signOut} className="mt-4 w-full text-[12px] text-muted-dark hover:text-muted inline-flex items-center justify-center gap-1.5"><LogOut className="w-3.5 h-3.5" /> {t('banned.signOut')}</button>
+            </>
+          )}
+
+          {phase === 'confirm' && confirmStep === 'code' && (
+            <>
+              <button type="button" onClick={() => { setConfirmStep('details'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('confirm.changeDetails')}</button>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Mail className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('confirm.codeTitle')}</h1>
+              <p className="text-[12.5px] text-muted mt-1 mb-6">{t('confirm.codeBody', { email: email.trim().toLowerCase() })}</p>
+              <OtpInput value={otp} onChange={setOtp} onComplete={(c) => checkConfirmCode(c)} />
+              <p className="mt-4 text-[11.5px] text-muted-dark leading-relaxed">{t('verify.checkSpam')}</p>
+              {err && <p role="alert" className="text-[12px] text-red-400 mt-3">{err}</p>}
+              <button type="button" disabled={busy} onClick={() => checkConfirmCode()} className={primaryBtn}>
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t('confirm.confirmContinue')}
+              </button>
+              <button type="button" onClick={sendConfirmCode} disabled={resendIn > 0 || busy} className="mt-3 w-full text-[12px] text-muted-dark hover:text-muted disabled:hover:text-muted-dark">
+                {resendIn > 0 ? t('verify.resendIn', { count: resendIn }) : t('verify.resend')}
+              </button>
+              {canDefer && (
+                <div className="mt-4 rounded-lg border border-border p-3">
+                  <p className="text-[11.5px] text-muted leading-relaxed">{t('confirm.laterNote')}</p>
+                  <button type="button" onClick={confirmLater} disabled={busy} className="mt-2 w-full h-9 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">{t('confirm.later')}</button>
+                </div>
+              )}
+            </>
+          )}
+
+          {phase === 'confirmMember' && (
+            <>
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Lock className="w-5 h-5" /></div>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('confirm.memberTitle')}</h1>
+              <p className="text-[12.5px] text-muted mt-1 leading-relaxed">{t('confirm.memberBody')}</p>
+              <button type="button" onClick={signOut} className={primaryBtn}>
+                <LogOut className="w-4 h-4" /> {t('confirm.signInAsOwner')}
               </button>
             </>
           )}

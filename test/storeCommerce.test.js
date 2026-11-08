@@ -301,7 +301,9 @@ test('only the Store package ships the addon; website and base builds are unchan
   assert.match(bs, /run\('node scripts\/build-store-native\.js'\)/);
   assert.match(bs, /--no-store-commerce/);
   const main = read('src', 'main', 'ipcHandlers.js');
-  assert.match(main, /if \(storeBridge\.available\(\)\) methods\.unshift\(\{ id: STORE_METHOD_ID, label: 'Microsoft Store', kind: 'store' \}\)/);
+  // Listed only when the server has Store sales on and the Store returns the add-ons' prices (1.0.23).
+  assert.match(main, /if \(offered\.storeSalesEnabled && storeBridge\.available\(\)\) \{/);
+  assert.match(main, /if \(checkoutMethods\.storeHasPrices\(st\)\) methods\.unshift\(\{ id: STORE_METHOD_ID, label: 'Microsoft Store', kind: 'store' \}\)/);
   assert.match(read('src', 'main', 'storeBridge.js'), /process\.windowsStore === true/);
   const gyp = read('native', 'store-addon', 'binding.gyp');
   assert.match(gyp, /"target_name": "softglaze_store"/);

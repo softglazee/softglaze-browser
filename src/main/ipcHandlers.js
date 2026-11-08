@@ -88,6 +88,10 @@ const storeCommerceLib = require('./storeCommerce');
 const tenantSignup = require('./tenantSignup');
 const tenantTrial = require('./tenantTrial');
 const planCatalog = require('./planCatalog');
+const checkoutMethods = require('./checkoutMethods');
+const signupLead = require('./signupLead');
+const signupConfirm = require('./signupConfirm');
+const serverErrors = require('./serverErrors');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
 const { redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
@@ -318,6 +322,10 @@ const CHANNELS = Object.freeze({
   ACCOUNT_SEND_OTP: 'account:send-otp',
   ACCOUNT_VERIFY_OTP: 'account:verify-otp',
   ACCOUNT_REGISTER: 'account:register',
+  ACCOUNT_SIGNUP_STATUS: 'account:signup-status',
+  ACCOUNT_CONFIRM_START: 'account:confirm-start',
+  ACCOUNT_CONFIRM_CHECK: 'account:confirm-check',
+  ACCOUNT_CONFIRM_LATER: 'account:confirm-later',
   EMAIL_GET_CONFIG: 'email:get-config',
   EMAIL_SET_CONFIG: 'email:set-config',
   EMAIL_TEST: 'email:test',
@@ -10217,15 +10225,19 @@ async function accountSendOtp(payload) {
   const input = requireObject(payload);
   const email = requiredString(input.email, 'Email').toLowerCase();
   // Tenant builds: our licensing server emails the code (never shown here) and refuses disposable or
-  // undeliverable addresses. Marketing consent is sent only when the box was ticked.
+  // undeliverable addresses. Marketing consent is sent only when the box was ticked. The lead details
+  // (phone, use case, company) go with it and reach the customer once the code is proven.
   if (tenantConfig().enabled) {
+    const lead = signupLead.normalizeLead(input, { requireUseCase: true });
+    if (lead.error) throw serverErrors.coded(lead.error);
     return tenantSignup.startVerification({
       ensureInstall: ensureBackendInstall,
       api: licenseClient.api,
       email,
       name: `${String(input.firstName || '').trim()} ${String(input.lastName || '').trim()}`.trim(),
       consentMarketing: input.consentMarketing === true,
-      lang: input.lang
+      lang: input.lang,
+      lead: lead.lead
     });
   }
   const code = String(crypto.randomInt(100000, 1000000));
@@ -10313,12 +10325,206 @@ async function accountRegister(payload) {
   await writeSetting('account', {
     firstName, lastName, email, phone, verified: true, createdAt: new Date().toISOString()
   });
-  if (serverCheck) await writeSetting('tenantCustomer', { email, customerId: serverCheck.customerId, verifiedAt: new Date().toISOString() }).catch(() => {});
+  if (serverCheck) {
+    await writeSetting('tenantCustomer', { email, customerId: serverCheck.customerId, verifiedAt: new Date().toISOString() }).catch(() => {});
+    // The server now has a verified customer for this install: no "Confirm your email" step later.
+    await recordSignupVerified().catch(() => {});
+  }
 
   // 6) Everything succeeded - now it is safe to consume the OTP.
   await writeSetting(key, null);
 
   return { ok: true, member: serializeMember(owner, { isCurrent: true }) };
+}
+
+// ---- Confirm your email (tenant builds, 1.0.23) ----
+// Workspaces made before server sign-up (or whose server sign-up never finished) confirm the Owner's
+// email with our licensing server once, so every install is a lead in the website admin. The server's
+// answer is the truth (signupConfirm.js); this run's decision is kept in memory, so the step is asked
+// again at the next start until it is done. Base builds never get here.
+let signupDecision = null; // { state, required, offline, deferredUntil, at }
+let signupFailedAt = 0; // our side failed to send or check a code in this run (offline, server, email)
+const SIGNUP_RECHECK_MS = 60000; // a "needed" answer is asked again after a minute
+const SIGNUP_FAILURE_MS = 15 * 60000;
+
+async function readSignupCache() {
+  const sealed = await readSetting(signupConfirm.CACHE_SETTING, null);
+  if (!sealed) return null;
+  try { return JSON.parse(secretStore.open(sealed)); } catch (_) { return null; }
+}
+
+async function writeSignupCache(record) {
+  await writeSetting(signupConfirm.CACHE_SETTING, secretStore.seal(JSON.stringify(record))).catch(() => {});
+}
+
+// This install's id at the licensing server, or a stable stand-in before it ever registered.
+async function signupInstallKey(install) {
+  if (install && install.installId) return String(install.installId);
+  return String((await readSetting('backendInstallId', null)) || 'unregistered');
+}
+
+// A verified paid lease on this computer: such a customer is never locked out by our server.
+async function hasPaidLease() {
+  const ent = await getBackendEntitlement();
+  return Boolean(ent && ent.type !== 'trial' && ((licenseClient.licenseIssue() || {}).reason !== 'machine_mismatch'));
+}
+
+// -> the decision for this run: { state, required, offline, deferredUntil }.
+async function signupDecide({ fresh = false } = {}) {
+  if (!tenantConfig().enabled) return { state: 'off', required: false, offline: false, deferredUntil: null };
+  const d = signupDecision;
+  if (!fresh && d && (d.state === 'verified' || d.state === 'deferred' || Date.now() - d.at < SIGNUP_RECHECK_MS)) return d;
+  let install = null;
+  let server = null;
+  try {
+    install = await ensureBackendInstall();
+    if (install) server = await tenantSignup.accountStatus({ ensureInstall: async () => install, api: licenseClient.api });
+  } catch (_) { server = null; } // offline, timeout, server error or an older server: could not ask
+  const { effectiveNow } = await clampLicenseNow();
+  const next = signupConfirm.decide({
+    server, cache: await readSignupCache(), installKey: await signupInstallKey(install), paid: await hasPaidLease(), nowMs: effectiveNow
+  });
+  await writeSignupCache(next.cache);
+  signupDecision = { state: next.state, required: next.required, offline: next.offline, deferredUntil: next.deferredUntil || null, at: Date.now() };
+  return signupDecision;
+}
+
+// Called once the server has verified this install's customer (sign-up or the confirm step).
+async function recordSignupVerified() {
+  const install = await ensureBackendInstall().catch(() => null);
+  const { effectiveNow } = await clampLicenseNow();
+  const next = signupConfirm.decide({ server: { verified: true }, cache: null, installKey: await signupInstallKey(install), nowMs: effectiveNow });
+  await writeSignupCache(next.cache);
+  signupDecision = { state: next.state, required: false, offline: false, deferredUntil: null, at: Date.now() };
+  signupFailedAt = 0;
+}
+
+// May the person go on for now after our side failed? Only right after such a failure in this run.
+async function signupDeferral() {
+  if (!signupFailedAt || Date.now() - signupFailedAt > SIGNUP_FAILURE_MS) return null;
+  const install = await ensureBackendInstall().catch(() => null);
+  const { effectiveNow } = await clampLicenseNow();
+  return signupConfirm.deferAfterFailure({ cache: await readSignupCache(), installKey: await signupInstallKey(install), paid: await hasPaidLease(), nowMs: effectiveNow });
+}
+
+// Who may confirm: whoever may purchase (requirePurchaser: the Owner, the Super Admin, single-user mode).
+async function mayConfirmSignup() {
+  try { await requirePurchaser('confirm the workspace email'); return true; } catch (_) { return false; }
+}
+
+// What the Gate shows after sign-in. A tenant build that cannot decide lets the person in; main still
+// checks before a profile launches (assertNotBanned).
+async function accountSignupStatus() {
+  if (!tenantConfig().enabled) return { enabled: false, state: 'off', required: false };
+  const d = await signupDecide();
+  const canConfirm = await mayConfirmSignup();
+  const out = { enabled: true, state: d.state, required: Boolean(d.required), offline: Boolean(d.offline), deferredUntil: d.deferredUntil || null, canConfirm, canDefer: false, prefill: null };
+  if (d.required && canConfirm) {
+    const deferral = await signupDeferral();
+    out.canDefer = Boolean(deferral && deferral.allowed);
+    const acct = (await readSetting('account', null)) || {};
+    const owner = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } }).catch(() => null);
+    const parts = String((owner && owner.name) || '').trim().split(' ').filter(Boolean);
+    out.prefill = {
+      firstName: String(acct.firstName || parts[0] || '').slice(0, 80),
+      lastName: String(acct.lastName || parts.slice(1).join(' ') || '').slice(0, 80),
+      email: String(acct.email || (owner && owner.email) || '').slice(0, 254),
+      phone: String(acct.phone || '').slice(0, 40)
+    };
+  }
+  return out;
+}
+
+function requireTenantSignup() {
+  if (!tenantConfig().enabled) throw new Error('Email confirmation is only used in builds with a licensing server.');
+}
+
+// Step 1: check the details and ask our server to email the code.
+async function accountConfirmStart(payload) {
+  requireTenantSignup();
+  await requirePurchaser('confirm the workspace email');
+  const input = requireObject(payload);
+  const email = requiredString(input.email, 'Email').toLowerCase();
+  if (!tenantSignup.EMAIL_RE.test(email)) throw serverErrors.coded('SIGNUP_INVALID_EMAIL');
+  const firstName = requiredString(input.firstName, 'First name').slice(0, 80);
+  const lastName = requiredString(input.lastName, 'Last name').slice(0, 80);
+  const lead = signupLead.normalizeLead(input, { requireUseCase: true });
+  if (lead.error) throw serverErrors.coded(lead.error);
+  try {
+    const r = await tenantSignup.startVerification({
+      ensureInstall: ensureBackendInstall, api: licenseClient.api, email, name: `${firstName} ${lastName}`,
+      consentMarketing: input.consentMarketing === true, lang: input.lang, lead: lead.lead, context: 'confirm'
+    });
+    signupFailedAt = 0;
+    return r;
+  } catch (e) {
+    if (signupConfirm.isOurSide(e)) signupFailedAt = Date.now();
+    throw e;
+  }
+}
+
+// Step 2: check the code with our server, then keep the workspace's own account in step with the
+// confirmed details, so the free trial and licences use the same email.
+async function accountConfirmCheck(payload) {
+  requireTenantSignup();
+  await requirePurchaser('confirm the workspace email');
+  const input = requireObject(payload);
+  const email = requiredString(input.email, 'Email').toLowerCase();
+  let res;
+  try {
+    res = await tenantSignup.checkVerification({ ensureInstall: ensureBackendInstall, api: licenseClient.api, email, code: input.code, context: 'confirmCheck' });
+  } catch (e) {
+    if (signupConfirm.isOurSide(e)) signupFailedAt = Date.now();
+    throw e;
+  }
+  await recordSignupVerified();
+  await writeSetting('tenantCustomer', { email, customerId: res.customerId, verifiedAt: new Date().toISOString() }).catch(() => {});
+  const me = await getActiveMember();
+  if (!me || me.role === 'OWNER') await syncOwnerAccount(me, input, email).catch(() => {});
+  await logAudit('account.confirm-email', { detail: { customerId: res.customerId || null } }).catch(() => {});
+  return { verified: true };
+}
+
+// The Owner's local account and member row take the confirmed name, email and phone. The member's email
+// is changed only when no other member uses it.
+async function syncOwnerAccount(me, input, email) {
+  const firstName = optionalString(input.firstName);
+  const lastName = optionalString(input.lastName);
+  const lead = signupLead.normalizeLead(input, { requireUseCase: false });
+  const acct = (await readSetting('account', null)) || {};
+  const next = { ...acct, email, verified: true };
+  if (firstName) next.firstName = firstName.slice(0, 80);
+  if (lastName) next.lastName = lastName.slice(0, 80);
+  if (lead.lead && lead.lead.phone) next.phone = lead.lead.phone;
+  await writeSetting('account', next);
+  const db = getPrisma();
+  const owner = me && me.role === 'OWNER' ? me : await db.member.findFirst({ where: { role: 'OWNER' }, orderBy: { createdAt: 'asc' } });
+  if (!owner || owner.id == null || owner.id < 0) return;
+  const data = {};
+  const name = `${next.firstName || ''} ${next.lastName || ''}`.trim();
+  if (name && name !== owner.name) { data.name = name; data.initials = initialsFrom(name); }
+  if (email !== String(owner.email || '').toLowerCase()) {
+    const clash = await db.member.findFirst({ where: { email, id: { not: owner.id } } });
+    if (!clash) data.email = email;
+  }
+  if (Object.keys(data).length) await db.member.update({ where: { id: owner.id }, data });
+}
+
+// "Continue for now" after our side failed: allowed within the offline window (always with a paid
+// licence). The step is asked again at the next start.
+async function accountConfirmLater() {
+  requireTenantSignup();
+  await requirePurchaser('confirm the workspace email');
+  const d = await signupDeferral();
+  if (!d || !d.allowed) {
+    const e = new Error('Confirm your email to continue. Check your internet connection and try again.');
+    e.code = 'SIGNUP_REQUIRED';
+    throw e;
+  }
+  await writeSignupCache(d.cache);
+  signupDecision = { state: 'deferred', required: false, offline: false, deferredUntil: d.deferredUntil || null, at: Date.now() };
+  await logAudit('account.confirm-later', { detail: { until: d.deferredUntil || null } }).catch(() => {});
+  return { deferred: true, deferredUntil: d.deferredUntil || null };
 }
 
 // ---- Team oversight (local-first admin dashboard) ----
@@ -11425,6 +11631,16 @@ function withLicenseReason(view, reason) {
 async function assertNotBanned() {
   const m = await getActiveMember();
   if (await isCertifiedSuperAdmin(m)) return;
+  // Tenant builds: the workspace email must be confirmed with our server first (signupConfirm.js). Only a
+  // "needed" or "overdue" answer refuses; a server that cannot be asked lets the launch through.
+  if (tenantConfig().enabled) {
+    const d = await signupDecide();
+    if (d.required) {
+      const e = new Error('Confirm the workspace email first. The owner can do it on the sign-in screen.');
+      e.code = 'SIGNUP_REQUIRED';
+      throw e;
+    }
+  }
   // Tenant builds: a verified lease on this machine (paid or trial) is the licence.
   if (tenantConfig().enabled && await getBackendEntitlement() && ((licenseClient.licenseIssue() || {}).reason !== 'machine_mismatch')) return;
   const ownerId = await resolveLicenseOwnerId();
@@ -11779,19 +11995,33 @@ async function validatePaymentConfig(payload) {
   return provider.validate(cfg);
 }
 
+// Tenant builds: the checkout methods the licensing server has switched on (checkoutMethods.js), or the
+// providers baked into the build when it cannot be reached.
+const serverCheckoutCatalog = checkoutMethods.createCheckoutCatalog({ fetchMethods: () => licenseClient.api.checkoutMethods() });
+async function tenantCheckoutMethods() {
+  const fallback = checkoutMethods.fallbackMethods(tenantConfig().checkoutProviders, (id) => {
+    const def = payments.getProviderDef(id);
+    return def ? def.label : id;
+  });
+  return serverCheckoutCatalog.get({ fallback });
+}
+
 // Enabled checkout methods (no secrets). Automated ones appear only once fully configured; manual
 // ones carry their public instructions or pay link.
 async function listPaymentMethods() {
   // A tenant build sells through the licensing server, which holds the provider keys. A customer's
-  // fresh install has no local gateway config, so offer the providers baked for this tenant instead
-  // of the (empty) local store - otherwise every buyer would see "no payment methods".
+  // fresh install has no local gateway config, so offer the providers the server has switched on for
+  // this tenant (labels from the server, so a provider added there needs no app update), falling back
+  // to the providers baked for this tenant when the server cannot be reached.
   if (tenantConfig().enabled) {
-    const methods = tenantConfig().checkoutProviders.map((id) => {
-      const def = payments.getProviderDef(id);
-      return { id, label: def ? def.label : id, kind: 'automated' };
-    });
-    // The Microsoft Store version sells through Microsoft's checkout (prices: store:status).
-    if (storeBridge.available()) methods.unshift({ id: STORE_METHOD_ID, label: 'Microsoft Store', kind: 'store' });
+    const offered = await tenantCheckoutMethods();
+    const methods = offered.providers.map((p) => ({ id: p.id, label: p.label, kind: 'automated' }));
+    // The Microsoft Store version sells through Microsoft's checkout, only when the server has Store
+    // sales on AND the Store has the add-ons' prices; otherwise the method is simply not listed.
+    if (offered.storeSalesEnabled && storeBridge.available()) {
+      const st = await getStoreCommerce().status().catch(() => null);
+      if (checkoutMethods.storeHasPrices(st)) methods.unshift({ id: STORE_METHOD_ID, label: 'Microsoft Store', kind: 'store' });
+    }
     return { methods };
   }
   const store = await readPaymentStore();
@@ -11834,7 +12064,7 @@ async function startCheckout(payload) {
     const plan = await findTenantPlanOrThrow(input.planId);
     // Default to this tenant's first provider (the trial-ended screen sends none); never let the
     // server fall back to a provider the tenant hasn't switched on.
-    const offered = tenantConfig().checkoutProviders;
+    const offered = (await tenantCheckoutMethods()).providers.map((p) => p.id);
     const provider = String(input.provider || offered[0] || '').trim().toLowerCase();
     if (!provider || !offered.includes(provider)) throw new Error('That payment method is not available for this app.');
     const install = await ensureBackendInstall();
@@ -11932,9 +12162,25 @@ function getStoreCommerce() {
   return storeCommerceInstance;
 }
 
+// The licensing server's Store sales switch (settings.store.salesEnabled, default off; off when it cannot
+// be reached). With it off the Store card and prices are hidden, unless this install already has (or
+// had) a Store subscription, which can still be restored and managed.
+async function storeSalesOpen() {
+  const offered = await tenantCheckoutMethods().catch(() => null);
+  return Boolean(offered && offered.storeSalesEnabled);
+}
+
+async function storeSubscriptionSeen() {
+  const pending = await readSetting(storeCommerceLib.PENDING_SETTING, null).catch(() => null);
+  const last = await readSetting(storeCommerceLib.SYNC_SETTING, null).catch(() => null);
+  return Boolean(pending || (last && last.hadEntitlement));
+}
+
 async function storeStatus() {
   if (!tenantConfig().enabled || !storeBridge.isStoreInstall()) return { available: false, reason: 'not_store_build' };
-  return getStoreCommerce().status();
+  const salesEnabled = await storeSalesOpen();
+  if (!salesEnabled && !(await storeSubscriptionSeen())) return { available: false, reason: 'sales_off', salesEnabled: false };
+  return { ...(await getStoreCommerce().status()), salesEnabled };
 }
 
 // The app window that asked, as the owner of Microsoft's purchase dialog.
@@ -11956,6 +12202,8 @@ async function storeResultWithLicense(r, extra = {}) {
 async function storePurchase(payload, event) {
   await requirePurchaser('purchase a subscription');
   if (!tenantConfig().enabled || !storeBridge.isStoreInstall()) throw new Error('Microsoft Store purchases are only in the Microsoft Store version of the app.');
+  // New Store purchases only while the server has Store sales on (restore keeps working).
+  if (!(await storeSalesOpen())) return { status: 'unavailable', code: 'store_sales_off' };
   const input = requireObject(payload || {});
   const plan = await findTenantPlanOrThrow(input.planId);
   const r = await getStoreCommerce().purchase(plan.id, storeWindowHandle(event));
@@ -13921,6 +14169,10 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.ACCOUNT_SEND_OTP, accountSendOtp);
   registerHandler(CHANNELS.ACCOUNT_VERIFY_OTP, accountVerifyOtp);
   registerHandler(CHANNELS.ACCOUNT_REGISTER, accountRegister);
+  registerHandler(CHANNELS.ACCOUNT_SIGNUP_STATUS, accountSignupStatus);
+  registerHandler(CHANNELS.ACCOUNT_CONFIRM_START, accountConfirmStart);
+  registerHandler(CHANNELS.ACCOUNT_CONFIRM_CHECK, accountConfirmCheck);
+  registerHandler(CHANNELS.ACCOUNT_CONFIRM_LATER, accountConfirmLater);
   registerHandler(CHANNELS.EMAIL_GET_CONFIG, getEmailConfig);
   registerHandler(CHANNELS.EMAIL_SET_CONFIG, setEmailConfig);
   registerHandler(CHANNELS.EMAIL_TEST, testEmail);
