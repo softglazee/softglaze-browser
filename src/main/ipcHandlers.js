@@ -87,6 +87,8 @@ const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
 const storeBridge = require('./storeBridge');
 const storeCommerceLib = require('./storeCommerce');
+const storeRatingLib = require('./storeRating');
+const { installChannel } = require('./installChannel');
 const tenantSignup = require('./tenantSignup');
 const tenantTrial = require('./tenantTrial');
 const planCatalog = require('./planCatalog');
@@ -298,6 +300,9 @@ const CHANNELS = Object.freeze({
   STORE_STATUS: 'store:status',
   STORE_PURCHASE: 'store:purchase',
   STORE_RESTORE: 'store:restore',
+  STORE_RATING_STATUS: 'store:rating-status',
+  STORE_RATING_CHOOSE: 'store:rating-choose',
+  STORE_RATING_RATE: 'store:rating-rate',
   INVOICE_LIST: 'invoice:list',
   INVOICE_CREATE: 'invoice:create',
   INVOICE_UPDATE: 'invoice:update',
@@ -6673,6 +6678,7 @@ async function launchProfileNow(payload) {
       acquireProfileLock(id, ffSession.sessionId, launcher);
       await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
       await logActivity(db, id, 'launch', `firefox session ${ffSession.sessionId}${ffRotated ? ` · rotated ${ffRotated.name}` : ''}`);
+      noteStoreRatingLaunch(input);
       return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
     }
 
@@ -6731,6 +6737,7 @@ async function launchProfileNow(payload) {
     acquireProfileLock(id, session.sessionId, launcher);
     await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
     await logActivity(db, id, 'launch', `session ${session.sessionId}${rotated ? ` · rotated proxy ${rotated.name}` : ''}`);
+    noteStoreRatingLaunch(input);
     return { ...session, rotatedProxy: rotated ? serializeProxy(rotated) : null };
   } catch (err) {
     releaseReservedLock(id, reservation); // no-op once upgraded, or if it is not ours
@@ -9795,6 +9802,8 @@ async function afterDbReady() {
   try { await seedStarters(); } catch (e) { /* best-effort */ }
   // First-run browser fleet - fire-and-forget so the window opens immediately.
   maybeSeedBrowsers().catch(() => {});
+  // Microsoft Store build: today counts as a day of use for the rating card (nothing elsewhere).
+  getStoreRating().noteUse().catch(() => {});
   try { await ai.load(); } catch (e) { /* AI stays off */ }
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
   // Licensing backend (when a tenant config is baked): refresh the signed lease on
@@ -12296,6 +12305,53 @@ async function storeRestore(payload) {
   return storeResultWithLicense(await getStoreCommerce().restore({ move: input.move === true }));
 }
 
+// ---- Microsoft Store rating (Store build only) ----
+// A small Dashboard card after real use (3 different days, 5 successful profile launches) and a
+// permanent entry in Settings > Updates, both opening the Store's own rating dialog, else the Store's
+// review page (src/main/storeRating.js). Website and base builds never count, ask or show it. Nothing
+// is rewarded or unlocked by rating.
+let storeRatingInstance = null;
+function getStoreRating() {
+  if (!storeRatingInstance) {
+    storeRatingInstance = storeRatingLib.createStoreRating({
+      isStoreBuild: () => installChannel() === 'store',
+      readSetting,
+      writeSetting,
+      bridge: storeBridge,
+      openExternal: (url) => require('electron').shell.openExternal(url),
+      promptBlocked: storeRatingBlocked
+    });
+  }
+  return storeRatingInstance;
+}
+
+// Not while the first-run wizard is still open, nor while the licence has ended, is in grace, is
+// blocked or belongs to another computer.
+async function storeRatingBlocked() {
+  const g = await readSetting('globalSettings', {});
+  if (!(g && g.onboardingDone === true)) return true;
+  return storeRatingLib.licenceBlocksAsk(await getLicense());
+}
+
+// A visible profile launch succeeded (headless warm-ups are not counted). Never slows or fails a launch.
+function noteStoreRatingLaunch(input) {
+  if (input && input.headless) return;
+  getStoreRating().noteLaunch().catch(() => {});
+}
+
+async function storeRatingStatus() {
+  return getStoreRating().status();
+}
+
+async function storeRatingChoose(payload) {
+  const input = requireObject(payload || {});
+  return getStoreRating().choose(String(input.choice || ''));
+}
+
+async function storeRatingRate(_payload, event) {
+  return getStoreRating().rate(storeWindowHandle(event));
+}
+
 // ---- Manual payments (Wise / bank transfer / custom) ----
 // The buyer pays out-of-band and submits a reference; a Super Admin approves it in-app, which grants
 // the term. Nothing from the renderer is trusted automatically.
@@ -14218,6 +14274,9 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.STORE_STATUS, storeStatus);
   registerHandler(CHANNELS.STORE_PURCHASE, storePurchase);
   registerHandler(CHANNELS.STORE_RESTORE, storeRestore);
+  registerHandler(CHANNELS.STORE_RATING_STATUS, storeRatingStatus);
+  registerHandler(CHANNELS.STORE_RATING_CHOOSE, storeRatingChoose);
+  registerHandler(CHANNELS.STORE_RATING_RATE, storeRatingRate);
   registerHandler(CHANNELS.INVOICE_LIST, listInvoices);
   registerHandler(CHANNELS.INVOICE_CREATE, createInvoice);
   registerHandler(CHANNELS.INVOICE_UPDATE, updateInvoice);

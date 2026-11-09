@@ -11,8 +11,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-// A purchase waits for the customer in Microsoft's dialog; everything else is quick.
-const TIMEOUT_MS = Object.freeze({ ping: 5000, license: 30000, products: 30000, keys: 30000, purchase: 15 * 60000 });
+// A purchase and a rating wait for the customer in Microsoft's dialog (writing a review can take a
+// while); everything else is quick.
+const TIMEOUT_MS = Object.freeze({ ping: 5000, license: 30000, products: 30000, keys: 30000, purchase: 15 * 60000, rate: 15 * 60000 });
 
 let addon; // undefined = not tried yet, null = unavailable
 let loadError = null;

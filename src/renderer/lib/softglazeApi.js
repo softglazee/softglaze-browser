@@ -264,6 +264,12 @@ export const softglazeApi = {
     purchase: (payload) => getSoftglazeApi().store.purchase(payload),
     restore: (payload) => getSoftglazeApi().store.restore(payload)
   },
+  // Microsoft Store rating (Store build only). An older preload has no `storeRating`: nothing shows.
+  storeRating: {
+    status: () => (window.softglaze && window.softglaze.storeRating ? window.softglaze.storeRating.status() : Promise.resolve({ storeBuild: false, ask: false })),
+    choose: (choice) => getSoftglazeApi().storeRating.choose(choice),
+    rate: () => getSoftglazeApi().storeRating.rate()
+  },
   billing: {
     getPlans: () => getSoftglazeApi().billing.getPlans(),
     plansAdmin: () => getSoftglazeApi().billing.plansAdmin(),

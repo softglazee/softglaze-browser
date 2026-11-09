@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import {
   Activity, Play, Globe, Folder, Clock, X, MonitorSmartphone, Zap, Loader2,
   ArrowUpRight, Shield, RefreshCw, Cpu, Server, Sparkles, CalendarDays,
-  Fingerprint, Users, Wand2, IdCard, LineChart, BarChart3, PieChart, Rocket
+  Fingerprint, Users, Wand2, IdCard, LineChart, BarChart3, PieChart, Rocket, Star
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button.jsx';
 import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { normalStart, showRatingCard } from '@/lib/storeRating.mjs';
 import { Sparkline, Bars, Donut, Legend, HBars, Meter } from '@/components/dashboard/DashCharts.jsx';
 
 // Brand chart palette - themes in light + dark via index.css tokens.
@@ -336,6 +337,62 @@ function RestoreBanner() {
   );
 }
 
+// Microsoft Store build only: a small, quiet request for a Store rating. Main decides whether it is time
+// (3 different days, 5 profile launches, Not now / Don't ask again / Rate; src/main/storeRating.js); it
+// is asked only after a normal start (lib/storeRating.mjs). Every user sees the same card and every
+// "Rate" goes to the Store's own rating dialog. Nothing is offered in return.
+function StoreRatingCard() {
+  const { t } = useTranslation();
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!normalStart()) return undefined;
+    let live = true;
+    softglazeApi.storeRating.status()
+      .then((s) => { if (live) setShow(showRatingCard(s)); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
+
+  if (!show) return null;
+
+  async function rate() {
+    setBusy(true);
+    setFailed(false);
+    let r = null;
+    try { r = await softglazeApi.storeRating.rate(); } catch (e) { r = null; }
+    setBusy(false);
+    if (r && r.ok) setShow(false);
+    else setFailed(true);
+  }
+  function choose(choice) {
+    setShow(false);
+    softglazeApi.storeRating.choose(choice).catch(() => {});
+  }
+
+  return (
+    <section aria-labelledby="store-rating-title" className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 animate-fade-up">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ background: 'color-mix(in srgb, var(--primary) 12%, transparent)' }} aria-hidden="true">
+        <Star className="h-4 w-4 text-primary" />
+      </span>
+      <div className="min-w-[12rem] flex-1">
+        <h2 id="store-rating-title" className="text-[13px] font-semibold text-foreground">{t('storeRating.cardTitle')}</h2>
+        <p className="text-[11.5px] text-muted-foreground">{t('storeRating.cardBody')}</p>
+        {failed && <p role="alert" className="mt-1 text-[11.5px] text-destructive">{t('storeRating.openFailed')}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="primary" size="sm" onClick={rate} disabled={busy}>
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />} {t('storeRating.rate')}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => choose('notNow')} disabled={busy}>{t('storeRating.notNow')}</Button>
+        <Button variant="ghost" size="sm" onClick={() => choose('never')} disabled={busy}>{t('storeRating.never')}</Button>
+      </div>
+    </section>
+  );
+}
+
 function SectionLabel({ icon: Icon, title, sub }) {
   return (
     <div className="mb-3 flex items-center gap-2.5">
@@ -505,6 +562,7 @@ export default function DashboardPage() {
     <div className="space-y-6 pb-10">
       <UpdateBanner />
       <RestoreBanner />
+      <StoreRatingCard />
 
       <WelcomeBanner />
 

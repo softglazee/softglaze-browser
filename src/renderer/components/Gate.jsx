@@ -13,6 +13,7 @@ import { USE_CASES, leadError, leadPayload, LEAD_LIMITS } from '@/lib/signupLead
 import billingEn from '@/i18n/locales/en/billing.json';
 import { isStoreMethod, storeOutcome, storePrice, methodsForPlan, sellablePlans, STORE_POLL } from '@/lib/storePurchase.mjs';
 import { BILLING_PERIODS, billingPeriodOf, hasBothPeriods, plansForPeriod, counterpartPlan, yearlyDeal } from '@/lib/planPeriods.mjs';
+import { noteGatePhase } from '@/lib/storeRating.mjs';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -722,6 +723,10 @@ export default function Gate({ children }) {
       setPhase('licensing');
     } catch (e) { setErr(e.message || t('errors.couldNotSignIn')); setBusy(false); }
   }
+
+  // A run that showed sign-up, an email code, the plan step or the blocked screen never asks for a
+  // Microsoft Store rating (lib/storeRating.mjs).
+  useEffect(() => { noteGatePhase(phase); }, [phase]);
 
   // After any auth, 'licensing' resolves the license and enters the app or shows 'banned'.
   // A read error fails open to the app (local-first).
