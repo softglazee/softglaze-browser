@@ -307,6 +307,8 @@
     "blacklistShort": "en lista negra",
     "notBlacklisted": "No está en ninguna lista negra verificada",
     "clean": "limpio",
+    "residential": "Rango residencial",
+    "residentialTip": "Rango residencial (Spamhaus PBL), no es una lista de spam. Es normal en proxies residenciales y móviles; no baja la puntuación de salud.",
     "hideLog": "Ocultar registro",
     "showLog": "Mostrar registro",
     "speed": {

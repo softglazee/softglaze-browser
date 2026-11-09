@@ -307,6 +307,8 @@
     "blacklistShort": "blacklisted",
     "notBlacklisted": "Not on any checked blocklist",
     "clean": "clean",
+    "residential": "Residential range",
+    "residentialTip": "Residential range (Spamhaus PBL), not a spam listing. Normal for residential and mobile proxies; it does not lower the health score.",
     "hideLog": "Hide log",
     "showLog": "Show log",
     "speed": {

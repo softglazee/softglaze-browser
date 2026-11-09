@@ -25,7 +25,7 @@ import NumberInput from '@/components/ui/NumberInput.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
+import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
@@ -711,10 +711,13 @@ export default function ProxyPoolPage() {
     const b = blacklistOf(proxy, checkResults);
     if (b === 'unknown') return <span className="text-muted-dark text-xs">-</span>;
     const listed = b === 'blacklisted';
+    // Spamhaus PBL only: a residential range, not a listing. Still clean; the badge says why.
+    const residential = !listed && residentialOf(proxy, checkResults);
     return (
-      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${listed ? 'bg-amber-500/12 text-amber-400' : 'bg-emerald-500/12 text-emerald-400'}`}>
+      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${listed ? 'bg-amber-500/12 text-amber-400' : 'bg-emerald-500/12 text-emerald-400'}`} title={residential ? t('checker.residentialTip') : undefined}>
         {listed ? <AlertTriangle className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
-        {listed ? t('blacklistFilter.blacklisted') : t('blacklistFilter.clean')}
+        {listed ? t('blacklistFilter.blacklisted') : (residential ? t('checker.residential') : t('blacklistFilter.clean'))}
+        {residential && <span className="sr-only">{`: ${t('checker.residentialTip')}`}</span>}
       </span>
     );
   }

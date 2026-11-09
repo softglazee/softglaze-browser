@@ -57,6 +57,7 @@ function loadBlacklist(resolve4) {
   const ctx = {
     module: {},
     require: (id) => (id === 'node:dns' ? fakeDns : require(id)),
+    dnsbl: require('../src/main/dnsbl'), // the module-level require in ipcHandlers.js
     setTimeout, clearTimeout, Promise
   };
   vm.createContext(ctx);
