@@ -11,7 +11,8 @@ import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 import { errorText, otpExtras, phaseForLicense, trialNeedsCode, trialPayload, paidPlans, defaultPlanId, formatPrice, confirmPhase, isOurSideError } from '@/lib/signupFlow.mjs';
 import { USE_CASES, leadError, leadPayload, LEAD_LIMITS } from '@/lib/signupLead.mjs';
 import billingEn from '@/i18n/locales/en/billing.json';
-import { isStoreMethod, storeOutcome, storePrice, STORE_POLL } from '@/lib/storePurchase.mjs';
+import { isStoreMethod, storeOutcome, storePrice, methodsForPlan, sellablePlans, STORE_POLL } from '@/lib/storePurchase.mjs';
+import { BILLING_PERIODS, billingPeriodOf, hasBothPeriods, plansForPeriod, counterpartPlan, yearlyDeal } from '@/lib/planPeriods.mjs';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -137,15 +138,36 @@ function LeadFields({ idPrefix, phone, setPhone, useCase, setUseCase, useCaseOth
 const PLAN_TEXT_KEY = new Map(Object.entries(billingEn.planText || {}).map(([key, text]) => [text, key]));
 
 // Tenant plan step: the paid plans with their prices and main features, from the licensing server
-// (or the built-in list when it cannot be reached).
+// (or the built-in list when it cannot be reached). With monthly and yearly plans for sale, a Monthly /
+// Yearly switch shows one period at a time and keeps the chosen tier when it flips (planPeriods.mjs).
 function PlanPicker({ plans, selected, onSelect, storeInfo = null }) {
   const { t } = useTranslation('gate');
   const { t: tb } = useTranslation('billing');
   const text = (s) => { const k = PLAN_TEXT_KEY.get(s); return k ? tb(`planText.${k}`) : s; };
+  const [period, setPeriod] = useState(null);
+  const selPlan = plans.find((p) => p.id === selected) || null;
+  const activePeriod = period || billingPeriodOf(selPlan) || 'month';
+  const shown = plansForPeriod(plans, activePeriod);
+  function pickPeriod(next) {
+    setPeriod(next);
+    const to = counterpartPlan(selPlan, plans, next) || plansForPeriod(plans, next).find((p) => p.kind !== 'trial');
+    if (to && to.id !== selected) onSelect(to.id);
+  }
   return (
+    <div className="space-y-2">
+    {hasBothPeriods(plans) && (
+      <div role="group" aria-label={tb('period.label')} className="inline-flex items-center rounded-lg border border-border p-0.5">
+        {BILLING_PERIODS.map((p) => (
+          <button key={p} type="button" aria-pressed={activePeriod === p} onClick={() => pickPeriod(p)} className={`h-7 px-2.5 rounded-md text-[11.5px] font-semibold transition-colors ${activePeriod === p ? 'bg-primary/15 text-foreground' : 'text-muted-dark hover:text-foreground'}`}>
+            {p === 'year' ? tb('period.yearly') : tb('period.monthly')}
+          </button>
+        ))}
+      </div>
+    )}
     <div role="radiogroup" aria-label={t('plan.choosePlan')} className="grid grid-cols-2 gap-2">
-      {plans.map((p) => {
+      {shown.map((p) => {
         const active = p.id === selected;
+        const deal = storePrice(storeInfo, p) ? null : yearlyDeal(p, plans);
         return (
           <button
             key={p.id}
@@ -163,9 +185,14 @@ function PlanPicker({ plans, selected, onSelect, storeInfo = null }) {
               {active ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : (p.highlight && <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary shrink-0">{tb('plans.bestValue')}</span>)}
             </span>
             <span className="block mt-1">
-              <span className="font-display text-[18px] font-semibold text-foreground">{storePrice(storeInfo, p.id) || formatPrice(p.amount, p.currency)}</span>
+              <span className="font-display text-[18px] font-semibold text-foreground">{storePrice(storeInfo, p) || formatPrice(p.amount, p.currency)}</span>
               <span className="text-[11px] text-muted-dark"> / {p.period}</span>
             </span>
+            {deal && (
+              <span className="block text-[10.5px] leading-snug text-muted-dark">
+                {tb('period.billedYearly', { perMonth: formatPrice(deal.perMonth, p.currency) })}{deal.monthsFree ? ` · ${tb('period.monthsFreeShort', { count: deal.monthsFree })}` : ''}
+              </span>
+            )}
             {Array.isArray(p.features) && p.features.length > 0 && (
               <ul className="mt-1.5 space-y-0.5">
                 {p.features.slice(0, 3).map((f, i) => (
@@ -178,6 +205,7 @@ function PlanPicker({ plans, selected, onSelect, storeInfo = null }) {
           </button>
         );
       })}
+    </div>
     </div>
   );
 }
@@ -344,8 +372,9 @@ function PayMethods({ methods, busy, onAutomated, onManual, store = null }) {
   const [sel, setSel] = useState(() => (methods[0] ? methods[0].id : null));
   const [reference, setReference] = useState('');
   const [done, setDone] = useState(false);
-  // Methods load async: select the first once they arrive, or a banned user sees no pay button.
-  useEffect(() => { if (sel == null && methods[0]) setSel(methods[0].id); }, [methods]);
+  // Methods load async: select the first once they arrive, or a banned user sees no pay button. The list
+  // also changes with the chosen plan (the Microsoft Store only sells plans it has an add-on for).
+  useEffect(() => { if (!methods.some((m) => m.id === sel)) setSel(methods[0] ? methods[0].id : null); }, [methods]);
   const cur = methods.find((m) => m.id === sel) || null;
 
   if (!methods.length) {
@@ -905,8 +934,18 @@ export default function Gate({ children }) {
     } catch (e) { setErr(e.message || tb('store.result.unavailable')); setBusy(false); }
   }
 
+  // The plans to offer and the methods for the chosen one: when the Microsoft Store is the only way to
+  // pay, only plans it sells; the Store method only for those plans.
+  const storeOnly = methods.length > 0 && methods.every(isStoreMethod);
+  const offerPlans = sellablePlans(plans, { storeOnly, storeInfo });
+  const selPlan = offerPlans.find((p) => p.id === selPlanId) || null;
+  const planMethods = methodsForPlan(methods, storeInfo, selPlan || selPlanId);
+  useEffect(() => {
+    if (offerPlans.length && !offerPlans.some((p) => p.id === selPlanId)) setSelPlanId(defaultPlanId(offerPlans));
+  }, [offerPlans, selPlanId]);
+
   const storeControls = storeInfo ? {
-    price: storePrice(storeInfo, selPlanId),
+    price: storePrice(storeInfo, selPlan || selPlanId),
     onBuy: buyWithStore,
     onRestore: restoreStore,
     message: storeMsg ? storeMsg.text : '',
@@ -946,8 +985,8 @@ export default function Gate({ children }) {
       <BannedScreen
         account={account}
         license={license}
-        methods={methods}
-        plans={tenant ? plans : []}
+        methods={tenant ? planMethods : methods}
+        plans={tenant ? offerPlans : []}
         selPlanId={selPlanId}
         onSelectPlan={setSelPlanId}
         planCode={planCode}
@@ -1125,8 +1164,8 @@ export default function Gate({ children }) {
               {plans.length > 0 && (
                 <div className="mt-4 rounded-lg border border-border p-3 space-y-2.5">
                   <span className="block text-[12px] font-semibold text-foreground flex items-center gap-1.5"><CreditCard className="w-4 h-4 text-primary" /> {t('plan.choosePlan')}</span>
-                  <PlanPicker plans={plans} selected={selPlanId} onSelect={setSelPlanId} storeInfo={storeInfo} />
-                  <PayMethods methods={methods} busy={busy} onAutomated={buyWith} onManual={submitManualPay} store={storeControls} />
+                  <PlanPicker plans={offerPlans} selected={selPlanId} onSelect={setSelPlanId} storeInfo={storeInfo} />
+                  <PayMethods methods={planMethods} busy={busy} onAutomated={buyWith} onManual={submitManualPay} store={storeControls} />
                 </div>
               )}
               <div className="mt-4">

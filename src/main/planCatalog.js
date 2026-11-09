@@ -65,6 +65,8 @@ function normalizeServerPlan(p) {
     amount,
     currency: String(p.currency || 'USD').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6) || 'USD',
     months,
+    // How the server bills it ('month', 'year'): the Billing page groups plans by it (planPeriods.mjs).
+    interval: trial ? null : (periodLabel(p.interval, months) === 'year' ? 'year' : String(p.interval || 'month').toLowerCase().slice(0, 16)),
     period: trial ? `${Math.max(1, Number.parseInt(p.trialDays, 10) || 7)} days` : periodLabel(p.interval, months),
     tagline: String(p.tagline || p.description || '').slice(0, 200),
     highlight: Boolean(p.highlight),

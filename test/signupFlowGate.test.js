@@ -78,7 +78,8 @@ test('Gate wiring: the tenant plan step starts the server trial; base keeps toda
   assert.match(GATE, /\{phase === 'plan' && !tenant && \(/);
   const tenantStep = GATE.slice(GATE.indexOf("{phase === 'plan' && tenant && ("), GATE.indexOf("{phase === 'plan' && !tenant && ("));
   assert.doesNotMatch(tenantStep, /t\('plan\.skip'\)/, 'no "skip" past the trial in tenant builds');
-  assert.match(tenantStep, /<PlanPicker plans=\{plans\}/);
+  // The plans the Microsoft Store sells when it is the only way to pay (yearly plans: storePurchase.sellablePlans).
+  assert.match(tenantStep, /<PlanPicker plans=\{offerPlans\}/);
   const baseStep = GATE.slice(GATE.indexOf("{phase === 'plan' && !tenant && ("), GATE.indexOf("{phase === 'login' && ("));
   assert.match(baseStep, /t\('plan\.skip'\)/, 'base still offers skip');
   assert.doesNotMatch(baseStep, /PlanPicker/);
