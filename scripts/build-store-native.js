@@ -1,7 +1,7 @@
 'use strict';
 // Builds native/store-addon (C++/WinRT + Node-API) into dist_store_native/softglaze_store.node, the
 // Microsoft Store build's bridge to Windows.Services.Store (purchases, add-on licences, Store ID
-// keys). Only the Store package ships it (electron-builder.store.js); website and base builds never
+// keys, the rating dialog). Only the Store package ships it (electron-builder.store.js); website and base builds never
 // include or load it.
 //
 //   node scripts/build-store-native.js           build
@@ -67,14 +67,16 @@ function check() {
     (async () => {
       const ping = JSON.parse(await a.call('ping', {}));
       const lic = JSON.parse(await a.call('license', {}));
+      const rate = JSON.parse(await a.call('rate', {}));
       const bad = JSON.parse(await a.call('nope', {}));
-      process.stdout.write(JSON.stringify({ ping, lic, bad }));
+      process.stdout.write(JSON.stringify({ ping, lic, rate, bad }));
     })().catch((e) => { console.error(e); process.exit(2); });`;
   const r = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 30000 });
   let out = null;
   try { out = JSON.parse(r.stdout); } catch (_) { out = null; }
   if (!out || out.ping.ok !== true || out.ping.protocol !== 1) fail(`ping failed: exit ${r.status} ${r.stdout} ${r.stderr}`);
   if (!out.ping.packaged && !(out.lic.ok === false && out.lic.error === 'no_package_identity')) fail(`license outside a package: ${JSON.stringify(out.lic)}`);
+  if (!out.ping.packaged && !(out.rate.ok === false && out.rate.error === 'no_package_identity')) fail(`rate outside a package: ${JSON.stringify(out.rate)}`);
   console.log(`check: ${JSON.stringify(out)}`);
 }
 

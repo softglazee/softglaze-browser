@@ -243,5 +243,15 @@
     "retry": "Reintentar",
     "droppedRows_one": "No se guardó {{count}} fila porque su URL no es una dirección http(s) válida: {{rows}}",
     "droppedRows_other": "No se guardaron {{count}} filas porque su URL no es una dirección http(s) válida: {{rows}}"
+  },
+  "storeRating": {
+    "cardTitle": "¿Te gusta SoftGlaze Browser?",
+    "cardBody": "Una valoración en Microsoft Store ayuda a otros equipos a encontrarlo.",
+    "rate": "Valorar en Microsoft Store",
+    "notNow": "Ahora no",
+    "never": "No volver a preguntar",
+    "entryTitle": "Valorar SoftGlaze Browser",
+    "entryDesc": "Comparte tu valoración y tu reseña en Microsoft Store.",
+    "openFailed": "No se pudo abrir Microsoft Store. Ábrela desde el menú Inicio y busca SoftGlaze Browser en tu Biblioteca."
   }
 }

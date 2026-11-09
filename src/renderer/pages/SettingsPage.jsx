@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound, Languages, Search, FlaskConical, AlertCircle } from 'lucide-react';
+import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound, Languages, Search, FlaskConical, AlertCircle, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import BillingSettings from '@/components/BillingSettings.jsx';
@@ -19,6 +19,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 import { SHOW_UNAPPLIED_SETTINGS, visibleSectionOrder } from '@/lib/unappliedSettings.mjs';
+import { showRatingEntry } from '@/lib/storeRating.mjs';
 import i18n from '@/i18n/index.js';
 import settingsExtraEn from '@/i18n/locales/en/settingsExtra.json';
 import settingsExtraEs from '@/i18n/locales/es/settingsExtra.json';
@@ -810,7 +811,48 @@ function UpdatesSection({ sec }) {
           </Button>
         </div>
       </div>
+      <StoreRatingEntry />
     </SectionBox>
+  );
+}
+
+// Microsoft Store build only: the permanent "Rate SoftGlaze Browser" entry, next to the app's update
+// status. It opens the Store's own rating dialog (else the Store's review page) and is never shown in
+// the website build.
+function StoreRatingEntry() {
+  const { t } = useTranslation();
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    softglazeApi.storeRating.status().then((s) => { if (live) setShow(showRatingEntry(s)); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+
+  if (!show) return null;
+
+  async function rate() {
+    setBusy(true);
+    setFailed(false);
+    let r = null;
+    try { r = await softglazeApi.storeRating.rate(); } catch (e) { r = null; }
+    setBusy(false);
+    if (!(r && r.ok)) setFailed(true);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3.5 border-t border-border">
+      <div className="min-w-0">
+        <p className="text-sm text-foreground">{t('storeRating.entryTitle')}</p>
+        <p className="text-xs text-muted-foreground">{t('storeRating.entryDesc')}</p>
+        {failed && <p role="alert" className="mt-1 text-xs text-destructive">{t('storeRating.openFailed')}</p>}
+      </div>
+      <Button variant="secondary" size="sm" onClick={rate} disabled={busy} className="shrink-0">
+        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5" />} {t('storeRating.rate')}
+      </Button>
+    </div>
   );
 }
 

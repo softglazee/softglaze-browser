@@ -175,6 +175,9 @@ const CHANNELS = Object.freeze({
   STORE_STATUS: 'store:status',
   STORE_PURCHASE: 'store:purchase',
   STORE_RESTORE: 'store:restore',
+  STORE_RATING_STATUS: 'store:rating-status',
+  STORE_RATING_CHOOSE: 'store:rating-choose',
+  STORE_RATING_RATE: 'store:rating-rate',
   INVOICE_LIST: 'invoice:list',
   INVOICE_CREATE: 'invoice:create',
   INVOICE_UPDATE: 'invoice:update',
@@ -613,6 +616,12 @@ const api = Object.freeze({
     status: () => invoke(CHANNELS.STORE_STATUS),
     purchase: (payload) => invoke(CHANNELS.STORE_PURCHASE, payload),
     restore: (payload) => invoke(CHANNELS.STORE_RESTORE, payload)
+  }),
+  // Microsoft Store rating (Store build only; elsewhere status() answers storeBuild: false and rate() does nothing).
+  storeRating: Object.freeze({
+    status: () => invoke(CHANNELS.STORE_RATING_STATUS),
+    choose: (choice) => invoke(CHANNELS.STORE_RATING_CHOOSE, { choice }),
+    rate: () => invoke(CHANNELS.STORE_RATING_RATE)
   }),
   invoices: Object.freeze({
     list: (payload) => invoke(CHANNELS.INVOICE_LIST, payload),

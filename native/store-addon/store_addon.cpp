@@ -12,7 +12,12 @@
 //   products                              {ok, products:[{storeId, inAppOfferToken, title, productKind, price, skus}], extendedError}
 //   purchase  {storeId, hwnd}             {ok, status: Succeeded|AlreadyPurchased|NotPurchased|NetworkError|ServerError, extendedError}
 //   keys      {collectionsTicket, purchaseTicket, publisherUserId}   {ok, collectionsKey, purchaseKey}
+//   rate      {hwnd}                      {ok, status: Succeeded|CanceledByUser|NetworkError|Error, wasUpdated, extendedError}
 // A failure resolves (never rejects) with {ok:false, error, hresult, message}.
+//
+// rate shows the Store's own rating and review dialog (StoreContext.RequestRateAndReviewAppAsync,
+// Windows 10 1809 or later; "must be called on the UI thread", learn.microsoft.com/windows/uwp/monetize/
+// request-ratings-and-reviews). The app treats any failure as "open the Store's review page instead".
 //
 // Every Store operation is STARTED on the calling thread, which in the app is Electron's UI thread,
 // with the app window set as the owner (IInitializeWithWindow), as Microsoft requires for desktop
@@ -106,6 +111,16 @@ char const* purchase_status_name(StorePurchaseStatus s) {
         case StorePurchaseStatus::NotPurchased: return "NotPurchased";
         case StorePurchaseStatus::NetworkError: return "NetworkError";
         case StorePurchaseStatus::ServerError: return "ServerError";
+        default: return "Unknown";
+    }
+}
+
+char const* rate_status_name(StoreRateAndReviewStatus s) {
+    switch (s) {
+        case StoreRateAndReviewStatus::Succeeded: return "Succeeded";
+        case StoreRateAndReviewStatus::CanceledByUser: return "CanceledByUser";
+        case StoreRateAndReviewStatus::NetworkError: return "NetworkError";
+        case StoreRateAndReviewStatus::Error: return "Error";
         default: return "Unknown";
     }
 }
@@ -310,7 +325,7 @@ napi_value Call(napi_env env, napi_callback_info info) {
     if (!packaged) {
         return resolved(env, deferred, promise, error_json("no_package_identity", APPMODEL_ERROR_NO_PACKAGE, "Store purchases only work in the Microsoft Store version of the app."));
     }
-    if (cmd != "license" && cmd != "products" && cmd != "purchase" && cmd != "keys") {
+    if (cmd != "license" && cmd != "products" && cmd != "purchase" && cmd != "keys" && cmd != "rate") {
         return resolved(env, deferred, promise, error_json("unknown_command", E_INVALIDARG, "Unknown command."));
     }
 
@@ -336,6 +351,13 @@ napi_value Call(napi_env env, napi_callback_info info) {
             if (storeId.empty() || get_string(env, opts, "hwnd").empty()) throw winrt::hresult_invalid_argument(L"storeId and hwnd are required");
             complete_with(job, ctx.RequestPurchaseAsync(winrt::to_hstring(storeId)), [](StorePurchaseResult const& r) {
                 return "{\"ok\":true,\"status\":" + q(std::string(purchase_status_name(r.Status()))) + ",\"extendedError\":" + q(hex32(r.ExtendedError())) + "}";
+            });
+        } else if (cmd == "rate") {
+            // The dialog needs its owner window, like the purchase dialog.
+            if (get_string(env, opts, "hwnd").empty()) throw winrt::hresult_invalid_argument(L"hwnd is required");
+            complete_with(job, ctx.RequestRateAndReviewAppAsync(), [](StoreRateAndReviewResult const& r) {
+                return "{\"ok\":true,\"status\":" + q(std::string(rate_status_name(r.Status()))) + ",\"wasUpdated\":" + b(r.WasUpdated())
+                    + ",\"extendedError\":" + q(hex32(r.ExtendedError())) + "}";
             });
         } else {
             std::string ct = get_string(env, opts, "collectionsTicket");

@@ -243,5 +243,15 @@
     "retry": "Retry",
     "droppedRows_one": "{{count}} row was not saved because its URL is not a valid http(s) address: {{rows}}",
     "droppedRows_other": "{{count}} rows were not saved because their URL is not a valid http(s) address: {{rows}}"
+  },
+  "storeRating": {
+    "cardTitle": "Enjoying SoftGlaze Browser?",
+    "cardBody": "A rating in the Microsoft Store helps other teams find it.",
+    "rate": "Rate in Microsoft Store",
+    "notNow": "Not now",
+    "never": "Don't ask again",
+    "entryTitle": "Rate SoftGlaze Browser",
+    "entryDesc": "Share your rating and review in the Microsoft Store.",
+    "openFailed": "The Microsoft Store could not be opened. Open it from the Start menu and find SoftGlaze Browser in your Library."
   }
 }
