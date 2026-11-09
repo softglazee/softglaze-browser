@@ -355,6 +355,8 @@ function RevealStep({ flow, dispatch, clientName, hostOs }) {
           </div>
         )}
         {client && client.key === 'n8n' && <p className="text-[12.5px] text-muted-foreground">{t('create.n8nHint')}</p>}
+        {client && client.key === 'claude-code' && <p className="text-[12.5px] text-muted-foreground">{t('create.claudeCodeHint')}</p>}
+        {client && client.key === 'claude-desktop' && <p className="text-[12.5px] text-muted-foreground">{t('create.claudeDesktopHint')}</p>}
 
         <label className="flex items-center gap-2.5 text-[13px] text-foreground">
           <input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={flow.acknowledged} onChange={(e) => dispatch({ type: 'acknowledge', value: e.target.checked })} />

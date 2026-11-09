@@ -8,8 +8,12 @@
 //   ai:approvals-respond  any signed-in member may answer approvals from tokens that act as
 //                         themselves; Owner and Admin may answer all.
 //   ai:approvals-list     filtered the same way, so a member's dialog can show their own approvals.
+//   ai:devtools-sessions  Owner (or Super Admin) only: running profiles for the "Use a profile with
+//   ai:devtools-endpoint  Playwright MCP or Chrome DevTools MCP" card, and one profile's DevTools
+//                         address with ready setups. Admins are refused, not just hidden from.
 // Events main -> renderer: ai:approval-requested (one approval, only to a window whose member may
-// answer it), ai:approvals-changed ({ pending }), ai:status-changed ({ at }).
+// answer it), ai:approvals-changed ({ pending }), ai:status-changed ({ at }),
+// ai:devtools-session-ended ({ profileId }; never an address).
 
 const AI_CHANNELS = Object.freeze({
   STATUS: 'ai:status',
@@ -30,10 +34,13 @@ const AI_CHANNELS = Object.freeze({
   SNIPPETS: 'ai:snippets',
   BRIDGE_INFO: 'ai:bridge-info',
   PREAPPROVABLE_TOOLS: 'ai:preapprovable-tools',
+  DEVTOOLS_SESSIONS: 'ai:devtools-sessions',
+  DEVTOOLS_ENDPOINT: 'ai:devtools-endpoint',
   // main -> renderer events
   APPROVAL_REQUESTED: 'ai:approval-requested',
   APPROVALS_CHANGED: 'ai:approvals-changed',
-  STATUS_CHANGED: 'ai:status-changed'
+  STATUS_CHANGED: 'ai:status-changed',
+  DEVTOOLS_SESSION_ENDED: 'ai:devtools-session-ended'
 });
 
 const ADMIN_ROLES = new Set(['OWNER', 'ADMIN', 'SUPER_ADMIN']);
@@ -83,6 +90,13 @@ function registerAiIpc(registerHandler, ai, host) {
     return m;
   };
   const isOwner = (m) => !m || OWNER_ROLES.has(m.role);
+  const requireOwner = async (message) => {
+    const m = await windowMember();
+    if (!m) return null; // single-user mode == Owner
+    activeOrThrow(m);
+    if (!OWNER_ROLES.has(m.role)) throw forbidden(message);
+    return m;
+  };
   const canAnswer = canAnswerApproval;
 
   registerHandler(AI_CHANNELS.STATUS, async () => { await requireAdmin(); return ai.status(); });
@@ -150,6 +164,16 @@ function registerAiIpc(registerHandler, ai, host) {
   registerHandler(AI_CHANNELS.SNIPPETS, async () => { await requireAdmin(); return ai.getSnippets(); });
   registerHandler(AI_CHANNELS.BRIDGE_INFO, async () => { await requireAdmin(); return ai.bridgeInfo(); });
   registerHandler(AI_CHANNELS.PREAPPROVABLE_TOOLS, async () => { await requireAdmin(); return ai.preApprovableTools(); });
+
+  // A person hands a running profile to an outside debugger. Independent of Expert mode (which
+  // governs what AI apps may ask for); the Owner check here is the guard, not the hidden card.
+  const DEVTOOLS_OWNER_ONLY = 'Only the Owner can hand a profile to Playwright MCP or Chrome DevTools MCP.';
+  registerHandler(AI_CHANNELS.DEVTOOLS_SESSIONS, async () => { await requireOwner(DEVTOOLS_OWNER_ONLY); return ai.devtoolsSessions(); });
+  registerHandler(AI_CHANNELS.DEVTOOLS_ENDPOINT, async (payload) => {
+    const m = await requireOwner(DEVTOOLS_OWNER_ONLY);
+    const src = (payload && typeof payload === 'object') ? payload : {};
+    return ai.devtoolsEndpoint({ profileId: src.profileId, tool: src.tool, client: src.client }, { memberId: m ? m.id : null });
+  });
 }
 
 module.exports = { AI_CHANNELS, registerAiIpc, canAnswerApproval, createWindowEmitter };

@@ -40,6 +40,23 @@ export function errorText(e) {
 
 export const TOKEN_PLACEHOLDER = '<YOUR_TOKEN>';
 export const DOCS_BASE = 'https://browser.softglaze.com/docs/ai-agents';
+// One-step installs (Claude Desktop .mcpb, the Claude Code plugins and the rest).
+export const INSTALL_DOCS_URL = 'https://browser.softglaze.com/docs/ai-install-apps';
+// Claude Code: the SoftGlaze plugin marketplace (github.com/softglazee/softglaze-claude-plugin).
+// softglaze-browser holds the skills; softglaze-browser-connector holds the tools and asks for the
+// token and the port. Claude Desktop chats and Cowork use the .mcpb instead.
+export const CLAUDE_PLUGIN_COMMANDS = [
+  '/plugin marketplace add softglazee/softglaze-claude-plugin',
+  '/plugin install softglaze-browser@softglaze',
+  '/plugin install softglaze-browser-connector@softglaze'
+].join('\n');
+
+// The Claude Desktop extension download (bridgeInfo().mcpbUrl): an https link, or null.
+export function mcpbUrlOf(bridge) {
+  const s = String((bridge && bridge.mcpbUrl) || '');
+  try { return new URL(s).protocol === 'https:' ? s : null; } catch (e) { return null; }
+}
+
 export const CLIENT_ORDER = ['claude-desktop', 'claude-code', 'cursor', 'vscode', 'gemini-cli', 'codex', 'windsurf', 'cline', 'n8n', 'other'];
 // Clients that start a local program (stdio) and so need the bridge.
 export const STDIO_CLIENTS = new Set(['claude-desktop', 'other']);

@@ -417,7 +417,18 @@ export const softglazeApi = {
     prompts: { list: () => aiCall((ai) => ai.prompts.list()) },
     snippets: () => aiCall((ai) => ai.snippets()),
     bridgeInfo: () => aiCall((ai) => ai.bridgeInfo()),
-    preapprovableTools: () => aiCall((ai) => ai.preapprovableTools())
+    preapprovableTools: () => aiCall((ai) => ai.preapprovableTools()),
+    // Owner only (main refuses everyone else). endpoint() returns the profile's DevTools address,
+    // so the card calls it only when the Owner presses Show.
+    devtools: {
+      sessions: () => aiCall((ai) => ai.devtools.sessions()),
+      endpoint: (input) => aiCall((ai) => ai.devtools.endpoint(input)),
+      onSessionEnded: (cb) => {
+        const ai = window.softglaze && window.softglaze.ai;
+        if (!ai || !ai.devtools || typeof ai.devtools.onSessionEnded !== 'function') return () => {};
+        return ai.devtools.onSessionEnded(cb);
+      }
+    }
   },
   updater: {
     getState: () => getSoftglazeApi().updater.getState(),

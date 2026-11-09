@@ -15,8 +15,9 @@ const fnBody = (name) => {
 };
 
 const SPEC_CHANNELS = ['ai:status', 'ai:set-enabled', 'ai:settings-get', 'ai:settings-set', 'ai:tokens-list', 'ai:tokens-create', 'ai:tokens-revoke', 'ai:approvals-list', 'ai:approvals-respond', 'ai:stop-all', 'ai:audit-list', 'ai:memory-get', 'ai:memory-set', 'ai:memory-reset', 'ai:prompts-list', 'ai:snippets', 'ai:bridge-info'];
-// Added after §10 for the AI page's automation-token form.
-const EXTRA_CHANNELS = ['ai:preapprovable-tools'];
+// Added after §10 for the AI page's automation-token form, and the Owner-only DevTools card
+// (test/aiIpcDevtools.test.js).
+const EXTRA_CHANNELS = ['ai:preapprovable-tools', 'ai:devtools-sessions', 'ai:devtools-endpoint'];
 
 function wire(windowMember, visible = new Set()) {
   const handlers = new Map();

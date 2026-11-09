@@ -14,6 +14,11 @@
 
 const TOKEN = '<YOUR_TOKEN>';
 
+// The SoftGlaze extension for Claude Desktop (asks for the token and the port when installed; also
+// what Claude Desktop chats and Cowork use). Live since 9 Nov 2026: 69,312 bytes, SHA-256
+// f9d4384c268054cbcda52516e3bc092a0e65cf5a9ac981d1ee8163d9097e974b (.sha256 next to it).
+const MCPB_URL = 'https://browser.softglaze.com/downloads/softglaze-browser.mcpb';
+
 function urls(port, host = '127.0.0.1') {
   const base = `http://${host}:${port}`;
   return { mcp: `${base}/mcp`, sse: `${base}/mcp/sse` };
@@ -31,7 +36,7 @@ function buildSnippets({ port, bridge }) {
     client: 'claude-code',
     title: 'Claude Code',
     kind: 'command',
-    where: 'Run in a terminal. Add --scope user to use SoftGlaze in every project.',
+    where: 'Without the plugins: run in a terminal. Add --scope user to use SoftGlaze in every project. Use the plugins or this command, not both.',
     text: `claude mcp add --transport http softglaze ${u.mcp} --header "Authorization: Bearer ${TOKEN}"`,
     docsUrl: 'https://code.claude.com/docs/en/mcp'
   });
@@ -41,7 +46,7 @@ function buildSnippets({ port, bridge }) {
     client: 'claude-desktop',
     title: 'Claude Desktop',
     kind: 'json',
-    where: 'Claude Desktop: Settings > Developer > Edit Config (claude_desktop_config.json), then restart Claude Desktop. Or install SoftGlaze.mcpb. Claude Desktop runs local servers over stdio, so this starts the SoftGlaze bridge.',
+    where: `Settings > Developer > Edit Config (claude_desktop_config.json), then restart Claude Desktop. Claude Desktop runs local servers over stdio, so this starts the SoftGlaze bridge. Easier: install softglaze-browser.mcpb (${MCPB_URL}), which asks for your token and port and also serves Cowork.`,
     text: json({
       mcpServers: {
         softglaze: {
@@ -132,4 +137,4 @@ function buildSnippets({ port, bridge }) {
   return out;
 }
 
-module.exports = { buildSnippets, urls, TOKEN };
+module.exports = { buildSnippets, urls, TOKEN, MCPB_URL };
