@@ -1,7 +1,7 @@
 {
   "title": "SoftGlaze AI",
   "beta": "Beta",
-  "description": "Let AI apps like Claude, Cursor and ChatGPT work with your profiles. Every change asks you first, and everything is logged.",
+  "description": "Let AI apps like Claude, Cursor and ChatGPT work with your profiles. You choose how often changes need your approval, and everything is logged.",
   "loading": "Loading SoftGlaze AI…",
   "refresh": "Refresh",
   "retry": "Try again",
