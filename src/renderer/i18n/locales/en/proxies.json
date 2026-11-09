@@ -255,7 +255,31 @@
     "removeFromGroup": "Remove from group",
     "deleteSelected": "Delete selected",
     "clear": "Clear",
-    "clearTooltip": "Clear selection"
+    "clearTooltip": "Clear selection",
+    "copyForExtension": "Copy for SoftGlaze Proxy",
+    "copyForExtensionTooltip": "Copy the selected proxies for the SoftGlaze Proxy browser extension's Bulk import"
+  },
+  "copyForExtension": {
+    "title": "Copy for SoftGlaze Proxy",
+    "description": "Copies the selected proxies as lines the SoftGlaze Proxy browser extension reads in its Bulk import box. Each line says its type (http, https, socks5 or socks4), so a SOCKS5 proxy is never read as HTTP.",
+    "loading": "Counting the selected proxies…",
+    "count": "Proxies to copy: {{count}}",
+    "skipped": "Left out: {{count}} (a type, address or port the extension does not read).",
+    "includeCredentials": "Include usernames and passwords",
+    "credsNoRole": "Your role cannot see proxy usernames and passwords. Ask an owner or admin.",
+    "credsNone": "None of the selected proxies has a username or password.",
+    "socks5Note": "SOCKS5 proxies with a login: {{count}}. Chrome and Edge cannot sign in to SOCKS5 proxies, so the extension will not take those lines there. Firefox can use them.",
+    "socks4Note": "SOCKS4 proxies with a login: {{count}}. They are copied without it, because SOCKS4 has no password and the extension does not take one.",
+    "clipboardWarning": "Other programs on this computer can read the clipboard. The app clears it after 2 minutes if it still holds this list.",
+    "copy": "Copy",
+    "copying": "Copying…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copied": "Copied {{count}} proxies without usernames or passwords. In the extension, open Proxies, choose Bulk import and paste.",
+    "copiedWithCredentials": "Copied {{count}} proxies with their usernames and passwords. In the extension, open Proxies, choose Bulk import and paste.",
+    "getExtension": "Get the SoftGlaze Proxy extension",
+    "loadError": "Could not read the selected proxies.",
+    "copyError": "Could not copy the proxies."
   },
   "table": {
     "loading": "Loading proxies...",

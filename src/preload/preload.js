@@ -36,6 +36,8 @@ const CHANNELS = Object.freeze({
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
+  PROXY_EXTENSION_COPY_INFO: 'proxy:extension-copy-info',
+  PROXY_EXTENSION_COPY: 'proxy:extension-copy',
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_CHECK_STREAM: 'proxy:check-stream',
   PROXY_CHECK_STOP: 'proxy:check-stop',
@@ -388,6 +390,9 @@ const api = Object.freeze({
     // { provider, cachedOnly } -> { supported, dashboardUrl, account }; never returns a secret.
     providerAccount: (payload) => invoke(CHANNELS.PROXY_PROVIDER_ACCOUNT, payload),
     rotateIp: (payload) => invoke(CHANNELS.PROXY_ROTATE_IP, payload),
+    // "Copy for SoftGlaze Proxy": counts only; the copy itself happens in main, which returns no secrets.
+    extensionCopyInfo: (ids) => invoke(CHANNELS.PROXY_EXTENSION_COPY_INFO, { ids }),
+    copyForExtension: (ids, includeCredentials) => invoke(CHANNELS.PROXY_EXTENSION_COPY, { ids, includeCredentials: includeCredentials === true }),
     testAll: () => invoke(CHANNELS.PROXY_TEST_ALL),
     checkStream: (payload) => invoke(CHANNELS.PROXY_CHECK_STREAM, payload),
     stopCheck: (payload) => invoke(CHANNELS.PROXY_CHECK_STOP, payload),

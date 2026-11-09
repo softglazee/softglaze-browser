@@ -255,7 +255,31 @@
     "removeFromGroup": "Quitar del grupo",
     "deleteSelected": "Eliminar seleccionados",
     "clear": "Limpiar",
-    "clearTooltip": "Limpiar selección"
+    "clearTooltip": "Limpiar selección",
+    "copyForExtension": "Copiar para SoftGlaze Proxy",
+    "copyForExtensionTooltip": "Copiar los proxies seleccionados para la importación masiva (Bulk import) de la extensión SoftGlaze Proxy"
+  },
+  "copyForExtension": {
+    "title": "Copiar para SoftGlaze Proxy",
+    "description": "Copia los proxies seleccionados como líneas que la extensión de navegador SoftGlaze Proxy lee en su cuadro Bulk import. Cada línea indica su tipo (http, https, socks5 o socks4), así un proxy SOCKS5 nunca se lee como HTTP.",
+    "loading": "Contando los proxies seleccionados…",
+    "count": "Proxies a copiar: {{count}}",
+    "skipped": "Omitidos: {{count}} (un tipo, dirección o puerto que la extensión no lee).",
+    "includeCredentials": "Incluir usuarios y contraseñas",
+    "credsNoRole": "Tu rol no puede ver los usuarios y contraseñas de los proxies. Pide ayuda a un propietario o administrador.",
+    "credsNone": "Ninguno de los proxies seleccionados tiene usuario o contraseña.",
+    "socks5Note": "Proxies SOCKS5 con usuario: {{count}}. Chrome y Edge no pueden iniciar sesión en proxies SOCKS5, así que la extensión no aceptará esas líneas allí. Firefox sí puede usarlas.",
+    "socks4Note": "Proxies SOCKS4 con usuario: {{count}}. Se copian sin él, porque SOCKS4 no tiene contraseña y la extensión no lo acepta.",
+    "clipboardWarning": "Otros programas de este equipo pueden leer el portapapeles. La aplicación lo vacía a los 2 minutos si todavía contiene esta lista.",
+    "copy": "Copiar",
+    "copying": "Copiando…",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "copied": "Se copiaron {{count}} proxies sin usuarios ni contraseñas. En la extensión, abre Proxies, elige Bulk import y pega.",
+    "copiedWithCredentials": "Se copiaron {{count}} proxies con sus usuarios y contraseñas. En la extensión, abre Proxies, elige Bulk import y pega.",
+    "getExtension": "Obtener la extensión SoftGlaze Proxy",
+    "loadError": "No se pudieron leer los proxies seleccionados.",
+    "copyError": "No se pudieron copiar los proxies."
   },
   "table": {
     "loading": "Cargando proxies...",

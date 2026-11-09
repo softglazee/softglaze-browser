@@ -24,6 +24,7 @@ import Input from '@/components/ui/Input.jsx';
 import NumberInput from '@/components/ui/NumberInput.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
 import Pager from '@/components/ui/Pager.jsx';
+import CopyForProxyExtensionDialog from '@/components/CopyForProxyExtensionDialog.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
@@ -153,6 +154,8 @@ export default function ProxyPoolPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [copiedId, setCopiedId] = useState(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // "Copy for SoftGlaze Proxy": the ids fixed when the dialog opened; null = closed.
+  const [extensionCopyIds, setExtensionCopyIds] = useState(null);
   const [view, setView] = useState('custom'); // 'custom' | 'history' | 'groups'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'failed' (driven by the stat cards)
   const [page, setPage] = useState(1);
@@ -385,6 +388,13 @@ export default function ProxyPoolPage() {
     } finally {
       setBulkDeleting(false);
     }
+  }
+
+  // Copy the selected proxies that are visible under the current filter, like Delete selected.
+  function openExtensionCopy() {
+    const visible = new Set(filteredProxies.map((p) => p.id));
+    const ids = Array.from(selectedIds).filter((id) => visible.has(id));
+    if (ids.length) setExtensionCopyIds(ids);
   }
 
   // Deep-check the current selection (streamed, concurrent, with progress + log).
@@ -1192,7 +1202,7 @@ export default function ProxyPoolPage() {
       </div>
 
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded border border-primary/40 bg-primary/10 px-4 py-2.5 text-sm">
           <span className="font-medium text-foreground">{t('selection.count', { count: selectedIds.size })}</span>
           <div className="w-px h-5 bg-border" />
           <Button size="sm" variant="secondary" onClick={handleBulkCheck} disabled={checkingAll || bulkDeleting}>
@@ -1217,6 +1227,9 @@ export default function ProxyPoolPage() {
               </div>
             )}
           </div>
+          <Button size="sm" variant="secondary" onClick={openExtensionCopy} disabled={bulkDeleting} title={t('selection.copyForExtensionTooltip')}>
+            <Copy className="h-3.5 w-3.5" /> {t('selection.copyForExtension')}
+          </Button>
           <Button size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('selection.deleteSelected')}
           </Button>
@@ -1456,6 +1469,12 @@ export default function ProxyPoolPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <CopyForProxyExtensionDialog
+        open={extensionCopyIds != null}
+        ids={extensionCopyIds}
+        onOpenChange={(o) => { if (!o) setExtensionCopyIds(null); }}
+      />
 
       <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
         <DialogContent title={t('batch.dialogTitle')} className="rounded border-border bg-card">

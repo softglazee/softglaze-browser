@@ -225,7 +225,8 @@
     "status_changed": "estado cambiado",
     "signed_in": "inició sesión",
     "signed_out": "cerró sesión",
-    "invite_accepted": "invitación aceptada"
+    "invite_accepted": "invitación aceptada",
+    "proxies_copied_for_extension": "proxies copiados para la extensión"
   },
   "feedTime": {
     "justNow": "ahora mismo",
