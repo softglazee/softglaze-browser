@@ -226,7 +226,8 @@
     "signed_in": "inició sesión",
     "signed_out": "cerró sesión",
     "invite_accepted": "invitación aceptada",
-    "proxies_copied_for_extension": "proxies copiados para la extensión"
+    "proxies_copied_for_extension": "proxies copiados para la extensión",
+    "devtools_address_shown": "dirección de DevTools mostrada"
   },
   "feedTime": {
     "justNow": "ahora mismo",
