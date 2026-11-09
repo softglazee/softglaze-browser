@@ -354,7 +354,8 @@ test('engine shapes (PR #38): allowHour, expired flag, pending outcome, run ids,
 
   const connect = read('src', 'renderer', 'components', 'ai', 'AiConnectTab.jsx');
   assert.match(connect, /\{hasPlaceholder\(entry\.text\) && <p/, 'no "<YOUR_TOKEN>" hint for snippets without it (VS Code prompts for the token)');
-  assert.match(connect, /!\(bridge && bridge\.mcpbPath\) \? `\$\{base\}\.step2NoMcpb`/, 'the .mcpb is only mentioned when the build ships one');
+  assert.match(connect, /const mcpbUrl = entry\.key === 'claude-desktop' \? mcpbUrlOf\(bridge\) : null;/);
+  assert.match(connect, /&& !mcpbUrl \? `\$\{base\}\.step2NoMcpb`/, 'the .mcpb is only mentioned when the engine names where to get it');
   assert.match(read('src', 'renderer', 'components', 'ai', 'AiApprovalsTab.jsx'), /a\.memberName \? ` · \$\{t\('approvals\.actsAs', \{ member: a\.memberName \}\)\}` : ''/, '"acts as" in the list too');
   assert.match(dialog, /current\.memberName\s*\? t\('approval\.tokenAndMember'/, '"acts as" in the dialog');
   assert.match(page, /status && status\.error \? t\('status\.errorHint', \{ message: status\.error \}\)/, 'the engine status error is shown');

@@ -301,7 +301,13 @@ const AI_CHANNELS = Object.freeze({
   SNIPPETS: 'ai:snippets',
   BRIDGE_INFO: 'ai:bridge-info',
   // Additive (engine PR #38): the operate tools an Owner may pre-approve on an Automation token.
-  PREAPPROVABLE_TOOLS: 'ai:preapprovable-tools'
+  PREAPPROVABLE_TOOLS: 'ai:preapprovable-tools',
+  // Owner only: the "Use a profile with Playwright MCP or Chrome DevTools MCP" card on the Connect
+  // tab (running profiles, then one profile's DevTools address on Show), and the event that clears
+  // a shown address when its profile stops.
+  DEVTOOLS_SESSIONS: 'ai:devtools-sessions',
+  DEVTOOLS_ENDPOINT: 'ai:devtools-endpoint',
+  DEVTOOLS_SESSION_ENDED: 'ai:devtools-session-ended'
 });
 
 const ALLOWED_CHANNELS = new Set([...Object.values(CHANNELS), ...Object.values(AI_CHANNELS)]);
@@ -776,7 +782,21 @@ const api = Object.freeze({
     snippets: () => invokeAi(AI_CHANNELS.SNIPPETS),
     bridgeInfo: () => invokeAi(AI_CHANNELS.BRIDGE_INFO),
     // -> [{ name, title, scope, destructive }]
-    preapprovableTools: () => invokeAi(AI_CHANNELS.PREAPPROVABLE_TOOLS)
+    preapprovableTools: () => invokeAi(AI_CHANNELS.PREAPPROVABLE_TOOLS),
+    devtools: Object.freeze({
+      // -> [{ profileId, name, engine: 'chromium' | 'firefox', running }]
+      sessions: () => invokeAi(AI_CHANNELS.DEVTOOLS_SESSIONS),
+      // -> { profileId, wsEndpoint, snippets, snippetsWithUsageStats }; call only when the Owner presses Show.
+      endpoint: (input) => {
+        const src = input && typeof input === 'object' ? input : {};
+        return invokeAi(AI_CHANNELS.DEVTOOLS_ENDPOINT, { profileId: src.profileId, tool: src.tool, client: src.client });
+      },
+      onSessionEnded: (callback) => {
+        const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+        ipcRenderer.on(AI_CHANNELS.DEVTOOLS_SESSION_ENDED, listener);
+        return () => ipcRenderer.removeListener(AI_CHANNELS.DEVTOOLS_SESSION_ENDED, listener);
+      }
+    })
   }),
   updater: Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),

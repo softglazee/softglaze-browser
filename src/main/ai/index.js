@@ -12,6 +12,7 @@ const aiSettings = require('./aiSettings');
 const memories = require('./memories');
 const prompts = require('./prompts');
 const snippets = require('./snippets');
+const devtoolsSnippets = require('./devtoolsSnippets');
 const { ApprovalManager } = require('./approvals');
 const { ToolRegistry, RateLimiter, AiTracker, JobStore } = require('./toolRegistry');
 const { McpHttpHandler } = require('./mcpServer');
@@ -297,9 +298,11 @@ function preApprovableTools() {
 
 function listPrompts() { return prompts.listPrompts(); }
 
+// mcpbUrl: the SoftGlaze extension for Claude Desktop (softglaze-browser.mcpb) on the website.
 function bridgeInfo() {
   const h = host();
-  return typeof h.bridgeInfo === 'function' ? h.bridgeInfo() : { command: 'node', args: [], env: {}, mcpbPath: null };
+  const info = typeof h.bridgeInfo === 'function' ? h.bridgeInfo() : { command: 'node', args: [], env: {}, mcpbPath: null };
+  return { ...info, mcpbUrl: snippets.MCPB_URL };
 }
 
 async function getSnippets() {
@@ -307,9 +310,82 @@ async function getSnippets() {
   return snippets.buildSnippets({ port: api.port, bridge: bridgeInfo() });
 }
 
+// ---- "Use a profile with Playwright MCP or Chrome DevTools MCP" (AI page, Owner only) ----
+// ai/ipc.js checks the Owner role before either call. The address is read only when the Owner
+// presses Show, and it never goes into a log, the AI audit or an event.
+
+const DEVTOOLS_EVENT = 'ai:devtools-session-ended';
+
+function devtoolsUserError(message, code = 'DEVTOOLS') {
+  const e = new Error(message);
+  e.code = code;
+  return e;
+}
+
+function isFirefoxProfile(sessionId) {
+  const d = state.toolDeps || {};
+  return typeof d.isFirefoxSession === 'function' ? Boolean(d.isFirefoxSession(String(sessionId))) : false;
+}
+
+// Running profiles for the card's picker: { profileId, name, engine, running }. No addresses.
+function devtoolsSessions() {
+  const d = state.toolDeps;
+  if (!d || typeof d.listAllSessions !== 'function') throw new Error('SoftGlaze AI is not ready yet.');
+  const out = [];
+  const seen = new Set();
+  for (const s of d.listAllSessions() || []) {
+    const sid = String((s && (s.sessionId != null ? s.sessionId : s.id)) || '');
+    const profileId = Number(sid);
+    if (!/^\d+$/.test(sid) || !Number.isSafeInteger(profileId) || profileId <= 0 || seen.has(profileId)) continue;
+    seen.add(profileId);
+    const engine = s.engine === 'firefox' || isFirefoxProfile(sid) ? 'firefox' : 'chromium';
+    out.push({ profileId, name: s.profileName ? String(s.profileName) : `Profile #${profileId}`, engine, running: true });
+  }
+  return out;
+}
+
+// input { profileId, tool, client } -> { profileId, wsEndpoint, snippets, snippetsWithUsageStats }.
+// snippets carry --no-usage-statistics for Chrome DevTools MCP (the card's default);
+// snippetsWithUsageStats are the same without it, so the card's checkbox needs no second call.
+async function devtoolsEndpoint(input, { memberId = null } = {}) {
+  const h = host();
+  const d = state.toolDeps;
+  if (!d) throw new Error('SoftGlaze AI is not ready yet.');
+  if (typeof h.isWorkspaceLocked === 'function' && h.isWorkspaceLocked()) throw devtoolsUserError('The SoftGlaze workspace is locked. Unlock it and try again.', 'LOCKED');
+  const src = (input && typeof input === 'object') ? input : {};
+  const profileId = Number(src.profileId);
+  if (!Number.isSafeInteger(profileId) || profileId <= 0) throw devtoolsUserError('Choose a running profile first.', 'BAD_INPUT');
+  const tool = devtoolsSnippets.TOOL_KEYS.includes(src.tool) ? src.tool : 'playwright';
+  const sid = String(profileId);
+  if (isFirefoxProfile(sid)) throw devtoolsUserError('Firefox profiles have no DevTools endpoint.', 'FIREFOX');
+  const page = await d.getAutomationPage(sid);
+  if (!page) throw devtoolsUserError(`Profile #${profileId} is not running. Start it first.`, 'NOT_RUNNING');
+  if (!page.wsEndpoint) throw devtoolsUserError('This profile has no DevTools endpoint.', 'NO_ENDPOINT');
+  const wsEndpoint = String(page.wsEndpoint);
+  const withoutStats = devtoolsSnippets.buildDevtoolsSnippets({ wsEndpoint, noUsageStats: true }); // also refuses a non-loopback address
+  const withStats = devtoolsSnippets.buildDevtoolsSnippets({ wsEndpoint, noUsageStats: false });
+  // Driven from outside now, like get_cdp_endpoint: block-page proxy switching leaves it alone and
+  // its browser closing is not a crash.
+  d.markAutomationDriven(profileId);
+  try {
+    await h.getPrisma().activityLog.create({
+      data: {
+        profileId,
+        memberId: memberId == null ? null : Number(memberId),
+        action: 'devtools',
+        detail: `DevTools address shown for profile #${profileId} (${devtoolsSnippets.toolLabel(tool)})`
+      }
+    });
+  } catch (e) { /* logging never blocks the action (same rule as logActivity) */ }
+  return { profileId, wsEndpoint, snippets: withoutStats, snippetsWithUsageStats: withStats };
+}
+
 // ---- Session events from the app ----
 function onProfileClosed(profileId) {
   state.tracker.removeProfile(profileId);
+  // The DevTools card clears a shown address as soon as its profile stops (no address in the event).
+  const id = Number(profileId);
+  if (Number.isSafeInteger(id) && id > 0) emit(DEVTOOLS_EVENT, { profileId: id });
 }
 
 module.exports = {
@@ -341,6 +417,8 @@ module.exports = {
   preApprovableTools,
   bridgeInfo,
   getSnippets,
+  devtoolsSessions,
+  devtoolsEndpoint,
   onProfileClosed,
   _state: state
 };

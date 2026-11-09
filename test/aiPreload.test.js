@@ -18,8 +18,9 @@ const CONTRACT = [
   'ai:audit-list', 'ai:memory-get', 'ai:memory-set', 'ai:memory-reset', 'ai:prompts-list', 'ai:snippets', 'ai:bridge-info'
 ];
 // Additive channels from the engine (PR #38): two events (approvals changed elsewhere, status
-// changed) and the pre-approvable tool list for Automation tokens.
-const ENGINE_EVENTS = ['ai:approvals-changed', 'ai:status-changed', 'ai:preapprovable-tools'];
+// changed) and the pre-approvable tool list for Automation tokens. Then the Owner-only DevTools card:
+// two calls and the event that clears a shown address when its profile stops.
+const ENGINE_EVENTS = ['ai:approvals-changed', 'ai:status-changed', 'ai:preapprovable-tools', 'ai:devtools-sessions', 'ai:devtools-endpoint', 'ai:devtools-session-ended'];
 
 // Loads preload.js against a stubbed electron. `reply(channel, payload)` decides what invoke returns.
 function loadPreload(reply = () => ({ ok: true, data: { ok: true } })) {
@@ -73,7 +74,9 @@ test('every window.softglaze.ai call invokes its spec §10 channel with an objec
     [() => ai.prompts.list(), 'ai:prompts-list', undefined],
     [() => ai.snippets(), 'ai:snippets', undefined],
     [() => ai.bridgeInfo(), 'ai:bridge-info', undefined],
-    [() => ai.preapprovableTools(), 'ai:preapprovable-tools', undefined]
+    [() => ai.preapprovableTools(), 'ai:preapprovable-tools', undefined],
+    [() => ai.devtools.sessions(), 'ai:devtools-sessions', undefined],
+    [() => ai.devtools.endpoint({ profileId: 12, tool: 'playwright', client: 'claude-code', extra: 'dropped' }), 'ai:devtools-endpoint', { profileId: 12, tool: 'playwright', client: 'claude-code' }]
   ];
   for (const [call, channel, payload] of run) {
     calls.length = 0;
@@ -110,6 +113,16 @@ test('the engine events "approvals changed" and "status changed" reach the rende
   offA(); offS();
   assert.equal(listeners.has('ai:approvals-changed'), false);
   assert.equal(listeners.has('ai:status-changed'), false);
+});
+
+test('the DevTools card hears when a profile stops, and unsubscribes cleanly', () => {
+  const { api, listeners } = loadPreload();
+  const seen = [];
+  const off = api.ai.devtools.onSessionEnded((d) => seen.push(d));
+  listeners.get('ai:devtools-session-ended')({}, { profileId: 12 });
+  assert.deepEqual(seen, [{ profileId: 12 }]);
+  off();
+  assert.equal(listeners.has('ai:devtools-session-ended'), false);
 });
 
 test('a build without the engine rejects with AI_UNAVAILABLE; main errors keep their code', async () => {

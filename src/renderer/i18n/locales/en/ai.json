@@ -116,6 +116,18 @@
     "noSnippet": "This app has no ready-made setup. Follow the steps above.",
     "createToken": "Create a token for this app",
     "createTokenHint": "Give each app its own token. Then you can see what each one does and switch one off without touching the others.",
+    "installGuide": "Install guide",
+    "mcpb": {
+      "title": "Install in Claude Desktop: download softglaze-browser.mcpb",
+      "download": "Download softglaze-browser.mcpb",
+      "body": "Double-click the file, or in Claude Desktop open Settings > Extensions > Advanced settings > Install Extension. Claude Desktop asks for your token and the port; keep the port shown on this page. Claude Desktop chats and Cowork both use it."
+    },
+    "claudeCode": {
+      "pluginTitle": "Install the SoftGlaze plugins (recommended)",
+      "pluginBody": "Run these one at a time inside Claude Code. softglaze-browser adds the skills; softglaze-browser-connector adds the SoftGlaze tools and asks for your token and the port. The connector needs Node.js 18 or newer.",
+      "desktopNote": "Claude Desktop chats and Cowork use softglaze-browser.mcpb instead (see Claude Desktop).",
+      "manualTitle": "Or add the server yourself (no Node.js needed)"
+    },
     "envVar": {
       "title": "Save the token for Codex",
       "body": "Codex reads the token from an environment variable named SOFTGLAZE_TOKEN. Run this once with your token, then open a new terminal.",
@@ -135,15 +147,15 @@
       "claude-desktop": {
         "title": "Claude Desktop",
         "step1": "Create a token for Claude Desktop with the button below.",
-        "step2": "Easiest: install the SoftGlaze.mcpb file shown below (Settings > Extensions > Advanced settings > Install Extension) and enter your token when Claude asks. Or open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>.",
+        "step2": "Easiest: download softglaze-browser.mcpb with the button below, double-click it and paste your token when Claude Desktop asks. Or open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>.",
         "step2NoMcpb": "Open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>. It starts the SoftGlaze bridge, because Claude Desktop runs local servers.",
-        "step3": "Quit and reopen Claude Desktop. SoftGlaze shows up under the + button below the chat box, in Connectors."
+        "step3": "If you edited the config file, quit and reopen Claude Desktop. SoftGlaze shows up under the + button below the chat box, in Connectors."
       },
       "claude-code": {
         "title": "Claude Code",
         "step1": "Create a token for Claude Code with the button below.",
-        "step2": "Run the command in a terminal, with your token in place of <YOUR_TOKEN>.",
-        "step3": "Start Claude Code and type /mcp. SoftGlaze should show as connected."
+        "step2": "Install the SoftGlaze plugins with the commands below and paste your token when Claude Code asks. Or run the command further down, with your token in place of <YOUR_TOKEN>. Use one way, not both.",
+        "step3": "Type /mcp in Claude Code. SoftGlaze should show as connected (plugin:softglaze-browser-connector:softglaze with the plugins)."
       },
       "cursor": {
         "title": "Cursor",
@@ -220,6 +232,44 @@
         "create": "Create an Automation token",
         "ownerOnly": "Only the Owner can create Automation tokens."
       }
+    },
+    "devtools": {
+      "title": "Use a profile with Playwright MCP or Chrome DevTools MCP (advanced)",
+      "subtitle": "Hand a running Chromium profile to an outside DevTools client.",
+      "ownerOnly": "Owner only",
+      "warning": "Websites can detect an outside debugger. Playwright MCP and Chrome DevTools MCP attach as a second DevTools client and send their own commands, which anti-bot scripts can notice. The profile may be flagged or blocked. SoftGlaze's own page tools do not do this. Anyone on this computer who has the address below can control the profile while it runs.",
+      "intro": "Use this for what SoftGlaze's page tools do not do, such as performance traces or network and console logs on your own site, and use a test profile. This is you acting in the app, separate from Expert mode, which decides what AI apps may ask for.",
+      "profile": "Running profile",
+      "loading": "Loading running profiles…",
+      "loadError": "Could not load the running profiles: {{message}}",
+      "choose": "Choose a running profile",
+      "option": "{{name}} (#{{id}}) · Chromium",
+      "optionFirefox": "{{name}} (#{{id}}) · Firefox: Firefox profiles have no DevTools endpoint",
+      "empty": "Start a Chromium profile first.",
+      "openProfiles": "Open Profiles",
+      "stopped": "This profile ({{name}}) stopped. Its address no longer works.",
+      "address": "DevTools address",
+      "hiddenLabel": "DevTools address, hidden until you press Show",
+      "show": "Show",
+      "showLabel": "Show the DevTools address of {{name}}",
+      "hide": "Hide",
+      "addressNote": "New every time the profile starts. Works only on this computer while the profile runs.",
+      "noAddress": "SoftGlaze got no DevTools address for this profile. Stop and start it, then try again.",
+      "setup": "Setup",
+      "toolsLabel": "MCP server",
+      "clientsLabel": "AI app",
+      "where": {
+        "claude-code": "Run in a terminal in your project folder. The address changes every time the profile starts, so run claude mcp remove {{name}} first, then this command again.",
+        "claude-desktop": "Settings > Developer > Edit Config (claude_desktop_config.json): add this under \"mcpServers\", then quit and reopen Claude Desktop. Update the address after every start.",
+        "cursor": "~/.cursor/mcp.json (all projects) or .cursor/mcp.json in one project. Update the address after every start.",
+        "vscode": ".vscode/mcp.json in your workspace, or run MCP: Open User Configuration. Update the address after every start."
+      },
+      "snippet": "{{tool}} setup for {{app}}",
+      "pressShow": "Press Show to see the setup with this profile's address.",
+      "usageStats": "Turn off Chrome DevTools MCP usage statistics",
+      "usageStatsHint": "Adds --no-usage-statistics. Without it, Chrome DevTools MCP sends usage statistics to Google.",
+      "footer": "When you are done, close the MCP server, then stop the profile.",
+      "guide": "Guide: Playwright MCP and Chrome DevTools MCP"
     }
   },
   "scope": {
@@ -266,6 +316,8 @@
     "yourToken": "Token",
     "filledSetup": "Setup for {{app}}, with your token filled in",
     "n8nHint": "In n8n, set Authentication to Bearer and paste this token.",
+    "claudeCodeHint": "Installing the SoftGlaze plugins? Paste this token when Claude Code asks for it while installing softglaze-browser-connector. The command above is the way without the plugins.",
+    "claudeDesktopHint": "Installing softglaze-browser.mcpb? Paste this token when Claude Desktop asks for it. The setup above is the way without the extension.",
     "acknowledge": "I have saved this token somewhere safe",
     "closeWarning": "Copy the token or tick the box first. You cannot see this token again.",
     "done": "Done"

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AppWindow, Cable, Check, CodeXml, ExternalLink, FileCode2, KeyRound, Plug, RefreshCw, SquareTerminal, TriangleAlert, Wind, Workflow
+  AppWindow, Cable, Check, CodeXml, Download, ExternalLink, FileCode2, KeyRound, Plug, RefreshCw, SquareTerminal, TriangleAlert, Wind, Workflow
 } from 'lucide-react';
 
 import Button from '@/components/ui/Button.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import { AI_TONE, CodeBlock, CopyField, InlineError, PrimaryButton, TonePill, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
-import { STDIO_CLIENTS, envVarCommand, hasPlaceholder, n8nEndpoints } from '@/lib/aiCore.mjs';
+import AiDevtoolsCard from '@/components/ai/AiDevtoolsCard.jsx';
+import { CLAUDE_PLUGIN_COMMANDS, INSTALL_DOCS_URL, STDIO_CLIENTS, envVarCommand, hasPlaceholder, mcpbUrlOf, n8nEndpoints } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
 
 const ICONS = {
@@ -140,6 +141,10 @@ export default function AiConnectTab({ status, clients, loading, bridge, error, 
           </div>
         </div>
       )}
+
+      {/* Owner only (main refuses everyone else too): hand a running profile to Playwright MCP or
+          Chrome DevTools MCP. */}
+      {isOwner && <AiDevtoolsCard />}
     </div>
   );
 }
@@ -192,11 +197,13 @@ function Steps({ items, title }) {
   );
 }
 
-function ClientPanel({ entry, bridge, onCreateToken }) {
+// Exported for test/aiDevtoolsCard.test.js (the panel renders without the tab list's effects).
+export function ClientPanel({ entry, bridge, onCreateToken }) {
   const { t } = useTranslation('ai');
   const base = entry.known ? `connect.clients.${entry.key}` : 'connect.clients.custom';
-  // Claude Desktop: mention the one-click .mcpb only when this build ships one.
-  const step2Key = entry.key === 'claude-desktop' && !(bridge && bridge.mcpbPath) ? `${base}.step2NoMcpb` : `${base}.step2`;
+  // Claude Desktop: the one-click softglaze-browser.mcpb, when the engine names where to get it.
+  const mcpbUrl = entry.key === 'claude-desktop' ? mcpbUrlOf(bridge) : null;
+  const step2Key = entry.key === 'claude-desktop' && !mcpbUrl ? `${base}.step2NoMcpb` : `${base}.step2`;
   const steps = [t(`${base}.step1`), t(step2Key), t(`${base}.step3`)];
   const kindLabel = t(`connect.kind.${entry.kind}`, { defaultValue: entry.kind });
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
@@ -220,6 +227,12 @@ function ClientPanel({ entry, bridge, onCreateToken }) {
           </PrimaryButton>
           <p className="min-w-[14rem] flex-1 text-[12.5px] text-muted-foreground">{t('connect.createTokenHint')}</p>
         </div>
+
+        {mcpbUrl && <McpbBox url={mcpbUrl} />}
+        {entry.key === 'claude-code' && <ClaudePluginBox />}
+        {entry.key === 'claude-code' && entry.text && (
+          <h3 className="text-[14px] font-semibold text-foreground">{t('connect.claudeCode.manualTitle')}</h3>
+        )}
 
         {entry.where && (
           <div className="flex items-start gap-2 text-[12.5px]">
@@ -251,6 +264,47 @@ function ClientPanel({ entry, bridge, onCreateToken }) {
         {showBridge &&<BridgeBox bridge={bridge} claudeDesktop={entry.key === 'claude-desktop'} />}
       </div>
     </>
+  );
+}
+
+// Claude Desktop (chats and Cowork): the SoftGlaze extension, which asks for the token and port.
+function McpbBox({ url }) {
+  const { t } = useTranslation('ai');
+  return (
+    <section aria-labelledby="ai-mcpb-title" className="space-y-2 rounded-lg border px-4 py-3" style={toneSurface('info', 6, 22)}>
+      <h3 id="ai-mcpb-title" className="text-[13px] font-semibold text-foreground">{t('connect.mcpb.title')}</h3>
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Opens in the system browser (main.js window-open handler), which saves the file. */}
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded border border-border bg-secondary px-3 py-1.5 text-[13px] font-medium text-secondary-foreground hover:bg-elevated">
+          <Download className="h-4 w-4" aria-hidden="true" /> {t('connect.mcpb.download')}
+          <span className="sr-only">{t('opensInBrowser')}</span>
+        </a>
+        <a href={INSTALL_DOCS_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-primary hover:underline">
+          {t('connect.installGuide')} <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          <span className="sr-only">{t('opensInBrowser')}</span>
+        </a>
+      </div>
+      <p className="text-[12.5px] leading-relaxed text-muted-foreground">{t('connect.mcpb.body')}</p>
+    </section>
+  );
+}
+
+// Claude Code: the SoftGlaze plugins from the softglazee/softglaze-claude-plugin marketplace.
+function ClaudePluginBox() {
+  const { t } = useTranslation('ai');
+  return (
+    <section aria-labelledby="ai-claude-plugin-title" className="space-y-2 rounded-lg border px-4 py-3" style={toneSurface('info', 6, 22)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="ai-claude-plugin-title" className="text-[13px] font-semibold text-foreground">{t('connect.claudeCode.pluginTitle')}</h3>
+        <a href={INSTALL_DOCS_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-primary hover:underline">
+          {t('connect.installGuide')} <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          <span className="sr-only">{t('opensInBrowser')}</span>
+        </a>
+      </div>
+      <p className="text-[12.5px] leading-relaxed text-muted-foreground">{t('connect.claudeCode.pluginBody')}</p>
+      <CodeBlock text={CLAUDE_PLUGIN_COMMANDS} label={t('connect.claudeCode.pluginTitle')} kindLabel={t('connect.clients.claude-code.title')} />
+      <p className="text-[12px] text-muted-foreground">{t('connect.claudeCode.desktopNote')}</p>
+    </section>
   );
 }
 
