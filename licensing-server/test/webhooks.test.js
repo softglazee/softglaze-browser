@@ -292,3 +292,31 @@ test('L9: invoiceSubscriptionId supports both invoice shapes', () => {
   assert.equal(stripeProvider.invoiceSubscriptionId({ parent: { subscription_details: { subscription: 'sub_c' } } }), 'sub_c');
   assert.equal(stripeProvider.invoiceSubscriptionId({ subscription: null, parent: null }), null);
 });
+
+// --- Yearly plans -----------------------------------------------------------
+test('yearly: a one-time payment for a 12-month plan grants 365 days, stacks with a month, and its refund takes 365 back', async () => {
+  reset();
+  db.tables.plan.push({ id: 'p2', tenantId: 't1', key: 'pro-yearly', tier: 'pro', months: 12, interval: 'year' });
+  addPayment('stripe', 'cs_y1', { plan: 'pro-yearly', amount: 5000 });
+  addPayment('stripe', 'cs_m1');
+  await post('stripe', stripeEvent('ey1', 'checkout.session.completed', paidSession('cs_y1')));
+  assert.equal(licenses().length, 1);
+  assert.equal(daysLeft(licenses()[0]), 365);
+  assert.equal(licenses()[0].plan, 'pro-yearly');
+  await post('stripe', stripeEvent('em1', 'checkout.session.completed', paidSession('cs_m1')));
+  assert.equal(daysLeft(licenses()[0]), 395, 'a month stacks on top of the year');
+  stripeProvider.resolveChargeRefs = async () => ({ sessionRef: 'cs_y1', subscriptionId: null });
+  await post('stripe', stripeEvent('ey2', 'charge.refunded', { id: 'chy', payment_intent: 'piy', amount: 5000, amount_refunded: 5000, refunded: true }));
+  assert.equal(daysLeft(licenses()[0]), 30, 'the refund removes the 365 days it granted');
+  assert.equal(licenses()[0].status, 'active');
+});
+
+test('yearly: a yearly subscription is provisional for 365 days until invoice.paid sets the period end', async () => {
+  reset();
+  db.tables.plan.push({ id: 'p3', tenantId: 't1', key: 'enterprise-yearly', tier: 'enterprise', months: 12, interval: 'year', recurring: true });
+  addPayment('stripe', 'cs_ys', { plan: 'enterprise-yearly', amount: 29000 });
+  await post('stripe', stripeEvent('eys', 'checkout.session.completed', paidSession('cs_ys', { mode: 'subscription', subscription: 'sub_y' })));
+  assert.equal(licenses().length, 1);
+  assert.equal(licenses()[0].tier, 'enterprise');
+  assert.equal(daysLeft(licenses()[0]), 365);
+});

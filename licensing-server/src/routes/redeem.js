@@ -7,9 +7,9 @@ const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
 const { authenticateInstall } = require('../installAuth');
 const { syncInstall } = require('../customers/sync');
+const { termMs } = require('../util/time');
 
 const router = express.Router();
-const DAY = 86400000;
 
 router.post('/', asyncHandler(async (req, res) => {
   const { tenantId, code, installId, installSecret } = req.body || {};
@@ -40,7 +40,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const existing = await prisma.license.findFirst({ where: { tenantId: tenant.id, installId: install.id }, orderBy: { updatedAt: 'desc' } });
   const base = existing && existing.currentPeriodEnd && new Date(existing.currentPeriodEnd).getTime() > now
     ? new Date(existing.currentPeriodEnd).getTime() : now;
-  const currentPeriodEnd = new Date(base + (rec.months || 1) * 30 * DAY);
+  const currentPeriodEnd = new Date(base + termMs(rec.months || 1));
 
   if (existing) {
     await prisma.license.update({ where: { id: existing.id }, data: { status: 'active', tier: rec.tier, currentPeriodEnd } });

@@ -333,3 +333,28 @@ test('segments are validated, saved and listed', async () => {
   assert.deepEqual(l.json.items[0].filters, { status: 'paid', country: 'US' });
   assert.equal((await admin('DELETE', `/segments/${s.json.segment.id}`)).status, 200);
 });
+
+// Yearly plans (owner's decision, 9 Nov 2026: 2 months free). Made in the admin like the monthly ones,
+// with interval 'year' and months 12; a 12-month term is 365 days (util/time termDays), not 360.
+test('yearly plans: created in the admin, served publicly, and a paid year lasts 365 days', async () => {
+  const mk = await admin('POST', '/plans', { body: { key: 'pro-yearly', name: 'Pro (yearly)', tier: 'pro', amount: 5000, currency: 'USD', interval: 'year', months: 12, active: true, highlight: false, sortOrder: 30 } });
+  assert.equal(mk.status, 201, mk.text);
+  const pub = await call('GET', `/v1/plans/public?tenantId=${T}`);
+  const y = pub.json.find((p) => p.key === 'pro-yearly');
+  assert.deepEqual([y.amount, y.amountDecimal, y.interval, y.months, y.tier], [5000, '50.00', 'year', 12, 'pro']);
+  assert.deepEqual(y.limits, { seats: 3, maxParallel: 3, auditExport: false }, 'the tier limits, as for monthly Pro');
+
+  const daysTo = (iso) => (new Date(iso).getTime() - Date.now()) / DAY;
+  const c = (await newCustomer({ email: 'yearly.buyer@example.com', source: 'invoice' })).json.customer;
+  const pay = await admin('POST', '/payments', { body: { customerId: c.id, amount: 5000, currency: 'USD', method: 'invoice', reference: 'INV-YEARLY-1', plan: 'pro-yearly', grant: true } });
+  assert.equal(pay.status, 201, pay.text);
+  assert.equal(pay.json.license.plan, 'pro-yearly');
+  const d = daysTo(pay.json.license.currentPeriodEnd);
+  assert.ok(d > 364.9 && d < 365.1, `a yearly payment grants 365 days, got ${d}`);
+
+  const c2 = (await newCustomer({ email: 'yearly.grant@example.com', source: 'invoice' })).json.customer;
+  const g = await admin('POST', '/licenses', { body: { customerId: c2.id, tier: 'pro', months: 12, reason: 'Invoice INV-YEARLY-2 paid' } });
+  assert.equal(g.status, 201, g.text);
+  const d2 = daysTo(g.json.license.currentPeriodEnd);
+  assert.ok(d2 > 364.9 && d2 < 365.1, `a 12-month grant is 365 days, got ${d2}`);
+});

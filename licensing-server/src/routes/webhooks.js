@@ -10,9 +10,9 @@ const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
 const { provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund } = require('../licensing');
 const { syncRecentLicences } = require('../customers/sync');
+const { termMs } = require('../util/time');
 
 const router = express.Router();
-const DAY = 86400000;
 // An event row that is still unprocessed this long after it was claimed belongs to an
 // attempt that died mid-way (crash, killed container); a retry may take it over.
 const STALE_CLAIM_MS = 10 * 60000;
@@ -83,7 +83,7 @@ function stripeSessionApply(tenant, s) {
         installId: payment.installId || md.installId || s.client_reference_id || null,
         tier: (plan && plan.tier) || md.tier || 'pro',
         plan: planKey,
-        periodEnd: new Date(Date.now() + months * 30 * DAY) // provisional until invoice.paid
+        periodEnd: new Date(Date.now() + termMs(months)) // provisional until invoice.paid
       }, tx);
     };
   }

@@ -244,7 +244,7 @@ present and non-empty or the call is a 400 (`src/providers/configFields.js`).
 - **Stripe refunds and disputes** (`charge.refunded` when fully refunded,
   `charge.dispute.created`): the schema has one licence per install with stacked
   terms, so the conservative action is to take back exactly what that payment bought.
-  A one-time payment becomes `refunded` and its plan term (`months × 30 days`) is cut
+  A one-time payment becomes `refunded` and its plan term (`months`: 30 days a month, 365 days per 12 months) is cut
   from the install's licence; if nothing paid remains, the licence ends now as
   `canceled`. A subscription charge ends the subscription's licence now. Partial
   refunds leave the licence alone. The charge is matched through the Stripe API

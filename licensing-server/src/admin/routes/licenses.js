@@ -1,12 +1,14 @@
 'use strict';
 // /v1/admin/licenses: list, grant (manual paid or complimentary licence), extend, revoke, assign to an
-// install. A month is 30 days, as for activation codes and one-time payments.
+// install. A month is 30 days and 12 months are 365 days (util/time termDays), as for activation codes
+// and one-time payments.
 const express = require('express');
 const prisma = require('../../db');
 const asyncHandler = require('../../middleware/asyncHandler');
 const { fail, invalid, notFound, settingsFor, own, pageParams, dateRange, csvList } = require('../http');
 const { audit } = require('../audit');
 const { addEvent, recomputeCustomer } = require('../../customers/sync');
+const { termDays } = require('../../util/time');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -22,7 +24,7 @@ function termEnd(b, base) {
   if (months === null && days === null) return { error: { months: 'give months (1-120), days (1-3650) or until' } };
   if (months !== null && (!Number.isInteger(months) || months < 1 || months > 120)) return { error: { months: 'integer 1-120' } };
   if (days !== null && (!Number.isInteger(days) || days < 1 || days > 3650)) return { error: { days: 'integer 1-3650' } };
-  return { end: new Date(base + ((months || 0) * 30 + (days || 0)) * DAY) };
+  return { end: new Date(base + (termDays(months || 0) + (days || 0)) * DAY) };
 }
 
 function reasonOf(b) {
