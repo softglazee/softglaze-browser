@@ -4398,7 +4398,10 @@ async function checkProxy(payload) {
     proxy = { type: found.type, host: found.host, port: found.port, username: found.username, password: found.password };
   } else if (input.raw) {
     proxy = parseProxyInput(input.raw);
-    if (proxy && input.type) proxy.type = parseProxyType(input.type);
+    // Same rule as saving the profile (createProfile/updateProfile): a scheme in the string wins and
+    // the editor's "Local" is not a protocol, so the check tests the proxy that will be saved.
+    const typeHint = proxyTypeHintFor(input.raw, input.type);
+    if (proxy && typeHint) proxy.type = typeHint;
   } else if (input.host) {
     proxy = parseProxyInput({
       type: input.type,
@@ -4958,6 +4961,13 @@ async function importProfileCookies(payload) {
   const input = requireObject(payload);
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
+  // Both write paths below are Chromium only (CDP, or the Chromium data folder offline). A Firefox
+  // profile keeps its cookies in its own folder, so an import there would report success and do
+  // nothing.
+  const target = await getPrisma().profile.findUnique({ where: { id }, select: { browserCore: true } });
+  if (target && normalizeBrowserCore(target.browserCore) === BROWSER_CORE.FIREFOX) {
+    throw new Error('Cookie import works for Chromium profiles only. Firefox profiles cannot take imported cookies yet.');
+  }
   const format = (optionalString(input.format) || 'json').toLowerCase();
   const data = requiredString(input.data, 'Cookie data');
 
@@ -5301,6 +5311,10 @@ async function createProfile(payload) {
     if (!proxy) throw new Error('Selected proxy does not exist.');
   }
 
+  // The runtime Profile table has no foreign key on groupId, so a stale id is refused here.
+  const groupId = input.groupId ? parseId(input.groupId, 'groupId') : null;
+  if (groupId !== null && !(await db.group.findUnique({ where: { id: groupId } }))) throw new Error('Selected group does not exist.');
+
   const dataDirName = await ensureUniqueDataDirName(db, input.dataDirName || title);
   const stampId = ownerStampId();
 
@@ -5314,7 +5328,7 @@ async function createProfile(payload) {
       dataDirName,
       ownerMemberId: stampId,
       assignedMemberId: stampId,
-      groupId: input.groupId ? parseId(input.groupId, 'groupId') : null,
+      groupId,
       tags: Array.isArray(input.tags) ? JSON.stringify(input.tags) : null,
       ...buildFingerprintFields(input) // generator-aware fingerprint injection
     },
@@ -5794,6 +5808,9 @@ async function updateProfile(payload) {
 
   if (input.groupId !== undefined) {
     data.groupId = (input.groupId === null || input.groupId === '') ? null : parseId(input.groupId, 'groupId');
+    if (data.groupId !== null && data.groupId !== existing.groupId && !(await db.group.findUnique({ where: { id: data.groupId } }))) {
+      throw new Error('Selected group does not exist.');
+    }
   }
   if (Array.isArray(input.tags)) {
     data.tags = JSON.stringify(input.tags);
@@ -7210,6 +7227,10 @@ async function commitProfileImport(payload, event) {
   // Rotation URLs have no Profile column - round-trip them via a Setting map.
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
   let rotationDirty = false;
+  // Stamp the importing member as owner and assignee, as createProfile does. An unowned row is
+  // hidden from every member but the Super Admin (scopedProfileWhere fails closed), so imported
+  // profiles did not show up in the importer's own Profiles list.
+  const stampId = ownerStampId();
   // A log-only line (no progress-bar change); item/done lines move the bar.
   const log = (level, message) => emit({ phase: 'log', level, message });
 
@@ -7300,6 +7321,8 @@ async function commitProfileImport(payload, event) {
           notes: optionalString(item.notes),
           systemProxyBehavior,
           dataDirName,
+          ownerMemberId: stampId,
+          assignedMemberId: stampId,
           groupId,
           ...(item.openUrl ? { startupUrls: String(item.openUrl).trim() } : {}),
           ...(platformAccounts ? { platformAccounts } : {})
