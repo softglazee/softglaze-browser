@@ -16,8 +16,14 @@
 // tests drive it with fakes and no real purchase is ever made. Results are plain objects with a
 // `status` the renderer turns into a message (src/renderer/lib/storePurchase.mjs).
 
-// Used when the licensing server cannot be reached; the server's settings.store.productPlans wins.
-const DEFAULT_PRODUCTS = Object.freeze({ pro: 'pro_monthly', enterprise: 'enterprise_monthly' });
+// One subscription add-on per tier and billing period (Partner Center Product IDs). Used when the
+// licensing server cannot be reached; the server's settings.store.productPlans (Product ID -> plan key)
+// wins. A yearly add-on stands for the yearly plan key (pro-yearly), as the server maps it.
+const DEFAULT_PRODUCTS = Object.freeze({
+  pro: Object.freeze({ month: 'pro_monthly', year: 'pro_yearly' }),
+  enterprise: Object.freeze({ month: 'enterprise_monthly', year: 'enterprise_yearly' })
+});
+const BILLING_PERIODS = Object.freeze(['month', 'year']);
 const SESSION_TTL_MS = 10 * 60000; // service tickets live about an hour
 const PRODUCTS_TTL_MS = 60 * 60000;
 const SYNC_EVERY_MS = 6 * 3600000;
@@ -26,11 +32,36 @@ const SYNC_SETTING = 'storeLastSync';
 const GRANTING = new Set(['active', 'grace']);
 
 function fallbackSession() {
-  return {
-    products: Object.entries(DEFAULT_PRODUCTS).map(([plan, productId]) => ({ productId, plan, tier: plan })),
-    verification: { mode: 'offline' },
-    offline: true
-  };
+  const products = [];
+  for (const period of BILLING_PERIODS) {
+    for (const [tier, ids] of Object.entries(DEFAULT_PRODUCTS)) {
+      products.push({ productId: ids[period], plan: period === 'year' ? `${tier}-yearly` : tier, tier });
+    }
+  }
+  return { products, verification: { mode: 'offline' }, offline: true };
+}
+
+// 'year' or 'month' for an add-on: the Store SKU's own billing period when the Store gives one (1 year, or
+// 12 months), else the Product ID (..._yearly, ..._annual), else monthly.
+function offerPeriod(productId, price) {
+  const p = price && price.period;
+  const unit = p ? String(p.unit || '').toLowerCase() : '';
+  if (unit === 'year' || (unit === 'month' && Number(p.count) === 12)) return 'year';
+  if (unit && unit !== 'unknown') return 'month';
+  return /(^|[_.-])(yearly|annual|annually|year)$/i.test(String(productId || '')) ? 'year' : 'month';
+}
+
+// The add-on to sell for a plan: the one mapped to the plan's key and billed the same way, else one of
+// the same tier billed the same way (a yearly add-on the server maps to the tier's monthly key), else
+// none. Never an add-on of another billing period: a yearly card never buys the monthly add-on.
+// st: status(); want: { plan, tier, period }.
+function offerFor(st, { plan, tier, period }) {
+  const offers = st && Array.isArray(st.offers) ? st.offers : [];
+  const key = String(plan || '').toLowerCase();
+  const p = period === 'year' ? 'year' : 'month';
+  return offers.find((o) => o.plan === key && o.period === p)
+    || (tier ? offers.find((o) => o.tier === tier && o.period === p) : null)
+    || null;
 }
 
 // The price to show and record: the subscription SKU's per-period price (a SKU with a free trial comes
@@ -94,15 +125,25 @@ function createStoreCommerce(deps) {
     let s = fallbackSession();
     if (install) { try { s = await getSession(install); } catch (_) { s = fallbackSession(); } }
     const prod = await storeProducts();
+    // offers: every mapped add-on with its billing period and the Store's own price. plans: one add-on per
+    // plan key, as before; if two map to one key, the monthly one keeps it (the yearly one stays in offers).
     const plans = {};
+    const offers = [];
     for (const m of s.products) {
       const p = prod.list.find((x) => x && x.inAppOfferToken === m.productId) || null;
-      plans[m.plan] = { productId: m.productId, tier: m.tier, available: Boolean(p && p.storeId), title: p ? p.title || null : null, price: priceOf(p) };
+      const price = priceOf(p);
+      const offer = { productId: m.productId, plan: String(m.plan || '').toLowerCase(), tier: m.tier, period: offerPeriod(m.productId, price), available: Boolean(p && p.storeId), title: p ? p.title || null : null, price };
+      offers.push(offer);
+      const prev = plans[offer.plan];
+      if (!prev || (prev.period === 'year' && offer.period === 'month')) {
+        plans[offer.plan] = { productId: offer.productId, tier: offer.tier, period: offer.period, available: offer.available, title: offer.title, price };
+      }
     }
     return {
       available: true,
       provider: 'Microsoft Store',
       plans,
+      offers,
       verification: (s.verification && s.verification.mode) || 'unknown',
       productsError: prod.ok ? null : prod.error
     };
@@ -173,10 +214,14 @@ function createStoreCommerce(deps) {
     return { status: 'none', mode: res ? res.mode : null };
   }
 
-  async function purchase(planKey, hwnd) {
+  // want: { tier, period } of the plan card, so a yearly card buys the yearly add-on (offerFor). Without
+  // it, the add-on mapped to the plan key, as before.
+  async function purchase(planKey, hwnd, want = null) {
     const st = await status();
     if (!st.available) return { status: 'unavailable', code: st.reason };
-    const plan = st.plans[String(planKey || '').toLowerCase()];
+    const plan = want && want.period
+      ? offerFor(st, { plan: planKey, tier: want.tier, period: want.period })
+      : st.plans[String(planKey || '').toLowerCase()];
     if (!plan || !plan.available) return { status: 'unavailable', code: 'store_product_missing' };
     if (!hwnd) return { status: 'error', code: 'no_window' };
     // The addon needs the add-on's Store ID; it is in the product list read by status().
@@ -231,4 +276,4 @@ function createServerClient(licenseClient, tenantConfig) {
   };
 }
 
-module.exports = { createStoreCommerce, createServerClient, priceOf, DEFAULT_PRODUCTS, PENDING_SETTING, SYNC_SETTING, SYNC_EVERY_MS };
+module.exports = { createStoreCommerce, createServerClient, priceOf, offerPeriod, offerFor, DEFAULT_PRODUCTS, PENDING_SETTING, SYNC_SETTING, SYNC_EVERY_MS };

@@ -11594,12 +11594,12 @@ async function refreshBackendLease() {
     await writeSetting('backendLease', secretStore.seal(JSON.stringify({
       token: res.lease, currentPeriodEnd: res.currentPeriodEnd || null, tier: ent.tier, type, fetchedAt: Date.now()
     })));
-    return { tier: ent.tier, type, exp: ent.exp, currentPeriodEnd: res.currentPeriodEnd || null };
+    return { tier: ent.tier, type, exp: ent.exp, currentPeriodEnd: res.currentPeriodEnd || null, plan: ent.plan || null };
   } catch (e) { return null; } // offline / backend down → keep using the cached lease
 }
 
 // Offline entitlement: re-verify the cached lease token (catches tamper + the
-// 7-day lease expiry). Returns { tier, exp, currentPeriodEnd } or null.
+// 7-day lease expiry). Returns { tier, type, exp, currentPeriodEnd, plan } or null.
 async function getBackendEntitlement() {
   if (!tenantConfig().enabled) return null;
   const sealed = await readSetting('backendLease', null);
@@ -11612,7 +11612,7 @@ async function getBackendEntitlement() {
   const ent = licenseClient.verifyLease(cached.token, { nowMs: effectiveNow });
   if (!ent) return null;
   const type = ent.type === 'trial' || cached.type === 'trial' ? 'trial' : 'paid';
-  return { tier: ent.tier, type, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null };
+  return { tier: ent.tier, type, exp: ent.exp, currentPeriodEnd: cached.currentPeriodEnd || null, plan: ent.plan || null };
 }
 
 // Render a "paid" license view from a verified backend entitlement. endsAt is the
@@ -11637,7 +11637,8 @@ async function backendLicenseInfo() {
   const ent = await getBackendEntitlement();
   return {
     enabled: true, tenantId: cfg.tenantId, apiBaseUrl: cfg.apiBaseUrl, installId: installId || null,
-    lease: ent ? { tier: ent.tier, type: ent.type, exp: ent.exp, currentPeriodEnd: ent.currentPeriodEnd } : null
+    // plan: the licence's plan key from the signed lease (e.g. 'pro-yearly'), null when it has none.
+    lease: ent ? { tier: ent.tier, type: ent.type, exp: ent.exp, currentPeriodEnd: ent.currentPeriodEnd, plan: ent.plan || null } : null
   };
 }
 
@@ -12280,7 +12281,9 @@ async function storePurchase(payload, event) {
   if (!(await storeSalesOpen())) return { status: 'unavailable', code: 'store_sales_off' };
   const input = requireObject(payload || {});
   const plan = await findTenantPlanOrThrow(input.planId);
-  const r = await getStoreCommerce().purchase(plan.id, storeWindowHandle(event));
+  // The card's tier and billing period pick the add-on: a yearly plan buys the yearly add-on, never the monthly.
+  const period = String(plan.interval || plan.period || '').toLowerCase().startsWith('year') || plan.months === 12 ? 'year' : 'month';
+  const r = await getStoreCommerce().purchase(plan.id, storeWindowHandle(event), { tier: plan.tier, period });
   return storeResultWithLicense(r, { planId: plan.id, planName: plan.name });
 }
 

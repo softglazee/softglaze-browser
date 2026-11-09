@@ -494,3 +494,48 @@ test('settings: the Product ID map is validated', async () => {
   assert.ok(st.json.alerts.includes('unknown_plans'), 'a mapped plan key that does not exist is flagged');
   await admin('PATCH', '/settings', { body: { store: { productPlans: { pro_monthly: 'pro', enterprise_monthly: 'enterprise' } } } });
 });
+
+// ---- yearly add-ons (owner's decision, 9 Nov 2026) ----------------------------------------------------
+// The owner adds Store subscription add-ons pro_yearly and enterprise_yearly (12-month billing period) and
+// maps them to the yearly plans: productPlans { ..., pro_yearly: 'pro-yearly', enterprise_yearly:
+// 'enterprise-yearly' }. No server code changes: the term comes from Microsoft's own dates.
+test('yearly add-ons: mapped to the yearly plans, verified with Microsoft, a year of access at the Store price', async () => {
+  for (const [key, tier, amount] of [['pro-yearly', 'pro', 5000], ['enterprise-yearly', 'enterprise', 29000]]) {
+    const p = await admin('POST', '/plans', { body: { key, name: key, tier, amount, currency: 'USD', interval: 'year', months: 12 } });
+    assert.ok([201, 409].includes(p.status), p.text);
+  }
+  const map = { pro_monthly: 'pro', enterprise_monthly: 'enterprise', pro_yearly: 'pro-yearly', enterprise_yearly: 'enterprise-yearly' };
+  assert.equal((await admin('PATCH', '/settings', { body: { store: { productPlans: map } } })).status, 200);
+  assert.ok(!(await admin('GET', '/store/status')).json.alerts.includes('unknown_plans'), 'every add-on points to an active plan');
+
+  const inst = await H.newInstall(T, 'v-yearly');
+  const s = await session(inst);
+  assert.deepEqual(s.json.products.map((p) => [p.productId, p.plan, p.tier]), [
+    ['pro_monthly', 'pro', 'pro'], ['enterprise_monthly', 'enterprise', 'enterprise'], ['pro_yearly', 'pro-yearly', 'pro'], ['enterprise_yearly', 'enterprise-yearly', 'enterprise']
+  ]);
+
+  const k = keysFor('yara');
+  const YEAR_STORE_ID = '9NPROYEAR001';
+  const exp = Date.now() + 365 * DAY;
+  MS.collections.push({ key: k.collections, productId: YEAR_STORE_ID, skuId: '0010', inAppOfferToken: 'pro_yearly', status: 'Active', endDate: iso(exp), orderId: 'order-y', skuType: 'Full' });
+  MS.recurrences.push({ key: k.purchase, id: 'rec-yara', productId: YEAR_STORE_ID, skuId: '0010', recurrenceState: 'Active', autoRenew: true, expirationTime: iso(exp) });
+  const prices = { pro_yearly: { formatted: '$49.99', formattedRecurrence: '$49.99/year', currencyCode: 'USD' } };
+  const r = await claim(inst, { licenseRead: true, addOns: [{ inAppOfferToken: 'pro_yearly', skuStoreId: `${YEAR_STORE_ID}/0010`, isActive: true, expiresAtMs: exp }], prices, keys: k, purchase: { productId: 'pro_yearly', status: 'Succeeded' } });
+  assert.equal(r.status, 200, r.text);
+  assert.equal(r.json.verified, true);
+  assert.equal(r.json.licensed, true);
+
+  const ent = db.tables.storeEntitlement.find((e) => e.installId === inst.installId);
+  assert.equal(ent.planKey, 'pro-yearly');
+  assert.equal(ent.tier, 'pro');
+  assert.equal(new Date(ent.accessUntil).getTime(), new Date(iso(exp)).getTime() + 3 * DAY, "Microsoft's end date plus the renewal slack");
+  const lic = db.tables.license.find((l) => l.installId === inst.installId && l.source === 'microsoft_store');
+  assert.equal(lic.plan, 'pro-yearly', 'the licence (and so the lease) names the yearly plan');
+  assert.ok((new Date(lic.currentPeriodEnd).getTime() - Date.now()) / DAY > 364);
+  const pay = storePayments().find((p) => p.installId === inst.installId);
+  assert.deepEqual([pay.amount, pay.currency, pay.plan], [4999, 'USD', 'pro-yearly'], 'the Store price, recorded once for the year');
+  const l = await lease(inst);
+  assert.equal(l.json.tier, 'pro');
+
+  await admin('PATCH', '/settings', { body: { store: { productPlans: { pro_monthly: 'pro', enterprise_monthly: 'enterprise' } } } });
+});

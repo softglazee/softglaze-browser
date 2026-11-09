@@ -91,9 +91,13 @@ export function paidPlans(plansInfo) {
   return list.filter((p) => p && p.kind !== 'trial' && p.active !== false);
 }
 
+// The plan picked first: the highlighted one, else the first. Monthly plans come first when yearly ones
+// are for sale too, whatever order the server lists them in.
 export function defaultPlanId(plans) {
   const list = Array.isArray(plans) ? plans : [];
-  const pick = list.find((p) => p.highlight) || list[0];
+  const monthly = list.filter((p) => p && !/^(year|annual)/i.test(String(p.interval || p.period || '')) && Number(p.months) !== 12);
+  const pool = monthly.length ? monthly : list;
+  const pick = pool.find((p) => p.highlight) || pool[0];
   return pick ? pick.id : null;
 }
 

@@ -8,6 +8,7 @@ const asyncHandler = require('../../middleware/asyncHandler');
 const { fail, invalid, notFound, settingsFor, own, pageParams, dateRange, csvList } = require('../http');
 const { audit } = require('../audit');
 const { addEvent, recomputeCustomer } = require('../../customers/sync');
+const { termMs } = require('../../util/time');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -45,7 +46,7 @@ async function grantForPayment(tenantId, customer, { tier, plan, months, install
     const base = Math.max(now, lic.currentPeriodEnd ? new Date(lic.currentPeriodEnd).getTime() : 0);
     return prisma.license.update({
       where: { id: lic.id },
-      data: { status: 'active', tier, plan: plan || lic.plan, currentPeriodEnd: new Date(base + months * 30 * DAY), customerId: customer.id, revokedAt: null, revokedReason: null, note: [lic.note, note].filter(Boolean).join('\n').slice(0, 5000) }
+      data: { status: 'active', tier, plan: plan || lic.plan, currentPeriodEnd: new Date(base + termMs(months)), customerId: customer.id, revokedAt: null, revokedReason: null, note: [lic.note, note].filter(Boolean).join('\n').slice(0, 5000) }
     });
   }
   let target = installId || null;
@@ -59,7 +60,7 @@ async function grantForPayment(tenantId, customer, { tier, plan, months, install
   return prisma.license.create({
     data: {
       tenantId, installId: target, customerId: customer.id, account: customer.email, tier, plan: plan || null, status: 'active',
-      currentPeriodEnd: new Date(now + months * 30 * DAY), source: 'manual', note
+      currentPeriodEnd: new Date(now + termMs(months)), source: 'manual', note
     }
   });
 }

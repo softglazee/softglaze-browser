@@ -3,8 +3,7 @@
 // at checkout. Each function takes an optional `db` (a Prisma transaction client) so provisioning
 // and the payment status change commit as one unit.
 const prisma = require('./db');
-
-const DAY = 86400000;
+const { termMs } = require('./util/time');
 
 // Match an existing licence by installId only, never by account: the account comes from checkout
 // metadata, so matching on it lets a purchase with someone else's email take over their licence.
@@ -15,7 +14,7 @@ async function grantMonths(tenant, { account, installId, tier, plan, months, pro
     : null;
   const base = existing && existing.currentPeriodEnd && new Date(existing.currentPeriodEnd).getTime() > now
     ? new Date(existing.currentPeriodEnd).getTime() : now;
-  const currentPeriodEnd = new Date(base + (months || 1) * 30 * DAY);
+  const currentPeriodEnd = new Date(base + termMs(months || 1));
 
   if (existing) {
     return db.license.update({
@@ -102,7 +101,7 @@ async function cancelSubscription(tenant, subscriptionId, db = prisma) {
 }
 
 // No per-purchase ledger exists, only one licence per install stacking every purchase. One-time:
-// Payment paid -> refunded once, and its term (plan.months x 30 days) is removed; with nothing paid
+// Payment paid -> refunded once, and its term (plan.months, util/time termDays) is removed; with nothing paid
 // left the licence ends as 'canceled'. Subscription: its licence ends now. Returns { changed }.
 async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId }, db = prisma) {
   const now = Date.now();
@@ -124,7 +123,7 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
       }
       if (!lic) return { changed: true };
       const end = lic.currentPeriodEnd ? new Date(lic.currentPeriodEnd).getTime() : now;
-      const shortened = end - months * 30 * DAY;
+      const shortened = end - termMs(months);
       const data = shortened > now
         ? { currentPeriodEnd: new Date(shortened) }
         : { currentPeriodEnd: new Date(now), status: 'canceled' };

@@ -65,6 +65,17 @@
     "current": "Current",
     "footerNote": "Payments are processed by the methods your administrator has enabled. After paying in your browser, this page activates your plan automatically."
   },
+  "period": {
+    "label": "Billing period",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "billedYearly": "Billed yearly, about {{perMonth}} a month",
+    "monthsFree_one": "{{count}} month free, you save {{saving}}",
+    "monthsFree_other": "{{count}} months free, you save {{saving}}",
+    "monthsFreeShort_one": "{{count}} month free",
+    "monthsFreeShort_other": "{{count}} months free",
+    "save": "You save {{saving}} a year"
+  },
   "cta": {
     "included": "Included",
     "onPaidPlan": "On a paid plan",
@@ -300,8 +311,9 @@
   },
   "store": {
     "cardTitle": "Microsoft Store subscription",
-    "processedBy": "In this version, Microsoft is the payment processor: you pay with your Microsoft account and Microsoft bills the subscription each month.",
+    "processedBy": "In this version, Microsoft is the payment processor: you pay with your Microsoft account and Microsoft bills the subscription each month, or each year on a yearly plan.",
     "upgradeNote": "Moving from Pro to Enterprise starts a second subscription. Cancel Pro in your Microsoft account so it stops renewing.",
+    "periodNote": "Moving between monthly and yearly billing also starts a second subscription. Cancel the old one in your Microsoft account so it stops renewing.",
     "downgradeNote": "To move from Enterprise to Pro, cancel Enterprise in your Microsoft account and buy Pro when it ends.",
     "buyWith": "Buy with Microsoft Store",
     "buyWithPrice": "Buy with Microsoft Store · {{price}}",

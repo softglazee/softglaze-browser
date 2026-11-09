@@ -285,7 +285,8 @@ Clears the machine binding so the next licence check from a new PC binds it. →
 
 ## Licences
 
-A licence belongs to one install (one PC); the app gets leases for it from `/v1/license`. A month is 30 days.
+A licence belongs to one install (one PC); the app gets leases for it from `/v1/license`. A month is 30 days and
+12 months are 365 days (a yearly plan lasts a year).
 
 ### GET /v1/admin/licenses
 
@@ -436,7 +437,7 @@ their built-in prices are fallbacks only.
 
 **Plan fields**: `key` (1-40 of `a-z 0-9 - _`, fixed once created), `name`, `tier` (`pro` | `enterprise`),
 `amount` (cents), `currency` (ISO 4217), `interval` (`month` | `year` | `once`), `months` (term per payment,
-1-120), `recurring`, `active`, `highlight`, `sortOrder`, `description`, `features` (up to 30 strings),
+1-120; 30 days a month, 365 days per 12 months), `recurring`, `active`, `highlight`, `sortOrder`, `description`, `features` (up to 30 strings),
 `limits` (`{ seats, maxParallel, auditExport }` or null for the tier defaults: Pro 3 / 3 / no,
 Enterprise 25 / 10 / yes).
 

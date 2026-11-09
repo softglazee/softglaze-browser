@@ -10,7 +10,8 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import billingEn from '@/i18n/locales/en/billing.json';
 import { errorText } from '@/lib/signupFlow.mjs';
-import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
+import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, methodsForPlan, sellablePlans, storeHasBothPeriods, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
+import { BILLING_PERIODS, hasBothPeriods, plansForPeriod, yearlyDeal, isCurrentPlan, initialPeriod } from '@/lib/planPeriods.mjs';
 
 // The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
 // show in the UI language through billing.planText, matched on the exact English text; anything the
@@ -64,6 +65,7 @@ export default function BillingPage() {
   const [storeMove, setStoreMove] = useState(false); // the Store subscription is in use on another PC
   const [storeWaiting, setStoreWaiting] = useState(false);
   const [storeNote, setStoreNote] = useState(null); // { text, tone }: a restore result, shown in the Store card
+  const [period, setPeriod] = useState(null); // 'month' | 'year' once picked (null: the page's default)
   const pollRef = useRef(null);
   const storePollRef = useRef(null);
 
@@ -119,17 +121,19 @@ export default function BillingPage() {
     finally { setBusy(''); }
   }
 
-  // When the only enabled method is automated, start it without opening the picker.
+  // When the only enabled method is automated, start it without opening the picker. The Microsoft Store
+  // is offered only for plans it sells (a yearly plan has no Store add-on unless one is mapped).
   function openPay(plan) {
     setErr(''); setMsg(''); setManualRef(''); setManualNote(''); setManualDone(false);
-    const autos = methods.filter((m) => m.kind === 'automated');
-    if (methods.length === 0) {
+    const ms = methodsForPlan(methods, storeInfo, plan);
+    const autos = ms.filter((m) => m.kind === 'automated');
+    if (ms.length === 0) {
       setErr(t('pay.errors.noMethods'));
       return;
     }
-    if (methods.length === 1 && autos.length === 1) { payAutomated(plan, autos[0]); return; }
-    if (methods.length === 1 && isStoreMethod(methods[0])) { payStore(plan); return; }
-    setSelMethod(methods[0] ? methods[0].id : null);
+    if (ms.length === 1 && autos.length === 1) { payAutomated(plan, autos[0]); return; }
+    if (ms.length === 1 && isStoreMethod(ms[0])) { payStore(plan); return; }
+    setSelMethod(ms[0] ? ms[0].id : null);
     setPayFor(plan);
   }
 
@@ -228,8 +232,14 @@ export default function BillingPage() {
   const isExempt = Boolean(license?.isExempt);
   const currentTier = plansInfo?.currentTier || license?.tier || 'pro';
   const isPaid = Boolean(license?.isPaid);
-  const plans = (plansInfo && Array.isArray(plansInfo.plans)) ? plansInfo.plans : [];
   const storeOnly = methods.length > 0 && methods.every(isStoreMethod);
+  // Monthly and yearly plans: a switch when both are for sale, monthly first unless the licence is on a
+  // yearly plan. The current plan is the lease's plan key when it has one, else the tier (planPeriods.mjs).
+  const allPlans = sellablePlans((plansInfo && Array.isArray(plansInfo.plans)) ? plansInfo.plans : [], { storeOnly, storeInfo });
+  const current = { isPaid, currentTier, currentPlanKey: backend?.lease?.plan || null, plans: allPlans };
+  const showPeriods = hasBothPeriods(allPlans);
+  const activePeriod = period || initialPeriod(allPlans, current);
+  const plans = plansForPeriod(allPlans, activePeriod);
 
   function planCta(plan) {
     if (plan.kind === 'trial') {
@@ -241,7 +251,7 @@ export default function BillingPage() {
       return { label: t('cta.startFreeTrial'), disabled: false, icon: Sparkles, trial: true };
     }
     if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown };
-    if (isPaid && plan.tier === currentTier) return { label: t('cta.currentPlan'), disabled: true, icon: Check };
+    if (isCurrentPlan(plan, current)) return { label: t('cta.currentPlan'), disabled: true, icon: Check };
     if (plan.tier === 'enterprise' && currentTier === 'pro') return { label: t('cta.upgradeEnterprise'), disabled: false, icon: ArrowUpRight };
     if (storeDowngradeBlocked({ storeOnly, isPaid, currentTier, planTier: plan.tier })) return { label: t('cta.downgradePro'), disabled: true, icon: Wallet, note: t('store.downgradeNote') };
     if (plan.tier === 'pro' && currentTier === 'enterprise' && isPaid) return { label: t('cta.downgradePro'), disabled: false, icon: Wallet };
@@ -339,6 +349,7 @@ export default function BillingPage() {
               <h3 className="text-sm font-semibold text-foreground">{t('store.cardTitle')}</h3>
               <p className="text-[12px] text-muted-foreground mt-0.5">{t('store.processedBy')}</p>
               <p className="text-[12px] text-muted-foreground mt-1">{t('store.upgradeNote')}</p>
+              {storeHasBothPeriods(storeInfo) && <p className="text-[12px] text-muted-foreground mt-1">{t('store.periodNote')}</p>}
               {storeWaiting && <p className="text-[12px] text-foreground mt-2 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> {t('store.result.pending')}</p>}
               {storeNote && <p role="status" className={`text-[12px] mt-2 ${storeNote.tone === 'error' ? 'text-red-400' : storeNote.tone === 'success' ? 'text-emerald-400' : 'text-foreground'}`}>{storeNote.text}</p>}
               <div className="flex items-center gap-2 flex-wrap mt-3">
@@ -359,13 +370,32 @@ export default function BillingPage() {
 
       {!isExempt && plans.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t('plans.chooseHeading')}</h2>
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('plans.chooseHeading')}</h2>
+            {showPeriods && (
+              <div role="group" aria-label={t('period.label')} className="inline-flex items-center rounded-lg border border-border bg-secondary/40 p-0.5">
+                {BILLING_PERIODS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={activePeriod === p}
+                    onClick={() => setPeriod(p)}
+                    className={`h-8 px-3 rounded-md text-[12px] font-semibold transition-colors ${activePeriod === p ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    {p === 'year' ? t('period.yearly') : t('period.monthly')}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {plans.map((plan) => {
               const cta = planCta(plan);
-              const isCurrent = isPaid && plan.tier === currentTier;
+              const isCurrent = isCurrentPlan(plan, current);
               const CtaIcon = cta.icon;
-              const storeText = plan.kind === 'trial' ? null : storePrice(storeInfo, plan.id);
+              const storeText = plan.kind === 'trial' ? null : storePrice(storeInfo, plan);
+              // A yearly card says it is billed yearly, the price spread over a month, and what it saves.
+              const deal = storeText ? null : yearlyDeal(plan, allPlans);
               return (
                 <div
                   key={plan.id}
@@ -389,6 +419,16 @@ export default function BillingPage() {
                     <span className="text-[12px] text-muted-foreground">/ {plan.period}</span>
                   </div>
                   {storeText && <p className="text-[11px] text-muted-foreground">{t('store.priceFrom')}</p>}
+                  {deal && (
+                    <p className="text-[11.5px] text-muted-foreground">
+                      {t('period.billedYearly', { perMonth: money(deal.perMonth, plan.currency) })}
+                      {deal.saving && (
+                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/15 text-emerald-400">
+                          {deal.monthsFree ? t('period.monthsFree', { count: deal.monthsFree, saving: money(deal.saving, plan.currency) }) : t('period.save', { saving: money(deal.saving, plan.currency) })}
+                        </span>
+                      )}
+                    </p>
+                  )}
                   <p className="mt-1 text-[12px] text-muted-foreground">{planText(t, plan.tagline)}</p>
 
                   <ul className="mt-4 space-y-1.5 flex-1">
@@ -443,14 +483,15 @@ export default function BillingPage() {
       <InvoicesSection />
 
       {payFor && (() => {
-        const sel = methods.find((m) => m.id === selMethod) || null;
+        const payMethods = methodsForPlan(methods, storeInfo, payFor);
+        const sel = payMethods.find((m) => m.id === selMethod) || null;
         return (
           <div className="fixed inset-0 z-[100] bg-black/50 grid place-items-center p-4" onClick={() => setPayFor(null)}>
             <div role="dialog" aria-modal="true" aria-label={t('payModal.title', { name: payFor.name })} tabIndex={-1} className="w-full max-w-[460px] rounded-xl bg-card border border-border p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">{t('payModal.title', { name: payFor.name })}</h3>
-                  <p className="text-[12px] text-muted-foreground">{(sel && isStoreMethod(sel) && storePrice(storeInfo, payFor.id)) || money(payFor.amount, payFor.currency)} / {payFor.period}</p>
+                  <p className="text-[12px] text-muted-foreground">{(sel && isStoreMethod(sel) && storePrice(storeInfo, payFor)) || money(payFor.amount, payFor.currency)} / {payFor.period}</p>
                 </div>
                 <button onClick={() => setPayFor(null)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
               </div>
@@ -462,7 +503,7 @@ export default function BillingPage() {
               ) : (
                 <>
                   <div className="space-y-1.5">
-                    {methods.map((m) => {
+                    {payMethods.map((m) => {
                       const active = m.id === selMethod;
                       const Icon = m.kind === 'manual' ? Landmark : (isStoreMethod(m) ? Store : (m.id === 'cryptomus' ? Wallet : CreditCard));
                       return (
@@ -500,7 +541,7 @@ export default function BillingPage() {
                       className="mt-4 w-full inline-flex items-center justify-center gap-2 h-10 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-500/25 disabled:opacity-60"
                     >
                       {busy === `${payFor.id}:store` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Store className="w-4 h-4" />}
-                      {storePrice(storeInfo, payFor.id) ? t('store.buyWithPrice', { price: storePrice(storeInfo, payFor.id) }) : t('store.buyWith')}
+                      {storePrice(storeInfo, payFor) ? t('store.buyWithPrice', { price: storePrice(storeInfo, payFor) }) : t('store.buyWith')}
                     </button>
                   )}
 

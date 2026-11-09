@@ -42,4 +42,13 @@ function parseDateParam(v) {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
-module.exports = { DAY, ms, toDate, dayKey, monthKey, monthStart, nextMonthStart, weekKey, monthRange, isMonthKey, parseDateParam };
+// The length of a licence term of `months` (one-time payments, purchase codes, manual grants and
+// refunds): a month is 30 days and each whole year is 365 days, so a yearly plan (months 12) lasts a
+// year, not 360 days. 1 -> 30, 6 -> 180, 11 -> 330, 12 -> 365, 13 -> 395, 24 -> 730.
+function termDays(months) {
+  const m = Math.max(0, Math.floor(Number(months) || 0));
+  return Math.floor(m / 12) * 365 + (m % 12) * 30;
+}
+const termMs = (months) => termDays(months) * DAY;
+
+module.exports = { DAY, ms, toDate, dayKey, monthKey, monthStart, nextMonthStart, weekKey, monthRange, isMonthKey, parseDateParam, termDays, termMs };
