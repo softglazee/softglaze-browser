@@ -38,6 +38,16 @@ export function blacklistOf(p, checkResults = {}) {
   return 'unknown';
 }
 
+// True when this session's check found the exit IP only on Spamhaus's PBL: a residential or dynamic
+// range, which is normal for residential proxies and not a spam listing. It counts as clean in every
+// filter and count; the badge just says why. A real listing wins (worst result shown). Only a fresh
+// check knows this: the saved snapshot keeps listed or not, nothing more.
+export function residentialOf(p, checkResults = {}) {
+  if (blacklistOf(p, checkResults) !== 'clean') return false;
+  const r = checkResults[p.id];
+  return !!(r && r.blacklist && r.blacklist.checked && r.blacklist.residential);
+}
+
 // Fastest or slowest first. Anything without a measured speed always goes last.
 export function sortByLatency(list, checkResults = {}, slowestFirst = false) {
   const value = (p) => measuredMs(p, checkResults);

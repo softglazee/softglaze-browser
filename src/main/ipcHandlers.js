@@ -41,6 +41,7 @@ const {
   reapplyScreenMetrics
 } = require('./browserEngine');
 const blockDetect = require('./blockDetect');
+const dnsbl = require('./dnsbl');
 const browserDownloader = require('./browserDownloader');
 const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
@@ -4408,8 +4409,10 @@ async function probeUrl(agent, target) {
   }
 }
 
-// DNSBL check of the exit IP: a 127.0.0.x answer means listed. Errors, timeouts and sentinels such
-// as Spamhaus's 127.255.255.x (public resolver blocked) count as not listed, to avoid false positives.
+// DNSBL check of the exit IP: a 127.0.0.x answer means listed, except Spamhaus PBL (127.0.0.10 and
+// .11), which marks a residential or dynamic range and is not a spam listing (see dnsbl.js).
+// Errors, timeouts and sentinels such as Spamhaus's 127.255.255.x (public resolver blocked) count
+// as not listed, to avoid false positives.
 // v6: whether the zone answers IPv6 nibble queries; zones without it are skipped for IPv6.
 // SORBS is gone: Proofpoint shut it down on 5 June 2024 and its zone no longer resolves (NXDOMAIN),
 // so it only cost a lookup. Do not add it back: if the domain were ever re-registered, a wildcard
@@ -4469,14 +4472,15 @@ async function checkBlacklist(ip) {
   const zones = DNSBL_ZONES.filter((z) => (isV6 ? z.v6 : true));
   if (!zones.length) return { checked: false, listed: false, sources: [] };
   const dns = require('node:dns').promises;
-  const sources = [];
-  await Promise.all(zones.map(async ({ zone, name }) => {
+  // One row per zone, in DNSBL_ZONES order; dnsbl.js reads the answer codes (Spamhaus PBL is a
+  // residential range, not a listing) and sums them up.
+  const results = await Promise.all(zones.map(async ({ zone, name }) => {
     try {
       const a = await withTimeout(dns.resolve4(`${rev}.${zone}`), 4000);
-      if (Array.isArray(a) && a.some((addr) => /^127\.0\.0\.\d+$/.test(addr))) sources.push(name);
-    } catch (e) { /* NXDOMAIN / timeout / error → not listed */ }
+      return { name, ...dnsbl.classifyAnswer(zone, a) };
+    } catch (e) { return { name, outcome: 'clean', lists: [] }; } // NXDOMAIN / timeout / error → not listed
   }));
-  return { checked: true, listed: sources.length > 0, sources };
+  return dnsbl.summarize(results);
 }
 
 function speedRating(avgMs) {
@@ -4582,8 +4586,9 @@ async function runProxyCheckStream(payload, event) {
       const etaMs = done ? Math.max(0, Math.round((elapsed / done) * (total - done))) : null;
       const urls = result.urlChecks || [];
       const okUrls = urls.filter((u) => u.ok).length;
+      const blText = dnsbl.logSuffix(result.blacklist); // listed, residential range, clean or ''
       const line = result.success
-        ? `${label} → ${result.country || '??'}${result.city ? ' · ' + result.city : ''} · ${result.latencyMs != null ? result.latencyMs + 'ms' : '-'} · ${okUrls}/${urls.length} sites · ${result.health.grade} ${result.health.label} · ${result.speed.rating}${result.blacklist.listed ? ` · ⚠ blacklisted (${result.blacklist.sources.join(', ')})` : (result.blacklist.checked ? ' · clean' : '')}`
+        ? `${label} → ${result.country || '??'}${result.city ? ' · ' + result.city : ''} · ${result.latencyMs != null ? result.latencyMs + 'ms' : '-'} · ${okUrls}/${urls.length} sites · ${result.health.grade} ${result.health.label} · ${result.speed.rating}${blText ? ` · ${blText}` : ''}`
         : `${label} → FAILED · ${result.error || 'unreachable'}`;
       send({ level: result.success ? (result.blacklist.listed ? 'WARN' : 'SUCCESS') : 'ERROR', proxyId: p.id, phase: 'result', message: line, result: publicProxyCheckResult(result), done, total, ok, fail, percent: Math.round((done / total) * 100), etaMs });
     }
