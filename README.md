@@ -1,24 +1,48 @@
 # SoftGlaze Browser
 
-SoftGlaze Browser is an **anti-detect browser**: a local-first Electron + React
-desktop app for managing isolated browser profiles, reusable proxies, and
-spreadsheet-based profile imports. Each profile runs in its own data directory
-with its own proxy and its own browser fingerprint, so several accounts can be
-worked in parallel without sharing cookies, storage, or device characteristics,
-and without sites linking them through the browser they run in.
+SoftGlaze Browser is a **multi-profile (anti-detect) browser for teams on Windows,
+with a built-in MCP server**. It is a local-first Electron + React desktop app for
+managing isolated browser profiles, reusable proxies and spreadsheet-based profile
+imports. Each profile runs in its own data directory with its own proxy and its
+own browser fingerprint, so several accounts can be worked side by side without
+sharing cookies, storage or device characteristics.
 
-All data stays on the machine. There is no hosted backend and no profile
-syncing to a remote server.
+Profiles, proxies, cookies and browsing data stay on your computer; there is no
+profile syncing to a remote server. The app talks to our licensing server only for
+the account email check and the licence.
 
 ## Download and demo
 
 - **Website:** [browser.softglaze.com](https://browser.softglaze.com)
+- **Microsoft Store:** [SoftGlaze Browser](https://apps.microsoft.com/detail/9NQZMTHN87CB)
+  (signed by Microsoft)
+- **Download:** the Windows installer and its SHA-256 are on the
+  [download page](https://browser.softglaze.com/download).
 - **Try it now:** an [interactive demo](https://browser.softglaze.com/demo) runs in
   your browser with simulated data, no install required.
-- **Download:** get the installer from the
-  [download page](https://browser.softglaze.com/download).
+- **Pricing:** 7-day free trial, no card. Pro US$5 a month (US$50 a year),
+  Enterprise US$29 a month (US$290 a year). See [pricing](https://browser.softglaze.com/pricing).
 
-Runs on **Windows, macOS, and Linux**.
+Released for **Windows 10 and 11, 64-bit**. macOS and Linux builds are produced
+in CI but are not released yet.
+
+## SoftGlaze AI: an MCP server inside the browser (Beta)
+
+SoftGlaze AI is a Model Context Protocol (MCP) server built into SoftGlaze Browser.
+Claude Desktop, Claude Code, Cursor, VS Code, Gemini CLI, Codex, Windsurf, Cline,
+n8n and other MCP apps can list and check profiles and proxies, start profiles, run
+macros and work inside a running profile's page, through that profile's own proxy
+and fingerprint.
+
+- Local only: it answers on `127.0.0.1`, off until you switch it on.
+- Every change asks you first inside SoftGlaze (Allow once, Allow for 1 hour, or
+  Deny), and one button stops all AI activity.
+- 40 tools; cookies, 2FA codes, proxy passwords and saved passwords are never
+  available to an AI app.
+- Guides: [SoftGlaze AI](https://browser.softglaze.com/features/ai-agents),
+  [connect your AI app](https://browser.softglaze.com/docs/ai-agents),
+  [tool reference](https://browser.softglaze.com/docs/ai-tools).
+- Claude Code plugins: [softglazee/softglaze-claude-plugin](https://github.com/softglazee/softglaze-claude-plugin).
 
 ## Stack
 
@@ -85,7 +109,8 @@ break the rules of a platform you have agreed to.
 
 - Node.js 20.19.0 or newer
 - npm 10 or newer
-- Windows, macOS, or Linux, for both development and packaged installers
+- Windows for released installers; development and CI builds also run on macOS
+  and Linux
 
 ## Install
 
