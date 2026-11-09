@@ -31,16 +31,27 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
+            builder_args: --win --x64
           - os: macos-latest
             platform: macos
+            # Intel and Apple Silicon. prisma/schema.prisma already lists both
+            # darwin engines, so one runner can package both arches.
+            builder_args: --mac --x64 --arm64
           - os: ubuntu-latest
             platform: linux
+            builder_args: --linux --x64
     runs-on: ${{ matrix.os }}
     env:
       # The app never launches a real Chrome/Electron during build; skip those
-      # large downloads. A base (unlicensed) build is what CI produces for testing.
+      # large downloads.
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-      SG_ALLOW_BASE_BUILD: '1'
+      # Licensed build when the SG_TENANT_CONFIG_JSON secret is set: the licensing
+      # tenant is baked in exactly like the website installer (build-tenant.js
+      # --bake-only), so trials and plans work. The config holds only the tenant
+      # id, the API URL and the server's PUBLIC key. Without the secret (for
+      # example on a fork) the build falls back to a base build with no
+      # licensing backend, which must never be shipped to customers.
+      SG_ALLOW_BASE_BUILD: ${{ secrets.SG_TENANT_CONFIG_JSON == '' && '1' || '0' }}
       # No Apple certificate in CI yet: tell electron-builder not to hunt for one,
       # so the macOS build completes unsigned instead of failing.
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -58,6 +69,21 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # After the tests (they expect the empty base config) and before anything
+      # is built from src/.
+      - name: Bake the licensing tenant
+        if: env.SG_ALLOW_BASE_BUILD != '1'
+        shell: bash
+        env:
+          TENANT_JSON: ${{ secrets.SG_TENANT_CONFIG_JSON }}
+        run: |
+          printf '%s' "$TENANT_JSON" > "$RUNNER_TEMP/tenant.config.json"
+          node scripts/build-tenant.js "$RUNNER_TEMP/tenant.config.json" --bake-only
+          rm -f "$RUNNER_TEMP/tenant.config.json"
+
+      - name: Check the build is licensed (or an explicit base build)
+        run: node scripts/check-tenant-baked.js
+
       - name: Build renderer
         run: npx vite build
 
@@ -71,13 +97,13 @@ jobs:
       # test build and only produces the workflow artifacts below.
       - name: Package installers and publish to the draft release
         if: startsWith(github.ref, 'refs/tags/v')
-        run: npx electron-builder --publish always
+        run: npx electron-builder ${{ matrix.builder_args }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package installers (no publish)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: npx electron-builder --publish never
+        run: npx electron-builder ${{ matrix.builder_args }} --publish never
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
