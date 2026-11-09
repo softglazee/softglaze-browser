@@ -1041,7 +1041,8 @@ function actionLabel(a) {
     // Security / team audit events (logAudit).
     'member.create': 'member added', 'member.update': 'member edited', 'member.delete': 'member removed',
     'member.permissions': 'permissions changed', 'member.status': 'status changed',
-    'member.login': 'signed in', 'member.logout': 'signed out', 'member.invite-accept': 'invite accepted'
+    'member.login': 'signed in', 'member.logout': 'signed out', 'member.invite-accept': 'invite accepted',
+    'proxy.copied_for_extension': 'proxies copied for extension'
   };
   return map[String(a || '').toLowerCase()] || a;
 }
@@ -1056,7 +1057,8 @@ const ACTION_COLORS = {
   restored: '#10b981', imported: '#f59e0b', assigned: '#06b6d4', reassigned: '#06b6d4',
   'member added': '#3b82f6', 'member edited': '#8b5cf6', 'member removed': '#ef4444',
   'permissions changed': '#f59e0b', 'status changed': '#f59e0b',
-  'signed in': '#10b981', 'signed out': '#94a3b8', 'invite accepted': '#06b6d4'
+  'signed in': '#10b981', 'signed out': '#94a3b8', 'invite accepted': '#06b6d4',
+  'proxies copied for extension': '#f59e0b'
 };
 // Structured audit detail is stored as compact JSON (logAudit) - render it as a
 // readable "key: value · key: value" line; legacy free-text detail passes through.

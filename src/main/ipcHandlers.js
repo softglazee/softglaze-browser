@@ -80,6 +80,7 @@ const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
 const secretStore = require('./secretStore');
 const proxySecrets = require('./proxySecrets');
+const proxyExtensionExport = require('./proxyExtensionExport');
 const rememberStore = require('./rememberStore');
 const { tenantConfig } = require('./tenantConfig');
 const licenseClient = require('./licenseClient');
@@ -158,6 +159,8 @@ const CHANNELS = Object.freeze({
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
+  PROXY_EXTENSION_COPY_INFO: 'proxy:extension-copy-info', // counts for "Copy for SoftGlaze Proxy"; no secrets
+  PROXY_EXTENSION_COPY: 'proxy:extension-copy', // main writes the clipboard; returns counts only
   PROXY_TEST_ALL: 'proxy:test-all',
   PROXY_CHECK_STREAM: 'proxy:check-stream',
   PROXY_CHECK_STOP: 'proxy:check-stop',
@@ -1217,6 +1220,67 @@ async function bulkDeleteProxies(payload) {
   await logAudit('proxy.delete', { detail: { count: result.count, proxyIds: allowed, bulk: true } });
   const removedGroups = await pruneEmptyAutoGroups(getPrisma());
   return { deleted: result.count, ids: allowed, denied, removedGroups };
+}
+
+// ---- Copy for SoftGlaze Proxy (the browser extension's Bulk import) ----
+// Usernames and passwords follow the rule used everywhere else for proxy credentials:
+// `proxies.reveal` (Manager and up, unless revoked for the member; single-user mode is the owner).
+// The renderer never receives them: the main process writes the clipboard itself and returns counts.
+// The clipboard is cleared after 2 minutes if it still holds the list (proxyExtensionExport.js).
+let proxyExtensionClipboard = null;
+function extensionClipboard() {
+  if (!proxyExtensionClipboard) {
+    proxyExtensionClipboard = proxyExtensionExport.createClipboardGuard({ clipboard: require('electron').clipboard });
+  }
+  return proxyExtensionClipboard;
+}
+
+async function canRevealProxyCredentials() {
+  try { await requirePermission('proxies.reveal'); return true; } catch (e) { return false; }
+}
+
+// The selected proxies this member may see, oldest first. Throws when none.
+async function extensionCopyRows(input) {
+  const ids = parseIdArray(input.ids);
+  const { allowed } = await partitionAccessibleProxyIds(ids);
+  if (allowed.length === 0) { const e = new Error('You do not have access to the selected proxies.'); e.code = 'FORBIDDEN'; throw e; }
+  return getPrisma().proxy.findMany({ where: { id: { in: allowed } }, orderBy: { createdAt: 'asc' } });
+}
+
+// { ids } -> { count, skipped, withLogin, socks5WithLogin, socks4WithLogin, canIncludeCredentials }
+async function getProxyExtensionCopyInfo(payload) {
+  const input = requireObject(payload);
+  const rows = await extensionCopyRows(input);
+  return { ...proxyExtensionExport.summarize(rows), canIncludeCredentials: await canRevealProxyCredentials() };
+}
+
+// { ids, includeCredentials } -> { copied, skipped, includedCredentials, socks4LoginLeftOut, clearAfterSeconds }
+async function copyProxiesForExtension(payload) {
+  const input = requireObject(payload);
+  const includeCredentials = input.includeCredentials === true;
+  if (includeCredentials) {
+    // Checked before any proxy row is read.
+    try {
+      await requirePermission('proxies.reveal');
+    } catch (e) {
+      const err = new Error('Your role cannot copy proxy usernames and passwords. Ask an owner or admin.');
+      err.code = 'FORBIDDEN';
+      throw err;
+    }
+  }
+  const rows = await extensionCopyRows(input);
+  const out = proxyExtensionExport.buildExtensionExport(rows, { includeCredentials });
+  if (out.count === 0) throw new Error('None of the selected proxies can be copied: their type, address or port is not one the extension reads.');
+  const { clearAfterMs } = extensionClipboard().write(out.text);
+  // The count and whether logins went along; never hosts, usernames or passwords.
+  await logAudit('proxy.copied_for_extension', { detail: { count: out.count, credentials: includeCredentials } });
+  return {
+    copied: out.count,
+    skipped: out.skipped,
+    includedCredentials: includeCredentials,
+    socks4LoginLeftOut: out.socks4LoginLeftOut,
+    clearAfterSeconds: Math.round(clearAfterMs / 1000)
+  };
 }
 
 // ---- Proxy rotation / sticky-session pools ----
@@ -13859,6 +13923,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_FREE_CANCEL, cancelFreeProxyHarvest);
   registerHandler(CHANNELS.PROXY_CHECK, checkProxy);
   registerHandler(CHANNELS.PROXY_BULK_DELETE, bulkDeleteProxies);
+  registerHandler(CHANNELS.PROXY_EXTENSION_COPY_INFO, getProxyExtensionCopyInfo);
+  registerHandler(CHANNELS.PROXY_EXTENSION_COPY, copyProxiesForExtension);
   registerHandler(CHANNELS.PROXY_ROTATION_GET, getProxyRotation);
   registerHandler(CHANNELS.PROXY_ROTATION_SET, setProxyRotation);
   registerHandler(CHANNELS.PROXY_SYNC_VENDOR_POOL, syncVendorPool);
