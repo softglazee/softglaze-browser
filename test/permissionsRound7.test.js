@@ -162,11 +162,11 @@ function loadRotation(db, { settings = { proxyRotation: ROTATION_SETTING } } = {
   const activity = [];
   const axios = { get: async (url) => { fetched.push(url); return { status: 200, data: `ok new ip 9.9.9.9 ${url}` }; } };
   const fns = loadMain([...VALIDATORS, 'requirePermission', 'canRevealProxyCredentials', 'assertCanAccessProxy', 'assertCanAccessProfile',
-    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'serializeProxy', 'deriveProvider',
+    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'rotationLinkRefusal', 'serializeProxy', 'deriveProvider',
     'launchedProxyView', 'rotateProfileProxyIp'], {
     ...ws.deps, rbacPolicy, redactForeignProxy, SECRET_MASK,
     readSetting: async (k, d) => (k in settings ? settings[k] : d),
-    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {},
+    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {}, ROTATION_LINK_REFUSALS: {},
     assertPublicHttpUrl: async () => {},
     assertPublicHttpUrlSync: () => {},
     publicOnlyLookup: () => {},
@@ -513,9 +513,9 @@ test('4: Rotate IP on a profile row is logged in its activity and returns the pr
   refusing.ws.as(3);
   const axiosRefuse = { get: async () => ({ status: 429, data: 'slow down' }) };
   const { rotateProfileProxyIp } = loadMain([...VALIDATORS, 'requirePermission', 'canRevealProxyCredentials', 'assertCanAccessProxy', 'assertCanAccessProfile',
-    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'serializeProxy', 'deriveProvider', 'launchedProxyView', 'rotateProfileProxyIp'], {
+    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'rotationLinkRefusal', 'serializeProxy', 'deriveProvider', 'launchedProxyView', 'rotateProfileProxyIp'], {
     ...refusing.ws.deps, rbacPolicy, redactForeignProxy, SECRET_MASK, readSetting: async (_k, d) => d,
-    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {}, assertPublicHttpUrl: async () => {}, assertPublicHttpUrlSync: () => {}, publicOnlyLookup: () => {},
+    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {}, ROTATION_LINK_REFUSALS: {}, assertPublicHttpUrl: async () => {}, assertPublicHttpUrlSync: () => {}, publicOnlyLookup: () => {},
     logActivity: async (_db, profileId, action, detail) => { refusing.activity.push({ profileId, action, detail }); },
     require: (m) => (m === 'axios' ? axiosRefuse : require(m))
   });

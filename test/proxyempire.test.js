@@ -137,6 +137,7 @@ test('every documented failure maps to its message, and none echoes the token', 
     [httpError(422, '{"message":"The given data was invalid.","errors":{"asn":["The asn field must only contain digits."]}}'), /^ProxyEmpire refused the request: The asn field must only contain digits\.$/],
     [httpError(429, '{"message":"Too many proxy-list requests. Please wait before generating more."}', { 'retry-after': '30' }), /Wait 30 seconds and pull again/],
     [httpError(429, '{"message":"Too many proxy-list requests."}'), /Wait a minute and pull again/],
+    [Object.assign(httpError(429, '{"message":"Too many proxy-list requests."}'), { headers: undefined, retryAfter: '12' }), /Wait 12 seconds and pull again/],
     [httpError(503, ''), /the API failed \(HTTP 503\)/],
     [new Error(`getaddrinfo ENOTFOUND panel.proxyempire.io Bearer ${TOKEN}`), /could not reach the API/]
   ];

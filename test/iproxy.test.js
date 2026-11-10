@@ -29,7 +29,7 @@ const fnSrc = (name) => {
   assert.ok(m, `${name} must exist`);
   return m[0];
 };
-const SECTION = between('// ---- iProxy.online (your own phones', '// Vendors wired to live API calls');
+const SECTION = between('// ---- iProxy.online (your own phones', '// ---- ProxyBrazil (dedicated 4G');
 const httpError = (status, body = '') => Object.assign(new Error(`HTTP ${status} ${body}`.trim()), { status });
 
 const access = (over = {}) => ({

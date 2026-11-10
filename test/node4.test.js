@@ -179,6 +179,7 @@ test('every documented failure has its own message, and none echoes the key', as
     [httpError(422, `{"error":"Country xx is not served. Served: us, gb (${KEY})"}`), /^Node4: Country xx is not served\. Served: us, gb \(\*\*\*\)\.$/],
     [httpError(429, '{"error":"Rate limit exceeded. Please wait before making more requests.","retryAfterSeconds":23,"limit":60,"windowSeconds":60}'), /Wait 23 seconds and pull again/],
     [httpError(429, '{"error":"Rate limit exceeded."}', { 'retry-after': '41' }), /Wait 41 seconds/],
+    [Object.assign(httpError(429, '{"error":"Rate limit exceeded."}'), { headers: undefined, retryAfter: '17' }), /Wait 17 seconds/],
     [httpError(500, 'oops'), /answered HTTP 500/],
     [new Error(`connect ECONNREFUSED node4.io ${KEY}`), /could not reach the API/]
   ];
