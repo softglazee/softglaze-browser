@@ -145,4 +145,57 @@ if (!URL) {
     const p = await prisma.payment.findFirst({ where: { tenantId: T, providerRef: 'INV-INT-1' } });
     assert.deepEqual([p.amount, p.customerId, p.account], [2900, null, null]);
   });
+
+  test('one-click sign-in (email code and GitHub) works on a real MySQL/MariaDB', async () => {
+    const github = require('../src/auth/providers/github');
+    process.env.GITHUB_CLIENT_ID = 'int-client';
+    process.env.GITHUB_CLIENT_SECRET = 'int-secret';
+    const res = (status, body) => ({ ok: status < 300, status, json: async () => body });
+    github.setFetchForTests(async (url) => {
+      if (String(url).startsWith(github.TOKEN_URL)) return res(200, { access_token: 'int-token', token_type: 'bearer' });
+      if (String(url).endsWith('/user')) return res(200, { id: 990001, login: 'intgh', name: 'Int GH' });
+      return res(200, [{ email: 'Int.GH@example.com', primary: true, verified: true }]);
+    });
+    const reg = await call('POST', '/v1/register', { tenantId: T, machineId: 'int-m3', machineHash: mh('pc3') });
+    const inst = { installId: reg.json.installId, installSecret: reg.json.installSecret };
+
+    assert.equal((await call('POST', '/auth/email/start', { tenantId: T, ...inst, email: 'int.gh@example.com', lang: 'en' })).status, 200);
+    const code = /\b(\d{6})\b/.exec(sent[sent.length - 1].text)[1];
+    const em = await call('POST', '/auth/email/verify', { tenantId: T, ...inst, email: 'int.gh@example.com', code });
+    assert.equal(em.status, 200, em.text);
+    assert.equal(em.json.provider, 'email');
+
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    const appState = crypto.randomBytes(20).toString('base64url');
+    const q = new globalThis.URLSearchParams({ provider: 'github', tenant: T, app_redirect: 'http://127.0.0.1:50999/auth', code_challenge: challenge, code_challenge_method: 'S256', state: appState });
+    const st = await fetch(`${base}/auth/start?${q}`, { redirect: 'manual' });
+    assert.equal(st.status, 302);
+    const ghState = new globalThis.URL(st.headers.get('location')).searchParams.get('state');
+    const cookie = st.headers.getSetCookie()[0].split(';')[0];
+    const cb = await fetch(`${base}/auth/callback/github?code=gh1&state=${encodeURIComponent(ghState)}`, { redirect: 'manual', headers: { cookie } });
+    assert.equal(cb.status, 302);
+    const back = new globalThis.URL(cb.headers.get('location'));
+    assert.equal(back.searchParams.get('state'), appState);
+    const ex = await call('POST', '/auth/exchange', { tenantId: T, ...inst, code: back.searchParams.get('code'), codeVerifier: verifier });
+    assert.equal(ex.status, 200, ex.text);
+    assert.equal(ex.json.linked, 'email', 'the GitHub verified email finds the customer made by the email sign-in');
+    assert.equal(ex.json.customer.id, em.json.customer.id);
+    assert.equal((await call('POST', '/auth/exchange', { tenantId: T, ...inst, code: back.searchParams.get('code'), codeVerifier: verifier })).json.error, 'invalid_grant');
+    await assert.rejects(
+      prisma.identity.create({ data: { tenantId: T, customerId: ex.json.customer.id, provider: 'github', providerUserId: '990001' } }),
+      (e) => e.code === 'P2002', 'one identity per provider user per tenant'
+    );
+    const me = await call('POST', '/auth/me', { tenantId: T, ...inst, session: ex.json.session });
+    assert.deepEqual(me.json.methods.map((m) => m.provider).sort(), ['email', 'github']);
+    assert.equal((await call('POST', '/v1/account/status', { tenantId: T, ...inst })).json.verified, true);
+    const d = await admin('GET', `/customers/${ex.json.customer.id}`);
+    assert.equal(d.json.signIns.length, 2);
+    assert.deepEqual((await call('POST', '/auth/logout', { tenantId: T, ...inst, session: ex.json.session })).json, { ok: true });
+    const er = await admin('POST', `/customers/${ex.json.customer.id}/erase`, { confirm: 'int.gh@example.com' });
+    assert.equal(er.status, 200, er.text);
+    assert.equal(await prisma.identity.count({ where: { tenantId: T } }), 0);
+    assert.equal(await prisma.authSession.count({ where: { tenantId: T } }), 0);
+    github.setFetchForTests(null);
+  });
 }

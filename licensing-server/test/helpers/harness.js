@@ -12,8 +12,9 @@ process.env.LEASE_DAYS = '7';
 // Every test request comes from 127.0.0.1; the per-IP limiter has its own test.
 process.env.PUBLIC_RATE_PER_MIN = '100000';
 process.env.VERIFY_RATE_PER_MIN = '100000';
+process.env.AUTH_RATE_PER_MIN = '100000';
 if (!process.env.CONFIG_ENV_FILE) process.env.CONFIG_ENV_FILE = path.join(os.tmpdir(), `sg-no-config-${process.pid}.env`);
-for (const k of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'SMTP_PORT', 'TRUST_PROXY_HOPS', 'EMAIL_DOMAIN_ALLOWLIST']) delete process.env[k];
+for (const k of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'SMTP_PORT', 'TRUST_PROXY_HOPS', 'EMAIL_DOMAIN_ALLOWLIST', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GITHUB_API_VERSION']) delete process.env[k];
 
 const { memoryPrisma } = require('./memoryPrisma');
 const db = memoryPrisma();
