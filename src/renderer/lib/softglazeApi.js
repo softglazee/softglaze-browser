@@ -112,6 +112,7 @@ export const softglazeApi = {
     update: (payload) => getSoftglazeApi().profiles.update(payload),
     delete: (id, options) => getSoftglazeApi().profiles.delete(id, options),
     launch: (id, options) => getSoftglazeApi().profiles.launch(id, options),
+    rotateIp: (id) => getSoftglazeApi().profiles.rotateIp(id),
     restore: (id) => getSoftglazeApi().profiles.restore(id),
     purge: (id) => getSoftglazeApi().profiles.purge(id),
     listTrash: () => getSoftglazeApi().profiles.listTrash(),

@@ -269,6 +269,7 @@
     "webrtcHelpReal": "WebRTC funciona como en un navegador normal y puede mostrar tu IP real aunque uses el proxy.",
     "webrtcHelpDisabled": "WebRTC se elimina de las páginas (no existe RTCPeerConnection). Algunos sitios lo notan.",
     "webrtcFirefox": "Los perfiles de Firefox siempre funcionan con WebRTC desactivado.",
+    "webrtcFirefoxKept": "Su ajuste guardado ({{mode}}) se conserva y vuelve a aplicarse si el perfil pasa a Chromium.",
     "locationHelp_prompt": "Un sitio debe pedirla y el navegador te pregunta cada vez. Si lo permites, el sitio recibe la ubicación del perfil (personalizada o la del proxy); sin ninguna de las dos, la tuya real.",
     "locationHelp_granted": "Los sitios reciben la ubicación del perfil (personalizada o la del proxy) sin preguntar. Sin proxy ni ubicación personalizada el navegador pregunta, así que tu ubicación real nunca se comparte sin avisar.",
     "locationHelp_denied": "La ubicación está bloqueada para todos los sitios.",
@@ -483,7 +484,11 @@
     "createdDaysAgo_other": "Creado hace {{count}} días",
     "neverWarmed": "nunca calentado",
     "warmedTimes_one": "calentado {{count}} vez, la última {{last}}",
-    "warmedTimes_other": "calentado {{count}} veces, la última {{last}}"
+    "warmedTimes_other": "calentado {{count}} veces, la última {{last}}",
+    "rotateIp": "Rotar IP",
+    "rotateIpTitle": "Rotar IP: obtener una nueva IP de salida en el proxy de este perfil",
+    "rotateIpDone": "Se pidió una nueva IP al proxy de \"{{title}}\". La nueva IP puede tardar unos segundos en aparecer.",
+    "rotateIpRefused": "El proxy de \"{{title}}\" rechazó la nueva IP (HTTP {{status}})."
   },
   "actions": {
     "stop": "Detener",

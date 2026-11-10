@@ -73,6 +73,7 @@
     "rowLanguage": "Language",
     "rowResolution": "Resolution",
     "rowWebRTC": "WebRTC",
+    "webrtcFirefoxOff": "Off (Firefox)",
     "rowWebglVendor": "WebGL vendor",
     "rowWebglRenderer": "WebGL renderer",
     "rowCpuCores": "CPU cores",

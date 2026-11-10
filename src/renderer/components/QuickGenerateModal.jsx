@@ -4,7 +4,7 @@ import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCi
 import { useDialog } from '@/lib/useDialog.js';
 import { countBuckets } from '@/lib/proxyBuckets.mjs';
 import { healthyFreeProxies } from '@/lib/freeProxies.mjs';
-import { quickGenNumber, quickGenProgressView } from '@/lib/quickGenProgress.mjs';
+import { quickGenNumber, quickGenPastedLines, quickGenPlannedCount, quickGenProgressView, quickGenUniqueCandidates } from '@/lib/quickGenProgress.mjs';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
@@ -37,6 +37,8 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   // Live frames from main while the run checks proxies and creates profiles (see batchGenerateHandler).
   const [frame, setFrame] = useState(null);
+  // The number of profiles main reported it is creating (its 'create' frame), for the preview's names.
+  const [mainToCreate, setMainToCreate] = useState(null);
   const [stopping, setStopping] = useState(false);
   const runIdRef = useRef(null);
   const offProgressRef = useRef(null);
@@ -64,8 +66,19 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     { id: 'paste', label: t('quickGenerate.proxyModePaste'), icon: ListPlus }
   ];
   const start = 1;
+  // main pads the names to the number of profiles it creates, which is fewer than asked when each profile
+  // needs its own proxy and fewer are usable: 10 asked with 9 proxies gives -1 to -9. So the preview counts
+  // what main can use (pasted lines, or unused proxies of the chosen source), and main's own number once it
+  // reports it, before the first profile is created.
+  const uniqueProxyRun = (proxyMode === 'pool' || proxyMode === 'free') && assignUnique;
+  const availableProxies = proxyMode === 'paste'
+    ? quickGenPastedLines(pasted).length
+    : uniqueProxyRun
+      ? quickGenUniqueCandidates(proxyMode === 'free' ? freeProxies : proxies, proxyMode === 'free' ? { free: true } : { source: proxySource, speed: proxySpeed, blacklist: proxyBlacklist }).length
+      : null;
+  const planned = quickGenPlannedCount({ count, available: availableProxies, toCreate: mainToCreate });
   // The number main gives the profile at `index` of this run (the same padding rule as main).
-  const pad = (index) => quickGenNumber(start, index, count);
+  const pad = (index) => quickGenNumber(start, index, planned);
 
   // Distinct providers present in the pool (for "create from <provider> proxies").
   const providerCounts = {};
@@ -105,10 +118,14 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     if (proxyMode === 'paste' && !pasted.trim()) return setErr(t('quickGenerate.errNoPasted'));
     const runId = `qgen-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     runIdRef.current = runId;
-    setFrame(null); setStopping(false);
+    setFrame(null); setStopping(false); setMainToCreate(null);
     // Listen before the run starts so its first frames are not missed; only this run's frames count.
     stopListening();
-    const off = softglazeApi.profiles.onBatchGenerateProgress((f) => { if (f && f.runId === runId) setFrame(f); });
+    const off = softglazeApi.profiles.onBatchGenerateProgress((f) => {
+      if (!f || f.runId !== runId) return;
+      setFrame(f);
+      if (f.phase === 'create' && Number(f.toCreate) >= 1) setMainToCreate(Number(f.toCreate));
+    });
     offProgressRef.current = typeof off === 'function' ? off : null;
     setBusy(true); setProgress({ done: 0, total: n });
     try {
@@ -159,7 +176,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
             <div><label className={labelCls}>{t('quickGenerate.quantity')}</label><input type="number" min={1} max={500} className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} /></div>
             <div className="col-span-2"><label className={labelCls}>{t('quickGenerate.baseName')}</label><input className={inputCls} value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Profile" /></div>
           </div>
-          <p className="text-[11px] text-muted-dark -mt-2">{t('quickGenerate.createsPrefix')} <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(0)}</span>{Number(count) > 1 && <>, <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(1)}</span></>}{Number(count) > 2 && ' …'}</p>
+          <p className="text-[11px] text-muted-dark -mt-2">{t('quickGenerate.createsPrefix')} <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(0)}</span>{planned > 1 && <>, <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(1)}</span></>}{planned > 2 && ' …'}</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div>

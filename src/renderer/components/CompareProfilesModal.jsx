@@ -20,7 +20,8 @@ export default function CompareProfilesModal({ profiles = [], onClose }) {
     [t('compare.rowTimezone'), (p) => p.timezoneType === 'Custom' ? (p.timezoneCustom || t('compare.custom')) : (p.timezoneType || t('compare.real'))],
     [t('compare.rowLanguage'), (p) => p.languageType === 'Custom' ? (p.languageCustom || t('compare.custom')) : (p.languageType || t('compare.real'))],
     [t('compare.rowResolution'), (p) => p.resolutionType === 'Custom' ? `${p.resolutionW || '?'}×${p.resolutionH || '?'}` : (p.resolutionType || t('compare.real'))],
-    [t('compare.rowWebRTC'), (p) => p.webrtc || t('compare.forward')],
+    // Firefox profiles always run with WebRTC off; their saved setting does not apply.
+    [t('compare.rowWebRTC'), (p) => (p.browserCore === 'Firefox' ? t('compare.webrtcFirefoxOff') : (p.webrtc || t('compare.forward')))],
     [t('compare.rowWebglVendor'), (p) => p.webglVendor || '-'],
     [t('compare.rowWebglRenderer'), (p) => p.webglRenderer || '-'],
     // Profiles carry cpuCores / ramGb (there are no cpu / ram fields).

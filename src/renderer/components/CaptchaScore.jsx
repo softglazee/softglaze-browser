@@ -37,6 +37,8 @@ function factorMessage(t, f) {
   if (f.key === 'history' && f.status === 'pass' && p.warmRuns) return t('factor.history.warmed', { count: p.warmRuns });
   if (f.key === 'ipType') return t(`factor.ipType.${f.status}`, { isp: p.isp ? ` (${p.isp})` : '' });
   if (f.key === 'webrtc' && p.noProxy) return t('factor.webrtc.realNoProxy');
+  // Firefox profiles always run with WebRTC off, whatever their setting (captchaScore.js).
+  if (f.key === 'webrtc' && p.firefox) return t('factor.webrtc.firefoxOff');
   return t(`factor.${f.key}.${f.status}`, p);
 }
 
