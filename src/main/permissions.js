@@ -1,7 +1,7 @@
 'use strict';
 // Role hierarchy: SUPER_ADMIN > OWNER > ADMIN > MANAGER > OPERATOR. A parent grants each child its
-// limits and feature flags, never more than it holds. Members see only their own subtree (managers
-// also see their parent admin), so siblings never see each other.
+// limits and feature flags, never more than it holds. Members see only their own subtree, never their
+// parent or siblings; anything else reaches them only through an explicit share (ProfileAccess).
 
 const ROLE_RANK = { OPERATOR: 1, MANAGER: 2, ADMIN: 3, OWNER: 4, SUPER_ADMIN: 5 };
 
@@ -184,8 +184,11 @@ const SUPER_ADMIN = Object.freeze({
 
 function isSuperAdminId(id) { return Number(id) === SUPER_ADMIN_ID; }
 
-// Visibility: SUPER_ADMIN and OWNER see their whole subtree, ADMIN self + descendants,
-// MANAGER self + descendants + parent admin, OPERATOR self only.
+// Visibility: SUPER_ADMIN everyone, every other role self + descendants (an Operator has none).
+// A Manager's parent is not in the set: it would put the parent's own profiles, proxies, groups,
+// templates and macros in the Manager's scope, and the parent on the Manager's Members page. Profiles
+// of the parent reach a Manager only when shared with them (profileRowAccessible's ProfileAccess
+// branch), and the parent already sees the Manager's subtree as its own.
 function descendantIds(members, rootId) {
   const childrenOf = new Map();
   for (const m of members) {
@@ -212,13 +215,6 @@ function visibleMemberIds(members, viewer) {
   if (viewer && viewer.id != null && viewer.id >= 0) ids.add(viewer.id);
   if (viewer && viewer.id != null) {
     for (const d of descendantIds(members, viewer.id)) ids.add(d);
-  }
-  if (role === 'OWNER') {
-    // Owner already covered by descendants (whole org under them).
-    return ids;
-  }
-  if (role === 'MANAGER' && viewer.parentMemberId != null) {
-    ids.add(Number(viewer.parentMemberId)); // their parent admin only
   }
   return ids;
 }

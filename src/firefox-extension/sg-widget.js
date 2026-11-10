@@ -109,11 +109,18 @@
     function unmount() { try { if (host.isConnected) host.remove(); } catch (e) {} }
 
     var toastTimer = null;
+    // The toast sits where the open panel's footer is (both 60px above the button), so while the panel
+    // is open it moves above the panel and never covers "Mark as used".
+    function placeToast() {
+      var above = panel.hidden ? 0 : (panel.offsetHeight || 0) + 8;
+      toastEl.style.bottom = (60 + above) + 'px';
+    }
     // Long messages stay up longer (about 60 ms a character, 2.6 s to 9 s).
     function toast(msg, ms) {
       mount();
       toastEl.textContent = msg;
       toastEl.hidden = false;
+      placeToast();
       clearTimeout(toastTimer);
       var dur = ms || Math.min(9000, Math.max(2600, String(msg).length * 60));
       toastTimer = setTimeout(function () { toastEl.hidden = true; }, dur);
@@ -153,6 +160,7 @@
     async function toggle() {
       isOpen = !isOpen;
       panel.hidden = !isOpen;
+      placeToast();
       if (!isOpen) return;
       if (loading) return;
       loading = true;
@@ -177,6 +185,7 @@
     function renderList() {
       clearBody();
       pinActive();
+      setTimeout(placeToast, 0);
       cntEl.textContent = personas.length ? (personas.length + ' available') : '';
       // While an identity is active the footer offers the manual controls: mark it
       // used now, or release it without marking (abandoned signup).
@@ -209,7 +218,15 @@
           filling = true;
           fillWith(p, { gesture: true })
             .catch(function () {})
-            .then(function () { filling = false; armMultiStep(p); });
+            .then(function () {
+              filling = false;
+              armMultiStep(p);
+              // Open the list again once typing is done, so the identity's "Mark as used" and
+              // "Release" are one click away instead of behind the SG button.
+              if ((active || selected) && fab.isConnected && !fab.hidden) {
+                isOpen = true; panel.hidden = false; renderList(); placeToast();
+              }
+            });
         });
         body.appendChild(btn);
       });

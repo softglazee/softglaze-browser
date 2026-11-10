@@ -24,7 +24,7 @@ function fnBody(name) {
 
 test('a DataImpulse sticky proxy without a link rotates through the vendor API', () => {
   const rotate = fnBody('rotateProxyIp');
-  const diAt = rotate.indexOf('isDataImpulseSticky(proxy)');
+  const diAt = rotate.indexOf('apiRotationProvider(proxy)');
   const throwAt = rotate.indexOf('No IP rotation link is configured');
   assert.ok(diAt > -1 && throwAt > -1 && diAt < throwAt,
     'the DataImpulse branch must run before the "no link" refusal');
@@ -51,7 +51,9 @@ test('the reset call uses the port and the base plan login', () => {
 });
 
 test('the pool is told which rows can rotate', () => {
-  assert.match(fnBody('serializeProxy'), /canRotate: Boolean\(proxy\.rotationUrl\) \|\| isDataImpulseSticky\(proxy\)/);
+  assert.match(fnBody('serializeProxy'), /canRotate: proxyCanRotate\(proxy\)/);
+  assert.match(fnBody('proxyCanRotate'), /Boolean\(proxy\.rotationUrl\) \|\| Boolean\(apiRotationProvider\(proxy\)\)/);
+  assert.match(fnBody('apiRotationProvider'), /if \(isDataImpulseSticky\(proxy\)\) return 'dataimpulse';/);
 });
 
 test('the Rotate IP buttons only render for rows that can rotate, then re-check the proxy', () => {

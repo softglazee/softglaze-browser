@@ -26,6 +26,7 @@ import NumberInput from '@/components/ui/NumberInput.jsx';
 import Textarea from '@/components/ui/Textarea.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import CopyForProxyExtensionDialog from '@/components/CopyForProxyExtensionDialog.jsx';
+import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
@@ -38,6 +39,12 @@ const PROVIDER_LABELS = {
   apify: 'Apify', shopsocks5: 'ShopSocks5',
   smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom'
 };
+// Every other provider tag shows its Proxy providers name (ARNPROXY, Node4, ...).
+const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.key, p.name]));
+const providerLabel = (key) => PROVIDER_LABELS[key] || PROVIDER_NAMES[key] || key;
+// Batch Add's optional Provider tag: ARNPROXY first (it has no connector, so a pasted list is how its
+// proxies arrive), then every provider by name.
+const BATCH_PROVIDERS = [...PROVIDERS].sort((a, b) => (a.key === 'arnproxy' ? -1 : b.key === 'arnproxy' ? 1 : a.name.localeCompare(b.name)));
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4', '#84cc16'];
 
 // Relative time for the "Last check" card.
@@ -154,6 +161,7 @@ export default function ProxyPoolPage() {
   const [proxyForm, setProxyForm] = useState(initialProxyForm);
   const [batchRaw, setBatchRaw] = useState('');
   const [batchType, setBatchType] = useState('HTTP');
+  const [batchProvider, setBatchProvider] = useState('');
   const [batchResult, setBatchResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -540,7 +548,10 @@ export default function ProxyPoolPage() {
     setError('');
     setBatchResult(null);
     try {
-      const result = await softglazeApi.proxies.batchAdd({ raw: batchRaw, type: batchType });
+      // A chosen provider tags the rows (and names them "<Provider> • host:port"), so they group and
+      // count under it like pulled ones.
+      const tag = PROVIDERS.find((p) => p.key === batchProvider);
+      const result = await softglazeApi.proxies.batchAdd({ raw: batchRaw, type: batchType, ...(tag ? { provider: tag.key, namePrefix: tag.name } : {}) });
       setBatchResult(result);
       await Promise.all([loadProxies(), loadGroups()]);
     } catch (err) {
@@ -1170,7 +1181,7 @@ export default function ProxyPoolPage() {
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(providerCounts).map(([prov, cnt]) => (
                       <button key={prov} className={chipCls(`provider:${prov}`)} onClick={() => { setActiveGroup(`provider:${prov}`); setView('custom'); }}>
-                        <Tag className="w-3 h-3" /> {PROVIDER_LABELS[prov] || prov} <span className="opacity-60">{cnt}</span>
+                        <Tag className="w-3 h-3" /> {providerLabel(prov)} <span className="opacity-60">{cnt}</span>
                       </button>
                     ))}
                   </div>
@@ -1219,7 +1230,7 @@ export default function ProxyPoolPage() {
         {Object.keys(providerCounts).length > 0 && (
           <select value={String(activeGroup).startsWith('provider:') ? String(activeGroup) : ''} onChange={(e) => setActiveGroup(e.target.value || 'all')} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground max-w-[200px]" title={t('filters.byProvider')}>
             <option value="">{t('filterBar.providerAll', 'All providers')}</option>
-            {Object.entries(providerCounts).map(([prov, cnt]) => <option key={prov} value={`provider:${prov}`}>{PROVIDER_LABELS[prov] || prov} ({cnt})</option>)}
+            {Object.entries(providerCounts).map(([prov, cnt]) => <option key={prov} value={`provider:${prov}`}>{providerLabel(prov)} ({cnt})</option>)}
           </select>
         )}
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="h-8 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" title={t('sort.tooltip')}>
@@ -1528,14 +1539,23 @@ export default function ProxyPoolPage() {
               <DialogDescription>{t('batch.descriptionPrefix')} <code className="font-mono text-muted-foreground">host:port:username:password</code>.</DialogDescription>
             </DialogHeader>
             <DialogBody className="grid gap-5">
-              <Field label={t('batch.defaultType')}>
-                <CustomSelect value={batchType} onChange={(event) => setBatchType(event.target.value)}>
-                  <option value="HTTP">HTTP</option>
-                  <option value="HTTPS">HTTPS</option>
-                  <option value="SOCKS5">SOCKS5</option>
-                  <option value="SOCKS4">SOCKS4</option>
-                </CustomSelect>
-              </Field>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label={t('batch.defaultType')}>
+                  <CustomSelect value={batchType} onChange={(event) => setBatchType(event.target.value)}>
+                    <option value="HTTP">HTTP</option>
+                    <option value="HTTPS">HTTPS</option>
+                    <option value="SOCKS5">SOCKS5</option>
+                    <option value="SOCKS4">SOCKS4</option>
+                  </CustomSelect>
+                </Field>
+                <Field label={t('batch.providerLabel')}>
+                  <CustomSelect value={batchProvider} onChange={(event) => setBatchProvider(event.target.value)}>
+                    <option value="">{t('batch.providerNone')}</option>
+                    {BATCH_PROVIDERS.map((p) => <option key={p.key} value={p.key}>{p.name}</option>)}
+                  </CustomSelect>
+                </Field>
+              </div>
+              <p className="-mt-3 text-xs text-muted">{t('batch.providerHint')}</p>
               {batchType === 'SOCKS4' && <Socks4Note text={t('form.socks4Note')} />}
               <Field label={t('batch.proxyLines')}>
                 <Textarea

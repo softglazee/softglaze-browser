@@ -37,11 +37,11 @@ test('Proxy unique key covers the password via its hash (schema + migrations agr
 });
 
 test('Live Proxies usernames match the dashboard generator', () => {
-  assert.equal(U.liveProxiesUsername('LV58712', { country: 'US' }), 'LV58712-lv_us');
-  assert.equal(U.liveProxiesUsername('LV58712', { country: 'gb', sid: '1936119' }), 'LV58712-lv_gb-1936119');
-  assert.equal(U.liveProxiesUsername('LV58712-lv_us-123', { country: 'CA' }), 'LV58712-lv_ca', 'a pasted full username keeps only the account');
-  assert.equal(U.liveProxiesUsername('LV58712', { country: 'US', sid: 'ab123456789' }), 'LV58712-lv_us-12345678', 'sid is digits only, max 8');
-  assert.equal(U.liveProxiesUsername('LV58712', {}), '', 'a country is required');
+  assert.equal(U.liveProxiesUsername('LV00000', { country: 'US' }), 'LV00000-lv_us');
+  assert.equal(U.liveProxiesUsername('LV00000', { country: 'gb', sid: '1936119' }), 'LV00000-lv_gb-1936119');
+  assert.equal(U.liveProxiesUsername('LV00000-lv_us-123', { country: 'CA' }), 'LV00000-lv_ca', 'a pasted full username keeps only the account');
+  assert.equal(U.liveProxiesUsername('LV00000', { country: 'US', sid: 'ab123456789' }), 'LV00000-lv_us-12345678', 'sid is digits only, max 8');
+  assert.equal(U.liveProxiesUsername('LV00000', {}), '', 'a country is required');
   assert.equal(U.liveProxiesStickyHost(1), 'b2b-s1.liveproxies.io');
   assert.equal(U.liveProxiesStickyHost(10), 'b2b-s10.liveproxies.io');
   // Only 17 sticky servers exist in DNS. A pull of 50 used to invent b2b-s18 to b2b-s50.
@@ -59,7 +59,11 @@ test('Live Proxies adapter uses gateway mode when a username is given', () => {
 
 test('blank session + How many > 1 mints sticky sessions on the gateway vendors', () => {
   const hits = IPC.match(/const fixed = String\(session \|\| ''\)\.trim\(\) \|\| \(clampPoolCount\(count, 1, 100\) > 1 \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
-  assert.equal(hits.length, 3, 'PacketStream, CatProxies and the shared gateway minter');
+  assert.equal(hits.length, 1, 'PacketStream (it has no Keep same IP)');
+  // CatProxies and the shared gateway minter follow gatewayPullPlan, which also makes one row sticky
+  // when Keep same IP is set (test/connectorsShared.test.js).
+  const plans = IPC.match(/const plan = gatewayPullPlan\(\{ session, count, life \}\);\r?\n\s*const fixed = plan\.session \|\| \(plan\.sticky \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
+  assert.equal(plans.length, 2, 'CatProxies and mintGatewayRows');
 });
 
 test('typed provider fields survive tab/provider switches and failed pulls', () => {
@@ -69,7 +73,7 @@ test('typed provider fields survive tab/provider switches and failed pulls', () 
   const pull = UI.slice(UI.indexOf('async function handleGeoSync'), UI.indexOf('async function handleLookup'));
   assert.ok(pull.indexOf('persistCreds();') < pull.indexOf('syncVendorPool('), 'creds are saved before the pull runs');
   assert.match(IPC, /PROXY_CRED_SECRET_FIELDS = \['password', 'token', 'apiToken', 'apiUrl'\]/);
-  assert.match(IPC, /PROXY_CRED_PLAIN_FIELDS = \['username', 'zone', 'plan', 'host', 'port', 'orderId'\]/);
+  assert.match(IPC, /PROXY_CRED_PLAIN_FIELDS = \['username', 'zone', 'plan', 'host', 'port', 'orderId', 'teamId', 'proxyType'\]/);
 });
 
 test('list-only providers without a country on their rows hide the country picker', () => {
@@ -84,7 +88,9 @@ test('every list-only provider offers How many, and Proxy-Solutions filters by c
     assert.match(UI, new RegExp(`key: '${key}'.*count: true`), key);
   }
   assert.doesNotMatch(UI, /key: 'proxysolutions'.*noCountry: true/, 'Proxy-Solutions rows carry a country');
-  assert.match(UI, /provider\.geoSync\.noCountry && provider\.geoSync\.count && \(/, 'How many must render without the country row');
+  // One How many field for every connector, the country row or not; its list wording follows geoSync.list.
+  assert.match(UI, /\{provider\.geoSync\.count && \(/, 'How many must render without the country row');
+  assert.match(UI, /placeholder=\{provider\.geoSync\.list \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : '5'\}/);
   for (const fn of ['fetchAirproxyPool', 'fetchMobileProxySpacePool', 'fetchProxySolutionsPool']) {
     const start = IPC.indexOf(`async function ${fn}(`);
     const body = IPC.slice(start, IPC.indexOf('\n}\n', start));

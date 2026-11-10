@@ -141,7 +141,7 @@ const hidden = (feature) => ({ permissionsJson: JSON.stringify({ features: { [fe
 function loadList({ reveal }) {
   const db = seed();
   const ws = workspace(db);
-  const fns = loadMain([...VALIDATORS, 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'serializeProfile',
+  const fns = loadMain([...VALIDATORS, 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'serializeProfile',
     'withViewerEditFlags', 'proxyInVisiblePool', 'searchMatchesView', 'listProfiles'], {
     ...ws.deps, rbacPolicy, profileOptions, redactProfileRow, redactPlatformAccounts, redactUseOnlyProxy,
     currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal
@@ -154,7 +154,7 @@ function loadList({ reveal }) {
 test('1: the Proxy pool sends a rotation link only with proxies.reveal; everyone else gets a mask and can still rotate', async () => {
   const db = seed();
   const row = await db.proxy.findUnique({ where: { id: 22 } });
-  const load = (reveal) => loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky'], { rbacPolicy, currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal });
+  const load = (reveal) => loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate'], { rbacPolicy, currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal });
   const op = load(false).serializeProxy(row); // an Operator (or a Manager with proxies.reveal turned off)
   assert.equal(op.rotationUrl, SECRET_MASK);
   assert.deepEqual([op.hasRotationUrl, op.canRotate], [true, true], 'the Rotate IP button still shows');
@@ -176,12 +176,12 @@ test('1: rotating fires the stored link by proxy id; a mask sent back is never s
   const db = seed();
   const fetched = [];
   const axios = { get: async (url) => { fetched.push(url); return { status: 200, data: 'new ip 9.9.9.9' }; } };
-  const { rotateProxyIp } = loadMain([...VALIDATORS, 'isDataImpulseSticky', 'assertCanRotateProxy', 'rotateProxyIp'], {
+  const { rotateProxyIp } = loadMain([...VALIDATORS, 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'assertCanRotateProxy', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'rotationLinkRefusal'], {
     getPrisma: () => db,
     requirePermission: async () => {},
     assertCanAccessProxy: async () => {},
     canRevealProxyCredentials: async () => true,
-    rotateDataImpulseSticky: async () => { throw new Error('not used'); },
+    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {}, ROTATION_LINK_REFUSALS: {},
     assertPublicHttpUrl: async () => {},
     assertPublicHttpUrlSync: () => {},
     publicOnlyLookup: () => {},

@@ -38,7 +38,9 @@ const RECOMMENDED_EXTENSIONS = [
   // Third-party helpers stay opt-in: blockers change page and network behavior (an anti-detect
   // tradeoff) and SwitchyOmega can override the native per-profile proxy.
   { chromeId: 'hlkenndednhfkekhgcdicdfddnkalmdm', name: 'Cookie-Editor', enable: false },
-  { chromeId: 'bbdpgcaljkaaigfcomhidmneffjjjfgp', name: 'uBlock Origin (MV3)', enable: false }, // MV3 build; Chrome is disabling the MV2 one
+  // uBlock Origin Lite (Raymond Hill), the MV3 uBlock. Until 1.0.26 this was bbdpgcaljkaaigfcomhidmneffjjjfgp,
+  // which is "uBlock Origin Scope" (a different extension); it never installed, so nothing to migrate.
+  { chromeId: 'ddkjiahejlhfcafbddmgiahcphecmpfh', name: 'uBlock Origin Lite', enable: false },
   { chromeId: 'onoegffbmcddafoabbeicpdebfjonkoj', name: 'Proxy SwitchyOmega 3 (MV3)', enable: false } // MV3 build
 ];
 
@@ -61,10 +63,44 @@ function parseChromeId(input) {
   return match && CHROME_ID_RE.test(match[0]) ? match[0] : null;
 }
 
-// Google's CRX update endpoint; `response=redirect` 302s to the signed package on the CDN.
-function downloadUrlFor(id) {
-  return `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=114.0&acceptformat=crx2,crx3&x=id%3D${id}%26uc`;
+// Google's CRX update endpoint; `response=redirect` 302s to the signed package on the CDN. It answers
+// 204 No Content (no package) when `prodversion` is below the extension's minimum_chrome_version, so a
+// fixed old version (114.0 until 1.0.26) got nothing for uBlock Origin Lite (it needs 122). Ask as the
+// Chrome the extension will run in (chromeProdVersion).
+function downloadUrlFor(id, prodversion = chromeProdVersion()) {
+  return `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${encodeURIComponent(prodversion)}&acceptformat=crx2,crx3&x=id%3D${id}%26uc`;
 }
+
+// The newest Chrome profiles launch on: a downloaded Chrome for Testing build (profiles with extensions
+// prefer one) or the installed Google Chrome. Without either, the newest version of the fingerprint
+// pool (fingerprintGenerator.CHROME_VERSIONS, bumped with each release). deps is for tests.
+const PRODVERSION_RE = /^\d{2,4}(\.\d{1,6}){0,3}$/;
+function chromeProdVersion(deps = {}) {
+  const versions = [];
+  const add = (v) => { const s = String(v || '').trim(); if (PRODVERSION_RE.test(s)) versions.push(s); };
+  try {
+    const listDownloaded = deps.listAvailableBrowsers || (() => require('./browserEngine').listAvailableBrowsers());
+    for (const b of listDownloaded() || []) add(b && b.version);
+  } catch (e) { /* no downloaded builds */ }
+  try {
+    const findReal = deps.findRealChrome || (() => require('./browserEngine').findRealChrome());
+    const real = findReal();
+    add(real && real.version);
+  } catch (e) { /* no installed Chrome */ }
+  if (!versions.length) {
+    const pool = deps.fallbackVersions || require('./fingerprintGenerator').CHROME_VERSIONS;
+    for (const v of pool || []) add(v);
+  }
+  if (!versions.length) return FALLBACK_PRODVERSION;
+  const num = (v) => v.split('.').map((n) => Number(n) || 0);
+  versions.sort((a, b) => {
+    const x = num(a); const y = num(b);
+    for (let i = 0; i < 4; i += 1) if ((x[i] || 0) !== (y[i] || 0)) return (y[i] || 0) - (x[i] || 0);
+    return 0;
+  });
+  return versions[0];
+}
+const FALLBACK_PRODVERSION = '149.0.7827.155'; // only if even the fingerprint pool is unreadable
 
 // A .crx is a signature header ("Cr24" magic) followed by a plain ZIP; slice the header off.
 // CRX2: [Cr24][u32 ver=2][u32 pubKeyLen][u32 sigLen][pubKey][sig][ZIP]
@@ -147,20 +183,22 @@ async function assertNoLinksUnder(dir) {
 }
 
 // Returns { localPath, name, version }.
-async function downloadAndExtract(chromeId) {
+// deps (tests only): http (an axios stand-in), root, and chromeProdVersion's lookups.
+async function downloadAndExtract(chromeId, deps = {}) {
   if (!CHROME_ID_RE.test(chromeId)) throw new Error('Invalid Chrome extension id.');
   let axios, extractZip;
   try {
-    axios = require('axios');
+    axios = deps.http || require('axios');
     extractZip = require('extract-zip');
   } catch (e) {
     throw new Error('Extension downloader is unavailable: the "axios"/"extract-zip" packages are not installed.');
   }
-  const root = extensionsRoot();
+  const root = deps.root || extensionsRoot();
   await fs.mkdir(root, { recursive: true });
 
   // https-only Google-host allowlist on the URL and every redirect, plus a size cap against OOM.
-  const startUrl = downloadUrlFor(chromeId);
+  const prodversion = chromeProdVersion(deps);
+  const startUrl = downloadUrlFor(chromeId, prodversion);
   assertAllowedDownloadUrl(startUrl, HOSTS.crx, 'extension download');
   let resp;
   try {
@@ -186,7 +224,11 @@ async function downloadAndExtract(chromeId) {
       : `Download failed: ${(e && e.message) || 'network error'}.`);
   }
 
-  const crxBuf = Buffer.from(resp.data);
+  // 204: the store has no package of this extension for that Chrome version (or no such extension).
+  if (resp && resp.status === 204) {
+    throw new Error(`The Chrome Web Store has no package of this extension for Chrome ${prodversion}. It may need a newer Chrome: download one on the Browsers page.`);
+  }
+  const crxBuf = Buffer.from(resp.data || []);
   if (crxBuf.length < 16) throw new Error('Downloaded package was empty or truncated.');
   const zipBuf = crxToZip(crxBuf);
 
@@ -342,6 +384,9 @@ async function removeRetiredExtensions({ db = getPrisma(), root = extensionsRoot
 
 module.exports = {
   assertSafeZipEntry,
+  chromeProdVersion,
+  downloadUrlFor,
+  downloadAndExtract,
   assertNoLinksUnder,
   RECOMMENDED_EXTENSIONS,
   RETIRED_EXTENSION_IDS,

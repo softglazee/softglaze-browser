@@ -196,14 +196,36 @@ function isolatedClientScript(cfg, run) {
     if (ok) p.res(val); else p.rej(new Error(String(val || 'bridge error')));
   };
   function viaFetch(name, args) {
-    return fetch(E + '/' + encodeURIComponent(name), {
-      method: 'POST', body: JSON.stringify({ args: args, key: K }),
-      // keepalive: a call made as the page navigates away (autofill marking an
-      // identity used on the final submit) must still reach main.
-      cache: 'no-store', credentials: 'omit', mode: 'cors', keepalive: true
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    var sent;
+    try {
+      sent = fetch(E + '/' + encodeURIComponent(name), {
+        method: 'POST', body: JSON.stringify({ args: args, key: K }),
+        // keepalive: a call made as the page navigates away (autofill marking an
+        // identity used on the final submit) must still reach main.
+        cache: 'no-store', credentials: 'omit', mode: 'cors', keepalive: true
+      });
+    } catch (e) { sent = Promise.reject(e); }
+    // A request that never reached main (a page CSP whose connect-src refuses the sentinel host) is
+    // marked, so rpc can send it over the binding instead; an answer from main is never re-sent.
+    return sent.then(function (r) { return r.json(); }, function (e) {
+      var err = new Error(String((e && e.message) || 'fetch failed'));
+      err.unsent = true;
+      throw err;
+    }).then(function (d) {
       if (d && d.error) throw new Error(d.error);
       return d ? d.result : null;
+    });
+  }
+  // Main adds the binding to this world once the document has committed. A call made before then
+  // goes by fetch, or waits here for the binding when a CSP refuses the fetch.
+  function waitForBinding(ms) {
+    return new Promise(function (res) {
+      var until = Date.now() + ms;
+      (function tick() {
+        if (typeof window[B] === 'function') { res(true); return; }
+        if (Date.now() >= until) { res(false); return; }
+        setTimeout(tick, 50);
+      })();
     });
   }
   function viaBinding(name, args, timeoutMs) {
@@ -219,9 +241,11 @@ function isolatedClientScript(cfg, run) {
     });
   }
   // Pick the transport once per document: a binding that exists but never answers
-  // (an engine that drops binding events) must not hang the widget forever.
+  // (an engine that drops binding events) must not hang the widget forever. While the binding is not
+  // there yet nothing is fixed, so an early call does not lock the document into fetch.
   function ensureMode() {
     if (mode) return Promise.resolve(mode);
+    if (typeof window[B] !== 'function') return Promise.resolve('fetch');
     if (!probing) {
       probing = viaBinding('__ping', [], 2500)
         .then(function () { mode = 'binding'; return mode; }, function () { mode = 'fetch'; return mode; });
@@ -237,9 +261,21 @@ function isolatedClientScript(cfg, run) {
           throw e;
         });
       }
-      return viaFetch(name, args);
+      return viaFetch(name, args).catch(function (e) {
+        if (!e || !e.unsent || mode === 'fetch') throw e;
+        return waitForBinding(3000).then(function (present) {
+          if (!present) throw e;
+          return ensureMode().then(function (m2) {
+            if (m2 !== 'binding') throw e;
+            return viaBinding(name, args, 0);
+          });
+        });
+      });
     });
   }
+  // Settle the transport before the first call: a probe started by that call would still be in
+  // flight if the call's page then navigates away (a recorded click on a submit button).
+  waitForBinding(5000).then(function (present) { if (present) ensureMode(); });
   run(rpc);
 }
 
@@ -351,6 +387,27 @@ async function attachIsolatedWorld(page, handlers, runSource) {
     const r = await cdp.send('Page.createIsolatedWorld', { frameId, worldName });
     return r.executionContextId;
   };
+  // Without Runtime.enable (never sent here: it is a detection tell) a binding reaches only the contexts
+  // of the world that exist when it is added, never a later document's. So it is added again for each
+  // top-level document once that document has committed: removed, then added by name, which installs
+  // it in the world's existing contexts. Until then (a few ms) the client uses the fetch.
+  let boundContextId = null;
+  const bindWorld = async () => {
+    try {
+      const contextId = await topContextId(); // the world of the current document (made if missing)
+      if (contextId == null || contextId === boundContextId) return;
+      boundContextId = contextId;
+      try { await cdp.send('Runtime.removeBinding', { name: cfg.binding }); } catch (e) { /* not added yet */ }
+      await cdp.send('Runtime.addBinding', { name: cfg.binding, executionContextName: worldName });
+    } catch (e) { /* this document keeps the fetch */ }
+  };
+  const onFrameNavigated = (event) => {
+    if (event && event.frame && !event.frame.parentId) bindWorld();
+  };
+  const onDomContent = () => { bindWorld(); };
+  cdp.on('Page.frameNavigated', onFrameNavigated);
+  cdp.on('Page.domContentEventFired', onDomContent);
+
   // Run fn(...args) in the top frame's isolated world; JSON-able args/result only.
   const evaluate = async (fn, ...args) => {
     const executionContextId = await topContextId();
@@ -370,9 +427,13 @@ async function attachIsolatedWorld(page, handlers, runSource) {
     const contextId = await topContextId();
     await cdp.send('Runtime.evaluate', { expression: source, contextId });
   } catch (e) { /* no document yet - the new-document script covers it */ }
+  await bindWorld();
 
   const dispose = async () => {
-    try { cdp.off('Fetch.requestPaused', onPaused); cdp.off('Runtime.bindingCalled', onBinding); } catch (e) { /* ignore */ }
+    try {
+      cdp.off('Fetch.requestPaused', onPaused); cdp.off('Runtime.bindingCalled', onBinding);
+      cdp.off('Page.frameNavigated', onFrameNavigated); cdp.off('Page.domContentEventFired', onDomContent);
+    } catch (e) { /* ignore */ }
     try { if (scriptId) await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: scriptId }); } catch (e) { /* ignore */ }
     try { await cdp.send('Fetch.disable'); } catch (e) { /* ignore */ }
     try { await cdp.detach(); } catch (e) { /* ignore */ }

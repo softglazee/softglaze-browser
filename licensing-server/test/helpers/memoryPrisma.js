@@ -29,7 +29,11 @@ const UNIQUE = {
   segment: [['tenantId', 'name']],
   metricSnapshot: [['tenantId', 'day']],
   jobLock: [],
-  storeEntitlement: [['tenantId', 'installId', 'productId']]
+  storeEntitlement: [['tenantId', 'installId', 'productId']],
+  identity: [['tenantId', 'provider', 'providerUserId']],
+  authState: [['stateHash']],
+  authCode: [['codeHash']],
+  authSession: [['tokenHash']]
 };
 const ID_FIELD = { jobLock: 'name' };
 
@@ -58,6 +62,10 @@ const DEFAULTS = {
   webhookEvent: () => ({ receivedAt: new Date(), processedAt: null }),
   licenseCode: () => ({ tier: 'pro', months: 1, redeemedAt: null, redeemedBy: null }),
   tenantPaymentConfig: () => ({ enabled: false }),
+  identity: () => ({ email: null, emailVerified: false, login: null, lastUsedAt: null }),
+  authState: () => ({ ipHash: null, usedAt: null }),
+  authCode: () => ({ usedAt: null }),
+  authSession: () => ({ identityId: null, ipHash: null, lastUsedAt: null, revokedAt: null }),
   storeEntitlement: () => ({
     customerId: null, licenseId: null, account: null, planKey: null, tier: 'pro', status: 'active', verified: false, verifyNote: null,
     expiresAt: null, accessUntil: null, autoRenew: null, recurrenceId: null, recurrenceState: null, storeId: null, skuStoreId: null,
@@ -67,7 +75,7 @@ const DEFAULTS = {
 };
 const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement']);
 const HAS_CREATED_AT = new Set(['tenant', 'plan', 'install', 'license', 'payment', 'licenseCode', 'customer', 'customerEvent', 'emailVerification',
-  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement']);
+  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession']);
 
 const isObj = (v) => v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v);
 const val = (v) => (v instanceof Date ? v.getTime() : v);

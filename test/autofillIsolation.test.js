@@ -56,8 +56,11 @@ const CFG = {
 function runIsolated({ binding } = {}) {
   const calls = { fetch: [] };
   const win = {};
+  // The client polls up to 5 s for a binding main adds later (pageBridge); unref'd so a test without one
+  // does not wait for the poll to end.
+  const unrefTimeout = (fn, ms) => { const t = setTimeout(fn, ms); if (t && t.unref) t.unref(); return t; };
   const sandbox = {
-    window: win, Promise, Object, Array, Error, JSON, String, setTimeout, clearTimeout, encodeURIComponent,
+    window: win, Promise, Object, Array, Error, JSON, String, setTimeout: unrefTimeout, clearTimeout, encodeURIComponent,
     fetch: (url, opts) => {
       calls.fetch.push({ url, opts });
       return Promise.resolve({ json: () => Promise.resolve({ result: 'via-fetch' }) });

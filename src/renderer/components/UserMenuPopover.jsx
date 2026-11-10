@@ -132,7 +132,8 @@ export default function UserMenuPopover({
       <div className="border-t border-border p-1.5 shrink-0">
         <button onClick={onAccount} className={`${rowBtn} text-muted-foreground hover:bg-secondary hover:text-foreground`}><UserCog className="w-4 h-4 shrink-0" />{t('shell.accountSettings')}</button>
         <button onClick={onManageMembers} className={`${rowBtn} text-muted-foreground hover:bg-secondary hover:text-foreground`}><Users className="w-4 h-4 shrink-0" />{t('shell.manageMembers')}</button>
-        {vault?.enabled && <button onClick={onLock} className={`${rowBtn} text-muted-foreground hover:bg-secondary hover:text-foreground`}><Lock className="w-4 h-4 shrink-0" />{t('shell.lockWorkspace')}</button>}
+        {/* A one-click workspace (1.0.26) has no password to unlock with: Sign out instead of Lock. */}
+        {vault?.enabled && !vault?.signIn && <button onClick={onLock} className={`${rowBtn} text-muted-foreground hover:bg-secondary hover:text-foreground`}><Lock className="w-4 h-4 shrink-0" />{t('shell.lockWorkspace')}</button>}
       </div>
       <div className="border-t border-border p-1.5 shrink-0">
         <button onClick={onLogout} className={`${rowBtn} text-destructive hover:bg-destructive/10`}><LogOut className="w-4 h-4 shrink-0" />{t('shell.logOut')}</button>

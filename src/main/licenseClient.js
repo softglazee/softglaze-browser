@@ -162,6 +162,8 @@ function requestJson(method, pathName, body, opts = {}) {
         err.status = res.statusCode;
         // e.g. trial_used carries reason 'machine' | 'email' | 'network'.
         if (typeof json.reason === 'string') err.reason = json.reason;
+        // move_limit (one-click sign-in) says when the next move is possible.
+        if (typeof json.retryAt === 'string') err.retryAt = json.retryAt;
         if (code === 'machine_mismatch') noteIssue('machine_mismatch');
         reject(err);
       });
@@ -210,7 +212,30 @@ const api = {
   plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 }),
   // Public (no auth): the website payment providers switched on for this tenant, with their names, and
   // whether Microsoft Store sales are on. -> { providers: [{ id, label, kind }], store: { salesEnabled } }
-  checkoutMethods: () => requestJson('GET', `/v1/checkout/methods?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 })
+  checkoutMethods: () => requestJson('GET', `/v1/checkout/methods?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 }),
+
+  // One-click sign-in (1.0.26, licensing-server/src/routes/auth.js). The browser leg runs in the system browser;
+  // these are the app's own calls, each with the install secret.
+  // -> { providers: ['github'], email: true }: the sign-in providers whose keys the server has.
+  authProviders: () => requestJson('GET', `/auth/providers?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 6000 }),
+  // The one-time code from softglaze://auth (or the loopback listener) and the PKCE verifier -> the sign-in.
+  authExchange: ({ installId, installSecret, code, codeVerifier, expectCustomerId }) => postJson('/auth/exchange', {
+    tenantId: tenantConfig().tenantId, installId, installSecret, code, codeVerifier, expectCustomerId: expectCustomerId || undefined,
+    appVersion: appVersion(), channel: installChannel()
+  }),
+  // "Continue with email": the same 6-digit code as verify/start, which then IS the sign-in.
+  authEmailStart: ({ installId, installSecret, email, lang }) => postJson('/auth/email/start', {
+    tenantId: tenantConfig().tenantId, installId, installSecret, email, lang: lang || 'en', appVersion: appVersion(), channel: installChannel()
+  }),
+  authEmailVerify: ({ installId, installSecret, email, code, expectCustomerId }) => postJson('/auth/email/verify', {
+    tenantId: tenantConfig().tenantId, installId, installSecret, email, code, expectCustomerId: expectCustomerId || undefined
+  }),
+  // -> { signedIn, provider, customer, methods, licence } or 401 session_invalid.
+  authMe: ({ installId, installSecret, session }) => requestJson('POST', '/auth/me', { tenantId: tenantConfig().tenantId, installId, installSecret, session }, { timeoutMs: 8000 }),
+  authProfile: ({ installId, installSecret, session, useCase, useCaseOther }) => requestJson('POST', '/auth/profile', { tenantId: tenantConfig().tenantId, installId, installSecret, session, useCase, useCaseOther }, { timeoutMs: 8000 }),
+  // -> { ok, moved, remaining } | 429 move_limit (2 moves per licence per 30 days).
+  authMoveLicence: ({ installId, installSecret, session }) => postJson('/auth/licence/move', { tenantId: tenantConfig().tenantId, installId, installSecret, session, move: true }),
+  authLogout: ({ installId, installSecret, session }) => requestJson('POST', '/auth/logout', { tenantId: tenantConfig().tenantId, installId, installSecret, session }, { timeoutMs: 6000 })
 };
 
 module.exports = { verifyLease, api, postJson, machineHash, appVersion, licenseIssue, clearLicenseIssue };

@@ -86,6 +86,7 @@ test('Proxy302 is wired: adapter, API base, registry and panel entry', () => {
   // the Apifox server list, answered 404 on every path on 2026-11-03.
   assert.match(IPC, /PROXY302_API = 'https:\/\/proxy302\.com\/open_api\/v3'/);
   assert.doesNotMatch(IPC, /open\.proxy302\.com/);
-  assert.match(UI, /key: 'proxy302'.*creds: \['username', 'password'\].*poolType: \[\['premium', 'Premium line'\], \['standard', 'Standard line'\]\].*count: true.*geo: true.*noSession: true.*maxLife: 120.*proto: true/);
+  // State and City on Premium only, and Standard's four session times (1.0.27 backlog 61).
+  assert.match(UI, /key: 'proxy302'.*creds: \['username', 'password'\].*poolType: \[\['premium', 'Premium line'\], \['standard', 'Standard line'\]\].*count: true.*geo: true, geoPools: \['premium'\].*noSession: true.*lifeOptions: \[10, 30, 60, 120\].*proto: true/);
   assert.doesNotMatch(UI, /key: 'proxy302', name: 'Proxy302', unavailable: true/);
 });

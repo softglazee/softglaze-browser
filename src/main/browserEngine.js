@@ -390,8 +390,10 @@ function personaPickPasswordTarget(sel, slot) {
     var inView = function (r) { return r.bottom > 0 && r.right > 0 && r.top < vh && r.left < vw; };
     var r = el.getBoundingClientRect();
     // A real field below the fold is scrolled to (as a person would); a decoy parked
-    // off-screen with absolute positioning stays out of view and is refused.
-    if (!inView(r) && r.width >= 2 && r.height >= 2) { try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) {} r = el.getBoundingClientRect(); }
+    // off-screen with absolute positioning stays out of view and is refused. Instantly, as in
+    // personaPrepareTarget: on a page with CSS smooth scrolling (Bootstrap sets it on :root) the field
+    // was still out of view when measured, so every password below the fold "did not take".
+    if (!inView(r) && r.width >= 2 && r.height >= 2) { try { el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }); } catch (e) {} r = el.getBoundingClientRect(); }
     if (r.width < 2 || r.height < 2 || !inView(r)) return false;
     for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
       var cs = window.getComputedStyle(n);

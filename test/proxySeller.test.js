@@ -94,7 +94,9 @@ test('ports are capped at the documented 1000 per list', () => {
 
 test('the download asks for the protocol that was chosen and rows are typed from it', () => {
   const body = fnBody('fetchProxySellerPool');
-  assert.match(body, /proto: socks \? 'socks5' : 'https'/);
+  // The v2 export takes `protocol` (http or socks5); `proto` does not apply to resident lists (backlog 32).
+  assert.match(body, /protocol: socks \? 'socks5' : 'http'/);
+  assert.doesNotMatch(body, /\bproto: /);
   assert.match(body, /type: socks \? 'SOCKS5' : 'HTTP'/);
   assert.match(body, /parseLoginList\(text\)/);
 });

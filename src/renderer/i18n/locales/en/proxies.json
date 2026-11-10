@@ -412,6 +412,9 @@
     "title": "Batch Add Proxies",
     "descriptionPrefix": "Paste one proxy per line. Supported format:",
     "defaultType": "Default Type",
+    "providerLabel": "Provider (optional)",
+    "providerNone": "None",
+    "providerHint": "Tags these proxies with the provider they came from, so they group under it here and count on the Proxy providers page.",
     "proxyLines": "Proxy Lines",
     "resultTitle": "Batch Result",
     "total": "Total",
@@ -506,7 +509,8 @@
       "noActivePlans": "No active plans on this account.",
       "noActiveProxies": "No active proxies on this account.",
       "planSizeOnly": "The API reports the plan size, not how much traffic is left.",
-      "firstPageOnly": "Worked out from your first 1000 proxies."
+      "firstPageOnly": "Worked out from your first 1000 proxies.",
+      "usedLast7Days": "Traffic used in the last 7 days; the API does not report what is left."
     }
   }
 }

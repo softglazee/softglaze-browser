@@ -15,6 +15,7 @@ const { hmacHex, safeEqual } = require('../crypto/derive');
 const { renderFor, sendNow } = require('../email/outbox');
 const transport = require('../email/transport');
 const { cleanLead, leadUpdate } = require('./lead');
+const { signedInOnInstall } = require('../auth/accounts');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
 
@@ -171,14 +172,15 @@ async function checkVerification(db, tenant, install, input, { now = Date.now(),
 }
 
 // Does this install have a customer whose email we verified on it? The same test the trial ledger uses
-// (a proven code from this install for the customer the install is linked to), plus the customer still
-// exists, is verified and is not deleted. -> { verified: true, email } | { verified: false }.
+// (a proven code from this install for the customer the install is linked to, or from 1.0.26 a one-click
+// sign-in on this install, src/auth/accounts.js), plus the customer still exists, is verified and is not
+// deleted. -> { verified: true, email } | { verified: false }.
 async function accountStatus(db, tenant, install) {
   if (!install || !install.customerId) return { verified: false };
   const row = await db.emailVerification.findFirst({
     where: { tenantId: tenant.id, installId: install.id, customerId: install.customerId, NOT: { verifiedAt: null } }
   });
-  if (!row) return { verified: false };
+  if (!row && !(await signedInOnInstall(db, tenant.id, install.id, install.customerId))) return { verified: false };
   const c = await db.customer.findUnique({ where: { id: install.customerId } });
   if (!c || c.tenantId !== tenant.id || !c.emailVerifiedAt || c.deletedAt) return { verified: false };
   return { verified: true, email: c.email };

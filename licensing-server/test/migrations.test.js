@@ -133,3 +133,24 @@ test('the sign-up lead fields migration only adds NULL columns, after the Store 
     assert.match(block('EmailVerification'), new RegExp(`\\n\\s+${col}\\s+String\\?\\s+@db\\.VarChar\\(${n}\\)`), col);
   }
 });
+
+// November 2026, app 1.0.26 one-click sign-in: four new tables, nothing else.
+test('the one-click sign-in migration only creates its own four tables, last', () => {
+  const name = '20261110120000_one_click_signin';
+  const sql = read(name);
+  // (ON DELETE / ON UPDATE CASCADE in the foreign keys are not statements.)
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|^\s*(UPDATE|DELETE|TRUNCATE|INSERT)\b/im.test(sql), 'additive only');
+  assert.deepEqual([...sql.matchAll(/CREATE TABLE `(\w+)`/g)].map((m) => m[1]), ['Identity', 'AuthState', 'AuthCode', 'AuthSession']);
+  assert.deepEqual([...new Set([...sql.matchAll(/ALTER TABLE `(\w+)`/g)].map((m) => m[1]))], ['Identity', 'AuthState', 'AuthCode', 'AuthSession'], 'only the new tables get foreign keys');
+  assert.match(sql, /UNIQUE INDEX `Identity_tenantId_provider_providerUserId_key`\(`tenantId`, `provider`, `providerUserId`\)/);
+  assert.match(sql, /UNIQUE INDEX `AuthState_stateHash_key`/);
+  assert.match(sql, /UNIQUE INDEX `AuthCode_codeHash_key`/);
+  assert.match(sql, /UNIQUE INDEX `AuthSession_tokenHash_key`/);
+  assert.ok(!/ADD COLUMN/.test(sql), 'no column on an existing table');
+  for (const t of EXISTING) assert.ok(!new RegExp('CREATE TABLE `' + t + '`').test(sql), `${t} is not re-created`);
+  const dirs = migrationDirs();
+  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  // No secret or token column in clear: hashes only.
+  for (const col of ['stateHash', 'nonceHash', 'codeHash', 'tokenHash']) assert.match(sql, new RegExp('`' + col + '` VARCHAR[(]64[)] NOT NULL'));
+  assert.ok(!/`(token|code|state|nonce|accessToken|secret)` /.test(sql), 'no raw token column');
+});

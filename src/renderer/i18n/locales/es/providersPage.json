@@ -68,6 +68,8 @@
     "connector": "Conector",
     "gateway": "Gateway",
     "gatewayFromKey": "Se lee de tu clave en cada descarga",
+    "gatewayManual": "De la lista que pegas en el grupo de proxies (Añadir en lote)",
+    "gatewayPorts": "{{host}}:{{port}} HTTP, :{{socksPort}} SOCKS5",
     "key": "Clave",
     "keySaved": "Guardada y cifrada en este equipo",
     "keyNotSaved": "No guardada",

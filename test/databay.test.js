@@ -21,8 +21,9 @@ test('databayUsername: zone is always present, residential by default', () => {
 test('databayUsername: one location filter, the most specific', () => {
   assert.equal(U.databayUsername('u1', { country: 'us' }), 'u1-zone-residential-countryCode-US');
   assert.equal(U.databayUsername('u1', { country: 'US', state: 'California' }), 'u1-zone-residential-stateName-California');
-  assert.equal(U.databayUsername('u1', { country: 'US', state: 'CA', city: 'Los Angeles' }), 'u1-zone-residential-cityName-Los Angeles');
-  assert.equal(U.databayUsername('u1', { country: 'FR', city: 'Aix-en-Provence' }), 'u1-zone-residential-cityName-Aix en Provence', 'hyphens never leak into a value');
+  // Connection String page: inside a value a space is %20 and a hyphen %2D (the hyphen separates parameters).
+  assert.equal(U.databayUsername('u1', { country: 'US', state: 'CA', city: 'Los Angeles' }), 'u1-zone-residential-cityName-Los%20Angeles');
+  assert.equal(U.databayUsername('u1', { country: 'FR', city: 'Aix-en-Provence' }), 'u1-zone-residential-cityName-Aix%2Den%2DProvence', 'a raw hyphen never leaks into a value');
 });
 
 test('databayUsername: mobile and datacenter take country only', () => {

@@ -136,7 +136,8 @@ test('Proxy-Seller page info reads the documented paging fields', () => {
 const GATEWAYS = lift(/const VENDOR_GATEWAYS = Object\.freeze\(\{[\s\S]*?\n\}\);/.exec(IPC)[0], {}, ['VENDOR_GATEWAYS']).VENDOR_GATEWAYS;
 const GATEWAY_SECTION = section('// ---- Session gateways: Bright Data', '// ---- DataImpulse ----');
 
-function gateways({ probe = { success: true, ip: '203.0.113.5' }, routes = {} } = {}) {
+// settings is the Setting table the AnyIP provisioning store reads and writes (one per test run).
+function gateways({ probe = { success: true, ip: '203.0.113.5' }, routes = {}, settings = {} } = {}) {
   const probes = [];
   const calls = [];
   const fns = lift(GATEWAY_SECTION, {
@@ -145,6 +146,11 @@ function gateways({ probe = { success: true, ip: '203.0.113.5' }, routes = {} } 
     VENDOR_GATEWAYS: GATEWAYS,
     testProxyConnectivity: async (row) => { probes.push(row); return probe; },
     scrubProxySecrets: (m) => String(m),
+    getPrisma: () => ({}),
+    proxySecrets: { hashPassword: async (_db, plain) => `h:${require('node:crypto').createHash('sha256').update(String(plain)).digest('hex')}` },
+    secretStore: { seal: (v) => `sealed:${v}`, open: (v) => String(v).replace(/^sealed:/, '') },
+    readSetting: async (key, fallback) => (Object.prototype.hasOwnProperty.call(settings, key) ? JSON.parse(JSON.stringify(settings[key])) : fallback),
+    writeSetting: async (key, value) => { settings[key] = JSON.parse(JSON.stringify(value)); },
     httpRequestText: async (url, options = {}) => {
       calls.push({ url, options });
       const key = Object.keys(routes).find((r) => url.startsWith(r));
@@ -276,7 +282,7 @@ test('AnyIP provisioning calls dashboard.anyip.io and falls back to the older ro
   assert.equal(g.calls[0].options.headers['Api-Key'], 'key1');
   const body = JSON.parse(g.calls[0].options.body);
   assert.match(body.password, /^[a-zA-Z0-9_]{6,}$/, 'the documented password rule');
-  assert.match(rows[0].username, /^user_srv1,type_residential,session_/);
+  assert.equal(rows[0].username, 'user_srv1,type_residential', 'one row, no session name, Keep same IP blank: the rotating login');
   assert.equal(rows[0].password, body.password);
   assert.doesNotMatch(IPC, /api\.anyip\.io/, 'api.anyip.io no longer resolves');
 });
@@ -491,7 +497,8 @@ test('the catalog lines carry the documented targeting', () => {
   assert.match(providerLine('smartproxy'), /gateway: \{ host: 'gate\.decodo\.com', port: 7000/);
   assert.match(IPC, /smartproxy: \{ host: 'gate\.decodo\.com', port: 7000, type: 'HTTP' \}/);
   for (const k of ['brightdata', 'oxylabs', 'smartproxy']) assert.match(providerLine(k), /apiMint: \{/, k);
-  assert.match(providerLine('brightdata'), /apiMint: \{ zone: true \}/);
+  // stateCode: Bright Data takes a US state as its two-letter code (1.0.27 backlog 57).
+  assert.match(providerLine('brightdata'), /apiMint: \{ zone: true, stateCode: true \}/);
   assert.match(providerLine('apify'), /usState: true/);
   assert.match(providerLine('anyip'), /geo: true/);
   assert.match(providerLine('anyip'), /proto: true/);

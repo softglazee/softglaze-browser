@@ -162,3 +162,52 @@ Why this order: the new code reads and writes the new columns, so it needs the m
 before this change already ignores `channel` in request bodies (routes pick their fields by name), so a
 1.0.23 app talking to it keeps working, it just records nothing. Rollback: redeploy the previous build; the
 two columns are ignored by the old code.
+
+---
+
+# Deploy note: one-click sign-in (app 1.0.26)
+
+"Continue with GitHub" and "Continue with email" (a 6-digit code, no password) in the app's first screen
+([ADMIN-API.md, One-click sign-in](ADMIN-API.md#one-click-sign-in-app-1026)). Deploy only after the PR is
+merged.
+
+Order: **this server, its migration and the GitHub keys first, then the 1.0.26 app** (website installer and
+Store package). Until the keys are set, `GET /auth/providers` lists no provider and the app hides the GitHub
+button; "Continue with email" works as soon as the migration ran.
+
+1. Build and deploy the code as in step 2 of the first note (`npm run build` regenerates the Prisma client;
+   no new dependency: GitHub is called with Node's own `fetch`).
+2. `bash scripts/migrate-deploy.sh` (backup first) straight after the new build starts. One migration applies:
+   `20261110120000_one_click_signin`: four new tables (`Identity`, `AuthState`, `AuthCode`, `AuthSession`)
+   with foreign keys to `Tenant`. Nothing on an existing table changes. The new build answers `/auth/*` only
+   once they exist; the existing routes keep working before that (the trial ledger and `/v1/account/status`
+   treat a missing table as "no sign-in"). Tested on MariaDB 10.4: all migrations applied to an empty
+   database, and `prisma migrate diff` from the database to `schema.prisma` reports no difference.
+3. The GitHub OAuth App and its keys: follow `D:\SoftGlaze-Browser-Login\GITHUB-OAUTH-SETUP.md` (the owner
+   creates the app and types the secret into `config/.env` himself; never in chat, never in git):
+
+   | Variable | Value |
+   |---|---|
+   | `GITHUB_CLIENT_ID` | the OAuth App's Client ID |
+   | `GITHUB_CLIENT_SECRET` | a client secret generated on the OAuth App page |
+   | `GITHUB_API_VERSION` | optional, default `2026-03-10` |
+   | `AUTH_RATE_PER_MIN` | optional, default 30 (per client IP per minute for `/auth/*`) |
+
+   `PUBLIC_BASE_URL` must be `https://api.softglaze.com` (the GitHub callback is
+   `PUBLIC_BASE_URL/auth/callback/github`, and the nonce cookie is `Secure` only on https). The keys are read
+   live from `config/.env`; no restart is needed.
+4. Check:
+   - `curl "https://api.softglaze.com/auth/providers?tenantId=cmu65rczt0000qkh0602kos0m"` answers
+     `{"providers":["github"],"email":true}`;
+   - open `https://api.softglaze.com/auth/start?provider=github&tenant=cmu65rczt0000qkh0602kos0m&app_redirect=softglaze://auth&code_challenge=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&code_challenge_method=S256&state=checkcheckcheck12`
+     in a browser: it must go to GitHub's "Authorize SoftGlaze Browser" page (stop there; this test code is
+     not an app);
+   - after the app is out: sign in once with GitHub and once with email, then `GET /v1/admin/customers/:id`
+     shows `signInMethods` and `signIns`.
+5. Ship app 1.0.26.
+
+Rollback: redeploy the previous build. The four tables are then unused (nothing else reads them), and apps
+that already signed in keep opening offline; "Continue with GitHub" and "Continue with email" fail with a
+server error until this build is back, and the old sign-up form ("More options") keeps working. To remove
+the tables after a rollback: `DROP TABLE AuthSession, AuthCode, AuthState, Identity;` (after a backup), then
+`DELETE FROM _prisma_migrations WHERE migration_name = '20261110120000_one_click_signin';`.

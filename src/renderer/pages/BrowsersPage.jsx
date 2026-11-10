@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Download, Check, Loader2, RefreshCcw, Cloud, Globe, Flame, HardDrive, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { rowDownload } from '@/lib/browserRows.mjs';
 
 function MiniStat({ icon: Icon, label, value, color }) {
   return (
@@ -23,7 +24,7 @@ function MiniStat({ icon: Icon, label, value, color }) {
 // One downloadable/installed engine version row (shared by Chrome + Firefox).
 function VersionRow({ label, versionText, installed, download, accent, onDownload, onPause, onResume }) {
   const { t } = useTranslation('browsers');
-  const d = download;
+  const d = rowDownload(installed, download);
   const downloading = d && (d.state === 'downloading' || d.state === 'extracting' || d.state === 'installing' || d.state === 'verifying' || d.state === 'queued');
   const paused = d && d.state === 'paused';
   const interrupted = d && d.state === 'interrupted';

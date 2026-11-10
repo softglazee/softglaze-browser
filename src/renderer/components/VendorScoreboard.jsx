@@ -172,14 +172,15 @@ export default function VendorScoreboard({ onSelect }) {
             aria-controls="vendor-scoreboard-body"
             title={open ? t('hide') : t('show')}
             onClick={toggle}
-            className="flex items-center gap-2 rounded text-[15px] font-semibold text-foreground font-display outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex items-center gap-2 rounded text-left text-[15px] font-semibold text-foreground font-display outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', !open && '-rotate-90')} aria-hidden="true" />
             <Trophy className="w-4 h-4 text-primary" aria-hidden="true" />
             {t('title')}
           </button>
         </h2>
-        <p className="min-w-0 flex-1 text-[12.5px] text-muted-foreground">{t('note', { days })}</p>
+        {/* A minimum width moves the note under the title in a narrow window instead of squeezing it. */}
+        <p className="min-w-[12rem] flex-1 text-[12.5px] text-muted-foreground">{t('note', { days })}</p>
         {open && (
           <Button variant="secondary" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} aria-hidden="true" /> {t('refresh')}

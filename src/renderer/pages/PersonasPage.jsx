@@ -478,10 +478,12 @@ function DataVault() {
             </div>
           ) : (
             <div className="w-full">
-              <table className="w-full min-w-[1200px] border-collapse text-left text-sm whitespace-nowrap">
-                <thead className="bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
+              {/* Fits a 1440 px window (the sidebar takes 232): Phone and Created, also in the edit dialog, show
+                  from 2xl; narrower windows scroll the table sideways inside the card. */}
+              <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+                <thead className="bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm whitespace-nowrap">
                   <tr>
-                    <th className="px-5 py-4 w-10">
+                    <th className="px-3 py-4 w-10">
                       <input
                         type="checkbox"
                         aria-label={t('table.selectAll')}
@@ -491,16 +493,16 @@ function DataVault() {
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="px-5 py-4">{t('table.colName')}</th>
-                    <th className="px-5 py-4">{t('table.colEmail')}</th>
-                    <th className="px-5 py-4">{t('table.colUsername')}</th>
-                    <th className="px-5 py-4">{t('table.colPassword')}</th>
-                    <th className="px-5 py-4">{t('table.colPhone')}</th>
-                    <th className="px-5 py-4">{t('table.colAddress')}</th>
-                    <th className="px-5 py-4">{t('table.colLabel')}</th>
-                    <th className="px-5 py-4">{t('table.colTimesUsed')}</th>
-                    <th className="px-5 py-4">{t('table.colCreated')}</th>
-                    <th className="px-5 py-4 text-right">{t('table.colActions')}</th>
+                    <th className="px-3 py-4">{t('table.colName')}</th>
+                    <th className="px-3 py-4">{t('table.colEmail')}</th>
+                    <th className="px-3 py-4">{t('table.colUsername')}</th>
+                    <th className="px-3 py-4">{t('table.colPassword')}</th>
+                    <th className="px-3 py-4 hidden 2xl:table-cell">{t('table.colPhone')}</th>
+                    <th className="px-3 py-4">{t('table.colAddress')}</th>
+                    <th className="px-3 py-4">{t('table.colLabel')}</th>
+                    <th className="px-3 py-4">{t('table.colTimesUsed')}</th>
+                    <th className="px-3 py-4 hidden 2xl:table-cell">{t('table.colCreated')}</th>
+                    <th className="px-3 py-4 text-right">{t('table.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -508,7 +510,7 @@ function DataVault() {
                     const name = [p.firstName, p.lastName].filter(Boolean).join(' ') || '-';
                     return (
                       <tr key={p.id} className={`group/row transition-colors ${selectedIds.has(p.id) ? 'bg-primary/5' : 'hover:bg-card/50'}`}>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <input
                             type="checkbox"
                             aria-label={t('table.selectRow', { name })}
@@ -517,20 +519,20 @@ function DataVault() {
                             onChange={() => toggleSelect(p.id)}
                           />
                         </td>
-                        <td className="px-5 py-4 font-medium text-foreground">{name}</td>
-                        <td className="px-5 py-4 text-muted-foreground">{p.email || '-'}</td>
-                        <td className="px-5 py-4 text-muted-foreground">{p.username || '-'}</td>
-                        <td className="px-5 py-4"><PasswordCell value={p.password} /></td>
-                        <td className="px-5 py-4 text-muted-foreground">{p.phone || '-'}</td>
-                        <td className="px-5 py-4 text-muted-foreground max-w-[240px] truncate" title={addressOf(p)}>{addressOf(p) || '-'}</td>
-                        <td className="px-5 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">-</span>}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4 font-medium text-foreground">{name}</td>
+                        <td className="px-3 py-4 text-muted-foreground whitespace-nowrap">{p.email || '-'}</td>
+                        <td className="px-3 py-4 text-muted-foreground whitespace-nowrap">{p.username || '-'}</td>
+                        <td className="px-3 py-4 whitespace-nowrap"><PasswordCell value={p.password} /></td>
+                        <td className="px-3 py-4 text-muted-foreground whitespace-nowrap hidden 2xl:table-cell">{p.phone || '-'}</td>
+                        <td className="px-3 py-4 text-muted-foreground max-w-[240px] truncate" title={addressOf(p)}>{addressOf(p) || '-'}</td>
+                        <td className="px-3 py-4">{p.label ? <Badge variant="blue">{p.label}</Badge> : <span className="text-muted-dark">-</span>}</td>
+                        <td className="px-3 py-4 whitespace-nowrap">
                           {p.usedCount > 0
                             ? <Badge variant="green" title={p.usedOnUrls?.join(', ')}>{t('table.reuse', { defaultValue: '♻ Reuse · {{count}}', count: p.usedCount })}</Badge>
                             : <span className="text-xs text-muted-foreground">{t('table.never')}</span>}
                         </td>
-                        <td className="px-5 py-4 text-muted-foreground text-xs">{formatDateTime(p.createdAt)}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4 text-muted-foreground text-xs whitespace-nowrap hidden 2xl:table-cell">{formatDateTime(p.createdAt)}</td>
+                        <td className="px-3 py-4">
                           <div className="flex justify-end gap-1.5 transition-opacity opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100">
                             <Button size="sm" variant="ghost" onClick={() => openEdit(p)} className="px-2.5" title={t('table.editIdentity')}>
                               <Edit className="h-4 w-4" />

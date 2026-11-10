@@ -143,6 +143,7 @@ export default function ProxyProvidersPage() {
         const s = r.state === 'unavailable' ? 'notSetUp' : r.state;
         if (s !== filter) return false;
       }
+      // The name carries a vendor's former name too (Decodo (Smartproxy)), and the key matches it as well.
       return !q || r.p.name.toLowerCase().includes(q) || r.p.key.includes(q);
     });
   }, [rows, filter, query]);
@@ -329,6 +330,7 @@ export default function ProxyProvidersPage() {
               testRun={testRun && testRun.key === sel.p.key ? testRun : null}
               lastPull={lastPull && lastPull.key === sel.p.key ? lastPull : null}
               onSynced={handleSynced}
+              onCredsChanged={load}
               openPool={() => navigate('/proxies')}
               denyPull={denyPull}
             />
@@ -349,9 +351,14 @@ function Row({ icon: Icon, label, children }) {
   );
 }
 
-function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, openPool, denyPull = null }) {
+function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, onCredsChanged, openPool, denyPull = null }) {
   const { p, pool, keySaved, trial, state, kind } = sel;
-  const gw = p.gateway ? `${p.gateway.host}:${p.gateway.port}` : null;
+  // A vendor with a separate SOCKS5 port on the same host (DataImpulse 824, NodeMaven 1080) shows both.
+  const gw = p.gateway
+    ? (p.gateway.socksPort
+      ? t('detail.gatewayPorts', { host: p.gateway.host, port: p.gateway.port, socksPort: p.gateway.socksPort })
+      : `${p.gateway.host}:${p.gateway.port}`)
+    : null;
   const trialDay = trial ? parseDay(trial.endsAt) : null;
 
   const TABS = [['pull', t('detail.tabPull')], ['pool', `${t('detail.tabPool')} ${pool.total}`]];
@@ -360,7 +367,9 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
     <>
       <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-border">
         <LogoTile p={p} size="lg" />
-        <div className="min-w-0 flex-1">
+        {/* A minimum width wraps the Dashboard button under the name in a narrow window, so the name and
+            state are never squeezed letter by letter. */}
+        <div className="min-w-[9rem] flex-1">
           <h2 className="text-[17px] font-semibold text-foreground font-display break-words">{p.name}</h2>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
             <StateDot state={state} label={t(`states.${state}`)} />
@@ -378,7 +387,7 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
       <section className="px-5 py-3 border-b border-border" aria-label={t('detail.overview')}>
         <dl className="divide-y divide-border/60">
           <Row icon={Plug} label={t('detail.connector')}>{t(`kind.${kind}`)}</Row>
-          <Row icon={Server} label={t('detail.gateway')}>{gw ? <span className="font-mono text-[12.5px]">{gw}</span> : <span className="text-muted-foreground">{t('detail.gatewayFromKey')}</span>}</Row>
+          <Row icon={Server} label={t('detail.gateway')}>{gw ? <span className="font-mono text-[12.5px]">{gw}</span> : <span className="text-muted-foreground">{t(p.unavailable ? 'detail.gatewayManual' : 'detail.gatewayFromKey')}</span>}</Row>
           {!p.unavailable && (
             <Row icon={KeyRound} label={t('detail.key')}>
               {credsHidden ? <span className="text-muted-foreground">{t('detail.keyHidden')}</span>
@@ -470,7 +479,7 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
                 <Switch checked={testAfter} onChange={setTestAfter} label={t('detail.testAfter')} />
               </label>
 
-              <ProxyProviders embedded selectedKey={p.key} onSynced={onSynced} />
+              <ProxyProviders embedded selectedKey={p.key} onSynced={onSynced} onCredsChanged={onCredsChanged} />
 
               {testRun && (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-[12.5px] text-foreground" role="status">

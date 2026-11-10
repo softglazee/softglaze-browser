@@ -158,7 +158,7 @@ test('U7 group counts refresh after check runs, deletes, batch add and provider 
   // reloads its pool counts after every pull (the pool page reloads on mount).
   assert.match(src, /<Link to="\/proxy-providers"/, 'pool links to the providers page');
   const providers = PAGE('ProxyProvidersPage');
-  assert.match(providers, /<ProxyProviders embedded selectedKey=\{p\.key\} onSynced=\{onSynced\} \/>/, 'provider pull');
+  assert.match(providers, /<ProxyProviders embedded selectedKey=\{p\.key\} onSynced=\{onSynced\} onCredsChanged=\{onCredsChanged\} \/>/, 'provider pull');
   assert.match(fnBody(providers, 'handleSynced'), /await load\(\);/, 'provider pull refreshes counts');
 });
 
