@@ -31,16 +31,20 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
   simplyproxies: 120, // 2 hours, extended while in use
   marsproxies: 1440, // no lifetime is sent: MarsProxies' default of 24 hours
+  proxiessx: 1440, // the app sends -ttl-86400 (Proxies.sx's own default is 1 hour)
   simplynode: 30 // the app sends ttl 1800 seconds
 });
 
 // Every Keep same IP time the form can offer, in minutes; a connector shows those up to its maxLife
-// (24 hours when unset), a pool's own maximum (maxLifeByPool, for example NOVADA's Rotating ISP), or
-// its own lifeOptions list.
+// (24 hours when unset), or its own lifeOptions list (times the shared list has no step for, such as
+// RapidProxy's 180 minutes). A pool's own maximum (maxLifeByPool: NOVADA's Rotating ISP, Databay's
+// Residential Flex, CatProxies' Mobile) cuts either list for that pool, so a pick is never clamped.
 export const LIFE_OPTIONS = Object.freeze([5, 10, 30, 60, 120, 360, 720, 1440, 4320, 10080]);
 export function lifeOptionsFor(geoSync = {}, poolType = '') {
-  if (Array.isArray(geoSync.lifeOptions) && geoSync.lifeOptions.length) return geoSync.lifeOptions.slice();
   const byPool = geoSync.maxLifeByPool && Number(geoSync.maxLifeByPool[poolType]) > 0 ? Number(geoSync.maxLifeByPool[poolType]) : 0;
+  if (Array.isArray(geoSync.lifeOptions) && geoSync.lifeOptions.length) {
+    return byPool ? geoSync.lifeOptions.filter((m) => m <= byPool) : geoSync.lifeOptions.slice();
+  }
   const max = byPool || (Number(geoSync.maxLife) > 0 ? Number(geoSync.maxLife) : 1440);
   return LIFE_OPTIONS.filter((m) => m <= max);
 }

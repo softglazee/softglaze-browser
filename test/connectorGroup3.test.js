@@ -84,7 +84,7 @@ function proxiesSx(overrides = {}) {
     if (/\/account\/proxy-password$/.test(url)) return JSON.stringify({ proxyUsername: 'psx_ab12cd', proxyPassword: 'secret1' });
     throw new Error(`unexpected ${url}`);
   });
-  const A = build([...SHARED_FNS, 'fetchProxiesSxPool'], [...SHARED_CONSTS, 'PROXIESSX_API', 'PROXIESSX_GATEWAY'],
+  const A = build([...SHARED_FNS, 'fetchProxiesSxPool'], [...SHARED_CONSTS, 'PROXIESSX_API', 'PROXIESSX_GATEWAY', 'PROXIESSX_DEFAULT_TTL_MIN'],
     { crypto, ...U, httpRequestText: async (url, opts) => { calls.push(url); return http(url, opts); } });
   return { fetch: A.fetchProxiesSxPool, calls };
 }
@@ -94,7 +94,8 @@ test('Proxies.sx: up to 250 sticky rows (its session limit), rotating rows ask f
   const many = await fetch({ token: 'psx_key', poolType: 'residential', country: 'DE', count: 1000 });
   assert.equal(many.length, 250);
   assert.equal(new Set(many.map((r) => r.username)).size, 250);
-  assert.match(many[0].username, /^psx_ab12cd-peer-de-sid-[a-z0-9_]{8,64}-rot-sticky-failover-strict$/);
+  // Residential is the peer network filtered to residential devices; Keep same IP blank is a 24-hour session record.
+  assert.match(many[0].username, /^psx_ab12cd-peer-de-iptype-residential-sid-[a-z0-9_]{8,64}-ttl-86400-rot-sticky-failover-strict$/);
   assert.deepEqual([many[0].type, many[0].host, many[0].port], ['HTTP', 'gw.proxies.sx', 7000]);
   const one = await fetch({ token: 'psx_key', poolType: 'mobile', country: 'US', count: 1, proxyType: 'socks5' });
   assert.equal(one.length, 1);
@@ -111,7 +112,7 @@ test('Proxies.sx: refuses Mobile outside its six countries, state names, and cou
   await assert.rejects(fetch({ token: 'psx_key', poolType: 'residential', country: 'FR', count: 3 }), /no Residential stock in FR/);
   await assert.rejects(fetch({ token: 'psx_key', poolType: 'mobile', country: 'NL', count: 3 }), /no Mobile stock in NL/);
   const rows = await fetch({ token: 'psx_key', poolType: 'residential', country: 'US', state: 'ny', city: 'New York', count: 2 });
-  assert.match(rows[0].username, /^psx_ab12cd-peer-us-state-ny-city-newyork-sid-/);
+  assert.match(rows[0].username, /^psx_ab12cd-peer-us-iptype-residential-state-ny-city-newyork-sid-/);
 });
 
 test('Proxies.sx: a failed stock read does not block the pull', async () => {
@@ -125,19 +126,22 @@ test('Proxies.sx: a failed stock read does not block the pull', async () => {
 test('MobileProxy.Space: the whole list in one call, How many above 500 is honoured', async () => {
   const list = Array.from({ length: 700 }, (_, i) => ({ proxy_id: i + 1, proxy_host_ip: `10.1.${i >> 8}.${i & 255}`, proxy_http_port: 5000, proxy_socks5_port: 5001, proxy_login: `l${i}`, proxy_pass: 'p' }));
   const seen = [];
-  const A = build([...SHARED_FNS, 'fetchMobileProxySpacePool'], [...SHARED_CONSTS, 'MOBILEPROXYSPACE_API'],
+  const MPS_FNS = [...SHARED_FNS, 'protocolChoice', 'mobileProxySpaceGet', 'fetchMobileProxySpacePool'];
+  const MPS_CONSTS = [...SHARED_CONSTS, 'MOBILEPROXYSPACE_API'];
+  const A = build(MPS_FNS, MPS_CONSTS,
     { crypto, ...U, httpRequestText: async (url) => { seen.push(url); return JSON.stringify({ status: 'ok', list }); } });
   assert.equal((await A.fetchMobileProxySpacePool({ token: 'tok', count: '600' })).length, 600);
   assert.equal((await A.fetchMobileProxySpacePool({ token: 'tok', count: '' })).length, 700);
+  // One list call per pull (these rows carry no id_country, so no country table is asked for).
   assert.deepEqual(seen, ['https://mpsapi.com/api.html?command=get_my_proxy', 'https://mpsapi.com/api.html?command=get_my_proxy']);
-  const B = build([...SHARED_FNS, 'fetchMobileProxySpacePool'], [...SHARED_CONSTS, 'MOBILEPROXYSPACE_API'],
+  const B = build(MPS_FNS, MPS_CONSTS,
     { crypto, ...U, httpRequestText: async () => { throw httpError(429, '{"status":"err","message":"Too many same requests, wait 3 seconds"}'); } });
   await assert.rejects(B.fetchMobileProxySpacePool({ token: 'tok' }), /too many requests/);
 });
 
 function proxySolutions(totalPages, countryOf = () => 'DE') {
   const pages = [];
-  const A = build([...SHARED_FNS, 'fetchProxySolutionsPool'], [...SHARED_CONSTS, 'PROXYSOLUTIONS_API', 'PROXYSOLUTIONS_MAX_PAGES'], {
+  const A = build([...SHARED_FNS, 'protocolChoice', 'fetchProxySolutionsPool'], [...SHARED_CONSTS, 'PROXYSOLUTIONS_API', 'PROXYSOLUTIONS_MAX_PAGES'], {
     crypto, ...U,
     httpRequestText: async (url) => {
       const page = Number(new URL(url).searchParams.get('page'));
