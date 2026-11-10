@@ -388,7 +388,18 @@ test('Dashboard buttons carry the owner\'s live affiliate links, and no made-up 
     proxy302: 'https://proxy302.com/register?ref=0abaab08fed00be49a',
     ipburger: 'https://secure.ipburger.com/aff.php?aff=3283',
     froxy: 'https://froxy.com/?fpr=qwsg97',
-    proxidize: 'https://proxidize.com/get/23265/'
+    proxidize: 'https://proxidize.com/get/23265/',
+    // The owner's decision of 10 Nov: these ten open his affiliate links too (verbatim).
+    novada: 'https://www.novada.com/?referral_code=tdNnxS',
+    coronium: 'https://dashboard.coronium.io/en/sign-up#d181ec35501bba9c002f49c388bef30e',
+    catproxies: 'https://catproxies.com/?ref=hrkymfu',
+    packetstream: 'https://packetstream.io/?psr=kkmtnsnqag',
+    proxmint: 'https://proxmint.com/r/K4EHJHMP',
+    rapidproxy: 'https://www.rapidproxy.io/?code=ZCHGKEK10',
+    proxy6: 'https://proxy6.net/?r=1061960',
+    twoextract: 'https://2extract.com/app/signup?ref=AbaSqU',
+    gsocks: 'https://gsocks.net/ref/dzsdxicb',
+    proxysolutions: 'https://proxy-solutions.net/?rc=t4TYHBATIR'
   };
   for (const [key, url] of Object.entries(live)) assert.ok(providerLine(key).includes(`referral: '${url}'`), key);
   const plain = { ipfoxy: 'https://app.ipfoxy.com/', brightdata: 'https://brightdata.com/', oxylabs: 'https://oxylabs.io/', smartproxy: 'https://dashboard.decodo.com/',
