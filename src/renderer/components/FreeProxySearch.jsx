@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gift, Loader2, ShieldCheck, Square } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import Input from '@/components/ui/Input.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 
 // The free-proxy search: downloads the public lists, tests each candidate through itself, drops dead
 // ones and any that leak the real IP, and saves up to the limit. A search still running from an
@@ -13,6 +15,8 @@ const labelCls = 'mb-1.5 block text-xs font-medium text-muted-foreground';
 
 export default function FreeProxySearch({ onAdded }) {
   const { t } = useTranslation('proxies');
+  // Searching adds proxies to the member's pool: proxies.manage, as main's harvest and cancel.
+  const deny = usePermissions().deny('proxies.manage');
   const [protocol, setProtocol] = useState('http');
   const [country, setCountry] = useState('');
   const [limit, setLimit] = useState(10);
@@ -104,26 +108,26 @@ export default function FreeProxySearch({ onAdded }) {
 
       <form
         className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
-        onSubmit={(e) => { e.preventDefault(); if (!running) start(); }}
+        onSubmit={(e) => { e.preventDefault(); if (!running && !deny) start(); }}
       >
         <div>
           <label className={labelCls} htmlFor="free-protocol">{t('free.protocol')}</label>
-          <select id="free-protocol" className={selectCls} value={protocol} onChange={(e) => setProtocol(e.target.value)} disabled={running}>
+          <select id="free-protocol" className={selectCls} value={protocol} onChange={(e) => setProtocol(e.target.value)} disabled={running || Boolean(deny)} title={deny || undefined}>
             <option value="http">HTTP</option>
             <option value="socks5">SOCKS5</option>
           </select>
         </div>
         <div>
           <label className={labelCls} htmlFor="free-country">{t('free.country')}</label>
-          <Input id="free-country" value={country} maxLength={2} placeholder={t('free.countryPlaceholder')} onChange={(e) => setCountry(e.target.value.toUpperCase())} disabled={running} className="h-10" />
+          <Input id="free-country" value={country} maxLength={2} placeholder={t('free.countryPlaceholder')} onChange={(e) => setCountry(e.target.value.toUpperCase())} disabled={running || Boolean(deny)} title={deny || undefined} className="h-10" />
         </div>
         <div>
           <label className={labelCls} htmlFor="free-limit">{t('free.limit')}</label>
-          <Input id="free-limit" type="number" min={1} max={100} value={limit} onChange={(e) => setLimit(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} disabled={running} className="h-10" />
+          <Input id="free-limit" type="number" min={1} max={100} value={limit} onChange={(e) => setLimit(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} disabled={running || Boolean(deny)} title={deny || undefined} className="h-10" />
         </div>
         {running
-          ? <Button type="button" variant="secondary" onClick={cancel} className="h-10"><Square className="h-3.5 w-3.5" aria-hidden="true" />{t('free.cancel')}</Button>
-          : <Button type="submit" variant="primary" className="h-10"><Gift className="h-4 w-4" aria-hidden="true" />{result ? t('free.again') : t('free.start')}</Button>}
+          ? <GuardedButton deny={deny} type="button" variant="secondary" onClick={cancel} className="h-10"><Square className="h-3.5 w-3.5" aria-hidden="true" />{t('free.cancel')}</GuardedButton>
+          : <GuardedButton deny={deny} type="submit" variant="primary" className="h-10"><Gift className="h-4 w-4" aria-hidden="true" />{result ? t('free.again') : t('free.start')}</GuardedButton>}
       </form>
 
       {running && progress && (
@@ -143,7 +147,7 @@ export default function FreeProxySearch({ onAdded }) {
       {busy && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning" role="status">
           <span>{t('freePage.busy')}</span>
-          <Button type="button" size="sm" variant="secondary" onClick={cancel}>{t('freePage.stopIt')}</Button>
+          <GuardedButton deny={deny} type="button" size="sm" variant="secondary" onClick={cancel}>{t('freePage.stopIt')}</GuardedButton>
         </div>
       )}
 

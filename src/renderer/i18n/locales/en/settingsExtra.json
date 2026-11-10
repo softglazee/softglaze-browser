@@ -316,6 +316,10 @@
     "firefox": {
       "title": "Firefox autofill",
       "desc": "Also install the autofill WebExtension into Firefox profiles (Firefox has no in-page bridge). Loads unsigned on Firefox Developer Edition / Nightly; release Firefox requires the Mozilla-signed build bundled with the installer."
+    },
+    "members": {
+      "title": "Team members can use the Data Vault in autofill",
+      "desc": "Off (default): the autofill button in launched profiles offers the Data Vault's identities only while the Owner is signed in. On: Admins, Managers and Operators get them too, without being able to open the Data Vault page. Only the Owner can change this."
     }
   },
   "audit": {

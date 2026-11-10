@@ -271,6 +271,7 @@ test('importProfileCookies refuses Firefox profiles instead of reporting a silen
   let core = 'Firefox';
   const parsers = ['cookieExpirySeconds', 'netscapeToCookies', 'parseJsonCookies', 'toSetCookieParam', 'cookieHealth'];
   const { importProfileCookies } = loadMain([...VALIDATORS, ...parsers, 'importProfileCookies'], {
+    requirePermission: async () => {},
     assertCanAccessProfile: async () => {},
     getPrisma: () => ({ profile: { findUnique: async () => ({ browserCore: core }) } }),
     BROWSER_CORE, normalizeBrowserCore,

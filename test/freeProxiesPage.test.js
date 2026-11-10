@@ -188,7 +188,8 @@ test('Quick generate counts only working free proxies and maps its source choice
 test('the page has a route and a sidebar item under Proxy pool', () => {
   const app = read('src', 'renderer', 'App.jsx');
   assert.match(app, /const FreeProxiesPage = lazy\(\(\) => import\('@\/pages\/FreeProxiesPage\.jsx'\)\);/);
-  assert.match(app, /<Route path="\/free-proxies" element=\{<FreeProxiesPage \/>\} \/>/);
+  // Behind the Proxies switch under "Visible features" since 1.0.26 (FeatureRoute).
+  assert.match(app, /<Route path="\/free-proxies" element=\{<FeatureRoute feature="proxies"><FreeProxiesPage \/><\/FeatureRoute>\} \/>/);
   const shell = read('src', 'renderer', 'components', 'AppShell.jsx');
   assert.match(shell, /\{ path: '\/proxies', labelKey: 'nav\.proxies', icon: Globe, featureKey: 'proxies' \},\r?\n\s*\{ path: '\/free-proxies', labelKey: 'nav\.freeProxies', icon: Gift, featureKey: 'proxies' \},/);
   assert.match(read('src', 'renderer', 'components', 'CommandPalette.jsx'), /\{ path: '\/free-proxies', labelKey: 'palette\.nav\.freeProxies', icon: Gift \}/);

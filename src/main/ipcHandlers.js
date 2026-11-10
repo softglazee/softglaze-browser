@@ -100,6 +100,7 @@ const signupConfirm = require('./signupConfirm');
 const serverErrors = require('./serverErrors');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
+const featureGate = require('./featureGate');
 const { redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, maskProxySellerKey, proxySellerListItems, proxySellerListGeo, proxySellerGeoView,
@@ -474,6 +475,11 @@ function registerHandler(channel, handler) {
         const denied = authGate.decide(channel, await ipcAuthState());
         if (denied) return { ok: false, error: { message: denied.message, code: denied.code } };
       }
+      // A page turned off for this member under "Visible features" cannot be used from anywhere else.
+      if (featureGate.featureForChannel(channel)) {
+        const off = featureGate.refusalFor(channel, await getActiveMember());
+        if (off) return { ok: false, error: { message: off.message, code: off.code } };
+      }
       const data = await handler(payload, event);
       return { ok: true, data };
     } catch (error) {
@@ -768,11 +774,12 @@ async function rotateProxyIp(payload) {
 // Streams the profile's cache + config into an AES-256-encrypted .sgz (see profileArchive.js).
 // Failures surface a clean error instead of a half-written file.
 async function exportProfileArchive(payload) {
+  await requirePermission('profiles.export');
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.profileId);
-  await assertCanAccessProfile(id);
   // The archive holds every cookie and saved login, more than a cookie dump, so it needs the same
-  // clearance.
+  // clearance: edit access (never a "use only" share) and the reveal rank.
+  await assertCanAccessProfile(id, { requireEdit: true });
   await assertCanRevealKind('cookieDump');
   const password = requiredString(input.password, 'Encryption password');
   const db = getPrisma();
@@ -1487,7 +1494,24 @@ async function setProxyPolicy(payload) {
   if (input.failoverMaxLatencyMs !== undefined) next.failoverMaxLatencyMs = Math.max(0, Number(input.failoverMaxLatencyMs) || 0);
   if (input.latencyTopN !== undefined) next.latencyTopN = Math.max(1, Number(input.latencyTopN) || 3);
   await writeSetting('proxyPolicy', next);
-  return getProxyPolicy();
+  return getProxyPolicyForActor();
+}
+
+// The policy as the window sees it: the per-profile overrides only of profiles the member can see (Trash
+// included), so other members' profile ids and modes stay in main. Launch reads the whole map
+// (resolveProxyPolicyMode). Single-user mode and the Super Admin see every override.
+async function getProxyPolicyForActor() {
+  const cfg = await getProxyPolicy();
+  const ids = Object.keys(cfg.byProfile).map((k) => Number(k)).filter((n) => Number.isInteger(n) && n > 0);
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return cfg;
+  const seen = ids.length
+    ? await getPrisma().profile.findMany({ where: await scopedProfileWhere({ id: { in: ids } }), select: { id: true } })
+    : [];
+  const keep = new Set(seen.map((r) => String(r.id)));
+  const byProfile = {};
+  for (const [k, mode] of Object.entries(cfg.byProfile)) if (keep.has(String(Number(k)))) byProfile[k] = mode;
+  return { ...cfg, byProfile };
 }
 
 // Workspace-wide proxy settings (the default rotation policy, the health-check schedule): the Owner
@@ -5053,8 +5077,9 @@ async function offlineProfileOpts(id) {
   return { userDataDir, executablePath: resolved && resolved.exePath ? resolved.exePath : undefined };
 }
 
-// Cookie dumps, archives and live 2FA codes need RAW_VALUE_MIN_RANK on top of profile access, so a
-// use-level share cannot take a logged-in session. Single-user mode and the super admin pass.
+// Cookie dumps, archives and live 2FA codes need RAW_VALUE_MIN_RANK on top of profile access. Cookie
+// dumps and archives also need edit access, so a "use only" share cannot take a logged-in session.
+// Single-user mode and the super admin pass.
 const REVEAL_LABELS = Object.freeze({
   cookieDump: 'export cookies or archives',
   twoFactorCode: 'read 2FA codes'
@@ -5071,10 +5096,13 @@ async function assertCanRevealKind(kind) {
   }
 }
 
+// Export hands over the profile's logged-in sessions: profiles.export, edit access (a profile shared
+// "use only" is used through its browser, never copied out) and the reveal rank.
 async function exportProfileCookies(payload) {
+  await requirePermission('profiles.export');
   const input = requireObject(payload);
   const id = parseId(input.id);
-  await assertCanAccessProfile(id);
+  await assertCanAccessProfile(id, { requireEdit: true });
   await assertCanRevealKind('cookieDump');
   const format = (optionalString(input.format) || 'json').toLowerCase();
   let cookies = await exportSessionCookies(String(id));
@@ -5088,10 +5116,12 @@ async function exportProfileCookies(payload) {
   return { format, count: cookies.length, content, health: cookieHealth(cookies) };
 }
 
+// Import replaces the profile's sessions, an edit of its data: profiles.edit and edit access.
 async function importProfileCookies(payload) {
+  await requirePermission('profiles.edit');
   const input = requireObject(payload);
   const id = parseId(input.id);
-  await assertCanAccessProfile(id);
+  await assertCanAccessProfile(id, { requireEdit: true });
   // Both write paths below are Chromium only (CDP, or the Chromium data folder offline). A Firefox
   // profile keeps its cookies in its own folder, so an import there would report success and do
   // nothing.
@@ -5122,8 +5152,10 @@ async function importProfileCookies(payload) {
 }
 
 // Imports one cookie set into every running profile (injection needs a live CDP session);
-// returns a per-session breakdown.
+// returns a per-session breakdown. Same rule as one profile: profiles.edit, and only profiles the
+// member may edit (a running "use only" share is left alone).
 async function importCookiesToRunning(payload) {
+  await requirePermission('profiles.edit');
   const input = requireObject(payload);
   const format = (optionalString(input.format) || 'json').toLowerCase();
   const data = requiredString(input.data, 'Cookie data');
@@ -5138,12 +5170,13 @@ async function importCookiesToRunning(payload) {
   if (params.length === 0) throw new Error('No valid cookies found to import.');
 
   let sessions = listActiveSessions();
-  // Scope to running sessions whose profile the active member may access.
-  const accessCheck = await profileAccessChecker();
-  if (accessCheck) {
-    const sids = sessions.map((s) => Number(s.sessionId)).filter((n) => !Number.isNaN(n));
-    const rows = sids.length ? await getPrisma().profile.findMany({ where: { id: { in: sids } }, select: { id: true, ownerMemberId: true, assignedMemberId: true } }) : [];
-    const okIds = new Set(rows.filter(accessCheck).map((r) => r.id));
+  // Scope to running sessions whose profile the active member may edit (single-user mode and the Super
+  // Admin: every session).
+  const member = await getActiveMember();
+  if (member && member.role !== 'SUPER_ADMIN') {
+    const sids = sessions.map((s) => Number(s.sessionId)).filter((n) => Number.isInteger(n) && n > 0);
+    const { allowed } = sids.length ? await partitionAccessibleProfileIds(sids, { requireEdit: true }) : { allowed: [] };
+    const okIds = new Set(allowed);
     sessions = sessions.filter((s) => okIds.has(Number(s.sessionId)));
   }
   if (sessions.length === 0) throw new Error('No profiles are running. Launch the target profiles first.');
@@ -5339,6 +5372,26 @@ async function reconcileReferencesForMember(db, fields) {
   return leftOut;
 }
 
+// A copy of a profile shared "use only" keeps its fingerprint and settings, but nothing that would let
+// the member sign in to its accounts or use its owner's proxy once the share is gone: the 2FA seed, the
+// saved platform logins (usernames, passwords, 2FA keys) and a proxy address saved without a pool proxy
+// are left out and reported in `leftOut`. A share can be revoked; a copy is the member's for good. A
+// copy of a profile the member may edit keeps them, as before.
+function stripUseOnlySecrets(fields, leftOut) {
+  if (fields.twoFactorSeed) leftOut.twoFactor = true;
+  fields.twoFactorSeed = null;
+  let accounts = null;
+  try { accounts = fields.platformAccounts ? JSON.parse(fields.platformAccounts) : []; } catch (e) { accounts = null; }
+  if (accounts === null || (Array.isArray(accounts) && accounts.length > 0)) leftOut.logins = true;
+  fields.platformAccounts = null;
+  if (!fields.proxyId && fields.proxyInfoString) {
+    fields.proxyInfoString = null;
+    // A DIRECT or system-proxy profile never used it, so only a profile proxy counts as left out.
+    if (fields.systemProxyBehavior !== 'DIRECT' && fields.systemProxyBehavior !== 'SYSTEM_PROXY') leftOut.proxy = true;
+  }
+  return leftOut;
+}
+
 async function cloneProfile(payload) {
   // Same create-permission and quota gates as createProfile.
   await requirePermission('profiles.create');
@@ -5347,13 +5400,18 @@ async function cloneProfile(payload) {
   await assertWithinLimit('profiles');
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
+  // Shared with this member "use only" (they may launch it, not edit it).
+  let useOnly = false;
+  try { await assertCanAccessProfile(id, { requireEdit: true }); }
+  catch (e) { if (!e || e.code !== 'FORBIDDEN') throw e; useOnly = true; }
   const reroll = Boolean(input.reroll);
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
 
   const fields = pickCloneableFields(src);
   // A copy of a profile shared with the member may sit on its owner's proxy or in their group.
-  const leftOut = await reconcileReferencesForMember(db, fields);
+  const leftOut = { ...(await reconcileReferencesForMember(db, fields)), twoFactor: false, logins: false };
+  if (useOnly) stripUseOnlySecrets(fields, leftOut);
   const title = `${src.title} (copy)`;
   const dataDirName = await ensureUniqueDataDirName(db, title);
 
@@ -5627,7 +5685,12 @@ async function withViewerEditFlags(rows) {
   }
   return rows.map((p) => {
     const { accesses, ...row } = p;
-    return { ...serializeProfile(row), canEdit: canEdit(p) };
+    const editable = canEdit(p);
+    const out = serializeProfile(row);
+    // A "use only" share never hands over its saved platform logins, whatever the role (the same rule
+    // as a copy of it, stripUseOnlySecrets): passwords and 2FA keys arrive masked.
+    if (!editable && Array.isArray(out.platformAccounts)) out.platformAccounts = redactPlatformAccounts(out.platformAccounts, false);
+    return { ...out, canEdit: editable };
   });
 }
 
@@ -7149,7 +7212,8 @@ async function launchProfileNow(payload) {
       // Smart Autofill on Firefox: master toggle AND the firefox sub-flag must
       // both be on. Installs the WebExtension + enables the loopback bridge path.
       const ffAutofill = (globalSettings.smartAutofill?.enabled !== false)
-        && (globalSettings.smartAutofill?.firefox !== false);
+        && (globalSettings.smartAutofill?.firefox !== false)
+        && (await vaultAutofillAllowed());
       const ffSession = await firefoxEngine.launchFirefoxProfile({
         profileId: profile.id,
         title: profile.title,
@@ -8023,23 +8087,34 @@ async function gatherExport() {
   const where = await scopedProfileWhere({ deletedAt: null });
   const profiles = await db.profile.findMany({
     where,
-    include: { proxy: true, group: true },
+    include: { proxy: true, group: true, accesses: { select: PROFILE_ACCESS_SELECT.accesses.select } },
     orderBy: { createdAt: 'asc' }
   });
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
   // profiles.export is rank 1, so blank proxy passwords, account passwords and 2FA keys unless the
   // member may reveal them (the same gates as the profile view and the 2FA code reader).
-  await getActiveMember(); // refreshes currentMemberCanRevealProxy
+  const member = await getActiveMember(); // also refreshes currentMemberCanRevealProxy
   const revealCreds = currentMemberCanRevealProxy;
   let revealTwoFa = revealCreds;
   if (revealTwoFa) { try { await assertCanRevealKind('twoFactorCode'); } catch (e) { revealTwoFa = false; } }
+  // A profile shared "use only" never hands over its saved platform logins (the rule of a copy of it,
+  // stripUseOnlySecrets): its account password and 2FA key stay blank whatever the role.
+  let editable = () => true;
+  if (member && member.role !== 'SUPER_ADMIN') {
+    const visible = permissions.visibleMemberIds(await db.member.findMany(), member);
+    editable = (p) => permissions.profileRowAccessible(visible, p, true);
+  }
   const headers = EXPORT_COLUMNS.map((c) => c[0]);
-  const rows = profiles.map((p) => EXPORT_COLUMNS.map((c) => {
-    if (!revealCreds && (c[0] === 'Proxy Password' || c[0] === 'Account Password')) return '';
-    if (!revealCreds && c[0] === 'Proxy Info') return p.proxy ? `${p.proxy.host}:${p.proxy.port}:${p.proxy.username || ''}:` : '';
-    if (!revealTwoFa && c[0] === '2FA Key') return '';
-    return c[1](p, rotationUrls);
-  }));
+  const rows = profiles.map((p) => {
+    const own = editable(p);
+    return EXPORT_COLUMNS.map((c) => {
+      if (!revealCreds && (c[0] === 'Proxy Password' || c[0] === 'Account Password')) return '';
+      if (!revealCreds && c[0] === 'Proxy Info') return p.proxy ? `${p.proxy.host}:${p.proxy.port}:${p.proxy.username || ''}:` : '';
+      if (!revealTwoFa && c[0] === '2FA Key') return '';
+      if (!own && (c[0] === 'Account Password' || c[0] === '2FA Key')) return '';
+      return c[1](p, rotationUrls);
+    });
+  });
   return { headers, rows, count: profiles.length };
 }
 
@@ -8658,8 +8733,9 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   // Saved profile-filter presets (name + filter state) - managed from the Profiles page.
   profileFilters: [],
   // `enabled` is the Smart Autofill master toggle; `firefox` also gates the Firefox WebExtension
-  // path (no CDP there, so it uses the loopback bridge).
-  smartAutofill: { enabled: true, firefox: true },
+  // path (no CDP there, so it uses the loopback bridge). `members`: the Owner lets the other members
+  // use the Data Vault's identities through autofill too (off by default; see vaultAutofillAllowed).
+  smartAutofill: { enabled: true, firefox: true, members: false },
   // Activity and security events older than this are pruned at startup; 0 keeps them forever.
   audit: { retentionDays: 90 }
 });
@@ -8708,7 +8784,60 @@ function withoutSuperOnlyKeys(settings) {
 
 async function getGlobalSettingsForActor() {
   const all = await getGlobalSettings();
-  return (await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all);
+  return withoutWorkspaceSecrets((await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all), await getActiveMember());
+}
+
+// Who may change each top-level group of the workspace settings through the window. Every group holds
+// one value for the whole workspace, and most of them change how everybody's profiles open (browser
+// behaviour, website rules, start-up checks, the CAPTCHA key, launch caps, log retention, start-page
+// links). So a group needs settings.manage (Admin and up; the Owner can turn it off for one Admin) and
+// the Settings page under "Visible features", unless it is listed here:
+//   - lists a member keeps on their own pages: saved Profiles filters and the first-run flag (anyone
+//     signed in), and the Automation page's warm-up lists (automation.run);
+//   - Smart Autofill decides who gets the Data Vault's identities, so it follows vault.manage (Owner);
+//   - the footer branding is the Super Admin's (proxyProviderTrials is checked separately, read and write).
+const GLOBAL_SETTING_WRITE_RULES = Object.freeze({
+  profileFilters: Object.freeze({ anyMember: true }),
+  onboardingDone: Object.freeze({ anyMember: true }),
+  warmer: Object.freeze({ action: 'automation.run', what: 'the warm-up lists' }),
+  smartAutofill: Object.freeze({ action: 'vault.manage', what: 'the Smart Autofill settings' }),
+  branding: Object.freeze({ superOnly: true, what: 'the footer branding' })
+});
+const WORKSPACE_SETTING_RULE = Object.freeze({ action: 'settings.manage', feature: 'settings', what: 'the workspace settings' });
+const SETTING_ROLE_PHRASE = Object.freeze({ 3: 'the Owner or an Admin', 4: 'the Owner' });
+
+// The groups a write would actually change: a page that saves back a value it read is not refused.
+function changedGlobalSettingKeys(current, input) {
+  return Object.keys(input).filter((k) => JSON.stringify(deepMergeSettings(current[k], input[k])) !== JSON.stringify(current[k]));
+}
+
+async function assertCanWriteGlobalSettings(member, current, input) {
+  if (!member || member.role === 'SUPER_ADMIN') return; // single-user mode is the Owner
+  for (const key of changedGlobalSettingKeys(current, input)) {
+    const rule = GLOBAL_SETTING_WRITE_RULES[key] || WORKSPACE_SETTING_RULE;
+    if (rule.anyMember) continue;
+    if (rule.superOnly) {
+      const e = new Error(`Only the Super Admin can change ${rule.what}.`); e.code = 'FORBIDDEN'; throw e;
+    }
+    const need = permissions.ACTION_MIN_RANK[rule.action] || 0;
+    if (member.status !== 'suspended' && member.status !== 'banned' && permissions.rankOf(member.role) < need) {
+      const e = new Error(`Your role does not permit this action: only ${SETTING_ROLE_PHRASE[need] || 'the Owner'} can change ${rule.what}.`);
+      e.code = 'FORBIDDEN';
+      throw e;
+    }
+    await requirePermission(rule.action); // suspended or banned, or turned off for this member
+    if (rule.feature && featureGate.featureHidden(member, rule.feature)) throw featureGate.featureOffError(rule.feature);
+  }
+}
+
+// The CAPTCHA solver key is a paid account's credential, so only members who may change the workspace
+// settings receive it (the others see the field empty and cannot save it).
+function withoutWorkspaceSecrets(settings, member) {
+  if (!member || member.role === 'SUPER_ADMIN') return settings;
+  const mayChange = permissions.effectivePermissions(member).actions['settings.manage'] === true
+    && member.status !== 'suspended' && member.status !== 'banned';
+  if (mayChange || !settings || !settings.captcha || !settings.captcha.apiKey) return settings;
+  return { ...settings, captcha: { ...settings.captcha, apiKey: '' } };
 }
 
 async function setGlobalSettingsForActor(payload) {
@@ -8719,8 +8848,10 @@ async function setGlobalSettingsForActor(payload) {
     err.code = 'FORBIDDEN';
     throw err;
   }
+  const member = await getActiveMember();
+  await assertCanWriteGlobalSettings(member, await getGlobalSettings(), input);
   const next = await setGlobalSettings(input);
-  return isSuper ? next : withoutSuperOnlyKeys(next);
+  return withoutWorkspaceSecrets(isSuper ? next : withoutSuperOnlyKeys(next), member);
 }
 
 // Saved proxy provider credentials, one workspace-wide Setting blob keyed by provider; secret
@@ -9017,7 +9148,28 @@ async function getPersonaSecretForUrl(id, url) {
 async function personaVaultAvailable() {
   const s = await ipcAuthState();
   if (s.vaultLocked) return false;
-  return Boolean(s.signedIn) || !(Number(s.memberCount) > 0);
+  if (!(Boolean(s.signedIn) || !(Number(s.memberCount) > 0))) return false;
+  return vaultAutofillAllowed();
+}
+
+// Whose launched profiles may offer the Data Vault's identities (the "SG" autofill button, both
+// browsers). The vault belongs to the Owner and its page is shown only with vault.manage, so autofill
+// follows the same rule: a member who may manage the vault (the Owner by default; single-user mode and
+// the Super Admin) always gets it, and the other members only when the Owner turned on "Team members
+// can use the Data Vault in autofill" (smartAutofill.members, off by default). The bridges call this
+// at fill time and it reads the member signed in to the window, the person at this computer.
+// Fails closed when the member cannot be read.
+async function vaultAutofillAllowed() {
+  const id = actingMemberId();
+  if (id == null || permissions.isSuperAdminId(id)) return true;
+  let m;
+  try { m = await getPrisma().member.findUnique({ where: { id } }); } catch (e) { return false; }
+  if (!m || m.status === 'suspended' || m.status === 'banned') return false;
+  if (permissions.effectivePermissions(m).actions['vault.manage'] === true) return true;
+  try {
+    const g = await getGlobalSettings();
+    return Boolean(g && g.smartAutofill && g.smartAutofill.members === true);
+  } catch (e) { return false; }
 }
 
 // Server-side only: resolves a persona's password for the trusted CDP autofill bridge, which types
@@ -14426,6 +14578,10 @@ function buildAiToolDeps() {
   return {
     getPrisma,
     requirePermission,
+    // "Visible features" for the token's member, the rule registerHandler applies to the window.
+    assertFeature: async (feature) => {
+      if (featureGate.featureHidden(await getActiveMember(), feature)) throw featureGate.featureOffError(feature);
+    },
     getActiveMember,
     getLicense,
     scopedProfileWhere,
@@ -14653,7 +14809,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.SETTINGS_SET_SCHEDULER, setProxyScheduler);
   registerHandler(CHANNELS.SETTINGS_GET_GLOBAL, getGlobalSettingsForActor);
   registerHandler(CHANNELS.SETTINGS_SET_GLOBAL, setGlobalSettingsForActor);
-  registerHandler(CHANNELS.SETTINGS_GET_PROXY_POLICY, getProxyPolicy);
+  registerHandler(CHANNELS.SETTINGS_GET_PROXY_POLICY, getProxyPolicyForActor);
   registerHandler(CHANNELS.SETTINGS_SET_PROXY_POLICY, setProxyPolicy);
 
   // Monetization - affiliate links for the Proxy Provider marketplace
@@ -14712,8 +14868,14 @@ function registerIpcHandlers() {
     // Resolve the plaintext password server-side by id: it is typed via the trusted CDP bridge and
     // never crosses into page JS.
     getSecret: (id) => getPersonaSecretById(id),
-    // Gate injection on the global Smart Autofill toggle (default on; fail-open).
-    isEnabled: async () => { try { const g = await getGlobalSettings(); return g?.smartAutofill?.enabled !== false; } catch (e) { return true; } }
+    // Gate injection on the global Smart Autofill toggle (default on; fail-open), and on whether the
+    // member signed in may use the vault through autofill (vaultAutofillAllowed; fails closed), so a
+    // member without it gets no autofill button at all.
+    isEnabled: async () => {
+      let on = true;
+      try { const g = await getGlobalSettings(); on = g?.smartAutofill?.enabled !== false; } catch (e) { on = true; }
+      return on && (await vaultAutofillAllowed());
+    }
   });
 
   // Firefox Smart Autofill: Firefox has no CDP/exposeFunction, so its WebExtension reaches the same

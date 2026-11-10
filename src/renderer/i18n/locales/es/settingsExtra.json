@@ -316,6 +316,10 @@
     "firefox": {
       "title": "Autocompletado en Firefox",
       "desc": "También instala la WebExtension de autocompletado en los perfiles de Firefox (Firefox no tiene puente en la página). Se carga sin firmar en Firefox Developer Edition / Nightly; la versión de Firefox estable requiere la compilación firmada por Mozilla incluida con el instalador."
+    },
+    "members": {
+      "title": "Los miembros del equipo pueden usar la Bóveda de datos en el autocompletado",
+      "desc": "Desactivado (predeterminado): el botón de autocompletado de los perfiles abiertos ofrece las identidades de la Bóveda de datos solo mientras el Propietario tiene la sesión iniciada. Activado: los Administradores, Gerentes y Operadores también las reciben, sin poder abrir la página de la Bóveda de datos. Solo el Propietario puede cambiarlo."
     }
   },
   "audit": {

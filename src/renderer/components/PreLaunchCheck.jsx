@@ -13,7 +13,9 @@ function issueText(t, issue) {
 
 // Shown before a launch when profiles have clear mismatches. Resolves with
 // { launch, fix, stopAsking }: fix applies the one-click fixes first, then everything launches.
-export default function PreLaunchCheckModal({ items, onDecide }) {
+// `canStopAsking`: "Don't check again" turns the check off for the whole workspace (a workspace
+// setting, settings.manage), so it is offered only to members who may change it.
+export default function PreLaunchCheckModal({ items, onDecide, canStopAsking = true }) {
   const { t } = useTranslation('captcha');
   const [stopAsking, setStopAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -65,10 +67,12 @@ export default function PreLaunchCheckModal({ items, onDecide }) {
               </ul>
             </section>
           ))}
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={stopAsking} onChange={(e) => setStopAsking(e.target.checked)} className="accent-primary" />
-            {t('prelaunch.stopAsking')}
-          </label>
+          {canStopAsking && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={stopAsking} onChange={(e) => setStopAsking(e.target.checked)} className="accent-primary" />
+              {t('prelaunch.stopAsking')}
+            </label>
+          )}
         </div>
 
         <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface px-5 py-4">

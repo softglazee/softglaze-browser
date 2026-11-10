@@ -21,6 +21,7 @@ export const ACTION_MIN_RANK = Object.freeze({
   'proxies.reveal': 2,
   'automation.run': 1,
   'extensions.manage': 3,
+  'settings.manage': 3,
   'vault.manage': 4,
   'members.manage': 3,
   'members.delete': 4
@@ -74,4 +75,23 @@ export function workspaceProxyDenial(me) {
 // Data Vault (the page and its sidebar entry): main's vault.manage, Owner by default.
 export function canManageVault(me) {
   return can(me, 'vault.manage');
+}
+
+// Exporting a profile's cookies (or its full archive): profiles.export and, as main's
+// assertCanRevealKind('cookieDump') (rbacPolicy.js), the Manager role or higher. Edit access to the
+// profile is checked per row (row.canEdit).
+export function cookieExportDenial(me) {
+  const d = denial(me, 'profiles.export');
+  if (d) return d;
+  if (me && me.role !== 'SUPER_ADMIN' && rankOf(me.role) < ROLE_RANK.MANAGER) return { kind: 'role', role: 'MANAGER' };
+  return null;
+}
+
+// A page under "Visible features" (Members > permissions) that was turned off for this member. Main
+// refuses that page's actions too (src/main/featureGate.js). Not loaded yet: not shown.
+export function featureVisible(me, key) {
+  if (me === undefined) return false;
+  if (me === null || me.role === 'SUPER_ADMIN' || !key) return true;
+  const f = me.permissions && me.permissions.features;
+  return !f || f[key] !== false;
 }

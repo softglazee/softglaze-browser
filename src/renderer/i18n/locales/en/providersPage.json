@@ -60,6 +60,7 @@
     "noMatch": "No provider matches this filter."
   },
   "detail": {
+    "pullDenied": "You can browse the providers, but pulling proxies is not available to you. {{reason}}",
     "proxiesInPool_one": "{{count}} proxy in pool",
     "proxiesInPool_other": "{{count}} proxies in pool",
     "dashboard": "Dashboard",

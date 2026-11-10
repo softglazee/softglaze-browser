@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Cookie, X, Loader2, Download, Copy, Upload, Check, Layers, AlertTriangle } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 function safeName(name) {
@@ -35,10 +36,13 @@ function CookieHealth({ health }) {
   );
 }
 
-export default function CookieManagerModal({ profileId, profileName, onClose }) {
+// `denyExport` / `denyImport` / `denyBulk`: why this member may not export this profile's cookies,
+// import into it, or import into every running profile they may edit (usePermissions), or null. Main
+// refuses the same calls (a profile shared "use only" can do neither).
+export default function CookieManagerModal({ profileId, profileName, onClose, denyExport = null, denyImport = null, denyBulk = null }) {
   const { t } = useTranslation('cmpModalsB');
   const { dialogRef } = useDialog({ onClose });
-  const [tab, setTab] = useState('export'); // 'export' | 'import'
+  const [tab, setTab] = useState(denyExport && !denyImport ? 'import' : 'export'); // 'export' | 'import'
   const [format, setFormat] = useState('json'); // 'json' | 'netscape'
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -165,10 +169,10 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
 
           {tab === 'export' ? (
             <>
-              <Button size="md" variant="primary" disabled={busy} onClick={handleExport} className="w-full">
+              <GuardedButton deny={denyExport} wrapperClassName="flex w-full" size="md" variant="primary" disabled={busy} onClick={handleExport} className="w-full">
                 {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                 {t('cookieManager.exportButton')}
-              </Button>
+              </GuardedButton>
               {exportContent && (
                 <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
                   <CookieHealth health={exportHealth} />
@@ -202,15 +206,15 @@ export default function CookieManagerModal({ profileId, profileName, onClose }) 
                 <Button size="sm" variant="secondary" onClick={() => fileRef.current && fileRef.current.click()} className="flex-1">
                   <Upload className="w-4 h-4 mr-2" /> {t('cookieManager.loadFile')}
                 </Button>
-                <Button size="sm" variant="primary" disabled={busy || bulkBusy} onClick={handleImport} className="flex-1">
+                <GuardedButton deny={denyImport} wrapperClassName="flex flex-1" size="sm" variant="primary" disabled={busy || bulkBusy} onClick={handleImport} className="flex-1">
                   {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   {t('cookieManager.importToProfile')}
-                </Button>
+                </GuardedButton>
               </div>
-              <Button size="sm" variant="secondary" disabled={busy || bulkBusy} onClick={handleBulkImport} className="w-full">
+              <GuardedButton deny={denyBulk} wrapperClassName="flex w-full" size="sm" variant="secondary" disabled={busy || bulkBusy} onClick={handleBulkImport} className="w-full">
                 {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Layers className="w-4 h-4 mr-2" />}
                 {t('cookieManager.importToAll')}
-              </Button>
+              </GuardedButton>
 
               {importHealth && <CookieHealth health={importHealth} />}
 

@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Plus, X, Check, Loader2, Wand2, ClipboardList } from 'lucide-react';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 
 // Prepends https:// when there is no scheme; returns '' unless the result is http(s).
 function normalizeUrl(raw) {
@@ -29,6 +31,10 @@ function labelFromUrl(raw) {
 // Global start-page links for every profile, kept in globalSettings.startPageLinks: [{ label, url }].
 export default function StartLinksPage() {
   const { t } = useTranslation();
+  // The links show on every member's start page: a workspace setting (settings.manage, Admin and up;
+  // main's setGlobalSettingsForActor refuses the others). Anyone else sees the list read-only.
+  const perm = usePermissions();
+  const deny = perm.deny('settings.manage');
   const [items, setItems] = useState([]);
   const [bulk, setBulk] = useState('');
   const [loading, setLoading] = useState(true);
@@ -117,9 +123,9 @@ export default function StartLinksPage() {
         actions={(
           <div className="flex items-center gap-2">
             {saved && <span className="text-xs text-emerald-500 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span>}
-            <Button variant="primary" size="sm" onClick={save} disabled={saving || !dirty || loading || !!loadErr}>
+            <GuardedButton deny={deny} variant="primary" size="sm" onClick={save} disabled={saving || !dirty || loading || !!loadErr}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />} Save
-            </Button>
+            </GuardedButton>
           </div>
         )}
       />
@@ -136,7 +142,14 @@ export default function StartLinksPage() {
         </div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+      {deny && perm.me !== undefined && (
+        <div role="note" className="mb-4 rounded-lg border border-border bg-elevated px-4 py-3 text-sm text-muted-foreground">
+          {t('perm.startLinksViewOnly', { reason: deny })}
+        </div>
+      )}
+
+      {/* A disabled fieldset turns every input and button below read-only for a member who may not change the links. */}
+      <fieldset disabled={Boolean(deny)} title={deny || undefined} className="min-w-0 m-0 p-0 border-0 [&_button:disabled]:opacity-60 [&_button:disabled]:cursor-not-allowed grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
 
         <Card className="bg-card border border-border rounded-xl">
           <CardContent className="p-0">
@@ -193,7 +206,7 @@ export default function StartLinksPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </fieldset>
     </div>
   );
 }

@@ -538,6 +538,9 @@
     "cloneNoProxy": "Copiado. El proxy del original no está disponible para ti, así que la copia aún no tiene proxy: asígnale uno antes de abrirla.",
     "cloneNoGroup": "Copiado. No puedes ver el grupo del original, así que la copia no está en ningún grupo.",
     "proxyMissing": "Sin proxy",
-    "proxyMissingTitle": "Configurado para usar un proxy, pero no tiene ninguno (se eliminó o no está disponible para ti). Asigna un proxy en el editor antes de abrirlo."
+    "proxyMissingTitle": "Configurado para usar un proxy, pero no tiene ninguno (se eliminó o no está disponible para ti). Asigna un proxy en el editor antes de abrirlo.",
+    "cloneNoTwoFactor": "La clave 2FA no se copió, porque el original está compartido contigo solo para usar.",
+    "cloneNoLogins": "Los inicios de sesión de plataformas guardados no se copiaron, porque el original está compartido contigo solo para usar.",
+    "cloneUseOnlyHint": "compartido contigo solo para usar, así que la copia no incluye su clave 2FA ni sus inicios de sesión guardados"
   }
 }

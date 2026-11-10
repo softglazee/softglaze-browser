@@ -43,6 +43,9 @@ const ACTION_CATALOG = [
   { key: 'proxies.reveal', label: 'Reveal raw proxy credentials', category: 'Proxies', minRank: 2 },
   { key: 'automation.run', label: 'Run automation / macros', category: 'Automation', minRank: 1 },
   { key: 'extensions.manage', label: 'Manage team extensions', category: 'Workspace', minRank: 3 },
+  // Workspace settings (the Settings page, start-page links) hold one value for every member, and most
+  // of them change how everybody's profiles open, so Admin and up, like the workspace rotation policy.
+  { key: 'settings.manage', label: 'Change workspace settings', category: 'Workspace', minRank: 3 },
   { key: 'vault.manage', label: 'Manage the Identity Vault', category: 'Workspace', minRank: 4 },
   { key: 'members.manage', label: 'Manage team members', category: 'Team', minRank: 3 },
   { key: 'members.delete', label: 'Delete members / change roles', category: 'Team', minRank: 4 }

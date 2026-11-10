@@ -6,8 +6,10 @@ import PageHeader from '@/components/PageHeader.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import FreeProxySearch from '@/components/FreeProxySearch.jsx';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { measuredMs, speedOf } from '@/lib/proxyBuckets.mjs';
 import { countryName } from '@/lib/countries.mjs';
 import { deadFreeIds, filterFreeProxies, freeCountryCounts, freeStatusOf, protocolOf } from '@/lib/freeProxies.mjs';
@@ -37,6 +39,9 @@ function timeAgo(value, t) {
 
 export default function FreeProxiesPage() {
   const { t, i18n } = useTranslation('proxies');
+  // Deleting free proxies needs proxies.manage (main's deleteProxy / bulkDeleteProxies); checking them
+  // does not. The search below follows the same rule (FreeProxySearch).
+  const denyManage = usePermissions().deny('proxies.manage');
   const [proxies, setProxies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -316,10 +321,10 @@ export default function FreeProxiesPage() {
               {checkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Activity className="h-3.5 w-3.5" aria-hidden="true" />}
               {t('freePage.actions.checkAll')}
             </Button>
-            <Button size="sm" variant="danger" onClick={() => removeIds(deadIds, t('freePage.confirm.deleteDead', { count: deadIds.length }))} disabled={deleting || deadIds.length === 0}>
+            <GuardedButton deny={denyManage} size="sm" variant="danger" onClick={() => removeIds(deadIds, t('freePage.confirm.deleteDead', { count: deadIds.length }))} disabled={deleting || deadIds.length === 0}>
               <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               {t('freePage.actions.deleteDead')}{deadIds.length ? ` · ${deadIds.length}` : ''}
-            </Button>
+            </GuardedButton>
           </div>
         </div>
 
@@ -344,9 +349,9 @@ export default function FreeProxiesPage() {
             <Button size="sm" variant="secondary" onClick={() => checkMany(visibleSelected)} disabled={checkBusy || deleting}>
               <Activity className="h-3.5 w-3.5" aria-hidden="true" />{t('freePage.actions.checkSelected')}
             </Button>
-            <Button size="sm" variant="danger" onClick={() => removeIds(visibleSelected, t('freePage.confirm.deleteSelected', { count: visibleSelected.length }))} disabled={deleting}>
+            <GuardedButton deny={denyManage} size="sm" variant="danger" onClick={() => removeIds(visibleSelected, t('freePage.confirm.deleteSelected', { count: visibleSelected.length }))} disabled={deleting}>
               {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}{t('freePage.actions.deleteSelected')}
-            </Button>
+            </GuardedButton>
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} className="ml-auto">
               <X className="h-4 w-4" aria-hidden="true" />{t('freePage.actions.clear')}
             </Button>
@@ -420,9 +425,9 @@ export default function FreeProxiesPage() {
                             <Button size="sm" variant="ghost" onClick={() => checkOne(p)} disabled={checkingId === p.id} aria-label={t('freePage.actions.checkAria', { address })} title={t('freePage.actions.check')} className="px-2">
                               {checkingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Activity className="h-4 w-4" aria-hidden="true" />}
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => removeOne(p)} aria-label={t('freePage.actions.deleteAria', { address })} title={t('freePage.actions.delete')} className="px-2 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                            <GuardedButton deny={denyManage} size="sm" variant="ghost" onClick={() => removeOne(p)} aria-label={t('freePage.actions.deleteAria', { address })} title={t('freePage.actions.delete')} className="px-2 text-destructive hover:bg-destructive/10 hover:text-destructive">
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            </Button>
+                            </GuardedButton>
                           </div>
                         </td>
                       </tr>

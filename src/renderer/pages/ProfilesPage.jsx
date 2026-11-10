@@ -1288,15 +1288,21 @@ export default function ProfilesPage() {
     } catch (err) { setError(err.message); }
   }
 
+  // A copy of a "use only" share leaves out its 2FA key and saved logins (main); the button says so.
+  const cloneTitle = (p, key) => (p && p.canEdit === false ? `${t(key)}: ${t('permNotes.cloneUseOnlyHint')}` : t(key));
+
   async function handleClone(profileId, reroll = false) {
     try {
       const copy = await softglazeApi.profiles.clone(profileId, { reroll });
       await loadData();
-      // A copy of a profile shared with the member never takes its owner's proxy or group (main).
+      // A copy of a profile shared with the member never takes its owner's proxy or group, and a copy of
+      // a "use only" share never takes its 2FA key or saved platform logins (main). Say what was left out.
       const left = (copy && copy.leftOut) || {};
       const notes = [];
       if (left.proxy) notes.push(t('permNotes.cloneNoProxy'));
       if (left.group) notes.push(t('permNotes.cloneNoGroup'));
+      if (left.twoFactor) notes.push(t('permNotes.cloneNoTwoFactor'));
+      if (left.logins) notes.push(t('permNotes.cloneNoLogins'));
       if (notes.length) setError(notes.join(' '));
     } catch (err) { setError(err.message); }
   }
@@ -2928,16 +2934,17 @@ export default function ProfilesPage() {
                         <GuardedButton deny={perm.denyRow('profiles.edit', p)} size="sm" variant="ghost" className="px-2" onClick={() => openEdit(p)} title={t('actions.editConfig')} aria-label={t('actions.editConfig')}>
                           <Settings2 className="w-4 h-4" />
                         </GuardedButton>
-                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
+                        {/* Off only when both export and import are refused (always so for a "use only" share). */}
+                        <GuardedButton deny={perm.denyCookieExport(p) && perm.denyCookieImport(p)} size="sm" variant="ghost" className="px-2" onClick={() => setCookieProfile({ id: p.id, title: p.title, canEdit: p.canEdit })} title={t('actions.manageCookies')} aria-label={t('actions.manageCookies')}>
                           <Cookie className="w-4 h-4" />
-                        </Button>
+                        </GuardedButton>
                         <GuardedButton deny={perm.denyRow('proxies.manage', p)} size="sm" variant="ghost" className="px-2" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')} aria-label={t('actions.proxyRotation')}>
                           <Shuffle className="w-4 h-4" />
                         </GuardedButton>
-                        <GuardedButton deny={perm.deny('profiles.create')} size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')} aria-label={t('actions.cloneSame')}>
+                        <GuardedButton deny={perm.deny('profiles.create')} size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id)} title={cloneTitle(p, 'actions.cloneSame')} aria-label={cloneTitle(p, 'actions.cloneSame')}>
                           <Copy className="w-4 h-4" />
                         </GuardedButton>
-                        <GuardedButton deny={perm.deny('profiles.create')} size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')} aria-label={t('actions.cloneNew')}>
+                        <GuardedButton deny={perm.deny('profiles.create')} size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id, true)} title={cloneTitle(p, 'actions.cloneNew')} aria-label={cloneTitle(p, 'actions.cloneNew')}>
                           <Dices className="w-4 h-4" />
                         </GuardedButton>
 
@@ -2961,7 +2968,7 @@ export default function ProfilesPage() {
         )}
       </Card>
 
-      {preLaunch && <PreLaunchCheckModal items={preLaunch.items} onDecide={preLaunch.resolve} />}
+      {preLaunch && <PreLaunchCheckModal items={preLaunch.items} onDecide={preLaunch.resolve} canStopAsking={!perm.deny('settings.manage')} />}
       {captchaProfile && (
         <CaptchaScoreModal
           profile={captchaProfile}
@@ -2982,6 +2989,9 @@ export default function ProfilesPage() {
         <CookieManagerModal
           profileId={cookieProfile.id}
           profileName={cookieProfile.title}
+          denyExport={perm.denyCookieExport(cookieProfile)}
+          denyImport={perm.denyCookieImport(cookieProfile)}
+          denyBulk={perm.deny('profiles.edit')}
           onClose={() => setCookieProfile(null)}
         />
       )}
