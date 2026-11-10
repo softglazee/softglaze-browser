@@ -142,7 +142,9 @@ export default function MigrationSettings() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Token and button side by side from the sm breakpoint; stacked on a narrow window, where the
+              button text does not fit beside the field. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="password"
               value={token}
@@ -152,12 +154,12 @@ export default function MigrationSettings() {
               autoComplete="off"
               spellCheck={false}
               disabled={running}
-              className="flex-1 h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary disabled:opacity-50 font-mono"
+              className="w-full min-w-0 sm:w-auto sm:flex-1 h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary disabled:opacity-50 font-mono"
             />
             <button
               onClick={startTransfer}
               disabled={running || !token.trim()}
-              className="shrink-0 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center gap-2"
+              className="shrink-0 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderSync className="w-4 h-4" />}
               {running ? t('migration.transferring') : t('migration.startTransfer')}
