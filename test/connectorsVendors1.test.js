@@ -171,6 +171,10 @@ test('Proxy-Seller per-IP orders import every IP: the hidden How many is not sen
   const p = proxySeller({ 'proxy/list/ipv6': psOk({ items }) });
   const rows = await p.fetchProxySellerPool({ token: PS_KEY, plan: 'ipv6', count: '' });
   assert.equal(rows.length, 7, 'a blank count is the whole order');
+  // The Order select's first option fits a 375 px window; the hint says where the counts come from.
+  assert.equal(LOCALES.en.proxyProviders.ps.checkForOrders, 'All orders');
+  assert.equal(LOCALES.es.proxyProviders.ps.checkForOrders, 'Todos los pedidos');
+  for (const lang of ['en', 'es']) assert.match(LOCALES[lang].proxyProviders.ps.orderHint, lang === 'en' ? /Check account/ : /Comprobar cuenta/);
 });
 
 test('Proxy-Seller residential export sends protocol= and the chosen entry server', async () => {

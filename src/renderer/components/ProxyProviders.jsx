@@ -808,10 +808,10 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                 <select value={form.orderId} onChange={(e) => set('orderId', e.target.value)} className={selectCls} style={chevronStyle}>
                   <option value="">{productInfo
                     ? t('proxyProviders.ps.allOrders', { count: productInfo.active, defaultValue: 'All orders ({{count}} IPs)' })
-                    : t('proxyProviders.ps.checkForOrders', 'All orders (Check account to see counts)')}</option>
+                    : t('proxyProviders.ps.checkForOrders', 'All orders')}</option>
                   {(productInfo ? productInfo.orders : []).map((o) => <option key={o.id} value={o.id}>{`${o.number} · ${o.count} IPs${o.country ? ` · ${o.country}` : ''}${o.expires ? ` · ${o.expires}` : ''}`}</option>)}
                 </select>
-                <p className={hintCls + ' mt-1.5'}>{t('proxyProviders.ps.orderHint', 'Adds every active IP in the order, each on its own port. Pulling again only adds IPs the pool does not have yet.')}</p>
+                <p className={hintCls + ' mt-1.5'}>{t('proxyProviders.ps.orderHint', 'Adds every active IP in the order, each on its own port. Pulling again only adds IPs the pool does not have yet. Check account lists each order with its IPs.')}</p>
               </div>
               {form.plan === 'ipv6' && (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-[color-mix(in_srgb,var(--color-amber-500)_45%,var(--foreground))]">{t('proxyProviders.ps.ipv6Note', 'IPv6 exits can only reach websites that have an IPv6 address. Before assigning these to profiles, check that the sites you use support IPv6, or a page may fail to load through them.')}</p>
