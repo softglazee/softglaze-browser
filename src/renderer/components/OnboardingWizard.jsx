@@ -67,7 +67,8 @@ export default function OnboardingWizard() {
         const existing = await softglazeApi.profiles.list().catch(() => []);
         const arr = Array.isArray(existing) ? existing : (existing && (existing.items || existing.profiles || existing.rows || existing.data)) || [];
         if (arr.length > 0) {
-          await softglazeApi.settings.setGlobal({ ...(g || {}), onboardingDone: true }).catch(() => {});
+          // Only the flag: main merges it in, and a member may not rewrite the workspace settings.
+          await softglazeApi.settings.setGlobal({ onboardingDone: true }).catch(() => {});
           if (live) setPhase('hidden');
           return;
         }
@@ -78,7 +79,7 @@ export default function OnboardingWizard() {
   }, []);
 
   async function finish() {
-    try { const g = await softglazeApi.settings.getGlobal().catch(() => ({})); await softglazeApi.settings.setGlobal({ ...(g || {}), onboardingDone: true }); } catch (e) { /* best-effort */ }
+    try { await softglazeApi.settings.setGlobal({ onboardingDone: true }); } catch (e) { /* best-effort */ }
     setPhase('hidden');
   }
 

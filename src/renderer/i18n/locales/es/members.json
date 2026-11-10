@@ -27,7 +27,7 @@
     "OPERATOR": "Abre y usa solo los perfiles asignados."
   },
   "features": {
-    "dashboard": "Panel",
+    "dashboard": "Panel (solo la página)",
     "profiles": "Perfiles",
     "groups": "Grupos",
     "proxies": "Conjunto de proxies",
@@ -145,7 +145,8 @@
       "canCreateAdmins": "Puede invitar administradores",
       "canCreateManagers": "Puede invitar responsables",
       "canCreateOperators": "Puede invitar operadores"
-    }
+    },
+    "featuresHint": "Una función desactivada se oculta de la barra lateral y sus acciones se rechazan en todas partes (por ejemplo añadir proxies, restaurar desde la Papelera o descargar navegadores). Las listas que necesitan otras páginas, como elegir un proxy o un grupo en el editor de perfiles, siguen cargando."
   },
   "accountStatus": {
     "title": "Estado de la cuenta",

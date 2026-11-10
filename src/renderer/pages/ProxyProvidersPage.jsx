@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/Card.jsx';
 import Input from '@/components/ui/Input.jsx';
 import Switch from '@/components/ui/Switch.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { TONE, daysUntil, parseDay, shortDate, toneText, useProviderStates } from '@/lib/providerStates.js';
 import { cn, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
@@ -72,6 +73,10 @@ export default function ProxyProvidersPage() {
   const lang = inst.language || 'en';
 
   const { loading, setLoading, loadErr, proxies, credsHidden, load, rows, isSuper } = useProviderStates();
+  // Pulling and looking up proxies need proxies.manage (main's syncVendorPool, vendorLookup,
+  // providerAccount); a member without it can browse the providers but every control is disabled.
+  const perm = usePermissions();
+  const denyPull = perm.deny('proxies.manage');
   const [links, setLinks] = useState({});
 
   // The Provider status page links here with ?provider=<key>&tab=<pull|pool>.
@@ -325,6 +330,7 @@ export default function ProxyProvidersPage() {
               lastPull={lastPull && lastPull.key === sel.p.key ? lastPull : null}
               onSynced={handleSynced}
               openPool={() => navigate('/proxies')}
+              denyPull={denyPull}
             />
           </Card>
         )}
@@ -343,7 +349,7 @@ function Row({ icon: Icon, label, children }) {
   );
 }
 
-function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, openPool }) {
+function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, openPool, denyPull = null }) {
   const { p, pool, keySaved, trial, state, kind } = sel;
   const gw = p.gateway ? `${p.gateway.host}:${p.gateway.port}` : null;
   const trialDay = trial ? parseDay(trial.endsAt) : null;
@@ -430,7 +436,7 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
         </dl>
       </section>
 
-      {!p.unavailable && <ProviderAccount providerKey={p.key} />}
+      {!p.unavailable && !denyPull && <ProviderAccount providerKey={p.key} />}
 
       <div role="tablist" className="flex items-center gap-1 px-5 border-b border-border">
         {TABS.map(([key, label]) => (
@@ -452,7 +458,10 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
           p.unavailable ? (
             <p className="text-[13px] text-muted-foreground leading-relaxed">{t('detail.noConnector')}</p>
           ) : (
-            <div className="flex flex-col gap-4 provider-workspace">
+            // A disabled fieldset turns every input and button of the pull form off for a member without
+            // proxies.manage; its title is the reason (main refuses the pull and lookups on its own).
+            <fieldset disabled={Boolean(denyPull)} title={denyPull || undefined} className="min-w-0 m-0 p-0 border-0 [&_button:disabled]:opacity-60 [&_button:disabled]:cursor-not-allowed flex flex-col gap-4 provider-workspace">
+              {denyPull && <p role="note" className="text-[12.5px] text-muted-foreground">{t('detail.pullDenied', { reason: denyPull })}</p>}
               <label className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background/40 px-3.5 py-2.5">
                 <span className="min-w-0">
                   <span className="block text-[13px] font-medium text-foreground">{t('detail.testAfter')}</span>
@@ -485,7 +494,7 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
                   )}
                 </div>
               )}
-            </div>
+            </fieldset>
           )
         ) : (
           <PoolList t={t} pool={pool} openPool={openPool} />

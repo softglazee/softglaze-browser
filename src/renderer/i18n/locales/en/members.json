@@ -27,7 +27,7 @@
     "OPERATOR": "Launch and use assigned profiles only."
   },
   "features": {
-    "dashboard": "Dashboard",
+    "dashboard": "Dashboard (page only)",
     "profiles": "Profiles",
     "groups": "Groups",
     "proxies": "Proxy pool",
@@ -145,7 +145,8 @@
       "canCreateAdmins": "Can invite admins",
       "canCreateManagers": "Can invite managers",
       "canCreateOperators": "Can invite operators"
-    }
+    },
+    "featuresHint": "A feature turned off is hidden from the sidebar, and its actions are refused everywhere (for example adding proxies, restoring from Trash or downloading browsers). Lists other pages need, such as picking a proxy or a group in the profile editor, still load."
   },
   "accountStatus": {
     "title": "Account status",

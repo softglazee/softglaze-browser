@@ -5,14 +5,15 @@ import Button from '@/components/ui/Button.jsx';
 // or that it was turned off for them) as a tooltip. A disabled Button has no pointer events, so the
 // tooltip sits on a wrapper; screen readers get the reason through aria-describedby.
 // `deny`: the reason from usePermissions(), or null/undefined when the action is allowed.
-export default function GuardedButton({ deny, children, ...props }) {
+// `wrapperClassName`: the wrapper's layout while denied, for a button that fills its row (flex-1, w-full).
+export default function GuardedButton({ deny, wrapperClassName = 'inline-flex', children, ...props }) {
   const id = useId();
   if (!deny) return <Button {...props}>{children}</Button>;
   const { onClick, ...rest } = props; // never fires while denied
   // `relative`: the sr-only reason is absolutely positioned; without a positioned wrapper it escapes a
   // scrolling table and widens the whole page on a narrow window.
   return (
-    <span className="relative inline-flex" title={deny}>
+    <span className={`relative ${wrapperClassName}`} title={deny}>
       <Button {...rest} disabled aria-describedby={id}>{children}</Button>
       <span id={id} className="sr-only">{deny}</span>
     </span>

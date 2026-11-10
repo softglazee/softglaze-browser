@@ -62,7 +62,8 @@ export default function BrandingSettings() {
   }, []);
 
   const isSuper = me && me.role === 'SUPER_ADMIN';
-  const canManageAutofill = me && (me.role === 'SUPER_ADMIN' || me.role === 'OWNER');
+  // Smart Autofill follows main's vault.manage (the Owner); single-user mode (no member) is the Owner.
+  const canManageAutofill = !me || me.role === 'SUPER_ADMIN' || me.role === 'OWNER';
 
   async function toggleAutofill(next) {
     setAutofill(next);

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound, Languages, Search, FlaskConical, AlertCircle, Star } from 'lucide-react';
+import { RefreshCcw, StopCircle, Loader2, Database, Clock, Zap, Settings2, ChevronDown, Mail, Send, CheckCircle2, ShieldCheck, Users, Globe2, Layers, Network, FolderSync, SlidersHorizontal, Power, KeyRound, Languages, Search, FlaskConical, AlertCircle, Star, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import BillingSettings from '@/components/BillingSettings.jsx';
@@ -14,8 +14,10 @@ import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import NumberInput from '@/components/ui/NumberInput.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
 import { SHOW_UNAPPLIED_SETTINGS, visibleSectionOrder } from '@/lib/unappliedSettings.mjs';
@@ -31,6 +33,14 @@ if (!i18n.hasResourceBundle('es', 'settingsExtra')) i18n.addResourceBundle('es',
 // Lowercased live search query, shared with every section/row so they can hide
 // themselves when they do not match. Empty string = show everything.
 const SearchCtx = createContext('');
+
+// Why the sections inside may not be changed by this member (the tooltip text), or null. Main refuses
+// the same writes (setGlobalSettingsForActor and the setters next to it); a section shown read-only
+// keeps its values visible and disables its controls (SectionBox).
+const ReadOnlyCtx = createContext(null);
+function ReadOnly({ deny, children }) {
+  return <ReadOnlyCtx.Provider value={deny || null}>{children}</ReadOnlyCtx.Provider>;
+}
 
 const numCls = 'w-20 bg-input-background border border-border rounded px-2 py-1 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary';
 
@@ -73,7 +83,7 @@ function buildSections(t, tx) {
   add('behaviour', 'browser', tx('behaviour.title'), tx('behaviour.description'), 'chrome sign-in translate devtools extensions https videos images bandwidth cookies third-party launch check mismatch');
   add('website', 'browser', tx('website.title'), tx('website.description'), `local network url${unapplied('block allowlist blocklist facebook')}`);
   add('ipsetting', 'browser', tx('ipSetting.title'), tx('ipSetting.description'), 'ip asn city region country checker ipinfo');
-  add('autofill', 'browser', tx('smartAutofill.title'), tx('smartAutofill.description'), 'autofill vault persona firefox form');
+  add('autofill', 'browser', tx('smartAutofill.title'), tx('smartAutofill.description'), 'autofill vault persona firefox form team members');
   add('captcha', 'browser', tx('captcha.title'), tx('captcha.description'), 'captcha recaptcha hcaptcha 2captcha anticaptcha solver api key');
 
   add('localruntime', 'runtime', tx('localRuntime.title'), tx('localRuntime.description'), 'sqlite database path profile root');
@@ -162,6 +172,13 @@ export default function SettingsPage() {
   useEffect(() => () => clearTimeout(savedTimer.current), []);
 
   const { s, loading: loadingGlobal, err: globalErr, apply } = useGlobalSettings(tx, reportSave);
+  // Workspace settings: settings.manage (Admin and up). Smart Autofill: vault.manage (Owner). The proxy
+  // check schedule: the workspace proxy rule. Email (SMTP): the Owner. Main refuses each on its own.
+  const perm = usePermissions();
+  const denySettings = perm.deny('settings.manage');
+  const denyVault = perm.deny('vault.manage');
+  const denySchedule = perm.denyWorkspaceProxy();
+  const denyEmail = perm.denyOwner(); // also cloud sync and workspace backup (Owner only in main)
 
   const sections = useMemo(() => buildSections(t, tx), [t, tx, i18nInst.language]);
   const q = query.trim().toLowerCase();
@@ -281,50 +298,64 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {denySettings && perm.me !== undefined && (
+          <div role="note" className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-elevated px-4 py-3 text-sm text-muted-foreground">
+            <Lock className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+            <span>{t('perm.settingsViewOnly', { reason: denySettings })}</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[224px_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
           <SettingsNav groups={sections.groups} active={active} query={query} setQuery={setQuery} onJump={jumpTo} searchRef={searchRef} />
 
           <div className="min-w-0 max-w-[860px] space-y-8">
             <GroupBlock group={sections.groups[0]} map={SEC}>
               <LanguageSection sec={SEC.language} />
-              <OnStartupSection sec={SEC.onstartup} s={s} apply={apply} />
+              <ReadOnly deny={denySettings}><OnStartupSection sec={SEC.onstartup} s={s} apply={apply} /></ReadOnly>
               <UpdatesSection sec={SEC.updates} />
-              {SHOW_UNAPPLIED_SETTINGS && <PlatformSection sec={SEC.platform} s={s} apply={apply} />}
+              <ReadOnly deny={denySettings}>{SHOW_UNAPPLIED_SETTINGS && <PlatformSection sec={SEC.platform} s={s} apply={apply} />}</ReadOnly>
             </GroupBlock>
 
             <GroupBlock group={sections.groups[1]} map={SEC}>
-              <FingerprintSection sec={SEC.fingerprint} s={s} apply={apply} />
-              <BehaviourSection sec={SEC.behaviour} s={s} apply={apply} />
-              <WebsiteSection sec={SEC.website} s={s} apply={apply} />
-              {SHOW_UNAPPLIED_SETTINGS && <IpSettingSection sec={SEC.ipsetting} s={s} apply={apply} />}
-              <AutofillSection sec={SEC.autofill} s={s} apply={apply} />
-              <CaptchaSection sec={SEC.captcha} s={s} apply={apply} />
+              <ReadOnly deny={denySettings}>
+                <FingerprintSection sec={SEC.fingerprint} s={s} apply={apply} />
+                <BehaviourSection sec={SEC.behaviour} s={s} apply={apply} />
+                <WebsiteSection sec={SEC.website} s={s} apply={apply} />
+                {SHOW_UNAPPLIED_SETTINGS && <IpSettingSection sec={SEC.ipsetting} s={s} apply={apply} />}
+              </ReadOnly>
+              <ReadOnly deny={denyVault}><AutofillSection sec={SEC.autofill} s={s} apply={apply} /></ReadOnly>
+              <ReadOnly deny={denySettings}><CaptchaSection sec={SEC.captcha} s={s} apply={apply} /></ReadOnly>
             </GroupBlock>
 
             <GroupBlock group={sections.groups[2]} map={SEC}>
               <LocalRuntimeSection sec={SEC.localruntime} loading={loading} systemInfo={systemInfo} />
-              <PerformanceSection sec={SEC.performance} s={s} apply={apply} />
-              <ReliabilitySection sec={SEC.reliability} s={s} apply={apply} />
+              <ReadOnly deny={denySettings}>
+                <PerformanceSection sec={SEC.performance} s={s} apply={apply} />
+                <ReliabilitySection sec={SEC.reliability} s={s} apply={apply} />
+              </ReadOnly>
               <SessionsSection sec={SEC.sessions} loading={loading} sessions={sessions} onClose={handleCloseSession} />
-              <SchedulerSection sec={SEC.scheduler} scheduler={scheduler} savingSched={savingSched} saveScheduler={saveScheduler} setScheduler={setScheduler} />
-              {SHOW_UNAPPLIED_SETTINGS && <DataSyncSection sec={SEC.datasync} s={s} apply={apply} />}
+              <ReadOnly deny={denySchedule}><SchedulerSection sec={SEC.scheduler} scheduler={scheduler} savingSched={savingSched} saveScheduler={saveScheduler} setScheduler={setScheduler} /></ReadOnly>
+              <ReadOnly deny={denySettings}>{SHOW_UNAPPLIED_SETTINGS && <DataSyncSection sec={SEC.datasync} s={s} apply={apply} />}</ReadOnly>
             </GroupBlock>
 
             <GroupBlock group={sections.groups[3]} map={SEC}>
-              {SHOW_UNAPPLIED_SETTINGS && <SecuritySection sec={SEC.security} s={s} apply={apply} />}
-              {SHOW_UNAPPLIED_SETTINGS && <MultiDeviceSection sec={SEC.multidevice} s={s} apply={apply} />}
-              <AuditSection sec={SEC.audit} s={s} apply={apply} />
-              <EmailSection sec={SEC.email} />
+              <ReadOnly deny={denySettings}>
+                {SHOW_UNAPPLIED_SETTINGS && <SecuritySection sec={SEC.security} s={s} apply={apply} />}
+                {SHOW_UNAPPLIED_SETTINGS && <MultiDeviceSection sec={SEC.multidevice} s={s} apply={apply} />}
+                <AuditSection sec={SEC.audit} s={s} apply={apply} />
+              </ReadOnly>
+              <EmailSection sec={SEC.email} deny={denyEmail} denyTest={perm.deny('members.manage')} />
             </GroupBlock>
 
             <GroupBlock group={sections.groups[4]} map={SEC}>
               <SearchGate sec={SEC.billing}><BillingSettings /></SearchGate>
               <SearchGate sec={SEC.monetization}><MonetizationSettings /></SearchGate>
               <SearchGate sec={SEC.migration}><MigrationSettings /></SearchGate>
-              <SearchGate sec={SEC.workspacesync}><SyncSettings /></SearchGate>
+              {/* Main: cloud sync and backups are the Owner's, database encryption follows vault.manage. */}
+              <ReadOnly deny={denyEmail}><SearchGate sec={SEC.workspacesync}><SyncSettings /></SearchGate></ReadOnly>
               <SearchGate sec={SEC.branding}><BrandingSettings /></SearchGate>
-              <SearchGate sec={SEC.dbencryption}><DbEncryptionSettings /></SearchGate>
-              <SearchGate sec={SEC.workspacebackup}><WorkspaceBackupSettings /></SearchGate>
+              <ReadOnly deny={denyVault}><SearchGate sec={SEC.dbencryption}><DbEncryptionSettings /></SearchGate></ReadOnly>
+              <ReadOnly deny={denyEmail}><SearchGate sec={SEC.workspacebackup}><WorkspaceBackupSettings /></SearchGate></ReadOnly>
               <SearchGate sec={SEC.developerapi}><DeveloperApiSettings /></SearchGate>
             </GroupBlock>
 
@@ -478,7 +509,15 @@ function IconTile({ icon: Icon, accent = '#3b82f6' }) {
 // jump to it and search can hide it.
 function SectionBox({ sec, icon, accent, headerRight, children, bodyClassName = '' }) {
   const query = useContext(SearchCtx);
+  const readOnly = useContext(ReadOnlyCtx);
+  const { t } = useTranslation();
   const hidden = query && !sec.kw.includes(query);
+  const roId = `set-ro-${sec.id}`;
+  // A disabled fieldset disables every control inside (switches, selects, inputs, buttons) without
+  // touching each one; its title is the tooltip over the whole section body.
+  const body = readOnly
+    ? <fieldset disabled title={readOnly} aria-describedby={roId} className="min-w-0 m-0 p-0 border-0 [&_button:disabled]:opacity-60 [&_button:disabled]:cursor-not-allowed">{children}</fieldset>
+    : children;
   return (
     <section
       id={`set-sec-${sec.id}`}
@@ -492,11 +531,17 @@ function SectionBox({ sec, icon, accent, headerRight, children, bodyClassName = 
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-foreground">{sec.label}</h3>
             {headerRight}
+            {readOnly && (
+              <span title={readOnly} className="relative inline-flex items-center gap-1 rounded border border-border bg-elevated px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <Lock className="w-3 h-3" aria-hidden="true" /> {t('perm.viewOnly')}
+                <span id={roId} className="sr-only">{readOnly}</span>
+              </span>
+            )}
           </div>
           {sec.desc && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed max-w-[70ch]">{sec.desc}</p>}
         </div>
       </header>
-      <div className={bodyClassName}>{children}</div>
+      <div className={bodyClassName}>{body}</div>
     </section>
   );
 }
@@ -505,10 +550,17 @@ function SectionBox({ sec, icon, accent, headerRight, children, bodyClassName = 
 // can hide it, without restyling the card itself.
 function SearchGate({ sec, children }) {
   const query = useContext(SearchCtx);
+  const readOnly = useContext(ReadOnlyCtx);
   const hidden = query && !sec.kw.includes(query);
+  // Inside <ReadOnly>: the card stays visible, its controls are disabled and the reason is shown above it.
   return (
     <div id={`set-sec-${sec.id}`} data-section hidden={hidden} className="scroll-mt-6">
-      {children}
+      {readOnly ? (
+        <>
+          <p role="note" className="mb-2 flex items-center gap-1.5 px-1 text-xs text-muted-foreground"><Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />{readOnly}</p>
+          <fieldset disabled title={readOnly} className="min-w-0 m-0 p-0 border-0 [&_button:disabled]:opacity-60 [&_button:disabled]:cursor-not-allowed">{children}</fieldset>
+        </>
+      ) : children}
     </div>
   );
 }
@@ -1071,6 +1123,15 @@ function AutofillSection({ sec, s, apply }) {
             disabled={s.smartAutofill && s.smartAutofill.enabled === false}
             onChange={(v) => apply({ smartAutofill: { firefox: v } })}
           />
+          {/* The vault is the Owner's: other members' autofill offers its identities only when this is on
+              (main's vaultAutofillAllowed). */}
+          <SwitchRow
+            title={tx('smartAutofill.members.title')}
+            description={tx('smartAutofill.members.desc')}
+            checked={Boolean(s.smartAutofill && s.smartAutofill.members === true)}
+            disabled={s.smartAutofill && s.smartAutofill.enabled === false}
+            onChange={(v) => apply({ smartAutofill: { members: v } })}
+          />
         </>
       )}
     </SectionBox>
@@ -1407,7 +1468,9 @@ function AuditSection({ sec, s, apply }) {
 
 // Email (SMTP) configuration for sending OTP verification codes. Optional: when
 // left blank the app runs offline and shows the code in-app.
-function EmailSection({ sec }) {
+// `deny`: saving the SMTP settings is the Owner's (main's setEmailConfig); `denyTest`: a test email needs
+// members.manage (main's testEmail).
+function EmailSection({ sec, deny, denyTest }) {
   const { t: tx } = useTranslation('settingsExtra');
   const [cfg, setCfg] = useState({ host: '', port: 465, secure: true, user: '', fromName: 'SoftGlaze Security', configured: false, hasPassword: false });
   const [pass, setPass] = useState('');
@@ -1458,7 +1521,8 @@ function EmailSection({ sec }) {
         : <Badge className="bg-secondary text-muted-foreground border-0">{tx('email.offlineMode')}</Badge>}
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        {deny && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />{deny}</p>}
+        <fieldset disabled={Boolean(deny)} title={deny || undefined} className="min-w-0 m-0 p-0 border-0 grid grid-cols-2 gap-3">
           <div className="col-span-2 sm:col-span-1">
             <label htmlFor="set-email-host" className={labelCls}>{tx('email.smtpHost')}</label>
             <input id="set-email-host" className={inputCls} value={cfg.host} onChange={(e) => setCfg({ ...cfg, host: e.target.value })} placeholder="smtp.hostinger.com" />
@@ -1486,20 +1550,20 @@ function EmailSection({ sec }) {
             <label htmlFor="set-email-fromname" className={labelCls}>{tx('email.fromName')}</label>
             <input id="set-email-fromname" className={inputCls} value={cfg.fromName} onChange={(e) => setCfg({ ...cfg, fromName: e.target.value })} placeholder="SoftGlaze Security" />
           </div>
-        </div>
+        </fieldset>
 
         {err && <p className="text-xs text-red-400">{err}</p>}
         {msg && <p className="text-xs text-green-400 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" />{msg}</p>}
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <Button variant="primary" onClick={save} disabled={busy}>
+          <GuardedButton deny={deny} variant="primary" onClick={save} disabled={busy}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : tx('email.saveButton')}
-          </Button>
+          </GuardedButton>
           <div className="ml-auto flex items-center gap-2">
-            <input className={inputCls + ' w-56'} value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="test@recipient.com" />
-            <Button variant="secondary" onClick={sendTest} disabled={testing || !testTo.trim()}>
+            <input className={inputCls + ' w-56'} value={testTo} onChange={(e) => setTestTo(e.target.value)} disabled={Boolean(denyTest)} title={denyTest || undefined} placeholder="test@recipient.com" />
+            <GuardedButton deny={denyTest} variant="secondary" onClick={sendTest} disabled={testing || !testTo.trim()}>
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> {tx('email.test')}</>}
-            </Button>
+            </GuardedButton>
           </div>
         </div>
       </div>

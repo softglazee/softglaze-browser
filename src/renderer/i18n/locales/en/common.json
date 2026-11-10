@@ -263,6 +263,11 @@
     "useOnly": "Shared with you for use only. Changing it needs edit access.",
     "notYourGroup": "Only the team that made this group, or the Owner or an Admin, can rename or delete it.",
     "vaultTitle": "Data Vault is managed by the Owner",
-    "vaultBody": "Only the workspace Owner can view and edit the identities in the Data Vault. In a launched profile, the SoftGlaze Autofill button still offers them on signup forms."
+    "vaultBody": "Only the workspace Owner can view and edit the identities in the Data Vault. In a launched profile, the SoftGlaze Autofill button offers them to other members only if the Owner turned on \"Team members can use the Data Vault in autofill\" in Settings > Smart Autofill.",
+    "viewOnly": "View only",
+    "settingsViewOnly": "Workspace settings apply to every member. You can see them here, but not change them. {{reason}}",
+    "startLinksViewOnly": "These links show on every member's start page. You can see them here, but not change them. {{reason}}",
+    "featureOffTitle": "This page is turned off for your account",
+    "featureOffBody": "An administrator turned it off under Visible features. Ask whoever manages your account if you need it."
   }
 }

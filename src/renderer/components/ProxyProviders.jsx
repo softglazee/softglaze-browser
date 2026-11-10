@@ -5,6 +5,7 @@ import {
   Plus, Gauge, MapPin, SlidersHorizontal, Layers
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { getLogo } from '@/lib/providerLogos.js';
 import { countryOptions } from '@/lib/countries.mjs';
 import i18n from '@/i18n/index.js';
@@ -192,6 +193,9 @@ function firstPoolType(provider) {
 
 export default function ProxyProviders({ onSynced, selectedKey: controlledKey, embedded = false }) {
   const { t, i18n } = useTranslation('cmpSettingsC');
+  // Saved vendor credentials are the Owner's (main's saveProxyProviderCreds); others may still pull
+  // with keys they type, which are not saved.
+  const denyCreds = usePermissions().denyOwner();
   const [ownSelectedKey, setSelectedKey] = useState(PROVIDERS[0].key);
   const selectedKey = controlledKey || ownSelectedKey;
   const provider = useMemo(() => PROVIDERS.find((p) => p.key === selectedKey) || PROVIDERS[0], [selectedKey]);
@@ -493,7 +497,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
   // secret) with a ready-to-pull confirmation distinct from the pull spinner.
   const renderSaveRow = () => (
     <div className="flex flex-wrap items-center gap-3">
-      <button type="button" onClick={handleSaveCreds} disabled={savingCreds} className={secondaryBtnCls}>
+      <button type="button" onClick={handleSaveCreds} disabled={savingCreds || Boolean(denyCreds)} title={denyCreds || undefined} className={secondaryBtnCls}>
         {savingCreds ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {t('proxyProviders.creds.save', 'Save credentials')}
       </button>
       {credsSaved && <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-400"><Check className="w-4 h-4" /> {t('proxyProviders.creds.saved', 'Credentials saved - ready to pull')}</span>}
@@ -1390,7 +1394,7 @@ export default function ProxyProviders({ onSynced, selectedKey: controlledKey, e
               )}
 
               <div className="flex items-center gap-3 flex-wrap">
-                <button onClick={handleSaveCreds} disabled={savingCreds} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
+                <button onClick={handleSaveCreds} disabled={savingCreds || Boolean(denyCreds)} title={denyCreds || undefined} className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-[13px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground border border-border disabled:opacity-60">
                   {savingCreds ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('proxyProviders.creds.save', 'Save credentials')}
                 </button>
                 {credsSaved && <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-emerald-400"><Check className="w-4 h-4" /> {t('proxyProviders.creds.saved', 'Credentials saved - ready to pull')}</span>}

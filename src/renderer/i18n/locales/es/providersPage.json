@@ -60,6 +60,7 @@
     "noMatch": "Ningún proveedor coincide con este filtro."
   },
   "detail": {
+    "pullDenied": "Puedes ver los proveedores, pero no puedes obtener proxies. {{reason}}",
     "proxiesInPool_one": "{{count}} proxy en el grupo",
     "proxiesInPool_other": "{{count}} proxies en el grupo",
     "dashboard": "Panel del proveedor",

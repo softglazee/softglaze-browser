@@ -538,6 +538,9 @@
     "cloneNoProxy": "Copied. The original's proxy is not available to you, so the copy has no proxy yet: assign one before launching it.",
     "cloneNoGroup": "Copied. The original's group is not visible to you, so the copy is not in a group.",
     "proxyMissing": "No proxy",
-    "proxyMissingTitle": "Set to use a proxy, but it has none (its proxy was deleted, or is not available to you). Assign a proxy in the editor before launching."
+    "proxyMissingTitle": "Set to use a proxy, but it has none (its proxy was deleted, or is not available to you). Assign a proxy in the editor before launching.",
+    "cloneNoTwoFactor": "The 2FA key was not copied, because the original is shared with you for use only.",
+    "cloneNoLogins": "The saved platform logins were not copied, because the original is shared with you for use only.",
+    "cloneUseOnlyHint": "shared with you for use only, so the copy leaves out its 2FA key and saved logins"
   }
 }

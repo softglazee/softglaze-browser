@@ -1022,6 +1022,8 @@ function PermissionEditor({ role, value, onChange, granter }) {
 
       <div>
         <label className={labelCls}>{t('perms.visibleFeatures')}</label>
+        {/* What a switched-off feature does (main's featureGate.js): page hidden and its actions refused. */}
+        <p className="text-[10.5px] text-muted-foreground mb-2 -mt-1">{t('perms.featuresHint')}</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
           {FEATURES.map(([k]) => {
             const granterOk = !granter || !granter.features || granter.features[k] !== false;

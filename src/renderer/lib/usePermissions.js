@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { can, denial, workspaceProxyDenial, canManageVault } from '@/lib/memberPermissions.mjs';
+import { can, denial, workspaceProxyDenial, canManageVault, cookieExportDenial, featureVisible } from '@/lib/memberPermissions.mjs';
 
 // The signed-in member, read once per window: switching member, signing out and locking the
 // workspace all reload the window. undefined until known; null in single-user mode (the Owner).
@@ -55,6 +55,13 @@ export function usePermissions() {
     // Owner-only actions outside the action list (ban or unban a member: main's requireOwnerOrSuper).
     denyOwner: () => text(me === undefined ? { kind: 'loading' }
       : (me === null || me.role === 'OWNER' || me.role === 'SUPER_ADMIN') ? null : { kind: 'role', role: 'OWNER' }),
+    // A profile's cookies: export needs profiles.export and the Manager role (cookie dumps are raw
+    // session values), import needs profiles.edit; both need edit access to the profile, so a profile
+    // shared "use only" can do neither.
+    denyCookieExport: (row) => text(cookieExportDenial(me)) || (row && row.canEdit === false ? t('perm.useOnly') : null),
+    denyCookieImport: (row) => text(denial(me, 'profiles.edit')) || (row && row.canEdit === false ? t('perm.useOnly') : null),
+    // A page turned off for this member under "Visible features".
+    featureOn: (key) => featureVisible(me, key),
     canManageVault: canManageVault(me)
   };
 }
