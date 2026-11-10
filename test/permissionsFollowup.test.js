@@ -593,7 +593,9 @@ function loadTrash(db = seed()) {
   const fns = loadMain([...VALIDATORS, 'requirePermission', 'assertCanAccessProfile', 'deleteProfile', 'restoreProfile', 'purgeProfile', 'bulkDeleteProfiles', 'bulkRestoreProfiles', 'withViewerEditFlags'], {
     ...ws.deps,
     closeAnySession: async () => {}, wipeProfileFolders: async () => 0, logActivity: async () => {}, logAudit: async () => {},
-    serializeProfile: (p) => ({ ...p })
+    serializeProfile: (p) => ({ ...p }),
+    // A "use only" row's proxy fields (1.0.26 round 4, test/permissionsRound4.test.js).
+    currentMemberCanRevealProxy: true, redactUseOnlyProxy: () => ({}), proxyInVisiblePool: () => false
   });
   return { db, ws, fns };
 }
@@ -629,7 +631,9 @@ test('the profile lists tell the page which rows the member may edit, without se
   assert.ok((await fns.withViewerEditFlags(rows)).every((p) => !('accesses' in p)));
   ws.as(null);
   assert.ok((await fns.withViewerEditFlags(rows)).every((p) => p.canEdit === true));
-  for (const name of ['listProfiles', 'listTrash']) assert.match(extractFunction(IPC, name), /return withViewerEditFlags\(profiles\);/);
+  assert.match(extractFunction(IPC, 'listTrash'), /return withViewerEditFlags\(profiles\);/);
+  // The list also drops rows a search matched only through a masked value (1.0.26 round 4).
+  assert.match(extractFunction(IPC, 'listProfiles'), /const rows = await withViewerEditFlags\(profiles\);/);
 });
 
 // ---- Schema ----

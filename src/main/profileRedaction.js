@@ -7,18 +7,54 @@ const SECRET_MASK = '••••••••';
 
 // host:port:user:pass -> host:port:user:•••••••• (host:port with no credentials is unchanged).
 // When the linked proxy row is available it is used, because a host may itself contain ':'.
-function maskProxyInfoString(info, proxy) {
+// `maskUsername`: the username is masked too (a proxy the viewer's own Proxy pool does not show).
+function maskProxyInfoString(info, proxy, { maskUsername = false } = {}) {
+  const userOf = (u) => (u ? (maskUsername ? SECRET_MASK : String(u)) : '');
   if (proxy && proxy.host) {
-    const user = proxy.username ? String(proxy.username) : '';
+    const user = userOf(proxy.username);
     const pass = proxy.password ? SECRET_MASK : '';
     return user || pass ? `${proxy.host}:${proxy.port}:${user}:${pass}` : `${proxy.host}:${proxy.port}`;
   }
   const s = info == null ? null : String(info);
   if (!s) return s;
   const parts = s.split(':');
-  if (parts.length < 4) return s;
+  if (parts.length < 3) return s;
+  if (parts.length === 3) return maskUsername ? `${parts[0]}:${parts[1]}:${userOf(parts[2])}` : s;
   const hasPassword = parts.slice(3).join(':') !== '';
-  return `${parts[0]}:${parts[1]}:${parts[2]}:${hasPassword ? SECRET_MASK : ''}`;
+  return `${parts[0]}:${parts[1]}:${userOf(parts[2])}:${hasPassword ? SECRET_MASK : ''}`;
+}
+
+// A proxy the viewer's own Proxy pool does not list (one owned outside their visible subtree, for
+// example on a profile shared with them): only what is not secret. The username and rotation link
+// are masked, the password stays masked. `view` is serializeProxy's output; returns a copy.
+function redactForeignProxy(view) {
+  if (!view || typeof view !== 'object') return view;
+  return {
+    ...view,
+    username: view.username ? SECRET_MASK : '',
+    password: view.password ? SECRET_MASK : '',
+    hasUsername: Boolean(view.username) || Boolean(view.hasUsername),
+    rotationUrl: null
+  };
+}
+
+// The proxy fields of a profile shared with the viewer "use only": the profile launches on its real
+// proxy (launch reads the stored row), but the window never gets the proxy's password, whatever the
+// role, nor its rotation link: the rule of the share's saved logins (PR #65). The username follows the
+// Proxy pool: shown only when `showUsername` (the proxy is in the viewer's own pool and they may reveal
+// credentials), masked otherwise. A proxy address saved on the profile without a pool proxy is the
+// profile owner's, so its username is masked too. `profile` is the stored row (with `proxy`), `view`
+// its serializeProfile output; returns { proxyInfoString, proxy } to put over the view.
+function redactUseOnlyProxy(profile, view, { showUsername = false } = {}) {
+  const linked = profile && profile.proxy && profile.proxy.host ? profile.proxy : null;
+  const proxyInfoString = maskProxyInfoString(profile ? profile.proxyInfoString : null, linked, { maskUsername: !(showUsername && linked) });
+  let proxy = view ? view.proxy : null;
+  if (proxy && typeof proxy === 'object') {
+    proxy = showUsername
+      ? { ...proxy, password: proxy.password ? SECRET_MASK : '', rotationUrl: null }
+      : redactForeignProxy(proxy);
+  }
+  return { proxyInfoString, proxy };
 }
 
 function redactPlatformAccounts(accounts, reveal) {
@@ -89,4 +125,4 @@ function restoreMaskedSecrets(input, existing) {
   return out;
 }
 
-module.exports = { SECRET_MASK, maskProxyInfoString, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets };
+module.exports = { SECRET_MASK, maskProxyInfoString, redactForeignProxy, redactUseOnlyProxy, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets };

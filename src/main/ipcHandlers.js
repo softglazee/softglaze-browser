@@ -101,7 +101,7 @@ const serverErrors = require('./serverErrors');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
 const featureGate = require('./featureGate');
-const { redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets } = require('./profileRedaction');
+const { redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets, redactUseOnlyProxy, redactForeignProxy } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, maskProxySellerKey, proxySellerListItems, proxySellerListGeo, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
@@ -5437,6 +5437,10 @@ async function saveProfileAsTemplate(payload) {
   // Gated like a clone, so a template cannot copy a profile the member cannot access.
   await requirePermission('profiles.create');
   await assertCanAccessProfile(id);
+  // Shared with this member "use only" (they may launch it, not edit it).
+  let useOnly = false;
+  try { await assertCanAccessProfile(id, { requireEdit: true }); }
+  catch (e) { if (!e || e.code !== 'FORBIDDEN') throw e; useOnly = true; }
   const name = requiredString(input.name, 'Template name');
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
@@ -5444,9 +5448,18 @@ async function saveProfileAsTemplate(payload) {
   // Templates are workspace-global, so strip live secrets (2FA seed, platform accounts); clones keep them.
   delete fields.twoFactorSeed;
   delete fields.platformAccounts;
+  // A template of a "use only" share keeps no proxy: its address holds the owner's proxy password,
+  // which a profile made from the template would hand to its new owner (the rule of a copy of it,
+  // stripUseOnlySecrets). A profile made from it keeps "Profile proxy" and asks for a proxy first.
+  const leftOut = { proxy: false };
+  if (useOnly && (fields.proxyId || fields.proxyInfoString)) {
+    fields.proxyId = null;
+    fields.proxyInfoString = null;
+    leftOut.proxy = true;
+  }
   // The maker owns the template; it is listed for their visible subtree (scopedTemplateWhere).
   const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields), ownerMemberId: ownerStampId() } });
-  return serializeTemplate(created);
+  return { ...serializeTemplate(created), leftOut };
 }
 
 // ---- Template scoping ----
@@ -5658,7 +5671,22 @@ async function listProfiles(payload = {}) {
   }
 
   const profiles = await db.profile.findMany({ where: await scopedProfileWhere(where), orderBy: { createdAt: 'desc' }, include: { proxy: true, group: true, accesses: { select: PROFILE_ACCESS_SELECT.accesses.select } } });
-  return withViewerEditFlags(profiles);
+  const rows = await withViewerEditFlags(profiles);
+  return search ? rows.filter((r) => searchMatchesView(r, search)) : rows;
+}
+
+// A search finds a profile only by what the member is shown of it. The database matched the stored
+// proxy address, which holds a password the window may not get (masked for a profile shared "use only"
+// and without proxies.reveal), so a row that matched only there is dropped: otherwise typing guesses
+// into the search box would tell a shared proxy's password one letter at a time.
+function searchMatchesView(row, search) {
+  const needle = String(search).toLowerCase();
+  return ['title', 'notes', 'dataDirName', 'proxyInfoString'].some((k) => typeof row[k] === 'string' && row[k].toLowerCase().includes(needle));
+}
+
+// A proxy the member's own Proxy pool lists: owned within their visible subtree (scopedProxyWhere).
+function proxyInVisiblePool(visible, proxy) {
+  return Boolean(proxy) && proxy.ownerMemberId != null && visible.has(proxy.ownerMemberId);
 }
 
 async function listTrash() {
@@ -5677,19 +5705,26 @@ async function listTrash() {
 // Main still refuses them on its own (assertCanAccessProfile / partitionAccessibleProfileIds with
 // requireEdit). The share list itself is not sent.
 async function withViewerEditFlags(rows) {
-  const member = await getActiveMember();
+  const member = await getActiveMember(); // also refreshes currentMemberCanRevealProxy
   let canEdit = () => true;
+  let inPool = () => true;
   if (member && member.role !== 'SUPER_ADMIN') {
     const visible = permissions.visibleMemberIds(await getPrisma().member.findMany(), member);
     canEdit = (row) => permissions.profileRowAccessible(visible, row, true);
+    inPool = (proxy) => proxyInVisiblePool(visible, proxy);
   }
   return rows.map((p) => {
     const { accesses, ...row } = p;
     const editable = canEdit(p);
-    const out = serializeProfile(row);
-    // A "use only" share never hands over its saved platform logins, whatever the role (the same rule
-    // as a copy of it, stripUseOnlySecrets): passwords and 2FA keys arrive masked.
-    if (!editable && Array.isArray(out.platformAccounts)) out.platformAccounts = redactPlatformAccounts(out.platformAccounts, false);
+    let out = serializeProfile(row);
+    if (!editable) {
+      // A "use only" share never hands over its saved platform logins, whatever the role (the same rule
+      // as a copy of it, stripUseOnlySecrets): passwords and 2FA keys arrive masked.
+      if (Array.isArray(out.platformAccounts)) out.platformAccounts = redactPlatformAccounts(out.platformAccounts, false);
+      // Nor its proxy's password or rotation link; the username only as the member's Proxy pool shows
+      // it (their own pool's proxy, with proxies.reveal). Launch still uses the stored proxy.
+      out = { ...out, ...redactUseOnlyProxy(row, out, { showUsername: currentMemberCanRevealProxy && inPool(row.proxy) }) };
+    }
     return { ...out, canEdit: editable };
   });
 }
@@ -7199,6 +7234,10 @@ async function launchProfileNow(payload) {
 
   // Reserve before the heavy spawn so a parallel launch cannot slip through the check-to-acquire window.
   const reservation = reserveProfileLock(id, launcher);
+  // Data Vault autofill in this browser follows the member launching it now (a token's member for
+  // SoftGlaze AI and the Local API), not whoever is signed in to the window later (sessionLaunchers).
+  const launchedBy = actingMemberId() == null ? null : actingMemberId(); // null: single-user mode
+  let undoLauncher = null;
   try {
     // Firefox has no CDP or MV3, so its launcher configures a dedicated profile through user.js prefs
     // (proxy and auth relay, UA, locale, timezone, WebRTC off).
@@ -7209,11 +7248,13 @@ async function launchProfileNow(payload) {
       const ffRotated = await pickRotationProxy(db, id);
       assertProfileHasLaunchProxy(profile, ffRotated);
       const ffProxy = ffRotated || (useFfProxy ? profile.proxy : null);
-      // Smart Autofill on Firefox: master toggle AND the firefox sub-flag must
-      // both be on. Installs the WebExtension + enables the loopback bridge path.
+      // Smart Autofill on Firefox: master toggle AND the firefox sub-flag must both be on, and the
+      // launcher must be allowed the vault in autofill. Installs the WebExtension + enables the
+      // loopback bridge path; without it the engine takes out a copy an earlier launch installed.
       const ffAutofill = (globalSettings.smartAutofill?.enabled !== false)
         && (globalSettings.smartAutofill?.firefox !== false)
-        && (await vaultAutofillAllowed());
+        && (await vaultAutofillAllowed(launchedBy));
+      undoLauncher = recordSessionLauncher(profile.id, launchedBy, { firefoxAutofill: ffAutofill });
       const ffSession = await firefoxEngine.launchFirefoxProfile({
         profileId: profile.id,
         title: profile.title,
@@ -7228,11 +7269,13 @@ async function launchProfileNow(payload) {
         profile,
         autofillEnabled: ffAutofill
       });
+      // Already open: that browser keeps the member who launched it.
+      if (ffSession && ffSession.alreadyRunning) undoLauncher();
       acquireProfileLock(id, ffSession.sessionId, launcher);
       await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
       await logActivity(db, id, 'launch', `firefox session ${ffSession.sessionId}${ffRotated ? ` · rotated ${ffRotated.name}` : ''}`);
       noteStoreRatingLaunch(input);
-      return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
+      return { ...ffSession, rotatedProxy: await launchedProxyView(ffRotated) };
     }
 
     // A User-Agent picked in the editor is applied as picked (browserEngine), even when it names another
@@ -7269,6 +7312,7 @@ async function launchProfileNow(payload) {
     const loadExtensions = perProfileBrowser.loadExtensions === true;
     const globalExtensionDirs = loadExtensions ? await extensionManager.resolveGlobalExtensionDirs() : [];
 
+    undoLauncher = recordSessionLauncher(profile.id, launchedBy);
     const session = await launchProfileSession({
       profileId: profile.id,
       title: profile.title,
@@ -7289,16 +7333,49 @@ async function launchProfileNow(payload) {
       geoMatchEnabled: !(globalSettings.geoMatch && globalSettings.geoMatch.enabled === false),
       startPageLinks: Array.isArray(globalSettings.startPageLinks) ? globalSettings.startPageLinks : []
     });
+    // Already open: that browser keeps the member who launched it.
+    if (session && session.alreadyRunning) undoLauncher();
 
     acquireProfileLock(id, session.sessionId, launcher);
     await db.profile.update({ where: { id }, data: { lastUsedAt: new Date(), launchCount: { increment: 1 } } }).catch(() => {});
     await logActivity(db, id, 'launch', `session ${session.sessionId}${rotated ? ` · rotated proxy ${rotated.name}` : ''}`);
     noteStoreRatingLaunch(input);
-    return { ...session, rotatedProxy: rotated ? serializeProxy(rotated) : null };
+    return { ...session, rotatedProxy: await launchedProxyView(rotated) };
   } catch (err) {
     releaseReservedLock(id, reservation); // no-op once upgraded, or if it is not ours
+    if (undoLauncher) undoLauncher();
     throw err;
   }
+}
+
+// Who launched each running profile: session id -> { memberId, firefoxAutofill }. memberId is null in
+// single-user mode (the Owner). Data Vault autofill in that browser follows this member, not whoever
+// is signed in to the window later (sessionAutofillAllowed), so switching members in the window
+// changes nothing for a profile already open. Recorded before the engine starts the browser, because
+// its first page asks while the launch is still running; dropped when the session ends.
+const sessionLaunchers = new Map();
+
+// Returns an undo for a launch that fails: it puts back what was there, so a profile already open
+// keeps its launcher.
+function recordSessionLauncher(sessionId, memberId, extra = {}) {
+  const key = String(sessionId);
+  const prev = sessionLaunchers.get(key);
+  const rec = { memberId: memberId == null ? null : memberId, firefoxAutofill: false, ...extra };
+  sessionLaunchers.set(key, rec);
+  return () => {
+    if (sessionLaunchers.get(key) !== rec) return;
+    if (prev) sessionLaunchers.set(key, prev);
+    else sessionLaunchers.delete(key);
+  };
+}
+
+// The rotation pool's proxy a launch picked, as the launcher may see it: one outside their own Proxy
+// pool (a profile shared with them, set up by its owner) without its username and rotation link.
+async function launchedProxyView(proxy) {
+  if (!proxy) return null;
+  const view = serializeProxy(proxy);
+  try { await assertCanAccessProxy(proxy.id); return view; }
+  catch (e) { return redactForeignProxy(view); }
 }
 
 // A profile set to "Profile proxy" that has no proxy (its proxy was deleted, or a template or copy
@@ -7402,6 +7479,8 @@ function handleSessionEvent(evt) {
   // itself; that ending is a close, not a crash (no crash toast, no auto-restart).
   if (evt.type === 'crashed' && pid != null && apiDrivenProfiles.has(pid)) evt = { ...evt, type: 'closed', reason: 'api-client' };
   if (pid != null) { apiDrivenProfiles.delete(pid); ai.onProfileClosed(pid); } // closed or crashed: no script drives it any more
+  // Closed or crashed: the session's launcher goes with it (a restart records its own).
+  if (evt.type === 'closed' || evt.type === 'crashed') sessionLaunchers.delete(String(evt.sessionId != null ? evt.sessionId : pid));
   if (evt.type === 'closed') {
     if (evt.reason === 'shutdown') return; // app quitting - leave the row 'running' so it can be restored next launch
     markSessionClosed(pid).catch(() => {});
@@ -8098,20 +8177,26 @@ async function gatherExport() {
   let revealTwoFa = revealCreds;
   if (revealTwoFa) { try { await assertCanRevealKind('twoFactorCode'); } catch (e) { revealTwoFa = false; } }
   // A profile shared "use only" never hands over its saved platform logins (the rule of a copy of it,
-  // stripUseOnlySecrets): its account password and 2FA key stay blank whatever the role.
+  // stripUseOnlySecrets): its account password and 2FA key stay blank whatever the role. Nor its
+  // proxy's password or rotation link, and the proxy username only as the member's Proxy pool shows
+  // it (their own pool's proxy, with proxies.reveal); the profile list follows the same rule.
   let editable = () => true;
+  let inPool = () => true;
   if (member && member.role !== 'SUPER_ADMIN') {
     const visible = permissions.visibleMemberIds(await db.member.findMany(), member);
     editable = (p) => permissions.profileRowAccessible(visible, p, true);
+    inPool = (proxy) => proxyInVisiblePool(visible, proxy);
   }
   const headers = EXPORT_COLUMNS.map((c) => c[0]);
   const rows = profiles.map((p) => {
     const own = editable(p);
+    const showUser = own || (revealCreds && inPool(p.proxy));
     return EXPORT_COLUMNS.map((c) => {
       if (!revealCreds && (c[0] === 'Proxy Password' || c[0] === 'Account Password')) return '';
-      if (!revealCreds && c[0] === 'Proxy Info') return p.proxy ? `${p.proxy.host}:${p.proxy.port}:${p.proxy.username || ''}:` : '';
+      if ((!revealCreds || !own) && c[0] === 'Proxy Info') return p.proxy ? `${p.proxy.host}:${p.proxy.port}:${showUser ? (p.proxy.username || '') : ''}:` : '';
       if (!revealTwoFa && c[0] === '2FA Key') return '';
-      if (!own && (c[0] === 'Account Password' || c[0] === '2FA Key')) return '';
+      if (!own && (c[0] === 'Account Password' || c[0] === '2FA Key' || c[0] === 'Proxy Password' || c[0] === 'Proxy Rotation URL')) return '';
+      if (!showUser && c[0] === 'Proxy Username') return '';
       return c[1](p, rotationUrls);
     });
   });
@@ -8282,13 +8367,16 @@ async function captchaScores(payload) {
 }
 
 // Applies one fix from a CAPTCHA score. Profile fixes need edit rights on that profile; the
-// third-party cookie switch is workspace-wide, so only the Owner may flip it.
+// third-party cookie switch is a workspace setting (browser.blockThirdPartyCookies), so it follows the
+// rule of the same switch in Settings: settings.manage and the Settings page under Visible features
+// (assertCanWriteGlobalSettings), with the same refusal.
 async function captchaFix(payload) {
   const input = requireObject(payload);
   const action = String(input.action || '');
   if (action === 'allow-3p-cookies') {
-    await requireOwnerOrSuper('change workspace browser settings');
-    await setGlobalSettings({ browser: { blockThirdPartyCookies: false } });
+    const patch = { browser: { blockThirdPartyCookies: false } };
+    await assertCanWriteGlobalSettings(await getActiveMember(), await getGlobalSettings(), patch);
+    await setGlobalSettings(patch);
     await logAudit('settings.third-party-cookies', { detail: 'Allowed from the CAPTCHA score' });
     return { ok: true, scope: 'workspace' };
   }
@@ -8783,8 +8871,133 @@ function withoutSuperOnlyKeys(settings) {
 }
 
 async function getGlobalSettingsForActor() {
-  const all = await getGlobalSettings();
-  return withoutWorkspaceSecrets((await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all), await getActiveMember());
+  const member = await getActiveMember();
+  const shared = await getGlobalSettings();
+  // The member's own saved filters and warm-up lists in place of the Owner's (memberPageLists).
+  let own = null;
+  try { own = await readOwnPageLists(member); }
+  catch (e) { own = pageListsOwnerKey(member) === null ? null : emptyPageLists(); }
+  const all = own ? { ...shared, ...own } : shared;
+  return withoutWorkspaceSecrets((await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all), member);
+}
+
+// ---- Saved Profiles filters and warm-up lists: one set per member ----
+// The Profiles page's saved filters (profileFilters) and the Automation page's warm-up plan and named
+// link lists (warmer) are a member's own working lists. Until 1.0.26 they were one list in
+// globalSettings that every member read and any member's save replaced. Now each member has their own:
+//   - The Owner (single-user mode is the Owner) keeps them where every version kept them,
+//     globalSettings.profileFilters and .warmer: nothing moves, and an older version still reads them.
+//   - Every other member's are in the Setting "memberPageLists":
+//     { version: 1, members: { "<member id>": { since, profileFilters, warmer } } }. `since` is the
+//     member's createdAt, so a new member who gets a deleted member's id does not get their lists.
+//   - Members who exist when the store is first created (the first start of 1.0.26) start with a copy
+//     of the shared lists: it is what they saw and used until then, and part of it may be theirs, since
+//     every save added to the one list. Members added later start empty. The shared lists are not
+//     changed by this.
+// The window keeps using settings:get-global and settings:set-global; main puts the member's own lists
+// in place of the Owner's (getGlobalSettingsForActor, setGlobalSettingsForActor).
+const MEMBER_PAGE_LIST_KEYS = Object.freeze(['profileFilters', 'warmer']);
+const MEMBER_PAGE_LISTS_SETTING = 'memberPageLists';
+// One read-modify-write of the store at a time.
+const memberPageListsLock = { tail: Promise.resolve() };
+
+function withMemberPageLists(fn) {
+  const run = memberPageListsLock.tail.then(() => fn());
+  memberPageListsLock.tail = run.then(() => {}, () => {});
+  return run;
+}
+
+// Whose lists: null for the Owner (and single-user mode), kept in globalSettings; otherwise the
+// member's id (the Super Admin included).
+function pageListsOwnerKey(member) {
+  if (!member || member.role === 'OWNER') return null;
+  return String(member.id);
+}
+
+function emptyPageLists() {
+  return { profileFilters: [], warmer: {} };
+}
+
+function memberSinceStamp(member) {
+  const c = member && member.createdAt;
+  if (!c) return null;
+  const d = c instanceof Date ? c : new Date(c);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function copyJson(value, fallback) {
+  if (value === undefined || value === null) return fallback;
+  try { return JSON.parse(JSON.stringify(value)); } catch (e) { return fallback; }
+}
+
+// readSetting, but a failed read throws instead of looking like a missing row: for a writer that must
+// never replace stored data it could not read. undefined when there is no row; null when unreadable.
+async function readSettingStrict(key) {
+  const row = await getPrisma().setting.findUnique({ where: { key } });
+  if (!row) return undefined;
+  try { return JSON.parse(row.value); } catch (e) { return null; }
+}
+
+// The store, created on its first read with a copy of the shared lists for every member who exists
+// then (see above). Call inside withMemberPageLists.
+async function loadMemberPageLists() {
+  const stored = await readSettingStrict(MEMBER_PAGE_LISTS_SETTING);
+  if (stored !== undefined) {
+    return stored && typeof stored === 'object' && stored.members && typeof stored.members === 'object'
+      ? stored
+      : { version: 1, members: {} };
+  }
+  const shared = await getGlobalSettings();
+  const store = { version: 1, createdAt: new Date().toISOString(), members: {} };
+  for (const m of await getPrisma().member.findMany()) {
+    if (m.role === 'OWNER') continue;
+    store.members[String(m.id)] = {
+      since: memberSinceStamp(m),
+      profileFilters: copyJson(Array.isArray(shared.profileFilters) ? shared.profileFilters : [], []),
+      warmer: copyJson(shared.warmer && typeof shared.warmer === 'object' ? shared.warmer : {}, {})
+    };
+  }
+  await writeSetting(MEMBER_PAGE_LISTS_SETTING, store);
+  return store;
+}
+
+// This member's entry, or empty lists (none yet, or one left by a deleted member with the same id).
+function ownPageListsIn(store, member) {
+  const e = store.members[pageListsOwnerKey(member)];
+  const since = memberSinceStamp(member);
+  if (!e || typeof e !== 'object' || (e.since && since && e.since !== since)) return emptyPageLists();
+  return {
+    profileFilters: Array.isArray(e.profileFilters) ? e.profileFilters : [],
+    warmer: e.warmer && typeof e.warmer === 'object' && !Array.isArray(e.warmer) ? e.warmer : {}
+  };
+}
+
+// The member's own lists, or null for the Owner (whose lists are globalSettings' own). Also creates the
+// store on the first read, whoever reads first.
+async function readOwnPageLists(member) {
+  return withMemberPageLists(async () => {
+    const store = await loadMemberPageLists();
+    return pageListsOwnerKey(member) === null ? null : ownPageListsIn(store, member);
+  });
+}
+
+// Saves a write's profileFilters and/or warmer as the member's own (not the Owner's; see
+// setGlobalSettingsForActor), with the merge globalSettings uses: the filter list is replaced, the
+// warm-up plan is merged key by key. Returns the member's lists after the write.
+async function writeOwnPageLists(member, patch) {
+  return withMemberPageLists(async () => {
+    const store = await loadMemberPageLists();
+    const cur = ownPageListsIn(store, member);
+    const next = { since: memberSinceStamp(member), profileFilters: cur.profileFilters, warmer: cur.warmer };
+    if (patch.profileFilters !== undefined) next.profileFilters = Array.isArray(patch.profileFilters) ? patch.profileFilters : [];
+    if (patch.warmer !== undefined) {
+      const merged = deepMergeSettings(cur.warmer, patch.warmer);
+      next.warmer = merged && typeof merged === 'object' && !Array.isArray(merged) ? merged : {};
+    }
+    store.members[pageListsOwnerKey(member)] = next;
+    await writeSetting(MEMBER_PAGE_LISTS_SETTING, store);
+    return { profileFilters: next.profileFilters, warmer: next.warmer };
+  });
 }
 
 // Who may change each top-level group of the workspace settings through the window. Every group holds
@@ -8793,7 +9006,8 @@ async function getGlobalSettingsForActor() {
 // links). So a group needs settings.manage (Admin and up; the Owner can turn it off for one Admin) and
 // the Settings page under "Visible features", unless it is listed here:
 //   - lists a member keeps on their own pages: saved Profiles filters and the first-run flag (anyone
-//     signed in), and the Automation page's warm-up lists (automation.run);
+//     signed in), and the Automation page's warm-up lists (automation.run); the filters and warm-up
+//     lists are each member's own since 1.0.26 (memberPageLists);
 //   - Smart Autofill decides who gets the Data Vault's identities, so it follows vault.manage (Owner);
 //   - the footer branding is the Super Admin's (proxyProviderTrials is checked separately, read and write).
 const GLOBAL_SETTING_WRITE_RULES = Object.freeze({
@@ -8849,8 +9063,24 @@ async function setGlobalSettingsForActor(payload) {
     throw err;
   }
   const member = await getActiveMember();
-  await assertCanWriteGlobalSettings(member, await getGlobalSettings(), input);
-  const next = await setGlobalSettings(input);
+  const shared = await getGlobalSettings();
+  // A member other than the Owner saves saved filters and warm-up lists as their own (memberPageLists),
+  // and they are compared with their own, so saving back what was read is not refused. The Owner's are
+  // globalSettings' own, so a store that cannot be read does not hold up the Owner's write.
+  const own = pageListsOwnerKey(member) === null
+    ? await readOwnPageLists(member).catch(() => null)
+    : await readOwnPageLists(member);
+  await assertCanWriteGlobalSettings(member, own ? { ...shared, ...own } : shared, input);
+  let next;
+  if (own) {
+    const mine = {};
+    const rest = {};
+    for (const [k, v] of Object.entries(input)) (MEMBER_PAGE_LIST_KEYS.includes(k) ? mine : rest)[k] = v;
+    const lists = Object.keys(mine).length ? await writeOwnPageLists(member, mine) : own;
+    next = { ...(Object.keys(rest).length ? await setGlobalSettings(rest) : shared), ...lists };
+  } else {
+    next = await setGlobalSettings(input);
+  }
   return withoutWorkspaceSecrets(isSuper ? next : withoutSuperOnlyKeys(next), member);
 }
 
@@ -9144,24 +9374,50 @@ async function getPersonaSecretForUrl(id, url) {
 }
 
 // The autofill bridges serve vault data only while the workspace is unlocked and someone is signed
-// in, as authGate requires for renderer IPC (no members counts as the Owner). Fails closed on DB error.
-async function personaVaultAvailable() {
+// in, as authGate requires for renderer IPC (no members counts as the Owner), and only to a browser
+// whose launcher may use the vault in autofill. `sessionId`: the Chromium session asking; `firefox`:
+// the Firefox bridge, which cannot say which profile asks (firefoxAutofillAllowed). Fails closed on DB
+// error.
+async function personaVaultAvailable({ sessionId = null, firefox = false } = {}) {
   const s = await ipcAuthState();
   if (s.vaultLocked) return false;
   if (!(Boolean(s.signedIn) || !(Number(s.memberCount) > 0))) return false;
-  return vaultAutofillAllowed();
+  return firefox ? firefoxAutofillAllowed() : sessionAutofillAllowed(sessionId);
+}
+
+// Data Vault autofill in one running Chromium session: the rule for the member who launched it
+// (sessionLaunchers). A session with no recorded launcher gets nothing.
+async function sessionAutofillAllowed(sessionId) {
+  const rec = sessionId == null ? null : sessionLaunchers.get(String(sessionId));
+  return rec ? vaultAutofillAllowed(rec.memberId) : false;
+}
+
+// The Firefox bridge cannot tell which Firefox profile is asking: there is one token per app run, and
+// every Firefox profile reads it from Firefox's managed storage. Only a profile whose launcher was
+// allowed gets the autofill add-on (launchProfileNow; firefoxEngine takes out an older copy), so the
+// bridge answers only while every running Firefox profile with the add-on was launched by a member who
+// is still allowed now, and otherwise not at all (fails closed).
+async function firefoxAutofillAllowed() {
+  const holders = [...sessionLaunchers].filter(([sid, rec]) => rec.firefoxAutofill && firefoxEngine.isFirefoxSession(sid));
+  if (!holders.length) return false;
+  for (const [, rec] of holders) {
+    if (!(await vaultAutofillAllowed(rec.memberId))) return false;
+  }
+  return true;
 }
 
 // Whose launched profiles may offer the Data Vault's identities (the "SG" autofill button, both
 // browsers). The vault belongs to the Owner and its page is shown only with vault.manage, so autofill
 // follows the same rule: a member who may manage the vault (the Owner by default; single-user mode and
 // the Super Admin) always gets it, and the other members only when the Owner turned on "Team members
-// can use the Data Vault in autofill" (smartAutofill.members, off by default). The bridges call this
-// at fill time and it reads the member signed in to the window, the person at this computer.
-// Fails closed when the member cannot be read.
-async function vaultAutofillAllowed() {
-  const id = actingMemberId();
-  if (id == null || permissions.isSuperAdminId(id)) return true;
+// can use the Data Vault in autofill" (smartAutofill.members, off by default). `memberId` is the member
+// who launched the profile (null: single-user mode, the Owner); the bridges ask at fill time, so a
+// change to the switch, the member's rights or status applies to profiles already open. Fails closed
+// when the member cannot be read.
+async function vaultAutofillAllowed(memberId) {
+  if (memberId === undefined) return false; // no launcher known
+  const id = memberId;
+  if (id === null || permissions.isSuperAdminId(id)) return true;
   let m;
   try { m = await getPrisma().member.findUnique({ where: { id } }); } catch (e) { return false; }
   if (!m || m.status === 'suspended' || m.status === 'banned') return false;
@@ -14861,20 +15117,21 @@ function registerIpcHandlers() {
   // Smart Autofill - let the in-page widget (run in a private isolated world of
   // launched Chromium profiles) reach the persona vault over its CDP channel.
   configurePersonaBridge({
-    // Refuse vault calls while locked or signed out.
-    isAvailable: () => personaVaultAvailable(),
+    // Refuse vault calls while locked or signed out, and to a browser whose launcher may not use the
+    // vault in autofill. `ctx.sessionId`: the session the page belongs to (browserEngine).
+    isAvailable: (ctx) => personaVaultAvailable({ sessionId: ctx && ctx.sessionId != null ? ctx.sessionId : null }),
     listForUrl: (url) => getAvailablePersonasForUrl({ url }),
     markUsed: (id, url) => markPersonaUsed({ id, url }),
     // Resolve the plaintext password server-side by id: it is typed via the trusted CDP bridge and
     // never crosses into page JS.
     getSecret: (id) => getPersonaSecretById(id),
     // Gate injection on the global Smart Autofill toggle (default on; fail-open), and on whether the
-    // member signed in may use the vault through autofill (vaultAutofillAllowed; fails closed), so a
-    // member without it gets no autofill button at all.
-    isEnabled: async () => {
+    // member who launched this browser may use the vault through autofill (sessionAutofillAllowed;
+    // fails closed), so a profile launched by a member without it gets no autofill button at all.
+    isEnabled: async (ctx) => {
       let on = true;
       try { const g = await getGlobalSettings(); on = g?.smartAutofill?.enabled !== false; } catch (e) { on = true; }
-      return on && (await vaultAutofillAllowed());
+      return on && (await sessionAutofillAllowed(ctx && ctx.sessionId != null ? ctx.sessionId : null));
     }
   });
 
@@ -14886,14 +15143,18 @@ function registerIpcHandlers() {
     // Firefox has no CDP trusted typer, so the content script fills the password itself, but only for a
     // persona offered on the committed origin, resolved one id at a time via the loopback /secret endpoint.
     getSecret: (id, url) => getPersonaSecretForUrl(id, url),
-    // No vault data while the app is locked or nobody is signed in.
-    isAvailable: () => personaVaultAvailable()
+    // No vault data while the app is locked or nobody is signed in, or while a running Firefox profile
+    // with the add-on was launched by a member who may not use the vault in autofill.
+    isAvailable: () => personaVaultAvailable({ firefox: true })
   });
   // Not started at boot: firefoxEngine acquires the bridge when a Firefox profile with the autofill
   // extension launches and releases it on exit, so the loopback port is open only while needed.
 
   // Resume the background proxy scheduler if it was enabled previously.
   (async () => {
+    // Per-member saved filters and warm-up lists: create the store at the first start of 1.0.26, so
+    // the copy of the shared lists goes to the members who exist now and not to members added later.
+    try { await withMemberPageLists(loadMemberPageLists); } catch (e) { /* created on the first read instead */ }
     try {
       const cfg = await readSetting('proxyScheduler', null);
       if (cfg && cfg.enabled) startProxyScheduler(cfg.minutes);

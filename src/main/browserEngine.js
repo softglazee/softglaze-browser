@@ -149,10 +149,13 @@ function activeStoreFor(targetPage) {
   return m;
 }
 
-async function attachPersonaAutofill(targetPage) {
+// `ctx.sessionId`: the session the page belongs to (the profile id), so main decides autofill by the
+// member who launched that browser, not whoever is signed in to the window now.
+async function attachPersonaAutofill(targetPage, ctx) {
   if (!personaBridge || !targetPage) return;
+  const bridgeCtx = { sessionId: ctx && ctx.sessionId != null ? String(ctx.sessionId) : null };
   // Respect the global Smart Autofill toggle (fail-open if the check throws).
-  if (personaBridge.isEnabled) { try { if (!(await personaBridge.isEnabled())) return; } catch (e) { /* default on */ } }
+  if (personaBridge.isEnabled) { try { if (!(await personaBridge.isEnabled(bridgeCtx))) return; } catch (e) { /* default on */ } }
   // The page's real committed origin, the single source of truth for persona scoping.
   // Falls back to '' (the bridge then returns nothing).
   const pageUrl = () => { try { return targetPage.url() || ''; } catch (e) { return ''; } };
@@ -160,7 +163,7 @@ async function attachPersonaAutofill(targetPage) {
   // Nothing comes from the vault while locked or signed out; fails closed if the check throws.
   const vaultOpen = async () => {
     if (typeof personaBridge.isAvailable !== 'function') return true;
-    try { return (await personaBridge.isAvailable()) === true; } catch (e) { return false; }
+    try { return (await personaBridge.isAvailable(bridgeCtx)) === true; } catch (e) { return false; }
   };
   const hPersonaList = async () => {
       if (!(await vaultOpen())) return [];
@@ -4120,7 +4123,7 @@ async function launchProfileSessionNow(options = {}) {
         });
       }
       // Smart Autofill on this tab and later navigations; a no-op unless the persona bridge is configured.
-      await attachPersonaAutofill(targetPage);
+      await attachPersonaAutofill(targetPage, { sessionId: profileId != null && profileId !== '' ? profileId : null });
     } catch (e) {
       // Best-effort per page, but record that identity setup did not complete so the UI can warn
       // instead of implying protection that isn't there.

@@ -112,6 +112,16 @@ async function installAutofillExtension(userDataDir) {
   } catch (e) { return { mode: 'none' }; }
 }
 
+// Takes our add-on (and only ours) out of the profile's extensions/ dir. A profile launched without
+// Smart Autofill (turned off, or its launcher may not use the Data Vault in autofill) must not keep a
+// copy an earlier launch installed: it would read the bridge token from managed storage and reach the
+// bridge while another Firefox profile holds it open. Firefox drops a missing profile add-on at start.
+async function removeAutofillExtension(userDataDir) {
+  const extDir = path.join(userDataDir, 'extensions');
+  await fsp.rm(path.join(extDir, `${AUTOFILL_EXT_ID}.xpi`), { force: true });
+  await fsp.rm(path.join(extDir, AUTOFILL_EXT_ID), { recursive: true, force: true });
+}
+
 // The bridge's per-run token reaches the extension via Firefox's managed-storage manifest
 // (browser.storage.managed): a signed .xpi cannot carry it and an extension cannot read prefs.
 // On Windows an HKCU ManagedStorage registry key points at the JSON file.
@@ -490,6 +500,8 @@ async function launchFirefoxProfileNow(options = {}) {
   if (options.autofillEnabled !== false) {
     const r = await installAutofillExtension(userDataDir).catch(() => ({ mode: 'none' }));
     autofillInstalled = r.mode !== 'none';
+  } else {
+    await removeAutofillExtension(userDataDir).catch(() => {});
   }
   // The loopback bridge listens only during a Firefox autofill session, and the extension gets the token
   // from managed storage; if the token cannot be handed over, skip the bridge.
@@ -1031,6 +1043,7 @@ module.exports = {
   closeAllFirefoxSessions,
   setSessionEventSink,
   // Exported for tests.
+  removeAutofillExtension,
   buildManagedStorageManifest,
   managedStoragePath,
   buildUserJs,

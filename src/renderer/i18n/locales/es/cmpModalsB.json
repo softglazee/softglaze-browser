@@ -155,6 +155,7 @@
     "errorLoad": "No se pudieron cargar las plantillas.",
     "errorPickProfile": "Elige un perfil para capturar.",
     "errorNameRequired": "Asigna un nombre a la plantilla.",
-    "errorProfileName": "Introduce un nombre para el nuevo perfil."
+    "errorProfileName": "Introduce un nombre para el nuevo perfil.",
+    "infoSavedNoProxy": "Plantilla guardada sin el proxy del perfil, porque el perfil está compartido contigo solo para usar. Un perfil creado con ella pide un proxy antes de abrirse."
   }
 }

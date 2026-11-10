@@ -31,10 +31,11 @@ function labelFromUrl(raw) {
 // Global start-page links for every profile, kept in globalSettings.startPageLinks: [{ label, url }].
 export default function StartLinksPage() {
   const { t } = useTranslation();
-  // The links show on every member's start page: a workspace setting (settings.manage, Admin and up;
-  // main's setGlobalSettingsForActor refuses the others). Anyone else sees the list read-only.
+  // The links show on every member's start page: a workspace setting (settings.manage, Admin and up,
+  // and the Settings page not turned off for the member; main's setGlobalSettingsForActor refuses the
+  // others). Anyone else sees the list read-only.
   const perm = usePermissions();
-  const deny = perm.deny('settings.manage');
+  const deny = perm.denyWorkspaceSettings();
   const [items, setItems] = useState([]);
   const [bulk, setBulk] = useState('');
   const [loading, setLoading] = useState(true);
@@ -115,7 +116,8 @@ export default function StartLinksPage() {
   const inputCls = 'bg-input-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
 
   return (
-    <div className="p-7">
+    // The window already has a gutter on a narrow screen; the page adds its own from the sm breakpoint.
+    <div className="sm:p-7">
       <PageHeader
         eyebrow={t('nav.sectionWorkspace', { defaultValue: 'Workspace' })}
         title={t('startLinks.title', { defaultValue: 'Start Page Links' })}
@@ -149,11 +151,11 @@ export default function StartLinksPage() {
       )}
 
       {/* A disabled fieldset turns every input and button below read-only for a member who may not change the links. */}
-      <fieldset disabled={Boolean(deny)} title={deny || undefined} className="min-w-0 m-0 p-0 border-0 [&_button:disabled]:opacity-60 [&_button:disabled]:cursor-not-allowed grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
+      <fieldset disabled={Boolean(deny)} title={deny || undefined} className="min-w-0 m-0 p-0 border-0 [&_button:disabled]:opacity-60 [&_button:disabled]:cursor-not-allowed grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
 
         <Card className="bg-card border border-border rounded-xl">
           <CardContent className="p-0">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-border">
               <h3 className="text-sm font-semibold text-foreground">Links <span className="text-muted-foreground font-normal">· {validCount}</span></h3>
               <div className="flex items-center gap-1.5">
                 <Button variant="ghost" size="sm" onClick={autoLabelAll} disabled={items.length === 0} title="Fill any empty label from its URL"><Wand2 className="w-3.5 h-3.5 mr-1" /> Auto-label</Button>
@@ -168,16 +170,20 @@ export default function StartLinksPage() {
               ) : items.map((it, i) => {
                 const bad = it.url.trim() && !normalizeUrl(it.url);
                 return (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="shrink-0 w-6 text-center text-[11px] text-muted-foreground tabular-nums">{i + 1}</span>
-                    <input className={`${inputCls} w-44 shrink-0`} placeholder="Label" value={it.label} onChange={(e) => update(i, 'label', e.target.value)} />
-                    <input
-                      className={`${inputCls} flex-1 min-w-0 ${bad ? 'border-red-500/60 focus:border-red-500' : ''}`}
-                      placeholder="https://example.com"
-                      value={it.url}
-                      onChange={(e) => update(i, 'url', e.target.value)}
-                      onBlur={() => { if (!it.label.trim() && normalizeUrl(it.url)) update(i, 'label', labelFromUrl(it.url)); }}
-                    />
+                  // Label and URL side by side from the sm breakpoint; on a narrow window the label sits
+                  // above the URL, so neither is squeezed and the row never scrolls sideways.
+                  <div key={i} className="flex items-start gap-2 sm:items-center">
+                    <span className="shrink-0 w-6 pt-2.5 sm:pt-0 text-center text-[11px] text-muted-foreground tabular-nums">{i + 1}</span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                      <input className={`${inputCls} w-full sm:w-44 sm:shrink-0`} placeholder="Label" value={it.label} onChange={(e) => update(i, 'label', e.target.value)} />
+                      <input
+                        className={`${inputCls} w-full min-w-0 sm:w-auto sm:flex-1 ${bad ? 'border-red-500/60 focus:border-red-500' : ''}`}
+                        placeholder="https://example.com"
+                        value={it.url}
+                        onChange={(e) => update(i, 'url', e.target.value)}
+                        onBlur={() => { if (!it.label.trim() && normalizeUrl(it.url)) update(i, 'label', labelFromUrl(it.url)); }}
+                      />
+                    </div>
                     <button type="button" onClick={() => removeAt(i)} className="shrink-0 w-9 h-9 grid place-items-center rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10" title="Remove"><X className="w-4 h-4" /></button>
                   </div>
                 );

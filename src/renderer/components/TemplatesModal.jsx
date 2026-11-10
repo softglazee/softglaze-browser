@@ -48,9 +48,10 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
     if (!saveName.trim()) { setError(t('templates.errorNameRequired')); return; }
     setBusy(true);
     try {
-      await softglazeApi.templates.save(Number(saveSrcId), saveName.trim());
+      const saved = await softglazeApi.templates.save(Number(saveSrcId), saveName.trim());
       setSaveName(''); setSaveSrcId('');
-      setInfo(t('templates.infoSaved'));
+      // A template of a profile shared "use only" keeps no proxy (main); say so.
+      setInfo(t(saved && saved.leftOut && saved.leftOut.proxy ? 'templates.infoSavedNoProxy' : 'templates.infoSaved'));
       await load();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }

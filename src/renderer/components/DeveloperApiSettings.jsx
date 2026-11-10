@@ -110,15 +110,17 @@ export default function DeveloperApiSettings() {
               <span className="text-[13px] font-semibold text-foreground">{t('developerApi.keys.title')}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Name and button side by side from the sm breakpoint; stacked on a narrow window, where the
+                button text does not fit beside the field. */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') generate(); }}
                 placeholder={t('developerApi.keys.namePlaceholder')}
-                className="flex-1 h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary"
+                className="w-full min-w-0 sm:w-auto sm:flex-1 h-9 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary"
               />
-              <button onClick={generate} disabled={creating} className="shrink-0 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-50 inline-flex items-center gap-2">
+              <button onClick={generate} disabled={creating} className="shrink-0 h-9 px-4 rounded-lg text-[13px] font-semibold text-white bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-50 inline-flex items-center justify-center gap-2">
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t('developerApi.keys.generate')}
               </button>
             </div>
@@ -190,7 +192,8 @@ export default function DeveloperApiSettings() {
                   {copied === 'curl' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />} {t('developerApi.copy')}
                 </button>
               </div>
-              <pre className="rounded-lg bg-[#0b0f17] border border-border p-3 font-mono text-[11.5px] text-foreground/90 overflow-x-auto whitespace-pre">{curl}</pre>
+              {/* Wraps on a narrow window instead of scrolling sideways; one line from the sm breakpoint. */}
+              <pre className="rounded-lg bg-[#0b0f17] border border-border p-3 font-mono text-[11.5px] text-foreground/90 overflow-x-auto whitespace-pre-wrap break-words sm:whitespace-pre">{curl}</pre>
               <p className="mt-2 text-[11px] text-muted-foreground inline-flex items-center gap-1.5">
                 <Power className="w-3 h-3" /> {t('developerApi.server.footnote')}
               </p>

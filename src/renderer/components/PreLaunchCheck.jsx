@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Loader2, Play, Wand2, X } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 
 function issueText(t, issue) {
   const p = issue.params || {};
@@ -14,8 +15,10 @@ function issueText(t, issue) {
 // Shown before a launch when profiles have clear mismatches. Resolves with
 // { launch, fix, stopAsking }: fix applies the one-click fixes first, then everything launches.
 // `canStopAsking`: "Don't check again" turns the check off for the whole workspace (a workspace
-// setting, settings.manage), so it is offered only to members who may change it.
-export default function PreLaunchCheckModal({ items, onDecide, canStopAsking = true }) {
+// setting, settings.manage), so it is offered only to members who may change it. `denyFix`: why the
+// fixes cannot run (usePermissions; they edit the profiles, which main refuses without edit access), or
+// null.
+export default function PreLaunchCheckModal({ items, onDecide, canStopAsking = true, denyFix = null }) {
   const { t } = useTranslation('captcha');
   const [stopAsking, setStopAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -83,10 +86,10 @@ export default function PreLaunchCheckModal({ items, onDecide, canStopAsking = t
             </Button>
           )}
           {fixable && launchable && (
-            <Button size="sm" variant="primary" disabled={busy} onClick={() => decide(true)}>
+            <GuardedButton deny={denyFix} size="sm" variant="primary" disabled={busy} onClick={() => decide(true)}>
               {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
               {t('prelaunch.fixAndLaunch')}
-            </Button>
+            </GuardedButton>
           )}
         </footer>
       </div>

@@ -1249,10 +1249,10 @@ export default function ProfilesPage() {
     let res;
     try { res = await softglazeApi.profiles.prelaunchCheck(ids); } catch (e) { return true; }
     const issues = (res && res.issues) || {};
-    const items = ids.filter((id) => issues[id]).map((id) => ({
-      profile: { id, title: (profiles.find((p) => p.id === id) || {}).title || `#${id}` },
-      issues: issues[id]
-    }));
+    const items = ids.filter((id) => issues[id]).map((id) => {
+      const row = profiles.find((p) => p.id === id) || {};
+      return { profile: { id, title: row.title || `#${id}`, canEdit: row.canEdit }, issues: issues[id] };
+    });
     if (!items.length) return true;
     const decision = await new Promise((resolve) => setPreLaunch({ items, resolve }));
     if (decision.stopAsking) {
@@ -2901,7 +2901,7 @@ export default function ProfilesPage() {
                       </div>
                     </td>
                     <td className="px-2 py-3.5">
-                      <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title })} />
+                      <CaptchaBadge score={captchaScores[p.id]} onClick={() => setCaptchaProfile({ id: p.id, title: p.title, canEdit: p.canEdit })} />
                     </td>
                     <td className="px-3 py-3.5 text-muted-foreground">
                       <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title={t('row.viewActivity')}>
@@ -2968,7 +2968,15 @@ export default function ProfilesPage() {
         )}
       </Card>
 
-      {preLaunch && <PreLaunchCheckModal items={preLaunch.items} onDecide={preLaunch.resolve} canStopAsking={!perm.deny('settings.manage')} />}
+      {preLaunch && (
+        <PreLaunchCheckModal
+          items={preLaunch.items}
+          onDecide={preLaunch.resolve}
+          canStopAsking={!perm.denyWorkspaceSettings()}
+          // The fixes edit the profiles: off when none of them may be edited ("use only" shares).
+          denyFix={perm.denyRow('profiles.edit', { canEdit: preLaunch.items.some((it) => it.profile.canEdit !== false) })}
+        />
+      )}
       {captchaProfile && (
         <CaptchaScoreModal
           profile={captchaProfile}
@@ -2976,6 +2984,11 @@ export default function ProfilesPage() {
           onClose={() => setCaptchaProfile(null)}
           onLeakCheck={() => { setLeakProfile(captchaProfile); setCaptchaProfile(null); }}
           onChanged={(id, fresh) => { if (fresh) setCaptchaScores((prev) => ({ ...prev, [id]: fresh })); loadData(); }}
+          // What main refuses: profile fixes need edit access, the cookie switch is a workspace setting,
+          // warm-up needs automation.run.
+          denyProfileFix={perm.denyRow('profiles.edit', captchaProfile)}
+          denyWorkspace={perm.denyWorkspaceSettings()}
+          denyWarmUp={perm.deny('automation.run')}
         />
       )}
       {leakProfile && (

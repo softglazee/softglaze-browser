@@ -155,6 +155,7 @@
     "errorLoad": "Failed to load templates.",
     "errorPickProfile": "Pick a profile to snapshot.",
     "errorNameRequired": "Give the template a name.",
-    "errorProfileName": "Enter a name for the new profile."
+    "errorProfileName": "Enter a name for the new profile.",
+    "infoSavedNoProxy": "Template saved without the profile's proxy, because the profile is shared with you for use only. A profile made from it asks for a proxy before it launches."
   }
 }

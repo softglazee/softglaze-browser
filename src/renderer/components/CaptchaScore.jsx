@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertTriangle, XCircle, X, Loader2, RefreshCcw, Wand2, Radio } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const LEVEL_STYLE = {
@@ -87,7 +88,11 @@ function ScoreRing({ score }) {
   );
 }
 
-export default function CaptchaScoreModal({ profile, running, onClose, onChanged, onLeakCheck }) {
+// Why this member may not apply a fix (usePermissions), or null: `denyProfileFix` for the fixes that
+// change this profile (edit access, so never on a "use only" share), `denyWorkspace` for the
+// third-party cookie switch (a workspace setting: settings.manage, as in Settings), `denyWarmUp` for a
+// warm-up (automation.run). Main refuses the same calls (captchaFix, startWarmer).
+export default function CaptchaScoreModal({ profile, running, onClose, onChanged, onLeakCheck, denyProfileFix = null, denyWorkspace = null, denyWarmUp = null }) {
   const { t } = useTranslation('captcha');
   const { dialogRef } = useDialog({ onClose });
   const [score, setScore] = useState(null);
@@ -134,6 +139,7 @@ export default function CaptchaScoreModal({ profile, running, onClose, onChanged
   };
 
   const fixable = score ? fixAllActions(score) : [];
+  const denyFix = (action) => (action === 'allow-3p-cookies' ? denyWorkspace : action === 'warm-up' ? denyWarmUp : denyProfileFix);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -194,10 +200,10 @@ export default function CaptchaScoreModal({ profile, running, onClose, onChanged
                         )}
                       </div>
                       {showFix && (
-                        <Button size="sm" variant="secondary" className="shrink-0" disabled={Boolean(busy)} onClick={() => apply([f.fix])}>
+                        <GuardedButton deny={denyFix(f.fix)} wrapperClassName="inline-flex shrink-0" size="sm" variant="secondary" className="shrink-0" disabled={Boolean(busy)} onClick={() => apply([f.fix])}>
                           {busy === f.fix ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
                           {t(`fix.${f.fix}`)}
-                        </Button>
+                        </GuardedButton>
                       )}
                     </li>
                   );
@@ -217,10 +223,10 @@ export default function CaptchaScoreModal({ profile, running, onClose, onChanged
             <RefreshCcw className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('rescore')}
           </Button>
           {fixable.length > 0 && (
-            <Button size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => apply(fixable)} title={t('fixAllTitle')}>
+            <GuardedButton deny={denyProfileFix} size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => apply(fixable)} title={t('fixAllTitle')}>
               {busy === 'all' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
               {t('fixAll')} ({fixable.length})
-            </Button>
+            </GuardedButton>
           )}
           <Button size="sm" variant="primary" onClick={onClose}>{t('done')}</Button>
         </footer>

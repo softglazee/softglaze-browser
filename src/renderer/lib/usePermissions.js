@@ -52,6 +52,12 @@ export function usePermissions() {
     denyGroup: (action, group) => text(denial(me, action)) || (group && group.canManage === false ? t('perm.notYourGroup') : null),
     // Workspace-wide proxy settings (default rotation policy, check schedule).
     denyWorkspaceProxy: () => text(workspaceProxyDenial(me)),
+    // A workspace setting changed outside the Settings page (start-page links, the CAPTCHA score's
+    // cookie switch, the pre-launch check's "Don't check again"): settings.manage, and off while the
+    // Settings page is turned off for the member under "Visible features", as main's
+    // setGlobalSettingsForActor.
+    denyWorkspaceSettings: () => text(denial(me, 'settings.manage'))
+      || (me && me.role !== 'SUPER_ADMIN' && !featureVisible(me, 'settings') ? t('perm.settingsHidden') : null),
     // Owner-only actions outside the action list (ban or unban a member: main's requireOwnerOrSuper).
     denyOwner: () => text(me === undefined ? { kind: 'loading' }
       : (me === null || me.role === 'OWNER' || me.role === 'SUPER_ADMIN') ? null : { kind: 'role', role: 'OWNER' }),
