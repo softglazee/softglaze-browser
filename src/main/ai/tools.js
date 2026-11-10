@@ -37,9 +37,19 @@ function startUrlsOf(raw) {
   return String(raw || '').split(/[\r\n]+/).map((s) => s.trim()).filter(Boolean).slice(0, 20);
 }
 
+// Whether Rotate IP can give this proxy a new IP: main's proxyCanRotate (a stored link, or a vendor API
+// that rotates the row: DataImpulse sticky ports, ProxyUDP, SimplyNode, MountProxies), which the tools
+// get as ctx.deps.proxyCanRotate, so the AI says exactly what rotate_proxy_ip does. Without it, only a
+// stored link counts.
+function rotatable(proxy, canRotate) {
+  if (!proxy) return false;
+  return typeof canRotate === 'function' ? Boolean(canRotate(proxy)) : Boolean(proxy.rotationUrl);
+}
+
 // Compact, secret-free view of a profile. Never: platform accounts, 2FA seed, proxy string,
-// proxy credentials, cookies.
-function compactProfile(p, running) {
+// proxy credentials, cookies. The proxy's canRotate tells the AI it may rotate it by profileId,
+// which is how a profile shared "use only" rotates its proxy.
+function compactProfile(p, running, canRotate) {
   const proxy = p.proxy || null;
   return {
     id: p.id,
@@ -57,7 +67,8 @@ function compactProfile(p, running) {
       type: proxy.type,
       country: proxy.lastCountry || null,
       status: proxy.lastStatus || 'unchecked',
-      latencyMs: proxy.lastLatencyMs == null ? null : proxy.lastLatencyMs
+      latencyMs: proxy.lastLatencyMs == null ? null : proxy.lastLatencyMs,
+      canRotate: rotatable(proxy, canRotate)
     } : null,
     running: Boolean(running && running.has(p.id)),
     launchCount: p.launchCount || 0,
@@ -66,9 +77,9 @@ function compactProfile(p, running) {
   };
 }
 
-function detailedProfile(p, running) {
+function detailedProfile(p, running, canRotate) {
   return {
-    ...compactProfile(p, running),
+    ...compactProfile(p, running, canRotate),
     notes: p.notes ? clip(p.notes, 1000) : null,
     startUrls: startUrlsOf(p.startupUrls),
     fingerprint: {
@@ -100,18 +111,8 @@ function detailedProfile(p, running) {
   };
 }
 
-// DataImpulse sticky ports (10000+) rotate through the vendor's API without a link, so they can rotate
-// too. The same rule as ipcHandlers.isDataImpulseSticky (test/spanishRound8.test.js keeps them equal).
-function isDataImpulseSticky(p) {
-  return Boolean(p)
-    && String(p.provider || '').toLowerCase() === 'dataimpulse'
-    && /(^|\.)dataimpulse\.com$/i.test(String(p.host || ''))
-    && Number(p.port) >= 10000
-    && Boolean(p.username) && Boolean(p.password);
-}
-
-// Compact proxy view: never the username, password, rotation link or raw string.
-function compactProxy(p) {
+// Compact proxy view: never the username, password, rotation link or raw string. canRotate: see rotatable.
+function compactProxy(p, canRotate) {
   return {
     id: p.id,
     name: p.name || null,
@@ -128,7 +129,7 @@ function compactProxy(p) {
     latencyMs: p.lastLatencyMs == null ? null : p.lastLatencyMs,
     blocklisted: typeof p.lastBlacklisted === 'boolean' ? p.lastBlacklisted : null,
     lastCheckedAt: iso(p.lastCheckedAt),
-    canRotate: Boolean(p.rotationUrl) || isDataImpulseSticky(p),
+    canRotate: rotatable(p, canRotate),
     usedByProfiles: p._count && typeof p._count.profiles === 'number' ? p._count.profiles : undefined
   };
 }
@@ -244,7 +245,7 @@ const TOOLS = [
       ]);
       return {
         summary: `${plural(total, 'profile')} match; showing ${rows.length} (page ${page}).`,
-        data: { total, page, pageSize, profiles: rows.map((p) => compactProfile(p, running)) }
+        data: { total, page, pageSize, profiles: rows.map((p) => compactProfile(p, running, ctx.deps.proxyCanRotate)) }
       };
     }
   },
@@ -263,7 +264,7 @@ const TOOLS = [
       const p = await ctx.db.profile.findUnique({ where: { id: a.id }, include: { proxy: true, group: true } });
       if (!p || p.deletedAt) throw ctx.userError(`Profile #${a.id} was not found.`);
       const running = await visibleRunning(ctx);
-      return { summary: `Profile "${p.title}"${running.has(p.id) ? ' (running)' : ''}.`, data: detailedProfile(p, running) };
+      return { summary: `Profile "${p.title}"${running.has(p.id) ? ' (running)' : ''}.`, data: detailedProfile(p, running, ctx.deps.proxyCanRotate) };
     }
   },
   {
@@ -364,7 +365,7 @@ const TOOLS = [
       if (a.startUrl) payload.startupUrls = a.startUrl;
       const created = await ctx.deps.createProfile(payload);
       const row = await ctx.db.profile.findUnique({ where: { id: created.id }, include: { proxy: true, group: true } });
-      return { summary: `Created profile "${created.title}" (#${created.id}).`, data: detailedProfile(row || created, new Set()) };
+      return { summary: `Created profile "${created.title}" (#${created.id}).`, data: detailedProfile(row || created, new Set(), ctx.deps.proxyCanRotate) };
     }
   },
   {
@@ -418,11 +419,25 @@ const TOOLS = [
         payload.proxyId = a.proxyId || null;
         payload.systemProxyBehavior = a.proxyId ? 'PROFILE_PROXY' : 'DIRECT';
       }
-      for (const fix of a.fixes || []) Object.assign(payload, captchaScore.PROFILE_FIELD_FIXES[fix]);
-      if (Object.keys(payload).length === 1) throw ctx.userError('Nothing to change: give at least one field.');
+      // Firefox profiles always run with WebRTC off, so webrtc-safe would change a saved setting that does
+      // not apply there and report it as a fix: it is left out and said so (the CAPTCHA score offers it
+      // only on Chromium).
+      const notApplied = [];
+      if ((a.fixes || []).includes('webrtc-safe')) {
+        const current = await ctx.db.profile.findUnique({ where: { id: a.id }, select: { browserCore: true } });
+        if (current && current.browserCore === 'Firefox') notApplied.push('webrtc-safe');
+      }
+      for (const fix of a.fixes || []) if (!notApplied.includes(fix)) Object.assign(payload, captchaScore.PROFILE_FIELD_FIXES[fix]);
+      if (Object.keys(payload).length === 1) {
+        throw ctx.userError(notApplied.length
+          ? 'Nothing to change: Firefox profiles always run with WebRTC off, so webrtc-safe does not apply to this profile.'
+          : 'Nothing to change: give at least one field.');
+      }
       await ctx.deps.updateProfile(payload);
       const row = await ctx.db.profile.findUnique({ where: { id: a.id }, include: { proxy: true, group: true } });
-      return { summary: `Updated profile "${row ? row.title : a.id}".`, data: detailedProfile(row, await visibleRunning(ctx)) };
+      const note = notApplied.length ? ' webrtc-safe was not applied: Firefox profiles always run with WebRTC off.' : '';
+      const data = detailedProfile(row, await visibleRunning(ctx), ctx.deps.proxyCanRotate);
+      return { summary: `Updated profile "${row ? row.title : a.id}".${note}`, data: notApplied.length ? { ...data, notApplied } : data };
     }
   },
   {
@@ -632,7 +647,7 @@ const TOOLS = [
         ctx.db.proxy.count({ where }),
         ctx.db.proxy.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize, include: { _count: { select: { profiles: true } }, proxyGroup: true } })
       ]);
-      return { summary: `${plural(total, 'proxy', 'proxies')} match; showing ${rows.length}.`, data: { total, page, pageSize, proxies: rows.map(compactProxy) } };
+      return { summary: `${plural(total, 'proxy', 'proxies')} match; showing ${rows.length}.`, data: { total, page, pageSize, proxies: rows.map((p) => compactProxy(p, ctx.deps.proxyCanRotate)) } };
     }
   },
   {
@@ -672,7 +687,7 @@ const TOOLS = [
         const history = await ctx.deps.getProxyHealthHistory({ id: a.id, limit: a.limit || 50 });
         const proxy = await ctx.db.proxy.findUnique({ where: { id: a.id }, include: { _count: { select: { profiles: true } }, proxyGroup: true } });
         const ok = history.filter((h) => h.status === 'ok').length;
-        return { summary: `${plural(history.length, 'check')} on record, ${ok} passed.`, data: { proxy: proxy ? compactProxy(proxy) : null, history } };
+        return { summary: `${plural(history.length, 'check')} on record, ${ok} passed.`, data: { proxy: proxy ? compactProxy(proxy, ctx.deps.proxyCanRotate) : null, history } };
       }
       const recent = await ctx.deps.getRecentProxyHealth({ perProxy: 8, maxProxies: 40 });
       let scoreboard = null;
@@ -729,7 +744,9 @@ const TOOLS = [
     description: 'Asks the proxy vendor for a new IP using the rotation link saved on the proxy (or the vendor\'s API where SoftGlaze supports it). Give proxyId for a proxy in your pool, or profileId to rotate the proxy a profile uses, a profile shared with you "use only" included. Only works where the vendor supports rotation. Asks the user first.',
     scope: 'operate',
     permission: 'proxies.manage',
-    feature: 'proxies', // Visible features: the window's rule (featureGate.js)
+    // Visible features, the window's rule (featureGate.js): Rotate IP on a profile row is a Profiles
+    // action (profile:rotate-ip), on the Proxy pool a Proxies one (proxy:rotate-ip).
+    feature: (a) => (a && a.profileId ? 'profiles' : 'proxies'),
     approval: 'ask',
     annotations: { ...CHANGE, openWorldHint: true },
     input: { proxyId: id().optional(), profileId: id().optional() },
@@ -742,12 +759,27 @@ const TOOLS = [
         if (!p || p.deletedAt) throw ctx.userError(`Profile #${a.profileId} was not found.`);
         if (p.proxyId == null) throw ctx.userError(`Profile #${a.profileId} has no proxy to rotate.`);
         if (a.proxyId && a.proxyId !== p.proxyId) throw ctx.userError(`Profile #${a.profileId} uses proxy #${p.proxyId}, not #${a.proxyId}.`);
+        // A new IP reaches every profile on the proxy, so a token limited to some groups may not rotate a
+        // proxy that profiles outside them use: the rule ctx.assertProxy applies by proxy id.
+        const groupIds = (ctx.token && ctx.token.groupIds) || [];
+        if (groupIds.length) {
+          const outside = await ctx.db.profile.count({ where: { proxyId: p.proxyId, deletedAt: null, NOT: { groupId: { in: groupIds } } } });
+          if (outside) throw ctx.denied(`Proxy #${p.proxyId} is also used by profiles outside the groups this token may use, so this token cannot rotate it.`);
+        }
         // The window's Rotate IP on a profile row: proxies.manage and profiles.launch, logged on the profile.
         const r = await ctx.deps.rotateProfileProxyIp({ id: a.profileId });
         return { summary: r && r.ok ? `The vendor accepted the rotation for the proxy of profile #${a.profileId}. Run check_proxy to see the new IP.` : `The vendor refused the rotation (HTTP ${r && r.status}).`, data: { profileId: a.profileId, proxyId: p.proxyId, ok: Boolean(r && r.ok), status: r ? r.status : null, latencyMs: r ? r.latencyMs : null } };
       }
       if (!a.proxyId) throw ctx.userError('Give proxyId (a proxy in your pool) or profileId (the proxy a profile uses).');
-      await ctx.assertProxy(a.proxyId);
+      try {
+        await ctx.assertProxy(a.proxyId);
+      } catch (e) {
+        // A proxy outside the member's pool that a profile shared with them uses rotates by that profile.
+        let shared = null;
+        try { shared = await ctx.db.profile.findFirst({ where: await ctx.profileWhere({ proxyId: a.proxyId, deletedAt: null }), select: { id: true } }); } catch (_) { shared = null; }
+        if (shared) e.message = `${e.message} It is the proxy of profile #${shared.id}: call rotate_proxy_ip with profileId ${shared.id}.`;
+        throw e;
+      }
       const r = await ctx.deps.rotateProxyIp({ id: a.proxyId });
       return { summary: r && r.ok ? `The vendor accepted the rotation for proxy #${a.proxyId}. Run check_proxy to see the new IP.` : `The vendor refused the rotation (HTTP ${r && r.status}).`, data: { proxyId: a.proxyId, ok: Boolean(r && r.ok), status: r ? r.status : null, latencyMs: r ? r.latencyMs : null } };
     }

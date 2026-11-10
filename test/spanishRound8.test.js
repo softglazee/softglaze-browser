@@ -299,7 +299,8 @@ test('7: the real probe: a closed port is refused at once; a reachable proxy sti
 const tools = require('../src/main/ai/tools');
 
 test('14: compactProxy offers rotation for DataImpulse sticky proxies, by the same rule as main', () => {
-  const { isDataImpulseSticky } = loadMain(['isDataImpulseSticky'], {});
+  // Since round 9 the AI views take main's own proxyCanRotate (ctx.deps), which covers this rule.
+  const { isDataImpulseSticky, proxyCanRotate } = loadMain(['isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate'], {});
   const rows = [
     { id: 1, provider: 'dataimpulse', host: 'gw.dataimpulse.com', port: 10001, username: 'plan__cr.us', password: 'p' },
     { id: 2, provider: 'dataimpulse', host: 'gw.dataimpulse.com', port: 823, username: 'plan', password: 'p' },
@@ -309,11 +310,11 @@ test('14: compactProxy offers rotation for DataImpulse sticky proxies, by the sa
     { id: 6, provider: 'dataimpulse', host: 'gw.dataimpulse.com', port: 10001, username: 'plan', password: '' }
   ];
   for (const r of rows) {
-    const view = tools.compactProxy(r);
+    const view = tools.compactProxy(r, proxyCanRotate);
     assert.equal(view.canRotate, Boolean(r.rotationUrl) || isDataImpulseSticky(r), `row ${r.id}`);
     assert.doesNotMatch(JSON.stringify(view), /plan__|"p"|rot\.example/);
   }
-  assert.equal(tools.compactProxy(rows[0]).canRotate, true);
+  assert.equal(tools.compactProxy(rows[0], proxyCanRotate).canRotate, true);
 });
 
 test('14: the AI profile view says WebRTC is off for Firefox profiles', () => {

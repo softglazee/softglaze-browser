@@ -925,11 +925,17 @@ function proxyMadeForImportedRow(profile, proxy) {
 // looked at once: running again changes nothing, and a link taken off a proxy later is not put back.
 // profileRotationUrls itself is never rewritten. A link that does not qualify stays as it was (exported,
 // not used).
+// Once per app run is enough: only imports made before 1.0.26 left links here unattached (an import now
+// puts its link on the proxy itself), so no new ones appear during a run. The one way an unseen legacy
+// link arrives mid-run is a workspace restore, which runs the pass again for the restored database. A
+// pass still going when the restore swaps the database stops without recording anything, so it never
+// writes the old database's record into the restored one.
 const ROTATION_LINKS_ADOPTED_SETTING = 'profileRotationUrlsAdopted';
 let rotationLinksAdoptedThisRun = false;
 async function adoptImportedRotationLinks() {
   if (rotationLinksAdoptedThisRun) return { attached: 0, skipped: 0 };
   const db = getPrisma();
+  const swapped = () => { try { return getPrisma() !== db; } catch (e) { return true; } };
   const links = (await readSetting('profileRotationUrls', {})) || {};
   const seen = await readSetting(ROTATION_LINKS_ADOPTED_SETTING, null);
   const done = seen && typeof seen === 'object' && seen.done && typeof seen.done === 'object' ? { ...seen.done } : {};
@@ -938,6 +944,7 @@ async function adoptImportedRotationLinks() {
   let attached = 0;
   let skipped = 0;
   for (const key of pending) {
+    if (swapped()) return { attached, skipped, interrupted: true };
     let outcome = 'skipped';
     try {
       const url = importedRotationUrl(links[key]);
@@ -949,6 +956,7 @@ async function adoptImportedRotationLinks() {
     done[key] = outcome;
     if (outcome === 'attached') attached += 1; else skipped += 1;
   }
+  if (swapped()) return { attached, skipped, interrupted: true };
   if (attached + skipped > 0) await writeSetting(ROTATION_LINKS_ADOPTED_SETTING, { version: 1, done });
   rotationLinksAdoptedThisRun = true;
   if (attached) await logAudit('proxy.rotation-links-adopted', { detail: { attached, skipped } });
@@ -16550,6 +16558,7 @@ function buildAiToolDeps() {
     getVendorScoreboard,
     rotateProxyIp: (payload) => rotateProxyIp({ id: payload.id }), // the stored rotation link only
     rotateProfileProxyIp: (payload) => rotateProfileProxyIp({ id: payload.id }), // by profile, "use only" shares included
+    proxyCanRotate, // pure: a stored link or a vendor API that rotates the row (canRotate in the AI views)
     bulkAssignProxies,
     harvestFreeProxies: (payload) => harvestFreeProxiesHandler(payload, null),
     cancelFreeProxyHarvest,

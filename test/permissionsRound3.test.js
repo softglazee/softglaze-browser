@@ -579,14 +579,17 @@ test('registerHandler checks the feature after sign-in and before the handler; A
   // SoftGlaze AI: the registry asks assertFeature for tools tied to a page.
   const REG = read('src', 'main', 'ai', 'toolRegistry.js');
   assert.match(REG, /'getPrisma', 'requirePermission', 'assertFeature',/);
-  assert.match(REG, /if \(tool\.feature && typeof this\.deps\.assertFeature === 'function'\) \{/);
+  assert.match(REG, /const feature = typeof tool\.feature === 'function' \? tool\.feature\(args\) : tool\.feature;\s*if \(feature && typeof this\.deps\.assertFeature === 'function'\) \{/);
   assert.match(extractFunction(IPC, 'buildAiToolDeps'), /assertFeature: async \(feature\) => \{\s*if \(featureGate\.featureHidden\(await getActiveMember\(\), feature\)\) throw featureGate\.featureOffError\(feature\);/);
   const { TOOLS } = require('../src/main/ai/tools');
-  const featureOf = Object.fromEntries(TOOLS.filter((t) => t.feature).map((t) => [t.name, t.feature]));
+  // rotate_proxy_ip follows the window: by profile it is a Profiles action (profile:rotate-ip), by proxy id a
+  // Proxies one (proxy:rotate-ip).
+  const featureOf = Object.fromEntries(TOOLS.filter((t) => t.feature).map((t) => [t.name, typeof t.feature === 'function' ? t.feature({ proxyId: 1 }) : t.feature]));
   assert.deepEqual(featureOf, {
     create_profile: 'profiles', update_profile: 'profiles', batch_generate_profiles: 'profiles', start_profile: 'profiles', assign_proxy: 'profiles',
     rotate_proxy_ip: 'proxies', find_free_proxies: 'proxies', create_group: 'groups', move_profiles_to_group: 'groups'
   });
+  assert.equal(TOOLS.find((t) => t.name === 'rotate_proxy_ip').feature({ profileId: 7 }), 'profiles');
 });
 
 test('an AI tool for a hidden feature is refused before it runs', async () => {
