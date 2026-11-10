@@ -143,6 +143,7 @@ export default function ProxyProvidersPage() {
         const s = r.state === 'unavailable' ? 'notSetUp' : r.state;
         if (s !== filter) return false;
       }
+      // The name carries a vendor's former name too (Decodo (Smartproxy)), and the key matches it as well.
       return !q || r.p.name.toLowerCase().includes(q) || r.p.key.includes(q);
     });
   }, [rows, filter, query]);
@@ -352,7 +353,12 @@ function Row({ icon: Icon, label, children }) {
 
 function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, onCredsChanged, openPool, denyPull = null }) {
   const { p, pool, keySaved, trial, state, kind } = sel;
-  const gw = p.gateway ? `${p.gateway.host}:${p.gateway.port}` : null;
+  // A vendor with a separate SOCKS5 port on the same host (DataImpulse 824, NodeMaven 1080) shows both.
+  const gw = p.gateway
+    ? (p.gateway.socksPort
+      ? t('detail.gatewayPorts', { host: p.gateway.host, port: p.gateway.port, socksPort: p.gateway.socksPort })
+      : `${p.gateway.host}:${p.gateway.port}`)
+    : null;
   const trialDay = trial ? parseDay(trial.endsAt) : null;
 
   const TABS = [['pull', t('detail.tabPull')], ['pool', `${t('detail.tabPool')} ${pool.total}`]];
