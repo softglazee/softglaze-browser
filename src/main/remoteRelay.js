@@ -5,8 +5,10 @@
 const { EventEmitter } = require('node:events');
 
 // Case-insensitive substring match on key names, so Cookie, Set-Cookie, Authorization, sessionToken
-// and capitalized variants are all redacted.
-const SECRET_KEY_RE = /pass|secret|token|api[_-]?key|auth|cookie|session|credential|bearer|private|otp|2fa|passphrase/i;
+// and capitalized variants are all redacted. `pass` is any password-like key (password, passwd,
+// passphrase, proxyPass) but not `passed`: the parallel run's pass count is a number, not a secret,
+// and masking it showed "•••• passed".
+const SECRET_KEY_RE = /pass(?!ed)|secret|token|api[_-]?key|auth|cookie|session|credential|bearer|private|otp|2fa|passphrase/i;
 // Binary/image frames (screenshots) can render credentials/PII; never stream raw image data.
 const IMAGE_KEY_RE = /^(image|screenshot|thumbnail|jpe?g|png|dataurl|framedata|snapshot)$/i;
 
