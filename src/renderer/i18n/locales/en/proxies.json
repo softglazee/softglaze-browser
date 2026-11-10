@@ -361,7 +361,9 @@
     "confirm_other": "Delete {{count}} selected proxies? Linked profiles will keep working with their proxy assignment cleared."
   },
   "delete": {
-    "confirm": "Delete proxy \"{{name}}\"?"
+    "confirm": "Delete proxy \"{{name}}\"?",
+    "profilesNeedProxy": "Profiles that used the deleted proxy: {{count}}. They now have no proxy and will not launch until you assign one (in the profile editor, or with Proxies on the Profiles page).",
+    "dismissNotice": "Dismiss"
   },
   "history": {
     "dialogTitle": "Proxy health history",

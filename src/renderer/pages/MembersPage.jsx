@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import { usePermissions } from '@/lib/usePermissions.js';
+import { DenyTip } from '@/components/ui/GuardedButton.jsx';
 
 // Plan-limit refusals from main (SEAT_LIMIT, ENTERPRISE_REQUIRED) in the UI language; anything else
 // keeps main's message.
@@ -128,6 +130,9 @@ function NumLimit({ k, label, value, granter, set, t }) {
 export default function MembersPage() {
   const { t } = useTranslation('members');
   const navigate = useNavigate();
+  // Inviting members and reading the team activity need members.manage (Admin and up) in main.
+  const perm = usePermissions();
+  const denyManage = perm.deny('members.manage');
   const [members, setMembers] = useState([]);
   const [me, setMe] = useState(null);
   const [seats, setSeats] = useState(null); // { used, total, full } from main; total -1 = exempt
@@ -156,7 +161,7 @@ export default function MembersPage() {
   const hasSeatCap = Boolean(seats && seats.total >= 0);
   const seatsFull = hasSeatCap && Boolean(seats.full);
   const canCreate = creatableRoles(me).length > 0;
-  const canInvite = canCreate && !seatsFull;
+  const canInvite = canCreate && !seatsFull && !denyManage;
   const topPlan = Boolean(seats && seats.tier === 'enterprise' && seats.type === 'paid');
   let seatNotice = '';
   if (seatsFull) {
@@ -180,9 +185,11 @@ export default function MembersPage() {
           </p>
         </div>
         {canCreate && (
+          <DenyTip deny={denyManage} className="inline-flex shrink-0">
           <button onClick={() => setEditing({})} disabled={!canInvite} title={seatsFull ? seatNotice : undefined} className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-500 disabled:hover:to-blue-600">
             <Plus className="w-3.5 h-3.5" />{t('actions.inviteMember')}
           </button>
+          </DenyTip>
         )}
       </div>
 
@@ -225,10 +232,13 @@ export default function MembersPage() {
           {[{ id: 'members', label: t('tabs.members'), icon: Users }, { id: 'activity', label: t('tabs.activity'), icon: Activity },
             ...(me && me.role === 'SUPER_ADMIN' ? [{ id: 'licenses', label: t('tabs.licenses'), icon: CreditCard }] : [])].map((tab2) => {
             const Icon = tab2.icon; const active = tab === tab2.id;
+            const denyTab = tab2.id === 'activity' ? denyManage : null;
             return (
-              <button key={tab2.id} onClick={() => setTab(tab2.id)} className={`px-4 py-2 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors ${active ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
-                <Icon className="w-3.5 h-3.5" />{tab2.label}
-              </button>
+              <DenyTip key={tab2.id} deny={denyTab}>
+                <button onClick={() => setTab(tab2.id)} disabled={Boolean(denyTab)} className={`px-4 py-2 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:pointer-events-none ${active ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground'}`}>
+                  <Icon className="w-3.5 h-3.5" />{tab2.label}
+                </button>
+              </DenyTip>
             );
           })}
         </div>
@@ -506,6 +516,12 @@ function LicenseEditModal({ row, plans, onClose, onSaved }) {
 function MemberModal({ member, me, members = [], onClose, onSaved }) {
   const { t } = useTranslation('members');
   const isNew = !member.id;
+  // Saving, removing, assigning and resetting need members.manage (Admin and up); ban and unban the
+  // Owner (main). A Manager or Operator who opens their own card can read it but not change it here
+  // (their name, email and password are under Account settings).
+  const perm = usePermissions();
+  const denyManage = perm.deny('members.manage');
+  const denyStatus = perm.denyOwner();
   const allowed = creatableRoles(me);
   const granter = (me && me.permissions) || defaultPerms('OWNER');
 
@@ -670,9 +686,11 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
           <div className="space-y-2">
             <PermissionEditor role={isNew ? role : member.role} value={perms} onChange={setPerms} granter={granter} />
             {!isNew && (
-              <button onClick={revertPerms} disabled={busy} className="text-[11.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 disabled:opacity-50">
-                <RotateCcw className="w-3.5 h-3.5" /> {t('perms.revertDefaults')}
-              </button>
+              <DenyTip deny={denyManage}>
+                <button onClick={revertPerms} disabled={busy || Boolean(denyManage)} className="text-[11.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 disabled:opacity-50">
+                  <RotateCcw className="w-3.5 h-3.5" /> {t('perms.revertDefaults')}
+                </button>
+              </DenyTip>
             )}
           </div>
         )}
@@ -695,20 +713,26 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
             {member.status === 'banned' ? (
               <>
                 {member.banReason && <p className="text-[11.5px] text-red-400/90">{t('accountStatus.reason', { reason: member.banReason })}</p>}
-                <button type="button" onClick={() => changeStatus('active')} disabled={statusBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60">
-                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} {t('accountStatus.unban')}
-                </button>
+                <DenyTip deny={denyStatus}>
+                  <button type="button" onClick={() => changeStatus('active')} disabled={statusBusy || Boolean(denyStatus)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 disabled:opacity-60">
+                    {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />} {t('accountStatus.unban')}
+                  </button>
+                </DenyTip>
                 <p className="text-[11px] text-muted-foreground">{t('accountStatus.banHint')}</p>
               </>
             ) : (
               <>
-                <label className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
-                  <input type="checkbox" checked={suspended} onChange={(e) => setSuspended(e.target.checked)} className="accent-red-500" />
-                  {t('accountStatus.suspendToggle')}
-                </label>
-                <button type="button" onClick={() => changeStatus('banned', 'Blocked by administrator.')} disabled={statusBusy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60">
-                  {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />} {t('accountStatus.ban')}
-                </button>
+                <DenyTip deny={denyManage} className="flex">
+                  <label className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
+                    <input type="checkbox" checked={suspended} disabled={Boolean(denyManage)} onChange={(e) => setSuspended(e.target.checked)} className="accent-red-500" />
+                    {t('accountStatus.suspendToggle')}
+                  </label>
+                </DenyTip>
+                <DenyTip deny={denyStatus}>
+                  <button type="button" onClick={() => changeStatus('banned', 'Blocked by administrator.')} disabled={statusBusy || Boolean(denyStatus)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500/10 text-red-400 border border-red-500/25 hover:bg-red-500/20 disabled:opacity-60">
+                    {statusBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />} {t('accountStatus.ban')}
+                  </button>
+                </DenyTip>
               </>
             )}
           </div>
@@ -717,15 +741,21 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         {err && <p className="text-[12px] text-red-400">{err}</p>}
       </div>
       <div className="flex items-center gap-2 px-6 py-4 border-t border-border">
-        {!isNew && !member.isCurrent && <button onClick={() => setShowDelete(true)} disabled={busy} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"><Trash2 className="w-4 h-4" />{t('actions.remove')}</button>}
-        {!isNew && member.inviteStatus !== 'pending' && canManageTeam(me) && (
+        {!isNew && !member.isCurrent && (
+          <DenyTip deny={denyManage}>
+            <button onClick={() => setShowDelete(true)} disabled={busy || Boolean(denyManage)} className="h-9 px-3 rounded-lg text-[12.5px] text-red-400 hover:bg-red-500/10 flex items-center gap-1.5 disabled:opacity-50"><Trash2 className="w-4 h-4" />{t('actions.remove')}</button>
+          </DenyTip>
+        )}
+        {!isNew && member.inviteStatus !== 'pending' && canManageTeam(me) && perm.can('members.manage') && (
           <button onClick={() => setShowAssign(true)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary flex items-center gap-1.5"><FolderInput className="w-4 h-4" />{t('actions.assignProfiles')}</button>
         )}
         <div className="ml-auto flex items-center gap-2">
           <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">{t('actions.cancel')}</button>
-          <button onClick={save} disabled={busy} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (isNew ? t('actions.createInvite') : t('actions.save'))}
-          </button>
+          <DenyTip deny={denyManage}>
+            <button onClick={save} disabled={busy || Boolean(denyManage)} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : (isNew ? t('actions.createInvite') : t('actions.save'))}
+            </button>
+          </DenyTip>
         </div>
       </div>
       {showAssign && <AssignProfilesModal member={member} onClose={() => setShowAssign(false)} />}

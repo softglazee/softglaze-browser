@@ -6384,14 +6384,27 @@ async function listGroups() {
     orderBy: { createdAt: 'desc' },
     include: { profiles: { where: await scopedProfileWhere({ deletedAt: null }), select: { tags: true } } }
   });
+  const canManage = await ownedRowManageChecker();
   return groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color,
     createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt,
     profileCount: g.profiles.length,
-    tags: collectTags(g.profiles)
+    tags: collectTags(g.profiles),
+    canManage: canManage(g) // rename and delete; the Groups page disables them otherwise
   }));
+}
+
+// For rows already listed through scopedGroupWhere / scopedProxyGroupWhere: may this member rename
+// or delete them (the `manage` rule)? Their owner is in the member's visible subtree, or they have no
+// owner and the member is the Owner or an Admin. Main still checks on rename and delete.
+async function ownedRowManageChecker() {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return () => true;
+  const visible = permissions.visibleMemberIds(await getPrisma().member.findMany(), member);
+  const admin = permissions.rankOf(member.role) >= permissions.ROLE_RANK.ADMIN;
+  return (row) => (row.ownerMemberId == null ? admin : visible.has(row.ownerMemberId));
 }
 
 // Groups only organise profiles, so making, renaming, deleting and filling one needs the right to
@@ -6570,13 +6583,15 @@ async function listProxyGroups() {
   for (const r of totals) totalByGroup[r.proxyGroupId] = r._count._all;
   const freeByGroup = {};
   for (const r of freeCounts) freeByGroup[r.proxyGroupId] = r._count._all;
+  const canManage = await ownedRowManageChecker();
   return proxyScope.paidGroupView(groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color || '#3b82f6',
     autoCreated: Boolean(g.autoCreated),
     proxyCount: totalByGroup[g.id] || 0,
-    createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt
+    createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt,
+    canManage: canManage(g) // rename and delete; the Proxy pool disables them otherwise
   })), freeByGroup);
 }
 

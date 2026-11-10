@@ -22,6 +22,8 @@ import QuickGenerateModal from '@/components/QuickGenerateModal.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import CompareProfilesModal from '@/components/CompareProfilesModal.jsx';
 import ShareProfileModal from '@/components/ShareProfileModal.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { Pencil, GitCompare, Bookmark, Share2, Eye, EyeOff } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
@@ -545,6 +547,9 @@ function ProxyReassignModal({ onClose, count, allProxies, proxyGroups, bulkBusy,
 export default function ProfilesPage() {
   const { t } = useTranslation('profiles');
   const { t: tc } = useTranslation('captcha');
+  // Role-aware buttons: an action the member may not do is disabled with the role it needs. Row
+  // actions that change a profile are also off for a profile shared "use only" (row.canEdit).
+  const perm = usePermissions();
   const [profiles, setProfiles] = useState([]);
   const [search, setSearch] = useState('');
   // The search the current `profiles` list was loaded for. Search is server-side, so the selection
@@ -1193,8 +1198,16 @@ export default function ProfilesPage() {
   }
 
   async function handleClone(profileId, reroll = false) {
-    try { await softglazeApi.profiles.clone(profileId, { reroll }); await loadData(); }
-    catch (err) { setError(err.message); }
+    try {
+      const copy = await softglazeApi.profiles.clone(profileId, { reroll });
+      await loadData();
+      // A copy of a profile shared with the member never takes its owner's proxy or group (main).
+      const left = (copy && copy.leftOut) || {};
+      const notes = [];
+      if (left.proxy) notes.push(t('permNotes.cloneNoProxy'));
+      if (left.group) notes.push(t('permNotes.cloneNoGroup'));
+      if (notes.length) setError(notes.join(' '));
+    } catch (err) { setError(err.message); }
   }
 
   function handleDelete(profileId, title) {
@@ -1293,8 +1306,11 @@ export default function ProfilesPage() {
     const ids = visibleSelectedIds();
     if (!tag || ids.length === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.tagAssign(ids, tag, mode); setShowTagModal(false); setTagInput(''); await loadData(); }
-    catch (err) { setError(err.message); }
+    try {
+      const res = await softglazeApi.profiles.tagAssign(ids, tag, mode);
+      setShowTagModal(false); setTagInput(''); await loadData();
+      if (res && res.skipped > 0) setError(t('permNotes.skipped', { count: res.skipped }));
+    } catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
   async function handleBulkRename() {
@@ -1303,8 +1319,11 @@ export default function ProfilesPage() {
     const orderedIds = visibleSelectedIds();
     if (!prefix || orderedIds.length === 0) return;
     setBulkBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkRename({ ids: orderedIds, prefix, start: Number(renameStart) || 1 }); setShowRenameModal(false); await loadData(); }
-    catch (err) { setError(err.message); }
+    try {
+      const res = await softglazeApi.profiles.bulkRename({ ids: orderedIds, prefix, start: Number(renameStart) || 1 });
+      setShowRenameModal(false); await loadData();
+      if (res && res.skipped > 0) setError(t('permNotes.skipped', { count: res.skipped }));
+    } catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
   }
   async function handleReassignProxy(payload) {
@@ -1319,6 +1338,8 @@ export default function ProfilesPage() {
       if (res && res.limited && res.skipped > 0) notes.push(t('reassignModal.limited', { assigned: res.assigned, skipped: res.skipped }));
       // Assigned, but Chromium will refuse to open these through SOCKS4; say so now, not at launch.
       if (res && Array.isArray(res.socks4Chromium) && res.socks4Chromium.length) notes.push(t('reassignModal.socks4Chromium', { count: res.socks4Chromium.length }));
+      // Pasted proxies past the member's proxy limit were left out (main's message says which limit).
+      if (res && res.proxyLimitMessage) notes.push(res.proxyLimitMessage);
       if (notes.length) setError(notes.join(' '));
     } catch (err) { setError(err.message); }
     finally { setBulkBusy(false); }
@@ -2330,18 +2351,19 @@ export default function ProfilesPage() {
               <LayoutTemplate className="h-4 w-4" />
               {t('header.templates')}
             </Button>
-            <Button variant="secondary" onClick={() => setShowQuickGen(true)}>
+            <GuardedButton deny={perm.deny('profiles.create')} variant="secondary" onClick={() => setShowQuickGen(true)}>
               <FileSpreadsheet className="h-4 w-4" />
               {t('header.batchCreate')}
-            </Button>
-            <Button
+            </GuardedButton>
+            <GuardedButton
+              deny={perm.deny('profiles.create')}
               variant="primary"
               onClick={openCreate}
               className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-blue-600"
             >
               <Plus className="h-4 w-4" />
               {t('header.newProfile')}
-            </Button>
+            </GuardedButton>
           </div>
         }
       />
@@ -2467,16 +2489,16 @@ export default function ProfilesPage() {
                 {t('bulk.queueWidth', 'at a time')}
               </label>
             )}
-            <Button size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</Button>
-            <Button size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</Button>
+            <GuardedButton deny={perm.deny('profiles.launch')} size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.launch')} size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</GuardedButton>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 mr-1" /> {t('bulk.tag')}</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 mr-1" /> {t('bulk.rename')}</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowReassignModal(true)} title={t('bulk.reassignProxyTitle')}><Link2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.reassignProxy')}</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkCaptchaFix} title={tc('bulk.fixTitle')}><ShieldCheck className="w-3.5 h-3.5 mr-1" /> {tc('bulk.fix')}</Button>
-            <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.share')}</Button>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 mr-1" /> {t('bulk.tag')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 mr-1" /> {t('bulk.rename')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowReassignModal(true)} title={t('bulk.reassignProxyTitle')}><Link2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.reassignProxy')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkCaptchaFix} title={tc('bulk.fixTitle')}><ShieldCheck className="w-3.5 h-3.5 mr-1" /> {tc('bulk.fix')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.share')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.share')}</GuardedButton>
             <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title={t('bulk.compareTitle')}><GitCompare className="w-3.5 h-3.5 mr-1" /> {t('bulk.compare')}</Button>
-            <Button size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</Button>
+            <GuardedButton deny={perm.deny('profiles.delete')} size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</GuardedButton>
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>{t('bulk.clear')}</Button>
           </div>
           )}
@@ -2652,6 +2674,13 @@ export default function ProfilesPage() {
                             <Link2 className="w-3 h-3" />
                             {p.proxyInfoString.split(':')[0]}
                           </span>
+                        ) : (p.systemProxyBehavior === 'PROFILE_PROXY' && !p.proxyId) ? (
+                          // Its proxy was deleted (or a copy left out one the member may not use): launch
+                          // refuses it until a proxy is assigned, so say so here instead of "Direct".
+                          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/25" title={t('permNotes.proxyMissingTitle')}>
+                            <AlertTriangle className="w-3 h-3" />
+                            {t('permNotes.proxyMissing')}
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
                             {t('row.direct')}
@@ -2686,9 +2715,9 @@ export default function ProfilesPage() {
                             <Lock className="w-3.5 h-3.5 mr-1" /> {t('row.inUse')}
                           </Button>
                         ) : (
-                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title={t('actions.launch')}>
+                          <GuardedButton deny={perm.deny('profiles.launch')} size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title={t('actions.launch')}>
                             <Play className="w-3.5 h-3.5 mr-1" /> {t('actions.launch')}
-                          </Button>
+                          </GuardedButton>
                         )}
 
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
@@ -2696,27 +2725,27 @@ export default function ProfilesPage() {
                         <Button size="sm" variant="ghost" className="px-2" onClick={() => setEnvProfile(p)} title={t('actions.environmentOverview')}>
                           <Fingerprint className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2" onClick={() => openEdit(p)} title={t('actions.editConfig')}>
+                        <GuardedButton deny={perm.denyRow('profiles.edit', p)} size="sm" variant="ghost" className="px-2" onClick={() => openEdit(p)} title={t('actions.editConfig')} aria-label={t('actions.editConfig')}>
                           <Settings2 className="w-4 h-4" />
-                        </Button>
+                        </GuardedButton>
                         <Button size="sm" variant="ghost" className="px-2" onClick={() => setCookieProfile({ id: p.id, title: p.title })} title={t('actions.manageCookies')}>
                           <Cookie className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="px-2" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')}>
+                        <GuardedButton deny={perm.denyRow('proxies.manage', p)} size="sm" variant="ghost" className="px-2" onClick={() => setRotationProfile({ id: p.id, title: p.title })} title={t('actions.proxyRotation')} aria-label={t('actions.proxyRotation')}>
                           <Shuffle className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')}>
+                        </GuardedButton>
+                        <GuardedButton deny={perm.deny('profiles.create')} size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id)} title={t('actions.cloneSame')} aria-label={t('actions.cloneSame')}>
                           <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')}>
+                        </GuardedButton>
+                        <GuardedButton deny={perm.deny('profiles.create')} size="sm" variant="ghost" className="px-2" onClick={() => handleClone(p.id, true)} title={t('actions.cloneNew')} aria-label={t('actions.cloneNew')}>
                           <Dices className="w-4 h-4" />
-                        </Button>
+                        </GuardedButton>
 
                         <div className="w-px h-6 bg-border mx-1 my-auto" />
 
-                        <Button size="sm" variant="ghost" className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => handleDelete(p.id, p.title)} title={t('actions.moveToTrash')}>
+                        <GuardedButton deny={perm.denyRow('profiles.delete', p)} size="sm" variant="ghost" className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" onClick={() => handleDelete(p.id, p.title)} title={t('actions.moveToTrash')} aria-label={t('actions.moveToTrash')}>
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </GuardedButton>
                       </div>
                     </td>
                   </tr>

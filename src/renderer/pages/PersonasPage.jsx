@@ -19,6 +19,7 @@ import personasEs from '@/i18n/locales/es/personas.json';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
+import { usePermissions } from '@/lib/usePermissions.js';
 
 // Register the "personas" namespace here; the central i18n config only bundles "common".
 if (!i18n.hasResourceBundle('en', 'personas')) i18n.addResourceBundle('en', 'personas', personasEn);
@@ -162,7 +163,25 @@ function PasswordCell({ value }) {
   );
 }
 
+// Main lets only members with vault.manage (the Owner by default) read or change the vault, and the
+// sidebar shows the page only to them. Anyone else who opens it (an old link) is told why instead of
+// getting a load error; nothing is requested from main.
 export default function PersonasPage() {
+  const { me, canManageVault } = usePermissions();
+  const { t } = useTranslation('common');
+  if (me === undefined) return null;
+  if (!canManageVault) {
+    return (
+      <>
+        <PageHeader eyebrow={t('header.eyebrow', { ns: 'personas' })} title={t('header.title', { ns: 'personas' })} />
+        <EmptyState title={t('perm.vaultTitle')} description={t('perm.vaultBody')} />
+      </>
+    );
+  }
+  return <DataVault />;
+}
+
+function DataVault() {
   const { t } = useTranslation('personas');
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);

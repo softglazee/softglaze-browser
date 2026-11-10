@@ -462,5 +462,12 @@
   "launchWarnings": {
     "geo": "{{name}}: no se pudo consultar la ubicación del proxy, así que este navegador usa la zona horaria de este equipo. Vuelve a abrirlo cuando el proxy responda.",
     "dismiss": "Descartar"
+  },
+  "permNotes": {
+    "skipped": "Perfiles sin cambios: {{count}}. No puedes editarlos (se compartieron contigo solo para usar, o son de otra persona).",
+    "cloneNoProxy": "Copiado. El proxy del original no está disponible para ti, así que la copia aún no tiene proxy: asígnale uno antes de abrirla.",
+    "cloneNoGroup": "Copiado. No puedes ver el grupo del original, así que la copia no está en ningún grupo.",
+    "proxyMissing": "Sin proxy",
+    "proxyMissingTitle": "Configurado para usar un proxy, pero no tiene ninguno (se eliminó o no está disponible para ti). Asigna un proxy en el editor antes de abrirlo."
   }
 }

@@ -19,6 +19,7 @@ import { pickLicenseNotice } from '@/lib/licenseNotice.mjs';
 import AiApprovalDialog from '@/components/ai/AiApprovalDialog.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import { canManageAi } from '@/lib/aiCore.mjs';
+import { canManageVault } from '@/lib/memberPermissions.mjs';
 
 function ThemeToggle({ collapsed }) {
   const { t } = useTranslation();
@@ -67,7 +68,8 @@ const SECTIONS = [
   {
     labelKey: 'nav.sectionData',
     items: [
-      { path: '/personas', labelKey: 'nav.dataVault', icon: IdCard, featureKey: 'personas' },
+      // Data Vault: only members main lets manage it (vault.manage, the Owner by default) see it.
+      { path: '/personas', labelKey: 'nav.dataVault', icon: IdCard, featureKey: 'personas', vaultOnly: true },
       { path: '/batch-import', labelKey: 'nav.batchImport', icon: FileSpreadsheet, featureKey: 'batchImport' },
       { path: '/trash', labelKey: 'nav.trash', icon: Trash2, featureKey: 'trash' }
     ]
@@ -304,13 +306,14 @@ export default function AppShell({ children }) {
           {SECTIONS.map((section) => {
             const items = section.items
               .filter((item) => !item.aiOnly || !meLoaded || canManageAi(me))
+              .filter((item) => !item.vaultOnly || !meLoaded || canManageVault(me))
               .filter((item) => (item.superOnly ? me?.role === 'SUPER_ADMIN' : canSee(item.featureKey)));
             if (items.length === 0) return null;
             return (
               <div key={section.labelKey} className="mt-3">
                 {!collapsed && <div className="px-3 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/70">{t(section.labelKey)}</div>}
                 <div className="space-y-0.5">
-                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} pill={item.pillKey ? t(item.pillKey) : undefined} reserved={item.aiOnly && !meLoaded} />)}
+                  {items.map((item) => <NavItem key={item.path} {...item} label={t(item.labelKey)} collapsed={collapsed} badge={item.badgeKey ? badges[item.badgeKey] : undefined} pill={item.pillKey ? t(item.pillKey) : undefined} reserved={(item.aiOnly || item.vaultOnly) && !meLoaded} />)}
                 </div>
               </div>
             );

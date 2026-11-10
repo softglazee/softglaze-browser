@@ -18,6 +18,7 @@ import PageHeader from '@/components/PageHeader.jsx';
 import { Gift } from 'lucide-react';
 import Badge from '@/components/ui/Badge.jsx';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton, { DenyTip } from '@/components/ui/GuardedButton.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
@@ -26,6 +27,7 @@ import Textarea from '@/components/ui/Textarea.jsx';
 import Pager from '@/components/ui/Pager.jsx';
 import CopyForProxyExtensionDialog from '@/components/CopyForProxyExtensionDialog.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 
@@ -136,6 +138,15 @@ function Socks4Note({ text }) {
 
 export default function ProxyPoolPage() {
   const { t } = useTranslation('proxies');
+  // Adding, editing, deleting, rotating and grouping proxies need proxies.manage (main). The workspace
+  // rotation policy and the check schedule also need the Owner or an Admin; renaming or deleting a
+  // proxy group needs one the member manages (group.canManage).
+  const perm = usePermissions();
+  const denyManage = perm.deny('proxies.manage');
+  const denyPolicy = perm.denyWorkspaceProxy();
+  // Deleting a proxy that profiles used: they keep "Profile proxy" with none and do not launch until
+  // one is assigned (main), so say how many.
+  const [poolNotice, setPoolNotice] = useState('');
   const [proxies, setProxies] = useState([]);
   const [search, setSearch] = useState('');
   const [proxyOpen, setProxyOpen] = useState(false);
@@ -302,10 +313,11 @@ export default function ProxyPoolPage() {
     setBulkDeleting(true);
     setError('');
     try {
-      await softglazeApi.proxies.bulkDelete(ids);
+      const res = await softglazeApi.proxies.bulkDelete(ids);
       clearSelection();
       // Group counts (sidebar chips) change with every delete, so refresh them too.
       await Promise.all([loadProxies(), loadGroups()]);
+      noteProfilesNeedProxy(res);
     } catch (err) {
       setError(err.message || t('errors.deleteProxies'));
     } finally {
@@ -380,9 +392,10 @@ export default function ProxyPoolPage() {
     setBulkDeleting(true);
     setError('');
     try {
-      await softglazeApi.proxies.bulkDelete(ids);
+      const res = await softglazeApi.proxies.bulkDelete(ids);
       clearSelection();
       await Promise.all([loadProxies(), loadGroups()]);
+      noteProfilesNeedProxy(res);
     } catch (err) {
       setError(err.message || t('errors.deleteSelected'));
     } finally {
@@ -752,11 +765,17 @@ export default function ProxyPoolPage() {
     if (!window.confirm(t('delete.confirm', { name: proxy.name }))) return;
     setError('');
     try {
-      await softglazeApi.proxies.delete(proxy.id);
+      const res = await softglazeApi.proxies.delete(proxy.id);
       await Promise.all([loadProxies(), loadGroups()]);
+      noteProfilesNeedProxy(res);
     } catch (err) {
       setError(err.message || t('errors.deleteProxy'));
     }
+  }
+
+  function noteProfilesNeedProxy(res) {
+    const n = Number(res && res.profilesNeedProxy) || 0;
+    setPoolNotice(n > 0 ? t('delete.profilesNeedProxy', { count: n }) : '');
   }
 
   // Verified/failed use the filter's health resolution so card counts match the rows;
@@ -794,22 +813,29 @@ export default function ProxyPoolPage() {
             <>
               <div className="flex items-center gap-2 mr-1">
                 <span className="text-[11px] font-medium text-muted-foreground">{t('rotation.label')}</span>
+                <DenyTip deny={denyPolicy}>
                 <select
                   value={proxyPolicy}
                   onChange={(e) => applyProxyPolicy(e.target.value)}
-                  className="h-9 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground"
-                  title={t('rotation.tooltip')}
+                  disabled={Boolean(denyPolicy)}
+                  className="h-9 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground disabled:opacity-60"
+                  title={denyPolicy ? undefined : t('rotation.tooltip')}
                 >
                   <option value="each-launch">{t('rotation.eachLaunch')}</option>
                   <option value="sticky">{t('rotation.sticky')}</option>
                   <option value="failover">{t('rotation.failover')}</option>
                   <option value="latency-optimized">{t('rotation.latencyOptimized')}</option>
                 </select>
+                </DenyTip>
                 {proxyPolicy === 'failover' && (
-                  <NumberInput min={0} fallback={0} value={policyDetail.failoverMaxLatencyMs} onCommit={(n) => applyPolicyParam({ failoverMaxLatencyMs: n })} title={t('rotation.failoverMaxTooltip')} placeholder={t('rotation.maxMsPlaceholder')} className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                  <DenyTip deny={denyPolicy}>
+                    <NumberInput min={0} fallback={0} value={policyDetail.failoverMaxLatencyMs} disabled={Boolean(denyPolicy)} onCommit={(n) => applyPolicyParam({ failoverMaxLatencyMs: n })} title={denyPolicy ? undefined : t('rotation.failoverMaxTooltip')} placeholder={t('rotation.maxMsPlaceholder')} className="h-9 w-24 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground disabled:opacity-60" />
+                  </DenyTip>
                 )}
                 {proxyPolicy === 'latency-optimized' && (
-                  <NumberInput min={1} fallback={1} value={policyDetail.latencyTopN} onCommit={(n) => applyPolicyParam({ latencyTopN: n })} title={t('rotation.topNTooltip')} placeholder={t('rotation.topNPlaceholder')} className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground" />
+                  <DenyTip deny={denyPolicy}>
+                    <NumberInput min={1} fallback={1} value={policyDetail.latencyTopN} disabled={Boolean(denyPolicy)} onCommit={(n) => applyPolicyParam({ latencyTopN: n })} title={denyPolicy ? undefined : t('rotation.topNTooltip')} placeholder={t('rotation.topNPlaceholder')} className="h-9 w-20 rounded-lg border border-border bg-card px-2 text-[12px] text-foreground disabled:opacity-60" />
+                  </DenyTip>
                 )}
               </div>
               <Button variant="secondary" onClick={handleTestAllFast} disabled={testingAll || proxies.length === 0} title={t('actions.testAllTooltip')}>
@@ -828,14 +854,14 @@ export default function ProxyPoolPage() {
                 <RefreshCcw className="h-4 w-4" />
                 {t('actions.refresh')}
               </Button>
-              <Button variant="secondary" onClick={() => setBatchOpen(true)}>
+              <GuardedButton deny={denyManage} variant="secondary" onClick={() => setBatchOpen(true)}>
                 <Upload className="h-4 w-4" />
                 {t('actions.batchAdd')}
-              </Button>
-              <Button variant="primary" onClick={openCreate}>
+              </GuardedButton>
+              <GuardedButton deny={denyManage} variant="primary" onClick={openCreate}>
                 <Plus className="h-4 w-4" />
                 {t('actions.newProxy')}
-              </Button>
+              </GuardedButton>
             </>
           ) : null
         }
@@ -995,6 +1021,12 @@ export default function ProxyPoolPage() {
       </div>
 
       {error && <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
+      {poolNotice && (
+        <div role="status" className="mb-4 flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+          <span className="flex-1">{poolNotice}</span>
+          <button type="button" onClick={() => setPoolNotice('')} className="shrink-0 text-amber-400/80 hover:text-amber-300" aria-label={t('delete.dismissNotice')}><X className="h-4 w-4" /></button>
+        </div>
+      )}
 
 
 
@@ -1067,12 +1099,16 @@ export default function ProxyPoolPage() {
                   <option value="state">{t('autoGroup.state')}</option>
                   <option value="city">{t('autoGroup.city')}</option>
                 </select>
-                <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0} title={t('autoGroup.buttonTooltip')} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
-                  {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} {t('autoGroup.button')}
-                </button>
-                <button className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors" onClick={() => setGroupModal({ name: '', color: GROUP_COLORS[groups.length % GROUP_COLORS.length] })}>
-                  <FolderPlus className="w-3.5 h-3.5" /> {t('groups.newGroup')}
-                </button>
+                <DenyTip deny={denyManage}>
+                  <button onClick={handleAutoGroup} disabled={autoGrouping || proxies.length === 0 || Boolean(denyManage)} title={denyManage ? undefined : t('autoGroup.buttonTooltip')} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50">
+                    {autoGrouping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Boxes className="w-3.5 h-3.5" />} {t('autoGroup.button')}
+                  </button>
+                </DenyTip>
+                <DenyTip deny={denyManage}>
+                  <button disabled={Boolean(denyManage)} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary transition-colors disabled:opacity-50" onClick={() => setGroupModal({ name: '', color: GROUP_COLORS[groups.length % GROUP_COLORS.length] })}>
+                    <FolderPlus className="w-3.5 h-3.5" /> {t('groups.newGroup')}
+                  </button>
+                </DenyTip>
               </div>
             </div>
             {autoGroupMsg && <div className="mb-2 text-[11px] text-emerald-400">{autoGroupMsg}</div>}
@@ -1092,8 +1128,11 @@ export default function ProxyPoolPage() {
                 >
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} />
                   {g.name} <span className="opacity-60">{g.proxyCount ?? 0}</span>
-                  <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title={t('groups.deleteGroup')}><X className="w-3 h-3" /></button>
+                  {/* Rename and delete only on a group the member manages (main refuses the others). */}
+                  {!perm.denyGroup('proxies.manage', g) && <>
+                    <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')} aria-label={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title={t('groups.deleteGroup')} aria-label={t('groups.deleteGroup')}><X className="w-3 h-3" /></button>
+                  </>}
                 </div>
               ))}
             </div>
@@ -1139,10 +1178,10 @@ export default function ProxyPoolPage() {
               </div>
               <div className="pt-3 border-t border-border">
                 <div className="text-sm font-semibold text-foreground mb-2">{t('groupsPage.scheduleTitle', 'Automatic health checks')}</div>
-                <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title={t('scheduler.tooltip')}>
-                  <input type="checkbox" checked={scheduler.enabled} onChange={(e) => applyScheduler({ ...scheduler, enabled: e.target.checked })} className="accent-primary" />
+                <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground" title={denyPolicy || t('scheduler.tooltip')}>
+                  <input type="checkbox" checked={scheduler.enabled} disabled={Boolean(denyPolicy)} onChange={(e) => applyScheduler({ ...scheduler, enabled: e.target.checked })} className="accent-primary" />
                   <Clock className="w-3.5 h-3.5" /> {t('scheduler.autoCheckEvery')}
-                  <NumberInput min={1} fallback={30} value={scheduler.minutes} onCommit={(n) => applyScheduler({ ...scheduler, minutes: n })} className=
+                  <NumberInput min={1} fallback={30} value={scheduler.minutes} disabled={Boolean(denyPolicy)} onCommit={(n) => applyScheduler({ ...scheduler, minutes: n })} className=
 "h-7 w-14 rounded border border-border bg-card px-1.5 text-[12px] text-foreground" /> {t('scheduler.min')}
                 </label>
               </div>
@@ -1194,10 +1233,10 @@ export default function ProxyPoolPage() {
           </button>
         )}
         {(statusFilter !== 'all' || activeGroup !== 'all' || blacklistFilter !== 'all' || speedFilter !== 'all' || search.trim()) && filteredProxies.length > 0 && (
-          <Button size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
+          <GuardedButton deny={denyManage} size="sm" variant="danger" onClick={handleDeleteFiltered} disabled={bulkDeleting} title={t('deleteFiltered.tooltip')}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {t('deleteFiltered.button', { scope: deleteFilteredScopeLabel(), count: filteredProxies.length })}
-          </Button>
+          </GuardedButton>
         )}
       </div>
 
@@ -1209,9 +1248,9 @@ export default function ProxyPoolPage() {
             {checkingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />} {t('selection.checkSelected')}
           </Button>
           <div className="relative">
-            <Button size="sm" variant="secondary" onClick={() => setAssignOpen((v) => !v)} disabled={bulkDeleting}>
+            <GuardedButton deny={denyManage} size="sm" variant="secondary" onClick={() => setAssignOpen((v) => !v)} disabled={bulkDeleting}>
               <FolderInput className="h-3.5 w-3.5" /> {t('selection.moveToGroup')} <ChevronDown className="h-3.5 w-3.5" />
-            </Button>
+            </GuardedButton>
             {assignOpen && (
               <div className="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-xl py-1">
                 {groups.length === 0 && <div className="px-3 py-2 text-[12px] text-muted">{t('selection.noGroupsYet')}</div>}
@@ -1230,9 +1269,9 @@ export default function ProxyPoolPage() {
           <Button size="sm" variant="secondary" onClick={openExtensionCopy} disabled={bulkDeleting} title={t('selection.copyForExtensionTooltip')}>
             <Copy className="h-3.5 w-3.5" /> {t('selection.copyForExtension')}
           </Button>
-          <Button size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
+          <GuardedButton deny={denyManage} size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('selection.deleteSelected')}
-          </Button>
+          </GuardedButton>
           <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title={t('selection.clearTooltip')}>
             <X className="h-4 w-4" /> {t('selection.clear')}
           </Button>
@@ -1298,15 +1337,19 @@ export default function ProxyPoolPage() {
                               {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                             </button>
                             {proxy.canRotate && (
-                              <button type="button" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id} title={t('rowActions.rotateIp', 'Rotate IP')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
-                                {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
-                              </button>
+                              <DenyTip deny={denyManage}>
+                                <button type="button" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id || Boolean(denyManage)} title={denyManage ? undefined : t('rowActions.rotateIp', 'Rotate IP')} aria-label={t('rowActions.rotateIp', 'Rotate IP')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50">
+                                  {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
+                                </button>
+                              </DenyTip>
                             )}
                             <button type="button" onClick={() => openHistory(proxy)} title={t('rowActions.healthHistory')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground">
                               <History className="h-3.5 w-3.5" />
                             </button>
-                            <button type="button" onClick={() => openEdit(proxy)} title={t('rowActions.editProxy')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground"><Edit className="h-3.5 w-3.5" /></button>
-                            <button type="button" onClick={() => handleDelete(proxy)} title={t('rowActions.deleteProxy')} className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <DenyTip deny={denyManage}>
+                              <button type="button" onClick={() => openEdit(proxy)} disabled={Boolean(denyManage)} title={denyManage ? undefined : t('rowActions.editProxy')} aria-label={t('rowActions.editProxy')} className="p-1 rounded hover:bg-card text-muted hover:text-foreground disabled:opacity-50"><Edit className="h-3.5 w-3.5" /></button>
+                              <button type="button" onClick={() => handleDelete(proxy)} disabled={Boolean(denyManage)} title={denyManage ? undefined : t('rowActions.deleteProxy')} aria-label={t('rowActions.deleteProxy')} className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </DenyTip>
                           </span>
                         </div>
                       </td>
@@ -1358,19 +1401,19 @@ export default function ProxyPoolPage() {
                       <td className="px-5 py-4">
                         <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id || rotatingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
                           {proxy.canRotate && (
-                            <Button size="sm" variant="secondary" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id || checkingId === proxy.id} title={t('rowActions.rotateIpTitle', 'Get a new exit IP on this proxy')} className="px-3">
+                            <GuardedButton deny={denyManage} size="sm" variant="secondary" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id || checkingId === proxy.id} title={t('rowActions.rotateIpTitle', 'Get a new exit IP on this proxy')} className="px-3">
                               {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5 mr-1" />} {t('rowActions.rotateIp', 'Rotate IP')}
-                            </Button>
+                            </GuardedButton>
                           )}
                           <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="px-3">
                             {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 mr-1" />} {t('rowActions.check')}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(proxy)} className="px-2.5">
+                          <GuardedButton deny={denyManage} size="sm" variant="ghost" onClick={() => openEdit(proxy)} className="px-2.5" aria-label={t('rowActions.editProxy')}>
                             <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(proxy)} className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                          </GuardedButton>
+                          <GuardedButton deny={denyManage} size="sm" variant="ghost" onClick={() => handleDelete(proxy)} className="px-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10" aria-label={t('rowActions.deleteProxy')}>
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </GuardedButton>
                         </div>
                       </td>
                     </tr>

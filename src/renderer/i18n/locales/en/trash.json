@@ -49,5 +49,6 @@
     "showing": "Showing {{from}}-{{to}} of {{total}}",
     "prev": "Prev",
     "next": "Next"
-  }
+  },
+  "bulkSkipped": "Not changed: {{count}} profile(s). {{reason}}"
 }
