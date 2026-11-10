@@ -68,6 +68,7 @@
     "connector": "Connector",
     "gateway": "Gateway",
     "gatewayFromKey": "Read from your key on each pull",
+    "gatewayManual": "From the list you paste in the proxy pool (Batch Add)",
     "key": "Key",
     "keySaved": "Saved, encrypted on this machine",
     "keyNotSaved": "Not saved",

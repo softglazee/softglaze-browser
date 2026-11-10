@@ -379,7 +379,7 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
       <section className="px-5 py-3 border-b border-border" aria-label={t('detail.overview')}>
         <dl className="divide-y divide-border/60">
           <Row icon={Plug} label={t('detail.connector')}>{t(`kind.${kind}`)}</Row>
-          <Row icon={Server} label={t('detail.gateway')}>{gw ? <span className="font-mono text-[12.5px]">{gw}</span> : <span className="text-muted-foreground">{t('detail.gatewayFromKey')}</span>}</Row>
+          <Row icon={Server} label={t('detail.gateway')}>{gw ? <span className="font-mono text-[12.5px]">{gw}</span> : <span className="text-muted-foreground">{t(p.unavailable ? 'detail.gatewayManual' : 'detail.gatewayFromKey')}</span>}</Row>
           {!p.unavailable && (
             <Row icon={KeyRound} label={t('detail.key')}>
               {credsHidden ? <span className="text-muted-foreground">{t('detail.keyHidden')}</span>
