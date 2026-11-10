@@ -29,7 +29,8 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   databay: 30, // databayUsername sends sessionLength 30
   twoextract: 10, // 2extract's default
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
-  simplyproxies: 120 // 2 hours, extended while in use
+  simplyproxies: 120, // 2 hours, extended while in use
+  simplynode: 30 // the app sends ttl 1800 seconds
 });
 
 // Every Keep same IP time the form can offer, in minutes; a connector shows those up to its maxLife
