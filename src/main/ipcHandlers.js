@@ -3187,6 +3187,16 @@ async function marsCall(token, method, pathAndQuery, what, body, raw) {
     if (/HTTP 401\b/.test(rawMsg)) throw new Error('MarsProxies: the API token was rejected. Copy it again from Dashboard, Settings, API.');
     if (/HTTP 403\b/.test(rawMsg)) throw new Error('MarsProxies: the residential API is not enabled on this account yet. It unlocks after at least 1 GB of residential traffic is purchased.');
     if (/HTTP 429\b/.test(rawMsg)) throw new Error('MarsProxies: the API rate limit was reached. Wait a minute and try again.');
+    // generate-proxy-list's documented refusals, coded so the form says them in the window's language
+    // (proxyProviders.errors.marsSubuserNotFound / marsMismatch): 404 "subuser credentials not found",
+    // 409 when the location segment, username or password do not match.
+    const status = (e && e.status) || Number((/HTTP (\d{3})\b/.exec(rawMsg) || [])[1]) || 0;
+    if (what === 'proxy list' && status === 404) {
+      throw Object.assign(new Error('MarsProxies found no sub-user with that username and password. Check them under Sub-users in the dashboard, and enter only the part of the password before the first underscore.'), { code: 'MARSPROXIES_SUBUSER_NOT_FOUND' });
+    }
+    if (what === 'proxy list' && status === 409) {
+      throw Object.assign(new Error('MarsProxies refused the request: the location, or the sub-user username and password, do not match. Check the State and City spelling or leave them blank, and enter only the part of the password before the first underscore.'), { code: 'MARSPROXIES_MISMATCH' });
+    }
     const m = /"message"\s*:\s*"([^"]+)"/.exec(rawMsg);
     throw new Error(`MarsProxies ${what}: ${m ? m[1] : rawMsg}`);
   }

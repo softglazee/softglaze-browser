@@ -241,7 +241,9 @@
       "pull": "No se pudieron extraer los proxies.",
       "saveCreds": "No se pudieron guardar las credenciales.",
       "lookup": "No se pudo acceder a la cuenta del proveedor.",
-      "anyipCredsOrApi": "Introduce tu Usuario + Contraseña del proxy, o una clave API + ID de equipo para el aprovisionamiento automático."
+      "anyipCredsOrApi": "Introduce tu Usuario + Contraseña del proxy, o una clave API + ID de equipo para el aprovisionamiento automático.",
+      "marsSubuserNotFound": "MarsProxies no encontró ningún subusuario con ese usuario y contraseña. Revísalos en Sub-users en el panel, e introduce solo la parte de la contraseña antes del primer guion bajo.",
+      "marsMismatch": "MarsProxies rechazó la solicitud: la ubicación, o el usuario y la contraseña del subusuario, no coinciden. Revisa cómo escribiste el estado y la ciudad o déjalos en blanco, e introduce solo la parte de la contraseña antes del primer guion bajo."
     },
     "countries": {
       "any": "Cualquiera / Aleatorio",

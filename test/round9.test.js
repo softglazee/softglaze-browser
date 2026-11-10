@@ -269,3 +269,32 @@ test('14: the legacy rotation-link pass stops when a restore swaps the database 
   assert.deepEqual(Object.keys(store.get('profileRotationUrlsAdopted').done).sort(), ['7', '8']);
   assert.match(extractFunction(IPC, 'workspaceRestore'), /rotationLinksAdoptedThisRun = false;\s*await afterDbReady\(\);/);
 });
+
+// ---- MarsProxies 404 and 409 ----
+
+test('MarsProxies: 404 and 409 from generate-proxy-list are clear, coded and translated', async () => {
+  const fail = (status, body) => async () => { throw Object.assign(new Error(`HTTP ${status} ${body}`), { status }); };
+  const load = (httpRequestText) => loadMain(['marsCall'], { httpRequestText, MARS_API: 'https://api.marsproxies.example' });
+  const list = (fn) => load(fn).marsCall('tok-123', 'POST', '/v1/residential/access/generate-proxy-list', 'proxy list', { a: 1 }, true);
+  await assert.rejects(list(fail(404, '{"message":"subuser credentials not found"}')), (e) => e.code === 'MARSPROXIES_SUBUSER_NOT_FOUND'
+    && /no sub-user with that username and password/.test(e.message) && /before the first underscore/.test(e.message));
+  await assert.rejects(list(fail(409, '{"message":"location segment, username or password does not match"}')), (e) => e.code === 'MARSPROXIES_MISMATCH'
+    && /location, or the sub-user username and password, do not match/.test(e.message));
+  // Elsewhere a 404 keeps the vendor's own text; the token never shows.
+  await assert.rejects(load(fail(404, '{"message":"not here tok-123"}')).marsCall('tok-123', 'GET', '/v1/residential/me', 'account check'), (e) => !e.code && /MarsProxies account check: not here \*\*\*/.test(e.message));
+  // A status only in the message text (no e.status) is read too.
+  await assert.rejects(list(async () => { throw new Error('HTTP 409 {}'); }), (e) => e.code === 'MARSPROXIES_MISMATCH');
+  // The form shows the code in the window's language.
+  assert.match(UI, /const PULL_ERROR_KEYS = \{ MARSPROXIES_SUBUSER_NOT_FOUND: 'marsSubuserNotFound', MARSPROXIES_MISMATCH: 'marsMismatch' \};/);
+  const geo = extractFunction(UI, 'handleGeoSync');
+  assert.match(geo, /const coded = e && PULL_ERROR_KEYS\[e\.code\];\s*setErr\(coded \? t\(`proxyProviders\.errors\.\$\{coded\}`\) : \(e\.message \|\| t\('proxyProviders\.errors\.pull'\)\)\);/);
+  for (const key of ['marsSubuserNotFound', 'marsMismatch']) {
+    const en = loc('en', 'cmpSettingsC').proxyProviders.errors[key];
+    const es = loc('es', 'cmpSettingsC').proxyProviders.errors[key];
+    assert.equal(typeof en, 'string', key);
+    assert.equal(typeof es, 'string', key);
+    assert.notEqual(en, es, key);
+    assert.doesNotMatch(en + es, /[–—]/);
+  }
+  assert.match(IPC, new RegExp(loc('en', 'cmpSettingsC').proxyProviders.errors.marsMismatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'the English text is main\'s');
+});

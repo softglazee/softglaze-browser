@@ -206,6 +206,9 @@ export const PROVIDERS = [
 
 // Notice codes a pull result may carry (syncVendorPool's result.notice), each a proxyProviders.result key.
 const RESULT_NOTICES = ['noChangeIpLink'];
+// Error codes a pull may fail with (main's coded vendor refusals), each a proxyProviders.errors key, so the
+// message reads in the window's language; any other error shows main's own text.
+const PULL_ERROR_KEYS = { MARSPROXIES_SUBUSER_NOT_FOUND: 'marsSubuserNotFound', MARSPROXIES_MISMATCH: 'marsMismatch' };
 
 // The token field's placeholder follows its label (geoSync.labels.token), and so does the username's.
 const TOKEN_PLACEHOLDERS = { apiKeyLabel: 'apiKeyPlaceholder', integrationTokenLabel: 'integrationTokenPlaceholder' };
@@ -559,7 +562,11 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
       persistCreds();
       if (typeof onSynced === 'function') onSynced(r, pullKey);
       if (activeKeyRef.current === pullKey) setSyncResult(r);
-    } catch (e) { if (activeKeyRef.current === pullKey) setErr(e.message || t('proxyProviders.errors.pull')); }
+    } catch (e) {
+      if (activeKeyRef.current !== pullKey) return;
+      const coded = e && PULL_ERROR_KEYS[e.code];
+      setErr(coded ? t(`proxyProviders.errors.${coded}`) : (e.message || t('proxyProviders.errors.pull')));
+    }
     finally { if (activeKeyRef.current === pullKey) setSyncing(false); }
   }
 

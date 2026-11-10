@@ -241,7 +241,9 @@
       "pull": "Could not pull proxies.",
       "saveCreds": "Could not save the credentials.",
       "lookup": "Could not reach the provider account.",
-      "anyipCredsOrApi": "Enter your proxy Username + Password, or an API key + Team ID to auto-provision."
+      "anyipCredsOrApi": "Enter your proxy Username + Password, or an API key + Team ID to auto-provision.",
+      "marsSubuserNotFound": "MarsProxies found no sub-user with that username and password. Check them under Sub-users in the dashboard, and enter only the part of the password before the first underscore.",
+      "marsMismatch": "MarsProxies refused the request: the location, or the sub-user username and password, do not match. Check the State and City spelling or leave them blank, and enter only the part of the password before the first underscore."
     },
     "countries": {
       "any": "Any / Random",
