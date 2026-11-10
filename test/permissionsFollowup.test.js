@@ -249,7 +249,8 @@ function loadTemplates(db = seed()) {
     'listTemplates', 'deleteTemplate', 'createProfileFromTemplate', 'saveProfileAsTemplate', 'cloneProfile', 'serializeTemplate'], {
     ...ws.deps,
     assertWithinLimit: async () => {}, ensureUniqueDataDirName: async (_db, n) => n,
-    randomMac: () => '00:11:22:33:44:55', randomDeviceName: () => 'DESKTOP-TEST', toStoredBrowserCore: (v) => v,
+    // Device name / MAC for the copy: test/profileOptions.test.js.
+    claimDeviceIdentity: async (_db, _st, d) => { d.deviceName = 'DESKTOP-TEST'; d.macAddress = '00:11:22:33:44:55'; return d; }, toStoredBrowserCore: (v) => v,
     serializeProfile: (p) => p, generateFingerprint: () => ({}), CLONE_EXCLUDE: new Set(['id', 'createdAt', 'updatedAt', 'accesses'])
   });
   return { db, ws, fns };

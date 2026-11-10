@@ -57,7 +57,8 @@ test('the ProxyType enum the database client is generated from includes SOCKS4',
   const m = /enum ProxyType \{([^}]*)\}/.exec(schema);
   assert.ok(m, 'enum ProxyType must exist');
   const values = m[1].split(/\s+/).filter(Boolean);
-  assert.deepEqual(values, ['HTTP', 'SOCKS5', 'SOCKS4']);
+  // HTTPS since 1.0.26 (a proxy reached over TLS): test/profileOptions.test.js.
+  assert.deepEqual(values, ['HTTP', 'HTTPS', 'SOCKS5', 'SOCKS4']);
   const main = /const VALID_PROXY_TYPES = new Set\(\[([^\]]*)\]\)/.exec(IPC);
   const accepted = main[1].match(/'([A-Z0-9]+)'/g).map((s) => s.replace(/'/g, ''));
   assert.deepEqual(accepted.slice().sort(), values.slice().sort(), 'the validator and the enum accept the same types');
@@ -103,19 +104,20 @@ test('the migration folder follows the runner\'s naming and runs after the last 
 });
 
 function loadTypeHelpers() {
-  const ctx = { VALID_PROXY_TYPES: new Set(['HTTP', 'SOCKS5', 'SOCKS4']) };
+  const ctx = { VALID_PROXY_TYPES: new Set(['HTTP', 'HTTPS', 'SOCKS5', 'SOCKS4']) };
   vm.createContext(ctx);
   vm.runInContext(`${extractFunction(IPC, 'parseProxyType')}\n${extractFunction(IPC, 'proxyTypeHintFor')}\nthis.parse = parseProxyType; this.hint = proxyTypeHintFor;`, ctx);
   return ctx;
 }
 
-test('every proxy write path stores an enum value: SOCKS4A -> SOCKS4, HTTPS -> HTTP', () => {
+test('every proxy write path stores an enum value: SOCKS4A -> SOCKS4, HTTPS stays HTTPS', () => {
   const { parse, hint } = loadTypeHelpers();
   assert.equal(parse('socks4'), 'SOCKS4');
   assert.equal(parse('SOCKS4A'), 'SOCKS4');
-  assert.equal(parse('https'), 'HTTP');
+  // 1.0.26: HTTPS is its own type (TLS to the proxy), no longer saved as HTTP.
+  assert.equal(parse('https'), 'HTTPS');
   assert.equal(parse('socks'), 'SOCKS5');
-  assert.throws(() => parse('ftp'), /Proxy type must be HTTP, SOCKS5, or SOCKS4\./);
+  assert.throws(() => parse('ftp'), /Proxy type must be HTTP, HTTPS, SOCKS5, or SOCKS4\./);
   // The profile editor's chosen type applies to a bare host:port string...
   assert.equal(hint('1.2.3.4:1080', 'SOCKS4'), 'SOCKS4');
   assert.equal(hint('1.2.3.4:1080', 'SOCKS5'), 'SOCKS5');

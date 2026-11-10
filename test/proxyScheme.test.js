@@ -29,9 +29,10 @@ test('parseProxyInput classifies socks5:// and bare socks:// as SOCKS5', () => {
   assert.equal(parseProxyInput('socks://1.2.3.4:1080').type, 'SOCKS5');
 });
 
-test('parseProxyInput classifies http/https/scheme-less as HTTP', () => {
+test('parseProxyInput classifies http/scheme-less as HTTP and https:// as HTTPS', () => {
   assert.equal(parseProxyInput('http://1.2.3.4:8080').type, 'HTTP');
-  assert.equal(parseProxyInput('https://1.2.3.4:8080').type, 'HTTP');
+  // 1.0.26: an https:// proxy is reached over TLS (Chrome's https:// proxy scheme), not saved as HTTP.
+  assert.equal(parseProxyInput('https://1.2.3.4:8080').type, 'HTTPS');
   assert.equal(parseProxyInput('1.2.3.4:8080').type, 'HTTP');
 });
 
@@ -56,8 +57,9 @@ test('buildProxyServerArgument emits socks4:// for a SOCKS4 proxy (NOT http://)'
 test('buildProxyServerArgument emits the right scheme for socks5 and http', () => {
   assert.equal(buildProxyServerArgument({ type: 'SOCKS5', host: 'h', port: 1 }), 'socks5://h:1');
   assert.equal(buildProxyServerArgument({ type: 'HTTP', host: 'h', port: 2 }), 'http://h:2');
-  // Unknown/HTTPS types fall back to http:// (Chromium tunnels HTTPS proxies via CONNECT).
-  assert.equal(buildProxyServerArgument({ type: 'HTTPS', host: 'h', port: 3 }), 'http://h:3');
+  // HTTPS is a proxy reached over TLS: Chrome's https:// scheme. Unknown types fall back to http://.
+  assert.equal(buildProxyServerArgument({ type: 'HTTPS', host: 'h', port: 3 }), 'https://h:3');
+  assert.equal(buildProxyServerArgument({ type: 'WHATEVER', host: 'h', port: 4 }), 'http://h:4');
 });
 
 test('a full socks4 round-trip: parse then build yields socks4://', () => {
