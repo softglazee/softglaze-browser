@@ -39,6 +39,9 @@ app.use('/v1/plans', publicLimiter, require('./routes/plansPublic'));
 app.use('/v1/store', publicLimiter, require('./routes/store'));
 app.use('/v1/email', publicLimiter, require('./routes/emailPublic'));
 app.use('/v1/tenant', require('./routes/tenantAdmin'));
+// One-click sign-in (app 1.0.26): the browser pages and the app's calls, per client IP per minute.
+const authLimiter = rateLimit({ windowMs: 60000, max: Number(process.env.AUTH_RATE_PER_MIN) || 30 });
+app.use('/auth', authLimiter, require('./routes/auth'));
 
 app.use((req, res) => res.status(404).json({ error: 'Not found.' }));
 // eslint-disable-next-line no-unused-vars

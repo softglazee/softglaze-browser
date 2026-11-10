@@ -44,6 +44,10 @@ model Tenant {
   snapshots      MetricSnapshot[]
   customerEvents CustomerEvent[]
   storeEntitlements StoreEntitlement[]
+  identities        Identity[]
+  authStates        AuthState[]
+  authCodes         AuthCode[]
+  authSessions      AuthSession[]
 }
 
 model TenantPaymentConfig {
@@ -566,5 +570,93 @@ model StoreEntitlement {
   @@index([tenantId, status])
   @@index([tenantId, verified, status])
   @@index([tenantId, subscriptionKey])
+  @@index([tenantId, customerId])
+}
+
+// One-click sign-in (app 1.0.26, src/auth/). A customer's sign-in methods: provider "github" (providerUserId =
+// the GitHub user id) or "email" (providerUserId = the email key). A method is linked to a customer only
+// through an email the provider (or our own 6-digit code) verified. Unique per tenant, because tenants
+// keep separate customers.
+model Identity {
+  id             String    @id @default(cuid())
+  tenantId       String
+  customerId     String    @db.VarChar(40)
+  provider       String    @db.VarChar(20)
+  providerUserId String    @db.VarChar(191)
+  email          String?   @db.VarChar(254) // the verified email the provider gave at the last sign-in
+  emailVerified  Boolean   @default(false)
+  login          String?   @db.VarChar(100) // GitHub username, shown in the admin
+  createdAt      DateTime  @default(now())
+  lastUsedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, providerUserId])
+  @@index([tenantId, customerId])
+}
+
+// The browser leg of a provider sign-in: GET /auth/start creates it, GET /auth/callback/:provider uses it once,
+// within 10 minutes. Only hashes of the server state and of the browser nonce cookie are stored; the
+// provider-side PKCE verifier is derived from the state (src/auth/flow.js), so it is never stored either.
+model AuthState {
+  id            String    @id @default(cuid())
+  tenantId      String
+  provider      String    @db.VarChar(20)
+  stateHash     String    @unique @db.VarChar(64)
+  nonceHash     String    @db.VarChar(64)
+  codeChallenge String    @db.VarChar(64) // the app's PKCE S256 challenge
+  appState      String    @db.VarChar(128) // returned to the app, which checks it
+  appRedirect   String    @db.VarChar(100) // softglaze://auth or http://127.0.0.1:<port>/auth
+  ipHash        String?   @db.VarChar(64)
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, ipHash, createdAt])
+  @@index([createdAt])
+}
+
+// The one-time code handed to the app after a provider sign-in (softglaze://auth?code=...): 60 seconds,
+// single use, bound to the AuthState's PKCE challenge. `profile` is what the provider verified
+// ({ providerUserId, email, emailVerified, name, login }); the retention cron deletes old rows.
+model AuthCode {
+  id          String    @id @default(cuid())
+  tenantId    String
+  authStateId String    @db.VarChar(40)
+  provider    String    @db.VarChar(20)
+  codeHash    String    @unique @db.VarChar(64)
+  profile     Json
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+// A signed-in app: one row per sign-in on an install (POST /auth/exchange, POST /auth/email/verify). Only the
+// SHA-256 of the session token is stored. emailKey is the account email proven on this install, which the
+// trial ledger and /v1/account/status accept like a proven 6-digit code. The audit trail of sign-ins is
+// these rows plus the customer's `signed_in` events.
+model AuthSession {
+  id         String    @id @default(cuid())
+  tenantId   String
+  customerId String    @db.VarChar(40)
+  installId  String    @db.VarChar(40)
+  identityId String?   @db.VarChar(40)
+  provider   String    @db.VarChar(20)
+  emailKey   String    @db.VarChar(254)
+  tokenHash  String    @unique @db.VarChar(64)
+  ipHash     String?   @db.VarChar(64)
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, installId, customerId])
   @@index([tenantId, customerId])
 }

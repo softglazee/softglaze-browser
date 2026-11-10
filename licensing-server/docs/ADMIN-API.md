@@ -189,12 +189,23 @@ Errors: `400 bad_request` (no file), `empty_file`, `missing_email_column`, `too_
   "licenses": [{ "id": "...", "tier": "enterprise", "status": "active", "currentPeriodEnd": "...", "complimentary": false, "source": "manual", "note": "..." }],
   "payments": [{ "id": "...", "provider": "manual", "method": "invoice", "providerRef": "INV-2026-014", "amount": 2900, "currency": "USD", "status": "paid", "paidAt": "..." }],
   "emails": [{ "id": "...", "templateKey": "welcome", "subject": "...", "status": "sent", "sentAt": "..." }],
+  "signInMethods": [{ "provider": "github", "email": "ana@example.com", "login": "ana-dev", "linkedAt": "...", "lastUsedAt": "..." },
+                    { "provider": "email", "email": "ana@example.com", "login": null, "linkedAt": "...", "lastUsedAt": null }],
+  "signIns": [{ "id": "...", "provider": "github", "installId": "...", "at": "...", "lastUsedAt": "...", "revokedAt": null }],
+  "identities": [{ "id": "...", "provider": "github", "email": "ana@example.com", "login": "ana-dev", "emailVerified": true, "linkedAt": "...", "lastUsedAt": "..." }],
   "timeline": [{ "at": "...", "kind": "event | install | licence | payment | email", "type": "trial_started", "data": {} }]
 }
 ```
 
 The timeline merges status changes, sign-up, verification, consent changes, trials, licences, payments,
 emails and notes, newest first. Errors: `404 not_found`.
+
+One-click sign-in (app 1.0.26, see [One-click sign-in](#one-click-sign-in-app-1026) below):
+`signInMethods` is what the customer can sign in with (their linked `Identity` rows, plus `email` whenever the
+email is verified, since a code to it always works); `signIns` are the latest 50 app sign-ins (where and when,
+never the session token); `identities` are the raw linked methods. The timeline gains `signed_in`
+(`{ provider, installId, linked: identity | email | new }`), `signin_linked` (a new method was linked) and
+`licence_moved` (`{ licenseId, from, to, by: "signin" }`) events.
 
 ### POST /v1/admin/customers
 
@@ -793,6 +804,66 @@ is linked to, and that customer is verified and not deleted (the same test the t
 only claimed at register (older apps) is not verified. `Cache-Control: no-store`. The general rate limit
 (120 per minute per IP), because every app start asks. Errors: the install errors above.
 
+### One-click sign-in (app 1.0.26)
+
+"Continue with GitHub" and "Continue with email" (a 6-digit code, no password). Google and Microsoft plug into
+the same routes later (`src/auth/providers/index.js`). Mounted at `/auth` (not `/v1`), with its own per-IP
+limit `AUTH_RATE_PER_MIN` (default 30 per minute).
+
+**Browser leg** (HTML pages; the app opens the first URL in the system browser):
+
+- `GET /auth/start?provider=github&tenant=<tenantId>&app_redirect=<redirect>&code_challenge=<S256>&code_challenge_method=S256&state=<app state>`
+  - `app_redirect` must be exactly `softglaze://auth` or `http://127.0.0.1:<port>/auth` (port 1024-65535);
+    anything else is refused. `code_challenge` is the app's PKCE S256 challenge (43 characters; `plain` is
+    refused); `state` is 16-128 base64url characters, returned to the app unchanged.
+  - Stores an `AuthState` (10 minutes, only hashes of the server state and nonce), sets an HttpOnly,
+    SameSite=Lax nonce cookie for `/auth/callback`, and redirects to GitHub with this server's own state and
+    PKCE challenge and the scope `read:user user:email`. At most 30 starts per network per hour.
+  - Pages: `400` (bad request or redirect), `429`, `503` (GitHub keys not set).
+- `GET /auth/callback/github` (GitHub's callback; set it as the OAuth App's callback URL)
+  - The state must be known, unused, unexpired and for GitHub, and the browser must hold that sign-in's nonce
+    cookie; otherwise a "link expired" page and nothing goes to the app.
+  - The code is traded with GitHub server side (client secret, PKCE verifier); the user's **primary verified**
+    email is read from `/user/emails`. No verified primary email, or a disposable domain: refused.
+  - Success: a one-time code (60 seconds, single use, only its hash stored) to
+    `<app_redirect>?code=...&state=<app state>` (a 302 for loopback, a page with a button and a meta refresh for
+    `softglaze://`). Failures go back as `?error=cancelled | email_not_verified | disposable_email | failed&state=...`.
+
+**App calls** (JSON; install-authenticated like `/v1/account/*`: `tenantId`, `installId`, `installSecret`):
+
+| Call | Body | Answer |
+|---|---|---|
+| `GET /auth/providers?tenantId=` | | `{ "providers": ["github"], "email": true }` (GitHub listed only when its keys are set) |
+| `POST /auth/exchange` | `code`, `codeVerifier`, `expectCustomerId?` | a sign-in (below); `400 invalid_grant` for any problem with the code (unknown, used, expired, other tenant, wrong verifier; the first attempt spends it), `409 account_mismatch` |
+| `POST /auth/email/start` | `email`, `lang?`, `name?`, `consentMarketing?` | exactly `POST /v1/account/verify/start`: same template, limits, disposable and MX checks |
+| `POST /auth/email/verify` | `email`, `code`, `expectCustomerId?` | a sign-in; or the `verify/check` errors; `409 account_mismatch` (checked before the code is tried) |
+| `POST /auth/me` | `session` | `{ signedIn, provider, customer, methods, licence }`; `401 session_invalid` |
+| `POST /auth/profile` | `session`, `useCase`, `useCaseOther?` | `{ ok, saved }` ("What will you use SoftGlaze for?") |
+| `POST /auth/licence/move` | `session`, `move: true` | `{ ok, moved, remaining }`; `400 confirm_required`, `404 no_licence`, `429 move_limit { retryAt }`, `409 move_conflict` |
+| `POST /auth/logout` | `session` | `{ ok: true }` always |
+
+A sign-in answers:
+
+```json
+{ "ok": true, "session": "<43 characters, shown once>", "provider": "github", "isNew": false, "linked": "email",
+  "customer": { "id": "cm...", "email": "ana@example.com", "name": "Ana Lopez", "useCase": null },
+  "methods": [{ "provider": "github", "email": "ana@example.com", "login": "ana-dev", "linkedAt": "...", "lastUsedAt": "..." }],
+  "licence": { "state": "elsewhere", "tier": "enterprise", "until": "...", "movesLeft": 2 } }
+```
+
+- **Linking**: the `Identity` for (provider, provider user id) first; else the customer with the same email key
+  (a GitHub verified email links automatically, no 6-digit code); else a new customer with `emailVerifiedAt`
+  set. An unverified email is never linked. `expectCustomerId` (the workspace's own account, sent when the app
+  unlocks or links an existing workspace) refuses any other account before anything is written.
+- The install is linked to the customer like after `verify/check`, and the sign-in counts for the trial ledger
+  and `/v1/account/status` like a proven code (one trial per computer and per email still holds).
+- `licence.state`: `here` (an active licence on this install), `elsewhere` (a website/invoice licence on
+  another install; `POST /auth/licence/move` moves it, at most 2 times per licence per 30 days, the same limit
+  as `/v1/license/transfer`), `store` (only a Microsoft Store subscription: "Restore Microsoft Store
+  purchases" moves it), `none`.
+- Sessions: only the SHA-256 is stored (`AuthSession`). Daily use of the app never needs one (the workspace
+  opens offline); the app uses it for Settings > Account and Sign out.
+
 ### GET /v1/checkout/methods?tenantId=...
 
 No auth. CORS open, `Cache-Control: public, max-age=60`.
@@ -890,5 +961,10 @@ customer id plus an HMAC; it never expires and holds no email address.
   anonymous id (so past churn and paying counts do not change).
 - **Retention (cron)**: unconfirmed verification codes after 30 days; unverified app sign-ups after 30 days
   if they have no licence, payment or trial and nothing an admin added (notes, tags, status override);
-  email bodies in the send log after 90 days (the row stays); trial attempt records after 180 days.
+  email bodies in the send log after 90 days (the row stays); trial attempt records after 180 days;
+  one-click sign-in browser states and one-time codes after a day.
+- **One-click sign-in** stores the provider user id, the verified email and the GitHub username
+  (`Identity`), and per sign-in the install, time and a hashed network (`AuthSession`). Session tokens, codes,
+  states and nonces are stored only as SHA-256 hashes; the GitHub access token is used for two reads and never
+  stored. The privacy erase deletes the customer's sign-in methods and sessions.
   Backfilled customers count their 30 days from the deploy day.

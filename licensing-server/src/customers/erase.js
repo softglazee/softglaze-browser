@@ -9,8 +9,10 @@
 //  - the trial ledger row: only hashes (machine, HMAC of the email key, HMAC of the IP), so the
 //    same person cannot take a second trial; the customer link is removed;
 //  - status history events, moved to a random anonymous id so past churn / paying counts stay true.
-// Deleted: the customer row, verification codes, sent-email log rows, other timeline events, and the
-// details of admin audit entries about this customer. Installs lose their email and customer link.
+// Deleted: the customer row, verification codes, sent-email log rows, other timeline events, sign-in methods
+// and app sessions (one-click sign-in), and the details of admin audit entries about this customer. Installs
+// lose their email and customer link. One-time sign-in codes (AuthCode) are deleted by the retention cron
+// within a day anyway.
 const crypto = require('node:crypto');
 
 async function eraseCustomer(db, tenantId, customerId) {
@@ -32,6 +34,8 @@ async function eraseCustomer(db, tenantId, customerId) {
     }
     await tx.trial.updateMany({ where, data: { customerId: null } });
     await tx.emailVerification.deleteMany({ where: { tenantId, OR: [{ customerId: c.id }, { emailKey: c.emailKey }] } });
+    await tx.identity.deleteMany({ where });
+    await tx.authSession.deleteMany({ where });
     await tx.emailOutbox.deleteMany({ where: { tenantId, OR: [{ customerId: c.id }, { toEmail: c.email }] } });
     await tx.customerEvent.updateMany({ where: { tenantId, customerId: c.id, type: 'status' }, data: { customerId: anon } });
     await tx.customerEvent.deleteMany({ where: { tenantId, customerId: c.id } });

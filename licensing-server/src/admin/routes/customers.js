@@ -15,6 +15,7 @@ const { eraseCustomer } = require('../../customers/erase');
 const { exportCsv, planImport, mergeForUpdate } = require('../../customers/csvIO');
 const { resetTrials } = require('../trialReset');
 const { asJson } = require('../../util/json');
+const { methodsFor } = require('../../auth/accounts');
 
 const router = express.Router();
 const ADMIN_SOURCES = ['manual', 'import', 'invoice', 'website'];
@@ -180,13 +181,15 @@ router.get('/:id', asyncHandler(async (req, res) => {
   if (!c) return notFound(res, 'Customer');
   const tenantId = req.tenant.id;
   const where = { tenantId, customerId: c.id };
-  const [installs, trials, licenses, payments, emails, events] = await Promise.all([
+  const [installs, trials, licenses, payments, emails, events, identities, sessions] = await Promise.all([
     prisma.install.findMany({ where, orderBy: { createdAt: 'desc' } }),
     prisma.trial.findMany({ where, orderBy: { startedAt: 'desc' } }),
     prisma.license.findMany({ where, orderBy: { createdAt: 'desc' } }),
     prisma.payment.findMany({ where, orderBy: { createdAt: 'desc' } }),
     prisma.emailOutbox.findMany({ where, orderBy: { createdAt: 'desc' }, take: 100 }),
-    prisma.customerEvent.findMany({ where, orderBy: { at: 'desc' }, take: 200 })
+    prisma.customerEvent.findMany({ where, orderBy: { at: 'desc' }, take: 200 }),
+    prisma.identity.findMany({ where, orderBy: { createdAt: 'asc' } }),
+    prisma.authSession.findMany({ where, orderBy: { createdAt: 'desc' }, take: 50 })
   ]);
   const timeline = [
     ...events.map((e) => ({ at: e.at, kind: 'event', type: e.type, data: asJson(e.data) })),
@@ -202,6 +205,11 @@ router.get('/:id', asyncHandler(async (req, res) => {
     licenses,
     payments,
     emails: emails.map(({ html, text, ...m }) => m),
+    // One-click sign-in (app 1.0.26): the linked methods, plus "email" when the email is verified, and the
+    // latest sign-ins (never the session token, only where and when).
+    signInMethods: await methodsFor(prisma, tenantId, c),
+    signIns: sessions.map((s) => ({ id: s.id, provider: s.provider, installId: s.installId, at: s.createdAt, lastUsedAt: s.lastUsedAt, revokedAt: s.revokedAt })),
+    identities: identities.map((i) => ({ id: i.id, provider: i.provider, email: i.email, login: i.login, emailVerified: i.emailVerified, linkedAt: i.createdAt, lastUsedAt: i.lastUsedAt })),
     timeline
   });
 }));

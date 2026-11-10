@@ -6,7 +6,8 @@
 //    the same way as a privacy erase;
 //  - email bodies in the send log: cleared after privacy.outboxBodyRetentionDays (90); the log row
 //    (to, subject, status, dates) stays;
-//  - trial attempt records: deleted after privacy.trialAttemptRetentionDays (180).
+//  - trial attempt records: deleted after privacy.trialAttemptRetentionDays (180);
+//  - one-click sign-in browser states and one-time codes (they live 10 minutes / 60 seconds): deleted after a day.
 const { eraseCustomer } = require('../customers/erase');
 
 const DAY = 86400000;
@@ -14,7 +15,7 @@ const DAY = 86400000;
 async function applyRetention(db, tenant, { now = Date.now(), settings }) {
   const p = settings.privacy;
   const tenantId = tenant.id;
-  const out = { codesDeleted: 0, signupsErased: 0, bodiesCleared: 0, attemptsDeleted: 0 };
+  const out = { codesDeleted: 0, signupsErased: 0, bodiesCleared: 0, attemptsDeleted: 0, signInRowsDeleted: 0 };
   const cutoff = new Date(now - p.unverifiedRetentionDays * DAY);
 
   out.codesDeleted = (await db.emailVerification.deleteMany({ where: { tenantId, verifiedAt: null, createdAt: { lt: cutoff } } })).count;
@@ -39,6 +40,10 @@ async function applyRetention(db, tenant, { now = Date.now(), settings }) {
   })).count;
 
   out.attemptsDeleted = (await db.trialAttempt.deleteMany({ where: { tenantId, at: { lt: new Date(now - p.trialAttemptRetentionDays * DAY) } } })).count;
+
+  const dayAgo = new Date(now - DAY);
+  out.signInRowsDeleted = (await db.authCode.deleteMany({ where: { tenantId, createdAt: { lt: dayAgo } } })).count
+    + (await db.authState.deleteMany({ where: { tenantId, createdAt: { lt: dayAgo } } })).count;
   return out;
 }
 
