@@ -2,19 +2,19 @@
   "header": {
     "eyebrow": "Repositorio Empresarial",
     "title": "Extensiones",
-    "summary_one": "{{count}} extensión instalada · {{enabled}} inyectadas en cada perfil al iniciar",
-    "summary_other": "{{count}} extensiones instaladas · {{enabled}} inyectadas en cada perfil al iniciar"
+    "summary_one": "{{count}} extensión instalada · {{enabled}} activadas para los perfiles que cargan extensiones",
+    "summary_other": "{{count}} extensiones instaladas · {{enabled}} activadas para los perfiles que cargan extensiones"
   },
   "stats": {
     "total": "Extensiones totales",
-    "injected": "Inyectadas globalmente",
+    "injected": "Activadas",
     "disabled": "Desactivadas"
   },
   "caveat": {
-    "before": "Las extensiones instaladas se descomprimen localmente y se montan en cada perfil mediante el",
-    "middle": "de Chromium al iniciar. Se aplican en el",
+    "before": "Las extensiones no se añaden a todos los perfiles. Solo se cargan en perfiles Chromium que tienen marcada la opción \"Load SoftGlaze extensions (uses Chrome-for-Testing)\" en la pestaña Avanzado del editor de perfiles (desactivada por defecto). Esos perfiles las montan con la opción",
+    "middle": "de Chromium al iniciar, así que un cambio se aplica en el",
     "nextLaunch": "próximo inicio",
-    "after": "de cada perfil donde la extensión esté activada. Algunas versiones reforzadas de Chrome estable restringen las extensiones sin empaquetar, pero el motor integrado de Softglaze las carga de forma fiable."
+    "after": "de ese perfil. Chrome normal ignora esa opción, así que estos perfiles se abren con una versión de Chrome for Testing: descarga una antes en la página Navegadores o el perfil se abrirá sin las extensiones. Los perfiles de Firefox no las cargan."
   },
   "importer": {
     "title": "Importar al equipo",
@@ -33,13 +33,13 @@
     "loadErrorTitle": "No se pudieron cargar las extensiones",
     "noExtTitle": "Aún no hay extensiones",
     "noMatchTitle": "Ninguna extensión coincide con tu búsqueda",
-    "noExtDesc": "Importa una extensión de Chrome Web Store arriba para añadirla al repositorio de tu equipo e inyectarla en cada perfil.",
+    "noExtDesc": "Importa una extensión de Chrome Web Store arriba para añadirla al repositorio de tu equipo. Se carga en los perfiles que tienen marcada la opción \"Load SoftGlaze extensions\" en la pestaña Avanzado.",
     "noMatchDesc": "Prueba con otro nombre o ID."
   },
   "card": {
     "unpacked": "Extensión sin empaquetar",
     "removeTitle": "Quitar del equipo",
-    "injected": "Inyectada",
+    "injected": "Activada",
     "disabled": "Desactivada"
   },
   "confirmRemove": "¿Quitar \"{{name}}\" del repositorio del equipo? Sus archivos locales se eliminarán.",

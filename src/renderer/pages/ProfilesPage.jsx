@@ -30,6 +30,7 @@ import { intersectSelection, socks4LeaksDns } from '@/lib/uiGuards.mjs';
 import { quickGenProxyFields } from '@/lib/freeProxies.mjs';
 import { doNotTrackChoice } from '@/lib/doNotTrack.mjs';
 import { SHOW_UNAPPLIED_SETTINGS } from '@/lib/unappliedSettings.mjs';
+import { parseTagInput, tagsToInput, proxyCheckView, rotationPoolIds, checkEditorCookies } from '@/lib/profileEditor.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
@@ -73,16 +74,17 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled, ari
   </div>
 );
 
-const ButtonTabs = ({ value, onChange, options, className = '' }) => (
+const ButtonTabs = ({ value, onChange, options, labels, className = '' }) => (
   <div className={`flex flex-wrap bg-background border border-border rounded w-max overflow-hidden ${className}`}>
     {options.map(opt => (
       <button
         key={opt}
         type="button"
         onClick={() => onChange(opt)}
+        aria-pressed={value === opt}
         className={`px-3 py-1.5 text-xs transition border-r border-border last:border-0 ${value === opt ? 'bg-muted-dark text-foreground font-medium' : 'text-muted hover:text-foreground hover:bg-surface'}`}
       >
-        {opt}
+        {labels && labels[opt] ? labels[opt] : opt}
       </button>
     ))}
   </div>
@@ -102,14 +104,46 @@ const ToggleSwitch = ({ checked, onChange, labelledBy, describedBy }) => (
   </button>
 );
 
+// A real (visually hidden) checkbox drives the box, so a click, Space and screen readers all work.
+// It used to be a label around a div with no input, so onChange never fired and the box could not
+// be ticked (e.g. "Load SoftGlaze extensions" on the Advanced tab).
 const CustomCheckbox = ({ checked, onChange, label }) => (
   <label className="flex items-center gap-2 cursor-pointer group">
-    <div className={`w-4 h-4 rounded border flex items-center justify-center transition ${checked ? 'bg-primary border-primary' : 'bg-background border-border group-hover:border-muted'}`}>
+    <input type="checkbox" className="sr-only peer" checked={Boolean(checked)} onChange={(e) => onChange && onChange(e.target.checked)} />
+    <div aria-hidden="true" className={`w-4 h-4 rounded border flex items-center justify-center transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary ${checked ? 'bg-primary border-primary' : 'bg-background border-border group-hover:border-muted'}`}>
       {checked && <Check className="w-3 h-3 text-white" />}
     </div>
     <span className="text-muted-foreground text-sm">{label}</span>
   </label>
 );
+
+// Result of "Check network". Green only when main reports success; a dead proxy shows its error.
+// Values the check did not return read "unknown" instead of made-up defaults.
+function ProxyCheckResult({ result }) {
+  const { t } = useTranslation('profiles');
+  const view = proxyCheckView(result);
+  if (!view) return null;
+  if (!view.ok) {
+    return (
+      <div role="alert" className="text-sm bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded w-full max-w-xl">
+        <div className="font-semibold flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4" aria-hidden="true" /> {t('proxy.connectionFailed')}</div>
+        <p className="text-xs break-words">{view.error || t('proxy.connectionFailedNoReason')}</p>
+      </div>
+    );
+  }
+  const unknown = t('proxy.unknown');
+  const place = [view.city, view.country].filter(Boolean).join(', ');
+  return (
+    <div role="status" className="text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded w-full max-w-xl">
+      <div className="font-semibold flex items-center gap-2 mb-3"><Check className="w-4 h-4" aria-hidden="true" /> {t('proxy.connectionOk')}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.ip')}</span> <span className="break-all">{view.ip || unknown}</span></div>
+        <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.country')}</span> {place || unknown}</div>
+        <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.latency')}</span> {view.latencyMs != null ? t('proxy.latencyMs', { ms: view.latencyMs }) : unknown}</div>
+      </div>
+    </div>
+  );
+}
 
 const FpRow = ({ label, description, children }) => (
   <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] items-start gap-2 lg:gap-6 border-b border-border pb-5 mb-5 last:border-0 last:pb-0 last:mb-0">
@@ -266,9 +300,9 @@ const initialProfileData = {
   deviceClass: 'desktop', // 'desktop' | 'mobile' (Android) - drives touch + viewport at launch
   uaCategory: 'All',
   userAgent: 'Auto',
-  group: 'Ungrouped',
-  tags: '',
-  cookie: '',
+  groupId: '', // '' = Ungrouped, otherwise the group id as a string (the select's value)
+  tags: '', // comma-separated in the box; saved as an array (parseTagInput)
+  cookie: '', // imported into the profile on save (checkEditorCookies + profiles.importCookies)
   remark: '',
   
   startupUrls: '',
@@ -286,6 +320,10 @@ const initialProfileData = {
   proxyPass: '',
   changeIpUrl: '',
   selectedSavedProxy: '',
+  // "Rotating Proxy": the per-profile rotation pool (proxy:rotation-set), the same one the row's
+  // Proxy Rotation dialog edits.
+  rotationMode: 'round-robin',
+  rotationProxyIds: [],
   rotIp: '',
   rotCountry: '',
   rotRegion: '',
@@ -541,6 +579,14 @@ export default function ProfilesPage() {
   const [warmStats, setWarmStats] = useState({}); // profileId -> { runs, lastAt } from the warm-up
   const [cookieProfile, setCookieProfile] = useState(null);
   const [loadingCookies, setLoadingCookies] = useState(false);
+  // Cookie text that is already in the profile (loaded with "Load this profile's saved cookies"),
+  // so saving does not import the same cookies again.
+  const [cookieBaseline, setCookieBaseline] = useState('');
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  // { id, enabled } of the rotation pool as it was when the editor opened this profile.
+  const rotationLoadedRef = useRef(null);
   const [showBrowserManager, setShowBrowserManager] = useState(false);
   const [rotationProfile, setRotationProfile] = useState(null);
   const [envProfile, setEnvProfile] = useState(null);
@@ -842,9 +888,19 @@ export default function ProfilesPage() {
       deviceNameType: 'Custom', deviceName: generateDeviceName(),
       macAddressType: 'Custom', macAddress: generateMac()
     });
+    resetEditorExtras();
     setActiveTab('General');
     setView('editor');
     setError('');
+  }
+
+  // Editor state that lives outside pd: the check result, the inline new-group form, the cookie
+  // baseline and the rotation pool loaded for the profile being edited.
+  function resetEditorExtras() {
+    setProxyResult(null);
+    setNewGroupOpen(false); setNewGroupName('');
+    setCookieBaseline('');
+    rotationLoadedRef.current = null;
   }
 
   function openEdit(profile) {
@@ -861,9 +917,9 @@ export default function ProfilesPage() {
       name: profile.title || '', 
       remark: profile.notes || '', 
       userAgent: profile.userAgent || 'Auto',
-      group: profile.group || 'Ungrouped',
-      tags: profile.tags || '',
-      cookie: profile.cookie || '',
+      groupId: profile.groupId != null ? String(profile.groupId) : '',
+      tags: tagsToInput(profile.tags),
+      cookie: '',
       startupUrls: profile.startupUrls || '',
       platformAccounts: profile.platformAccounts || [],
       proxyHost: pHost, proxyPort: pPort, proxyUser: pUser, proxyPass: pPass,
@@ -877,7 +933,22 @@ export default function ProfilesPage() {
       proxySetting: profile.proxyId ? 'Saved Proxies' : 'Custom',
       selectedSavedProxy: profile.proxyId ? String(profile.proxyId) : ''
     });
-    setActiveTab('General'); 
+    resetEditorExtras();
+    // A profile with an enabled rotation pool opens on "Rotating Proxy" with its pool ticked, so a
+    // save keeps it, and switching to another setting turns the pool off (see handleSaveProfile).
+    const editId = profile.id;
+    softglazeApi.proxies.getRotation(editId).then((cfg) => {
+      const enabled = Boolean(cfg && cfg.enabled && Array.isArray(cfg.proxyIds) && cfg.proxyIds.length);
+      rotationLoadedRef.current = { id: editId, enabled };
+      if (!enabled) return;
+      setPd((prev) => (prev.id !== editId ? prev : {
+        ...prev,
+        proxySetting: 'Rotating Proxy',
+        rotationMode: cfg.mode === 'random' ? 'random' : 'round-robin',
+        rotationProxyIds: cfg.proxyIds.map((id) => String(id))
+      }));
+    }).catch(() => { /* no rotation info: the editor shows the profile's own proxy */ });
+    setActiveTab('General');
     setView('editor');
     setError('');
   }
@@ -965,6 +1036,7 @@ export default function ProfilesPage() {
     try {
       const res = await softglazeApi.profiles.exportCookies(pd.id, 'json');
       updatePd('cookie', res.content || '');
+      setCookieBaseline(res.content || ''); // already in the profile: Save does not import it again
       if (!res.count) setError(t('errors.noCookies'));
     } catch (err) {
       setError(err.message || t('errors.loadCookies'));
@@ -975,20 +1047,35 @@ export default function ProfilesPage() {
 
   async function handleSaveProfile() {
     if (!pd.name) return setError(t('errors.nameRequired'));
+    const rotating = pd.proxySetting === 'Rotating Proxy';
+    const rotationIds = rotating ? rotationPoolIds(allProxies, pd.rotationProxyIds) : [];
+    if (rotating && rotationIds.length === 0) { setActiveTab('Proxy'); return setError(t('errors.rotationEmpty')); }
+    // Cookies pasted (or changed) in the Cookie box are checked before anything is saved.
+    const cookieText = String(pd.cookie || '').trim();
+    const cookieCheck = cookieText && cookieText !== String(cookieBaseline || '').trim() ? checkEditorCookies(cookieText) : { empty: true };
+    if (cookieCheck.error) { setActiveTab('General'); return setError(t(`cookieErrors.${cookieCheck.error}`)); }
+    if (cookieCheck.format && String(pd.browserCore).toLowerCase() === 'firefox') { setActiveTab('General'); return setError(t('cookieErrors.firefox')); }
     setSaving(true);
     try {
       const finalUA = pd.userAgent === 'Auto' ? generateAutoUserAgent(pd.os, pd.uaCategory, profiles.length, effectiveChromeMajor) : pd.userAgent;
-      // Both saved and custom proxies set a proxy and flip systemProxyBehavior to PROFILE_PROXY;
-      // otherwise launch falls back to DIRECT and leaks the real IP.
+      // Saved, custom and rotating proxies all set a proxy and flip systemProxyBehavior to
+      // PROFILE_PROXY; otherwise launch falls back to DIRECT and leaks the real IP. A rotating profile
+      // keeps the pool's first proxy as its own, so the Sticky policy (which never rotates) and every
+      // check that reads the profile's proxy still see a proxy, never the real IP.
       const proxyRaw = pd.proxySetting === 'Custom' ? constructProxyString() : '';
       const savedProxyId = pd.proxySetting === 'Saved Proxies' && pd.selectedSavedProxy
-        ? Number(pd.selectedSavedProxy) : null;
+        ? Number(pd.selectedSavedProxy)
+        : (rotating ? rotationIds[0] : null);
       const usingProxy = Boolean(proxyRaw) || Boolean(savedProxyId);
 
+      // cookie goes through profiles.importCookies below; group is the row's relation object.
+      const { cookie, group, rotationMode, rotationProxyIds, ...fields } = pd;
       const payload = {
-        ...pd,
+        ...fields,
         title: pd.name,
         notes: pd.remark,
+        groupId: pd.groupId ? Number(pd.groupId) : null, // main reads groupId, not a group name
+        tags: parseTagInput(pd.tags),                     // main stores an array only
         proxyRaw: proxyRaw || null,
         proxyId: savedProxyId,                 // explicit: links the saved proxy (null clears it)
         systemProxyBehavior: usingProxy ? 'PROFILE_PROXY' : 'DIRECT',
@@ -996,19 +1083,68 @@ export default function ProfilesPage() {
         dataDirName: pd.name,
         userAgent: finalUA
       };
-      
+
+      let saved;
       if (isEditing) {
         // Never send dataDirName on an update: it names the on-disk profile folder and seeds the fingerprint,
         // and nothing moves the folder. The backend ignores it too; this avoids a warning on every save.
         const { dataDirName, ...updatePayload } = payload;
-        await softglazeApi.profiles.update({ id: pd.id, ...updatePayload });
+        saved = await softglazeApi.profiles.update({ id: pd.id, ...updatePayload });
       } else {
-        await softglazeApi.profiles.create(payload);
+        saved = await softglazeApi.profiles.create(payload);
       }
-      
+      const profileId = (saved && saved.id) || pd.id;
+
+      // The profile exists now. A failed follow-up is reported on the list, not in the editor,
+      // where a second Save would create the profile again.
+      const followUp = [];
+      const loaded = rotationLoadedRef.current;
+      const rotationWasOn = Boolean(loaded && loaded.enabled && loaded.id === profileId);
+      if (rotating || rotationWasOn) {
+        try {
+          await softglazeApi.proxies.setRotation(rotating
+            ? { id: profileId, enabled: true, mode: pd.rotationMode, proxyIds: rotationIds }
+            : { id: profileId, enabled: false, mode: pd.rotationMode, proxyIds: [] });
+        } catch (err) {
+          followUp.push(t(rotating ? 'errors.rotationNotSaved' : 'errors.rotationNotCleared', { reason: err.message || '' }));
+        }
+      }
+      if (cookieCheck.format) {
+        try {
+          await softglazeApi.profiles.importCookies(profileId, cookieText, cookieCheck.format);
+        } catch (err) {
+          followUp.push(t('errors.cookiesNotImported', { reason: err.message || '' }));
+        }
+      }
+
       closeEditor(); await loadData();
-    } catch (err) { setError(err.message); } 
+      if (followUp.length) setError(followUp.join(' '));
+    } catch (err) { setError(err.message); }
     finally { setSaving(false); }
+  }
+
+  // "+ Add new group": creates the group with the groups API and selects it. A name that already
+  // exists (any case) selects that group instead of making a second one.
+  async function handleCreateGroup() {
+    const name = newGroupName.trim();
+    if (!name || creatingGroup) return;
+    const existing = groups.find((g) => String(g.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (existing) {
+      updatePd('groupId', String(existing.id));
+      setNewGroupOpen(false); setNewGroupName('');
+      return;
+    }
+    setCreatingGroup(true); setError('');
+    try {
+      const g = await softglazeApi.groups.create({ name });
+      setGroups((prev) => [g, ...prev.filter((x) => x.id !== g.id)]);
+      updatePd('groupId', String(g.id));
+      setNewGroupOpen(false); setNewGroupName('');
+    } catch (err) {
+      setError(err.message || t('errors.groupCreate'));
+    } finally {
+      setCreatingGroup(false);
+    }
   }
 
   // Lists clear mismatches before a launch and lets the user fix them, launch anyway or cancel.
@@ -1232,17 +1368,26 @@ export default function ProfilesPage() {
     finally { setBulkBusy(false); }
   }
 
+  // Custom checks the typed proxy; Saved Proxies checks the chosen saved proxy by id (main also
+  // records the result on that proxy, as the Proxy Pool check does). main answers a dead proxy with
+  // { success: false, error }, and a thrown error is shown the same way, in the result box.
   async function handleCheckProxy(e) {
-    e.preventDefault();
-    const proxyRaw = constructProxyString();
-    if (pd.proxySetting === 'Custom' && (!pd.proxyHost || !pd.proxyPort)) return setError(t('errors.proxyHostPort'));
+    if (e && e.preventDefault) e.preventDefault();
+    let request;
+    if (pd.proxySetting === 'Saved Proxies') {
+      if (!pd.selectedSavedProxy) return setError(t('errors.pickSavedProxy'));
+      request = { id: Number(pd.selectedSavedProxy) };
+    } else {
+      if (!pd.proxyHost || !pd.proxyPort) return setError(t('errors.proxyHostPort'));
+      request = { type: pd.proxyType, raw: constructProxyString() };
+    }
     setCheckingProxy(true); setError(''); setProxyResult(null);
     try {
-      setProxyResult(await softglazeApi.proxies.check({ type: pd.proxyType, raw: proxyRaw }));
+      setProxyResult(await softglazeApi.proxies.check(request));
     } catch (err) {
-      setError(err.message || t('errors.proxyCheckFailed'));
-    } finally { 
-      setCheckingProxy(false); 
+      setProxyResult({ success: false, error: err.message || t('errors.proxyCheckFailed') });
+    } finally {
+      setCheckingProxy(false);
     }
   }
 
@@ -1270,9 +1415,6 @@ export default function ProfilesPage() {
           <div className="flex items-center gap-4">
             <button onClick={closeEditor} className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-foreground transition"><ArrowLeft className="h-5 w-5" /></button>
             <h1 className="text-lg font-bold text-foreground tracking-tight">{isEditing ? t('editor.titleEdit') : t('editor.titleNew')}</h1>
-          </div>
-          <div className="flex items-center gap-3 text-xs text-amber-400 bg-amber-500/10 px-4 py-2 rounded border border-amber-500/20">
-            <ShieldCheck className="h-4 w-4" /> {t('editor.authBanner')}
           </div>
         </div>
 
@@ -1440,31 +1582,73 @@ export default function ProfilesPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium"><span className="text-red-500 mr-1">*</span>{t('general.group')}</label>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <CustomSelect value={pd.group} onChange={e => updatePd('group', e.target.value)} className="w-full sm:w-[220px]">
-                        <option value="Ungrouped">{t('general.ungrouped')}</option><option value="New">{t('general.addNewGroup')}</option><option value="Lead Gen">Lead Gen</option>
-                      </CustomSelect>
-                      <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded px-3 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition">
-                        <Tag className="w-4 h-4 text-muted" />
-                        <input type="text" value={pd.tags} onChange={e => updatePd('tags', e.target.value)} placeholder={t('general.tagsPlaceholder')} className="w-full bg-transparent outline-none text-foreground py-2.5 text-sm" />
+                  <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
+                    <label className="text-left lg:text-right text-muted font-medium mt-2">{t('general.group')}</label>
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {/* The workspace's real groups; the value is the group id main stores. */}
+                        <CustomSelect
+                          ariaLabel={t('general.group')}
+                          value={newGroupOpen ? '__new__' : String(pd.groupId || '')}
+                          onChange={e => {
+                            if (e.target.value === '__new__') { setNewGroupOpen(true); return; }
+                            setNewGroupOpen(false); setNewGroupName('');
+                            updatePd('groupId', e.target.value);
+                          }}
+                          className="w-full sm:w-[220px]"
+                        >
+                          <option value="">{t('general.ungrouped')}</option>
+                          {groups.map((g) => <option key={g.id} value={String(g.id)}>{g.name}</option>)}
+                          {/* The profile's group before the list has it (e.g. made in another window). */}
+                          {pd.groupId && !groups.some((g) => String(g.id) === String(pd.groupId)) && (
+                            <option value={String(pd.groupId)}>{(pd.group && pd.group.name) || `#${pd.groupId}`}</option>
+                          )}
+                          <option value="__new__">{t('general.addNewGroup')}</option>
+                        </CustomSelect>
+                        <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded px-3 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition">
+                          <Tag className="w-4 h-4 text-muted" aria-hidden="true" />
+                          <input type="text" aria-label={t('general.tags')} aria-describedby="pf-general-tags-hint" value={pd.tags} onChange={e => updatePd('tags', e.target.value)} placeholder={t('general.tagsPlaceholder')} className="w-full bg-transparent outline-none text-foreground py-2.5 text-sm" />
+                        </div>
                       </div>
+                      {newGroupOpen && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            aria-label={t('general.newGroupName')}
+                            value={newGroupName}
+                            maxLength={80}
+                            onChange={e => setNewGroupName(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { e.preventDefault(); handleCreateGroup(); }
+                              if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setNewGroupOpen(false); setNewGroupName(''); }
+                            }}
+                            placeholder={t('general.newGroupPlaceholder')}
+                            className="w-full sm:w-[220px] bg-background border border-border rounded px-3 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+                          />
+                          <Button size="sm" variant="primary" onClick={handleCreateGroup} disabled={creatingGroup || !newGroupName.trim()} className="gap-1.5">
+                            {creatingGroup ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} {t('general.createGroup')}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setNewGroupOpen(false); setNewGroupName(''); }}>{t('common.cancel')}</Button>
+                        </div>
+                      )}
+                      <p id="pf-general-tags-hint" className="text-xs text-muted">{t('general.tagsHint')}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
                     <label htmlFor="pf-general-cookie" className="text-left lg:text-right text-muted font-medium mt-2">{t('general.cookie')}</label>
                     <div className="w-full">
-                      <textarea id="pf-general-cookie" value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder={t('general.cookiePlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
-                      {isEditing && (
-                        <div className="flex items-center justify-end gap-3 mt-2">
+                      <textarea id="pf-general-cookie" aria-describedby="pf-general-cookie-hint" value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder={t('general.cookiePlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
+                      <div className="flex flex-wrap items-start justify-between gap-3 mt-2">
+                        <p id="pf-general-cookie-hint" className="text-xs text-muted max-w-xl">{t('general.cookieHint')}</p>
+                        {isEditing && (
                           <button type="button" onClick={handleLoadCookies} disabled={loadingCookies} className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-hover disabled:opacity-50 transition">
                             {loadingCookies ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Cookie className="w-3.5 h-3.5" />}
                             {t('general.loadCookies')}
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1479,7 +1663,7 @@ export default function ProfilesPage() {
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
                     <label className="text-left lg:text-right text-muted font-medium">{t('proxy.setting')}</label>
-                    <ButtonTabs value={pd.proxySetting} onChange={v => { updatePd('proxySetting', v); setProxyResult(null); setError(''); }} options={['Custom', 'Saved Proxies', 'Rotating Proxy']} />
+                    <ButtonTabs value={pd.proxySetting} onChange={v => { updatePd('proxySetting', v); setProxyResult(null); setError(''); }} options={['Custom', 'Saved Proxies', 'Rotating Proxy']} labels={{ Custom: t('proxy.settingCustom'), 'Saved Proxies': t('proxy.settingSaved'), 'Rotating Proxy': t('proxy.settingRotating') }} />
                   </div>
 
                   {pd.proxySetting === 'Custom' && (
@@ -1498,16 +1682,7 @@ export default function ProfilesPage() {
                           {socks4LeaksDns(pd.proxyType, pd.browserCore) && (
                             <p role="note" className="flex items-start gap-1.5 text-xs text-warning max-w-xl"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.socks4Chromium')}</p>
                           )}
-                          {proxyResult && (
-                            <div className="text-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded w-full max-w-xl">
-                              <div className="font-semibold flex items-center gap-2 mb-3"><Check className="w-4 h-4"/> {t('proxy.connectionOk')}</div>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.ip')}</span> {proxyResult.ip || pd.proxyHost}</div>
-                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.country')}</span> {proxyResult.country || 'US'}</div>
-                                <div><span className="text-emerald-500/70 block text-xs mb-1 uppercase tracking-wider">{t('proxy.latency')}</span> {proxyResult.latencyMs || '120'}ms</div>
-                              </div>
-                            </div>
-                          )}
+                          <ProxyCheckResult result={proxyResult} />
                         </div>
                       </div>
 
@@ -1535,19 +1710,27 @@ export default function ProfilesPage() {
                   {pd.proxySetting === 'Saved Proxies' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 mt-4">
                       <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.selectProxy')}</label>
-                      <CustomSelect value={pd.selectedSavedProxy} onChange={e => updatePd('selectedSavedProxy', e.target.value)} className="w-full max-w-md">
-                        <option value="">{t('proxy.chooseSaved')}</option>
-                        {allProxies.length > 0 && (
-                          <optgroup label={t('proxy.optgroupPaid')}>
-                            {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
-                          </optgroup>
-                        )}
-                        {freeProxies.length > 0 && (
-                          <optgroup label={t('proxy.optgroupFree')}>
-                            {freeProxies.map(p => <option key={p.id} value={p.id}>{p.host}:{p.port} ({p.type}{p.lastCountry ? ` · ${p.lastCountry}` : ''})</option>)}
-                          </optgroup>
-                        )}
-                      </CustomSelect>
+                      <div className="w-full space-y-4 min-w-0">
+                        <div className="flex flex-wrap gap-3">
+                          <CustomSelect value={pd.selectedSavedProxy} onChange={e => { updatePd('selectedSavedProxy', e.target.value); setProxyResult(null); }} className="w-full max-w-md">
+                            <option value="">{t('proxy.chooseSaved')}</option>
+                            {allProxies.length > 0 && (
+                              <optgroup label={t('proxy.optgroupPaid')}>
+                                {allProxies.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type} · {p.host}:{p.port})</option>)}
+                              </optgroup>
+                            )}
+                            {freeProxies.length > 0 && (
+                              <optgroup label={t('proxy.optgroupFree')}>
+                                {freeProxies.map(p => <option key={p.id} value={p.id}>{p.host}:{p.port} ({p.type}{p.lastCountry ? ` · ${p.lastCountry}` : ''})</option>)}
+                              </optgroup>
+                            )}
+                          </CustomSelect>
+                          <Button variant="secondary" onClick={handleCheckProxy} disabled={checkingProxy || !pd.selectedSavedProxy} className="gap-2">
+                            {checkingProxy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} {checkingProxy ? t('proxy.checking') : t('proxy.checkNetwork')}
+                          </Button>
+                        </div>
+                        <ProxyCheckResult result={proxyResult} />
+                      </div>
                       {allProxies.length === 0 && freeProxies.length === 0 && <p className="text-xs text-muted-foreground mt-2 col-start-2">{t('proxy.noSaved')}</p>}
                       {freeProxies.some(p => String(p.id) === String(pd.selectedSavedProxy)) && (
                         <p role="note" className="flex items-start gap-1.5 text-xs text-warning mt-2 lg:col-start-2"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.freeWarning')}</p>
@@ -1557,6 +1740,41 @@ export default function ProfilesPage() {
                       )}
                     </div>
                   )}
+                  {/* Rotating: the per-profile rotation pool that launch already applies (pickRotationProxy),
+                      from the paid pool only (free proxies cannot join a pool). */}
+                  {pd.proxySetting === 'Rotating Proxy' && (() => {
+                    const poolIds = rotationPoolIds(allProxies, pd.rotationProxyIds);
+                    const ticked = new Set(poolIds.map(String));
+                    const togglePoolProxy = (id) => setPd((prev) => {
+                      const key = String(id);
+                      const cur = (prev.rotationProxyIds || []).map(String);
+                      return { ...prev, rotationProxyIds: cur.includes(key) ? cur.filter((x) => x !== key) : [...cur, key] };
+                    });
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 mt-4">
+                        <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.rotationPool')}</label>
+                        <div className="w-full max-w-xl space-y-3 min-w-0">
+                          <p className="text-xs text-muted leading-relaxed">{t('proxy.rotationHelp')}</p>
+                          <ButtonTabs value={pd.rotationMode} onChange={v => updatePd('rotationMode', v)} options={['round-robin', 'random']} labels={{ 'round-robin': t('proxy.rotationRoundRobin'), random: t('proxy.rotationRandom') }} />
+                          {allProxies.length > 0 ? (
+                            <div role="group" aria-label={t('proxy.rotationPool')} className="max-h-64 overflow-y-auto rounded border border-border bg-background divide-y divide-border">
+                              {allProxies.map((p) => (
+                                <div key={p.id} className="px-3 py-2 min-w-0">
+                                  <CustomCheckbox label={`${p.name} (${p.type} · ${p.host}:${p.port})`} checked={ticked.has(String(p.id))} onChange={() => togglePoolProxy(p.id)} />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">{t('proxy.rotationNoProxies')}</p>
+                          )}
+                          <p className="text-xs text-muted" aria-live="polite">{t('proxy.rotationSelected', { count: poolIds.length })}</p>
+                          {allProxies.some((p) => ticked.has(String(p.id)) && socks4LeaksDns(p.type, pd.browserCore)) && (
+                            <p role="note" className="flex items-start gap-1.5 text-xs text-warning"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />{t('proxy.socks4Chromium')}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
@@ -2030,9 +2248,13 @@ export default function ProfilesPage() {
                   <div className="text-[10px] uppercase tracking-wider font-bold text-primary/80 pt-3 pb-1 border-t border-border mt-2 first:mt-0 first:border-t-0 first:pt-0">{children}</div>
                 );
                 const deviceMem = Math.min(8, Number(pd.ramGb) || 8); // Chrome caps deviceMemory at 8
-                const proxyText = pd.proxySetting === 'Custom' && pd.proxyHost
-                  ? `${pd.proxyType} ${pd.proxyHost}:${pd.proxyPort || ''}`
-                  : (pd.selectedSavedProxy ? t('env.savedProxy') : t('env.directNoProxy'));
+                // Mirrors what handleSaveProfile stores for the chosen setting.
+                const rotationCount = rotationPoolIds(allProxies, pd.rotationProxyIds).length;
+                const proxyText = pd.proxySetting === 'Custom'
+                  ? (pd.proxyHost ? `${pd.proxyType} ${pd.proxyHost}:${pd.proxyPort || ''}` : t('env.directNoProxy'))
+                  : pd.proxySetting === 'Rotating Proxy'
+                    ? (rotationCount ? t('env.rotatingProxy', { count: rotationCount }) : t('env.directNoProxy'))
+                    : (pd.selectedSavedProxy ? t('env.savedProxy') : t('env.directNoProxy'));
                 const noiseTag = (on) => on === false ? t('env.real') : t('env.noise');
                 return (
                   <>

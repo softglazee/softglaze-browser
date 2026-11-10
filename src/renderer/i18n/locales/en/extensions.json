@@ -2,19 +2,19 @@
   "header": {
     "eyebrow": "Enterprise Repository",
     "title": "Extensions",
-    "summary_one": "{{count}} extension installed · {{enabled}} injected into every profile at launch",
-    "summary_other": "{{count}} extensions installed · {{enabled}} injected into every profile at launch"
+    "summary_one": "{{count}} extension installed · {{enabled}} enabled for profiles that load extensions",
+    "summary_other": "{{count}} extensions installed · {{enabled}} enabled for profiles that load extensions"
   },
   "stats": {
     "total": "Total Extensions",
-    "injected": "Injected Globally",
+    "injected": "Enabled",
     "disabled": "Disabled"
   },
   "caveat": {
-    "before": "Installed extensions are unpacked locally and mounted into each profile via Chromium's",
-    "middle": "at launch. They apply on the",
+    "before": "Extensions are not added to every profile. They load only in Chromium profiles that have \"Load SoftGlaze extensions (uses Chrome-for-Testing)\" ticked on the profile editor's Advanced tab (off by default). Those profiles mount them with Chromium's",
+    "middle": "flag at launch, so a change applies on the",
     "nextLaunch": "next launch",
-    "after": "of every profile where the extension is enabled. Some hardened stable-Chrome builds restrict unpacked extensions - Softglaze's bundled engine loads them reliably."
+    "after": "of such a profile. Regular Chrome ignores that flag, so these profiles open on a Chrome for Testing build: download one on the Browsers page first, or the profile opens without the extensions. Firefox profiles do not load them."
   },
   "importer": {
     "title": "Import to Team",
@@ -33,13 +33,13 @@
     "loadErrorTitle": "Could not load extensions",
     "noExtTitle": "No extensions yet",
     "noMatchTitle": "No extensions match your search",
-    "noExtDesc": "Import a Chrome Web Store extension above to add it to your team repository and inject it into every profile.",
+    "noExtDesc": "Import a Chrome Web Store extension above to add it to your team repository. It loads in profiles that have \"Load SoftGlaze extensions\" ticked on the Advanced tab.",
     "noMatchDesc": "Try a different name or ID."
   },
   "card": {
     "unpacked": "Unpacked extension",
     "removeTitle": "Remove from team",
-    "injected": "Injected",
+    "injected": "Enabled",
     "disabled": "Disabled"
   },
   "confirmRemove": "Remove \"{{name}}\" from the team repository? Its local files will be deleted.",
