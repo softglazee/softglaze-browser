@@ -423,3 +423,19 @@ test('18: the Batch import page and the app\'s proxy pool use the Store listing\
   assert.match(c, /pools en connect\.gonzoproxy\.app/, 'a vendor\'s own pools stay "pools"');
   for (const ns of ['batchImport', 'common', 'cmpSettingsC']) assert.doesNotMatch(JSON.stringify(loc('es', ns)), /perfiles por lotes|Importación por lotes/, ns);
 });
+
+// ---- The Proxy pool at 375 px ----
+
+test('Proxy pool at 375 px: the view tabs wrap inside their bar, and the stat cards wrap instead of cutting', () => {
+  const pool = read('src', 'renderer', 'pages', 'ProxyPoolPage.jsx');
+  // "Custom Proxies / Check history / Groups & countries" (longer in Spanish) pushed the page 37 px (en)
+  // and 132 px (es) past a 375 px window.
+  assert.match(pool, /<div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-elevated\/60 border border-border w-fit max-w-full">/);
+  assert.match(pool, /className=\{`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-\[13px\] font-semibold/);
+  // "Total de pr..." and "7 verificados · 0 si..." were cut: the label and line wrap, and below sm the
+  // decorative icon gives its room to the label.
+  const stat = extractFunction(pool, 'MiniStat');
+  assert.match(stat, /<p className="break-words text-\[11px\] font-medium leading-snug text-muted-foreground">\{label\}<\/p>/);
+  assert.match(stat, /className="hidden sm:grid h-8 w-8 shrink-0 place-items-center rounded-md"/);
+  assert.doesNotMatch(pool, /className="block truncate"/);
+});

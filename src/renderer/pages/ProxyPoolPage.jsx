@@ -93,10 +93,11 @@ function MiniStat({ icon: Icon, label, value, sub, accent = 'var(--primary)', on
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+          <p className="break-words text-[11px] font-medium leading-snug text-muted-foreground">{label}</p>
           <p className="mt-1 font-mono text-[22px] font-semibold leading-none tabular-nums text-foreground">{value}</p>
         </div>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
+        {/* Below sm the decorative icon gives its room to the label, which wraps whole words then. */}
+        <span className="hidden sm:grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
           <Icon className="h-4 w-4" />
         </span>
       </div>
@@ -918,7 +919,8 @@ export default function ProxyPoolPage() {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
+      {/* The tabs wrap inside the bar in a narrow window (375 px), so the page never scrolls sideways. */}
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit max-w-full">
         {[
           { key: 'custom', label: t('tabs.custom'), icon: Server },
           { key: 'history', label: t('tabs.history', 'Check history'), icon: History },
@@ -928,7 +930,7 @@ export default function ProxyPoolPage() {
             key={key}
             type="button"
             onClick={() => setView(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Icon className="w-4 h-4" /> {label}
           </button>
@@ -960,7 +962,7 @@ export default function ProxyPoolPage() {
                 { value: failedCount, color: 'var(--destructive)' },
                 { value: uncheckedCount, color: mutedTrack }
               ]} />
-              <span className="block truncate">{t('stats.splitSub', { verified: verifiedCount, unchecked: uncheckedCount })}</span>
+              <span className="block break-words">{t('stats.splitSub', { verified: verifiedCount, unchecked: uncheckedCount })}</span>
             </div>
           )}
         />
@@ -978,7 +980,7 @@ export default function ProxyPoolPage() {
                 { value: verifiedCount, color: 'var(--success)' },
                 { value: Math.max(0, proxies.length - verifiedCount), color: mutedTrack }
               ]} />
-              <span className="block truncate">{view === 'custom' && statusFilter === 'verified' ? t('stats.filtering') : t('stats.pctOfPool', { pct: verifiedPct })}</span>
+              <span className="block break-words">{view === 'custom' && statusFilter === 'verified' ? t('stats.filtering') : t('stats.pctOfPool', { pct: verifiedPct })}</span>
             </div>
           )}
         />
@@ -990,7 +992,7 @@ export default function ProxyPoolPage() {
           active={view === 'custom' && statusFilter === 'failed'}
           title={t('stats.failedTip')}
           onClick={() => { toggleStatusFilter('failed'); setView('custom'); }}
-          sub={<span className="block truncate">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
+          sub={<span className="block break-words">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
         />
         {/* Protocol mix is informational; there is no type filter */}
         <MiniStat
@@ -1006,7 +1008,7 @@ export default function ProxyPoolPage() {
                 { value: socksCount, color: 'var(--chart-4)' },
                 { value: otherTypeCount, color: mutedTrack }
               ]} />
-              <span className="block truncate">{t('stats.protocolsSub', { http: httpCount, socks: socksCount })}</span>
+              <span className="block break-words">{t('stats.protocolsSub', { http: httpCount, socks: socksCount })}</span>
             </div>
           )}
         />
@@ -1017,7 +1019,7 @@ export default function ProxyPoolPage() {
           accent="var(--chart-2)"
           title={t('stats.countriesTip')}
           onClick={() => setView('groups')}
-          sub={<span className="block truncate">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
+          sub={<span className="block break-words">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
         />
         <MiniStat
           icon={Clock}
@@ -1026,7 +1028,7 @@ export default function ProxyPoolPage() {
           accent="var(--chart-3)"
           title={t('stats.lastCheckTip')}
           onClick={() => setView('groups')}
-          sub={<span className="block truncate">{scheduler.enabled ? t('stats.autoEvery', { n: scheduler.minutes }) : t('stats.autoOff')}</span>}
+          sub={<span className="block break-words">{scheduler.enabled ? t('stats.autoEvery', { n: scheduler.minutes }) : t('stats.autoOff')}</span>}
         />
       </div>
 
