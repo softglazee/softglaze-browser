@@ -397,7 +397,8 @@ test('handler: gated on proxies.manage, cache readable only through it, no secre
 
 test('renderer: the Account section sits on the right card for every live provider', () => {
   assert.match(PAGE, /import ProviderAccount from '@\/components\/ProviderAccount\.jsx';/);
-  assert.match(PAGE, /\{!p\.unavailable && <ProviderAccount providerKey=\{p\.key\} \/>\}/);
+  // Not for a member without proxies.manage, whom main refuses (1.0.26).
+  assert.match(PAGE, /\{!p\.unavailable && !denyPull && <ProviderAccount providerKey=\{p\.key\} \/>\}/);
   const cmp = read('src/renderer/components/ProviderAccount.jsx');
   assert.match(cmp, /providerAccount\(\{ provider: providerKey, cachedOnly: true \}\)/);
   assert.match(cmp, /providerAccount\(\{ provider: key \}\)/);

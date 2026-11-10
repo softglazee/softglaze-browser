@@ -246,7 +246,7 @@ test('auto-grouping fills only groups the member can see: X gets their own "Unit
 function loadTemplates(db = seed()) {
   const ws = workspace(db);
   const fns = loadMain([...VALIDATORS, 'requirePermission', ...SCOPE_FNS, 'reconcileReferences', 'reconcileReferencesForMember', 'pickCloneableFields',
-    'listTemplates', 'deleteTemplate', 'createProfileFromTemplate', 'saveProfileAsTemplate', 'cloneProfile', 'serializeTemplate'], {
+    'listTemplates', 'deleteTemplate', 'createProfileFromTemplate', 'saveProfileAsTemplate', 'cloneProfile', 'stripUseOnlySecrets', 'serializeTemplate'], {
     ...ws.deps,
     assertWithinLimit: async () => {}, ensureUniqueDataDirName: async (_db, n) => n,
     // Device name / MAC for the copy: test/profileOptions.test.js.
@@ -328,9 +328,9 @@ test('a copy of a profile shared with the member leaves out its owner\'s proxy a
   assert.equal(copy.ownerMemberId, 3);
   assert.deepEqual([copy.proxyId, copy.proxyInfoString, copy.groupId], [null, null, null]);
   assert.equal(copy.systemProxyBehavior, 'PROFILE_PROXY');
-  assert.deepEqual(copy.leftOut, { proxy: true, group: true });
+  assert.deepEqual(copy.leftOut, { proxy: true, group: true, twoFactor: false, logins: false });
   const ownCopy = await fns.cloneProfile({ id: 100 });
-  assert.deepEqual([ownCopy.proxyId, ownCopy.groupId, ownCopy.leftOut], [20, 10, { proxy: false, group: false }]);
+  assert.deepEqual([ownCopy.proxyId, ownCopy.groupId, ownCopy.leftOut], [20, 10, { proxy: false, group: false, twoFactor: false, logins: false }]);
 });
 
 test('a removed member\'s groups and templates are handed over or become Owner/Admin-managed', () => {
@@ -346,7 +346,7 @@ function loadPolicy(db = seed()) {
   const ws = workspace(db);
   const settings = new Map();
   const scheduler = [];
-  const fns = loadMain(['requireObject', 'parseId', 'requirePermission', 'assertCanAccessProfile', 'requireWorkspaceProxySettings', 'getProxyPolicy', 'setProxyPolicy', 'setProxyScheduler'], {
+  const fns = loadMain(['requireObject', 'parseId', 'requirePermission', 'assertCanAccessProfile', 'requireWorkspaceProxySettings', 'getProxyPolicy', 'getProxyPolicyForActor', 'setProxyPolicy', 'setProxyScheduler'], {
     ...ws.deps,
     PROXY_POLICY_MODES: new Set(['each-launch', 'sticky', 'failover', 'latency-optimized']),
     readSetting: async (k, d) => (settings.has(k) ? JSON.parse(JSON.stringify(settings.get(k))) : d),
@@ -781,7 +781,9 @@ test('the pages disable what main refuses, with the role it needs, and Data Vaul
   const GUARD = src('components', 'ui', 'GuardedButton.jsx');
   // `relative` keeps the absolutely positioned sr-only reason inside a scrolling table (at 375 px it
   // otherwise widened the whole page).
-  assert.match(GUARD, /<span className="relative inline-flex" title=\{deny\}>\s*<Button \{\.\.\.rest\} disabled aria-describedby=\{id\}>/);
+  // The wrapper is inline-flex unless a full-width button asks for another layout (1.0.26 round 3).
+  assert.match(GUARD, /wrapperClassName = 'inline-flex'/);
+  assert.match(GUARD, /<span className=\{`relative \$\{wrapperClassName\}`\} title=\{deny\}>\s*<Button \{\.\.\.rest\} disabled aria-describedby=\{id\}>/);
   // Every string the pages use exists in both languages.
   for (const lang of ['en', 'es']) {
     const loc = (ns) => JSON.parse(read('src', 'renderer', 'i18n', 'locales', lang, `${ns}.json`));
