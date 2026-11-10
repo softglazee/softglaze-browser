@@ -1,6 +1,7 @@
 'use strict';
 // The server-side trial ledger (spec A3). A trial is granted only when:
-//   1. the email was verified by us on THIS install (POST /v1/account/verify/check),
+//   1. the email was verified by us on THIS install (POST /v1/account/verify/check), or, from app 1.0.26, the
+//      customer signed in on this install with a verified email (one-click sign-in, src/auth/accounts.js),
 //   2. this machine hash never had a trial in this tenant,
 //   3. this email key (Gmail dots / +tags folded) never had one,
 //   4. this network (HMAC of the client IP; IPv6 per /64) had fewer than trial.networkLimit trials in
@@ -14,6 +15,7 @@ const { parseEmail } = require('../customers/emailAddress');
 const { hmacHex } = require('../crypto/derive');
 const { addEvent, recomputeCustomer } = require('../customers/sync');
 const { ms } = require('../util/time');
+const { signedInOnInstall } = require('../auth/accounts');
 
 const DAY = 86400000;
 const emailKeyHash = (emailKey) => hmacHex('trial-email-v1', emailKey);
@@ -43,7 +45,9 @@ async function startTrial(db, tenant, install, { email }, { ipHash = null, ipCou
   const verified = await db.emailVerification.findFirst({
     where: { tenantId, installId: install.id, emailKey: parsed.emailKey, NOT: { verifiedAt: null } }
   });
-  if (!verified || !install.customerId || verified.customerId !== install.customerId) {
+  const proven = Boolean(install.customerId) && ((verified && verified.customerId === install.customerId)
+    || await signedInOnInstall(db, tenantId, install.id, install.customerId, parsed.emailKey));
+  if (!proven) {
     await logAttempt(db, tenantId, install.id, 'not_verified', ipHash, now);
     return { status: 403, body: { error: 'email_not_verified', message: 'Confirm your email address first.' } };
   }
