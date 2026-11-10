@@ -88,7 +88,9 @@ test('every list-only provider offers How many, and Proxy-Solutions filters by c
     assert.match(UI, new RegExp(`key: '${key}'.*count: true`), key);
   }
   assert.doesNotMatch(UI, /key: 'proxysolutions'.*noCountry: true/, 'Proxy-Solutions rows carry a country');
-  assert.match(UI, /provider\.geoSync\.noCountry && provider\.geoSync\.count && \(/, 'How many must render without the country row');
+  // One How many field for every connector, the country row or not; its list wording follows geoSync.list.
+  assert.match(UI, /\{provider\.geoSync\.count && \(/, 'How many must render without the country row');
+  assert.match(UI, /placeholder=\{provider\.geoSync\.list \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : '5'\}/);
   for (const fn of ['fetchAirproxyPool', 'fetchMobileProxySpacePool', 'fetchProxySolutionsPool']) {
     const start = IPC.indexOf(`async function ${fn}(`);
     const body = IPC.slice(start, IPC.indexOf('\n}\n', start));

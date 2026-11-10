@@ -23,7 +23,8 @@ test('check 1: no country means no proxy, and every row is strict on a single po
   const m = U.proxiesSxUsername('psx_ab12cd', { poolType: 'mobile', country: 'US' });
   const r = U.proxiesSxUsername('psx_ab12cd', { poolType: 'residential', country: 'de' });
   assert.equal(m, 'psx_ab12cd-mbl-us-rot-ondemand-failover-strict');
-  assert.equal(r, 'psx_ab12cd-peer-de-rot-ondemand-failover-strict');
+  // peer mixes residential and mobile devices, so Residential adds the hard -iptype-residential filter.
+  assert.equal(r, 'psx_ab12cd-peer-de-iptype-residential-rot-ondemand-failover-strict');
   for (const u of [m, r]) {
     assert.ok(u.endsWith('-failover-strict'));
     assert.doesNotMatch(u, /-(best|any)-/, 'never a cross-pool fallback pool');
@@ -60,9 +61,9 @@ test('proxiesSxProxyCreds reads the documented and alternative shapes', () => {
 test('state (2-letter code) and city ride on the Residential pool only', () => {
   assert.equal(
     U.proxiesSxUsername('psx_ab12cd', { poolType: 'residential', country: 'US', state: 'CA', city: 'Los Angeles', sid: 'shop_0001' }),
-    'psx_ab12cd-peer-us-state-ca-city-losangeles-sid-shop_0001-rot-sticky-failover-strict');
+    'psx_ab12cd-peer-us-iptype-residential-state-ca-city-losangeles-sid-shop_0001-rot-sticky-failover-strict');
   assert.equal(U.proxiesSxUsername('psx_ab12cd', { poolType: 'residential', country: 'US', state: 'California' }),
-    'psx_ab12cd-peer-us-rot-ondemand-failover-strict', 'a full state name is not a region code');
+    'psx_ab12cd-peer-us-iptype-residential-rot-ondemand-failover-strict', 'a full state name is not a region code');
   assert.equal(U.proxiesSxUsername('psx_ab12cd', { poolType: 'mobile', country: 'US', state: 'ca', city: 'x' }),
     'psx_ab12cd-mbl-us-rot-ondemand-failover-strict', 'modems never match state or city');
 });

@@ -2,8 +2,9 @@
 // Gsocks connector: endpoints from help.gsocks.net/en/articles/9847111-api-documentation (fetched
 // 2026-11-01). The docs show the line format but no sample list body and no proxy object, so the
 // fixtures below are shaped from the prose. Built from the docs only: never checked live.
-// Auth: the Authorization section and every header table say "authorization: key {api_key}"; the
-// curl samples' "session eyJ..." is a dashboard login token, not an API key.
+// Auth: the Authorization section and every header table say "authorization: key {api_key}", while the
+// curl samples send "session eyJ...". Unsettled until a live key is tried, so the adapter sends the rule
+// first (session first for a key that is itself a JWT) and tries the other form once on 401/403.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -76,11 +77,11 @@ function adapter(total = 45, perList = 30) {
   };
   const constant = (name) => new RegExp(`^const ${name} = (.+?);`, 'm').exec(IPC)[1];
   const fn = new Function(
-    'httpRequestText', 'gsocksProxyIds', 'gsocksListRows',
+    'httpRequestText', 'gsocksProxyIds', 'gsocksListRows', 'gsocksAuthSchemes',
     `const GSOCKS_API = ${constant('GSOCKS_API')};\nconst GSOCKS_POOLS = ${/const GSOCKS_POOLS = (Object\.freeze\(\{[\s\S]*?\}\));/.exec(IPC)[1]};\n`
     + `const GSOCKS_PAGE_SIZE = ${constant('GSOCKS_PAGE_SIZE')};\nconst GSOCKS_MAX_PAGES = ${constant('GSOCKS_MAX_PAGES')};\n`
     + `${['clampPoolCount', 'limitListRows', 'fetchGsocksPool'].map(ipcFunction).join('\n')}\nreturn fetchGsocksPool;`
-  )(httpRequestText, U.gsocksProxyIds, U.gsocksListRows);
+  )(httpRequestText, U.gsocksProxyIds, U.gsocksListRows, U.gsocksAuthSchemes);
   return { fetchGsocksPool: fn, urls, headers };
 }
 
@@ -104,7 +105,8 @@ test('How many stops fetching lists once enough lines are in, with no 500 cap', 
 
 test('Gsocks is wired and only ever reads', () => {
   const body = /async function fetchGsocksPool\([\s\S]*?\r?\n\}\r?\n/.exec(IPC)[0];
-  assert.match(body, /authorization: `key \$\{key\}`/);
+  assert.match(body, /authorization: `\$\{schemes\[0\]\} \$\{key\}`/);
+  assert.deepEqual(U.gsocksAuthSchemes('K1'), ['key', 'session'], 'the documented rule first');
   assert.doesNotMatch(body, /method: 'POST'/, 'a pull must never create or buy a proxy');
   assert.match(IPC, /gsocks: fetchGsocksPool/);
   assert.match(IPC, /gsocks: 'Gsocks'/);
