@@ -144,6 +144,7 @@ const {
   PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
   mountProxiesRows, mountProxiesRotateTarget,
   massiveBaseUser, massiveUsername,
+  weProxyBaseUser, weProxyUsername,
   iproxyRows
 } = require('./proxyVendorUtils');
 
@@ -2054,6 +2055,7 @@ const PROXY_VENDORS = Object.freeze({
   mountproxies: 'MountProxies',
   massive: 'Massive',
   iproxy: 'iProxy.online',
+  weproxy: 'WEPROXY',
   // No connector yet: its proxies are added with Batch Add's Provider tag, so the pool and the Proxy
   // providers page group and count them (syncVendorPool refuses a pull).
   arnproxy: 'ARNPROXY'
@@ -4018,6 +4020,34 @@ async function fetchDatabayPool({ username, password, poolType, country, state, 
   return rows;
 }
 
+// ---- WEPROXY (Premium Rotating Residential, gateway-minted; v1) ----
+// No customer API (WEPROXY offers a reseller API only): the login is built on gw.weproxy.com.tr:8989, HTTP
+// and SOCKS5 on the same port, from the panel's proxy user, with the package, country and city in the
+// username (weProxyUsername). WEPROXY has not published its state, session or lifetime tokens, so v1 adds
+// ONE rotating proxy per pull and refuses State, Sticky session and Keep same IP; v2 mints sticky sessions
+// with mintGatewayRows once WEPROXY gives the grammar (SPEC-weproxy.md).
+const WEPROXY_GATEWAY = Object.freeze({ host: 'gw.weproxy.com.tr', port: 8989 });
+
+async function fetchWeProxyPool({ username, password, country, state, city, session, life, proxyType, host, port }) {
+  const user = weProxyBaseUser(username);
+  const pw = password != null ? String(password) : '';
+  if (!user || /[\s:@]/.test(user)) throw new Error('WEPROXY: enter the proxy username from the WEPROXY panel, not your login email.');
+  if (!pw) throw new Error('WEPROXY: enter the proxy password from the panel.');
+  const minutes = Number.parseInt(String(life == null ? '' : life), 10);
+  if (String(state || '').trim() || String(session || '').trim() || (Number.isFinite(minutes) && minutes > 0)) {
+    throw new Error('WEPROXY has not published how to target a state or keep a sticky IP yet. Leave State, Sticky session and Keep same IP empty.');
+  }
+  const gw = gatewayOverride(host, port, WEPROXY_GATEWAY, 'WEPROXY');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  return [{
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port,
+    username: weProxyUsername(user, { country: cc, city }), password: pw,
+    label: `WEPROXY • Premium Residential • ${cc || 'Any country'} • rotating`,
+    country: cc || null, dedupeOnPassword: true
+  }];
+}
+
 // ---- IPFoxy (rotating residential, gateway-minted) ----
 // Targeting rides in the username; gate.ipfoxy.io, gate-sg.ipfoxy.io (Asia-Pacific) and
 // gate-de.ipfoxy.io (Europe) go through the override. Every route reaches every exit country.
@@ -5519,7 +5549,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   proxyempire: fetchProxyEmpirePool,
   mountproxies: fetchMountProxiesPool,
   massive: fetchMassivePool,
-  iproxy: fetchIproxyPool
+  iproxy: fetchIproxyPool,
+  weproxy: fetchWeProxyPool
 });
 
 async function syncVendorPool(payload) {

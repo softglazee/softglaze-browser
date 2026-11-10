@@ -2872,6 +2872,28 @@ function massiveCity(v) {
   return encodeURIComponent(String(v || '').trim()).replace(/-/g, '%2D');
 }
 
+// WEPROXY (weproxy.io): no customer API. The one published username template is
+// USER-package-residential-country-de-city-berlin (Premium, rotating residential, rotating mobile and
+// antidetect pages), on gw.weproxy.com.tr:8989; the password carries nothing. Anything pasted from
+// "-package-" on is dropped so the targeting comes from the form. The country is lower case and the city
+// lower case without spaces (inferred from the sample: confirm with WEPROXY); characters that would split
+// the username or the proxy URL (- : @ /) are dropped from the city too. WEPROXY has not published its
+// state, session or lifetime tokens, so v1 builds none (rotating only). Built from WEPROXY's public
+// pages 2026-11-10; not live-tested (the trial quota was used up).
+function weProxyBaseUser(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  const at = s.toLowerCase().indexOf('-package-');
+  return at >= 0 ? s.slice(0, at) : s;
+}
+function weProxyUsername(base, { country, city } = {}) {
+  let user = `${weProxyBaseUser(base)}-package-residential`;
+  const cc = String(country || '').trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(cc)) user += `-country-${cc}`;
+  const town = String(city || '').trim().toLowerCase().replace(/[\s\-:@/]+/g, '');
+  if (town) user += `-city-${town}`;
+  return user;
+}
+
 function massiveUsername(base, { type, country, subdivision, city, zip, asn, session, ttlMin } = {}) {
   const parts = [base];
   const cc = String(country || '').trim().toUpperCase();
@@ -3081,5 +3103,6 @@ module.exports = {
   PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
   mountProxiesRows, mountProxiesRotateTarget,
   massiveBaseUser, massiveUsername,
+  weProxyBaseUser, weProxyUsername,
   iproxyChangeIpLinks, iproxyConnections, iproxyRows
 };

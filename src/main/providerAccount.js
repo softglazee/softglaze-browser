@@ -1084,7 +1084,8 @@ const DASHBOARD_URLS = Object.freeze({
   ipfoxy: 'https://app.ipfoxy.com/',
   liveproxies: 'https://liveproxies.io/dashboard/overview',
   novada: 'https://dashboard.novada.com/',
-  databay: 'https://app.databay.com/'
+  databay: 'https://app.databay.com/',
+  weproxy: 'https://my.weproxy.io/'
 });
 
 function accountAdapterFor(provider) {

@@ -202,6 +202,11 @@ export const PROVIDERS = [
   // iProxy.online: the user's own Android phones as mobile proxies. A user API key (dashboard) lists every
   // proxy access (host, port, login) and each phone's change-IP link, kept as the proxy's Rotate IP link.
   { key: 'iproxy', name: 'iProxy.online', initials: 'IP', color: '#f59e0b', referral: 'https://iproxy.online/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, noCountry: true, count: true, list: true, proto: true } },
+  // WEPROXY: no customer API; logins are built on gw.weproxy.com.tr:8989 (HTTP and SOCKS5 on one port)
+  // from the panel's proxy user, with the package, country and city in the username. v1 adds one rotating
+  // proxy per pull, so there is no How many, Sticky session or Keep same IP; its State box is refused
+  // until WEPROXY publishes the token (main says so).
+  { key: 'weproxy', name: 'WEPROXY', initials: 'WP', color: '#e11d48', referral: 'https://weproxy.io/', gateway: { host: 'gw.weproxy.com.tr', port: 8989, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], geo: true, noSession: true, proto: true, gateway: true } },
   // ARNPROXY: no connector yet (its customer API is not confirmed for logins). Its list is pasted in the
   // Proxy pool's Batch Add with Provider ARNPROXY, so this page counts those proxies.
   { key: 'arnproxy', name: 'ARNPROXY', initials: 'AX', color: '#b91c1c', referral: 'https://www.arnproxy.com/', gateway: null, unavailable: true }
