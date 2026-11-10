@@ -39,7 +39,7 @@ const NEVER_EXPOSED_NAME = /cookie|2fa|totp|\botp\b|password|passwd|secret|vault
 // so a cookie exporter, a delete handler or a settings writer can never be wired in by mistake.
 const ALLOWED_DEPS = Object.freeze([
   'getPrisma', 'requirePermission', 'getActiveMember', 'getLicense',
-  'scopedProfileWhere', 'scopedProxyWhere', 'assertCanAccessProfile', 'assertCanAccessProxy', 'partitionAccessibleProfileIds',
+  'scopedProfileWhere', 'scopedProxyWhere', 'scopedGroupWhere', 'assertCanAccessProfile', 'assertCanAccessProxy', 'partitionAccessibleProfileIds',
   'listAllSessions', 'isFirefoxSession', 'launchProfile', 'closeSession', 'markAutomationDriven',
   'createProfile', 'updateProfile', 'batchGenerateProfiles', 'createGroup', 'assignProfilesToGroup',
   'checkProxy', 'getProxyHealthHistory', 'getRecentProxyHealth', 'getVendorScoreboard', 'rotateProxyIp',
@@ -484,7 +484,8 @@ class ToolRegistry {
         if (groupId == null || !groupIds.includes(Number(groupId))) throw denied('This token may only use profiles in its own groups; choose one of them (see workspace_summary).');
       },
       async resolveGroup(ref) {
-        const groups = await db.group.findMany({ select: { id: true, name: true } });
+        // Only groups the token's member can see, the same list as the app's Groups page.
+        const groups = await db.group.findMany({ where: await deps.scopedGroupWhere(undefined), select: { id: true, name: true } });
         const asNum = Number(ref);
         let g = Number.isInteger(asNum) && asNum > 0 ? groups.find((x) => x.id === asNum) : null;
         if (!g) {
@@ -518,7 +519,7 @@ class ToolRegistry {
         return new Set(rows.map((r) => r.id));
       },
       async visibleGroups() {
-        const groups = await db.group.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, color: true } });
+        const groups = await db.group.findMany({ where: await deps.scopedGroupWhere(undefined), orderBy: { name: 'asc' }, select: { id: true, name: true, color: true } });
         const where = await ctx.profileWhere({ deletedAt: null, groupId: { not: null } });
         const rows = await db.profile.findMany({ where, select: { groupId: true } });
         const counts = new Map();

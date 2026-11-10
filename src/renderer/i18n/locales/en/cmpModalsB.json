@@ -112,6 +112,7 @@
     "close": "Close",
     "save": "Save",
     "infoSaved": "Rotation settings saved.",
+    "infoSavedOwnProxy": "Rotation settings saved. This profile had no proxy of its own, so {{name}} (the first proxy in the pool) is now its proxy, used whenever the pool is skipped, such as with the Sticky (fixed proxy) rotation.",
     "errorLoad": "Failed to load rotation config.",
     "errorSave": "Failed to save."
   },

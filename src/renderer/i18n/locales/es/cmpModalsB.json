@@ -112,6 +112,7 @@
     "close": "Cerrar",
     "save": "Guardar",
     "infoSaved": "Configuración de rotación guardada.",
+    "infoSavedOwnProxy": "Configuración de rotación guardada. Este perfil no tenía proxy propio, así que {{name}} (el primer proxy del grupo) es ahora su proxy, el que se usa cuando se omite el grupo, como con la rotación Fijo (proxy fijo).",
     "errorLoad": "No se pudo cargar la configuración de rotación.",
     "errorSave": "No se pudo guardar."
   },

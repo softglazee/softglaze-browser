@@ -4,10 +4,13 @@ import { Shuffle, X, Loader2, Check, Repeat, Dices } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { rotationPoolIds } from '@/lib/profileEditor.mjs';
 
 // Configure a proxy-rotation pool for one profile. The profile keeps its own
 // browser data dir (cookies persist) while the exit IP rotates across the pool.
-export default function ProxyRotationModal({ profileId, profileName, onClose }) {
+// A profile with no proxy of its own gets the first pool proxy as its proxy when the pool is turned on
+// (main does it, as the editor's Rotating Proxy option does); onSaved lets the list show it.
+export default function ProxyRotationModal({ profileId, profileName, onClose, onSaved }) {
   const { t } = useTranslation('cmpModalsB');
   const { dialogRef } = useDialog({ onClose });
   const [loading, setLoading] = useState(true);
@@ -43,13 +46,16 @@ export default function ProxyRotationModal({ profileId, profileName, onClose }) 
   const save = async () => {
     setSaving(true); setError(''); setInfo('');
     try {
-      await softglazeApi.proxies.setRotation({
+      // List order, as in the editor, so "the first proxy" is the top ticked one; ids no longer listed are dropped.
+      const res = await softglazeApi.proxies.setRotation({
         id: profileId,
         enabled,
         mode,
-        proxyIds: Array.from(selected)
+        proxyIds: rotationPoolIds(proxies, Array.from(selected))
       });
-      setInfo(t('proxyRotation.infoSaved'));
+      const assigned = res && res.assignedProxy;
+      setInfo(assigned ? t('proxyRotation.infoSavedOwnProxy', { name: assigned.name }) : t('proxyRotation.infoSaved'));
+      if (assigned && onSaved) onSaved();
     } catch (e) { setError(e.message || t('proxyRotation.errorSave')); }
     finally { setSaving(false); }
   };
@@ -76,7 +82,7 @@ export default function ProxyRotationModal({ profileId, profileName, onClose }) 
           </p>
 
           {error && <div className="rounded border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>}
-          {info && <div className="rounded border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400 font-medium flex items-center gap-2"><Check className="w-4 h-4" /> {info}</div>}
+          {info && <div className="rounded border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400 font-medium flex items-center gap-2"><Check className="w-4 h-4 shrink-0" /> {info}</div>}
 
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted py-8 justify-center"><Loader2 className="w-4 h-4 animate-spin" /> {t('proxyRotation.loading')}</div>
