@@ -144,6 +144,7 @@ const {
   PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
   mountProxiesRows, mountProxiesRotateTarget,
   massiveBaseUser, massiveUsername,
+  weProxyBaseUser, weProxyUsername,
   iproxyRows
 } = require('./proxyVendorUtils');
 
@@ -712,7 +713,6 @@ function deriveProvider(proxy) {
   const n = String(proxy.name || '').toLowerCase();
   if (n.startsWith('apify')) return 'apify';
   if (n.startsWith('anyip')) return 'anyip';
-  if (n.startsWith('shopsocks5')) return 'shopsocks5';
   if (n.startsWith('bright')) return 'brightdata';
   if (n.startsWith('oxylabs')) return 'oxylabs';
   // Smartproxy is now Decodo; stored rows keep the provider key smartproxy.
@@ -926,11 +926,17 @@ function proxyMadeForImportedRow(profile, proxy) {
 // looked at once: running again changes nothing, and a link taken off a proxy later is not put back.
 // profileRotationUrls itself is never rewritten. A link that does not qualify stays as it was (exported,
 // not used).
+// Once per app run is enough: only imports made before 1.0.26 left links here unattached (an import now
+// puts its link on the proxy itself), so no new ones appear during a run. The one way an unseen legacy
+// link arrives mid-run is a workspace restore, which runs the pass again for the restored database. A
+// pass still going when the restore swaps the database stops without recording anything, so it never
+// writes the old database's record into the restored one.
 const ROTATION_LINKS_ADOPTED_SETTING = 'profileRotationUrlsAdopted';
 let rotationLinksAdoptedThisRun = false;
 async function adoptImportedRotationLinks() {
   if (rotationLinksAdoptedThisRun) return { attached: 0, skipped: 0 };
   const db = getPrisma();
+  const swapped = () => { try { return getPrisma() !== db; } catch (e) { return true; } };
   const links = (await readSetting('profileRotationUrls', {})) || {};
   const seen = await readSetting(ROTATION_LINKS_ADOPTED_SETTING, null);
   const done = seen && typeof seen === 'object' && seen.done && typeof seen.done === 'object' ? { ...seen.done } : {};
@@ -939,6 +945,7 @@ async function adoptImportedRotationLinks() {
   let attached = 0;
   let skipped = 0;
   for (const key of pending) {
+    if (swapped()) return { attached, skipped, interrupted: true };
     let outcome = 'skipped';
     try {
       const url = importedRotationUrl(links[key]);
@@ -950,6 +957,7 @@ async function adoptImportedRotationLinks() {
     done[key] = outcome;
     if (outcome === 'attached') attached += 1; else skipped += 1;
   }
+  if (swapped()) return { attached, skipped, interrupted: true };
   if (attached + skipped > 0) await writeSetting(ROTATION_LINKS_ADOPTED_SETTING, { version: 1, done });
   rotationLinksAdoptedThisRun = true;
   if (attached) await logAudit('proxy.rotation-links-adopted', { detail: { attached, skipped } });
@@ -2022,7 +2030,7 @@ const PROXY_VENDORS = Object.freeze({
   // smartproxy is Decodo's old name; the key stays because stored rows and settings use it.
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Decodo',
   proxy302: 'Proxy302', mangoproxy: 'MangoProxy',
-  ipburger: 'IP Burger', shopsocks5: 'ShopSocks5',
+  ipburger: 'IP Burger',
   apify: 'Apify', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
   froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', packetstream: 'PacketStream',
@@ -2047,6 +2055,7 @@ const PROXY_VENDORS = Object.freeze({
   mountproxies: 'MountProxies',
   massive: 'Massive',
   iproxy: 'iProxy.online',
+  weproxy: 'WEPROXY',
   // No connector yet: its proxies are added with Batch Add's Provider tag, so the pool and the Proxy
   // providers page group and count them (syncVendorPool refuses a pull).
   arnproxy: 'ARNPROXY'
@@ -2112,7 +2121,7 @@ function httpRequestText(url, options = {}) {
 const {
   ipRoyalMaxCount, ipRoyalCountRefused, ipRoyalLifetimeFromMinutes, oxylabsBaseUser, oxylabsUsername, decodoBaseUser, decodoUsername,
   brightDataZoneUser, brightDataUsername, brightDataRouteIps, brightDataState, apifyUsername, anyIpPlace,
-  shopSocks5Request, PROXY_SELLER_PAGE_SIZE, proxySellerPageInfo,
+  PROXY_SELLER_PAGE_SIZE, proxySellerPageInfo,
   froxyPastedPool, LIVEPROXIES_SID_MAX
 } = require('./proxyVendorUtils');
 
@@ -2479,84 +2488,6 @@ async function fetchAnyIpPool({ username, password, country, state, city, sessio
     });
   }
   return rows;
-}
-
-// ---- ShopSocks5 ----
-// POST form-urlencoded (helper shopSocks5Request); needs both user_name and api_token (the token
-// alone fails). Rows come back under `response`. qty has no documented maximum and no paging, so
-// one request asks for the whole amount, bounded by the shared cap.
-const SHOPSOCKS5_MAX_QTY = MINTED_PULL_MAX;
-async function fetchShopSocks5Pool({ token, username, country, count, state, city, plan, proxyType, poolType }) {
-  const tok = String(token || '').trim();
-  if (!tok) throw new Error('ShopSocks5: your API token is required.');
-  const user = String(username || '').trim();
-  if (!user) throw new Error('ShopSocks5: your ShopSocks5 account username or email is required - the API authenticates with user_name + api_token together.');
-  const cc = normCountryCode(country);
-
-  // API docs: https://shopsocks5.com/document. Returns { success, response: [...], message }.
-  // Only the Premium route takes proxy_type (the form shows Proxy type for Premium only); on the other
-  // routes each row keeps the type the API reports, and SOCKS5 when it reports none.
-  const premium = String(plan || '').trim().toLowerCase() === 'premium';
-  const ptype = premium ? (String(proxyType || 'proxy_sock_5').trim() || 'proxy_sock_5') : 'proxy_sock_5';
-  const isHttps = ptype === 'proxy_https';
-  const qty = clampPoolCount(count, 5, SHOPSOCKS5_MAX_QTY);
-  const { path: route, form } = shopSocks5Request({ user, token: tok, plan, qty, country: cc, state, city, sockType: poolType, proxyType: ptype });
-
-  let text;
-  try {
-    text = await httpRequestText(`https://shopsocks5.com${route}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: form.toString(),
-      timeoutMs: 30000
-    });
-  } catch (e) { throw new Error(`ShopSocks5 API error: ${e.message}`); }
-
-  let parsed;
-  try { parsed = JSON.parse(text); } catch (e) { throw new Error('ShopSocks5: the API did not return JSON - verify the username + token.'); }
-  if (!parsed || parsed.success === false) {
-    const msg = (parsed && parsed.message) || 'request failed';
-    if (/too fast|slow/i.test(msg)) throw new Error('ShopSocks5: rate limited ("Too fast, please slowly") - wait ~10 seconds and pull again.');
-    throw new Error(`ShopSocks5: ${msg} - check your account username + API token, and that the chosen country/type has stock.`);
-  }
-
-  // Items look like { sock_ip: "host:port", user_name, password, proxy_type: "SOCKS5 Proxy",
-  // country_code, country, city, states }. Plain {ip/host, port}, packed combos and bare strings
-  // are tolerated too.
-  const list = Array.isArray(parsed.response) ? parsed.response : (Array.isArray(parsed) ? parsed : []);
-  const rows = [];
-  for (const it of list) {
-    let host, port, u, pw, rowCc, scheme, place;
-    if (typeof it === 'string') {
-      const parts = it.split(':'); host = parts[0]; port = parts[1]; u = parts[2]; pw = parts[3];
-    } else if (it && typeof it === 'object') {
-      host = it.ip || it.host || it.server;
-      port = it.port;
-      u = it.user || it.username || it.login || it.user_name;
-      pw = it.pass || it.password || it.passwd;
-      rowCc = it.country_code || it.geo || it.country; // prefer 2-letter code over full name
-      scheme = String(it.proxy_type || '');
-      place = [it.city, it.states].filter(Boolean).join(', ');
-      // ShopSocks5 packs host:port into `sock_ip` ("1.2.3.4:7998").
-      const combo = [it.sock_ip, it.socks, it.socks5, it.proxy, it.ip_port, it.proxy_address]
-        .find((v) => typeof v === 'string' && v.includes(':'));
-      if ((!host || !port) && combo) { const p = combo.split(':'); host = host || p[0]; port = port || p[1]; u = u || p[2]; pw = pw || p[3]; }
-    }
-    const pnum = Number.parseInt(String(port), 10);
-    if (!host || !Number.isFinite(pnum)) continue;
-    const rc = normCountryCode(rowCc) || cc || null;
-    // Honor the scheme the API reports; otherwise fall back to the requested type.
-    let rtype = isHttps ? 'HTTP' : 'SOCKS5';
-    if (/socks/i.test(scheme || '')) rtype = 'SOCKS5'; else if (/https?/i.test(scheme || '')) rtype = 'HTTP';
-    const labelGeo = [rc, place].filter(Boolean).join(' ') || String(host).trim();
-    rows.push({
-      type: rtype, host: String(host).trim(), port: pnum,
-      username: u ? String(u).trim() : null, password: pw != null ? String(pw) : null,
-      label: `ShopSocks5 • ${labelGeo}`, country: rc
-    });
-  }
-  if (!rows.length) throw new Error('ShopSocks5: the API returned no usable proxies (try a different country/state, or check your stock).');
-  return rows.slice(0, qty);
 }
 
 // ---- DataImpulse ----
@@ -3258,6 +3189,16 @@ async function marsCall(token, method, pathAndQuery, what, body, raw) {
     if (/HTTP 401\b/.test(rawMsg)) throw new Error('MarsProxies: the API token was rejected. Copy it again from Dashboard, Settings, API.');
     if (/HTTP 403\b/.test(rawMsg)) throw new Error('MarsProxies: the residential API is not enabled on this account yet. It unlocks after at least 1 GB of residential traffic is purchased.');
     if (/HTTP 429\b/.test(rawMsg)) throw new Error('MarsProxies: the API rate limit was reached. Wait a minute and try again.');
+    // generate-proxy-list's documented refusals, coded so the form says them in the window's language
+    // (proxyProviders.errors.marsSubuserNotFound / marsMismatch): 404 "subuser credentials not found",
+    // 409 when the location segment, username or password do not match.
+    const status = (e && e.status) || Number((/HTTP (\d{3})\b/.exec(rawMsg) || [])[1]) || 0;
+    if (what === 'proxy list' && status === 404) {
+      throw Object.assign(new Error('MarsProxies found no sub-user with that username and password. Check them under Sub-users in the dashboard, and enter only the part of the password before the first underscore.'), { code: 'MARSPROXIES_SUBUSER_NOT_FOUND' });
+    }
+    if (what === 'proxy list' && status === 409) {
+      throw Object.assign(new Error('MarsProxies refused the request: the location, or the sub-user username and password, do not match. Check the State and City spelling or leave them blank, and enter only the part of the password before the first underscore.'), { code: 'MARSPROXIES_MISMATCH' });
+    }
     const m = /"message"\s*:\s*"([^"]+)"/.exec(rawMsg);
     throw new Error(`MarsProxies ${what}: ${m ? m[1] : rawMsg}`);
   }
@@ -4077,6 +4018,34 @@ async function fetchDatabayPool({ username, password, poolType, country, state, 
   }).map((r) => ({ ...r, country: cc || null }));
   if (!rows.length) throw new Error('Databay: could not build any proxies.');
   return rows;
+}
+
+// ---- WEPROXY (Premium Rotating Residential, gateway-minted; v1) ----
+// No customer API (WEPROXY offers a reseller API only): the login is built on gw.weproxy.com.tr:8989, HTTP
+// and SOCKS5 on the same port, from the panel's proxy user, with the package, country and city in the
+// username (weProxyUsername). WEPROXY has not published its state, session or lifetime tokens, so v1 adds
+// ONE rotating proxy per pull and refuses State, Sticky session and Keep same IP; v2 mints sticky sessions
+// with mintGatewayRows once WEPROXY gives the grammar (SPEC-weproxy.md).
+const WEPROXY_GATEWAY = Object.freeze({ host: 'gw.weproxy.com.tr', port: 8989 });
+
+async function fetchWeProxyPool({ username, password, country, state, city, session, life, proxyType, host, port }) {
+  const user = weProxyBaseUser(username);
+  const pw = password != null ? String(password) : '';
+  if (!user || /[\s:@]/.test(user)) throw new Error('WEPROXY: enter the proxy username from the WEPROXY panel, not your login email.');
+  if (!pw) throw new Error('WEPROXY: enter the proxy password from the panel.');
+  const minutes = Number.parseInt(String(life == null ? '' : life), 10);
+  if (String(state || '').trim() || String(session || '').trim() || (Number.isFinite(minutes) && minutes > 0)) {
+    throw new Error('WEPROXY has not published how to target a state or keep a sticky IP yet. Leave State, Sticky session and Keep same IP empty.');
+  }
+  const gw = gatewayOverride(host, port, WEPROXY_GATEWAY, 'WEPROXY');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const cc = normCountryCode(country);
+  return [{
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port,
+    username: weProxyUsername(user, { country: cc, city }), password: pw,
+    label: `WEPROXY • Premium Residential • ${cc || 'Any country'} • rotating`,
+    country: cc || null, dedupeOnPassword: true
+  }];
 }
 
 // ---- IPFoxy (rotating residential, gateway-minted) ----
@@ -5540,7 +5509,6 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   oxylabs: fetchOxylabsPool,
   smartproxy: fetchSmartproxyPool,
   apify: fetchApifyPool,
-  shopsocks5: fetchShopSocks5Pool,
   anyip: fetchAnyIpPool,
   dataimpulse: fetchDataImpulsePool,
   proxyseller: fetchProxySellerPool,
@@ -5581,7 +5549,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   proxyempire: fetchProxyEmpirePool,
   mountproxies: fetchMountProxiesPool,
   massive: fetchMassivePool,
-  iproxy: fetchIproxyPool
+  iproxy: fetchIproxyPool,
+  weproxy: fetchWeProxyPool
 });
 
 async function syncVendorPool(payload) {
@@ -5616,7 +5585,7 @@ async function syncVendorPool(payload) {
       apiUrl: optionalString(input.apiUrl),
       host: optionalString(input.host),
       port: input.port,
-      // ShopSocks5 plan endpoint (premium|list|daily) + proxy type (proxy_sock_5|proxy_https).
+      // The product (DataImpulse, Proxy-Seller) and the Protocol select (http, https or socks5).
       plan: optionalString(input.plan),
       proxyType: optionalString(input.proxyType),
       // anyip.io: pool selector (sent as type_<poolType>) and team id for REST auto-provisioning.
@@ -10632,9 +10601,16 @@ function hasProxyProviderKey(entry) {
   return Boolean(entry && typeof entry === 'object' && PROXY_CRED_KEY_FIELDS.some((f) => entry[f] != null && String(entry[f]) !== ''));
 }
 
+// Only providers the app still has (PROXY_VENDORS) count: the saved key of a connector that was removed
+// is never read or used, and the next save of any provider's credentials drops its entry.
 async function readProxyProviderCredMap() {
   const raw = await readSetting('proxyProviderCreds', {});
-  return raw && typeof raw === 'object' ? raw : {};
+  const map = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return map;
+  for (const [key, entry] of Object.entries(raw)) {
+    if (Object.prototype.hasOwnProperty.call(PROXY_VENDORS, key)) map[key] = entry;
+  }
+  return map;
 }
 
 async function getProxyProviderCreds(payload) {
@@ -10657,6 +10633,7 @@ async function saveProxyProviderCreds(payload) {
   await requireOwnerOrSuper('change proxy provider credentials');
   const input = requireObject(payload);
   const provider = requiredString(input.provider, 'provider').toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(PROXY_VENDORS, provider)) throw new Error('Unknown proxy provider.');
   const map = await readProxyProviderCredMap();
   const entry = { ...(map[provider] && typeof map[provider] === 'object' ? map[provider] : {}) };
   for (const f of PROXY_CRED_PLAIN_FIELDS) {
@@ -15350,23 +15327,26 @@ async function deliverPaymentReceipt(email, name, reference, months) {
 
 // ---- IP provider integrations (Super Admin only) ----
 // Master credentials for resold proxy vendors; the renderer only ever gets a masked key preview.
+// name is the row's unique key in the IpProvider table, so it never changes; label is the name the
+// window shows. Smartproxy is now Decodo: its row keeps the name Smartproxy, shows the connector's name
+// "Decodo (Smartproxy)", and its old default dashboard link (replaces) moves to Decodo's.
 const DEFAULT_IP_PROVIDERS = [
   { name: 'Bright Data', referralLink: 'https://brightdata.com/cp/api_example' },
   { name: 'Oxylabs', referralLink: 'https://dashboard.oxylabs.io/' },
-  { name: 'Smartproxy', referralLink: 'https://dashboard.smartproxy.com/' },
+  { name: 'Smartproxy', label: 'Decodo (Smartproxy)', referralLink: 'https://dashboard.decodo.com/', replaces: ['https://dashboard.smartproxy.com/'] },
   { name: 'IPRoyal', referralLink: 'https://dashboard.iproyal.com/' },
   { name: 'Webshare', referralLink: 'https://dashboard.webshare.io/userapi/keys' },
   { name: 'Asocks', referralLink: 'https://asocks.com/' }
 ];
 
 // Seed the 6 default providers (idempotent). Existing rows keep their creds/
-// status; only a missing referralLink is backfilled.
+// status; only a missing referralLink, or a default one that was replaced, is updated.
 async function ensureIpProviders(db) {
   for (const def of DEFAULT_IP_PROVIDERS) {
     const existing = await db.ipProvider.findUnique({ where: { name: def.name } });
     if (!existing) {
       await db.ipProvider.create({ data: { name: def.name, referralLink: def.referralLink, status: 'DISABLED' } });
-    } else if (!existing.referralLink && def.referralLink) {
+    } else if (def.referralLink && existing.referralLink !== def.referralLink && (!existing.referralLink || (def.replaces || []).includes(existing.referralLink))) {
       await db.ipProvider.update({ where: { id: existing.id }, data: { referralLink: def.referralLink } }).catch(() => {});
     }
   }
@@ -15380,10 +15360,17 @@ function maskSecret(value) {
   return `${s.slice(0, 3)}••••••••${s.slice(-2)}`;
 }
 
+// The name a provider row shows: its label (Decodo (Smartproxy)), else its stored name.
+function ipProviderLabel(name) {
+  const def = DEFAULT_IP_PROVIDERS.find((d) => d.name === name);
+  return (def && def.label) || name;
+}
+
 function serializeIpProvider(p) {
   return {
     id: p.id,
     name: p.name,
+    label: ipProviderLabel(p.name),
     status: p.status === 'ENABLED' ? 'ENABLED' : 'DISABLED',
     referralLink: p.referralLink || null,
     hasApiKey: Boolean(p.apiKey),
@@ -16612,6 +16599,7 @@ function buildAiToolDeps() {
     getVendorScoreboard,
     rotateProxyIp: (payload) => rotateProxyIp({ id: payload.id }), // the stored rotation link only
     rotateProfileProxyIp: (payload) => rotateProfileProxyIp({ id: payload.id }), // by profile, "use only" shares included
+    proxyCanRotate, // pure: a stored link or a vendor API that rotates the row (canRotate in the AI views)
     bulkAssignProxies,
     harvestFreeProxies: (payload) => harvestFreeProxiesHandler(payload, null),
     cancelFreeProxyHarvest,

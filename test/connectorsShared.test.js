@@ -36,7 +36,7 @@ const fnSrc = (name) => {
 // The gateway vendors, with the shared helpers, against a stubbed transport.
 const CORE = between('function normCountryCode(', '// ---- Apify Residential');
 const SECTIONS = [
-  between('// anyip.io: one gateway', '// ---- ShopSocks5'),
+  between('// anyip.io: one gateway', '// ---- DataImpulse ----'),
   between('// ---- NodeMaven (gateway', '// Froxy (SOAX reseller'),
   between('// ---- CatProxies ----', '// Fixed-IP products are imported as a list'),
   between('// Optional host/port override', '// Proxies.sx: the X-API-Key'),
@@ -286,6 +286,7 @@ test('a username the vendor allows blank is not required: MangoProxy sub-account
 function credStore(initial = {}) {
   let map = JSON.parse(JSON.stringify(initial));
   const src = [
+    /const PROXY_VENDORS = Object\.freeze\(\{[\s\S]*?\n\}\);/.exec(IPC)[0],
     /const PROXY_CRED_SECRET_FIELDS = [^\n]*/.exec(IPC)[0],
     /const PROXY_CRED_PLAIN_FIELDS = [^\n]*/.exec(IPC)[0],
     /const PROXY_CRED_KEY_FIELDS = [^\n]*/.exec(IPC)[0],
@@ -324,10 +325,10 @@ test('an empty or host-only entry saved by an older build counts as nothing save
 test('the AnyIP Team ID and the Protocol / Proxy type select survive a restart', async () => {
   const s = credStore();
   await s.saveProxyProviderCreds({ provider: 'anyip', token: 'key', teamId: 'team-7', proxyType: 'socks5' });
-  await s.saveProxyProviderCreds({ provider: 'shopsocks5', username: 'me', token: 't', proxyType: 'proxy_https' });
+  await s.saveProxyProviderCreds({ provider: 'froxy', username: 'me', password: 'p', proxyType: 'socks5' });
   const anyip = await s.getProxyProviderCreds({ provider: 'anyip' });
   assert.deepEqual([anyip.token, anyip.teamId, anyip.proxyType], ['key', 'team-7', 'socks5']);
-  assert.equal((await s.getProxyProviderCreds({ provider: 'shopsocks5' })).proxyType, 'proxy_https');
+  assert.equal((await s.getProxyProviderCreds({ provider: 'froxy' })).proxyType, 'socks5');
   assert.equal(s.map().anyip.token, 'sealed:key', 'the key stays sealed at rest');
   // The form sends and restores both.
   assert.equal((UI.match(/teamId: form\.teamId, proxyType: form\.proxyType/g) || []).length, 2, 'persistCreds and handleSaveCreds');
@@ -371,8 +372,8 @@ test('canRotate and the link timeout follow the stored row', () => {
 
 test('a rotator reads the account key from the saved credentials, main-only', async () => {
   const s = credStore();
-  await s.saveProxyProviderCreds({ provider: 'somevendor', token: 'acct-key', username: 'u1' });
-  assert.deepEqual(await s.readSavedProviderCreds('SomeVendor'), { username: 'u1', token: 'acct-key' });
+  await s.saveProxyProviderCreds({ provider: 'proxyudp', token: 'acct-key', username: 'u1' });
+  assert.deepEqual(await s.readSavedProviderCreds('ProxyUDP'), { username: 'u1', token: 'acct-key' });
   assert.equal(await s.readSavedProviderCreds('nothing'), null);
   assert.doesNotMatch(fnSrc('readSavedProviderCreds'), /requireOwnerOrSuper/, 'main calls it for a member who may rotate');
   assert.doesNotMatch(IPC, /readSavedProviderCreds[^\n]*rotationUrl/, 'a key never goes into a rotation link');
@@ -387,11 +388,22 @@ test('Dashboard buttons carry the owner\'s live affiliate links, and no made-up 
     proxy302: 'https://proxy302.com/register?ref=0abaab08fed00be49a',
     ipburger: 'https://secure.ipburger.com/aff.php?aff=3283',
     froxy: 'https://froxy.com/?fpr=qwsg97',
-    proxidize: 'https://proxidize.com/get/23265/'
+    proxidize: 'https://proxidize.com/get/23265/',
+    // The owner's decision of 10 Nov: these ten open his affiliate links too (verbatim).
+    novada: 'https://www.novada.com/?referral_code=tdNnxS',
+    coronium: 'https://dashboard.coronium.io/en/sign-up#d181ec35501bba9c002f49c388bef30e',
+    catproxies: 'https://catproxies.com/?ref=hrkymfu',
+    packetstream: 'https://packetstream.io/?psr=kkmtnsnqag',
+    proxmint: 'https://proxmint.com/r/K4EHJHMP',
+    rapidproxy: 'https://www.rapidproxy.io/?code=ZCHGKEK10',
+    proxy6: 'https://proxy6.net/?r=1061960',
+    twoextract: 'https://2extract.com/app/signup?ref=AbaSqU',
+    gsocks: 'https://gsocks.net/ref/dzsdxicb',
+    proxysolutions: 'https://proxy-solutions.net/?rc=t4TYHBATIR'
   };
   for (const [key, url] of Object.entries(live)) assert.ok(providerLine(key).includes(`referral: '${url}'`), key);
   const plain = { ipfoxy: 'https://app.ipfoxy.com/', brightdata: 'https://brightdata.com/', oxylabs: 'https://oxylabs.io/', smartproxy: 'https://dashboard.decodo.com/',
-    mangoproxy: 'https://my.mangoproxy.com/', shopsocks5: 'https://shopsocks5.com/', apify: 'https://apify.com/', anyip: 'https://anyip.io/account',
+    mangoproxy: 'https://my.mangoproxy.com/', apify: 'https://apify.com/', anyip: 'https://anyip.io/account',
     marsproxies: 'https://dashboard.marsproxies.com/', nodemaven: 'https://nodemaven.com/' };
   for (const [key, url] of Object.entries(plain)) assert.ok(providerLine(key).includes(`referral: '${url}'`), key);
   assert.doesNotMatch(UI, /TODO: replace the \?ref=softglaze/);

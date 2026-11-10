@@ -174,7 +174,10 @@ test('51 Simply Proxies: How many is the gateway field, not "All / leave blank f
   // One How many block for every connector of the shared form; the list wording follows geoSync.list only.
   const form = UI.slice(UI.indexOf('Geo-targeted pull: one consistent grid'), UI.indexOf('Rotating engine configuration form'));
   assert.equal((form.match(/<label className=\{labelCls\}>\{t\('proxyProviders\.geo\.howMany'\)\}<\/label>/g) || []).length, 1);
-  assert.match(UI, /placeholder=\{provider\.geoSync\.list \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : '5'\} title=\{provider\.geoSync\.list \? t\('proxyProviders\.geo\.howManyListTitle'\)/);
+  // Round 9: the placeholder and title say what a blank How many adds (countBlankFor): one here.
+  assert.match(UI, /placeholder=\{countBlank === 'all' \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : String\(countBlank\)\} title=\{countBlank === 'all' \? t\('proxyProviders\.geo\.howManyListTitle'\)/);
+  const { countBlankFor } = await pull();
+  assert.equal(countBlankFor(geoSyncOf('simplyproxies')), 1);
   // Blank really is one rotating proxy, which the Keep same IP select already says.
   const rows = await load().fetchSimplyProxiesPool({ username: 'u1', password: 'p', count: '' });
   assert.equal(rows.length, 1);

@@ -1,7 +1,8 @@
 'use strict';
 // Per-vendor connector fixes, 1.0.27 backlog batches 1 and 2 plus items 11 to 13: NOVADA, DataImpulse,
 // Apify, Proxidize, Proxy-Seller, Froxy, IPRoyal, Live Proxies, AnyIP, MarsProxies, NodeMaven, Bright
-// Data, Oxylabs, Decodo, ShopSocks5, Proxy302, IPFoxy, IP Burger and MangoProxy.
+// Data, Oxylabs, Decodo, Proxy302, IPFoxy, IP Burger and MangoProxy. (ShopSocks5 was removed
+// from the app on 10 Nov 2026; see removed-vendors.test.js.)
 //
 // Vendor answers are fixtures built from the documented shapes in the vendor notes; no test reaches a
 // provider and no real credential is used. ipcHandlers.js pulls in electron, so each test lifts the
@@ -355,7 +356,7 @@ function anyip(settings) {
     readSetting: async (key, fallback) => (Object.prototype.hasOwnProperty.call(settings, key) ? JSON.parse(JSON.stringify(settings[key])) : fallback),
     writeSetting: async (key, value) => { settings[key] = JSON.parse(JSON.stringify(value)); }
   };
-  const fns = lift(`${CORE}\n${between('// anyip.io: one gateway', '// ---- ShopSocks5')}`, scope, ['fetchAnyIpPool']);
+  const fns = lift(`${CORE}\n${between('// anyip.io: one gateway', '// ---- DataImpulse ----')}`, scope, ['fetchAnyIpPool']);
   return { ...fns, calls: t.calls, made: () => made };
 }
 
@@ -522,27 +523,6 @@ test('Bright Data opens on Sticky sessions, which need no API token', () => {
   assert.match(UI, /return modes\.includes\(poolType\) \? poolType : 'sticky';/);
 });
 
-// ---- 60 ShopSocks5 ----------------------------------------------------------------------------------------------
-
-test('ShopSocks5: no made-up gateway, and Proxy type only where the API reads it', async () => {
-  assert.match(providerLine('shopsocks5'), /gateway: null/);
-  assert.doesNotMatch(UI + IPC, /gate\.shopsocks5\.com/);
-  assert.match(UI, /\{form\.plan === 'premium' && \(/);
-  const list = [{ sock_ip: '198.51.100.7:7000', user_name: 'u', password: 'p', country_code: 'US' }];
-  const run = async (plan) => {
-    const t = transport({ 'https://shopsocks5.com/socks/': JSON.stringify({ success: true, response: list }) });
-    const { fetchShopSocks5Pool } = lift(between('// ---- Session gateways: Bright Data', '// ---- DataImpulse ----'), {
-      ...U, require, VENDOR_GATEWAYS: {}, testProxyConnectivity: async () => ({ success: true }), scrubProxySecrets: (m) => m, httpRequestText: t.httpRequestText
-    }, ['fetchShopSocks5Pool']);
-    const rows = await fetchShopSocks5Pool({ token: 't', username: 'me', plan, proxyType: 'proxy_https', count: '1' });
-    return { rows, form: new URLSearchParams(t.calls[0].options.body) };
-  };
-  const premium = await run('premium');
-  assert.deepEqual([premium.form.get('proxy_type'), premium.rows[0].type], ['proxy_https', 'HTTP']);
-  const all = await run('all');
-  assert.deepEqual([all.form.has('proxy_type'), all.rows[0].type], [false, 'SOCKS5'], 'a hidden Proxy type does not change other plans');
-});
-
 // ---- 61 Proxy302 -------------------------------------------------------------------------------------------------
 
 test('Proxy302: Premium can rotate, State and City are Premium only, and the times are Standard\'s four', async () => {
@@ -625,7 +605,7 @@ test('MangoProxy: State, City and ASN only for the pools that take them', async 
 // ---- Every string this lane touched -------------------------------------------------------------------------------
 
 test('every hint and string this lane changed exists in English and Spanish, without dashes', () => {
-  const keys = ['apify', 'shopsocks5', 'anyip', 'proxyseller', 'novada', 'froxy', 'nodemaven', 'marsproxies', 'proxidize', 'liveproxies', 'ipfoxy', 'mangoproxy', 'ipburger', 'proxy302'];
+  const keys = ['apify', 'anyip', 'proxyseller', 'novada', 'froxy', 'nodemaven', 'marsproxies', 'proxidize', 'liveproxies', 'ipfoxy', 'mangoproxy', 'ipburger', 'proxy302'];
   for (const lang of ['en', 'es']) {
     for (const k of keys) {
       assert.equal(typeof hint(lang, k), 'string', `${lang} ${k}`);

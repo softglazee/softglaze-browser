@@ -537,29 +537,6 @@ function anyIpPlace(value) {
   return placeToken(value, '');
 }
 
-// ShopSocks5 (shopsocks5.com/document): POST /socks/all_plan is the documented pull and takes
-// sock_type from GET /socks/type_sock. premium, list and daily are older routes the server
-// still answers, kept for accounts set up on them.
-const SHOPSOCKS5_PLANS = Object.freeze({ all: 'all_plan', premium: 'premium', list: 'list', daily: 'daily' });
-const SHOPSOCKS5_SOCK_TYPES = Object.freeze(['residential', 'business', 'cellular', 'hosting']);
-function shopSocks5Request({ user, token, plan, qty, country, state, city, sockType, proxyType } = {}) {
-  const key = String(plan || 'all').toLowerCase();
-  const route = SHOPSOCKS5_PLANS[key] || SHOPSOCKS5_PLANS.all;
-  const form = new URLSearchParams();
-  form.set('user_name', String(user || ''));
-  form.set('api_token', String(token || ''));
-  form.set('qty', String(qty));
-  const cc = isoCountry(country);
-  if (cc) form.set('country', cc);
-  if (String(state || '').trim()) form.set('state', String(state).trim());
-  if (String(city || '').trim()) form.set('city', String(city).trim());
-  const type = String(sockType || '').toLowerCase();
-  if (route === 'premium') form.set('proxy_type', String(proxyType || 'proxy_sock_5'));
-  else if (route === 'all_plan') { if (SHOPSOCKS5_SOCK_TYPES.includes(type)) form.set('sock_type', type); }
-  else form.set('sock_type', 'residential');
-  return { path: `/socks/${route}`, form };
-}
-
 // Splits a bare "host:port" (IPv6-bracket aware), as the Proxidize per-proxy API returns it.
 function parseHostPort(raw) {
   const s = String(raw || '').trim();
@@ -736,7 +713,8 @@ function packetStreamPassword(base, { country, session } = {}) {
 }
 
 // Airproxy dedicated mobile proxies, all in Italy. GET /api/proxy/list/ returns { proxies: [{ id, ip,
-// port, username, password, isp, in_use_till, ... }], count, success }. The list names one port; our
+// port, username, password, isp, in_use_till, ... }], count, success }. in_use_till is the date the proxy is
+// paid until; the label ends "until YYYY-MM-DD", as the other list connectors show their expiry. The list names one port; our
 // dashboard read of 29 Sep 2026 showed HTTP and SOCKS5 on it, which Airproxy's public pages do not state,
 // so SOCKS5 is the user's choice and HTTP stays the default.
 const AIRPROXY_COUNTRY = 'IT';
@@ -758,10 +736,11 @@ function airproxyRows(body, { socks = false } = {}) {
     seen.add(dupe);
     const isp = String(p.isp || '').trim();
     const id = p.id != null ? String(p.id) : '';
+    const until = isoDay(p.in_use_till);
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
-      label: `Airproxy • Mobile • IT${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}`,
+      label: `Airproxy • Mobile • IT${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}${until ? ` • until ${until}` : ''}`,
       country: AIRPROXY_COUNTRY
     });
   }
@@ -2893,6 +2872,28 @@ function massiveCity(v) {
   return encodeURIComponent(String(v || '').trim()).replace(/-/g, '%2D');
 }
 
+// WEPROXY (weproxy.io): no customer API. The one published username template is
+// USER-package-residential-country-de-city-berlin (Premium, rotating residential, rotating mobile and
+// antidetect pages), on gw.weproxy.com.tr:8989; the password carries nothing. Anything pasted from
+// "-package-" on is dropped so the targeting comes from the form. The country is lower case and the city
+// lower case without spaces (inferred from the sample: confirm with WEPROXY); characters that would split
+// the username or the proxy URL (- : @ /) are dropped from the city too. WEPROXY has not published its
+// state, session or lifetime tokens, so v1 builds none (rotating only). Built from WEPROXY's public
+// pages 2026-11-10; not live-tested (the trial quota was used up).
+function weProxyBaseUser(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  const at = s.toLowerCase().indexOf('-package-');
+  return at >= 0 ? s.slice(0, at) : s;
+}
+function weProxyUsername(base, { country, city } = {}) {
+  let user = `${weProxyBaseUser(base)}-package-residential`;
+  const cc = String(country || '').trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(cc)) user += `-country-${cc}`;
+  const town = String(city || '').trim().toLowerCase().replace(/[\s\-:@/]+/g, '');
+  if (town) user += `-city-${town}`;
+  return user;
+}
+
 function massiveUsername(base, { type, country, subdivision, city, zip, asn, session, ttlMin } = {}) {
   const parts = [base];
   const cc = String(country || '').trim().toUpperCase();
@@ -3043,7 +3044,6 @@ module.exports = {
   brightDataZoneUser, brightDataUsername, brightDataRouteIps, brightDataState, US_STATE_CODES,
   apifyUsername,
   anyIpPlace,
-  SHOPSOCKS5_PLANS, SHOPSOCKS5_SOCK_TYPES, shopSocks5Request,
   GEOJS_URL,
   normalizeGeoJs,
   PROXY_SELLER_ORDER_TYPES,
@@ -3103,5 +3103,6 @@ module.exports = {
   PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
   mountProxiesRows, mountProxiesRotateTarget,
   massiveBaseUser, massiveUsername,
+  weProxyBaseUser, weProxyUsername,
   iproxyChangeIpLinks, iproxyConnections, iproxyRows
 };

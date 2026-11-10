@@ -296,7 +296,7 @@ test('finalizeAccount: fixed shape, typed fields, past expiry reads as expired',
 test('registry: providers without a confirmed account API fall back with their dashboard link', async () => {
   let calls = 0;
   const get = async () => { calls += 1; return '{}'; };
-  for (const key of ['dataimpulse', 'airproxy', 'proxysolutions', 'proxy302', 'shopsocks5', 'ipfoxy', 'nodemaven', 'oxylabs', 'no-such-vendor']) {
+  for (const key of ['dataimpulse', 'airproxy', 'proxysolutions', 'proxy302', 'ipfoxy', 'nodemaven', 'oxylabs', 'no-such-vendor']) {
     const r = await pa.checkProviderAccount(key, { token: 'abcdefgh', username: 'u', password: 'p' }, get);
     assert.equal(r.supported, false, key);
     assert.equal(r.account, null, key);

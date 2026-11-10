@@ -31,17 +31,14 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
+import { providerTagLabel, pulledProviderNames } from '@/lib/providerTags.mjs';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
 
-// Friendly labels for the "auto group by provider" chips.
-const PROVIDER_LABELS = {
-  apify: 'Apify', shopsocks5: 'ShopSocks5',
-  smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom'
-};
-// Every other provider tag shows its Proxy providers name (ARNPROXY, Node4, ...).
-const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.key, p.name]));
-const providerLabel = (key) => PROVIDER_LABELS[key] || PROVIDER_NAMES[key] || key;
+// The "auto group by provider" chips and filter name a tag as Proxy providers does (Decodo
+// (Smartproxy), ARNPROXY, Node4, ...), with a shorter Apify and the manual "custom" tag. A tag no
+// connector has any more (a removed provider) shows the vendor name its proxies were pulled with.
+const PROVIDER_NAMES = { ...Object.fromEntries(PROVIDERS.map((p) => [p.key, p.name])), apify: 'Apify', custom: 'Custom' };
 // Batch Add's optional Provider tag: ARNPROXY first (it has no connector, so a pasted list is how its
 // proxies arrive), then every provider by name.
 const BATCH_PROVIDERS = [...PROVIDERS].sort((a, b) => (a.key === 'arnproxy' ? -1 : b.key === 'arnproxy' ? 1 : a.name.localeCompare(b.name)));
@@ -96,10 +93,11 @@ function MiniStat({ icon: Icon, label, value, sub, accent = 'var(--primary)', on
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-medium text-muted-foreground">{label}</p>
+          <p className="break-words text-[11px] font-medium leading-snug text-muted-foreground">{label}</p>
           <p className="mt-1 font-mono text-[22px] font-semibold leading-none tabular-nums text-foreground">{value}</p>
         </div>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
+        {/* Below sm the decorative icon gives its room to the label, which wraps whole words then. */}
+        <span className="hidden sm:grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>
           <Icon className="h-4 w-4" />
         </span>
       </div>
@@ -231,6 +229,8 @@ export default function ProxyPoolPage() {
     for (const p of proxies) { if (p.provider) m[p.provider] = (m[p.provider] || 0) + 1; }
     return m;
   }, [proxies]);
+  const pulledNames = useMemo(() => pulledProviderNames(proxies), [proxies]);
+  const providerLabel = (key) => providerTagLabel(key, PROVIDER_NAMES, pulledNames);
 
   // Client-side filter: search, active category and the stat-card status filter.
   const filteredProxies = useMemo(() => {
@@ -759,7 +759,7 @@ export default function ProxyPoolPage() {
   const chipCls = (key) => `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(key) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`;
 
   // Mirror the backend's name enrichment so a checked proxy shows its geo immediately
-  // (e.g. "ShopSocks5 • US Kirkland, Washington 98033") without a full reload.
+  // (e.g. "NOVADA • US Kirkland, Washington 98033") without a full reload.
   function applyGeoName(id, result) {
     if (!result || !result.success) return;
     const cc = String(result.country || '').toUpperCase();
@@ -919,7 +919,8 @@ export default function ProxyPoolPage() {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit">
+      {/* The tabs wrap inside the bar in a narrow window (375 px), so the page never scrolls sideways. */}
+      <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-elevated/60 border border-border w-fit max-w-full">
         {[
           { key: 'custom', label: t('tabs.custom'), icon: Server },
           { key: 'history', label: t('tabs.history', 'Check history'), icon: History },
@@ -929,7 +930,7 @@ export default function ProxyPoolPage() {
             key={key}
             type="button"
             onClick={() => setView(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${view === key ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Icon className="w-4 h-4" /> {label}
           </button>
@@ -961,7 +962,7 @@ export default function ProxyPoolPage() {
                 { value: failedCount, color: 'var(--destructive)' },
                 { value: uncheckedCount, color: mutedTrack }
               ]} />
-              <span className="block truncate">{t('stats.splitSub', { verified: verifiedCount, unchecked: uncheckedCount })}</span>
+              <span className="block break-words">{t('stats.splitSub', { verified: verifiedCount, unchecked: uncheckedCount })}</span>
             </div>
           )}
         />
@@ -979,7 +980,7 @@ export default function ProxyPoolPage() {
                 { value: verifiedCount, color: 'var(--success)' },
                 { value: Math.max(0, proxies.length - verifiedCount), color: mutedTrack }
               ]} />
-              <span className="block truncate">{view === 'custom' && statusFilter === 'verified' ? t('stats.filtering') : t('stats.pctOfPool', { pct: verifiedPct })}</span>
+              <span className="block break-words">{view === 'custom' && statusFilter === 'verified' ? t('stats.filtering') : t('stats.pctOfPool', { pct: verifiedPct })}</span>
             </div>
           )}
         />
@@ -991,7 +992,7 @@ export default function ProxyPoolPage() {
           active={view === 'custom' && statusFilter === 'failed'}
           title={t('stats.failedTip')}
           onClick={() => { toggleStatusFilter('failed'); setView('custom'); }}
-          sub={<span className="block truncate">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
+          sub={<span className="block break-words">{view === 'custom' && statusFilter === 'failed' ? t('stats.filtering') : t('stats.uncheckedSub', { count: uncheckedCount })}</span>}
         />
         {/* Protocol mix is informational; there is no type filter */}
         <MiniStat
@@ -1007,7 +1008,7 @@ export default function ProxyPoolPage() {
                 { value: socksCount, color: 'var(--chart-4)' },
                 { value: otherTypeCount, color: mutedTrack }
               ]} />
-              <span className="block truncate">{t('stats.protocolsSub', { http: httpCount, socks: socksCount })}</span>
+              <span className="block break-words">{t('stats.protocolsSub', { http: httpCount, socks: socksCount })}</span>
             </div>
           )}
         />
@@ -1018,7 +1019,7 @@ export default function ProxyPoolPage() {
           accent="var(--chart-2)"
           title={t('stats.countriesTip')}
           onClick={() => setView('groups')}
-          sub={<span className="block truncate">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
+          sub={<span className="block break-words">{topCountry ? t('stats.topCountry', { country: topCountry.country, count: topCountry.count }) : t('stats.countriesEmpty')}</span>}
         />
         <MiniStat
           icon={Clock}
@@ -1027,7 +1028,7 @@ export default function ProxyPoolPage() {
           accent="var(--chart-3)"
           title={t('stats.lastCheckTip')}
           onClick={() => setView('groups')}
-          sub={<span className="block truncate">{scheduler.enabled ? t('stats.autoEvery', { n: scheduler.minutes }) : t('stats.autoOff')}</span>}
+          sub={<span className="block break-words">{scheduler.enabled ? t('stats.autoEvery', { n: scheduler.minutes }) : t('stats.autoOff')}</span>}
         />
       </div>
 

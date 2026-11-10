@@ -1,7 +1,7 @@
 {
   "header": {
     "eyebrow": "Automatización",
-    "title": "Creación de perfiles por lotes",
+    "title": "Creación masiva de perfiles",
     "description": "Despliega rápidamente varios entornos de navegador mediante una hoja de cálculo o generación secuencial.",
     "exportProfiles": "Exportar perfiles"
   },

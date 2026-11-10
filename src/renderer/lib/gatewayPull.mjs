@@ -52,10 +52,36 @@ export function lifeOptionsFor(geoSync = {}, poolType = '') {
 }
 
 // Whether State, City and the other place filters apply to the chosen pool: a connector whose pools
-// differ lists the ones that take them in geoSync.geoPools (MangoProxy, Proxy302).
+// differ lists the ones that take them in geoSync.geoPools (MangoProxy, Proxy302, CatProxies).
 export function geoForPool(geoSync = {}, poolType = '') {
   if (!geoSync.geo) return false;
   return !Array.isArray(geoSync.geoPools) || geoSync.geoPools.includes(poolType);
+}
+
+// Whether Sticky session and Keep same IP apply to the chosen pool, the same way: a connector whose other
+// pools have fixed IPs lists the ones that mint sessions in geoSync.stickyPools (CatProxies' ISP and
+// Datacenter plans import their IPs). Elsewhere the form hides both and the pull sends neither.
+export function stickyForPool(geoSync = {}, poolType = '') {
+  return !Array.isArray(geoSync.stickyPools) || geoSync.stickyPools.includes(poolType);
+}
+
+// Whether Country applies to the chosen pool: not for a connector without one (noCountry), nor for a pool
+// whose IPs carry their location (geoSync.noCountryPools: CatProxies' ISP plans).
+export function countryForPool(geoSync = {}, poolType = '') {
+  if (geoSync.noCountry) return false;
+  return !(Array.isArray(geoSync.noCountryPools) && geoSync.noCountryPools.includes(poolType));
+}
+
+// What How many left blank adds, as main does: 'all' where the pull imports the proxies the account owns
+// (a list connector, a pool in geoSync.listPools, or Proxidize's Per-Proxy list, picked by typing its
+// username: listByUsername); otherwise the number main uses for a blank count: 1 for the gateway
+// connectors (one proxy, rotating while Keep same IP and the session are blank too), or geoSync.countBlank
+// where the adapter adds more (Apify and Proxy302 add 5).
+export function countBlankFor(geoSync = {}, { poolType = '', username = '' } = {}) {
+  if (geoSync.list) return 'all';
+  if (Array.isArray(geoSync.listPools) && geoSync.listPools.includes(poolType)) return 'all';
+  if (geoSync.listByUsername && String(username == null ? '' : username).trim()) return 'all';
+  return Number(geoSync.countBlank) > 0 ? Number(geoSync.countBlank) : 1;
 }
 
 // The text of the blank Keep same IP option, as an i18n key and its values: "Different IP each time"

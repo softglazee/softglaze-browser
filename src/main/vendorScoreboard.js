@@ -88,9 +88,17 @@ function levelOf(score) {
   return 'poor';
 }
 
+// A connector names each pulled proxy "<Vendor> • <details>": the part before the first " • " names a
+// tag no connector has any more (a removed provider), so its row does not show the bare tag.
+function pulledVendorName(proxyName) {
+  const s = String(proxyName == null ? '' : proxyName);
+  const at = s.indexOf(' • ');
+  return at > 0 ? s.slice(0, at).trim() : '';
+}
+
 function emptyGroup(key) {
   return {
-    key, proxies: 0, checked: 0, working: 0, dnsbl: 0, listed: 0, typed: 0, datacenter: 0,
+    key, pulledName: '', proxies: 0, checked: 0, working: 0, dnsbl: 0, listed: 0, typed: 0, datacenter: 0,
     lastCheckedAt: -Infinity, checks: 0, passed: 0, latencies: [], blocks: 0, sites: new Map()
   };
 }
@@ -114,7 +122,7 @@ function finishGroup(g, vendors) {
   return {
     key: g.key,
     kind,
-    name: kind === 'vendor' ? (vendors[g.key] || g.key) : null,
+    name: kind === 'vendor' ? (vendors[g.key] || g.pulledName || g.key) : null,
     proxies: g.proxies,
     checked: g.checked,
     workingPct: pct(g.working, g.checked),
@@ -155,6 +163,7 @@ function buildScoreboard({ proxies = [], events = [], blocks = [], now = Date.no
     if (!g) { g = emptyGroup(key); groups.set(key, g); }
     groupOf.set(p.id, g);
     g.proxies += 1;
+    if (!g.pulledName) g.pulledName = pulledVendorName(p.name);
     if (p.lastStatus === 'ok' || p.lastStatus === 'fail') {
       g.checked += 1;
       if (p.lastStatus === 'ok') g.working += 1;

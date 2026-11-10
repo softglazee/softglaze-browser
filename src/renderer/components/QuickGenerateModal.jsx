@@ -6,6 +6,8 @@ import { countBuckets } from '@/lib/proxyBuckets.mjs';
 import { healthyFreeProxies } from '@/lib/freeProxies.mjs';
 import { quickGenNumber, quickGenPastedLines, quickGenPlannedCount, quickGenProgressView, quickGenUniqueCandidates } from '@/lib/quickGenProgress.mjs';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { providerTagLabel, pulledProviderNames } from '@/lib/providerTags.mjs';
+import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -13,7 +15,9 @@ const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
 const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
 const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
 
-const PROVIDER_LABELS = { apify: 'Apify', shopsocks5: 'ShopSocks5', smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom' };
+// A provider tag shows its Proxy providers name, as on the Proxy pool page (Decodo (Smartproxy), Node4, ...);
+// a tag no connector has any more shows the vendor name its proxies were pulled with.
+const PROVIDER_NAMES = { ...Object.fromEntries(PROVIDERS.map((p) => [p.key, p.name])), apify: 'Apify', custom: 'Custom' };
 
 // proxies is the paid pool; freeProxies (the Free proxies page) is a separate source that is never
 // the default and is used only when its tile is chosen.
@@ -84,6 +88,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
   const providerCounts = {};
   for (const p of proxies) { if (p.provider) providerCounts[p.provider] = (providerCounts[p.provider] || 0) + 1; }
   const providers = Object.entries(providerCounts);
+  const pulledNames = pulledProviderNames(proxies);
 
   // Same thresholds as the Proxy Pool page, so Fast/Slow and Clean/Blacklisted counts show up front.
   const q = countBuckets(proxies);
@@ -250,7 +255,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
                 )}
                 {providers.length > 0 && (
                   <optgroup label={t('quickGenerate.optgroupByProvider')}>
-                    {providers.map(([k, c]) => <option key={`p${k}`} value={`provider:${k}`}>{PROVIDER_LABELS[k] || k} ({c})</option>)}
+                    {providers.map(([k, c]) => <option key={`p${k}`} value={`provider:${k}`}>{providerTagLabel(k, PROVIDER_NAMES, pulledNames)} ({c})</option>)}
                   </optgroup>
                 )}
               </select>

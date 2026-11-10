@@ -84,9 +84,11 @@ test('the Batch Add dialog has an optional Provider select, ARNPROXY first, and 
   assert.match(POOL, /softglazeApi\.proxies\.batchAdd\(\{ raw: batchRaw, type: batchType, \.\.\.\(tag \? \{ provider: tag\.key, namePrefix: tag\.name \} : \{\}\) \}\)/);
   assert.match(POOL, /<Field label=\{t\('batch\.providerLabel'\)\}>/);
   assert.match(POOL, /<option value="">\{t\('batch\.providerNone'\)\}<\/option>/);
-  // A provider-tag chip shows the provider's name, not its key.
-  assert.match(POOL, /const providerLabel = \(key\) => PROVIDER_LABELS\[key\] \|\| PROVIDER_NAMES\[key\] \|\| key;/);
-  assert.doesNotMatch(POOL, /PROVIDER_LABELS\[prov\] \|\| prov/);
+  // A provider-tag chip shows the provider's name, not its key (a removed provider: the name its proxies
+  // were pulled with; removed-vendors.test.js).
+  assert.match(POOL, /const PROVIDER_NAMES = \{ \.\.\.Object\.fromEntries\(PROVIDERS\.map\(\(p\) => \[p\.key, p\.name\]\)\), apify: 'Apify', custom: 'Custom' \};/);
+  assert.match(POOL, /const providerLabel = \(key\) => providerTagLabel\(key, PROVIDER_NAMES, pulledNames\);/);
+  assert.doesNotMatch(POOL, /PROVIDER_LABELS/);
 });
 
 test('the Batch Add strings exist in English and Spanish, without dashes', () => {

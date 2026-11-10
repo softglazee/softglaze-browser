@@ -42,7 +42,7 @@ const ALLOWED_DEPS = Object.freeze([
   'scopedProfileWhere', 'scopedProxyWhere', 'scopedGroupWhere', 'assertCanAccessProfile', 'assertCanAccessProxy', 'partitionAccessibleProfileIds',
   'listAllSessions', 'isFirefoxSession', 'launchProfile', 'closeSession', 'markAutomationDriven',
   'createProfile', 'updateProfile', 'batchGenerateProfiles', 'createGroup', 'assignProfilesToGroup',
-  'checkProxy', 'getProxyHealthHistory', 'getRecentProxyHealth', 'getVendorScoreboard', 'rotateProxyIp', 'rotateProfileProxyIp',
+  'checkProxy', 'getProxyHealthHistory', 'getRecentProxyHealth', 'getVendorScoreboard', 'rotateProxyIp', 'rotateProfileProxyIp', 'proxyCanRotate',
   'bulkAssignProxies', 'harvestFreeProxies', 'cancelFreeProxyHarvest',
   'getMacros', 'saveMacro', 'normalizeMacroSteps', 'runParallelMacro', 'getParallelRunStatus', 'stopParallelRun',
   'startWarmer', 'stopWarmer', 'listActiveWarmers',
@@ -310,8 +310,10 @@ class ToolRegistry {
           catch (e) { throw userError(e.message || 'Your role does not permit this action.', 'FORBIDDEN'); }
         }
         // A page turned off for the member under "Visible features" is off for their tokens too.
-        if (tool.feature && typeof this.deps.assertFeature === 'function') {
-          try { await this.deps.assertFeature(tool.feature); }
+        // A tool whose page depends on its arguments names it with a function (rotate_proxy_ip).
+        const feature = typeof tool.feature === 'function' ? tool.feature(args) : tool.feature;
+        if (feature && typeof this.deps.assertFeature === 'function') {
+          try { await this.deps.assertFeature(feature); }
           catch (e) { throw userError(e.message || 'This feature is turned off for your account.', 'FORBIDDEN'); }
         }
         const t = tool.targets ? tool.targets(args) : { profileIds: [] };
