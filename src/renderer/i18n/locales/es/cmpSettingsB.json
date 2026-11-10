@@ -83,7 +83,7 @@
   },
   "workspaceBackup": {
     "title": "Copia de seguridad y restauración del espacio de trabajo",
-    "subtitle": "Exporta todo tu espacio de trabajo (base de datos + ajustes) como un único archivo cifrado.",
+    "subtitle": "Exporta todo tu espacio de trabajo (base de datos + configuración) como un único archivo cifrado.",
     "lastBackup": "Última copia de seguridad:",
     "createTitle": "Crear una copia de seguridad",
     "backupPasswordLabel": "Contraseña de la copia de seguridad",
@@ -94,7 +94,7 @@
     "restorePasswordPlaceholder": "Contraseña usada para el archivo de copia de seguridad",
     "confirmRestoreLabel": "Entiendo que esto reemplaza mi espacio de trabajo actual con el contenido de la copia de seguridad.",
     "restoreBtn": "Elegir archivo y restaurar",
-    "footerNote": "Una copia de seguridad captura perfiles, ajustes y credenciales tal como están en la base de datos - no las cachés del navegador en disco. El archivo se verifica antes de que cualquier restauración sobrescriba tus datos actuales, por lo que una contraseña incorrecta o un archivo dañado fallan de forma segura. Los secretos guardados con el llavero de Windows (semillas 2FA, claves SMTP y de proveedores, token de sincronización) solo se restauran en la misma cuenta de usuario de Windows; en otro usuario o equipo hay que volver a introducirlos.",
+    "footerNote": "Una copia de seguridad captura perfiles, configuración y credenciales tal como están en la base de datos - no las cachés del navegador en disco. El archivo se verifica antes de que cualquier restauración sobrescriba tus datos actuales, por lo que una contraseña incorrecta o un archivo dañado fallan de forma segura. Los secretos guardados con el llavero de Windows (semillas 2FA, claves SMTP y de proveedores, token de sincronización) solo se restauran en la misma cuenta de usuario de Windows; en otro usuario o equipo hay que volver a introducirlos.",
     "errPasswordMin": "Elige una contraseña de copia de seguridad de al menos 6 caracteres.",
     "errBackupFailed": "La copia de seguridad falló.",
     "errEnterPassword": "Introduce la contraseña del archivo de copia de seguridad.",

@@ -197,8 +197,8 @@
   "deleteFiltered": {
     "tooltip": "Delete every proxy matching the current filter",
     "button": "Delete all {{scope}} ({{count}})",
-    "confirm_one": "Delete all {{count}} {{scope}} proxy? This cannot be undone - linked profiles keep working with their proxy assignment cleared.",
-    "confirm_other": "Delete all {{count}} {{scope}} proxies? This cannot be undone - linked profiles keep working with their proxy assignment cleared.",
+    "confirm_one": "Delete all {{count}} {{scope}} proxy? This cannot be undone - profiles that use it lose it and will not launch until you assign them another proxy.",
+    "confirm_other": "Delete all {{count}} {{scope}} proxies? This cannot be undone - profiles that use them lose their proxy and will not launch until you assign them another one.",
     "scope": {
       "all": "all",
       "filtered": "filtered",
@@ -357,8 +357,8 @@
     "slowTip": "Show only proxies measured slower than 2s"
   },
   "bulkDelete": {
-    "confirm_one": "Delete {{count}} selected proxy? Linked profiles will keep working with their proxy assignment cleared.",
-    "confirm_other": "Delete {{count}} selected proxies? Linked profiles will keep working with their proxy assignment cleared."
+    "confirm_one": "Delete {{count}} selected proxy? Profiles that use it lose it and will not launch until you assign them another proxy.",
+    "confirm_other": "Delete {{count}} selected proxies? Profiles that use them lose their proxy and will not launch until you assign them another one."
   },
   "delete": {
     "confirm": "Delete proxy \"{{name}}\"?",

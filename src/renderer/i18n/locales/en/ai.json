@@ -145,6 +145,7 @@
     },
     "clients": {
       "claude-desktop": {
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), then restart Claude Desktop. Claude Desktop runs local servers over stdio, so this starts the SoftGlaze bridge. Easier: install softglaze-browser.mcpb ({{mcpb}}), which asks for your token and port and also serves Cowork.",
         "title": "Claude Desktop",
         "step1": "Create a token for Claude Desktop with the button below.",
         "step2": "Easiest: download softglaze-browser.mcpb with the button below, double-click it and paste your token when Claude Desktop asks. Or open Settings > Developer > Edit Config and paste the setup into claude_desktop_config.json, with your token in place of <YOUR_TOKEN>.",
@@ -152,51 +153,60 @@
         "step3": "If you edited the config file, quit and reopen Claude Desktop. SoftGlaze shows up under the + button below the chat box, in Connectors."
       },
       "claude-code": {
+        "where": "Without the plugins: run in a terminal. Add --scope user to use SoftGlaze in every project. Use the plugins or this command, not both.",
         "title": "Claude Code",
         "step1": "Create a token for Claude Code with the button below.",
         "step2": "Install the SoftGlaze plugins with the commands below and paste your token when Claude Code asks. Or run the command further down, with your token in place of <YOUR_TOKEN>. Use one way, not both.",
         "step3": "Type /mcp in Claude Code. SoftGlaze should show as connected (plugin:softglaze-browser-connector:softglaze with the plugins)."
       },
       "cursor": {
+        "where": "~/.cursor/mcp.json (all projects) or .cursor/mcp.json in a project. To keep the token out of the file use \"Bearer ${env:SOFTGLAZE_TOKEN}\".",
         "title": "Cursor",
         "step1": "Create a token for Cursor with the button below.",
         "step2": "Open ~/.cursor/mcp.json (or .cursor/mcp.json in one project) and paste the setup, with your token in place of <YOUR_TOKEN>.",
         "step3": "In Cursor's settings, check that SoftGlaze is listed and switched on. Then ask the chat to list your SoftGlaze profiles."
       },
       "vscode": {
+        "where": ".vscode/mcp.json in your workspace, or run \"MCP: Open User Configuration\". VS Code asks for the token once and stores it securely, so it never sits in the file.",
         "title": "VS Code (Copilot)",
         "step1": "Create a token for VS Code with the button below.",
         "step2": "Add the setup to .vscode/mcp.json in your workspace (or run MCP: Open User Configuration). The first time SoftGlaze starts, VS Code asks for your token and stores it securely, so it never sits in the file.",
         "step3": "Open Copilot Chat and ask it to list your SoftGlaze profiles. Allow the tool when VS Code asks."
       },
       "gemini-cli": {
+        "where": "~/.gemini/settings.json (merge into the file), or run: gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
         "title": "Gemini CLI",
         "step1": "Create a token for Gemini CLI with the button below.",
         "step2": "Add the setup inside \"mcpServers\" in ~/.gemini/settings.json, with your token in place of <YOUR_TOKEN>. Leave \"trust\" off: SoftGlaze asks you before every change anyway.",
         "step3": "Start gemini and type /mcp. SoftGlaze and its tools should be listed."
       },
       "codex": {
+        "where": "~/.codex/config.toml (shared by the ChatGPT desktop app, Codex CLI and the IDE extension). Set the environment variable SOFTGLAZE_TOKEN to your token first (Windows: setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"), then restart the app.",
         "title": "ChatGPT desktop / Codex",
         "step1": "Create a token for Codex with the button below, then save it in the SOFTGLAZE_TOKEN environment variable (command below).",
         "step2": "Add the setup to ~/.codex/config.toml. Codex reads the token from SOFTGLAZE_TOKEN, so the file never holds it.",
         "step3": "Open a new terminal, start Codex and type /mcp. SoftGlaze should be listed."
       },
       "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json, then refresh MCP servers. Devin Desktop (Windsurf's new name) uses ~/.config/devin/mcp_config.json with \"url\" and \"transport\": \"http\" instead of \"serverUrl\".",
         "title": "Windsurf",
         "step1": "Create a token for Windsurf with the button below.",
         "step2": "Paste the setup into Windsurf's MCP config file (see Where it goes), with your token in place of <YOUR_TOKEN>.",
         "step3": "Refresh the MCP servers in Windsurf and check that SoftGlaze is listed."
       },
       "cline": {
+        "where": "Cline: MCP Servers > Configure (cline_mcp_settings.json).",
         "title": "Cline",
         "step1": "Create a token for Cline with the button below.",
         "step2": "In Cline, open MCP Servers > Configure and paste the setup into cline_mcp_settings.json, with your token in place of <YOUR_TOKEN>.",
         "step3": "Check that SoftGlaze shows as connected in Cline's MCP Servers list."
       },
       "n8n": {
+        "where": "In the MCP Client Tool node: SSE Endpoint as below, Authentication \"Bearer\", and your token as the credential. If n8n runs in Docker Desktop, use host.docker.internal instead of 127.0.0.1 and add host.docker.internal to Extra allowed hosts in SoftGlaze AI settings. For unattended workflows use an automation token (pre-approved tools, limited to groups).",
         "title": "n8n"
       },
       "other": {
+        "where": "Any MCP client that supports Streamable HTTP with headers. Clients that only speak the older HTTP+SSE transport use the SSE URL. Clients that only run local commands use the SoftGlaze bridge (see Claude Desktop).",
         "title": "Other apps",
         "step1": "Create a token for the app with the button below.",
         "step2": "Open the app's MCP settings and add a server with this address and an Authorization header: Bearer, a space, then your token.",

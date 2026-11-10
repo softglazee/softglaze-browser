@@ -1044,14 +1044,14 @@ function PermissionEditor({ role, value, onChange, granter }) {
           <div className="space-y-2.5">
             {actionCats.map((cat) => (
               <div key={cat.name}>
-                <div className="text-[10px] uppercase tracking-wider text-muted-dark mb-1">{cat.name}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-dark mb-1">{t(`actionCategories.${cat.name}`, { defaultValue: cat.name })}</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                   {cat.items.map((a) => {
                     const granterOk = !granter || !granter.actions || granter.actions[a.key] !== false;
                     return (
                       <label key={a.key} className={`flex items-center gap-2 text-[12px] ${granterOk ? 'text-muted-foreground cursor-pointer' : 'text-muted-dark cursor-not-allowed'}`}>
                         <input type="checkbox" disabled={!granterOk} checked={granterOk && ((value.actions || {})[a.key] !== false)} onChange={(e) => setAction(a.key, e.target.checked)} className="accent-blue-500" />
-                        {a.label}
+                        {t(`actionLabels.${a.key.replace('.', '_')}`, { defaultValue: a.label })}
                       </label>
                     );
                   })}

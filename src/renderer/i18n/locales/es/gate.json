@@ -17,7 +17,7 @@
     },
     "heroLine1": "Ejecuta cientos de identidades.",
     "heroLine2": "Cada una, por separado.",
-    "heroBody": "Un navegador multiperfil para equipos que prioriza lo local. Cada perfil mantiene sus propias cookies, almacenamiento, proxy y ajustes de huella digital.",
+    "heroBody": "Un navegador multiperfil para equipos que prioriza lo local. Cada perfil mantiene sus propias cookies, almacenamiento, proxy y configuración de huella digital.",
     "footer": "© {{year}} SoftGlaze · Espacio de trabajo local",
     "trust": {
       "local": "Local primero",
@@ -158,7 +158,7 @@
     "password": "Contraseña",
     "forgot": "¿Olvidaste?",
     "passwordPlaceholder": "Contraseña maestra",
-    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local - nunca sale de este dispositivo. Si se pierde, el espacio de trabajo debe restablecerse desde Ajustes.",
+    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local - nunca sale de este dispositivo. Si se pierde, el espacio de trabajo debe restablecerse desde Configuración.",
     "signIn": "Iniciar sesión",
     "noAccount": "¿No tienes una cuenta?",
     "newHere": "¿Nuevo en SoftGlaze?",
@@ -222,7 +222,7 @@
     "workspacePassword": "Contraseña del espacio de trabajo",
     "passwordPlaceholder": "Contraseña del espacio de trabajo",
     "unlock": "Desbloquear",
-    "corrupted": "Si estás seguro de que la contraseña es correcta, el archivo de la base de datos podría estar dañado. Puedes recuperarte reinstalando y restaurando una copia de seguridad del espacio de trabajo (Ajustes → Copia de seguridad y restauración del espacio de trabajo). No hay restablecimiento de contraseña - los datos solo se pueden abrir con la contraseña correcta."
+    "corrupted": "Si estás seguro de que la contraseña es correcta, el archivo de la base de datos podría estar dañado. Puedes recuperarte reinstalando y restaurando una copia de seguridad del espacio de trabajo (Configuración → Copia de seguridad y restauración del espacio de trabajo). No hay restablecimiento de contraseña - los datos solo se pueden abrir con la contraseña correcta."
   },
   "errors": {
     "enterFirstLast": "Introduce tu nombre y apellidos.",

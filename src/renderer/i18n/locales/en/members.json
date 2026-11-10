@@ -26,6 +26,30 @@
     "MANAGER": "Create, edit and launch profiles, and add operators.",
     "OPERATOR": "Launch and use assigned profiles only."
   },
+  "actionCategories": {
+    "Profiles": "Profiles",
+    "Proxies": "Proxies",
+    "Automation": "Automation",
+    "Workspace": "Workspace",
+    "Team": "Team"
+  },
+  "actionLabels": {
+    "profiles_launch": "Launch profiles",
+    "profiles_create": "Create profiles",
+    "profiles_edit": "Edit profiles",
+    "profiles_export": "Export profiles",
+    "profiles_share": "Share profiles with members",
+    "profiles_delete": "Delete profiles (to trash)",
+    "profiles_purge": "Permanently purge profiles",
+    "proxies_manage": "Add / edit / delete proxies",
+    "proxies_reveal": "Reveal raw proxy credentials",
+    "automation_run": "Run automation / macros",
+    "extensions_manage": "Manage team extensions",
+    "settings_manage": "Change workspace settings",
+    "vault_manage": "Manage the Identity Vault",
+    "members_manage": "Manage team members",
+    "members_delete": "Delete members / change roles"
+  },
   "features": {
     "dashboard": "Dashboard (page only)",
     "profiles": "Profiles",

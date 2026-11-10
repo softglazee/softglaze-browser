@@ -26,6 +26,7 @@
     "settings": "Settings"
   },
   "shell": {
+    "footerDefault": "© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multi-Profile",
     "darkMode": "Dark mode",
     "lightMode": "Light mode",

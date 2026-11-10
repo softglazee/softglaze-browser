@@ -7,7 +7,7 @@ import {
   CreditCard, Link2, Plug, ClipboardList, Gift, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { renderFooterNodes } from '@/lib/footerText.jsx';
+import { renderFooterNodes, footerTextFor } from '@/lib/footerText.jsx';
 import { getStoredTheme, setTheme as applyThemeChoice } from '@/lib/theme.js';
 import ResilienceToasts from '@/components/ResilienceToasts.jsx';
 import CommandPalette from '@/components/CommandPalette.jsx';
@@ -28,6 +28,8 @@ function ThemeToggle({ collapsed }) {
   return (
     <button
       onClick={() => setThemeState(applyThemeChoice(isDark ? 'light' : 'dark'))}
+      role="switch"
+      aria-checked={isDark}
       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-colors text-left text-[13px] font-medium text-muted-foreground hover:text-foreground"
       title={isDark ? t('shell.switchToLight') : t('shell.switchToDark')}
     >
@@ -36,10 +38,12 @@ function ThemeToggle({ collapsed }) {
           ? <Moon className="w-[18px] h-[18px]" strokeWidth={1.75} />
           : <Sun className="w-[18px] h-[18px]" strokeWidth={1.75} />}
       </span>
+      {/* One label, "Dark mode", and the switch shows whether it is on (it read "Dark mode" with the
+          switch off while the dark theme was on). */}
       {!collapsed && <>
-        {isDark ? t('shell.darkMode') : t('shell.lightMode')}
-        <span className="ml-auto inline-flex items-center h-5 w-9 rounded-full p-0.5 transition-colors" style={{ background: isDark ? 'var(--switch-background)' : 'var(--primary)' }}>
-          <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${isDark ? '' : 'translate-x-4'}`} />
+        {t('shell.darkMode')}
+        <span className="ml-auto inline-flex items-center h-5 w-9 rounded-full p-0.5 transition-colors" style={{ background: isDark ? 'var(--primary)' : 'var(--switch-background)' }}>
+          <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-4' : ''}`} />
         </span>
       </>}
     </button>
@@ -101,10 +105,11 @@ const ROLE_LABEL = { OWNER: 'Owner', ADMIN: 'Admin', MANAGER: 'Manager', OPERATO
 // {year} becomes the current year; http(s) URLs become links (shown without the scheme) that
 // open in the default browser. The Super Admin sets the text in Settings.
 function FooterBar({ text }) {
+  const { t } = useTranslation();
   if (!text) return null;
   return (
     <footer className="shrink-0 border-t border-border px-7 py-2.5 text-[11px] text-muted-foreground/80 text-center leading-relaxed">
-      {renderFooterNodes(text)}
+      {renderFooterNodes(footerTextFor(text, t))}
     </footer>
   );
 }

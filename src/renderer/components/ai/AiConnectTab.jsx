@@ -208,6 +208,8 @@ export function ClientPanel({ entry, bridge, onCreateToken }) {
   const kindLabel = t(`connect.kind.${entry.kind}`, { defaultValue: entry.kind });
   const hostOs = (typeof window !== 'undefined' && window.softglaze && window.softglaze.hostOs) || 'Windows';
   const showBridge = STDIO_CLIENTS.has(entry.key) || !entry.known;
+  // A known client's "where" line in the window's language; the engine's English text is the fallback.
+  const where = entry.where && entry.known ? t(`${base}.where`, { ...(entry.whereVars || {}), defaultValue: entry.where }) : entry.where;
 
   return (
     <>
@@ -234,12 +236,12 @@ export function ClientPanel({ entry, bridge, onCreateToken }) {
           <h3 className="text-[14px] font-semibold text-foreground">{t('connect.claudeCode.manualTitle')}</h3>
         )}
 
-        {entry.where && (
+        {where && (
           <div className="flex items-start gap-2 text-[12.5px]">
             <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <p className="min-w-0 break-words text-foreground">
               <span className="font-semibold">{t('connect.where')}: </span>
-              {/\s/.test(entry.where) ? entry.where : <code className="font-mono text-[12px]">{entry.where}</code>}
+              {/\s/.test(where) ? where : <code className="font-mono text-[12px]">{where}</code>}
             </p>
           </div>
         )}

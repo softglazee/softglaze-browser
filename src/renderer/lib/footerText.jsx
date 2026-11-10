@@ -1,5 +1,13 @@
 import React from 'react';
 
+// The footer main seeds (ipcHandlers globalSettings.branding.footerText). While a workspace keeps it,
+// the window shows it in its own language (common shell.footerDefault); a footer the Super Admin
+// wrote is shown as written.
+export const DEFAULT_FOOTER_TEXT = '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)';
+export function footerTextFor(text, t) {
+  return text === DEFAULT_FOOTER_TEXT ? t('shell.footerDefault', { defaultValue: text }) : text;
+}
+
 // Renders {year}, [label](https://) as a label-only link, and bare https URLs without the scheme.
 // Shared by FooterBar and the Settings preview so both always match.
 export function renderFooterNodes(text, linkClass = 'text-primary hover:underline') {
