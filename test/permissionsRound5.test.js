@@ -144,7 +144,7 @@ function loadList({ reveal }) {
   const fns = loadMain([...VALIDATORS, 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'serializeProfile',
     'withViewerEditFlags', 'proxyInVisiblePool', 'searchMatchesView', 'listProfiles'], {
     ...ws.deps, rbacPolicy, profileOptions, redactProfileRow, redactPlatformAccounts, redactUseOnlyProxy,
-    currentMemberCanRevealProxy: reveal
+    currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal
   });
   return { db, ws, fns, rows: async (search) => Object.fromEntries((await fns.listProfiles(search ? { search } : {})).map((r) => [r.id, r])) };
 }
@@ -154,7 +154,7 @@ function loadList({ reveal }) {
 test('1: the Proxy pool sends a rotation link only with proxies.reveal; everyone else gets a mask and can still rotate', async () => {
   const db = seed();
   const row = await db.proxy.findUnique({ where: { id: 22 } });
-  const load = (reveal) => loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky'], { rbacPolicy, currentMemberCanRevealProxy: reveal });
+  const load = (reveal) => loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky'], { rbacPolicy, currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal });
   const op = load(false).serializeProxy(row); // an Operator (or a Manager with proxies.reveal turned off)
   assert.equal(op.rotationUrl, SECRET_MASK);
   assert.deepEqual([op.hasRotationUrl, op.canRotate], [true, true], 'the Rotate IP button still shows');
@@ -176,10 +176,11 @@ test('1: rotating fires the stored link by proxy id; a mask sent back is never s
   const db = seed();
   const fetched = [];
   const axios = { get: async (url) => { fetched.push(url); return { status: 200, data: 'new ip 9.9.9.9' }; } };
-  const { rotateProxyIp } = loadMain([...VALIDATORS, 'isDataImpulseSticky', 'rotateProxyIp'], {
+  const { rotateProxyIp } = loadMain([...VALIDATORS, 'isDataImpulseSticky', 'assertCanRotateProxy', 'rotateProxyIp'], {
     getPrisma: () => db,
     requirePermission: async () => {},
     assertCanAccessProxy: async () => {},
+    canRevealProxyCredentials: async () => true,
     rotateDataImpulseSticky: async () => { throw new Error('not used'); },
     assertPublicHttpUrl: async () => {},
     assertPublicHttpUrlSync: () => {},
@@ -196,7 +197,7 @@ test('1: rotating fires the stored link by proxy id; a mask sent back is never s
   // Every caller rotates by id: the Proxy pool page, the automatic block response, SoftGlaze AI and the
   // Local API (which runs the AI tools); none hands a link from the window.
   assert.match(read('src', 'renderer', 'pages', 'ProxyPoolPage.jsx'), /softglazeApi\.proxies\.rotateIp\(\{ id: proxy\.id \}\)/);
-  assert.match(extractFunction(IPC, 'respondToBlock'), /await rotateProxyIp\(\{ id: proxy\.id \}\)/);
+  assert.match(extractFunction(IPC, 'respondToBlock'), /await rotateProxyIp\(\{ id: proxy\.id, profileId: id \}\)/);
   assert.match(IPC, /rotateProxyIp: \(payload\) => rotateProxyIp\(\{ id: payload\.id \}\), \/\/ the stored rotation link only/);
   const tools = read('src', 'main', 'ai', 'tools.js');
   assert.match(tools, /ctx\.deps\.rotateProxyIp\(\{ id: a\.proxyId \}\)/);
@@ -208,7 +209,7 @@ test('1: the spreadsheet export blanks the rotation link and proxy username with
   const db = seed();
   const ws = workspace(db);
   const load = (reveal) => loadMain(['assertCanRevealKind', 'firstAccount', 'proxyInVisiblePool', 'gatherExport'], {
-    ...ws.deps, rbacPolicy, currentMemberCanRevealProxy: reveal,
+    ...ws.deps, rbacPolicy, currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal,
     readSetting: async (k, d) => (k === 'profileRotationUrls' ? { 108: 'https://rotate.example/108?key=K108' } : d),
     doNotTrackChoice: require('../src/main/doNotTrack').doNotTrackChoice
   }, ['REVEAL_LABELS', 'EXPORT_COLUMNS']);
@@ -574,7 +575,36 @@ test('B: Quick generate\'s preview names are exactly the names main creates', as
   assert.equal(quickGenNumber(1, 0, 3), '1', '3 profiles: Etsy Shop-1, not -001');
   assert.equal(quickGenNumber(1, 0, 12), '01');
   assert.equal(quickGenNumber(1, 0, 100), '001');
+
+  // Round 7: fewer usable proxies than asked for. main pads to the number it creates (10 asked, 9 proxies:
+  // -1 to -9), and the preview predicts that number: from the proxies the window lists (one per profile),
+  // the pasted lines, and main's own 'create' frame. Main's naming is unchanged.
+  const { quickGenPastedLines, quickGenUniqueCandidates, quickGenPlannedCount } = await importLib('quickGenProgress.mjs');
+  const fresh = new Date().toISOString();
+  const shortCases = [[10, 9], [12, 9], [100, 99], [101, 12], [3, 2], [10, 10]];
+  for (const [count, have] of shortCases) {
+    // The pool as the window lists it (serializeProxy: unused, working) and as main reads it.
+    const pool = Array.from({ length: have }, (_, i) => ({ id: i + 1, type: i % 2 ? 'SOCKS5' : 'HTTP', host: `10.1.0.${i + 1}`, port: 8000, username: null, password: null,
+      lastStatus: 'ok', lastCheckedAt: fresh, lastLatencyMs: 300, lastBlacklisted: false, profileCount: 0, proxyGroupId: null, provider: null }));
+    const frames = [];
+    titles.length = 0;
+    ctx.getPrisma = () => ({ proxy: { count: async () => 0, findMany: async () => pool }, group: { create: async () => ({ id: 1 }), delete: async () => {} } });
+    await ctx.run({ count, proxyMode: 'unique', prefix: 'Etsy Shop' }, { progress: (f) => frames.push(f) });
+    assert.equal(titles.length, Math.min(count, have));
+    const planned = quickGenPlannedCount({ count, available: quickGenUniqueCandidates(pool).length });
+    assert.deepEqual(titles, titles.map((_, i) => `Etsy Shop-${quickGenNumber(1, i, planned)}`), `${count} asked, ${have} proxies (window's count)`);
+    const create = frames.find((f) => f.phase === 'create');
+    const reported = quickGenPlannedCount({ count, available: count, toCreate: create.toCreate });
+    assert.deepEqual(titles, titles.map((_, i) => `Etsy Shop-${quickGenNumber(1, i, reported)}`), `${count} asked, ${have} proxies (main's frame)`);
+    // Pasted proxies: the same, with a duplicate and a SOCKS4 line that main leaves out.
+    const pasted = [...pool.map((p) => `${p.host}:${p.port}`), `${pool[0].host}:${pool[0].port}`, 'socks4://10.9.9.9:1080'].join('\n');
+    titles.length = 0;
+    await ctx.run({ count, proxyMode: 'paste', prefix: 'Etsy Shop', proxyList: pasted });
+    const pastePlan = quickGenPlannedCount({ count, available: quickGenPastedLines(pasted).length });
+    assert.deepEqual(titles, titles.map((_, i) => `Etsy Shop-${quickGenNumber(1, i, pastePlan)}`), `${count} asked, ${have} pasted`);
+  }
+  assert.equal(titles[0], 'Etsy Shop-01', 'the last case: 10 asked, 10 pasted');
   const modal = read('src', 'renderer', 'components', 'QuickGenerateModal.jsx');
-  assert.match(modal, /const pad = \(index\) => quickGenNumber\(start, index, count\);/);
+  assert.match(modal, /const pad = \(index\) => quickGenNumber\(start, index, planned\);/);
   assert.doesNotMatch(modal, /padStart\(3, '0'\)/);
 });

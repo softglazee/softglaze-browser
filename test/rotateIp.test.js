@@ -29,7 +29,8 @@ test('a DataImpulse sticky proxy without a link rotates through the vendor API',
   assert.ok(diAt > -1 && throwAt > -1 && diAt < throwAt,
     'the DataImpulse branch must run before the "no link" refusal');
   assert.match(rotate, /await requirePermission\('proxies\.manage'\)/, 'the action stays gated');
-  assert.match(rotate, /await assertCanAccessProxy\(id\)/, 'and scoped to proxies the caller can access');
+  assert.match(rotate, /await assertCanRotateProxy\(id, profileId\)/, 'and scoped to proxies the caller can access');
+  assert.match(fnBody('assertCanRotateProxy'), /await assertCanAccessProxy\(id\)/, 'the own Proxy pool first');
 });
 
 test('only real DataImpulse sticky rows qualify', () => {

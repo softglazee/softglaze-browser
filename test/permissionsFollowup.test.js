@@ -595,7 +595,7 @@ function loadTrash(db = seed()) {
     closeAnySession: async () => {}, wipeProfileFolders: async () => 0, logActivity: async () => {}, logAudit: async () => {},
     serializeProfile: (p) => ({ ...p }),
     // A "use only" row's proxy fields (1.0.26 round 4, test/permissionsRound4.test.js).
-    currentMemberCanRevealProxy: true, redactUseOnlyProxy: () => ({}), proxyInVisiblePool: () => false
+    currentMemberCanRevealProxy: true, proxyRevealAllowed: () => true, redactUseOnlyProxy: () => ({}), proxyInVisiblePool: () => false
   });
   return { db, ws, fns };
 }

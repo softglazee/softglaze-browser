@@ -114,6 +114,7 @@
     "webrtc": {
       "pass": "Mode {{mode}} keeps your real IP hidden.",
       "realNoProxy": "Real with no proxy: sites already see this computer's IP, so WebRTC shows them nothing new.",
+      "firefoxOff": "WebRTC is off in Firefox profiles, which few real browsers do. No setting changes this.",
       "warn": "WebRTC is disabled, which few real browsers do.",
       "fail": "Set to Real, which shows your real IP behind the proxy."
     },

@@ -153,7 +153,7 @@ function loadList({ reveal = true } = {}) {
   const fns = loadMain([...VALIDATORS, 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'serializeProfile',
     'withViewerEditFlags', 'proxyInVisiblePool', 'searchMatchesView', 'listProfiles', 'listTrash'], {
     ...ws.deps, rbacPolicy, profileOptions, redactProfileRow, redactPlatformAccounts, redactUseOnlyProxy,
-    currentMemberCanRevealProxy: reveal
+    currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal
   });
   const rows = async (search) => Object.fromEntries((await fns.listProfiles(search ? { search } : {})).map((r) => [r.id, r]));
   return { db, ws, fns, rows };
@@ -270,7 +270,7 @@ test('the spreadsheet export blanks a "use only" share\'s proxy password, rotati
   const db = seed();
   const ws = workspace(db);
   const load = (reveal) => loadMain(['assertCanRevealKind', 'firstAccount', 'proxyInVisiblePool', 'gatherExport'], {
-    ...ws.deps, rbacPolicy, currentMemberCanRevealProxy: reveal,
+    ...ws.deps, rbacPolicy, currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal,
     readSetting: async (k, d) => (k === 'profileRotationUrls' ? { 104: 'https://rotate.example/104?key=K', 105: 'https://rotate.example/105', 106: 'https://rotate.example/106' } : d),
     doNotTrackChoice: require('../src/main/doNotTrack').doNotTrackChoice
   }, ['REVEAL_LABELS', 'EXPORT_COLUMNS']);
@@ -318,7 +318,7 @@ test('the proxy a launch rotated to arrives without the username and rotation li
   const db = seed();
   const ws = workspace(db);
   const { launchedProxyView } = loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'launchedProxyView'], {
-    ...ws.deps, rbacPolicy, redactForeignProxy, currentMemberCanRevealProxy: true,
+    ...ws.deps, rbacPolicy, redactForeignProxy, currentMemberCanRevealProxy: true, proxyRevealAllowed: () => true,
     assertCanAccessProxy: async (id) => {
       const m = ws.state.member;
       if (!m) return;

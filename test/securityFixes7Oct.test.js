@@ -52,7 +52,7 @@ test('S2: saving a masked 2FA key back keeps the stored one', () => {
 // ---- S3 ----
 test('S3: profile export blanks secret columns unless the member may reveal them', () => {
   const body = fnBody(IPC, 'async function gatherExport()');
-  assert.match(body, /currentMemberCanRevealProxy/);
+  assert.match(body, /proxyRevealAllowed\(\)/);
   assert.match(body, /assertCanRevealKind\('twoFactorCode'\)/);
   for (const col of ['Proxy Password', 'Account Password', '2FA Key', 'Proxy Info']) assert.ok(body.includes(`'${col}'`), col);
 });

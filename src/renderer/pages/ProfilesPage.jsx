@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Pause, Square, Activity, Loader2, Download, KeyRound, Combine, Lock, AlertTriangle } from 'lucide-react';
+import { RefreshCcw, Search, Plus, Trash2, ArrowLeft, ShieldCheck, Settings2, Monitor, Apple, Smartphone, Terminal, ChevronDown, Check, Tag, Link2, Zap, FileSpreadsheet, Cookie, Copy, Dices, Shuffle, Fingerprint, LayoutTemplate, History, Play, Pause, Square, Activity, Loader2, Download, KeyRound, Combine, Lock, AlertTriangle, RotateCw } from 'lucide-react';
 import EmptyState from '@/components/EmptyState.jsx';
 import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
@@ -602,6 +602,7 @@ export default function ProfilesPage() {
   const rotationLoadedRef = useRef(null);
   const [showBrowserManager, setShowBrowserManager] = useState(false);
   const [rotationProfile, setRotationProfile] = useState(null);
+  const [rotatingIpId, setRotatingIpId] = useState(null); // profile whose proxy is getting a new IP
   const [envProfile, setEnvProfile] = useState(null);
   const [previewDraft, setPreviewDraft] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -1286,6 +1287,19 @@ export default function ProfilesPage() {
       // Refresh running state so the row flips to a Stop button immediately.
       await refreshSessions();
     } catch (err) { setError(err.message); }
+  }
+
+  // A new exit IP on the profile's own proxy (its vendor's rotation link, or the DataImpulse reset). Main
+  // fires it by profile id, so a "use only" share can rotate its proxy without seeing anything secret.
+  async function handleRotateIp(p) {
+    setRotatingIpId(p.id); setError(''); setNotice('');
+    try {
+      const r = await softglazeApi.profiles.rotateIp(p.id);
+      if (r && r.ok === false) setError(t('row.rotateIpRefused', { title: p.title, status: r.status }));
+      else setNotice(t('row.rotateIpDone', { title: p.title }));
+      await loadData();
+    } catch (err) { setError(err.message); }
+    finally { setRotatingIpId(null); }
   }
 
   // A copy of a "use only" share leaves out its 2FA key and saved logins (main); the button says so.
@@ -2024,8 +2038,16 @@ export default function ProfilesPage() {
                   </div>
 
                   <FpRow label={t('fp.webrtc')} description={t('fp.webrtcDesc')}>
-                    <ButtonTabs value={webrtcModeOf(pd.webrtc)} onChange={v => updatePd('webrtc', v)} options={['Forward', 'Replace', 'Real', 'Disabled']} />
-                    <p className="text-xs text-muted leading-relaxed">{pd.browserCore === 'Firefox' ? t('fp.webrtcFirefox') : t(`fp.webrtcHelp${webrtcModeOf(pd.webrtc)}`)}</p>
+                    {/* Firefox profiles always run with WebRTC off (user.js), so there is no choice to offer;
+                        the saved value is kept and applies again if the profile moves to Chromium. */}
+                    {pd.browserCore === 'Firefox' ? (
+                      <p role="note" className="text-xs text-muted leading-relaxed">{t('fp.webrtcFirefox')} {t('fp.webrtcFirefoxKept', { mode: webrtcModeOf(pd.webrtc) })}</p>
+                    ) : (
+                      <>
+                        <ButtonTabs value={webrtcModeOf(pd.webrtc)} onChange={v => updatePd('webrtc', v)} options={['Forward', 'Replace', 'Real', 'Disabled']} />
+                        <p className="text-xs text-muted leading-relaxed">{t(`fp.webrtcHelp${webrtcModeOf(pd.webrtc)}`)}</p>
+                      </>
+                    )}
                   </FpRow>
 
                   <FpRow label={t('fp.timezone')} description={t('fp.timezoneDesc')}>
@@ -2893,6 +2915,12 @@ export default function ProfilesPage() {
                           <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium bg-secondary text-muted-foreground border border-border">
                             {t('row.direct')}
                           </span>
+                        )}
+                        {/* Only where the profile's proxy can rotate; a "use only" share too (main checks it) */}
+                        {p.proxy && p.proxy.canRotate && (
+                          <GuardedButton deny={perm.deny('proxies.manage') || perm.deny('profiles.launch')} size="sm" variant="ghost" className="px-2" onClick={() => handleRotateIp(p)} disabled={rotatingIpId === p.id} title={t('row.rotateIpTitle')} aria-label={t('row.rotateIp')}>
+                            {rotatingIpId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCw className="w-3.5 h-3.5" />}
+                          </GuardedButton>
                         )}
                       </div>
                     </td>

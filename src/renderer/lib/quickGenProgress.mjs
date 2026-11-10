@@ -49,3 +49,53 @@ export function quickGenNumber(start, index, count) {
   const width = String(first + n - 1).length;
   return String(first + index).padStart(width, '0');
 }
+
+// ---- How many profiles a run will create (main: ipcHandlers.js batchGenerateProfiles) ----
+// main pads the numbers to the count it actually creates, not the count asked for: 10 asked with 9 usable
+// proxies gives -1 to -9. The preview therefore numbers with quickGenPlannedCount(), and
+// test/permissionsRound7.test.js runs main's function to keep the two equal.
+
+// The pasted proxy lines main can use (paste mode): distinct non-empty lines, without socks4:// and
+// socks4a:// lines (Chromium cannot use SOCKS4 without a DNS leak; Quick generate sends no proxy type).
+export function quickGenPastedLines(text) {
+  const lines = [...new Set(String(text || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean))];
+  return lines.filter((s) => !/^socks4a?:\/\//i.test(s));
+}
+
+const QUICK_GEN_PROXY_TYPES = new Set(['HTTP', 'SOCKS5']); // main's CHROMIUM_PROXY_TYPES
+const QUICK_GEN_FAST_MAX_MS = 2000; // main's Fast / Slow line
+
+// The proxies of the window's list that main can give a profile of its own (one proxy per profile):
+// HTTP or SOCKS5, the chosen source ('' the paid pool, 'group:<id>', 'provider:<key>'; free proxies only
+// when they passed their last check), the speed and blocklist filters on their stored results, and no
+// profile using them as far as this member can see. main then checks the stale ones live, so it can end
+// up with fewer; it reports the number before it creates the first profile (the 'create' frame).
+export function quickGenUniqueCandidates(proxies, { source = '', speed = 'any', blacklist = 'any', free = false } = {}) {
+  const src = String(source || '');
+  return (Array.isArray(proxies) ? proxies : []).filter((p) => {
+    if (!p || !QUICK_GEN_PROXY_TYPES.has(String(p.type || '').toUpperCase())) return false;
+    if (Number(p.profileCount) > 0) return false;
+    if (free) return p.lastStatus === 'ok';
+    if (src.startsWith('group:') && String(p.proxyGroupId ?? '') !== src.slice(6)) return false;
+    if (src.startsWith('provider:') && String(p.provider || '').toLowerCase() !== src.slice(9).toLowerCase()) return false;
+    const ok = p.lastStatus === 'ok';
+    const ms = typeof p.lastLatencyMs === 'number' ? p.lastLatencyMs : null;
+    if (speed === 'fast' && !(ok && ms != null && ms <= QUICK_GEN_FAST_MAX_MS)) return false;
+    if (speed === 'slow' && !(ok && ms != null && ms > QUICK_GEN_FAST_MAX_MS)) return false;
+    if (blacklist === 'clean' && !(ok && p.lastBlacklisted === false)) return false;
+    if (blacklist === 'blacklisted' && !(ok && p.lastBlacklisted === true)) return false;
+    return true;
+  });
+}
+
+// The number of profiles main will create, for the preview's names. `count` is the number asked for.
+// `available` is how many proxies main can use when each profile needs its own (one per profile, or the
+// pasted lines), null when that does not limit the run (no proxy, or pool proxies shared round-robin).
+// `toCreate` is main's own number from its 'create' progress frame; once known it wins. With nothing
+// available main creates nothing and says why, so the preview keeps the names asked for.
+export function quickGenPlannedCount({ count, available = null, toCreate = null } = {}) {
+  const asked = Number.isFinite(Number(count)) && Number(count) >= 1 ? Math.floor(Number(count)) : 1;
+  if (toCreate != null && Number.isFinite(Number(toCreate)) && Number(toCreate) >= 1) return Math.floor(Number(toCreate));
+  if (available == null || !Number.isFinite(Number(available)) || Number(available) < 1) return asked;
+  return Math.min(asked, Math.floor(Number(available)));
+}

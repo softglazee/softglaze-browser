@@ -36,6 +36,7 @@ const CHANNELS = Object.freeze({
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
+  PROFILE_ROTATE_IP: 'profile:rotate-ip',
   PROXY_EXTENSION_COPY_INFO: 'proxy:extension-copy-info',
   PROXY_EXTENSION_COPY: 'proxy:extension-copy',
   PROXY_TEST_ALL: 'proxy:test-all',
@@ -447,6 +448,8 @@ const api = Object.freeze({
     update: (payload) => invoke(CHANNELS.PROFILE_UPDATE, payload),
     delete: (id, options = {}) => invoke(CHANNELS.PROFILE_DELETE, { id, removeLocalData: Boolean(options.removeLocalData) }),
     launch: (id, options = {}) => invoke(CHANNELS.PROFILE_LAUNCH, { id, startUrl: options.startUrl || 'about:blank' }),
+    // A new IP on the profile's own proxy; main fires the stored link by id.
+    rotateIp: (id) => invoke(CHANNELS.PROFILE_ROTATE_IP, { id }),
     restore: (id) => invoke(CHANNELS.PROFILE_RESTORE, { id }),
     purge: (id) => invoke(CHANNELS.PROFILE_PURGE, { id }),
     listTrash: () => invoke(CHANNELS.PROFILE_LIST_TRASH),
