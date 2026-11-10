@@ -56,7 +56,7 @@ export default function IpProvidersSettings() {
 
   return (
     <div className="rounded-xl bg-card border border-border p-5">
-      <div className="flex items-center justify-between gap-3 mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <div className="flex items-center gap-3">
           <span className="w-10 h-10 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #6366f1 14%, transparent)', border: '1px solid color-mix(in srgb, #6366f1 24%, transparent)' }}>
             <Network className="w-5 h-5 text-indigo-400" />
@@ -133,8 +133,9 @@ function ProviderCard({ provider, onChange, onError }) {
           {brand.initials}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-foreground truncate">{shownName}</span>
+          {/* The name wraps (Decodo (Smartproxy) at 375 px) instead of being cut, with the badge after it. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="text-[13px] font-semibold text-foreground break-words min-w-0">{shownName}</span>
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={enabled ? { background: 'color-mix(in srgb, #22c55e 14%, transparent)', color: '#22c55e' } : { background: 'var(--secondary)', color: 'var(--muted-foreground)' }}>
               {enabled ? t('ipProviders.statusEnabled') : t('ipProviders.statusDisabled')}
             </span>

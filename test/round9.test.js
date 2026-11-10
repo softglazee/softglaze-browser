@@ -439,3 +439,8 @@ test('Proxy pool at 375 px: the view tabs wrap inside their bar, and the stat ca
   assert.match(stat, /className="hidden sm:grid h-8 w-8 shrink-0 place-items-center rounded-md"/);
   assert.doesNotMatch(pool, /className="block truncate"/);
 });
+
+test('Decodo: the IP provider card wraps a long name at 375 px instead of cutting it', () => {
+  const card = read('src', 'renderer', 'components', 'IpProvidersSettings.jsx');
+  assert.match(card, /<div className="flex flex-wrap items-center gap-x-2 gap-y-0\.5">\s*<span className="text-\[13px\] font-semibold text-foreground break-words min-w-0">\{shownName\}<\/span>/);
+});
