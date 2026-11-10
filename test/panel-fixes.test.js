@@ -62,7 +62,7 @@ test('blank session + How many > 1 mints sticky sessions on the gateway vendors'
   assert.equal(hits.length, 1, 'PacketStream (it has no Keep same IP)');
   // CatProxies and the shared gateway minter follow gatewayPullPlan, which also makes one row sticky
   // when Keep same IP is set (test/connectorsShared.test.js).
-  const plans = IPC.match(/const plan = gatewayPullPlan\(\{ session, count, life \}\);\r?\n  const fixed = plan\.session \|\| \(plan\.sticky \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
+  const plans = IPC.match(/const plan = gatewayPullPlan\(\{ session, count, life \}\);\r?\n\s*const fixed = plan\.session \|\| \(plan\.sticky \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
   assert.equal(plans.length, 2, 'CatProxies and mintGatewayRows');
 });
 

@@ -367,7 +367,9 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
     <>
       <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-border">
         <LogoTile p={p} size="lg" />
-        <div className="min-w-0 flex-1">
+        {/* A minimum width wraps the Dashboard button under the name in a narrow window, so the name and
+            state are never squeezed letter by letter. */}
+        <div className="min-w-[9rem] flex-1">
           <h2 className="text-[17px] font-semibold text-foreground font-display break-words">{p.name}</h2>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
             <StateDot state={state} label={t(`states.${state}`)} />
