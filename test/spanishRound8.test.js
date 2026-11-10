@@ -195,7 +195,8 @@ test('17: the default footer is shown in the window\'s language; a custom one as
   assert.ok(IPC.includes(`footerText: '${def}'`), 'the same default main seeds');
   assert.equal(loc('en', 'common').shell.footerDefault, def);
   assert.match(loc('es', 'common').shell.footerDefault, /^© \{year\} SoftGlaze - Creado por el \[equipo de SoftGlaze\]\(https:\/\/softglaze\.com\) · Desarrollado por \[Azhar Ali\]\(https:\/\/azhar\.softglaze\.com\)$/);
-  assert.match(lib, /return text === DEFAULT_FOOTER_TEXT \? t\('shell\.footerDefault', \{ defaultValue: text \}\) : text;/);
+  // Round 9: an older stored default (round9.test.js) counts as the default too.
+  assert.match(lib, /const isDefault = text === DEFAULT_FOOTER_TEXT \|\| LEGACY_DEFAULT_FOOTER_TEXTS\.includes\(text\);\s*return isDefault \? t\('shell\.footerDefault', \{ defaultValue: DEFAULT_FOOTER_TEXT \}\) : text;/);
   assert.match(read('src', 'renderer', 'components', 'AppShell.jsx'), /\{renderFooterNodes\(footerTextFor\(text, t\)\)\}/);
 });
 

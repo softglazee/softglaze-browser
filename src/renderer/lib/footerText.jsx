@@ -4,8 +4,15 @@ import React from 'react';
 // the window shows it in its own language (common shell.footerDefault); a footer the Super Admin
 // wrote is shown as written.
 export const DEFAULT_FOOTER_TEXT = '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)';
+// Earlier defaults main seeded (June to September 2026). setGlobalSettings stores the defaults with any
+// saved setting, so a workspace from then may still hold one; it is the default footer too.
+export const LEGACY_DEFAULT_FOOTER_TEXTS = Object.freeze([
+  '© {year} SoftGlaze \u2014 Built by the SoftGlaze Team (https://softglaze.com) · Developed by Azhar Ali (https://azhar.softglaze.com)',
+  '© {year} SoftGlaze \u2014 Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
+]);
 export function footerTextFor(text, t) {
-  return text === DEFAULT_FOOTER_TEXT ? t('shell.footerDefault', { defaultValue: text }) : text;
+  const isDefault = text === DEFAULT_FOOTER_TEXT || LEGACY_DEFAULT_FOOTER_TEXTS.includes(text);
+  return isDefault ? t('shell.footerDefault', { defaultValue: DEFAULT_FOOTER_TEXT }) : text;
 }
 
 // Renders {year}, [label](https://) as a label-only link, and bare https URLs without the scheme.

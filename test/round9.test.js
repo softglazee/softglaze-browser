@@ -387,3 +387,39 @@ test('AnyIP: the note follows Dashboard V2 (a proxy profile\'s proxy details), n
   assert.doesNotMatch(UI, /Get Proxy Details/, 'the fallback text too');
   assert.equal(UI.includes(loc('en', 'cmpSettingsC').proxyProviders.geo.anyipApiNote), true, 'the fallback is the English text');
 });
+
+// ---- 17 and 18: Spanish leftovers ----
+
+test('17: a footer stored by an older build (its default then) reads in the window\'s language too', () => {
+  const lib = read('src', 'renderer', 'lib', 'footerText.jsx');
+  const src = ['DEFAULT_FOOTER_TEXT', 'LEGACY_DEFAULT_FOOTER_TEXTS'].map((name) => {
+    const m = new RegExp(`export const ${name} = [\\s\\S]*?;\\r?\\n`).exec(lib);
+    assert.ok(m, name);
+    return m[0].replace(/^export /, '');
+  }).join('\n') + /export (function footerTextFor[\s\S]*?\n\})/.exec(lib)[1];
+  // eslint-disable-next-line no-new-func
+  const { footerTextFor, LEGACY_DEFAULT_FOOTER_TEXTS, DEFAULT_FOOTER_TEXT } = new Function(`${src}\nreturn { footerTextFor, LEGACY_DEFAULT_FOOTER_TEXTS, DEFAULT_FOOTER_TEXT };`)();
+  const es = loc('es', 'common').shell.footerDefault;
+  const t = (key, opts) => (key === 'shell.footerDefault' ? es : opts.defaultValue);
+  // The defaults main seeded before 1.0.7, with an em dash (June to September 2026).
+  const old = [
+    '© {year} SoftGlaze — Built by the SoftGlaze Team (https://softglaze.com) · Developed by Azhar Ali (https://azhar.softglaze.com)',
+    '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
+  ];
+  assert.deepEqual([...LEGACY_DEFAULT_FOOTER_TEXTS], old);
+  for (const text of [DEFAULT_FOOTER_TEXT, ...old]) assert.equal(footerTextFor(text, t), es, text);
+  assert.equal(footerTextFor('© {year} Acme Ltd', t), '© {year} Acme Ltd', 'a footer someone wrote is shown as written');
+  assert.equal(footerTextFor(old[0], (k, o) => o.defaultValue), DEFAULT_FOOTER_TEXT, 'without a translation: today\'s default');
+});
+
+test('18: the Batch import page and the app\'s proxy pool use the Store listing\'s Spanish terms', () => {
+  assert.equal(loc('es', 'batchImport').header.title, 'Creación masiva de perfiles', 'like the sidebar\'s "Importación masiva"');
+  assert.equal(loc('es', 'common').nav.sectionAdmin, 'Administración');
+  const c = JSON.stringify(loc('es', 'cmpSettingsC'));
+  for (const s of ['varios productos en el pool', 'cuando el pool ya tiene', 'los puertos que el pool aún no tiene', 'las IP que el pool aún no tiene']) {
+    assert.equal(c.includes(s), false, s);
+  }
+  assert.match(c, /el grupo de proxies ya tiene 5/);
+  assert.match(c, /pools en connect\.gonzoproxy\.app/, 'a vendor\'s own pools stay "pools"');
+  for (const ns of ['batchImport', 'common', 'cmpSettingsC']) assert.doesNotMatch(JSON.stringify(loc('es', ns)), /perfiles por lotes|Importación por lotes/, ns);
+});
