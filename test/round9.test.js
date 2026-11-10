@@ -298,3 +298,65 @@ test('MarsProxies: 404 and 409 from generate-proxy-list are clear, coded and tra
   }
   assert.match(IPC, new RegExp(loc('en', 'cmpSettingsC').proxyProviders.errors.marsMismatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'the English text is main\'s');
 });
+
+// ---- CatProxies ISP and Datacenter, and the How many placeholder ----
+
+const providerLine = (key) => {
+  const line = UI.split(/\r?\n/).find((l) => l.startsWith(`  { key: '${key}', `));
+  assert.ok(line, key);
+  return line;
+};
+
+test('CatProxies: ISP and Datacenter hide Sticky session and Keep same IP (and ISP its Country), and send none of them', async () => {
+  const { stickyForPool, countryForPool, geoForPool } = await importLib('gatewayPull.mjs');
+  const line = providerLine('catproxies');
+  const minting = ['residential', 'residential_premium', 'mobile'];
+  for (const k of ['geoPools', 'stickyPools']) assert.match(line, new RegExp(`${k}: \\['residential', 'residential_premium', 'mobile'\\]`), k);
+  assert.match(line, /listPools: \['isp', 'datacenter'\], noCountryPools: \['isp'\]/);
+  const g = { geo: true, geoPools: minting, stickyPools: minting, listPools: ['isp', 'datacenter'], noCountryPools: ['isp'] };
+  for (const pool of minting) assert.deepEqual([stickyForPool(g, pool), geoForPool(g, pool), countryForPool(g, pool)], [true, true, true], pool);
+  assert.deepEqual([stickyForPool(g, 'isp'), geoForPool(g, 'isp'), countryForPool(g, 'isp')], [false, false, false]);
+  assert.deepEqual([stickyForPool(g, 'datacenter'), geoForPool(g, 'datacenter'), countryForPool(g, 'datacenter')], [false, false, true], 'Datacenter filters by country');
+  // A connector without the lists keeps every field, as before.
+  assert.deepEqual([stickyForPool({}, 'x'), countryForPool({}, 'x'), countryForPool({ noCountry: true }, 'x')], [true, true, false]);
+  // The form hides them and the pull sends none of them (main refuses them on these pools).
+  assert.match(UI, /const showSession = Boolean\(provider\.geoSync && !provider\.geoSync\.noSession && \(provider\.geoSync\.session \|\| provider\.geoSync\.geo\)\) && stickyOn;/);
+  assert.match(UI, /\{provider\.geoSync\.life && stickyOn && \(/);
+  const geo = extractFunction(UI, 'handleGeoSync');
+  assert.match(geo, /const sessionText = stickyOn \? form\.session\.trim\(\) : '';/);
+  assert.match(geo, /country: countryOn \? form\.country : '',/);
+  assert.match(geo, /life: stickyOn \? form\.life : '',/);
+  assert.match(geo, /state: placeOn \? form\.state\.trim\(\) : '',/);
+  assert.match(extractFunction(IPC, 'fetchCatProxiesFixedIps'), /Clear Country, State, City and Sticky session/, 'what main refuses on those pools');
+  for (const lang of ['en', 'es']) assert.doesNotMatch(loc(lang, 'cmpSettingsC').proxyProviders.geoHints.catproxies, /leave State, City and Sticky session blank|deja en blanco Estado, Ciudad y Sesión fija/, lang);
+});
+
+test('How many: the placeholder and title say what a blank How many adds, as main does', async () => {
+  const { countBlankFor } = await importLib('gatewayPull.mjs');
+  assert.equal(countBlankFor({ list: true }), 'all');
+  assert.equal(countBlankFor({ listPools: ['isp'] }, { poolType: 'isp' }), 'all');
+  assert.equal(countBlankFor({ listPools: ['isp'] }, { poolType: 'residential' }), 1);
+  assert.equal(countBlankFor({ listByUsername: true }, { username: ' per-proxy-1 ' }), 'all', 'Proxidize Per-Proxy lists the modems');
+  assert.equal(countBlankFor({ listByUsername: true }, { username: '' }), 1, 'Proxidize Per GB mints one');
+  assert.equal(countBlankFor({ countBlank: 5 }), 5);
+  assert.equal(countBlankFor({}), 1);
+  assert.match(UI, /placeholder=\{countBlank === 'all' \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : String\(countBlank\)\} title=\{countBlank === 'all' \? t\('proxyProviders\.geo\.howManyListTitle'\) : t\('proxyProviders\.geo\.howManyCapTitle', \{ n: countBlank \}\)\}/);
+  assert.doesNotMatch(UI, /: '5'\} title=\{provider\.geoSync\.list/);
+  for (const lang of ['en', 'es']) assert.match(loc(lang, 'cmpSettingsC').proxyProviders.geo.howManyCapTitle, /\{\{n\}\}/, lang);
+  // Each shared-form connector's blank default matches its adapter in main: 5 where the adapter
+  // defaults a blank count to 5 (clampPoolCount(count, 5, ...)), else 1.
+  const adapters = Object.fromEntries([...extractConst(IPC, 'REAL_VENDOR_ADAPTERS').matchAll(/^\s+(\w+): (fetch\w+),?$/gm)].map((m) => [m[1], m[2]]));
+  const keys = [...UI.matchAll(/^ {2}\{ key: '(\w+)', [^\n]*geoSync: \{[^\n]*count: true/gm)].map((m) => m[1]);
+  assert.ok(keys.length > 30, keys.join(','));
+  for (const key of keys) {
+    const line = providerLine(key);
+    if (/di: true|ps: true|ipr: true|list: true/.test(line)) continue; // own panels, or a list
+    assert.ok(adapters[key], `${key} has an adapter`);
+    const five = /clampPoolCount\(count, 5\b/.test(extractFunction(IPC, adapters[key]));
+    assert.equal(/countBlank: 5\b/.test(line), five, `${key}: placeholder ${five ? 5 : 1}`);
+  }
+  // List pools: Node4's Static Datacenter and CatProxies' fixed-IP plans import everything when blank.
+  assert.match(providerLine('node4'), /listPools: \['static'\]/);
+  assert.match(extractFunction(IPC, 'fetchNode4Pool'), /return limitListRows\(picked, count, Infinity\);/);
+  assert.match(providerLine('proxidize'), /listByUsername: true/);
+});

@@ -80,7 +80,10 @@ test('list-only providers without a country on their rows hide the country picke
   for (const key of ['airproxy', 'mobileproxyspace']) {
     assert.match(UI, new RegExp(`key: '${key}'.*noCountry: true`), key);
   }
-  assert.match(UI, /\{!provider\.geoSync\.noCountry && \(/);
+  // Round 9: countryForPool also hides it on a pool without one (CatProxies ISP).
+  assert.match(UI, /const countryOn = Boolean\(provider\.geoSync\) && countryForPool\(provider\.geoSync, form\.poolType\);/);
+  assert.match(UI, /\{countryOn && \(\s*<div className="sm:col-span-2">/);
+  assert.match(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'lib', 'gatewayPull.mjs'), 'utf8'), /if \(geoSync\.noCountry\) return false;/);
 });
 
 test('every list-only provider offers How many, and Proxy-Solutions filters by country', () => {
@@ -90,7 +93,8 @@ test('every list-only provider offers How many, and Proxy-Solutions filters by c
   assert.doesNotMatch(UI, /key: 'proxysolutions'.*noCountry: true/, 'Proxy-Solutions rows carry a country');
   // One How many field for every connector, the country row or not; its list wording follows geoSync.list.
   assert.match(UI, /\{provider\.geoSync\.count && \(/, 'How many must render without the country row');
-  assert.match(UI, /placeholder=\{provider\.geoSync\.list \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : '5'\}/);
+  assert.match(UI, /placeholder=\{countBlank === 'all' \? t\('proxyProviders\.geo\.howManyAll', 'All'\) : String\(countBlank\)\}/);
+  assert.match(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'lib', 'gatewayPull.mjs'), 'utf8'), /if \(geoSync\.list\) return 'all';/);
   for (const fn of ['fetchAirproxyPool', 'fetchMobileProxySpacePool', 'fetchProxySolutionsPool']) {
     const start = IPC.indexOf(`async function ${fn}(`);
     const body = IPC.slice(start, IPC.indexOf('\n}\n', start));
