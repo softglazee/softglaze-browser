@@ -4,7 +4,7 @@
 // describe such an endpoint have an adapter; the rest report "not supported" with a dashboard link.
 // Parsers are pure and the HTTP call is injected, so tests run the documented sample payloads.
 
-const { unwrapProxySeller } = require('./proxyVendorUtils');
+const { unwrapProxySeller, gsocksAuthSchemes, coroniumExpiryMs } = require('./proxyVendorUtils');
 
 const GIB = 1024 ** 3;
 const STATUSES = new Set(['active', 'expired', 'suspended', 'unknown']);
@@ -420,7 +420,8 @@ ADAPTERS.proxiessx = {
 };
 
 // ---- Coronium: GET /account (USDT and account credit, both USD) and GET /account/proxies, whose
-// tariff_expired_at is each line's end in epoch milliseconds. Dedicated lines are not metered. ----
+// tariff_expired_at is each line's end in epoch milliseconds (expires_at, ISO, on rental rows; read by
+// coroniumExpiryMs, as the pull does). Dedicated lines are not metered. ----
 const CORONIUM_API = 'https://api.coronium.io/api/v3';
 
 function coroniumJson(body, what) {
@@ -440,7 +441,7 @@ function parseCoroniumAccount(accountBody, proxiesBody, { now = Date.now() } = {
   const any = rows.length > 0 || (count != null && count > 0);
   return {
     status: any ? 'active' : 'unknown',
-    expiresAt: nextExpiry(rows.map((r) => r.tariff_expired_at), now),
+    expiresAt: nextExpiry(rows.map((r) => coroniumExpiryMs(r)), now),
     balance,
     currency: balance != null ? 'USD' : null,
     note: !any ? 'noActiveProxies' : (rows.length > 1 ? 'firstToExpire' : null)
@@ -655,8 +656,17 @@ ADAPTERS.gsocks = {
   async fetch(c, get) {
     const key = String(c.token).trim();
     if (/\s/.test(key)) throw new Error('Gsocks: the saved API key does not look right. Save it again on the Pull tab.');
-    const headers = { authorization: `key ${key}`, Accept: 'application/json' };
-    const balance = await get(`${GSOCKS_API}/client/balance`, { headers });
+    // The docs show two header forms (gsocksAuthSchemes); the balance call settles which one works.
+    const [first, second] = gsocksAuthSchemes(key);
+    let headers = { authorization: `${first} ${key}`, Accept: 'application/json' };
+    let balance;
+    try {
+      balance = await get(`${GSOCKS_API}/client/balance`, { headers });
+    } catch (e) {
+      if (!e || (e.status !== 401 && e.status !== 403)) throw e;
+      headers = { authorization: `${second} ${key}`, Accept: 'application/json' };
+      balance = await get(`${GSOCKS_API}/client/balance`, { headers });
+    }
     const volumes = [];
     for (const kind of ['residential', 'mobile']) {
       try { volumes.push(await get(`${GSOCKS_API}/proxy/${kind}-volume`, { headers })); } catch (e) {
