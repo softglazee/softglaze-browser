@@ -398,8 +398,8 @@ test('3: the Firefox bridge asks the rule for that profile\'s launcher; the fail
   const firefox = reg.slice(reg.indexOf('autofillBridge.configure({'));
   assert.match(firefox, /isAvailable: \(ctx\) => personaVaultAvailable\(\{ sessionId: ctx && ctx\.sessionId != null \? ctx\.sessionId : null \}\)/);
   assert.match(extractFunction(IPC, 'personaVaultAvailable'), /return sessionAutofillAllowed\(sessionId\);/);
-  // No change to the add-on's files (it would need a new Mozilla signature).
-  assert.equal(JSON.parse(read('src', 'firefox-extension', 'manifest.json')).version, '1.0.2');
+  // 1.0.26 round 8 changed the add-on's files; 1.0.3 is the version signed for 1.0.26.
+  assert.equal(JSON.parse(read('src', 'firefox-extension', 'manifest.json')).version, '1.0.3');
 });
 
 // ==== 4. The first-run wizard, per member ====
