@@ -83,6 +83,14 @@
       "output": "dist_installer"
     },
     "afterPack": "build/afterPack.js",
+    "protocols": [
+      {
+        "name": "SoftGlaze Browser",
+        "schemes": [
+          "softglaze"
+        ]
+      }
+    ],
     "asarUnpack": [
       "node_modules/.prisma/**/*",
       "node_modules/@prisma/client/**/*",

@@ -219,6 +219,16 @@ const CHANNELS = Object.freeze({
   ACCOUNT_CONFIRM_START: 'account:confirm-start',
   ACCOUNT_CONFIRM_CHECK: 'account:confirm-check',
   ACCOUNT_CONFIRM_LATER: 'account:confirm-later',
+  SIGNIN_INFO: 'signin:info',
+  SIGNIN_START: 'signin:start',
+  SIGNIN_CANCEL: 'signin:cancel',
+  SIGNIN_EMAIL_START: 'signin:email-start',
+  SIGNIN_EMAIL_VERIFY: 'signin:email-verify',
+  SIGNIN_ACCOUNT: 'signin:account',
+  SIGNIN_SIGN_OUT: 'signin:sign-out',
+  SIGNIN_USE_CASE: 'signin:use-case',
+  SIGNIN_LICENCE_STATE: 'signin:licence-state',
+  SIGNIN_MOVE_LICENCE: 'signin:move-licence',
 
   GROUP_LIST: 'group:list',
   GROUP_CREATE: 'group:create',
@@ -688,6 +698,24 @@ const api = Object.freeze({
     confirmStart: (payload) => invoke(CHANNELS.ACCOUNT_CONFIRM_START, payload),
     confirmCheck: (payload) => invoke(CHANNELS.ACCOUNT_CONFIRM_CHECK, payload),
     confirmLater: () => invoke(CHANNELS.ACCOUNT_CONFIRM_LATER)
+  }),
+  // One-click sign-in (1.0.26). purpose: 'signup' (a new workspace) | 'unlock' (a one-click workspace after
+  // Sign out) | 'link' (Settings > Account). The session token never reaches the renderer.
+  signin: Object.freeze({
+    // -> { tenant, providers: ['github'], email: true, purpose, account, keychain }
+    info: () => invoke(CHANNELS.SIGNIN_INFO),
+    // Opens the system browser and resolves when the sign-in came back (or rejects: SIGNIN_CANCELLED, ...).
+    // mode 'loopback' = "Try another way". -> { outcome: created | unlocked | linked, askUseCase, licence }
+    start: (provider, purpose, mode) => invoke(CHANNELS.SIGNIN_START, { provider, purpose, mode }),
+    cancel: () => invoke(CHANNELS.SIGNIN_CANCEL),
+    emailStart: (email, purpose, lang) => invoke(CHANNELS.SIGNIN_EMAIL_START, { email, purpose, lang }),
+    emailVerify: (email, code, purpose) => invoke(CHANNELS.SIGNIN_EMAIL_VERIFY, { email, code, purpose }),
+    // Settings > Account -> { tenant, signedIn, email, name, provider, methods, offline, signInWorkspace, providers }
+    account: () => invoke(CHANNELS.SIGNIN_ACCOUNT),
+    signOut: () => invoke(CHANNELS.SIGNIN_SIGN_OUT),
+    saveUseCase: (payload) => invoke(CHANNELS.SIGNIN_USE_CASE, payload),
+    licenceState: () => invoke(CHANNELS.SIGNIN_LICENCE_STATE),
+    moveLicence: () => invoke(CHANNELS.SIGNIN_MOVE_LICENCE)
   }),
   batch: Object.freeze({
     previewProfilesFromSpreadsheet: () => invoke(CHANNELS.BATCH_PREVIEW_PROFILES_DIALOG),

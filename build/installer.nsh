@@ -24,3 +24,20 @@
     sgInitDone:
   ${endif}
 !macroend
+
+; One-click sign-in (1.0.26): register softglaze:// so the browser can hand the sign-in back to the app
+; (softglaze://auth?code=...). SHCTX is HKLM for this per-machine installer. The app also registers it for
+; the current user at start (app.setAsDefaultProtocolClient). The Store package declares it in its manifest
+; (package.json build.protocols), not here.
+!macro customInstall
+  DeleteRegKey SHCTX "Software\Classes\softglaze"
+  WriteRegStr SHCTX "Software\Classes\softglaze" "" "URL:SoftGlaze Browser"
+  WriteRegStr SHCTX "Software\Classes\softglaze" "URL Protocol" ""
+  WriteRegStr SHCTX "Software\Classes\softglaze\DefaultIcon" "" "$appExe,0"
+  WriteRegStr SHCTX "Software\Classes\softglaze\shell\open\command" "" '"$appExe" "%1"'
+!macroend
+
+!macro customUnInstall
+  DeleteRegKey SHCTX "Software\Classes\softglaze"
+  DeleteRegKey HKCU "Software\Classes\softglaze"
+!macroend
