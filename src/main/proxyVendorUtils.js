@@ -692,9 +692,11 @@ function froxyPassword(base, { country, region, city } = {}) {
   return [head, /^[a-z]{2}$/.test(cc) ? cc : '', froxyField(region), froxyField(city), ''].join(';');
 }
 
-// PacketStream: one gateway (proxy.packetstream.io:31112 HTTP, :31113 SOCKS5). Country and session go
-// on the password (<pass>_country-UnitedStates_session-ab12cd). Countries are English names without
-// spaces, not ISO codes (a code is ignored); these are the 126 names its dashboard offers.
+// PacketStream: one gateway (proxy.packetstream.io: 31111 HTTPS, 31112 HTTP, 31113 SOCKS5). Country and
+// session go on the auth key, the proxy password (<key>_country-UnitedStates_session-ab12cd). Countries
+// are the English dashboard names without spaces, the 126 its dashboard offers. PacketStream's docs now
+// show ISO codes (_country-US), but a code was ignored in our live test of 6 Oct 2026 (the exit landed
+// anywhere), so the names stay until a live re-test shows codes work.
 const PACKETSTREAM_COUNTRIES = Object.freeze({
   US: 'UnitedStates', CA: 'Canada', AF: 'Afghanistan', AL: 'Albania', DZ: 'Algeria',
   AR: 'Argentina', AM: 'Armenia', AW: 'Aruba', AU: 'Australia', AT: 'Austria', AZ: 'Azerbaijan',
@@ -733,9 +735,12 @@ function packetStreamPassword(base, { country, session } = {}) {
   return pw;
 }
 
-// Airproxy dedicated mobile proxies (HTTP only). GET /api/proxy/list/ returns { proxies: [{ id, ip,
-// port, username, password, isp, in_use_till, ... }], count, success }.
-function airproxyRows(body) {
+// Airproxy dedicated mobile proxies, all in Italy. GET /api/proxy/list/ returns { proxies: [{ id, ip,
+// port, username, password, isp, in_use_till, ... }], count, success }. The list names one port; our
+// dashboard read of 29 Sep 2026 showed HTTP and SOCKS5 on it, which Airproxy's public pages do not state,
+// so SOCKS5 is the user's choice and HTTP stays the default.
+const AIRPROXY_COUNTRY = 'IT';
+function airproxyRows(body, { socks = false } = {}) {
   let data;
   try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return []; }
   const list = Array.isArray(data && data.proxies) ? data.proxies : [];
@@ -754,10 +759,10 @@ function airproxyRows(body) {
     const isp = String(p.isp || '').trim();
     const id = p.id != null ? String(p.id) : '';
     rows.push({
-      type: 'HTTP',
+      type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
-      label: `Airproxy • Mobile${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}`,
-      country: null
+      label: `Airproxy • Mobile • IT${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}`,
+      country: AIRPROXY_COUNTRY
     });
   }
   return rows;
@@ -806,6 +811,51 @@ function catProxiesMobileUsername(base, { country, region, city, session, ttlMin
   const ttl = catProxiesMobileTtl(ttlMin);
   if (sid) u += ttl ? `-sid-${sid}-ttl-${ttl}m` : `-sid-${sid}`;
   return u;
+}
+// CatProxies Premium Residential (resix): <region>.premium.catproxies.com, with the targeting on the
+// password, not the username. The first flag joins with '-', every later one with '_':
+// <pass>-country-gb_city-london_session-a1b2c3d4_lifetime-1h. A state is US-only and cannot be combined
+// with a city; a session id is exactly 8 lowercase letters or digits; lifetime is 30m, 1h, 24h and so on,
+// up to 168 hours (catproxies.com/docs/api, Premium Residential).
+const CATPROXIES_PREMIUM_MAX_LIFETIME = 168 * 60;
+function catProxiesPremiumSession(id) {
+  const raw = String(id || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (/^[a-z0-9]{8}$/.test(raw)) return raw;
+  // Two FNV-1a hashes give a stable 8-character id for any session name.
+  let a = 2166136261;
+  let b = 0x9747b28c;
+  for (const ch of raw) {
+    const c = ch.codePointAt(0);
+    a = Math.imul(a ^ c, 16777619) >>> 0;
+    b = Math.imul(b ^ c, 16777619) >>> 0;
+  }
+  return a.toString(36).padStart(7, '0').slice(-4) + b.toString(36).padStart(7, '0').slice(-4);
+}
+function catProxiesPremiumLifetime(minutes) {
+  const m = Number(minutes);
+  if (!Number.isInteger(m) || m < 1) return '';
+  const c = Math.min(m, CATPROXIES_PREMIUM_MAX_LIFETIME);
+  return c % 60 === 0 ? `${c / 60}h` : `${c}m`;
+}
+function catProxiesPremiumPassword(base, { country, state, city, session, lifetimeMin } = {}) {
+  const pass = base != null ? String(base) : '';
+  const flags = [];
+  const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+  const hasCc = /^[a-z]{2}$/.test(cc);
+  if (hasCc) flags.push(`country-${cc}`);
+  const place = (v) => (hasCc ? String(v || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '') : '');
+  const ct = place(city);
+  const st = cc === 'us' ? place(state) : '';
+  if (ct) flags.push(`city-${ct}`);
+  else if (st) flags.push(`state-${st}`);
+  const sid = catProxiesPremiumSession(session);
+  if (sid) {
+    flags.push(`session-${sid}`);
+    const life = catProxiesPremiumLifetime(lifetimeMin);
+    if (life) flags.push(`lifetime-${life}`);
+  }
+  return flags.length ? `${pass}-${flags.join('_')}` : pass;
 }
 // Pull { username, password, bandwidthLeft } out of a GET /orders/:id response, tolerating
 // the payload.order.proxy nesting the API documents plus a couple of flatter fallbacks.
@@ -1049,10 +1099,16 @@ function novadaUsername(base, { poolType, country, state, city, session, lifeMin
 }
 
 // Proxies.sx (gw.proxies.sx, 7000 HTTP, 7001 SOCKS5) lowercases the username and splits it on '-':
-// psx_<acct>-<mbl|peer>-<cc>[-state-<xx>][-city-<name>](-sid-<id>-rot-sticky|-rot-ondemand)-failover-strict.
+// psx_<acct>-<mbl|peer>-<cc>[-iptype-residential][-state-<xx>][-city-<name>]
+// (-sid-<id>[-ttl-<seconds>]-rot-sticky|-rot-ondemand)-failover-strict.
 // Never best/any (they cross pools); failover-strict errors on an out-of-stock country instead of
 // exiting elsewhere. Without a rot token the gateway moves the exit every 10 minutes (auto10), so a
 // rotating row asks for ondemand: a new endpoint on each connection. State and city are peer-only.
+// The peer network mixes residential and mobile devices, so the Residential choice adds the hard
+// -iptype-residential filter (agents.proxies.sx/pool/skill.md). -ttl- is the session record's life in
+// seconds (60 to 2592000, default 3600); it does not promise the IP, which leaves when its device does.
+const PROXIESSX_TTL_MIN_S = 60;
+const PROXIESSX_TTL_MAX_S = 2592000;
 const PROXIESSX_POOLS = Object.freeze({ mobile: 'mbl', residential: 'peer' });
 // The carrier-modem pool (mbl) runs in these six countries only; GE is Georgia.
 const PROXIESSX_MOBILE_COUNTRIES = Object.freeze(['US', 'GB', 'FR', 'NL', 'PL', 'GE']);
@@ -1066,13 +1122,14 @@ function proxiesSxSid(prefix, index) {
   if (core.length >= 8) return core.slice(0, 64);
   return `sg_${core.padStart(5, '0')}`.slice(0, 64);
 }
-function proxiesSxUsername(login, { poolType, country, sid, state, city } = {}) {
+function proxiesSxUsername(login, { poolType, country, sid, state, city, ttlSeconds } = {}) {
   const acct = String(login || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const pool = PROXIESSX_POOLS[String(poolType || '').toLowerCase()] || PROXIESSX_POOLS.mobile;
   const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
   if (!acct || !/^[a-z]{2}$/.test(cc)) return '';
   let user = `${acct}-${pool}-${cc}`;
   if (pool === PROXIESSX_POOLS.residential) {
+    user += '-iptype-residential';
     // State is the 2-letter region code (-state-ca, never -state-california).
     const st = String(state || '').trim().toLowerCase();
     if (/^[a-z]{2}$/.test(st)) user += `-state-${st}`;
@@ -1080,7 +1137,9 @@ function proxiesSxUsername(login, { poolType, country, sid, state, city } = {}) 
     if (ct) user += `-city-${ct}`;
   }
   const s = String(sid || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
-  user += s ? `-sid-${s}-rot-sticky` : '-rot-ondemand';
+  const ttl = Number(ttlSeconds);
+  const ttlTag = s && Number.isInteger(ttl) && ttl > 0 ? `-ttl-${Math.min(PROXIESSX_TTL_MAX_S, Math.max(PROXIESSX_TTL_MIN_S, ttl))}` : '';
+  user += s ? `-sid-${s}${ttlTag}-rot-sticky` : '-rot-ondemand';
   return `${user}-failover-strict`;
 }
 // Routable endpoints for one pool and country from GET /v1/gateway/pool/stock (public, counts only):
@@ -1111,8 +1170,23 @@ function proxiesSxProxyCreds(body) {
 // MobileProxy.Space: GET mpsapi.com/api.html?command=get_my_proxy (Bearer) -> { status: 'ok', list };
 // one docs sample is a bare array instead. Errors are { status: 'err', message }, and some commands
 // answer 'OK', so status is compared without case. Each proxy has one login, separate HTTP/SOCKS5
-// ports; numbers may be strings, and proxy_exp stays vendor text (Moscow time).
-function mobileProxySpaceRows(body, { socks = false } = {}) {
+// ports; numbers may be strings, and proxy_exp stays vendor text (Moscow time). The equipment-independent
+// address (proxy_independent_http_hostname / _socks5_hostname, or their _host_ip, on
+// proxy_independent_port) survives a device change, so it wins over proxy_host_ip and the per-protocol
+// ports when the proxy has one (github.com/mobileproxy/api-docs, openapi.yaml, schema Proxy).
+// `countries` maps id_country to an ISO code (mobileProxySpaceCountries), so a row carries its country.
+function mobileProxySpaceCountries(body) {
+  let data;
+  try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return {}; }
+  const list = data && Array.isArray(data.id_country) ? data.id_country : [];
+  const out = {};
+  for (const c of list) {
+    const iso = String((c && c.iso) || '').trim().toUpperCase();
+    if (c && c.id_country != null && /^[A-Z]{2}$/.test(iso)) out[String(c.id_country)] = iso;
+  }
+  return out;
+}
+function mobileProxySpaceRows(body, { socks = false, countries = null } = {}) {
   let data;
   try { data = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { error: 'bad-json', rows: [] }; }
   if (!data || typeof data !== 'object') return { error: 'bad-json', rows: [] };
@@ -1122,8 +1196,13 @@ function mobileProxySpaceRows(body, { socks = false } = {}) {
   const seen = new Set();
   for (const p of list) {
     if (!p || typeof p !== 'object') continue;
-    const host = String(p.proxy_host_ip || p.proxy_hostname || '').trim();
-    const port = Number.parseInt(String(socks ? p.proxy_socks5_port : p.proxy_http_port), 10);
+    const indHost = String((socks
+      ? (p.proxy_independent_socks5_hostname || p.proxy_independent_socks5_host_ip)
+      : (p.proxy_independent_http_hostname || p.proxy_independent_http_host_ip)) || '').trim();
+    const indPort = Number.parseInt(String(p.proxy_independent_port), 10);
+    const independent = Boolean(indHost) && !/[\s/@?#]/.test(indHost) && Number.isInteger(indPort) && indPort >= 1 && indPort <= 65535;
+    const host = independent ? indHost : String(p.proxy_host_ip || p.proxy_hostname || '').trim();
+    const port = independent ? indPort : Number.parseInt(String(socks ? p.proxy_socks5_port : p.proxy_http_port), 10);
     const username = p.proxy_login != null ? String(p.proxy_login) : '';
     const password = p.proxy_pass != null ? String(p.proxy_pass) : '';
     if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
@@ -1133,11 +1212,12 @@ function mobileProxySpaceRows(body, { socks = false } = {}) {
     const geo = String(p.proxy_geo || '').trim();
     const op = String(p.proxy_operator || '').trim();
     const exp = String(p.proxy_exp || '').trim();
+    const iso = countries && p.id_country != null ? String(countries[String(p.id_country)] || '') : '';
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
       label: `MobileProxy.Space • ${[geo, op].filter(Boolean).join(' • ') || 'Mobile'}${p.proxy_id != null ? ` • #${p.proxy_id}` : ''}${exp ? ` • until ${exp}` : ''}`,
-      country: null
+      country: /^[A-Z]{2}$/.test(iso) ? iso : null
     });
   }
   return { error: '', rows };
@@ -1243,9 +1323,14 @@ function databayZone(value) {
   const v = String(value || '').trim().toLowerCase();
   return DATABAY_ZONES.find((z) => z.toLowerCase() === v) || 'residential';
 }
+// Hyphen is the parameter separator, so inside a value the Connection String page asks for %2D, and %20
+// for a space (Winston-Salem -> Winston%2DSalem, Los Angeles -> Los%20Angeles). A value typed already
+// encoded is read back first; an underscore counts as a space.
 function databayGeoValue(v) {
-  // Hyphen is the parameter separator, so it can never appear inside a value.
-  return String(v || '').trim().replace(/[-_]+/g, ' ').replace(/[^\p{L}\p{N} .']/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const plain = String(v || '').replace(/%2D/gi, '-').replace(/%20/g, ' ').replace(/_+/g, ' ')
+    .replace(/[^\p{L}\p{N} .'-]/gu, '').replace(/\s*-\s*/g, '-').replace(/-+/g, '-').replace(/\s+/g, ' ')
+    .trim().replace(/^-+|-+$/g, '').slice(0, 60);
+  return plain.replace(/-/g, '%2D').replace(/ /g, '%20');
 }
 function databayUsername(base, { zone, country, state, city, session, lengthMin } = {}) {
   const user = String(base || '').trim().replace(/-zone-.*$/i, '');
@@ -1628,9 +1713,23 @@ function simplyProxiesUsername(base, { network, session, minutes } = {}) {
   return parts.join('-');
 }
 
-// Coronium: GET /api/v3/account/proxies (Bearer) -> { data }. Rows use ip_address + proxy_login on
-// http_port/socks_port, or per-protocol proxyEndpoints, which win. The restart/status token URLs
-// rotate the IP without auth, so only the named fields are copied. Not tested with a live key.
+// Coronium: GET /api/v3/account/proxies (Bearer) -> { data }. Rows use ip_address (connection_ip is its
+// documented alias) + proxy_login on http_port/socks_port, or per-protocol proxyEndpoints, which win.
+// The restart/status token URLs rotate the IP without auth, so only the named fields are copied.
+// Expiry: Coronium's OpenAPI (api.coronium.io/openapi.json, schema Proxy) gives tariff_expired_at in
+// epoch milliseconds; support named expires_at, which the same file has as ISO-8601 on rental rows. Both
+// are read, and a number below 1e12 is taken as seconds, so a unit mix-up cannot mark every line expired.
+// Not tested with a live key.
+function coroniumExpiryMs(p) {
+  for (const v of [p && p.tariff_expired_at, p && p.expires_at]) {
+    if (v == null || v === '' || typeof v === 'boolean') continue;
+    const n = typeof v === 'number' ? v : (/^\d+(\.\d+)?$/.test(String(v).trim()) ? Number(v) : NaN);
+    if (Number.isFinite(n)) { if (n > 0) return n < 1e12 ? n * 1000 : n; continue; }
+    const t = Date.parse(String(v));
+    if (Number.isFinite(t)) return t;
+  }
+  return null;
+}
 function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, expired: 0 }; }
@@ -1640,8 +1739,8 @@ function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
   let expired = 0;
   for (const p of list) {
     if (!p || typeof p !== 'object') continue;
-    const exp = Number(p.tariff_expired_at);
-    if (Number.isFinite(exp) && exp > 0 && exp <= now) { expired += 1; continue; }
+    const exp = coroniumExpiryMs(p);
+    if (exp != null && exp <= now) { expired += 1; continue; }
     // A row with proxyEndpoints never falls back to the classic fields: those are for other rows.
     const pe = p.proxyEndpoints && typeof p.proxyEndpoints === 'object' ? p.proxyEndpoints : null;
     const ep = pe ? (socks ? pe.socks5 : pe.http) : null;
@@ -1668,7 +1767,8 @@ function coroniumRows(body, { socks = false, now = Date.now() } = {}) {
 // Singapore Mobile Proxy: GET /api/v1/proxies/my (x-api-key) -> { proxyList }; authentication_user is
 // "user:password". Each row is one dedicated modem. Its rotation_link changes the IP when opened (at
 // most every few minutes), so it becomes the proxy's Rotate IP link and is never fetched here. Lines
-// without a login (IP allow-list only) are counted and left out.
+// without a login (IP allow-list only) are counted and left out. The vendor sells Singapore only, so
+// every row is SG.
 function singaporeMobileProxyRows(body, { socks = false } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], total: 0, inactive: 0, noLogin: 0 }; }
@@ -1700,16 +1800,26 @@ function singaporeMobileProxyRows(body, { socks = false } = {}) {
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
       label: `Singapore Mobile Proxy${plan ? ` • ${plan}` : ''} • ${port}${data}`,
-      country: null,
+      country: 'SG',
       rotationUrl: /^https:\/\//i.test(rotation) ? rotation : null
     });
   }
   return { rows, total: list.length, inactive, noLogin };
 }
 
-// Gsocks (api.gsocks.net, "authorization: key <api_key>"): GET /proxy returns { proxies, count },
-// then /proxy/<residential|mobile>-proxy-list/:id a host:port:user:pass text list (bare or { List }).
-// The id field is undocumented (read as `id`, failing loudly). Not tested with a live key.
+// Gsocks (api.gsocks.net): GET /proxy returns { proxies, count }, then
+// /proxy/<residential|mobile>-proxy-list/:id a host:port:user:pass text list (bare or { List }).
+// HTTP and SOCKS5 share each line's host and port (Gsocks' help guides), so the protocol is the user's
+// choice. The id field is undocumented (read as `id`, a number or a plain token, failing loudly).
+// Not tested with a live key.
+//
+// The auth header is unsettled: the API page's rule and header tables say "authorization: key
+// {api_key}", while every curl example on the same page sends "authorization: session eyJ..." (a JWT).
+// gsocksAuthSchemes gives the order to try: the documented rule first, or session first for a key
+// that is itself a JWT; the caller tries the other once on 401/403 and keeps the one that works.
+function gsocksAuthSchemes(key) {
+  return /^eyJ[\w-]*\.[\w-]*\.[\w-]*$/.test(String(key || '').trim()) ? ['session', 'key'] : ['key', 'session'];
+}
 function gsocksProxyIds(body) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { ids: [], listed: 0, total: 0 }; }
@@ -1717,12 +1827,12 @@ function gsocksProxyIds(body) {
   const ids = [];
   for (const p of list) {
     const id = p && p.id;
-    if ((typeof id === 'number' && Number.isInteger(id)) || (typeof id === 'string' && /^\d+$/.test(id))) ids.push(String(id));
+    if ((typeof id === 'number' && Number.isInteger(id) && id >= 0) || (typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id))) ids.push(String(id));
   }
   const total = Number.parseInt(String(json && json.count), 10);
   return { ids, listed: list.length, total: Number.isInteger(total) ? total : list.length };
 }
-function gsocksListRows(body, { kind = 'Residential', id = '' } = {}) {
+function gsocksListRows(body, { kind = 'Residential', id = '', socks = false } = {}) {
   let text = typeof body === 'string' ? body : '';
   if (typeof body !== 'string' && body && typeof body === 'object') text = body.List ?? body.list ?? '';
   const trimmed = String(text).trim();
@@ -1748,7 +1858,7 @@ function gsocksListRows(body, { kind = 'Residential', id = '' } = {}) {
     if (seen.has(key)) continue;
     seen.add(key);
     rows.push({
-      type: 'HTTP',
+      type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
       label: `Gsocks • ${kind}${id ? ` • #${id}` : ''}`,
       country: null,
@@ -1760,7 +1870,9 @@ function gsocksListRows(body, { kind = 'Residential', id = '' } = {}) {
 
 // Proxy Bonanza: GET /api/v1/userpackages-ippacks.json with "Authorization: <api_key>!<user_id>"
 // returns { success, data: [{ ip, port_http, port_socks, login, password, countrycode, ... }] }
-// for every IP on active plans. Not tested with a live key.
+// for every IP on active plans. Not tested with a live key. A plan can also authorize by IP; whether such
+// a plan still returns its login here is not documented, so an IP without a login is counted (noLogin)
+// and left out, and the pull says why when that leaves nothing.
 function proxyBonanzaRows(body, { socks = false } = {}) {
   let json;
   try { json = typeof body === 'string' ? JSON.parse(body) : body; } catch { return { rows: [], error: 'The API did not return JSON.' }; }
@@ -1771,13 +1883,15 @@ function proxyBonanzaRows(body, { socks = false } = {}) {
   const list = Array.isArray(json.data) ? json.data : [];
   const rows = [];
   const seen = new Set();
+  let noLogin = 0;
   for (const p of list) {
     if (!p || typeof p !== 'object') continue;
     const host = String(p.ip || '').trim();
     const port = Number.parseInt(String(socks ? p.port_socks : p.port_http), 10);
     const username = p.login != null ? String(p.login) : '';
     const password = p.password != null ? String(p.password) : '';
-    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    if (!username || !password) { noLogin += 1; continue; }
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
     const key = `${host}:${port}:${username}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -1791,7 +1905,7 @@ function proxyBonanzaRows(body, { socks = false } = {}) {
       country: code || null
     });
   }
-  return { rows, error: '', total: list.length };
+  return { rows, error: '', total: list.length, noLogin };
 }
 
 // PROXY6: GET px6.link/api/<key>/getproxy/?state=active&nokey&limit=1000&page=<n> -> { list }.
@@ -1911,7 +2025,7 @@ module.exports = {
   liveProxiesUsername,
   liveProxiesStickyHost,
   pickGeoConsensus,
-  mobileProxySpaceRows,
+  mobileProxySpaceRows, mobileProxySpaceCountries,
   proxySolutionsPage,
   rapidProxyUsername,
   NOVADA_ZONES, NOVADA_MAX_SESSTIME,
@@ -1962,8 +2076,9 @@ module.exports = {
   froxyType,
   froxyPassword, froxyPastedPool, FROXY_TYPE_WORDS,
   packetStreamPassword, packetStreamCountry, PACKETSTREAM_COUNTRIES,
-  airproxyRows,
+  airproxyRows, AIRPROXY_COUNTRY,
   catProxiesResiUsername,
+  catProxiesPremiumPassword, catProxiesPremiumSession, catProxiesPremiumLifetime,
   CATPROXIES_MOBILE_TTLS, catProxiesMobileTtl,
   catProxiesMobileUsername,
   catProxiesCreds,
@@ -1978,9 +2093,9 @@ module.exports = {
   twoExtractBaseUser, twoExtractCountry, twoExtractUsername,
   gonzoProxyBaseLogin, gonzoProxyUsername, gonzoProxyTtl,
   SIMPLYPROXIES_NETWORKS, simplyProxiesUsername,
-  coroniumRows,
+  coroniumRows, coroniumExpiryMs,
   singaporeMobileProxyRows,
-  gsocksProxyIds, gsocksListRows,
+  gsocksProxyIds, gsocksListRows, gsocksAuthSchemes,
   proxyBonanzaRows,
   proxy6Page, 
   catProxiesIspRows, catProxiesDatacenterRows
