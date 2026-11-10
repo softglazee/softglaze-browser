@@ -61,6 +61,7 @@
     "recommendedProxyPasswords": "proxy passwords",
     "recommendedAfter": ", 2FA seeds, saved cookies and account data at rest - it encrypts every field, not just some. Make a workspace backup first, then turn it on below.",
     "enabledNotice": "On next launch you'll be asked to unlock the database with your workspace password before the app opens.",
+    "enabledNoticeRemembered": "“Keep me signed in” is on for this device, so the app unlocks the database by itself at launch (your workspace password is stored encrypted to your Windows account). To be asked for the password at every launch, choose “Forget this device” under “Stay signed in on this device”.",
     "turnOff": "Turn off encryption",
     "turnOn": "Turn on encryption",
     "readFirstLabel": "Read this first.",

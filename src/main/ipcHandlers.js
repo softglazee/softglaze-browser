@@ -10669,7 +10669,15 @@ async function updateMember(payload) {
     data.role = role;
   }
   const m = await db.member.update({ where: { id }, data });
-  await logAudit('member.update', { detail: { target: id, name: m.name, changed: Object.keys(data) } });
+  // The member dialog sends every field, its status included, on each save. Log what actually changed:
+  // a status change as 'member.status' (the same row as Block / Suspend, setMemberStatus), any other
+  // change as 'member.update' with only the fields that changed.
+  // Compared as the dialog shows them (serializeMember): a row without a colour shows the default one.
+  const before = (k) => (k === 'color' ? (target.color || '#3DC6DA') : (target[k] === undefined ? null : target[k]));
+  const statusChanged = data.status !== undefined && data.status !== (target.status || 'active');
+  const changed = Object.keys(data).filter((k) => k !== 'status' && data[k] !== before(k));
+  if (statusChanged) await logAudit('member.status', { detail: { target: id, name: m.name, status: data.status, reason: null } });
+  if (changed.length) await logAudit('member.update', { detail: { target: id, name: m.name, changed } });
   return serializeMember(m);
 }
 
@@ -11691,6 +11699,8 @@ async function accountRegister(payload) {
   // 2) Create the master account as OWNER (always - this is the workspace owner).
   const db = getPrisma();
   const name = `${firstName} ${lastName}`.trim();
+  // Registering signs the Owner in (step 3), so it counts as their first sign-in: the Members page
+  // shows them active now, not "Never active" until the next sign-in.
   const owner = await db.member.create({
     data: {
       name,
@@ -11698,7 +11708,8 @@ async function accountRegister(payload) {
       role: 'OWNER',
       color: '#3DC6DA',
       initials: initialsFrom(name),
-      status: 'active'
+      status: 'active',
+      lastActiveAt: new Date()
     }
   });
 

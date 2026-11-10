@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Lock, KeyRound, ShieldCheck, AlertTriangle, Loader2, Check, ChevronDown } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { dbEncryptionNoticeKey } from '@/lib/dbEncryptionNotice.mjs';
 
 // Full-database encryption at rest. Off until the user opts in, never overclaims runtime
 // protection, and enabling requires acknowledging that a lost password is unrecoverable.
 export default function DbEncryptionSettings() {
   const { t } = useTranslation('cmpSettingsB');
   const [status, setStatus] = useState(null);
+  const [remember, setRemember] = useState(null); // "Keep me signed in" on this device (no secret)
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false); // expand the enable/disable panel
 
@@ -25,6 +27,11 @@ export default function DbEncryptionSettings() {
     finally { setLoading(false); }
   }, [t]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    (softglazeApi.auth && softglazeApi.auth.rememberStatus ? softglazeApi.auth.rememberStatus() : Promise.resolve(null))
+      .then((r) => setRemember(r || null))
+      .catch(() => {});
+  }, []);
 
   if (loading) return null;
 
@@ -90,7 +97,7 @@ export default function DbEncryptionSettings() {
       {enabled && (
         <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-[12px]" style={{ background: 'color-mix(in srgb, #10b981 10%, transparent)', color: '#10b981', border: '1px solid color-mix(in srgb, #10b981 22%, transparent)' }}>
           <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{t('dbEncryption.enabledNotice')}</span>
+          <span>{t(dbEncryptionNoticeKey(remember))}</span>
         </div>
       )}
 
