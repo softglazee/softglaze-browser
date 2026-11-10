@@ -165,6 +165,7 @@ const CHANNELS = Object.freeze({
   PROXY_PROVIDER_CREDS_SET: 'proxy-provider:creds-set',
   PROXY_PROVIDER_ACCOUNT: 'proxy:provider-account',
   PROXY_ROTATE_IP: 'proxy:rotate-ip',
+  PROFILE_ROTATE_IP: 'profile:rotate-ip', // Rotate IP on a profile's own proxy (Profiles page)
   PROXY_EXTENSION_COPY_INFO: 'proxy:extension-copy-info', // counts for "Copy for SoftGlaze Proxy"; no secrets
   PROXY_EXTENSION_COPY: 'proxy:extension-copy', // main writes the clipboard; returns counts only
   PROXY_TEST_ALL: 'proxy:test-all',
@@ -431,11 +432,22 @@ let currentMemberId = null;
 // Cached by getActiveMember() so the synchronous proxy serializer can decide redaction.
 // Single-user mode (no member) counts as owner, so full reveal.
 let currentMemberCanRevealProxy = true;
+// The same flag for an AI or Local API token's member, per call (keyed by the frozen actor of
+// aiActor.run()): getActiveMember() records it while a token acts; the window's flag is left alone.
+const actorCanRevealProxy = new WeakMap();
 // The member a call acts as: an AI or Local API token's member inside aiActor.run() (see
 // src/main/ai/actor.js), otherwise the member signed in to the window.
 function actingMemberId() {
   const a = aiActor.current();
   return a ? a.memberId : currentMemberId;
+}
+// proxies.reveal of the member this call acts as, for the synchronous serializers (serializeProxy,
+// serializeProfile, the profile list, the export). Inside an AI or Local API call that is the token's
+// member, as for every other permission check there; a token whose member was not read yet gets none.
+function proxyRevealAllowed() {
+  const a = aiActor.current();
+  if (!a) return currentMemberCanRevealProxy;
+  return actorCanRevealProxy.get(a) === true;
 }
 let vaultLocked = false;
 // How the workspace was last unlocked: 'vault' (Owner password), 'member', 'super', 'none' (no vault)
@@ -714,33 +726,74 @@ function serializeProxy(proxy) {
   };
   // Passwords are masked for everyone; usernames too without `proxies.reveal`. Launches read the raw
   // DB row, never this view, so connectivity is unaffected.
-  return currentMemberCanRevealProxy ? out : rbacPolicy.redactForRole('OPERATOR', 'proxyCredentials', out);
+  return proxyRevealAllowed() ? out : rbacPolicy.redactForRole('OPERATOR', 'proxyCredentials', out);
+}
+
+// The proxies a profile opens on: its own proxy and the proxies of its rotation pool (pickRotationProxy).
+async function profileLaunchProxyIds(db, profileId) {
+  const ids = new Set();
+  const row = await db.profile.findUnique({ where: { id: profileId }, select: { proxyId: true } });
+  if (row && row.proxyId != null) ids.add(Number(row.proxyId));
+  const cfg = ((await readSetting('proxyRotation', {})) || {})[profileId];
+  if (cfg && cfg.enabled && Array.isArray(cfg.proxyIds)) for (const pid of cfg.proxyIds) ids.add(Number(pid));
+  return ids;
+}
+
+// Who may rotate this proxy. The member's own Proxy pool (the proxy is owned within their visible
+// subtree), as before. Or, with `profileId`, a proxy that profile opens on, for anyone who may launch the
+// profile: a "use only" share included, since main fires the stored link by id and nothing secret
+// reaches the member. Returns { inPool }. Throws FORBIDDEN otherwise.
+async function assertCanRotateProxy(id, profileId) {
+  try {
+    await assertCanAccessProxy(id);
+    return { inPool: true };
+  } catch (e) {
+    if (!e || e.code !== 'FORBIDDEN' || profileId == null) throw e;
+  }
+  await requirePermission('profiles.launch');
+  await assertCanAccessProfile(profileId);
+  if (!(await profileLaunchProxyIds(getPrisma(), profileId)).has(Number(id))) {
+    const e = new Error('You do not have access to this proxy.'); e.code = 'FORBIDDEN'; throw e;
+  }
+  return { inPool: false };
 }
 
 // Fires the vendor's one-shot "change IP" link (stored, or provided and persisted) server-side.
 // Failures return or throw cleanly and never touch the live proxy credentials.
+// Callers: the Proxy pool and SoftGlaze AI / the Local API by proxy id; the Profiles page
+// (rotateProfileProxyIp) and the automatic block response with the profile's id as well.
 async function rotateProxyIp(payload) {
   // Main fetches a renderer-supplied URL: require proxies.manage, access to this proxy, a public target.
   await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const id = parseId(input.id ?? input.proxyId);
-  await assertCanAccessProxy(id);
+  const profileId = input.profileId == null ? null : parseId(input.profileId, 'profileId');
+  const { inPool } = await assertCanRotateProxy(id, profileId);
   const db = getPrisma();
   const proxy = await db.proxy.findUnique({ where: { id } });
   if (!proxy) throw new Error('Proxy not found.');
 
   // Prefer a freshly-provided link (and persist it for next time), else the stored one. The window
   // never needs the stored link (a member without proxies.reveal is sent a mask), so rotating is by
-  // proxy id only; a mask sent back means "the stored link".
+  // proxy id only; a mask sent back means "the stored link". Only a proxy of the member's own pool
+  // takes a new link: a shared profile's proxy belongs to someone else.
   let rotationUrl = String(input.rotationUrl || '').trim();
   if (rotationUrl === SECRET_MASK) rotationUrl = '';
+  if (rotationUrl && !inPool) {
+    const e = new Error('A rotation link can only be saved on a proxy of your own Proxy pool.'); e.code = 'FORBIDDEN'; throw e;
+  }
   if (rotationUrl) {
     await db.proxy.update({ where: { id }, data: { rotationUrl } }).catch(() => {});
   } else {
     rotationUrl = String(proxy.rotationUrl || '').trim();
   }
+  // The vendor's reply is shown only to a member who may see the link (some vendors echo it or the key).
+  const showReply = inPool && await canRevealProxyCredentials();
   // DataImpulse sticky proxies need no link: their API resets the session on the port.
-  if (!rotationUrl && isDataImpulseSticky(proxy)) return rotateDataImpulseSticky(proxy);
+  if (!rotationUrl && isDataImpulseSticky(proxy)) {
+    const di = await rotateDataImpulseSticky(proxy);
+    return showReply ? di : { ...di, response: undefined };
+  }
   if (!rotationUrl) throw new Error('No IP rotation link is configured for this proxy.');
   if (!/^https?:\/\//i.test(rotationUrl)) throw new Error('The rotation link must be an http(s) URL.');
   await assertPublicHttpUrl(rotationUrl, 'rotation link');
@@ -773,8 +826,101 @@ async function rotateProxyIp(payload) {
     status: res.status,
     latencyMs: Date.now() - startedAt,
     // Many vendors echo the new IP / a status string - surface a short preview.
-    response: typeof res.data === 'string' ? res.data.slice(0, 400) : undefined
+    response: showReply && typeof res.data === 'string' ? res.data.slice(0, 400) : undefined
   };
+}
+
+// Rotate IP from the Profiles page: a new IP on the profile's own proxy, for any member who may launch
+// the profile, a "use only" share included (rotateProxyIp's rules: proxies.manage, profiles.launch,
+// access to the profile, and a proxy that can rotate). Logged in the profile's activity, as launches
+// that rotate are. The proxy comes back as the profile list shows it to this member (launchedProxyView:
+// without its username, password and link outside their own pool, and masked without proxies.reveal).
+async function rotateProfileProxyIp(payload) {
+  await requirePermission('profiles.launch');
+  const input = requireObject(payload);
+  const id = parseId(input.id ?? input.profileId);
+  await assertCanAccessProfile(id); // use access is enough
+  const db = getPrisma();
+  const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
+  if (!profile || profile.deletedAt) throw new Error('Profile not found.');
+  if (!profile.proxy) throw new Error('This profile has no proxy to rotate.');
+  const res = await rotateProxyIp({ id: profile.proxy.id, profileId: id });
+  const label = profile.proxy.name || `${profile.proxy.host}:${profile.proxy.port}`;
+  await logActivity(db, id, 'proxy-rotate', res && res.ok === false ? `new IP refused by proxy ${label} (HTTP ${res.status})` : `new IP from proxy ${label}`);
+  return { ok: Boolean(res && res.ok !== false), status: res ? res.status : null, latencyMs: res ? res.latencyMs : null, proxy: await launchedProxyView(profile.proxy) };
+}
+
+// ---- Rotation links from a spreadsheet import ----
+// A row's "Proxy Rotation URL" is the vendor's "change IP" link of the proxy on that row. Since 1.0.26 it
+// is put on that proxy when the proxy has no link yet, so it works and is hidden exactly like a proxy's
+// own link: Rotate IP (Proxy pool and Profiles), the automatic block response, SoftGlaze AI and the Local
+// API fire it by proxy id, and the window gets it only with proxies.reveal (serializeProxy).
+// Precedence: the proxy's own link (from a vendor pull or an earlier row) always wins; an import never
+// replaces it. Then the imported link; then the DataImpulse sticky reset (rotateProxyIp). A row without a
+// proxy of its own (auto-bound to a pool proxy, or no proxy) has no proxy the link belongs to, so it is
+// kept for the export only. Every imported link also stays in the Setting profileRotationUrls, as before.
+function importedRotationUrl(value) {
+  const s = String(value == null ? '' : value).trim();
+  if (!/^https?:\/\/\S+$/i.test(s)) return null;
+  try { new URL(s); } catch (e) { return null; }
+  return s;
+}
+
+// Puts `url` on the proxy only while it has no link: one conditional write, so an import and the start-up
+// pass below never replace a link, whichever runs first. True when the link was put on the proxy.
+async function attachImportedRotationUrl(db, proxyId, url) {
+  if (!url || proxyId == null) return false;
+  const r = await db.proxy.updateMany({ where: { id: proxyId, OR: [{ rotationUrl: null }, { rotationUrl: '' }] }, data: { rotationUrl: url } });
+  return Boolean(r && r.count);
+}
+
+// The proxy an import made for this profile's row, still on it: named "<title> Proxy", owned by the
+// profile's owner, created at most a minute before the profile (commitProfileImport makes the row's
+// proxy just before its profile) and without a link. A renamed or reassigned profile, a proxy reused
+// from the pool or an auto-bound one does not qualify.
+function proxyMadeForImportedRow(profile, proxy) {
+  if (!profile || !proxy || profile.proxyId !== proxy.id || proxy.rotationUrl) return false;
+  if (String(proxy.name || '') !== `${profile.title} Proxy`) return false;
+  if ((proxy.ownerMemberId ?? null) !== (profile.ownerMemberId ?? null)) return false;
+  const made = new Date(proxy.createdAt).getTime();
+  const born = new Date(profile.createdAt).getTime();
+  return Number.isFinite(made) && Number.isFinite(born) && made <= born && born - made <= 60 * 1000;
+}
+
+// Links imported before 1.0.26 are only in profileRotationUrls. Once per link, when the database is
+// ready, each is put on its profile's proxy if that proxy was made for the row (proxyMadeForImportedRow)
+// and has no link. Every link looked at is recorded in the Setting profileRotationUrlsAdopted, so it is
+// looked at once: running again changes nothing, and a link taken off a proxy later is not put back.
+// profileRotationUrls itself is never rewritten. A link that does not qualify stays as it was (exported,
+// not used).
+const ROTATION_LINKS_ADOPTED_SETTING = 'profileRotationUrlsAdopted';
+let rotationLinksAdoptedThisRun = false;
+async function adoptImportedRotationLinks() {
+  if (rotationLinksAdoptedThisRun) return { attached: 0, skipped: 0 };
+  const db = getPrisma();
+  const links = (await readSetting('profileRotationUrls', {})) || {};
+  const seen = await readSetting(ROTATION_LINKS_ADOPTED_SETTING, null);
+  const done = seen && typeof seen === 'object' && seen.done && typeof seen.done === 'object' ? { ...seen.done } : {};
+  const pending = Object.keys(links).filter((k) => /^\d+$/.test(k) && !Object.prototype.hasOwnProperty.call(done, k))
+    .sort((a, b) => Number(a) - Number(b)); // oldest row first: of two rows on one proxy, the first wins
+  let attached = 0;
+  let skipped = 0;
+  for (const key of pending) {
+    let outcome = 'skipped';
+    try {
+      const url = importedRotationUrl(links[key]);
+      const profile = url ? await db.profile.findUnique({ where: { id: Number(key) }, include: { proxy: true } }) : null;
+      if (profile && proxyMadeForImportedRow(profile, profile.proxy) && await attachImportedRotationUrl(db, profile.proxy.id, url)) outcome = 'attached';
+    } catch (e) {
+      continue; // not recorded: looked at again at the next start
+    }
+    done[key] = outcome;
+    if (outcome === 'attached') attached += 1; else skipped += 1;
+  }
+  if (attached + skipped > 0) await writeSetting(ROTATION_LINKS_ADOPTED_SETTING, { version: 1, done });
+  rotationLinksAdoptedThisRun = true;
+  if (attached) await logAudit('proxy.rotation-links-adopted', { detail: { attached, skipped } });
+  return { attached, skipped };
 }
 
 // Streams the profile's cache + config into an AES-256-encrypted .sgz (see profileArchive.js).
@@ -857,7 +1003,7 @@ async function cookieRobot(payload) {
 
 function serializeProfile(profile) {
   // The raw row holds platform passwords, the raw proxy string and the 2FA seed; see profileRedaction.js.
-  const reveal = currentMemberCanRevealProxy;
+  const reveal = proxyRevealAllowed();
   const safe = redactProfileRow(profile, { reveal });
 
   let platformAccounts = [];
@@ -4935,7 +5081,12 @@ async function analyzeProfileLeaks(payload) {
   }
 
   const webrtc = profile.webrtc || 'Forward';
-  if (webrtc === 'Real' && usesProxy) {
+  if (normalizeBrowserCore(profile.browserCore) === BROWSER_CORE.FIREFOX) {
+    // Firefox profiles always run with WebRTC off (firefoxEngine's user.js), whatever the setting says,
+    // so the setting is not graded: the same status as "Disabled", which also leaks nothing. The CAPTCHA
+    // score says the same (captchaScore.js).
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'WebRTC is off in Firefox profiles - real IP not leaked via WebRTC.' });
+  } else if (webrtc === 'Real' && usesProxy) {
     checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: 'Set to "Real" - WebRTC can expose the real IP behind the proxy.' });
   } else if (webrtc === 'Real') {
     // No proxy: WebRTC shows the IP every site already sees (the IP / Proxy row says so), so there is no
@@ -5750,7 +5901,7 @@ async function listTrash() {
 // Main still refuses them on its own (assertCanAccessProfile / partitionAccessibleProfileIds with
 // requireEdit). The share list itself is not sent.
 async function withViewerEditFlags(rows) {
-  const member = await getActiveMember(); // also refreshes currentMemberCanRevealProxy
+  const member = await getActiveMember(); // also refreshes the reveal flag (proxyRevealAllowed)
   let canEdit = () => true;
   let inPool = () => true;
   if (member && member.role !== 'SUPER_ADMIN') {
@@ -5768,7 +5919,7 @@ async function withViewerEditFlags(rows) {
       if (Array.isArray(out.platformAccounts)) out.platformAccounts = redactPlatformAccounts(out.platformAccounts, false);
       // Nor its proxy's password or rotation link; the username only as the member's Proxy pool shows
       // it (their own pool's proxy, with proxies.reveal). Launch still uses the stored proxy.
-      out = { ...out, ...redactUseOnlyProxy(row, out, { showUsername: currentMemberCanRevealProxy && inPool(row.proxy) }) };
+      out = { ...out, ...redactUseOnlyProxy(row, out, { showUsername: proxyRevealAllowed() && inPool(row.proxy) }) };
     }
     return { ...out, canEdit: editable };
   });
@@ -7668,7 +7819,8 @@ async function respondToBlock(evt, profile, proxy) {
   for (const step of plan.steps) {
     try {
       if (step === 'rotate') {
-        const res = await rotateProxyIp({ id: proxy.id });
+        // With the profile's id: a member who may only use the profile rotates its proxy as well.
+        const res = await rotateProxyIp({ id: proxy.id, profileId: id });
         if (!res || res.ok === false) { reason = 'failed'; continue; }
         blockSwitchTimes.set(id, [...times, now]);
         await sleepMs(blockDetect.ROTATE_SETTLE_MS);
@@ -7910,7 +8062,8 @@ async function commitProfileImport(payload, event) {
     return matches[i];
   };
 
-  // Rotation URLs have no Profile column - round-trip them via a Setting map.
+  // Rotation URLs have no Profile column - round-trip them via a Setting map (the export reads it). A row
+  // with its own proxy also puts its link on that proxy, where rotating uses it (see importedRotationUrl).
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
   let rotationDirty = false;
   // Device names and MACs in use, read once for the run (claimDeviceIdentity keeps it up to date).
@@ -7943,6 +8096,17 @@ async function commitProfileImport(payload, event) {
       if (item.proxyMethod === 'CUSTOM') {
         proxy = await findOrCreateProxy(db, item.rawProxy, `${item.title} Proxy`, item.proxyType || null, proxyAdd);
         if (proxy) {
+          // The row's rotation link is this proxy's "change IP" link: it goes on the proxy unless the proxy
+          // has one of its own, which always wins (importedRotationUrl).
+          const link = importedRotationUrl(item.proxyRotationUrl);
+          if (link && !proxy.rotationUrl) {
+            if (await attachImportedRotationUrl(db, proxy.id, link)) {
+              proxy = { ...proxy, rotationUrl: link };
+              log('info', `[INFO] Rotation link saved on proxy ${proxy.host}:${proxy.port}.`);
+            }
+          } else if (link && proxy.rotationUrl !== link) {
+            log('info', `[INFO] Proxy ${proxy.host}:${proxy.port} keeps its own rotation link.`);
+          }
           result.createdProxies.push(serializeProxy(proxy));
           log('info', `[INFO] Binding ${proxy.type} Proxy ${proxy.host}:${proxy.port}...`);
         }
@@ -8221,8 +8385,8 @@ async function gatherExport() {
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
   // profiles.export is rank 1, so blank proxy passwords, account passwords and 2FA keys unless the
   // member may reveal them (the same gates as the profile view and the 2FA code reader).
-  const member = await getActiveMember(); // also refreshes currentMemberCanRevealProxy
-  const revealCreds = currentMemberCanRevealProxy;
+  const member = await getActiveMember(); // also refreshes the reveal flag (proxyRevealAllowed)
+  const revealCreds = proxyRevealAllowed();
   let revealTwoFa = revealCreds;
   if (revealTwoFa) { try { await assertCanRevealKind('twoFactorCode'); } catch (e) { revealTwoFa = false; } }
   // A profile shared "use only" never hands over its saved platform logins (the rule of a copy of it,
@@ -9964,16 +10128,18 @@ function ownerStampId() {
 
 async function getActiveMember() {
   // Inside an AI or Local API call the token's member acts, and the window's cached redaction
-  // flag is left alone. A token's member that cannot be read fails closed instead of reading as
-  // single-user mode.
-  const viaToken = aiActor.current() != null;
+  // flag is left alone: the token's own flag is recorded for this call (proxyRevealAllowed). A token's
+  // member that cannot be read fails closed instead of reading as single-user mode.
+  const actor = aiActor.current();
+  const viaToken = actor != null;
   const id = actingMemberId();
-  if (id == null) { if (!viaToken) currentMemberCanRevealProxy = true; return null; } // single-user == owner
-  if (permissions.isSuperAdminId(id)) { if (!viaToken) currentMemberCanRevealProxy = true; return { ...permissions.SUPER_ADMIN }; }
+  if (id == null) { if (!viaToken) currentMemberCanRevealProxy = true; else actorCanRevealProxy.set(actor, true); return null; } // single-user == owner
+  if (permissions.isSuperAdminId(id)) { if (!viaToken) currentMemberCanRevealProxy = true; else actorCanRevealProxy.set(actor, true); return { ...permissions.SUPER_ADMIN }; }
   try {
     const m = await getPrisma().member.findUnique({ where: { id } });
     if (viaToken) {
-      if (!m) { const e = new Error('The member this token acts as no longer exists.'); e.code = 'FORBIDDEN'; throw e; }
+      if (!m) { actorCanRevealProxy.set(actor, false); const e = new Error('The member this token acts as no longer exists.'); e.code = 'FORBIDDEN'; throw e; }
+      actorCanRevealProxy.set(actor, permissions.effectivePermissions(m).actions['proxies.reveal'] !== false);
       return m;
     }
     // Refresh the cached redaction capability (rank baseline + any per-member revoke).
@@ -10936,6 +11102,8 @@ async function whenSessionReady() { try { await sessionRestore; } catch (e) { /*
 
 async function afterDbReady() {
   pruneEmptyAutoGroups(getPrisma()).catch((e) => console.error('[SG][proxy] empty group cleanup failed', e && e.message ? e.message : e));
+  // Rotation links imported before 1.0.26 go on the proxy made for their row (once each; see there).
+  adoptImportedRotationLinks().catch((e) => console.error('[SG][proxy] imported rotation links failed', e && e.message ? e.message : e));
   retryPendingProfileWipes().catch((e) => console.error('[SG][profile] pending wipe retry failed', e && e.message ? e.message : e));
   sessionRestore = restoreSession();
   await sessionRestore;
@@ -15144,6 +15312,7 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROXY_PROVIDER_CREDS_SET, saveProxyProviderCreds);
   registerHandler(CHANNELS.PROXY_PROVIDER_ACCOUNT, getProviderAccount);
   registerHandler(CHANNELS.PROXY_ROTATE_IP, rotateProxyIp);
+  registerHandler(CHANNELS.PROFILE_ROTATE_IP, rotateProfileProxyIp);
   registerHandler(CHANNELS.PROXY_TEST_ALL, testAllProxies);
   registerHandler(CHANNELS.PROXY_CHECK_STREAM, runProxyCheckStream);
   registerHandler(CHANNELS.PROXY_CHECK_STOP, stopProxyCheck);

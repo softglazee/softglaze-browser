@@ -44,7 +44,7 @@ const FEATURE_CHANNELS = Object.freeze({
     'profile:clone', 'template:save', 'template:delete', 'template:create-profile',
     'profile:captcha-fix', 'profile:captcha-fix-bulk', 'profile:get-2fa-token', 'profile:bulk-synchronize',
     'profile:export-archive', 'profile:cookie-robot', 'profile:tag-assign', 'profile:bulk-rename',
-    'proxy:rotation-set'
+    'proxy:rotation-set', 'profile:rotate-ip'
   ]),
   groups: Object.freeze(['group:create', 'group:update', 'group:delete', 'group:assign']),
   proxies: Object.freeze([
