@@ -1,8 +1,9 @@
 'use strict';
 // A small in-memory stand-in for the Prisma client, enough for the SoftGlaze AI engine tests:
-// create / findUnique / findFirst / findMany / count / update / updateMany / deleteMany with the
-// where operators the engine uses (equals, in, notIn, not, contains, lt/lte/gt/gte, AND, OR, NOT,
-// and the proxy.profiles `none` relation filter), plus the includes it reads.
+// create / findUnique / findFirst / findMany / count / update / updateMany / delete / deleteMany with
+// the where operators the engine uses (equals, in, notIn, not, contains, lt/lte/gt/gte, AND, OR, NOT,
+// and the proxy.profiles and group.profiles `none` / `some` relation filters), plus the includes it
+// reads (a group's profiles with their own where and select, for the Groups list).
 
 function matchValue(value, cond) {
   if (cond === null) return value === null || value === undefined;
@@ -36,8 +37,9 @@ function createFakePrisma(seed = {}) {
       if (key === 'AND') { if (!cond.every((w) => matches(model, row, w))) return false; continue; }
       if (key === 'OR') { if (!cond.some((w) => matches(model, row, w))) return false; continue; }
       if (key === 'NOT') { const list = Array.isArray(cond) ? cond : [cond]; if (list.some((w) => matches(model, row, w))) return false; continue; }
-      if (model === 'proxy' && key === 'profiles') {
-        const users = tables.profile.filter((p) => p.proxyId === row.id);
+      if ((model === 'proxy' || model === 'group') && key === 'profiles') {
+        const fk = model === 'proxy' ? 'proxyId' : 'groupId';
+        const users = tables.profile.filter((p) => p[fk] === row.id);
         if (cond.none && users.some((p) => matches('profile', p, cond.none))) return false;
         if (cond.some && !users.some((p) => matches('profile', p, cond.some))) return false;
         continue;
@@ -58,6 +60,12 @@ function createFakePrisma(seed = {}) {
       if (model === 'proxy') {
         if (include._count) out._count = { profiles: tables.profile.filter((p) => p.proxyId === row.id).length };
         if (include.proxyGroup) out.proxyGroup = tables.proxyGroup.find((g) => g.id === row.proxyGroupId) || null;
+      }
+      if (model === 'group' && include.profiles) {
+        const spec = include.profiles === true ? {} : include.profiles;
+        out.profiles = tables.profile
+          .filter((p) => p.groupId === row.id && matches('profile', p, spec.where))
+          .map((p) => withIncludes('profile', p, null, spec.select));
       }
     }
     if (select) {
@@ -119,6 +127,12 @@ function createFakePrisma(seed = {}) {
         const rows = tables[model].filter((r) => matches(model, r, where));
         rows.forEach((r) => Object.assign(r, data));
         return { count: rows.length };
+      },
+      async delete({ where }) {
+        const row = tables[model].find((r) => matches(model, r, where));
+        if (!row) throw new Error(`${model} not found`);
+        tables[model] = tables[model].filter((r) => r !== row);
+        return { ...row };
       },
       async deleteMany({ where } = {}) {
         const before = tables[model].length;

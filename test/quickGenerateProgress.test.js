@@ -144,6 +144,8 @@ function loadBatchGenerate(stubs) {
     parseId: (v) => Number(v),
     normCountryCode: (v) => (v ? String(v).toUpperCase() : null),
     scopedProxyWhere: async (w) => w,
+    assertCanAccessGroup: async () => {},
+    ownerStampId: () => null,
     shuffleInPlace: (a) => a,
     normalizeStartupUrls: () => '',
     CHROME_VERSIONS: ['130', '131'],

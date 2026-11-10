@@ -93,7 +93,8 @@ test('createProfile stores a real group id and refuses one that does not exist',
     assertWithinLimit: async () => {}, findOrCreateProxy: async () => null, proxyTypeHintFor: () => null,
     ensureUniqueDataDirName: async (_db, n) => n, ownerStampId: () => 5, buildProxyInfoString: () => '',
     validateSystemProxyBehavior: (v) => v || 'DIRECT', buildFingerprintFields: () => ({}),
-    logActivity: async () => {}, serializeProfile: (p) => p
+    logActivity: async () => {}, serializeProfile: (p) => p,
+    assertCanAccessGroup: async () => {} // group visibility: test/permissionGaps.test.js
   });
   await createProfile({ title: 'A', groupId: 3, tags: ['vip', 'warm'] });
   assert.equal(created[0].groupId, 3);
@@ -119,7 +120,8 @@ test('updateProfile saves the group and tags, and refuses a group that does not 
     requirePermission: async () => {}, getPrisma: () => db, assertCanAccessProfile: async () => {},
     restoreMaskedSecrets: (x) => x, extractFingerprintData: () => ({}), validateSystemProxyBehavior: (v) => v,
     findOrCreateProxy: async () => null, proxyTypeHintFor: () => null, buildProxyInfoString: () => '',
-    sanitizeDataDirName: (v) => v, logActivity: async () => {}, serializeProfile: (p) => p, console
+    sanitizeDataDirName: (v) => v, logActivity: async () => {}, serializeProfile: (p) => p, console,
+    assertCanAccessGroup: async () => {} // group visibility: test/permissionGaps.test.js
   });
   await updateProfile({ id: 4, groupId: 3, tags: ['a'] });
   assert.equal(updates[0].groupId, 3);
@@ -304,7 +306,9 @@ test('batch import stamps the importing member as owner and assignee', async () 
     readSetting: async () => ({}), writeSetting: async () => {}, findOrCreateProxy: async () => null,
     serializeProxy: (p) => p, parseSystemProxyBehavior: (_v, d) => d, doNotTrackChoice: (v) => v,
     ensureUniqueDataDirName: async (_db, n) => n, generateFingerprint: () => ({}), buildProxyInfoString: () => '',
-    serializeProfile: (p) => p, logActivity: async () => {}, ownerStampId: () => 5
+    serializeProfile: (p) => p, logActivity: async () => {}, ownerStampId: () => 5,
+    // Permission, quota and scoping: test/permissionGaps.test.js
+    requirePermission: async () => {}, assertWithinLimit: async () => {}, scopedProxyWhere: async (w) => w, scopedGroupWhere: async (w) => w
   });
   const res = await commitProfileImport({ token: 'tok' }, null);
   assert.equal(res.createdProfiles.length, 2);

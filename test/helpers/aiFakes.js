@@ -74,6 +74,7 @@ function createFakeApp(opts = {}) {
     getLicense: async () => license,
     scopedProfileWhere: async (w) => w,
     scopedProxyWhere: async (w) => w,
+    scopedGroupWhere: async (w) => w,
     assertCanAccessProfile: async () => {},
     assertCanAccessProxy: async (id) => { if (!(await db.proxy.findUnique({ where: { id } }))) throw new Error('Proxy not found.'); },
     partitionAccessibleProfileIds: async (ids) => ({ allowed: ids, denied: [] }),

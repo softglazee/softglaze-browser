@@ -118,7 +118,7 @@ test('dashboard, rotation, checks, grouping, health cards and reassign use the p
   assert.match(body('getRecentProxyHealth'), /scopedProxyWhere\(proxyScope\.proxyScopeWhere\('paid'\)\)/);
   assert.match(body('bulkAssignProxies'), /scopedProxyWhere\(proxyScope\.withProxyScope\(Object\.keys\(filter\)\.length \? filter : undefined, 'paid'\)\)/);
   assert.match(body('listProxyGroups'), /return proxyScope\.paidGroupView\(/);
-  assert.match(body('commitProfileImport'), /db\.proxy\.findMany\(\{ where: proxyScope\.autoBindPoolWhere\(input\.autoBindSource\) \}\)/);
+  assert.match(body('commitProfileImport'), /db\.proxy\.findMany\(\{ where: await scopedProxyWhere\(proxyScope\.autoBindPoolWhere\(input\.autoBindSource\)\) \}\)/);
 });
 
 test('a spare proxy picked automatically is never a free one', () => {
