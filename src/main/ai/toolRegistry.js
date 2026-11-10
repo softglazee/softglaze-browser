@@ -38,7 +38,7 @@ const NEVER_EXPOSED_NAME = /cookie|2fa|totp|\botp\b|password|passwd|secret|vault
 // The only app functions the AI layer is given. Anything else passed in is refused at start-up,
 // so a cookie exporter, a delete handler or a settings writer can never be wired in by mistake.
 const ALLOWED_DEPS = Object.freeze([
-  'getPrisma', 'requirePermission', 'getActiveMember', 'getLicense',
+  'getPrisma', 'requirePermission', 'assertFeature', 'getActiveMember', 'getLicense',
   'scopedProfileWhere', 'scopedProxyWhere', 'scopedGroupWhere', 'assertCanAccessProfile', 'assertCanAccessProxy', 'partitionAccessibleProfileIds',
   'listAllSessions', 'isFirefoxSession', 'launchProfile', 'closeSession', 'markAutomationDriven',
   'createProfile', 'updateProfile', 'batchGenerateProfiles', 'createGroup', 'assignProfilesToGroup',
@@ -308,6 +308,11 @@ class ToolRegistry {
         if (tool.permission) {
           try { await this.deps.requirePermission(tool.permission); }
           catch (e) { throw userError(e.message || 'Your role does not permit this action.', 'FORBIDDEN'); }
+        }
+        // A page turned off for the member under "Visible features" is off for their tokens too.
+        if (tool.feature && typeof this.deps.assertFeature === 'function') {
+          try { await this.deps.assertFeature(tool.feature); }
+          catch (e) { throw userError(e.message || 'This feature is turned off for your account.', 'FORBIDDEN'); }
         }
         const t = tool.targets ? tool.targets(args) : { profileIds: [] };
         let profileIds = (t && t.profileIds) || [];

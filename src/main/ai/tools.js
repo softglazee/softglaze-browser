@@ -316,6 +316,7 @@ const TOOLS = [
     description: 'Creates one profile. SoftGlaze generates its fingerprint for the chosen OS and engine. Optional: group, proxy (id from list_proxies), start URL, notes, tags. Timezone, language and location follow the proxy. Asks the user first. Never sets passwords or cookies.',
     scope: 'operate',
     permission: 'profiles.create',
+    feature: 'profiles', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: CHANGE,
     input: {
@@ -360,6 +361,7 @@ const TOOLS = [
     description: 'Changes a profile\'s name, group, tags (replaces the list), notes, start URL or proxy (proxyId, or null to remove it), and can apply CAPTCHA fixes: tz-auto, lang-auto, geo-auto (follow the proxy) and webrtc-safe. Asks the user first. Never changes the fingerprint, passwords, 2FA or cookies, and never deletes.',
     scope: 'operate',
     permission: 'profiles.edit',
+    feature: 'profiles', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: { ...CHANGE, idempotentHint: true },
     input: {
@@ -417,6 +419,7 @@ const TOOLS = [
     description: 'Creates up to 50 profiles at once with unique generated fingerprints and, by default, one working proxy each from your pool (proxySource unique; optionally from one country). Proxies are live-checked first; profiles meant to have a proxy are never created without one. Asks the user first. Long runs continue in the background: follow them with get_run_status.',
     scope: 'operate',
     permission: 'profiles.create',
+    feature: 'profiles', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: CHANGE,
     input: {
@@ -506,6 +509,7 @@ const TOOLS = [
     description: 'Opens a profile\'s browser through its own proxy and fingerprint, optionally at a URL and optionally hidden (headless). Asks the user first. Stop it with stop_profile when you are done.',
     scope: 'operate',
     permission: 'profiles.launch',
+    feature: 'profiles', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: { ...CHANGE, openWorldHint: true },
     input: {
@@ -680,6 +684,7 @@ const TOOLS = [
     description: 'Gives profiles a proxy. mode single: the same proxyId for all; unique: one different proxy each from source; pool: share the source round-robin; clear: remove the proxy. source all, unassigned (no profile uses it) or group (proxyGroupId); verifyProxies live-checks first. Free proxies are never used. Asks the user first.',
     scope: 'operate',
     permission: 'profiles.edit',
+    feature: 'profiles', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: CHANGE,
     input: {
@@ -712,6 +717,7 @@ const TOOLS = [
     description: 'Asks the proxy vendor for a new IP using the rotation link saved on the proxy (or the vendor\'s API where SoftGlaze supports it). Only works where the vendor supports rotation. Asks the user first.',
     scope: 'operate',
     permission: 'proxies.manage',
+    feature: 'proxies', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: { ...CHANGE, openWorldHint: true },
     input: { proxyId: id() },
@@ -728,6 +734,7 @@ const TOOLS = [
     description: 'Searches public free-proxy lists, tests each candidate (working, anonymous, country) and adds the ones that pass to the "Free proxies" group. Free proxies are slow and short-lived and are not for logged-in accounts; they are never assigned automatically. Asks the user first. Runs in the background; follow with get_run_status.',
     scope: 'operate',
     permission: 'proxies.manage',
+    feature: 'proxies', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: { ...CHANGE, openWorldHint: true },
     input: {
@@ -768,6 +775,7 @@ const TOOLS = [
     description: 'Creates an empty profile group. Asks the user first.',
     scope: 'operate',
     permission: 'profiles.edit',
+    feature: 'groups', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: CHANGE,
     input: { name: z.string().trim().min(1).max(80), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional() },
@@ -786,6 +794,7 @@ const TOOLS = [
     description: 'Puts profiles into a group (id or name), or takes them out of their group with group null. Asks the user first.',
     scope: 'operate',
     permission: 'profiles.edit',
+    feature: 'groups', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: { ...CHANGE, idempotentHint: true },
     input: { profileIds: idList(200), group: groupRef().nullable() },
