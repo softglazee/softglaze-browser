@@ -1,0 +1,97 @@
+{
+  "choose": {
+    "title": "Welcome to SoftGlaze",
+    "subtitle": "Sign in to create your workspace. No password needed.",
+    "github": "Continue with GitHub",
+    "email": "Continue with email",
+    "or": "or",
+    "moreOptions": "More options",
+    "moreOptionsHint": "Create the workspace with a name and password instead",
+    "privacy": "We receive only your name and your verified email address.",
+    "haveAccount": "Already have a workspace on this computer?",
+    "logIn": "Log in"
+  },
+  "unlock": {
+    "title": "Welcome back",
+    "titleNamed": "Welcome back, {{name}}",
+    "subtitle": "Sign in with the account this workspace belongs to.",
+    "account": "Workspace account: {{email}}",
+    "passwordInstead": "Sign in with your password",
+    "haveInvite": "I have an invite code",
+    "teamSignIn": "Team member sign in"
+  },
+  "link": {
+    "title": "Sign in to your SoftGlaze account",
+    "subtitle": "Use one-click sign-in here and on other computers. Your workspace stays as it is."
+  },
+  "email": {
+    "title": "Continue with email",
+    "subtitle": "We'll email you a 6-digit code. No password needed.",
+    "label": "Email address",
+    "placeholder": "you@company.com",
+    "send": "Send code",
+    "codeTitle": "Check your email",
+    "codeBody": "Enter the 6-digit code we sent to {{email}}.",
+    "codeLabel": "6-digit code",
+    "verify": "Continue",
+    "resend": "Send a new code",
+    "resendIn": "Send a new code in {{count}} s",
+    "checkSpam": "It can take a minute. Check your spam folder if you don't see it.",
+    "devCode": "No email server is set up in this build, so here is the code: {{code}}",
+    "change": "Use another email"
+  },
+  "waiting": {
+    "title": "Finish in your browser",
+    "body": "We opened {{provider}} in your browser. Sign in there, then come back here.",
+    "status": "Waiting for {{provider}}...",
+    "reopen": "Open the page again",
+    "anotherWay": "Didn't come back? Try another way",
+    "cancel": "Cancel"
+  },
+  "back": "Back",
+  "useCase": {
+    "title": "What will you use SoftGlaze for?",
+    "subtitle": "Optional. It helps us improve SoftGlaze for you.",
+    "continue": "Continue",
+    "skip": "Skip"
+  },
+  "move": {
+    "title": "Your subscription",
+    "moved": "Done. Your subscription now works on this computer."
+  },
+  "account": {
+    "title": "Sign-in methods",
+    "subtitle": "How you sign in to your SoftGlaze account. Signing in on a new computer also moves your licence there.",
+    "signedInAs": "Signed in as {{email}}",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "Email code",
+    "lastUsed": "Last used {{date}}",
+    "linkedOn": "Linked {{date}}",
+    "signOut": "Sign out",
+    "signOutConfirm": "Sign out of your SoftGlaze account on this computer? You can sign in again with the same account at any time.",
+    "signingOut": "Signing out...",
+    "offline": "Offline: showing what this computer saved.",
+    "notSignedIn": "Sign in to your SoftGlaze account to use one-click sign-in here and on other computers.",
+    "signInWorkspace": "This workspace opens with your sign-in. Add a password above if you also want to sign in without the internet.",
+    "linked": "Signed in. Your sign-in methods are below.",
+    "loading": "Loading sign-in methods...",
+    "notAvailable": "One-click sign-in needs the SoftGlaze licensing server, which this build does not use."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Connect to the internet to sign in.",
+    "SIGNIN_EXPIRED": "This sign-in expired or was already used. Please try again.",
+    "SIGNIN_ACCOUNT_MISMATCH": "This workspace belongs to a different SoftGlaze account. Sign in with the account you created it with.",
+    "SIGNIN_EMAIL_MISMATCH": "Use the email address of this workspace.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Your GitHub account has no verified primary email. Verify it on GitHub (Settings > Emails), or continue with email.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Please use a permanent email address.",
+    "SIGNIN_UNAVAILABLE": "This sign-in is not available yet. Continue with email, or use More options.",
+    "SIGNIN_FAILED": "The sign-in didn't finish. Try again in a minute.",
+    "SIGNIN_TIMEOUT": "The sign-in took too long. Try again.",
+    "SIGNIN_NOT_ALLOWED": "This sign-in is not available for this workspace.",
+    "SIGNIN_KEY_LOST": "This workspace could not be opened with your sign-in on this computer. Sign in with your password.",
+    "SIGNIN_SESSION_ENDED": "Your sign-in has ended. Sign in again.",
+    "SIGNIN_BAD_INPUT": "Enter a valid email address.",
+    "MOVE_FAILED": "The licence couldn't be moved right now. Try again in a minute."
+  }
+}

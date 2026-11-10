@@ -14,6 +14,8 @@ import billingEn from '@/i18n/locales/en/billing.json';
 import { isStoreMethod, storeOutcome, storePrice, methodsForPlan, sellablePlans, STORE_POLL } from '@/lib/storePurchase.mjs';
 import { BILLING_PERIODS, billingPeriodOf, hasBothPeriods, plansForPeriod, counterpartPlan, yearlyDeal } from '@/lib/planPeriods.mjs';
 import { noteGatePhase } from '@/lib/storeRating.mjs';
+import SignInPanel, { UseCaseStep, MoveLicenceCard } from '@/components/SignInPanel.jsx';
+import { phaseAfterSignIn } from '@/lib/signInFlow.mjs';
 
 const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark';
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
@@ -497,7 +499,8 @@ function BannedScreen({ account, license, methods, plans = [], selPlanId, onSele
 export default function Gate({ children }) {
   const { t } = useTranslation('gate');
   const { t: tb } = useTranslation('billing');
-  const [phase, setPhase] = useState('loading'); // loading | register | login | pick | confirm | confirmMember | plan | licensing | banned | ready
+  const { t: ts } = useTranslation('signin');
+  const [phase, setPhase] = useState('loading'); // loading | register | login | pick | confirm | confirmMember | usecase | plan | licensing | banned | ready
   const [members, setMembers] = useState([]);
   const [account, setAccount] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -506,8 +509,11 @@ export default function Gate({ children }) {
   const [planCode, setPlanCode] = useState(''); // register plan step: purchase-code entry
   const [methods, setMethods] = useState([]); // enabled payment methods (banned screen + plan step)
 
-  // register
-  const [step, setStep] = useState('details'); // details | verify
+  // register: 'choose' is the one-click first screen (1.0.26); 'details' + 'verify' the old form under More options
+  const [step, setStep] = useState('choose'); // choose | details | verify
+  // One-click sign-in (1.0.26): what the server offers (signin.info) and whether this workspace opens by signing in.
+  const [signin, setSignin] = useState(null);
+  const [vaultSignIn, setVaultSignIn] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -573,11 +579,14 @@ export default function Gate({ children }) {
       setMembers(ms); setAccount(acct);
       if (backend && backend.enabled) setTenant(true);
       if (acct?.email) setEmail(acct.email);
+      setVaultSignIn(Boolean(vs && vs.signIn));
+      // The sign-in buttons (GitHub only when our server has its keys); not awaited, the screen shows at once.
+      softglazeApi.signin.info().then((s) => setSignin(s || null)).catch(() => setSignin(null));
       if (vs && vs.locked) { setPhase('login'); return; }
       // Check the signed-in member before the empty-list branch: SUPER_ADMIN (id -1) is not in
       // members.list(), so a remembered super session would otherwise land on register every boot.
       if (cur) { setBusy(false); setPhase('licensing'); return; }
-      if (ms.length === 0) { setPhase('register'); setStep('details'); return; }
+      if (ms.length === 0) { setPhase('register'); setStep('choose'); return; }
       setPhase('pick');
     } catch (e) {
       // Fail closed to the login screen rather than into the app.
@@ -657,7 +666,7 @@ export default function Gate({ children }) {
     try {
       await softglazeApi.vault.unlock(loginPass, remember);
       const list = await softglazeApi.members.list().catch(() => []);
-      if (!list.length) { setPhase('register'); setStep('details'); setErr(''); setBusy(false); return; }
+      if (!list.length) { setPhase('register'); setStep('choose'); setErr(''); setBusy(false); return; }
       const owner = list.find((x) => account?.email && x.email && x.email.toLowerCase() === account.email.toLowerCase())
         || list.find((x) => x.role === 'OWNER') || list[0];
       if (owner && !owner.isCurrent) { try { await softglazeApi.members.switch(owner.id); } catch (_) { /* owner may have a PIN */ } }
@@ -666,6 +675,18 @@ export default function Gate({ children }) {
       if (!cur && list.length) { setPhase('pick'); setBusy(false); return; }
       setPhase('licensing');
     } catch (e) { setErr(e.message || t('errors.incorrectPassword')); setBusy(false); }
+  }
+
+  // One-click sign-in finished (main created the workspace, or opened this one): the optional use-case question
+  // once after a new sign-up, then the licence check as after any sign-in.
+  async function afterSignIn(result) {
+    setErr('');
+    const acct = await softglazeApi.account.get().catch(() => null);
+    if (acct) { setAccount(acct); if (acct.email) setEmail(acct.email); }
+    const vs = await softglazeApi.vault.status().catch(() => null);
+    setVaultSignIn(Boolean(vs && vs.signIn));
+    setBusy(false);
+    setPhase(phaseAfterSignIn(result));
   }
 
   async function pick(m) {
@@ -1024,8 +1045,22 @@ export default function Gate({ children }) {
           <div className="w-full max-w-[420px] animate-fade-up">
             <div className="rounded-2xl border border-border/80 bg-card/70 backdrop-blur-xl shadow-2xl shadow-black/40 px-7 py-8">
 
+          {phase === 'register' && step === 'choose' && (
+            <>
+              <SignInPanel purpose="signup" info={signin} onDone={afterSignIn} onMoreOptions={() => { setStep('details'); setErr(''); }} />
+              <div className="mt-6 pt-4 border-t border-border text-center text-[12.5px]">
+                <span className="text-muted">{t('register.haveAccount')} </span>
+                <button onClick={() => { setPhase('login'); setErr(''); }} className="font-semibold text-primary hover:text-primary-hover">{t('register.logIn')}</button>
+              </div>
+              <SuperLink />
+            </>
+          )}
+
+          {phase === 'usecase' && <UseCaseStep onDone={() => setPhase('licensing')} />}
+
           {phase === 'register' && step === 'details' && (
             <>
+              <button onClick={() => { setStep('choose'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5"><ArrowLeft className="w-3.5 h-3.5" /> {t('common.back')}</button>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('register.title')}</h1>
               <p className="text-[12.5px] text-muted mt-1 mb-6">{t('register.subtitle')}</p>
               <div className="space-y-3.5">
@@ -1148,6 +1183,8 @@ export default function Gate({ children }) {
               <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Sparkles className="w-5 h-5" /></div>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('plan.tenantTitle')}</h1>
               <p className="text-[12.5px] text-muted mt-1 mb-6">{t('plan.tenantSubtitle')}</p>
+              {/* Signed in on another computer: the account's licence can be moved here (1.0.26). */}
+              <MoveLicenceCard onMoved={() => { setBusy(false); setPhase('licensing'); }} />
               {trialCodeFor ? (
                 <div className="rounded-lg border border-primary/40 bg-primary/5 p-3.5">
                   <span className="block text-[13px] font-semibold">{t('plan.verifyTitle')}</span>
@@ -1215,7 +1252,22 @@ export default function Gate({ children }) {
             </>
           )}
 
-          {phase === 'login' && (
+          {phase === 'login' && vaultSignIn && (
+            <>
+              <h1 className="font-display text-[20px] font-semibold tracking-tight">{account?.firstName ? t('login.welcomeBackNamed', { name: account.firstName }) : t('login.welcomeBack')}</h1>
+              <p className="text-[12.5px] text-muted mt-1">{ts('unlock.subtitle')}</p>
+              {account?.email && <p className="text-[11.5px] text-muted-dark mt-1 mb-6 break-words">{ts('unlock.account', { email: account.email })}</p>}
+              <SignInPanel purpose="unlock" heading={false} info={signin} lockedEmail={account?.email || ''} onDone={afterSignIn} />
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6 pt-4 border-t border-border text-[11.5px]">
+                <button onClick={() => { setPhase('memberlogin'); setErr(''); }} className="text-muted-dark hover:text-primary">{ts('unlock.passwordInstead')}</button>
+                <span className="hidden sm:inline text-border" aria-hidden="true">·</span>
+                <button onClick={() => { setPhase('invite'); setErr(''); }} className="text-muted-dark hover:text-primary">{ts('unlock.haveInvite')}</button>
+              </div>
+              <SuperLink />
+            </>
+          )}
+
+          {phase === 'login' && !vaultSignIn && (
             <>
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{account?.firstName ? t('login.welcomeBackNamed', { name: account.firstName }) : t('login.welcomeBack')}</h1>
               <p className="text-[12.5px] text-muted mt-1 mb-6">{t('login.subtitle')}</p>
@@ -1235,7 +1287,7 @@ export default function Gate({ children }) {
               <div className="mt-6 pt-4 border-t border-border">
                 <p className="text-center text-[11px] text-muted-dark mb-2.5">{t('login.newHere')}</p>
                 <button
-                  onClick={() => { setPhase('register'); setStep('details'); setErr(''); }}
+                  onClick={() => { setPhase('register'); setStep('choose'); setErr(''); }}
                   className="w-full h-10 rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold text-[13px] flex items-center justify-center gap-2 transition-colors"
                 >
                   {t('login.createOne')} <ArrowRight className="w-4 h-4" />

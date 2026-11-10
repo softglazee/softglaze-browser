@@ -33,6 +33,12 @@ function aiCall(run) {
   }
 }
 
+function signinCall(run) {
+  const api = window.softglaze && window.softglaze.signin;
+  if (!api) return Promise.reject(Object.assign(new Error('Sign-in is not available in this build.'), { code: 'SIGNIN_UNAVAILABLE' }));
+  try { return Promise.resolve(run(api)); } catch (e) { return Promise.reject(e); }
+}
+
 export const softglazeApi = {
   system: {
     getInfo: () => getSoftglazeApi().system.getInfo(),
@@ -349,6 +355,19 @@ export const softglazeApi = {
     confirmStart: (payload) => getSoftglazeApi().account.confirmStart(payload),
     confirmCheck: (payload) => getSoftglazeApi().account.confirmCheck(payload),
     confirmLater: () => getSoftglazeApi().account.confirmLater()
+  },
+  // One-click sign-in (1.0.26). An older preload has no `signin`: every call rejects instead of throwing.
+  signin: {
+    info: () => signinCall((s) => s.info()),
+    start: (provider, purpose, mode) => signinCall((s) => s.start(provider, purpose, mode)),
+    cancel: () => signinCall((s) => s.cancel()),
+    emailStart: (email, purpose, lang) => signinCall((s) => s.emailStart(email, purpose, lang)),
+    emailVerify: (email, code, purpose) => signinCall((s) => s.emailVerify(email, code, purpose)),
+    account: () => signinCall((s) => s.account()),
+    signOut: () => signinCall((s) => s.signOut()),
+    saveUseCase: (payload) => signinCall((s) => s.saveUseCase(payload)),
+    licenceState: () => signinCall((s) => s.licenceState()),
+    moveLicence: () => signinCall((s) => s.moveLicence())
   },
   batch: {
     previewProfilesFromSpreadsheet: () => getSoftglazeApi().batch.previewProfilesFromSpreadsheet(),
