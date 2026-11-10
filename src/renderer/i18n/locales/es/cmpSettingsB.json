@@ -61,6 +61,7 @@
     "recommendedProxyPasswords": "las contraseñas de proxy",
     "recommendedAfter": ", las semillas 2FA, las cookies guardadas y los datos de cuenta en reposo - cifra todos los campos, no solo algunos. Haz primero una copia de seguridad del espacio de trabajo y luego actívalo abajo.",
     "enabledNotice": "En el próximo inicio se te pedirá desbloquear la base de datos con tu contraseña del espacio de trabajo antes de que la aplicación se abra.",
+    "enabledNoticeRemembered": "“Mantener mi sesión iniciada” está activado en este dispositivo, así que la aplicación desbloquea la base de datos sola al iniciarse (tu contraseña del espacio de trabajo se guarda cifrada con tu cuenta de Windows). Para que se te pida la contraseña en cada inicio, elige “Olvidar este dispositivo” en “Mantener la sesión iniciada en este dispositivo”.",
     "turnOff": "Desactivar cifrado",
     "turnOn": "Activar cifrado",
     "readFirstLabel": "Lee esto primero.",
