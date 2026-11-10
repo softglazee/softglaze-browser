@@ -1042,6 +1042,38 @@ ADAPTERS.massive = {
   }
 };
 
+// ---- iProxy.online: GET /connections (the guide says /connection) lists the user's phones, each with
+// its active plan's end date; no traffic or balance. ----
+const IPROXY_API = 'https://iproxy.online/api/console/v1';
+
+function parseIproxyAccount(body, { now = Date.now() } = {}) {
+  const j = parseJson(body);
+  if (!j || typeof j !== 'object' || !Array.isArray(j.connections)) throw new Error('iProxy.online: the API did not return the phone list.');
+  const phones = j.connections.filter((c) => c && typeof c === 'object');
+  const plans = phones.map((c) => (c.plan_info && typeof c.plan_info === 'object' ? c.plan_info.active_plan : null)).filter((p) => p && typeof p === 'object');
+  return {
+    status: plans.length ? 'active' : 'unknown',
+    expiresAt: nextExpiry(plans.map((p) => p.expires_at), now),
+    note: !plans.length ? 'noActivePlans' : (plans.length > 1 ? 'firstToExpire' : null)
+  };
+}
+
+ADAPTERS.iproxy = {
+  name: 'iProxy.online', needs: ['token'], needsLabel: 'API key', dashboardUrl: 'https://iproxy.online/',
+  authMessage: 'iProxy.online rejected the saved API key. If you generated a new one, save it again on the Pull tab.',
+  async fetch(c, get, opts) {
+    const headers = bearer(c.token);
+    let body;
+    try {
+      body = await get(`${IPROXY_API}/connections`, { headers });
+    } catch (e) {
+      if (!e || e.status !== 404) throw e;
+      body = await get(`${IPROXY_API}/connection`, { headers });
+    }
+    return parseIproxyAccount(body, opts);
+  }
+};
+
 // Customer dashboards for providers whose API reports no account details (or needs a credential the
 // app does not store), so the card can still send the user to the right page.
 const DASHBOARD_URLS = Object.freeze({
@@ -1146,6 +1178,7 @@ module.exports = {
     node4: parseNode4Account,
     proxyempire: parseProxyEmpireAccount,
     mountproxies: parseMountProxiesAccount,
-    massive: parseMassiveUsage
+    massive: parseMassiveUsage,
+    iproxy: parseIproxyAccount
   }
 };

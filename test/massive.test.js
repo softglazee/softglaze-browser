@@ -30,7 +30,7 @@ const fnSrc = (name) => {
   assert.ok(m, `${name} must exist`);
   return m[0];
 };
-const SECTION = between('// ---- Massive (residential', '// ---- ProxyBrazil (dedicated 4G');
+const SECTION = between('// ---- Massive (residential', '// ---- iProxy.online (your own phones');
 
 const fetchMassivePool = new Function(
   'crypto', 'massiveBaseUser', 'massiveUsername', 'MINTED_PULL_MAX',

@@ -139,7 +139,8 @@ const {
   NODE4_GATEWAY_PRODUCTS, NODE4_CALL_MAX, node4GatewayBody, node4GatewayRows, node4StaticRows, node4Countries,
   PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
   mountProxiesRows, mountProxiesRotateTarget,
-  massiveBaseUser, massiveUsername
+  massiveBaseUser, massiveUsername,
+  iproxyRows
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1807,6 +1808,10 @@ async function batchAddProxies(payload) {
   const raw = requiredString(input.raw, 'Raw proxy batch');
   const fallbackType = parseProxyType(input.type || 'HTTP');
   const namePrefix = optionalString(input.namePrefix);
+  // Batch Add's optional Provider: a key of PROXY_VENDORS (a connector, or ARNPROXY's manual list), so
+  // the rows group and count under that provider like pulled ones. Anything else is refused.
+  const provider = input.provider == null || String(input.provider).trim() === '' ? null : String(input.provider).trim().toLowerCase();
+  if (provider && !Object.prototype.hasOwnProperty.call(PROXY_VENDORS, provider)) throw new Error('Unknown proxy provider.');
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const result = { total: lines.length, created: [], skipped: [], errors: [] };
   const add = await proxyAddContext();
@@ -1833,14 +1838,15 @@ async function batchAddProxies(payload) {
 
       const created = await db.proxy.create({
         data: {
-          name: namePrefix ? `${namePrefix} ${index + 1}` : `${parsed.type} ${parsed.host}:${parsed.port}`,
+          // A provider's name labels the row like a pulled one ("ARNPROXY • host:port").
+          name: namePrefix ? `${namePrefix} • ${parsed.host}:${parsed.port}` : `${parsed.type} ${parsed.host}:${parsed.port}`,
           type: parsed.type,
           host: parsed.host,
           port: parsed.port,
           username: parsed.username,
           password: parsed.password,
           // Vendor tag for auto-grouping, from the batch's declared provider.
-          provider: input.provider ? String(input.provider).toLowerCase() : null,
+          provider,
           ownerMemberId: proxyStampId
         }
       });
@@ -2024,7 +2030,11 @@ const PROXY_VENDORS = Object.freeze({
   node4: 'Node4',
   proxyempire: 'ProxyEmpire',
   mountproxies: 'MountProxies',
-  massive: 'Massive'
+  massive: 'Massive',
+  iproxy: 'iProxy.online',
+  // No connector yet: its proxies are added with Batch Add's Provider tag, so the pool and the Proxy
+  // providers page group and count them (syncVendorPool refuses a pull).
+  arnproxy: 'ARNPROXY'
 });
 
 // Gateways for adapters that build a URL from this table. Add a host only if the vendor documents it
@@ -5044,6 +5054,60 @@ async function fetchMassivePool({ username, password, poolType, country, state, 
   return rows;
 }
 
+// ---- iProxy.online (your own phones, list pull) ----
+// A user API key (dashboard) lists the proxy accesses on the user's Android phones and each phone's
+// change-IP link, which becomes the proxy's rotation link (it carries a link id, not the key). Never
+// called: POST /me/api-key (it would void the key), creating or deleting accesses or links,
+// command-push, VPN configs, credential exports. Not live-key tested.
+const IPROXY_API = 'https://iproxy.online/api/console/v1';
+
+async function fetchIproxyPool({ token, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('iProxy.online: paste the user API key from your dashboard.');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const call = async (pathName) => {
+    try {
+      return await httpRequestText(`${IPROXY_API}${pathName}`, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' }, timeoutMs: 20000, maxBytes: 8_000_000 });
+    } catch (error) {
+      const status = error && error.status;
+      let message = 'iProxy.online: could not read your proxy accesses. Check your connection and try again.';
+      if (status === 401) message = 'iProxy.online rejected the API key. If you generated a new one, the old one stopped working.';
+      else if (status === 403) message = 'iProxy.online refused this API key (Forbidden). Check the user API key in your dashboard.';
+      else if (status === 429) message = 'iProxy.online: too many requests. Wait a minute and pull again.';
+      throw Object.assign(new Error(message), { status });
+    }
+  };
+  const accesses = await call('/proxy-access');
+  // The links and the phone names only enrich the rows: without them the proxies still work, with no
+  // Rotate IP link and no country until a health check. A refused key still stops the pull; a 404
+  // tries the next path.
+  const optional = async (...paths) => {
+    for (const p of paths) {
+      try {
+        return await call(p);
+      } catch (e) {
+        if ([401, 403, 429].includes(e.status)) throw e;
+        if (e.status !== 404) return '';
+      }
+    }
+    return '';
+  };
+  const links = await optional('/actionlinks?action=changeip');
+  // The Swagger names /connections, the guide /connection.
+  const phones = await optional('/connections', '/connection');
+  const res = iproxyRows(accesses, links, phones, { socks, key });
+  const proto = socks ? 'SOCKS5' : 'HTTP';
+  if (!res.rows.length) {
+    if (res.noAuth && !res.wrongProtocol) throw new Error('iProxy.online: your proxy accesses use no login (IP restriction only). Add one with a username and password.');
+    if (res.total && res.inactive === res.total) throw new Error('iProxy.online: your proxy accesses are turned off or expired. Turn one on in the dashboard, then pull again.');
+    throw new Error(`iProxy.online: none of your phones has a ${proto} proxy access with a login. Create one in the dashboard.`);
+  }
+  const out = limitListRows(res.rows, count, Infinity);
+  // Shown under the pull result: proxies of a phone without a change-IP link were added without one.
+  if (res.noLinkPhones) out.notice = { code: 'noChangeIpLink', count: res.noLinkPhones };
+  return out;
+}
+
 // ---- ProxyBrazil (dedicated 4G mobile in Brazil, list pull) ----
 // The Partner API for profile browsers: a pb_live_ key (Integrations, App: SoftGlaze) lists the
 // account's proxies, 200 a page. Each keeps its rotation_url, a per-proxy link that needs no key, for
@@ -5501,7 +5565,8 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   node4: fetchNode4Pool,
   proxyempire: fetchProxyEmpirePool,
   mountproxies: fetchMountProxiesPool,
-  massive: fetchMassivePool
+  massive: fetchMassivePool,
+  iproxy: fetchIproxyPool
 });
 
 async function syncVendorPool(payload) {
@@ -5574,6 +5639,11 @@ async function syncVendorPool(payload) {
   }
 
   const result = { provider: PROXY_VENDORS[vendorKey], simulated, total: rows.length, created: [], skipped: [] };
+  // An adapter may hang one notice code on its rows for the pull result, which the form translates
+  // (iProxy.online: phones without a change-IP link were added without Rotate IP).
+  if (rows && rows.notice && typeof rows.notice === 'object' && /^[A-Za-z]{1,40}$/.test(String(rows.notice.code || ''))) {
+    result.notice = { code: String(rows.notice.code), count: Math.max(0, Math.floor(Number(rows.notice.count) || 0)) };
+  }
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
     try {

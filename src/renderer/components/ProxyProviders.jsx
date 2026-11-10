@@ -198,8 +198,17 @@ export const PROVIDERS = [
   // Massive: residential gateway network.joinmassive.com (HTTP 65534, SOCKS5 65533) with the targeting in
   // the username; the proxy password is the account's API token (dashboard, Profile). ISP is
   // isp.joinmassive.com:8000 with no targeting.
-  { key: 'massive', name: 'Massive', initials: 'MV', color: '#4f46e5', referral: 'https://www.joinmassive.com/', gateway: { host: 'network.joinmassive.com', port: 65534, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], labels: { password: 'apiTokenPasswordLabel' }, poolType: [['residential', 'Residential'], ['residential_mobile', 'Residential mobile'], ['isp', 'ISP (US)']], count: true, geo: true, zip: true, asn: true, session: true, life: true, maxLife: 1440, proto: true, gateway: true } }
+  { key: 'massive', name: 'Massive', initials: 'MV', color: '#4f46e5', referral: 'https://www.joinmassive.com/', gateway: { host: 'network.joinmassive.com', port: 65534, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], labels: { password: 'apiTokenPasswordLabel' }, poolType: [['residential', 'Residential'], ['residential_mobile', 'Residential mobile'], ['isp', 'ISP (US)']], count: true, geo: true, zip: true, asn: true, session: true, life: true, maxLife: 1440, proto: true, gateway: true } },
+  // iProxy.online: the user's own Android phones as mobile proxies. A user API key (dashboard) lists every
+  // proxy access (host, port, login) and each phone's change-IP link, kept as the proxy's Rotate IP link.
+  { key: 'iproxy', name: 'iProxy.online', initials: 'IP', color: '#f59e0b', referral: 'https://iproxy.online/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, noCountry: true, count: true, list: true, proto: true } },
+  // ARNPROXY: no connector yet (its customer API is not confirmed for logins). Its list is pasted in the
+  // Proxy pool's Batch Add with Provider ARNPROXY, so this page counts those proxies.
+  { key: 'arnproxy', name: 'ARNPROXY', initials: 'AX', color: '#b91c1c', referral: 'https://www.arnproxy.com/', gateway: null, unavailable: true }
 ];
+
+// Notice codes a pull result may carry (syncVendorPool's result.notice), each a proxyProviders.result key.
+const RESULT_NOTICES = ['noChangeIpLink'];
 
 // The token field's placeholder follows its label (geoSync.labels.token), and so does the username's.
 const TOKEN_PLACEHOLDERS = { apiKeyLabel: 'apiKeyPlaceholder', integrationTokenLabel: 'integrationTokenPlaceholder' };
@@ -1632,6 +1641,10 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                 <div className="text-emerald-400">{t('proxyProviders.result.added', { count: syncResult.created?.length ?? 0 })}</div>
                 <div className="text-amber-400">{t('proxyProviders.result.existing', { count: syncResult.skipped?.length ?? 0 })}</div>
               </div>
+              {/* A connector's note on what it added (iProxy.online: phones without a change-IP link). */}
+              {syncResult.notice && RESULT_NOTICES.includes(syncResult.notice.code) && (
+                <p className="mt-2 text-[12px] text-[color-mix(in_srgb,var(--color-amber-500)_55%,var(--foreground))]">{t(`proxyProviders.result.${syncResult.notice.code}`, { count: syncResult.notice.count })}</p>
+              )}
             </div>
           )}
         </div>
