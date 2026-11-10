@@ -1480,6 +1480,7 @@ export default function ProxyPoolPage() {
                 <Field label={t('form.type')}>
                   <CustomSelect value={proxyForm.type} onChange={(event) => updateProxyForm('type', event.target.value)}>
                     <option value="HTTP">HTTP</option>
+                    <option value="HTTPS">HTTPS</option>
                     <option value="SOCKS5">SOCKS5</option>
                     <option value="SOCKS4">SOCKS4</option>
                   </CustomSelect>
@@ -1530,6 +1531,7 @@ export default function ProxyPoolPage() {
               <Field label={t('batch.defaultType')}>
                 <CustomSelect value={batchType} onChange={(event) => setBatchType(event.target.value)}>
                   <option value="HTTP">HTTP</option>
+                  <option value="HTTPS">HTTPS</option>
                   <option value="SOCKS5">SOCKS5</option>
                   <option value="SOCKS4">SOCKS4</option>
                 </CustomSelect>

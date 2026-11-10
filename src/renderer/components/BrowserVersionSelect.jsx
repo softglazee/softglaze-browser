@@ -99,6 +99,9 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
   }
 
   function pick(v, e) { if (e) e.stopPropagation(); onChange(String(v)); setOpen(false); }
+  // A picked version is a bare major. A generated profile's full Chrome version ("149.0.7827.155") is no
+  // pick: it launches as Auto (browserEngine.chooseBrowserBinary), so it shows as Auto.
+  const isAuto = !value || value === 'Auto' || (!isFirefox && !/^\s*\d{2,4}\s*$/.test(String(value)));
 
   return (
     <div className="relative" ref={ref}>
@@ -107,7 +110,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
         onClick={() => setOpen((o) => !o)}
         className="appearance-none bg-transparent outline-none text-muted hover:text-foreground pl-3 pr-2 py-2 text-sm cursor-pointer flex items-center gap-1"
       >
-        {value || t('versionSelect.auto')}
+        {isAuto ? t('versionSelect.auto') : value}
         <ChevronDown className={`w-4 h-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -116,10 +119,10 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
           <button
             type="button"
             onClick={(e) => pick('Auto', e)}
-            className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-secondary transition-colors ${value === 'Auto' ? 'text-primary font-medium' : 'text-foreground'}`}
+            className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-secondary transition-colors ${isAuto ? 'text-primary font-medium' : 'text-foreground'}`}
           >
             <span>{t('versionSelect.auto')}</span>
-            {value === 'Auto' && <Check className="w-4 h-4" />}
+            {isAuto && <Check className="w-4 h-4" />}
           </button>
 
           {loading && (

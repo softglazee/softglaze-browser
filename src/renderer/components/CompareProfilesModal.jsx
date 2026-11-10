@@ -23,8 +23,11 @@ export default function CompareProfilesModal({ profiles = [], onClose }) {
     [t('compare.rowWebRTC'), (p) => p.webrtc || t('compare.forward')],
     [t('compare.rowWebglVendor'), (p) => p.webglVendor || '-'],
     [t('compare.rowWebglRenderer'), (p) => p.webglRenderer || '-'],
-    [t('compare.rowCpuCores'), (p) => p.cpu ?? '-'],
-    [t('compare.rowRam'), (p) => p.ram ?? '-'],
+    // Profiles carry cpuCores / ramGb (there are no cpu / ram fields).
+    [t('compare.rowCpuCores'), (p) => (/^real$/i.test(String(p.cpuType || '')) ? t('compare.real') : (p.cpuCores ?? '-'))],
+    [t('compare.rowRam'), (p) => (/^real$/i.test(String(p.ramType || '')) ? t('compare.real') : (p.ramGb ?? '-'))],
+    [t('compare.rowDeviceName'), (p) => (p.deviceNameType === 'Real' ? t('compare.real') : (p.deviceName || '-'))],
+    [t('compare.rowMacAddress'), (p) => (p.macAddressType === 'Real' ? t('compare.real') : (p.macAddress || '-'))],
     [t('compare.rowGroup'), (p) => (p.group && p.group.name) || '-'],
     [t('compare.rowTags'), (p) => (Array.isArray(p.tags) && p.tags.length) ? p.tags.join(', ') : '-']
   ];

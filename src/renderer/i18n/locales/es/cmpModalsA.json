@@ -78,6 +78,8 @@
     "rowCpuCores": "Núcleos de CPU",
     "rowRam": "RAM (GB)",
     "rowGroup": "Grupo",
-    "rowTags": "Etiquetas"
+    "rowTags": "Etiquetas",
+    "rowDeviceName": "Nombre del dispositivo",
+    "rowMacAddress": "Dirección MAC"
   }
 }

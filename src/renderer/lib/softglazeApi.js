@@ -141,6 +141,14 @@ export const softglazeApi = {
     importCookiesToRunning: (data, format) => getSoftglazeApi().profiles.importCookiesToRunning(data, format),
     storageInfo: (id) => getSoftglazeApi().profiles.storageInfo(id),
     clone: (id, options) => getSoftglazeApi().profiles.clone(id, options),
+    // Each OS's standard fonts (the Fonts > Custom default); an older preload has no such call.
+    editorOptions: () => (window.softglaze && window.softglaze.profiles && typeof window.softglaze.profiles.editorOptions === 'function'
+      ? getSoftglazeApi().profiles.editorOptions()
+      : Promise.resolve(null)),
+    // A device name and MAC for the OS that no profile uses (null with an older preload).
+    generateIdentity: (os, excludeId) => (window.softglaze && window.softglaze.profiles && typeof window.softglaze.profiles.generateIdentity === 'function'
+      ? getSoftglazeApi().profiles.generateIdentity(os, excludeId)
+      : Promise.resolve(null)),
     liveLeak: (id) => getSoftglazeApi().profiles.liveLeak(id),
     captchaScores: (ids) => getSoftglazeApi().profiles.captchaScores(ids),
     captchaFix: (id, action) => getSoftglazeApi().profiles.captchaFix(id, action),
