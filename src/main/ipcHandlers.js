@@ -712,7 +712,6 @@ function deriveProvider(proxy) {
   const n = String(proxy.name || '').toLowerCase();
   if (n.startsWith('apify')) return 'apify';
   if (n.startsWith('anyip')) return 'anyip';
-  if (n.startsWith('shopsocks5')) return 'shopsocks5';
   if (n.startsWith('bright')) return 'brightdata';
   if (n.startsWith('oxylabs')) return 'oxylabs';
   // Smartproxy is now Decodo; stored rows keep the provider key smartproxy.
@@ -2022,7 +2021,7 @@ const PROXY_VENDORS = Object.freeze({
   // smartproxy is Decodo's old name; the key stays because stored rows and settings use it.
   ipfoxy: 'IPFoxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', smartproxy: 'Decodo',
   proxy302: 'Proxy302', mangoproxy: 'MangoProxy',
-  ipburger: 'IP Burger', shopsocks5: 'ShopSocks5',
+  ipburger: 'IP Burger',
   apify: 'Apify', anyip: 'AnyIP', dataimpulse: 'DataImpulse',
   proxyseller: 'Proxy-Seller', iproyal: 'IPRoyal', marsproxies: 'MarsProxies', nodemaven: 'NodeMaven',
   froxy: 'Froxy', proxidize: 'Proxidize', liveproxies: 'Live Proxies', packetstream: 'PacketStream',
@@ -2112,7 +2111,7 @@ function httpRequestText(url, options = {}) {
 const {
   ipRoyalMaxCount, ipRoyalCountRefused, ipRoyalLifetimeFromMinutes, oxylabsBaseUser, oxylabsUsername, decodoBaseUser, decodoUsername,
   brightDataZoneUser, brightDataUsername, brightDataRouteIps, brightDataState, apifyUsername, anyIpPlace,
-  shopSocks5Request, PROXY_SELLER_PAGE_SIZE, proxySellerPageInfo,
+  PROXY_SELLER_PAGE_SIZE, proxySellerPageInfo,
   froxyPastedPool, LIVEPROXIES_SID_MAX
 } = require('./proxyVendorUtils');
 
@@ -2479,84 +2478,6 @@ async function fetchAnyIpPool({ username, password, country, state, city, sessio
     });
   }
   return rows;
-}
-
-// ---- ShopSocks5 ----
-// POST form-urlencoded (helper shopSocks5Request); needs both user_name and api_token (the token
-// alone fails). Rows come back under `response`. qty has no documented maximum and no paging, so
-// one request asks for the whole amount, bounded by the shared cap.
-const SHOPSOCKS5_MAX_QTY = MINTED_PULL_MAX;
-async function fetchShopSocks5Pool({ token, username, country, count, state, city, plan, proxyType, poolType }) {
-  const tok = String(token || '').trim();
-  if (!tok) throw new Error('ShopSocks5: your API token is required.');
-  const user = String(username || '').trim();
-  if (!user) throw new Error('ShopSocks5: your ShopSocks5 account username or email is required - the API authenticates with user_name + api_token together.');
-  const cc = normCountryCode(country);
-
-  // API docs: https://shopsocks5.com/document. Returns { success, response: [...], message }.
-  // Only the Premium route takes proxy_type (the form shows Proxy type for Premium only); on the other
-  // routes each row keeps the type the API reports, and SOCKS5 when it reports none.
-  const premium = String(plan || '').trim().toLowerCase() === 'premium';
-  const ptype = premium ? (String(proxyType || 'proxy_sock_5').trim() || 'proxy_sock_5') : 'proxy_sock_5';
-  const isHttps = ptype === 'proxy_https';
-  const qty = clampPoolCount(count, 5, SHOPSOCKS5_MAX_QTY);
-  const { path: route, form } = shopSocks5Request({ user, token: tok, plan, qty, country: cc, state, city, sockType: poolType, proxyType: ptype });
-
-  let text;
-  try {
-    text = await httpRequestText(`https://shopsocks5.com${route}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: form.toString(),
-      timeoutMs: 30000
-    });
-  } catch (e) { throw new Error(`ShopSocks5 API error: ${e.message}`); }
-
-  let parsed;
-  try { parsed = JSON.parse(text); } catch (e) { throw new Error('ShopSocks5: the API did not return JSON - verify the username + token.'); }
-  if (!parsed || parsed.success === false) {
-    const msg = (parsed && parsed.message) || 'request failed';
-    if (/too fast|slow/i.test(msg)) throw new Error('ShopSocks5: rate limited ("Too fast, please slowly") - wait ~10 seconds and pull again.');
-    throw new Error(`ShopSocks5: ${msg} - check your account username + API token, and that the chosen country/type has stock.`);
-  }
-
-  // Items look like { sock_ip: "host:port", user_name, password, proxy_type: "SOCKS5 Proxy",
-  // country_code, country, city, states }. Plain {ip/host, port}, packed combos and bare strings
-  // are tolerated too.
-  const list = Array.isArray(parsed.response) ? parsed.response : (Array.isArray(parsed) ? parsed : []);
-  const rows = [];
-  for (const it of list) {
-    let host, port, u, pw, rowCc, scheme, place;
-    if (typeof it === 'string') {
-      const parts = it.split(':'); host = parts[0]; port = parts[1]; u = parts[2]; pw = parts[3];
-    } else if (it && typeof it === 'object') {
-      host = it.ip || it.host || it.server;
-      port = it.port;
-      u = it.user || it.username || it.login || it.user_name;
-      pw = it.pass || it.password || it.passwd;
-      rowCc = it.country_code || it.geo || it.country; // prefer 2-letter code over full name
-      scheme = String(it.proxy_type || '');
-      place = [it.city, it.states].filter(Boolean).join(', ');
-      // ShopSocks5 packs host:port into `sock_ip` ("1.2.3.4:7998").
-      const combo = [it.sock_ip, it.socks, it.socks5, it.proxy, it.ip_port, it.proxy_address]
-        .find((v) => typeof v === 'string' && v.includes(':'));
-      if ((!host || !port) && combo) { const p = combo.split(':'); host = host || p[0]; port = port || p[1]; u = u || p[2]; pw = pw || p[3]; }
-    }
-    const pnum = Number.parseInt(String(port), 10);
-    if (!host || !Number.isFinite(pnum)) continue;
-    const rc = normCountryCode(rowCc) || cc || null;
-    // Honor the scheme the API reports; otherwise fall back to the requested type.
-    let rtype = isHttps ? 'HTTP' : 'SOCKS5';
-    if (/socks/i.test(scheme || '')) rtype = 'SOCKS5'; else if (/https?/i.test(scheme || '')) rtype = 'HTTP';
-    const labelGeo = [rc, place].filter(Boolean).join(' ') || String(host).trim();
-    rows.push({
-      type: rtype, host: String(host).trim(), port: pnum,
-      username: u ? String(u).trim() : null, password: pw != null ? String(pw) : null,
-      label: `ShopSocks5 • ${labelGeo}`, country: rc
-    });
-  }
-  if (!rows.length) throw new Error('ShopSocks5: the API returned no usable proxies (try a different country/state, or check your stock).');
-  return rows.slice(0, qty);
 }
 
 // ---- DataImpulse ----
@@ -5540,7 +5461,6 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   oxylabs: fetchOxylabsPool,
   smartproxy: fetchSmartproxyPool,
   apify: fetchApifyPool,
-  shopsocks5: fetchShopSocks5Pool,
   anyip: fetchAnyIpPool,
   dataimpulse: fetchDataImpulsePool,
   proxyseller: fetchProxySellerPool,
@@ -5616,7 +5536,7 @@ async function syncVendorPool(payload) {
       apiUrl: optionalString(input.apiUrl),
       host: optionalString(input.host),
       port: input.port,
-      // ShopSocks5 plan endpoint (premium|list|daily) + proxy type (proxy_sock_5|proxy_https).
+      // The product (DataImpulse, Proxy-Seller) and the Protocol select (http, https or socks5).
       plan: optionalString(input.plan),
       proxyType: optionalString(input.proxyType),
       // anyip.io: pool selector (sent as type_<poolType>) and team id for REST auto-provisioning.
@@ -10632,9 +10552,16 @@ function hasProxyProviderKey(entry) {
   return Boolean(entry && typeof entry === 'object' && PROXY_CRED_KEY_FIELDS.some((f) => entry[f] != null && String(entry[f]) !== ''));
 }
 
+// Only providers the app still has (PROXY_VENDORS) count: the saved key of a connector that was removed
+// is never read or used, and the next save of any provider's credentials drops its entry.
 async function readProxyProviderCredMap() {
   const raw = await readSetting('proxyProviderCreds', {});
-  return raw && typeof raw === 'object' ? raw : {};
+  const map = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return map;
+  for (const [key, entry] of Object.entries(raw)) {
+    if (Object.prototype.hasOwnProperty.call(PROXY_VENDORS, key)) map[key] = entry;
+  }
+  return map;
 }
 
 async function getProxyProviderCreds(payload) {
@@ -10657,6 +10584,7 @@ async function saveProxyProviderCreds(payload) {
   await requireOwnerOrSuper('change proxy provider credentials');
   const input = requireObject(payload);
   const provider = requiredString(input.provider, 'provider').toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(PROXY_VENDORS, provider)) throw new Error('Unknown proxy provider.');
   const map = await readProxyProviderCredMap();
   const entry = { ...(map[provider] && typeof map[provider] === 'object' ? map[provider] : {}) };
   for (const f of PROXY_CRED_PLAIN_FIELDS) {

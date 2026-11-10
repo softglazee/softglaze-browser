@@ -113,15 +113,17 @@ test('hand-added proxies group as your own, free ones as free proxies', () => {
   const board = buildScoreboard({
     now: NOW,
     vendors: VENDORS,
-    proxies: [proxy(1, { provider: null }), proxy(2, { provider: 'custom' }), proxy(3, { provider: undefined }), proxy(4, { provider: 'free' }), proxy(5, { provider: 'oldvendor' })]
+    proxies: [proxy(1, { provider: null }), proxy(2, { provider: 'custom' }), proxy(3, { provider: undefined }), proxy(4, { provider: 'free' }), proxy(5, { provider: 'oldvendor', name: 'Plain' }), proxy(6, { provider: 'gonevendor', name: 'GoneVendor • US Dallas' })]
   });
-  assert.deepEqual(board.rows.map((r) => r.key).sort(), ['free', 'oldvendor', 'own']);
+  assert.deepEqual(board.rows.map((r) => r.key).sort(), ['free', 'gonevendor', 'oldvendor', 'own']);
   const own = rowOf(board, 'own');
   assert.equal(own.kind, 'own');
   assert.equal(own.name, null, 'the renderer names it');
   assert.equal(own.proxies, 3);
   assert.equal(rowOf(board, 'free').kind, 'free');
   assert.equal(rowOf(board, 'oldvendor').name, 'oldvendor', 'an unknown tag keeps its own row');
+  // A removed provider's proxies keep the vendor name they were pulled with (1.0.27: ShopSocks5).
+  assert.equal(rowOf(board, 'gonevendor').name, 'GoneVendor');
 });
 
 test('blocks count per vendor with the top blocking sites', () => {

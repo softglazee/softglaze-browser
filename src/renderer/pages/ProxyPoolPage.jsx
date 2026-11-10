@@ -31,17 +31,14 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
+import { providerTagLabel, pulledProviderNames } from '@/lib/providerTags.mjs';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
 
-// Friendly labels for the "auto group by provider" chips.
-const PROVIDER_LABELS = {
-  apify: 'Apify', shopsocks5: 'ShopSocks5',
-  smartproxy: 'Smartproxy', brightdata: 'Bright Data', oxylabs: 'Oxylabs', custom: 'Custom'
-};
-// Every other provider tag shows its Proxy providers name (ARNPROXY, Node4, ...).
-const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map((p) => [p.key, p.name]));
-const providerLabel = (key) => PROVIDER_LABELS[key] || PROVIDER_NAMES[key] || key;
+// The "auto group by provider" chips and filter name a tag as Proxy providers does (Decodo
+// (Smartproxy), ARNPROXY, Node4, ...), with a shorter Apify and the manual "custom" tag. A tag no
+// connector has any more (a removed provider) shows the vendor name its proxies were pulled with.
+const PROVIDER_NAMES = { ...Object.fromEntries(PROVIDERS.map((p) => [p.key, p.name])), apify: 'Apify', custom: 'Custom' };
 // Batch Add's optional Provider tag: ARNPROXY first (it has no connector, so a pasted list is how its
 // proxies arrive), then every provider by name.
 const BATCH_PROVIDERS = [...PROVIDERS].sort((a, b) => (a.key === 'arnproxy' ? -1 : b.key === 'arnproxy' ? 1 : a.name.localeCompare(b.name)));
@@ -231,6 +228,8 @@ export default function ProxyPoolPage() {
     for (const p of proxies) { if (p.provider) m[p.provider] = (m[p.provider] || 0) + 1; }
     return m;
   }, [proxies]);
+  const pulledNames = useMemo(() => pulledProviderNames(proxies), [proxies]);
+  const providerLabel = (key) => providerTagLabel(key, PROVIDER_NAMES, pulledNames);
 
   // Client-side filter: search, active category and the stat-card status filter.
   const filteredProxies = useMemo(() => {
@@ -759,7 +758,7 @@ export default function ProxyPoolPage() {
   const chipCls = (key) => `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(key) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`;
 
   // Mirror the backend's name enrichment so a checked proxy shows its geo immediately
-  // (e.g. "ShopSocks5 • US Kirkland, Washington 98033") without a full reload.
+  // (e.g. "NOVADA • US Kirkland, Washington 98033") without a full reload.
   function applyGeoName(id, result) {
     if (!result || !result.success) return;
     const cc = String(result.country || '').toUpperCase();

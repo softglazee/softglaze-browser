@@ -1,11 +1,11 @@
 'use strict';
 // Pull size, session and targeting rules for Bright Data, Oxylabs, Smartproxy (Decodo), Apify,
-// AnyIP, ShopSocks5, DataImpulse, Proxy-Seller and IPRoyal.
+// AnyIP, DataImpulse, Proxy-Seller and IPRoyal.
 //
 // Username examples come from the vendors' docs: docs.brightdata.com (proxy-networks/config-options),
 // developers.oxylabs.io (residential location-settings, session-control), help.decodo.com
 // (residential-proxy-user-pass-requests), docs.apify.com (platform/proxy), anyip.io/docs
-// (configuration, location-targeting), shopsocks5.com/document (swagger.json),
+// (configuration, location-targeting),
 // docs.dataimpulse.com (types-of-connections), docs.proxy-seller.com (api-v2, retrieve active proxy)
 // and resi-api.iproyal.com/docs (OpenAPI).
 //
@@ -107,18 +107,6 @@ test('AnyIP place names match the values its location API returns', () => {
   assert.equal(U.placeToken('São Paulo'), 'sao_paulo');
 });
 
-test('ShopSocks5 uses the documented all_plan route and keeps the older plan routes', () => {
-  const all = U.shopSocks5Request({ user: 'me', token: 't', qty: 1000, country: 'us', state: 'California', sockType: 'cellular' });
-  assert.equal(all.path, '/socks/all_plan');
-  assert.deepEqual(Object.fromEntries(all.form), { user_name: 'me', api_token: 't', qty: '1000', country: 'US', state: 'California', sock_type: 'cellular' });
-  assert.equal(U.shopSocks5Request({ plan: 'all', sockType: 'any' }).form.has('sock_type'), false, 'Any type sends no filter');
-  const premium = U.shopSocks5Request({ plan: 'premium', qty: 5, proxyType: 'proxy_https' });
-  assert.equal(premium.path, '/socks/premium');
-  assert.equal(premium.form.get('proxy_type'), 'proxy_https');
-  assert.equal(U.shopSocks5Request({ plan: 'daily', qty: 5 }).form.get('sock_type'), 'residential');
-  assert.equal(U.shopSocks5Request({ plan: 'nonsense', qty: 5 }).path, '/socks/all_plan');
-});
-
 test('IPRoyal reads its proxy_count maximum from the validation message', () => {
   assert.equal(U.ipRoyalMaxCount('IPRoyal proxy list: The proxy count field must not be greater than 100.'), 100);
   assert.equal(U.ipRoyalMaxCount('IPRoyal proxy list: The location is invalid.'), null);
@@ -159,7 +147,7 @@ function gateways({ probe = { success: true, ip: '203.0.113.5' }, routes = {}, s
       if (answer instanceof Error) throw answer;
       return typeof answer === 'function' ? answer(url, options) : answer;
     }
-  }, ['fetchBrightDataPool', 'fetchOxylabsPool', 'fetchSmartproxyPool', 'fetchApifyPool', 'fetchAnyIpPool', 'fetchShopSocks5Pool', 'MINTED_PULL_MAX']);
+  }, ['fetchBrightDataPool', 'fetchOxylabsPool', 'fetchSmartproxyPool', 'fetchApifyPool', 'fetchAnyIpPool', 'MINTED_PULL_MAX']);
   return { ...fns, probes, calls };
 }
 
@@ -285,21 +273,6 @@ test('AnyIP provisioning calls dashboard.anyip.io and falls back to the older ro
   assert.equal(rows[0].username, 'user_srv1,type_residential', 'one row, no session name, Keep same IP blank: the rotating login');
   assert.equal(rows[0].password, body.password);
   assert.doesNotMatch(IPC, /api\.anyip\.io/, 'api.anyip.io no longer resolves');
-});
-
-test('ShopSocks5 posts to all_plan and asks for more than 100', async () => {
-  const list = Array.from({ length: 250 }, (_, i) => ({ sock_ip: `198.51.100.${i % 250}:${7000 + i}`, user_name: 'u', password: 'p', proxy_type: 'SOCKS5 Proxy', country_code: 'US' }));
-  const g = gateways({ routes: { 'https://shopsocks5.com/socks/': JSON.stringify({ success: true, response: list }) } });
-  const rows = await g.fetchShopSocks5Pool({ token: 't', username: 'me', count: '250', country: 'US', poolType: 'residential' });
-  assert.equal(g.calls[0].url, 'https://shopsocks5.com/socks/all_plan');
-  const form = new URLSearchParams(g.calls[0].options.body);
-  assert.equal(form.get('qty'), '250');
-  assert.equal(form.get('sock_type'), 'residential');
-  assert.equal(rows.length, 250, 'the old 200 slice is gone');
-  assert.equal(rows[0].type, 'SOCKS5');
-  const g2 = gateways({ routes: { 'https://shopsocks5.com/socks/': JSON.stringify({ success: true, response: [] }) } });
-  await assert.rejects(g2.fetchShopSocks5Pool({ token: 't', username: 'me', count: '99999' }), /no usable proxies/);
-  assert.equal(new URLSearchParams(g2.calls[0].options.body).get('qty'), '1000');
 });
 
 // ---- DataImpulse -----------------------------------------------------------------------------
@@ -502,7 +475,6 @@ test('the catalog lines carry the documented targeting', () => {
   assert.match(providerLine('apify'), /usState: true/);
   assert.match(providerLine('anyip'), /geo: true/);
   assert.match(providerLine('anyip'), /proto: true/);
-  assert.match(providerLine('shopsocks5'), /\['cellular', 'Cellular'\]/);
   const anyip = /countries: \[([^\]]+)\]/.exec(providerLine('anyip'));
   const codes = anyip[1].match(/'([A-Z]{2})'/g).map((s) => s.slice(1, 3));
   assert.ok(codes.length > 100 && codes.includes('US') && codes.includes('XK'), 'the AnyIP reference list');
@@ -540,7 +512,7 @@ test('new strings exist in English and Spanish', () => {
   const keys = [
     'apiSync.modeLabel', 'apiSync.modeZone', 'apiSync.modeSticky', 'apiSync.modeRotating', 'apiSync.modeZoneHelp',
     'apiSync.modeStickyHelp', 'apiSync.modeRotatingHelp', 'apiSync.countTitle', 'apiSync.lifeDefault', 'apiSync.geoHint',
-    'geo.planAll', 'geo.diCountTitle', 'ipr.countTitle'
+    'geo.diCountTitle', 'ipr.countTitle'
   ];
   const get = (o, k) => k.split('.').reduce((c, p) => (c == null ? c : c[p]), o);
   for (const k of keys) {

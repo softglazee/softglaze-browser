@@ -1081,7 +1081,6 @@ const DASHBOARD_URLS = Object.freeze({
   airproxy: 'https://airproxy.io/en/accounts/profile/dashboard/',
   proxysolutions: 'https://proxy-solutions.net/lk',
   proxy302: 'https://proxy302.com/login/',
-  shopsocks5: 'https://shopsocks5.com/',
   ipfoxy: 'https://app.ipfoxy.com/',
   liveproxies: 'https://liveproxies.io/dashboard/overview',
   novada: 'https://dashboard.novada.com/',

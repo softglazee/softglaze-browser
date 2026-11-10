@@ -137,13 +137,13 @@ test('the UI offers DataImpulse a pull and does not mark it unavailable', () => 
 });
 
 test('the DataImpulse selects are seeded with values its own options carry', () => {
-  // The shared defaults are plan:'premium', proxyType:'proxy_sock_5', poolType:'residential'.
-  // None of those is a DataImpulse option value, so without a provider-aware reset the
-  // three selects render with nothing selected.
+  // The shared defaults are plan:'premium' and poolType:'residential', neither a DataImpulse option
+  // value, so without a provider-aware reset those selects render with nothing selected. Protocol
+  // starts on http for every connector.
   assert.match(UI, /const di = provider\.key === 'dataimpulse'/,
     'the form reset must know which provider it is priming');
   assert.match(UI, /plan: di \? 'residential' : /, 'product must default to residential');
-  assert.match(UI, /proxyType: di \|\| \(provider\.geoSync && provider\.geoSync\.proto\) \? 'http' : 'proxy_sock_5'/, 'protocol must default to http');
+  assert.match(UI, /plan: di \? 'residential' : 'premium', proxyType: 'http',/, 'protocol must default to http');
   // Sticky, because a profile needs an exit IP that stays put and rotating adds one proxy.
   assert.match(UI, /poolType: di \? 'sticky' : firstPoolType\(provider\)/, 'session must default to sticky');
 });

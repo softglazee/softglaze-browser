@@ -66,9 +66,6 @@ export const PROVIDERS = [
   // no SOCKS5 on their residential network). Country (or one city/state narrowing token) and a
   // sticky session (up to 30 min) ride in the username.
   { key: 'ipburger', name: 'IP Burger', initials: 'IB', color: '#ef4444', referral: 'https://secure.ipburger.com/aff.php?aff=3283', gateway: { host: 'residential.ipb.cloud', port: 7777, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], count: true, geo: true, session: true, life: true, maxLife: 30, gateway: true } },
-  // ShopSocks5: poolType is the documented sock_type filter of /socks/all_plan. Every proxy comes
-  // back with its own host and port, so there is no gateway.
-  { key: 'shopsocks5', name: 'ShopSocks5', initials: 'SS', color: '#6366f1', referral: 'https://shopsocks5.com/', gateway: null, geoSync: { creds: ['username', 'token'], count: true, geo: true, noSession: true, shop: true, poolType: [['residential', 'Residential'], ['business', 'Business'], ['cellular', 'Cellular'], ['hosting', 'Hosting'], ['any', 'Any type']] } },
   // Apify: a US state rides in the country flag (country-US_CA), so only a state code is offered.
   { key: 'apify', name: 'Apify Residential', initials: 'AP', color: '#22c55e', referral: 'https://apify.com/', gateway: { host: 'proxy.apify.com', port: 8000, type: 'HTTP' }, geoSync: { creds: ['password'], count: true, usState: true } },
   // AnyIP: countries from its location reference (dashboard.anyip.io/api/data/country).
@@ -296,7 +293,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
   const [affiliateLinks, setAffiliateLinks] = useState({});
   const referral = affiliateLinks[provider.key] || provider.referral;
 
-  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'proxy_sock_5', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
+  const [form, setForm] = useState({ host: '', port: '', username: '', password: '', token: '', apiToken: '', zone: '', country: '', count: '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: 'premium', proxyType: 'http', poolType: 'residential', teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
   // Read-only account view (traffic left, saved lists, live locations) for the vendors
   // that expose one. Cleared whenever the provider changes.
   const [account, setAccount] = useState(null);
@@ -332,7 +329,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
     // Any / Random.
     const needCountry = Boolean(provider.geoSync && provider.geoSync.countryRequired);
     if (draft) setForm({ ...draft, ...(needCountry && !draft.country ? { country: 'US' } : {}) });
-    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', apiToken: '', zone: '', country: needCountry ? 'US' : '', count: provider.geoSync && provider.geoSync.list ? '' : '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : (provider.geoSync && provider.geoSync.shop ? 'all' : 'premium'), proxyType: di || (provider.geoSync && provider.geoSync.proto) ? 'http' : 'proxy_sock_5', poolType: di ? 'sticky' : firstPoolType(provider), teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
+    else setForm({ host: gw.host, port: String(gw.port), username: '', password: '', token: '', apiToken: '', zone: '', country: needCountry ? 'US' : '', count: provider.geoSync && provider.geoSync.list ? '' : '5', state: '', city: '', session: '', life: '', apiUrl: '', plan: di ? 'residential' : 'premium', proxyType: 'http', poolType: di ? 'sticky' : firstPoolType(provider), teamId: '', ipv6: false, zip: '', asn: '', excludeCountries: '', excludeAsns: '', listId: '', source: 'new', orderId: '', subuserHash: '' });
     setAccount(null);
     setLookingUp('');
     setGeoOptions({ state: [], city: [], region: [], country: [] });
@@ -1334,8 +1331,8 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {provider.geoSync.creds.includes('username') && (
                     <div>
-                      <label className={labelCls}>{provider.geoSync.apiKey ? t('proxyProviders.geo.anyipUserLabel', 'Proxy username (user_…)') : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : credLabel('username', 'usernameLabel'))}{(provider.geoSync.optional || []).includes('username') && <> {optMarker}</>}</label>
-                      <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : (USERNAME_PLACEHOLDERS[(provider.geoSync.labels || {}).username] ? t(`proxyProviders.geo.${USERNAME_PLACEHOLDERS[(provider.geoSync.labels || {}).username]}`) : 'username'))} autoComplete="off" />
+                      <label className={labelCls}>{provider.geoSync.apiKey ? t('proxyProviders.geo.anyipUserLabel', 'Proxy username (user_…)') : credLabel('username', 'usernameLabel')}{(provider.geoSync.optional || []).includes('username') && <> {optMarker}</>}</label>
+                      <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (USERNAME_PLACEHOLDERS[(provider.geoSync.labels || {}).username] ? t(`proxyProviders.geo.${USERNAME_PLACEHOLDERS[(provider.geoSync.labels || {}).username]}`) : 'username')} autoComplete="off" />
                     </div>
                   )}
                   {provider.geoSync.creds.includes('password') && (
@@ -1358,30 +1355,6 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                   )}
                 </div>
 
-                {provider.geoSync.shop && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelCls}>{t('proxyProviders.geo.planLabel')}</label>
-                      <select value={form.plan} onChange={(e) => set('plan', e.target.value)} className={selectCls} style={chevronStyle}>
-                        <option value="all">{t('proxyProviders.geo.planAll')}</option>
-                        <option value="premium">{t('proxyProviders.geo.planPremium')}</option>
-                        <option value="list">{t('proxyProviders.geo.planList')}</option>
-                        <option value="daily">{t('proxyProviders.geo.planDaily')}</option>
-                      </select>
-                    </div>
-                    {/* Only the Premium route takes proxy_type; the other plans return each proxy's own type. */}
-                    {form.plan === 'premium' && (
-                      <div>
-                        <label className={labelCls}>{t('proxyProviders.geo.proxyTypeLabel')}</label>
-                        <select value={form.proxyType} onChange={(e) => set('proxyType', e.target.value)} className={selectCls} style={chevronStyle}>
-                          <option value="proxy_sock_5">SOCKS5</option>
-                          <option value="proxy_https">HTTPS</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {provider.geoSync.gateway && (
                   <div>
                     <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
@@ -1395,14 +1368,6 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                       </div>
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground/90">{!provider.gateway ? t('proxyProviders.geo.gatewayHintNone', { provider: provider.name }) : t('proxyProviders.geo.gatewayHintGeneric', { provider: provider.name, gateway: [(provider.gateway || {}).host, (provider.gateway || {}).port].filter(Boolean).join(':') })}</p>
-                  </div>
-                )}
-
-                {provider.geoSync.apiUrl && (
-                  <div>
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-amber-400">{t('proxyProviders.geo.apiUrlLabel')}</label>
-                    <input value={form.apiUrl} onChange={(e) => set('apiUrl', e.target.value)} className={inputCls + ' font-mono text-[12px]'} placeholder="https://shopsocks5.com/api/...  (paste from SOCKS5 API guide)" autoComplete="off" />
-                    <p className="mt-1 text-[11px] text-amber-400/90">{t('proxyProviders.geo.apiUrlHintBefore')}<span className="font-mono text-foreground">{'{country}'}</span>{t('proxyProviders.geo.apiUrlHintAfter')}</p>
                   </div>
                 )}
 
@@ -1690,8 +1655,6 @@ function ProviderIcon({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><path d="M4 9c1-3.2 4.2-5 8-5s7 1.8 8 5" /><path d="M4 12.5h16" /><path d="M5 16h14a2.2 2.2 0 0 1-2.2 2.2H7.2A2.2 2.2 0 0 1 5 16z" /></svg>);
     case 'tisocks': // sock
       return (<svg {...line}><path d="M10 3v8l-3.2 3.2a3.6 3.6 0 0 0 5.1 5.1l4.1-4.1-3-3V3z" /><path d="M10 3h5" /></svg>);
-    case 'shopsocks5': // shopping bag
-      return (<svg {...line}><path d="M6.5 8h11l-1 11.5H7.5z" /><path d="M9 8a3 3 0 0 1 6 0" /></svg>);
     case 'apify': // crawler node + spokes
       return (<svg {...line}><circle cx="12" cy="12" r="3" /><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22M5 5l2.4 2.4M16.6 16.6L19 19M19 5l-2.4 2.4M7.4 16.6L5 19" /></svg>);
     case 'anyip': // concentric rings
