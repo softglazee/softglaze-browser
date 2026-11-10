@@ -143,7 +143,22 @@ export const PROVIDERS = [
   { key: 'proxybonanza', name: 'Proxy Bonanza', initials: 'PB', color: '#d97706', referral: 'https://proxybonanza.com/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, count: true, list: true, proto: true } },
   // PROXY6: static IPv4 and IPv6 listed from the account with an API key; Country filters that list
   // and How many caps it. MTProto lines are left out.
-  { key: 'proxy6', name: 'PROXY6', initials: 'P6', color: '#4f46e5', referral: 'https://proxy6.net/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, count: true, list: true, proto: true } }
+  { key: 'proxy6', name: 'PROXY6', initials: 'P6', color: '#4f46e5', referral: 'https://proxy6.net/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, count: true, list: true, proto: true } },
+  // Node4: an n4k_ API key (Account Settings, API & Webhooks; read:proxies only). Residential, Rotating
+  // Datacenter and Rotating Unmetered logins are built by Node4 (POST /gateways/endpoint); Static
+  // Datacenter lists the IPs the account owns (GET /proxies/list). State, city and ASN are Residential only.
+  { key: 'node4', name: 'Node4', initials: 'N4', color: '#0f766e', referral: 'https://node4.io?ref=REF-7643BU', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, poolType: [['residential', 'Residential'], ['rotating_datacenter', 'Rotating Datacenter'], ['rotating_unmetered', 'Rotating Unmetered'], ['static', 'Static Datacenter']], count: true, geo: true, asn: true, countryLookup: true, noSession: true, proto: true } },
+  // ProxyEmpire: a Bearer API token from Settings, API Tokens; POST /proxy-list (panel.proxyempire.io/api/v2)
+  // returns ready user:pass@host:port lines with the location and the rotation in the username.
+  { key: 'proxyempire', name: 'ProxyEmpire', initials: 'PE', color: '#7c3aed', referral: 'https://proxyempire.io/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Rotating Residential'], ['mobile', 'Rotating Mobile'], ['datacenter', 'Rotating Datacenter'], ['static-resi', 'Static Residential (ISP)']], count: true, geo: true, zip: true, asn: true, countryLookup: true, noSession: true, life: true, maxLife: 120, proto: true } },
+  // MountProxies: dedicated US 4G and 5G modems listed with the account API key (it travels in the query
+  // string, so errors never echo the URL). HTTP only: the API gives no SOCKS5 port. Rotate IP asks the
+  // API with the saved key; no rotation link is stored.
+  { key: 'mountproxies', name: 'MountProxies', initials: 'MT', color: '#475569', referral: 'https://mountproxies.com/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, noCountry: true, count: true, list: true } },
+  // Massive: residential gateway network.joinmassive.com (HTTP 65534, SOCKS5 65533) with the targeting in
+  // the username; the proxy password is the account's API token (dashboard, Profile). ISP is
+  // isp.joinmassive.com:8000 with no targeting.
+  { key: 'massive', name: 'Massive', initials: 'MV', color: '#4f46e5', referral: 'https://www.joinmassive.com/', gateway: { host: 'network.joinmassive.com', port: 65534, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], labels: { password: 'apiTokenPasswordLabel' }, poolType: [['residential', 'Residential'], ['residential_mobile', 'Residential mobile'], ['isp', 'ISP (US)']], count: true, geo: true, zip: true, asn: true, session: true, life: true, maxLife: 1440, proto: true, gateway: true } }
 ];
 
 // The token field's placeholder follows its label (geoSync.labels.token).
@@ -1546,7 +1561,13 @@ function ProviderIcon({ k, className = 'w-6 h-6' }) {
       return (<svg {...line}><path d="M4 17l-1-9 5 4 4-7 4 7 5-4-1 9z" /><path d="M5 20h14" /></svg>);
     case 'proxyseller': // stacked list rows
       return (<svg {...line}><rect x="4" y="4.5" width="16" height="4" rx="1.2" /><rect x="4" y="10" width="16" height="4" rx="1.2" /><rect x="4" y="15.5" width="16" height="4" rx="1.2" /></svg>);
-    default:
+    default: {
+      // No bundled logo and no drawn mark: the provider's initials (PROVIDERS), else a plain ring.
+      const initials = (PROVIDERS.find((p) => p.key === k) || {}).initials;
+      if (initials) {
+        return (<svg {...solid}><text x="12" y="12.5" textAnchor="middle" dominantBaseline="central" fontSize={initials.length > 2 ? 10 : 13} fontWeight="700" fontFamily="inherit">{initials}</text></svg>);
+      }
       return (<svg {...line}><circle cx="12" cy="12" r="7" /></svg>);
+    }
   }
 }
