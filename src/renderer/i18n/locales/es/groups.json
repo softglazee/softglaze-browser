@@ -12,6 +12,8 @@
   "sidebar": {
     "directories": "Directorios",
     "createGroup": "Crear nuevo grupo",
+    "renameGroup": "Renombrar el grupo {{name}}",
+    "deleteGroup": "Eliminar el grupo {{name}}",
     "groupNamePlaceholder": "Nombre del grupo..."
   },
   "table": {

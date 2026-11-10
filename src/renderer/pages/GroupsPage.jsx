@@ -8,7 +8,9 @@ import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card } from '@/components/ui/Card.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
+import { DenyTip } from '@/components/ui/GuardedButton.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 
 const GROUP_COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -40,6 +42,11 @@ const Checkbox = ({ checked, onChange }) => (
 
 export default function GroupsPage() {
   const { t } = useTranslation('groups');
+  // Groups only organise profiles: making, renaming, deleting and filling them needs profiles.edit
+  // (main). Rename and delete also need a group the member manages (group.canManage), and moving or
+  // tagging a profile needs edit access to it (profile.canEdit).
+  const perm = usePermissions();
+  const denyEdit = perm.deny('profiles.edit');
   const [groups, setGroups] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -231,13 +238,17 @@ export default function GroupsPage() {
         <Card className="w-full md:w-72 shrink-0 flex flex-col bg-surface border-border shadow-sm rounded">
           <div className="p-4 border-b border-border bg-card/50 flex justify-between items-center rounded-t">
             <h2 className="text-foreground font-semibold text-sm uppercase tracking-wider">{t('sidebar.directories')}</h2>
-            <button
-              onClick={() => { setIsAddingGroup(true); setEditingGroupId(null); }}
-              className="p-1 hover:bg-muted-dark rounded text-primary hover:text-primary-hover transition"
-              title={t('sidebar.createGroup')}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            <DenyTip deny={denyEdit}>
+              <button
+                onClick={() => { setIsAddingGroup(true); setEditingGroupId(null); }}
+                disabled={Boolean(denyEdit)}
+                className="p-1 hover:bg-muted-dark rounded text-primary hover:text-primary-hover transition disabled:opacity-40 disabled:pointer-events-none"
+                title={denyEdit ? undefined : t('sidebar.createGroup')}
+                aria-label={t('sidebar.createGroup')}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </DenyTip>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -289,6 +300,7 @@ export default function GroupsPage() {
             )}
 
             {groups.map((group) => {
+              const denyManage = perm.denyGroup('profiles.edit', group);
               const isEditing = editingGroupId === group.id;
               const isActive = activeGroupId === group.id;
               const count = groupMeta.counts.get(group.id) || 0;
@@ -326,18 +338,24 @@ export default function GroupsPage() {
                       <span className={`text-sm truncate ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{group.name}</span>
                     </div>
                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                    <DenyTip deny={denyManage} className="flex items-center gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingGroupId(group.id); setEditGroupName(group.name); setEditGroupColor(group.color || GROUP_COLORS[0]); setIsAddingGroup(false); }}
-                        className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-foreground transition"
+                        disabled={Boolean(denyManage)}
+                        aria-label={t('sidebar.renameGroup', { name: group.name })}
+                        className="p-1.5 hover:bg-muted-dark rounded text-muted hover:text-foreground transition disabled:opacity-40 disabled:pointer-events-none"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id, group.name); }}
-                        className="p-1.5 hover:bg-red-500/20 rounded text-muted hover:text-red-400 transition"
+                        disabled={Boolean(denyManage)}
+                        aria-label={t('sidebar.deleteGroup', { name: group.name })}
+                        className="p-1.5 hover:bg-red-500/20 rounded text-muted hover:text-red-400 transition disabled:opacity-40 disabled:pointer-events-none"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                    </DenyTip>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded font-mono group-hover:hidden ${isActive ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{count}</span>
                   </div>
@@ -400,16 +418,18 @@ export default function GroupsPage() {
               <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>
               <div className="flex items-center gap-3 ml-auto">
                 <span className="text-xs text-muted font-medium uppercase tracking-wider">{t('bulk.moveTo')}</span>
-                <CustomSelect
-                  disabled={busy}
-                  value=""
-                  onChange={(e) => { handleBulkMove(e.target.value); }}
-                  className="w-40"
-                >
-                  <option value="" disabled>{t('bulk.chooseGroup')}</option>
-                  <option value="__ungroup">{t('filters.ungrouped')}</option>
-                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </CustomSelect>
+                <DenyTip deny={denyEdit}>
+                  <CustomSelect
+                    disabled={busy || Boolean(denyEdit)}
+                    value=""
+                    onChange={(e) => { handleBulkMove(e.target.value); }}
+                    className="w-40"
+                  >
+                    <option value="" disabled>{t('bulk.chooseGroup')}</option>
+                    <option value="__ungroup">{t('filters.ungrouped')}</option>
+                    {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </CustomSelect>
+                </DenyTip>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={clearSelection}>{t('bulk.clear')}</Button>
               </div>
             </div>
@@ -442,29 +462,34 @@ export default function GroupsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredProfiles.map((p) => (
+                    filteredProfiles.map((p) => { const denyRow = perm.denyRow('profiles.edit', p); return (
                       <tr key={p.id} className="hover:bg-card/50 transition-colors bg-background align-top group">
                         <td className="px-5 py-4 text-center">
                           <Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} />
                         </td>
                         <td className="px-5 py-4 font-medium text-foreground">{p.title}</td>
                         <td className="px-5 py-4">
-                          <CustomSelect
-                            disabled={busy}
-                            value={p.groupId ?? ''}
-                            onChange={(e) => handleAssign([p.id], e.target.value === '' ? null : Number(e.target.value))}
-                            className="w-[160px]"
-                          >
-                            <option value="">{t('filters.ungrouped')}</option>
-                            {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                          </CustomSelect>
+                          <DenyTip deny={denyRow}>
+                            <CustomSelect
+                              disabled={busy || Boolean(denyRow)}
+                              value={p.groupId ?? ''}
+                              onChange={(e) => handleAssign([p.id], e.target.value === '' ? null : Number(e.target.value))}
+                              className="w-[160px]"
+                            >
+                              <option value="">{t('filters.ungrouped')}</option>
+                              {/* A profile in a group this member cannot see keeps showing it, so the
+                                  select does not read "Ungrouped" for it. */}
+                              {p.groupId != null && !groups.some((g) => g.id === p.groupId) && p.group && <option value={p.groupId} disabled>{p.group.name}</option>}
+                              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                            </CustomSelect>
+                          </DenyTip>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex flex-wrap items-center gap-2">
                             {(p.tags || []).map((t) => (
                               <span key={t} className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-surface border border-border text-muted-foreground px-2 py-1 rounded shadow-sm">
                                 {t}
-                                <button onClick={() => handleRemoveTag(p, t)} className="text-muted hover:text-red-400 transition-colors" title={removeTagLabel}><X className="w-3 h-3" /></button>
+                                {!denyRow && <button onClick={() => handleRemoveTag(p, t)} className="text-muted hover:text-red-400 transition-colors" title={removeTagLabel} aria-label={removeTagLabel}><X className="w-3 h-3" /></button>}
                               </span>
                             ))}
                             {tagEditFor === p.id ? (
@@ -479,17 +504,20 @@ export default function GroupsPage() {
                                 className="bg-surface border border-primary rounded px-2 py-1 text-xs text-foreground outline-none w-28 shadow-glow transition-all"
                               />
                             ) : (
-                              <button
-                                onClick={() => { setTagEditFor(p.id); setTagInput(''); }}
-                                className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-primary border border-dashed border-border hover:border-primary/50 rounded px-2 py-1 transition bg-surface"
-                              >
-                                <Plus className="w-3 h-3" /> {t('tags.add')}
-                              </button>
+                              <DenyTip deny={denyRow}>
+                                <button
+                                  onClick={() => { setTagEditFor(p.id); setTagInput(''); }}
+                                  disabled={Boolean(denyRow)}
+                                  className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-primary border border-dashed border-border hover:border-primary/50 rounded px-2 py-1 transition bg-surface disabled:opacity-40 disabled:pointer-events-none"
+                                >
+                                  <Plus className="w-3 h-3" /> {t('tags.add')}
+                                </button>
+                              </DenyTip>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ))
+                    ); })
                   )}
                 </tbody>
               </table>

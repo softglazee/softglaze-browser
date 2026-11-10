@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button.jsx';
 import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import { normalStart, showRatingCard } from '@/lib/storeRating.mjs';
 import { Sparkline, Bars, Donut, Legend, HBars, Meter } from '@/components/dashboard/DashCharts.jsx';
 
@@ -410,6 +411,8 @@ export default function DashboardPage() {
   const [proxies, setProxies] = useState([]);
   const [sysInfo, setSysInfo] = useState(null);
   const [aux, setAux] = useState({ members: null, macros: null, personas: null });
+  // Data Vault is the Owner's (vault.manage); its quick link is shown only to members who may open it.
+  const { canManageVault } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [showStatus, setShowStatus] = useState(false);
   const [metric, setMetric] = useState('sessions');
@@ -555,7 +558,7 @@ export default function DashboardPage() {
     { to: '/proxy-providers', icon: Server, label: t('dashboard.quickProviders'), value: providerCount, caption: t('dashboard.qProvidersCap'), color: 'var(--chart-3)' },
     { to: '/automation', icon: Wand2, label: t('nav.automation'), value: aux.macros, caption: t('dashboard.qAutomationCap'), color: 'var(--chart-4)' },
     { to: '/members', icon: Users, label: t('nav.members'), value: aux.members, caption: t('dashboard.qMembersCap'), color: 'var(--chart-5)' },
-    { to: '/personas', icon: IdCard, label: t('nav.dataVault'), value: aux.personas, caption: t('dashboard.qVaultCap'), color: 'var(--chart-1)' }
+    ...(canManageVault ? [{ to: '/personas', icon: IdCard, label: t('nav.dataVault'), value: aux.personas, caption: t('dashboard.qVaultCap'), color: 'var(--chart-1)' }] : [])
   ];
 
   return (

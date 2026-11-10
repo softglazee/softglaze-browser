@@ -64,7 +64,10 @@ model Proxy {
   @@index([createdAt])
   @@index([ownerMemberId])
   @@index([proxyGroupId])
-  @@unique([type, host, port, username, passwordHash])
+  // Per member: two members may each keep their own row for the same proxy. Rows with no owner keep
+  // the old key through a partial unique index the migration adds (Prisma cannot declare it here):
+  // 20261111000100_proxy_unique_per_owner.
+  @@unique([type, host, port, username, passwordHash, ownerMemberId])
 }
 
 // Proxy categories/folders (e.g. "USA Proxies", "UK", "Japan"). A proxy belongs to
@@ -113,9 +116,11 @@ model Template {
   id        Int      @id @default(autoincrement())
   name      String
   dataJson  String // JSON snapshot of profile config fields
+  ownerMemberId Int? // member who saved it; scopes the template list (NULL = older template, Owner/Admin)
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([ownerMemberId])
 }
 
 model ActivityLog {

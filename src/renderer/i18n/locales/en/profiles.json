@@ -462,5 +462,12 @@
   "launchWarnings": {
     "geo": "{{name}}: the proxy location could not be looked up, so this browser is using this computer's timezone. Relaunch it once the proxy answers.",
     "dismiss": "Dismiss"
+  },
+  "permNotes": {
+    "skipped": "Profiles left unchanged: {{count}}. You may not edit them (they are shared with you for use only, or belong to someone else).",
+    "cloneNoProxy": "Copied. The original's proxy is not available to you, so the copy has no proxy yet: assign one before launching it.",
+    "cloneNoGroup": "Copied. The original's group is not visible to you, so the copy is not in a group.",
+    "proxyMissing": "No proxy",
+    "proxyMissingTitle": "Set to use a proxy, but it has none (its proxy was deleted, or is not available to you). Assign a proxy in the editor before launching."
   }
 }

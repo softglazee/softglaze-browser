@@ -23,7 +23,13 @@ const MIG = fs.readFileSync(path.join(ROOT, 'prisma', 'migrations', '20260929000
 // but the password is sealed at rest, so the key uses its keyed hash (passwordHash).
 const MIG_HASH = fs.readFileSync(path.join(ROOT, 'prisma', 'migrations', '20261007000000_proxy_password_hash', 'migration.sql'), 'utf8');
 test('Proxy unique key covers the password via its hash (schema + migrations agree)', () => {
-  assert.match(SCHEMA, /@@unique\(\[type, host, port, username, passwordHash\]\)/);
+  // 1.0.26 adds the owner to the key (one row per member) and keeps the old key for rows with no
+  // owner as a partial index; the password part is unchanged.
+  assert.match(SCHEMA, /@@unique\(\[type, host, port, username, passwordHash, ownerMemberId\]\)/);
+  const MIG_OWNER = fs.readFileSync(path.join(ROOT, 'prisma', 'migrations', '20261111000100_proxy_unique_per_owner', 'migration.sql'), 'utf8');
+  assert.match(MIG_OWNER, /DROP INDEX IF EXISTS "Proxy_type_host_port_username_passwordHash_key"/);
+  assert.match(MIG_OWNER, /CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_type_host_port_username_passwordHash_ownerMemberId_key" ON "Proxy"\("type", "host", "port", "username", "passwordHash", "ownerMemberId"\)/);
+  assert.match(MIG_OWNER, /CREATE UNIQUE INDEX IF NOT EXISTS "Proxy_unowned_identity_key" ON "Proxy"\("type", "host", "port", "username", "passwordHash"\) WHERE "ownerMemberId" IS NULL/);
   assert.doesNotMatch(SCHEMA, /@@unique\(\[type, host, port, username, password\]\)/);
   assert.match(MIG, /DROP INDEX IF EXISTS "Proxy_type_host_port_username_key"/);
   assert.match(MIG_HASH, /DROP INDEX IF EXISTS "Proxy_type_host_port_username_password_key"/);

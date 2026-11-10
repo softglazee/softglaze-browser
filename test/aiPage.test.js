@@ -408,7 +408,8 @@ test('permissions: the page is Owner/Admin only, Owner-only parts stay with the 
   const shell = read('src', 'renderer', 'components', 'AppShell.jsx');
   assert.match(shell, /\{ path: '\/ai', labelKey: 'nav\.ai', icon: Sparkles, aiOnly: true, pillKey: 'nav\.beta', badgeKey: 'aiApprovals', badgeTone: 'warning' \}/);
   assert.match(shell, /\.filter\(\(item\) => !item\.aiOnly \|\| !meLoaded \|\| canManageAi\(me\)\)/, 'Owner/Admin only once the member is known');
-  assert.match(shell, /reserved=\{item\.aiOnly && !meLoaded\}/, 'until then its slot is kept but invisible (no layout shift for owners)');
+  // (1.0.26: the Owner-only Data Vault item is reserved the same way; test/permissionsFollowup.test.js.)
+  assert.match(shell, /reserved=\{\(item\.aiOnly \|\| item\.vaultOnly\) && !meLoaded\}/, 'until then its slot is kept but invisible (no layout shift for owners)');
   assert.match(shell, /className=\{reserved \? 'block invisible' : 'block'\} aria-hidden=\{reserved \|\| undefined\} tabIndex=\{reserved \? -1 : undefined\}/, 'a reserved item is not visible, read or focusable');
   assert.match(shell, /<AiApprovalDialog \/>/, 'every member gets the approval dialog, on every page');
 

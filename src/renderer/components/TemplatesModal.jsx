@@ -3,11 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { LayoutTemplate, X, Loader2, Trash2, Plus, Save } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import Button from '@/components/ui/Button.jsx';
+import GuardedButton, { DenyTip } from '@/components/ui/GuardedButton.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 
+// Templates are listed for the member's own subtree (main scopes them); saving, deleting and using
+// one need profiles.create, as in main.
 export default function TemplatesModal({ onClose, onProfilesChanged }) {
   const { t } = useTranslation('cmpModalsB');
   const { dialogRef } = useDialog({ onClose });
+  const perm = usePermissions();
+  const denyCreate = perm.deny('profiles.create');
   const [templates, setTemplates] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,9 +70,15 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
     if (!title) { setError(t('templates.errorProfileName')); return; }
     setBusy(true);
     try {
-      await softglazeApi.templates.createProfile(tpl.id, title);
+      const created = await softglazeApi.templates.createProfile(tpl.id, title);
       setTitles((prev) => ({ ...prev, [tpl.id]: '' }));
-      setInfo(t('templates.infoCreated', { title, name: tpl.name }));
+      // A proxy or group of the template that this member may not use is left out by main.
+      const left = (created && created.leftOut) || {};
+      setInfo([
+        t('templates.infoCreated', { title, name: tpl.name }),
+        left.proxy ? t('templates.infoNoProxy') : '',
+        left.group ? t('templates.infoNoGroup') : ''
+      ].filter(Boolean).join(' '));
       if (onProfilesChanged) await onProfilesChanged();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
@@ -105,7 +117,7 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
                 onChange={(e) => setSaveName(e.target.value)}
                 className="flex-1 bg-secondary border border-border rounded-md px-3 py-2 text-[13px] text-foreground outline-none focus:border-blue-500"
               />
-              <Button size="sm" disabled={busy} onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white shrink-0">{t('templates.saveButton')}</Button>
+              <GuardedButton deny={denyCreate} size="sm" disabled={busy} onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white shrink-0">{t('templates.saveButton')}</GuardedButton>
             </div>
           </div>
 
@@ -126,7 +138,9 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
                           {[tpl.summary?.os, tpl.summary?.browserCore, tpl.summary?.resolution, tpl.summary?.hasProxy ? t('templates.proxyTag') : null].filter(Boolean).join(' · ') || t('templates.savedConfig')}
                         </div>
                       </div>
-                      <button onClick={() => handleDelete(tpl)} className="p-1 text-muted-foreground hover:text-red-400 rounded hover:bg-red-900/30 transition shrink-0"><Trash2 className="w-4 h-4" /></button>
+                      <DenyTip deny={denyCreate} className="inline-flex shrink-0">
+                        <button onClick={() => handleDelete(tpl)} disabled={Boolean(denyCreate)} aria-label={t('templates.deleteLabel', { name: tpl.name })} className="p-1 text-muted-foreground hover:text-red-400 rounded hover:bg-red-900/30 transition shrink-0 disabled:opacity-50 disabled:pointer-events-none"><Trash2 className="w-4 h-4" /></button>
+                      </DenyTip>
                     </div>
                     <div className="flex gap-2 mt-3">
                       <input
@@ -136,9 +150,9 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
                         onChange={(e) => setTitles((prev) => ({ ...prev, [tpl.id]: e.target.value }))}
                         className="flex-1 bg-secondary border border-border rounded-md px-3 py-1.5 text-[12px] text-foreground outline-none focus:border-blue-500"
                       />
-                      <Button size="sm" disabled={busy} onClick={() => handleCreate(tpl)} className="bg-secondary hover:bg-elevated text-foreground border border-border shrink-0">
+                      <GuardedButton deny={denyCreate} size="sm" disabled={busy} onClick={() => handleCreate(tpl)} className="bg-secondary hover:bg-elevated text-foreground border border-border shrink-0">
                         <Plus className="w-3.5 h-3.5 mr-1.5" /> {t('templates.newProfileButton')}
-                      </Button>
+                      </GuardedButton>
                     </div>
                   </div>
                 ))}

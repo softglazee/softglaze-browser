@@ -1065,9 +1065,11 @@ function parseColonProxyLine(rawLine, fallbackType = 'HTTP') {
   });
 }
 
-// Matches the DB unique key (type, host, port, username, passwordHash). Vendors carry sticky sessions
-// in the password, so lines differing only there are distinct exits. extendClient rewrites `password`
-// to passwordHash; explicit nulls match only rows without a username/password.
+// The proxy's credentials (type, host, port, username, password). With the owner it is the DB unique
+// key (type, host, port, username, passwordHash, ownerMemberId): two members may each save the same
+// proxy as their own row. Vendors carry sticky sessions in the password, so lines differing only
+// there are distinct exits. extendClient rewrites `password` to passwordHash; explicit nulls match
+// only rows without a username/password.
 function proxyIdentityWhere(parsed) {
   return {
     type: parsed.type,
@@ -1078,7 +1080,42 @@ function proxyIdentityWhere(parsed) {
   };
 }
 
-async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint = null) {
+// Who is adding proxies, read once: which existing rows count as theirs to reuse or skip as
+// duplicates (`visible`, the same rule as scopedProxyWhere; undefined = every row), the owner to
+// stamp, and the member's proxy limit (-1 = none). Read before a transaction: inside one, a query on
+// the outer client blocks on SQLite's one connection.
+async function proxyAddContext() {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return { visible: undefined, ownerId: ownerStampId(), max: -1 };
+  const all = await getPrisma().member.findMany();
+  const max = permissions.effectivePermissions(member).maxProxies;
+  return {
+    visible: { ownerMemberId: { in: [...permissions.visibleMemberIds(all, member)] } },
+    ownerId: member.id,
+    max: max == null ? -1 : Number(max)
+  };
+}
+
+// assertWithinLimit('proxies') on the given client (a transaction's, too) and a context read before.
+async function assertProxyQuota(db, ctx) {
+  if (!ctx || ctx.max < 0 || ctx.ownerId == null) return;
+  const used = await db.proxy.count({ where: { ownerMemberId: ctx.ownerId } });
+  if (used >= ctx.max) throw limitError('proxy', ctx.max);
+}
+
+// A saved proxy with these credentials that the member may already use: their own row first, then
+// one of their visible subtree. Never another member's row they cannot see (that row's profile titles
+// would show in the other member's pool, and the member's own copy would skip their proxy limit).
+async function findVisibleProxy(db, parsed, ctx) {
+  const identity = proxyIdentityWhere(parsed);
+  if (ctx.visible && ctx.ownerId != null) {
+    const own = await db.proxy.findFirst({ where: { ...identity, ownerMemberId: ctx.ownerId } });
+    if (own) return own;
+  }
+  return db.proxy.findFirst({ where: proxyScope.andWhere(identity, ctx.visible) });
+}
+
+async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint = null, ctx = null) {
   const parsed = parseProxyInput(proxyInput);
   if (!parsed) return null;
   // An explicit "Proxy Type" column (HTTP/HTTPS/SOCKS5/SOCKS4) overrides the default. Both go through
@@ -1087,10 +1124,13 @@ async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint =
   parsed.type = parseProxyType(typeHint || parsed.type);
 
   // Reuse a row only when every credential matches, so nothing is revealed or changed; a different
-  // password is a different sticky session or account. No member-scope query: this also runs inside
-  // a migration transaction, where a query on the outer client would block on SQLite's one connection.
-  const existing = await db.proxy.findFirst({ where: proxyIdentityWhere(parsed) });
+  // password is a different sticky session or account. Only a row the member may use is reused;
+  // otherwise the member gets their own row, which counts against their proxy limit. `ctx` comes
+  // from proxyAddContext(); a caller inside a transaction must pass it (see there).
+  const add = ctx || await proxyAddContext();
+  const existing = await findVisibleProxy(db, parsed, add);
   if (existing) return existing;
+  await assertProxyQuota(db, add);
 
   return db.proxy.create({
     data: {
@@ -1100,7 +1140,7 @@ async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint =
       port: parsed.port,
       username: parsed.username,
       password: parsed.password,
-      ownerMemberId: ownerStampId() // stamp the creator so it stays visible in their scoped pool
+      ownerMemberId: add.ownerId // stamp the creator so it stays visible in their scoped pool
     }
   });
 }
@@ -1126,14 +1166,16 @@ async function listProxies(payload = {}) {
   if (scopeWhere) clauses.push(scopeWhere);
   const where = clauses.length ? (clauses.length === 1 ? clauses[0] : { AND: clauses }) : undefined;
 
+  // Names of the profiles directly assigned this proxy (so the pool shows which profiles use it, not
+  // just a count). take:50 keeps the payload bounded. Only profiles the member can see are named or
+  // counted: an Admin may put a member's proxy on a profile that member cannot see.
+  const visibleProfiles = await scopedProfileWhere({});
   const proxies = await db.proxy.findMany({
     where: await scopedProxyWhere(where),
     orderBy: { createdAt: 'desc' },
-    // Names of the profiles directly assigned this proxy (so the pool shows which
-    // profiles use it, not just a count). take:50 keeps the payload bounded.
     include: {
-      _count: { select: { profiles: true } },
-      profiles: { select: { title: true }, orderBy: { title: 'asc' }, take: 50 },
+      _count: { select: { profiles: { where: visibleProfiles } } },
+      profiles: { where: visibleProfiles, select: { title: true }, orderBy: { title: 'asc' }, take: 50 },
       proxyGroup: true
     }
   });
@@ -1154,12 +1196,11 @@ async function createProxy(payload) {
     password: optionalString(input.password)
   });
 
-  // Same identity as the DB unique key, password included: a second sticky session on
-  // the same gateway user is a different proxy, not a duplicate.
-  const existing = await db.proxy.findFirst({
-    where: proxyIdentityWhere(parsed),
-    select: { id: true }
-  });
+  // Same credentials, password included: a second sticky session on the same gateway user is a
+  // different proxy, not a duplicate. Only a proxy the member can already use is a duplicate; the
+  // same proxy in another member's pool (which this member cannot see) does not block their own.
+  const add = await proxyAddContext();
+  const existing = await findVisibleProxy(db, parsed, add);
   if (existing) throw new Error('This proxy (same type, host, port, username and password) already exists.');
 
   const created = await db.proxy.create({
@@ -1170,7 +1211,7 @@ async function createProxy(payload) {
       port: parsed.port,
       username: parsed.username,
       password: parsed.password,
-      ownerMemberId: ownerStampId()
+      ownerMemberId: add.ownerId
     }
   });
 
@@ -1202,10 +1243,11 @@ async function deleteProxy(payload) {
   const db = getPrisma();
   const id = parseId(input.id);
   await assertCanAccessProxy(id);
+  const profilesNeedProxy = await detachProfilesFromProxies(db, [id]);
   await db.proxy.delete({ where: { id } });
-  await logAudit('proxy.delete', { detail: { proxyId: id } });
+  await logAudit('proxy.delete', { detail: { proxyId: id, profilesNeedProxy } });
   const removedGroups = await pruneEmptyAutoGroups(db);
-  return { deleted: true, id, removedGroups };
+  return { deleted: true, id, removedGroups, profilesNeedProxy };
 }
 
 // Removes auto-created groups left empty; a group a person made stays, even empty.
@@ -1214,7 +1256,20 @@ async function pruneEmptyAutoGroups(db) {
   return res.count;
 }
 
-// Profiles on a deleted proxy get proxyId nulled by the relation's onDelete: SetNull.
+// Before proxies are deleted: their profiles lose the proxy AND its cached address (proxyInfoString),
+// which launch used to fall back to, so a profile never opens on a deleted proxy. They keep "Profile
+// proxy", so they do not quietly open on the real IP either: launch refuses them ("proxy missing")
+// until a proxy is assigned or the profile is set to no proxy (assertProfileHasLaunchProxy). Returns
+// how many profiles (not in Trash) now need a proxy.
+async function detachProfilesFromProxies(db, proxyIds) {
+  if (!proxyIds.length) return 0;
+  const users = await db.profile.findMany({ where: { proxyId: { in: proxyIds } }, select: { id: true, systemProxyBehavior: true, deletedAt: true } });
+  if (!users.length) return 0;
+  await db.profile.updateMany({ where: { id: { in: users.map((u) => u.id) } }, data: { proxyId: null, proxyInfoString: null } });
+  for (const u of users) await logActivity(db, u.id, 'proxy-reassign', 'proxy deleted; assign a proxy before launching').catch(() => {});
+  return users.filter((u) => u.systemProxyBehavior === 'PROFILE_PROXY' && u.deletedAt == null).length;
+}
+
 async function bulkDeleteProxies(payload) {
   await requirePermission('proxies.manage');
   const input = requireObject(payload);
@@ -1222,10 +1277,11 @@ async function bulkDeleteProxies(payload) {
   if (ids.length === 0) throw new Error('No proxies selected.');
   const { allowed, denied } = await partitionAccessibleProxyIds(ids);
   if (allowed.length === 0) { const e = new Error('You do not have access to the selected proxies.'); e.code = 'FORBIDDEN'; throw e; }
+  const profilesNeedProxy = await detachProfilesFromProxies(getPrisma(), allowed);
   const result = await getPrisma().proxy.deleteMany({ where: { id: { in: allowed } } });
-  await logAudit('proxy.delete', { detail: { count: result.count, proxyIds: allowed, bulk: true } });
+  await logAudit('proxy.delete', { detail: { count: result.count, proxyIds: allowed, bulk: true, profilesNeedProxy } });
   const removedGroups = await pruneEmptyAutoGroups(getPrisma());
-  return { deleted: result.count, ids: allowed, denied, removedGroups };
+  return { deleted: result.count, ids: allowed, denied, removedGroups, profilesNeedProxy };
 }
 
 // ---- Copy for SoftGlaze Proxy (the browser extension's Bulk import) ----
@@ -1376,8 +1432,19 @@ async function getProxyPolicy() {
   };
 }
 
+// The workspace default (and the failover / latency settings) decide how every member's pooled
+// profiles launch, so they need proxies.manage AND the Owner or an Admin. A per-profile override is
+// part of that profile's proxy setup: proxies.manage and edit access to the profile, as the row's
+// Proxy Rotation dialog needs (setProxyRotation).
 async function setProxyPolicy(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
+  if (input.default !== undefined || input.failoverMaxLatencyMs !== undefined || input.latencyTopN !== undefined) {
+    await requireWorkspaceProxySettings('rotation policy');
+  }
+  if (input.profileId !== undefined && input.profileId !== null) {
+    await assertCanAccessProfile(parseId(input.profileId), { requireEdit: true });
+  }
   const cur = (await readSetting('proxyPolicy', {})) || {};
   const next = {
     ...cur,
@@ -1402,6 +1469,19 @@ async function setProxyPolicy(payload) {
   if (input.latencyTopN !== undefined) next.latencyTopN = Math.max(1, Number(input.latencyTopN) || 3);
   await writeSetting('proxyPolicy', next);
   return getProxyPolicy();
+}
+
+// Workspace-wide proxy settings (the default rotation policy, the health-check schedule): the Owner
+// or an Admin. Single-user mode and the Super Admin pass. Call after requirePermission, which already
+// refuses a suspended or banned member and a revoked proxies.manage.
+async function requireWorkspaceProxySettings(what) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return;
+  if (permissions.rankOf(member.role) < permissions.ROLE_RANK.ADMIN) {
+    const e = new Error(`Your role does not permit this action: only the Owner or an Admin can change the workspace ${what}.`);
+    e.code = 'FORBIDDEN';
+    throw e;
+  }
 }
 
 // Resolve the effective policy mode for a profile (per-profile override wins).
@@ -1493,6 +1573,7 @@ async function batchAddProxies(payload) {
   const namePrefix = optionalString(input.namePrefix);
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const result = { total: lines.length, created: [], skipped: [], errors: [] };
+  const add = await proxyAddContext();
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -1505,10 +1586,9 @@ async function batchAddProxies(payload) {
     }
     try {
       const parsed = parseColonProxyLine(line, fallbackType);
-      // Password included: N sticky-session lines on one gateway user are N proxies.
-      const existing = await db.proxy.findFirst({
-        where: proxyIdentityWhere(parsed)
-      });
+      // Password included: N sticky-session lines on one gateway user are N proxies. Only a proxy
+      // this member can already use is a duplicate (and returned); another member's is never shown.
+      const existing = await findVisibleProxy(db, parsed, add);
 
       if (existing) {
         result.skipped.push({ line: index + 1, reason: 'DUPLICATE', proxy: serializeProxy(existing) });
@@ -1572,8 +1652,10 @@ async function harvestFreeProxiesHandler(payload, event) {
   await assertWithinLimit('proxies');
   const db = getPrisma();
 
-  // Free proxies already in the pool are not re-tested or re-added.
-  const have = await db.proxy.findMany({ where: { provider: 'free' }, select: { type: true, host: true, port: true } });
+  // Free proxies already in the member's pool are not re-tested or re-added (another member's free
+  // proxies do not count: this member cannot see or use them).
+  const add = await proxyAddContext();
+  const have = await db.proxy.findMany({ where: proxyScope.andWhere({ provider: 'free' }, add.visible), select: { type: true, host: true, port: true } });
   const exclude = new Set(have.map(freeProxyKey));
 
   const controller = new AbortController();
@@ -1643,13 +1725,13 @@ async function harvestFreeProxiesHandler(payload, event) {
       for (const f of res.found) {
         try { await assertWithinLimit('proxies'); } catch (e) { limitReached = true; break; }
         const type = freeTypeOf(f);
-        const dup = await db.proxy.findFirst({ where: proxyIdentityWhere({ type, host: f.host, port: f.port, username: null, password: null }), select: { id: true } });
+        const dup = await findVisibleProxy(db, { type, host: f.host, port: f.port, username: null, password: null }, add);
         if (dup) continue;
         const created = await db.proxy.create({
           data: {
             name: `Free ${f.country || '??'} ${f.host}:${f.port}`,
             type, host: f.host, port: f.port, username: null, password: null,
-            provider: 'free', proxyGroupId: group ? group.id : null, ownerMemberId: ownerStampId(),
+            provider: 'free', proxyGroupId: group ? group.id : null, ownerMemberId: add.ownerId,
             lastStatus: 'ok', lastCountry: f.country || null, lastLatencyMs: f.latencyMs || null, lastCheckedAt: new Date()
           }
         });
@@ -4111,6 +4193,9 @@ async function syncVendorPool(payload) {
   const db = getPrisma();
   // Refuse before any vendor call when already at maxProxies; each row is re-checked below.
   await assertWithinLimit('proxies');
+  // The member's own pool decides what is already pulled; another member's copy of the same vendor
+  // proxy is neither skipped over nor touched.
+  const add = await proxyAddContext();
   const adapter = REAL_VENDOR_ADAPTERS[vendorKey];
   let rows;
   let simulated = false;
@@ -4156,7 +4241,7 @@ async function syncVendorPool(payload) {
       // hands out sticky ports deterministically, so this lets a pull add new proxies.
       existingPorts: async ({ host, login }) => new Set(
         (await db.proxy.findMany({
-          where: { host, OR: [{ username: login }, { username: { startsWith: `${login}__` } }] },
+          where: proxyScope.andWhere({ host, OR: [{ username: login }, { username: { startsWith: `${login}__` } }] }, add.visible),
           select: { port: true }
         })).map((r) => r.port)
       )
@@ -4184,7 +4269,7 @@ async function syncVendorPool(payload) {
     const existing = await db.proxy.findFirst({
       // Sticky IPRoyal-style rows differ only in the password (the session id), which is sealed,
       // so compare its keyed hash.
-      where: { type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { passwordHash: await proxySecrets.hashPassword(db, row.password) } : {}) },
+      where: proxyScope.andWhere({ type: row.type, host: row.host, port: row.port, username: row.username, ...(row.dedupeOnPassword ? { passwordHash: await proxySecrets.hashPassword(db, row.password) } : {}) }, add.visible),
       select: { id: true, rotationUrl: true }
     });
     if (existing) {
@@ -4196,7 +4281,7 @@ async function syncVendorPool(payload) {
     const created = await db.proxy.create({
       data: {
         name: row.label, type: row.type, host: row.host, port: row.port,
-        username: row.username, password: row.password, ownerMemberId: ownerStampId(),
+        username: row.username, password: row.password, ownerMemberId: add.ownerId,
         // Lets the pool group proxies by provider.
         provider: vendorKey,
         // A vendor-supplied reboot link (Proxy-Seller mobile) powers the pool's Rotate IP.
@@ -5109,6 +5194,30 @@ async function reconcileReferences(db, fields) {
   return fields;
 }
 
+// A copy or a profile made from a template carries the source's proxy and group ids. Like a new
+// proxy or group in updateProfile, the new profile links only a proxy and joins only a group the
+// member may use; any other is left out and reported. The profile keeps "Profile proxy", so with
+// its proxy left out it cannot open on the real IP: launch asks for a proxy first.
+async function reconcileReferencesForMember(db, fields) {
+  await reconcileReferences(db, fields);
+  const leftOut = { proxy: false, group: false };
+  if (fields.proxyId) {
+    try { await assertCanAccessProxy(fields.proxyId); }
+    catch (e) {
+      if (!e || e.code !== 'FORBIDDEN') throw e;
+      fields.proxyId = null; fields.proxyInfoString = null; leftOut.proxy = true;
+    }
+  }
+  if (fields.groupId) {
+    try { await assertCanAccessGroup(fields.groupId); }
+    catch (e) {
+      if (!e || e.code !== 'FORBIDDEN') throw e;
+      fields.groupId = null; leftOut.group = true;
+    }
+  }
+  return leftOut;
+}
+
 async function cloneProfile(payload) {
   // Same create-permission and quota gates as createProfile.
   await requirePermission('profiles.create');
@@ -5121,7 +5230,9 @@ async function cloneProfile(payload) {
   const src = await db.profile.findUnique({ where: { id } });
   if (!src) throw new Error('Profile not found.');
 
-  const fields = await reconcileReferences(db, pickCloneableFields(src));
+  const fields = pickCloneableFields(src);
+  // A copy of a profile shared with the member may sit on its owner's proxy or in their group.
+  const leftOut = await reconcileReferencesForMember(db, fields);
   const title = `${src.title} (copy)`;
   const dataDirName = await ensureUniqueDataDirName(db, title);
 
@@ -5136,7 +5247,7 @@ async function cloneProfile(payload) {
   // model (e.g. Pixel 7) so the UA / Client-Hints model stays coherent.
   if (!isMobile) data.deviceName = randomDeviceName();
   const created = await db.profile.create({ data, include: { proxy: true, group: true } });
-  return serializeProfile(created);
+  return { ...serializeProfile(created), leftOut };
 }
 
 async function saveProfileAsTemplate(payload) {
@@ -5153,20 +5264,49 @@ async function saveProfileAsTemplate(payload) {
   // Templates are workspace-global, so strip live secrets (2FA seed, platform accounts); clones keep them.
   delete fields.twoFactorSeed;
   delete fields.platformAccounts;
-  const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields) } });
+  // The maker owns the template; it is listed for their visible subtree (scopedTemplateWhere).
+  const created = await db.template.create({ data: { name, dataJson: JSON.stringify(fields), ownerMemberId: ownerStampId() } });
   return serializeTemplate(created);
+}
+
+// ---- Template scoping ----
+// Templates follow the profile-group rule without its "holds a profile" branch: a member sees (uses
+// and deletes) a template made by someone in their visible subtree. A template with no owner (made
+// before 1.0.26, in single-user mode or by the Super Admin) is seen by the Owner and Admins only.
+// Single-user mode and the Super Admin are unrestricted.
+async function scopedTemplateWhere(baseWhere) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
+  const all = await getPrisma().member.findMany();
+  const or = [{ ownerMemberId: { in: [...permissions.visibleMemberIds(all, member)] } }];
+  if (permissions.rankOf(member.role) >= permissions.ROLE_RANK.ADMIN) or.push({ ownerMemberId: null });
+  return baseWhere ? { AND: [baseWhere, { OR: or }] } : { OR: or };
+}
+
+async function assertCanAccessTemplate(id) {
+  const db = getPrisma();
+  if (!(await db.template.findUnique({ where: { id }, select: { id: true } }))) throw new Error('Template not found.');
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return;
+  if (!(await db.template.findFirst({ where: await scopedTemplateWhere({ id }), select: { id: true } }))) {
+    const e = new Error('You do not have access to this template.'); e.code = 'FORBIDDEN'; throw e;
+  }
 }
 
 async function listTemplates() {
   const db = getPrisma();
-  const rows = await db.template.findMany({ orderBy: { createdAt: 'desc' } });
+  const rows = await db.template.findMany({ where: await scopedTemplateWhere(undefined), orderBy: { createdAt: 'desc' } });
   return rows.map(serializeTemplate);
 }
 
+// Deleting a template needs the same right as saving one (profiles.create) and a template the member
+// can see.
 async function deleteTemplate(payload) {
+  await requirePermission('profiles.create');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessTemplate(id);
   await db.template.delete({ where: { id } });
   return { deleted: true, id };
 }
@@ -5178,6 +5318,7 @@ async function createProfileFromTemplate(payload) {
   const db = getPrisma();
   await assertWithinLimit('profiles');
   const templateId = parseId(input.templateId, 'templateId');
+  await assertCanAccessTemplate(templateId);
   const tpl = await db.template.findUnique({ where: { id: templateId } });
   if (!tpl) throw new Error('Template not found.');
 
@@ -5187,7 +5328,9 @@ async function createProfileFromTemplate(payload) {
   if (!fields || typeof fields !== 'object') throw new Error('Template data is invalid.');
 
   const title = requiredString(input.title || tpl.name, 'Profile title');
-  await reconcileReferences(db, fields);
+  // The template's proxy or group may be one this member cannot use (a template saved from a shared
+  // profile, or an older template): it is left out and reported, never linked.
+  const leftOut = await reconcileReferencesForMember(db, fields);
   const dataDirName = await ensureUniqueDataDirName(db, title);
 
   // A mobile template keeps its device model (e.g. Pixel 7) so the UA / Client-Hints
@@ -5199,7 +5342,7 @@ async function createProfileFromTemplate(payload) {
   if ('browserCore' in data) data.browserCore = toStoredBrowserCore(data.browserCore);
   if (!isMobile) data.deviceName = randomDeviceName();
   const created = await db.profile.create({ data, include: { proxy: true, group: true } });
-  return serializeProfile(created);
+  return { ...serializeProfile(created), leftOut };
 }
 
 // ---- Profile access scoping (tenant isolation) ----
@@ -5331,8 +5474,8 @@ async function listProfiles(payload = {}) {
     where.OR = [{ title: { contains: search } }, { notes: { contains: search } }, { dataDirName: { contains: search } }, { proxyInfoString: { contains: search } }];
   }
 
-  const profiles = await db.profile.findMany({ where: await scopedProfileWhere(where), orderBy: { createdAt: 'desc' }, include: { proxy: true, group: true } });
-  return profiles.map(serializeProfile);
+  const profiles = await db.profile.findMany({ where: await scopedProfileWhere(where), orderBy: { createdAt: 'desc' }, include: { proxy: true, group: true, accesses: { select: PROFILE_ACCESS_SELECT.accesses.select } } });
+  return withViewerEditFlags(profiles);
 }
 
 async function listTrash() {
@@ -5340,9 +5483,27 @@ async function listTrash() {
   const profiles = await db.profile.findMany({
     where: await scopedProfileWhere({ deletedAt: { not: null } }),
     orderBy: { deletedAt: 'desc' },
-    include: { proxy: true, group: true }
+    include: { proxy: true, group: true, accesses: { select: PROFILE_ACCESS_SELECT.accesses.select } }
   });
-  return profiles.map(serializeProfile);
+  return withViewerEditFlags(profiles);
+}
+
+// Serialized rows plus `canEdit`: whether this member may edit each one (it is theirs or their
+// subtree's, or shared with them for editing). A profile shared "use only" can be launched but not
+// edited, renamed, tagged, moved, trashed or restored, so the pages disable those actions on it.
+// Main still refuses them on its own (assertCanAccessProfile / partitionAccessibleProfileIds with
+// requireEdit). The share list itself is not sent.
+async function withViewerEditFlags(rows) {
+  const member = await getActiveMember();
+  let canEdit = () => true;
+  if (member && member.role !== 'SUPER_ADMIN') {
+    const visible = permissions.visibleMemberIds(await getPrisma().member.findMany(), member);
+    canEdit = (row) => permissions.profileRowAccessible(visible, row, true);
+  }
+  return rows.map((p) => {
+    const { accesses, ...row } = p;
+    return { ...serializeProfile(row), canEdit: canEdit(p) };
+  });
 }
 
 async function createProfile(payload) {
@@ -5916,12 +6077,14 @@ async function updateProfile(payload) {
   return serializeProfile(updated);
 }
 
+// Trash actions change the profile, so like editing they need edit access: a profile shared with the
+// member "use only" cannot be trashed, restored or purged by them.
 async function deleteProfile(payload) {
   await requirePermission('profiles.delete');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
-  await assertCanAccessProfile(id);
+  await assertCanAccessProfile(id, { requireEdit: true });
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
@@ -5936,11 +6099,13 @@ async function deleteProfile(payload) {
   return { trashed: true, id, removedLocalData: removeLocalData };
 }
 
+// Restoring undoes a move to Trash, so it needs the same right (profiles.delete, Admin and up).
 async function restoreProfile(payload) {
+  await requirePermission('profiles.delete');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
-  await assertCanAccessProfile(id);
+  await assertCanAccessProfile(id, { requireEdit: true });
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
   await db.profile.update({ where: { id }, data: { deletedAt: null } });
@@ -5953,7 +6118,7 @@ async function purgeProfile(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
-  await assertCanAccessProfile(id);
+  await assertCanAccessProfile(id, { requireEdit: true });
   const existing = await db.profile.findUnique({ where: { id } });
   if (!existing) throw new Error('Profile not found.');
 
@@ -5971,7 +6136,7 @@ async function bulkDeleteProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
-  const { allowed, denied } = await partitionAccessibleProfileIds(ids);
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
   const result = { trashed: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
   for (const id of allowed) {
     try {
@@ -5987,10 +6152,11 @@ async function bulkDeleteProfiles(payload) {
 }
 
 async function bulkRestoreProfiles(payload) {
+  await requirePermission('profiles.delete');
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
-  const { allowed, denied } = await partitionAccessibleProfileIds(ids);
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
   const result = { restored: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
   for (const id of allowed) {
     try {
@@ -6008,7 +6174,7 @@ async function bulkPurgeProfiles(payload) {
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
-  const { allowed, denied } = await partitionAccessibleProfileIds(ids);
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
   const result = { purged: [], errors: denied.map((id) => ({ id, message: 'You do not have access to this profile.' })) };
   for (const id of allowed) {
     try {
@@ -6218,14 +6384,27 @@ async function listGroups() {
     orderBy: { createdAt: 'desc' },
     include: { profiles: { where: await scopedProfileWhere({ deletedAt: null }), select: { tags: true } } }
   });
+  const canManage = await ownedRowManageChecker();
   return groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color,
     createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt,
     profileCount: g.profiles.length,
-    tags: collectTags(g.profiles)
+    tags: collectTags(g.profiles),
+    canManage: canManage(g) // rename and delete; the Groups page disables them otherwise
   }));
+}
+
+// For rows already listed through scopedGroupWhere / scopedProxyGroupWhere: may this member rename
+// or delete them (the `manage` rule)? Their owner is in the member's visible subtree, or they have no
+// owner and the member is the Owner or an Admin. Main still checks on rename and delete.
+async function ownedRowManageChecker() {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return () => true;
+  const visible = permissions.visibleMemberIds(await getPrisma().member.findMany(), member);
+  const admin = permissions.rankOf(member.role) >= permissions.ROLE_RANK.ADMIN;
+  return (row) => (row.ownerMemberId == null ? admin : visible.has(row.ownerMemberId));
 }
 
 // Groups only organise profiles, so making, renaming, deleting and filling one needs the right to
@@ -6297,16 +6476,19 @@ async function assignProfilesToGroup(payload) {
 }
 
 // Adds or removes one tag across profiles. Tags are a JSON array per profile, so this is a scoped
-// read-modify-write, case-insensitive both ways.
+// read-modify-write, case-insensitive both ways. Tagging is editing: profiles.edit and edit access to
+// each profile (a profile shared "use only" is skipped and counted in `skipped`).
 async function assignTagToProfiles(payload) {
+  await requirePermission('profiles.edit');
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
   const tag = String(input.tag || '').trim().slice(0, 40);
   const mode = input.mode === 'remove' ? 'remove' : 'add';
   if (!tag) throw new Error('A tag is required.');
-  const { allowed } = await partitionAccessibleProfileIds(ids);
-  if (!allowed.length) return { updated: 0, tag, mode };
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
+  const skipped = denied.length;
+  if (!allowed.length) return { updated: 0, tag, mode, skipped };
   const rows = await db.profile.findMany({ where: { id: { in: allowed } }, select: { id: true, tags: true } });
   let updated = 0;
   for (const r of rows) {
@@ -6320,17 +6502,20 @@ async function assignTagToProfiles(payload) {
     await logActivity(db, r.id, 'tag', `${mode === 'add' ? 'tagged' : 'untagged'} ${tag}`).catch(() => {});
     updated += 1;
   }
-  return { updated, tag, mode };
+  return { updated, tag, mode, skipped };
 }
 
 // Takes an explicit [{id,title}] list or a { prefix, start } pattern numbered in the renderer's
-// visible order. Only the title changes; dataDirName never does.
+// visible order. Only the title changes; dataDirName never does. Renaming is editing: profiles.edit
+// and edit access to each profile (others are skipped and counted; numbering skips them too).
 async function bulkRenameProfiles(payload) {
+  await requirePermission('profiles.edit');
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
-  const { allowed } = await partitionAccessibleProfileIds(ids);
-  if (!allowed.length) return { renamed: 0 };
+  const { allowed, denied } = await partitionAccessibleProfileIds(ids, { requireEdit: true });
+  const skipped = denied.length;
+  if (!allowed.length) return { renamed: 0, skipped };
   const allowedSet = new Set(allowed.map((n) => Number(n)));
   let renamed = 0;
   if (Array.isArray(input.renames)) {
@@ -6342,7 +6527,7 @@ async function bulkRenameProfiles(payload) {
       await logActivity(db, id, 'rename', `renamed to ${title}`).catch(() => {});
       renamed += 1;
     }
-    return { renamed };
+    return { renamed, skipped };
   }
   const prefix = String(input.prefix || '').trim().slice(0, 100);
   if (!prefix) throw new Error('A name prefix is required.');
@@ -6354,33 +6539,66 @@ async function bulkRenameProfiles(payload) {
     await logActivity(db, Number(id), 'rename', `renamed to ${title}`).catch(() => {});
     n += 1; renamed += 1;
   }
-  return { renamed };
+  return { renamed, skipped };
 }
 
 // ---- Proxy groups ----
-// Paid view only: the "Free proxies" group and free proxies inside any group are left out.
+// Proxy groups follow the profile-group rules (scopedGroupWhere), with proxies in place of profiles:
+// a member sees a proxy group made by someone in their visible subtree, or one that holds a proxy
+// they may use. A group with no owner (made in single-user mode or by the Super Admin) is also
+// visible to the Owner and Admins. Renaming or deleting (`manage`) needs the first or last rule, not
+// just a visible proxy inside. Single-user mode and the Super Admin are unrestricted.
+async function scopedProxyGroupWhere(baseWhere, opts = {}) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return baseWhere;
+  const all = await getPrisma().member.findMany();
+  const visible = [...permissions.visibleMemberIds(all, member)];
+  const or = [{ ownerMemberId: { in: visible } }];
+  if (permissions.rankOf(member.role) >= permissions.ROLE_RANK.ADMIN) or.push({ ownerMemberId: null });
+  if (!opts.manage) or.push({ proxies: { some: { ownerMemberId: { in: visible } } } });
+  return baseWhere ? { AND: [baseWhere, { OR: or }] } : { OR: or };
+}
+
+async function assertCanAccessProxyGroup(id, opts = {}) {
+  const member = await getActiveMember();
+  if (!member || member.role === 'SUPER_ADMIN') return;
+  const db = getPrisma();
+  if (!(await db.proxyGroup.findUnique({ where: { id }, select: { id: true } }))) throw new Error('Proxy group not found.');
+  if (!(await db.proxyGroup.findFirst({ where: await scopedProxyGroupWhere({ id }, opts), select: { id: true } }))) {
+    const e = new Error('You do not have access to this proxy group.'); e.code = 'FORBIDDEN'; throw e;
+  }
+}
+
+// Paid view only: the "Free proxies" group and free proxies inside any group are left out. Scoped,
+// not gated, like the proxy list: only the groups this member may see, counting only their proxies.
 async function listProxyGroups() {
   const db = getPrisma();
-  const [groups, freeCounts] = await Promise.all([
-    db.proxyGroup.findMany({
-      orderBy: { createdAt: 'asc' },
-      include: { _count: { select: { proxies: true } } }
-    }),
-    db.proxy.groupBy({ by: ['proxyGroupId'], where: { provider: proxyScope.FREE_PROVIDER, proxyGroupId: { not: null } }, _count: { _all: true } }).catch(() => [])
+  const visibleProxies = await scopedProxyWhere(undefined); // undefined = every proxy
+  const [groups, totals, freeCounts] = await Promise.all([
+    db.proxyGroup.findMany({ where: await scopedProxyGroupWhere(undefined), orderBy: { createdAt: 'asc' } }),
+    db.proxy.groupBy({ by: ['proxyGroupId'], where: proxyScope.andWhere({ proxyGroupId: { not: null } }, visibleProxies), _count: { _all: true } }).catch(() => []),
+    db.proxy.groupBy({ by: ['proxyGroupId'], where: proxyScope.andWhere({ provider: proxyScope.FREE_PROVIDER, proxyGroupId: { not: null } }, visibleProxies), _count: { _all: true } }).catch(() => [])
   ]);
+  const totalByGroup = {};
+  for (const r of totals) totalByGroup[r.proxyGroupId] = r._count._all;
   const freeByGroup = {};
   for (const r of freeCounts) freeByGroup[r.proxyGroupId] = r._count._all;
+  const canManage = await ownedRowManageChecker();
   return proxyScope.paidGroupView(groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color || '#3b82f6',
     autoCreated: Boolean(g.autoCreated),
-    proxyCount: g._count?.proxies ?? 0,
-    createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt
+    proxyCount: totalByGroup[g.id] || 0,
+    createdAt: g.createdAt instanceof Date ? g.createdAt.toISOString() : g.createdAt,
+    canManage: canManage(g) // rename and delete; the Proxy pool disables them otherwise
   })), freeByGroup);
 }
 
+// Proxy groups only organise proxies, so making, renaming, deleting and filling one needs the right
+// to manage proxies (as adding, editing and deleting them does). The creator owns the group.
 async function createProxyGroup(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   const name = requiredString(input.name, 'Group name').slice(0, 80);
@@ -6390,9 +6608,11 @@ async function createProxyGroup(payload) {
 }
 
 async function updateProxyGroup(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProxyGroup(id, { manage: true });
   const data = {};
   if (input.name !== undefined) data.name = requiredString(input.name, 'Group name').slice(0, 80);
   if (input.color !== undefined) data.color = optionalString(input.color) || '#3b82f6';
@@ -6401,9 +6621,11 @@ async function updateProxyGroup(payload) {
 }
 
 async function deleteProxyGroup(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   const id = parseId(input.id);
+  await assertCanAccessProxyGroup(id, { manage: true });
   // Detach proxies first (keep the proxies; only drop the grouping).
   await db.proxy.updateMany({ where: { proxyGroupId: id }, data: { proxyGroupId: null } });
   await db.proxyGroup.delete({ where: { id } });
@@ -6411,7 +6633,9 @@ async function deleteProxyGroup(payload) {
   return { deleted: true, id };
 }
 
+// Moves only proxies the member may use, into a proxy group the member can see.
 async function assignProxiesToGroup(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload);
   const db = getPrisma();
   const ids = parseIdArray(input.ids);
@@ -6421,11 +6645,12 @@ async function assignProxiesToGroup(payload) {
   if (groupId !== null) {
     const group = await db.proxyGroup.findUnique({ where: { id: groupId } });
     if (!group) throw new Error('Selected proxy group does not exist.');
+    await assertCanAccessProxyGroup(groupId);
   }
-  const { allowed } = await partitionAccessibleProxyIds(ids);
+  const { allowed, denied } = await partitionAccessibleProxyIds(ids);
   const res = await db.proxy.updateMany({ where: { id: { in: allowed } }, data: { proxyGroupId: groupId } });
   await pruneEmptyAutoGroups(db); // moving the last proxy out empties an auto group too
-  return { assigned: res.count, groupId };
+  return { assigned: res.count, groupId, skipped: denied.length };
 }
 
 // Reassigns proxies across existing profiles. Modes: unique (a distinct proxy each, capped by the
@@ -6494,9 +6719,16 @@ async function bulkAssignProxies(payload) {
   if (source === 'paste') {
     const lines = Array.from(new Set(String(input.proxyList || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)));
     const typeHint = optionalString(input.proxyType) ? parseProxyType(input.proxyType) : null;
+    // A pasted line reuses a proxy the member may use; a new one counts against their proxy limit.
+    const add = await proxyAddContext();
+    let limitErr = null;
     for (const line of lines) {
-      try { const p = await findOrCreateProxy(db, line, null, typeHint); if (p) sourceProxies.push(p); }
-      catch (e) { /* skip an unparseable line */ }
+      try { const p = await findOrCreateProxy(db, line, null, typeHint, add); if (p) sourceProxies.push(p); }
+      catch (e) { if (e && e.code === 'LIMIT_REACHED') limitErr = e; /* otherwise skip an unparseable line */ }
+    }
+    if (limitErr) {
+      if (!sourceProxies.length) throw limitErr;
+      result.proxyLimitMessage = limitErr.message; // the lines past the limit were left out
     }
   } else {
     const filter = {};
@@ -6565,6 +6797,7 @@ function autoGroupColor(name) {
 // coarser level). Each proxy joins exactly one group; proxies with no known country are skipped.
 // `onlyUngrouped` (the auto-run after Test All) leaves manually grouped proxies alone.
 async function autoGroupProxies(payload) {
+  await requirePermission('proxies.manage');
   const input = requireObject(payload || {});
   const level = ['country', 'state', 'city'].includes(String(input.level)) ? String(input.level) : 'country';
   const onlyUngrouped = input.onlyUngrouped === true;
@@ -6597,8 +6830,10 @@ async function autoGroupProxies(payload) {
     buckets.get(name).push(p.id);
   }
 
-  // Find-or-create each group by case-insensitive name, then assign its proxies.
-  const existing = await db.proxyGroup.findMany({ select: { id: true, name: true } });
+  // Find-or-create each group by case-insensitive name, then assign its proxies. Only a group the
+  // member can see is joined: another member's "United States" is never filled with this member's
+  // proxies (the member gets their own, as batch import does for profile groups).
+  const existing = await db.proxyGroup.findMany({ where: await scopedProxyGroupWhere(undefined), select: { id: true, name: true } });
   const byName = new Map(existing.map((g) => [String(g.name).toLowerCase(), g.id]));
   let createdGroups = 0;
   let assigned = 0;
@@ -6753,6 +6988,7 @@ async function launchProfileNow(payload) {
       const { profileRoot: ffRoot } = getRuntimeConfig();
       const useFfProxy = profile.systemProxyBehavior === 'PROFILE_PROXY';
       const ffRotated = await pickRotationProxy(db, id);
+      assertProfileHasLaunchProxy(profile, ffRotated);
       const ffProxy = ffRotated || (useFfProxy ? profile.proxy : null);
       // Smart Autofill on Firefox: master toggle AND the firefox sub-flag must
       // both be on. Installs the WebExtension + enables the loopback bridge path.
@@ -6800,6 +7036,7 @@ async function launchProfileNow(payload) {
     // Proxy rotation: if a pool is configured, the chosen pool proxy overrides the
     // profile's fixed proxy for this launch (sticky session - same userDataDir).
     const rotated = await pickRotationProxy(db, id);
+    assertProfileHasLaunchProxy(profile, rotated);
     const launchProxy = rotated || (useProfileProxy ? profile.proxy : null);
     const launchProxyInfo = rotated ? null : (useProfileProxy ? profile.proxyInfoString : null);
 
@@ -6840,6 +7077,18 @@ async function launchProfileNow(payload) {
     releaseReservedLock(id, reservation); // no-op once upgraded, or if it is not ours
     throw err;
   }
+}
+
+// A profile set to "Profile proxy" that has no proxy (its proxy was deleted, or a template or copy
+// left out a proxy the member may not use) opens neither on the real IP nor on a stale cached
+// address: the launch is refused until a proxy is assigned or the profile is set to no proxy. A
+// rotation pool that picked a proxy for this launch is enough.
+function assertProfileHasLaunchProxy(profile, rotated) {
+  if (rotated || !profile || profile.systemProxyBehavior !== 'PROFILE_PROXY') return;
+  if (profile.proxy || profile.proxyInfoString) return;
+  const e = new Error('This profile is set to use a proxy but has none (its proxy was deleted, or is not available to you). Assign a proxy in the profile editor, or set it to no proxy, before launching.');
+  e.code = 'PROXY_MISSING';
+  throw e;
 }
 
 // Close a session by id on either engine. closeProfileSession() alone does nothing for a Firefox
@@ -7321,6 +7570,8 @@ async function commitProfileImport(payload, event) {
   // A log-only line (no progress-bar change); item/done lines move the bar.
   const log = (level, message) => emit({ phase: 'log', level, message });
   const groupsByName = new Map(); // group name -> row found or made for an earlier row of this file
+  // A custom proxy reuses only a row the importer may use; a new one counts against their proxy limit.
+  const proxyAdd = await proxyAddContext();
 
   let processed = 0;
   for (const item of cached.parsed.items) {
@@ -7338,7 +7589,7 @@ async function commitProfileImport(payload, event) {
       let proxy = null;
       let autoBoundProxy = false;
       if (item.proxyMethod === 'CUSTOM') {
-        proxy = await findOrCreateProxy(db, item.rawProxy, `${item.title} Proxy`, item.proxyType || null);
+        proxy = await findOrCreateProxy(db, item.rawProxy, `${item.title} Proxy`, item.proxyType || null, proxyAdd);
         if (proxy) {
           result.createdProxies.push(serializeProxy(proxy));
           log('info', `[INFO] Binding ${proxy.type} Proxy ${proxy.host}:${proxy.port}...`);
@@ -7433,8 +7684,9 @@ async function commitProfileImport(payload, event) {
       const message = error instanceof Error ? error.message : 'Unknown import error';
       result.errors.push({ row: item.row, message });
       emit({ phase: 'item', index: processed, total, title: item.title, ok: false, level: 'error', message: `[ERROR] Row ${item.row} failed: ${message}` });
-      // The profile limit: no later row can be created either, so the import stops here.
-      if (error && error.code === 'LIMIT_REACHED') {
+      // The profile limit: no later row can be created either, so the import stops here. (At the proxy
+      // limit only rows with a new custom proxy fail; the others still import.)
+      if (error && error.code === 'LIMIT_REACHED' && error.limitKind !== 'proxy') {
         const left = total - processed;
         result.stoppedAtLimit = { row: item.row, notImported: left + 1 };
         if (left > 0) log('warn', `[WARN] Import stopped: the profile limit was reached, so ${left} more row${left === 1 ? ' was' : 's were'} not imported.`);
@@ -7480,6 +7732,8 @@ async function migrateProfiles(payload, event) {
   const stampId = ownerStampId();
   const result = { platform, label, total, createdProfiles: [], createdProxyIds: [], errors: [] };
   let processed = 0;
+  // Read outside the per-profile transactions below (a query on the outer client inside one blocks).
+  const proxyAdd = await proxyAddContext();
 
   for (const raw of rawProfiles) {
     processed += 1;
@@ -7496,7 +7750,7 @@ async function migrateProfiles(payload, event) {
     try {
       const created = await db.$transaction(async (tx) => {
         let proxy = null;
-        if (norm.proxyRaw) proxy = await findOrCreateProxy(tx, norm.proxyRaw, `${norm.title} Proxy`, norm.proxyType);
+        if (norm.proxyRaw) proxy = await findOrCreateProxy(tx, norm.proxyRaw, `${norm.title} Proxy`, norm.proxyType, proxyAdd);
         const dataDirName = await ensureUniqueDataDirName(tx, norm.title);
         const overrides = {};
         if (norm.os) overrides.os = norm.os;
@@ -8128,7 +8382,11 @@ async function getProxyScheduler() {
   return { enabled: Boolean(cfg.enabled), minutes: Number(cfg.minutes) || 30, running: Boolean(proxySchedulerTimer) };
 }
 
+// The automatic health check runs over the whole workspace pool: the same rule as the default
+// rotation policy (requireWorkspaceProxySettings).
 async function setProxyScheduler(payload) {
+  await requirePermission('proxies.manage');
+  await requireWorkspaceProxySettings('proxy check schedule');
   const input = requireObject(payload);
   const enabled = Boolean(input.enabled);
   const minutes = Math.max(1, Number.parseInt(input.minutes, 10) || 30);
@@ -8936,6 +9194,7 @@ function clampPermissions(requested, granterPerms, childRole) {
 function limitError(kind, max) {
   const e = new Error(`You've reached your ${kind} limit (${max}). Ask whoever invited you to raise it.`);
   e.code = 'LIMIT_REACHED';
+  e.limitKind = kind; // 'profile' | 'proxy': batch import stops only at the profile limit
   return e;
 }
 
@@ -9590,17 +9849,28 @@ async function deleteMember(payload) {
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: toId } }).catch(() => {});
     await db.proxy.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
     await db.proxyGroup.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
+    await db.group.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
+    await db.template.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: toId } }).catch(() => {});
   } else if (dataAction === 'delete') {
     // Owned profiles go to Trash (recoverable, local data kept); assigned-only ones are unassigned.
-    // Deleting a proxy nulls proxyId on profiles using it (onDelete: SetNull).
+    // Profiles on a deleted proxy keep "Profile proxy" with no proxy, so they cannot launch on the
+    // real IP or on the deleted proxy until one is assigned (detachProfilesFromProxies).
     await db.profile.updateMany({ where: { ownerMemberId: id, deletedAt: null }, data: { deletedAt: new Date(), assignedMemberId: null, ownerMemberId: null } }).catch(() => {});
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
+    const goneProxies = await db.proxy.findMany({ where: { ownerMemberId: id }, select: { id: true } }).catch(() => []);
+    await detachProfilesFromProxies(db, goneProxies.map((p) => p.id)).catch(() => {});
     await db.proxy.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
     await pruneEmptyAutoGroups(db).catch(() => {});
     await db.proxyGroup.deleteMany({ where: { ownerMemberId: id } }).catch(() => {});
   } else {
     await db.profile.updateMany({ where: { assignedMemberId: id }, data: { assignedMemberId: null } }).catch(() => {});
     await db.profile.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: null } }).catch(() => {});
+  }
+  if (dataAction !== 'reassign') {
+    // Profile groups and templates of a removed member become ownerless, which the Owner and Admins
+    // manage (scopedGroupWhere, scopedTemplateWhere); otherwise nobody could rename or delete them.
+    await db.group.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: null } }).catch(() => {});
+    await db.template.updateMany({ where: { ownerMemberId: id }, data: { ownerMemberId: null } }).catch(() => {});
   }
 
   await db.member.delete({ where: { id } });

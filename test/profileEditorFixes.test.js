@@ -218,7 +218,8 @@ test('"Rotating Proxy" saves a proxy and the rotation pool, never a DIRECT profi
   assert.match(edit, /proxySetting: 'Rotating Proxy'/);
   // The launch path this feeds: an enabled pool overrides the profile's proxy for Chromium and Firefox.
   assert.match(IPC, /const ffRotated = await pickRotationProxy\(db, id\);/);
-  assert.match(IPC, /const rotated = await pickRotationProxy\(db, id\);\s*const launchProxy = rotated \|\| \(useProfileProxy \? profile\.proxy : null\);/);
+  // (1.0.26: a profile left without its own proxy is refused in between; test/permissionsFollowup.test.js.)
+  assert.match(IPC, /const rotated = await pickRotationProxy\(db, id\);\s*assertProfileHasLaunchProxy\(profile, rotated\);\s*const launchProxy = rotated \|\| \(useProfileProxy \? profile\.proxy : null\);/);
 });
 
 // ---- Cookie box ----
@@ -308,7 +309,8 @@ test('batch import stamps the importing member as owner and assignee', async () 
     ensureUniqueDataDirName: async (_db, n) => n, generateFingerprint: () => ({}), buildProxyInfoString: () => '',
     serializeProfile: (p) => p, logActivity: async () => {}, ownerStampId: () => 5,
     // Permission, quota and scoping: test/permissionGaps.test.js
-    requirePermission: async () => {}, assertWithinLimit: async () => {}, scopedProxyWhere: async (w) => w, scopedGroupWhere: async (w) => w
+    requirePermission: async () => {}, assertWithinLimit: async () => {}, scopedProxyWhere: async (w) => w, scopedGroupWhere: async (w) => w,
+    proxyAddContext: async () => ({ visible: undefined, ownerId: 5, max: -1 }) // proxy reuse: test/permissionsFollowup.test.js
   });
   const res = await commitProfileImport({ token: 'tok' }, null);
   assert.equal(res.createdProfiles.length, 2);

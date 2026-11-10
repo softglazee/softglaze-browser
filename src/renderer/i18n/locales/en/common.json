@@ -253,5 +253,16 @@
     "entryTitle": "Rate SoftGlaze Browser",
     "entryDesc": "Share your rating and review in the Microsoft Store.",
     "openFailed": "The Microsoft Store could not be opened. Open it from the Start menu and find SoftGlaze Browser in your Library."
+  },
+  "perm": {
+    "needsRole": "Needs the {{role}} role or higher.",
+    "ownerOnly": "Only the Owner can do this.",
+    "turnedOff": "This action is turned off for your account by an administrator.",
+    "inactive": "Your account is suspended.",
+    "checking": "Checking your permissions…",
+    "useOnly": "Shared with you for use only. Changing it needs edit access.",
+    "notYourGroup": "Only the team that made this group, or the Owner or an Admin, can rename or delete it.",
+    "vaultTitle": "Data Vault is managed by the Owner",
+    "vaultBody": "Only the workspace Owner can view and edit the identities in the Data Vault. In a launched profile, the SoftGlaze Autofill button still offers them on signup forms."
   }
 }

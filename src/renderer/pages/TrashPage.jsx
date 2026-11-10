@@ -5,8 +5,10 @@ import PageHeader from '@/components/PageHeader.jsx';
 import Button from '@/components/ui/Button.jsx';
 import { Card, CardContent } from '@/components/ui/Card.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
+import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import { formatDateTime } from '@/lib/utils.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { usePermissions } from '@/lib/usePermissions.js';
 import i18n from '@/i18n/index.js';
 import trashEn from '@/i18n/locales/en/trash.json';
 import trashEs from '@/i18n/locales/es/trash.json';
@@ -27,6 +29,11 @@ const Checkbox = ({ checked, onChange }) => (
 
 export default function TrashPage() {
   const { t } = useTranslation('trash');
+  // Restore needs profiles.delete (Admin and up) and deleting forever profiles.purge (the Owner), as in
+  // main; both also need edit access to the profile (item.canEdit).
+  const perm = usePermissions();
+  const denyRestore = perm.deny('profiles.delete');
+  const denyPurge = perm.deny('profiles.purge');
   const [trashItems, setTrashItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -117,7 +124,7 @@ export default function TrashPage() {
   const handleBulkRestore = async () => {
     if (selectedIds.size === 0) return;
     setBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkRestore([...selectedIds]); await loadTrash(); clearSelection(); }
+    try { const res = await softglazeApi.profiles.bulkRestore([...selectedIds]); await loadTrash(); clearSelection(); reportSkipped(res); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -126,7 +133,7 @@ export default function TrashPage() {
     if (selectedIds.size === 0) return;
     if (!window.confirm(t('confirm.bulkPurgeWithData', { count: selectedIds.size }))) return;
     setBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkPurge([...selectedIds]); await loadTrash(); clearSelection(); }
+    try { const res = await softglazeApi.profiles.bulkPurge([...selectedIds]); await loadTrash(); clearSelection(); reportSkipped(res); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -135,9 +142,15 @@ export default function TrashPage() {
     if (trashItems.length === 0) return;
     if (!window.confirm(t('confirm.emptyTrashWithData', { count: trashItems.length }))) return;
     setBusy(true); setError('');
-    try { await softglazeApi.profiles.bulkPurge(trashItems.map((i) => i.id)); await loadTrash(); clearSelection(); }
+    try { const res = await softglazeApi.profiles.bulkPurge(trashItems.map((i) => i.id)); await loadTrash(); clearSelection(); reportSkipped(res); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
+  };
+
+  // Main skips profiles the member may not change (shared "use only") and lists them in `errors`.
+  const reportSkipped = (res) => {
+    const errs = (res && Array.isArray(res.errors)) ? res.errors : [];
+    if (errs.length) setError(t('bulkSkipped', { count: errs.length, reason: (errs[0] && errs[0].message) || '' }));
   };
 
   return (
@@ -147,14 +160,15 @@ export default function TrashPage() {
         title={t('header.title')}
         description={t('header.description')}
         actions={
-          <Button
+          <GuardedButton
+            deny={denyPurge}
             onClick={handleEmptyTrash}
             disabled={trashItems.length === 0 || busy}
             className="bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300 border border-red-900/50 transition-colors disabled:opacity-50"
           >
             <ArchiveX className="w-4 h-4 mr-2" />
             {t('actions.emptyTrash')}
-          </Button>
+          </GuardedButton>
         }
       />
 
@@ -187,12 +201,12 @@ export default function TrashPage() {
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
           <span className="text-[13px] text-foreground font-medium">{t('bulk.selected', { count: selectedIds.size })}</span>
           <div className="flex gap-2 ml-auto">
-            <Button size="sm" disabled={busy} onClick={handleBulkRestore} className="bg-secondary hover:bg-secondary text-foreground border border-border">
+            <GuardedButton deny={denyRestore} size="sm" disabled={busy} onClick={handleBulkRestore} className="bg-secondary hover:bg-secondary text-foreground border border-border">
               <Undo2 className="w-3.5 h-3.5 mr-1.5" /> {t('actions.restore')}
-            </Button>
-            <Button size="sm" disabled={busy} onClick={handleBulkPurge} className="bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-900/50">
+            </GuardedButton>
+            <GuardedButton deny={denyPurge} size="sm" disabled={busy} onClick={handleBulkPurge} className="bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-900/50">
               <Trash2 className="w-3.5 h-3.5 mr-1.5" /> {t('actions.deleteForever')}
-            </Button>
+            </GuardedButton>
             <Button size="sm" variant="outline" disabled={busy} onClick={clearSelection} className="bg-secondary border-border text-foreground">{t('actions.clear')}</Button>
           </div>
         </div>
@@ -243,7 +257,8 @@ export default function TrashPage() {
                         <td className="px-5 py-4 text-muted-foreground">{formatDateTime(item.deletedAt)}</td>
                         <td className="px-5 py-4">
                           <div className="flex justify-end gap-2">
-                            <Button
+                            <GuardedButton
+                              deny={perm.denyRow('profiles.delete', item)}
                               size="sm"
                               disabled={busy}
                               onClick={() => handleRestore(item.id)}
@@ -252,16 +267,18 @@ export default function TrashPage() {
                             >
                               <Undo2 className="w-3.5 h-3.5 mr-1.5" />
                               {t('actions.restore')}
-                            </Button>
-                            <Button
+                            </GuardedButton>
+                            <GuardedButton
+                              deny={perm.denyRow('profiles.purge', item)}
                               size="sm"
                               disabled={busy}
                               onClick={() => handlePurge(item.id, item.title)}
                               className="bg-transparent hover:bg-red-900/30 text-muted-foreground hover:text-red-400 border border-transparent hover:border-red-900/50 transition"
                               title={t('actions.purgeTitle')}
+                              aria-label={t('actions.purgeTitle')}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                            </GuardedButton>
                           </div>
                         </td>
                       </tr>

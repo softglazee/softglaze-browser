@@ -361,7 +361,9 @@
     "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada."
   },
   "delete": {
-    "confirm": "¿Eliminar el proxy \"{{name}}\"?"
+    "confirm": "¿Eliminar el proxy \"{{name}}\"?",
+    "profilesNeedProxy": "Perfiles que usaban el proxy eliminado: {{count}}. Ahora no tienen proxy y no se abrirán hasta que les asignes uno (en el editor del perfil, o con Proxies en la página Perfiles).",
+    "dismissNotice": "Cerrar"
   },
   "history": {
     "dialogTitle": "Historial de estado del proxy",

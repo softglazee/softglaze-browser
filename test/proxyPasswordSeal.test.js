@@ -132,6 +132,21 @@ test('the unique key holds via passwordHash; rows differing only by password coe
   assert.equal(byHash.name, 's1');
 });
 
+// 1.0.26 (migration 20261111000100_proxy_unique_per_owner, applied here by the real startup runner):
+// the owner is part of the key, so two members can each save the same proxy as their own row, while
+// one member (and a workspace with no members) still cannot hold it twice.
+test('each member may keep their own row for the same proxy; nobody holds it twice', async (t) => {
+  if (!prismaUsable) return t.skip('no Prisma engine');
+  const base = { type: 'HTTP', host: 'team.example', port: 9100, username: 'shared', password: 'same-pw' };
+  await db.proxy.create({ data: { ...base, name: 'member 3', ownerMemberId: 3 } });
+  await db.proxy.create({ data: { ...base, name: 'member 4', ownerMemberId: 4 } });
+  await assert.rejects(db.proxy.create({ data: { ...base, name: 'member 3 again', ownerMemberId: 3 } }), (e) => e.code === 'P2002');
+  await db.proxy.create({ data: { ...base, name: 'no owner' } });
+  await assert.rejects(db.proxy.create({ data: { ...base, name: 'no owner again' } }), (e) => e.code === 'P2002');
+  const rows = await db.proxy.findMany({ where: { host: 'team.example' }, orderBy: { id: 'asc' } });
+  assert.deepEqual(rows.map((r) => r.name), ['member 3', 'member 4', 'no owner']);
+});
+
 test('data migration: mixed sealed/plain rows, idempotent, empty-safe, never loses a password', async (t) => {
   if (!prismaUsable) return t.skip('no Prisma engine');
   const ins = (name, pw, hash) => db.$executeRawUnsafe(

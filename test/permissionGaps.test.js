@@ -135,7 +135,7 @@ const ids = (rows) => rows.map((r) => r.id).sort((a, b) => a - b);
 function loadGroups(db = seed()) {
   const ws = workspace(db);
   const activity = [];
-  const fns = loadMain([...VALIDATORS, 'requirePermission', 'collectTags', ...SCOPE_FNS, 'listGroups', 'createGroup', 'updateGroup', 'deleteGroup', 'assignProfilesToGroup'], {
+  const fns = loadMain([...VALIDATORS, 'requirePermission', 'collectTags', 'ownedRowManageChecker', ...SCOPE_FNS, 'listGroups', 'createGroup', 'updateGroup', 'deleteGroup', 'assignProfilesToGroup'], {
     ...ws.deps,
     logActivity: async (_db, id, action) => { activity.push([id, action]); }
   });
@@ -303,7 +303,7 @@ function loadImport(db, items, opts = {}) {
   const cache = new Map([['tok', { parsed: { fileName: 'p.xlsx', sheetName: 'S', headerRow: 1, totalRows: items.length, errors: [], items } }]]);
   const madeProxies = [];
   const sent = [];
-  const fns = loadMain([...VALIDATORS, 'requirePermission', 'limitError', 'assertWithinLimit', ...SCOPE_FNS, 'commitProfileImport'], {
+  const fns = loadMain([...VALIDATORS, 'requirePermission', 'limitError', 'assertWithinLimit', 'proxyAddContext', ...SCOPE_FNS, 'commitProfileImport'], {
     ...ws.deps,
     importPreviewCache: cache, CHANNELS: { BATCH_IMPORT_PROGRESS: 'p' }, proxyScope,
     toCountryCode: (v) => String(v || '').trim().toUpperCase(), countryMatches: (a, b) => Boolean(a) && String(a).toUpperCase() === String(b || '').toUpperCase(),
