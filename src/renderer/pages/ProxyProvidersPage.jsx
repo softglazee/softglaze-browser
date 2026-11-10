@@ -329,6 +329,7 @@ export default function ProxyProvidersPage() {
               testRun={testRun && testRun.key === sel.p.key ? testRun : null}
               lastPull={lastPull && lastPull.key === sel.p.key ? lastPull : null}
               onSynced={handleSynced}
+              onCredsChanged={load}
               openPool={() => navigate('/proxies')}
               denyPull={denyPull}
             />
@@ -349,7 +350,7 @@ function Row({ icon: Icon, label, children }) {
   );
 }
 
-function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, openPool, denyPull = null }) {
+function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab, trialEdit, setTrialEdit, trialErr, savingTrial, saveTrial, testAfter, setTestAfter, testRun, lastPull, onSynced, onCredsChanged, openPool, denyPull = null }) {
   const { p, pool, keySaved, trial, state, kind } = sel;
   const gw = p.gateway ? `${p.gateway.host}:${p.gateway.port}` : null;
   const trialDay = trial ? parseDay(trial.endsAt) : null;
@@ -470,7 +471,7 @@ function DetailPanel({ t, lang, sel, credsHidden, isSuper, referral, tab, setTab
                 <Switch checked={testAfter} onChange={setTestAfter} label={t('detail.testAfter')} />
               </label>
 
-              <ProxyProviders embedded selectedKey={p.key} onSynced={onSynced} />
+              <ProxyProviders embedded selectedKey={p.key} onSynced={onSynced} onCredsChanged={onCredsChanged} />
 
               {testRun && (
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3.5 py-2.5 text-[12.5px] text-foreground" role="status">
