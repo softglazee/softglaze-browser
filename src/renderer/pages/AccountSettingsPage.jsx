@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import SignInMethodsCard from '@/components/SignInMethodsCard.jsx';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // ~2 MB before base64 expansion
@@ -262,6 +263,9 @@ export default function AccountSettingsPage() {
           )}
         </div>
       </div>
+
+      {/* One-click sign-in (1.0.26): the SoftGlaze account's sign-in methods and Sign out, for the Owner. */}
+      <SignInMethodsCard isOwner={me === null || me?.role === 'OWNER' || me?.role === 'SUPER_ADMIN'} />
 
       {verify && (
         <VerifyModal

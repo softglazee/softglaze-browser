@@ -97,6 +97,10 @@ const planCatalog = require('./planCatalog');
 const checkoutMethods = require('./checkoutMethods');
 const signupLead = require('./signupLead');
 const signupConfirm = require('./signupConfirm');
+const { createOneClickSignIn } = require('./oneClickSignIn');
+const { createSignInFlow } = require('./signInFlow');
+const { createAccountSession } = require('./accountSession');
+const { startLoopback } = require('./authLoopback');
 const serverErrors = require('./serverErrors');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
@@ -353,6 +357,17 @@ const CHANNELS = Object.freeze({
   ACCOUNT_CONFIRM_START: 'account:confirm-start',
   ACCOUNT_CONFIRM_CHECK: 'account:confirm-check',
   ACCOUNT_CONFIRM_LATER: 'account:confirm-later',
+  // One-click sign-in (1.0.26, oneClickSignIn.js)
+  SIGNIN_INFO: 'signin:info',
+  SIGNIN_START: 'signin:start',
+  SIGNIN_CANCEL: 'signin:cancel',
+  SIGNIN_EMAIL_START: 'signin:email-start',
+  SIGNIN_EMAIL_VERIFY: 'signin:email-verify',
+  SIGNIN_ACCOUNT: 'signin:account',
+  SIGNIN_SIGN_OUT: 'signin:sign-out',
+  SIGNIN_USE_CASE: 'signin:use-case',
+  SIGNIN_LICENCE_STATE: 'signin:licence-state',
+  SIGNIN_MOVE_LICENCE: 'signin:move-licence',
   EMAIL_GET_CONFIG: 'email:get-config',
   EMAIL_SET_CONFIG: 'email:set-config',
   EMAIL_TEST: 'email:test',
@@ -12399,7 +12414,8 @@ async function dbEnableEncryption(payload) {
   const password = String(input.password || '');
   // The DB key is the vault password, so require an enabled vault and verify the password against it.
   const v = await readVault();
-  if (!v.enabled || !v.hash) {
+  if (!v.enabled || !v.hash || v.signIn) {
+    // A one-click workspace's key is a random device key nobody knows, so it cannot be the database key.
     const e = new Error('Set a workspace password (vault) first - database encryption uses it as the key.');
     e.code = 'NO_VAULT';
     throw e;
@@ -12599,15 +12615,25 @@ async function vaultStatus() {
     enabled: Boolean(v.enabled),
     hasPassword: Boolean(v.hash),
     locked: Boolean(v.enabled) && vaultLocked,
-    autoLockMinutes: Number(v.autoLockMinutes) || 0
+    autoLockMinutes: Number(v.autoLockMinutes) || 0,
+    // A workspace made by one-click sign-in (1.0.26): no password a person knows, opened by signing in.
+    signIn: Boolean(v.enabled && v.signIn)
   };
+}
+
+// The current workspace password for vault changes: what the person typed, or for a one-click workspace
+// (no password a person knows) its sealed device key while it is open.
+function vaultCurrentSecret(v, typed) {
+  const t = String(typed || '');
+  if (t || !v || !v.signIn || vaultLocked) return t;
+  return oneClick().deviceKey();
 }
 
 async function vaultSetPassword(payload) {
   await requirePermission('vault.manage');
   const input = requireObject(payload);
   const v = await readVault();
-  if (v.enabled && v.hash && !verifySecret(String(input.current || ''), v.salt, v.hash)) {
+  if (v.enabled && v.hash && !verifySecret(vaultCurrentSecret(v, input.current), v.salt, v.hash)) {
     throw new Error('Current password is incorrect.');
   }
   const next = requiredString(input.password, 'Password');
@@ -12661,7 +12687,7 @@ async function vaultDisable(payload) {
   }
   const input = requireObject(payload);
   const v = await readVault();
-  if (v.enabled && v.hash && !verifySecret(String(input.password || ''), v.salt, v.hash)) {
+  if (v.enabled && v.hash && !verifySecret(vaultCurrentSecret(v, input.password), v.salt, v.hash)) {
     throw new Error('Incorrect password.');
   }
   await writeSetting('vault', { enabled: false, hash: null, salt: null, autoLockMinutes: 0 });
@@ -13153,6 +13179,125 @@ async function accountConfirmLater() {
   signupDecision = { state: 'deferred', required: false, offline: false, deferredUntil: d.deferredUntil || null, at: Date.now() };
   await logAudit('account.confirm-later', { detail: { until: d.deferredUntil || null } }).catch(() => {});
   return { deferred: true, deferredUntil: d.deferredUntil || null };
+}
+
+// ---- One-click sign-in (1.0.26) ----
+// "Continue with GitHub" / "Continue with email" on the first screen, the sign-in of a one-click workspace after
+// Sign out, and Settings > Account. The logic is in oneClickSignIn.js; this wires it to main's state.
+let oneClickService = null;
+let accountSessionStore = null;
+
+function accountSession() {
+  if (!accountSessionStore) {
+    const { app, safeStorage } = require('electron');
+    accountSessionStore = createAccountSession({ safeStorage, dir: () => app.getPath('userData') });
+  }
+  return accountSessionStore;
+}
+
+// softglaze:// is registered by the installer, the Store package and main.js; an unpacked dev run is not, so
+// it takes the loopback listener instead.
+function signInProtocolReady() {
+  try {
+    const { app } = require('electron');
+    if (process.windowsStore) return true;
+    return Boolean(app.isPackaged && app.isDefaultProtocolClient('softglaze'));
+  } catch (_) { return false; }
+}
+
+function oneClick() {
+  if (!oneClickService) {
+    oneClickService = createOneClickSignIn({
+      tenantConfig,
+      api: licenseClient.api,
+      ensureInstall: ensureBackendInstall,
+      flow: createSignInFlow({
+        tenantConfig,
+        openExternal: (url) => require('electron').shell.openExternal(url),
+        startLoopback,
+        protocolReady: signInProtocolReady
+      }),
+      accountSession: accountSession(),
+      rememberStore,
+      getPrisma,
+      readSetting,
+      writeSetting,
+      hashSecret,
+      verifySecret,
+      initialsFrom,
+      assertFirstRunSetup,
+      recordSignupVerified,
+      logAudit,
+      isDbEncryptionEnabled: () => database.isDbEncryptionEnabled(),
+      requirePurchaser,
+      refreshBackendLease,
+      deliverOtp,
+      normalizeLead: signupLead.normalizeLead,
+      gate: {
+        state: () => ({ vaultLocked: Boolean(vaultLocked), currentMemberId }),
+        authState: ipcAuthState,
+        // 'vault': opened with the workspace key after a verified sign-in; 'none': no vault (no OS keychain).
+        unlock: (source) => {
+          if (source === 'vault') { vaultLocked = false; vaultUnlockSource = 'vault'; }
+          else { vaultLocked = false; vaultUnlockSource = 'none'; }
+        },
+        setCurrentMember: async (id) => {
+          currentMemberId = id;
+          await writeSetting('currentMemberId', id).catch(() => {});
+        }
+      }
+    });
+  }
+  return oneClickService;
+}
+
+function signinPayload(payload) {
+  return payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+}
+
+async function signinInfo() { return oneClick().info(); }
+
+async function signinStart(payload) {
+  const p = signinPayload(payload);
+  return oneClick().start({ provider: String(p.provider || ''), purpose: String(p.purpose || ''), mode: p.mode });
+}
+
+async function signinCancel() { return oneClick().cancel(); }
+
+async function signinEmailStart(payload) {
+  const p = signinPayload(payload);
+  return oneClick().emailStart({ email: p.email, purpose: String(p.purpose || ''), lang: p.lang });
+}
+
+async function signinEmailVerify(payload) {
+  const p = signinPayload(payload);
+  return oneClick().emailVerify({ email: p.email, code: p.code, purpose: String(p.purpose || '') });
+}
+
+async function signinAccount() { return oneClick().account(); }
+
+// Sign out of the SoftGlaze account on this computer, then out of the workspace (it locks).
+async function signinSignOut() {
+  await oneClick().signOut();
+  return memberLogout();
+}
+
+async function signinUseCase(payload) {
+  await requirePurchaser('answer the sign-up question');
+  return oneClick().saveUseCase(signinPayload(payload));
+}
+
+async function signinLicenceState() {
+  await requirePurchaser('see where the licence is');
+  return oneClick().licenceState();
+}
+
+async function signinMoveLicence() { return oneClick().moveLicence(); }
+
+// A softglaze:// URL from the operating system (main.js: second-instance, open-url). -> true when it finished
+// the pending sign-in; anything else is ignored.
+function handleAuthProtocolUrl(url) {
+  try { return oneClick().handleProtocolUrl(url); } catch (_) { return false; }
 }
 
 // ---- Team oversight (local-first admin dashboard) ----
@@ -16885,6 +17030,16 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.ACCOUNT_CONFIRM_START, accountConfirmStart);
   registerHandler(CHANNELS.ACCOUNT_CONFIRM_CHECK, accountConfirmCheck);
   registerHandler(CHANNELS.ACCOUNT_CONFIRM_LATER, accountConfirmLater);
+  registerHandler(CHANNELS.SIGNIN_INFO, signinInfo);
+  registerHandler(CHANNELS.SIGNIN_START, signinStart);
+  registerHandler(CHANNELS.SIGNIN_CANCEL, signinCancel);
+  registerHandler(CHANNELS.SIGNIN_EMAIL_START, signinEmailStart);
+  registerHandler(CHANNELS.SIGNIN_EMAIL_VERIFY, signinEmailVerify);
+  registerHandler(CHANNELS.SIGNIN_ACCOUNT, signinAccount);
+  registerHandler(CHANNELS.SIGNIN_SIGN_OUT, signinSignOut);
+  registerHandler(CHANNELS.SIGNIN_USE_CASE, signinUseCase);
+  registerHandler(CHANNELS.SIGNIN_LICENCE_STATE, signinLicenceState);
+  registerHandler(CHANNELS.SIGNIN_MOVE_LICENCE, signinMoveLicence);
   registerHandler(CHANNELS.EMAIL_GET_CONFIG, getEmailConfig);
   registerHandler(CHANNELS.EMAIL_SET_CONFIG, setEmailConfig);
   registerHandler(CHANNELS.EMAIL_TEST, testEmail);
@@ -16928,5 +17083,6 @@ module.exports = {
   registerIpcHandlers,
   shutdownIpcHandlers,
   attemptRememberedUnlock,
-  whenSessionReady
+  whenSessionReady,
+  handleAuthProtocolUrl
 };

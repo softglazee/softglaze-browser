@@ -9,6 +9,9 @@ const PRE_AUTH_CHANNELS = Object.freeze(new Set([
   'vault:status', 'vault:unlock', 'vault:lock',
   // first-run registration (main-gated by assertFirstRunSetup)
   'account:get', 'account:send-otp', 'account:register',
+  // one-click sign-in (1.0.26): a new workspace, or a one-click workspace after Sign out; oneClickSignIn.js
+  // checks the purpose (assertFirstRunSetup, or a locked one-click workspace and its own account)
+  'signin:info', 'signin:start', 'signin:cancel', 'signin:email-start', 'signin:email-verify',
   // member picker / logins / invite redemption / Super Admin access
   'member:current', 'member:list', 'member:switch', 'member:login', 'member:logout',
   'member:accept-invite', 'member:super-status', 'member:super-login', 'member:super-setup',

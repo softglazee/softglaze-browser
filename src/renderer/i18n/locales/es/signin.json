@@ -1,0 +1,97 @@
+{
+  "choose": {
+    "title": "Te damos la bienvenida a SoftGlaze",
+    "subtitle": "Inicia sesión para crear tu espacio de trabajo. No necesitas contraseña.",
+    "github": "Continuar con GitHub",
+    "email": "Continuar con correo",
+    "or": "o",
+    "moreOptions": "Más opciones",
+    "moreOptionsHint": "Crear el espacio de trabajo con nombre y contraseña",
+    "privacy": "Solo recibimos tu nombre y tu correo verificado.",
+    "haveAccount": "¿Ya tienes un espacio de trabajo en este equipo?",
+    "logIn": "Iniciar sesión"
+  },
+  "unlock": {
+    "title": "Hola de nuevo",
+    "titleNamed": "Hola de nuevo, {{name}}",
+    "subtitle": "Inicia sesión con la cuenta a la que pertenece este espacio de trabajo.",
+    "account": "Cuenta del espacio de trabajo: {{email}}",
+    "passwordInstead": "Iniciar sesión con tu contraseña",
+    "haveInvite": "Tengo un código de invitación",
+    "teamSignIn": "Acceso de miembros del equipo"
+  },
+  "link": {
+    "title": "Inicia sesión en tu cuenta de SoftGlaze",
+    "subtitle": "Usa el inicio de sesión con un clic aquí y en otros equipos. Tu espacio de trabajo no cambia."
+  },
+  "email": {
+    "title": "Continuar con correo",
+    "subtitle": "Te enviaremos un código de 6 dígitos. No necesitas contraseña.",
+    "label": "Correo electrónico",
+    "placeholder": "tu@empresa.com",
+    "send": "Enviar código",
+    "codeTitle": "Revisa tu correo",
+    "codeBody": "Escribe el código de 6 dígitos que enviamos a {{email}}.",
+    "codeLabel": "Código de 6 dígitos",
+    "verify": "Continuar",
+    "resend": "Enviar un código nuevo",
+    "resendIn": "Enviar un código nuevo en {{count}} s",
+    "checkSpam": "Puede tardar un minuto. Si no lo ves, revisa la carpeta de spam.",
+    "devCode": "Esta versión no tiene servidor de correo, así que este es el código: {{code}}",
+    "change": "Usar otro correo"
+  },
+  "waiting": {
+    "title": "Termina en tu navegador",
+    "body": "Abrimos {{provider}} en tu navegador. Inicia sesión allí y luego vuelve aquí.",
+    "status": "Esperando a {{provider}}...",
+    "reopen": "Abrir la página de nuevo",
+    "anotherWay": "¿No volvió? Prueba de otra forma",
+    "cancel": "Cancelar"
+  },
+  "back": "Atrás",
+  "useCase": {
+    "title": "¿Para qué usarás SoftGlaze?",
+    "subtitle": "Opcional. Nos ayuda a mejorar SoftGlaze para ti.",
+    "continue": "Continuar",
+    "skip": "Omitir"
+  },
+  "move": {
+    "title": "Tu suscripción",
+    "moved": "Listo. Tu suscripción ya funciona en este equipo."
+  },
+  "account": {
+    "title": "Métodos de inicio de sesión",
+    "subtitle": "Cómo inicias sesión en tu cuenta de SoftGlaze. Al iniciar sesión en un equipo nuevo, tu licencia también pasa a ese equipo.",
+    "signedInAs": "Sesión iniciada como {{email}}",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "Código por correo",
+    "lastUsed": "Último uso: {{date}}",
+    "linkedOn": "Vinculado el {{date}}",
+    "signOut": "Cerrar sesión",
+    "signOutConfirm": "¿Cerrar sesión en tu cuenta de SoftGlaze en este equipo? Puedes volver a iniciar sesión con la misma cuenta cuando quieras.",
+    "signingOut": "Cerrando sesión...",
+    "offline": "Sin conexión: se muestra lo que guardó este equipo.",
+    "notSignedIn": "Inicia sesión en tu cuenta de SoftGlaze para usar el inicio de sesión con un clic aquí y en otros equipos.",
+    "signInWorkspace": "Este espacio de trabajo se abre con tu inicio de sesión. Añade una contraseña arriba si también quieres entrar sin internet.",
+    "linked": "Sesión iniciada. Tus métodos de inicio de sesión están abajo.",
+    "loading": "Cargando métodos de inicio de sesión...",
+    "notAvailable": "El inicio de sesión con un clic necesita el servidor de licencias de SoftGlaze, que esta versión no usa."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Conéctate a internet para iniciar sesión.",
+    "SIGNIN_EXPIRED": "Este inicio de sesión caducó o ya se usó. Inténtalo de nuevo.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Este espacio de trabajo pertenece a otra cuenta de SoftGlaze. Inicia sesión con la cuenta con la que lo creaste.",
+    "SIGNIN_EMAIL_MISMATCH": "Usa el correo de este espacio de trabajo.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Tu cuenta de GitHub no tiene un correo principal verificado. Verifícalo en GitHub (Settings > Emails) o continúa con tu correo.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Usa una dirección de correo permanente.",
+    "SIGNIN_UNAVAILABLE": "Este inicio de sesión aún no está disponible. Continúa con tu correo o usa Más opciones.",
+    "SIGNIN_FAILED": "No se pudo completar el inicio de sesión. Inténtalo de nuevo en un minuto.",
+    "SIGNIN_TIMEOUT": "El inicio de sesión tardó demasiado. Inténtalo de nuevo.",
+    "SIGNIN_NOT_ALLOWED": "Este inicio de sesión no está disponible para este espacio de trabajo.",
+    "SIGNIN_KEY_LOST": "No se pudo abrir este espacio de trabajo con tu inicio de sesión en este equipo. Inicia sesión con tu contraseña.",
+    "SIGNIN_SESSION_ENDED": "Tu sesión terminó. Vuelve a iniciar sesión.",
+    "SIGNIN_BAD_INPUT": "Escribe un correo electrónico válido.",
+    "MOVE_FAILED": "No se pudo mover la licencia ahora. Inténtalo de nuevo en un minuto."
+  }
+}

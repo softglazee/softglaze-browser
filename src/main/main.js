@@ -242,6 +242,25 @@ function configureSessionSecurity() {
   session.defaultSession.setPermissionCheckHandler(() => false);
 }
 
+// One-click sign-in (1.0.26): the licensing server hands the sign-in back through softglaze://auth?code=..
+// (src/main/oneClickSignIn.js). The NSIS installer (build/installer.nsh) and the Store package manifest
+// (package.json build.protocols) register the scheme; this also registers it for the current Windows user,
+// so an install from before the installer change gets it at the first start. The Store package is
+// registered by its manifest only. An unpacked dev run takes the loopback listener instead.
+const AUTH_SCHEME = 'softglaze';
+if (!process.windowsStore) {
+  try {
+    if (app.isPackaged) app.setAsDefaultProtocolClient(AUTH_SCHEME);
+  } catch (e) { console.warn('[auth] protocol registration failed:', e && e.message); }
+}
+
+// A softglaze://auth URL from the operating system: finish the pending sign-in in this window.
+function deliverAuthUrl(argv) {
+  const url = require('./oneClickAuth').findProtocolUrl(argv);
+  if (!url) return false;
+  try { return require('./ipcHandlers').handleAuthProtocolUrl(url); } catch (_) { return false; }
+}
+
 // Only one instance may own the workspace: the startup orphan scan kills every Chrome referencing
 // softglaze_profiles, so a second instance would kill the first one's live sessions. Without the
 // lock, quit before whenReady runs any cleanup; with it, a second launch focuses this one.
@@ -249,7 +268,9 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
-app.on('second-instance', () => {
+app.on('second-instance', (_event, argv) => {
+  // Windows starts a second instance for softglaze://auth?...; the sign-in result goes to the waiting window.
+  deliverAuthUrl(argv);
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -258,6 +279,11 @@ app.on('second-instance', () => {
     // Recreate the window if the app was running in the background with no open windows
     createMainWindow(); 
   }
+});
+// macOS hands custom-scheme URLs to the running app instead of starting a second instance.
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  deliverAuthUrl([url]);
 });
 }
 
