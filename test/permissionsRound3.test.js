@@ -19,7 +19,7 @@ const { pathToFileURL } = require('node:url');
 const permissions = require('../src/main/permissions');
 const rbacPolicy = require('../src/main/rbacPolicy');
 const featureGate = require('../src/main/featureGate');
-const { redactPlatformAccounts } = require('../src/main/profileRedaction');
+const { redactPlatformAccounts, redactUseOnlyProxy } = require('../src/main/profileRedaction');
 const { BROWSER_CORE, normalizeBrowserCore } = require('../src/main/importParser');
 const { createFakePrisma } = require('./helpers/fakePrisma');
 
@@ -141,11 +141,16 @@ function loadSettings(stored = {}) {
   const settings = new Map([['globalSettings', JSON.parse(JSON.stringify(stored))]]);
   const fns = loadMain([...VALIDATORS, 'requirePermission', 'deepMergeSettings', 'getGlobalSettings', 'setGlobalSettings',
     'activeIsSuperAdmin', 'withoutSuperOnlyKeys', 'getGlobalSettingsForActor', 'changedGlobalSettingKeys',
-    'assertCanWriteGlobalSettings', 'withoutWorkspaceSecrets', 'setGlobalSettingsForActor'], {
+    'assertCanWriteGlobalSettings', 'withoutWorkspaceSecrets', 'setGlobalSettingsForActor',
+    // Saved filters and warm-up lists are each member's own since round 4 (test/permissionsRound4.test.js).
+    'withMemberPageLists', 'pageListsOwnerKey', 'emptyPageLists', 'memberSinceStamp', 'copyJson', 'loadMemberPageLists',
+    'ownPageListsIn', 'readOwnPageLists', 'writeOwnPageLists'], {
     ...ws.deps,
     readSetting: async (k, d) => (settings.has(k) ? JSON.parse(JSON.stringify(settings.get(k))) : d),
+    readSettingStrict: async (k) => (settings.has(k) ? JSON.parse(JSON.stringify(settings.get(k))) : undefined),
     writeSetting: async (k, v) => { settings.set(k, JSON.parse(JSON.stringify(v))); }
-  }, ['GLOBAL_SETTINGS_DEFAULTS', 'SUPER_ONLY_GLOBAL_KEYS', 'GLOBAL_SETTING_WRITE_RULES', 'WORKSPACE_SETTING_RULE', 'SETTING_ROLE_PHRASE']);
+  }, ['GLOBAL_SETTINGS_DEFAULTS', 'SUPER_ONLY_GLOBAL_KEYS', 'GLOBAL_SETTING_WRITE_RULES', 'WORKSPACE_SETTING_RULE', 'SETTING_ROLE_PHRASE',
+    'MEMBER_PAGE_LIST_KEYS', 'MEMBER_PAGE_LISTS_SETTING', 'memberPageListsLock']);
   return { ws, fns, settings, stored: () => settings.get('globalSettings') };
 }
 
@@ -183,7 +188,11 @@ test('workspace settings: a member\'s own page lists stay writable, Smart Autofi
   await fns.setGlobalSettingsForActor({ profileFilters: [{ name: 'mine', filter: {} }] });
   await fns.setGlobalSettingsForActor({ onboardingDone: true });
   await fns.setGlobalSettingsForActor({ warmer: { sites: ['https://example.com'] } });
-  assert.deepEqual([stored().profileFilters.length, stored().onboardingDone, stored().warmer.sites.length], [1, true, 1]);
+  assert.equal(stored().onboardingDone, true);
+  // Round 4: the filters and warm-up lists are the Operator's own; the Owner's stay as they were.
+  const mine = await fns.getGlobalSettingsForActor();
+  assert.deepEqual([mine.profileFilters.length, mine.warmer.sites.length], [1, 1]);
+  assert.deepEqual([stored().profileFilters.length, stored().warmer], [0, undefined]);
   ws.as(3, revoked('automation.run'));
   await assert.rejects(fns.setGlobalSettingsForActor({ warmer: { loop: true } }), /turned off for your account by an administrator/);
 
@@ -267,10 +276,10 @@ test('the Settings page shows workspace sections read-only to members who may no
   assert.match(PAGE, /apply\(\{ smartAutofill: \{ members: v \} \}\)/, 'the Owner\'s switch for members\' autofill');
   // Start-page links, the pre-launch "don't check again" box and the onboarding flag.
   const LINKS = read('src', 'renderer', 'pages', 'StartLinksPage.jsx');
-  assert.match(LINKS, /const deny = perm\.deny\('settings\.manage'\);/);
+  assert.match(LINKS, /const deny = perm\.denyWorkspaceSettings\(\);/);
   assert.match(LINKS, /<fieldset disabled=\{Boolean\(deny\)\}/);
   assert.match(LINKS, /<GuardedButton deny=\{deny\} variant="primary" size="sm" onClick=\{save\}/);
-  assert.match(read('src', 'renderer', 'pages', 'ProfilesPage.jsx'), /canStopAsking=\{!perm\.deny\('settings\.manage'\)\}/);
+  assert.match(read('src', 'renderer', 'pages', 'ProfilesPage.jsx'), /canStopAsking=\{!perm\.denyWorkspaceSettings\(\)\}/);
   assert.match(read('src', 'renderer', 'components', 'PreLaunchCheck.jsx'), /\{canStopAsking && \(/);
   const WIZARD = read('src', 'renderer', 'components', 'OnboardingWizard.jsx');
   assert.doesNotMatch(WIZARD, /\.\.\.\(g \|\| \{\}\), onboardingDone/, 'the wizard no longer writes the whole settings blob');
@@ -401,8 +410,8 @@ test('stripUseOnlySecrets: a DIRECT profile\'s stale address is cleared without 
 test('a "use only" share never hands over its saved logins in the profile list or the spreadsheet export either', async () => {
   const db = seed();
   const ws = workspace(db);
-  const { withViewerEditFlags } = loadMain(['withViewerEditFlags'], {
-    ...ws.deps, redactPlatformAccounts,
+  const { withViewerEditFlags } = loadMain(['withViewerEditFlags', 'proxyInVisiblePool'], {
+    ...ws.deps, redactPlatformAccounts, redactUseOnlyProxy, currentMemberCanRevealProxy: true,
     serializeProfile: (p) => ({ ...p, platformAccounts: p.platformAccounts ? JSON.parse(p.platformAccounts) : [] })
   });
   ws.as(5); // a Manager may reveal credentials, but not a use-only share's
@@ -410,7 +419,7 @@ test('a "use only" share never hands over its saved logins in the profile list o
   assert.deepEqual([rows[104].platformAccounts[0].password, rows[104].platformAccounts[0].twoFa, rows[104].platformAccounts[0].username], ['••••••••', '••••••••', 'owner@example.com']);
   assert.equal(rows[106].platformAccounts[0].password, 'hunter2', 'shared for editing: unchanged');
 
-  const { gatherExport } = loadMain(['assertCanRevealKind', 'firstAccount', 'gatherExport'], {
+  const { gatherExport } = loadMain(['assertCanRevealKind', 'firstAccount', 'proxyInVisiblePool', 'gatherExport'], {
     ...ws.deps, rbacPolicy, readSetting: async (_k, d) => d, currentMemberCanRevealProxy: true,
     doNotTrackChoice: require('../src/main/doNotTrack').doNotTrackChoice
   }, ['REVEAL_LABELS', 'EXPORT_COLUMNS']);
@@ -436,36 +445,39 @@ test('the clone result says what was left out, and the clone buttons warn on a "
 function loadAutofill(globals = {}) {
   const db = seed();
   const state = { id: null, dbDown: false };
-  const fns = loadMain(['vaultAutofillAllowed', 'personaVaultAvailable'], {
+  const sessionLaunchers = new Map();
+  const fns = loadMain(['vaultAutofillAllowed', 'personaVaultAvailable', 'sessionAutofillAllowed', 'firefoxAutofillAllowed'], {
     permissions,
-    actingMemberId: () => state.id,
+    sessionLaunchers,
+    firefoxEngine: { isFirefoxSession: () => false },
     getPrisma: () => (state.dbDown ? { member: { findUnique: async () => { throw new Error('locked'); } } } : db),
     getGlobalSettings: async () => globals,
     ipcAuthState: async () => ({ vaultLocked: false, signedIn: state.id != null, memberCount: 5 })
   });
-  return { db, state, fns };
+  return { db, state, fns, sessionLaunchers };
 }
 
 test('autofill offers the vault to the Owner only, unless the Owner lets team members use it', async () => {
+  // Round 4: the rule is asked for the member who launched the browser (test/permissionsRound4.test.js).
   const off = loadAutofill({ smartAutofill: { enabled: true, members: false } });
-  const who = async (id) => { off.state.id = id; return off.fns.vaultAutofillAllowed(); };
+  const who = async (id) => off.fns.vaultAutofillAllowed(id);
   assert.deepEqual([await who(1), await who(2), await who(5), await who(3)], [true, false, false, false]);
   assert.equal(await who(-1), true, 'the Super Admin');
   assert.equal(await who(null), true, 'single-user mode is the Owner');
+  off.sessionLaunchers.set('100', { memberId: 2, firefoxAutofill: false });
+  off.sessionLaunchers.set('104', { memberId: 1, firefoxAutofill: false });
   off.state.id = 2;
-  assert.equal(await off.fns.personaVaultAvailable(), false, 'the bridges get nothing for an Admin');
-  off.state.id = 1;
-  assert.equal(await off.fns.personaVaultAvailable(), true);
+  assert.equal(await off.fns.personaVaultAvailable({ sessionId: '100' }), false, 'the bridges get nothing for a browser an Admin launched');
+  assert.equal(await off.fns.personaVaultAvailable({ sessionId: '104' }), true);
   off.state.id = null; // signed out on a workspace with members: nothing, as before
-  assert.equal(await off.fns.personaVaultAvailable(), false);
+  assert.equal(await off.fns.personaVaultAvailable({ sessionId: '104' }), false);
 
   const on = loadAutofill({ smartAutofill: { enabled: true, members: true } });
-  for (const id of [2, 5, 3]) { on.state.id = id; assert.equal(await on.fns.vaultAutofillAllowed(), true, `member ${id}`); }
+  for (const id of [2, 5, 3]) assert.equal(await on.fns.vaultAutofillAllowed(id), true, `member ${id}`);
   await on.db.member.update({ where: { id: 3 }, data: { status: 'suspended' } });
-  on.state.id = 3;
-  assert.equal(await on.fns.vaultAutofillAllowed(), false, 'a suspended member gets nothing');
-  on.state.id = 2; on.state.dbDown = true;
-  assert.equal(await on.fns.vaultAutofillAllowed(), false, 'fails closed when the member cannot be read');
+  assert.equal(await on.fns.vaultAutofillAllowed(3), false, 'a suspended member gets nothing');
+  on.state.dbDown = true;
+  assert.equal(await on.fns.vaultAutofillAllowed(2), false, 'fails closed when the member cannot be read');
   // Defaults: off for members.
   const defaults = extractConst(IPC, 'GLOBAL_SETTINGS_DEFAULTS');
   assert.match(defaults, /smartAutofill: \{ enabled: true, firefox: true, members: false \}/);
@@ -474,11 +486,12 @@ test('autofill offers the vault to the Owner only, unless the Owner lets team me
 test('both autofill bridges and the Firefox launch use the rule', () => {
   const reg = IPC.slice(IPC.indexOf('function registerIpcHandlers()'));
   const chromium = reg.slice(reg.indexOf('configurePersonaBridge({'), reg.indexOf('autofillBridge.configure({'));
-  assert.match(chromium, /isAvailable: \(\) => personaVaultAvailable\(\)/);
-  assert.match(chromium, /return on && \(await vaultAutofillAllowed\(\)\);/, 'no autofill button for a member without it');
+  // Round 4: the session's launcher decides (test/permissionsRound4.test.js).
+  assert.match(chromium, /isAvailable: \(ctx\) => personaVaultAvailable\(\{ sessionId: /);
+  assert.match(chromium, /return on && \(await sessionAutofillAllowed\(/, 'no autofill button in a browser its launcher may not use it in');
   const firefox = reg.slice(reg.indexOf('autofillBridge.configure({'));
-  assert.match(firefox, /isAvailable: \(\) => personaVaultAvailable\(\)/);
-  assert.match(IPC, /&& \(globalSettings\.smartAutofill\?\.firefox !== false\)\s*&& \(await vaultAutofillAllowed\(\)\);/, 'the Firefox autofill add-on is installed only for an allowed member');
+  assert.match(firefox, /isAvailable: \(\) => personaVaultAvailable\(\{ firefox: true \}\)/);
+  assert.match(IPC, /&& \(globalSettings\.smartAutofill\?\.firefox !== false\)\s*&& \(await vaultAutofillAllowed\(launchedBy\)\);/, 'the Firefox autofill add-on is installed only for an allowed launcher');
   // The Owner's switch lives in Settings > Smart Autofill (Owner only), and the Data Vault notice says so.
   for (const lang of ['en', 'es']) {
     const ns = JSON.parse(read('src', 'renderer', 'i18n', 'locales', lang, 'settingsExtra.json'));
