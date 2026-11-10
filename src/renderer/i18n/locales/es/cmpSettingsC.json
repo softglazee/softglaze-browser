@@ -115,7 +115,7 @@
       "integrationTokenLabel": "Token de integración",
       "integrationTokenPlaceholder": "Token de integración de la página API for developers",
       "lifeDefaultTime": "Por defecto ({{time}})",
-      "lifeDefaultUpTo": "Por defecto (hasta {{time}})",
+      "lifeDefaultUpTo": "Hasta {{time}}",
       "lifeProviderDefault": "Valor del proveedor",
       "life4320": "72 horas",
       "life10080": "7 días",
