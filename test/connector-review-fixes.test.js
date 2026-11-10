@@ -26,9 +26,13 @@ test('Froxy rows dedupe on the password, where country and pool type live', () =
   assert.match(body, /dedupeOnPassword: true/);
 });
 
-test('Live Proxies keeps the index inside the 8-digit session', () => {
-  assert.match(IPC, /typed\.slice\(0, Math\.max\(1, 8 - String\(n\)\.length\)\)/);
+// 1.0.27 backlog 28: a typed session is used as typed on one row; one that would run past 8 digits
+// with the row number is refused with a message instead of being cut (test/connectorsVendors1.test.js
+// runs it).
+test('Live Proxies never cuts a typed session to fit the index', () => {
+  assert.doesNotMatch(IPC, /typed\.slice\(0, Math\.max\(1, 8 - String\(n\)\.length\)\)/);
   assert.doesNotMatch(IPC, /`\$\{typed\}\$\{i \+ 1\}`\.slice\(0, 8\)/);
+  assert.match(IPC, /const sid = typed \? \(n > 1 \? `\$\{typed\}\$\{i \+ 1\}` : typed\) : randomSid\(\);/);
 });
 
 test('Bright Data uses port 44445 and refuses a login without the customer id', () => {
@@ -54,6 +58,8 @@ test('panel flags match what the adapters read', () => {
   for (const [k, m] of [['novada', 120], ['proxmint', 120], ['databay', 120]]) assert.match(UI, new RegExp(`key: '${k}'.*maxLife: ${m}`), k);
   // RapidProxy's stime runs to 180 minutes, which the shared list has no step for, so it lists its own.
   assert.match(UI, /key: 'rapidproxy'.*lifeOptions: \[5, 10, 30, 60, 120, 180\]/, 'rapidproxy');
-  assert.match(UI, /\{lifeOptionsFor\(provider\.geoSync, form\.poolType\)\.map\(/, 'Keep same IP offers only what the vendor (and the pool) accepts (src/renderer/lib/gatewayPull.mjs)');
+  // The options follow the chosen pool as well (maxLifeByPool: NOVADA's Rotating ISP), 1.0.27 backlog 11.
+  assert.match(UI, /lifeOptionsFor\(provider\.geoSync \|\| \{\}, poolType\)/, 'Keep same IP offers only what the vendor accepts (src/renderer/lib/gatewayPull.mjs)');
+  assert.match(UI, /\{lifeValuesFor\(form\.poolType\)\.map\(/);
   assert.doesNotMatch(UI, /up to 500/, 'no promise the adapters do not keep');
 });

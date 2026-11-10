@@ -89,7 +89,8 @@ test('froxyPassword appends the geo fields to the dashboard password (help.froxy
   assert.equal(U.froxyPassword('qwerty', {}), 'qwerty;;;;', 'no country = any location');
   assert.equal(U.froxyBasePassword('abc;de;;;'), 'abc');
   assert.equal(U.froxyType('mobile'), 'mobile');
-  assert.equal(U.froxyType('datacenter'), 'fast');
+  // Datacenter plans use the type word shared; fast is the separate Fast product (1.0.27 backlog 26).
+  assert.equal(U.froxyType('datacenter'), 'shared');
   assert.equal(U.froxyType('anything'), 'wifi');
 });
 

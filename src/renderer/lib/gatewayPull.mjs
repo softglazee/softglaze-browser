@@ -30,19 +30,29 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   twoextract: 10, // 2extract's default
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
   simplyproxies: 120, // 2 hours, extended while in use
+  marsproxies: 1440, // no lifetime is sent: MarsProxies' default of 24 hours
   proxiessx: 1440 // the app sends -ttl-86400 (Proxies.sx's own default is 1 hour)
 });
 
 // Every Keep same IP time the form can offer, in minutes; a connector shows those up to its maxLife
-// (24 hours when unset), or its own lifeOptions list. A pool whose vendor limit differs has its own
-// list in geoSync.poolLife ({ <poolType>: [minutes...] }), so a pick is never clamped by main.
+// (24 hours when unset), or its own lifeOptions list (times the shared list has no step for, such as
+// RapidProxy's 180 minutes). A pool's own maximum (maxLifeByPool: NOVADA's Rotating ISP, Databay's
+// Residential Flex, CatProxies' Mobile) cuts either list for that pool, so a pick is never clamped.
 export const LIFE_OPTIONS = Object.freeze([5, 10, 30, 60, 120, 360, 720, 1440, 4320, 10080]);
 export function lifeOptionsFor(geoSync = {}, poolType = '') {
-  const perPool = poolType && geoSync.poolLife ? geoSync.poolLife[poolType] : null;
-  if (Array.isArray(perPool) && perPool.length) return perPool.slice();
-  if (Array.isArray(geoSync.lifeOptions) && geoSync.lifeOptions.length) return geoSync.lifeOptions.slice();
-  const max = Number(geoSync.maxLife) > 0 ? Number(geoSync.maxLife) : 1440;
+  const byPool = geoSync.maxLifeByPool && Number(geoSync.maxLifeByPool[poolType]) > 0 ? Number(geoSync.maxLifeByPool[poolType]) : 0;
+  if (Array.isArray(geoSync.lifeOptions) && geoSync.lifeOptions.length) {
+    return byPool ? geoSync.lifeOptions.filter((m) => m <= byPool) : geoSync.lifeOptions.slice();
+  }
+  const max = byPool || (Number(geoSync.maxLife) > 0 ? Number(geoSync.maxLife) : 1440);
   return LIFE_OPTIONS.filter((m) => m <= max);
+}
+
+// Whether State, City and the other place filters apply to the chosen pool: a connector whose pools
+// differ lists the ones that take them in geoSync.geoPools (MangoProxy, Proxy302).
+export function geoForPool(geoSync = {}, poolType = '') {
+  if (!geoSync.geo) return false;
+  return !Array.isArray(geoSync.geoPools) || geoSync.geoPools.includes(poolType);
 }
 
 // The text of the blank Keep same IP option, as an i18n key and its values: "Different IP each time"

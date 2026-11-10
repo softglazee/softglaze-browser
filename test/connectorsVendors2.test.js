@@ -89,17 +89,23 @@ test('48 Databay: Residential Flex offers only its own 30 minutes; the other poo
   for (const m of lifeOptionsFor(g, 'residential_FLEX')) {
     assert.match(U.databayUsername('u1', { zone: 'residential_FLEX', session: 'a', lengthMin: m }), new RegExp(`-sessionLength-${m}$`));
   }
-  // A time the new pool does not offer goes back to blank in the form.
-  assert.match(UI, /if \(!f\.life \|\| lifeOptionsFor\(g, f\.poolType\)\.some\(\(m\) => String\(m\) === String\(f\.life\)\)\) return f;/);
+  // One mechanism with NOVADA's Rotating ISP: the pool's maximum (maxLifeByPool), and another Pool type
+  // clears a time it does not offer.
+  assert.deepEqual(g.maxLifeByPool, { residential_FLEX: 30 });
+  assert.match(UI, /if \(form\.life && !lifeValuesFor\(value\)\.includes\(String\(form\.life\)\)\) set\('life', ''\);/);
 });
 
 test('48 Databay: State and City show and are sent on Residential only, and main refuses them elsewhere', async () => {
   const g = geoSyncOf('databay');
   assert.deepEqual(g.geoPools, ['residential']);
-  assert.match(UI, /\(provider\.geoSync\.geo \|\| provider\.geoSync\.usState\) && geoForPool\(provider\.geoSync, form\.poolType\)/, 'State is hidden off Residential');
-  assert.match(UI, /provider\.geoSync\.geo && geoForPool\(provider\.geoSync, form\.poolType\) && \(/, 'City too');
-  assert.match(UI, /state: geoForPool\(g, form\.poolType\) \? form\.state\.trim\(\) : '',/, 'a hidden State is not sent');
-  assert.match(UI, /city: geoForPool\(g, form\.poolType\) \? form\.city\.trim\(\) : '',/);
+  // The shared geoPools rule (gatewayPull.mjs geoForPool): the form hides State and City, and the pull sends neither.
+  const { geoForPool } = await pull();
+  assert.equal(geoForPool(g, 'residential'), true);
+  for (const pool of ['residential_FLEX', 'mobile', 'datacenter']) assert.equal(geoForPool(g, pool), false, pool);
+  assert.match(UI, /\{\(geoOn \|\| provider\.geoSync\.usState\) && \(/, 'State is hidden off Residential');
+  assert.match(UI, /\{geoOn && \(/, 'City too');
+  assert.match(UI, /state: placeOn \? form\.state\.trim\(\) : '',/, 'a hidden State is not sent');
+  assert.match(UI, /city: placeOn \? form\.city\.trim\(\) : '',/);
   const a = load();
   for (const poolType of ['residential_FLEX', 'mobile', 'datacenter']) {
     await assert.rejects(a.fetchDatabayPool({ username: 'u1', password: 'p', poolType, country: 'US', city: 'Miami', count: '2' }), /State and City work on Residential only/, poolType);
@@ -123,13 +129,12 @@ test('48 Databay: a hyphen in a place name is %2D and a space %20, as the Connec
 // ---- 49 GonzoProxy ---------------------------------------------------------------------------------
 
 test('49 GonzoProxy: Country is required in the form, so a pull never starts on Any / Random', () => {
+  // The shared countryRequired flag: no Any / Random option, the form starts on United States, and Pull
+  // asks for a country before calling the vendor.
   assert.equal(geoSyncOf('gonzoproxy').countryRequired, true);
-  assert.match(UI, /provider\.geoSync\.countryRequired\s*\? <option value="" disabled>\{t\('proxyProviders\.geo\.pickCountryOption'\)\}<\/option>/, 'no Any / Random option');
-  assert.match(UI, /if \(g\.countryRequired && !form\.country\) \{ setErr\(t\('proxyProviders\.geo\.countryRequiredError', \{ provider: provider\.name \}\)\); return; \}/);
-  for (const lang of ['en', 'es']) {
-    for (const k of ['pickCountryOption', 'countryRequiredError', 'requiredWord']) assert.equal(typeof geoText(lang, k), 'string', `${lang} ${k}`);
-    assert.match(geoText(lang, 'countryRequiredError'), /\{\{provider\}\}/);
-  }
+  assert.match(UI, /\{!provider\.geoSync\.countryRequired && <option value="">/, 'no Any / Random option');
+  assert.match(UI, /country: needCountry \? 'US' : ''/);
+  assert.match(UI, /if \(g\.countryRequired && !form\.country\) \{ setErr\(/);
   // Main still refuses an empty country, with its own message.
   assert.throws(() => U.gonzoProxyUsername('Gz1abc', {}), /pick a country/);
 });
@@ -540,19 +545,21 @@ test('75 MobileProxy.Space: each proxy gets its country from id_country, asked o
 
 // ---- The shared mechanisms this lane adds ------------------------------------------------------------------
 
-test('lifeOptionsFor takes the pool: poolLife wins for that pool, other pools keep the vendor list', async () => {
+test('lifeOptionsFor: a pool maximum (maxLifeByPool) also cuts a vendor\'s own lifeOptions list', async () => {
   const { lifeOptionsFor } = await pull();
-  const g = { maxLife: 120, poolLife: { flex: [5, 30] } };
-  assert.deepEqual(lifeOptionsFor(g, 'flex'), [5, 30]);
+  const g = { maxLife: 120, maxLifeByPool: { flex: 30 } };
+  assert.deepEqual(lifeOptionsFor(g, 'flex'), [5, 10, 30]);
   assert.deepEqual(lifeOptionsFor(g, 'other'), [5, 10, 30, 60, 120]);
   assert.deepEqual(lifeOptionsFor(g), [5, 10, 30, 60, 120], 'no pool: the vendor list');
-  assert.deepEqual(lifeOptionsFor({ lifeOptions: [5, 180], poolLife: { m: [10] } }, 'x'), [5, 180]);
+  const own = { lifeOptions: [5, 180, 240, 1440], maxLifeByPool: { m: 240 } };
+  assert.deepEqual(lifeOptionsFor(own, 'm'), [5, 180, 240], 'steps the shared list lacks, cut for the pool');
+  assert.deepEqual(lifeOptionsFor(own, 'x'), [5, 180, 240, 1440]);
 });
 
 test('every new or changed string is in English and Spanish, with no em or en dashes', () => {
   const vendors = ['packetstream', 'airproxy', 'catproxies', 'rapidproxy', 'proxiessx', 'mobileproxyspace', 'proxysolutions', 'databay',
     'proxybonanza', 'gsocks', 'singaporemobileproxy', 'simplyproxies', 'gonzoproxy', 'twoextract', 'coronium'];
-  const geoKeys = ['life180', 'life240', 'requiredWord', 'pickCountryOption', 'countryRequiredError', 'gatewayRegionLabel', 'regionUs', 'regionEu', 'regionAsia'];
+  const geoKeys = ['life180', 'life240', 'gatewayRegionLabel', 'regionUs', 'regionEu', 'regionAsia'];
   for (const lang of ['en', 'es']) {
     for (const v of vendors) {
       assert.equal(typeof hint(lang, v), 'string', `${lang} ${v}`);
