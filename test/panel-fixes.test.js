@@ -37,11 +37,11 @@ test('Proxy unique key covers the password via its hash (schema + migrations agr
 });
 
 test('Live Proxies usernames match the dashboard generator', () => {
-  assert.equal(U.liveProxiesUsername('LV58712', { country: 'US' }), 'LV58712-lv_us');
-  assert.equal(U.liveProxiesUsername('LV58712', { country: 'gb', sid: '1936119' }), 'LV58712-lv_gb-1936119');
-  assert.equal(U.liveProxiesUsername('LV58712-lv_us-123', { country: 'CA' }), 'LV58712-lv_ca', 'a pasted full username keeps only the account');
-  assert.equal(U.liveProxiesUsername('LV58712', { country: 'US', sid: 'ab123456789' }), 'LV58712-lv_us-12345678', 'sid is digits only, max 8');
-  assert.equal(U.liveProxiesUsername('LV58712', {}), '', 'a country is required');
+  assert.equal(U.liveProxiesUsername('LV00000', { country: 'US' }), 'LV00000-lv_us');
+  assert.equal(U.liveProxiesUsername('LV00000', { country: 'gb', sid: '1936119' }), 'LV00000-lv_gb-1936119');
+  assert.equal(U.liveProxiesUsername('LV00000-lv_us-123', { country: 'CA' }), 'LV00000-lv_ca', 'a pasted full username keeps only the account');
+  assert.equal(U.liveProxiesUsername('LV00000', { country: 'US', sid: 'ab123456789' }), 'LV00000-lv_us-12345678', 'sid is digits only, max 8');
+  assert.equal(U.liveProxiesUsername('LV00000', {}), '', 'a country is required');
   assert.equal(U.liveProxiesStickyHost(1), 'b2b-s1.liveproxies.io');
   assert.equal(U.liveProxiesStickyHost(10), 'b2b-s10.liveproxies.io');
   // Only 17 sticky servers exist in DNS. A pull of 50 used to invent b2b-s18 to b2b-s50.
@@ -62,7 +62,7 @@ test('blank session + How many > 1 mints sticky sessions on the gateway vendors'
   assert.equal(hits.length, 1, 'PacketStream (it has no Keep same IP)');
   // CatProxies and the shared gateway minter follow gatewayPullPlan, which also makes one row sticky
   // when Keep same IP is set (test/connectorsShared.test.js).
-  const plans = IPC.match(/const plan = gatewayPullPlan\(\{ session, count, life \}\);\n  const fixed = plan\.session \|\| \(plan\.sticky \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
+  const plans = IPC.match(/const plan = gatewayPullPlan\(\{ session, count, life \}\);\r?\n  const fixed = plan\.session \|\| \(plan\.sticky \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
   assert.equal(plans.length, 2, 'CatProxies and mintGatewayRows');
 });
 

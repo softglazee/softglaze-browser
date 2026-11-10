@@ -67,7 +67,7 @@ test('gateway vendors mint up to 1000 sticky rows per pull, each distinct', asyn
     froxy: await a.fetchFroxyPool({ username: 'pkg', password: 'wifi;;;;', country: 'US', count: 1500 }),
     packetstream: await a.fetchPacketStreamPool({ username: 'u', password: 'k', country: 'US', count: 1500 }),
     rapidproxy: await a.fetchRapidProxyPool({ username: 'sub1', password: 'pw', country: 'US', count: 1500 }),
-    liveproxies: await a.fetchLiveProxiesPool({ username: 'LV58712', password: 'pw', country: 'US', count: 1500 })
+    liveproxies: await a.fetchLiveProxiesPool({ username: 'LV00000', password: 'pw', country: 'US', count: 1500 })
   };
   for (const [vendor, rows] of Object.entries(pulls)) {
     assert.equal(rows.length, 1000, `${vendor} pulls up to 1000`);
@@ -87,17 +87,17 @@ test('Froxy gives one row per port, 9000 to 9999, and no session token', async (
 
 test('Live Proxies keeps its sticky host per index and digits-only sessions, and never repeats one', async () => {
   const a = load();
-  const rows = await a.fetchLiveProxiesPool({ username: 'LV58712', password: 'pw', country: 'GB', count: 1000 });
+  const rows = await a.fetchLiveProxiesPool({ username: 'LV00000', password: 'pw', country: 'GB', count: 1000 });
   assert.equal(rows[0].host, 'b2b-s1.liveproxies.io');
   assert.equal(rows[16].host, 'b2b-s17.liveproxies.io');
   assert.equal(rows[17].host, 'b2b-s1.liveproxies.io');
-  const sids = rows.map((r) => /^LV58712-lv_gb-(\d{1,8})$/.exec(r.username)[1]);
+  const sids = rows.map((r) => /^LV00000-lv_gb-(\d{1,8})$/.exec(r.username)[1]);
   assert.equal(new Set(sids).size, 1000, 'random session ids are unique within a pull');
-  const typed = await a.fetchLiveProxiesPool({ username: 'LV58712', password: 'pw', country: 'US', session: '42', count: 1000 });
-  assert.equal(typed[0].username, 'LV58712-lv_us-421');
-  assert.equal(typed[999].username, 'LV58712-lv_us-421000');
-  const one = await a.fetchLiveProxiesPool({ username: 'LV58712', password: 'pw', country: 'US', count: 1 });
-  assert.deepEqual({ host: one[0].host, username: one[0].username }, { host: 'b2b.liveproxies.io', username: 'LV58712-lv_us' });
+  const typed = await a.fetchLiveProxiesPool({ username: 'LV00000', password: 'pw', country: 'US', session: '42', count: 1000 });
+  assert.equal(typed[0].username, 'LV00000-lv_us-421');
+  assert.equal(typed[999].username, 'LV00000-lv_us-421000');
+  const one = await a.fetchLiveProxiesPool({ username: 'LV00000', password: 'pw', country: 'US', count: 1 });
+  assert.deepEqual({ host: one[0].host, username: one[0].username }, { host: 'b2b.liveproxies.io', username: 'LV00000-lv_us' });
 });
 
 test('MarsProxies asks the API for up to 1000 proxies', async () => {
@@ -234,7 +234,8 @@ test('the PacketStream picker lists exactly the countries its password can name'
 test('catalog flags match what the adapters read', () => {
   assert.match(UI, /key: 'proxidize'.*geo: true/, 'Proxidize Per-GB takes country, state, city and a session');
   assert.doesNotMatch(UI, /key: 'proxidize'.*noCountry: true/);
-  assert.match(UI, /key: 'proxidize'.*gateway: \{ host: 'pg\.proxi\.es', port: 20000, type: 'HTTP' \}/, 'the Per-GB host field starts on the documented gateway');
+  // The provider page shows the SOCKS5 port too (socksPort, 1.0.27 backlog 12).
+  assert.match(UI, /key: 'proxidize'.*gateway: \{ host: 'pg\.proxi\.es', port: 20000, type: 'HTTP', socksPort: 20002 \}/, 'the Per-GB host field starts on the documented gateway');
   assert.match(UI, /key: 'froxy'.*noSession: true/, 'Froxy sessions are ports, not a typed name');
 });
 
