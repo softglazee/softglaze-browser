@@ -30,6 +30,7 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   twoextract: 10, // 2extract's default
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
   simplyproxies: 120, // 2 hours, extended while in use
+  simplynode: 30, // the app sends ttl 1800 seconds
   proxyempire: null, // sticky "Same IP": held until ProxyEmpire rotates it or its device goes offline
   massive: 15 // no sessionttl is sent: Massive's default of 15 minutes
 });

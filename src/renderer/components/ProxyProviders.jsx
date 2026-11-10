@@ -144,6 +144,21 @@ export const PROVIDERS = [
   // PROXY6: static IPv4 and IPv6 listed from the account with an API key; Country filters that list
   // and How many caps it. MTProto lines are left out.
   { key: 'proxy6', name: 'PROXY6', initials: 'P6', color: '#4f46e5', referral: 'https://proxy6.net/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, count: true, list: true, proto: true } },
+  // ProxyBrazil: dedicated 4G mobile proxies in Brazil, listed with a pb_live_ key from Integrations
+  // (the Partner API for profile browsers). Each keeps its rotation link for Rotate IP.
+  { key: 'proxybrazil', name: 'ProxyBrazil', initials: 'BR', color: '#009c3b', referral: 'https://proxybrazil.com/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, noCountry: true, count: true, list: true, proto: true } },
+  // ProxyUDP: mobile 4G/5G ports listed with an API token (Dashboard, API Access); each port's login
+  // comes from its detail call. Rotate IP asks the API with the saved token (no link is stored).
+  { key: 'proxyudp', name: 'ProxyUDP', initials: 'PU', color: '#0891b2', referral: 'https://proxyudp.com/', gateway: null, geoSync: { creds: ['token'], noCountry: true, count: true, list: true, proto: true } },
+  // Zokol: French mobile proxies (Orange, SFR, Bouygues, Free) listed with a Bearer API key. Dedicated
+  // lines keep their rotation link for Rotate IP; shared lines have none.
+  { key: 'zokol', name: 'Zokol', initials: 'ZK', color: '#2563eb', referral: 'https://zokol.fr/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, noCountry: true, count: true, list: true, proto: true } },
+  // ResiProx: an API token generates each proxy string on go.resiprox.com:5000 (HTTP or SOCKS5);
+  // Residential and Mobile have separate traffic. How many 1 rotates; more are sticky (up to 50).
+  { key: 'resiprox', name: 'ResiProx', initials: 'RX', color: '#059669', referral: 'https://resiprox.com?ref=n2m3ztm', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile']], count: true, geo: true, countryLookup: true, noSession: true, proto: true } },
+  // SimplyNode: an API key and one sub-account (typed, or the first of the pool with traffic); each
+  // proxy string comes from POST /proxy. Essential and Core are the dashboard's residential solutions.
+  { key: 'simplynode', name: 'SimplyNode', initials: 'SN', color: '#0d9488', referral: 'https://simplynode.io/', gateway: null, geoSync: { creds: ['token', 'username'], optional: ['username'], labels: { token: 'apiKeyLabel', username: 'subaccountLabel' }, poolType: [['residential_essential', 'Residential Essential'], ['residential_core', 'Residential Core'], ['mobile', 'Mobile']], count: true, geo: true, countryLookup: true, noSession: true, life: true, maxLife: 60, proto: true } },
   // Node4: an n4k_ API key (Account Settings, API & Webhooks; read:proxies only). Residential, Rotating
   // Datacenter and Rotating Unmetered logins are built by Node4 (POST /gateways/endpoint); Static
   // Datacenter lists the IPs the account owns (GET /proxies/list). State, city and ASN are Residential only.
@@ -161,8 +176,9 @@ export const PROVIDERS = [
   { key: 'massive', name: 'Massive', initials: 'MV', color: '#4f46e5', referral: 'https://www.joinmassive.com/', gateway: { host: 'network.joinmassive.com', port: 65534, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], labels: { password: 'apiTokenPasswordLabel' }, poolType: [['residential', 'Residential'], ['residential_mobile', 'Residential mobile'], ['isp', 'ISP (US)']], count: true, geo: true, zip: true, asn: true, session: true, life: true, maxLife: 1440, proto: true, gateway: true } }
 ];
 
-// The token field's placeholder follows its label (geoSync.labels.token).
+// The token field's placeholder follows its label (geoSync.labels.token), and so does the username's.
 const TOKEN_PLACEHOLDERS = { apiKeyLabel: 'apiKeyPlaceholder', integrationTokenLabel: 'integrationTokenPlaceholder' };
+const USERNAME_PLACEHOLDERS = { subaccountLabel: 'subaccountPlaceholder' };
 
 // IPRoyal sticky lifetimes, in the "{n}m" / "{n}h" format its API takes (1 second to 168 hours).
 const IPR_LIFETIME_OPTIONS = [['10m', 10, 'minutes'], ['30m', 30, 'minutes'], ['1h', 1, 'hours'], ['6h', 6, 'hours'], ['24h', 24, 'hours'], ['72h', 72, 'hours'], ['168h', 168, 'hours']];
@@ -1207,7 +1223,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                   {provider.geoSync.creds.includes('username') && (
                     <div>
                       <label className={labelCls}>{provider.geoSync.apiKey ? t('proxyProviders.geo.anyipUserLabel', 'Proxy username (user_…)') : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopLabel') : credLabel('username', 'usernameLabel'))}{(provider.geoSync.optional || []).includes('username') && <> {optMarker}</>}</label>
-                      <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : 'username')} autoComplete="off" />
+                      <input value={form.username} onChange={(e) => set('username', e.target.value)} className={inputCls + ' font-mono'} placeholder={provider.geoSync.apiKey ? 'user_XXXX' : (provider.geoSync.shop ? t('proxyProviders.geo.usernameShopPlaceholder') : (USERNAME_PLACEHOLDERS[(provider.geoSync.labels || {}).username] ? t(`proxyProviders.geo.${USERNAME_PLACEHOLDERS[(provider.geoSync.labels || {}).username]}`) : 'username'))} autoComplete="off" />
                     </div>
                   )}
                   {provider.geoSync.creds.includes('password') && (
@@ -1562,10 +1578,10 @@ function ProviderIcon({ k, className = 'w-6 h-6' }) {
     case 'proxyseller': // stacked list rows
       return (<svg {...line}><rect x="4" y="4.5" width="16" height="4" rx="1.2" /><rect x="4" y="10" width="16" height="4" rx="1.2" /><rect x="4" y="15.5" width="16" height="4" rx="1.2" /></svg>);
     default: {
-      // No bundled logo and no drawn mark: the provider's initials (PROVIDERS), else a plain ring.
+      // No logo file and no mark of its own: the catalog's initials, so new connectors tell apart.
       const initials = (PROVIDERS.find((p) => p.key === k) || {}).initials;
       if (initials) {
-        return (<svg {...solid}><text x="12" y="12.5" textAnchor="middle" dominantBaseline="central" fontSize={initials.length > 2 ? 10 : 13} fontWeight="700" fontFamily="inherit">{initials}</text></svg>);
+        return (<svg {...solid} viewBox="0 0 16 16" overflow="visible"><text x="8" y="8.6" textAnchor="middle" dominantBaseline="central" fontSize={initials.length > 2 ? 7 : 9.5} fontWeight="700" fontFamily="inherit">{initials}</text></svg>);
       }
       return (<svg {...line}><circle cx="12" cy="12" r="7" /></svg>);
     }
