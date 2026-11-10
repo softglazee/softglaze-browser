@@ -128,7 +128,12 @@ const {
   gsocksProxyIds, gsocksListRows,
   proxyBonanzaRows,
   proxy6Page,
-  catProxiesIspRows, catProxiesDatacenterRows
+  catProxiesIspRows, catProxiesDatacenterRows,
+  retryAfterSeconds,
+  NODE4_GATEWAY_PRODUCTS, NODE4_CALL_MAX, node4GatewayBody, node4GatewayRows, node4StaticRows, node4Countries,
+  PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
+  mountProxiesRows, mountProxiesRotateTarget,
+  massiveBaseUser, massiveUsername
 } = require('./proxyVendorUtils');
 
 const CHANNELS = Object.freeze({
@@ -1999,7 +2004,11 @@ const PROXY_VENDORS = Object.freeze({
   singaporemobileproxy: 'Singapore Mobile Proxy',
   gsocks: 'Gsocks',
   proxybonanza: 'Proxy Bonanza',
-  proxy6: 'PROXY6'
+  proxy6: 'PROXY6',
+  node4: 'Node4',
+  proxyempire: 'ProxyEmpire',
+  mountproxies: 'MountProxies',
+  massive: 'Massive'
 });
 
 // Gateways for adapters that build a URL from this table. Add a host only if the vendor documents it
@@ -2045,7 +2054,9 @@ function httpRequestText(url, options = {}) {
       res.on('end', () => {
         const buf = Buffer.concat(chunks);
         if (status < 200 || status >= 300) {
-          return finish(reject, Object.assign(new Error(`HTTP ${status} ${buf.toString('utf8').slice(0, 200).trim() || res.statusMessage || ''}`.trim()), { status }));
+          // headers ride along for a vendor's Retry-After on a 429 (retryAfterSeconds); adapters map the
+          // error to their own message, so they never reach the window.
+          return finish(reject, Object.assign(new Error(`HTTP ${status} ${buf.toString('utf8').slice(0, 200).trim() || res.statusMessage || ''}`.trim()), { status, headers: res.headers }));
         }
         finish(resolve, options.binary ? buf : buf.toString('utf8'));
       });
@@ -2618,10 +2629,14 @@ async function rotateDataImpulseSticky(proxy) {
 function apiRotationProvider(proxy) {
   if (!proxy) return '';
   if (isDataImpulseSticky(proxy)) return 'dataimpulse';
+  // A pulled MountProxies modem: the saved key finds its subscription_key (rotateMountProxies).
+  if (String(proxy.provider || '').toLowerCase() === 'mountproxies' && proxy.host && proxy.port && proxy.username) return 'mountproxies';
   return '';
 }
 const PROVIDER_ROTATORS = Object.freeze({
-  dataimpulse: rotateDataImpulseSticky
+  dataimpulse: rotateDataImpulseSticky,
+  // Resolved when called: the rotator sits with its connector further down.
+  mountproxies: (proxy) => rotateMountProxies(proxy)
 });
 function proxyCanRotate(proxy) {
   return Boolean(proxy) && (Boolean(proxy.rotationUrl) || Boolean(apiRotationProvider(proxy)));
@@ -4087,7 +4102,9 @@ const VENDOR_LOOKUPS = Object.freeze({
   dataimpulse: lookupDataImpulse,
   proxyseller: lookupProxySeller,
   iproyal: lookupIpRoyal,
-  mangoproxy: lookupMangoProxy
+  mangoproxy: lookupMangoProxy,
+  node4: lookupNode4,
+  proxyempire: lookupProxyEmpire
 });
 
 // Read-only account view for the provider panel; never creates anything on the vendor side.
@@ -4419,6 +4436,339 @@ async function fetchProxy6Pool({ token, country, count, proxyType }) {
   return limitListRows(picked, count, Infinity);
 }
 
+// ---- Node4 (gateway builder + static list) ----
+// An n4k_ API key with read:proxies. Residential, Rotating Datacenter and Rotating Unmetered logins are
+// built by Node4 (POST /gateways/endpoint, 100 a call); Static Datacenter lists the IPs the account
+// owns (GET /proxies/list). Never called: replace, refresh, credentials or sub-user writes, orders,
+// top-ups. Not live-key tested.
+const NODE4_API = 'https://node4.io/api/v1';
+const NODE4_KEY = /^n4k_[A-Za-z0-9_-]{8,200}$/;
+// 60 requests a minute per key: a pull of 1000 is 10 calls, spaced so it stays well inside that.
+const NODE4_MAX_CALLS = 10;
+const NODE4_CALL_GAP_MS = 1100;
+
+async function node4Call(key, method, pathName, body, productName = '') {
+  let text;
+  try {
+    text = await httpRequestText(`${NODE4_API}${pathName}`, {
+      method,
+      headers: { Authorization: `Bearer ${key}`, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: 30000,
+      maxBytes: 8_000_000
+    });
+  } catch (error) {
+    const status = error && error.status;
+    const raw = String((error && error.message) || '');
+    if (status === 401) throw new Error('Node4 rejected the API key, or it expired. Create a new one with the read:proxies permission.');
+    if (status === 403) throw new Error('Node4: this key lacks the read:proxies permission. Create a key with it.');
+    if (status === 429) {
+      const s = retryAfterSeconds(error.headers, raw);
+      throw new Error(`Node4: too many requests (60 a minute per key). Wait ${s || 60} seconds and pull again.`);
+    }
+    if (status === 404 && productName) throw new Error(`Node4: this account has no active ${productName} plan.`);
+    if (status === 409) throw new Error('Node4: the proxy login is over its monthly limit, or there is no active login.');
+    if (status === 422 || status === 400) {
+      // Node4's own words, which list the countries a product serves; the key is never in them.
+      const m = /"error"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(raw);
+      const why = m ? m[1].replace(/\\(.)/g, '$1').split(key).join('***').replace(/[.\s]+$/, '').slice(0, 200) : 'the request was refused';
+      throw new Error(`Node4: ${why}.`);
+    }
+    if (status) throw new Error(`Node4: the API answered HTTP ${status}. Try again later.`);
+    throw new Error('Node4: could not reach the API. Check your connection and try again.');
+  }
+  try { return JSON.parse(text); } catch (e) { throw new Error('Node4: the API did not return JSON.'); }
+}
+
+async function fetchNode4Pool({ token, poolType, country, state, city, asn, count, proxyType }) {
+  const key = String(token || '').trim();
+  if (!NODE4_KEY.test(key)) throw new Error('Node4: paste an API key from Account Settings, API & Webhooks. It starts with n4k_.');
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const pool = String(poolType || 'residential').toLowerCase();
+  if (pool === 'static') {
+    if (String(state || '').trim() || String(city || '').trim() || String(asn || '').trim()) {
+      throw new Error('Node4: state, city and ASN work on Residential only. Clear them for this pool.');
+    }
+    const rawCountry = String(country || '').trim();
+    const cc = normCountryCode(rawCountry);
+    if (rawCountry && !cc) throw new Error(`Node4: "${rawCountry}" is not a country code.`);
+    const json = await node4Call(key, 'GET', '/proxies/list?format=json&fields=host,port,username,password,protocol,type,country');
+    const res = node4StaticRows(json, { socks });
+    if (!res.rows.length) {
+      if (res.total && res.noLogin && !res.skippedProtocol) throw new Error('Node4: your static proxies have no username and password (the free tier uses IP authorization). Set a login in the dashboard, then pull again.');
+      if (res.skippedProtocol) throw new Error(`Node4: none of your static proxies is listed for ${socks ? 'SOCKS5' : 'HTTP'}. Switch Protocol and pull again.`);
+      throw new Error('Node4: no active static proxies on this account.');
+    }
+    const picked = cc ? res.rows.filter((r) => r.country === cc) : res.rows;
+    if (!picked.length) {
+      const have = [...new Set(res.rows.map((r) => r.country).filter(Boolean))].join(', ');
+      throw new Error(`Node4: no static proxies in ${cc} on this account.${have ? ` You have ${have}.` : ''}`);
+    }
+    return limitListRows(picked, count, Infinity);
+  }
+  const product = NODE4_GATEWAY_PRODUCTS[pool];
+  if (!product) throw new Error('Node4: pick Residential, Rotating Datacenter, Rotating Unmetered or Static Datacenter.');
+  // How many 1 is one rotating login (a new exit per connection); more are sticky, one session each.
+  const want = clampPoolCount(count, 1, MINTED_PULL_MAX);
+  const sticky = want > 1;
+  const cc = normCountryCode(country);
+  // Validates the targeting before any call (state, city and ASN are Residential only).
+  node4GatewayBody({ pool, socks, country, state, city, asn, count: want, sticky });
+  const rows = [];
+  const seen = new Set();
+  for (let call = 0; call < NODE4_MAX_CALLS && rows.length < want; call += 1) {
+    if (call > 0) await sleepMs(NODE4_CALL_GAP_MS);
+    const body = node4GatewayBody({ pool, socks, country, state, city, asn, count: Math.min(NODE4_CALL_MAX, want - rows.length), sticky });
+    const json = await node4Call(key, 'POST', '/gateways/endpoint', body, product.name);
+    let added = 0;
+    for (const r of node4GatewayRows(json, { socks, name: product.name, country: cc })) {
+      const k = `${r.host}:${r.port}:${r.username}:${r.password}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push(r);
+      added += 1;
+    }
+    if (!sticky || !added) break;
+  }
+  if (!rows.length) throw new Error(`Node4 returned no ${product.name} login for that location. Try a wider location.`);
+  return rows.slice(0, want);
+}
+
+// Load countries: Residential from GET /geo/countries; the datacenter products serve the plan's
+// countries (US, Italy, Spain), so no call is made for them.
+const NODE4_DATACENTER_COUNTRIES = Object.freeze(['US', 'IT', 'ES']);
+
+async function lookupNode4({ token, groupby, poolType }) {
+  const key = String(token || '').trim();
+  if (!NODE4_KEY.test(key)) throw new Error('Node4: paste an API key from Account Settings, API & Webhooks. It starts with n4k_.');
+  if (groupby !== 'country') throw new Error('Node4: only the country list can be loaded here.');
+  if (String(poolType || 'residential').toLowerCase() !== 'residential') {
+    return { provider: 'node4', geo: NODE4_DATACENTER_COUNTRIES.map((code) => ({ key: code })) };
+  }
+  const geo = node4Countries(await node4Call(key, 'GET', '/geo/countries', null, 'Residential'));
+  if (!geo.length) throw new Error('Node4 lists no Residential countries for this account.');
+  return { provider: 'node4', geo };
+}
+
+// ---- ProxyEmpire (proxy-list generator) ----
+// A Bearer API token (panel, Settings, API Tokens). GET /user checks the package for the pool, then
+// POST /proxy-list returns ready user:pass@host:port lines. Never called: rotate-session, bandwidth
+// moves, sub-users, ISP orders and renewals. Not live-key tested.
+const PROXYEMPIRE_API = 'https://panel.proxyempire.io/api/v2';
+
+async function proxyEmpireCall(token, method, pathName, body, poolName) {
+  let text;
+  try {
+    text = await httpRequestText(`${PROXYEMPIRE_API}${pathName}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      timeoutMs: 30000,
+      maxBytes: 8_000_000
+    });
+  } catch (error) {
+    throw new Error(proxyEmpireErrorMessage(error, poolName));
+  }
+  try { return JSON.parse(text); } catch (e) { throw new Error('ProxyEmpire: the API did not return JSON.'); }
+}
+
+async function fetchProxyEmpirePool({ token, poolType, country, state, city, zip, asn, count, life, proxyType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('ProxyEmpire: paste an API token from Settings, API Tokens in the panel.');
+  const pool = String(poolType || 'residential').toLowerCase();
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  // Throws, before any call, on targeting the pool refuses.
+  const plan = proxyEmpireBody({ pool, country, state, city, zip, asn, count, life, max: MINTED_PULL_MAX });
+  const { found, slot } = proxyEmpireSlot(await proxyEmpireCall(key, 'GET', '/user', null, plan.name), pool);
+  if (!found) throw new Error('ProxyEmpire: the account details came back in an unexpected shape. Try again later.');
+  if (!slot) throw new Error(`ProxyEmpire: this account has no ${plan.name} package.`);
+  const bw = slot.bandwidth && typeof slot.bandwidth === 'object' ? slot.bandwidth : {};
+  if (Number(bw.total) > 0 && bw.remaining != null && Number(bw.remaining) <= 0) {
+    throw new Error(`ProxyEmpire: your ${plan.name} package has no traffic left. Top it up in the panel.`);
+  }
+  const avail = slot.provider_availability && typeof slot.provider_availability === 'object' ? slot.provider_availability : {};
+  if (['unavailable', 'circuit_open'].includes(String(avail.state || '').toLowerCase())) {
+    const why = String(avail.message || '').replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '').slice(0, 160);
+    throw new Error(`ProxyEmpire: ${plan.name} is unavailable right now${why ? ` (${why})` : ''}. Try again later.`);
+  }
+  const res = await proxyEmpireCall(key, 'POST', '/proxy-list', plan.body, plan.name);
+  const lines = Array.isArray(res && res.proxies) ? res.proxies.map((l) => String(l)) : [];
+  const parsed = parseLoginList(lines.join('\n'));
+  if (!parsed.length) throw new Error('ProxyEmpire returned no proxies for that location. Try a wider location.');
+  const sent = String(plan.body.country || '').toUpperCase();
+  const cc = sent === 'UK' ? 'GB' : sent;
+  const how = { random: 'rotating', sticky: 'sticky', custom: `${plan.lifeMin} min`, fixed: 'static' }[plan.mode];
+  return parsed.slice(0, plan.body.length).map((r, i) => ({
+    type: socks ? 'SOCKS5' : 'HTTP',
+    host: r.host, port: r.port, username: r.username, password: r.password,
+    label: `ProxyEmpire • ${plan.name} • ${cc || 'Any country'} • ${how} • #${i + 1}`,
+    country: cc || null,
+    dedupeOnPassword: false
+  }));
+}
+
+async function lookupProxyEmpire({ token, groupby, poolType }) {
+  const key = String(token || '').trim();
+  if (!key || /\s/.test(key)) throw new Error('ProxyEmpire: paste an API token from Settings, API Tokens in the panel.');
+  if (groupby !== 'country') throw new Error('ProxyEmpire: only the country list can be loaded here.');
+  const pool = PROXYEMPIRE_POOLS[String(poolType || '').toLowerCase()] || PROXYEMPIRE_POOLS.residential;
+  const geo = proxyEmpireCountries(await proxyEmpireCall(key, 'GET', `/countries?connection_type=${encodeURIComponent(pool.type)}`, null, pool.name));
+  if (!geo.length) throw new Error(`ProxyEmpire lists no countries for ${pool.name} on this account.`);
+  return { provider: 'proxyempire', geo };
+}
+
+// ---- MountProxies (dedicated US 4G/5G modems, list pull + Rotate IP by API) ----
+// The account API key travels in the query string, so every failure maps to a fixed message that never
+// echoes the URL, and no key is stored on a row: Rotate IP reads the saved key (rotateMountProxies).
+// Never called: update_credentials, rotation_time, change_location, speed tests. Not live-key tested.
+const MOUNTPROXIES_API = 'https://api.mountproxies.com/api';
+const MOUNTPROXIES_KEY = /^[A-Za-z0-9_-]{8,200}$/;
+
+// GET /proxies with the key in the query string. A failure keeps only its status (never the URL).
+async function mountProxiesFetchList(key) {
+  try {
+    return await httpRequestText(`${MOUNTPROXIES_API}/proxies?api_key=${encodeURIComponent(key)}&output=json`, { headers: { Accept: 'application/json' }, timeoutMs: 20000, maxBytes: 8_000_000 });
+  } catch (error) {
+    throw Object.assign(new Error('MountProxies: the proxy list could not be read.'), { status: error && error.status });
+  }
+}
+
+async function fetchMountProxiesPool({ token, count }) {
+  const key = String(token || '').trim();
+  if (!MOUNTPROXIES_KEY.test(key)) throw new Error('MountProxies: paste the API key from your account page.');
+  let text;
+  try {
+    text = await mountProxiesFetchList(key);
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) throw new Error('MountProxies rejected the API key. Copy it again from your account page.');
+    if (error.status === 429) throw new Error('MountProxies: too many requests. Wait a minute and pull again.');
+    throw new Error('MountProxies: could not read the proxy list. Check your connection and try again.');
+  }
+  const res = mountProxiesRows(text);
+  if (res.error) throw new Error(res.error);
+  if (!res.rows.length) {
+    if (res.noLogin && res.noLogin + res.expired >= res.total) throw new Error('MountProxies: your proxies use IP authorization only. Set a username and password in the dashboard, then pull again.');
+    throw new Error('MountProxies: no active proxies on this account.');
+  }
+  return limitListRows(res.rows, count, Infinity);
+}
+
+// Rotate IP for a pulled MountProxies modem: the saved key lists the proxies, the stored row is matched
+// by IP, port and username to its subscription_key, and GET /subscription/<key>/rotate_ip asks for a new
+// IP (about 10 seconds). A 404 there retries once with the V1 path and the modem_key, as the help article
+// does. Errors are fixed messages or MountProxies' own reply, with the key masked.
+async function rotateMountProxies(proxy) {
+  const saved = await readSavedProviderCreds('mountproxies');
+  const key = String((saved && saved.token) || '').trim();
+  if (!key) throw new Error('MountProxies: Rotate IP uses your saved API key. Save it on the Proxy providers page (MountProxies, Save credentials), then try again.');
+  if (!MOUNTPROXIES_KEY.test(key)) throw new Error('MountProxies: the saved API key does not look right. Save it again on the Proxy providers page.');
+  const started = Date.now();
+  let listText;
+  try {
+    listText = await mountProxiesFetchList(key);
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) throw new Error('MountProxies rejected the saved API key. Save it again on the Proxy providers page.');
+    if (error.status === 429) throw new Error('MountProxies: too many requests. Wait a minute before the next rotation.');
+    throw new Error('MountProxies: could not read the proxy list to find this proxy. Check your connection and try again.');
+  }
+  const target = mountProxiesRotateTarget(listText, proxy);
+  if (!target) throw new Error('MountProxies: this proxy is no longer on your account, or its login changed. Pull again from the Proxy providers page, then rotate.');
+  const vendorSays = (error) => {
+    const m = /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(String((error && error.message) || ''));
+    return m ? m[1].replace(/\\(.)/g, '$1').split(key).join('***').replace(/[.\s]+$/, '').slice(0, 200) : '';
+  };
+  const call = (pathName) => httpRequestText(`${MOUNTPROXIES_API}${pathName}?api_key=${encodeURIComponent(key)}`, { headers: { Accept: 'application/json' }, timeoutMs: 30000 });
+  let text;
+  let via = 'V2';
+  try {
+    if (!target.subscriptionKey) throw Object.assign(new Error('no subscription key'), { status: 404 });
+    text = await call(`/subscription/${encodeURIComponent(target.subscriptionKey)}/rotate_ip`);
+  } catch (error) {
+    let failed = error;
+    if (error && error.status === 404 && target.modemKey) {
+      try {
+        text = await call(`/proxy/${encodeURIComponent(target.modemKey)}/rotate_ip`);
+        via = 'V1';
+        failed = null;
+      } catch (e) { failed = e; }
+    }
+    if (failed) {
+      const status = failed && failed.status;
+      if (status === 401 || status === 403) throw new Error('MountProxies rejected the saved API key. Save it again on the Proxy providers page.');
+      if (status === 404) throw new Error('MountProxies could not find this proxy to rotate. Rotate it from the MountProxies dashboard.');
+      if (status === 429) throw new Error('MountProxies: too many requests. Wait a minute before the next rotation.');
+      const why = vendorSays(failed);
+      if (status) throw new Error(`MountProxies refused the rotation${why ? `: ${why}` : ` (HTTP ${status})`}. After a failed rotation, wait at least one minute before trying again.`);
+      throw new Error('MountProxies: could not reach the API. Check your connection and try again.');
+    }
+  }
+  let message = '';
+  try { const body = JSON.parse(text); message = body && body.message != null ? String(body.message) : ''; } catch (e) { message = ''; }
+  message = message.split(key).join('***').replace(/\s+/g, ' ').trim().slice(0, 200);
+  return { ok: true, status: 200, latencyMs: Date.now() - started, response: `${message || 'Rotation requested'} (${via})`, provider: 'mountproxies' };
+}
+
+// ---- Massive (residential + ISP, gateway-minted) ----
+// network.joinmassive.com (HTTP 65534, SOCKS5 65533) with the targeting in the username; the proxy
+// password is the account's API token. ISP is isp.joinmassive.com:8000 for both protocols, with no
+// targeting. No API call: the rows are built here. Not live-key tested.
+const MASSIVE_GATEWAYS = Object.freeze({
+  residential: { host: 'network.joinmassive.com', http: 65534, socks: 65533 },
+  isp: { host: 'isp.joinmassive.com', http: 8000, socks: 8000 }
+});
+const MASSIVE_POOLS = Object.freeze({
+  residential: { name: 'Residential', type: '' },
+  residential_mobile: { name: 'Residential mobile', type: 'mobile' },
+  isp: { name: 'ISP', type: '', isp: true }
+});
+
+async function fetchMassivePool({ username, password, poolType, country, state, city, zip, asn, session, life, count, proxyType, host, port }) {
+  const base = massiveBaseUser(username);
+  if (!base) throw new Error('Massive: enter the proxy username from your Massive dashboard (Profile).');
+  if (/[\s:]/.test(base)) throw new Error('Massive: the proxy username has no spaces or colons. Copy it again from your Massive dashboard (Profile).');
+  const pw = password != null ? String(password) : '';
+  if (!pw.trim() || /\s/.test(pw)) throw new Error('Massive: enter your Massive API token as the proxy password (dashboard, Profile).');
+  const pool = MASSIVE_POOLS[String(poolType || '').toLowerCase()] || MASSIVE_POOLS.residential;
+  const socks = String(proxyType || '').toLowerCase() === 'socks5';
+  const rawCountry = String(country || '').trim();
+  const cc = normCountryCode(rawCountry);
+  if (rawCountry && !cc) throw new Error(`Massive: "${rawCountry}" is not a country code.`);
+  const st = String(state || '').trim();
+  const ct = String(city || '').trim();
+  const z = String(zip || '').trim();
+  const a = String(asn || '').trim().replace(/^AS/i, '');
+  if (pool.isp) {
+    if (cc || st || ct || z || a) throw new Error('Massive: ISP proxies take no location. Clear Country, State, City, ZIP and ASN.');
+  } else if ((st || ct || z || a) && !cc) {
+    throw new Error('Massive: pick a country before a state, city, ZIP or ASN.');
+  }
+  if (a && !/^\d{1,10}$/.test(a)) throw new Error('Massive: an ASN is digits only, for example 7922.');
+  if (z && !/^[A-Za-z0-9 -]{2,12}$/.test(z)) throw new Error(`Massive: "${z}" is not a ZIP code.`);
+  const sess = String(session || '').trim();
+  if (sess && !/^[A-Za-z0-9_]{1,200}$/.test(sess)) throw new Error('Massive: a sticky session name is letters, digits and _ only.');
+  // ISP always uses isp.joinmassive.com:8000. On Residential a typed host wins (a regional host), and
+  // the port follows the protocol unless one other than 65534 or 65533 was typed.
+  let gw;
+  if (pool.isp) {
+    gw = { host: MASSIVE_GATEWAYS.isp.host, port: MASSIVE_GATEWAYS.isp.http };
+  } else {
+    const def = MASSIVE_GATEWAYS.residential;
+    const protoPort = socks ? def.socks : def.http;
+    const typed = port != null && String(port).trim() !== '' ? Number.parseInt(String(port), 10) : null;
+    const usePort = typed == null || typed === def.http || typed === def.socks ? protoPort : port;
+    gw = gatewayOverride(host, usePort, { host: def.host, port: protoPort }, 'Massive');
+  }
+  // ISP sessions do not expire, so Keep same IP applies to Residential only.
+  const lifeMin = pool.isp ? '' : String(life == null ? '' : life).trim();
+  const rows = mintGatewayRows({
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session: sess, count, life: lifeMin, max: MINTED_PULL_MAX,
+    buildUser: (sid) => massiveUsername(base, { type: pool.type, country: cc, subdivision: st, city: ct, zip: z, asn: a, session: sid, ttlMin: sid ? lifeMin : '' }),
+    label: `Massive • ${pool.name} • ${cc || 'Any country'}`
+  }).map((r) => ({ ...r, country: cc || null }));
+  if (!rows.length) throw new Error('Massive: could not build any proxies.');
+  return rows;
+}
+
 // Vendors wired to live API calls; syncVendorPool refuses every other vendor.
 const REAL_VENDOR_ADAPTERS = Object.freeze({
   brightdata: fetchBrightDataPool,
@@ -4456,7 +4806,11 @@ const REAL_VENDOR_ADAPTERS = Object.freeze({
   singaporemobileproxy: fetchSingaporeMobileProxyPool,
   gsocks: fetchGsocksPool,
   proxybonanza: fetchProxyBonanzaPool,
-  proxy6: fetchProxy6Pool
+  proxy6: fetchProxy6Pool,
+  node4: fetchNode4Pool,
+  proxyempire: fetchProxyEmpirePool,
+  mountproxies: fetchMountProxiesPool,
+  massive: fetchMassivePool
 });
 
 async function syncVendorPool(payload) {
