@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Download, Check, Loader2, RefreshCcw, MonitorDown, Cloud, Play } from 'lucide-react';
 import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { rowDownload } from '@/lib/browserRows.mjs';
 
 // Lists Chrome-for-Testing builds (installed vs downloadable) and installs them on demand.
 export default function BrowserManagerModal({ onClose, onInstalled }) {
@@ -93,7 +94,7 @@ export default function BrowserManagerModal({ onClose, onInstalled }) {
           ) : items.length === 0 ? (
             <div className="text-center py-16 text-sm text-muted-foreground">{t('browserManager.noVersions')}</div>
           ) : items.map((it) => {
-            const d = it.download;
+            const d = rowDownload(it.installed, it.download);
             const downloading = d && (d.state === 'downloading' || d.state === 'extracting' || d.state === 'queued');
             const halted = d && (d.state === 'paused' || d.state === 'interrupted');
             return (
