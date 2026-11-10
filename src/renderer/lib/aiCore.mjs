@@ -172,6 +172,7 @@ export function buildClientList(snippets, status) {
       title: s.title || s.client || '',
       kind: ['command', 'json', 'toml'].includes(s.kind) ? s.kind : 'json',
       where: s.where || '',
+      whereVars: s.whereVars && typeof s.whereVars === 'object' ? s.whereVars : {},
       text: typeof s.text === 'string' ? s.text : '',
       docsUrl: docsUrlFor(key),
       appDocsUrl: appDocsUrl(s.docsUrl)

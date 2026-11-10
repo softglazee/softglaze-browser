@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatabaseBackup, Download, ArchiveRestore, AlertTriangle, Loader2, Check } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { backupKb } from '@/lib/backupSize.mjs';
 
 // Passphrase-protected .sgzw backup of the database and settings; restore verifies the file
 // before touching the live database.
@@ -35,7 +36,7 @@ export default function WorkspaceBackupSettings() {
       if (r.cancelled) { setMsg(''); }
       else if (r.ok) {
         setBackupPass('');
-        setMsg(t('workspaceBackup.msgSaved', { path: r.path, kb: Number.isFinite(Number(r.dbBytes)) ? (Number(r.dbBytes) / 1024).toFixed(0) : '?', count: r.settingsCount ?? 0 }));
+        setMsg(t('workspaceBackup.msgSaved', { path: r.path, kb: backupKb(r), count: r.settingsCount ?? 0 }));
         load();
       }
     } catch (e) { setErr(e.message || t('workspaceBackup.errBackupFailed')); }

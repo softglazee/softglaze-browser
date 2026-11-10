@@ -17,30 +17,54 @@
     "SUPER_ADMIN": "Superadministrador",
     "OWNER": "Propietario",
     "ADMIN": "Administrador",
-    "MANAGER": "Responsable",
+    "MANAGER": "Gerente",
     "OPERATOR": "Operador"
   },
   "roleDesc": {
     "OWNER": "Control total, incluidos los miembros y la bóveda.",
-    "ADMIN": "Gestiona perfiles, proxies, grupos y los responsables/operadores que crea.",
+    "ADMIN": "Gestiona perfiles, proxies, grupos y los gerentes y operadores que crea.",
     "MANAGER": "Crea, edita y abre perfiles, y añade operadores.",
     "OPERATOR": "Abre y usa solo los perfiles asignados."
+  },
+  "actionCategories": {
+    "Profiles": "Perfiles",
+    "Proxies": "Proxies",
+    "Automation": "Automatización",
+    "Workspace": "Espacio de trabajo",
+    "Team": "Equipo"
+  },
+  "actionLabels": {
+    "profiles_launch": "Abrir perfiles",
+    "profiles_create": "Crear perfiles",
+    "profiles_edit": "Editar perfiles",
+    "profiles_export": "Exportar perfiles",
+    "profiles_share": "Compartir perfiles con miembros",
+    "profiles_delete": "Eliminar perfiles (a la Papelera)",
+    "profiles_purge": "Eliminar perfiles definitivamente",
+    "proxies_manage": "Añadir / editar / eliminar proxies",
+    "proxies_reveal": "Ver las credenciales de proxy sin ocultar",
+    "automation_run": "Ejecutar automatizaciones y macros",
+    "extensions_manage": "Gestionar las extensiones del equipo",
+    "settings_manage": "Cambiar la configuración del espacio de trabajo",
+    "vault_manage": "Gestionar la Bóveda de datos",
+    "members_manage": "Gestionar los miembros del equipo",
+    "members_delete": "Eliminar miembros / cambiar roles"
   },
   "features": {
     "dashboard": "Panel (solo la página)",
     "profiles": "Perfiles",
     "groups": "Grupos",
-    "proxies": "Conjunto de proxies",
+    "proxies": "Grupo de proxies",
     "browsers": "Navegadores",
     "extensions": "Extensiones",
-    "batchImport": "Importación por lotes",
+    "batchImport": "Importación masiva",
     "trash": "Papelera",
     "members": "Miembros",
-    "settings": "Ajustes"
+    "settings": "Configuración"
   },
   "caps": {
     "maxAdmins": "Administradores",
-    "maxManagers": "Responsables",
+    "maxManagers": "Gerentes",
     "maxOperators": "Operadores"
   },
   "labels": {
@@ -124,7 +148,7 @@
     "code": "Código de invitación",
     "link": "Enlace de invitación",
     "emailedTo": "Enviado por correo a {{email}}.",
-    "emailNotSent": "Correo no enviado (configura SMTP en Ajustes → Correo). Comparte el código manualmente."
+    "emailNotSent": "Correo no enviado (configura SMTP en Configuración → Correo). Comparte el código manualmente."
   },
   "alloc": {
     "heading_one": "Asignado a {{count}} submiembro",
@@ -143,7 +167,7 @@
     "max": "(máx. {{max}})",
     "canInvite": {
       "canCreateAdmins": "Puede invitar administradores",
-      "canCreateManagers": "Puede invitar responsables",
+      "canCreateManagers": "Puede invitar gerentes",
       "canCreateOperators": "Puede invitar operadores"
     },
     "featuresHint": "Una función desactivada se oculta de la barra lateral y sus acciones se rechazan en todas partes (por ejemplo añadir proxies, restaurar desde la Papelera o descargar navegadores). Las listas que necesitan otras páginas, como elegir un proxy o un grupo en el editor de perfiles, siguen cargando."

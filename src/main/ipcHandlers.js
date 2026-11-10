@@ -5829,9 +5829,35 @@ function proxyAgentScheme(type) {
   return 'http';
 }
 
+// Opens (and at once closes) a plain TCP connection to the proxy itself. A proxy that is down or
+// unreachable fails here within PROXY_TCP_PROBE_MS, so the check does not wait out both 15 s stages
+// below (about 30 s) to say so. Resolves { ok } or { ok: false, code }; never rejects.
+const PROXY_TCP_PROBE_MS = 8000;
+function probeProxyTcp(host, port, ms = PROXY_TCP_PROBE_MS) {
+  return new Promise((resolve) => {
+    let done = false;
+    let sock = null;
+    const finish = (r) => { if (done) return; done = true; clearTimeout(timer); try { if (sock) sock.destroy(); } catch (e) { /* ignore */ } resolve(r); };
+    const timer = setTimeout(() => finish({ ok: false, code: 'ETIMEDOUT' }), ms);
+    try {
+      sock = require('node:net').connect({ host: String(host).replace(/^\[|\]$/g, ''), port: Number(port) });
+      sock.once('connect', () => finish({ ok: true }));
+      sock.once('error', (e) => finish({ ok: false, code: (e && e.code) || 'ECONNRESET' }));
+    } catch (e) { finish({ ok: false, code: (e && e.code) || 'EINVAL' }); }
+  });
+}
+function proxyUnreachableMessage(proxy, code, ms = PROXY_TCP_PROBE_MS) {
+  const where = `${formatProxyHost(proxy.host)}:${proxy.port}`;
+  if (code === 'ECONNREFUSED') return `The proxy refused the connection at ${where} (nothing is listening on that port).`;
+  if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return `The proxy host ${proxy.host} could not be found (DNS).`;
+  if (code === 'ETIMEDOUT') return `The proxy did not answer at ${where} within ${Math.round(ms / 1000)} s.`;
+  return `The proxy could not be reached at ${where} (${code}).`;
+}
+
 // Routes a request to an IP/geo service through the proxy; returns { success, ip, country, city,
 // isp, latencyMs } or { success: false, error }. opts.timeoutMs / opts.fallbackTimeoutMs shorten the
 // two stages (15 s each by default); only Quick generate's gate passes them (proxyGate.js).
+// opts.probe replaces probeProxyTcp (tests only).
 async function testProxyConnectivity(proxy, opts = {}) {
   const primaryMs = Number(opts.timeoutMs) > 0 ? Number(opts.timeoutMs) : 15000;
   const fallbackMs = Number(opts.fallbackTimeoutMs) > 0 ? Number(opts.fallbackTimeoutMs) : 15000;
@@ -5850,6 +5876,9 @@ async function testProxyConnectivity(proxy, opts = {}) {
   const agent = new ProxyAgent({ getProxyForUrl: () => proxyUrl });
 
   const started = Date.now();
+  // The proxy itself must accept a connection; when it does not, nothing below can succeed.
+  const reach = Promise.resolve((opts.probe || probeProxyTcp)(proxy.host, proxy.port)).catch(() => ({ ok: true }));
+  const unreachable = reach.then((r) => (r && r.ok === false ? r : new Promise(() => {})));
 
   // Race two HTTPS services; the first answer wins. ipinfo.io has no AAAA record, so an IPv6-only
   // exit can only reach get.geojs.io, and trying them in turn made IPv6 checks wait out ipinfo.
@@ -5862,10 +5891,20 @@ async function testProxyConnectivity(proxy, opts = {}) {
     if (!geo) throw new Error('get.geojs.io returned no IP.');
     return { ip: geo.ip, country: geo.country, region: geo.region, city: geo.city, zip: null, isp: geo.isp, timezone: geo.timezone };
   });
+  viaIpinfo.catch(() => {}); viaGeojs.catch(() => {}); // settled later when the proxy is unreachable
   try {
-    const first = await Promise.any([viaIpinfo, viaGeojs]);
-    return { success: true, ...first, latencyMs: Date.now() - started };
+    const first = await Promise.race([
+      Promise.any([viaIpinfo, viaGeojs]).then((v) => ({ v })),
+      unreachable.then((r) => ({ down: r }))
+    ]);
+    if (first.down) {
+      return { success: false, error: scrubProxySecrets(proxyUnreachableMessage(proxy, first.down.code), proxy), unreachable: true, latencyMs: Date.now() - started };
+    }
+    return { success: true, ...first.v, latencyMs: Date.now() - started };
   } catch (raced) {
+    // Both services failed. A proxy that does not accept connections needs no plain-HTTP retry.
+    const down = await Promise.race([unreachable, new Promise((r) => setTimeout(() => r(null), 0))]);
+    if (down) return { success: false, error: scrubProxySecrets(proxyUnreachableMessage(proxy, down.code), proxy), unreachable: true, latencyMs: Date.now() - started };
     const primaryError = raced && raced.errors ? raced.errors[0] : raced;
     // Fallback: ip-api over plain HTTP (some proxies block 443 or SNI).
     try {
@@ -12462,7 +12501,11 @@ async function workspaceBackup(payload) {
   if (save.canceled || !save.filePath) return { cancelled: true };
   const res = await profileArchive.exportWorkspaceArchive({ dbPath, settings, password, outPath: save.filePath });
   await writeSetting('workspaceLastBackupAt', new Date().toISOString()).catch(() => {});
-  return { ok: true, path: save.filePath, dbBytes: res.dbBytes, settingsCount: res.settingsCount };
+  // The size shown is the saved file's (database, settings and encryption together), as Explorer
+  // shows it; dbBytes is only the database inside it.
+  let fileBytes = null;
+  try { fileBytes = (await fs.stat(save.filePath)).size; } catch (e) { fileBytes = null; }
+  return { ok: true, path: save.filePath, fileBytes, dbBytes: res.dbBytes, settingsCount: res.settingsCount };
 }
 
 async function workspaceRestore(payload) {
@@ -12509,6 +12552,9 @@ async function workspaceRestore(payload) {
   }
   // Success - remove the (plaintext) safety copy so it can't linger on disk.
   await dbCrypto.secureUnlink(safety);
+  // The restored database may hold rotation links imported before 1.0.26 that were never looked at:
+  // the once-per-run pass in afterDbReady runs again for it (its own Setting keeps it once per link).
+  rotationLinksAdoptedThisRun = false;
   await afterDbReady();
   // Keychain-sealed secrets (enc:v1:, DPAPI) only open for the Windows user that sealed them;
   // report the ones this restore could not open so the UI can say so.
@@ -16565,6 +16611,7 @@ function buildAiToolDeps() {
     getRecentProxyHealth,
     getVendorScoreboard,
     rotateProxyIp: (payload) => rotateProxyIp({ id: payload.id }), // the stored rotation link only
+    rotateProfileProxyIp: (payload) => rotateProfileProxyIp({ id: payload.id }), // by profile, "use only" shares included
     bulkAssignProxies,
     harvestFreeProxies: (payload) => harvestFreeProxiesHandler(payload, null),
     cancelFreeProxyHarvest,

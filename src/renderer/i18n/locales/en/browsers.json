@@ -14,6 +14,18 @@
   "counts": {
     "installedAvailable": "· {{installed}} installed · {{available}} available"
   },
+  "engine": {
+    "heading": "Fingerprint engine",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "description": "fingerprint-chromium - spoofs canvas / WebGL / UA / platform / timezone natively, hides webdriver, blocks the WebRTC leak. Turn it on in Settings → Browser.",
+    "progressInstalling": "installing",
+    "progressVerifying": "verifying",
+    "installing": "Installing",
+    "verifying": "Verifying",
+    "downloading": "Downloading",
+    "download": "Download (~180 MB)"
+  },
   "firefox": {
     "heading": "Firefox",
     "ready": "Ready",

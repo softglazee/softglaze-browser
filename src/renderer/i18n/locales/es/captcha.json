@@ -25,7 +25,7 @@
   "leakTestTitle": "Abre la comprobación de fugas detallada, con una prueba en vivo del perfil abierto",
   "loadFailed": "No se pudo puntuar este perfil.",
   "fixAll": "Arreglar todo",
-  "fixAllTitle": "Aplica todas las soluciones que solo cambian los ajustes o el proxy de este perfil",
+  "fixAllTitle": "Aplica todas las soluciones que solo cambian la configuración o el proxy de este perfil",
   "rescore": "Puntuar de nuevo",
   "done": "Listo",
   "runningNote": "Este perfil está abierto. Los cambios se aplican la próxima vez que se inicie.",
@@ -120,7 +120,7 @@
     },
     "thirdPartyCookies": {
       "pass": "Permitidas, como en Chrome normal.",
-      "warn": "Bloqueadas para todos los perfiles en Ajustes. reCAPTCHA y hCaptcha dependen de ellas."
+      "warn": "Bloqueadas para todos los perfiles en Configuración. reCAPTCHA y hCaptcha dependen de ellas."
     },
     "history": {
       "pass": "Tiene historial de navegación y cookies.",
@@ -162,7 +162,7 @@
     },
     "editorOnly": "(cámbialo en el editor del perfil)",
     "blocking": "(este perfil no se abrirá hasta que lo cambies en el editor de perfiles)",
-    "stopAsking": "No volver a revisar antes de abrir (se puede reactivar en Ajustes)",
+    "stopAsking": "No volver a revisar antes de abrir (se puede reactivar en Configuración)",
     "cancel": "Cancelar",
     "launchAnyway": "Abrir de todos modos",
     "fixAndLaunch": "Arreglar y abrir"
@@ -170,8 +170,8 @@
   "bulk": {
     "fix": "Arreglar problemas de CAPTCHA",
     "fixTitle": "Aplica las soluciones seguras de CAPTCHA a los perfiles seleccionados: zona horaria, idioma, ubicación, WebRTC y un proxy libre cuando reduce el riesgo",
-    "confirm_one": "¿Arreglar los problemas de CAPTCHA de este perfil? Solo se cambian ajustes y proxies que reducen el riesgo.",
-    "confirm_other": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian ajustes y proxies que reducen el riesgo.",
+    "confirm_one": "¿Arreglar los problemas de CAPTCHA de este perfil? Solo se cambian opciones de configuración y proxies que reducen el riesgo.",
+    "confirm_other": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian opciones de configuración y proxies que reducen el riesgo.",
     "done": "Arreglados {{changed}} de {{total}} perfiles; {{swapped}} pasaron a un proxy libre.",
     "noBetter": "{{count}} no pudieron obtener un proxy mejor."
   },

@@ -11,7 +11,7 @@
     "profiles": "Perfiles",
     "startLinks": "Enlaces de inicio",
     "groups": "Grupos",
-    "proxies": "Proxies",
+    "proxies": "Grupo de proxies",
     "freeProxies": "Proxies gratis",
     "proxyProviders": "Proveedores de proxies",
     "providerStatus": "Estado de proveedores",
@@ -26,6 +26,7 @@
     "settings": "Configuración"
   },
   "shell": {
+    "footerDefault": "© {year} SoftGlaze - Creado por el [equipo de SoftGlaze](https://softglaze.com) · Desarrollado por [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multiperfil",
     "darkMode": "Modo oscuro",
     "lightMode": "Modo claro",
@@ -263,13 +264,13 @@
     "useOnly": "Compartido contigo solo para usar. Cambiarlo requiere acceso de edición.",
     "notYourGroup": "Solo el equipo que creó este grupo, o el Propietario o un Administrador, puede renombrarlo o eliminarlo.",
     "vaultTitle": "El Propietario gestiona la Bóveda de datos",
-    "vaultBody": "Solo el Propietario del espacio de trabajo puede ver y editar las identidades de la Bóveda de datos. En un perfil abierto, el botón SoftGlaze Autofill las ofrece a otros miembros solo si el Propietario activó \"Los miembros del equipo pueden usar la Bóveda de datos en el autocompletado\" en Ajustes > Autocompletado inteligente.",
+    "vaultBody": "Solo el Propietario del espacio de trabajo puede ver y editar las identidades de la Bóveda de datos. En un perfil abierto, el botón SoftGlaze Autofill las ofrece a otros miembros solo si el Propietario activó \"Los miembros del equipo pueden usar la Bóveda de datos en el autocompletado\" en Configuración > Autocompletado inteligente.",
     "viewOnly": "Solo lectura",
-    "settingsViewOnly": "Los ajustes del espacio de trabajo se aplican a todos los miembros. Puedes verlos aquí, pero no cambiarlos. {{reason}}",
+    "settingsViewOnly": "La configuración del espacio de trabajo se aplica a todos los miembros. Puedes verla aquí, pero no cambiarla. {{reason}}",
     "startLinksViewOnly": "Estos enlaces aparecen en la página de inicio de todos los miembros. Puedes verlos aquí, pero no cambiarlos. {{reason}}",
     "featureOffTitle": "Esta página está desactivada para tu cuenta",
     "featureOffBody": "Un administrador la desactivó en Funciones visibles. Pide acceso a quien gestiona tu cuenta si la necesitas.",
-    "settingsHidden": "Un administrador desactivó Ajustes para tu cuenta.",
+    "settingsHidden": "Un administrador desactivó Configuración para tu cuenta.",
     "proxiesHidden": "Un administrador desactivó Proxies para tu cuenta.",
     "profilesHidden": "Un administrador desactivó Perfiles para tu cuenta."
   }

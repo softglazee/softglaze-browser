@@ -62,7 +62,9 @@ module.exports = {
     applicationId: 'SoftGlazeBrowser',
     displayName: 'SoftGlaze Browser',
     backgroundColor: 'transparent',
-    languages: ['en-US'],
+    // The package's languages (the first is the default). The Store lists them on the product page;
+    // they match the app's own translations (src/renderer/i18n: en, es) and the Spanish Store listing.
+    languages: ['en-US', 'es'],
     showNameOnTiles: true,
   },
   directories: {

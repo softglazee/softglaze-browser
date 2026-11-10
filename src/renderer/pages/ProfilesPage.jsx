@@ -24,6 +24,7 @@ import CompareProfilesModal from '@/components/CompareProfilesModal.jsx';
 import ShareProfileModal from '@/components/ShareProfileModal.jsx';
 import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import { usePermissions } from '@/lib/usePermissions.js';
+import { optionLabel, osVersionLabel } from '@/lib/profileOptionLabels.mjs';
 import { Pencil, GitCompare, Bookmark, Share2, Eye, EyeOff } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
@@ -77,7 +78,10 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled, ari
   </div>
 );
 
-const ButtonTabs = ({ value, onChange, options, labels, className = '' }) => (
+// Option values stay English (saved profiles and main read them); the buttons show their labels.
+const ButtonTabs = ({ value, onChange, options, labels, className = '' }) => {
+  const { t } = useTranslation('profiles');
+  return (
   <div className={`flex flex-wrap bg-background border border-border rounded w-max overflow-hidden ${className}`}>
     {options.map(opt => (
       <button
@@ -87,11 +91,12 @@ const ButtonTabs = ({ value, onChange, options, labels, className = '' }) => (
         aria-pressed={value === opt}
         className={`px-3 py-1.5 text-xs transition border-r border-border last:border-0 ${value === opt ? 'bg-muted-dark text-foreground font-medium' : 'text-muted hover:text-foreground hover:bg-surface'}`}
       >
-        {labels && labels[opt] ? labels[opt] : opt}
+        {labels && labels[opt] ? labels[opt] : optionLabel(t, opt)}
       </button>
     ))}
   </div>
-);
+  );
+};
 
 const ToggleSwitch = ({ checked, onChange, labelledBy, describedBy }) => (
   <button
@@ -1671,7 +1676,7 @@ export default function ProfilesPage() {
                             <div className="w-px h-6 bg-border"></div>
                             <div className="relative">
                               <select value={isSelected ? pd.osVersion : os.versions[0]} onChange={e => { updatePd('os', os.id); updatePd('osVersion', e.target.value); }} className="appearance-none bg-transparent outline-none text-muted hover:text-foreground px-3 pr-8 py-2 text-sm cursor-pointer">
-                                {os.versions.map(v => <option key={v} value={v} className="bg-surface text-foreground">{v}</option>)}
+                                {os.versions.map(v => <option key={v} value={v} className="bg-surface text-foreground">{osVersionLabel(t, os.id, v)}</option>)}
                               </select>
                               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
                             </div>
@@ -2496,32 +2501,32 @@ export default function ProfilesPage() {
                 const versionText = isFirefox ? pd.browserVersion
                   : (pinnedMajor ? `${pinnedMajor}${pinnedAvailable ? '' : ` (${t('env.notDownloaded')})`}` : `Auto${autoChromeMajor ? ` (${autoChromeMajor})` : ''}`);
                 const locationText = pd.locationType === 'Block' ? t('env.locBlocked')
-                  : `${pd.locationType === 'Custom' ? `${pd.locationLat || '?'}, ${pd.locationLng || '?'}` : pd.locationType} · ${t(`env.locPerm_${geolocationPermission(pd)}`)}`;
+                  : `${pd.locationType === 'Custom' ? `${pd.locationLat || '?'}, ${pd.locationLng || '?'}` : optionLabel(t, pd.locationType)} · ${t(`env.locPerm_${geolocationPermission(pd)}`)}`;
                 const displayLangText = pd.displayLangType === 'Custom' ? (pd.displayLangCustom || '?')
                   : (pd.displayLangType === 'Real' ? t('env.displayReal') : t('env.displaySameAsLanguage'));
-                const fontsText = pd.fontsType === 'Custom' ? t('env.fontsCustom', { count: parseFontList(pd.fontsList).length }) : pd.fontsType;
+                const fontsText = pd.fontsType === 'Custom' ? t('env.fontsCustom', { count: parseFontList(pd.fontsList).length }) : optionLabel(t, pd.fontsType);
                 const webgpuText = (() => {
                   const choice = webgpuChoice(pd.webgpu);
-                  if (choice !== 'Based on WebGL') return choice;
+                  if (choice !== 'Based on WebGL') return optionLabel(t, choice);
                   if (!isFirefox && pd.antidetectEngine) return t('env.webgpuNative');
                   const info = webglSpoofed(pd, hostOs) ? webgpuInfoFromWebgl(pd.webglVendor, pd.webglRenderer) : null;
                   return info ? `${info.vendor}${info.architecture ? ` ${info.architecture}` : ''}` : t('env.webgpuSameAsWebgl');
                 })();
-                const mediaText = pd.mediaDevice === 'Edit' ? t('env.mediaCounts', parseMediaCounts(pd.mediaDeviceCounts)) : pd.mediaDevice;
-                const webrtcText = isFirefox ? t('env.webrtcFirefoxOff') : webrtcModeOf(pd.webrtc);
+                const mediaText = pd.mediaDevice === 'Edit' ? t('env.mediaCounts', parseMediaCounts(pd.mediaDeviceCounts)) : optionLabel(t, pd.mediaDevice);
+                const webrtcText = isFirefox ? t('env.webrtcFirefoxOff') : optionLabel(t, webrtcModeOf(pd.webrtc));
                 return (
                   <>
                     <EnvHead>{t('env.headBrowserOs')}</EnvHead>
                     <EnvRow k={t('env.browser')} v={`${pd.browserCore} ${versionText}`} />
-                    <EnvRow k={t('env.os')} v={`${pd.os} ${pd.osVersion}`} />
+                    <EnvRow k={t('env.os')} v={/^All /.test(String(pd.osVersion || '')) ? t('env.osAllVersions', { os: pd.os }) : `${pd.os} ${pd.osVersion}`} />
                     <div className="flex flex-col gap-1.5 py-1.5">
                       <span className="text-muted text-xs">{t('env.userAgent')}</span>
                       <span className="text-primary font-mono text-[11px] bg-primary/5 border border-primary/20 p-2.5 rounded break-all leading-relaxed max-h-28 overflow-y-auto">{displayUA}</span>
                     </div>
 
                     <EnvHead>{t('env.headLocale')}</EnvHead>
-                    <EnvRow k={t('env.timezone')} v={pd.timezoneType === 'Custom' ? pd.timezoneCustom : pd.timezoneType} />
-                    <EnvRow k={t('env.language')} v={pd.languageType === 'Custom' ? pd.languageCustom : pd.languageType} />
+                    <EnvRow k={t('env.timezone')} v={pd.timezoneType === 'Custom' ? pd.timezoneCustom : optionLabel(t, pd.timezoneType)} />
+                    <EnvRow k={t('env.language')} v={pd.languageType === 'Custom' ? pd.languageCustom : optionLabel(t, pd.languageType)} />
                     <EnvRow k={t('env.location')} v={locationText} />
                     <EnvRow k={t('env.displayLang')} v={displayLangText} />
 
@@ -2546,8 +2551,8 @@ export default function ProfilesPage() {
                     <EnvRow k={t('env.audioContext')} v={noiseTag(pd.audioContextNoise)} />
                     <EnvRow k={t('env.clientRects')} v={noiseTag(pd.clientRectsNoise)} />
                     <EnvRow k={t('env.mediaDevice')} v={mediaText} />
-                    <EnvRow k={t('env.doNotTrack')} v={pd.doNotTrack} />
-                    <EnvRow k={t('env.portScan')} v={pd.portScanProtection} />
+                    <EnvRow k={t('env.doNotTrack')} v={optionLabel(t, pd.doNotTrack)} />
+                    <EnvRow k={t('env.portScan')} v={optionLabel(t, pd.portScanProtection)} />
 
                     <EnvHead>{t('env.headNetworkDevice')}</EnvHead>
                     <EnvRow k={t('env.proxy')} v={proxyText} mono />

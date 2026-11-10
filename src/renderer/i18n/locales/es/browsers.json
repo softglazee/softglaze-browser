@@ -14,6 +14,18 @@
   "counts": {
     "installedAvailable": "· {{installed}} instalados · {{available}} disponibles"
   },
+  "engine": {
+    "heading": "Motor de huella digital",
+    "installed": "Instalado",
+    "notInstalled": "No instalado",
+    "description": "fingerprint-chromium: falsea de forma nativa canvas / WebGL / UA / plataforma / zona horaria, oculta webdriver y bloquea la fuga de WebRTC. Actívalo en Configuración → Navegador.",
+    "progressInstalling": "instalando",
+    "progressVerifying": "verificando",
+    "installing": "Instalando",
+    "verifying": "Verificando",
+    "downloading": "Descargando",
+    "download": "Descargar (~180 MB)"
+  },
   "firefox": {
     "heading": "Firefox",
     "ready": "Listo",

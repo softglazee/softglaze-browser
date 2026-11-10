@@ -254,12 +254,12 @@ export default function BrowsersPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold text-foreground">Fingerprint engine</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('engine.heading')}</h3>
               {antidetect?.installed
-                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><Check className="w-3 h-3" /> Installed</span>
-                : <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Not installed</span>}
+                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><Check className="w-3 h-3" /> {t('engine.installed')}</span>
+                : <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">{t('engine.notInstalled')}</span>}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">fingerprint-chromium - spoofs canvas / WebGL / UA / platform / timezone natively, hides webdriver, blocks the WebRTC leak. Turn it on in Settings → Browser.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('engine.description')}</p>
           </div>
         </div>
         <div className="p-4">
@@ -277,7 +277,7 @@ export default function BrowsersPage() {
                   <div className="flex-1 h-1.5 rounded-full bg-card overflow-hidden max-w-[280px]">
                     <div className="h-full rounded-full transition-all duration-300" style={{ width: `${antidetect.percent || 0}%`, background: 'var(--primary)' }} />
                   </div>
-                  <span className="text-[11px] text-muted-foreground">{antidetect.state === 'extracting' ? 'installing' : antidetect.state === 'verifying' ? 'verifying' : `${antidetect.percent || 0}%`}</span>
+                  <span className="text-[11px] text-muted-foreground">{antidetect.state === 'extracting' ? t('engine.progressInstalling') : antidetect.state === 'verifying' ? t('engine.progressVerifying') : `${antidetect.percent || 0}%`}</span>
                 </div>
               )}
               {antidetect?.state === 'error' && <p className="text-[11px] text-red-400 mt-1 truncate">{antidetect.error}</p>}
@@ -285,10 +285,10 @@ export default function BrowsersPage() {
             {antidetect?.installed ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0"><Check className="w-3.5 h-3.5" /> {t('row.ready')}</span>
             ) : antidetect && ['resolving', 'downloading', 'verifying', 'extracting'].includes(antidetect.state) ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {antidetect.state === 'extracting' ? 'Installing' : antidetect.state === 'verifying' ? 'Verifying' : 'Downloading'}</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground shrink-0"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {antidetect.state === 'extracting' ? t('engine.installing') : antidetect.state === 'verifying' ? t('engine.verifying') : t('engine.downloading')}</span>
             ) : (
               <button onClick={startAntidetectDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white shadow-lg shrink-0" style={{ background: 'linear-gradient(135deg, #06b6d4, color-mix(in srgb, #06b6d4 70%, #000))', boxShadow: '0 8px 20px -8px #06b6d4' }}>
-                <Download className="w-3.5 h-3.5" /> Download (~180 MB)
+                <Download className="w-3.5 h-3.5" /> {t('engine.download')}
               </button>
             )}
           </div>

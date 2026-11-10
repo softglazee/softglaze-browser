@@ -42,7 +42,7 @@ const ALLOWED_DEPS = Object.freeze([
   'scopedProfileWhere', 'scopedProxyWhere', 'scopedGroupWhere', 'assertCanAccessProfile', 'assertCanAccessProxy', 'partitionAccessibleProfileIds',
   'listAllSessions', 'isFirefoxSession', 'launchProfile', 'closeSession', 'markAutomationDriven',
   'createProfile', 'updateProfile', 'batchGenerateProfiles', 'createGroup', 'assignProfilesToGroup',
-  'checkProxy', 'getProxyHealthHistory', 'getRecentProxyHealth', 'getVendorScoreboard', 'rotateProxyIp',
+  'checkProxy', 'getProxyHealthHistory', 'getRecentProxyHealth', 'getVendorScoreboard', 'rotateProxyIp', 'rotateProfileProxyIp',
   'bulkAssignProxies', 'harvestFreeProxies', 'cancelFreeProxyHarvest',
   'getMacros', 'saveMacro', 'normalizeMacroSteps', 'runParallelMacro', 'getParallelRunStatus', 'stopParallelRun',
   'startWarmer', 'stopWarmer', 'listActiveWarmers',

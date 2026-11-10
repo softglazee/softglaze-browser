@@ -28,7 +28,7 @@
     "description": "Cómo se comporta el navegador iniciado en el día a día."
   },
   "ui": {
-    "searchPlaceholder": "Buscar ajustes",
+    "searchPlaceholder": "Buscar en la configuración",
     "jumpTo": "Ir a la sección",
     "noResultsTitle": "Ningún ajuste coincide con «{{term}}»",
     "noResultsDesc": "Prueba con una palabra más corta, por ejemplo proxy, cámara o inicio de sesión.",
@@ -222,7 +222,7 @@
         "switched": "Se cambió a {{proxy}} y se volvió a abrir la página.",
         "notReopened": "Se cambió a {{proxy}}, pero el perfil no se volvió a abrir.",
         "none": {
-          "disabled": "El cambio de proxy está desactivado en Ajustes, así que no se cambió nada.",
+          "disabled": "El cambio de proxy está desactivado en Configuración, así que no se cambió nada.",
           "noProxy": "El perfil no usa un proxy guardado, así que no se cambió nada.",
           "busy": "La automatización o la API local está usando este perfil, así que no se cambió nada.",
           "limit": "Este perfil ya cambió {{limit}} veces en la última hora, así que no se cambió nada.",

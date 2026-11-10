@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Palette, ShieldCheck, Loader2, Check, MonitorSmartphone, Info, Wand2 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import { renderFooterNodes } from '@/lib/footerText.jsx';
+import { renderFooterNodes, DEFAULT_FOOTER_TEXT, footerTextFor } from '@/lib/footerText.jsx';
 import Switch from '@/components/ui/Switch.jsx';
 
 // Default mirrors GLOBAL_SETTINGS_DEFAULTS.branding.footerText in the main process.
 // [label](url) renders as an anchor showing the label; {year} → current year.
-const DEFAULT_FOOTER = '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)';
+const DEFAULT_FOOTER = DEFAULT_FOOTER_TEXT;
 
 function Card({ icon: Icon, accent = '#3b82f6', title, description, children }) {
   return (
@@ -29,6 +29,7 @@ function Card({ icon: Icon, accent = '#3b82f6', title, description, children }) 
 // Footer branding (Super Admin only) + per-device "stay signed in" control.
 export default function BrandingSettings() {
   const { t } = useTranslation('cmpSettingsB');
+  const { t: tc } = useTranslation('common');
   const [me, setMe] = useState(null);
   const [footer, setFooter] = useState(DEFAULT_FOOTER);
   const [footerEnabled, setFooterEnabled] = useState(true);
@@ -130,7 +131,7 @@ export default function BrandingSettings() {
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[12px] text-muted-foreground">{renderFooterNodes(footer)}</div>
+            <div className="rounded-lg bg-elevated border border-border px-3 py-2 text-[12px] text-muted-foreground">{renderFooterNodes(footerTextFor(footer, tc))}</div>
             <p className="text-[11.5px] text-muted-foreground flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> {t('branding.onlySuperFooter')}</p>
           </div>
         )}

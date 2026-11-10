@@ -93,9 +93,21 @@ function detailedProfile(p, running) {
       timezone: p.timezoneType === 'Custom' ? `Custom: ${p.timezoneCustom || '?'}` : (p.timezoneType || 'Based on IP'),
       language: p.languageType === 'Custom' ? `Custom: ${p.languageCustom || '?'}` : (p.languageType || 'Based on IP'),
       geolocation: p.locationType || 'Based on IP',
-      webrtc: p.webrtc || 'Forward'
+      // Firefox profiles always run with WebRTC off (media.peerconnection.enabled false); the saved
+      // setting applies only if the profile moves to Chromium.
+      webrtc: p.browserCore === 'Firefox' ? `Off (Firefox profiles always run with WebRTC off; saved setting ${p.webrtc || 'Forward'} applies on Chromium)` : (p.webrtc || 'Forward')
     }
   };
+}
+
+// DataImpulse sticky ports (10000+) rotate through the vendor's API without a link, so they can rotate
+// too. The same rule as ipcHandlers.isDataImpulseSticky (test/spanishRound8.test.js keeps them equal).
+function isDataImpulseSticky(p) {
+  return Boolean(p)
+    && String(p.provider || '').toLowerCase() === 'dataimpulse'
+    && /(^|\.)dataimpulse\.com$/i.test(String(p.host || ''))
+    && Number(p.port) >= 10000
+    && Boolean(p.username) && Boolean(p.password);
 }
 
 // Compact proxy view: never the username, password, rotation link or raw string.
@@ -116,7 +128,7 @@ function compactProxy(p) {
     latencyMs: p.lastLatencyMs == null ? null : p.lastLatencyMs,
     blocklisted: typeof p.lastBlacklisted === 'boolean' ? p.lastBlacklisted : null,
     lastCheckedAt: iso(p.lastCheckedAt),
-    canRotate: Boolean(p.rotationUrl),
+    canRotate: Boolean(p.rotationUrl) || isDataImpulseSticky(p),
     usedByProfiles: p._count && typeof p._count.profiles === 'number' ? p._count.profiles : undefined
   };
 }
@@ -714,15 +726,27 @@ const TOOLS = [
   {
     name: 'rotate_proxy_ip',
     title: 'Rotate a proxy\'s IP',
-    description: 'Asks the proxy vendor for a new IP using the rotation link saved on the proxy (or the vendor\'s API where SoftGlaze supports it). Only works where the vendor supports rotation. Asks the user first.',
+    description: 'Asks the proxy vendor for a new IP using the rotation link saved on the proxy (or the vendor\'s API where SoftGlaze supports it). Give proxyId for a proxy in your pool, or profileId to rotate the proxy a profile uses, a profile shared with you "use only" included. Only works where the vendor supports rotation. Asks the user first.',
     scope: 'operate',
     permission: 'proxies.manage',
     feature: 'proxies', // Visible features: the window's rule (featureGate.js)
     approval: 'ask',
     annotations: { ...CHANGE, openWorldHint: true },
-    input: { proxyId: id() },
-    summarize: (a) => `Rotate the IP of proxy #${a.proxyId}`,
+    input: { proxyId: id().optional(), profileId: id().optional() },
+    // By profile, the registry checks access to it (a "use only" share is enough) and names it.
+    targets: (a) => ({ profileIds: a.profileId ? [a.profileId] : [] }),
+    summarize: (a) => (a.profileId ? `Rotate the IP of the proxy profile #${a.profileId} uses` : `Rotate the IP of proxy #${a.proxyId}`),
     async handler(a, ctx) {
+      if (a.profileId) {
+        const p = await ctx.db.profile.findUnique({ where: { id: a.profileId }, select: { proxyId: true, deletedAt: true } });
+        if (!p || p.deletedAt) throw ctx.userError(`Profile #${a.profileId} was not found.`);
+        if (p.proxyId == null) throw ctx.userError(`Profile #${a.profileId} has no proxy to rotate.`);
+        if (a.proxyId && a.proxyId !== p.proxyId) throw ctx.userError(`Profile #${a.profileId} uses proxy #${p.proxyId}, not #${a.proxyId}.`);
+        // The window's Rotate IP on a profile row: proxies.manage and profiles.launch, logged on the profile.
+        const r = await ctx.deps.rotateProfileProxyIp({ id: a.profileId });
+        return { summary: r && r.ok ? `The vendor accepted the rotation for the proxy of profile #${a.profileId}. Run check_proxy to see the new IP.` : `The vendor refused the rotation (HTTP ${r && r.status}).`, data: { profileId: a.profileId, proxyId: p.proxyId, ok: Boolean(r && r.ok), status: r ? r.status : null, latencyMs: r ? r.latencyMs : null } };
+      }
+      if (!a.proxyId) throw ctx.userError('Give proxyId (a proxy in your pool) or profileId (the proxy a profile uses).');
       await ctx.assertProxy(a.proxyId);
       const r = await ctx.deps.rotateProxyIp({ id: a.proxyId });
       return { summary: r && r.ok ? `The vendor accepted the rotation for proxy #${a.proxyId}. Run check_proxy to see the new IP.` : `The vendor refused the rotation (HTTP ${r && r.status}).`, data: { proxyId: a.proxyId, ok: Boolean(r && r.ok), status: r ? r.status : null, latencyMs: r ? r.latencyMs : null } };
@@ -1100,4 +1124,4 @@ const TOOLS = [
   ...PAGE_TOOLS
 ];
 
-module.exports = { TOOLS, compactProfile, compactProxy, redactMacroSteps, HIDDEN_VALUE };
+module.exports = { TOOLS, compactProfile, detailedProfile, compactProxy, redactMacroSteps, HIDDEN_VALUE };

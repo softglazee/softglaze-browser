@@ -123,7 +123,7 @@
     "manualActivationNote": "Tu plan se activa una vez que un administrador confirma el pago."
   },
   "admin": {
-    "configureMethods": "Configurar métodos de pago en Ajustes"
+    "configureMethods": "Configurar métodos de pago en Configuración"
   },
   "invoices": {
     "title": "Facturas",

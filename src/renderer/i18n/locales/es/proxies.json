@@ -197,8 +197,8 @@
   "deleteFiltered": {
     "tooltip": "Eliminar todos los proxies que coincidan con el filtro actual",
     "button": "Eliminar todos los {{scope}} ({{count}})",
-    "confirm_one": "¿Eliminar {{count}} proxy {{scope}}? Esto no se puede deshacer - los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
-    "confirm_other": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer - los perfiles vinculados siguen funcionando con su asignación de proxy borrada.",
+    "confirm_one": "¿Eliminar {{count}} proxy {{scope}}? Esto no se puede deshacer - los perfiles que lo usan se quedan sin él y no se abrirán hasta que les asignes otro proxy.",
+    "confirm_other": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer - los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro.",
     "scope": {
       "all": "totales",
       "filtered": "filtrados",
@@ -357,8 +357,8 @@
     "slowTip": "Mostrar solo proxies medidos con más de 2s"
   },
   "bulkDelete": {
-    "confirm_one": "¿Eliminar {{count}} proxy seleccionado? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada.",
-    "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles vinculados seguirán funcionando con su asignación de proxy borrada."
+    "confirm_one": "¿Eliminar {{count}} proxy seleccionado? Los perfiles que lo usan se quedan sin él y no se abrirán hasta que les asignes otro proxy.",
+    "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro."
   },
   "delete": {
     "confirm": "¿Eliminar el proxy \"{{name}}\"?",
@@ -429,8 +429,8 @@
   "groupModal": {
     "dialogTitleEdit": "Editar grupo",
     "dialogTitleNew": "Nuevo grupo",
-    "titleEdit": "Editar grupo de proxies",
-    "titleNew": "Nuevo grupo de proxies",
+    "titleEdit": "Editar grupo",
+    "titleNew": "Nuevo grupo",
     "description": "Agrupa los proxies por país o propósito (p. ej. EE. UU., Reino Unido, Japón). Puedes seleccionar un grupo al crear perfiles en lote.",
     "groupName": "Nombre del grupo",
     "groupNamePlaceholder": "Proxies de EE. UU.",
