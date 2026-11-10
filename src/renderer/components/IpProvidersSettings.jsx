@@ -11,11 +11,12 @@ import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
 if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
 if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
-// Brand accent + initials per provider (lucide has no brand glyphs).
+// Brand accent + initials per provider (lucide has no brand glyphs), by the row's stored name. Smartproxy
+// is now Decodo: it shows as "Decodo (Smartproxy)" (main's label) with Decodo's initials.
 const BRAND = {
   'Bright Data': { color: '#00b4d8', initials: 'BD' },
   Oxylabs: { color: '#7c5cff', initials: 'OX' },
-  Smartproxy: { color: '#ff6b35', initials: 'SP' },
+  Smartproxy: { color: '#ff6b35', initials: 'DC' },
   IPRoyal: { color: '#22c55e', initials: 'IPR' },
   Webshare: { color: '#3b82f6', initials: 'WS' },
   Asocks: { color: '#f59e0b', initials: 'AS' }
@@ -87,6 +88,8 @@ export default function IpProvidersSettings() {
 function ProviderCard({ provider, onChange, onError }) {
   const { t } = useTranslation('cmpSettingsC');
   const brand = brandOf(provider.name);
+  // The shown name (main's label) can differ from the stored one: Smartproxy shows as Decodo (Smartproxy).
+  const shownName = provider.label || provider.name;
   const [expanded, setExpanded] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -131,7 +134,7 @@ function ProviderCard({ provider, onChange, onError }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-foreground truncate">{provider.name}</span>
+            <span className="text-[13px] font-semibold text-foreground truncate">{shownName}</span>
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={enabled ? { background: 'color-mix(in srgb, #22c55e 14%, transparent)', color: '#22c55e' } : { background: 'var(--secondary)', color: 'var(--muted-foreground)' }}>
               {enabled ? t('ipProviders.statusEnabled') : t('ipProviders.statusDisabled')}
             </span>
@@ -177,7 +180,7 @@ function ProviderCard({ provider, onChange, onError }) {
           <div className="flex items-center justify-between gap-2 pt-1">
             {provider.referralLink ? (
               <a href={provider.referralLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-medium" style={{ color: brand.color }}>
-                <ExternalLink className="w-3 h-3" /> {t('ipProviders.providerDashboard', { provider: provider.name })}
+                <ExternalLink className="w-3 h-3" /> {t('ipProviders.providerDashboard', { provider: shownName })}
               </a>
             ) : <span />}
             <div className="flex items-center gap-2">
@@ -192,7 +195,7 @@ function ProviderCard({ provider, onChange, onError }) {
 
       {!expanded && provider.referralLink && (
         <a href={provider.referralLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3.5 pb-3 text-[11px] font-medium" style={{ color: brand.color }}>
-          <ExternalLink className="w-3 h-3" /> {t('ipProviders.getApiKeysAt', { provider: provider.name })}
+          <ExternalLink className="w-3 h-3" /> {t('ipProviders.getApiKeysAt', { provider: shownName })}
         </a>
       )}
     </div>

@@ -340,8 +340,6 @@ const initialProfileData = {
   rotCountry: '',
   rotRegion: '',
   rotCity: '',
-  proxyProvider: 'Smartproxy',
-  proxyApiKey: '',
 
   webrtc: 'Forward',
   timezoneType: 'Based on IP',

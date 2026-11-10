@@ -15278,23 +15278,26 @@ async function deliverPaymentReceipt(email, name, reference, months) {
 
 // ---- IP provider integrations (Super Admin only) ----
 // Master credentials for resold proxy vendors; the renderer only ever gets a masked key preview.
+// name is the row's unique key in the IpProvider table, so it never changes; label is the name the
+// window shows. Smartproxy is now Decodo: its row keeps the name Smartproxy, shows the connector's name
+// "Decodo (Smartproxy)", and its old default dashboard link (replaces) moves to Decodo's.
 const DEFAULT_IP_PROVIDERS = [
   { name: 'Bright Data', referralLink: 'https://brightdata.com/cp/api_example' },
   { name: 'Oxylabs', referralLink: 'https://dashboard.oxylabs.io/' },
-  { name: 'Smartproxy', referralLink: 'https://dashboard.smartproxy.com/' },
+  { name: 'Smartproxy', label: 'Decodo (Smartproxy)', referralLink: 'https://dashboard.decodo.com/', replaces: ['https://dashboard.smartproxy.com/'] },
   { name: 'IPRoyal', referralLink: 'https://dashboard.iproyal.com/' },
   { name: 'Webshare', referralLink: 'https://dashboard.webshare.io/userapi/keys' },
   { name: 'Asocks', referralLink: 'https://asocks.com/' }
 ];
 
 // Seed the 6 default providers (idempotent). Existing rows keep their creds/
-// status; only a missing referralLink is backfilled.
+// status; only a missing referralLink, or a default one that was replaced, is updated.
 async function ensureIpProviders(db) {
   for (const def of DEFAULT_IP_PROVIDERS) {
     const existing = await db.ipProvider.findUnique({ where: { name: def.name } });
     if (!existing) {
       await db.ipProvider.create({ data: { name: def.name, referralLink: def.referralLink, status: 'DISABLED' } });
-    } else if (!existing.referralLink && def.referralLink) {
+    } else if (def.referralLink && existing.referralLink !== def.referralLink && (!existing.referralLink || (def.replaces || []).includes(existing.referralLink))) {
       await db.ipProvider.update({ where: { id: existing.id }, data: { referralLink: def.referralLink } }).catch(() => {});
     }
   }
@@ -15308,10 +15311,17 @@ function maskSecret(value) {
   return `${s.slice(0, 3)}••••••••${s.slice(-2)}`;
 }
 
+// The name a provider row shows: its label (Decodo (Smartproxy)), else its stored name.
+function ipProviderLabel(name) {
+  const def = DEFAULT_IP_PROVIDERS.find((d) => d.name === name);
+  return (def && def.label) || name;
+}
+
 function serializeIpProvider(p) {
   return {
     id: p.id,
     name: p.name,
+    label: ipProviderLabel(p.name),
     status: p.status === 'ENABLED' ? 'ENABLED' : 'DISABLED',
     referralLink: p.referralLink || null,
     hasApiKey: Boolean(p.apiKey),
