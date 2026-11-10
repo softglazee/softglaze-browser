@@ -150,7 +150,7 @@ const hidden = (feature) => ({ permissionsJson: JSON.stringify({ features: { [fe
 function loadList({ reveal = true } = {}) {
   const db = seed();
   const ws = workspace(db);
-  const fns = loadMain([...VALIDATORS, 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'serializeProfile',
+  const fns = loadMain([...VALIDATORS, 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'serializeProfile',
     'withViewerEditFlags', 'proxyInVisiblePool', 'searchMatchesView', 'listProfiles', 'listTrash'], {
     ...ws.deps, rbacPolicy, profileOptions, redactProfileRow, redactPlatformAccounts, redactUseOnlyProxy,
     currentMemberCanRevealProxy: reveal, proxyRevealAllowed: () => reveal
@@ -317,7 +317,7 @@ test('a template of a "use only" share keeps no proxy, and says so', async () =>
 test('the proxy a launch rotated to arrives without the username and rotation link when it is not in the launcher\'s pool', async () => {
   const db = seed();
   const ws = workspace(db);
-  const { launchedProxyView } = loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'launchedProxyView'], {
+  const { launchedProxyView } = loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'launchedProxyView'], {
     ...ws.deps, rbacPolicy, redactForeignProxy, currentMemberCanRevealProxy: true, proxyRevealAllowed: () => true,
     assertCanAccessProxy: async (id) => {
       const m = ws.state.member;

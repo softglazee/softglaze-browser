@@ -162,11 +162,11 @@ function loadRotation(db, { settings = { proxyRotation: ROTATION_SETTING } } = {
   const activity = [];
   const axios = { get: async (url) => { fetched.push(url); return { status: 200, data: `ok new ip 9.9.9.9 ${url}` }; } };
   const fns = loadMain([...VALIDATORS, 'requirePermission', 'canRevealProxyCredentials', 'assertCanAccessProxy', 'assertCanAccessProfile',
-    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'rotateProxyIp', 'serializeProxy', 'deriveProvider',
+    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'serializeProxy', 'deriveProvider',
     'launchedProxyView', 'rotateProfileProxyIp'], {
     ...ws.deps, rbacPolicy, redactForeignProxy, SECRET_MASK,
     readSetting: async (k, d) => (k in settings ? settings[k] : d),
-    rotateDataImpulseSticky: async () => { throw new Error('not used'); },
+    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {},
     assertPublicHttpUrl: async () => {},
     assertPublicHttpUrlSync: () => {},
     publicOnlyLookup: () => {},
@@ -250,7 +250,7 @@ test('1: an imported link then works and hides exactly like a proxy\'s own link 
   await imp.run();
   const row = await db.proxy.findFirst({ where: { host: 'mob1.example' } });
   // The Proxy pool, the profile list's linked proxy and every other serializeProxy caller.
-  const view = (reveal) => loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky'], { rbacPolicy, proxyRevealAllowed: () => reveal }).serializeProxy(row);
+  const view = (reveal) => loadMain(['serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate'], { rbacPolicy, proxyRevealAllowed: () => reveal }).serializeProxy(row);
   assert.deepEqual([view(false).rotationUrl, view(false).canRotate, view(false).hasRotationUrl], [SECRET_MASK, true, true], 'an Operator gets the mask and the Rotate IP button');
   assert.doesNotMatch(JSON.stringify(view(false)), /K1/);
   assert.equal(view(true).rotationUrl, 'https://rot.example/1?key=K1', 'proxies.reveal: shown');
@@ -267,7 +267,7 @@ test('1: an imported link then works and hides exactly like a proxy\'s own link 
   assert.match(read('src', 'main', 'ai', 'tools.js'), /ctx\.deps\.rotateProxyIp\(\{ id: a\.proxyId \}\)/);
   assert.doesNotMatch(read('src', 'main', 'localApi.js'), /rotationUrl/, 'the Local API runs the AI tools');
   // The automatic block response decides "can rotate" from the proxy's link.
-  assert.match(extractFunction(IPC, 'respondToBlock'), /canRotate: Boolean\(proxy\) && \(Boolean\(proxy\.rotationUrl\) \|\| isDataImpulseSticky\(proxy\)\)/);
+  assert.match(extractFunction(IPC, 'respondToBlock'), /canRotate: proxyCanRotate\(proxy\)/);
   // The export's column is still blank without proxies.reveal (round 5), from the same Setting.
   assert.match(extractFunction(IPC, 'gatherExport'), /c\[0\] === 'Proxy Rotation URL'\)\) return '';/);
 });
@@ -513,9 +513,9 @@ test('4: Rotate IP on a profile row is logged in its activity and returns the pr
   refusing.ws.as(3);
   const axiosRefuse = { get: async () => ({ status: 429, data: 'slow down' }) };
   const { rotateProfileProxyIp } = loadMain([...VALIDATORS, 'requirePermission', 'canRevealProxyCredentials', 'assertCanAccessProxy', 'assertCanAccessProfile',
-    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'rotateProxyIp', 'serializeProxy', 'deriveProvider', 'launchedProxyView', 'rotateProfileProxyIp'], {
+    'profileLaunchProxyIds', 'assertCanRotateProxy', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'serializeProxy', 'deriveProvider', 'launchedProxyView', 'rotateProfileProxyIp'], {
     ...refusing.ws.deps, rbacPolicy, redactForeignProxy, SECRET_MASK, readSetting: async (_k, d) => d,
-    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, assertPublicHttpUrl: async () => {}, assertPublicHttpUrlSync: () => {}, publicOnlyLookup: () => {},
+    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {}, assertPublicHttpUrl: async () => {}, assertPublicHttpUrlSync: () => {}, publicOnlyLookup: () => {},
     logActivity: async (_db, profileId, action, detail) => { refusing.activity.push({ profileId, action, detail }); },
     require: (m) => (m === 'axios' ? axiosRefuse : require(m))
   });
@@ -541,6 +541,7 @@ test('4: the automatic block response rotates the proxy of a "use only" profile 
       blockDetect: { ...blockDetect, ROTATE_SETTLE_MS: 0 }, blockSwitchTimes: new Map(),
       profileDrivenByAutomation: () => false, profileUsesRotationPool: async () => false,
       isDataImpulseSticky: () => false,
+      proxyCanRotate: (p) => Boolean(p) && Boolean(p.rotationUrl),
       rotateProxyIp: rot.fns.rotateProxyIp,
       sleepMs: async () => {}, retryBlockedPage: async (sid, url) => { retried.push([sid, url]); },
       swapProxyAfterBlock: async () => { swapped.push(true); return null; }
@@ -591,7 +592,7 @@ test('4: the Profiles page offers Rotate IP where the profile\'s proxy can rotat
 
 test('5: while an AI or Local API token acts, serializeProxy and the profile list follow the token\'s member\'s proxies.reveal, not the window\'s', async () => {
   const db = seed();
-  const load = (windowMemberId) => loadMain(['actingMemberId', 'proxyRevealAllowed', 'getActiveMember', 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky',
+  const load = (windowMemberId) => loadMain(['actingMemberId', 'proxyRevealAllowed', 'getActiveMember', 'serializeProxy', 'deriveProvider', 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate',
     'serializeProfile'], {
     aiActor, permissions, rbacPolicy, profileOptions, redactProfileRow, redactPlatformAccounts,
     getPrisma: () => db, currentMemberId: windowMemberId, currentMemberCanRevealProxy: true

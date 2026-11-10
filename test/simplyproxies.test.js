@@ -65,7 +65,7 @@ function ipcFunction(name) {
 }
 const fetchSimplyProxiesPool = new Function(
   'crypto', 'simplyProxiesUsername', 'SIMPLYPROXIES_NETWORKS', 'SIMPLYPROXIES_GATEWAY', 'MINTED_PULL_MAX',
-  `${['clampPoolCount', 'mintGatewayRows', 'fetchSimplyProxiesPool'].map(ipcFunction).join('\n')}\nreturn fetchSimplyProxiesPool;`
+  `${['clampPoolCount', 'gatewayPullPlan', 'mintGatewayRows', 'fetchSimplyProxiesPool'].map(ipcFunction).join('\n')}\nreturn fetchSimplyProxiesPool;`
 )(require('crypto'), U.simplyProxiesUsername, U.SIMPLYPROXIES_NETWORKS, { host: 'proxy.simplyproxies.com', socks: 6890 }, Number(/const MINTED_PULL_MAX = (\d+);/.exec(IPC)[1]));
 
 test('a pull mints up to MINTED_PULL_MAX sticky SOCKS5 rows', async () => {

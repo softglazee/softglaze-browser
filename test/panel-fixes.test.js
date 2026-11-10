@@ -59,7 +59,11 @@ test('Live Proxies adapter uses gateway mode when a username is given', () => {
 
 test('blank session + How many > 1 mints sticky sessions on the gateway vendors', () => {
   const hits = IPC.match(/const fixed = String\(session \|\| ''\)\.trim\(\) \|\| \(clampPoolCount\(count, 1, 100\) > 1 \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
-  assert.equal(hits.length, 3, 'PacketStream, CatProxies and the shared gateway minter');
+  assert.equal(hits.length, 1, 'PacketStream (it has no Keep same IP)');
+  // CatProxies and the shared gateway minter follow gatewayPullPlan, which also makes one row sticky
+  // when Keep same IP is set (test/connectorsShared.test.js).
+  const plans = IPC.match(/const plan = gatewayPullPlan\(\{ session, count, life \}\);\n  const fixed = plan\.session \|\| \(plan\.sticky \? `sg\$\{crypto\.randomBytes\(3\)\.toString\('hex'\)\}` : ''\);/g) || [];
+  assert.equal(plans.length, 2, 'CatProxies and mintGatewayRows');
 });
 
 test('typed provider fields survive tab/provider switches and failed pulls', () => {
@@ -69,7 +73,7 @@ test('typed provider fields survive tab/provider switches and failed pulls', () 
   const pull = UI.slice(UI.indexOf('async function handleGeoSync'), UI.indexOf('async function handleLookup'));
   assert.ok(pull.indexOf('persistCreds();') < pull.indexOf('syncVendorPool('), 'creds are saved before the pull runs');
   assert.match(IPC, /PROXY_CRED_SECRET_FIELDS = \['password', 'token', 'apiToken', 'apiUrl'\]/);
-  assert.match(IPC, /PROXY_CRED_PLAIN_FIELDS = \['username', 'zone', 'plan', 'host', 'port', 'orderId'\]/);
+  assert.match(IPC, /PROXY_CRED_PLAIN_FIELDS = \['username', 'zone', 'plan', 'host', 'port', 'orderId', 'teamId', 'proxyType'\]/);
 });
 
 test('list-only providers without a country on their rows hide the country picker', () => {

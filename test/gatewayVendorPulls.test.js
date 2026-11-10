@@ -276,7 +276,7 @@ test('AnyIP provisioning calls dashboard.anyip.io and falls back to the older ro
   assert.equal(g.calls[0].options.headers['Api-Key'], 'key1');
   const body = JSON.parse(g.calls[0].options.body);
   assert.match(body.password, /^[a-zA-Z0-9_]{6,}$/, 'the documented password rule');
-  assert.match(rows[0].username, /^user_srv1,type_residential,session_/);
+  assert.equal(rows[0].username, 'user_srv1,type_residential', 'one row, no session name, Keep same IP blank: the rotating login');
   assert.equal(rows[0].password, body.password);
   assert.doesNotMatch(IPC, /api\.anyip\.io/, 'api.anyip.io no longer resolves');
 });

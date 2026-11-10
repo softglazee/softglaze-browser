@@ -81,7 +81,7 @@ function ipcFunction(name) {
 }
 const fetchTwoExtractPool = new Function(
   'crypto', 'twoExtractBaseUser', 'twoExtractUsername', 'TWOEXTRACT_GATEWAY', 'MINTED_PULL_MAX',
-  `${['normCountryCode', 'clampPoolCount', 'gatewayOverride', 'mintGatewayRows', 'fetchTwoExtractPool'].map(ipcFunction).join('\n')}\nreturn fetchTwoExtractPool;`
+  `${['normCountryCode', 'clampPoolCount', 'gatewayPullPlan', 'gatewayOverride', 'mintGatewayRows', 'fetchTwoExtractPool'].map(ipcFunction).join('\n')}\nreturn fetchTwoExtractPool;`
 )(require('crypto'), U.twoExtractBaseUser, U.twoExtractUsername, { host: 'proxy.2extract.net', port: 5555 }, Number(/const MINTED_PULL_MAX = (\d+);/.exec(IPC)[1]));
 
 test('a pull mints up to MINTED_PULL_MAX sticky rows, each with its own session', async () => {

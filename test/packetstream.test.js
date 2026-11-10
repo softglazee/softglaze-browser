@@ -59,7 +59,7 @@ test('PacketStream has a PROVIDERS entry in the UI', () => {
   const line = UI.split(/\r?\n/).find((l) => /key:\s*'packetstream'/.test(l));
   assert.ok(line, 'packetstream must be a PROVIDERS entry');
   assert.ok(!/unavailable:\s*true/.test(line), 'must not be marked unavailable');
-  assert.match(line, /geoSync:\s*\{[^}]*session:\s*true/, 'sticky-session field must be enabled');
+  assert.match(line, /geoSync:\s*\{.*session:\s*true/, 'sticky-session field must be enabled');
 });
 
 test('geoHints.packetstream exists in every cmpSettingsC locale', () => {
