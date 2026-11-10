@@ -1497,7 +1497,9 @@ export default function ProfilesPage() {
       request = { id: Number(pd.selectedSavedProxy) };
     } else {
       if (!pd.proxyHost || !pd.proxyPort) return setError(t('errors.proxyHostPort'));
-      request = { type: pd.proxyType === 'Local' ? pd.localProxyProtocol : pd.proxyType, raw: constructProxyString() };
+      // A username or password hidden for this member arrives as a mask; main puts it back from this
+      // profile (pd.id) for the check, as it does on save.
+      request = { type: pd.proxyType === 'Local' ? pd.localProxyProtocol : pd.proxyType, raw: constructProxyString(), ...(pd.id ? { profileId: pd.id } : {}) };
     }
     setCheckingProxy(true); setError(''); setProxyResult(null);
     try {

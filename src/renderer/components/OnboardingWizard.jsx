@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Sparkles, Mail, Globe, Fingerprint, Smartphone, Check, ArrowRight, ArrowLeft, Loader2, X } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
+import { loadCurrentMember } from '@/lib/usePermissions.js';
+import { ONBOARDING_STEPS, onboardingStepDenials } from '@/lib/memberPermissions.mjs';
 import i18n from '@/i18n/index.js';
 import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
 import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
@@ -12,8 +14,11 @@ import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
 if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
 if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
-// First-run setup over the existing SMTP / proxy / profile flows. Shown only on a fresh workspace
-// until completed or skipped (flag in global settings); every step is skippable.
+// First-run setup over the existing SMTP / proxy / profile flows; every step is skippable. Each member
+// has their own "done" flag (main: the Owner's is globalSettings.onboardingDone, every other member's is
+// in memberOnboarding), so finishing or skipping it hides it for that member only. The Owner is not
+// shown it on a workspace that already has profiles. A step the member's role cannot do is skipped and
+// shown greyed out on the welcome screen with the reason as its tooltip; with no step left, no wizard.
 const inputCls = 'w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary';
 const labelCls = 'block text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5';
 
@@ -45,8 +50,11 @@ function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, on
 
 export default function OnboardingWizard() {
   const { t } = useTranslation('cmpOverlays');
+  const { t: tc } = useTranslation('common');
   const [phase, setPhase] = useState('checking'); // checking | hidden | active
-  const [step, setStep] = useState(0); // 0 welcome · 1 smtp · 2 proxy · 3 profile
+  const [step, setStep] = useState('welcome'); // welcome · smtp · proxy · profile
+  // Why each step is off for this member (onboardingStepDenials), null when it is on.
+  const [denied, setDenied] = useState({ smtp: null, proxy: null, profile: null });
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -61,18 +69,27 @@ export default function OnboardingWizard() {
     let live = true;
     (async () => {
       try {
+        // main returns this member's own flag (the Owner's is the workspace's).
         const g = await softglazeApi.settings.getGlobal().catch(() => ({}));
         if (g && g.onboardingDone) { if (live) setPhase('hidden'); return; }
-        // Don't nag an existing workspace: if profiles already exist, mark done.
-        const existing = await softglazeApi.profiles.list().catch(() => []);
-        const arr = Array.isArray(existing) ? existing : (existing && (existing.items || existing.profiles || existing.rows || existing.data)) || [];
-        if (arr.length > 0) {
-          // Only the flag: main merges it in, and a member may not rewrite the workspace settings.
-          await softglazeApi.settings.setGlobal({ onboardingDone: true }).catch(() => {});
-          if (live) setPhase('hidden');
-          return;
+        const me = await loadCurrentMember();
+        const d = onboardingStepDenials(me);
+        // Nothing here this member may set up: no wizard (and no flag, so it can show once they may).
+        if (ONBOARDING_STEPS.every((k) => d[k])) { if (live) setPhase('hidden'); return; }
+        // Don't nag an existing workspace: the Owner (single-user mode included) who already has profiles
+        // is marked done. Other members have their own flag, which main already set for members who used
+        // the app before 1.0.26, so a new member is shown the wizard even when profiles are shared with them.
+        if (me === null || (me && me.role === 'OWNER')) {
+          const existing = await softglazeApi.profiles.list().catch(() => []);
+          const arr = Array.isArray(existing) ? existing : (existing && (existing.items || existing.profiles || existing.rows || existing.data)) || [];
+          if (arr.length > 0) {
+            // Only the flag: main merges it in.
+            await softglazeApi.settings.setGlobal({ onboardingDone: true }).catch(() => {});
+            if (live) setPhase('hidden');
+            return;
+          }
         }
-        if (live) setPhase('active');
+        if (live) { setDenied(d); setPhase('active'); }
       } catch (e) { if (live) setPhase('hidden'); }
     })();
     return () => { live = false; };
@@ -85,11 +102,27 @@ export default function OnboardingWizard() {
 
   if (phase !== 'active') return null;
 
+  // The steps this member may do, in order; the others are skipped.
+  const order = ONBOARDING_STEPS.filter((k) => !denied[k]);
+  const nextOf = (k) => order[order.indexOf(k) + 1] || null;
+  const backOf = (k) => order[order.indexOf(k) - 1] || 'welcome';
+  const goNext = (k) => { const n = nextOf(k); if (n) setStep(n); else finish(); };
+  // The same wording as every other control a member may not use (usePermissions).
+  const reasonText = (d) => {
+    if (!d) return null;
+    if (d.kind === 'feature') return tc(d.feature === 'proxies' ? 'perm.proxiesHidden' : 'perm.profilesHidden');
+    if (d.kind === 'loading') return tc('perm.checking');
+    if (d.kind === 'inactive') return tc('perm.inactive');
+    if (d.kind === 'revoked') return tc('perm.turnedOff');
+    if (d.role === 'OWNER') return tc('perm.ownerOnly');
+    return tc('perm.needsRole', { role: tc(`roles.${d.role}`) });
+  };
+
   async function saveSmtp() {
     setErr(''); setMsg(''); setBusy('smtp');
     try {
       await softglazeApi.settings.setEmail({ host: smtp.host.trim(), port: Number(smtp.port) || 587, user: smtp.user.trim(), pass: smtp.pass, from: smtp.from.trim() || smtp.user.trim() });
-      setMsg(t('wizard.msg.smtpSaved')); setStep(2);
+      setMsg(t('wizard.msg.smtpSaved')); goNext('smtp');
     } catch (e) { setErr(e.message || t('wizard.err.smtpSaveFailed')); }
     finally { setBusy(''); }
   }
@@ -103,7 +136,7 @@ export default function OnboardingWizard() {
         username: proxy.username.trim() || null, password: proxy.password || null
       });
       if (created && created.id) setProxyId(created.id);
-      setMsg(t('wizard.msg.proxySaved')); setStep(3);
+      setMsg(t('wizard.msg.proxySaved')); goNext('proxy');
     } catch (e) { setErr(e.message || t('wizard.err.proxySaveFailed')); }
     finally { setBusy(''); }
   }
@@ -119,30 +152,42 @@ export default function OnboardingWizard() {
     } catch (e) { setErr(e.message || t('wizard.err.profileCreateFailed')); setBusy(''); }
   }
 
-  if (step === 0) {
+  if (step === 'welcome') {
+    // A step this member cannot do stays in the list, greyed out, with the reason as its tooltip (and for
+    // screen readers), the way a disabled control explains itself (GuardedButton).
+    const welcomeStep = (key, Icon, label) => {
+      const why = reasonText(denied[key]);
+      if (!why) return <li key={key} className="flex items-center gap-2.5"><Icon className="w-4 h-4 text-primary" /> {label}</li>;
+      return (
+        <li key={key} className="flex items-center gap-2.5 opacity-50" title={why}>
+          <Icon className="w-4 h-4 text-muted-foreground" aria-hidden="true" /> {label}<span className="sr-only"> ({why})</span>
+        </li>
+      );
+    };
     return (
-      <WizardShell icon={Sparkles} title={t('wizard.welcome.title')} subtitle={t('wizard.welcome.subtitle')}
+      <WizardShell icon={Sparkles} title={t('wizard.welcome.title')} subtitle={order.length === ONBOARDING_STEPS.length ? t('wizard.welcome.subtitle') : t('wizard.welcome.subtitleShort', { count: order.length })}
         onSkip={finish} err={err} msg={msg}
         footer={<>
           <button onClick={finish} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
-          <button onClick={() => { setErr(''); setMsg(''); setStep(1); }} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2">{t('wizard.welcome.getStarted')} <ArrowRight className="w-4 h-4" /></button>
+          <button onClick={() => { setErr(''); setMsg(''); setStep(order[0]); }} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2">{t('wizard.welcome.getStarted')} <ArrowRight className="w-4 h-4" /></button>
         </>}>
         <ul className="space-y-2.5 text-[13px] text-foreground">
-          <li className="flex items-center gap-2.5"><Mail className="w-4 h-4 text-primary" /> {t('wizard.welcome.stepEmail')}</li>
-          <li className="flex items-center gap-2.5"><Globe className="w-4 h-4 text-primary" /> {t('wizard.welcome.stepProxy')}</li>
-          <li className="flex items-center gap-2.5"><Fingerprint className="w-4 h-4 text-primary" /> {t('wizard.welcome.stepProfile')}</li>
+          {welcomeStep('smtp', Mail, t('wizard.welcome.stepEmail'))}
+          {welcomeStep('proxy', Globe, t('wizard.welcome.stepProxy'))}
+          {welcomeStep('profile', Fingerprint, t('wizard.welcome.stepProfile'))}
         </ul>
+        {order.length < ONBOARDING_STEPS.length && <p className="mt-3 text-[11.5px] text-muted-foreground">{t('wizard.welcome.unavailable')}</p>}
       </WizardShell>
     );
   }
 
-  if (step === 1) {
+  if (step === 'smtp') {
     return (
       <WizardShell icon={Mail} title={t('wizard.smtp.title')} subtitle={t('wizard.smtp.subtitle')}
-        onBack={() => setStep(0)} onSkip={finish} err={err} msg={msg}
+        onBack={() => setStep(backOf('smtp'))} onSkip={finish} err={err} msg={msg}
         footer={<>
-          <button onClick={() => { setErr(''); setMsg(''); setStep(2); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
-          <button onClick={saveSmtp} disabled={busy === 'smtp' || !smtp.host} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'smtp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} {t('wizard.saveAndContinue')}</button>
+          <button onClick={() => { setErr(''); setMsg(''); goNext('smtp'); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
+          <button onClick={saveSmtp} disabled={busy === 'smtp' || !smtp.host} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'smtp' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} {t(nextOf('smtp') ? 'wizard.saveAndContinue' : 'wizard.saveAndFinish')}</button>
         </>}>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
@@ -156,13 +201,13 @@ export default function OnboardingWizard() {
     );
   }
 
-  if (step === 2) {
+  if (step === 'proxy') {
     return (
       <WizardShell icon={Globe} title={t('wizard.proxy.title')} subtitle={t('wizard.proxy.subtitle')}
-        onBack={() => setStep(1)} onSkip={finish} err={err} msg={msg}
+        onBack={() => setStep(backOf('proxy'))} onSkip={finish} err={err} msg={msg}
         footer={<>
-          <button onClick={() => { setErr(''); setMsg(''); setStep(3); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
-          <button onClick={saveProxy} disabled={busy === 'proxy' || !proxy.host || !proxy.port} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'proxy' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} {t('wizard.saveAndContinue')}</button>
+          <button onClick={() => { setErr(''); setMsg(''); goNext('proxy'); }} className="text-[12.5px] text-muted-foreground hover:text-foreground px-3 py-2">{t('wizard.skip')}</button>
+          <button onClick={saveProxy} disabled={busy === 'proxy' || !proxy.host || !proxy.port} className="h-9 px-5 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'proxy' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />} {t(nextOf('proxy') ? 'wizard.saveAndContinue' : 'wizard.saveAndFinish')}</button>
         </>}>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
@@ -184,10 +229,10 @@ export default function OnboardingWizard() {
     );
   }
 
-  // step 3 - first profile
+  // the first profile (always the last step when it is on)
   return (
     <WizardShell icon={Fingerprint} title={t('wizard.profile.title')} subtitle={t('wizard.profile.subtitle')}
-      onBack={() => setStep(2)} onSkip={finish} err={err} msg={msg}
+      onBack={() => setStep(backOf('profile'))} onSkip={finish} err={err} msg={msg}
       footer={<button onClick={createProfile} disabled={busy === 'profile'} className="h-9 px-5 rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">{busy === 'profile' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t('wizard.profile.createAndFinish')}</button>}>
       <div className="space-y-3.5">
         <div><label className={labelCls}>{t('wizard.profile.name')}</label><input className={inputCls} value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder={t('wizard.profile.namePlaceholder')} /></div>
