@@ -22,6 +22,7 @@ const {
   liveLeakTest,
   listAvailableBrowsers,
   resolveBrowserExecutable,
+  findRealChrome,
   navigateSession,
   runCookieRobot,
   warmInteract,
@@ -58,6 +59,7 @@ const payments = require('./payments');
 const { parseWorkbookFile, parseDataRows, parseSystemProxyBehavior, BROWSER_CORE, normalizeBrowserCore, toStoredBrowserCore } = require('./importParser');
 const { generateFingerprint, normalizeBrand, deviceGpuCoherence, fingerprintSignature, CHROME_VERSIONS } = require('./fingerprintGenerator');
 const { doNotTrackChoice } = require('./doNotTrack');
+const profileOptions = require('./profileOptions');
 const migrationService = require('./migrationService');
 const extensionManager = require('./extensionManager');
 const profileArchive = require('./profileArchive');
@@ -210,6 +212,8 @@ const CHANNELS = Object.freeze({
   PROFILE_IMPORT_COOKIES_BULK: 'profile:import-cookies-bulk',
   PROFILE_STORAGE_INFO: 'profile:storage-info',
   PROFILE_CLONE: 'profile:clone',
+  PROFILE_EDITOR_OPTIONS: 'profile:editor-options',
+  PROFILE_GENERATE_IDENTITY: 'profile:generate-identity',
   TEMPLATE_LIST: 'template:list',
   TEMPLATE_SAVE: 'template:save',
   TEMPLATE_DELETE: 'template:delete',
@@ -415,7 +419,8 @@ const CHANNELS = Object.freeze({
   UPDATER_NOTICE_DOWNLOAD: 'updater:notice-download'
 });
 
-const VALID_PROXY_TYPES = new Set(['HTTP', 'SOCKS5', 'SOCKS4']);
+// HTTPS is a proxy reached over TLS (Chrome's https:// proxy scheme); since 1.0.26 it is kept as HTTPS.
+const VALID_PROXY_TYPES = new Set(['HTTP', 'HTTPS', 'SOCKS5', 'SOCKS4']);
 const VALID_SYSTEM_PROXY_BEHAVIORS = new Set(['DIRECT', 'PROFILE_PROXY', 'SYSTEM_PROXY']);
 
 let registered = false;
@@ -534,16 +539,15 @@ function parsePort(value) {
 
 function parseProxyType(value) {
   const normalized = String(value || 'HTTP').trim().toUpperCase()
-    .replace(/^HTTPS$/, 'HTTP')
     .replace(/^SOCKS4A$/, 'SOCKS4')
-    .replace(/^SOCKS$/, 'SOCKS5');
-  if (!VALID_PROXY_TYPES.has(normalized)) throw new Error('Proxy type must be HTTP, SOCKS5, or SOCKS4.');
+    .replace(/^SOCKS5H?$|^SOCKS$/, 'SOCKS5');
+  if (!VALID_PROXY_TYPES.has(normalized)) throw new Error('Proxy type must be HTTP, HTTPS, SOCKS5, or SOCKS4.');
   return normalized;
 }
 
 // The type the profile editor picked for a raw "host:port:user:pass" proxy. A scheme written in the
-// string itself (socks5://...) wins, and a label that is not a proxy protocol (the editor's "Local")
-// leaves the string's own default.
+// string itself (socks5://...) wins, and a label that is not a proxy protocol leaves the string's own
+// default. (The editor's "Local" sends the protocol picked for it, see ProfilesPage.)
 function proxyTypeHintFor(raw, type) {
   if (!type || /^[a-z0-9]+:\/\//i.test(String(raw || '').trim())) return null;
   try { return parseProxyType(type); } catch (e) { return null; }
@@ -857,6 +861,8 @@ function serializeProfile(profile) {
     syncItems,
     browserSettings,
     tags,
+    fontsList: profileOptions.parseFontList(profile.fontsList || []),
+    mediaDeviceCounts: profileOptions.parseMediaCounts(profile.mediaDeviceCounts),
     lastUsedAt: profile.lastUsedAt instanceof Date ? profile.lastUsedAt.toISOString() : (profile.lastUsedAt || null),
     launchCount: profile.launchCount ?? 0,
     group: profile.group
@@ -883,6 +889,8 @@ function extractFingerprintData(input) {
     osVersion: input.osVersion,
     deviceClass: input.deviceClass === 'mobile' ? 'mobile' : (input.deviceClass === 'desktop' ? 'desktop' : undefined),
     userAgent: input.userAgent || 'Auto',
+    // 'Custom' when the user picked this UA (applied at launch), 'Auto' when it was generated for display.
+    userAgentMode: input.userAgentMode === undefined ? undefined : (input.userAgentMode === 'Custom' ? 'Custom' : 'Auto'),
     // Stored as newline-joined text. The editor sends that text as typed (kept as is); a list from an
     // API caller is joined the same way, each entry whole (an array here was a database error).
     startupUrls: Array.isArray(input.startupUrls) ? normalizeStartupUrls(input.startupUrls) : input.startupUrls,
@@ -891,7 +899,8 @@ function extractFingerprintData(input) {
     // sealed at rest and decrypted only to mint a live token.
     twoFactorSeed: input.twoFactorSeed === undefined ? undefined : (String(input.twoFactorSeed).trim() ? secretStore.seal(String(input.twoFactorSeed).trim()) : null),
 
-    webrtc: input.webrtc,
+    // The editor's words; the retired "Proxy UDP" (and other spellings) become the mode they launch as.
+    webrtc: input.webrtc === undefined ? undefined : (profileOptions.parseWebrtc(input.webrtc) || input.webrtc),
     timezoneType: input.timezoneType,
     timezoneCustom: input.timezoneCustom,
     locationType: input.locationType,
@@ -908,6 +917,11 @@ function extractFingerprintData(input) {
     resolutionW: input.resolutionW,
     resolutionH: input.resolutionH,
     fontsType: input.fontsType,
+    // Fonts > Custom: the fonts websites may see (JSON array); empty means this OS's standard set.
+    fontsList: input.fontsList === undefined ? undefined : (() => {
+      const list = profileOptions.parseFontList(input.fontsList);
+      return list.length ? JSON.stringify(list) : null;
+    })(),
     
     canvasNoise: input.canvasNoise !== false,
     webglImageNoise: input.webglImageNoise !== false,
@@ -915,6 +929,8 @@ function extractFingerprintData(input) {
     clientRectsNoise: input.clientRectsNoise !== false,
     speechVoicesNoise: input.speechVoicesNoise !== false,
     mediaDevice: input.mediaDevice,
+    // Media Device "Edit": how many microphones, speakers and cameras websites see (0-4 each).
+    mediaDeviceCounts: input.mediaDeviceCounts === undefined ? undefined : JSON.stringify(profileOptions.parseMediaCounts(input.mediaDeviceCounts)),
     
     webglMetadata: input.webglMetadata,
     webglVendor: input.webglVendor,
@@ -927,14 +943,17 @@ function extractFingerprintData(input) {
     ramGb: input.ramGb,
     
     deviceNameType: input.deviceNameType,
-    deviceName: input.deviceName,
+    deviceName: input.deviceName === undefined ? undefined : (String(input.deviceName == null ? '' : input.deviceName).trim() || null),
     macAddressType: input.macAddressType,
-    macAddress: input.macAddress,
+    // Stored as AA:BB:CC:DD:EE:FF when it is a MAC at all (validation reports anything else).
+    macAddress: input.macAddress === undefined ? undefined
+      : (profileOptions.normalizeMac(input.macAddress) || (String(input.macAddress == null ? '' : input.macAddress).trim() || null)),
     
     // Stored as the editor's word: 'Open' / 'Close' / 'Default' (the API may send on/off, 1/0, true/false).
     doNotTrack: input.doNotTrack === undefined ? undefined : doNotTrackChoice(input.doNotTrack),
     portScanProtection: input.portScanProtection,
-    hardwareAcceleration: input.hardwareAcceleration,
+    // Default / On / Off (older words: Open = On, Close = Off).
+    hardwareAcceleration: input.hardwareAcceleration === undefined ? undefined : profileOptions.hardwareAccelerationChoice(input.hardwareAcceleration),
     disableTls: input.disableTls,
     launchArgs: input.launchArgs,
     // HTTP/3 (QUIC) is opt-in, off for stealth; explicit boolean so a payload without it saves false.
@@ -1119,8 +1138,8 @@ async function findOrCreateProxy(db, proxyInput, nameFallback = null, typeHint =
   const parsed = parseProxyInput(proxyInput);
   if (!parsed) return null;
   // An explicit "Proxy Type" column (HTTP/HTTPS/SOCKS5/SOCKS4) overrides the default. Both go through
-  // parseProxyType, so the stored value is always one the ProxyType enum accepts (HTTPS -> HTTP,
-  // SOCKS4A -> SOCKS4) instead of failing the database write.
+  // parseProxyType, so the stored value is always one the ProxyType enum accepts (SOCKS4A -> SOCKS4,
+  // SOCKS -> SOCKS5) instead of failing the database write.
   parsed.type = parseProxyType(typeHint || parsed.type);
 
   // Reuse a row only when every credential matches, so nothing is revealed or changed; a different
@@ -4421,6 +4440,7 @@ function proxyAgentScheme(type) {
   const t = String(type || '').toLowerCase();
   if (t === 'socks5') return 'socks5h';
   if (t === 'socks4') return 'socks4';
+  if (t === 'https') return 'https'; // TLS to the proxy (https-proxy-agent's secure proxy)
   return 'http';
 }
 
@@ -5151,15 +5171,116 @@ function pickCloneableFields(row) {
   return out;
 }
 
-function randomMac() {
-  const h = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
-  return [h(), h(), h(), h(), h(), h()].join(':');
+// ---- Device name and MAC address ----
+// Every profile has its own (profileOptions.js): realistic for its OS (DESKTOP-XXXXXXX on Windows, a
+// registered network-adapter prefix for the MAC) and never shared with another profile in the workspace,
+// trashed ones included (they can be restored). "Real" fields are left alone.
+
+// The names (lower case) and MACs (normalized) the workspace's profiles use, except excludeId's.
+async function takenDeviceIdentities(db, excludeId = null) {
+  const rows = await db.profile.findMany({ select: { id: true, deviceName: true, macAddress: true } });
+  const names = new Set();
+  const macs = new Set();
+  for (const r of rows) {
+    if (excludeId != null && r.id === excludeId) continue;
+    const n = String(r.deviceName || '').trim();
+    if (n) names.add(n.toLowerCase());
+    const m = profileOptions.normalizeMac(r.macAddress);
+    if (m) macs.add(m);
+  }
+  return { names, macs };
 }
 
-function randomDeviceName() {
-  const prefixes = ['DESKTOP', 'LAPTOP', 'PC', 'WORKSTATION'];
-  const suffix = crypto.randomBytes(4).toString('hex').toUpperCase();
-  return `${prefixes[Math.floor(Math.random() * prefixes.length)]}-${suffix}`;
+const DEVICE_NAME_RULE = {
+  Windows: 'a Windows computer name has at most 15 letters, digits and hyphens',
+  other: 'use at most 63 letters, digits, spaces, dots, hyphens, underscores or apostrophes, starting with a letter or digit'
+};
+
+// Throws a readable error when a device name or MAC typed by the user is unusable or taken.
+function assertDeviceIdentity(data, taken, os) {
+  const osName = os || data.os;
+  if (!/^real$/i.test(String(data.deviceNameType || '')) && data.deviceName) {
+    const n = String(data.deviceName).trim();
+    const err = profileOptions.deviceNameError(n, osName);
+    if (err) throw new Error(`The device name "${n}" cannot be used: ${profileOptions.identityOsKey(osName) === 'Windows' ? DEVICE_NAME_RULE.Windows : DEVICE_NAME_RULE.other}.`);
+    if (taken.names.has(n.toLowerCase())) throw new Error(`Another profile already uses the device name "${n}". Every profile needs its own: click "Generate new".`);
+  }
+  if (!/^real$/i.test(String(data.macAddressType || '')) && data.macAddress) {
+    const err = profileOptions.macAddressError(data.macAddress);
+    if (err === 'multicast') throw new Error(`The MAC address "${data.macAddress}" is a group address, which no network card has (the first pair must be even). Click "Generate new".`);
+    if (err) throw new Error(`The MAC address "${data.macAddress}" cannot be used: write six pairs of hex digits, like 3C:A9:F4:12:34:56.`);
+    if (taken.macs.has(profileOptions.normalizeMac(data.macAddress))) throw new Error(`Another profile already uses the MAC address "${data.macAddress}". Every profile needs its own: click "Generate new".`);
+  }
+}
+
+// Gives `data` (a profile row about to be written) a usable, unique device name and MAC wherever it has
+// none, an unusable one or one already taken; usable values are kept (a MAC in AA:BB:CC:DD:EE:FF form).
+// Adds what it settles on to `taken`, so a batch never repeats itself.
+function fillDeviceIdentity(data, taken, os) {
+  const osName = os || data.os;
+  if (!/^real$/i.test(String(data.deviceNameType || ''))) {
+    const n = String(data.deviceName || '').trim();
+    data.deviceName = (!n || profileOptions.deviceNameError(n, osName) || taken.names.has(n.toLowerCase()))
+      ? profileOptions.uniqueDeviceIdentity(osName, taken).deviceName
+      : n;
+    if (!data.deviceNameType) data.deviceNameType = 'Custom';
+    taken.names.add(data.deviceName.toLowerCase());
+  }
+  if (!/^real$/i.test(String(data.macAddressType || ''))) {
+    const m = profileOptions.normalizeMac(data.macAddress);
+    data.macAddress = (!m || profileOptions.macAddressError(m) || taken.macs.has(m))
+      ? profileOptions.uniqueDeviceIdentity(osName, taken).macAddress
+      : m;
+    if (!data.macAddressType) data.macAddressType = 'Custom';
+    taken.macs.add(data.macAddress);
+  }
+  return data;
+}
+
+// createProfile: a device name or MAC the caller typed must be usable and unused (else an error); one the
+// random fingerprint made, or none, becomes a unique pair. Changes `fields` in place.
+async function settleDeviceIdentity(db, fields, input) {
+  const taken = await takenDeviceIdentities(db);
+  assertDeviceIdentity({
+    deviceNameType: fields.deviceNameType,
+    macAddressType: fields.macAddressType,
+    deviceName: input && input.deviceName ? fields.deviceName : null,
+    macAddress: input && input.macAddress ? fields.macAddress : null
+  }, taken, fields.os);
+  return fillDeviceIdentity(fields, taken, fields.os);
+}
+
+// Batch import and migration: the next profile's device name and MAC, unique within the workspace and
+// the run (state keeps what is taken across calls).
+async function claimDeviceIdentity(db, state, data, os) {
+  if (!state.taken) state.taken = await takenDeviceIdentities(db);
+  return fillDeviceIdentity(data, state.taken, os);
+}
+
+// A profile made before 1.0.26 may have no device name or MAC, or one that is not usable (old random
+// values: a 20-character WORKSTATION- name, a group-address MAC). It gets a new pair on its first launch.
+async function ensureProfileDeviceIdentity(db, profile) {
+  const needName = !/^real$/i.test(String(profile.deviceNameType || ''))
+    && (!profile.deviceName || profileOptions.deviceNameError(profile.deviceName, profile.os));
+  const needMac = !/^real$/i.test(String(profile.macAddressType || ''))
+    && (!profile.macAddress || profileOptions.macAddressError(profile.macAddress));
+  if (!needName && !needMac) return profile;
+  try {
+    const taken = await takenDeviceIdentities(db, profile.id);
+    const fresh = fillDeviceIdentity({
+      os: profile.os,
+      deviceNameType: profile.deviceNameType, deviceName: needName ? null : profile.deviceName,
+      macAddressType: profile.macAddressType, macAddress: needMac ? null : profile.macAddress
+    }, taken, profile.os);
+    const data = {};
+    if (needName) { data.deviceName = fresh.deviceName; data.deviceNameType = fresh.deviceNameType; }
+    if (needMac) { data.macAddress = fresh.macAddress; data.macAddressType = fresh.macAddressType; }
+    await db.profile.update({ where: { id: profile.id }, data });
+    return { ...profile, ...data };
+  } catch (e) {
+    console.warn('[SG][profile] could not give the profile a device name / MAC:', (e && e.message) || e);
+    return profile;
+  }
 }
 
 function serializeTemplate(t) {
@@ -5242,10 +5363,11 @@ async function cloneProfile(payload) {
   const fingerprint = reroll ? generateFingerprint({ deviceClass: src.deviceClass }) : {};
   // The copy belongs to the current member, not the source's owner or assignee.
   const cloneStampId = ownerStampId();
-  const data = { ...fields, ...fingerprint, title, dataDirName, macAddress: randomMac(), ownerMemberId: cloneStampId, assignedMemberId: cloneStampId };
-  // Desktop machine names are randomized per copy; a mobile profile keeps its device
-  // model (e.g. Pixel 7) so the UA / Client-Hints model stays coherent.
-  if (!isMobile) data.deviceName = randomDeviceName();
+  const data = { ...fields, ...fingerprint, title, dataDirName, ownerMemberId: cloneStampId, assignedMemberId: cloneStampId };
+  // A copy is another device: it gets its own device name and MAC (the UA's phone model is separate).
+  data.deviceName = null;
+  data.macAddress = null;
+  await claimDeviceIdentity(db, {}, data, data.os || (isMobile ? 'Android' : null));
   const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return { ...serializeProfile(created), leftOut };
 }
@@ -5338,9 +5460,12 @@ async function createProfileFromTemplate(payload) {
   const isMobile = fields.deviceClass === 'mobile';
   // Stamp ownership to the current member (templates carry no owner).
   const tplStampId = ownerStampId();
-  const data = { ...fields, title, dataDirName, macAddress: randomMac(), ownerMemberId: tplStampId, assignedMemberId: tplStampId };
+  const data = { ...fields, title, dataDirName, ownerMemberId: tplStampId, assignedMemberId: tplStampId };
   if ('browserCore' in data) data.browserCore = toStoredBrowserCore(data.browserCore);
-  if (!isMobile) data.deviceName = randomDeviceName();
+  // Every profile made from a template is its own device: a new device name and MAC.
+  data.deviceName = null;
+  data.macAddress = null;
+  await claimDeviceIdentity(db, {}, data, data.os || (isMobile ? 'Android' : null));
   const created = await db.profile.create({ data, include: { proxy: true, group: true } });
   return { ...serializeProfile(created), leftOut };
 }
@@ -5536,6 +5661,10 @@ async function createProfile(payload) {
   const dataDirName = await ensureUniqueDataDirName(db, input.dataDirName || title);
   const stampId = ownerStampId();
 
+  // Device name and MAC: a value given here must be usable and unused; a missing one is generated.
+  const fingerprintFields = buildFingerprintFields(input); // generator-aware fingerprint injection
+  await settleDeviceIdentity(db, fingerprintFields, input);
+
   const created = await db.profile.create({
     data: {
       title,
@@ -5548,7 +5677,7 @@ async function createProfile(payload) {
       assignedMemberId: stampId,
       groupId,
       tags: Array.isArray(input.tags) ? JSON.stringify(input.tags) : null,
-      ...buildFingerprintFields(input) // generator-aware fingerprint injection
+      ...fingerprintFields
     },
     include: { proxy: true, group: true }
   });
@@ -5922,6 +6051,9 @@ async function batchGenerateProfiles(payload, run = {}) {
       Object.assign(profilePayload, fp);
       profilePayload.randomFingerprint = false; // fp fields are passed explicitly
       profilePayload.deviceClass = deviceClass;
+      // createProfile gives each profile a device name and MAC no other profile uses.
+      delete profilePayload.deviceName;
+      delete profilePayload.macAddress;
     }
 
     try {
@@ -6025,6 +6157,28 @@ async function updateProfile(payload) {
   if (input.title !== undefined) data.title = requiredString(input.title, 'Profile title');
   if (input.notes !== undefined) data.notes = optionalString(input.notes);
   if (input.systemProxyBehavior !== undefined) data.systemProxyBehavior = validateSystemProxyBehavior(input.systemProxyBehavior);
+
+  // A changed device name or MAC must be usable and not used by another profile; an unchanged one is
+  // kept as it is, and an emptied one gets a new value.
+  {
+    const os = data.os !== undefined ? data.os : existing.os;
+    const changed = {
+      deviceNameType: data.deviceNameType !== undefined ? data.deviceNameType : existing.deviceNameType,
+      macAddressType: data.macAddressType !== undefined ? data.macAddressType : existing.macAddressType,
+      deviceName: data.deviceName !== undefined && String(data.deviceName || '').trim().toLowerCase() !== String(existing.deviceName || '').trim().toLowerCase() ? data.deviceName : null,
+      macAddress: data.macAddress !== undefined && profileOptions.normalizeMac(data.macAddress) !== profileOptions.normalizeMac(existing.macAddress) ? data.macAddress : null
+    };
+    if (changed.deviceName || changed.macAddress) assertDeviceIdentity(changed, await takenDeviceIdentities(db, id), os);
+    if ((data.deviceName !== undefined && !data.deviceName) || (data.macAddress !== undefined && !data.macAddress)) {
+      const filled = fillDeviceIdentity({
+        deviceNameType: changed.deviceNameType, macAddressType: changed.macAddressType,
+        deviceName: data.deviceName !== undefined ? data.deviceName : existing.deviceName,
+        macAddress: data.macAddress !== undefined ? data.macAddress : existing.macAddress
+      }, await takenDeviceIdentities(db, id), os);
+      if (data.deviceName !== undefined && !data.deviceName) data.deviceName = filled.deviceName;
+      if (data.macAddress !== undefined && !data.macAddress) data.macAddress = filled.macAddress;
+    }
+  }
 
   if (input.groupId !== undefined) {
     data.groupId = (input.groupId === null || input.groupId === '') ? null : parseId(input.groupId, 'groupId');
@@ -6955,8 +7109,10 @@ async function launchProfileNow(payload) {
   const db = getPrisma();
   const id = parseId(input.id);
   await assertCanAccessProfile(id);
-  const profile = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
-  if (!profile) throw new Error('Profile not found.');
+  const found = await db.profile.findUnique({ where: { id }, include: { proxy: true } });
+  if (!found) throw new Error('Profile not found.');
+  // A profile without a usable device name / MAC (made before 1.0.26) gets its own pair now.
+  const profile = await ensureProfileDeviceIdentity(db, found);
 
   // A banned owner tree cannot launch; enforced in main, not just the renderer.
   await assertNotBanned();
@@ -7015,15 +7171,17 @@ async function launchProfileNow(payload) {
       return { ...ffSession, rotatedProxy: ffRotated ? serializeProxy(ffRotated) : null };
     }
 
-    // A custom UA that does not match the binary would be a tell, but the Chrome engine always derives
-    // the UA from the launched binary, so a mismatch only warns and never blocks the launch.
-    const uaStr = String(profile.userAgent || '').trim();
-    if (uaStr && uaStr.toLowerCase() !== 'auto') {
-      const resolved = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
-      const binaryMajor = resolved && resolved.major ? resolved.major : null;
-      const uaChrome = uaStr.match(/Chrome\/(\d+)/i);
-      if (!uaChrome || (binaryMajor && Number(uaChrome[1]) !== binaryMajor)) {
-        console.warn(`[profile:launch] Profile "${profile.title}" has a custom UA that doesn't match the Chrome ${binaryMajor || '?'} engine - launching with the auto-derived (matching) UA instead.`);
+    // A User-Agent picked in the editor is applied as picked (browserEngine), even when it names another
+    // browser or version than the one launched; the editor warns about that, and so does this log.
+    const pickedUa = profileOptions.customUserAgent(profile);
+    if (pickedUa) {
+      const family = profileOptions.uaFamily(pickedUa);
+      const uaMajor = profileOptions.uaChromeMajor(pickedUa);
+      if (family !== 'chromium') {
+        console.warn(`[profile:launch] Profile "${profile.title}" uses a picked ${family} User-Agent on Chromium: sites can tell from the browser's behaviour that it is not that browser.`);
+      } else if (uaMajor) {
+        const pin = profileOptions.chromeVersionPin(profile.browserVersion);
+        if (pin && pin !== uaMajor) console.warn(`[profile:launch] Profile "${profile.title}" picks a Chrome ${uaMajor} User-Agent but launches Chrome ${pin}.`);
       }
     }
 
@@ -7563,6 +7721,8 @@ async function commitProfileImport(payload, event) {
   // Rotation URLs have no Profile column - round-trip them via a Setting map.
   const rotationUrls = (await readSetting('profileRotationUrls', {})) || {};
   let rotationDirty = false;
+  // Device names and MACs in use, read once for the run (claimDeviceIdentity keeps it up to date).
+  const importIdentities = {};
   // Stamp the importing member as owner and assignee, as createProfile does. An unowned row is
   // hidden from every member but the Super Admin (scopedProfileWhere fails closed), so imported
   // profiles did not show up in the importer's own Profiles list.
@@ -7654,11 +7814,17 @@ async function commitProfileImport(payload, event) {
 
       const dataDirName = await ensureUniqueDataDirName(db, item.dataDirName || item.title);
       // Generate a distinct fingerprint first, then let the imported values override it.
-      const fpFields = generateFingerprint();
+      const fpFields = generateFingerprint({ os: fp.os });
+      // Device name and MAC: the imported ones when usable and unused, else new ones for this profile.
+      if (item.deviceName) fp.deviceName = String(item.deviceName).trim();
+      if (item.macAddress) fp.macAddress = String(item.macAddress).trim();
+      const identity = await claimDeviceIdentity(db, importIdentities, { ...fpFields, ...fp }, fp.os || fpFields.os);
       const profile = await db.profile.create({
         data: {
           ...fpFields,
           ...fp,
+          deviceName: identity.deviceName,
+          macAddress: identity.macAddress,
           title: item.title,
           proxyId: proxy ? proxy.id : null,
           proxyInfoString: proxy ? buildProxyInfoString(proxy) : null,
@@ -7731,6 +7897,7 @@ async function migrateProfiles(payload, event) {
 
   const stampId = ownerStampId();
   const result = { platform, label, total, createdProfiles: [], createdProxyIds: [], errors: [] };
+  const migrateIdentities = {}; // device names and MACs in use, read once for the run
   let processed = 0;
   // Read outside the per-profile transactions below (a query on the outer client inside one blocks).
   const proxyAdd = await proxyAddContext();
@@ -7755,9 +7922,13 @@ async function migrateProfiles(payload, event) {
         const overrides = {};
         if (norm.os) overrides.os = norm.os;
         if (norm.userAgent) overrides.userAgent = norm.userAgent;
+        const base = generateFingerprint(); // distinct Softglaze fingerprint base
+        const identity = await claimDeviceIdentity(tx, migrateIdentities, { ...base, ...overrides, deviceName: null, macAddress: null }, overrides.os || base.os);
         const profile = await tx.profile.create({
           data: {
-            ...generateFingerprint(), // distinct Softglaze fingerprint base
+            ...base,
+            deviceName: identity.deviceName,
+            macAddress: identity.macAddress,
             ...overrides,             // then the competitor's known values
             title: norm.title,
             notes: norm.notes,
@@ -7827,6 +7998,9 @@ const EXPORT_COLUMNS = [
   ['AudioContext', (p) => (p.audioContextNoise === false ? 'Real' : 'Noise')],
   ['CPU Cores', (p) => p.cpuCores || ''],
   ['Memory (GB)', (p) => p.ramGb || ''],
+  // Read back by batch import (when not used by another profile there).
+  ['Device Name', (p) => (/^real$/i.test(String(p.deviceNameType || '')) ? '' : (p.deviceName || ''))],
+  ['MAC Address', (p) => (/^real$/i.test(String(p.macAddressType || '')) ? '' : (p.macAddress || ''))],
   // The editor's word, which batch import reads back unchanged (older exports wrote 1 / 0; still read).
   ['Do Not Track', (p) => doNotTrackChoice(p.doNotTrack)],
   ['Timezone Mode', (p) => (p.timezoneType === 'Custom' ? 'Manual' : 'Auto')],
@@ -8968,12 +9142,35 @@ async function getSystemInfo() {
   };
 }
 
-// Real Chrome builds available on disk (for the profile editor's version picker).
+// Real Chrome builds available on disk (for the profile editor's version picker), and the installed
+// Google Chrome, which "Auto" launches when there is one (browserEngine.chooseBrowserBinary).
 async function listBrowsers() {
   const browsers = listAvailableBrowsers();
+  let realChrome = null;
+  try { const r = findRealChrome(); if (r) realChrome = { major: r.major || null, version: r.version || '' }; } catch (e) { realChrome = null; }
   return {
     count: browsers.length,
-    browsers: browsers.map((b) => ({ major: b.major, version: b.version }))
+    browsers: browsers.map((b) => ({ major: b.major, version: b.version })),
+    realChrome
+  };
+}
+
+// The editor's "Generate new": a device name and MAC for the OS that no profile in the workspace uses
+// (payload.excludeId: the profile being edited, whose own values may come back).
+async function generateProfileIdentity(payload) {
+  const input = payload && typeof payload === 'object' ? payload : {};
+  const excludeId = input.excludeId != null && input.excludeId !== '' ? parseId(input.excludeId, 'excludeId') : null;
+  const taken = await takenDeviceIdentities(getPrisma(), excludeId);
+  return profileOptions.uniqueDeviceIdentity(optionalString(input.os) || 'Windows', taken);
+}
+
+// What the profile editor offers for its options: each OS's standard fonts (the Fonts > Custom default)
+// and the limits main enforces.
+async function profileEditorOptions() {
+  return {
+    fonts: { ...profileOptions.DATA.fonts },
+    fontListMax: 1000,
+    mediaCountMax: profileOptions.MEDIA_COUNT_MAX
   };
 }
 
@@ -11193,7 +11390,9 @@ const SYNC_SCALAR_FIELDS = [
   'resolutionType', 'resolutionW', 'resolutionH', 'fontsType',
   'canvasNoise', 'webglImageNoise', 'audioContextNoise', 'clientRectsNoise', 'speechVoicesNoise', 'mediaDevice',
   'webglMetadata', 'webglVendor', 'webglRenderer', 'webgpu',
-  'cpuType', 'cpuCores', 'ramType', 'ramGb', 'twoFactorSeed', 'notes'
+  'cpuType', 'cpuCores', 'ramType', 'ramGb', 'twoFactorSeed', 'notes',
+  // Applied at launch since 1.0.26 (a missing one, from an older install, keeps the local value).
+  'userAgentMode', 'fontsList', 'mediaDeviceCounts', 'locationPrompt', 'hardwareAcceleration'
 ];
 
 // Session-scoped sync state; the passphrase-derived key lives only here.
@@ -14431,6 +14630,8 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.PROFILE_IMPORT_COOKIES_BULK, importCookiesToRunning);
   registerHandler(CHANNELS.PROFILE_STORAGE_INFO, getProfileStorageInfo);
   registerHandler(CHANNELS.PROFILE_CLONE, cloneProfile);
+  registerHandler(CHANNELS.PROFILE_EDITOR_OPTIONS, profileEditorOptions);
+  registerHandler(CHANNELS.PROFILE_GENERATE_IDENTITY, generateProfileIdentity);
   registerHandler(CHANNELS.TEMPLATE_LIST, listTemplates);
   registerHandler(CHANNELS.TEMPLATE_SAVE, saveProfileAsTemplate);
   registerHandler(CHANNELS.TEMPLATE_DELETE, deleteTemplate);

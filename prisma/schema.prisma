@@ -14,8 +14,10 @@ datasource db {
 // Stored as TEXT in SQLite (no CHECK constraint), so adding a value needs no table rebuild. SOCKS4
 // works in Firefox profiles; the Chromium launch refuses it because Chromium resolves DNS locally
 // for SOCKS4 (see launchCheck.socks4DnsLeak).
+// HTTPS (since 1.0.26) is a proxy reached over TLS: Chrome's https:// proxy scheme.
 enum ProxyType {
   HTTP
+  HTTPS
   SOCKS5
   SOCKS4
 }
@@ -364,6 +366,9 @@ model Profile {
   osVersion        String?
   deviceClass      String? @default("desktop") // "desktop" | "mobile" (Android, CDP-emulated)
   userAgent        String? @default("Auto")
+  // "Custom" when the user picked the UA in the editor (applied at launch); "Auto" or null (profiles
+  // made before 1.0.26) when it was generated for display and the engine uses the browser's own.
+  userAgentMode    String?
   startupUrls      String?
   platformAccounts String? // JSON string
 
@@ -390,6 +395,7 @@ model Profile {
   resolutionW       String?
   resolutionH       String?
   fontsType         String?
+  fontsList         String? // JSON array: the fonts websites may see with fontsType "Custom"
 
   // Fingerprint noise toggles (real booleans)
   canvasNoise       Boolean @default(true)
@@ -398,6 +404,7 @@ model Profile {
   clientRectsNoise  Boolean @default(true)
   speechVoicesNoise Boolean @default(true)
   mediaDevice       String?
+  mediaDeviceCounts String? // JSON { mic, spk, cam }: what websites see with mediaDevice "Edit"
 
   // WebGL / WebGPU
   webglMetadata String?

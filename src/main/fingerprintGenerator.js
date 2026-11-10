@@ -4,6 +4,7 @@
 // Timezone, language and geolocation stay "Based on IP" so launch binds them to the proxy exit IP.
 
 const crypto = require('node:crypto');
+const { generateDeviceName, generateMacAddress } = require('./profileOptions');
 
 function choice(arr) { return arr[crypto.randomInt(arr.length)]; }
 
@@ -15,15 +16,6 @@ function weighted(pairs) {
     r -= w;
   }
   return pairs[0][0];
-}
-
-function randMac() {
-  const hex = () => '0123456789ABCDEF'[crypto.randomInt(16)];
-  return Array.from({ length: 6 }, () => `${hex()}${hex()}`).join('-');
-}
-
-function randDeviceName() {
-  return `DESKTOP-${crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 7)}`;
 }
 
 // Map a free-form OS request to a desktop OS key, or null for "let it be random".
@@ -237,23 +229,43 @@ function mediaOsKey(os) {
 }
 
 // With a numeric `seed` the pick is deterministic (same hardware every launch); otherwise random.
-function generateMediaDevices(os, seed) {
+// `counts` ({ mic, spk, cam }, the editor's Media Device "Edit") sets how many devices of each kind the
+// profile shows; without it, one of each. mics/spks/cams list the labels (the first is mic/spk/cam);
+// further devices take the next labels of the pool, numbered once the pool is used up.
+function generateMediaDevices(os, seed, counts = null) {
   const key = mediaOsKey(os);
   const pool = MEDIA_LABELS[key];
-  const at = (arr, shift) => {
-    if (!arr || !arr.length) return '';
-    const idx = (seed === undefined || seed === null)
+  const startOf = (arr, shift) => {
+    if (!arr || !arr.length) return 0;
+    return (seed === undefined || seed === null)
       ? crypto.randomInt(arr.length)
       : ((seed >>> 0) >>> shift) % arr.length;
-    return arr[idx];
   };
+  const list = (arr, start, n) => {
+    const out = [];
+    if (!arr || !arr.length) return out;
+    for (let i = 0; i < n; i += 1) {
+      const label = arr[(start + i) % arr.length];
+      out.push(i < arr.length ? label : `${label} (${Math.floor(i / arr.length) + 1})`);
+    }
+    return out;
+  };
+  const n = (v) => (counts && Number.isInteger(v) && v >= 0 ? v : 1);
+  const at = [startOf(pool.audioinput, 0), startOf(pool.audiooutput, 5), startOf(pool.videoinput, 10)];
+  const mics = list(pool.audioinput, at[0], n(counts && counts.mic));
+  const spks = list(pool.audiooutput, at[1], n(counts && counts.spk));
+  const cams = list(pool.videoinput, at[2], n(counts && counts.cam));
+  const label = (arr, i) => (arr && arr.length ? arr[i] : '');
   return {
     os: key,
     isWindows: key === 'Windows',
-    mic: at(pool.audioinput, 0),
-    spk: at(pool.audiooutput, 5),
-    cam: at(pool.videoinput, 10),
-    hasCamera: true
+    mic: label(pool.audioinput, at[0]),
+    spk: label(pool.audiooutput, at[1]),
+    cam: label(pool.videoinput, at[2]),
+    hasCamera: cams.length > 0,
+    mics,
+    spks,
+    cams
   };
 }
 
@@ -283,10 +295,12 @@ function generateMobileFingerprint() {
     ramType: 'Custom',
     ramGb: '8',
 
+    // A per-profile name and a randomised Wi-Fi address, as Android shows (profileOptions.js); callers
+    // that save the profile make them unique in the workspace.
     deviceNameType: 'Custom',
-    deviceName: 'Pixel 7',
+    deviceName: generateDeviceName('Android'),
     macAddressType: 'Custom',
-    macAddress: randMac(),
+    macAddress: generateMacAddress('Android'),
 
     // Bound to the proxy at launch - intentionally not hardcoded here.
     timezoneType: 'Based on IP',
@@ -381,10 +395,12 @@ function generateFingerprint(opts = {}) {
     ramType: 'Custom',
     ramGb,
 
+    // Realistic for the OS (DESKTOP-XXXXXXX, an Intel/Realtek/Apple... adapter prefix); callers that save
+    // the profile make them unique in the workspace.
     deviceNameType: 'Custom',
-    deviceName: randDeviceName(),
+    deviceName: generateDeviceName(os),
     macAddressType: 'Custom',
-    macAddress: randMac(),
+    macAddress: generateMacAddress(os),
 
     // Bound to the proxy at launch - intentionally not hardcoded here.
     timezoneType: 'Based on IP',

@@ -67,7 +67,11 @@ const HEADER_ALIASES = Object.freeze({
   enableSystemProxy: ['enable system proxy', 'system proxy'],
   tagManagement: ['tag management', 'tag', 'tags'],
   systemProxyBehavior: ['system proxy behavior', 'proxy behavior'],
-  country: ['country', 'country/region', 'region', 'geo', 'location', 'proxy country', 'target country']
+  country: ['country', 'country/region', 'region', 'geo', 'location', 'proxy country', 'target country'],
+
+  // Matched exactly only (findExactColumnIndex): a fuzzy match would read "Name" or "Host" as these.
+  deviceName: ['device name', 'computer name', 'machine name', 'pc name'],
+  macAddress: ['mac address', 'mac addr', 'macaddress', 'mac']
 });
 
 // Phrases that mark a template's instruction rows. Bare words like "example" would drop real
@@ -85,6 +89,15 @@ function looksLikeInstructionRow(row, titleIndex) {
   if (!title) return true; // blank title = spacer/note row
   const t = title.toLowerCase();
   return INSTRUCTION_PHRASES.some((p) => t.includes(p));
+}
+
+function findExactColumnIndex(headers, aliases) {
+  const normalizedHeaders = headers.map(normalizeHeader);
+  for (const alias of aliases) {
+    const i = normalizedHeaders.indexOf(normalizeHeader(alias));
+    if (i >= 0) return i;
+  }
+  return -1;
 }
 
 function findColumnIndex(headers, aliases) {
@@ -220,12 +233,14 @@ function modeToNoise(value) {
   return true;
 }
 
+// The editor's words (Forward / Replace / Real / Disabled), so an imported choice launches as written.
+// Before 1.0.26 this returned "Block" and "Noise", which the engine never knew (they launch as Forward).
 function normalizeWebrtc(value) {
   const t = normalizeHeader(value);
   if (!t) return null;
   if (t.includes('real')) return 'Real';
-  if (t.includes('block') || t.includes('disable') || t.includes('off')) return 'Block';
-  if (t.includes('noise') || t.includes('fake') || t.includes('replace')) return 'Noise';
+  if (t.includes('block') || t.includes('disable') || t.includes('off')) return 'Disabled';
+  if (t.includes('noise') || t.includes('fake') || t.includes('replace')) return 'Replace';
   if (t.includes('forward') || t.includes('proxy')) return 'Forward';
   return null;
 }
@@ -361,7 +376,9 @@ function parseWorkbookFile(filePath) {
     localeVal: findColumnIndex(headers, HEADER_ALIASES.localeVal),
     geoMode: findColumnIndex(headers, HEADER_ALIASES.geoMode),
     latitude: findColumnIndex(headers, HEADER_ALIASES.latitude),
-    longitude: findColumnIndex(headers, HEADER_ALIASES.longitude)
+    longitude: findColumnIndex(headers, HEADER_ALIASES.longitude),
+    deviceName: findExactColumnIndex(headers, HEADER_ALIASES.deviceName),
+    macAddress: findExactColumnIndex(headers, HEADER_ALIASES.macAddress)
   };
 
   if (columns.title < 0) {
@@ -455,7 +472,10 @@ function parseWorkbookFile(filePath) {
         languageCustom: localeVal,
         locationType: normalizeGeoMode(getCell(row, columns.geoMode)) || ((lat && lng) ? 'Custom' : null),
         locationLat: lat,
-        locationLng: lng
+        locationLng: lng,
+        // Used when usable and not taken by another profile; otherwise the profile gets its own.
+        deviceName: getCell(row, columns.deviceName),
+        macAddress: getCell(row, columns.macAddress)
       });
     } catch (error) {
       errors.push({

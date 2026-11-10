@@ -1,0 +1,98 @@
+{
+  "_comment": "Data for src/main/profileOptions.js. fonts: the fonts a stock install of each OS ships (the Fonts > Custom default). fontProbe: further families fingerprinting scripts commonly probe (office, design and app fonts); with Fonts > Custom every listed family that is not allowed is hidden. shadowSources: a font nearly every host has, used only as the load source of the hidden placeholders. oui: registered vendor prefixes (IEEE OUI registry) of common network adapters.",
+  "fonts": {
+    "Windows": [
+      "Arial", "Arial Black", "Bahnschrift", "Calibri", "Calibri Light", "Cambria", "Cambria Math", "Candara", "Candara Light",
+      "Comic Sans MS", "Consolas", "Constantia", "Corbel", "Corbel Light", "Courier New", "Ebrima", "Franklin Gothic Medium",
+      "Gabriola", "Gadugi", "Georgia", "HoloLens MDL2 Assets", "Impact", "Ink Free", "Javanese Text", "Leelawadee UI",
+      "Leelawadee UI Semilight", "Lucida Console", "Lucida Sans Unicode", "Malgun Gothic", "Malgun Gothic Semilight", "Marlett",
+      "Microsoft Himalaya", "Microsoft JhengHei", "Microsoft JhengHei UI", "Microsoft New Tai Lue", "Microsoft PhagsPa",
+      "Microsoft Sans Serif", "Microsoft Tai Le", "Microsoft YaHei", "Microsoft YaHei UI", "Microsoft Yi Baiti", "MingLiU-ExtB",
+      "MingLiU_HKSCS-ExtB", "Mongolian Baiti", "MS Gothic", "MS PGothic", "MS UI Gothic", "MV Boli", "Myanmar Text", "Nirmala UI",
+      "Nirmala UI Semilight", "NSimSun", "Palatino Linotype", "PMingLiU-ExtB", "Segoe Fluent Icons", "Segoe MDL2 Assets",
+      "Segoe Print", "Segoe Script", "Segoe UI", "Segoe UI Black", "Segoe UI Emoji", "Segoe UI Historic", "Segoe UI Light",
+      "Segoe UI Semibold", "Segoe UI Semilight", "Segoe UI Symbol", "Segoe UI Variable", "SimSun", "SimSun-ExtB", "Sitka Banner",
+      "Sitka Display", "Sitka Heading", "Sitka Small", "Sitka Subheading", "Sitka Text", "Sylfaen", "Symbol", "Tahoma",
+      "Times New Roman", "Trebuchet MS", "Verdana", "Webdings", "Wingdings", "Yu Gothic", "Yu Gothic Light", "Yu Gothic Medium",
+      "Yu Gothic UI"
+    ],
+    "macOS": [
+      "American Typewriter", "Andale Mono", "Apple Braille", "Apple Chancery", "Apple Color Emoji", "Apple SD Gothic Neo",
+      "Apple Symbols", "AppleGothic", "AppleMyungjo", "Arial", "Arial Black", "Arial Hebrew", "Arial Narrow", "Arial Rounded MT Bold",
+      "Arial Unicode MS", "Avenir", "Avenir Next", "Avenir Next Condensed", "Ayuthaya", "Baghdad", "Bangla MN", "Bangla Sangam MN",
+      "Baskerville", "Big Caslon", "Bodoni 72", "Bradley Hand", "Brush Script MT", "Chalkboard", "Chalkboard SE", "Chalkduster",
+      "Charter", "Cochin", "Comic Sans MS", "Copperplate", "Courier", "Courier New", "Damascus", "DecoType Naskh", "Devanagari MT",
+      "Didot", "DIN Alternate", "DIN Condensed", "Euphemia UCAS", "Farah", "Futura", "Galvji", "Geeza Pro", "Geneva", "Georgia",
+      "Gill Sans", "Gujarati MT", "Gurmukhi MN", "Heiti SC", "Heiti TC", "Helvetica", "Helvetica Neue", "Herculanum",
+      "Hiragino Kaku Gothic ProN", "Hiragino Mincho ProN", "Hiragino Sans", "Hoefler Text", "Impact", "InaiMathi", "Kailasa",
+      "Kefa", "Khmer Sangam MN", "Kohinoor Bangla", "Kohinoor Devanagari", "Krungthep", "Lao Sangam MN", "Lucida Grande",
+      "Luminari", "Malayalam Sangam MN", "Marker Felt", "Menlo", "Microsoft Sans Serif", "Mishafi", "Monaco", "Mshtakan", "Muna",
+      "Noteworthy", "Noto Nastaliq Urdu", "Optima", "Oriya Sangam MN", "Palatino", "Papyrus", "Party LET", "Phosphate",
+      "PingFang HK", "PingFang SC", "PingFang TC", "Plantagenet Cherokee", "PT Mono", "PT Sans", "PT Serif", "Rockwell", "Sathu",
+      "Savoye LET", "Shree Devanagari 714", "SignPainter", "Silom", "Sinhala Sangam MN", "Skia", "Snell Roundhand", "STIXGeneral",
+      "Sukhumvit Set", "Symbol", "Tahoma", "Tamil Sangam MN", "Telugu Sangam MN", "Thonburi", "Times", "Times New Roman",
+      "Trattatello", "Trebuchet MS", "Verdana", "Webdings", "Wingdings", "Wingdings 2", "Wingdings 3", "Zapf Dingbats", "Zapfino"
+    ],
+    "Linux": [
+      "Cantarell", "DejaVu Sans", "DejaVu Sans Mono", "DejaVu Serif", "Droid Sans Fallback", "FreeMono", "FreeSans", "FreeSerif",
+      "Liberation Mono", "Liberation Sans", "Liberation Sans Narrow", "Liberation Serif", "Nimbus Mono PS", "Nimbus Roman",
+      "Nimbus Sans", "Nimbus Sans Narrow", "Noto Color Emoji", "Noto Mono", "Noto Sans", "Noto Sans CJK JP", "Noto Sans CJK SC",
+      "Noto Sans Mono", "Noto Serif", "Noto Serif CJK SC", "P052", "Standard Symbols PS", "Ubuntu", "Ubuntu Condensed",
+      "Ubuntu Mono", "URW Bookman", "URW Gothic", "C059", "D050000L", "Z003"
+    ],
+    "Android": [
+      "Carrois Gothic SC", "Coming Soon", "Cutive Mono", "Dancing Script", "Droid Sans", "Droid Sans Mono", "Droid Serif",
+      "Noto Color Emoji", "Noto Sans", "Noto Sans CJK JP", "Noto Sans CJK SC", "Noto Serif", "Roboto", "Roboto Condensed",
+      "Roboto Mono", "Source Sans Pro"
+    ]
+  },
+  "fontProbe": [
+    "Agency FB", "Algerian", "ARNO PRO", "Arial Narrow", "Arial Rounded MT Bold", "Arial Unicode MS", "Arimo", "AvantGarde Bk BT",
+    "BankGothic Md BT", "Batang", "Bauhaus 93", "Bell MT", "Bernard MT Condensed", "Bitstream Vera Sans Mono", "Book Antiqua",
+    "Bookman Old Style", "Bookshelf Symbol 7", "Bradley Hand ITC", "Britannic Bold", "Broadway", "Brush Script MT", "Calisto MT",
+    "Cascadia Code", "Cascadia Mono", "Castellar", "Centaur", "Century", "Century Gothic", "Century Schoolbook", "Chiller",
+    "Clarendon", "Colonna MT", "Cooper Black", "Copperplate Gothic Bold", "Cousine", "Curlz MT", "Edwardian Script ITC", "Elephant",
+    "Engravers MT", "EUROSTILE", "Felix Titling", "Fira Code", "Fira Sans", "Footlight MT Light", "Forte", "Franklin Gothic",
+    "Franklin Gothic Book", "Freestyle Script", "French Script MT", "Futura Bk BT", "Futura Md BT", "Garamond", "Gigi",
+    "Gill Sans MT", "Gloucester MT Extra Condensed", "GOTHAM", "Goudy Old Style", "Haettenschweiler", "Harlow Solid Italic",
+    "Harrington", "HELV", "Helvetica", "Helvetica Neue", "High Tower Text", "Humanst521 BT", "Imprint MT Shadow", "Informal Roman",
+    "Inter", "JetBrains Mono", "Jokerman", "Juice ITC", "Kristen ITC", "Kunstler Script", "Lato", "Leelawadee", "Letter Gothic",
+    "Levenim MT", "Lucida Bright", "Lucida Calligraphy", "Lucida Fax", "Lucida Handwriting", "Lucida Sans", "Lucida Sans Typewriter",
+    "Magneto", "Maiandra GD", "Matura MT Script Capitals", "Meiryo", "Meiryo UI", "Menlo", "Microsoft Uighur", "Minion Pro",
+    "Mistral", "Modern No. 20", "Monotype Corsiva", "Montserrat", "MS Mincho", "MS Outlook", "MS PMincho", "MS Reference Sans Serif",
+    "MS Reference Specialty", "MT Extra", "MYRIAD PRO", "Niagara Engraved", "Old English Text MT", "Onyx", "Open Sans",
+    "Palace Script MT", "Parchment", "Perpetua", "Playbill", "PMingLiU", "Poor Richard", "Pristina", "Rage Italic", "Ravie",
+    "Roboto", "Rockwell", "Script MT Bold", "SCRIPTINA", "Serifa", "Showcard Gothic", "SimHei", "Small Fonts", "Snap ITC",
+    "Source Code Pro", "Source Sans Pro", "Staccato222 BT", "Stencil", "Tempus Sans ITC", "Tinos", "TRAJAN PRO", "Tw Cen MT",
+    "Univers CE 55 Medium", "Viner Hand ITC", "Vivaldi", "Vladimir Script", "Vrinda", "Wide Latin", "ZWAdobeF"
+  ],
+  "genericFamilies": [
+    "serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace",
+    "ui-rounded", "emoji", "math", "fangsong", "-apple-system", "BlinkMacSystemFont", "inherit", "initial", "unset", "revert"
+  ],
+  "shadowSources": [
+    "Arial", "Helvetica", "Segoe UI", "Tahoma", "DejaVu Sans", "Liberation Sans", "Noto Sans", "FreeSans", "Ubuntu", "Cantarell", "Roboto"
+  ],
+  "oui": {
+    "pc": [
+      "00:15:17", "00:1B:21", "00:1E:67", "00:24:D7", "34:13:E8", "3C:A9:F4", "48:51:C5", "50:E0:85", "5C:51:4F", "7C:7A:91",
+      "8C:8D:28", "A4:34:D9", "AC:FD:CE", "F8:94:C2", "00:E0:4C", "00:03:7F", "9C:B6:D0", "18:DB:F2", "B8:CA:3A", "E4:B9:7A",
+      "F8:BC:12", "3C:D9:2B", "70:5A:0F", "04:92:26", "2C:56:DC", "28:18:78", "C8:5B:76", "D0:37:45"
+    ],
+    "apple": ["14:7D:DA", "3C:22:FB", "88:66:5A", "8C:85:90", "A4:83:E7", "AC:BC:32", "F0:18:98", "F4:5C:89"]
+  },
+  "names": {
+    "first": [
+      "Alex", "Sam", "Chris", "Jordan", "Taylor", "Morgan", "Jamie", "Casey", "Daniel", "David", "Michael", "James", "Robert",
+      "John", "Mark", "Paul", "Peter", "Thomas", "Anna", "Maria", "Laura", "Sarah", "Emma", "Olivia", "Sophie", "Julia", "Lisa",
+      "Kate", "Nina", "Elena", "Lucas", "Leo", "Max", "Noah", "Ethan", "Adam", "Ben", "Oscar", "Hugo", "Felix", "Ali", "Omar",
+      "Hana", "Yuki", "Mei", "Ivan", "Marco", "Luca", "Pablo", "Carlos"
+    ],
+    "macModels": ["MacBook-Pro", "MacBook-Air", "iMac", "Mac-mini", "Mac-Studio"],
+    "linuxModels": [
+      "ThinkPad-T14", "ThinkPad-X1-Carbon", "ThinkPad-E14", "XPS-13-9310", "Latitude-5420", "OptiPlex-7090", "desktop", "laptop",
+      "HP-EliteBook-840-G8", "Inspiron-15-3520", "IdeaPad-5", "ROG-Strix"
+    ],
+    "androidModel": "Pixel 7"
+  }
+}
