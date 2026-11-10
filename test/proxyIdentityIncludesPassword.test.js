@@ -20,7 +20,9 @@ const fnBody = (name) => {
 };
 
 test('the identity matches the DB unique key, password included', () => {
-  assert.match(SCHEMA, /@@unique\(\[type, host, port, username, passwordHash\]\)/);
+  // 1.0.26: the owner is part of the key, so two members can each keep their own row
+  // (test/permissionsFollowup.test.js).
+  assert.match(SCHEMA, /@@unique\(\[type, host, port, username, passwordHash, ownerMemberId\]\)/);
   const id = fnBody('proxyIdentityWhere');
   for (const col of ['type: parsed.type', 'host: parsed.host', 'port: parsed.port']) assert.ok(id.includes(col), col);
   assert.match(id, /username: parsed\.username == null \|\| parsed\.username === '' \? null : String\(parsed\.username\)/);
@@ -29,15 +31,20 @@ test('the identity matches the DB unique key, password included', () => {
 
 test('findOrCreateProxy reuses only an exact match and never rewrites a password', () => {
   const body = fnBody('findOrCreateProxy');
-  assert.match(body, /db\.proxy\.findFirst\(\{ where: proxyIdentityWhere\(parsed\) \}\)/);
-  assert.ok(!/db\.proxy\.update\(/.test(body), 'no password overwrite on a matched row');
-  assert.ok(!/scopedProxyWhere/.test(body), 'no outer-client query (it runs inside $transaction during migration)');
+  assert.match(body, /const existing = await findVisibleProxy\(db, parsed, add\);/);
+  const find = fnBody('findVisibleProxy');
+  assert.match(find, /const identity = proxyIdentityWhere\(parsed\);/);
+  assert.ok(!/db\.proxy\.update\(/.test(body + find), 'no password overwrite on a matched row');
+  // Inside the migration $transaction an outer-client query would block: the caller reads the
+  // member context first and passes it in, and the lookup itself only uses the given client.
+  assert.ok(!/scopedProxyWhere|getPrisma\(\)/.test(find), 'no outer-client query in the lookup');
+  assert.match(fnBody('migrateProfiles'), /findOrCreateProxy\(tx, norm\.proxyRaw, `\$\{norm\.title\} Proxy`, norm\.proxyType, proxyAdd\)/);
   assert.match(body, /return db\.proxy\.create\(\{/);
 });
 
 test('manual add and batch add treat a different password as a different proxy', () => {
-  assert.match(fnBody('createProxy'), /where: proxyIdentityWhere\(parsed\),/);
-  assert.match(fnBody('batchAddProxies'), /where: proxyIdentityWhere\(parsed\)/);
+  assert.match(fnBody('createProxy'), /const existing = await findVisibleProxy\(db, parsed, add\);/);
+  assert.match(fnBody('batchAddProxies'), /const existing = await findVisibleProxy\(db, parsed, add\);/);
 });
 
 test('the proxy client rewrites password equality to the keyed hash (sealed rows still match)', () => {

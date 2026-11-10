@@ -1,9 +1,10 @@
 'use strict';
 // A small in-memory stand-in for the Prisma client, enough for the SoftGlaze AI engine tests:
-// create / findUnique / findFirst / findMany / count / update / updateMany / delete / deleteMany with
-// the where operators the engine uses (equals, in, notIn, not, contains, lt/lte/gt/gte, AND, OR, NOT,
-// and the proxy.profiles and group.profiles `none` / `some` relation filters), plus the includes it
-// reads (a group's profiles with their own where and select, for the Groups list).
+// create / findUnique / findFirst / findMany / count / groupBy (one `by` field, `_count._all`) /
+// update / updateMany / delete / deleteMany with the where operators the engine uses (equals, in,
+// notIn, not, contains, lt/lte/gt/gte, AND, OR, NOT, and the proxy.profiles, group.profiles and
+// proxyGroup.proxies `none` / `some` relation filters), plus the includes it reads (a group's
+// profiles and a proxy's profiles with their own where and select, and a filtered `_count`).
 
 function matchValue(value, cond) {
   if (cond === null) return value === null || value === undefined;
@@ -26,7 +27,7 @@ function matchValue(value, cond) {
 function createFakePrisma(seed = {}) {
   const tables = {};
   const ids = {};
-  const models = ['apiToken', 'aiAuditLog', 'member', 'profile', 'proxy', 'group', 'proxyGroup', 'activityLog', 'setting', 'macro'];
+  const models = ['apiToken', 'aiAuditLog', 'member', 'profile', 'proxy', 'group', 'proxyGroup', 'activityLog', 'setting', 'macro', 'template'];
   for (const m of models) { tables[m] = []; ids[m] = 0; }
 
   const db = { _tables: tables };
@@ -44,6 +45,12 @@ function createFakePrisma(seed = {}) {
         if (cond.some && !users.some((p) => matches('profile', p, cond.some))) return false;
         continue;
       }
+      if (model === 'proxyGroup' && key === 'proxies') {
+        const inside = tables.proxy.filter((p) => p.proxyGroupId === row.id);
+        if (cond.none && inside.some((p) => matches('proxy', p, cond.none))) return false;
+        if (cond.some && !inside.some((p) => matches('proxy', p, cond.some))) return false;
+        continue;
+      }
       if (!matchValue(row[key], cond)) return false;
     }
     return true;
@@ -58,8 +65,18 @@ function createFakePrisma(seed = {}) {
         if (include.group) out.group = tables.group.find((g) => g.id === row.groupId) || null;
       }
       if (model === 'proxy') {
-        if (include._count) out._count = { profiles: tables.profile.filter((p) => p.proxyId === row.id).length };
+        if (include._count) {
+          const spec = include._count.select && include._count.select.profiles;
+          const where = spec && typeof spec === 'object' ? spec.where : undefined;
+          out._count = { profiles: tables.profile.filter((p) => p.proxyId === row.id && matches('profile', p, where)).length };
+        }
         if (include.proxyGroup) out.proxyGroup = tables.proxyGroup.find((g) => g.id === row.proxyGroupId) || null;
+        if (include.profiles) {
+          const spec = include.profiles === true ? {} : include.profiles;
+          out.profiles = sortRows(tables.profile.filter((p) => p.proxyId === row.id && matches('profile', p, spec.where)), spec.orderBy)
+            .slice(0, spec.take == null ? undefined : spec.take)
+            .map((p) => withIncludes('profile', p, null, spec.select));
+        }
       }
       if (model === 'group' && include.profiles) {
         const spec = include.profiles === true ? {} : include.profiles;
@@ -116,6 +133,12 @@ function createFakePrisma(seed = {}) {
       },
       async count({ where } = {}) {
         return tables[model].filter((r) => matches(model, r, where)).length;
+      },
+      async groupBy({ by, where, _count } = {}) {
+        const key = Array.isArray(by) ? by[0] : by;
+        const counts = new Map();
+        for (const r of tables[model].filter((x) => matches(model, x, where))) counts.set(r[key], (counts.get(r[key]) || 0) + 1);
+        return [...counts].map(([value, n]) => ({ [key]: value, ...(_count ? { _count: { _all: n } } : {}) }));
       },
       async update({ where, data }) {
         const row = tables[model].find((r) => matches(model, r, where));
