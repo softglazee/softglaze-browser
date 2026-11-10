@@ -161,7 +161,7 @@ test('the rotate hook: a pulled MountProxies row can rotate with no link; the ke
   assert.equal(f.proxyCanRotate(row), true);
   assert.equal(f.proxyCanRotate({ ...row, provider: 'other' }), false);
   assert.equal(f.proxyCanRotate({ ...row, username: '' }), false);
-  assert.match(IPC, /const PROVIDER_ROTATORS = Object\.freeze\(\{\n {2}dataimpulse: rotateDataImpulseSticky,[\s\S]*?mountproxies: \(proxy\) => rotateMountProxies\(proxy\)\n\}\);/);
+  assert.match(IPC, /const PROVIDER_ROTATORS = Object\.freeze\(\{\r?\n {2}dataimpulse: rotateDataImpulseSticky,[\s\S]*?mountproxies: \(proxy\) => rotateMountProxies\(proxy\)\r?\n\}\);/);
   assert.match(fnSrc('rotateMountProxies'), /readSavedProviderCreds\('mountproxies'\)/);
   assert.doesNotMatch(SECTION, /rotationUrl/, 'no MountProxies row carries a rotation link');
 });

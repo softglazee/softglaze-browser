@@ -24,7 +24,8 @@ for (const file of SOURCES) {
   });
 }
 
-test('the separate Smartproxy connector is unaffected', () => {
+// The separate connector is Decodo, formerly Smartproxy; its key stays smartproxy (1.0.27 backlog 65).
+test('the separate Decodo (Smartproxy) connector is unaffected', () => {
   assert.match(read('src/main/ipcHandlers.js'), /smartproxy: fetchSmartproxyPool/);
-  assert.match(read('src/renderer/components/ProxyProviders.jsx'), /key: 'smartproxy', name: 'Smartproxy'/);
+  assert.match(read('src/renderer/components/ProxyProviders.jsx'), /key: 'smartproxy', name: 'Decodo \(Smartproxy\)'/);
 });

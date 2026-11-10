@@ -23,7 +23,8 @@ test('IPFoxy sticky time is 30 or 60 minutes, so other picks snap to one of them
     assert.equal(U.ipfoxyUsername('customer-a', { session: 's1', ttlMin: ttl }), `customer-a-sessid-s1-ttl-${want}`, `ttl ${ttl}`);
   }
   assert.equal(U.ipfoxyUsername('customer-a', { session: 's1' }), 'customer-a-sessid-s1', 'no ttl keeps the 30 minute default');
-  assert.match(UI, /key: 'ipfoxy'.*life: true, maxLife: 60/);
+  // The form offers only those two, so 5 or 10 minutes is never picked and turned into 30 (backlog 62).
+  assert.match(UI, /key: 'ipfoxy'.*life: true, lifeOptions: \[30, 60\]/);
 });
 
 test('mangoProxyRows parses the ProxyUrlDto array', () => {

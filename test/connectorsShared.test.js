@@ -188,7 +188,8 @@ test('a session name typed on one row is still one sticky row; AnyIP drops a pas
   const pasted = await a.fetchAnyIpPool({ username: 'user_1,session_old,sesstime_30', password: 'p', count: '1' });
   assert.equal(pasted[0].username, 'user_1,type_residential', 'the rotating row keeps neither the pasted session nor its time');
   const nm = await a.fetchNodeMavenPool({ username: 'nm', password: 'p', session: 'abc', count: '1' });
-  assert.match(nm[0].username, /-sid-abc$/);
+  // NodeMaven rows also carry the default quality filter and IPv4 only (1.0.27 backlog 31).
+  assert.match(nm[0].username, /-sid-abc-filter-medium-ipv4-true$/);
 });
 
 // ---- The form: every Keep same IP connector, its options and its texts ----------------------------

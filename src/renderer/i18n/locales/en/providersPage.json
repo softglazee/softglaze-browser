@@ -68,6 +68,7 @@
     "connector": "Connector",
     "gateway": "Gateway",
     "gatewayFromKey": "Read from your key on each pull",
+    "gatewayPorts": "{{host}}:{{port}} HTTP, :{{socksPort}} SOCKS5",
     "key": "Key",
     "keySaved": "Saved, encrypted on this machine",
     "keyNotSaved": "Not saved",
