@@ -2231,6 +2231,92 @@ function massiveUsername(base, { type, country, subdivision, city, zip, asn, ses
   return parts.join('-');
 }
 
+// ---------------------------------------------------------------------------------------
+// iProxy.online Console API (iproxy.online/api/console/v1, Swagger specs/console/Console-API.yaml and the
+// guide at iproxy.online/docs-api-console, read 2026-11-10). GET /proxy-access lists every proxy access
+// on the user's phones; GET /actionlinks?action=changeip lists each phone's change-IP link, a plain GET
+// that needs no key ("changeip command has been sent"); GET /connections names the phones. One phone
+// is one connection, so all its proxy accesses change IP together. Built from the docs only.
+function iproxyList(body, field) {
+  const j = parseJsonBody(body);
+  return j && Array.isArray(j[field]) ? j[field].filter((x) => x && typeof x === 'object') : [];
+}
+
+// connection_id -> its newest change-IP link. Only an https:// link that does not carry the user's API
+// key is kept: it becomes the proxy's rotationUrl, which members with proxies.reveal can see.
+function iproxyChangeIpLinks(body, { key = '' } = {}) {
+  const out = new Map();
+  const newest = new Map();
+  for (const l of iproxyList(body, 'action_links')) {
+    if (l.action != null && String(l.action).toLowerCase() !== 'changeip') continue;
+    const link = String(l.link || '').trim();
+    const conn = String(l.connection_id == null ? '' : l.connection_id);
+    if (!conn || !/^https:\/\/[^\s]+$/i.test(link)) continue;
+    if (key && key.length >= 4 && (link.includes(key) || link.includes(encodeURIComponent(key)))) continue;
+    const at = Date.parse(String(l.created_at || '')) || 0;
+    if (newest.has(conn) && newest.get(conn) > at) continue;
+    newest.set(conn, at);
+    out.set(conn, link);
+  }
+  return out;
+}
+
+// connection_id -> { name, country, planEndsAt } from GET /connections (or the guide's /connection).
+function iproxyConnections(body) {
+  const out = new Map();
+  for (const c of iproxyList(body, 'connections')) {
+    const id = String(c.id == null ? '' : c.id);
+    if (!id) continue;
+    const info = c.basic_info && typeof c.basic_info === 'object' ? c.basic_info : {};
+    const app = c.app_data && typeof c.app_data === 'object' ? c.app_data : {};
+    const plan = c.plan_info && typeof c.plan_info === 'object' && c.plan_info.active_plan && typeof c.plan_info.active_plan === 'object' ? c.plan_info.active_plan : null;
+    const cc = String(app.ip_country_code || '').trim().toUpperCase();
+    out.set(id, { name: String(info.name || '').trim(), country: /^[A-Z]{2}$/.test(cc) ? (cc === 'UK' ? 'GB' : cc) : '', planEndsAt: plan ? plan.expires_at : null, active: Boolean(plan) });
+  }
+  return out;
+}
+
+// Rows for one protocol: user:pass accesses only, not turned off, not expired. Counts say why the rest
+// were left out, and how many phones with rows have no change-IP link.
+function iproxyRows(accessesBody, linksBody, connectionsBody, { socks = false, now = Date.now(), key = '' } = {}) {
+  const accesses = iproxyList(accessesBody, 'proxy_accesses');
+  const links = iproxyChangeIpLinks(linksBody, { key });
+  const phones = iproxyConnections(connectionsBody);
+  const want = socks ? 'socks5' : 'http';
+  const rows = [];
+  const seen = new Set();
+  const noLinkPhones = new Set();
+  let inactive = 0; let noAuth = 0; let wrongProtocol = 0;
+  for (const a of accesses) {
+    const ends = a.expires_at ? Date.parse(String(a.expires_at)) : NaN;
+    if (a.deactivated_at || (Number.isFinite(ends) && ends <= now)) { inactive += 1; continue; }
+    if (String(a.listen_service || '').toLowerCase() !== want) { wrongProtocol += 1; continue; }
+    const auth = a.auth && typeof a.auth === 'object' ? a.auth : {};
+    const username = auth.login != null ? String(auth.login) : '';
+    const password = auth.password != null ? String(auth.password) : '';
+    if (String(a.auth_type || '').toLowerCase() !== 'userpass' || !username || !password) { noAuth += 1; continue; }
+    const host = String(a.hostname || a.ip || '').trim();
+    const port = Number.parseInt(String(a.port), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const k = `${host}:${port}:${username}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const conn = String(a.connection_id == null ? '' : a.connection_id);
+    const phone = phones.get(conn) || { name: '', country: '' };
+    const link = links.get(conn) || null;
+    if (!link) noLinkPhones.add(conn || k);
+    const what = String(a.description || '').replace(/\s+/g, ' ').trim().slice(0, 60) || (a.id != null ? `#${a.id}` : '');
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: ['iProxy', phone.name, what, phone.country].filter(Boolean).join(' • '),
+      country: phone.country || null,
+      rotationUrl: link
+    });
+  }
+  return { rows, total: accesses.length, inactive, noAuth, wrongProtocol, noLinkPhones: noLinkPhones.size };
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -2322,5 +2408,6 @@ module.exports = {
   NODE4_GATEWAY_PRODUCTS, NODE4_CALL_MAX, node4GatewayBody, node4GatewayRows, node4StaticRows, node4Countries,
   PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
   mountProxiesRows, mountProxiesRotateTarget,
-  massiveBaseUser, massiveUsername
+  massiveBaseUser, massiveUsername,
+  iproxyChangeIpLinks, iproxyConnections, iproxyRows
 };
