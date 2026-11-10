@@ -2222,11 +2222,14 @@ export default function ProfilesPage() {
               )}
             </div>
 
-            <div className="bg-surface border-t border-border p-5 flex justify-end gap-3 shrink-0 rounded-b">
+            {/* Wraps instead of overflowing: on a narrow window Cancel and Save move below Preview Environment
+                (which was clipped at 375 px). On a wide one it is the same single row. */}
+            <div className="bg-surface border-t border-border p-5 flex flex-wrap gap-3 shrink-0 rounded-b">
               <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 mr-1.5" /> {t('editor.previewEnvironment')}</Button>
-              <div className="flex-1" />
-              <Button variant="secondary" onClick={closeEditor}>{t('common.cancel')}</Button>
-              <Button variant="primary" onClick={handleSaveProfile} isLoading={saving}>{t('editor.saveProfile')}</Button>
+              <div className="ml-auto flex gap-3">
+                <Button variant="secondary" onClick={closeEditor}>{t('common.cancel')}</Button>
+                <Button variant="primary" onClick={handleSaveProfile} isLoading={saving}>{t('editor.saveProfile')}</Button>
+              </div>
             </div>
           </div>
 
@@ -2758,6 +2761,7 @@ export default function ProfilesPage() {
           profileId={rotationProfile.id}
           profileName={rotationProfile.title}
           onClose={() => setRotationProfile(null)}
+          onSaved={loadData}
         />
       )}
       {envProfile && (
