@@ -417,7 +417,7 @@ test('a "use only" share never hands over its saved logins in the profile list o
   const db = seed();
   const ws = workspace(db);
   const { withViewerEditFlags } = loadMain(['withViewerEditFlags', 'proxyInVisiblePool'], {
-    ...ws.deps, redactPlatformAccounts, redactUseOnlyProxy, currentMemberCanRevealProxy: true,
+    ...ws.deps, redactPlatformAccounts, redactUseOnlyProxy, currentMemberCanRevealProxy: true, proxyRevealAllowed: () => true,
     serializeProfile: (p) => ({ ...p, platformAccounts: p.platformAccounts ? JSON.parse(p.platformAccounts) : [] })
   });
   ws.as(5); // a Manager may reveal credentials, but not a use-only share's
@@ -426,7 +426,7 @@ test('a "use only" share never hands over its saved logins in the profile list o
   assert.equal(rows[106].platformAccounts[0].password, 'hunter2', 'shared for editing: unchanged');
 
   const { gatherExport } = loadMain(['assertCanRevealKind', 'firstAccount', 'proxyInVisiblePool', 'gatherExport'], {
-    ...ws.deps, rbacPolicy, readSetting: async (_k, d) => d, currentMemberCanRevealProxy: true,
+    ...ws.deps, rbacPolicy, readSetting: async (_k, d) => d, currentMemberCanRevealProxy: true, proxyRevealAllowed: () => true,
     doNotTrackChoice: require('../src/main/doNotTrack').doNotTrackChoice
   }, ['REVEAL_LABELS', 'EXPORT_COLUMNS']);
   const out = await gatherExport();

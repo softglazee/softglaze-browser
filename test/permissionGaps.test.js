@@ -304,7 +304,7 @@ function loadImport(db, items, opts = {}) {
   const cache = new Map([['tok', { parsed: { fileName: 'p.xlsx', sheetName: 'S', headerRow: 1, totalRows: items.length, errors: [], items } }]]);
   const madeProxies = [];
   const sent = [];
-  const fns = loadMain([...VALIDATORS, 'requirePermission', 'limitError', 'assertWithinLimit', 'proxyAddContext', ...SCOPE_FNS, 'commitProfileImport'], {
+  const fns = loadMain([...VALIDATORS, 'requirePermission', 'limitError', 'assertWithinLimit', 'proxyAddContext', ...SCOPE_FNS, 'importedRotationUrl', 'attachImportedRotationUrl', 'commitProfileImport'], {
     ...ws.deps,
     importPreviewCache: cache, CHANNELS: { BATCH_IMPORT_PROGRESS: 'p' }, proxyScope,
     toCountryCode: (v) => String(v || '').trim().toUpperCase(), countryMatches: (a, b) => Boolean(a) && String(a).toUpperCase() === String(b || '').toUpperCase(),

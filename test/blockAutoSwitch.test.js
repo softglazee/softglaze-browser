@@ -213,7 +213,7 @@ test('the switch reads the setting, the loop guard and the automation guard', ()
   assert.match(respond, /blockDetect\.withinSwitchBudget\(times, now\)/);
   assert.match(respond, /busy: profileDrivenByAutomation\(id\)/);
   assert.match(respond, /authGate\.decide\(CHANNELS\.PROFILE_LAUNCH, await ipcAuthState\(\)\)/, 'nothing changes while signed out or locked');
-  assert.match(respond, /rotateProxyIp\(\{ id: proxy\.id \}\)/, 'rotation goes through the gated handler');
+  assert.match(respond, /rotateProxyIp\(\{ id: proxy\.id, profileId: id \}\)/, 'rotation goes through the gated handler, for the profile that met the block');
   assert.match(respond, /isDataImpulseSticky\(proxy\)/);
   const busy = between(IPC, 'function profileDrivenByAutomation(', 'async function profileUsesRotationPool(');
   for (const src of ['apiDrivenProfiles', 'profilesInParallelRun()', 'macroRuns.values()', 'warmerRuns.values()', 'isRecordingMacro(']) {
