@@ -2,14 +2,24 @@
 // puppeteer's page.authenticate() is wired per page, so a new tab or popup sends its first request
 // before auth and gets a 407 (and looks like a bot). This relay on 127.0.0.1 takes no auth and adds
 // Proxy-Authorization upstream (CONNECT and plain HTTP); returns { port, close } like socksRelay.
+// An HTTPS proxy (type 'HTTPS') is reached over TLS, with its certificate checked as Chrome checks it,
+// so a browser that can only speak plain HTTP to a proxy (Firefox) can use one through this relay too.
 const net = require('node:net');
+const tls = require('node:tls');
 const http = require('node:http');
+const https = require('node:https');
 
-function startHttpAuthRelay({ host, port, username, password }) {
+function startHttpAuthRelay({ host, port, username, password, type }) {
   return new Promise((resolve, reject) => {
     const upstreamHost = String(host);
     const upstreamPort = Number(port);
-    const authHeader = 'Basic ' + Buffer.from(`${username || ''}:${password || ''}`, 'utf8').toString('base64');
+    const secure = String(type || '').toUpperCase() === 'HTTPS';
+    const servername = net.isIP(upstreamHost) ? undefined : upstreamHost;
+    // No credentials (an HTTPS proxy relayed only for its TLS): send no Proxy-Authorization at all.
+    const authHeader = (username || password)
+      ? 'Basic ' + Buffer.from(`${username || ''}:${password || ''}`, 'utf8').toString('base64')
+      : null;
+    const withAuth = (headers) => (authHeader ? { ...headers, 'Proxy-Authorization': authHeader } : { ...headers });
     const open = new Set(); // every live socket, destroyed on close()
 
     const track = (s) => {
@@ -25,12 +35,13 @@ function startHttpAuthRelay({ host, port, username, password }) {
     // Plain HTTP: Chromium sends the absolute-form URI (GET http://site/… HTTP/1.1) to
     // the proxy. Forward it verbatim to the upstream with Proxy-Authorization added.
     server.on('request', (creq, cres) => {
-      const upstreamReq = http.request({
+      const upstreamReq = (secure ? https : http).request({
         host: upstreamHost,
         port: upstreamPort,
         method: creq.method,
         path: creq.url, // absolute URI - the upstream proxy resolves it
-        headers: { ...creq.headers, 'Proxy-Authorization': authHeader }
+        headers: withAuth(creq.headers),
+        ...(secure ? { servername } : {})
       });
       upstreamReq.on('socket', (s) => track(s));
       upstreamReq.on('error', () => {
@@ -49,16 +60,18 @@ function startHttpAuthRelay({ host, port, username, password }) {
     // issue our own CONNECT with Proxy-Authorization, and on its 2xx reply splice the two.
     server.on('connect', (creq, clientSocket, head) => {
       clientSocket.on('error', () => { try { clientSocket.destroy(); } catch (e) {} });
-      const upstream = net.connect(upstreamPort, upstreamHost);
+      const upstream = secure
+        ? tls.connect({ host: upstreamHost, port: upstreamPort, servername })
+        : net.connect(upstreamPort, upstreamHost);
       track(upstream);
       upstream.setTimeout(20000, () => { try { upstream.destroy(); } catch (e) {} });
       upstream.on('error', () => { try { clientSocket.destroy(); } catch (e) {} });
-      upstream.on('connect', () => {
+      upstream.on(secure ? 'secureConnect' : 'connect', () => {
         upstream.setTimeout(0);
         upstream.write(
           `CONNECT ${creq.url} HTTP/1.1\r\n` +
           `Host: ${creq.url}\r\n` +
-          `Proxy-Authorization: ${authHeader}\r\n` +
+          (authHeader ? `Proxy-Authorization: ${authHeader}\r\n` : '') +
           `\r\n`
         );
       });

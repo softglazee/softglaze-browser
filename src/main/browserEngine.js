@@ -8,6 +8,7 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { generateMediaDevices, buildBrandIdentity } = require('./fingerprintGenerator');
 const { doNotTrackFlag, dntPrefToWrite } = require('./doNotTrack');
+const profileOptions = require('./profileOptions');
 const { applyBrandWindowIcon } = require('./windowIcon');
 const platform = require('./platform');
 // Shared with browserDownloader so the binary resolver reads exactly where the downloader writes
@@ -541,21 +542,37 @@ function findRealChrome() {
   return null;
 }
 
-// Real system Chrome is preferred: its New Tab Page is stable, it has no Testing icon, and it needs no
-// NTP-override workaround (which Chrome's consent bubble lets the user disable). Without it, fall
-// back to a downloaded CfT build (with the NTP override) by the profile's version.
-function chooseBrowserBinary(profile, opts = {}) {
-  // Profiles that load extensions prefer Chrome for Testing: stable Chrome silently ignores
-  // --load-extension. Profiles without extensions keep the stealthier real Chrome.
+// The Chrome a profile launches on:
+//   Auto: the installed Google Chrome (its New Tab Page is stable, it has no Testing icon and needs no
+//     NTP-override workaround), else the newest downloaded build.
+//   A version picked in the editor (a bare major, see profileOptions.chromeVersionPin): Chrome of that
+//     version - the installed Google Chrome when it is that version, else the downloaded build. While
+//     that version is not downloaded, Auto is used (and a warning is logged).
+//   A generated profile's full version ("149.0.7827.155") is a preferred version, not a pick: it behaves
+//     as Auto, except that without Google Chrome the matching download is preferred (as before 1.0.26).
+// Profiles that load extensions prefer a downloaded build (Chrome for Testing): stable Chrome silently
+// ignores --load-extension. Without one they fall through to the rules above.
+// deps (tests only) replaces the on-disk lookups.
+function chooseBrowserBinary(profile, opts = {}, deps = {}) {
+  const findReal = deps.findRealChrome || findRealChrome;
+  const listDownloaded = deps.listAvailableBrowsers || listAvailableBrowsers;
+  const resolveDownloaded = deps.resolveBrowserExecutable || resolveBrowserExecutable;
   if (opts.preferCftForExtensions) {
-    const cft = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
+    const cft = resolveDownloaded(profile.browserVersion || profile.browserCore);
     if (cft) return { ...cft, isReal: false };
-    // No CfT build installed - fall through to real Chrome so the profile still launches
-    // (the extensions just won't mount; the UI hint tells the user to install a browser).
+    // No CfT build installed - fall through so the profile still launches (the extensions just won't
+    // mount; the UI hint tells the user to install a browser).
   }
-  const real = findRealChrome();
+  const pin = profileOptions.chromeVersionPin(profile.browserVersion);
+  const real = findReal();
+  if (pin) {
+    if (real && real.major === pin) return { ...real, pinned: true };
+    const exact = listDownloaded().find((b) => b.major === pin);
+    if (exact) return { ...exact, isReal: false, pinned: true };
+    console.warn(`[SG][launch] Chrome ${pin} is selected for this profile but is not downloaded - launching on Auto. Download it on the Browsers page.`);
+  }
   if (real) return real;
-  const cft = resolveBrowserExecutable(profile.browserVersion || profile.browserCore);
+  const cft = resolveDownloaded(profile.browserVersion || profile.browserCore);
   return cft ? { ...cft, isReal: false } : null;
 }
 
@@ -588,11 +605,11 @@ function buildAntidetectFlags(profile, fpConfig, seed, timezoneId, hasProxy) {
   const cores = Number(fpConfig && fpConfig.cores) || Number(profile.cpuCores) || 0;
   if (cores > 0) flags.push(`--fingerprint-hardware-concurrency=${cores}`);
   const langs = (fpConfig && Array.isArray(fpConfig.langs) && fpConfig.langs.length) ? fpConfig.langs : null;
-  if (langs) {
-    // --lang may also be emitted by the shared arg-builder with the same value; a
-    // duplicate is harmless (Chromium honors the last, identical, occurrence).
-    flags.push(`--lang=${langs[0]}`, `--accept-lang=${langs.join(',')}`);
-  }
+  // --lang is the browser UI language (the profile's Display Language, absent for "Real"); the shared
+  // arg-builder emits the same value, and a duplicate is harmless. --accept-lang is what websites get.
+  const uiLocale = fpConfig && fpConfig.uiLocale !== undefined ? fpConfig.uiLocale : (langs ? langs[0] : null);
+  if (uiLocale) flags.push(`--lang=${uiLocale}`);
+  if (langs) flags.push(`--accept-lang=${langs.join(',')}`);
   if (timezoneId) flags.push(`--timezone=${timezoneId}`);
   if (hasProxy) flags.push('--disable-non-proxied-udp');
   return flags;
@@ -715,9 +732,10 @@ function parseProxyString(rawProxyString) {
   if (!raw) return null;
   // SOCKS4 vs SOCKS5 matters: Chromium speaks a different wire protocol for each and SOCKS4 has no
   // auth, so a wrong label breaks the connection. The scheme prefix is stripped before parsing.
-  const scheme = (raw.match(/^(socks4a?|socks5|socks|https?):\/\//i) || [])[1] || '';
-  const type = /^socks4/i.test(scheme) ? 'SOCKS4' : (/^socks/i.test(scheme) ? 'SOCKS5' : 'HTTP');
-  const working = raw.replace(/^(socks4a?|socks5|socks|https?):\/\//i, '');
+  // https:// is a proxy reached over TLS (Chrome's https:// proxy scheme), not a plain HTTP proxy.
+  const scheme = (raw.match(/^(socks4a?|socks5h?|socks|https?):\/\//i) || [])[1] || '';
+  const type = /^socks4/i.test(scheme) ? 'SOCKS4' : (/^socks/i.test(scheme) ? 'SOCKS5' : (/^https$/i.test(scheme) ? 'HTTPS' : 'HTTP'));
+  const working = raw.replace(/^(socks4a?|socks5h?|socks|https?):\/\//i, '');
 
   // userinfo form user:pass@host:port (a documented batch format). Split at the last '@': a host
   // never contains one, a pasted password sometimes does.
@@ -790,11 +808,11 @@ function parseProxyInput(input) {
 
 function buildProxyServerArgument(proxy) {
   if (!proxy) return null;
-  // Map the type exactly: a wrong scheme (http:// for SOCKS) makes every request fail. Only http:// and
-  // socks5:// resolve DNS on the proxy side; Chromium's socks4:// uses local DNS, which
-  // launchProfileSession refuses. This mapper stays exact for the proxy checker and tests.
+  // Map the type exactly: a wrong scheme (http:// for SOCKS) makes every request fail. http://,
+  // https:// (TLS to the proxy) and socks5:// resolve DNS on the proxy side; Chromium's socks4:// uses
+  // local DNS, which launchProfileSession refuses. This mapper stays exact for the proxy checker and tests.
   const t = String(proxy.type).toLowerCase();
-  const protocol = t === 'socks5' ? 'socks5' : (t === 'socks4' ? 'socks4' : 'http');
+  const protocol = t === 'socks5' ? 'socks5' : (t === 'socks4' ? 'socks4' : (t === 'https' ? 'https' : 'http'));
   return `${protocol}://${formatProxyHost(proxy.host)}:${proxy.port}`;
 }
 
@@ -964,7 +982,7 @@ function randomGuardName() {
   return out;
 }
 
-function nativeGapScript(fp) {
+function nativeGapScript(fp, extras) {
   // Run-once guard: a per-launch random, non-enumerable name from the launcher (fp.guard), so neither
   // Object.keys nor a fixed-name probe like `'__sgn' in window` can single SoftGlaze out.
   const _guard = (fp && typeof fp.guard === 'string' && fp.guard) || ('_' + Math.random().toString(36).slice(2, 11));
@@ -1034,9 +1052,19 @@ function nativeGapScript(fp) {
         try { Object.defineProperty(mdProto, name, { value: fn, configurable: true, writable: true, enumerable: false }); }
         catch (e) { try { md[name] = fn; } catch (e2) {} }
       };
+      // How many of each kind the profile shows (Media Device "Edit"; one of each otherwise).
+      const mics = Array.isArray(set.mics) ? set.mics : [micLabel];
+      const spks = Array.isArray(set.spks) ? set.spks : [spkLabel];
+      const cams = Array.isArray(set.cams) ? set.cams : [camLabel];
       if (typeof md.getUserMedia === 'function') {
         const origGUM = md.getUserMedia.bind(md);
-        defineOnMd('getUserMedia', markNative(function getUserMedia() {
+        defineOnMd('getUserMedia', markNative(function getUserMedia(constraints) {
+          // A kind the profile has none of is "not found", as on a computer without that device.
+          try {
+            if (constraints && ((constraints.audio && !mics.length) || (constraints.video && !cams.length))) {
+              return Promise.reject(new DOMException('Requested device not found', 'NotFoundError'));
+            }
+          } catch (e) { /* fall through to the real call */ }
           let p;
           try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
           // Observe on a separate chain and return the original promise: returning p.then(...) would put this
@@ -1051,19 +1079,25 @@ function nativeGapScript(fp) {
         const audioIn = (deviceId, label) => rows.push({ kind: 'audioinput', deviceId, groupId: gMicIn, label });
         const audioOut = (deviceId, label) => rows.push({ kind: 'audiooutput', deviceId, groupId: gSpkOut, label });
         if (granted) {
-          audioIn('default', 'Default - ' + micLabel);
-          if (isWin) audioIn('communications', 'Communications - ' + micLabel);
-          audioIn(micId, micLabel);
-          rows.push({ kind: 'videoinput', deviceId: camId, groupId: gCam, label: camLabel });
-          audioOut('default', 'Default - ' + spkLabel);
-          if (isWin) audioOut('communications', 'Communications - ' + spkLabel);
-          audioOut(spkId, spkLabel);
+          // Default (and on Windows Communications) entries point at the first device of a kind; every
+          // further device has its own ids. One of each keeps the ids it always had.
+          if (mics.length) {
+            audioIn('default', 'Default - ' + mics[0]);
+            if (isWin) audioIn('communications', 'Communications - ' + mics[0]);
+            mics.forEach((l, i) => rows.push({ kind: 'audioinput', deviceId: i ? mkId(100 + i) : micId, groupId: i ? mkId(110 + i) : gMicIn, label: l }));
+          }
+          cams.forEach((l, i) => rows.push({ kind: 'videoinput', deviceId: i ? mkId(200 + i) : camId, groupId: i ? mkId(210 + i) : gCam, label: l }));
+          if (spks.length) {
+            audioOut('default', 'Default - ' + spks[0]);
+            if (isWin) audioOut('communications', 'Communications - ' + spks[0]);
+            spks.forEach((l, i) => rows.push({ kind: 'audiooutput', deviceId: i ? mkId(300 + i) : spkId, groupId: i ? mkId(310 + i) : gSpkOut, label: l }));
+          }
         } else {
-          // Pre-grant: one endpoint per kind, empty deviceId + label, stable groupId -
+          // Pre-grant: one endpoint per kind that has a device, empty deviceId + label, stable groupId -
           // precisely what real Chrome exposes before a permission grant.
-          audioIn('', '');
-          rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
-          audioOut('', '');
+          if (mics.length) audioIn('', '');
+          if (cams.length) rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
+          if (spks.length) audioOut('', '');
         }
         return rows;
       };
@@ -1078,6 +1112,9 @@ function nativeGapScript(fp) {
       }, 'enumerateDevices'));
     } catch (e) { /* never break the page over device spoofing */ }
   }
+
+  // Fonts, WebGPU adapter info and WebRTC "Replace" (profileExtrasScript), which the binary does not do.
+  if (typeof extras === 'function') { try { extras(fp, { markNative }); } catch (e) { /* never break the page */ } }
 }
 
 // Do Not Track is Chromium's own profile setting (pref enable_do_not_track, the "Send a Do Not Track
@@ -1150,7 +1187,262 @@ async function ensureCookiePolicyPref(userDataDir, browserSettings) {
   } catch (e) { /* best-effort - a cookie preference is not worth failing a launch over */ }
 }
 
-function fingerprintScript(fp) {
+// WebRTC's UDP must not bypass the proxy: STUN would reach the site's server from the real IP. Chrome
+// stopped reading the --force-webrtc-ip-handling-policy switch (Chrome 157 no longer has it), so the
+// policy goes into the profile's own setting, webrtc.ip_handling_policy (not a protected pref), before
+// launch: 'disable_non_proxied_udp' with a proxy unless WebRTC is "Real", else Chrome's default.
+function webrtcPolicyFor(hasProxy, mode) {
+  return hasProxy && profileOptions.webrtcMode(mode) !== 'Real' ? 'disable_non_proxied_udp' : null;
+}
+
+async function ensureWebrtcPolicyPref(userDataDir, policy) {
+  try {
+    const prefsPath = path.join(userDataDir, 'Default', 'Preferences');
+    let prefs = {};
+    let hadFile = false;
+    try {
+      prefs = JSON.parse(await fs.readFile(prefsPath, 'utf8'));
+      hadFile = true;
+    } catch (e) {
+      // Same rule as ensureDoNotTrackPref: never overwrite a Preferences file that exists but did not parse.
+      if (e && e.code !== 'ENOENT') return;
+      prefs = {};
+    }
+    if (hadFile && (!prefs || typeof prefs !== 'object' || Array.isArray(prefs))) return;
+    const current = prefs.webrtc && typeof prefs.webrtc === 'object' ? prefs.webrtc.ip_handling_policy : undefined;
+    if (!policy) {
+      // Chrome's default: drop only the value SoftGlaze writes, so nothing else is touched.
+      if (current !== 'disable_non_proxied_udp') return;
+      delete prefs.webrtc.ip_handling_policy;
+    } else {
+      if (current === policy) return; // already right: no write
+      if (!prefs.webrtc || typeof prefs.webrtc !== 'object' || Array.isArray(prefs.webrtc)) prefs.webrtc = {};
+      prefs.webrtc.ip_handling_policy = policy;
+    }
+    await fs.mkdir(path.dirname(prefsPath), { recursive: true });
+    await fs.writeFile(prefsPath, JSON.stringify(prefs));
+  } catch (e) { /* best-effort; the page script still keeps the real IP out of the candidates */ }
+}
+
+// Page-side profile options shared by both Chromium engines: the standard engine's fingerprintScript and
+// the anti-detect engine's nativeGapScript call it last, with their own native-looking helpers
+// (api.markNative), and only once per document (their run-once guard). Self-contained: it is serialized
+// with toString() and handed to them as their second argument, so it never needs eval.
+//   fp.fontsHidden      Fonts > Custom: families websites must not see.
+//   fp.webgpuInfo       WebGPU > Based on WebGL: GPUAdapterInfo vendor/architecture of the WebGL GPU.
+//   fp.webrtcReplaceIp  WebRTC > Replace: the proxy's exit IP, shown as the profile's public address.
+function profileExtrasScript(fp, api) {
+  if (!fp || !api || typeof api.markNative !== 'function') return;
+  const markNative = api.markNative;
+
+  // ---- Fonts: websites see only the allowed fonts ----
+  // Each hidden family gets a placeholder face in document.fonts. It loads from a font every computer
+  // has but covers only U+10FFFF, a code point no text uses, so the family name now belongs to the
+  // document and the installed font of that name is never used: DOM text and canvas measure with the
+  // next font in the CSS list, exactly as when the font is not installed. A site's own web font of
+  // that name still renders (its faces cover the real text). The placeholders are left out of
+  // everything that lists document.fonts, and FontFace local("<hidden font>") fails to load.
+  if (Array.isArray(fp.fontsHidden) && fp.fontsHidden.length) {
+    try {
+      const NativeFontFace = window.FontFace;
+      const fontSet = (typeof document !== 'undefined' && document && document.fonts) || null;
+      const SetProto = fontSet && Object.getPrototypeOf(fontSet);
+      if (typeof NativeFontFace === 'function' && SetProto && typeof SetProto.add === 'function') {
+        const shadows = new WeakSet();
+        const shadowList = [];
+        const nAdd = SetProto.add;
+        const src = (Array.isArray(fp.fontsShadowSources) && fp.fontsShadowSources.length ? fp.fontsShadowSources : ['Arial', 'Helvetica', 'DejaVu Sans'])
+          .map((n) => 'local("' + n + '")').join(', ');
+        for (const name of fp.fontsHidden) {
+          try {
+            const face = new NativeFontFace(String(name), src, { unicodeRange: 'U+10FFFF' });
+            shadows.add(face);
+            shadowList.push(face);
+            nAdd.call(fontSet, face);
+          } catch (e) { /* a name the FontFace parser refuses: skip it */ }
+        }
+        const isShadow = (v) => shadows.has(v) || (Array.isArray(v) && shadows.has(v[0]));
+        const redefine = (obj, name, fn) => {
+          const d = Object.getOwnPropertyDescriptor(obj, name);
+          if (!d || typeof d.value !== 'function') return;
+          Object.defineProperty(obj, name, { value: markNative(fn, name), configurable: true, writable: true, enumerable: d.enumerable });
+        };
+        // values(), keys(), entries() and for...of share one native iterator type: skip placeholders in
+        // its next(), so the iterator objects stay the browser's own.
+        try {
+          const ItProto = Object.getPrototypeOf(SetProto.values.call(fontSet));
+          const nNext = ItProto && ItProto.next;
+          if (typeof nNext === 'function') {
+            redefine(ItProto, 'next', function next() {
+              let r = nNext.apply(this, arguments);
+              while (r && !r.done && isShadow(r.value)) r = nNext.apply(this, arguments);
+              return r;
+            });
+          }
+        } catch (e) { /* no iterator to adjust */ }
+        const nForEach = SetProto.forEach;
+        redefine(SetProto, 'forEach', function forEach(callback, thisArg) {
+          if (typeof callback !== 'function') return nForEach.apply(this, arguments); // the native TypeError
+          return nForEach.call(this, function (a, b, s) { if (!shadows.has(a)) return callback.call(thisArg, a, b, s); });
+        });
+        const nHas = SetProto.has;
+        redefine(SetProto, 'has', function has(face) { return shadows.has(face) ? false : nHas.apply(this, arguments); });
+        const nDelete = SetProto.delete;
+        redefine(SetProto, 'delete', function (face) { return shadows.has(face) ? false : nDelete.apply(this, arguments); });
+        const nClear = SetProto.clear;
+        redefine(SetProto, 'clear', function clear() {
+          const r = nClear.apply(this, arguments);
+          if (this === fontSet) shadowList.forEach((f) => { try { nAdd.call(fontSet, f); } catch (e) {} });
+          return r;
+        });
+        const sizeDesc = Object.getOwnPropertyDescriptor(SetProto, 'size');
+        if (sizeDesc && typeof sizeDesc.get === 'function') {
+          const nSize = sizeDesc.get;
+          const getter = markNative(Object.getOwnPropertyDescriptor({ get size() {
+            const n = nSize.call(this);
+            return this === fontSet ? Math.max(0, n - shadowList.length) : n;
+          } }, 'size').get, 'get size');
+          Object.defineProperty(SetProto, 'size', { get: getter, configurable: true, enumerable: sizeDesc.enumerable });
+        }
+        // FontFace(name, 'local("<hidden font>")') looks the font up directly; point it at a name that
+        // does not exist so it fails to load, as on a computer without that font. A local name is
+        // matched to the longest known family it starts with ("Arial Narrow Bold" -> Arial Narrow).
+        const known = [];
+        (fp.fontsHidden || []).forEach((n) => known.push([String(n).toLowerCase(), true]));
+        (fp.fontsAllowed || []).forEach((n) => known.push([String(n).toLowerCase(), false]));
+        known.sort((a, b) => b[0].length - a[0].length);
+        const squash = (s) => s.replace(/[\s_-]+/g, '');
+        const hiddenLocal = (localName) => {
+          const n = String(localName).trim().toLowerCase();
+          const ns = squash(n);
+          for (const [fam, hide] of known) {
+            const fs = squash(fam);
+            if (n === fam || n.startsWith(fam + ' ') || n.startsWith(fam + '-') || ns === fs || ns.startsWith(fs + 'mt') || ns.startsWith(fs + 'ps') || n.startsWith(fs + '-')) return hide;
+          }
+          return false;
+        };
+        const missing = 'local("' + (fp.fontsMissingLocal || 'NoSuchFont') + '")';
+        const rewrite = (source) => String(source).replace(/local\(\s*(["']?)([^"')]+)\1\s*\)/gi, (m, q, name) => (hiddenLocal(name) ? missing : m));
+        const Wrapped = function FontFace(family, source) {
+          if (!new.target) return NativeFontFace.apply(this, arguments); // throws the native TypeError
+          const args = Array.prototype.slice.call(arguments);
+          if (typeof args[1] === 'string') args[1] = rewrite(args[1]);
+          return Reflect.construct(NativeFontFace, args, new.target === Wrapped ? NativeFontFace : new.target);
+        };
+        Wrapped.prototype = NativeFontFace.prototype;
+        try { Object.defineProperty(NativeFontFace.prototype, 'constructor', { value: Wrapped, configurable: true, writable: true }); } catch (e) {}
+        markNative(Wrapped, 'FontFace');
+        window.FontFace = Wrapped;
+      }
+    } catch (e) { /* never break the page over fonts */ }
+  }
+
+  // ---- WebGPU: adapter info that matches the profile's WebGL GPU ----
+  // Chrome reports vendor and architecture and leaves device and description empty. The native getter
+  // still runs first, so calling it on anything but a GPUAdapterInfo throws as it does in Chrome.
+  if (fp.webgpuInfo && typeof GPUAdapterInfo !== 'undefined') {
+    try {
+      const P = GPUAdapterInfo.prototype;
+      const values = { vendor: fp.webgpuInfo.vendor || '', architecture: fp.webgpuInfo.architecture || '', device: '', description: '' };
+      Object.keys(values).forEach((k) => {
+        const d = Object.getOwnPropertyDescriptor(P, k);
+        if (!d || typeof d.get !== 'function') return;
+        const nGet = d.get;
+        const v = values[k];
+        const getter = markNative(Object.getOwnPropertyDescriptor({ get [k]() { nGet.call(this); return v; } }, k).get, 'get ' + k);
+        Object.defineProperty(P, k, { get: getter, configurable: true, enumerable: d.enumerable });
+      });
+    } catch (e) { /* leave WebGPU as it is */ }
+  }
+
+  // ---- WebRTC "Replace": the proxy's exit IP is the profile's public address ----
+  // UDP that would bypass the proxy stays blocked (webrtc.ip_handling_policy), so the browser itself
+  // gathers no host or STUN candidate. When gathering ends on a connection that has a STUN or TURN
+  // server, the page is given one server-reflexive candidate with the proxy's exit IP, as a computer
+  // behind that IP would show, and the local description lists it too.
+  if (fp.webrtcReplaceIp && typeof window.RTCPeerConnection === 'function' && typeof RTCIceCandidate === 'function') {
+    try {
+      const IP = String(fp.webrtcReplaceIp);
+      const isV6 = IP.indexOf(':') !== -1;
+      const Base = window.RTCPeerConnection;
+      const addListener = EventTarget.prototype.addEventListener;
+      const getConfiguration = Base.prototype.getConfiguration;
+      const nativeLocal = (() => {
+        for (let p = Base.prototype; p; p = Object.getPrototypeOf(p)) {
+          const d = Object.getOwnPropertyDescriptor(p, 'localDescription');
+          if (d && d.get) return d.get;
+        }
+        return null;
+      })();
+      const added = new WeakMap(); // pc -> { sdpLine, port }
+      const hasServer = (pc) => {
+        try {
+          const cfg = getConfiguration.call(pc) || {};
+          return (cfg.iceServers || []).some((s) => [].concat((s && (s.urls || s.url)) || []).some((u) => /^(stuns?|turns?):/i.test(String(u))));
+        } catch (e) { return false; }
+      };
+      const withCandidate = (pc, desc) => {
+        const c = added.get(pc);
+        if (!c || !desc || !desc.sdp || String(desc.sdp).indexOf(c.sdpLine) !== -1) return desc;
+        try {
+          const lines = String(desc.sdp).split('\r\n');
+          const m = lines.findIndex((l) => l.indexOf('m=') === 0);
+          if (m < 0) return desc;
+          let end = lines.findIndex((l, i) => i > m && l.indexOf('m=') === 0);
+          if (end < 0) end = lines.length;
+          let at = -1;
+          let cLine = -1;
+          for (let i = m + 1; i < end; i += 1) {
+            if (lines[i].indexOf('c=') === 0) { cLine = i; at = i + 1; }
+            else if (lines[i].indexOf('a=candidate:') === 0) at = i + 1;
+          }
+          if (at < 0) at = m + 1;
+          // No other candidate yet: the address and port of the section become this one, as in Chrome.
+          if (cLine >= 0 && /^c=IN IP[46] (0\.0\.0\.0|::)$/.test(lines[cLine])) {
+            lines[cLine] = (isV6 ? 'c=IN IP6 ' : 'c=IN IP4 ') + IP;
+            lines[m] = lines[m].replace(/^(m=\S+ )9 /, '$1' + c.port + ' ');
+          }
+          lines.splice(at, 0, c.sdpLine);
+          return new RTCSessionDescription({ type: desc.type, sdp: lines.join('\r\n') });
+        } catch (e) { return desc; }
+      };
+      class ReplacedRTC extends Base {
+        constructor(...args) {
+          super(...args);
+          const pc = this;
+          // Registered first, so it sees the end of gathering before the page's own listeners do.
+          addListener.call(pc, 'icecandidate', (ev) => {
+            try {
+              if (!ev || ev.candidate || added.has(pc) || !hasServer(pc)) return;
+              const local = nativeLocal ? nativeLocal.call(pc) : null;
+              const sdp = (local && local.sdp) || '';
+              const ufrag = (/a=ice-ufrag:(\S+)/.exec(sdp) || [])[1] || '';
+              const mid = (/a=mid:(\S+)/.exec(sdp) || [])[1] || '0';
+              const port = 49152 + Math.floor(Math.random() * 16383);
+              const foundation = String((Math.random() * 4294967295) >>> 0);
+              const body = foundation + ' 1 udp 1677729535 ' + IP + ' ' + port + ' typ srflx raddr ' + (isV6 ? '::' : '0.0.0.0') + ' rport 0 generation 0';
+              added.set(pc, { port, sdpLine: 'a=candidate:' + body + ' network-cost 999' });
+              const candidate = new RTCIceCandidate({ candidate: 'candidate:' + body + ' ufrag ' + ufrag + ' network-cost 999', sdpMid: mid, sdpMLineIndex: 0, usernameFragment: ufrag || null });
+              pc.dispatchEvent(new RTCPeerConnectionIceEvent('icecandidate', { candidate }));
+            } catch (e) { /* the page still gets the end of gathering */ }
+          });
+        }
+        get localDescription() { return withCandidate(this, super.localDescription); }
+        get currentLocalDescription() { return withCandidate(this, super.currentLocalDescription); }
+        get pendingLocalDescription() { return withCandidate(this, super.pendingLocalDescription); }
+      }
+      ['localDescription', 'currentLocalDescription', 'pendingLocalDescription'].forEach((k) => {
+        const d = Object.getOwnPropertyDescriptor(ReplacedRTC.prototype, k);
+        if (d && d.get) markNative(d.get, 'get ' + k);
+      });
+      markNative(ReplacedRTC, 'RTCPeerConnection');
+      window.RTCPeerConnection = ReplacedRTC;
+      if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = ReplacedRTC;
+    } catch (e) { /* leave WebRTC as it is */ }
+  }
+}
+
+function fingerprintScript(fp, extras) {
   // fingerprint-chromium spoofs at the binary level, so this JS layer must not run: a second,
   // differently derived spoof would contradict it, which is itself a detection signal.
   if (fp && fp.nativeEngine) return;
@@ -1228,7 +1520,7 @@ function fingerprintScript(fp) {
   // UA and Sec-CH-UA brands are set via CDP. navigator.vendor stays "Google Inc."; vendor globals are
   // added so the claimed brand exists in the page (Brave with no navigator.brave is a mismatch).
   try {
-    if (fp.brandVendor) define(navigator, 'vendor', fp.brandVendor);
+    if (typeof fp.brandVendor === 'string') define(navigator, 'vendor', fp.brandVendor);
     var _inj = fp.brandInject || [];
     if (_inj.indexOf('brave') !== -1 && !('brave' in navigator)) {
       var _brave = { isBrave: markNative(function isBrave() { return Promise.resolve(true); }, 'isBrave') };
@@ -1744,9 +2036,19 @@ if (fp.noise.canvas) {
         try { Object.defineProperty(mdProto, name, { value: fn, configurable: true, writable: true, enumerable: false }); }
         catch (e) { try { md[name] = fn; } catch (e2) {} }
       };
+      // How many of each kind the profile shows (Media Device "Edit"; one of each otherwise).
+      const mics = Array.isArray(set.mics) ? set.mics : [micLabel];
+      const spks = Array.isArray(set.spks) ? set.spks : [spkLabel];
+      const cams = Array.isArray(set.cams) ? set.cams : [camLabel];
       if (typeof md.getUserMedia === 'function') {
         const origGUM = md.getUserMedia.bind(md);
-        defineOnMd('getUserMedia', markNative(function getUserMedia() {
+        defineOnMd('getUserMedia', markNative(function getUserMedia(constraints) {
+          // A kind the profile has none of is "not found", as on a computer without that device.
+          try {
+            if (constraints && ((constraints.audio && !mics.length) || (constraints.video && !cams.length))) {
+              return Promise.reject(new DOMException('Requested device not found', 'NotFoundError'));
+            }
+          } catch (e) { /* fall through to the real call */ }
           let p;
           try { p = origGUM.apply(md, arguments); } catch (e) { return Promise.reject(e); }
           // Observe on a separate chain and return the original promise: returning p.then(...) would put this
@@ -1764,19 +2066,25 @@ if (fp.noise.canvas) {
           // Full structured list: the Default / Communications pseudo-endpoints
           // (Communications is Windows-only) plus the real endpoints, all with
           // concrete ids + labels - the shape real Chrome returns post-grant.
-          audioIn('default', 'Default - ' + micLabel);
-          if (isWin) audioIn('communications', 'Communications - ' + micLabel);
-          audioIn(micId, micLabel);
-          rows.push({ kind: 'videoinput', deviceId: camId, groupId: gCam, label: camLabel });
-          audioOut('default', 'Default - ' + spkLabel);
-          if (isWin) audioOut('communications', 'Communications - ' + spkLabel);
-          audioOut(spkId, spkLabel);
+          // Default (and on Windows Communications) entries point at the first device of a kind; every
+          // further device has its own ids. One of each keeps the ids it always had.
+          if (mics.length) {
+            audioIn('default', 'Default - ' + mics[0]);
+            if (isWin) audioIn('communications', 'Communications - ' + mics[0]);
+            mics.forEach((l, i) => rows.push({ kind: 'audioinput', deviceId: i ? mkId(100 + i) : micId, groupId: i ? mkId(110 + i) : gMicIn, label: l }));
+          }
+          cams.forEach((l, i) => rows.push({ kind: 'videoinput', deviceId: i ? mkId(200 + i) : camId, groupId: i ? mkId(210 + i) : gCam, label: l }));
+          if (spks.length) {
+            audioOut('default', 'Default - ' + spks[0]);
+            if (isWin) audioOut('communications', 'Communications - ' + spks[0]);
+            spks.forEach((l, i) => rows.push({ kind: 'audiooutput', deviceId: i ? mkId(300 + i) : spkId, groupId: i ? mkId(310 + i) : gSpkOut, label: l }));
+          }
         } else {
-          // Pre-grant: one endpoint per kind, empty deviceId + label, stable
-          // groupId - precisely what real Chrome exposes before a permission grant.
-          audioIn('', '');
-          rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
-          audioOut('', '');
+          // Pre-grant: one endpoint per kind that has a device, empty deviceId + label, stable groupId -
+          // precisely what real Chrome exposes before a permission grant.
+          if (mics.length) audioIn('', '');
+          if (cams.length) rows.push({ kind: 'videoinput', deviceId: '', groupId: gCam, label: '' });
+          if (spks.length) audioOut('', '');
         }
         return rows;
       };
@@ -1871,6 +2179,10 @@ if (fp.noise.canvas) {
       window.WebSocket = PatchedWS;
     }
   }
+
+  // Fonts, WebGPU adapter info and WebRTC "Replace" (profileExtrasScript), handed in as the second
+  // argument wherever the launcher injects this script.
+  if (typeof extras === 'function') { try { extras(fp, { markNative, define }); } catch (e) { /* never break the page */ } }
 }
 
 // Hosts on the local machine or LAN. Blocks local-network probing (an anti-detect leak) when
@@ -2367,8 +2679,9 @@ function lookupProxyGeoNode(proxy) {
 
     // Use proxy-agent to correctly route SOCKS5 / SOCKS4 / HTTP requests
     if (ProxyAgent) {
-      // socks5h makes the proxy resolve the geo hostnames; plain socks5 would use the host's DNS.
-      const scheme = schemeLc === 'socks5' ? 'socks5h' : (schemeLc === 'socks4' ? 'socks4' : 'http');
+      // socks5h makes the proxy resolve the geo hostnames; plain socks5 would use the host's DNS. An HTTPS
+      // proxy is reached over TLS (https-proxy-agent's secure proxy).
+      const scheme = schemeLc === 'socks5' ? 'socks5h' : (schemeLc === 'socks4' ? 'socks4' : (schemeLc === 'https' ? 'https' : 'http'));
       const auth = proxy.username ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password || '')}@` : '';
       const proxyUrl = `${scheme}://${auth}${formatProxyHost(proxy.host)}:${proxy.port}`;
       
@@ -2420,8 +2733,8 @@ function lookupProxyGeoNode(proxy) {
       return;
     }
 
-    // Fallback when proxy-agent is missing.
-    if (schemeLc.startsWith('socks')) return resolve(null);
+    // Fallback when proxy-agent is missing (plain HTTP to the proxy only).
+    if (schemeLc.startsWith('socks') || schemeLc === 'https') return resolve(null);
     
     const fallbackUrl = 'http://ip-api.com/json/?fields=status,country,countryCode,regionName,city,timezone,lat,lon,isp,query';
     const headers = { Host: 'ip-api.com', 'User-Agent': 'Mozilla/5.0', Accept: 'application/json', Connection: 'close' };
@@ -2496,7 +2809,9 @@ async function lookupProxyGeoNodeCached(proxy) {
 // Fingerprint JS ships as an MV3 MAIN-world content script at document_start: unlike CDP injection,
 // it runs before page scripts in every tab, popup and iframe, with no race on new tabs.
 function buildFingerprintConfig(profile, opts) {
-  const { seed, resW, resH, webrtcMode, hasProxy, geo, timezone } = opts;
+  const { seed, resW, resH, hasProxy, geo, timezone } = opts;
+  // Forward | Replace | Real | Disabled; anything else (the retired "Proxy UDP") launches as Forward.
+  const webrtcMode = profileOptions.webrtcMode(opts.webrtcMode);
   const osTok = osTokens(profile.os);
   const manualLang = profile.languageType === 'Custom' && profile.languageCustom
     ? String(profile.languageCustom).trim() : null;
@@ -2561,7 +2876,35 @@ function buildFingerprintConfig(profile, opts) {
   const deviceMemory = ramGb >= 8 ? 8 : (ramGb >= 4 ? 4 : (ramGb >= 2 ? 2 : 1));
 
   // vendor/inject don't depend on the major version; UA token and brands are applied via CDP.
-  const brandIdent = buildBrandIdentity(profile.browserBrand, 0, '');
+  let brandIdent = buildBrandIdentity(profile.browserBrand, 0, '');
+  // A User-Agent picked in the editor (userAgentMode "Custom") also sets navigator.platform and the page
+  // identity: an Edge/Opera/Yandex UA presents as that brand, a Firefox or Safari UA gets that browser's
+  // navigator.vendor and no Chromium vendor globals. Auto keeps the profile's brand.
+  const customUa = profileOptions.customUserAgent(profile);
+  const uaPlatform = customUa ? profileOptions.uaPlatformInfo(customUa, profile) : null;
+  if (customUa) {
+    const family = profileOptions.uaFamily(customUa);
+    if (family === 'chromium') {
+      const uaBrand = /Edg(?:e|A)?\//.test(customUa) ? 'Edge' : /OPR\//.test(customUa) ? 'Opera' : /YaBrowser\//.test(customUa) ? 'Yandex' : null;
+      if (uaBrand) brandIdent = buildBrandIdentity(uaBrand, 0, '');
+    } else if (family === 'firefox' || family === 'webkit') {
+      brandIdent = { ...brandIdent, id: family, vendor: family === 'firefox' ? '' : 'Apple Computer, Inc.', inject: [], gpc: false };
+    }
+  }
+
+  // Fonts > Custom: everything known that is not on the profile's list is hidden (profileExtrasScript).
+  const fontsAllowed = profileOptions.allowedFonts(profile);
+  const fontsHidden = fontsAllowed ? profileOptions.hiddenFonts(fontsAllowed, opts.installedFonts || []) : null;
+
+  // WebGPU "Based on WebGL": when WebGL reports a profile GPU, WebGPU's adapter info names the same
+  // maker and architecture. With WebGL "Real" both already show the real GPU, so nothing changes.
+  const webgpuDisabled = /disabled?/i.test(String(profile.webgpu || ''));
+  const webgpuBasedOnWebgl = !webgpuDisabled && !/^real$/i.test(String(profile.webgpu || '').trim());
+  const webgpuInfo = webgpuBasedOnWebgl && webglVendor ? profileOptions.webgpuInfoFromWebgl(webglVendor, webglRenderer) : null;
+
+  // The proxy's exit IP, from the launch's lookup through the proxy (opts.webrtcIp for Replace when the
+  // geo lookup itself was skipped).
+  const exitIp = opts.webrtcIp || (geo && geo.query) || null;
 
   return {
     seed,
@@ -2572,7 +2915,9 @@ function buildFingerprintConfig(profile, opts) {
     // Global Privacy Control comes from the brand (Brave sends it by itself), never from Do Not Track.
     gpc: Boolean(brandIdent.gpc),
     timezone: timezone || null,
-    navPlatform: osTok.navPlatform,
+    navPlatform: (uaPlatform && uaPlatform.navPlatform) || osTok.navPlatform,
+    // The browser UI language (--lang), or null for the computer's own ("Real"); see displayLocale.
+    uiLocale: profileOptions.displayLocale(profile, langs),
     // null ⇒ no override (report the real value) - only when the user picks "Real".
     cores: realCpu ? null : spoofCores,
     mem: realRam ? null : deviceMemory,
@@ -2584,14 +2929,24 @@ function buildFingerprintConfig(profile, opts) {
     // On with a proxy unless the mode is pass-through. Candidates are rewritten to the known proxy exit
     // IP (matching the HTTP IP); if it is unknown, the in-page guard drops public-IP candidates.
     webrtcProtect: Boolean(hasProxy) && webrtcMode !== 'Real' && webrtcMode !== 'Disabled',
-    webrtcPublicIp: (geo && geo.query) ? String(geo.query) : null,
+    webrtcPublicIp: exitIp ? String(exitIp) : null,
+    // Replace: the exit IP is also given to the page as the profile's public WebRTC address. Without a
+    // proxy or a known exit IP it behaves as Forward.
+    webrtcReplaceIp: (Boolean(hasProxy) && webrtcMode === 'Replace' && exitIp) ? String(exitIp) : null,
     dnt,
-    webgpuDisabled: /disabled?/i.test(String(profile.webgpu || '')),
+    webgpuDisabled,
+    webgpuInfo,
     speechVoices: profile.speechVoicesNoise !== false,
     mediaDevices: !/^real$/i.test(String(profile.mediaDevice || 'Auto')),
-    // Realistic OS-matched enumerateDevices() set from the same seed, so it is stable across launches.
-    mediaSet: generateMediaDevices(profile.os, seed),
+    // Realistic OS-matched enumerateDevices() set from the same seed, so it is stable across launches;
+    // Media Device "Edit" sets how many of each kind (one of each otherwise).
+    mediaSet: generateMediaDevices(profile.os, seed, profileOptions.mediaDeviceCounts(profile)),
     fontsNoise: profile.fontsType ? !/^real$/i.test(String(profile.fontsType)) : false,
+    fontsHidden: fontsHidden && fontsHidden.length ? fontsHidden : null,
+    fontsAllowed: fontsHidden && fontsHidden.length ? fontsAllowed : null,
+    fontsShadowSources: fontsHidden && fontsHidden.length ? profileOptions.DATA.shadowSources.slice() : null,
+    // A local() name no computer has, so FontFace(local("<hidden font>")) fails like a missing font.
+    fontsMissingLocal: fontsHidden && fontsHidden.length ? `F${crypto.randomBytes(6).toString('hex')}` : null,
     portScan: /^enable/i.test(String(profile.portScanProtection || '')),
     noise: {
       canvas: profile.canvasNoise !== false,
@@ -2651,7 +3006,8 @@ function workerPreludeScript(o) {
     try { hostTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
     const tzNeeded = Boolean(o.timezone) && hostTz !== o.timezone;
     const glNeeded = Boolean(o.webglVendor || o.webglRenderer);
-    if (!props.length && !tzNeeded && !glNeeded) return;
+    const gpuNeeded = Boolean(o.gpuInfo) && typeof GPUAdapterInfo !== 'undefined';
+    if (!props.length && !tzNeeded && !glNeeded && !gpuNeeded) return;
 
     // Same native-looking functions as the page script: [native code] from toString, the right name,
     // getters on the prototype (hasOwnProperty stays false) with no .prototype and not constructible.
@@ -2692,6 +3048,22 @@ function workerPreludeScript(o) {
       };
       try { if (typeof WebGLRenderingContext !== 'undefined') wrapGl(WebGLRenderingContext.prototype); } catch (e) {}
       try { if (typeof WebGL2RenderingContext !== 'undefined') wrapGl(WebGL2RenderingContext.prototype); } catch (e) {}
+    }
+
+    // WebGPU "Based on WebGL" in the worker too (see profileExtrasScript).
+    if (gpuNeeded) {
+      const P = GPUAdapterInfo.prototype;
+      const values = { vendor: o.gpuInfo.vendor || '', architecture: o.gpuInfo.architecture || '', device: '', description: '' };
+      Object.keys(values).forEach((k) => {
+        try {
+          const d = Object.getOwnPropertyDescriptor(P, k);
+          if (!d || typeof d.get !== 'function') return;
+          const nGet = d.get;
+          const v = values[k];
+          const getter = mark(Object.getOwnPropertyDescriptor({ get [k]() { nGet.call(this); return v; } }, k).get, 'get ' + k);
+          Object.defineProperty(P, k, { get: getter, configurable: true, enumerable: d.enumerable });
+        } catch (e) {}
+      });
     }
 
     if (tzNeeded) {
@@ -2753,6 +3125,7 @@ function workerPreludeSource(fp, ua = null) {
     timezone: fp.timezone || undefined,
     webglVendor: gpu ? (fp.webglVendor || undefined) : undefined,
     webglRenderer: gpu ? (fp.webglRenderer || undefined) : undefined,
+    gpuInfo: fp.webgpuInfo || undefined,
     gpc: fp.gpc ? true : undefined
   };
   return `(${workerPreludeScript.toString()})(${JSON.stringify(data)});`;
@@ -2799,9 +3172,10 @@ function targetFingerprintCommands(kind, fp = {}, late = {}) {
   const isWorker = kind === 'worker' || kind === 'shared_worker' || kind === 'service_worker';
   if (!isFrame && !isWorker) return cmds;
   // The anti-detect build sets UA, Client Hints, cores and time zone from its launch flags; a CDP value
-  // disagreeing with them would itself be a tell.
+  // disagreeing with them would itself be a tell. A User-Agent the user picked (late.ua.custom) is applied
+  // on both engines: the user asked for exactly that string.
   const native = Boolean(fp.nativeEngine);
-  if (!native && late.ua) {
+  if (late.ua && (!native || late.ua.custom)) {
     cmds.push({
       method: 'Emulation.setUserAgentOverride',
       params: {
@@ -2833,8 +3207,15 @@ function targetFingerprintCommands(kind, fp = {}, late = {}) {
     cmds.push({ method: 'Emulation.setTouchEmulationEnabled', params: { enabled: true, maxTouchPoints: late.mobileMetrics.maxTouchPoints } });
     cmds.push({ method: 'Emulation.setEmitTouchEventsForMouse', params: { enabled: true, configuration: 'mobile' } });
   }
-  if (late.geoLat != null && late.geoLng != null) {
-    cmds.push({ method: 'Browser.grantPermissions', params: { permissions: ['geolocation'] } });
+  // Location: Block denies the permission for every site; otherwise the profile's coordinates (custom, or
+  // the proxy's) are what a site gets, granted up front for "Always allow" and asked for by the browser
+  // for "Ask each time". Without coordinates nothing is granted, so the real location is never shared
+  // without a prompt. late.geoPermission is unset only for older callers: they always granted.
+  const geoPermission = late.geoPermission || 'granted';
+  if (geoPermission === 'denied') {
+    cmds.push({ method: 'Browser.setPermission', params: { permission: { name: 'geolocation' }, setting: 'denied' } });
+  } else if (late.geoLat != null && late.geoLng != null) {
+    if (geoPermission === 'granted') cmds.push({ method: 'Browser.grantPermissions', params: { permissions: ['geolocation'] } });
     cmds.push({ method: 'Emulation.setGeolocationOverride', params: { latitude: late.geoLat, longitude: late.geoLng, accuracy: late.geoAcc } });
   }
   return cmds;
@@ -3114,7 +3495,7 @@ async function writeFingerprintExtension(userDataDir, fpConfig, opts = {}) {
   // Self-contained: serialize the function and invoke it with the baked config. Under the native engine
   // fingerprintScript bails, so ship the small gap filler for the two axes fingerprint-chromium misses.
   const fn = fpConfig && fpConfig.nativeEngine ? nativeGapScript : fingerprintScript;
-  const source = `(${fn.toString()})(${JSON.stringify(fpConfig)});`;
+  const source = `(${fn.toString()})(${JSON.stringify(fpConfig)}, ${profileExtrasScript.toString()});`;
   await fs.writeFile(path.join(extDir, 'fp.js'), source);
   return extDir;
 }
@@ -3225,7 +3606,8 @@ async function launchProfileSessionNow(options = {}) {
   const winW = toInt(profile.resolutionW, DEFAULT_WINDOW_SIZE.width);
   const winH = toInt(profile.resolutionH, DEFAULT_WINDOW_SIZE.height);
 
-  const webrtcMode = profile.webrtc || 'Forward';
+  // Forward | Replace | Real | Disabled (the retired "Proxy UDP" launches as Forward, as it always did).
+  const webrtcMode = profileOptions.webrtcMode(profile.webrtc);
 
   // Pre-launch geo lookup through the proxy: knowing the timezone up front sets TZ on the Chrome process
   // (every tab and worker, no injection race) and bakes the proxy IP and locale into the extension.
@@ -3259,9 +3641,24 @@ async function launchProfileSessionNow(options = {}) {
   }
 
   // Bake the geo-aware fingerprint config into a MAIN-world extension before launch (the reliable path).
-  const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId });
+  // WebRTC Replace shows the proxy's exit IP, found the way the launch finds the proxy's location (a
+  // lookup through the proxy). Done here too when that lookup was skipped (timezone "Real", or geo
+  // matching off); it never changes the timezone.
+  let webrtcIp = null;
+  if (webrtcMode === 'Replace' && resolvedProxy && !(geo && geo.query)) {
+    const g = (await (usingAntidetect ? lookupProxyGeoNode(resolvedProxy) : lookupProxyGeoNodeCached(resolvedProxy)).catch(() => null))
+      || lastKnownProxyGeo(resolvedProxy);
+    webrtcIp = g && g.query ? String(g.query) : null;
+    if (!webrtcIp) console.warn('[SG][webrtc] Replace: the proxy exit IP could not be looked up, so WebRTC behaves as Forward for this launch.');
+  }
+  // Fonts > Custom hides every known family that is not allowed, the ones installed here included.
+  const installedFonts = profileOptions.allowedFonts(profile) ? await profileOptions.installedFontFamilies() : [];
+  const fpConfig = buildFingerprintConfig(profile, { seed, resW, resH, webrtcMode, hasProxy: Boolean(resolvedProxy), geo, timezone: timezoneId, webrtcIp, installedFonts });
   // Decide the binary up front so the NTP override is written only for Chrome-for-Testing.
   if (usingAntidetect) fpConfig.nativeEngine = true;
+  // fingerprint-chromium reports a WebGL GPU derived from its seed, not the profile's stored one, so
+  // WebGPU "Based on WebGL" cannot be matched to it: WebGPU stays the engine's own there.
+  if (usingAntidetect) fpConfig.webgpuInfo = null;
   // Per-launch random name for the in-page run-once guard. Not part of the fingerprint,
   // so the profile's values stay identical across launches.
   fpConfig.guard = randomGuardName();
@@ -3285,6 +3682,9 @@ async function launchProfileSessionNow(options = {}) {
   // Third-party cookies: Chrome's normal default for every engine (the anti-detect
   // build blocks them by default, which hurts CAPTCHA scoring) - see ensureCookiePolicyPref.
   await ensureCookiePolicyPref(userDataDir, browserSettings);
+  // WebRTC UDP that would bypass the proxy is blocked through the profile's own setting (the old switch
+  // below is gone from current Chrome).
+  await ensureWebrtcPolicyPref(userDataDir, webrtcPolicyFor(Boolean(resolvedProxy), webrtcMode));
 
   const usingCft = !(chosenBrowser && chosenBrowser.isReal);
   // usingCft means "not real Chrome", which includes the anti-detect build. Only real CfT needs the NTP
@@ -3325,11 +3725,16 @@ async function launchProfileSessionNow(options = {}) {
 
   // --lang aligns the whole locale stack (ICU/Intl and Accept-Language) with navigator.language;
   // otherwise Intl reports en-US under a spoofed en-GB, a mismatch CreepJS flags.
-  const primaryLocale = (fpConfig.langs && fpConfig.langs[0]) || null;
-  if (primaryLocale) args.push(`--lang=${primaryLocale}`);
+  // The profile's Display Language is the browser UI language and the default locale of Intl in pages
+  // ("Based on Language" = the first website language, as before; "Real" = no switch, the computer's own).
+  // Websites' Accept-Language and navigator.languages come from the Language setting (CDP), separately.
+  const uiLocale = fpConfig.uiLocale || null;
+  if (uiLocale) args.push(`--lang=${uiLocale}`);
 
   // Always block non-proxied UDP when proxied: Chrome's mDNS host candidate (xxxx.local) can be
   // resolved to the real IP, so only the proxied srflx candidate (proxy IP) or nothing is exposed.
+  // Current Chrome no longer reads this switch (the webrtc.ip_handling_policy setting written above does
+  // the blocking); it stays for older builds and fingerprint-chromium.
   if (resolvedProxy && webrtcMode !== 'Real') {
     args.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
   }
@@ -3358,7 +3763,9 @@ async function launchProfileSessionNow(options = {}) {
   // A Google session can de-anonymize a profile, so sync is off unless explicitly allowed.
   if (!browserSettings.allowChromeSignin) args.push('--disable-sync');
 
-  if (/disable|off|close/i.test(String(profile.hardwareAcceleration || ''))) args.push('--disable-gpu');
+  // Hardware Acceleration: Default adds nothing, On adds --ignore-gpu-blocklist, Off adds --disable-gpu
+  // (older profiles: "Open" is On, "Close" is Off).
+  args.push(...profileOptions.hardwareAccelerationArgs(profile.hardwareAcceleration));
   if (/open|enable|on|true/i.test(String(profile.disableTls || ''))) args.push('--ignore-certificate-errors');
   // Custom launch args: only accept well-formed "--flag" tokens.
   if (profile.launchArgs) {
@@ -3490,7 +3897,7 @@ async function launchProfileSessionNow(options = {}) {
   // until its fingerprint is set (attachFingerprintToNewTargets). Dedicated workers are covered there
   // too, so the in-page Worker wrapper stays off unless the auto-attach cannot be set up.
   fpConfig.dedicatedWorkersViaCdp = !fpConfig.nativeEngine;
-  const fpInjectSource = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)});`;
+  const fpInjectSource = `(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)}, ${profileExtrasScript.toString()});`;
   // Android profiles also need a small high-DPR viewport and touch: CDP device emulation makes
   // maxTouchPoints, ontouchstart, devicePixelRatio and the viewport match the Android UA.
   const isMobile = String(profile.deviceClass || '').toLowerCase() === 'mobile'
@@ -3597,7 +4004,13 @@ async function launchProfileSessionNow(options = {}) {
   const acceptLanguage = acceptLanguageOverride(fpConfig.langs);
   // DNT / Sec-GPC request headers for applyToPage (every tab); see privacyRequestHeaders.
   const privacyHeaders = privacyRequestHeaders(fpConfig);
-  const ua = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
+  // Auto: the launched binary's own version with the profile's OS and brand. A UA picked in the editor
+  // (userAgentMode "Custom") is applied as picked, with Client Hints that belong to it.
+  const autoUa = buildUserAgentBundle(profile, realMajor, realFullVersion, seed);
+  const pickedUa = profileOptions.customUserAgent(profile);
+  const ua = pickedUa
+    ? profileOptions.customUserAgentBundle(pickedUa, profile, autoUa, { major: realMajor, fullVersion: realFullVersion })
+    : autoUa;
 
   fpLate.ua = ua;
   fpLate.acceptLanguage = acceptLanguage;
@@ -3623,6 +4036,8 @@ async function launchProfileSessionNow(options = {}) {
   fpLate.geoLat = geoLat;
   fpLate.geoLng = geoLng;
   fpLate.geoAcc = toInt(profile.locationAcc, 100);
+  // Ask each time (prompt), Always allow (granted) or Block (denied); see targetFingerprintCommands.
+  fpLate.geoPermission = profileOptions.geolocationPermission(profile);
 
   // Apply the full fingerprint to one page: the first tab and every later tab or popup. Idempotent.
   const appliedPages = new WeakSet();
@@ -3631,7 +4046,9 @@ async function launchProfileSessionNow(options = {}) {
   const registerFingerprintScript = async (targetPage) => {
     if (scriptPages.has(targetPage)) return;
     scriptPages.add(targetPage);
-    await targetPage.evaluateOnNewDocument(fingerprintScript, fpConfig).catch(() => {});
+    // Built now, not with fpInjectSource: fpConfig.dedicatedWorkersViaCdp turns false when the auto-attach
+    // could not be set up, and then this copy must wrap Worker itself.
+    await targetPage.evaluateOnNewDocument(`(${fingerprintScript.toString()})(${JSON.stringify(fpConfig)}, ${profileExtrasScript.toString()});`).catch(() => {});
   };
   // Track whether identity setup on the primary tab completed, so a profile never reports
   // "launched" while running with the real identity.
@@ -5009,6 +5426,13 @@ module.exports = {
   ensureCookiePolicyPref,
   // Exported for tests: Do Not Track as Chromium's own setting, written before launch.
   ensureDoNotTrackPref,
+  // Exported for tests: the WebRTC UDP policy written before launch, and the page-side profile options.
+  ensureWebrtcPolicyPref,
+  webrtcPolicyFor,
+  profileExtrasScript,
+  // Exported for tests: which Chrome a profile launches on (Auto / a picked version).
+  chooseBrowserBinary,
+  findRealChrome,
   parseProxyInput,
   formatProxyHost,
   // Exported for tests: proxy type to --proxy-server scheme (SOCKS4 -> socks4://, not http://).

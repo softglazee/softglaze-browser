@@ -248,7 +248,8 @@ function loadProfileFns(db = seed()) {
     findOrCreateProxy: async () => null, proxyTypeHintFor: () => null, ensureUniqueDataDirName: async (_db, n) => n,
     buildProxyInfoString: (p) => `${p.host}:${p.port}`, validateSystemProxyBehavior: (v) => v || 'DIRECT',
     buildFingerprintFields: () => ({}), logActivity: async () => {}, serializeProfile: (p) => p,
-    assertCanAccessProfile: async () => {}, extractFingerprintData: () => ({}), sanitizeDataDirName: (v) => v, console
+    assertCanAccessProfile: async () => {}, extractFingerprintData: () => ({}), sanitizeDataDirName: (v) => v, console,
+    settleDeviceIdentity: async () => {} // device name / MAC: test/profileOptions.test.js
   });
   return { db, ws, fns };
 }
@@ -311,7 +312,9 @@ function loadImport(db, items, opts = {}) {
     findOrCreateProxy: async (_db, raw) => { madeProxies.push(raw); return db.proxy.create({ data: { name: raw, type: 'HTTP', host: raw, port: 1, ownerMemberId: ws.deps.ownerStampId() } }); },
     serializeProxy: (p) => p, parseSystemProxyBehavior: (_v, d) => d, doNotTrackChoice: (v) => v,
     ensureUniqueDataDirName: async (_db, n) => n, generateFingerprint: () => ({}), buildProxyInfoString: (p) => `${p.host}:${p.port}`,
-    serializeProfile: (p) => p, logActivity: async () => {}, ...opts
+    serializeProfile: (p) => p, logActivity: async () => {},
+    claimDeviceIdentity: async (_db, _st, d) => d, // device name / MAC: test/profileOptions.test.js
+    ...opts
   });
   const event = { sender: { send: (_c, data) => sent.push(data) } };
   return { ws, cache, madeProxies, sent, run: (payload = {}) => fns.commitProfileImport({ token: 'tok', ...payload }, event) };

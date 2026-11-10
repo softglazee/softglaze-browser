@@ -94,7 +94,8 @@ test('createProfile stores a real group id and refuses one that does not exist',
     ensureUniqueDataDirName: async (_db, n) => n, ownerStampId: () => 5, buildProxyInfoString: () => '',
     validateSystemProxyBehavior: (v) => v || 'DIRECT', buildFingerprintFields: () => ({}),
     logActivity: async () => {}, serializeProfile: (p) => p,
-    assertCanAccessGroup: async () => {} // group visibility: test/permissionGaps.test.js
+    assertCanAccessGroup: async () => {}, // group visibility: test/permissionGaps.test.js
+    settleDeviceIdentity: async () => {} // device name / MAC: test/profileOptions.test.js
   });
   await createProfile({ title: 'A', groupId: 3, tags: ['vip', 'warm'] });
   assert.equal(created[0].groupId, 3);
@@ -308,6 +309,7 @@ test('batch import stamps the importing member as owner and assignee', async () 
     serializeProxy: (p) => p, parseSystemProxyBehavior: (_v, d) => d, doNotTrackChoice: (v) => v,
     ensureUniqueDataDirName: async (_db, n) => n, generateFingerprint: () => ({}), buildProxyInfoString: () => '',
     serializeProfile: (p) => p, logActivity: async () => {}, ownerStampId: () => 5,
+    claimDeviceIdentity: async (_db, _st, d) => d, // device name / MAC: test/profileOptions.test.js
     // Permission, quota and scoping: test/permissionGaps.test.js
     requirePermission: async () => {}, assertWithinLimit: async () => {}, scopedProxyWhere: async (w) => w, scopedGroupWhere: async (w) => w,
     proxyAddContext: async () => ({ visible: undefined, ownerId: 5, max: -1 }) // proxy reuse: test/permissionsFollowup.test.js

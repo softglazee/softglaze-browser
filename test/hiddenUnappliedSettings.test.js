@@ -128,12 +128,10 @@ test('Settings: search keywords do not point at hidden controls', () => {
 
 // ---- profile editor ----------------------------------------------------------------------------
 
-test('Profile editor: Device Name, MAC Address, Data Sync and the unread browser switches are gated', () => {
+test('Profile editor: Data Sync and the unread browser switches are gated', () => {
   assert.match(PROFILES, /import \{ SHOW_UNAPPLIED_SETTINGS \} from '@\/lib\/unappliedSettings\.mjs';/);
   const gates = gateRanges(PROFILES);
   const needles = [
-    "updatePd('deviceNameType'", "updatePd('deviceName'", "updatePd('macAddressType'", "updatePd('macAddress'",
-    "t('env.deviceName')", "t('env.mac')",
     "updatePd('advancedSync'", "updateNestedPd('syncItems'",
     "updatePd('advancedBrowser'",
     // Advanced: Extension (advancedExt) is never read; Random Fingerprint is overridden by the
@@ -153,11 +151,18 @@ test('Profile editor: "Load SoftGlaze extensions" stays on screen on its own', (
   assert.ok(!gates.some(([a, b]) => hits[0] > a && hits[0] < b), 'loadExtensions is not behind the gate');
 });
 
-test('Environment overview modal: Device name and MAC address rows are gated', () => {
-  assert.match(ENV_MODAL, /import \{ SHOW_UNAPPLIED_SETTINGS \} from '@\/lib\/unappliedSettings\.mjs';/);
-  const gates = gateRanges(ENV_MODAL);
-  assertOnlyInside(ENV_MODAL, "t('envOverview.rowDeviceName')", gates, 'EnvironmentOverviewModal');
-  assertOnlyInside(ENV_MODAL, "t('envOverview.rowMacAddress')", gates, 'EnvironmentOverviewModal');
+// 1.0.26: Device Name and MAC Address are real per-profile options again (unique per profile, applied
+// where a browser has a channel for them: test/profileOptions.test.js), so they are on screen ungated.
+test('Device Name and MAC Address are shown, ungated, in the editor, its side panel and the overview', () => {
+  const pageGates = gateRanges(PROFILES);
+  for (const n of ["updatePd('deviceNameType'", "updatePd('deviceName'", "updatePd('macAddressType'", "updatePd('macAddress'", "t('env.deviceName')", "t('env.mac')"]) {
+    const hits = indexesOf(PROFILES, n);
+    assert.ok(hits.length > 0, `${n} is on the page`);
+    assert.ok(hits.every((at) => !pageGates.some(([a, b]) => at > a && at < b)), `${n} is not behind SHOW_UNAPPLIED_SETTINGS`);
+  }
+  assert.doesNotMatch(ENV_MODAL, /SHOW_UNAPPLIED_SETTINGS/, 'nothing in the overview is gated any more');
+  assert.match(ENV_MODAL, /t\('envOverview\.rowDeviceName'\)/);
+  assert.match(ENV_MODAL, /t\('envOverview\.rowMacAddress'\)/);
 });
 
 // ---- main still ignores them (if this fails, the setting works now: show it again) -------------
@@ -182,11 +187,14 @@ test('main reads none of the hidden global settings', () => {
   }
 });
 
-test('main applies no Device Name, MAC Address or per-profile switch but loadExtensions', () => {
+test('main applies no per-profile switch but loadExtensions (and no MAC address: no browser has a channel for it)', () => {
   for (const f of ['browserEngine.js', 'firefoxEngine.js', 'launchCheck.js']) {
     const src = read('src', 'main', f);
-    assert.doesNotMatch(src, /\b(deviceName|macAddress|syncItems|advancedSync|advancedBrowser|browserSettingsJson)\b/, `${f} now applies one`);
+    assert.doesNotMatch(src, /\b(macAddress|syncItems|advancedSync|advancedBrowser|browserSettingsJson)\b/, `${f} now applies one`);
   }
+  // The device name has one channel, in Firefox (Firefox account device name, NTLM workstation name).
+  assert.doesNotMatch(read('src', 'main', 'browserEngine.js'), /\bdeviceName\b/, 'Chromium has no setting for the device name');
+  assert.match(read('src', 'main', 'firefoxEngine.js'), /network\.generic-ntlm-auth\.workstation/);
   const reads = [...IPC.matchAll(/perProfileBrowser\.(\w+)/g)].map((m) => m[1]);
   assert.deepEqual([...new Set(reads)], ['loadExtensions'], 'launch reads only loadExtensions from the per-profile switches');
 });
@@ -245,8 +253,8 @@ test('Synchronize is not labelled Premium, and Random Fingerprint says when it r
     assert.doesNotMatch(prof.bulk.synchronizeTitle, /premium/i, `${lang}: no plan restricts Synchronize`);
     assert.equal(prof.platform.premium, undefined, `${lang}: the 2FA Secret "Premium" badge label is gone`);
     assert.doesNotMatch(prof.advanced.randomFingerprintDesc, /each startup|on each launch|cada inicio/i, `${lang}: it is generated on save, not at launch`);
-    // Headings over the hidden fields do not promise them.
-    assert.doesNotMatch(prof.fp.hardwareConfigSub, /MAC|device name|dispositivo/i, `${lang}: hardware heading`);
+    // The hardware heading names what is under it: Device Name and MAC Address are shown again (1.0.26).
+    assert.match(prof.fp.hardwareConfigSub, /MAC/, `${lang}: hardware heading`);
     assert.doesNotMatch(prof.advanced.coreSettingsSub, /sync|sincroniz/i, `${lang}: core settings heading`);
   }
   assert.doesNotMatch(read('src', 'main', 'tierPolicy.js'), /synchron/i, 'if a plan ever restricts Synchronize, the label can return');

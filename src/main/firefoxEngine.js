@@ -15,6 +15,8 @@ const { spawn, execFile } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const { parseProxyInput } = require('./browserEngine');
 const { startSocksAuthRelay } = require('./socksRelay');
+const { startHttpAuthRelay } = require('./httpRelay');
+const profileOptions = require('./profileOptions');
 const { assertAllowedDownloadUrl, resolveRedirect, HOSTS } = require('./downloadGuard');
 const platform = require('./platform');
 const { extractFirefox } = require('./extractArchive');
@@ -240,11 +242,49 @@ function buildUserJs(opts) {
   pref('browser.warnOnQuit', false);
   pref('browser.sessionstore.warnOnQuit', false);
 
-  // Disable WebRTC and geolocation so the real IP and location cannot leak.
+  // Disable WebRTC so the real IP cannot leak.
   pref('media.peerconnection.enabled', false);
   pref('media.navigator.enabled', false);
-  pref('geo.enabled', false);
   pref('dom.webnotifications.enabled', false);
+
+  // Location (opts.location): off unless the profile has coordinates to show (custom, or the proxy's)
+  // and is not set to Block. Then Firefox's network provider answers with those coordinates (a data:
+  // URL, no lookup, the OS providers off) and permissions.default.geo is 0 (ask) or 1 (always allow).
+  const loc = opts.location;
+  if (loc && loc.permission !== 'denied' && Number.isFinite(loc.lat) && Number.isFinite(loc.lng)) {
+    pref('geo.enabled', true);
+    pref('geo.provider.network.url', 'data:application/json,' + JSON.stringify({ location: { lat: loc.lat, lng: loc.lng }, accuracy: Number.isFinite(loc.accuracy) ? loc.accuracy : 100 }));
+    pref('geo.provider.ms-windows-location', false);
+    pref('geo.provider.use_corelocation', false);
+    pref('geo.provider.use_gpsd', false);
+    pref('geo.provider.use_geoclue', false);
+    pref('permissions.default.geo', loc.permission === 'granted' ? 1 : 0);
+  } else {
+    pref('geo.enabled', false);
+  }
+
+  // Fonts > Custom (opts.fontsAllowed): Firefox's own allowlist of system fonts, so pages see only these
+  // (and only those installed). null or [] lifts it ('' = every font).
+  if (opts.fontsAllowed !== undefined) pref('font.system.whitelist', Array.isArray(opts.fontsAllowed) ? opts.fontsAllowed.join(', ') : '');
+
+  // Hardware acceleration (opts.hardwareAcceleration): Default leaves Firefox's own choice, On forces
+  // the GPU, Off turns it off. All three prefs are written so a former choice does not linger.
+  if (opts.hardwareAcceleration) {
+    const hw = opts.hardwareAcceleration;
+    pref('layers.acceleration.disabled', hw === 'Off');
+    pref('layers.acceleration.force-enabled', hw === 'On');
+    pref('gfx.webrender.software', hw === 'Off');
+  }
+
+  // Device name (opts.deviceName; '' for "Real"): the name this Firefox gives itself in a Firefox
+  // account (Sync / Send Tab), and the workstation name Firefox's own NTLM sends to a server that asks
+  // for Windows sign-in, instead of the computer's (Windows' own NTLM, used otherwise, always sends the
+  // real computer name). '' keeps Firefox's defaults.
+  if (typeof opts.deviceName === 'string') {
+    pref('identity.fxaccounts.account.device.name', opts.deviceName ? `Firefox on ${opts.deviceName}` : '');
+    pref('network.auth.force-generic-ntlm', Boolean(opts.deviceName));
+    if (opts.deviceName) pref('network.generic-ntlm-auth.workstation', opts.deviceName);
+  }
 
   if (opts.userAgent) pref('general.useragent.override', opts.userAgent);
 
@@ -253,10 +293,12 @@ function buildUserJs(opts) {
   // writes nothing (Firefox keeps its own value, off by default).
   if (opts.doNotTrack === '1' || opts.doNotTrack === '0') pref('privacy.donottrackheader.enabled', opts.doNotTrack === '1');
 
-  if (opts.acceptLanguages) {
-    pref('intl.accept_languages', opts.acceptLanguages);
-    pref('intl.locale.requested', opts.acceptLanguages.split(',')[0]);
-  }
+  if (opts.acceptLanguages) pref('intl.accept_languages', opts.acceptLanguages);
+  // The UI language (the profile's Display Language): opts.uiLocale, '' for "Real" (the computer's own),
+  // undefined to keep the former rule (the first website language). Firefox shows its menus in it only
+  // when that language pack is installed.
+  if (typeof opts.uiLocale === 'string') pref('intl.locale.requested', opts.uiLocale);
+  else if (opts.acceptLanguages) pref('intl.locale.requested', opts.acceptLanguages.split(',')[0]);
 
   // Let profile-scope (sideloaded) add-ons install and stay enabled, without update checks.
   if (opts.autofill) {
@@ -391,16 +433,20 @@ async function launchFirefoxProfileNow(options = {}) {
   // No-auth proxies are used directly; a relay that fails to bind throws.
   let relay = null;              // { port, close } - closed on teardown / launch failure
   let effectiveProxy = proxy;
-  if (proxy && (proxy.username || proxy.password)) {
+  // Firefox's proxy prefs speak plain HTTP to a proxy, so an HTTPS proxy (TLS to the proxy) always goes
+  // through the local relay, which opens the TLS connection, with or without credentials.
+  const proxyIsHttps = Boolean(proxy) && String(proxy.type || '').toLowerCase() === 'https';
+  if (proxy && (proxy.username || proxy.password || proxyIsHttps)) {
     const typeLc = String(proxy.type || '').toLowerCase();
     const isSocks5 = typeLc === 'socks5';   // only SOCKS5 carries username/password auth
     const isSocks4 = typeLc.startsWith('socks') && !isSocks5; // socks4/4a can't carry a password
     // SOCKS4/4a has no password handshake, so pass it directly (the Chrome engine relays only SOCKS5).
     if (!isSocks4) {
       try {
-        relay = isSocks5 ? await startSocksAuthRelay(proxy) : await startAuthRelay(proxy);
+        relay = isSocks5 ? await startSocksAuthRelay(proxy)
+          : (proxyIsHttps ? await startHttpAuthRelay(proxy) : await startAuthRelay(proxy));
       } catch (e) {
-        throw new Error(`Could not start the local ${isSocks5 ? 'SOCKS5' : 'HTTP'} proxy authentication relay for this profile: ${(e && e.message) || e}`);
+        throw new Error(`Could not start the local ${isSocks5 ? 'SOCKS5' : (proxyIsHttps ? 'HTTPS' : 'HTTP')} proxy relay for this profile: ${(e && e.message) || e}`);
       }
       effectiveProxy = { type: isSocks5 ? 'SOCKS5' : 'HTTP', host: '127.0.0.1', port: relay.port, username: null, password: null };
     }
@@ -410,8 +456,10 @@ async function launchFirefoxProfileNow(options = {}) {
   // The geo lookup goes through the real upstream and is cached per proxy.
   const tzCustom = profile.timezoneType === 'Custom' && profile.timezoneCustom;
   const langCustom = profile.languageType === 'Custom' && profile.languageCustom;
+  // Location "Based on IP" shows the proxy's coordinates, so it needs the lookup too.
+  const locFromIp = !/^(custom|block)$/i.test(String(profile.locationType || '').trim());
   let proxyGeo = null;
-  if (proxy && (!tzCustom || !langCustom)) {
+  if (proxy && (!tzCustom || !langCustom || locFromIp)) {
     try {
       const { lookupProxyGeoNodeCached } = require('./browserEngine');
       proxyGeo = await lookupProxyGeoNodeCached(proxy);
@@ -419,7 +467,7 @@ async function launchFirefoxProfileNow(options = {}) {
   }
   // Lookup failed: use the last geo this proxy resolved to; with none, the launch returns a geoWarning
   // instead of running on the host timezone.
-  if (proxy && !proxyGeo && (!tzCustom || !langCustom)) {
+  if (proxy && !proxyGeo && (!tzCustom || !langCustom || locFromIp)) {
     try { proxyGeo = require('./browserEngine').lastKnownProxyGeo(proxy); } catch (e) { proxyGeo = null; }
   }
   const acceptLanguages = langCustom
@@ -461,10 +509,28 @@ async function launchFirefoxProfileNow(options = {}) {
   // Honor an explicit Firefox UA; otherwise null keeps the binary's native UA (matches its TLS/JA4).
   const storedUa = profile.userAgent && profile.userAgent !== 'Auto' ? String(profile.userAgent).trim() : '';
   const firefoxUserAgent = (/firefox\//i.test(storedUa) && !/chrome\//i.test(storedUa)) ? storedUa : null;
+  // Display Language: "Real" is '' (the computer's own); "Based on Language" follows the first website
+  // language when there is one (undefined otherwise, as before).
+  const displayType = String(profile.displayLangType || '').trim().toLowerCase();
+  const uiLocale = displayType === 'real' ? ''
+    : (profileOptions.displayLocale(profile, acceptLanguages ? acceptLanguages.split(',') : []) || undefined);
+  // Location: Custom coordinates, else the proxy's (Based on IP); Block turns it off.
+  const customLoc = String(profile.locationType || '') === 'Custom';
+  const lat = customLoc ? Number.parseFloat(profile.locationLat) : (proxyGeo && Number.isFinite(proxyGeo.lat) ? proxyGeo.lat : NaN);
+  const lng = customLoc ? Number.parseFloat(profile.locationLng) : (proxyGeo && Number.isFinite(proxyGeo.lon) ? proxyGeo.lon : NaN);
+  const accuracy = Number.parseInt(String(profile.locationAcc || ''), 10);
+  // Device Name "Real" writes '' (Firefox's defaults); an unusable stored name writes nothing.
+  const deviceNameReal = /^real$/i.test(String(profile.deviceNameType || '').trim());
+  const deviceName = deviceNameReal ? '' : (profileOptions.deviceNameError(profile.deviceName, profile.os) ? undefined : String(profile.deviceName).trim());
   const userJs = buildUserJs({
     proxy: effectiveProxy,
     userAgent: firefoxUserAgent,
     acceptLanguages,
+    uiLocale,
+    location: { permission: profileOptions.geolocationPermission(profile), lat, lng, accuracy: Number.isFinite(accuracy) && accuracy > 0 ? accuracy : 100 },
+    hardwareAcceleration: profileOptions.hardwareAccelerationChoice(profile.hardwareAcceleration),
+    fontsAllowed: profileOptions.allowedFonts(profile),
+    deviceName,
     autofill: autofillInstalled,
     doNotTrack: await dntPrefToWrite(userDataDir, doNotTrackFlag(profile.doNotTrack))
   });

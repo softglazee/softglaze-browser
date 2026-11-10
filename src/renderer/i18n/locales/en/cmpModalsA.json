@@ -78,6 +78,8 @@
     "rowCpuCores": "CPU cores",
     "rowRam": "RAM (GB)",
     "rowGroup": "Group",
-    "rowTags": "Tags"
+    "rowTags": "Tags",
+    "rowDeviceName": "Device name",
+    "rowMacAddress": "MAC address"
   }
 }
