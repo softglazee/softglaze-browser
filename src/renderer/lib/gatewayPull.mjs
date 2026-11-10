@@ -29,13 +29,17 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   databay: 30, // databayUsername sends sessionLength 30
   twoextract: 10, // 2extract's default
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
-  simplyproxies: 120 // 2 hours, extended while in use
+  simplyproxies: 120, // 2 hours, extended while in use
+  proxiessx: 1440 // the app sends -ttl-86400 (Proxies.sx's own default is 1 hour)
 });
 
 // Every Keep same IP time the form can offer, in minutes; a connector shows those up to its maxLife
-// (24 hours when unset), or its own lifeOptions list.
+// (24 hours when unset), or its own lifeOptions list. A pool whose vendor limit differs has its own
+// list in geoSync.poolLife ({ <poolType>: [minutes...] }), so a pick is never clamped by main.
 export const LIFE_OPTIONS = Object.freeze([5, 10, 30, 60, 120, 360, 720, 1440, 4320, 10080]);
-export function lifeOptionsFor(geoSync = {}) {
+export function lifeOptionsFor(geoSync = {}, poolType = '') {
+  const perPool = poolType && geoSync.poolLife ? geoSync.poolLife[poolType] : null;
+  if (Array.isArray(perPool) && perPool.length) return perPool.slice();
   if (Array.isArray(geoSync.lifeOptions) && geoSync.lifeOptions.length) return geoSync.lifeOptions.slice();
   const max = Number(geoSync.maxLife) > 0 ? Number(geoSync.maxLife) : 1440;
   return LIFE_OPTIONS.filter((m) => m <= max);
