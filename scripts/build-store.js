@@ -110,8 +110,10 @@ async function fixManifest(appxPath) {
   const xml = await fixManifest(appx);
   const identity = (xml.match(/<Identity[^>]*\/>/) || [''])[0].replace(/\s+/g, ' ');
   const pubName = (xml.match(/<PublisherDisplayName>([^<]*)</) || [])[1];
+  const languages = [...xml.matchAll(/<Resource Language="([^"]+)"/g)].map((m) => m[1]);
   console.log(`\nStore package: ${appx} (${(fs.statSync(appx).size / 1048576).toFixed(1)} MB)`);
   console.log(`Identity: ${identity}`);
   console.log(`PublisherDisplayName: ${pubName}`);
+  console.log(`Languages: ${languages.join(', ') || '(none)'}`);
   console.log('Check these three against Partner Center > Product identity before uploading.');
 })().catch((e) => { console.error(e && e.message ? e.message : e); process.exit(1); });

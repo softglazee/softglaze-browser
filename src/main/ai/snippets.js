@@ -47,6 +47,9 @@ function buildSnippets({ port, bridge }) {
     title: 'Claude Desktop',
     kind: 'json',
     where: `Settings > Developer > Edit Config (claude_desktop_config.json), then restart Claude Desktop. Claude Desktop runs local servers over stdio, so this starts the SoftGlaze bridge. Easier: install softglaze-browser.mcpb (${MCPB_URL}), which asks for your token and port and also serves Cowork.`,
+    // The window shows `where` in its own language (ai.json connect.clients.<client>.where) and fills
+    // these values in; `where` itself stays English for the website guide.
+    whereVars: { mcpb: MCPB_URL },
     text: json({
       mcpServers: {
         softglaze: {
@@ -85,6 +88,7 @@ function buildSnippets({ port, bridge }) {
     title: 'Gemini CLI',
     kind: 'json',
     where: '~/.gemini/settings.json (merge into the file), or run: gemini mcp add --transport http -s user --header "Authorization: Bearer <YOUR_TOKEN>" softglaze ' + u.mcp,
+    whereVars: { mcp: u.mcp },
     text: json({ mcpServers: { softglaze: { httpUrl: u.mcp, headers: auth } } }),
     docsUrl: 'https://geminicli.com/docs/tools/mcp-server/'
   });
