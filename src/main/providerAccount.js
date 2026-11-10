@@ -90,7 +90,7 @@ function uniqueText(values, max = 120) {
 }
 
 // Notes are codes the renderer translates, so main never sends English prose to the card.
-const NOTE_CODES = new Set(['firstToExpire', 'summedPlans', 'noActivePlans', 'noActiveProxies', 'planSizeOnly', 'firstPageOnly']);
+const NOTE_CODES = new Set(['firstToExpire', 'summedPlans', 'noActivePlans', 'noActiveProxies', 'planSizeOnly', 'firstPageOnly', 'usedLast7Days']);
 
 function text(v, max) {
   if (v == null || typeof v === 'object') return null;
@@ -925,6 +925,123 @@ ADAPTERS.simplynode = {
   }
 };
 
+// ---- Node4: GET /status (read:proxies) gives ok + reason, bandwidth in MB when the plan is limited,
+// and the active proxy count. The end date needs read:subscription, whose schema is not published. ----
+const NODE4_API = 'https://node4.io/api/v1';
+
+function parseNode4Account(body) {
+  const j = parseJson(body);
+  if (!j || typeof j !== 'object') throw new Error('Node4: the API did not return JSON.');
+  if (typeof j.error === 'string' && j.error) throw new Error(`Node4: ${text(j.error, 160)}`);
+  const d = j.data && typeof j.data === 'object' && !Array.isArray(j.data) ? j.data : j;
+  const reason = String(d.reason == null ? '' : d.reason).toLowerCase();
+  const sub = d.subscription && typeof d.subscription === 'object' ? d.subscription : {};
+  let status = 'unknown';
+  if (d.ok === true) status = 'active';
+  else if (reason === 'user_inactive') status = 'suspended';
+  else if (sub.active === false) status = normStatus(sub.status);
+  const bw = d.bandwidth && typeof d.bandwidth === 'object' ? d.bandwidth : {};
+  const limited = bw.limited === true;
+  return {
+    status,
+    trafficUsedGb: mbToGb(bw.usedMb),
+    trafficTotalGb: limited ? mbToGb(bw.limitMb) : null,
+    trafficLeftGb: limited ? mbToGb(bw.remainingMb) : null,
+    note: reason === 'no_active_proxies' ? 'noActiveProxies' : null
+  };
+}
+
+ADAPTERS.node4 = {
+  name: 'Node4', needs: ['token'], needsLabel: 'API key', dashboardUrl: 'https://node4.io/dashboard',
+  authMessage: 'Node4 rejected the saved API key, or it lacks the read:proxies permission. Save a key with read:proxies on the Pull tab.',
+  async fetch(c, get) {
+    const key = String(c.token).trim();
+    if (!/^n4k_[A-Za-z0-9_-]{8,200}$/.test(key)) throw new Error('Node4: the saved API key does not start with n4k_. Save it again on the Pull tab.');
+    return parseNode4Account(await get(`${NODE4_API}/status`, { headers: bearer(key) }));
+  }
+};
+
+// ---- ProxyEmpire: GET /user lists each package (residential, mobile, datacenter, static-resi,
+// private-resi) with bandwidth in bytes; no end date (GB plans roll over) and no balance. ----
+const PROXYEMPIRE_API = 'https://panel.proxyempire.io/api/v2';
+const PROXYEMPIRE_SLOTS = Object.freeze([['residential', 'Rotating Residential'], ['mobile', 'Rotating Mobile'], ['datacenter', 'Rotating Datacenter'], ['static-resi', 'Static Residential'], ['private-resi', 'Private Residential']]);
+
+function parseProxyEmpireAccount(body) {
+  const j = parseJson(body);
+  if (!j || typeof j !== 'object') throw new Error('ProxyEmpire: the API did not return JSON.');
+  const data = j.data && typeof j.data === 'object' && !Array.isArray(j.data) ? j.data : null;
+  if (!data) throw new Error(`ProxyEmpire: ${text(j.message, 160) || 'the account details came back in an unexpected shape'}`);
+  const slots = PROXYEMPIRE_SLOTS.filter(([k]) => data[k] && typeof data[k] === 'object').map(([k, name]) => ({ name, bw: data[k].bandwidth && typeof data[k].bandwidth === 'object' ? data[k].bandwidth : {} }));
+  // A GB in "bandwidth" is read as 2^30 bytes until ProxyEmpire says otherwise.
+  return {
+    status: slots.some((s) => num(s.bw.remaining) > 0) ? 'active' : 'unknown',
+    plan: uniqueText(slots.map((s) => s.name)),
+    trafficLeftGb: bytesToGb(sumOrNull(slots.map((s) => s.bw.remaining))),
+    trafficUsedGb: bytesToGb(sumOrNull(slots.map((s) => s.bw.used))),
+    trafficTotalGb: bytesToGb(sumOrNull(slots.map((s) => s.bw.total))),
+    note: !slots.length ? 'noActivePlans' : (slots.length > 1 ? 'summedPlans' : null)
+  };
+}
+
+ADAPTERS.proxyempire = {
+  name: 'ProxyEmpire', needs: ['token'], needsLabel: 'API token', dashboardUrl: 'https://panel.proxyempire.io/',
+  authMessage: 'ProxyEmpire rejected the saved API token, or it lacks the read ability. Save a token from Settings, API Tokens on the Pull tab.',
+  async fetch(c, get) {
+    return parseProxyEmpireAccount(await get(`${PROXYEMPIRE_API}/user`, { headers: bearer(c.token) }));
+  }
+};
+
+// ---- MountProxies: GET /proxies (the key in the query string) lists each modem with expire_at,
+// auto_renew_at and billing_cycle; plans are unlimited data, so there is no traffic figure. ----
+const MOUNTPROXIES_API = 'https://api.mountproxies.com/api';
+
+function parseMountProxiesAccount(body, { now = Date.now() } = {}) {
+  const j = parseJson(body);
+  if (!j || typeof j !== 'object') throw new Error('MountProxies: the API did not return JSON.');
+  if (j.success !== true || !Array.isArray(j.data)) throw new Error('MountProxies: the API reported a failure. Try again later.');
+  const list = j.data.filter((p) => p && typeof p === 'object');
+  // expire_at is "N/A" on a plan that renews; auto_renew_at is then the next date.
+  const dated = list.map((p) => p.expire_at).filter((v) => normDate(v));
+  const ends = dated.length ? dated : list.map((p) => p.auto_renew_at);
+  return {
+    status: list.length ? 'active' : 'unknown',
+    plan: uniqueText(list.map((p) => p.billing_cycle).filter((v) => String(v || '').trim() && String(v).trim().toUpperCase() !== 'N/A')),
+    expiresAt: nextExpiry(ends, now),
+    note: !list.length ? 'noActiveProxies' : (list.length > 1 ? 'firstToExpire' : null)
+  };
+}
+
+ADAPTERS.mountproxies = {
+  name: 'MountProxies', needs: ['token'], needsLabel: 'API key', dashboardUrl: 'https://app.mountproxies.com/',
+  authMessage: 'MountProxies rejected the saved API key. Copy it again from your account page and save it on the Pull tab.',
+  async fetch(c, get, opts) {
+    const key = String(c.token).trim();
+    if (!/^[A-Za-z0-9_-]{8,200}$/.test(key)) throw new Error('MountProxies: the saved API key does not look right. Save it again on the Pull tab.');
+    return parseMountProxiesAccount(await get(`${MOUNTPROXIES_API}/proxies?api_key=${encodeURIComponent(key)}&output=json`, { headers: { Accept: 'application/json' } }), opts);
+  }
+};
+
+// ---- Massive: the Reporting API (x-api-key: the API token, the proxy password) gives used_bytes
+// for the past 7 days; divide by 10^9 for the dashboard's GB. No total, left, end date or balance. ----
+const MASSIVE_REPORTING_API = 'https://api-network.joinmassive.com/reporting/v1';
+
+function parseMassiveUsage(body) {
+  const j = parseJson(body);
+  if (j == null || typeof j !== 'object') throw new Error('Massive: the Reporting API did not return JSON.');
+  // The reply's outer shape is not published: an array of rows, { data: [...] }, { usage: [...] } or one row.
+  const items = Array.isArray(j) ? j : (Array.isArray(j.data) ? j.data : (Array.isArray(j.usage) ? j.usage : [j]));
+  const used = sumOrNull(items.map((x) => (x && typeof x === 'object' ? x.used_bytes : null)));
+  return { status: 'unknown', trafficUsedGb: used == null ? null : used / 1e9, note: used == null ? null : 'usedLast7Days' };
+}
+
+ADAPTERS.massive = {
+  name: 'Massive', needs: ['password'], needsLabel: 'API token', dashboardUrl: 'https://partners.joinmassive.com/profile',
+  authMessage: 'Massive rejected the saved API token. Save the token from your dashboard (Profile) as the proxy password on the Pull tab.',
+  async fetch(c, get) {
+    return parseMassiveUsage(await get(`${MASSIVE_REPORTING_API}/usage`, { headers: { 'x-api-key': String(c.password).trim(), Accept: 'application/json' } }));
+  }
+};
+
 // Customer dashboards for providers whose API reports no account details (or needs a credential the
 // app does not store), so the card can still send the user to the right page.
 const DASHBOARD_URLS = Object.freeze({
@@ -1025,6 +1142,10 @@ module.exports = {
     proxyudp: parseProxyUdpAccount,
     zokol: parseZokolAccount,
     resiprox: parseResiProxAccount,
-    simplynode: parseSimplyNodeAccount
+    simplynode: parseSimplyNodeAccount,
+    node4: parseNode4Account,
+    proxyempire: parseProxyEmpireAccount,
+    mountproxies: parseMountProxiesAccount,
+    massive: parseMassiveUsage
   }
 };

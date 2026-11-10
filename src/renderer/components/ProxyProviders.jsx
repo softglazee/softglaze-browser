@@ -183,7 +183,22 @@ export const PROVIDERS = [
   { key: 'resiprox', name: 'ResiProx', initials: 'RX', color: '#059669', referral: 'https://resiprox.com?ref=n2m3ztm', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Residential'], ['mobile', 'Mobile']], count: true, geo: true, countryLookup: true, noSession: true, proto: true } },
   // SimplyNode: an API key and one sub-account (typed, or the first of the pool with traffic); each
   // proxy string comes from POST /proxy. Essential and Core are the dashboard's residential solutions.
-  { key: 'simplynode', name: 'SimplyNode', initials: 'SN', color: '#0d9488', referral: 'https://simplynode.io/', gateway: null, geoSync: { creds: ['token', 'username'], optional: ['username'], labels: { token: 'apiKeyLabel', username: 'subaccountLabel' }, poolType: [['residential_essential', 'Residential Essential'], ['residential_core', 'Residential Core'], ['mobile', 'Mobile']], count: true, geo: true, countryLookup: true, noSession: true, life: true, maxLife: 60, proto: true } }
+  { key: 'simplynode', name: 'SimplyNode', initials: 'SN', color: '#0d9488', referral: 'https://simplynode.io/', gateway: null, geoSync: { creds: ['token', 'username'], optional: ['username'], labels: { token: 'apiKeyLabel', username: 'subaccountLabel' }, poolType: [['residential_essential', 'Residential Essential'], ['residential_core', 'Residential Core'], ['mobile', 'Mobile']], count: true, geo: true, countryLookup: true, noSession: true, life: true, maxLife: 60, proto: true } },
+  // Node4: an n4k_ API key (Account Settings, API & Webhooks; read:proxies only). Residential, Rotating
+  // Datacenter and Rotating Unmetered logins are built by Node4 (POST /gateways/endpoint); Static
+  // Datacenter lists the IPs the account owns (GET /proxies/list). State, city and ASN are Residential only.
+  { key: 'node4', name: 'Node4', initials: 'N4', color: '#0f766e', referral: 'https://node4.io?ref=REF-7643BU', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, poolType: [['residential', 'Residential'], ['rotating_datacenter', 'Rotating Datacenter'], ['rotating_unmetered', 'Rotating Unmetered'], ['static', 'Static Datacenter']], count: true, geo: true, asn: true, countryLookup: true, noSession: true, proto: true } },
+  // ProxyEmpire: a Bearer API token from Settings, API Tokens; POST /proxy-list (panel.proxyempire.io/api/v2)
+  // returns ready user:pass@host:port lines with the location and the rotation in the username.
+  { key: 'proxyempire', name: 'ProxyEmpire', initials: 'PE', color: '#7c3aed', referral: 'https://proxyempire.io/', gateway: null, geoSync: { creds: ['token'], poolType: [['residential', 'Rotating Residential'], ['mobile', 'Rotating Mobile'], ['datacenter', 'Rotating Datacenter'], ['static-resi', 'Static Residential (ISP)']], count: true, geo: true, zip: true, asn: true, countryLookup: true, noSession: true, life: true, maxLife: 120, proto: true } },
+  // MountProxies: dedicated US 4G and 5G modems listed with the account API key (it travels in the query
+  // string, so errors never echo the URL). HTTP only: the API gives no SOCKS5 port. Rotate IP asks the
+  // API with the saved key; no rotation link is stored.
+  { key: 'mountproxies', name: 'MountProxies', initials: 'MT', color: '#475569', referral: 'https://mountproxies.com/', gateway: null, geoSync: { creds: ['token'], labels: { token: 'apiKeyLabel' }, noCountry: true, count: true, list: true } },
+  // Massive: residential gateway network.joinmassive.com (HTTP 65534, SOCKS5 65533) with the targeting in
+  // the username; the proxy password is the account's API token (dashboard, Profile). ISP is
+  // isp.joinmassive.com:8000 with no targeting.
+  { key: 'massive', name: 'Massive', initials: 'MV', color: '#4f46e5', referral: 'https://www.joinmassive.com/', gateway: { host: 'network.joinmassive.com', port: 65534, type: 'HTTP' }, geoSync: { creds: ['username', 'password'], labels: { password: 'apiTokenPasswordLabel' }, poolType: [['residential', 'Residential'], ['residential_mobile', 'Residential mobile'], ['isp', 'ISP (US)']], count: true, geo: true, zip: true, asn: true, session: true, life: true, maxLife: 1440, proto: true, gateway: true } }
 ];
 
 // The token field's placeholder follows its label (geoSync.labels.token), and so does the username's.

@@ -506,7 +506,8 @@
       "noActivePlans": "No hay planes activos en esta cuenta.",
       "noActiveProxies": "No hay proxies activos en esta cuenta.",
       "planSizeOnly": "La API informa del tamaño del plan, no del tráfico restante.",
-      "firstPageOnly": "Calculado con tus primeros 1000 proxies."
+      "firstPageOnly": "Calculado con tus primeros 1000 proxies.",
+      "usedLast7Days": "Tráfico usado en los últimos 7 días; la API no informa del tráfico restante."
     }
   }
 }

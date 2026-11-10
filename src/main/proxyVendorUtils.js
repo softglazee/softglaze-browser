@@ -2526,6 +2526,398 @@ function simplyNodeRow(raw, { socks = false, kind = 'Essential', country = '', i
   };
 }
 
+// The wait a vendor asks for on a 429: the Retry-After header (seconds, or an HTTP date), else a
+// retryAfterSeconds field in its JSON body (Node4). null when neither says.
+function retryAfterSeconds(headers, body, now = Date.now()) {
+  const h = headers && typeof headers === 'object' ? (headers['retry-after'] != null ? headers['retry-after'] : headers['Retry-After']) : null;
+  const raw = Array.isArray(h) ? h[0] : h;
+  if (raw != null && String(raw).trim() !== '') {
+    const s = String(raw).trim();
+    if (/^\d{1,6}$/.test(s)) return Number(s);
+    const at = Date.parse(s);
+    if (Number.isFinite(at)) return Math.max(0, Math.ceil((at - now) / 1000));
+  }
+  const m = /"retryAfterSeconds"\s*:\s*(\d{1,6})/.exec(String(body == null ? '' : body));
+  return m ? Number(m[1]) : null;
+}
+
+function parseJsonBody(body) {
+  if (body && typeof body === 'object') return body;
+  try { return JSON.parse(String(body)); } catch { return null; }
+}
+
+// ---------------------------------------------------------------------------------------
+// Node4 (node4.io/api/v1, OpenAPI 3.1.0 read 2026-11-10). Gateway products are built by Node4 with
+// POST /gateways/endpoint: count 1 to 100 per call, state, city and ASN on Residential only, ttl not
+// selectable. Static Premium and Shared Datacenter IPs come from GET /proxies/list. Replies use the
+// { success, data } envelope. Built from the docs only: never checked against a live account.
+const NODE4_GATEWAY_PRODUCTS = Object.freeze({
+  residential: { product: 'residential', name: 'Residential', residential: true },
+  rotating_datacenter: { product: 'rotating_datacenter', name: 'Rotating Datacenter', residential: false },
+  rotating_unmetered: { product: 'rotating_unmetered', name: 'Rotating Unmetered', residential: false }
+});
+const NODE4_CALL_MAX = 100;
+const NODE4_STATIC_TYPES = Object.freeze({ premium_private: 'Premium', shared: 'Shared' });
+
+function node4Data(json) {
+  const j = parseJsonBody(json);
+  if (!j || typeof j !== 'object') return null;
+  return !Array.isArray(j) && Object.prototype.hasOwnProperty.call(j, 'data') && j.data != null ? j.data : j;
+}
+
+// One POST /gateways/endpoint body. Throws, before any call, on targeting the product does not take.
+// `sticky` is for the whole pull (How many above 1), so a follow-up call for the rest stays sticky.
+function node4GatewayBody({ pool, socks = false, country, state, city, asn, count, sticky = false } = {}) {
+  const product = NODE4_GATEWAY_PRODUCTS[String(pool || '').toLowerCase()];
+  if (!product) throw new Error('Node4: pick Residential, Rotating Datacenter, Rotating Unmetered or Static Datacenter.');
+  const rawCc = String(country || '').trim();
+  const cc = rawCc.toLowerCase();
+  if (rawCc && !/^[a-z]{2}$/.test(cc)) throw new Error(`Node4: "${rawCc}" is not a country code.`);
+  const st = String(state || '').trim();
+  const ct = String(city || '').trim();
+  const asnRaw = String(asn || '').trim();
+  if ((st || ct || asnRaw) && !product.residential) throw new Error('Node4: state, city and ASN work on Residential only. Clear them for this pool.');
+  if ((st || ct) && !cc) throw new Error('Node4: pick a country before a state or city.');
+  const stateCode = st.toLowerCase();
+  if (st && !/^[a-z0-9]{2,3}$/.test(stateCode)) throw new Error('Node4: a state is a 2 or 3 letter code, for example TX.');
+  // A city segment is lowercase letters and digits ("New York" is newyork).
+  const cityName = ct.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (ct && !cityName) throw new Error('Node4: a city is letters and digits, for example austin.');
+  const asnNum = asnRaw.replace(/^AS/i, '');
+  if (asnRaw && !/^\d{1,10}$/.test(asnNum)) throw new Error('Node4: an ASN is digits only, for example 7922.');
+  const n = sticky ? Math.max(1, Math.min(NODE4_CALL_MAX, Number.parseInt(String(count), 10) || 1)) : 1;
+  const body = { product: product.product, protocol: socks ? 'socks5' : 'http' };
+  // The UK is gb in Node4's targeting.
+  if (cc) body.country = cc === 'uk' ? 'gb' : cc;
+  if (stateCode) body.state = stateCode;
+  if (cityName) body.city = cityName;
+  if (asnNum) body.asn = asnNum;
+  body.sticky = Boolean(sticky);
+  body.count = n;
+  return body;
+}
+
+// Rows from a POST /gateways/endpoint reply: endpoints[] (one per session), or the top-level endpoint
+// when that list is empty. Rows dedupe on the password too: the login grammar is Node4's.
+function node4GatewayRows(json, { socks = false, name = 'Residential', country = '' } = {}) {
+  const d = node4Data(json);
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return [];
+  const list = Array.isArray(d.endpoints) && d.endpoints.length ? d.endpoints : [d];
+  const cc = String(country || '').trim().toUpperCase();
+  const code = /^[A-Z]{2}$/.test(cc) ? (cc === 'UK' ? 'GB' : cc) : '';
+  const rows = [];
+  const seen = new Set();
+  for (const e of list) {
+    if (!e || typeof e !== 'object') continue;
+    const host = String(e.host || '').trim();
+    const port = Number.parseInt(String(e.port), 10);
+    const username = e.username != null ? String(e.username) : '';
+    const password = e.password != null ? String(e.password) : '';
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535 || !username || !password) continue;
+    const key = `${host}:${port}:${username}:${password}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const sid = e.sessionId != null && String(e.sessionId).trim() ? String(e.sessionId).trim() : '';
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `Node4 • ${name} • ${code || 'Any country'} • ${sid ? `sticky ${sid}` : 'rotating'}`,
+      country: code || null,
+      dedupeOnPassword: true
+    });
+  }
+  return rows;
+}
+
+// GET /proxies/list?format=json: the account's active static IPs. Only Premium (premium_private) and
+// Shared Datacenter rows for the chosen protocol; rows without a login (the free tier's IP
+// authorization) are counted, not added.
+function node4StaticRows(json, { socks = false } = {}) {
+  const d = node4Data(json);
+  const list = Array.isArray(d) ? d : (d && Array.isArray(d.proxies) ? d.proxies : []);
+  const rows = [];
+  const seen = new Set();
+  let total = 0; let skippedType = 0; let skippedProtocol = 0; let noLogin = 0;
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    total += 1;
+    const kind = NODE4_STATIC_TYPES[String(p.type || '').toLowerCase()];
+    if (!kind) { skippedType += 1; continue; }
+    // HTTP and HTTPS rows serve the HTTP select; SOCKS5 rows the SOCKS5 one.
+    if (/socks/i.test(String(p.protocol || '')) !== Boolean(socks)) { skippedProtocol += 1; continue; }
+    const host = String(p.host || '').trim();
+    const port = Number.parseInt(String(p.port), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const username = p.username != null ? String(p.username) : '';
+    const password = p.password != null ? String(p.password) : '';
+    if (!username || !password) { noLogin += 1; continue; }
+    const k = `${host}:${port}:${username}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const cc = String(p.country || '').trim().toUpperCase();
+    const code = /^[A-Z]{2}$/.test(cc) ? (cc === 'UK' ? 'GB' : cc) : '';
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: `Node4 • ${kind} Datacenter${code ? ` • ${code}` : ''} • ${host}`,
+      country: code || null
+    });
+  }
+  return { rows, total, skippedType, skippedProtocol, noLogin };
+}
+
+// GET /geo/countries: { countries: [{ code (lowercase), name, cityCount, availableIps }] }.
+function node4Countries(json) {
+  const d = node4Data(json);
+  const list = Array.isArray(d && d.countries) ? d.countries : (Array.isArray(d) ? d : []);
+  const out = [];
+  const seen = new Set();
+  for (const c of list) {
+    const raw = String((c && c.code) || '').trim().toUpperCase();
+    const code = raw === 'UK' ? 'GB' : raw;
+    if (!/^[A-Z]{2}$/.test(code) || seen.has(code)) continue;
+    seen.add(code);
+    out.push({ key: code, label: String((c && c.name) || '').trim() || code });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// ---------------------------------------------------------------------------------------
+// ProxyEmpire (panel.proxyempire.io/api/v2, OpenAPI 3.0.3 "ProxyEmpire API" v2.0.0 read 2026-11-10).
+// POST /proxy-list returns ready lines (format 1 = user:pass@host:port, up to 3000 a call) with the
+// location and the rotation in the username; GET /user says which packages the account has. Datacenter
+// takes a country only; Static Residential takes no targeting and no rotation (422 otherwise). Built
+// from the docs only: never checked against a live account.
+const PROXYEMPIRE_POOLS = Object.freeze({
+  residential: { type: 'residential', name: 'Rotating Residential', targeting: 'full' },
+  mobile: { type: 'mobile', name: 'Rotating Mobile', targeting: 'full' },
+  datacenter: { type: 'datacenter', name: 'Rotating Datacenter', targeting: 'country' },
+  'static-resi': { type: 'static-resi', name: 'Static Residential', targeting: 'none' }
+});
+const PROXYEMPIRE_MAX_LIFE = 120; // session_lifetime runs from 1 to 120 minutes
+
+// Region and city values are lowercase words joined with '+' ("new+york").
+function proxyEmpirePlace(v) {
+  return String(v || '').trim().toLowerCase().split(/\s+/).filter(Boolean).join('+');
+}
+
+// The POST /proxy-list body for one pull, and what it makes: random (one rotating line), sticky (How
+// many above 1, each line held until ProxyEmpire rotates it or its device goes offline), custom (Keep
+// same IP, up to 120 minutes) or fixed (Static Residential). Throws, before any call, on targeting the
+// pool refuses.
+function proxyEmpireBody({ pool, country, state, city, zip, asn, count, life, max = 1000 } = {}) {
+  const p = PROXYEMPIRE_POOLS[String(pool || '').toLowerCase()];
+  if (!p) throw new Error('ProxyEmpire: pick Rotating Residential, Rotating Mobile, Rotating Datacenter or Static Residential.');
+  const rawCc = String(country || '').trim();
+  let cc = rawCc.toLowerCase();
+  if (rawCc && !/^[a-z]{2}$/.test(cc)) throw new Error(`ProxyEmpire: "${rawCc}" is not a country code.`);
+  const region = proxyEmpirePlace(state);
+  const town = proxyEmpirePlace(city);
+  const zipCode = String(zip || '').trim();
+  const asnRaw = String(asn || '').trim();
+  const asnNum = asnRaw.replace(/^AS/i, '');
+  const minutes = Number.parseInt(String(life == null ? '' : life), 10);
+  const lifeSet = Number.isFinite(minutes) && minutes > 0;
+  const n = Math.max(1, Math.min(max, Number.parseInt(String(count), 10) || 1));
+  const body = { proxy_type: p.type, format: 1, length: n };
+  if (p.targeting === 'none') {
+    if (cc || region || town || zipCode || asnRaw) throw new Error('ProxyEmpire: Static Residential takes no location. Clear Country, State, City, ZIP and ASN.');
+    if (lifeSet) throw new Error('ProxyEmpire: Static Residential IPs are fixed. Leave Keep same IP blank.');
+    return { body, mode: 'fixed', name: p.name, lifeMin: 0 };
+  }
+  if (p.targeting === 'country' && (region || town || zipCode || asnRaw)) throw new Error('ProxyEmpire: Rotating Datacenter takes a country only. Clear State, City, ZIP and ASN.');
+  if ((region || town) && !cc) throw new Error('ProxyEmpire: pick a country before a state or city.');
+  if (zipCode && !cc) throw new Error('ProxyEmpire: a ZIP code needs a country.');
+  if (zipCode && !/^[A-Za-z0-9 -]{2,12}$/.test(zipCode)) throw new Error(`ProxyEmpire: "${zipCode}" is not a ZIP code.`);
+  if (asnRaw && !/^\d{1,10}$/.test(asnNum)) throw new Error('ProxyEmpire: an ASN is digits only, for example 7922.');
+  // The Datacenter country list names the UK uk; the other pools use gb.
+  if (cc === 'gb' && p.type === 'datacenter') cc = 'uk';
+  else if (cc === 'uk' && p.type !== 'datacenter') cc = 'gb';
+  if (cc) body.country = cc;
+  if (region) body.region = region;
+  if (town) body.city = town;
+  if (zipCode) body.zip = zipCode;
+  if (asnNum) body.asn = asnNum;
+  let mode;
+  if (lifeSet) {
+    mode = 'custom';
+    body.ip_rotation_type = 'custom';
+    body.session_lifetime = Math.min(PROXYEMPIRE_MAX_LIFE, minutes);
+  } else if (n > 1) {
+    mode = 'sticky';
+    body.ip_rotation_type = 'sticky';
+  } else {
+    mode = 'random';
+    body.ip_rotation_type = 'random';
+  }
+  return { body, mode, name: p.name, lifeMin: body.session_lifetime || 0 };
+}
+
+// GET /user: { message, data: { residential, mobile, datacenter, "static-resi", "private-resi" } },
+// each slot null or { proxy_username, proxy_password, bandwidth, provider_availability }. `found` is
+// false when the reply has no data object at all.
+function proxyEmpireSlot(json, pool) {
+  const j = parseJsonBody(json);
+  const data = j && j.data && typeof j.data === 'object' && !Array.isArray(j.data) ? j.data : null;
+  if (!data) return { found: false, slot: null };
+  const p = PROXYEMPIRE_POOLS[String(pool || '').toLowerCase()];
+  const slot = data[p ? p.type : String(pool || '')];
+  return { found: true, slot: slot && typeof slot === 'object' ? slot : null };
+}
+
+// A failed call, as a fixed message: the token is never echoed. 422 carries Laravel's
+// { message, errors: { field: [text] } }, whose first text is shown.
+function proxyEmpireErrorMessage(error, poolName = 'proxy') {
+  const status = error && error.status;
+  const text = String((error && error.message) || '');
+  if (status === 401) return 'ProxyEmpire rejected the API token. Create a new one under Settings, API Tokens.';
+  if (status === 403) {
+    return /not active/i.test(text)
+      ? 'ProxyEmpire: your account is not active. Check the panel.'
+      : 'ProxyEmpire: this token is missing a permission the pull needs. Create a token with the read ability (and create, if ProxyEmpire asks for it).';
+  }
+  if (status === 422) {
+    if (/no active package/i.test(text)) return `ProxyEmpire: this account has no ${poolName} package.`;
+    const m = /"errors"\s*:\s*\{\s*"[^"]*"\s*:\s*\[\s*"((?:[^"\\]|\\.)*)"/.exec(text) || /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(text);
+    const why = m ? m[1].replace(/\\(.)/g, '$1').replace(/[.\s]+$/, '').slice(0, 160) : 'the request was not valid';
+    return `ProxyEmpire refused the request: ${why}.`;
+  }
+  if (status === 429) {
+    const s = retryAfterSeconds(error && (error.headers || { 'retry-after': error.retryAfter }), text);
+    return `ProxyEmpire: too many proxy-list requests. Wait ${s ? `${s} second${s === 1 ? '' : 's'}` : 'a minute'} and pull again.`;
+  }
+  if (Number(status) >= 500) return `ProxyEmpire: the API failed (HTTP ${status}). Try again later.`;
+  if (status) return `ProxyEmpire: the API answered HTTP ${status}. Try again later.`;
+  if (/timed out/i.test(text)) return 'ProxyEmpire did not answer in time. Try again in a moment.';
+  return 'ProxyEmpire: could not reach the API. Check your connection and try again.';
+}
+
+// GET /countries?connection_type=<pool>: { countries: [{ name, code }], counts, provider_availability }.
+function proxyEmpireCountries(json) {
+  const j = parseJsonBody(json);
+  const list = Array.isArray(j && j.countries) ? j.countries : (Array.isArray(j && j.data && j.data.countries) ? j.data.countries : []);
+  const out = [];
+  const seen = new Set();
+  for (const c of list) {
+    const code = String((c && c.code) || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(code) || seen.has(code)) continue;
+    seen.add(code);
+    out.push({ key: code, label: String((c && c.name) || '').trim() || code });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// ---------------------------------------------------------------------------------------
+// MountProxies (api.mountproxies.com/api, Swagger 2.0 v1.0.0 read 2026-11-10). GET
+// /proxies?api_key=<KEY>&output=json lists every proxy with its login and keys: { success, data: [{
+// proxy_ip, http_port, username, password, modem_key, subscription_key, api_key, cellular_network,
+// location, auto_renew_at, expire_at, billing_cycle, ... }] }. Each item echoes the account api_key,
+// so a row keeps none of the keys. HTTP only: the API gives no SOCKS5 port. Built from the docs only.
+function mountProxiesList(body) {
+  const j = parseJsonBody(body);
+  return j && j.success === true && Array.isArray(j.data) ? j.data.filter((p) => p && typeof p === 'object') : null;
+}
+
+// expire_at is a date, or "N/A" for a plan that renews.
+function mountProxiesExpiry(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
+  const ms = Date.parse(s);
+  return Number.isFinite(ms) ? { day: s.slice(0, 10), ms } : null;
+}
+
+function mountProxiesRows(body, { now = Date.now() } = {}) {
+  const list = mountProxiesList(body);
+  if (!list) return { rows: [], total: 0, expired: 0, noLogin: 0, error: 'MountProxies: the API reported a failure. Try again later.' };
+  const rows = [];
+  const seen = new Set();
+  let expired = 0; let noLogin = 0;
+  for (const p of list) {
+    const ends = mountProxiesExpiry(p.expire_at);
+    if (ends && ends.ms <= now) { expired += 1; continue; }
+    const host = String(p.proxy_ip || '').trim();
+    const port = Number.parseInt(String(p.http_port), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const username = p.username != null ? String(p.username) : '';
+    const password = p.password != null ? String(p.password) : '';
+    // A modem set to IP authorization only has no login to store.
+    if (!username || !password) { noLogin += 1; continue; }
+    const k = `${host}:${port}:${username}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const carrier = String(p.cellular_network || '').trim();
+    const place = String(p.location || '').trim();
+    rows.push({
+      type: 'HTTP',
+      host, port, username, password,
+      label: ['MountProxies', carrier, place, String(port)].filter(Boolean).join(' • ') + (ends ? ` • until ${ends.day}` : ''),
+      country: 'US'
+    });
+  }
+  return { rows, total: list.length, expired, noLogin, error: '' };
+}
+
+// The keys Rotate IP needs for one stored proxy, matched by IP, port and username; null when the
+// account no longer lists it. Only main holds these, for the length of one rotation.
+function mountProxiesRotateTarget(body, { host, port, username } = {}) {
+  const list = mountProxiesList(body);
+  if (!list) return null;
+  const h = String(host || '').trim();
+  const pt = Number(port);
+  const u = String(username || '');
+  const p = list.find((x) => String(x.proxy_ip || '').trim() === h && Number(x.http_port) === pt && String(x.username == null ? '' : x.username) === u);
+  if (!p) return null;
+  const sub = String(p.subscription_key == null ? '' : p.subscription_key).trim();
+  const modem = String(p.modem_key == null ? '' : p.modem_key).trim();
+  return sub || modem ? { subscriptionKey: sub, modemKey: modem } : null;
+}
+
+// ---------------------------------------------------------------------------------------
+// Massive (docs.joinmassive.com, read 2026-11-10). Residential gateway network.joinmassive.com (HTTP
+// 65534, SOCKS5 65533); ISP isp.joinmassive.com:8000 for both, with no targeting. The targeting rides in
+// the username as dash-separated key-value pairs, any order:
+// {USER}-country-US-subdivision-NY-city-New%20York-session-abc-sessionttl-60. The proxy password is the
+// account's API token. Built from the docs only: never checked against a live account.
+const MASSIVE_MAX_TTL = 1440; // sessionttl: minutes, default 15, not extended by use
+
+// The bare login from a pasted username: everything before the first targeting key.
+function massiveBaseUser(raw) {
+  const s = String(raw || '').trim();
+  const m = /-(country|session|type|subaccount)-/i.exec(s);
+  return (m ? s.slice(0, m.index) : s).trim();
+}
+
+// City names are GeoNames English names, URL-encoded; a dash is encoded too, so a name like
+// Winston-Salem cannot split the dash-separated username.
+function massiveCity(v) {
+  return encodeURIComponent(String(v || '').trim()).replace(/-/g, '%2D');
+}
+
+function massiveUsername(base, { type, country, subdivision, city, zip, asn, session, ttlMin } = {}) {
+  const parts = [base];
+  const cc = String(country || '').trim().toUpperCase();
+  if (cc) {
+    parts.push('country', cc);
+    const sub = String(subdivision || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (sub) parts.push('subdivision', sub);
+    // With a ZIP code Massive ignores the city, so only one is sent.
+    const z = String(zip || '').trim().replace(/\s+/g, '');
+    const ct = String(city || '').trim();
+    if (z) parts.push('zipcode', encodeURIComponent(z).replace(/-/g, '%2D'));
+    else if (ct) parts.push('city', massiveCity(ct));
+    const a = String(asn || '').trim().replace(/^AS/i, '');
+    if (/^\d{1,10}$/.test(a)) parts.push('asn', a);
+  }
+  if (type) parts.push('type', type);
+  const sid = String(session || '').trim();
+  if (sid) {
+    parts.push('session', sid);
+    const t = Number.parseInt(String(ttlMin == null ? '' : ttlMin), 10);
+    if (Number.isFinite(t) && t > 0) parts.push('sessionttl', String(Math.min(MASSIVE_MAX_TTL, t)));
+  }
+  return parts.join('-');
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -2619,5 +3011,10 @@ module.exports = {
   proxyUdpFlagCountry, proxyUdpSubscriptions, proxyUdpRows, proxyUdpFindSubscription, proxyUdpRotateOutcome,
   ZOKOL_ISPS, zokolRows, zokolRotateRefusal,
   RESIPROX_POOLS, resiProxPool, resiProxCountries, resiProxRow,
-  SIMPLYNODE_POOLS, SIMPLYNODE_RESET_PORTS, simplyNodeTrafficValue, simplyNodeSubaccountPick, simplyNodeCountries, simplyNodeProxyBody, simplyNodeRow
+  SIMPLYNODE_POOLS, SIMPLYNODE_RESET_PORTS, simplyNodeTrafficValue, simplyNodeSubaccountPick, simplyNodeCountries, simplyNodeProxyBody, simplyNodeRow,
+  retryAfterSeconds,
+  NODE4_GATEWAY_PRODUCTS, NODE4_CALL_MAX, node4GatewayBody, node4GatewayRows, node4StaticRows, node4Countries,
+  PROXYEMPIRE_POOLS, proxyEmpireBody, proxyEmpireSlot, proxyEmpireErrorMessage, proxyEmpireCountries,
+  mountProxiesRows, mountProxiesRotateTarget,
+  massiveBaseUser, massiveUsername
 };
