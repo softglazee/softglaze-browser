@@ -1839,6 +1839,521 @@ function catProxiesDatacenterRows(json, { socks = false } = {}) {
   return rows;
 }
 
+// ---------------------------------------------------------------------------------------
+// Shared by the 1.0.26 list and generator connectors (ProxyBrazil, ProxyUDP, Zokol, ResiProx,
+// SimplyNode). Pure: no network, no key ever kept in a result.
+
+// A JSON body, or null.
+function jsonOf(body) {
+  if (body && typeof body === 'object') return body;
+  try { return JSON.parse(String(body)); } catch { return null; }
+}
+// 'YYYY-MM-DD' of an ISO date or date-time, '' otherwise.
+function isoDay(v) {
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v == null ? '' : v).trim());
+  return m ? m[1] : '';
+}
+// A Retry-After header (seconds) as "N seconds", or "a minute" when absent or a date.
+function retryAfterWait(retryAfter) {
+  const n = Number.parseInt(String(retryAfter == null ? '' : retryAfter).trim(), 10);
+  if (!Number.isInteger(n) || n <= 0) return 'a minute';
+  return n === 1 ? '1 second' : `${n} seconds`;
+}
+// The human part of a vendor's JSON error body (Laravel 422 "errors", an "error" string or object, or
+// "message"), from a body or from httpRequestText's "HTTP <status> <body>" text. URLs are cut out and
+// the text is kept short, so a key-bearing link is never echoed. '' when there is none.
+function vendorErrorText(text) {
+  const s = String(text == null ? '' : text);
+  const unq = (v) => { try { return JSON.parse(`"${v}"`); } catch { return v; } };
+  const m = /"errors"\s*:\s*\{\s*"[^"]*"\s*:\s*\[\s*"((?:[^"\\]|\\.)*)"/.exec(s)
+    || /"error"\s*:\s*\{[^{}]*?"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s)
+    || /"error"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s)
+    || /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(s);
+  if (!m) return '';
+  return unq(m[1]).replace(/https?:\/\/\S+/gi, '').replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '').slice(0, 160);
+}
+// A vendor error code ("code": "rate_limited") from a JSON error body or httpRequestText's error text.
+function vendorErrorCode(text) {
+  const m = /"code"\s*:\s*"([A-Za-z0-9_.-]{1,60})"/.exec(String(text == null ? '' : text));
+  return m ? m[1] : '';
+}
+
+// A proxy host: a DNS name or IPv4 address, or a bracketed IPv6 address (returned without brackets).
+function vendorProxyEndpoint(text) {
+  const s = String(text || '').trim();
+  const h = s.lastIndexOf(':');
+  if (h < 0) return null;
+  let host = s.slice(0, h).trim();
+  const portText = s.slice(h + 1).trim();
+  if (!/^\d{1,5}$/.test(portText)) return null;
+  const port = Number.parseInt(portText, 10);
+  if (port < 1 || port > 65535) return null;
+  if (host.startsWith('[') && host.endsWith(']')) {
+    host = host.slice(1, -1);
+    if (!/^[0-9A-Fa-f:.]+$/.test(host) || !host.includes(':')) return null;
+  } else if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/.test(host)) {
+    return null;
+  }
+  return { host, port };
+}
+
+// One proxy string from a vendor's generator API (ResiProx GET /generate-proxy-string, SimplyNode
+// POST /proxy). Neither vendor publishes the format, so this reads the three shapes such APIs print,
+// and nothing else:
+//   a URL           http|https|socks4|socks5|socks5h://user:pass@host:port (user and password decoded)
+//   user:pass@host:port   (split at the last @; the password may hold ':' or ';')
+//   host:port:user:pass   (the password may hold ':')
+// host:port alone is a proxy without a login (an IP allow-list), which the app cannot store as a
+// login proxy: { ok: false, reason: 'noLogin' }. Anything else: { ok: false, reason: 'unreadable' }.
+const VENDOR_STRING_SCHEMES = new Set(['http', 'https', 'socks4', 'socks5', 'socks5h']);
+function parseVendorProxyString(raw) {
+  const unreadable = { ok: false, reason: 'unreadable' };
+  const noLogin = { ok: false, reason: 'noLogin' };
+  let s = String(raw == null ? '' : raw).trim();
+  if (!s || s.length > 2048 || /\s/.test(s)) return unreadable;
+  let scheme = '';
+  const m = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/(.*)$/.exec(s);
+  if (m) {
+    scheme = m[1].toLowerCase();
+    if (!VENDOR_STRING_SCHEMES.has(scheme)) return unreadable;
+    s = m[2].replace(/\/$/, '');
+    if (/[/?#]/.test(s)) return unreadable;
+  }
+  const at = s.lastIndexOf('@');
+  if (at >= 0) {
+    const ep = vendorProxyEndpoint(s.slice(at + 1));
+    if (!ep) return unreadable;
+    const cred = s.slice(0, at);
+    const c = cred.indexOf(':');
+    let username = c >= 0 ? cred.slice(0, c) : cred;
+    let password = c >= 0 ? cred.slice(c + 1) : '';
+    if (scheme) {
+      try { username = decodeURIComponent(username); password = decodeURIComponent(password); } catch { return unreadable; }
+    }
+    if (!username || !password) return noLogin;
+    return { ok: true, scheme, host: ep.host, port: ep.port, username, password };
+  }
+  const parts = s.split(':');
+  if (!scheme && parts.length >= 4) {
+    const ep = vendorProxyEndpoint(`${parts[0]}:${parts[1]}`);
+    const username = parts[2];
+    const password = parts.slice(3).join(':');
+    if (ep && username && password) return { ok: true, scheme: '', host: ep.host, port: ep.port, username, password };
+    if (ep) return noLogin;
+  }
+  return vendorProxyEndpoint(s) ? noLogin : unreadable;
+}
+
+// Calls a generator API `want` times, `inFlight` at a time, and keeps each distinct string. A call
+// that returns a string already seen ends the pull (a rotating string repeats itself), as does an
+// error (kept for the caller: rows already made are not thrown away) or the deadline.
+async function collectVendorStrings(want, fetchOne, { inFlight = 3, deadlineMs = 60000, now = Date.now } = {}) {
+  const strings = [];
+  const seen = new Set();
+  let error = null;
+  let repeated = false;
+  let timedOut = false;
+  const until = now() + deadlineMs;
+  let calls = 0;
+  while (strings.length < want && !error && !repeated) {
+    if (now() > until) { timedOut = true; break; }
+    const size = Math.max(1, Math.min(inFlight, want - strings.length));
+    const settled = await Promise.allSettled(Array.from({ length: size }, () => { calls += 1; return fetchOne(calls); }));
+    for (const r of settled) {
+      if (r.status === 'rejected') { if (!error) error = r.reason; continue; }
+      const v = String(r.value == null ? '' : r.value).trim();
+      if (!v || seen.has(v)) { repeated = true; continue; }
+      if (strings.length >= want) continue;
+      seen.add(v);
+      strings.push(v);
+    }
+  }
+  return { strings, error, repeated, timedOut };
+}
+
+// ---------------------------------------------------------------------------------------
+// ProxyBrazil: the Partner API for profile browsers (api.proxybrazil.com/v1, OpenAPI 1.0.0, read
+// 2026-11-10). GET /proxies?page=&per_page= (Bearer pb_live_ key) -> { data: [Proxy], page, per_page,
+// total }. A Proxy is one dedicated 4G modem port: host, http_port, socks5_port, username, password,
+// status active | data_exhausted, data_limit_mb, data_used_mb, expires_at, rotation_url (a per-proxy
+// link that needs no key; null while rotation links are not configured). Not tested with a live key.
+const PROXYBRAZIL_KEY = /^pb_live_[A-Za-z0-9]{40}$/;
+function proxyBrazilRows(body, { socks = false } = {}) {
+  const json = jsonOf(body);
+  if (!json || typeof json !== 'object' || Array.isArray(json)) {
+    return { rows: [], total: 0, exhausted: 0, inactive: 0, noLogin: 0, more: false, error: 'ProxyBrazil: the API did not return JSON.' };
+  }
+  const list = Array.isArray(json.data) ? json.data : [];
+  const rows = [];
+  const seen = new Set();
+  let exhausted = 0;
+  let inactive = 0;
+  let noLogin = 0;
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const status = String(p.status || '').toLowerCase();
+    // data_exhausted proxies are listed but "will not carry traffic until renewed".
+    if (status === 'data_exhausted') { exhausted += 1; continue; }
+    if (status !== 'active') { inactive += 1; continue; }
+    const username = p.username != null ? String(p.username) : '';
+    const password = p.password != null ? String(p.password) : '';
+    if (!username || !password) { noLogin += 1; continue; }
+    const host = String(p.host || '').trim();
+    const port = Number.parseInt(String(socks ? p.socks5_port : p.http_port), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const name = String(p.name || '').trim().slice(0, 60);
+    const used = Number(p.data_used_mb);
+    const limit = Number(p.data_limit_mb);
+    const data = Number.isFinite(used) && Number.isFinite(limit) && limit > 0
+      ? `${Math.round((used / 1024) * 10) / 10}/${Math.round((limit / 1024) * 10) / 10} GB` : '';
+    const until = isoDay(p.expires_at);
+    const rotation = String(p.rotation_url || '').trim();
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: ['ProxyBrazil', String(p.type || '') === 'mobile_4g_dedicated' ? '4G' : 'Mobile', name || `port ${port}`, data, until ? `until ${until}` : ''].filter(Boolean).join(' • '),
+      country: 'BR',
+      rotationUrl: /^https:\/\/[^\s]+$/i.test(rotation) ? rotation : null
+    });
+  }
+  const page = Number(json.page);
+  const per = Number(json.per_page);
+  const total = Number(json.total);
+  const more = list.length > 0 && Number.isInteger(page) && per > 0 && Number.isFinite(total) && page * per < total;
+  return { rows, total: list.length, exhausted, inactive, noLogin, more, error: '' };
+}
+// A failed list call, from its status and the { error: { code } } body. Never echoes the key.
+function proxyBrazilErrorMessage(status, text) {
+  const code = vendorErrorCode(text);
+  if (status === 401 || code === 'invalid_key') return 'ProxyBrazil rejected the API key, or it was revoked. Create a new one under Integrations (App: SoftGlaze).';
+  if (code === 'missing_scope') return 'ProxyBrazil: this key cannot list proxies. Create a new one under Integrations.';
+  if (code === 'account_blocked') return 'ProxyBrazil: this account is blocked. Contact ProxyBrazil support.';
+  if (status === 403) return 'ProxyBrazil refused access for this key.';
+  if (status === 429 || code === 'rate_limited') return 'ProxyBrazil: too many requests (120 a minute). Wait a minute and pull again.';
+  if (status === 503 || code === 'api_disabled') return 'ProxyBrazil: the API is switched off for now. Try again later.';
+  return 'ProxyBrazil: could not read the proxy list. Check your connection and try again.';
+}
+// What ProxyBrazil's rotation_url answered: '' when the IP changed (or the link worked), else a clear
+// message. Success is { success: true, old_ip, new_ip }; a refusal has error.code.
+function proxyBrazilRotateRefusal(status, data) {
+  const s = Number(status);
+  const body = jsonOf(data);
+  const code = body && body.error && typeof body.error === 'object' ? String(body.error.code || '') : '';
+  const again = 'ProxyBrazil: the modem did not change IP this time. Try again in a minute.';
+  if (s >= 200 && s < 300) return body && body.success === false ? again : '';
+  if (s >= 300 && s < 400) return '';
+  if (s === 409 || code === 'proxy_not_active') return 'ProxyBrazil: this proxy is not active, so it cannot change IP.';
+  if (s === 429 || code === 'rate_limited') return 'ProxyBrazil: the account reached 30 IP changes in 15 minutes. Wait and try again.';
+  if (s === 400 || s === 502 || s === 504 || code === 'rotation_failed' || code === 'rotation_timeout') return again;
+  if (s === 404 || code === 'invalid_link' || code === 'not_found') return 'ProxyBrazil: this rotation link no longer works (links stop when every API key is revoked). Pull the proxies again with a current key.';
+  if (code === 'account_blocked') return 'ProxyBrazil: this account is blocked. Contact ProxyBrazil support.';
+  if (s === 503 || code === 'api_disabled') return 'ProxyBrazil: the API is switched off for now. Try again later.';
+  return `ProxyBrazil: the IP change failed (HTTP ${s || 0}). Try again in a minute.`;
+}
+
+// ---------------------------------------------------------------------------------------
+// ProxyUDP (proxyudp.com/api/v1, "Authorization: Token <token>"; OpenAPI 3.0.3, read 2026-11-10).
+// GET /subscriptions/?active=true&page= -> { count, next, previous, results } (Django REST paging);
+// GET /subscriptions/{id}/ adds proxy_login and proxy_password. Each subscription is one mobile port
+// pair on proxy_ip_address (http_port, socks_port). Not tested with a live key.
+const PROXYUDP_FLAG = /^\s*([\u{1F1E6}-\u{1F1FF}])([\u{1F1E6}-\u{1F1FF}])\s*/u;
+// The country of a product name that starts with a flag emoji ("🇩🇪 1&1 Versatel"), else ''. The flag
+// is inferred from the public catalog; the health check fills the country when there is none.
+function proxyUdpFlagCountry(serverName) {
+  const m = PROXYUDP_FLAG.exec(String(serverName || ''));
+  if (!m) return '';
+  const code = [m[1], m[2]].map((c) => String.fromCharCode(c.codePointAt(0) - 0x1F1E6 + 65)).join('');
+  return /^[A-Z]{2}$/.test(code) ? code : '';
+}
+function proxyUdpPlanName(serverName) {
+  return String(serverName || '').replace(PROXYUDP_FLAG, '').replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+function proxyUdpLive(s, now) {
+  if (!s || typeof s !== 'object' || String(s.status || '').toLowerCase() !== 'active') return false;
+  const ends = Date.parse(String(s.expires_at || ''));
+  return !(Number.isFinite(ends) && ends <= now);
+}
+// One page of the subscription list: the active, unexpired subscriptions (id, address, ports), the
+// number listed, and whether another page follows (`next` is set). The id must be a plain id.
+function proxyUdpSubscriptions(body, { now = Date.now() } = {}) {
+  const json = jsonOf(body);
+  const list = Array.isArray(json && json.results) ? json.results : [];
+  const active = [];
+  for (const s of list) {
+    if (!proxyUdpLive(s, now)) continue;
+    const id = String(s.id == null ? '' : s.id).trim();
+    if (!/^[A-Za-z0-9-]{1,64}$/.test(id)) continue;
+    active.push({
+      id, server_name: s.server_name, proxy_ip_address: String(s.proxy_ip_address || '').trim(),
+      http_port: s.http_port, socks_port: s.socks_port, expires_at: s.expires_at
+    });
+  }
+  return { active, listed: list.length, more: Boolean(json && typeof json.next === 'string' && json.next) && list.length > 0 };
+}
+// Rows from the detail calls (SubscriptionDetail). Ports without a login are counted, not imported.
+function proxyUdpRows(details, { socks = false, now = Date.now() } = {}) {
+  const rows = [];
+  const seen = new Set();
+  let noLogin = 0;
+  for (const d of Array.isArray(details) ? details : []) {
+    if (!proxyUdpLive(d, now)) continue;
+    const username = d.proxy_login != null ? String(d.proxy_login) : '';
+    const password = d.proxy_password != null ? String(d.proxy_password) : '';
+    if (!username || !password) { noLogin += 1; continue; }
+    const host = String(d.proxy_ip_address || '').trim();
+    const port = Number.parseInt(String(socks ? d.socks_port : d.http_port), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const cc = proxyUdpFlagCountry(d.server_name);
+    const until = isoDay(d.expires_at);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: ['ProxyUDP', proxyUdpPlanName(d.server_name) || 'Mobile', String(port), until ? `until ${until}` : ''].filter(Boolean).join(' • '),
+      country: cc || null
+    });
+  }
+  return { rows, noLogin };
+}
+// The subscription a stored proxy row belongs to: same address, and its HTTP or SOCKS5 port.
+function proxyUdpFindSubscription(list, proxy) {
+  const host = String((proxy && proxy.host) || '').trim();
+  const port = Number(proxy && proxy.port);
+  if (!host || !Number.isInteger(port)) return null;
+  return (Array.isArray(list) ? list : []).find((s) => s && s.proxy_ip_address === host
+    && (Number(s.http_port) === port || Number(s.socks_port) === port)) || null;
+}
+// What POST /subscriptions/{id}/rotate-ip/ answered ({ status, message, code, changed, success,
+// egress_ip, ... } on 200, 400, 409 and 503). { ok, response } or { ok: false, message }.
+function proxyUdpRotateOutcome(status, body, { retryAfter } = {}) {
+  const s = Number(status);
+  const json = jsonOf(body);
+  const said = json && typeof json === 'object' ? vendorErrorText(JSON.stringify({ message: json.message })) : vendorErrorText(body);
+  if (s >= 200 && s < 300) {
+    if (json && json.success === false) return { ok: false, message: `ProxyUDP did not change the IP${said ? `: ${said}` : ''}.` };
+    const ip = json && typeof json.egress_ip === 'string' && /^[0-9A-Fa-f.:]{3,45}$/.test(json.egress_ip) ? json.egress_ip : '';
+    if (json && json.changed === false) return { ok: true, response: `ProxyUDP kept the same IP${ip ? ` (${ip})` : ''}: the carrier can hand back the same address.` };
+    return { ok: true, response: ip ? `New IP ${ip}` : 'IP change requested' };
+  }
+  if (s === 409 || s === 503) return { ok: false, message: `ProxyUDP: the modem is busy. Try again in ${retryAfterWait(retryAfter)}.` };
+  if (s === 429) return { ok: false, message: `ProxyUDP: too many IP changes. Try again in ${retryAfterWait(retryAfter)}.` };
+  if (s === 401) return { ok: false, message: 'ProxyUDP rejected the saved API token. Save it again on the Proxy providers page.' };
+  if (s === 403) return { ok: false, message: 'ProxyUDP refused access for this token.' };
+  if (s === 404) return { ok: false, message: 'ProxyUDP: this port is no longer on the account.' };
+  if (s === 400) return { ok: false, message: `ProxyUDP refused the IP change${said ? `: ${said}` : ' for this port'}.` };
+  return { ok: false, message: 'ProxyUDP: could not reach the API to change the IP. Try again in a moment.' };
+}
+
+// ---------------------------------------------------------------------------------------
+// Zokol ("Zokol Dashboard API" v2.24.0 at docs.zokol.fr, read 2026-11-10; Bearer API key).
+// GET api.dashboard.zokol.fr/v1/proxies/mobile/?active=true&size=100&page=<0-based> ->
+// { content: [ProxyDto], page: { size, number, totalElements, totalPages } }. Not tested with a live key.
+const ZOKOL_ISPS = Object.freeze({ ISP_ORANGE_FR: 'Orange', ISP_SFR_FR: 'SFR', ISP_BOUYGUES_FR: 'Bouygues', ISP_FREE_FR: 'Free' });
+function zokolRows(body, { socks = false, now = Date.now() } = {}) {
+  const json = jsonOf(body);
+  if (!json || typeof json !== 'object' || Array.isArray(json)) {
+    return { rows: [], total: 0, expired: 0, violation: 0, noLogin: 0, more: false, error: 'Zokol: the API did not return JSON.' };
+  }
+  const list = Array.isArray(json.content) ? json.content : [];
+  const rows = [];
+  const seen = new Set();
+  let expired = 0;
+  let violation = 0;
+  let noLogin = 0;
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const state = String(p.state || '').toUpperCase();
+    if (state === 'POLICY_VIOLATION') { violation += 1; continue; }
+    const ends = Date.parse(String(p.finishAt || ''));
+    if (state === 'EXPIRED' || (Number.isFinite(ends) && ends <= now)) { expired += 1; continue; }
+    if (state !== 'ACTIVE' && state !== 'EXPIRE_SOON') continue;
+    const auth = p.auth && typeof p.auth === 'object' ? p.auth : {};
+    const username = auth.username != null ? String(auth.username) : '';
+    const password = auth.password != null ? String(auth.password) : '';
+    if (!username || !password) { noLogin += 1; continue; }
+    const host = String(p.hostname || '').trim();
+    const portObj = socks ? p.portSocks5 : p.portHttp;
+    const port = Number.parseInt(String(portObj && typeof portObj === 'object' ? portObj.port : ''), 10);
+    if (!host || /[\s/@?#]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) continue;
+    const key = `${host}:${port}:${username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const isp = ZOKOL_ISPS[String((p.network && p.network.data && p.network.data.isp) || '')] || '';
+    const shared = p.shared === true;
+    const link = p.rotation && p.rotation.manual && typeof p.rotation.manual === 'object' ? String(p.rotation.manual.url || '').trim() : '';
+    const until = isoDay(p.finishAt);
+    rows.push({
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host, port, username, password,
+      label: ['Zokol', isp || 'Mobile', `${shared ? 'Shared' : 'Dedicated'}${p.trial === true ? ' • trial' : ''}`, p.id != null ? `#${p.id}` : '', until ? `until ${until}` : ''].filter(Boolean).join(' • '),
+      country: 'FR',
+      // Shared lines have no rotation link ("No rotation link available with shared proxy").
+      rotationUrl: !shared && /^https:\/\/[^\s]+$/i.test(link) ? link : null
+    });
+  }
+  const pg = json.page && typeof json.page === 'object' ? json.page : {};
+  const more = list.length > 0 && Number.isInteger(Number(pg.number)) && Number(pg.number) + 1 < Number(pg.totalPages);
+  return { rows, total: list.length, expired, violation, noLogin, more, error: '' };
+}
+// What a Zokol rotation link answered. Its behaviour is not documented (the dashboard opens it with a
+// plain GET), so a refusal gets a clear message and the dashboard as the fallback.
+function zokolRotateRefusal(status) {
+  const s = Number(status);
+  if (s >= 200 && s < 400) return '';
+  if (s === 429) return 'Zokol: the IP was changed a moment ago. Wait for the cooldown the Zokol dashboard shows, then try again.';
+  if (s === 401 || s === 403 || s === 404) return 'Zokol refused this rotation link. Pull the proxy again to refresh its link, or change the IP in the Zokol dashboard.';
+  return `Zokol: the IP change failed (HTTP ${s || 0}). Try again in a moment, or change the IP in the Zokol dashboard.`;
+}
+
+// ---------------------------------------------------------------------------------------
+// ResiProx (dashboard.resiprox.com/api/v1, Bearer API token; OpenAPI 3.1 "0.1", read 2026-11-10).
+// GET /user/me -> { user: { data: { residential: { user, pass, bandwidth: { total, used, remaining } }
+// | null, mobile: same } } }, bandwidth in BYTES as strings (1 GB = 1,000,000,000 bytes, the docs' rule).
+// GET /generate-proxy-string -> { proxy_string } (format unpublished: parseVendorProxyString).
+const RESIPROX_POOLS = Object.freeze({ residential: 'Residential', mobile: 'Mobile' });
+function resiProxPool(me, pool) {
+  const json = jsonOf(me);
+  const data = (json && json.user && json.user.data) || (json && json.data) || null;
+  const p = data && typeof data === 'object' ? data[pool] : null;
+  if (!p || typeof p !== 'object') return null;
+  const bw = p.bandwidth && typeof p.bandwidth === 'object' ? p.bandwidth : {};
+  const n = (v) => {
+    const s = String(v == null ? '' : v).trim();
+    return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : null;
+  };
+  return {
+    user: p.user != null ? String(p.user) : '', pass: p.pass != null ? String(p.pass) : '',
+    totalBytes: n(bw.total), usedBytes: n(bw.used), remainingBytes: n(bw.remaining)
+  };
+}
+// GET /countries -> { countries: <shape undocumented> }: an array of codes, of objects with a code and
+// a name, or an object keyed by code. Only 2-letter codes are kept.
+function resiProxCountries(body) {
+  const json = jsonOf(body);
+  let src = json && typeof json === 'object' && !Array.isArray(json) ? json.countries : json;
+  if (src && typeof src === 'object' && !Array.isArray(src) && Array.isArray(src.data)) src = src.data;
+  const entries = Array.isArray(src)
+    ? src.map((c) => (c && typeof c === 'object'
+      ? [c.code ?? c.country_code ?? c.iso ?? c.iso2 ?? c.alpha2 ?? c.value, c.name ?? c.country_name ?? c.label ?? c.country]
+      : [c, '']))
+    : (src && typeof src === 'object' ? Object.entries(src).map(([k, v]) => [k, typeof v === 'string' ? v : (v && (v.name || v.label)) || '']) : []);
+  const out = [];
+  const seen = new Set();
+  for (const [code, name] of entries) {
+    const key = String(code == null ? '' : code).trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, label: String(name || '').trim().slice(0, 60) || key });
+  }
+  return out;
+}
+// One generated proxy string as a row on the ResiProx gateway; a host that is not a resiprox.com
+// name is refused (old pages print a dead template host).
+function resiProxRow(raw, { socks = false, pool = 'residential', country = '', index = 1, sticky = false } = {}) {
+  const p = parseVendorProxyString(raw);
+  if (!p.ok) return { row: null, reason: p.reason };
+  if (!/(^|\.)resiprox\.com$/i.test(p.host)) return { row: null, reason: 'host', host: p.host };
+  const cc = /^[A-Z]{2}$/.test(String(country || '').toUpperCase()) ? String(country).toUpperCase() : '';
+  return {
+    row: {
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: p.host, port: p.port, username: p.username, password: p.password,
+      label: `ResiProx • ${RESIPROX_POOLS[pool] || 'Residential'} • ${cc || 'Any country'} • ${sticky ? `#${index}` : 'rotating'}`,
+      country: cc || null,
+      // Sticky strings may differ only in the password.
+      dedupeOnPassword: true
+    },
+    reason: ''
+  };
+}
+
+// ---------------------------------------------------------------------------------------
+// SimplyNode (app.simplynode.io/api, x-api-key; OpenAPI 3.1 file emailed 2026-11-02). One sub-account
+// (proxy profile) per pull: GET /subaccounts lists them ({ count, nextToken, items: [Subaccount] }),
+// POST /proxy generates one proxy string ({ "proxy-string" }, format unpublished). Not live-key tested.
+const SIMPLYNODE_POOLS = Object.freeze({
+  residential_essential: Object.freeze({ productType: 'residential', solution: 'essential', kind: 'Essential', name: 'Residential Essential' }),
+  residential_core: Object.freeze({ productType: 'residential', solution: 'core', kind: 'Core', name: 'Residential Core' }),
+  mobile: Object.freeze({ productType: 'mobile', solution: '', kind: 'Mobile', name: 'Mobile' })
+});
+// The sticky ports of the port format (proxy.simplynode.io, one session per port) that
+// GET /subaccounts/{login}/session:reset?ports= accepts, per the API file.
+const SIMPLYNODE_RESET_PORTS = Object.freeze({ host: 'proxy.simplynode.io', min: 9000, max: 18999 });
+// { unit, value } traffic: the value as a number, or null.
+function simplyNodeTrafficValue(t) {
+  if (!t || typeof t !== 'object') return null;
+  const n = Number(t.value);
+  return Number.isFinite(n) ? n : null;
+}
+// The first sub-account with traffic left. Subaccount.status values are undocumented, so only a status
+// that plainly reads as off is skipped.
+function simplyNodeSubaccountPick(items) {
+  for (const s of Array.isArray(items) ? items : []) {
+    if (!s || typeof s !== 'object' || !/^[A-Za-z0-9_.-]{1,64}$/.test(String(s.subaccountLogin || ''))) continue;
+    if (/^(inactive|disabled|blocked|suspended|deleted|expired|banned)$/i.test(String(s.status || '').trim())) continue;
+    const left = simplyNodeTrafficValue(s.trafficAvailable);
+    if (left != null && left > 0) return s;
+  }
+  return null;
+}
+// GET /targets/countries -> { items: [{ code, name }] } with lowercase codes. The code is kept as
+// SimplyNode prints it (upper-cased for the picker): its site uses "uk", not the ISO "gb".
+function simplyNodeCountries(body) {
+  const json = jsonOf(body);
+  const list = Array.isArray(json && json.items) ? json.items : (Array.isArray(json) ? json : []);
+  const out = [];
+  const seen = new Set();
+  for (const c of list) {
+    const key = String((c && typeof c === 'object' ? c.code : c) || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, label: String((c && typeof c === 'object' && c.name) || '').trim().slice(0, 60) || key });
+  }
+  return out;
+}
+// The POST /proxy body (GetProxyStringRequest, additionalProperties false). auth 'login' because a row
+// stores a username and password; country, region and city lowercase as SimplyNode's lists print them.
+// One rotating proxy is sticky false with ttl 0; a sticky one holds `ttlMin` minutes (sent in seconds).
+function simplyNodeProxyBody({ login, socks = false, country = '', region = '', city = '', sticky = false, ttlMin = 0 } = {}) {
+  const body = { login: String(login || ''), auth: 'login', protocol: socks ? 'socks5' : 'http' };
+  const cc = String(country || '').trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(cc)) {
+    body.country = cc;
+    const rg = String(region || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const ct = String(city || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (rg) body.region = rg;
+    if (ct) body.city = ct;
+  }
+  body.sticky = Boolean(sticky);
+  const minutes = Number.parseInt(String(ttlMin), 10);
+  body.ttl = sticky && Number.isInteger(minutes) && minutes > 0 ? minutes * 60 : 0;
+  return body;
+}
+function simplyNodeRow(raw, { socks = false, kind = 'Essential', country = '', index = 1, sticky = false } = {}) {
+  const p = parseVendorProxyString(raw);
+  if (!p.ok) return { row: null, reason: p.reason };
+  if (!/(^|\.)simplynode\.io$/i.test(p.host)) return { row: null, reason: 'host', host: p.host };
+  let cc = String(country || '').trim().toUpperCase();
+  if (cc === 'UK') cc = 'GB';
+  if (!/^[A-Z]{2}$/.test(cc)) cc = '';
+  return {
+    row: {
+      type: socks ? 'SOCKS5' : 'HTTP',
+      host: p.host, port: p.port, username: p.username, password: p.password,
+      label: `SimplyNode • ${kind} • ${cc || 'Any country'} • ${sticky ? `#${index}` : 'rotating'}`,
+      country: cc || null,
+      // The flag format keeps host, port and user and differs in the password.
+      dedupeOnPassword: true
+    },
+    reason: ''
+  };
+}
+
 module.exports = {
   ipBurgerBaseUser,
   ipBurgerUsername,
@@ -1924,6 +2439,12 @@ module.exports = {
   singaporeMobileProxyRows,
   gsocksProxyIds, gsocksListRows,
   proxyBonanzaRows,
-  proxy6Page, 
-  catProxiesIspRows, catProxiesDatacenterRows
+  proxy6Page,
+  catProxiesIspRows, catProxiesDatacenterRows,
+  retryAfterWait, vendorErrorText, vendorErrorCode, parseVendorProxyString, collectVendorStrings,
+  PROXYBRAZIL_KEY, proxyBrazilRows, proxyBrazilErrorMessage, proxyBrazilRotateRefusal,
+  proxyUdpFlagCountry, proxyUdpSubscriptions, proxyUdpRows, proxyUdpFindSubscription, proxyUdpRotateOutcome,
+  ZOKOL_ISPS, zokolRows, zokolRotateRefusal,
+  RESIPROX_POOLS, resiProxPool, resiProxCountries, resiProxRow,
+  SIMPLYNODE_POOLS, SIMPLYNODE_RESET_PORTS, simplyNodeTrafficValue, simplyNodeSubaccountPick, simplyNodeCountries, simplyNodeProxyBody, simplyNodeRow
 };
