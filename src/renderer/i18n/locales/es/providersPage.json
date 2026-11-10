@@ -68,6 +68,7 @@
     "connector": "Conector",
     "gateway": "Gateway",
     "gatewayFromKey": "Se lee de tu clave en cada descarga",
+    "gatewayPorts": "{{host}}:{{port}} HTTP, :{{socksPort}} SOCKS5",
     "key": "Clave",
     "keySaved": "Guardada y cifrada en este equipo",
     "keyNotSaved": "No guardada",

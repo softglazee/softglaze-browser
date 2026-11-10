@@ -29,16 +29,26 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   databay: 30, // databayUsername sends sessionLength 30
   twoextract: 10, // 2extract's default
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
-  simplyproxies: 120 // 2 hours, extended while in use
+  simplyproxies: 120, // 2 hours, extended while in use
+  marsproxies: 1440 // no lifetime is sent: MarsProxies' default of 24 hours
 });
 
 // Every Keep same IP time the form can offer, in minutes; a connector shows those up to its maxLife
-// (24 hours when unset), or its own lifeOptions list.
+// (24 hours when unset), a pool's own maximum (maxLifeByPool, for example NOVADA's Rotating ISP), or
+// its own lifeOptions list.
 export const LIFE_OPTIONS = Object.freeze([5, 10, 30, 60, 120, 360, 720, 1440, 4320, 10080]);
-export function lifeOptionsFor(geoSync = {}) {
+export function lifeOptionsFor(geoSync = {}, poolType = '') {
   if (Array.isArray(geoSync.lifeOptions) && geoSync.lifeOptions.length) return geoSync.lifeOptions.slice();
-  const max = Number(geoSync.maxLife) > 0 ? Number(geoSync.maxLife) : 1440;
+  const byPool = geoSync.maxLifeByPool && Number(geoSync.maxLifeByPool[poolType]) > 0 ? Number(geoSync.maxLifeByPool[poolType]) : 0;
+  const max = byPool || (Number(geoSync.maxLife) > 0 ? Number(geoSync.maxLife) : 1440);
   return LIFE_OPTIONS.filter((m) => m <= max);
+}
+
+// Whether State, City and the other place filters apply to the chosen pool: a connector whose pools
+// differ lists the ones that take them in geoSync.geoPools (MangoProxy, Proxy302).
+export function geoForPool(geoSync = {}, poolType = '') {
+  if (!geoSync.geo) return false;
+  return !Array.isArray(geoSync.geoPools) || geoSync.geoPools.includes(poolType);
 }
 
 // The text of the blank Keep same IP option, as an i18n key and its values: "Different IP each time"
