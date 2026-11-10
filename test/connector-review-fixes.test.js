@@ -51,7 +51,9 @@ test('panel flags match what the adapters read', () => {
   assert.doesNotMatch(UI, /key: 'proxidize'.*noCountry: true/, 'Proxidize Per-GB reads country/state/city');
   assert.match(UI, /key: 'proxidize'.*geo: true/);
   for (const k of ['airproxy', 'mobileproxyspace', 'proxysolutions']) assert.match(UI, new RegExp(`key: '${k}'.*list: true`), k);
-  for (const [k, m] of [['novada', 120], ['rapidproxy', 180], ['proxmint', 120], ['databay', 120]]) assert.match(UI, new RegExp(`key: '${k}'.*maxLife: ${m}`), k);
-  assert.match(UI, /\{lifeOptionsFor\(provider\.geoSync\)\.map\(/, 'Keep same IP offers only what the vendor accepts (src/renderer/lib/gatewayPull.mjs)');
+  for (const [k, m] of [['novada', 120], ['proxmint', 120], ['databay', 120]]) assert.match(UI, new RegExp(`key: '${k}'.*maxLife: ${m}`), k);
+  // RapidProxy's stime runs to 180 minutes, which the shared list has no step for, so it lists its own.
+  assert.match(UI, /key: 'rapidproxy'.*lifeOptions: \[5, 10, 30, 60, 120, 180\]/, 'rapidproxy');
+  assert.match(UI, /\{lifeOptionsFor\(provider\.geoSync, form\.poolType\)\.map\(/, 'Keep same IP offers only what the vendor (and the pool) accepts (src/renderer/lib/gatewayPull.mjs)');
   assert.doesNotMatch(UI, /up to 500/, 'no promise the adapters do not keep');
 });
