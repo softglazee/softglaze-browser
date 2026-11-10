@@ -713,7 +713,8 @@ function packetStreamPassword(base, { country, session } = {}) {
 }
 
 // Airproxy dedicated mobile proxies, all in Italy. GET /api/proxy/list/ returns { proxies: [{ id, ip,
-// port, username, password, isp, in_use_till, ... }], count, success }. The list names one port; our
+// port, username, password, isp, in_use_till, ... }], count, success }. in_use_till is the date the proxy is
+// paid until; the label ends "until YYYY-MM-DD", as the other list connectors show their expiry. The list names one port; our
 // dashboard read of 29 Sep 2026 showed HTTP and SOCKS5 on it, which Airproxy's public pages do not state,
 // so SOCKS5 is the user's choice and HTTP stays the default.
 const AIRPROXY_COUNTRY = 'IT';
@@ -735,10 +736,11 @@ function airproxyRows(body, { socks = false } = {}) {
     seen.add(dupe);
     const isp = String(p.isp || '').trim();
     const id = p.id != null ? String(p.id) : '';
+    const until = isoDay(p.in_use_till);
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username, password,
-      label: `Airproxy • Mobile • IT${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}`,
+      label: `Airproxy • Mobile • IT${isp ? ` • ${isp}` : ''}${id ? ` • #${id}` : ''}${until ? ` • until ${until}` : ''}`,
       country: AIRPROXY_COUNTRY
     });
   }

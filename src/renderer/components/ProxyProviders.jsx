@@ -1332,7 +1332,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
 
                 {provider.geoSync.apiKey && (
                   <div className="rounded-lg border border-border bg-background/40 p-3.5 space-y-3">
-                    <p className="text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.geo.anyipApiNote', 'Two ways to connect: paste your proxy Username + Password below (anyip dashboard → Get Proxy Details), OR enter an API key + Team ID here to auto-provision a proxy account. The API key is NOT the proxy password.')}</p>
+                    <p className="text-[11.5px] text-muted-foreground leading-relaxed">{t('proxyProviders.geo.anyipApiNote', 'Two ways to connect: paste your proxy Username + Password below (AnyIP dashboard: open a proxy profile and scroll to its proxy details), OR enter an API key + Team ID here to auto-provision a proxy account. The API key is NOT the proxy password.')}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className={labelCls}><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('proxyProviders.geo.apiKeyOptLabel', 'API key')} {optMarker}</label>

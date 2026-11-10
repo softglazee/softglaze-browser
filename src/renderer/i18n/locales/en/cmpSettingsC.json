@@ -73,7 +73,7 @@
       "teamIdPlaceholder": "your anyip team id",
       "anyipUserLabel": "Proxy username (user_…)",
       "anyipApiKeyPlaceholder": "anyip API key",
-      "anyipApiNote": "Two ways to connect: paste your proxy Username + Password below (anyip dashboard → Get Proxy Details), OR enter an API key + Team ID here to auto-provision a proxy account. The API key is NOT the proxy password.",
+      "anyipApiNote": "Two ways to connect: paste your proxy Username + Password below (AnyIP dashboard: open a proxy profile and scroll to its proxy details), OR enter an API key + Team ID here to auto-provision a proxy account. The API key is NOT the proxy password.",
       "apifyPasswordLabel": "{{provider}} proxy password",
       "proxyPasswordLabel": "Proxy password",
       "apiTokenLabel": "API token",

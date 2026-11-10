@@ -360,3 +360,30 @@ test('How many: the placeholder and title say what a blank How many adds, as mai
   assert.match(extractFunction(IPC, 'fetchNode4Pool'), /return limitListRows\(picked, count, Infinity\);/);
   assert.match(providerLine('proxidize'), /listByUsername: true/);
 });
+
+// ---- Airproxy paid-until date, AnyIP wording ----
+
+test('Airproxy: each proxy shows the date it is paid until, as the other list connectors do', () => {
+  const U = require('../src/main/proxyVendorUtils');
+  const body = { proxies: [
+    { id: 301, ip: 's1.airproxy.io', port: 30501, username: 'acct', password: 'DUMMYpass', isp: 'Wind', in_use_till: '2026-12-03T13:38:50Z' },
+    { id: 302, ip: 's2.airproxy.io', port: 30502, username: 'acct', password: 'DUMMYpass', isp: 'TIM' },
+    { id: 303, ip: 's3.airproxy.io', port: 30503, username: 'acct', password: 'DUMMYpass', in_use_till: 'soon' }
+  ] };
+  const rows = U.airproxyRows(body);
+  assert.equal(rows[0].label, 'Airproxy • Mobile • IT • Wind • #301 • until 2026-12-03');
+  assert.equal(rows[1].label, 'Airproxy • Mobile • IT • TIM • #302', 'no date, no "until"');
+  assert.equal(rows[2].label, 'Airproxy • Mobile • IT • #303', 'an unreadable date is left out');
+  // The same " • until YYYY-MM-DD" ProxyBrazil, ProxyUDP and Zokol labels end with.
+  assert.match(read('src', 'main', 'proxyVendorUtils.js'), /until \? `until \$\{until\}` : ''/);
+});
+
+test('AnyIP: the note follows Dashboard V2 (a proxy profile\'s proxy details), not "Get Proxy Details"', () => {
+  for (const lang of ['en', 'es']) {
+    const note = loc(lang, 'cmpSettingsC').proxyProviders.geo.anyipApiNote;
+    assert.doesNotMatch(note, /Get Proxy Details/, lang);
+    assert.match(note, lang === 'en' ? /open a proxy profile and scroll to its proxy details/ : /abre un perfil de proxy y baja hasta sus datos de proxy/, lang);
+  }
+  assert.doesNotMatch(UI, /Get Proxy Details/, 'the fallback text too');
+  assert.equal(UI.includes(loc('en', 'cmpSettingsC').proxyProviders.geo.anyipApiNote), true, 'the fallback is the English text');
+});
