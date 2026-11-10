@@ -318,10 +318,12 @@ function ipRoyalLocation({ country, state, city } = {}) {
 }
 
 // Named port for the protocol from GET /access/entry-nodes. The generate call takes the port name
-// ("http", "socks5"), not the number.
+// ("http", "socks5"), not the number. The OpenAPI example names the HTTP port "http"; the GitBook
+// docs name it "http|https", so both forms count as the HTTP port.
+const IPROYAL_HTTP_PORT_NAME = /^https?(?:\|https?)?$/i;
 function pickIpRoyalPort(nodes, socks) {
   const list = Array.isArray(nodes) ? nodes : [];
-  const want = socks ? /socks/i : /^https?$/i;
+  const want = socks ? /socks/i : IPROYAL_HTTP_PORT_NAME;
   for (const node of list) {
     for (const p of (node && Array.isArray(node.ports) ? node.ports : [])) {
       if (p && p.name && want.test(String(p.name))) return { name: String(p.name), port: Number(p.port) || null, dns: node.dns ? String(node.dns) : null };
@@ -362,6 +364,22 @@ function ipRoyalMaxCount(message) {
   const m = /proxy[ _]count[^.]*?greater than (\d+)/i.exec(String(message || ''));
   const n = m ? Number.parseInt(m[1], 10) : NaN;
   return Number.isInteger(n) && n > 0 ? n : null;
+}
+// The spec words the same refusal without a number: "The proxy count field must be between 1 and
+// the configured proxy_list_max_quantity." The caller then retries with a smaller batch.
+function ipRoyalCountRefused(message) {
+  const s = String(message || '');
+  return /proxy[ _]count/i.test(s) && /(between|greater than|max_quantity|maximum)/i.test(s);
+}
+
+// IPRoyal-style sticky lifetime ("{n}m" or "{n}h", 1 second to 168 hours) from a Keep same IP time in
+// minutes; '' when blank, so the API default applies. MarsProxies uses the same rule.
+function ipRoyalLifetimeFromMinutes(minutes) {
+  const m = Number.parseInt(String(minutes == null ? '' : minutes), 10);
+  if (!Number.isInteger(m) || m <= 0) return '';
+  if (m < 60) return `${m}m`;
+  if (m % 60 === 0) return `${Math.min(168, m / 60)}h`;
+  return `${Math.min(168, Math.ceil(m / 60))}h`;
 }
 
 // ---- Session-minting gateways (Oxylabs, Decodo, Bright Data, Apify, AnyIP) ----
@@ -444,12 +462,32 @@ function brightDataZoneUser(raw) {
   }
   return { base: [m[1], ...kept].join('-'), zone: m[1].split('-zone-')[1] };
 }
-// Country works on every network; state (US) and city are residential only and need the country.
+// US states by name, for the two-letter code Bright Data's -state- flag takes (-country-us-state-ny).
+const US_STATE_CODES = Object.freeze({
+  alabama: 'al', alaska: 'ak', arizona: 'az', arkansas: 'ar', california: 'ca', colorado: 'co', connecticut: 'ct',
+  delaware: 'de', districtofcolumbia: 'dc', florida: 'fl', georgia: 'ga', hawaii: 'hi', idaho: 'id', illinois: 'il',
+  indiana: 'in', iowa: 'ia', kansas: 'ks', kentucky: 'ky', louisiana: 'la', maine: 'me', maryland: 'md',
+  massachusetts: 'ma', michigan: 'mi', minnesota: 'mn', mississippi: 'ms', missouri: 'mo', montana: 'mt',
+  nebraska: 'ne', nevada: 'nv', newhampshire: 'nh', newjersey: 'nj', newmexico: 'nm', newyork: 'ny',
+  northcarolina: 'nc', northdakota: 'nd', ohio: 'oh', oklahoma: 'ok', oregon: 'or', pennsylvania: 'pa',
+  rhodeisland: 'ri', southcarolina: 'sc', southdakota: 'sd', tennessee: 'tn', texas: 'tx', utah: 'ut',
+  vermont: 'vt', virginia: 'va', washington: 'wa', westvirginia: 'wv', wisconsin: 'wi', wyoming: 'wy'
+});
+// A US state as Bright Data's two-letter code: a code is kept, a full name is mapped, anything else
+// is '' so the caller can refuse it instead of sending a state Bright Data does not know.
+function brightDataState(value) {
+  const t = placeToken(value, '');
+  if (!t) return '';
+  if (/^[a-z]{2}$/.test(t) && Object.values(US_STATE_CODES).includes(t)) return t;
+  return US_STATE_CODES[t] || '';
+}
+// Country works on every network; state (US, as its two-letter code) and city are residential only
+// and need the country.
 function brightDataUsername(base, { country, state, city, session } = {}) {
   const parts = [base];
   const cc = isoCountry(country).toLowerCase();
   const ct = placeToken(city, '');
-  const st = placeToken(state, '');
+  const st = brightDataState(state);
   if (cc) parts.push(`country-${cc}`);
   if (cc && ct) parts.push(`city-${ct}`);
   else if (cc === 'us' && st) parts.push(`state-${st}`);
@@ -578,7 +616,7 @@ function parseMarsProxiesList(text) {
 }
 
 // NodeMaven (gate.nodemaven.com): targeting lives in the username, no list endpoint:
-// <login>-country-<cc>-region-<r>-city-<c>-type-<residential|mobile>-sid-<id>-ttl-<t>-filter-<f>.
+// <login>-country-<cc>-region-<r>-city-<c>-type-<residential|mobile>-sid-<id>-ttl-<t>-filter-<f>-ipv4-true.
 // The gateway truncates on '-', so values containing it are dropped; city needs region.
 const NODEMAVEN_TTL = /^[1-9]\d*[smh]$/;
 function nodeMavenTtl(value) {
@@ -592,7 +630,7 @@ function nodeMavenToken(v) {
   if (!s || s.includes('-')) return '';
   return s.replace(/[^a-z0-9_]/g, '');
 }
-function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, filter } = {}) {
+function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, filter, ipv4 } = {}) {
   const base = String(login || '').trim();
   if (!base) return '';
   const parts = [base];
@@ -613,6 +651,8 @@ function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, 
   if (sd && tl) parts.push('ttl', tl);
   const fl = String(filter || '').trim().toLowerCase();
   if (/^(low|medium|high)$/.test(fl)) parts.push('filter', fl);
+  // NodeMaven mixes IPv4 and IPv6 exits unless -ipv4-true asks for IPv4 only.
+  if (ipv4 === true) parts.push('ipv4', 'true');
   return parts.join('-');
 }
 
@@ -621,10 +661,14 @@ function nodeMavenUsername(login, { country, region, city, isp, type, sid, ttl, 
 // each port holds its own exit IP until the forced rotation set in the dashboard (90-3600 s).
 // The dashboard shows "qwerty;;;;", so only the text before the first ';' is the base. Froxy reports
 // a malformed password as an IP-whitelist error.
+// Froxy's password type words: wifi (Residential), mobile, shared (Datacenter plans, plan ids
+// datacenter-*) and fast (the separate Fast residential product).
+const FROXY_TYPE_WORDS = Object.freeze({ wifi: 'residential', mobile: 'mobile', shared: 'datacenter', fast: 'fast' });
 function froxyType(poolType) {
   const t = String(poolType || '').trim().toLowerCase();
   if (t === 'mobile') return 'mobile';
-  if (t === 'fast' || t === 'datacenter') return 'fast';
+  if (t === 'datacenter' || t === 'shared') return 'shared';
+  if (t === 'fast') return 'fast';
   return 'wifi';
 }
 function froxyField(v) {
@@ -633,13 +677,18 @@ function froxyField(v) {
 function froxyBasePassword(pasted) {
   return String(pasted == null ? '' : pasted).split(';')[0].trim();
 }
-// The first field of a Froxy "password" is the pool type (wifi = residential, mobile, fast =
-// datacenter), as the dashboard shows it ("wifi;;;;"). When the pasted value is one of those
-// type tokens, the panel's Pool type wins; anything else is treated as a real secret and kept.
-function froxyPassword(base, { country, region, city, poolType } = {}) {
+// The pool a pasted password names by its type word ('residential', 'mobile', 'datacenter', 'fast'),
+// or '' when its first field is a real secret rather than a type word.
+function froxyPastedPool(pasted) {
+  return FROXY_TYPE_WORDS[froxyBasePassword(pasted).toLowerCase()] || '';
+}
+// The first field of a Froxy "password" is the subscription's type word as the dashboard shows it
+// ("wifi;;;;", "mobile;;;;"), or a real secret. Either is kept as pasted: each subscription has its
+// own login, so a type word that does not match it is refused by Froxy. fetchFroxyPool stops a Pool
+// type that disagrees with the pasted word instead of rewriting it.
+function froxyPassword(base, { country, region, city } = {}) {
   const cc = String(country || '').trim().toLowerCase().replace(/[^a-z]/g, '');
-  let head = froxyBasePassword(base);
-  if (poolType && ['wifi', 'mobile', 'fast'].includes(head.toLowerCase())) head = froxyType(poolType);
+  const head = froxyBasePassword(base);
   return [head, /^[a-z]{2}$/.test(cc) ? cc : '', froxyField(region), froxyField(city), ''].join(';');
 }
 
@@ -892,11 +941,14 @@ function liveProxiesRows(text, { socks = false, country = '', plan = 'residentia
 }
 
 // Live Proxies gateway (no list URL): lines are built from the account username (LV<id>) and password.
-// Rotating b2b.liveproxies.io:7383 (user LV58712-lv_us); sticky b2b-s<N>, user -<1-8 digits>, 60 min;
-// SOCKS5 socks.liveproxies.io:1080. Country is "lv_" + lowercase ISO-2 code.
+// Rotating b2b.liveproxies.io:7383 (user LV00000-lv_us); sticky b2b-s<N>, user -<1-8 digits>, held up
+// to 60 min on residential (30 on mobile); SOCKS5 socks.liveproxies.io:1080. Country is "lv_" + the
+// lowercase ISO-2 code. The examples use the made-up account LV00000.
 const LIVEPROXIES_GATEWAY = Object.freeze({ http: 'b2b.liveproxies.io', port: 7383, socksHost: 'socks.liveproxies.io', socksPort: 1080 });
+// A sticky session id is 1 to 8 digits, as the dashboard's Proxy Generation panel makes them.
+const LIVEPROXIES_SID_MAX = 8;
 function liveProxiesBaseUser(raw) {
-  // Accept "LV58712" or a full generated username ("LV58712-lv_us-123") and keep the account part.
+  // Accept "LV00000" or a full generated username ("LV00000-lv_us-123") and keep the account part.
   const m = String(raw || '').trim().match(/^([A-Za-z]{2}\d{2,})/);
   return m ? m[1].toUpperCase() : '';
 }
@@ -966,11 +1018,13 @@ function rapidProxyUsername(base, { country, state, city, session, lifeMin } = {
   return user;
 }
 
-// NOVADA (super.novada.pro:7777, overridable for regional hosts like pr-as.novada.pro). Auth is a
-// proxy user from Residential Proxies -> Users, not the login email. Lowercase, no spaces:
-// <user>-zone-<res|isp|mob>[-region-<cc>[-st-<state>][-city-<city>]][-session-<id>-sessTime-<1-120>]
+// NOVADA (super.novada.pro:7777; another host shown for the account in the dashboard endpoint
+// generator goes through the override). Auth is a proxy user from Users, Add User, not the login
+// email. Lowercase, no spaces:
+// <user>-zone-<res|isp|mob>[-region-<cc>[-st-<state>][-city-<city>]][-session-<id>-sessTime-<min>]
+// sessTime runs up to 120 minutes on Residential and Mobile, and up to 360 on Rotating ISP.
 const NOVADA_ZONES = Object.freeze({ residential: 'res', isp: 'isp', mobile: 'mob' });
-const NOVADA_MAX_SESSTIME = 120;
+const NOVADA_MAX_SESSTIME = Object.freeze({ res: 120, isp: 360, mob: 120 });
 function novadaPlace(value) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -988,7 +1042,7 @@ function novadaUsername(base, { poolType, country, state, city, session, lifeMin
   const sid = String(session || '').trim().replace(/[^A-Za-z0-9]/g, '');
   if (sid) {
     const m = Number(lifeMin);
-    const mins = Number.isInteger(m) && m > 0 ? Math.min(m, NOVADA_MAX_SESSTIME) : 10;
+    const mins = Number.isInteger(m) && m > 0 ? Math.min(m, NOVADA_MAX_SESSTIME[zone]) : 10;
     user += `-session-${sid}-sessTime-${mins}`;
   }
   return user;
@@ -1393,8 +1447,10 @@ function proxy302AreaId(text, place) {
   const id = Number(hit.id);
   return Number.isInteger(id) ? id : null;
 }
-// Product line s: 1-2 premium, 3-4 standard. Premium takes state/city but only sticky sessions of a
-// fixed length; standard takes rotating, or sticky with session_duration 10/30/60/120 minutes.
+// Product line s: 1-2 premium, 3-4 standard. Premium takes state/city and keeps a sticky session of a
+// fixed length Proxy302 sets, or rotates when lifeMin is 'rotating' (the API reference allows rotating
+// on s=1/2 in one place and only on 3/4 in another, so fetchProxy302Pool names a refusal clearly).
+// Standard takes rotating, or sticky with session_duration 10/30/60/120 minutes.
 const PROXY302_LINES = Object.freeze({ premium: 1, standard: 3 });
 const PROXY302_DURATIONS = Object.freeze([10, 30, 60, 120]);
 function proxy302PurchaseQuery({ line, socks = false, countryId = 0, stateId = 0, cityId = 0, lifeMin } = {}) {
@@ -1414,6 +1470,8 @@ function proxy302PurchaseQuery({ line, socks = false, countryId = 0, stateId = 0
     } else {
       q.set('session_mode', 'rotating');
     }
+  } else if (String(lifeMin == null ? '' : lifeMin).trim().toLowerCase() === 'rotating') {
+    q.set('session_mode', 'rotating');
   }
   return q.toString();
 }
@@ -1848,7 +1906,7 @@ module.exports = {
   rapidProxySid,
   froxyBasePassword,
   medianMs,
-  LIVEPROXIES_GATEWAY,
+  LIVEPROXIES_GATEWAY, LIVEPROXIES_SID_MAX,
   liveProxiesBaseUser,
   liveProxiesUsername,
   liveProxiesStickyHost,
@@ -1856,7 +1914,7 @@ module.exports = {
   mobileProxySpaceRows,
   proxySolutionsPage,
   rapidProxyUsername,
-  NOVADA_ZONES,
+  NOVADA_ZONES, NOVADA_MAX_SESSTIME,
   novadaUsername,
   PROXIESSX_POOLS,
   proxiesSxSid,
@@ -1871,11 +1929,11 @@ module.exports = {
   pickIpRoyalPort,
   ipRoyalCountriesView,
   ipRoyalErrorMessage,
-  ipRoyalMaxCount,
+  ipRoyalMaxCount, ipRoyalCountRefused, ipRoyalLifetimeFromMinutes,
   placeToken,
   oxylabsBaseUser, oxylabsUsername, OXYLABS_MAX_SESSTIME,
   decodoBaseUser, decodoUsername, DECODO_MAX_DURATION,
-  brightDataZoneUser, brightDataUsername, brightDataRouteIps,
+  brightDataZoneUser, brightDataUsername, brightDataRouteIps, brightDataState, US_STATE_CODES,
   apifyUsername,
   anyIpPlace,
   SHOPSOCKS5_PLANS, SHOPSOCKS5_SOCK_TYPES, shopSocks5Request,
@@ -1902,7 +1960,7 @@ module.exports = {
   nodeMavenTtl,
   nodeMavenUsername,
   froxyType,
-  froxyPassword,
+  froxyPassword, froxyPastedPool, FROXY_TYPE_WORDS,
   packetStreamPassword, packetStreamCountry, PACKETSTREAM_COUNTRIES,
   airproxyRows,
   catProxiesResiUsername,
