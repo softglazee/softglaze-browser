@@ -113,9 +113,10 @@ async function installAutofillExtension(userDataDir) {
 }
 
 // Takes our add-on (and only ours) out of the profile's extensions/ dir. A profile launched without
-// Smart Autofill (turned off, or its launcher may not use the Data Vault in autofill) must not keep a
-// copy an earlier launch installed: it would read the bridge token from managed storage and reach the
-// bridge while another Firefox profile holds it open. Firefox drops a missing profile add-on at start.
+// Smart Autofill (turned off, or its launcher may not use the Data Vault in autofill) does not keep a
+// copy an earlier launch installed. Its user.js also bans every bridge port (autofillBridge
+// portsBannedFor), so even a copy left behind could not reach another profile's port. Firefox drops a
+// missing profile add-on at start.
 async function removeAutofillExtension(userDataDir) {
   const extDir = path.join(userDataDir, 'extensions');
   await fsp.rm(path.join(extDir, `${AUTOFILL_EXT_ID}.xpi`), { force: true });
@@ -323,6 +324,12 @@ function buildUserJs(opts) {
     pref('xpinstall.signatures.required', false);
   }
 
+  // The autofill bridge has one loopback port per Firefox profile (autofillBridge.js). This profile may
+  // reach only its own (opts.autofillPort): Firefox refuses the other ports of the range for every
+  // request, the add-on's included, so the bridge knows which profile asks from the port alone. Without
+  // autofill every port of the range is refused. Written on every launch so an older value never stays.
+  pref('network.security.ports.banned', autofillBridge.portsBannedFor(opts.autofill && opts.autofillPort ? opts.autofillPort : null).join(','));
+
   // type 1 = manual. opts.proxy is already the local no-auth relay when the upstream needs creds,
   // since Firefox prefs cannot carry proxy auth for HTTP or SOCKS.
   for (const [k, v] of firefoxProxyPrefs(opts.proxy)) pref(k, v);
@@ -503,19 +510,24 @@ async function launchFirefoxProfileNow(options = {}) {
   } else {
     await removeAutofillExtension(userDataDir).catch(() => {});
   }
-  // The loopback bridge listens only during a Firefox autofill session, and the extension gets the token
-  // from managed storage; if the token cannot be handed over, skip the bridge.
+  // The loopback bridge listens only during a Firefox autofill session, on a port of its own for this
+  // profile (user.js bans the others, buildUserJs), and the extension gets the token from managed
+  // storage; if the token cannot be handed over or no port is free, this profile gets no bridge.
+  const sessionId = String(profileId || crypto.randomUUID());
   let autofillHeld = false;
+  let autofillPort = null;
   if (autofillInstalled) {
     try {
       await writeAutofillManagedToken(autofillBridge.getToken());
-      await autofillBridge.acquire();
+      const held = await autofillBridge.acquire(sessionId);
       autofillHeld = true;
+      autofillPort = held && held.port ? held.port : null;
+      if (!autofillPort) console.warn('[SG][firefox] no free autofill bridge port: this profile opens without the Data Vault autofill.');
     } catch (e) {
       console.warn('[SG][firefox] autofill bridge token handoff failed:', (e && e.message) || e);
     }
   }
-  const releaseAutofill = () => { if (autofillHeld) { autofillHeld = false; autofillBridge.release().catch(() => {}); } };
+  const releaseAutofill = () => { if (autofillHeld) { autofillHeld = false; autofillBridge.release(sessionId).catch(() => {}); } };
 
   // Never apply a Chrome UA to Gecko: buildID, oscpu and the missing userAgentData still say Firefox.
   // Honor an explicit Firefox UA; otherwise null keeps the binary's native UA (matches its TLS/JA4).
@@ -544,6 +556,7 @@ async function launchFirefoxProfileNow(options = {}) {
     fontsAllowed: profileOptions.allowedFonts(profile),
     deviceName,
     autofill: autofillInstalled,
+    autofillPort,
     doNotTrack: await dntPrefToWrite(userDataDir, doNotTrackFlag(profile.doNotTrack))
   });
   // Until exit handlers are wired, a throw would leave the authenticated relay listening; close it.
@@ -590,7 +603,6 @@ async function launchFirefoxProfileNow(options = {}) {
     releaseAutofill();
     throw e;
   }
-  const sessionId = String(profileId || crypto.randomUUID());
   const session = { proc, relay, userDataDir, title: title || `Profile ${sessionId}`, proxyLabel, createdAt: new Date(), engine: 'firefox', releaseAutofill, geoWarning };
   ffSessions.set(sessionId, session);
 

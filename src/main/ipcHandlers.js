@@ -101,7 +101,7 @@ const serverErrors = require('./serverErrors');
 const ownerCert = require('./ownerCert');
 const authGate = require('./authGate');
 const featureGate = require('./featureGate');
-const { redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets, redactUseOnlyProxy, redactForeignProxy } = require('./profileRedaction');
+const { SECRET_MASK, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets, restoreMaskedProxyRaw, storedProxyCredentials, maskProxyInfoString, redactUseOnlyProxy, redactForeignProxy } = require('./profileRedaction');
 const {
   parseLoginList, csvFilter, asnList, FILTER_PATTERNS, proxySellerRotation, unwrapProxySeller, maskProxySellerKey, proxySellerListItems, proxySellerListGeo, proxySellerGeoView,
   GEOJS_URL, normalizeGeoJs, PROXY_SELLER_ORDER_TYPES, proxySellerOrderRows, summarizeProxySellerOrders,
@@ -691,6 +691,9 @@ function serializeProxy(proxy) {
     username: proxy.username,
     password: proxy.password ? '••••••••' : '',
     hasPassword: Boolean(proxy.password),
+    // The vendor's "change IP" link often carries the account's API key, so it follows the username:
+    // shown with proxies.reveal, a mask otherwise (rbacPolicy). Rotate IP never needs it in the
+    // window: main fires the stored link by proxy id (rotateProxyIp).
     rotationUrl: proxy.rotationUrl || null,
     hasRotationUrl: Boolean(proxy.rotationUrl),
     // The pool shows a Rotate IP action only where a rotation can actually happen.
@@ -726,8 +729,11 @@ async function rotateProxyIp(payload) {
   const proxy = await db.proxy.findUnique({ where: { id } });
   if (!proxy) throw new Error('Proxy not found.');
 
-  // Prefer a freshly-provided link (and persist it for next time), else the stored one.
+  // Prefer a freshly-provided link (and persist it for next time), else the stored one. The window
+  // never needs the stored link (a member without proxies.reveal is sent a mask), so rotating is by
+  // proxy id only; a mask sent back means "the stored link".
   let rotationUrl = String(input.rotationUrl || '').trim();
+  if (rotationUrl === SECRET_MASK) rotationUrl = '';
   if (rotationUrl) {
     await db.proxy.update({ where: { id }, data: { rotationUrl } }).catch(() => {});
   } else {
@@ -797,13 +803,17 @@ async function exportProfileArchive(payload) {
   });
   if (save.canceled || !save.filePath) return { cancelled: true };
 
+  // The archive's config is readable by whoever has its password, so its proxy address follows the
+  // profile list: username and password only with proxies.reveal (a Manager or Admin can have it
+  // turned off and still export archives).
+  const revealProxy = await canRevealProxyCredentials();
   const config = {
     profile: {
       title: profile.title,
       dataDirName: profile.dataDirName,
       os: profile.os || null,
       userAgent: profile.userAgent || null,
-      proxyInfoString: profile.proxyInfoString || null
+      proxyInfoString: (revealProxy ? profile.proxyInfoString : maskProxyInfoString(profile.proxyInfoString, null, { maskUsername: true })) || null
     }
   };
   const res = await profileArchive.exportProfileArchive({ userDataDir, config, password, outPath: save.filePath });
@@ -1256,11 +1266,31 @@ async function updateProxy(payload) {
   if (input.type !== undefined) data.type = parseProxyType(input.type);
   if (input.host !== undefined) data.host = requiredString(input.host, 'Proxy host');
   if (input.port !== undefined) data.port = parsePort(input.port);
-  if (input.username !== undefined) data.username = optionalString(input.username);
-  if (input.password !== undefined && input.password !== '••••••••') data.password = optionalString(input.password);
+  // The pool shows a member without proxies.reveal the username as a mask, and the edit dialog sends it
+  // back: a mask keeps the stored value, as for the password.
+  if (input.username !== undefined && input.username !== SECRET_MASK) data.username = optionalString(input.username);
+  if (input.password !== undefined && input.password !== SECRET_MASK) data.password = optionalString(input.password);
+  await assertHiddenCredentialsStayWithHost(id, data);
 
   const updated = await db.proxy.update({ where: { id }, data });
   return serializeProxy(updated);
+}
+
+// A member who may not see proxy credentials (no proxies.reveal) edits a proxy whose username or
+// password they were shown as a mask: the stored values stay with their host. Moving them to another
+// host would send them to a server the member chose, where they could read them. Retyping both
+// credentials (or clearing them) is fine.
+async function assertHiddenCredentialsStayWithHost(id, data) {
+  if (data.host === undefined || await canRevealProxyCredentials()) return;
+  const cur = await getPrisma().proxy.findUnique({ where: { id }, select: { host: true, username: true, password: true } });
+  if (!cur || String(cur.host || '').trim().toLowerCase() === String(data.host).trim().toLowerCase()) return;
+  const keepsUser = Boolean(cur.username) && data.username === undefined;
+  const keepsPass = Boolean(cur.password) && data.password === undefined;
+  if (keepsUser || keepsPass) {
+    const e = new Error('The proxy username and password are hidden for your account, so they stay with their host. To use another host, type the username and password again.');
+    e.code = 'FORBIDDEN';
+    throw e;
+  }
 }
 
 async function deleteProxy(payload) {
@@ -4538,7 +4568,22 @@ async function testProxyConnectivity(proxy, opts = {}) {
   }
 }
 
-// Accepts { id } (a saved proxy), { raw, type }, or { host, port, username, password, type }.
+// The editor's "Check network" sends its fields as they are; for a member without proxies.reveal the
+// username and password are masks, put back from the profile being edited (`profileId`, edit access
+// needed), as a save does (restoreMaskedSecrets). Without a profile they become empty.
+async function unmaskedEditorProxyRaw(input) {
+  const raw = String(input.raw);
+  if (!raw.includes(SECRET_MASK)) return raw;
+  let stored = null;
+  if (input.profileId !== undefined && input.profileId !== null && input.profileId !== '') {
+    const profileId = parseId(input.profileId, 'profileId');
+    await assertCanAccessProfile(profileId, { requireEdit: true });
+    stored = storedProxyCredentials(await getPrisma().profile.findUnique({ where: { id: profileId }, include: { proxy: true } }));
+  }
+  return restoreMaskedProxyRaw(raw, stored);
+}
+
+// Accepts { id } (a saved proxy), { raw, type, profileId? }, or { host, port, username, password, type }.
 async function checkProxy(payload) {
   const input = requireObject(payload);
   let proxy = null;
@@ -4552,10 +4597,11 @@ async function checkProxy(payload) {
     if (!found) throw new Error('Proxy not found.');
     proxy = { type: found.type, host: found.host, port: found.port, username: found.username, password: found.password };
   } else if (input.raw) {
-    proxy = parseProxyInput(input.raw);
+    const raw = await unmaskedEditorProxyRaw(input); // masked fields from the editor
+    proxy = parseProxyInput(raw);
     // Same rule as saving the profile (createProfile/updateProfile): a scheme in the string wins and
     // the editor's "Local" is not a protocol, so the check tests the proxy that will be saved.
-    const typeHint = proxyTypeHintFor(input.raw, input.type);
+    const typeHint = proxyTypeHintFor(raw, input.type);
     if (proxy && typeHint) proxy.type = typeHint;
   } else if (input.host) {
     proxy = parseProxyInput({
@@ -4889,13 +4935,12 @@ async function analyzeProfileLeaks(payload) {
   }
 
   const webrtc = profile.webrtc || 'Forward';
-  if (webrtc === 'Real') {
-    checks.push({
-      key: 'webrtc', label: 'WebRTC', status: usesProxy ? 'fail' : 'warn',
-      detail: usesProxy
-        ? 'Set to "Real" - WebRTC can expose the real IP behind the proxy.'
-        : 'Set to "Real" (no proxy) - real IP visible via WebRTC.'
-    });
+  if (webrtc === 'Real' && usesProxy) {
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: 'Set to "Real" - WebRTC can expose the real IP behind the proxy.' });
+  } else if (webrtc === 'Real') {
+    // No proxy: WebRTC shows the IP every site already sees (the IP / Proxy row says so), so there is no
+    // mismatch to flag. The CAPTCHA score says the same (captchaScore.js).
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'Set to "Real" with no proxy - sites already see this computer\'s IP, so WebRTC shows them nothing new.' });
   } else {
     checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Mode "${webrtc}" - real IP not leaked via WebRTC.` });
   }
@@ -6111,6 +6156,8 @@ async function batchGenerateProfiles(payload, run = {}) {
   const created = [];
   const errors = [];
   const usedSignatures = new Set();
+  // The window's preview numbers the names with the same rule (src/renderer/lib/quickGenProgress.mjs
+  // quickGenNumber; test/permissionsRound5.test.js runs this function to keep the two equal).
   const padLen = String(startIndex + Math.max(effectiveCount, 1) - 1).length;
   let cancelled = false;
 
@@ -7249,12 +7296,13 @@ async function launchProfileNow(payload) {
       assertProfileHasLaunchProxy(profile, ffRotated);
       const ffProxy = ffRotated || (useFfProxy ? profile.proxy : null);
       // Smart Autofill on Firefox: master toggle AND the firefox sub-flag must both be on, and the
-      // launcher must be allowed the vault in autofill. Installs the WebExtension + enables the
-      // loopback bridge path; without it the engine takes out a copy an earlier launch installed.
+      // launcher must be allowed the vault in autofill. Installs the WebExtension and gives this profile
+      // its own bridge port; without it the engine takes out a copy an earlier launch installed. The
+      // bridge then asks the rule for this session at fill time, as the Chromium bridge does.
       const ffAutofill = (globalSettings.smartAutofill?.enabled !== false)
         && (globalSettings.smartAutofill?.firefox !== false)
         && (await vaultAutofillAllowed(launchedBy));
-      undoLauncher = recordSessionLauncher(profile.id, launchedBy, { firefoxAutofill: ffAutofill });
+      undoLauncher = recordSessionLauncher(profile.id, launchedBy);
       const ffSession = await firefoxEngine.launchFirefoxProfile({
         profileId: profile.id,
         title: profile.title,
@@ -7348,11 +7396,12 @@ async function launchProfileNow(payload) {
   }
 }
 
-// Who launched each running profile: session id -> { memberId, firefoxAutofill }. memberId is null in
-// single-user mode (the Owner). Data Vault autofill in that browser follows this member, not whoever
-// is signed in to the window later (sessionAutofillAllowed), so switching members in the window
-// changes nothing for a profile already open. Recorded before the engine starts the browser, because
-// its first page asks while the launch is still running; dropped when the session ends.
+// Who launched each running profile: session id -> { memberId }. memberId is null in single-user mode
+// (the Owner). Data Vault autofill in that browser follows this member, not whoever is signed in to the
+// window later (sessionAutofillAllowed), so switching members in the window changes nothing for a
+// profile already open. Both bridges know the session asking: Chromium passes it, and each Firefox
+// profile has its own bridge port (autofillBridge.js). Recorded before the engine starts the browser,
+// because its first page asks while the launch is still running; dropped when the session ends.
 const sessionLaunchers = new Map();
 
 // Returns an undo for a launch that fails: it puts back what was there, so a profile already open
@@ -7360,7 +7409,7 @@ const sessionLaunchers = new Map();
 function recordSessionLauncher(sessionId, memberId, extra = {}) {
   const key = String(sessionId);
   const prev = sessionLaunchers.get(key);
-  const rec = { memberId: memberId == null ? null : memberId, firefoxAutofill: false, ...extra };
+  const rec = { memberId: memberId == null ? null : memberId, ...extra };
   sessionLaunchers.set(key, rec);
   return () => {
     if (sessionLaunchers.get(key) !== rec) return;
@@ -8180,6 +8229,8 @@ async function gatherExport() {
   // stripUseOnlySecrets): its account password and 2FA key stay blank whatever the role. Nor its
   // proxy's password or rotation link, and the proxy username only as the member's Proxy pool shows
   // it (their own pool's proxy, with proxies.reveal); the profile list follows the same rule.
+  // Without proxies.reveal the proxy username and the rotation link (it often carries the vendor's
+  // API key) are blank on every row, editable ones included, as the profile list masks them.
   let editable = () => true;
   let inPool = () => true;
   if (member && member.role !== 'SUPER_ADMIN') {
@@ -8190,9 +8241,9 @@ async function gatherExport() {
   const headers = EXPORT_COLUMNS.map((c) => c[0]);
   const rows = profiles.map((p) => {
     const own = editable(p);
-    const showUser = own || (revealCreds && inPool(p.proxy));
+    const showUser = revealCreds && (own || inPool(p.proxy));
     return EXPORT_COLUMNS.map((c) => {
-      if (!revealCreds && (c[0] === 'Proxy Password' || c[0] === 'Account Password')) return '';
+      if (!revealCreds && (c[0] === 'Proxy Password' || c[0] === 'Account Password' || c[0] === 'Proxy Rotation URL')) return '';
       if ((!revealCreds || !own) && c[0] === 'Proxy Info') return p.proxy ? `${p.proxy.host}:${p.proxy.port}:${showUser ? (p.proxy.username || '') : ''}:` : '';
       if (!revealTwoFa && c[0] === '2FA Key') return '';
       if (!own && (c[0] === 'Account Password' || c[0] === '2FA Key' || c[0] === 'Proxy Password' || c[0] === 'Proxy Rotation URL')) return '';
@@ -8877,7 +8928,9 @@ async function getGlobalSettingsForActor() {
   let own = null;
   try { own = await readOwnPageLists(member); }
   catch (e) { own = pageListsOwnerKey(member) === null ? null : emptyPageLists(); }
-  const all = own ? { ...shared, ...own } : shared;
+  let all = own ? { ...shared, ...own } : shared;
+  // And their own first-run flag in place of the Owner's (memberOnboarding).
+  if (onboardingOwnerKey(member) !== null) all = { ...all, onboardingDone: await readOwnOnboardingDoneSafe(member) };
   return withoutWorkspaceSecrets((await activeIsSuperAdmin()) ? all : withoutSuperOnlyKeys(all), member);
 }
 
@@ -9000,6 +9053,88 @@ async function writeOwnPageLists(member, patch) {
   });
 }
 
+// ---- The first-run wizard: one "done" flag per member ----
+// Until 1.0.26 `onboardingDone` was one flag in globalSettings: whoever finished or skipped the wizard
+// hid it for every member. Now:
+//   - The Owner (and single-user mode) keeps globalSettings.onboardingDone, unchanged, so an older
+//     version reads the same flag.
+//   - Every other member (the Super Admin included) has their own in the Setting "memberOnboarding":
+//     { version: 1, createdAt, members: { "<member id>": { since, done } } }. `since` is the member's
+//     createdAt, as in memberPageLists, so an entry left by a deleted member is never reused.
+//   - Members who exist when the store is first created (the first start of 1.0.26, before anyone signs
+//     in) are marked done if they ever signed in (Member.lastActiveAt, set at every sign-in since June
+//     2026): they have used the app and are not shown a first-run wizard now. Members who never signed
+//     in are not, so they see it at their first sign-in, as do members added later. The Super Admin is
+//     marked done. Nothing in globalSettings is changed by this.
+// The window keeps using settings:get-global and settings:set-global; main puts the member's own flag
+// in place of the Owner's (getGlobalSettingsForActor, setGlobalSettingsForActor).
+const MEMBER_ONBOARDING_SETTING = 'memberOnboarding';
+const memberOnboardingLock = { tail: Promise.resolve() };
+
+function withMemberOnboarding(fn) {
+  const run = memberOnboardingLock.tail.then(() => fn());
+  memberOnboardingLock.tail = run.then(() => {}, () => {});
+  return run;
+}
+
+// Whose flag: null for the Owner (and single-user mode), kept in globalSettings; otherwise the
+// member's id (the Super Admin included).
+function onboardingOwnerKey(member) {
+  return pageListsOwnerKey(member);
+}
+
+// The store, created on its first read (see above). Call inside withMemberOnboarding. A database error
+// is thrown, never taken for "no store yet", so a stored flag is never replaced.
+async function loadMemberOnboarding() {
+  const stored = await readSettingStrict(MEMBER_ONBOARDING_SETTING);
+  if (stored !== undefined) {
+    return stored && typeof stored === 'object' && stored.members && typeof stored.members === 'object'
+      ? stored
+      : { version: 1, members: {} };
+  }
+  const store = { version: 1, createdAt: new Date().toISOString(), members: {} };
+  for (const m of await getPrisma().member.findMany()) {
+    if (m.role === 'OWNER') continue;
+    store.members[String(m.id)] = { since: memberSinceStamp(m), done: Boolean(m.lastActiveAt) };
+  }
+  store.members[String(permissions.SUPER_ADMIN_ID)] = { since: null, done: true };
+  await writeSetting(MEMBER_ONBOARDING_SETTING, store);
+  return store;
+}
+
+// Creates the store if it is not there yet. Called at startup and before a sign-in records
+// lastActiveAt, so the members who exist at the update are judged by their sign-ins before it.
+function ensureMemberOnboardingStore() {
+  return withMemberOnboarding(loadMemberOnboarding);
+}
+
+function ownOnboardingDoneIn(store, member) {
+  const e = store.members[onboardingOwnerKey(member)];
+  const since = memberSinceStamp(member);
+  if (!e || typeof e !== 'object' || (e.since && since && e.since !== since)) return false;
+  return e.done === true;
+}
+
+// The member's own flag (not for the Owner, whose flag is globalSettings' own).
+async function readOwnOnboardingDone(member) {
+  return withMemberOnboarding(async () => ownOnboardingDoneIn(await loadMemberOnboarding(), member));
+}
+
+// A store that cannot be read shows nobody the wizard: a member who has used the app for months must
+// not get it because of a database hiccup.
+async function readOwnOnboardingDoneSafe(member) {
+  try { return await readOwnOnboardingDone(member); } catch (e) { return true; }
+}
+
+async function writeOwnOnboardingDone(member, done) {
+  return withMemberOnboarding(async () => {
+    const store = await loadMemberOnboarding();
+    store.members[onboardingOwnerKey(member)] = { since: memberSinceStamp(member), done: done === true };
+    await writeSetting(MEMBER_ONBOARDING_SETTING, store);
+    return done === true;
+  });
+}
+
 // Who may change each top-level group of the workspace settings through the window. Every group holds
 // one value for the whole workspace, and most of them change how everybody's profiles open (browser
 // behaviour, website rules, start-up checks, the CAPTCHA key, launch caps, log retention, start-page
@@ -9055,7 +9190,7 @@ function withoutWorkspaceSecrets(settings, member) {
 }
 
 async function setGlobalSettingsForActor(payload) {
-  const input = requireObject(payload);
+  let input = requireObject(payload);
   const isSuper = await activeIsSuperAdmin();
   if (!isSuper && SUPER_ONLY_GLOBAL_KEYS.some((k) => Object.prototype.hasOwnProperty.call(input, k))) {
     const err = new Error('Only the Super Admin can track provider trials.');
@@ -9070,7 +9205,18 @@ async function setGlobalSettingsForActor(payload) {
   const own = pageListsOwnerKey(member) === null
     ? await readOwnPageLists(member).catch(() => null)
     : await readOwnPageLists(member);
+  // Their first-run flag likewise (memberOnboarding): finishing the wizard hides it for them only. It is
+  // anyone's to set (GLOBAL_SETTING_WRITE_RULES), so it is taken out before the rest is checked.
+  const ownsFlag = onboardingOwnerKey(member) !== null;
+  let flagWrite;
+  if (ownsFlag && Object.prototype.hasOwnProperty.call(input, 'onboardingDone')) {
+    const { onboardingDone, ...others } = input;
+    flagWrite = onboardingDone === true;
+    input = others; // the rest goes on as before
+  }
   await assertCanWriteGlobalSettings(member, own ? { ...shared, ...own } : shared, input);
+  const flag = !ownsFlag ? {}
+    : { onboardingDone: flagWrite !== undefined ? await writeOwnOnboardingDone(member, flagWrite) : await readOwnOnboardingDoneSafe(member) };
   let next;
   if (own) {
     const mine = {};
@@ -9081,6 +9227,7 @@ async function setGlobalSettingsForActor(payload) {
   } else {
     next = await setGlobalSettings(input);
   }
+  next = { ...next, ...flag };
   return withoutWorkspaceSecrets(isSuper ? next : withoutSuperOnlyKeys(next), member);
 }
 
@@ -9375,35 +9522,21 @@ async function getPersonaSecretForUrl(id, url) {
 
 // The autofill bridges serve vault data only while the workspace is unlocked and someone is signed
 // in, as authGate requires for renderer IPC (no members counts as the Owner), and only to a browser
-// whose launcher may use the vault in autofill. `sessionId`: the Chromium session asking; `firefox`:
-// the Firefox bridge, which cannot say which profile asks (firefoxAutofillAllowed). Fails closed on DB
-// error.
-async function personaVaultAvailable({ sessionId = null, firefox = false } = {}) {
+// whose launcher may use the vault in autofill. `sessionId`: the session asking. The Chromium bridge
+// passes the page's session; the Firefox bridge the session that owns the port the request came in on
+// (each Firefox profile can reach only its own port, autofillBridge.js). Fails closed on DB error.
+async function personaVaultAvailable({ sessionId = null } = {}) {
   const s = await ipcAuthState();
   if (s.vaultLocked) return false;
   if (!(Boolean(s.signedIn) || !(Number(s.memberCount) > 0))) return false;
-  return firefox ? firefoxAutofillAllowed() : sessionAutofillAllowed(sessionId);
+  return sessionAutofillAllowed(sessionId);
 }
 
-// Data Vault autofill in one running Chromium session: the rule for the member who launched it
-// (sessionLaunchers). A session with no recorded launcher gets nothing.
+// Data Vault autofill in one running session, Chromium or Firefox: the rule for the member who
+// launched it (sessionLaunchers). A session with no recorded launcher gets nothing.
 async function sessionAutofillAllowed(sessionId) {
   const rec = sessionId == null ? null : sessionLaunchers.get(String(sessionId));
   return rec ? vaultAutofillAllowed(rec.memberId) : false;
-}
-
-// The Firefox bridge cannot tell which Firefox profile is asking: there is one token per app run, and
-// every Firefox profile reads it from Firefox's managed storage. Only a profile whose launcher was
-// allowed gets the autofill add-on (launchProfileNow; firefoxEngine takes out an older copy), so the
-// bridge answers only while every running Firefox profile with the add-on was launched by a member who
-// is still allowed now, and otherwise not at all (fails closed).
-async function firefoxAutofillAllowed() {
-  const holders = [...sessionLaunchers].filter(([sid, rec]) => rec.firefoxAutofill && firefoxEngine.isFirefoxSession(sid));
-  if (!holders.length) return false;
-  for (const [, rec] of holders) {
-    if (!(await vaultAutofillAllowed(rec.memberId))) return false;
-  }
-  return true;
 }
 
 // Whose launched profiles may offer the Data Vault's identities (the "SG" autofill button, both
@@ -10114,6 +10247,9 @@ async function acceptInvite(payload) {
   await writeSetting('currentMemberId', updated.id).catch(() => {});
   vaultLocked = false;
   vaultUnlockSource = 'member';
+  // Before lastActiveAt changes: the first-run flags of the members who exist at the update follow their
+  // sign-ins before it (memberOnboarding).
+  await ensureMemberOnboardingStore().catch(() => {});
   await db.member.update({ where: { id: updated.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   await logAudit('member.invite-accept', { detail: { name: updated.name } });
   return serializeMember(updated, { isCurrent: true });
@@ -10141,6 +10277,9 @@ async function memberLogin(payload) {
   vaultLocked = false; // member's own password is their auth
   vaultUnlockSource = 'member';
   applyRememberChoice(input.remember, { kind: 'member', identifier, password });
+  // Before lastActiveAt changes: the first-run flags of the members who exist at the update follow their
+  // sign-ins before it (memberOnboarding).
+  await ensureMemberOnboardingStore().catch(() => {});
   await db.member.update({ where: { id: member.id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   await logAudit('member.login', { detail: { name: member.name } });
   return serializeMember(member, { isCurrent: true });
@@ -10546,6 +10685,9 @@ async function switchMember(payload) {
   }
   currentMemberId = id;
   await writeSetting('currentMemberId', id).catch(() => {});
+  // Before lastActiveAt changes: the first-run flags of the members who exist at the update follow their
+  // sign-ins before it (memberOnboarding).
+  await ensureMemberOnboardingStore().catch(() => {});
   await db.member.update({ where: { id }, data: { lastActiveAt: new Date() } }).catch(() => {});
   return serializeMember(m, { isCurrent: true });
 }
@@ -15143,18 +15285,22 @@ function registerIpcHandlers() {
     // Firefox has no CDP trusted typer, so the content script fills the password itself, but only for a
     // persona offered on the committed origin, resolved one id at a time via the loopback /secret endpoint.
     getSecret: (id, url) => getPersonaSecretForUrl(id, url),
-    // No vault data while the app is locked or nobody is signed in, or while a running Firefox profile
-    // with the add-on was launched by a member who may not use the vault in autofill.
-    isAvailable: () => personaVaultAvailable({ firefox: true })
+    // No vault data while the app is locked or nobody is signed in, or for a Firefox profile whose
+    // launcher may not use the vault in autofill. The session is the one owning the port the request
+    // arrived on: each Firefox profile can reach only its own (autofillBridge.js).
+    isAvailable: (ctx) => personaVaultAvailable({ sessionId: ctx && ctx.sessionId != null ? ctx.sessionId : null })
   });
-  // Not started at boot: firefoxEngine acquires the bridge when a Firefox profile with the autofill
-  // extension launches and releases it on exit, so the loopback port is open only while needed.
+  // Not started at boot: firefoxEngine acquires a port for each Firefox profile with the autofill
+  // extension when it launches and releases it on exit, so a loopback port is open only while needed.
 
   // Resume the background proxy scheduler if it was enabled previously.
   (async () => {
     // Per-member saved filters and warm-up lists: create the store at the first start of 1.0.26, so
     // the copy of the shared lists goes to the members who exist now and not to members added later.
     try { await withMemberPageLists(loadMemberPageLists); } catch (e) { /* created on the first read instead */ }
+    // Per-member first-run flags: created now, before anyone signs in, so members who signed in before the
+    // update are marked done and members who never did see the wizard (memberOnboarding).
+    try { await ensureMemberOnboardingStore(); } catch (e) { /* created before the first sign-in instead */ }
     try {
       const cfg = await readSetting('proxyScheduler', null);
       if (cfg && cfg.enabled) startProxyScheduler(cfg.minutes);

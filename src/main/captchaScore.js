@@ -128,6 +128,9 @@ function scoreProfile(profile, ctx = {}) {
   const webrtc = p.webrtc || 'Forward';
   if (usesProxy && webrtc === 'Real') add('webrtc', 'fail', 25, {}, 'webrtc-safe');
   else if (webrtc === 'Disabled') add('webrtc', 'warn', 5, {}, 'webrtc-safe');
+  // Real with no proxy: the IP WebRTC shows is the one every site already sees, so there is no mismatch
+  // to flag. It is not "hidden" either, so it has its own message (the Leak check says the same).
+  else if (webrtc === 'Real') add('webrtc', 'pass', 0, { mode: webrtc, noProxy: true });
   else add('webrtc', 'pass', 0, { mode: webrtc });
 
   // ---- Browser state ----

@@ -63,5 +63,18 @@ app run: the app writes it to Firefox managed storage for this extension id at
 every launch (`storage` permission, read with `browser.storage.managed`), and the
 bridge only listens while a Firefox autofill session runs. The origin a call is
 scoped to comes from `sender.url` in the background script, never from the
-content script. Any change to these files needs a fresh Mozilla signature.
-See `src/main/autofillBridge.js`.
+content script. Any change to the extension's files (everything here but this
+README) needs a fresh Mozilla signature. See `src/main/autofillBridge.js`.
+
+**Which profile is asking.** Every Firefox profile reads the same token, so the
+token alone cannot say which profile a call comes from. Each running Firefox
+profile with autofill gets **its own port** of 47800-47809, and its `user.js`
+sets `network.security.ports.banned` to every other port of the range. Firefox
+refuses those ports for that profile (the add-on's background fetches included),
+so the add-on's probe finds only its own port, and the bridge knows the profile,
+and so the member who launched it, from the port a call arrives on. A profile
+launched without autofill has the whole range banned. This needs no change to
+the add-on: checked with the signed 1.0.2 `.xpi` in release Firefox 157 (two
+profiles at once, each reached only its own port). At most 10 Firefox profiles
+with autofill can run at once (the add-on's fixed port list); an 11th opens
+without autofill.
