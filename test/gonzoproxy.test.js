@@ -54,7 +54,7 @@ function ipcFunction(name) {
 }
 const fetchGonzoProxyPool = new Function(
   'crypto', 'gonzoProxyBaseLogin', 'gonzoProxyUsername', 'GONZOPROXY_GATEWAY', 'MINTED_PULL_MAX',
-  `${['normCountryCode', 'clampPoolCount', 'gatewayOverride', 'mintGatewayRows', 'fetchGonzoProxyPool'].map(ipcFunction).join('\n')}\nreturn fetchGonzoProxyPool;`
+  `${['normCountryCode', 'clampPoolCount', 'gatewayPullPlan', 'gatewayOverride', 'mintGatewayRows', 'fetchGonzoProxyPool'].map(ipcFunction).join('\n')}\nreturn fetchGonzoProxyPool;`
 )(require('crypto'), U.gonzoProxyBaseLogin, U.gonzoProxyUsername, { host: 'connect.gonzoproxy.app', port: 10000 }, Number(/const MINTED_PULL_MAX = (\d+);/.exec(IPC)[1]));
 
 test('a pull rotates for one row, mints up to MINTED_PULL_MAX sticky rows, and honours Keep same IP', async () => {
@@ -75,7 +75,7 @@ test('GonzoProxy is wired: adapter, registry, panel entry and hints', () => {
   assert.match(IPC, /gonzoproxy: 'GonzoProxy'/);
   assert.match(IPC, /host: 'connect\.gonzoproxy\.app', port: 10000/);
   assert.match(UI, /key: 'gonzoproxy'.*creds: \['username', 'password'\].*geo: true.*session: true, life: true.*proto: true/);
-  assert.doesNotMatch(/key: 'gonzoproxy'.*/.exec(UI)[0], /maxLife: /, 'every Keep same IP option is within 7 days');
+  assert.match(/key: 'gonzoproxy'.*/.exec(UI)[0], /maxLife: 10080/, 'Keep same IP offers up to 7 days, the vendor maximum');
   for (const loc of ['en', 'es']) {
     const json = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales', loc, 'cmpSettingsC.json'), 'utf8'));
     assert.equal(typeof json.proxyProviders.geoHints.gonzoproxy, 'string', loc);

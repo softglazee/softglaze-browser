@@ -33,7 +33,7 @@ function build(fns, consts, deps) {
   const names = Object.keys(deps);
   return new Function(...names, `${src}\nreturn { ${fns.join(', ')} };`)(...names.map((k) => deps[k]));
 }
-const SHARED_FNS = ['normCountryCode', 'clampPoolCount', 'gatewayOverride', 'mintGatewayRows', 'limitListRows'];
+const SHARED_FNS = ['normCountryCode', 'clampPoolCount', 'gatewayPullPlan', 'gatewayOverride', 'mintGatewayRows', 'limitListRows'];
 const SHARED_CONSTS = ['MINTED_PULL_MAX', 'LIST_IMPORT_MAX'];
 const httpError = (status, body = '') => Object.assign(new Error(`HTTP ${status} ${body}`.trim()), { status });
 

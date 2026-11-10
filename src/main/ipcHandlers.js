@@ -709,7 +709,7 @@ function serializeProxy(proxy) {
     rotationUrl: proxy.rotationUrl || null,
     hasRotationUrl: Boolean(proxy.rotationUrl),
     // The pool shows a Rotate IP action only where a rotation can actually happen.
-    canRotate: Boolean(proxy.rotationUrl) || isDataImpulseSticky(proxy),
+    canRotate: proxyCanRotate(proxy),
     provider: deriveProvider(proxy),
     proxyGroupId: proxy.proxyGroupId ?? null,
     groupName: proxy.proxyGroup ? proxy.proxyGroup.name : null,
@@ -789,10 +789,12 @@ async function rotateProxyIp(payload) {
   }
   // The vendor's reply is shown only to a member who may see the link (some vendors echo it or the key).
   const showReply = inPool && await canRevealProxyCredentials();
-  // DataImpulse sticky proxies need no link: their API resets the session on the port.
-  if (!rotationUrl && isDataImpulseSticky(proxy)) {
-    const di = await rotateDataImpulseSticky(proxy);
-    return showReply ? di : { ...di, response: undefined };
+  // A vendor that rotates through its own API needs no link (PROVIDER_ROTATORS: DataImpulse sticky
+  // ports, ...). A stored or provided link still wins.
+  const apiVendor = rotationUrl ? '' : apiRotationProvider(proxy);
+  if (apiVendor) {
+    const res = await PROVIDER_ROTATORS[apiVendor](proxy);
+    return showReply ? res : { ...res, response: undefined };
   }
   if (!rotationUrl) throw new Error('No IP rotation link is configured for this proxy.');
   if (!/^https?:\/\//i.test(rotationUrl)) throw new Error('The rotation link must be an http(s) URL.');
@@ -803,7 +805,7 @@ async function rotateProxyIp(payload) {
   let res;
   try {
     res = await axios.get(rotationUrl, {
-      timeout: 20000,
+      timeout: rotationLinkTimeoutMs(proxy),
       maxRedirects: 3,
       // Connect-time check of the resolved address (DNS rebind, names pointing inward).
       lookup: publicOnlyLookup,
@@ -2213,6 +2215,20 @@ function clampPoolCount(value, def = 5, max = 500) {
   return Math.min(n, max);
 }
 
+// What a gateway pull makes, for every connector with Keep same IP and a session name. One proxy with
+// no session name and Keep same IP blank ("Different IP each time") is one rotating proxy: a new IP on
+// every request. A session name, a Keep same IP time, or How many above 1 makes sticky proxies, one
+// session each, because several rotating rows would be the same login. With Keep same IP blank they
+// keep the IP for the vendor's default time, and the form says so instead of "Different IP each time"
+// (src/renderer/lib/gatewayPull.mjs mirrors this rule).
+function gatewayPullPlan({ session, count, life } = {}) {
+  const name = String(session == null ? '' : session).trim();
+  const minutes = Number.parseInt(String(life == null ? '' : life), 10);
+  const lifeSet = Number.isFinite(minutes) && minutes > 0;
+  const many = clampPoolCount(count, 1, MINTED_PULL_MAX) > 1;
+  return { sticky: Boolean(name || lifeSet || many), session: name, lifeSet };
+}
+
 // ---- Apify Residential ----
 // One HTTP gateway (proxy.apify.com:8000); the username picks pool (groups-RESIDENTIAL), country
 // (country-XX, or country-US_CA for a US state) and stickiness (session-<id>, about 30 minutes on
@@ -2311,7 +2327,11 @@ async function fetchAnyIpPool({ username, password, country, state, city, sessio
   // session, 7 days. The UI tops out at 1440, but the full range is accepted.
   const lifeMin = Math.min(10080, Math.max(0, Number.parseInt(String(life), 10) || 0));
   const ptype = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
-  const n = fixedSession ? 1 : clampPoolCount(count, 5, MINTED_PULL_MAX);
+  // gatewayPullPlan: one row with no session name and Keep same IP blank is AnyIP's rotating login (no
+  // session_ flag, a new IP per request). Otherwise each row has its own session, held for Keep same IP
+  // or AnyIP's default of 7 days. A fixed session name pins one IP, so it makes one row.
+  const plan = gatewayPullPlan({ session: fixedSession, count, life: lifeMin });
+  const n = fixedSession || !plan.sticky ? 1 : clampPoolCount(count, 1, MINTED_PULL_MAX);
   // Operators often paste the whole gateway username (with session_/sesstime_ flags). Duplicate keys
   // leave it to the gateway which one wins, which could collapse every profile onto one IP. Keep the
   // bare account id, treat pasted flags as defaults, and emit each key once.
@@ -2335,14 +2355,15 @@ async function fetchAnyIpPool({ username, password, country, state, city, sessio
     }
     if (lifeMin) own.set('sesstime', `sesstime_${lifeMin}`);
     // session goes last, the layout known to work against the live gateway; delete first because
-    // Map.set keeps an existing key's position.
+    // Map.set keeps an existing key's position. A rotating row drops a pasted session and its time.
     own.delete('session');
-    own.set('session', `session_${fixedSession || randSession()}`);
+    if (plan.sticky) own.set('session', `session_${fixedSession || randSession()}`);
+    else own.delete('sesstime');
     const parts = [baseUser, ...own.values()];
     rows.push({
       type: rowType, host: gwHost, port: gwPort,
       username: parts.join(','), password: pw,
-      label: `AnyIP • ${ptype === 'mobile' ? 'Mobile' : 'Res'} • ${[cc || 'Global', town || region].filter(Boolean).join(' ')} • #${i}`, country: cc || null
+      label: `AnyIP • ${ptype === 'mobile' ? 'Mobile' : 'Res'} • ${[cc || 'Global', town || region].filter(Boolean).join(' ')} • ${plan.sticky ? `#${i}` : 'rotating'}`, country: cc || null
     });
   }
   return rows;
@@ -2584,6 +2605,33 @@ async function rotateDataImpulseSticky(proxy) {
     throw new Error(`DataImpulse refused the rotation: ${(body && body.message) || 'no reason given'}. One port can be reset at most once every 30 seconds.`);
   }
   return { ok: true, status: 200, latencyMs: Date.now() - started, response: String(body.message || 'ok'), provider: 'dataimpulse' };
+}
+
+// ---- Provider-API rotation (rotateProxyIp) ----
+// Vendors whose API gives a proxy a new IP, instead of a change-IP link stored on the proxy.
+// apiRotationProvider names the vendor that can rotate this proxy ('' for none), from the stored row
+// alone, so canRotate (serializeProxy, the block response) stays a pure function of the row; a new
+// vendor adds one line here and one entry in PROVIDER_ROTATORS. A rotator takes the proxy and returns
+// { ok, status, latencyMs, response } or throws a clear message. An account key is read from the saved
+// provider credentials (readSavedProviderCreds) when the rotation runs, and never put in a proxy's
+// rotationUrl, which members with proxies.reveal can see and export.
+function apiRotationProvider(proxy) {
+  if (!proxy) return '';
+  if (isDataImpulseSticky(proxy)) return 'dataimpulse';
+  return '';
+}
+const PROVIDER_ROTATORS = Object.freeze({
+  dataimpulse: rotateDataImpulseSticky
+});
+function proxyCanRotate(proxy) {
+  return Boolean(proxy) && (Boolean(proxy.rotationUrl) || Boolean(apiRotationProvider(proxy)));
+}
+// A change-IP link that answers only once the new IP is up gets longer than the default 20 seconds,
+// by the proxy's provider tag.
+const ROTATION_LINK_TIMEOUT_MS = Object.freeze({});
+function rotationLinkTimeoutMs(proxy) {
+  const v = ROTATION_LINK_TIMEOUT_MS[String((proxy && proxy.provider) || '').toLowerCase()];
+  return Number(v) > 0 ? Number(v) : 20000;
 }
 
 // Plan stats plus a live geo breakdown for the provider panel; pool counts come from
@@ -3134,13 +3182,17 @@ async function fetchNodeMavenPool({ username, password, country, state, city, se
   const type = String(poolType || '').toLowerCase() === 'mobile' ? 'mobile' : 'residential';
   const cc = normCountryCode(country);
   const ttl = nodeMavenTtl(nodeMavenTtlFromMinutes(life));
-  const n = clampPoolCount(count, 1, MINTED_PULL_MAX);
+  // gatewayPullPlan: one row with no session name and Keep same IP blank has no -sid-, so NodeMaven
+  // gives it a new IP per request. Otherwise each row has its own -sid-, held for Keep same IP or, when
+  // that is blank, as long as NodeMaven can (up to 24 hours).
   const fixed = String(session || '').trim();
+  const plan = gatewayPullPlan({ session: fixed, count, life });
+  const n = plan.sticky ? clampPoolCount(count, 1, MINTED_PULL_MAX) : 1;
   const rows = [];
   const seen = new Set();
   for (let i = 0; i < n; i++) {
-    const sid = fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(6).toString('hex');
-    const user = nodeMavenUsername(login, { country: cc, region: state, city, type, sid, ttl });
+    const sid = !plan.sticky ? '' : fixed ? (n > 1 ? `${fixed}${i}` : fixed) : crypto.randomBytes(6).toString('hex');
+    const user = nodeMavenUsername(login, { country: cc, region: state, city, type, sid, ttl: sid ? ttl : '' });
     if (!user) continue;
     const key = `${host}:${port}:${user}`;
     if (seen.has(key)) continue;
@@ -3148,7 +3200,7 @@ async function fetchNodeMavenPool({ username, password, country, state, city, se
     rows.push({
       type: socks ? 'SOCKS5' : 'HTTP',
       host, port, username: user, password: pass,
-      label: `NodeMaven • ${type === 'mobile' ? 'Mobile' : 'Residential'} • ${cc || 'Global'} • sid ${sid}`,
+      label: `NodeMaven • ${type === 'mobile' ? 'Mobile' : 'Residential'} • ${cc || 'Global'} • ${sid ? `sid ${sid}` : 'rotating'}`,
       country: cc || null
     });
   }
@@ -3312,8 +3364,10 @@ async function fetchCatProxiesPool({ token, orderId, poolType, country, state, c
   const buildUser = (sid) => product.mobile
     ? catProxiesMobileUsername(username, { country: cc, region: state, city, session: sid, ttlMin: lifeMin })
     : catProxiesResiUsername(username, { country: cc, state, city, session: sid, lifetimeMin: resiLife });
-  // A blank session with How many > 1 mints that many sticky sessions; with 1 it stays rotating.
-  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  // gatewayPullPlan: a session name, a Keep same IP time or How many above 1 mints sticky sessions;
+  // otherwise one rotating row.
+  const plan = gatewayPullPlan({ session, count, life });
+  const fixed = plan.session || (plan.sticky ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     const user = buildUser('');
     return [{ type, host: product.host, port, username: user, password, label: `CatProxies • ${product.kind} • ${where} • rotating`, country: cc || null, dedupeOnPassword: true }];
@@ -3389,9 +3443,11 @@ function gatewayOverride(host, port, def, label) {
 // Mint `count` sticky rows (one session id each) or a single rotating row, for vendors whose
 // targeting lives in the username. buildUser(sid) returns the full username for that session.
 // `max` is lower than MINTED_PULL_MAX only for a vendor that documents a session limit.
-function mintGatewayRows({ type, host, port, password, session, count, buildUser, label, max = MINTED_PULL_MAX }) {
-  // A blank session with How many > 1 mints that many sticky sessions; with 1 it stays rotating.
-  const fixed = String(session || '').trim() || (clampPoolCount(count, 1, 100) > 1 ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+// gatewayPullPlan decides sticky or rotating: a session name, a Keep same IP time (`life`) or How many
+// above 1 is sticky; otherwise one rotating row.
+function mintGatewayRows({ type, host, port, password, session, count, life, buildUser, label, max = MINTED_PULL_MAX }) {
+  const plan = gatewayPullPlan({ session, count, life });
+  const fixed = plan.session || (plan.sticky ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
   if (!fixed) {
     return [{ type, host, port, username: buildUser(''), password, label: `${label} • rotating`, dedupeOnPassword: true }];
   }
@@ -3435,7 +3491,7 @@ async function fetchRapidProxyPool({ username, password, country, state, city, s
   };
   const rows = mintGatewayRows({
     // SOCKS5 runs on the same host:port.
-    type: String(poolType || '').toLowerCase() === 'socks5' ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    type: String(poolType || '').toLowerCase() === 'socks5' ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life,
     buildUser: (sid) => rapidProxyUsername(sub, { country: cc, state, city, session: uniqueSid(sid), lifeMin: Number(life) }),
     label: `RapidProxy • ${where}`,
     max: MINTED_PULL_MAX
@@ -3459,7 +3515,7 @@ async function fetchNovadaPool({ username, password, poolType, country, state, c
   const gw = gatewayOverride(host, port, NOVADA_GATEWAY, 'NOVADA');
   const kind = { res: 'Residential', isp: 'Rotating ISP', mob: 'Mobile' }[NOVADA_ZONES[String(poolType || '').toLowerCase()] || 'res'];
   const rows = mintGatewayRows({
-    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life,
     buildUser: (sid) => novadaUsername(user, { poolType, country: cc, state, city, session: sid, lifeMin: Number(life) }),
     label: `NOVADA • ${kind} • ${cc || 'Global'}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -3618,7 +3674,7 @@ async function fetchProxmintPool({ token, poolType, country, state, city, sessio
   if (!port) throw new Error(`Proxmint: no ${socks ? 'SOCKS5' : 'HTTP'} port on the ${prod.name} product.`);
   const cc = normCountryCode(country);
   const rows = mintGatewayRows({
-    type: socks ? 'SOCKS5' : 'HTTP', host: prod.host, port, password: prod.password, session, count,
+    type: socks ? 'SOCKS5' : 'HTTP', host: prod.host, port, password: prod.password, session, count, life,
     buildUser: (sid) => proxmintUsername(prod.username, { country: cc, state, city, session: sid, ttlMin: life }),
     label: `Proxmint • ${prod.name} • ${cc || 'Worldwide'}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -3639,7 +3695,7 @@ async function fetchIpBurgerPool({ username, password, country, state, city, ses
   const gw = gatewayOverride(host, port, IPBURGER_GATEWAY, 'IP Burger');
   const cc = normCountryCode(country);
   const rows = mintGatewayRows({
-    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    type: 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life,
     buildUser: (sid) => ipBurgerUsername(base, { country: cc, state, city, session: sid, sesstimeMin: life }),
     label: `IP Burger • Residential • ${cc || 'Worldwide'}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -3745,7 +3801,7 @@ async function fetchDatabayPool({ username, password, poolType, country, state, 
   const cc = normCountryCode(country);
   const kind = { residential: 'Residential', residential_FLEX: 'Residential Flex', mobile: 'Mobile', datacenter: 'Datacenter' }[zone];
   const rows = mintGatewayRows({
-    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life,
     buildUser: (sid) => databayUsername(user, { zone, country: cc, state, city, session: sid, lengthMin: life }),
     label: `Databay • ${kind} • ${cc || 'Worldwide'}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -3767,7 +3823,7 @@ async function fetchIpfoxyPool({ username, password, country, state, city, sessi
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const cc = normCountryCode(country);
   const rows = mintGatewayRows({
-    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count,
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life,
     buildUser: (sid) => ipfoxyUsername(acct, { country: cc, state, city, session: sid, ttlMin: life }),
     label: `IPFoxy • Residential • ${cc || 'Worldwide'}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -4055,9 +4111,12 @@ async function vendorLookup(payload) {
 // ---- Provider account status (plan, expiry, traffic, balance) for the provider card ----
 // Uses the saved credentials and returns only the summary, never a secret. The last result per
 // provider is kept in the providerAccountCache setting, which only this gated handler reads.
+// readSavedProviderCreds is main-only: the account check and a provider-API rotation
+// (PROVIDER_ROTATORS) read the opened credentials here; they never go back to the window. An entry
+// with no key or login (hasProxyProviderKey) is nothing saved.
 async function readSavedProviderCreds(provider) {
-  const stored = (await readProxyProviderCredMap())[provider];
-  if (!stored || typeof stored !== 'object') return null;
+  const stored = (await readProxyProviderCredMap())[String(provider || '').toLowerCase()];
+  if (!hasProxyProviderKey(stored)) return null;
   const out = {};
   for (const f of PROXY_CRED_PLAIN_FIELDS) if (stored[f] != null) out[f] = stored[f];
   for (const f of PROXY_CRED_SECRET_FIELDS) if (stored[f] != null) out[f] = secretStore.open(stored[f]);
@@ -4105,10 +4164,9 @@ async function fetchTwoExtractPool({ username, password, country, state, city, z
   const cc = normCountryCode(country);
   const asnTag = String(asn || '').trim();
   const lifeMin = String(life == null ? '' : life).trim();
-  // A chosen Keep same IP needs a session to apply to, even for a single row.
-  const fixed = String(session || '').trim() || (lifeMin ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  // A chosen Keep same IP makes even one row sticky (gatewayPullPlan).
   const rows = mintGatewayRows({
-    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session: fixed, count, max: MINTED_PULL_MAX,
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life: lifeMin, max: MINTED_PULL_MAX,
     buildUser: (sid) => twoExtractUsername(username, { country, state, city, zip, asn, session: sid, timeMin: sid ? lifeMin : '' }),
     label: `2extract • ${cc || (asnTag ? `ASN ${asnTag}` : 'Worldwide')}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -4130,10 +4188,9 @@ async function fetchGonzoProxyPool({ username, password, country, state, city, s
   const socks = String(proxyType || '').toLowerCase() === 'socks5';
   const cc = normCountryCode(country);
   const lifeMin = String(life == null ? '' : life).trim();
-  // A chosen Keep same IP needs a session to apply to, even for a single row.
-  const fixed = String(session || '').trim() || (lifeMin ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  // A chosen Keep same IP makes even one row sticky (gatewayPullPlan).
   const rows = mintGatewayRows({
-    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session: fixed, count, max: MINTED_PULL_MAX,
+    type: socks ? 'SOCKS5' : 'HTTP', host: gw.host, port: gw.port, password: pw, session, count, life: lifeMin, max: MINTED_PULL_MAX,
     buildUser: (sid) => gonzoProxyUsername(username, { country, state, city, session: sid, ttlMin: sid ? lifeMin : '' }),
     label: `GonzoProxy • ${cc || 'Unknown'}`
   }).map((r) => ({ ...r, country: cc || null }));
@@ -4153,11 +4210,10 @@ async function fetchSimplyProxiesPool({ username, password, poolType, country, s
   const cc = String(country || '').trim().toUpperCase();
   if (cc && cc !== 'GB') throw new Error(`Simply Proxies only has UK exits, not ${cc}.`);
   const minutes = String(life == null ? '' : life).trim();
-  // A chosen Keep same IP needs a session to apply to, even for a single row.
-  const fixed = String(session || '').trim() || (minutes ? `sg${crypto.randomBytes(3).toString('hex')}` : '');
+  // A chosen Keep same IP makes even one row sticky (gatewayPullPlan).
   const net = String(poolType || '').toLowerCase();
   const rows = mintGatewayRows({
-    type: 'SOCKS5', host: SIMPLYPROXIES_GATEWAY.host, port: SIMPLYPROXIES_GATEWAY.socks, password: pw, session: fixed, count, max: MINTED_PULL_MAX,
+    type: 'SOCKS5', host: SIMPLYPROXIES_GATEWAY.host, port: SIMPLYPROXIES_GATEWAY.socks, password: pw, session, count, life: minutes, max: MINTED_PULL_MAX,
     buildUser: (sid) => simplyProxiesUsername(username, { network: poolType, session: sid, minutes: sid ? minutes : '' }),
     label: `Simply Proxies • UK${SIMPLYPROXIES_NETWORKS.includes(net) ? ` • ${net === 'o2' ? 'O2' : net === 'ee' ? 'EE' : net.charAt(0).toUpperCase() + net.slice(1)}` : ''}`
   }).map((r) => ({ ...r, country: 'GB' }));
@@ -7809,7 +7865,7 @@ async function respondToBlock(evt, profile, proxy) {
     hasProxy: Boolean(proxy),
     busy: profileDrivenByAutomation(id),
     withinBudget: blockDetect.withinSwitchBudget(times, now),
-    canRotate: Boolean(proxy) && (Boolean(proxy.rotationUrl) || isDataImpulseSticky(proxy)),
+    canRotate: proxyCanRotate(proxy),
     poolInUse: Boolean(proxy) && (proxy.id !== profile.proxyId || await profileUsesRotationPool(id))
   });
   if (!plan.steps.length) return { action: 'none', reason: plan.reason };
@@ -9398,7 +9454,15 @@ async function setGlobalSettingsForActor(payload) {
 // Saved proxy provider credentials, one workspace-wide Setting blob keyed by provider; secret
 // fields are DPAPI-sealed via secretStore. apiUrl is secret: a Live Proxies link carries the access code.
 const PROXY_CRED_SECRET_FIELDS = ['password', 'token', 'apiToken', 'apiUrl'];
-const PROXY_CRED_PLAIN_FIELDS = ['username', 'zone', 'plan', 'host', 'port', 'orderId'];
+// teamId (AnyIP) and proxyType (the Protocol or Proxy type select) are kept so they survive a restart.
+const PROXY_CRED_PLAIN_FIELDS = ['username', 'zone', 'plan', 'host', 'port', 'orderId', 'teamId', 'proxyType'];
+// The fields that make an entry a saved credential. Host, port, plan and the selects alone are not: an
+// entry without any of these counts as nothing saved, so the provider does not show as Connected.
+const PROXY_CRED_KEY_FIELDS = ['username', ...PROXY_CRED_SECRET_FIELDS];
+
+function hasProxyProviderKey(entry) {
+  return Boolean(entry && typeof entry === 'object' && PROXY_CRED_KEY_FIELDS.some((f) => entry[f] != null && String(entry[f]) !== ''));
+}
 
 async function readProxyProviderCredMap() {
   const raw = await readSetting('proxyProviderCreds', {});
@@ -9412,7 +9476,8 @@ async function getProxyProviderCreds(payload) {
   const provider = requiredString(input.provider, 'provider').toLowerCase();
   const map = await readProxyProviderCredMap();
   const stored = map[provider];
-  if (!stored || typeof stored !== 'object') return { found: false };
+  // An entry left empty by an older build (fields cleared, then saved) is nothing saved.
+  if (!hasProxyProviderKey(stored)) return { found: false };
   const out = { found: true };
   for (const f of PROXY_CRED_PLAIN_FIELDS) if (stored[f] != null) out[f] = stored[f];
   // Secrets are sealed at rest; open() is fail-safe (returns input if not sealed).
@@ -9436,9 +9501,11 @@ async function saveProxyProviderCreds(payload) {
     const v = String(input[f] == null ? '' : input[f]);
     if (v) entry[f] = secretStore.seal(v); else delete entry[f];
   }
-  map[provider] = entry;
+  // Clearing every key and login removes the entry, so the provider is no longer shown as Connected.
+  const saved = hasProxyProviderKey(entry);
+  if (saved) map[provider] = entry; else delete map[provider];
   await writeSetting('proxyProviderCreds', map);
-  return { ok: true };
+  return { ok: true, saved };
 }
 
 // ---- Affiliate links for the Proxy Providers tab ----

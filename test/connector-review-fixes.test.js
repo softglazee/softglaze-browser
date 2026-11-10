@@ -52,6 +52,6 @@ test('panel flags match what the adapters read', () => {
   assert.match(UI, /key: 'proxidize'.*geo: true/);
   for (const k of ['airproxy', 'mobileproxyspace', 'proxysolutions']) assert.match(UI, new RegExp(`key: '${k}'.*list: true`), k);
   for (const [k, m] of [['novada', 120], ['rapidproxy', 180], ['proxmint', 120], ['databay', 120]]) assert.match(UI, new RegExp(`key: '${k}'.*maxLife: ${m}`), k);
-  assert.match(UI, /\.filter\(\(m\) => !provider\.geoSync\.maxLife \|\| m <= provider\.geoSync\.maxLife\)/);
+  assert.match(UI, /\{lifeOptionsFor\(provider\.geoSync\)\.map\(/, 'Keep same IP offers only what the vendor accepts (src/renderer/lib/gatewayPull.mjs)');
   assert.doesNotMatch(UI, /up to 500/, 'no promise the adapters do not keep');
 });
