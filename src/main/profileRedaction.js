@@ -69,13 +69,22 @@ function redactPlatformAccounts(accounts, reveal) {
   });
 }
 
-// Remove what the renderer must not receive from a profile row (before serialization).
+// Remove what the renderer must not receive from a profile row (before serialization). Without
+// `reveal` (proxies.reveal) the proxy address loses its username as well as its password, as the
+// Proxy pool shows it, and the linked proxy's rotation link (it often holds the vendor's API key).
 function redactProfileRow(profile, { reveal }) {
   const out = { ...profile };
   out.twoFactorSeed = profile.twoFactorSeed ? SECRET_MASK : null;
   if (!reveal) {
-    out.proxyInfoString = maskProxyInfoString(profile.proxyInfoString, profile.proxy);
-    if (out.proxy && typeof out.proxy === 'object') out.proxy = { ...out.proxy, password: out.proxy.password ? SECRET_MASK : '' };
+    out.proxyInfoString = maskProxyInfoString(profile.proxyInfoString, profile.proxy, { maskUsername: true });
+    if (out.proxy && typeof out.proxy === 'object') {
+      out.proxy = {
+        ...out.proxy,
+        username: out.proxy.username ? SECRET_MASK : out.proxy.username,
+        password: out.proxy.password ? SECRET_MASK : '',
+        rotationUrl: out.proxy.rotationUrl ? SECRET_MASK : (out.proxy.rotationUrl ?? null)
+      };
+    }
     if (typeof out.platformAccounts === 'string') {
       let accs = [];
       try { accs = JSON.parse(out.platformAccounts); } catch (e) { accs = []; }
@@ -119,10 +128,57 @@ function restoreMaskedSecrets(input, existing) {
   }
 
   if (typeof out.proxyRaw === 'string' && out.proxyRaw.includes(SECRET_MASK)) {
-    const pass = existing && existing.proxy && existing.proxy.password ? String(existing.proxy.password) : '';
-    out.proxyRaw = out.proxyRaw.split(SECRET_MASK).join(pass);
+    out.proxyRaw = restoreMaskedProxyRaw(out.proxyRaw, storedProxyCredentials(existing));
   }
   return out;
 }
 
-module.exports = { SECRET_MASK, maskProxyInfoString, redactForeignProxy, redactUseOnlyProxy, redactPlatformAccounts, redactProfileRow, restoreMaskedSecrets };
+// The proxy credentials a profile has stored: its linked proxy's, else the ones in a proxy address
+// saved without a pool proxy (host:port:user:pass, read as maskProxyInfoString writes it). Null when
+// it has none.
+function storedProxyCredentials(profile) {
+  if (!profile) return null;
+  const p = profile.proxy;
+  if (p && p.host) return { host: String(p.host), port: p.port, username: p.username || '', password: p.password || '' };
+  const s = profile.proxyInfoString == null ? '' : String(profile.proxyInfoString);
+  const parts = s.split(':');
+  if (parts.length < 3 || !parts[0]) return null;
+  return { host: parts[0], port: parts[1], username: parts[2] || '', password: parts.slice(3).join(':') };
+}
+
+// The editor builds host:port:user:pass from its fields (ProfilesPage constructProxyString); a member
+// without proxies.reveal gets the username and password as masks, so a save or "Check network" sends
+// them back masked. Each masked part is put back from what is stored, the username from the stored
+// username and the password from the stored password (before 1.0.26 every mask became the password).
+// The hidden values stay with the host they belong to: with a different host the call is refused,
+// otherwise a member could send credentials they may not see to a server of their own. Nothing stored
+// (a new profile): masks become empty, never dots.
+function restoreMaskedProxyRaw(raw, stored) {
+  const s = String(raw);
+  if (!s.includes(SECRET_MASK)) return s;
+  const parts = s.split(':');
+  if (parts.length < 3) return s.split(SECRET_MASK).join('');
+  const host = parts[0];
+  const port = parts[1];
+  const user = parts[2];
+  const pass = parts.slice(3).join(':');
+  const userMasked = user === SECRET_MASK;
+  const passMasked = pass === SECRET_MASK;
+  if (!stored) {
+    const u = userMasked ? '' : user;
+    return parts.length > 3 ? `${host}:${port}:${u}:${passMasked ? '' : pass}` : `${host}:${port}:${u}`;
+  }
+  if ((userMasked || passMasked) && String(host).trim().toLowerCase() !== String(stored.host).trim().toLowerCase()) {
+    const e = new Error('The proxy username and password are hidden for your account, so they stay with their host. To use another host, type the username and password again.');
+    e.code = 'FORBIDDEN';
+    throw e;
+  }
+  const u = userMasked ? String(stored.username || '') : user;
+  if (parts.length === 3) return `${host}:${port}:${u}`;
+  return `${host}:${port}:${u}:${passMasked ? String(stored.password || '') : pass}`;
+}
+
+module.exports = {
+  SECRET_MASK, maskProxyInfoString, redactForeignProxy, redactUseOnlyProxy, redactPlatformAccounts, redactProfileRow,
+  restoreMaskedSecrets, restoreMaskedProxyRaw, storedProxyCredentials
+};

@@ -323,6 +323,7 @@ test('E3: firefoxEngine hands the token over through a managed-storage manifest 
   assert.deepEqual(m.data, { token: 'abc123' });
   assert.ok(ff.managedStoragePath().includes('autofill@softglaze.app'));
   const src = SRC('main/firefoxEngine.js');
-  assert.match(src, /await writeAutofillManagedToken\(autofillBridge\.getToken\(\)\);\s*await autofillBridge\.acquire\(\);/);
+  // Round 5: each Firefox profile acquires its own port (test/permissionsRound5.test.js).
+  assert.match(src, /await writeAutofillManagedToken\(autofillBridge\.getToken\(\)\);\s*const held = await autofillBridge\.acquire\(sessionId\);/);
   assert.match(src, /session\.releaseAutofill\(\);/);
 });

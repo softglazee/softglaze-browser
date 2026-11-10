@@ -44,6 +44,7 @@
     "back": "Back",
     "skip": "Skip",
     "saveAndContinue": "Save & continue",
+    "saveAndFinish": "Save & finish",
     "msg": {
       "smtpSaved": "SMTP saved.",
       "proxySaved": "Proxy saved."
@@ -56,6 +57,9 @@
     "welcome": {
       "title": "Welcome to SoftGlaze",
       "subtitle": "A quick 3-step setup gets you to your first profile. You can skip any step.",
+      "subtitleShort_one": "One quick step. You can skip it.",
+      "subtitleShort_other": "A quick {{count}}-step setup. You can skip any step.",
+      "unavailable": "Greyed-out steps are skipped: your account cannot do them.",
       "getStarted": "Get started",
       "stepEmail": "Email (SMTP) - optional, for OTP codes",
       "stepProxy": "Your first proxy - optional",

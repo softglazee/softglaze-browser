@@ -38,3 +38,14 @@ export function quickGenProgressView(frame, { requested = 0, uniqueProxies = fal
 
   return base;
 }
+
+// The names Quick generate gives its profiles: `<base>-<number>`, numbered from `start` and padded with
+// zeros to the width of the last number (3 profiles: -1 to -3; 12: -01 to -12; 100: -001 to -100).
+// main names them with the same rule (ipcHandlers.js batchGenerateProfiles; test/permissionsRound5.test.js
+// keeps the two equal), so the preview shows the names that will be created.
+export function quickGenNumber(start, index, count) {
+  const first = Number.isFinite(Number(start)) ? Math.max(0, Math.floor(Number(start))) : 1;
+  const n = Number.isFinite(Number(count)) && Number(count) >= 1 ? Math.floor(Number(count)) : 1;
+  const width = String(first + n - 1).length;
+  return String(first + index).padStart(width, '0');
+}

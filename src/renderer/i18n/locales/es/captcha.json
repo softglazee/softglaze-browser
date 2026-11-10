@@ -113,6 +113,7 @@
     },
     "webrtc": {
       "pass": "El modo {{mode}} mantiene oculta tu IP real.",
+      "realNoProxy": "Real sin proxy: los sitios ya ven la IP de este equipo, así que WebRTC no les muestra nada nuevo.",
       "warn": "WebRTC está desactivado, algo que pocos navegadores reales hacen.",
       "fail": "Está en Real, lo que muestra tu IP real detrás del proxy."
     },

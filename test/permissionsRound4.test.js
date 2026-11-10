@@ -351,7 +351,10 @@ function loadSettings(stored = {}, { memberPageLists } = {}) {
     'activeIsSuperAdmin', 'withoutSuperOnlyKeys', 'getGlobalSettingsForActor', 'changedGlobalSettingKeys',
     'assertCanWriteGlobalSettings', 'withoutWorkspaceSecrets', 'setGlobalSettingsForActor',
     'withMemberPageLists', 'pageListsOwnerKey', 'emptyPageLists', 'memberSinceStamp', 'copyJson', 'loadMemberPageLists',
-    'ownPageListsIn', 'readOwnPageLists', 'writeOwnPageLists'], {
+    'ownPageListsIn', 'readOwnPageLists', 'writeOwnPageLists',
+    // The first-run flag is each member's own since round 5 (test/permissionsRound5.test.js).
+    'onboardingOwnerKey', 'withMemberOnboarding', 'loadMemberOnboarding', 'ownOnboardingDoneIn', 'readOwnOnboardingDone',
+    'readOwnOnboardingDoneSafe', 'writeOwnOnboardingDone'], {
     ...ws.deps,
     readSetting: async (k, d) => (settings.has(k) ? JSON.parse(JSON.stringify(settings.get(k))) : d),
     readSettingStrict: async (k) => {
@@ -360,7 +363,7 @@ function loadSettings(stored = {}, { memberPageLists } = {}) {
     },
     writeSetting: async (k, v) => { settings.set(k, JSON.parse(JSON.stringify(v))); }
   }, ['GLOBAL_SETTINGS_DEFAULTS', 'SUPER_ONLY_GLOBAL_KEYS', 'GLOBAL_SETTING_WRITE_RULES', 'WORKSPACE_SETTING_RULE', 'SETTING_ROLE_PHRASE',
-    'MEMBER_PAGE_LIST_KEYS', 'MEMBER_PAGE_LISTS_SETTING', 'memberPageListsLock']);
+    'MEMBER_PAGE_LIST_KEYS', 'MEMBER_PAGE_LISTS_SETTING', 'memberPageListsLock', 'MEMBER_ONBOARDING_SETTING', 'memberOnboardingLock']);
   return { db, ws, fns, settings, state, shared: () => settings.get('globalSettings'), store: () => settings.get('memberPageLists') };
 }
 const SHARED = {
@@ -520,7 +523,8 @@ function loadLaunchers(globals = { smartAutofill: { enabled: true, members: fals
   const window = { id: null, signedIn: true };
   const sessionLaunchers = new Map();
   const ffSessions = new Set();
-  const fns = loadMain(['recordSessionLauncher', 'vaultAutofillAllowed', 'personaVaultAvailable', 'sessionAutofillAllowed', 'firefoxAutofillAllowed'], {
+  // Round 5: firefoxAutofillAllowed is gone; a Firefox session is asked like a Chromium one.
+  const fns = loadMain(['recordSessionLauncher', 'vaultAutofillAllowed', 'personaVaultAvailable', 'sessionAutofillAllowed'], {
     permissions,
     sessionLaunchers,
     // The member signed in to the window; the rule must not read it any more.
@@ -560,7 +564,7 @@ test('single-user launches count as the Owner; a failed launch puts the previous
   const undo = fns.recordSessionLauncher(104, 3);
   assert.equal(await fns.sessionAutofillAllowed('104'), false);
   undo();
-  assert.deepEqual(sessionLaunchers.get('104'), { memberId: null, firefoxAutofill: false });
+  assert.deepEqual(sessionLaunchers.get('104'), { memberId: null });
   undo(); // twice is harmless
   const undoNew = fns.recordSessionLauncher(105, 2);
   undoNew();
@@ -568,22 +572,19 @@ test('single-user launches count as the Owner; a failed launch puts the previous
   assert.equal(await fns.vaultAutofillAllowed(undefined), false, 'no launcher known: nothing');
 });
 
-test('the Firefox bridge answers only while every Firefox profile with the add-on was launched by an allowed member', async () => {
+// Round 5 replaced the fail-closed rule (every running Firefox profile had to be allowed): each Firefox
+// profile has its own bridge port, so the bridge names the session (test/permissionsRound5.test.js).
+test('the Firefox bridge follows the launcher of the profile asking, not the other Firefox profiles', async () => {
   const { fns, ffSessions, globals } = loadLaunchers();
-  assert.equal(await fns.personaVaultAvailable({ firefox: true }), false, 'no Firefox autofill session');
-  fns.recordSessionLauncher(104, 1, { firefoxAutofill: true });
+  fns.recordSessionLauncher(104, 1); // the Owner's Firefox
   ffSessions.add('104');
-  fns.recordSessionLauncher(100, 3, { firefoxAutofill: false }); // X's Firefox launched without the add-on
-  ffSessions.add('100');
-  assert.equal(await fns.personaVaultAvailable({ firefox: true }), true);
   globals.smartAutofill.members = true;
-  fns.recordSessionLauncher(101, 4, { firefoxAutofill: true }); // Y's, while members were allowed
+  fns.recordSessionLauncher(101, 4); // Y's, while members were allowed
   ffSessions.add('101');
-  assert.equal(await fns.firefoxAutofillAllowed(), true);
-  globals.smartAutofill.members = false; // the Owner turns it off: the bridge cannot tell Y's from the Owner's
-  assert.equal(await fns.firefoxAutofillAllowed(), false, 'fails closed');
-  ffSessions.delete('101');
-  assert.equal(await fns.firefoxAutofillAllowed(), true, 'Y\'s Firefox closed');
+  assert.equal(await fns.personaVaultAvailable({ sessionId: '101' }), true);
+  globals.smartAutofill.members = false; // the Owner turns it off
+  assert.equal(await fns.personaVaultAvailable({ sessionId: '101' }), false, 'Y\'s Firefox gets nothing');
+  assert.equal(await fns.personaVaultAvailable({ sessionId: '104' }), true, 'the Owner\'s Firefox keeps it');
 });
 
 test('launch records the launcher before the engine starts, and session ends drop it', () => {
@@ -591,7 +592,7 @@ test('launch records the launcher before the engine starts, and session ends dro
   assert.match(body, /const launchedBy = actingMemberId\(\) == null \? null : actingMemberId\(\);/);
   const chrome = body.indexOf('undoLauncher = recordSessionLauncher(profile.id, launchedBy);');
   assert.ok(chrome > 0 && chrome < body.indexOf('const session = await launchProfileSession({'), 'Chromium: recorded before the engine call');
-  const ff = body.indexOf('undoLauncher = recordSessionLauncher(profile.id, launchedBy, { firefoxAutofill: ffAutofill });');
+  const ff = body.indexOf('undoLauncher = recordSessionLauncher(profile.id, launchedBy);', body.indexOf('if (isFirefox) {'));
   assert.ok(ff > 0 && ff < body.indexOf('await firefoxEngine.launchFirefoxProfile({'), 'Firefox: recorded before the engine call');
   assert.match(body, /&& \(await vaultAutofillAllowed\(launchedBy\)\);/);
   assert.match(body, /if \(ffSession && ffSession\.alreadyRunning\) undoLauncher\(\);/);

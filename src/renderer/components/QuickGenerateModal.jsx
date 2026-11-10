@@ -4,7 +4,7 @@ import { Wand2, X, Loader2, Server, ListPlus, Ban, Link2, AlertTriangle, CheckCi
 import { useDialog } from '@/lib/useDialog.js';
 import { countBuckets } from '@/lib/proxyBuckets.mjs';
 import { healthyFreeProxies } from '@/lib/freeProxies.mjs';
-import { quickGenProgressView } from '@/lib/quickGenProgress.mjs';
+import { quickGenNumber, quickGenProgressView } from '@/lib/quickGenProgress.mjs';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
 const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary transition-colors';
@@ -64,7 +64,8 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
     { id: 'paste', label: t('quickGenerate.proxyModePaste'), icon: ListPlus }
   ];
   const start = 1;
-  const pad = (x) => String(x).padStart(3, '0');
+  // The number main gives the profile at `index` of this run (the same padding rule as main).
+  const pad = (index) => quickGenNumber(start, index, count);
 
   // Distinct providers present in the pool (for "create from <provider> proxies").
   const providerCounts = {};
@@ -158,7 +159,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
             <div><label className={labelCls}>{t('quickGenerate.quantity')}</label><input type="number" min={1} max={500} className={inputCls} value={count} onChange={(e) => setCount(e.target.value)} /></div>
             <div className="col-span-2"><label className={labelCls}>{t('quickGenerate.baseName')}</label><input className={inputCls} value={baseName} onChange={(e) => setBaseName(e.target.value)} placeholder="Profile" /></div>
           </div>
-          <p className="text-[11px] text-muted-dark -mt-2">{t('quickGenerate.createsPrefix')} <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(start)}</span>, <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(start + 1)}</span> …</p>
+          <p className="text-[11px] text-muted-dark -mt-2">{t('quickGenerate.createsPrefix')} <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(0)}</span>{Number(count) > 1 && <>, <span className="font-mono text-muted">{baseName || 'Profile'}-{pad(1)}</span></>}{Number(count) > 2 && ' …'}</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div>

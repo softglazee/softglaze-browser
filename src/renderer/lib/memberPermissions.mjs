@@ -95,3 +95,25 @@ export function featureVisible(me, key) {
   const f = me.permissions && me.permissions.features;
   return !f || f[key] !== false;
 }
+
+// The first-run wizard's steps and what main checks for each:
+//   smtp    email:set-config, the Owner only (requireOwnerOrSuper);
+//   proxy   proxies.manage, and the Proxies page not turned off (featureGate, proxy:create);
+//   profile profiles.create, and the Profiles page not turned off (featureGate, profile:create).
+// Returns { smtp, proxy, profile }: null when the member may do the step, else why not
+// ({ kind: 'role' | 'revoked' | 'inactive' | 'loading' } as denial(), or { kind: 'feature', feature }).
+export const ONBOARDING_STEPS = Object.freeze(['smtp', 'proxy', 'profile']);
+export function onboardingStepDenials(me) {
+  const ownerOnly = () => {
+    if (me === undefined) return { kind: 'loading' };
+    if (me === null || me.role === 'SUPER_ADMIN') return null;
+    if (inactive(me)) return { kind: 'inactive' };
+    return me.role === 'OWNER' ? null : { kind: 'role', role: 'OWNER' };
+  };
+  const withPage = (action, feature) => denial(me, action) || (featureVisible(me, feature) ? null : { kind: 'feature', feature });
+  return {
+    smtp: ownerOnly(),
+    proxy: withPage('proxies.manage', 'proxies'),
+    profile: withPage('profiles.create', 'profiles')
+  };
+}

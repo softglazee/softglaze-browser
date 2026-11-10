@@ -37,8 +37,9 @@ function redactForRole(role, kind, record) {
       // Connectivity stays usable in the UI; the secrets are blanked.
       if ('username' in out) out.username = out.username ? REDACTED : '';
       if ('password' in out) out.password = out.password ? REDACTED : '';
-      // Also blank combined host:port:user:pass strings, which per-field masking would leak.
-      for (const f of ['proxyRaw', 'url', 'connectionString']) {
+      // Also blank combined host:port:user:pass strings, which per-field masking would leak, and the
+      // vendor's rotation link, which often carries the account's API key.
+      for (const f of ['proxyRaw', 'url', 'connectionString', 'rotationUrl']) {
         if (out[f]) out[f] = REDACTED;
       }
       out.hasUsername = Boolean(record.username);
