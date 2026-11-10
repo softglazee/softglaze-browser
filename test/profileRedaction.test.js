@@ -29,8 +29,10 @@ test('the 2FA seed never leaves the main process, even for the owner', () => {
 
 test('a restricted viewer gets the proxy and platform passwords masked', () => {
   const r = redactProfileRow(row(), { reveal: false });
-  assert.equal(r.proxyInfoString, `1.2.3.4:8080:alice:${SECRET_MASK}`);
+  // Round 5: the proxy username is masked too, as the Proxy pool masks it (test/permissionsRound5.test.js).
+  assert.equal(r.proxyInfoString, `1.2.3.4:8080:${SECRET_MASK}:${SECRET_MASK}`);
   assert.ok(!JSON.stringify(r).includes('s3cret'));
+  assert.ok(!JSON.stringify(r).includes('alice'));
   const accs = redactPlatformAccounts(JSON.parse(row().platformAccounts), false);
   assert.equal(accs[0].password, SECRET_MASK);
   assert.equal(accs[0].username, 'a@x.com');

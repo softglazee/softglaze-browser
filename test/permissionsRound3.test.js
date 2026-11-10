@@ -144,13 +144,16 @@ function loadSettings(stored = {}) {
     'assertCanWriteGlobalSettings', 'withoutWorkspaceSecrets', 'setGlobalSettingsForActor',
     // Saved filters and warm-up lists are each member's own since round 4 (test/permissionsRound4.test.js).
     'withMemberPageLists', 'pageListsOwnerKey', 'emptyPageLists', 'memberSinceStamp', 'copyJson', 'loadMemberPageLists',
-    'ownPageListsIn', 'readOwnPageLists', 'writeOwnPageLists'], {
+    'ownPageListsIn', 'readOwnPageLists', 'writeOwnPageLists',
+    // The first-run flag is each member's own since round 5 (test/permissionsRound5.test.js).
+    'onboardingOwnerKey', 'withMemberOnboarding', 'loadMemberOnboarding', 'ownOnboardingDoneIn', 'readOwnOnboardingDone',
+    'readOwnOnboardingDoneSafe', 'writeOwnOnboardingDone'], {
     ...ws.deps,
     readSetting: async (k, d) => (settings.has(k) ? JSON.parse(JSON.stringify(settings.get(k))) : d),
     readSettingStrict: async (k) => (settings.has(k) ? JSON.parse(JSON.stringify(settings.get(k))) : undefined),
     writeSetting: async (k, v) => { settings.set(k, JSON.parse(JSON.stringify(v))); }
   }, ['GLOBAL_SETTINGS_DEFAULTS', 'SUPER_ONLY_GLOBAL_KEYS', 'GLOBAL_SETTING_WRITE_RULES', 'WORKSPACE_SETTING_RULE', 'SETTING_ROLE_PHRASE',
-    'MEMBER_PAGE_LIST_KEYS', 'MEMBER_PAGE_LISTS_SETTING', 'memberPageListsLock']);
+    'MEMBER_PAGE_LIST_KEYS', 'MEMBER_PAGE_LISTS_SETTING', 'memberPageListsLock', 'MEMBER_ONBOARDING_SETTING', 'memberOnboardingLock']);
   return { ws, fns, settings, stored: () => settings.get('globalSettings') };
 }
 
@@ -188,11 +191,14 @@ test('workspace settings: a member\'s own page lists stay writable, Smart Autofi
   await fns.setGlobalSettingsForActor({ profileFilters: [{ name: 'mine', filter: {} }] });
   await fns.setGlobalSettingsForActor({ onboardingDone: true });
   await fns.setGlobalSettingsForActor({ warmer: { sites: ['https://example.com'] } });
-  assert.equal(stored().onboardingDone, true);
+  // Round 5: the first-run flag is the Operator's own; the workspace's (the Owner's) is unchanged.
+  assert.equal(stored().onboardingDone, undefined);
+  assert.equal((await fns.getGlobalSettingsForActor()).onboardingDone, true);
   // Round 4: the filters and warm-up lists are the Operator's own; the Owner's stay as they were.
   const mine = await fns.getGlobalSettingsForActor();
   assert.deepEqual([mine.profileFilters.length, mine.warmer.sites.length], [1, 1]);
-  assert.deepEqual([stored().profileFilters.length, stored().warmer], [0, undefined]);
+  // (No write of the Operator's reaches globalSettings any more, so it holds nothing at all here.)
+  assert.deepEqual([(stored().profileFilters || []).length, stored().warmer], [0, undefined]);
   ws.as(3, revoked('automation.run'));
   await assert.rejects(fns.setGlobalSettingsForActor({ warmer: { loop: true } }), /turned off for your account by an administrator/);
 
@@ -446,7 +452,8 @@ function loadAutofill(globals = {}) {
   const db = seed();
   const state = { id: null, dbDown: false };
   const sessionLaunchers = new Map();
-  const fns = loadMain(['vaultAutofillAllowed', 'personaVaultAvailable', 'sessionAutofillAllowed', 'firefoxAutofillAllowed'], {
+  // Round 5: the Firefox-wide rule (firefoxAutofillAllowed) is gone; both bridges ask per session.
+  const fns = loadMain(['vaultAutofillAllowed', 'personaVaultAvailable', 'sessionAutofillAllowed'], {
     permissions,
     sessionLaunchers,
     firefoxEngine: { isFirefoxSession: () => false },
@@ -490,7 +497,8 @@ test('both autofill bridges and the Firefox launch use the rule', () => {
   assert.match(chromium, /isAvailable: \(ctx\) => personaVaultAvailable\(\{ sessionId: /);
   assert.match(chromium, /return on && \(await sessionAutofillAllowed\(/, 'no autofill button in a browser its launcher may not use it in');
   const firefox = reg.slice(reg.indexOf('autofillBridge.configure({'));
-  assert.match(firefox, /isAvailable: \(\) => personaVaultAvailable\(\{ firefox: true \}\)/);
+  // Round 5: the Firefox bridge passes the session that owns the port the call came in on.
+  assert.match(firefox, /isAvailable: \(ctx\) => personaVaultAvailable\(\{ sessionId: ctx && ctx\.sessionId != null \? ctx\.sessionId : null \}\)/);
   assert.match(IPC, /&& \(globalSettings\.smartAutofill\?\.firefox !== false\)\s*&& \(await vaultAutofillAllowed\(launchedBy\)\);/, 'the Firefox autofill add-on is installed only for an allowed launcher');
   // The Owner's switch lives in Settings > Smart Autofill (Owner only), and the Data Vault notice says so.
   for (const lang of ['en', 'es']) {

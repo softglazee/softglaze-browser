@@ -167,7 +167,10 @@ function loadCheckProxy(result) {
   const seen = [];
   const persisted = [];
   const db = { proxy: { findUnique: async ({ where }) => ({ id: where.id, type: 'SOCKS5', host: 's.example', port: 1080, username: 'u', password: 'p', createdAt: new Date(0) }) } };
-  const fns = loadMain([...VALIDATORS, 'parseProxyType', 'proxyTypeHintFor', 'checkProxy'], {
+  // Round 5: masked fields from the editor are put back first (unmaskedEditorProxyRaw).
+  const fns = loadMain([...VALIDATORS, 'parseProxyType', 'proxyTypeHintFor', 'unmaskedEditorProxyRaw', 'checkProxy'], {
+    ...require('../src/main/profileRedaction'),
+    assertCanAccessProfile: async () => {},
     VALID_PROXY_TYPES: new Set(['HTTP', 'SOCKS5', 'SOCKS4']),
     getPrisma: () => db,
     assertCanAccessProxy: async () => {},
