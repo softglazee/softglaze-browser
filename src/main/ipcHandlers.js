@@ -10987,15 +10987,18 @@ const STARTER_MACROS = [
     ]
   },
   {
+    // Wikipedia's own search page (fulltext=1 in its form, so Enter always lists results), checked on a
+    // fresh profile with the runner's step rules on 10 Nov 2026. The Google version failed on fresh
+    // profiles (consent page, "unusual traffic" check); see refreshSeededStarterMacros.
     name: 'Search & open result',
-    description: 'Search Google for a query and open the first result. Edit the query in the "type" step.',
+    description: 'Search Wikipedia for a query and open the first result. Edit the query in the "type" step.',
     steps: [
-      { type: 'goto', url: 'https://www.google.com/' },
+      { type: 'goto', url: 'https://en.wikipedia.org/wiki/Special:Search' },
       { type: 'wait', ms: 1500 },
-      { type: 'type', selector: 'textarea[name="q"]', value: 'softglaze browser' },
+      { type: 'type', selector: '#searchText input', value: 'web browser' },
       { type: 'keypress', key: 'Enter' },
-      { type: 'wait', ms: 2500 },
-      { type: 'click', selector: 'h3' }
+      { type: 'waitFor', selector: '.mw-search-result-heading a', state: 'visible' },
+      { type: 'click', selector: '.mw-search-result-heading a' }
     ]
   },
   {
@@ -11011,6 +11014,47 @@ const STARTER_MACROS = [
     ]
   }
 ];
+
+// Starters seeded by earlier versions and since replaced. A seeded copy is updated once, and only while
+// it is exactly as seeded (same description and steps, no owner): a copy someone edited is left alone.
+const STARTER_MACRO_REPLACED = [
+  {
+    name: 'Search & open result',
+    description: 'Search Google for a query and open the first result. Edit the query in the "type" step.',
+    steps: [
+      { type: 'goto', url: 'https://www.google.com/' },
+      { type: 'wait', ms: 1500 },
+      { type: 'type', selector: 'textarea[name="q"]', value: 'softglaze browser' },
+      { type: 'keypress', key: 'Enter' },
+      { type: 'wait', ms: 2500 },
+      { type: 'click', selector: 'h3' }
+    ]
+  }
+];
+const STARTER_MACROS_REFRESHED_FLAG = 'starterMacrosRefreshed_v1';
+
+async function refreshSeededStarterMacros() {
+  if (await readSetting(STARTER_MACROS_REFRESHED_FLAG, false)) return { skipped: true };
+  const db = getPrisma();
+  let updated = 0;
+  for (const old of STARTER_MACRO_REPLACED) {
+    const next = STARTER_MACROS.find((m) => m.name === old.name);
+    if (!next) continue;
+    const rows = await db.macro.findMany({ where: { name: old.name } });
+    for (const row of rows) {
+      let steps = null;
+      try { steps = JSON.parse(row.stepsJson || 'null'); } catch (e) { steps = null; }
+      const asSeeded = row.ownerMemberId == null && row.description === old.description
+        && JSON.stringify(steps) === JSON.stringify(old.steps);
+      if (!asSeeded) continue;
+      await db.macro.update({ where: { id: row.id }, data: { description: next.description, stepsJson: JSON.stringify(next.steps) } });
+      updated += 1;
+    }
+  }
+  // Set only after every row was looked at, so a database error retries at the next start.
+  await writeSetting(STARTER_MACROS_REFRESHED_FLAG, true);
+  return { updated };
+}
 
 // The generator picks the OS at random, so retry until it matches, then fall back to any OS.
 function starterDesktopFingerprint(targetOs) {
@@ -11116,6 +11160,7 @@ async function afterDbReady() {
   sessionRestore = restoreSession();
   await sessionRestore;
   try { await seedStarters(); } catch (e) { /* best-effort */ }
+  try { await refreshSeededStarterMacros(); } catch (e) { /* best-effort; retried at the next start */ }
   // First-run browser fleet - fire-and-forget so the window opens immediately.
   maybeSeedBrowsers().catch(() => {});
   // Microsoft Store build: today counts as a day of use for the rating card (nothing elsewhere).
