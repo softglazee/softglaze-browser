@@ -714,6 +714,217 @@ ADAPTERS.mangoproxy = {
   }
 };
 
+// ---- ProxyBrazil: GET /proxies (Partner API, Bearer pb_live_ key) lists each dedicated 4G proxy with
+// its expiry and data_limit_mb / data_used_mb; the pull's own call, paged at 200. No balance. ----
+const PROXYBRAZIL_API = 'https://api.proxybrazil.com/v1';
+
+function proxyBrazilJson(body) {
+  const j = parseJson(body);
+  if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('ProxyBrazil: the API did not return JSON.');
+  if (j.error && typeof j.error === 'object') throw new Error(`ProxyBrazil: ${text(j.error.message, 160) || text(j.error.code, 60) || 'request failed'}`);
+  return j;
+}
+
+function parseProxyBrazilAccount(pageBodies, { now = Date.now() } = {}) {
+  const pages = (Array.isArray(pageBodies) ? pageBodies : [pageBodies]).map(proxyBrazilJson);
+  const list = pages.flatMap((j) => (Array.isArray(j.data) ? j.data : [])).filter((p) => p && typeof p === 'object');
+  const active = list.filter((p) => String(p.status || '').toLowerCase() === 'active');
+  return {
+    status: active.length ? 'active' : 'unknown',
+    plan: list.length ? 'Dedicated 4G' : null,
+    expiresAt: nextExpiry((active.length ? active : list).map((p) => p.expires_at), now),
+    trafficUsedGb: mbToGb(sumOrNull(list.map((p) => p.data_used_mb))),
+    trafficTotalGb: mbToGb(sumOrNull(list.map((p) => p.data_limit_mb))),
+    note: !list.length ? 'noActiveProxies' : (list.length > 1 ? 'summedPlans' : null)
+  };
+}
+
+ADAPTERS.proxybrazil = {
+  name: 'ProxyBrazil', needs: ['token'], needsLabel: 'API key', dashboardUrl: 'https://proxybrazil.com/dashboard',
+  async fetch(c, get, opts) {
+    const key = String(c.token).trim();
+    if (!/^pb_live_[A-Za-z0-9]{40}$/.test(key)) throw new Error('ProxyBrazil: the saved API key does not look right (it starts with pb_live_). Save it again on the Pull tab.');
+    const headers = bearer(key);
+    const bodies = [];
+    for (let page = 1; page <= 10; page += 1) {
+      const body = await get(`${PROXYBRAZIL_API}/proxies?page=${page}&per_page=200`, { headers });
+      bodies.push(body);
+      const j = parseJson(body);
+      const list = j && Array.isArray(j.data) ? j.data : [];
+      if (!list.length || !(num(j.page) * num(j.per_page) < num(j.total))) break;
+    }
+    return parseProxyBrazilAccount(bodies, opts);
+  }
+};
+
+// ---- ProxyUDP: GET /me/ (balance; top-ups are in USD) and GET /subscriptions/?active=true (each
+// port's expires_at and product name). "Authorization: Token <token>". ----
+const PROXYUDP_API = 'https://proxyudp.com/api/v1';
+const PROXYUDP_FLAG = /^\s*[\u{1F1E6}-\u{1F1FF}]{2}\s*/u;
+
+function parseProxyUdpAccount(meBody, subscriptionBodies, { now = Date.now() } = {}) {
+  const me = parseJson(meBody);
+  if (!me || typeof me !== 'object' || Array.isArray(me)) throw new Error('ProxyUDP: the API did not return JSON.');
+  const subs = (Array.isArray(subscriptionBodies) ? subscriptionBodies : [subscriptionBodies])
+    .map(parseJson).flatMap((j) => (j && Array.isArray(j.results) ? j.results : [])).filter((s) => s && typeof s === 'object');
+  const active = subs.filter((s) => String(s.status || '').toLowerCase() === 'active');
+  const counted = active.length ? active : subs;
+  const names = counted.map((s) => String(s.server_name || '').replace(PROXYUDP_FLAG, '').trim()).filter(Boolean);
+  const distinct = [...new Set(names)];
+  const balance = num(me.balance);
+  return {
+    status: active.length ? 'active' : 'unknown',
+    plan: distinct.length ? uniqueText(distinct.slice(0, 3)) : null,
+    expiresAt: nextExpiry(counted.map((s) => s.expires_at), now),
+    balance,
+    currency: balance != null ? 'USD' : null,
+    note: !counted.length ? 'noActiveProxies' : (counted.length > 1 ? 'firstToExpire' : null)
+  };
+}
+
+ADAPTERS.proxyudp = {
+  name: 'ProxyUDP', needs: ['token'], needsLabel: 'API token', dashboardUrl: 'https://proxyudp.com/en/account/dashboard/',
+  async fetch(c, get, opts) {
+    const key = String(c.token).trim();
+    if (/\s/.test(key)) throw new Error('ProxyUDP: the saved API token does not look right. Save it again on the Pull tab.');
+    const headers = { Authorization: `Token ${key}`, Accept: 'application/json' };
+    const me = await get(`${PROXYUDP_API}/me/`, { headers });
+    const pages = [];
+    for (let page = 1; page <= 20; page += 1) {
+      const body = await get(`${PROXYUDP_API}/subscriptions/?active=true&page=${page}`, { headers });
+      pages.push(body);
+      const j = parseJson(body);
+      if (!j || !Array.isArray(j.results) || !j.results.length || typeof j.next !== 'string' || !j.next) break;
+    }
+    return parseProxyUdpAccount(me, pages, opts);
+  }
+};
+
+// ---- Zokol: GET /v1/proxies/mobile/ (Bearer API key) gives each line's state, finishAt and whether
+// it is shared. Traffic units are not documented, so no traffic figure is shown. ----
+const ZOKOL_API = 'https://api.dashboard.zokol.fr';
+
+function parseZokolAccount(pageBodies, { now = Date.now() } = {}) {
+  const pages = (Array.isArray(pageBodies) ? pageBodies : [pageBodies]).map((b) => {
+    const j = parseJson(b);
+    if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('Zokol: the API did not return JSON.');
+    return j;
+  });
+  const list = pages.flatMap((j) => (Array.isArray(j.content) ? j.content : [])).filter((p) => p && typeof p === 'object');
+  const state = (p) => String(p.state || '').toUpperCase();
+  const live = list.filter((p) => state(p) === 'ACTIVE' || state(p) === 'EXPIRE_SOON');
+  const suspended = list.length > 0 && list.every((p) => state(p) === 'POLICY_VIOLATION');
+  const counted = live.length ? live : list;
+  return {
+    status: live.length ? 'active' : (suspended ? 'suspended' : 'unknown'),
+    plan: uniqueText(counted.map((p) => (p.shared === true ? 'Shared' : 'Dedicated'))),
+    expiresAt: nextExpiry(counted.map((p) => p.finishAt), now),
+    note: !live.length ? 'noActiveProxies' : (live.length > 1 ? 'firstToExpire' : null)
+  };
+}
+
+ADAPTERS.zokol = {
+  name: 'Zokol', needs: ['token'], needsLabel: 'API key', dashboardUrl: 'https://dashboard.zokol.fr/products/mobile-proxies/list',
+  async fetch(c, get, opts) {
+    const headers = bearer(c.token);
+    const pages = [];
+    for (let page = 0; page < 20; page += 1) {
+      const body = await get(`${ZOKOL_API}/v1/proxies/mobile/?active=true&size=100&page=${page}`, { headers });
+      pages.push(body);
+      const j = parseJson(body);
+      const pg = j && j.page && typeof j.page === 'object' ? j.page : {};
+      if (!j || !Array.isArray(j.content) || !j.content.length || !(num(pg.number) + 1 < num(pg.totalPages))) break;
+    }
+    return parseZokolAccount(pages, opts);
+  }
+};
+
+// ---- ResiProx: GET /user/me gives each pool's bandwidth in BYTES as strings. The docs: "1 GB =
+// 1,000,000,000 bytes ... Do not divide by 1024³", so this is decimal GB, not bytesToGb. ----
+const RESIPROX_API = 'https://dashboard.resiprox.com/api/v1';
+
+function decimalGb(v) { const n = num(v); return n == null ? null : round3(n / 1e9); }
+
+function parseResiProxAccount(body) {
+  const j = parseJson(body);
+  if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('ResiProx: the API did not return JSON.');
+  const data = (j.user && j.user.data) || j.data || {};
+  const pools = [['residential', 'Residential'], ['mobile', 'Mobile']]
+    .map(([k, label]) => ({ label, p: data && typeof data === 'object' ? data[k] : null }))
+    .filter((x) => x.p && typeof x.p === 'object')
+    .map(({ label, p }) => {
+      const bw = p.bandwidth && typeof p.bandwidth === 'object' ? p.bandwidth : {};
+      return { label, total: decimalGb(bw.total), used: decimalGb(bw.used), left: decimalGb(bw.remaining) };
+    });
+  const left = sumOrNull(pools.map((x) => x.left));
+  return {
+    status: pools.some((x) => (x.left || 0) > 0) ? 'active' : 'unknown',
+    plan: uniqueText(pools.map((x) => x.label)),
+    trafficLeftGb: left,
+    trafficUsedGb: sumOrNull(pools.map((x) => x.used)),
+    trafficTotalGb: sumOrNull(pools.map((x) => x.total)),
+    note: !pools.length ? 'noActivePlans' : (pools.length > 1 ? 'summedPlans' : null)
+  };
+}
+
+ADAPTERS.resiprox = {
+  name: 'ResiProx', needs: ['token'], needsLabel: 'API token', dashboardUrl: 'https://dashboard.resiprox.com/',
+  async fetch(c, get) {
+    return parseResiProxAccount(await get(`${RESIPROX_API}/user/me`, { headers: bearer(c.token) }));
+  }
+};
+
+// ---- SimplyNode: GET /subaccounts (x-api-key) lists each sub-account's trafficOverall, trafficSpent
+// and trafficAvailable as { unit, value }. No expiry or balance. ----
+const SIMPLYNODE_API = 'https://app.simplynode.io/api';
+
+// A { unit, value } traffic figure in GB; an undocumented unit gives null rather than a wrong figure.
+function simplyNodeGb(t) {
+  if (!t || typeof t !== 'object') return null;
+  const unit = String(t.unit || '').trim().toUpperCase();
+  if (unit === 'GB' || unit === 'GIB') return gbValue(t.value);
+  if (unit === 'MB' || unit === 'MIB') return mbToGb(t.value);
+  if (unit === 'KB' || unit === 'KIB') { const n = num(t.value); return n == null ? null : round3(n / 1024 / 1024); }
+  if (unit === 'B' || unit === 'BYTE' || unit === 'BYTES') return bytesToGb(t.value);
+  return null;
+}
+
+function parseSimplyNodeAccount(pageBodies) {
+  const pages = (Array.isArray(pageBodies) ? pageBodies : [pageBodies]).map((b) => {
+    const j = parseJson(b);
+    if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('SimplyNode: the API did not return JSON.');
+    return j;
+  });
+  const items = pages.flatMap((j) => (Array.isArray(j.items) ? j.items : [])).filter((s) => s && typeof s === 'object');
+  const left = sumOrNull(items.map((s) => simplyNodeGb(s.trafficAvailable)));
+  const types = items.map((s) => String(s.productType || '').toLowerCase()).map((t) => (t === 'mobile' ? 'Mobile' : (t === 'residential' ? 'Residential' : null)));
+  return {
+    status: left != null && left > 0 ? 'active' : 'unknown',
+    plan: uniqueText(types),
+    trafficLeftGb: left,
+    trafficUsedGb: sumOrNull(items.map((s) => simplyNodeGb(s.trafficSpent))),
+    trafficTotalGb: sumOrNull(items.map((s) => simplyNodeGb(s.trafficOverall))),
+    note: !items.length ? 'noActivePlans' : (items.length > 1 ? 'summedPlans' : null)
+  };
+}
+
+ADAPTERS.simplynode = {
+  name: 'SimplyNode', needs: ['token'], needsLabel: 'API key', dashboardUrl: 'https://app.simplynode.io/',
+  async fetch(c, get) {
+    const headers = { 'x-api-key': String(c.token).trim(), Accept: 'application/json' };
+    const pages = [];
+    let next = '';
+    for (let page = 0; page < 10; page += 1) {
+      const body = await get(`${SIMPLYNODE_API}/subaccounts?limit=50${next ? `&next_token=${encodeURIComponent(next)}` : ''}`, { headers });
+      pages.push(body);
+      const j = parseJson(body);
+      next = j && typeof j.nextToken === 'string' ? j.nextToken : '';
+      if (!next || !j || !Array.isArray(j.items) || !j.items.length) break;
+    }
+    return parseSimplyNodeAccount(pages);
+  }
+};
+
 // Customer dashboards for providers whose API reports no account details (or needs a credential the
 // app does not store), so the card can still send the user to the right page.
 const DASHBOARD_URLS = Object.freeze({
@@ -809,6 +1020,11 @@ module.exports = {
     iproyal: parseIpRoyalAccount,
     brightdata: parseBrightDataBalance,
     gsocks: parseGsocksAccount,
-    mangoproxy: parseMangoProxyAccount
+    mangoproxy: parseMangoProxyAccount,
+    proxybrazil: parseProxyBrazilAccount,
+    proxyudp: parseProxyUdpAccount,
+    zokol: parseZokolAccount,
+    resiprox: parseResiProxAccount,
+    simplynode: parseSimplyNodeAccount
   }
 };

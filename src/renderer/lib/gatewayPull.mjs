@@ -31,7 +31,8 @@ export const LIFE_BLANK_DEFAULTS = Object.freeze({
   gonzoproxy: 4320, // the app sends 72h, the dashboard generator's default
   simplyproxies: 120, // 2 hours, extended while in use
   marsproxies: 1440, // no lifetime is sent: MarsProxies' default of 24 hours
-  proxiessx: 1440 // the app sends -ttl-86400 (Proxies.sx's own default is 1 hour)
+  proxiessx: 1440, // the app sends -ttl-86400 (Proxies.sx's own default is 1 hour)
+  simplynode: 30 // the app sends ttl 1800 seconds
 });
 
 // Every Keep same IP time the form can offer, in minutes; a connector shows those up to its maxLife

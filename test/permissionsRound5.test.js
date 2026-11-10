@@ -176,12 +176,12 @@ test('1: rotating fires the stored link by proxy id; a mask sent back is never s
   const db = seed();
   const fetched = [];
   const axios = { get: async (url) => { fetched.push(url); return { status: 200, data: 'new ip 9.9.9.9' }; } };
-  const { rotateProxyIp } = loadMain([...VALIDATORS, 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'assertCanRotateProxy', 'rotateProxyIp', 'rotationLinkTimeoutMs'], {
+  const { rotateProxyIp } = loadMain([...VALIDATORS, 'isDataImpulseSticky', 'apiRotationProvider', 'proxyCanRotate', 'assertCanRotateProxy', 'rotateProxyIp', 'rotationLinkTimeoutMs', 'rotationLinkRefusal'], {
     getPrisma: () => db,
     requirePermission: async () => {},
     assertCanAccessProxy: async () => {},
     canRevealProxyCredentials: async () => true,
-    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {},
+    rotateDataImpulseSticky: async () => { throw new Error('not used'); }, PROVIDER_ROTATORS: { dataimpulse: async () => { throw new Error('not used'); } }, ROTATION_LINK_TIMEOUT_MS: {}, ROTATION_LINK_REFUSALS: {},
     assertPublicHttpUrl: async () => {},
     assertPublicHttpUrlSync: () => {},
     publicOnlyLookup: () => {},
