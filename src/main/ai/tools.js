@@ -774,7 +774,7 @@ const TOOLS = [
     summarize: (a) => `Create group "${a.name}"`,
     async handler(a, ctx) {
       if (ctx.token.groupIds.length) throw ctx.denied('This token is limited to some groups, so it cannot create groups.');
-      const existing = (await ctx.db.group.findMany({ select: { id: true, name: true } })).find((g) => g.name.toLowerCase() === a.name.toLowerCase());
+      const existing = (await ctx.db.group.findMany({ where: await ctx.deps.scopedGroupWhere(undefined), select: { id: true, name: true } })).find((g) => g.name.toLowerCase() === a.name.toLowerCase());
       if (existing) return { summary: `Group "${existing.name}" already exists (#${existing.id}).`, data: { id: existing.id, name: existing.name, created: false } };
       const g = await ctx.deps.createGroup({ name: a.name, color: a.color });
       return { summary: `Created group "${g.name}" (#${g.id}).`, data: { id: g.id, name: g.name, created: true } };

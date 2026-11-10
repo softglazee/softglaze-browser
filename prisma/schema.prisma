@@ -100,11 +100,13 @@ model Group {
   id        Int      @id @default(autoincrement())
   name      String
   color     String?  @default("#3b82f6")
+  ownerMemberId Int? // member who made it; scopes the Groups list (NULL = older group, Owner/Admin)
   createdAt DateTime @default(now())
 
   profiles Profile[]
 
   @@index([createdAt])
+  @@index([ownerMemberId])
 }
 
 model Template {
