@@ -349,7 +349,7 @@ test('rotateProxyIp runs a vendor API rotator from PROVIDER_ROTATORS when the pr
   assert.match(rotate, /const apiVendor = rotationUrl \? '' : apiRotationProvider\(proxy\);/, 'a stored or provided link still wins');
   assert.match(rotate, /await PROVIDER_ROTATORS\[apiVendor\]\(proxy\)/);
   assert.match(rotate, /timeout: rotationLinkTimeoutMs\(proxy\)/);
-  assert.match(IPC, /const PROVIDER_ROTATORS = Object\.freeze\(\{\n  dataimpulse: rotateDataImpulseSticky/);
+  assert.match(IPC, /const PROVIDER_ROTATORS = Object\.freeze\(\{\r?\n\s*dataimpulse: /, 'DataImpulse sticky ports rotate through the registry');
   assert.match(fnSrc('serializeProxy'), /canRotate: proxyCanRotate\(proxy\)/);
 });
 
