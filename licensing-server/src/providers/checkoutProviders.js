@@ -10,8 +10,19 @@ const CHECKOUT_PROVIDERS = Object.freeze({
   safepay: Object.freeze({ label: 'Safepay (cards)' })
 });
 const CHECKOUT_IDS = Object.freeze(Object.keys(CHECKOUT_PROVIDERS));
+const { openJson } = require('../crypto/secrets');
 
-// -> { providers: [{ id, label, kind: 'automated' }], store: { salesEnabled } }
+// The website's card checkout (browser.softglaze.com/buy, src/webPurchase.js) runs on Safepay. The site
+// shows it only when card is true, and with test true (Safepay sandbox keys) only to a tester who asks.
+function webCheckout(rows) {
+  const row = rows.find((r) => r.provider === 'safepay');
+  if (!row) return { card: false, test: false };
+  let env = 'sandbox';
+  try { env = String(openJson(row.secretsSealed).env || 'sandbox'); } catch (_) { /* unreadable keys: treat as test */ }
+  return { card: true, test: env !== 'live' };
+}
+
+// -> { providers: [{ id, label, kind: 'automated' }], store: { salesEnabled }, web: { card, test } }
 // A provider is offered when its keys are saved and enabled (TenantPaymentConfig.enabled); then
 // settings.checkout.providers (when a list) picks and orders them, and settings.checkout.labels renames.
 // store.salesEnabled is settings.store.salesEnabled (default false): the app also needs the Store's prices.
@@ -27,7 +38,11 @@ async function publicCheckoutMethods(db, tenantId, settings) {
     const label = typeof labels[id] === 'string' && labels[id].trim() ? labels[id].trim() : CHECKOUT_PROVIDERS[id].label;
     providers.push({ id, label, kind: 'automated' });
   }
-  return { providers, store: { salesEnabled: Boolean(settings && settings.store && settings.store.salesEnabled === true) } };
+  return {
+    providers,
+    store: { salesEnabled: Boolean(settings && settings.store && settings.store.salesEnabled === true) },
+    web: webCheckout(rows)
+  };
 }
 
 module.exports = { CHECKOUT_PROVIDERS, CHECKOUT_IDS, publicCheckoutMethods };

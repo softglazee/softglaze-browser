@@ -143,6 +143,19 @@ test('CORS: only the website origin (and localhost for development) may call che
   }
 });
 
+test('/methods tells the website whether card checkout is on and whether it is a test (sandbox) setup', async () => {
+  const r = await H.call('GET', `/v1/checkout/methods?tenantId=${T}`);
+  assert.deepEqual(r.json.web, { card: true, test: true });
+  assert.ok(!JSON.stringify(r.json).includes('sec_x'));
+  const cfg = await H.db.tenantPaymentConfig.findFirst({ where: { tenantId: T, provider: 'safepay' } });
+  await H.db.tenantPaymentConfig.update({ where: { id: cfg.id }, data: { secretsSealed: sealJson({ publicKey: 'pub_x', secretKey: 'sec_x', webhookSecret: 'wh', env: 'live' }) } });
+  try {
+    assert.deepEqual((await H.call('GET', `/v1/checkout/methods?tenantId=${T}`)).json.web, { card: true, test: false });
+  } finally {
+    await H.db.tenantPaymentConfig.update({ where: { id: cfg.id }, data: { secretsSealed: cfg.secretsSealed } });
+  }
+});
+
 // --- status, code, email ------------------------------------------------------------------------------
 test('paid: /status says pending, then paid; one code with the plan\'s tier and term is emailed; no licence', async () => {
   const email = 'web.buyer@example.com';
