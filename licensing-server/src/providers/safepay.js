@@ -139,7 +139,34 @@ function amountMatches(data, payment) {
     && String(data.currency || '').toUpperCase() === String(payment.currency || '').toUpperCase();
 }
 
+// GET /reporter/api/v1/payments/{tracker} -> the tracker as Safepay sees it. Safepay's docs show it
+// both under data.tracker and as data itself; either way -> { token, state, quote, base } where quote
+// and base are { amount, currency } from purchase_totals (quote = what we asked for, e.g. USD cents;
+// base = the settled amount, e.g. PKR) or null.
+async function fetchTracker(secrets, tracker) {
+  assertConfigured(secrets);
+  const json = await request('GET', `${hostsFor(secrets.env).api}/reporter/api/v1/payments/${encodeURIComponent(tracker)}`, secrets.secretKey, null);
+  const d = json.data || {};
+  const t = d.tracker && typeof d.tracker === 'object' ? d.tracker : d;
+  const totals = t.purchase_totals || {};
+  const money = (m) => (m && typeof m === 'object' && m.amount != null ? { amount: Number(m.amount), currency: String(m.currency || '').toUpperCase() } : null);
+  return { token: t.token ? String(t.token) : null, state: t.state ? String(t.state) : null, quote: money(totals.quote_amount), base: money(totals.base_amount) };
+}
+
+// A fetched tracker pays for `payment` when it is TRACKER_ENDED (dashboard "Complete") and its quote
+// amount, or else its base amount, equals the Payment row's amount and currency.
+function trackerPays(t, payment) {
+  if (!t || t.state !== 'TRACKER_ENDED' || !payment) return false;
+  if (t.token && t.token !== String(payment.providerRef)) return false;
+  const want = { amount: Number(payment.amount), currency: String(payment.currency || '').toUpperCase() };
+  const same = (m) => Boolean(m) && Number(m.amount) === want.amount && String(m.currency || '').toUpperCase() === want.currency;
+  return same(t.quote) || same(t.base);
+}
+
+// Safepay's tracker tokens: track_<uuid>.
+const isTrackerToken = (v) => typeof v === 'string' && /^track_[0-9a-f-]{8,64}$/i.test(v);
+
 module.exports = {
   ENVS, hostsFor, createCheckout, createPlan, createTracker, authToken, paymentCheckoutUrl, subscriptionCheckoutUrl,
-  verifyWebhook, eventId, subscriptionRef, subscriptionId, tsDate, amountMatches, safepayInterval
+  fetchTracker, trackerPays, isTrackerToken, verifyWebhook, eventId, subscriptionRef, subscriptionId, tsDate, amountMatches, safepayInterval
 };

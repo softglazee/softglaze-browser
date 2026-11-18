@@ -12,6 +12,7 @@ const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
 const safepayProvider = require('../providers/safepay');
+const { verifySafepayTracker } = require('../safepayVerify');
 const { CHECKOUT_IDS, publicCheckoutMethods } = require('../providers/checkoutProviders');
 const { getSettings } = require('../settings');
 
@@ -61,7 +62,11 @@ router.post('/', asyncHandler(async (req, res) => {
   } else if (provider === 'safepay') {
     // ref = the tracker (one-time) or this checkout's Safepay plan token (recurring); see providers/safepay.js.
     const orderId = `sg-${tenant.id}-${Date.now()}`;
-    ({ url, ref } = await safepayProvider.createCheckout({ secrets, plan, orderId, returnUrl, cancelUrl }));
+    // Safepay appends "?order_id=...&tracker=..." to the return URL even when it already has a query
+    // string, so its return URLs carry the status in the path instead.
+    ({ url, ref } = await safepayProvider.createCheckout({
+      secrets, plan, orderId, returnUrl: `${publicBaseUrl}/v1/checkout/return/success`, cancelUrl: `${publicBaseUrl}/v1/checkout/return/cancel`
+    }));
   } else { // cryptomus
     const orderId = `sg-${tenant.id}-${Date.now()}`;
     ({ url, ref } = await cryptomusProvider.createCheckout({ secrets, plan, orderId, returnUrl, callbackUrl: `${publicBaseUrl}/v1/webhooks/cryptomus/${tenant.id}` }));
@@ -76,15 +81,47 @@ router.post('/', asyncHandler(async (req, res) => {
   res.json({ url, ref, provider });
 }));
 
-// Landing page providers redirect back to after pay/cancel.
-router.get('/return', (req, res) => {
-  const ok = req.query.status === 'success';
-  res.set('content-type', 'text/html').send(
-    `<!doctype html><html><body style="font-family:system-ui,sans-serif;text-align:center;padding:3rem;background:#0b0b0f;color:#e5e7eb">
+// Landing page providers redirect back to after pay/cancel: /return?status=success|cancel (Stripe,
+// PayPal, Cryptomus) or /return/success|cancel (Safepay). A status that merely starts with "success"
+// counts, for a provider that glued its own "?..." onto ours. On success with a Safepay tracker, the
+// server asks Safepay's API whether that pending payment is complete and provisions it if so; the
+// query string alone never grants anything.
+const VERIFY_WAIT_MS = 10000;
+
+async function verifyOnReturn(req) {
+  const tracker = typeof req.query.tracker === 'string' ? req.query.tracker.trim() : '';
+  if (!safepayProvider.isTrackerToken(tracker)) return;
+  let timer;
+  try {
+    await Promise.race([
+      verifySafepayTracker(tracker),
+      new Promise((resolve) => { timer = setTimeout(resolve, VERIFY_WAIT_MS); })
+    ]);
+  } catch (e) {
+    console.warn('[checkout:return] Safepay verification failed:', e && e.message ? e.message : e);
+  } finally { clearTimeout(timer); }
+}
+
+function returnPage(res, ok) {
+  res.set('content-type', 'text/html').set('Cache-Control', 'no-store').send(
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${ok ? 'Payment received' : 'Checkout canceled'}</title></head>
+     <body style="font-family:system-ui,sans-serif;text-align:center;padding:3rem 1rem;background:#0b0b0f;color:#e5e7eb">
        <h2>${ok ? 'Payment received' : 'Checkout canceled'}</h2>
-       <p>You can close this window and return to the app${ok ? ' — your plan will activate shortly' : ''}.</p>
+       <p>${ok ? 'Your plan will be active in a moment; you can close this window and return to the app.' : 'No payment was taken. You can close this window and return to the app.'}</p>
      </body></html>`
   );
-});
+}
+
+async function handleReturn(req, res, ok) {
+  if (ok) await verifyOnReturn(req);
+  returnPage(res, ok);
+}
+
+router.get('/return', asyncHandler(async (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : '';
+  await handleReturn(req, res, status.startsWith('success'));
+}));
+router.get('/return/success', asyncHandler(async (req, res) => handleReturn(req, res, true)));
+router.get('/return/cancel', asyncHandler(async (req, res) => handleReturn(req, res, false)));
 
 module.exports = router;

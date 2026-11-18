@@ -1,9 +1,10 @@
 'use strict';
 // One scheduler pass (scripts/run-cron.js, every 15 minutes from a Hostinger cron job). Per active
 // tenant: re-check Microsoft Store subscriptions (renewals, cancellations, refunds; at most every 6 hours
-// each), reconcile customers with licences / payments / trials, queue due automations, send the
-// outbox (daily cap), apply retention, write today's metric snapshot. A row in JobLock stops two
-// runs overlapping; a run that died is taken over after its lock expires (20 minutes).
+// each), check one-time Safepay payments still pending (src/safepayVerify.js), reconcile customers with
+// licences / payments / trials, queue due automations, send the outbox (daily cap), apply retention,
+// write today's metric snapshot. A row in JobLock stops two runs overlapping; a run that died is taken
+// over after its lock expires (20 minutes).
 const os = require('node:os');
 const crypto = require('node:crypto');
 const { getSettings } = require('./settings');
@@ -13,6 +14,7 @@ const { processOutbox } = require('./email/outbox');
 const { applyRetention } = require('./privacy/retention');
 const { writeSnapshot } = require('./metrics/compute');
 const { recheckTenant } = require('./store/entitlements');
+const { reconcileSafepay } = require('./safepayVerify');
 
 const LOCK = 'cron';
 const LOCK_MS = 20 * 60000;
@@ -53,6 +55,8 @@ async function runCron(db, { now = Date.now() } = {}) {
       const t = {};
       // Microsoft Store first, so the reconcile below already sees renewed or ended Store licences.
       t.store = await step(errors, 'store', () => recheckTenant(db, tenant, { now, settings }));
+      // Safepay one-time payments whose webhook never came and whose buyer never reached the return page.
+      t.safepay = await step(errors, 'safepay', () => reconcileSafepay(db, tenant, { now }));
       t.reconcile = await step(errors, 'reconcile', () => reconcileTenant(db, tenant, { now, graceDays }));
       t.automations = await step(errors, 'automations', () => scheduleAutomations(db, tenant, { now, settings }));
       t.outbox = await step(errors, 'outbox', () => processOutbox(db, tenant, { now, settings }));

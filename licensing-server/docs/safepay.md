@@ -34,6 +34,10 @@ The response returns the webhook URL to paste into Safepay. All three keys are r
 `sandbox` (default) or `live`. Each save replaces the whole set. If the admin setting
 `checkout.providers` is a list (not `null`), add `"safepay"` to it, or the app will not offer it.
 
+**Webhooks may not arrive.** In the first sandbox test (18 Nov 2026) Safepay delivered no webhook at
+all for a completed payment (Webhook Logs empty, endpoint "NO EVENT"), so one-time payments do not
+depend on them. Subscriptions still do: their renewals and cancellations arrive only by webhook.
+
 ## 3. Test with sandbox cards
 
 From Safepay's test-card list (Safepay's own examples use expiry `12/2028` and CVV `123`):
@@ -60,7 +64,15 @@ are sold.
 
 - **One-time plan**: the server creates a payment session (`POST /order/payments/v3/`, amount in
   cents from our Plan row) and an auth token, and sends the buyer to the hosted checkout
-  (`/embedded/`). `payment.succeeded` with that `tracker` provisions the licence.
+  (`/embedded/`). Safepay sends the buyer back to `/v1/checkout/return/success` and appends
+  `?order_id=...&tracker=...`. **Verification on return is the primary path**: the server asks
+  Safepay `GET /reporter/api/v1/payments/<tracker>` with the tenant's secret key, and only when Safepay
+  answers `TRACKER_ENDED` (dashboard "Complete") with our amount and currency (`purchase_totals`
+  quote amount, or base amount) does it provision the licence. The tracker in the URL only says which
+  pending Payment to check; it never grants anything by itself. The cron (every 15 minutes) does the
+  same check for one-time Safepay payments still pending 2 minutes to 48 hours after checkout, for
+  buyers who closed the tab before the return page. The `payment.succeeded` webhook, if Safepay sends
+  it, provisions the same way; whichever comes first wins and the others do nothing.
 - **Recurring plan**: each checkout creates its own Safepay plan from our Plan row
   (`POST /client/plans/v1/`, MONTH or YEAR), so the price charged can never differ from ours, and
   sends the buyer to `/checkout/auth/login`. The plan token is the checkout reference: the first
