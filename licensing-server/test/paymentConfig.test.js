@@ -31,7 +31,7 @@ test('stripe requires secretKey and webhookSecret; unknown providers are refused
   assert.deepEqual(buildProviderSecrets('stripe', { secretKey: 'sk', webhookSecret: 'wh' }).secrets, { secretKey: 'sk', webhookSecret: 'wh' });
   assert.match(buildProviderSecrets('stripe', { secretKey: 'sk' }).error, /webhookSecret/);
   assert.equal(buildProviderSecrets('square', {}).error, 'Unknown provider.');
-  assert.deepEqual(Object.keys(PROVIDER_FIELDS).sort(), ['cryptomus', 'microsoft_store', 'paypal', 'stripe']);
+  assert.deepEqual(Object.keys(PROVIDER_FIELDS).sort(), ['cryptomus', 'microsoft_store', 'paypal', 'safepay', 'stripe']);
 });
 
 test('microsoft_store holds the Entra ID app (two GUIDs and a secret), never a half-filled set', () => {

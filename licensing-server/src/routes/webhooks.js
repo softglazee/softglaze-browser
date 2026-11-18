@@ -8,6 +8,7 @@ const { openJson } = require('../crypto/secrets');
 const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
+const safepayProvider = require('../providers/safepay');
 const { provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund } = require('../licensing');
 const { syncRecentLicences } = require('../customers/sync');
 const { termMs } = require('../util/time');
@@ -193,6 +194,93 @@ router.post('/paypal/:tenantId', express.json({ type: '*/*', limit: '256kb' }), 
     if (!handled) return res.json({ received: true, duplicate: true });
     res.json({ received: true });
   } catch (e) { console.error('[webhook:paypal]', e && e.stack ? e.stack : e); res.status(500).json({ error: 'handler error' }); }
+});
+
+// Safepay: X-SFPY-SIGNATURE (HMAC-SHA256 of the raw body) is checked before the body is parsed.
+// One-time: payment.succeeded settles the Payment whose providerRef is data.tracker. Subscriptions:
+// subscription.payment.succeeded settles the Payment whose providerRef is the checkout's plan token
+// (data.reference or data.plan_id) on the first charge, then extends the licence keyed to the Safepay
+// subscription id on each renewal; subscription.cancelled ends it. Failed payments grant nothing, and
+// an amount or currency that differs from the Payment row recorded at checkout grants nothing.
+async function safepayPayment(tenantId, ref) {
+  return prisma.payment.findFirst({ where: { tenantId, provider: 'safepay', providerRef: String(ref) }, orderBy: { createdAt: 'desc' } });
+}
+
+async function safepayApply(tenant, event) {
+  const data = (event && event.data) || {};
+  switch (event && event.type) {
+    case 'payment.succeeded': {
+      if (!data.tracker) return null;
+      const payment = await safepayPayment(tenant.id, data.tracker);
+      if (!payment) return null; // not a checkout of ours (e.g. the charge behind a subscription)
+      if (!safepayProvider.amountMatches(data, payment)) {
+        console.warn(`[webhook:safepay] ${safepayProvider.eventId(event)}: amount/currency ${data.amount} ${data.currency} does not match the checkout (${payment.amount} ${payment.currency}); not provisioned.`);
+        return null;
+      }
+      return (tx) => provisionFromPaymentRef(tenant, 'safepay', data.tracker, {}, tx);
+    }
+    case 'subscription.payment.succeeded': {
+      const ref = safepayProvider.subscriptionRef(data);
+      const subscriptionId = safepayProvider.subscriptionId(data);
+      if (!ref || !subscriptionId) return null;
+      if (data.transaction_status && String(data.transaction_status).toUpperCase() !== 'COMPLETE') return null;
+      const payment = await safepayPayment(tenant.id, ref);
+      if (!payment) return null;
+      if (!safepayProvider.amountMatches(data, payment)) {
+        console.warn(`[webhook:safepay] ${safepayProvider.eventId(event)}: amount/currency ${data.amount} ${data.currency} does not match the subscription (${payment.amount} ${payment.currency}); not provisioned.`);
+        return null;
+      }
+      const plan = payment.plan ? await prisma.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: payment.plan } } }) : null;
+      const months = (plan && plan.interval === 'year') ? 12 : 1;
+      const reported = safepayProvider.tsDate(data.current_period_end_date);
+      const fallback = new Date(Date.now() + termMs(months));
+      // Safepay's period end when it lies ahead, else one plan interval from now.
+      const periodEnd = reported && reported.getTime() > Date.now() ? reported : fallback;
+      return async (tx) => {
+        const claimed = await claimPendingPayment(tenant, 'safepay', ref, tx);
+        if (claimed) {
+          await setSubscriptionPeriod(tenant, {
+            subscriptionId,
+            account: claimed.account || data.customer_email || null,
+            installId: claimed.installId || null,
+            tier: (plan && plan.tier) || 'pro',
+            plan: claimed.plan || null,
+            periodEnd
+          }, tx);
+          return;
+        }
+        // Renewal: only for a subscription whose first charge was provisioned here.
+        const lic = await tx.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } });
+        if (!lic) return;
+        const current = lic.currentPeriodEnd ? new Date(lic.currentPeriodEnd).getTime() : 0;
+        await setSubscriptionPeriod(tenant, { subscriptionId, periodEnd: new Date(Math.max(current, periodEnd.getTime())), status: 'active' }, tx);
+      };
+    }
+    case 'subscription.cancelled':
+    case 'subscription.canceled':
+    case 'subscription.ended': {
+      const subscriptionId = safepayProvider.subscriptionId(data);
+      return subscriptionId ? (tx) => cancelSubscription(tenant, subscriptionId, tx) : null;
+    }
+    default:
+      // payment.failed, subscription.payment.failed, subscription.created, ...: nothing is granted.
+      return null;
+  }
+}
+
+router.post('/safepay/:tenantId', express.raw({ type: '*/*', limit: '256kb' }), async (req, res) => {
+  try {
+    const { tenant, secrets } = await tenantAndSecrets(req.params.tenantId, 'safepay');
+    if (!tenant || !secrets) return res.status(404).end();
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    if (!safepayProvider.verifyWebhook({ secrets, rawBody, signature: req.get('x-sfpy-signature') })) return res.status(400).json({ error: 'bad signature' });
+    let event;
+    try { event = JSON.parse(rawBody.toString('utf8')); } catch (e) { return res.status(400).json({ error: 'bad json' }); }
+    if (!event || typeof event !== 'object') return res.status(400).json({ error: 'bad json' });
+    const handled = await handleOnce(tenant.id, 'safepay', safepayProvider.eventId(event), event.type, () => safepayApply(tenant, event));
+    if (!handled) return res.json({ received: true, duplicate: true });
+    res.json({ received: true });
+  } catch (e) { console.error('[webhook:safepay]', e && e.stack ? e.stack : e); res.status(500).json({ error: 'handler error' }); }
 });
 
 module.exports = router;

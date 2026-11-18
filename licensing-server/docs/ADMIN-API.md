@@ -341,7 +341,7 @@ refresh and falls back to its offline grace. → `{ "license": License }`. Error
 
 ### GET /v1/admin/payments
 
-Params: `status` (`pending,paid,failed,refunded`), `provider` (`stripe,paypal,cryptomus,manual,microsoft_store`),
+Params: `status` (`pending,paid,failed,refunded`), `provider` (`stripe,paypal,cryptomus,safepay,manual,microsoft_store`),
 `method`, `currency`, `customerId`, `from`, `to` (paid date), `sort` (`createdAt`, `paidAt`, `amount`), `order`, paging.
 
 Microsoft Store payments (`provider=microsoft_store`, `method: store`) are recorded by the server, one per

@@ -23,6 +23,9 @@ test('checkoutProviders keeps known providers only, lower-cased and de-duplicate
   withEnv({ SG_CHECKOUT_PROVIDERS: ' Cryptomus, bogus ,stripe,cryptomus,PAYPAL' }, () => {
     assert.deepEqual(tc.tenantConfig().checkoutProviders, ['cryptomus', 'stripe', 'paypal']);
   });
+  withEnv({ SG_CHECKOUT_PROVIDERS: 'SafePay,stripe' }, () => {
+    assert.deepEqual(tc.tenantConfig().checkoutProviders, ['safepay', 'stripe']);
+  });
 });
 
 test('checkoutProviders is empty when nothing is baked or set', () => {

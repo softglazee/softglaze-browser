@@ -5,7 +5,7 @@ of truth** for who has paid and what they're entitled to — the desktop app onl
 *verifies* a short-lived, cryptographically-signed lease it cannot forge.
 
 > **Status.** Tenant provisioning, hosted checkout and signature-verified webhooks
-> for **Stripe, PayPal and Cryptomus**, Ed25519 license leases, backend-issued redeem
+> for **Stripe, PayPal, Cryptomus and Safepay**, Ed25519 license leases, backend-issued redeem
 > codes, per-tenant key rotation and recurring Stripe subscriptions are all
 > implemented and covered by `npm test` plus an end-to-end check against a running
 > server (`scripts/e2e-local.js`). Live at https://api.softglaze.com since October 2026.
@@ -32,7 +32,7 @@ extracted and a locally-polled "paid" status can be spoofed. This server fixes b
 
 ## Model (locked decisions)
 - **Central multi-tenant** — one backend, many buyer-merchants (tenants).
-- **Per-tenant stored keys** — each merchant supplies their own Stripe/PayPal/Cryptomus
+- **Per-tenant stored keys** — each merchant supplies their own Stripe/PayPal/Cryptomus/Safepay
   keys; stored AES-256-GCM-sealed at rest (`MASTER_KEY`).
 - **Per-tenant Ed25519 keypair** — baked into each merchant's white-label build.
 - **Baked tenant build** — `tenantId` + `apiBaseUrl` + `publicKeyPem` compiled in.
@@ -203,7 +203,7 @@ Legitimate PC change, two ways:
 | GET | `/health` | — | liveness |
 | POST | `/v1/register` | tenant-scoped | register an install |
 | POST | `/v1/checkout` | tenant-scoped | create a hosted payment session |
-| POST | `/v1/webhooks/{stripe,paypal,cryptomus}/:tenantId` | provider signature | provision on payment |
+| POST | `/v1/webhooks/{stripe,paypal,cryptomus,safepay}/:tenantId` | provider signature | provision on payment |
 | POST | `/v1/license` | tenant-scoped | issue a signed lease (machine-bound) |
 | POST | `/v1/license/transfer` | install secret + proof of purchase | move a licence to a new PC (2 per 30 days) |
 | POST | `/v1/redeem` | tenant-scoped | redeem an activation code |
@@ -229,6 +229,9 @@ present and non-empty or the call is a 400 (`src/providers/configFields.js`).
   or `"sandbox"`
 - **cryptomus**: `{ merchantId, apiKey }` (both required; the webhook signature is
   verified offline with `apiKey`, and a webhook is rejected while it is empty)
+- **safepay**: `{ publicKey, secretKey, webhookSecret, env? }` — `env` is `"sandbox"`
+  (default) or `"live"`; `webhookSecret` is the endpoint's shared secret (HMAC of
+  `X-SFPY-SIGNATURE`). Setup and test cards: [docs/safepay.md](docs/safepay.md)
 
 ### Webhook behaviour
 - **Idempotent and retry-safe.** The `WebhookEvent` row is inserted before processing
