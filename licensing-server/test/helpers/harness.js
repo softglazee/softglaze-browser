@@ -44,6 +44,7 @@ const mail = {
   }
 };
 transport.setTransportForTests(mail);
+transport.setRetryDelaysForTests([0, 0]); // immediate sends retry transient errors without waiting
 
 // DNS: domains in `dns.noMx` have no mail records, `dns.missing` do not exist, `dns.slow` time out.
 const dns = { noMx: new Set(['nomail.example']), missing: new Set(['doesnotexist.example']), slow: new Set() };

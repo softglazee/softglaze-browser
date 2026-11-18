@@ -3,7 +3,9 @@
 // out), consent is checked again just before sending, failures retry with back-off (5 min, 30 min,
 // 2 h, 6 h; 5 attempts) unless the SMTP server refused permanently, and a rolling 24-hour cap limits
 // what the cron sends. Essential email (sign-in codes) is sent at once and is never held by the cap,
-// but it counts towards it. Codes are never stored: their log row keeps the subject only.
+// but it counts towards it. Codes are never stored: their log row keeps the subject only, except
+// while a sign-in code waits for a retry after the SMTP connection dropped (its body is cleared once
+// it is sent, fails or can no longer be used).
 const { renderEmail, varsFor } = require('./render');
 const { getTemplate } = require('./templates');
 const { unsubscribeUrl } = require('./unsubscribe');
@@ -12,6 +14,10 @@ const transport = require('./transport');
 const BACKOFF_MIN = [5, 30, 120, 360];
 const STALE_SENDING_MS = 10 * 60000;
 const PRIORITY = { essential: 10, lifecycle: 5, service: 3, marketing: 1 };
+// A queued verify_code row carries this dedupe key + the EmailVerification id: it is only sent while
+// that code can still be used.
+const VERIFY_KEY_PREFIX = 'verify:';
+const verifyIdOf = (row) => (row.dedupeKey && row.dedupeKey.startsWith(VERIFY_KEY_PREFIX) ? row.dedupeKey.slice(VERIFY_KEY_PREFIX.length) : null);
 
 // Why this customer must not get an email of this category now; null = allowed.
 // essential: always (if not erased); lifecycle/service: not deleted, not unsubscribed;
@@ -74,13 +80,17 @@ async function sentInLast24h(db, tenantId, now = Date.now()) {
   return db.emailOutbox.count({ where: { tenantId, status: 'sent', sentAt: { gte: new Date(now - 86400000) } } });
 }
 
-// Sends immediately and logs it (codes, test sends). Returns { ok, messageId?, error? }.
+// Sends immediately and logs it (codes, test sends). Transient connection errors are retried at once
+// (transport.sendMail with retry). Returns { ok, messageId?, error?, queued? }.
 // opts.redact: store the log row without the body.
-async function sendNow(db, tenantId, { toEmail, customer, rendered, replyTo, createdBy, redact, campaignId }) {
+// opts.queueOnTransient: if the send still fails for a transient reason, keep the row queued and due
+// now (with its body, even when redacted) for the next cron run instead of failing it -> { queued: true }.
+// opts.dedupeKey: stored on the row (a verify_code uses verify:<EmailVerification id>).
+async function sendNow(db, tenantId, { toEmail, customer, rendered, replyTo, createdBy, redact, campaignId, queueOnTransient, dedupeKey }) {
   const row = await db.emailOutbox.create({
     data: {
       tenantId, customerId: customer ? customer.id : null, toEmail, templateKey: rendered.templateKey || null,
-      category: rendered.category, campaignId: campaignId || null, subject: rendered.subject.slice(0, 250),
+      category: rendered.category, campaignId: campaignId || null, dedupeKey: dedupeKey || null, subject: rendered.subject.slice(0, 250),
       html: redact ? null : rendered.html, text: redact ? null : rendered.text,
       priority: PRIORITY[rendered.category] || 0, status: 'sending', attempts: 1, lockedAt: new Date(), createdBy: createdBy || null
     }
@@ -89,20 +99,43 @@ async function sendNow(db, tenantId, { toEmail, customer, rendered, replyTo, cre
     const info = await transport.sendMail({
       to: toEmail, subject: rendered.subject, html: rendered.html, text: rendered.text, replyTo,
       unsubscribeUrl: rendered.category === 'essential' ? null : rendered.unsubscribeUrl
-    });
+    }, { retry: true });
     await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'sent', sentAt: new Date(), messageId: info.messageId, lockedAt: null } });
     return { ok: true, messageId: info.messageId, outboxId: row.id };
   } catch (e) {
+    if (queueOnTransient && transport.isTransient(e)) {
+      // Due now, so the next cron run sends it whenever it starts.
+      await db.emailOutbox.update({
+        where: { id: row.id },
+        data: { status: 'queued', lastError: transport.describeError(e), lockedAt: null, nextAttemptAt: new Date(), html: rendered.html, text: rendered.text }
+      });
+      return { ok: false, queued: true, error: e, outboxId: row.id };
+    }
     await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'failed', lastError: transport.describeError(e), lockedAt: null } });
     return { ok: false, error: e, outboxId: row.id };
   }
 }
 
+// A queued sign-in code that can no longer be used (expired, replaced by a newer one, already
+// proven) must not go out. -> reason | null
+async function codeRowBlockReason(db, row, now) {
+  const id = verifyIdOf(row);
+  if (!id) return null;
+  const v = await db.emailVerification.findUnique({ where: { id } });
+  if (!v) return 'code_gone';
+  if (v.verifiedAt) return 'code_used';
+  if (new Date(v.expiresAt).getTime() <= now) return 'code_expired';
+  return null;
+}
+
 // Sends one row this caller has already claimed (status 'sending'). -> 'sent' | 'failed' | 'retrying' | 'skipped'
-async function sendClaimed(db, row, settings, now = Date.now()) {
+// opts.immediate: someone is waiting (not the cron): transient errors are retried at once, and a row
+// that still fails is due again straight away, so the next cron run sends it.
+async function sendClaimed(db, row, settings, now = Date.now(), { immediate = false } = {}) {
   // Consent can change between queueing and sending.
   const customer = row.customerId ? await db.customer.findUnique({ where: { id: row.customerId } }) : null;
-  const reason = row.customerId ? blockReason(customer, row.category) : null;
+  const reason = (row.customerId ? blockReason(customer, row.category) : null) || await codeRowBlockReason(db, row, now);
+  const isCode = Boolean(verifyIdOf(row));
   if (reason) {
     await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'skipped', lastError: reason, lockedAt: null, html: null, text: null } });
     return 'skipped';
@@ -111,16 +144,25 @@ async function sendClaimed(db, row, settings, now = Date.now()) {
     const info = await transport.sendMail({
       to: row.toEmail, subject: row.subject, html: row.html, text: row.text, replyTo: settings.email.replyTo,
       unsubscribeUrl: row.category !== 'essential' && row.customerId ? unsubscribeUrl(row.customerId) : null
+    }, { retry: immediate });
+    await db.emailOutbox.update({
+      where: { id: row.id },
+      data: { status: 'sent', sentAt: new Date(now), messageId: info.messageId, attempts: row.attempts + 1, lockedAt: null, ...(isCode ? { html: null, text: null } : {}) }
     });
-    await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'sent', sentAt: new Date(now), messageId: info.messageId, attempts: row.attempts + 1, lockedAt: null } });
     return 'sent';
   } catch (e) {
     const attempts = row.attempts + 1;
     const final = transport.isPermanent(e) || attempts >= row.maxAttempts;
-    const wait = BACKOFF_MIN[Math.min(attempts - 1, BACKOFF_MIN.length - 1)] * 60000;
+    // The first immediate send failing for a transient reason leaves the row due at once, so the next
+    // cron run takes it (a time a few minutes ahead can land just after a cron tick and wait a whole
+    // interval). Later failures back off as usual.
+    const wait = immediate && attempts === 1 && transport.isTransient(e) ? 0 : BACKOFF_MIN[Math.min(attempts - 1, BACKOFF_MIN.length - 1)] * 60000;
     await db.emailOutbox.update({
       where: { id: row.id },
-      data: { status: final ? 'failed' : 'queued', attempts, lastError: transport.describeError(e), lockedAt: null, nextAttemptAt: new Date(now + wait) }
+      data: {
+        status: final ? 'failed' : 'queued', attempts, lastError: transport.describeError(e), lockedAt: null, nextAttemptAt: new Date(now + wait),
+        ...(final && isCode ? { html: null, text: null } : {})
+      }
     });
     return final ? 'failed' : 'retrying';
   }
@@ -134,7 +176,7 @@ async function deliverQueued(db, tenantId, id, { settings, now = Date.now() } = 
   const claim = await db.emailOutbox.updateMany({ where: { id, tenantId, status: 'queued', nextAttemptAt: { lte: new Date(now) } }, data: { status: 'sending', lockedAt: new Date(now) } });
   if (claim.count !== 1) return { status: 'not_queued' };
   const row = await db.emailOutbox.findUnique({ where: { id } });
-  return { status: await sendClaimed(db, row, settings, now) };
+  return { status: await sendClaimed(db, row, settings, now, { immediate: true }) };
 }
 
 // Sends what is due. Returns counts. opts: { now, settings, limit }
@@ -168,4 +210,4 @@ async function processOutbox(db, tenant, { now = Date.now(), settings, limit = 2
   return out;
 }
 
-module.exports = { blockReason, renderFor, enqueue, sendNow, processOutbox, deliverQueued, sentInLast24h, BACKOFF_MIN, PRIORITY };
+module.exports = { blockReason, renderFor, enqueue, sendNow, processOutbox, deliverQueued, sentInLast24h, BACKOFF_MIN, PRIORITY, VERIFY_KEY_PREFIX };

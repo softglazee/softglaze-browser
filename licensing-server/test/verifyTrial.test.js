@@ -129,9 +129,9 @@ test('resend throttle and hourly limits answer rate_limited with Retry-After', a
   assert.equal((await call('POST', '/v1/account/verify/start', { body: { ...body, ...sixth } })).json.error, 'rate_limited');
 });
 
-test('a failed send does not lock the person out and says email_failed', async () => {
+test('a refused send does not lock the person out and says email_failed', async () => {
   const inst = await H.newInstall(T, 'v-smtpfail');
-  mail.fail = () => Object.assign(new Error('Connection timeout'), { code: 'ETIMEDOUT' });
+  mail.fail = () => Object.assign(new Error('550 mailbox unavailable'), { code: 'EENVELOPE', responseCode: 550 });
   const r = await call('POST', '/v1/account/verify/start', { body: { tenantId: T, ...inst, email: 'smtp@example.com', consentMarketing: false, lang: 'en' } });
   mail.fail = null;
   assert.equal(r.status, 502);

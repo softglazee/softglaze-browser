@@ -12,7 +12,7 @@ const { isDisposableDomain } = require('../customers/disposable');
 const { checkMailDomain } = require('../customers/mx');
 const { createCustomer, addEvent, claimUnboundLicences, linkInstallRecords, recomputeCustomer } = require('../customers/sync');
 const { hmacHex, safeEqual } = require('../crypto/derive');
-const { renderFor, sendNow } = require('../email/outbox');
+const { renderFor, sendNow, VERIFY_KEY_PREFIX } = require('../email/outbox');
 const transport = require('../email/transport');
 const { cleanLead, leadUpdate } = require('./lead');
 const { signedInOnInstall } = require('../auth/accounts');
@@ -93,7 +93,16 @@ async function startVerification(db, tenant, install, input, { ipHash = null, no
     customer: { email: parsed.email, name, lang }, templateKey: 'verify_code', category: 'essential', settings, now,
     extraVars: { code, codeMinutes: String(v.codeTtlMinutes) }, lang
   });
-  const sent = await sendNow(db, tenantId, { toEmail: parsed.email, rendered, replyTo: em.replyTo, createdBy: 'verify', redact: true });
+  // A dropped SMTP connection is retried at once; if it still fails the email stays queued for the next
+  // cron run, which sends it only while this code can still be used.
+  const sent = await sendNow(db, tenantId, {
+    toEmail: parsed.email, rendered, replyTo: em.replyTo, createdBy: 'verify', redact: true,
+    queueOnTransient: true, dedupeKey: `${VERIFY_KEY_PREFIX}${row.id}`
+  });
+  if (sent.queued) {
+    // The code is valid and on its way, a little late; the resend throttle applies as usual.
+    return { status: 200, body: { ok: true, sent: false, queued: true, expiresInSec: v.codeTtlMinutes * 60, resendAfterSec: v.resendSeconds } };
+  }
   if (!sent.ok) {
     // Nothing reached the person, so the throttle must not hold them back.
     await db.emailVerification.delete({ where: { id: row.id } }).catch(() => {});

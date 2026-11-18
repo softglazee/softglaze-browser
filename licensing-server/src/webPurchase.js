@@ -15,6 +15,7 @@ const WEB_METHOD = 'web';
 const TEMPLATE_KEY = 'activation_code';
 const CODE_RE = /\bSG-[0-9A-F]{12}\b/;
 const NOTE_PREFIX = 'Activation code';
+const KICK_GAP_MS = 60000;
 
 const isWebPayment = (p) => Boolean(p) && p.method === WEB_METHOD && !p.installId;
 const codeOfPayment = (p) => {
@@ -86,6 +87,9 @@ async function deliverCodeEmail(db, tenantId, outboxId) {
 async function kickCodeEmail(db, tenantId, paymentId) {
   const row = await db.emailOutbox.findUnique({ where: { tenantId_dedupeKey: { tenantId, dedupeKey: dedupeKeyFor(paymentId) } } });
   if (!row || row.status !== 'queued') return { status: 'none' };
+  // A failed first send leaves the row due at once (for the next cron run); polls inside a minute of
+  // that attempt leave it alone instead of hitting a struggling SMTP server again on every poll.
+  if (row.attempts > 0 && row.updatedAt && Date.now() - new Date(row.updatedAt).getTime() < KICK_GAP_MS) return { status: 'recent_attempt' };
   return deliverCodeEmail(db, tenantId, row.id);
 }
 
