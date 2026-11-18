@@ -165,8 +165,8 @@ test('one-time checkout: tracker + auth token, hosted /embedded/ URL, Payment re
   assert.equal(u.searchParams.get('tracker'), 'track_abc');
   assert.equal(u.searchParams.get('tbt'), 'tbt_xyz');
   assert.equal(u.searchParams.get('source'), 'hosted');
-  assert.equal(u.searchParams.get('redirect_url'), 'https://api.test/v1/checkout/return?status=success');
-  assert.equal(u.searchParams.get('cancel_url'), 'https://api.test/v1/checkout/return?status=cancel');
+  assert.equal(u.searchParams.get('redirect_url'), 'https://api.test/v1/checkout/return/success');
+  assert.equal(u.searchParams.get('cancel_url'), 'https://api.test/v1/checkout/return/cancel');
   const p = payment('track_abc');
   assert.equal(p.status, 'pending');
   assert.equal(p.amount, 500);
