@@ -62,8 +62,45 @@ function fromAddress() {
   return c ? c.from : 'SoftGlaze <no-reply@softglaze.com>';
 }
 
+// Drops the cached transporter so the next send builds a fresh one (after a dropped connection).
+function resetTransporter() {
+  const t = cached.transporter;
+  cached = { fingerprint: null, transporter: null };
+  if (t && typeof t.close === 'function') { try { t.close(); } catch { /* already closed */ } }
+}
+
+// Connection-level failures (the server dropped or never answered the connection). A 5xx reply is
+// never transient, whatever the code says.
+const TRANSIENT_CODES = new Set(['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'ECONNRESET', 'EDNS']);
+function isTransient(err) {
+  if (!err || !TRANSIENT_CODES.has(err.code)) return false;
+  return !(Number(err.responseCode) >= 500);
+}
+
+// Quick retries for a send someone is waiting on: 1 s, then 3 s. A retry only starts while the send
+// has taken less than RETRY_BUDGET_MS in all, so a slow timeout is not repeated behind an HTTP request.
+let retryDelaysMs = [1000, 3000];
+const RETRY_BUDGET_MS = 12000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // msg: { to, subject, html, text, replyTo, unsubscribeUrl }. Resolves { messageId }.
-async function sendMail(msg) {
+// opts.retry: retry transient connection errors (with a fresh transporter) before giving up.
+async function sendMail(msg, opts = {}) {
+  const started = Date.now();
+  const delays = opts.retry ? retryDelaysMs : [];
+  for (let i = 0; ; i++) {
+    try {
+      return await sendOnce(msg);
+    } catch (e) {
+      if (!isTransient(e)) throw e;
+      resetTransporter();
+      if (i >= delays.length || Date.now() - started + delays[i] > RETRY_BUDGET_MS) throw e;
+      await sleep(delays[i]);
+    }
+  }
+}
+
+async function sendOnce(msg) {
   const t = getTransporter();
   if (!t) { const e = new Error('Email is not configured on this server.'); e.code = 'NOT_CONFIGURED'; throw e; }
   const mail = {
@@ -100,5 +137,9 @@ function describeError(err) {
 }
 
 function setTransportForTests(t) { override = t; }
+function setRetryDelaysForTests(d) { retryDelaysMs = d; }
 
-module.exports = { smtpConfig, isConfigured, publicConfig, sendMail, isPermanent, describeError, setTransportForTests, getTransporter };
+module.exports = {
+  smtpConfig, isConfigured, publicConfig, sendMail, isPermanent, isTransient, describeError, resetTransporter,
+  setTransportForTests, setRetryDelaysForTests, getTransporter
+};

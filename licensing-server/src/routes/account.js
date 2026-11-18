@@ -3,6 +3,8 @@
 // POST /v1/account/verify/start { tenantId, installId, installSecret, email, name?, consentMarketing, lang, country?,
 //   phone?, useCase?, useCaseOther?, company?, appVersion?, channel? }
 //   -> 200 { ok: true, sent: true, expiresInSec, resendAfterSec }
+//      or 200 { ok: true, sent: false, queued: true, ... } when SMTP dropped the connection: the code is
+//      valid and the next cron run emails it
 //   errors: 400 invalid_email | disposable_email | no_mx | invalid_phone | invalid_use_case,
 //           429 rate_limited { retryAfterSec }, 503 email_unavailable, 502 email_failed,
 //           + the install errors in installRequest.js
