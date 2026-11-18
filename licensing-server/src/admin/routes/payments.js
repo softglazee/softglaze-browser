@@ -1,7 +1,8 @@
 'use strict';
 // /v1/admin/payments: list, record a manual payment (invoice, bank transfer, Payoneer, 2Checkout) which
 // updates the customer and can grant or extend their licence in the same call, and mark a manual
-// payment refunded.
+// payment refunded. A website purchase (method 'web') carries its activation code in `note`; POST
+// /:id/resend-code emails that code to the buyer again.
 const express = require('express');
 const prisma = require('../../db');
 const asyncHandler = require('../../middleware/asyncHandler');
@@ -9,6 +10,7 @@ const { fail, invalid, notFound, settingsFor, own, pageParams, dateRange, csvLis
 const { audit } = require('../audit');
 const { addEvent, recomputeCustomer } = require('../../customers/sync');
 const { termMs } = require('../../util/time');
+const { resendWebCode } = require('../../webPurchase');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -148,6 +150,19 @@ router.post('/:id/refund', asyncHandler(async (req, res) => {
   }
   await audit(prisma, req, 'payment.refund', { targetType: 'payment', targetId: p.id, detail: { amount: p.amount, currency: p.currency, reason } });
   res.json({ payment: updated });
+}));
+
+// POST /:id/resend-code: emails a website purchase's activation code again (new outbox row, sent now
+// when SMTP is configured, else queued). -> { code, redeemed, outboxId, delivery: { status } }
+router.post('/:id/resend-code', asyncHandler(async (req, res) => {
+  const p = await own('payment', req, req.params.id);
+  if (!p) return notFound(res, 'Payment');
+  const r = await resendWebCode(prisma, req.tenant.id, p.id, { createdBy: req.admin ? req.admin.actor : null });
+  if (r.error === 'no_code') return fail(res, 409, 'no_code', 'This payment has no activation code (only paid website purchases do).');
+  if (r.error === 'not_paid') return fail(res, 409, 'not_paid', 'Only a paid payment has a code to resend.');
+  if (r.error) return notFound(res, 'Payment');
+  await audit(prisma, req, 'payment.resend_code', { targetType: 'payment', targetId: p.id, detail: { outboxId: r.outboxId, delivery: r.delivery && r.delivery.status } });
+  res.json(r);
 }));
 
 module.exports = router;

@@ -103,6 +103,8 @@ metric snapshot. Check after 15 minutes: the log has a line, and `GET /v1/admin/
 | `TRUST_PROXY_HOPS` | 1 | proxies in front of the app; re-read live; set by set-proxy-hops |
 | `EMAIL_DOMAIN_ALLOWLIST` | none | comma list of domains allowed despite the disposable list |
 | `PUBLIC_RATE_PER_MIN` / `VERIFY_RATE_PER_MIN` | 120 / 20 | per client IP per minute |
+| `WEB_CHECKOUT_RATE_PER_MIN` | 10 | website checkouts (no install) per client IP per minute |
+| `SITE_BASE_URL` | https://browser.softglaze.com | website return URLs and the CORS origin for website checkout |
 
 ## 8. Keeping the disposable list fresh
 

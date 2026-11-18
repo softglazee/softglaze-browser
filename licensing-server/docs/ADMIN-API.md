@@ -351,6 +351,21 @@ billing period the Store reports active (`providerRef` = `msstore:<entitlementId
 whether the purchase was verified with the Microsoft Store or only reported by the app (UNVERIFIED).
 A Store refund marks the period's payment `refunded`; `POST /:id/refund` refuses them (`409 not_manual`).
 
+Website purchases (`provider=safepay`, `method=web`, `installId` null) are card payments made on
+browser.softglaze.com/buy without the app. They get no licence: when paid, the server mints one single-use
+activation code for the plan's tier and months and emails it to `account` (template `activation_code`,
+category essential, outbox `dedupeKey` `activation-code:<paymentId>`). The code is written on the payment's
+`note` (`Activation code SG-XXXXXXXXXXXX (...)`), so `GET /v1/admin/payments?method=web` shows every web
+purchase with its code. If SMTP is not configured the code is still saved and its email waits `queued` in the
+outbox until SMTP is set. A gateway refund of an unused code voids it.
+
+### POST /v1/admin/payments/:id/resend-code
+
+Emails a paid website purchase's activation code again (a lost or filtered email): a new outbox row, sent
+at once when SMTP is configured, else queued. No body.
+→ `200 { "code", "redeemed": bool, "outboxId", "delivery": { "status": "sent" | "retrying" | "failed" | "not_configured" | ... } }`.
+Errors: `404 not_found`, `409 no_code` (not a website purchase), `409 not_paid`.
+
 ### POST /v1/admin/payments (record a manual payment)
 
 ```json

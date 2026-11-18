@@ -98,6 +98,45 @@ async function sendNow(db, tenantId, { toEmail, customer, rendered, replyTo, cre
   }
 }
 
+// Sends one row this caller has already claimed (status 'sending'). -> 'sent' | 'failed' | 'retrying' | 'skipped'
+async function sendClaimed(db, row, settings, now = Date.now()) {
+  // Consent can change between queueing and sending.
+  const customer = row.customerId ? await db.customer.findUnique({ where: { id: row.customerId } }) : null;
+  const reason = row.customerId ? blockReason(customer, row.category) : null;
+  if (reason) {
+    await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'skipped', lastError: reason, lockedAt: null, html: null, text: null } });
+    return 'skipped';
+  }
+  try {
+    const info = await transport.sendMail({
+      to: row.toEmail, subject: row.subject, html: row.html, text: row.text, replyTo: settings.email.replyTo,
+      unsubscribeUrl: row.category !== 'essential' && row.customerId ? unsubscribeUrl(row.customerId) : null
+    });
+    await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'sent', sentAt: new Date(now), messageId: info.messageId, attempts: row.attempts + 1, lockedAt: null } });
+    return 'sent';
+  } catch (e) {
+    const attempts = row.attempts + 1;
+    const final = transport.isPermanent(e) || attempts >= row.maxAttempts;
+    const wait = BACKOFF_MIN[Math.min(attempts - 1, BACKOFF_MIN.length - 1)] * 60000;
+    await db.emailOutbox.update({
+      where: { id: row.id },
+      data: { status: final ? 'failed' : 'queued', attempts, lastError: transport.describeError(e), lockedAt: null, nextAttemptAt: new Date(now + wait) }
+    });
+    return final ? 'failed' : 'retrying';
+  }
+}
+
+// Sends one queued row now, outside the cron (an activation code right after payment). Same rules as
+// processOutbox (a row waiting for its retry time is left alone); a failure stays queued for the
+// cron's retries. -> { status }
+async function deliverQueued(db, tenantId, id, { settings, now = Date.now() } = {}) {
+  if (!transport.isConfigured()) return { status: 'not_configured' };
+  const claim = await db.emailOutbox.updateMany({ where: { id, tenantId, status: 'queued', nextAttemptAt: { lte: new Date(now) } }, data: { status: 'sending', lockedAt: new Date(now) } });
+  if (claim.count !== 1) return { status: 'not_queued' };
+  const row = await db.emailOutbox.findUnique({ where: { id } });
+  return { status: await sendClaimed(db, row, settings, now) };
+}
+
 // Sends what is due. Returns counts. opts: { now, settings, limit }
 async function processOutbox(db, tenant, { now = Date.now(), settings, limit = 200 } = {}) {
   const tenantId = tenant.id;
@@ -122,35 +161,11 @@ async function processOutbox(db, tenant, { now = Date.now(), settings, limit = 2
     if (row.category !== 'essential' && used >= cap) { out.heldByCap += 1; continue; }
     const claim = await db.emailOutbox.updateMany({ where: { id: row.id, status: 'queued' }, data: { status: 'sending', lockedAt: new Date(now) } });
     if (claim.count !== 1) continue;
-
-    // Consent can change between queueing and sending.
-    const customer = row.customerId ? await db.customer.findUnique({ where: { id: row.customerId } }) : null;
-    const reason = row.customerId ? blockReason(customer, row.category) : null;
-    if (reason) {
-      await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'skipped', lastError: reason, lockedAt: null, html: null, text: null } });
-      out.skipped += 1;
-      continue;
-    }
-    try {
-      const info = await transport.sendMail({
-        to: row.toEmail, subject: row.subject, html: row.html, text: row.text, replyTo: settings.email.replyTo,
-        unsubscribeUrl: row.category !== 'essential' && row.customerId ? unsubscribeUrl(row.customerId) : null
-      });
-      await db.emailOutbox.update({ where: { id: row.id }, data: { status: 'sent', sentAt: new Date(now), messageId: info.messageId, attempts: row.attempts + 1, lockedAt: null } });
-      used += 1;
-      out.sent += 1;
-    } catch (e) {
-      const attempts = row.attempts + 1;
-      const final = transport.isPermanent(e) || attempts >= row.maxAttempts;
-      const wait = BACKOFF_MIN[Math.min(attempts - 1, BACKOFF_MIN.length - 1)] * 60000;
-      await db.emailOutbox.update({
-        where: { id: row.id },
-        data: { status: final ? 'failed' : 'queued', attempts, lastError: transport.describeError(e), lockedAt: null, nextAttemptAt: new Date(now + wait) }
-      });
-      if (final) out.failed += 1; else out.retrying += 1;
-    }
+    const r = await sendClaimed(db, row, settings, now);
+    if (r === 'sent') used += 1;
+    out[r] += 1;
   }
   return out;
 }
 
-module.exports = { blockReason, renderFor, enqueue, sendNow, processOutbox, sentInLast24h, BACKOFF_MIN, PRIORITY };
+module.exports = { blockReason, renderFor, enqueue, sendNow, processOutbox, deliverQueued, sentInLast24h, BACKOFF_MIN, PRIORITY };
