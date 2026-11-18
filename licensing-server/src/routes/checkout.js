@@ -11,6 +11,7 @@ const { publicBaseUrl } = require('../env');
 const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
+const safepayProvider = require('../providers/safepay');
 const { CHECKOUT_IDS, publicCheckoutMethods } = require('../providers/checkoutProviders');
 const { getSettings } = require('../settings');
 
@@ -57,6 +58,10 @@ router.post('/', asyncHandler(async (req, res) => {
     ({ url, ref } = await stripeProvider.createCheckout({ secretKey: secrets.secretKey, tenantId: tenant.id, plan, installId, account }));
   } else if (provider === 'paypal') {
     ({ url, ref } = await paypalProvider.createCheckout({ secrets, plan, returnUrl, cancelUrl }));
+  } else if (provider === 'safepay') {
+    // ref = the tracker (one-time) or this checkout's Safepay plan token (recurring); see providers/safepay.js.
+    const orderId = `sg-${tenant.id}-${Date.now()}`;
+    ({ url, ref } = await safepayProvider.createCheckout({ secrets, plan, orderId, returnUrl, cancelUrl }));
   } else { // cryptomus
     const orderId = `sg-${tenant.id}-${Date.now()}`;
     ({ url, ref } = await cryptomusProvider.createCheckout({ secrets, plan, orderId, returnUrl, callbackUrl: `${publicBaseUrl}/v1/webhooks/cryptomus/${tenant.id}` }));

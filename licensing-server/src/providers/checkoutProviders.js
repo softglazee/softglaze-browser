@@ -6,7 +6,8 @@
 const CHECKOUT_PROVIDERS = Object.freeze({
   stripe: Object.freeze({ label: 'Stripe (cards)' }),
   paypal: Object.freeze({ label: 'PayPal' }),
-  cryptomus: Object.freeze({ label: 'Cryptomus (crypto)' })
+  cryptomus: Object.freeze({ label: 'Cryptomus (crypto)' }),
+  safepay: Object.freeze({ label: 'Safepay (cards)' })
 });
 const CHECKOUT_IDS = Object.freeze(Object.keys(CHECKOUT_PROVIDERS));
 

@@ -21,7 +21,7 @@ function sanitizeSecureUrl(raw, label) {
 }
 
 // Providers the licensing server can run a checkout for (licensing-server/src/routes/checkout.js).
-const CHECKOUT_PROVIDERS = ['cryptomus', 'stripe', 'paypal'];
+const CHECKOUT_PROVIDERS = ['cryptomus', 'stripe', 'paypal', 'safepay'];
 
 // Guarded: under plain node (tests) require('electron') is the binary path, not the API.
 function isPackagedApp() {

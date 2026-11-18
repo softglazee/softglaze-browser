@@ -14800,7 +14800,8 @@ const serverCheckoutCatalog = checkoutMethods.createCheckoutCatalog({ fetchMetho
 async function tenantCheckoutMethods() {
   const fallback = checkoutMethods.fallbackMethods(tenantConfig().checkoutProviders, (id) => {
     const def = payments.getProviderDef(id);
-    return def ? def.label : id;
+    // Server-only providers (no in-app gateway adapter) still get a readable name offline.
+    return def ? def.label : ({ safepay: 'Safepay (cards)' }[id] || id);
   });
   return serverCheckoutCatalog.get({ fallback });
 }

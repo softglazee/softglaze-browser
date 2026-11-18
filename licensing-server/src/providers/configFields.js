@@ -5,11 +5,15 @@ const PROVIDER_FIELDS = {
   stripe: { required: ['secretKey', 'webhookSecret'], optional: [] },
   paypal: { required: ['clientId', 'clientSecret', 'webhookId'], optional: ['env'] },
   cryptomus: { required: ['merchantId', 'apiKey'], optional: [] },
+  // Safepay: publicKey = the merchant API key (merchant_api_key), secretKey = X-SFPY-MERCHANT-SECRET,
+  // webhookSecret = the endpoint's shared secret (HMAC of X-SFPY-SIGNATURE). env 'sandbox' (default) | 'live'.
+  safepay: { required: ['publicKey', 'secretKey', 'webhookSecret'], optional: ['env'] },
   // Not a checkout gateway: the Microsoft Entra ID (Azure AD) app that may call the Microsoft Store
   // collection and purchase APIs for this tenant's Store purchases (src/store/msStoreApi.js).
   microsoft_store: { required: ['entraTenantId', 'clientId', 'clientSecret'], optional: [] }
 };
 const PAYPAL_ENVS = ['live', 'sandbox'];
+const SAFEPAY_ENVS = ['sandbox', 'live'];
 
 // -> { secrets } or { error }. Unknown keys are dropped; every required key must be a
 // non-empty string (an empty verification key would make a webhook forgeable).
@@ -31,6 +35,12 @@ function buildProviderSecrets(provider, body) {
   if (provider === 'paypal') {
     const env = (secrets.env || 'live').toLowerCase();
     if (!PAYPAL_ENVS.includes(env)) return { error: 'paypal env must be "live" or "sandbox".' };
+    secrets.env = env;
+  }
+  if (provider === 'safepay') {
+    // Sandbox until the owner flips it: a live key saved without env still talks to the sandbox and fails loudly.
+    const env = (secrets.env || 'sandbox').toLowerCase();
+    if (!SAFEPAY_ENVS.includes(env)) return { error: 'safepay env must be "sandbox" or "live".' };
     secrets.env = env;
   }
   return { secrets };
