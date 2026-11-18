@@ -6,7 +6,7 @@
 
 const PLACEHOLDERS = Object.freeze([
   'name', 'greeting', 'email', 'trialEndsAt', 'daysLeft', 'plan', 'downloadUrl', 'unsubscribeUrl',
-  'supportEmail', 'appName', 'companyName', 'companyAddress', 'code', 'codeMinutes'
+  'supportEmail', 'appName', 'companyName', 'companyAddress', 'code', 'codeMinutes', 'term'
 ]);
 const PLACEHOLDER_RE = /\{\{\s*([A-Za-z]+)\s*\}\}/g;
 
@@ -50,14 +50,17 @@ function greetingFor(name, lang) {
 }
 
 const FOOTER = {
-  en: { sentBy: (c, e) => `This email was sent by ${c} to ${e}.`, unsub: 'Do not want these emails?', unsubLink: 'Unsubscribe', essential: 'You get this email because this address was entered in the app.' },
-  es: { sentBy: (c, e) => `Este correo lo envía ${c} a ${e}.`, unsub: '¿No quieres recibir estos correos?', unsubLink: 'Darte de baja', essential: 'Recibes este correo porque alguien escribió esta dirección en la aplicación.' }
+  en: { sentBy: (c, e) => `This email was sent by ${c} to ${e}.`, unsub: 'Do not want these emails?', unsubLink: 'Unsubscribe', essential: 'You get this email because this address was entered in the app.', purchase: 'You get this email because this address was used for a purchase on our website.' },
+  es: { sentBy: (c, e) => `Este correo lo envía ${c} a ${e}.`, unsub: '¿No quieres recibir estos correos?', unsubLink: 'Darte de baja', essential: 'Recibes este correo porque alguien escribió esta dirección en la aplicación.', purchase: 'Recibes este correo porque esta dirección se usó para una compra en nuestra web.' }
 };
+// Essential emails sent for a website purchase, not for something typed into the app.
+const PURCHASE_KEYS = new Set(['activation_code']);
+const essentialLine = (f, key) => (PURCHASE_KEYS.has(key) ? f.purchase : f.essential);
 
-function layout(bodyHtml, { lang, vars, category }) {
+function layout(bodyHtml, { lang, vars, category, key }) {
   const f = FOOTER[lang] || FOOTER.en;
   const lines = [escapeHtml(f.sentBy(vars.companyName || 'SoftGlaze', vars.email || ''))];
-  if (category === 'essential') lines.push(escapeHtml(f.essential));
+  if (category === 'essential') lines.push(escapeHtml(essentialLine(f, key)));
   if (category !== 'essential' && vars.unsubscribeUrl) {
     lines.push(`${escapeHtml(f.unsub)} <a href="${escapeHtml(vars.unsubscribeUrl)}" style="color:#4b5563;">${escapeHtml(f.unsubLink)}</a>`);
   }
@@ -78,10 +81,10 @@ ${lines.join('<br>')}
 </body></html>`;
 }
 
-function textFooter({ lang, vars, category }) {
+function textFooter({ lang, vars, category, key }) {
   const f = FOOTER[lang] || FOOTER.en;
   const lines = ['', '--', f.sentBy(vars.companyName || 'SoftGlaze', vars.email || '')];
-  if (category === 'essential') lines.push(f.essential);
+  if (category === 'essential') lines.push(essentialLine(f, key));
   if (category !== 'essential' && vars.unsubscribeUrl) lines.push(`${f.unsub} ${f.unsubLink}: ${vars.unsubscribeUrl}`);
   if (category === 'marketing' && vars.companyAddress) lines.push(vars.companyAddress);
   return lines.join('\n');
@@ -92,8 +95,9 @@ function renderEmail(template, vars) {
   const lang = template.lang === 'es' ? 'es' : 'en';
   const category = template.category || 'lifecycle';
   const subject = fill(template.subject, vars, (s) => s).replace(/[\r\n]+/g, ' ').trim().slice(0, 250);
-  const html = layout(fill(template.html, vars, escapeHtml), { lang, vars, category });
-  const text = fill(template.text, vars, (s) => s) + '\n' + textFooter({ lang, vars, category });
+  const key = template.key || null;
+  const html = layout(fill(template.html, vars, escapeHtml), { lang, vars, category, key });
+  const text = fill(template.text, vars, (s) => s) + '\n' + textFooter({ lang, vars, category, key });
   return { subject, html, text };
 }
 
@@ -116,7 +120,8 @@ function varsFor({ customer = {}, settings, unsubscribeUrl = '', now = Date.now(
     companyName: email.companyName || 'SoftGlaze',
     companyAddress: email.companyAddress || '',
     code: code || '',
-    codeMinutes: codeMinutes != null ? String(codeMinutes) : ''
+    codeMinutes: codeMinutes != null ? String(codeMinutes) : '',
+    term: ''
   };
 }
 

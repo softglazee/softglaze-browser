@@ -1,7 +1,7 @@
 'use strict';
 // Email templates live in the EmailTemplate table (seeded by migration). Lookup order for (key, lang):
 // the tenant's row in that language, the tenant's English row, then the built-in copy.
-const { defaultRows, builtIn, BUILT_IN_KEYS, LANGS } = require('./defaults');
+const { allDefaultRows, builtIn, BUILT_IN_KEYS, LANGS } = require('./defaults');
 
 const CATEGORIES = ['essential', 'lifecycle', 'marketing', 'service'];
 
@@ -19,7 +19,7 @@ async function getTemplate(db, tenantId, key, lang = 'en') {
 // Adds any built-in template the tenant does not have yet (new tenants, new built-in keys).
 async function ensureDefaultTemplates(db, tenantId) {
   let added = 0;
-  for (const r of defaultRows()) {
+  for (const r of allDefaultRows()) {
     const exists = await db.emailTemplate.findUnique({ where: { tenantId_key_lang: { tenantId, key: r.key, lang: r.lang } } });
     if (exists) continue;
     try {

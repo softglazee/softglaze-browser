@@ -73,6 +73,15 @@ are sold.
   same check for one-time Safepay payments still pending 2 minutes to 48 hours after checkout, for
   buyers who closed the tab before the return page. The `payment.succeeded` webhook, if Safepay sends
   it, provisions the same way; whichever comes first wins and the others do nothing.
+- **Website purchase** (browser.softglaze.com/buy, no app): `POST /v1/checkout` without `installId`,
+  with the buyer's email in `account` (validated, no temporary-mail domains) and a one-time plan. The
+  Payment is recorded with `method: "web"`. Safepay returns the buyer to
+  `https://browser.softglaze.com/buy/thanks?order_id=...&tracker=...` (cancel: `/buy?cancelled=1`); that
+  page polls `GET /v1/checkout/status?tenantId=...&tracker=...`, which runs the same Safepay check and
+  answers only `{ "status": "paid" | "pending" | "unknown" }`. When paid, no licence is created: one
+  single-use activation code (tier and months of the plan) is minted, written on the Payment's note and
+  emailed to the buyer; they enter it in the app (Billing, "Have a purchase code?"). Retries, the cron
+  and webhooks never mint a second code. CORS allows only the website origin and localhost.
 - **Recurring plan**: each checkout creates its own Safepay plan from our Plan row
   (`POST /client/plans/v1/`, MONTH or YEAR), so the price charged can never differ from ours, and
   sends the buyer to `/checkout/auth/login`. The plan token is the checkout reference: the first

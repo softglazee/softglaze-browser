@@ -226,7 +226,8 @@ test('custom sends: consent rules, preview counts, test send to yourself, campai
 
 test('templates: built-ins seeded in en + es, editable, category locked, reset, custom create/delete, preview', async () => {
   const l = await admin('GET', '/email/templates');
-  assert.equal(l.json.items.filter((t) => t.builtIn).length, 14);
+  // 7 seeded templates + activation_code (added after the seed), each in en + es.
+  assert.equal(l.json.items.filter((t) => t.builtIn).length, 16);
   assert.ok(l.json.placeholders.includes('unsubscribeUrl'));
   const put = await admin('PUT', '/email/templates/welcome', { body: { lang: 'en', subject: 'Hello {{name}}', html: '<p>{{greeting}}</p><p>Custom.</p>', text: '{{greeting}} Custom.' } });
   assert.equal(put.status, 200);

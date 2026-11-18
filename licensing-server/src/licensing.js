@@ -4,6 +4,7 @@
 // and the payment status change commit as one unit.
 const prisma = require('./db');
 const { termMs } = require('./util/time');
+const { isWebPayment, issueWebCode, voidWebCode } = require('./webPurchase');
 
 // Match an existing licence by installId only, never by account: the account comes from checkout
 // metadata, so matching on it lets a purchase with someone else's email take over their licence.
@@ -52,6 +53,8 @@ async function claimPendingPayment(tenant, provider, providerRef, db = prisma) {
 // Recover grant details from the Payment recorded at checkout (uniform across
 // providers), look up the plan for tier/months, grant, and mark the payment paid.
 // Returns { provisioned }. No pending Payment for this provider+ref => nothing happens.
+// A website purchase (method 'web', no install) gets no licence: it gets one single-use activation
+// code, emailed to the buyer (src/webPurchase.js), and returns { provisioned, webCode: { outboxId } }.
 async function provisionFromPaymentRef(tenant, provider, providerRef, fallback = {}, db = prisma) {
   const payment = await claimPendingPayment(tenant, provider, providerRef, db);
   if (!payment) return { provisioned: false };
@@ -59,6 +62,10 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
   const plan = planKey
     ? await db.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: planKey } } })
     : null;
+  if (isWebPayment(payment)) {
+    const { outboxId } = await issueWebCode(tenant, payment, plan, db);
+    return { provisioned: true, webCode: { paymentId: payment.id, outboxId } };
+  }
   await grantMonths(tenant, {
     account: payment.account || fallback.account || null,
     installId: payment.installId || fallback.installId || null,
@@ -117,6 +124,8 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
         ? await db.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: payment.plan } } })
         : null;
       const months = (plan && plan.months) || 1;
+      // A website purchase has no licence of its own: its activation code stops working if unused.
+      if (isWebPayment(payment)) { await voidWebCode(db, tenant.id, payment); return { changed: true }; }
       let lic = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(sessionRef) }, orderBy: { updatedAt: 'desc' } });
       if (!lic && payment.installId) {
         lic = await db.license.findFirst({ where: { tenantId: tenant.id, installId: payment.installId }, orderBy: { updatedAt: 'desc' } });

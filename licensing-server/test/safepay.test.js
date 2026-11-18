@@ -176,7 +176,7 @@ test('one-time checkout: tracker + auth token, hosted /embedded/ URL, Payment re
 test('recurring checkout: a Safepay plan from our Plan row, /checkout/auth/login URL, Payment ref = plan token', async () => {
   reset();
   http.replies.push(ok({ token: 'plan_123' }), { status: 200, json: { data: 'tbt_1' } });
-  const r = await fetch(`${base}/v1/checkout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenantId: 't1', planKey: 'ent_yearly', provider: 'safepay' }) });
+  const r = await fetch(`${base}/v1/checkout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenantId: 't1', planKey: 'ent_yearly', provider: 'safepay', installId: 'inst1' }) });
   const j = await r.json();
   assert.equal(r.status, 200);
   assert.equal(j.ref, 'plan_123');
@@ -209,7 +209,7 @@ test('a Safepay API error fails the checkout and records no Payment', async () =
   http.replies.push({ status: 400, json: { data: null, status: { errors: ['invalid merchant_api_key'], message: 'error' } } });
   await assert.rejects(safepay.createCheckout({ secrets: SECRETS, plan: db.tables.plan[0], orderId: 'o' }), /invalid merchant_api_key/);
   http.replies.push({ status: 400, json: { data: null, status: { errors: ['bad'], message: 'error' } } });
-  const r = await quiet(() => fetch(`${base}/v1/checkout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenantId: 't1', planKey: 'pro', provider: 'safepay' }) }));
+  const r = await quiet(() => fetch(`${base}/v1/checkout`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tenantId: 't1', planKey: 'pro', provider: 'safepay', installId: 'inst1' }) }));
   assert.equal(r.status, 500);
   assert.equal(db.tables.payment.length, 0);
 });

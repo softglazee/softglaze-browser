@@ -9,6 +9,7 @@ const { openJson } = require('./crypto/secrets');
 const safepay = require('./providers/safepay');
 const { provisionFromPaymentRef } = require('./licensing');
 const { handleOnce } = require('./webhookOnce');
+const { deliverCodeEmail } = require('./webPurchase');
 
 const verifyEventId = (tracker) => `safepay-verify:${tracker}`;
 
@@ -36,12 +37,23 @@ async function verifySafepayTracker(tracker, { tenantId = null, db = prisma } = 
   }
   const tenant = { id: payment.tenantId };
   let provisioned = false;
+  let webCode = null;
   const handled = await handleOnce(tenant.id, 'safepay', verifyEventId(tracker), 'payment.verified', async () => async (tx) => {
     const r = await provisionFromPaymentRef(tenant, 'safepay', tracker, {}, tx);
     provisioned = Boolean(r && r.provisioned);
+    webCode = (r && r.webCode) || null;
   }, db);
   if (!handled) return { status: 'duplicate' };
-  return { status: provisioned ? 'provisioned' : 'duplicate' };
+  if (!provisioned) return { status: 'duplicate' };
+  const out = { status: 'provisioned' };
+  if (webCode) {
+    // A website purchase: send its activation code now, after the commit, without holding up the
+    // caller (the buyer's status poll). A failure stays queued and the cron retries it.
+    out.emailDelivery = new Promise((resolve) => setImmediate(resolve))
+      .then(() => deliverCodeEmail(db, tenant.id, webCode.outboxId))
+      .catch((e) => { console.warn('[safepay:verify] activation email not sent yet:', e && e.message ? e.message : e); return { status: 'error' }; });
+  }
+  return out;
 }
 
 // Cron: one-time Safepay payments still pending between 2 minutes and 48 hours after checkout

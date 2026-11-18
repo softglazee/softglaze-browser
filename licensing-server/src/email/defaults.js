@@ -263,26 +263,108 @@ La última versión está aquí: {{downloadUrl}}`
   }
 };
 
-const LANGS = ['en', 'es'];
-const BUILT_IN_KEYS = Object.keys(TEMPLATES);
+// Built-in templates added after the 20261107120100 seed migration. They are not in that migration (it
+// must stay word for word what was applied); ensureDefaultTemplates adds them to a tenant's table the
+// first time the admin lists templates, and until then getTemplate falls back to this copy.
+const ADDED_TEMPLATES = {
+  activation_code: {
+    name: 'Activation code (website purchase)',
+    category: 'essential',
+    en: {
+      subject: 'Your SoftGlaze Browser activation code',
+      html: `<p>{{greeting}}</p>
+<p>Thank you for buying {{appName}}. Your payment for the {{plan}} plan ({{term}}) is complete.</p>
+<p>Your activation code is:</p>
+<p style="${CODE_STYLE}">{{code}}</p>
+<p>How to use it:</p>
+<ol>
+<li>Install {{appName}} if you have not yet: <a href="{{downloadUrl}}">{{downloadUrl}}</a></li>
+<li>Open the app and go to Billing.</li>
+<li>Under "Have a purchase code?", paste the code and press Apply.</li>
+</ol>
+<p>The code works once, on the computer where you enter it. Keep this email until you have used it.</p>
+<p>If something does not work, reply to this email or write to {{supportEmail}}. We will help, resend the code, or refund you.</p>
+<p>The SoftGlaze team</p>`,
+      text: `{{greeting}}
 
-// [{ key, lang, name, category, subject, html, text }]
-function defaultRows() {
+Thank you for buying {{appName}}. Your payment for the {{plan}} plan ({{term}}) is complete.
+
+Your activation code is: {{code}}
+
+How to use it:
+
+1. Install {{appName}} if you have not yet: {{downloadUrl}}
+2. Open the app and go to Billing.
+3. Under "Have a purchase code?", paste the code and press Apply.
+
+The code works once, on the computer where you enter it. Keep this email until you have used it.
+
+If something does not work, reply to this email or write to {{supportEmail}}. We will help, resend the code, or refund you.
+
+The SoftGlaze team`
+    },
+    es: {
+      subject: 'Tu código de activación de SoftGlaze Browser',
+      html: `<p>{{greeting}}</p>
+<p>Gracias por comprar {{appName}}. Tu pago del plan {{plan}} ({{term}}) se ha completado.</p>
+<p>Tu código de activación es:</p>
+<p style="${CODE_STYLE}">{{code}}</p>
+<p>Cómo usarlo:</p>
+<ol>
+<li>Instala {{appName}} si aún no lo tienes: <a href="{{downloadUrl}}">{{downloadUrl}}</a></li>
+<li>Abre la aplicación y ve a Facturación.</li>
+<li>En "¿Tienes un código de compra?", pega el código y pulsa Aplicar.</li>
+</ol>
+<p>El código funciona una vez, en el ordenador donde lo introduzcas. Guarda este correo hasta que lo hayas usado.</p>
+<p>Si algo no funciona, responde a este correo o escribe a {{supportEmail}}. Te ayudamos, te reenviamos el código o te devolvemos el dinero.</p>
+<p>El equipo de SoftGlaze</p>`,
+      text: `{{greeting}}
+
+Gracias por comprar {{appName}}. Tu pago del plan {{plan}} ({{term}}) se ha completado.
+
+Tu código de activación es: {{code}}
+
+Cómo usarlo:
+
+1. Instala {{appName}} si aún no lo tienes: {{downloadUrl}}
+2. Abre la aplicación y ve a Facturación.
+3. En "¿Tienes un código de compra?", pega el código y pulsa Aplicar.
+
+El código funciona una vez, en el ordenador donde lo introduzcas. Guarda este correo hasta que lo hayas usado.
+
+Si algo no funciona, responde a este correo o escribe a {{supportEmail}}. Te ayudamos, te reenviamos el código o te devolvemos el dinero.
+
+El equipo de SoftGlaze`
+    }
+  }
+};
+
+const LANGS = ['en', 'es'];
+const SEEDED_KEYS = Object.keys(TEMPLATES);
+const BUILT_IN_KEYS = [...SEEDED_KEYS, ...Object.keys(ADDED_TEMPLATES)];
+const ALL = { ...TEMPLATES, ...ADDED_TEMPLATES };
+
+function rowsOf(keys) {
   const out = [];
-  for (const key of BUILT_IN_KEYS) {
+  for (const key of keys) {
     for (const lang of LANGS) {
-      const t = TEMPLATES[key];
+      const t = ALL[key];
       out.push({ key, lang, name: t.name, category: t.category, ...t[lang] });
     }
   }
   return out;
 }
 
+// The rows the seed migration inserted: [{ key, lang, name, category, subject, html, text }]
+function defaultRows() { return rowsOf(SEEDED_KEYS); }
+// Every built-in row, including the ones added later (ensureDefaultTemplates).
+function allDefaultRows() { return rowsOf(BUILT_IN_KEYS); }
+
 function builtIn(key, lang) {
-  const t = TEMPLATES[key];
+  const t = ALL[key];
   if (!t) return null;
   const copy = t[lang] || t.en;
   return { key, lang: t[lang] ? lang : 'en', name: t.name, category: t.category, ...copy };
 }
 
-module.exports = { TEMPLATES, LANGS, BUILT_IN_KEYS, defaultRows, builtIn };
+module.exports = { TEMPLATES, ADDED_TEMPLATES, LANGS, BUILT_IN_KEYS, defaultRows, allDefaultRows, builtIn };

@@ -3,6 +3,11 @@
 // Uses the tenant's own sealed provider keys and records a pending Payment for the webhook to claim.
 // GET /v1/checkout/methods?tenantId=... (no auth) -> { providers: [{ id, label, kind }], store: { salesEnabled } }:
 // the payment methods the app offers (src/providers/checkoutProviders.js). CORS open, cached 60 s.
+// Website checkout (browser.softglaze.com/buy): POST /v1/checkout WITHOUT installId, with the buyer's
+// email in `account` and provider 'safepay'. Safepay sends the buyer back to the website
+// (SITE_BASE_URL/buy/thanks), whose page asks GET /v1/checkout/status?tenantId&tracker -> { status:
+// 'paid' | 'pending' | 'unknown' } (never the code or the email). The paid Payment gets an activation
+// code by email instead of a licence (src/webPurchase.js). CORS: the website origin (and localhost).
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -15,9 +20,32 @@ const safepayProvider = require('../providers/safepay');
 const { verifySafepayTracker } = require('../safepayVerify');
 const { CHECKOUT_IDS, publicCheckoutMethods } = require('../providers/checkoutProviders');
 const { getSettings } = require('../settings');
+const { parseEmail } = require('../customers/emailAddress');
+const { isDisposableDomain } = require('../customers/disposable');
+const { rateLimit } = require('../middleware/rateLimit');
+const { WEB_METHOD, isWebPayment, kickCodeEmail } = require('../webPurchase');
 
 const router = express.Router();
 const SUPPORTED = new Set(CHECKOUT_IDS);
+
+// The website that sells without the app. Its origin (and a local dev server) may call the checkout
+// and status endpoints from the browser; other origins get no CORS headers (the app is not a browser).
+const SITE_BASE_URL = String(process.env.SITE_BASE_URL || 'https://browser.softglaze.com').replace(/\/+$/, '');
+const SITE_ORIGIN = (() => { try { return new URL(SITE_BASE_URL).origin; } catch (_) { return 'https://browser.softglaze.com'; } })();
+const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
+const siteOriginAllowed = (o) => typeof o === 'string' && (o === SITE_ORIGIN || LOCAL_ORIGIN_RE.test(o));
+function siteCors(req, res, methods) {
+  const origin = req.get('origin');
+  res.vary('Origin');
+  if (!siteOriginAllowed(origin)) return false;
+  res.set('Access-Control-Allow-Origin', origin);
+  res.set('Access-Control-Allow-Methods', methods);
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  res.set('Access-Control-Max-Age', '600');
+  return true;
+}
+// A website checkout creates a Safepay tracker per request: a tighter per-IP limit than the app's.
+const webCheckoutLimiter = rateLimit({ windowMs: 60000, max: Number(process.env.WEB_CHECKOUT_RATE_PER_MIN) || 10 });
 
 // Public and read-only: no secrets, only which methods are switched on and their names.
 router.options('/methods', (req, res) => {
@@ -35,17 +63,48 @@ router.get('/methods', asyncHandler(async (req, res) => {
   res.json(await publicCheckoutMethods(prisma, tenant.id, await getSettings(prisma, tenant.id)));
 }));
 
-router.post('/', asyncHandler(async (req, res) => {
-  const { tenantId, planKey, installId, account } = req.body || {};
+router.options('/', (req, res) => {
+  siteCors(req, res, 'POST, OPTIONS');
+  res.status(204).end();
+});
+
+// No installId = a website purchase: rate limited here, before anything is created.
+function webCheckoutGate(req, res, next) {
+  siteCors(req, res, 'POST, OPTIONS');
+  const b = req.body || {};
+  if (b.installId) return next();
+  return webCheckoutLimiter(req, res, next);
+}
+
+router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
+  const { tenantId, planKey, installId } = req.body || {};
+  let { account } = req.body || {};
   const provider = String((req.body && req.body.provider) || 'stripe').toLowerCase();
   if (!tenantId || !planKey) return res.status(400).json({ error: 'tenantId and planKey are required.' });
   if (!SUPPORTED.has(provider)) return res.status(400).json({ error: `Unsupported provider "${provider}".` });
+  const web = !installId;
+  let webEmail = null;
+  if (web) {
+    // Website checkout: card payments (Safepay) only, and the activation code goes to this email.
+    if (provider !== 'safepay') return res.status(400).json({ error: 'install_required', message: 'This payment method is only available in the app.' });
+    webEmail = parseEmail(typeof account === 'string' ? account : '');
+    if (!webEmail) return res.status(400).json({ error: 'invalid_email', message: 'Enter a valid email address. Your activation code is sent there.' });
+    account = webEmail.email;
+  }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: String(tenantId) } });
   if (!tenant || tenant.status !== 'active') return res.status(404).json({ error: 'Unknown tenant.' });
 
   const plan = await prisma.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: String(planKey) } } });
   if (!plan || !plan.active) return res.status(404).json({ error: 'Unknown or inactive plan.' });
+  if (web) {
+    // A code is a fixed term; a subscription needs an install to renew.
+    if (plan.recurring) return res.status(400).json({ error: 'install_required', message: 'This plan can only be bought in the app.' });
+    const em = (await getSettings(prisma, tenant.id)).email;
+    if (isDisposableDomain(webEmail.domain, { allow: em.domainAllowlist, block: em.domainBlocklist })) {
+      return res.status(400).json({ error: 'disposable_email', message: 'Please use a permanent email address, not a temporary one.' });
+    }
+  }
 
   const cfg = await prisma.tenantPaymentConfig.findUnique({ where: { tenantId_provider: { tenantId: tenant.id, provider } } });
   if (!cfg || !cfg.enabled) return res.status(400).json({ error: `${provider} is not enabled for this tenant.` });
@@ -64,8 +123,12 @@ router.post('/', asyncHandler(async (req, res) => {
     const orderId = `sg-${tenant.id}-${Date.now()}`;
     // Safepay appends "?order_id=...&tracker=..." to the return URL even when it already has a query
     // string, so its return URLs carry the status in the path instead.
+    // A website checkout returns to the website: its thanks page asks /status; a cancel lands on /buy
+    // (Safepay may glue "?order_id=..." onto "cancelled=1"; the page only checks that the key is there).
     ({ url, ref } = await safepayProvider.createCheckout({
-      secrets, plan, orderId, returnUrl: `${publicBaseUrl}/v1/checkout/return/success`, cancelUrl: `${publicBaseUrl}/v1/checkout/return/cancel`
+      secrets, plan, orderId,
+      returnUrl: web ? `${SITE_BASE_URL}/buy/thanks` : `${publicBaseUrl}/v1/checkout/return/success`,
+      cancelUrl: web ? `${SITE_BASE_URL}/buy?cancelled=1` : `${publicBaseUrl}/v1/checkout/return/cancel`
     }));
   } else { // cryptomus
     const orderId = `sg-${tenant.id}-${Date.now()}`;
@@ -75,10 +138,47 @@ router.post('/', asyncHandler(async (req, res) => {
   await prisma.payment.create({
     data: {
       tenantId: tenant.id, provider, providerRef: ref ? String(ref) : null, amount: plan.amount, currency: plan.currency,
-      status: 'pending', account: account ? String(account) : null, plan: plan.key, installId: installId ? String(installId) : null
+      status: 'pending', account: account ? String(account) : null, plan: plan.key, installId: installId ? String(installId) : null,
+      ...(web ? { method: WEB_METHOD } : {})
     }
   });
   res.json({ url, ref, provider });
+}));
+
+// GET /v1/checkout/status?tenantId=...&tracker=track_... (no auth): the website's thanks page. A pending
+// website payment is checked with Safepay first (same check as the return page and the cron). Answers
+// only { status: 'paid' | 'pending' | 'unknown' }: never the code, the email or the amount.
+const STATUS_VERIFY_WAIT_MS = 8000;
+router.options('/status', (req, res) => {
+  siteCors(req, res, 'GET, OPTIONS');
+  res.status(204).end();
+});
+router.get('/status', asyncHandler(async (req, res) => {
+  siteCors(req, res, 'GET, OPTIONS');
+  res.set('Cache-Control', 'no-store');
+  const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : '';
+  const tracker = typeof req.query.tracker === 'string' ? req.query.tracker.trim() : '';
+  if (!tenantId || tenantId.length > 64 || !safepayProvider.isTrackerToken(tracker)) return res.json({ status: 'unknown' });
+  const find = () => prisma.payment.findFirst({ where: { tenantId, provider: 'safepay', providerRef: tracker }, orderBy: { createdAt: 'desc' } });
+  let payment = await find();
+  if (!payment || !isWebPayment(payment)) return res.json({ status: 'unknown' });
+  if (payment.status === 'pending') {
+    let timer;
+    try {
+      await Promise.race([
+        verifySafepayTracker(tracker, { tenantId }),
+        new Promise((resolve) => { timer = setTimeout(resolve, STATUS_VERIFY_WAIT_MS); })
+      ]);
+    } catch (e) {
+      console.warn('[checkout:status] Safepay verification failed:', e && e.message ? e.message : e);
+    } finally { clearTimeout(timer); }
+    payment = await find();
+  } else if (payment.status === 'paid') {
+    // Settled by a webhook: make sure its activation email is not waiting for the next cron run.
+    kickCodeEmail(prisma, tenantId, payment.id).catch(() => {});
+  }
+  const status = payment && payment.status === 'paid' ? 'paid' : payment && payment.status === 'pending' ? 'pending' : 'unknown';
+  res.json({ status });
 }));
 
 // Landing page providers redirect back to after pay/cancel: /return?status=success|cancel (Stripe,
