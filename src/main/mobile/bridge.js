@@ -186,12 +186,23 @@ class MobileBridge {
     };
     if (view.clientName) body.clientName = truncate(view.clientName, 200);
     if (view.memberName) body.memberName = truncate(view.memberName, 200);
-    // The member the AI token acts as. The phone's data contract has AiRequest.tokenMemberId; the
-    // field reaches the phone once @softglaze/protocol adds it to approval_request (optional fields
-    // are backward compatible). Until then the validator drops it and memberName carries the name.
+    // The member the AI token acts as and the token's name ("Requested by <tokenName>" on the phone).
     if (view.memberId != null) body.tokenMemberId = String(view.memberId);
     if (view.tokenName) body.tokenName = truncate(view.tokenName, 200);
     return P.createMessage('approval_request', body);
+  }
+
+  // Every approval still pending that this phone may answer (state.request, new session).
+  async sendPendingApprovals(device) {
+    if (!device.scopes.includes('approve_ai')) return 0;
+    const who = await this.memberOf(device);
+    if (!who.ok) return 0;
+    let n = 0;
+    for (const view of this.host.approvals.list()) {
+      if (!this.host.canAnswerApproval(who.member, view)) continue;
+      try { if (await this.send(device, this.approvalMessage(view), {})) n++; } catch (e) { this.log('approval resend failed', e && e.message); }
+    }
+    return n;
   }
 
   // A new AI approval: every phone with approve_ai whose member may answer it gets it, sealed, with
@@ -245,6 +256,7 @@ class MobileBridge {
     switch (cmd.name) {
       case 'state.request':
         await this.sendSnapshot(device);
+        await this.sendPendingApprovals(device);
         return { ok: true, code: 'ok' };
       case 'profile.start':
       case 'profile.stop':

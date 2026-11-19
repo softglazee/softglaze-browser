@@ -14,10 +14,12 @@
 // offline phone (approvals, results, revoke) goes sealed to its pinned key, approvals with push.
 const { EventEmitter } = require('node:events');
 const { P } = require('./protocol');
-const { rowFromPairing, publicDevice } = require('./devices');
+const { rowFromPairing, publicDevice, deviceKind, defaultScopesFor } = require('./devices');
 const { MobileBridge } = require('./bridge');
 
 const PAIRING_TTL_MS = 5 * 60_000;
+// Push kind for a message resent sealed after its session copy was queued.
+const PUSH_FOR = Object.freeze({ approval_request: 'approval', alert: 'alert', revoke: 'security' });
 const CONFIRM_TTL_MS = 5 * 60_000;
 
 function errorWith(code, message) {
@@ -110,7 +112,12 @@ class MobileCompanion extends EventEmitter {
     if (!o) return null;
     const v = { pairingId: o.pairingId, stage: o.stage, expiresAt: new Date(o.expiresAt).toISOString() };
     if (o.stage === 'open') v.qrText = o.qrText;
-    if (o.stage === 'confirm') { v.sas = o.sas; v.phone = { name: o.peer.device.name, platform: o.peer.device.platform, appVersion: o.peer.device.appVersion }; }
+    if (o.stage === 'confirm') {
+      const kind = deviceKind(o.peer.device.appVersion);
+      v.sas = o.sas;
+      v.phone = { name: o.peer.device.name, platform: o.peer.device.platform, appVersion: o.peer.device.appVersion, kind };
+      v.defaultScopes = defaultScopesFor(kind);
+    }
     if (o.error) v.error = o.error;
     return v;
   }
@@ -202,7 +209,13 @@ class MobileCompanion extends EventEmitter {
 
   // The codes did not match (or the user changed their mind): the phone is never trusted.
   rejectPairing(pairingId) {
-    if (this.offer && this.offer.pairingId === pairingId) this.cancelPairing();
+    const o = this.offer;
+    if (o && o.pairingId === pairingId) {
+      // The phone linked right after the handshake; unlinking sends it `revoked`, so it stops
+      // waiting for the hello at once.
+      if (o.peer) this.relay.unlink(o.peer.mailboxId);
+      this.cancelPairing();
+    }
     return { ok: true };
   }
 
@@ -214,9 +227,12 @@ class MobileCompanion extends EventEmitter {
     await this._greet(device);
   }
 
+  // Every new session: hello (deviceId + scopes, the phone builds its own member from them), the
+  // state, and every approval still pending (the phone does not keep them across reconnects).
   async _greet(device) {
     await this.sendTo(device, this.bridge.helloFor(device), { liveOnly: true });
     await this.bridge.sendSnapshot(device);
+    await this.bridge.sendPendingApprovals(device);
   }
 
   // ---- inbound envelopes ----
@@ -275,18 +291,29 @@ class MobileCompanion extends EventEmitter {
     else env = P.sealTo({ sender: this.identity, recipientDhPub: device.dhPub, message: msg });
     const ack = await this.relay.sendEnvelope(device.mailboxId, env, opts.push || null);
     if (ack.status === 'queued' && viaSession) {
-      // The phone went away: its session keys are gone with it. Drop ours, and resend what matters
-      // sealed so it can be read after the phone reconnects (the phone's id cache drops duplicates).
+      // The phone went away and will open a NEW session when it is back, so the queued session copy
+      // is unreadable then (LIVE-COMPANION.md 3.3). Drop the session and send it again sealed, with
+      // a push for what a person should see (the phone's id cache drops a duplicate).
       session.close();
       this.sessions.delete(device.mailboxId);
       this.online.set(device.mailboxId, false);
       if (!opts.liveOnly) {
         const sealed = P.sealTo({ sender: this.identity, recipientDhPub: device.dhPub, message: msg });
-        return (await this.relay.sendEnvelope(device.mailboxId, sealed, null)).status !== 'rejected';
+        const again = await this.relay.sendEnvelope(device.mailboxId, sealed, PUSH_FOR[msg.type] || null);
+        return this._afterAck(device, again);
       }
       return false;
     }
-    if (ack.status === 'rejected' && ack.reason === 'not_linked') this.relay.link(device.mailboxId);
+    return this._afterAck(device, ack);
+  }
+
+  // `rejected: not_linked` means the phone unpaired itself (its sealed revoke may have been purged
+  // with the queue while this PC was offline, LIVE-COMPANION.md 3.5): forget it here too. Not for a
+  // phone that is still being paired (its link is not active yet).
+  _afterAck(device, ack) {
+    if (ack.status === 'rejected' && ack.reason === 'not_linked' && !this.awaitingLink.has(device.mailboxId)) {
+      this._onPeerRevoked(device.mailboxId, 'unpaired_on_phone').catch(() => {});
+    }
     return ack.status !== 'rejected';
   }
 

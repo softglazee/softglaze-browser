@@ -30,6 +30,7 @@ test('the vendored protocol bundle is the one VENDOR.json describes', () => {
   const sha = crypto.createHash('sha256').update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')).digest('hex');
   assert.equal(sha, VENDOR.sha256, 'run scripts/vendor-softglaze-protocol.mjs instead of editing the bundle');
   assert.equal(VENDOR.package, '@softglaze/protocol');
+  assert.equal(VENDOR.protocolCommit, '0eaecd861b4a6a5824e949d9d0d48eacfa5df637', 'protocol with tokenMemberId and tokenName in approval_request');
   assert.deepEqual(VENDOR.dependencies, { '@noble/ciphers': '2.4.0', '@noble/curves': '2.4.0', '@noble/hashes': '2.4.0', valibot: '1.5.0' });
   for (const name of ['PairingOffer', 'acceptSession', 'sealTo', 'openSealed', 'buildAuthFrame', 'SyncEngine', 'SyncSpaceOwner']) assert.equal(typeof P[name], 'function', name);
 });
@@ -158,7 +159,7 @@ test('bridge: a phone paired in single-user mode acts as the first Owner once a 
   assert.deepEqual(host.state.actedAs, [1]);
 });
 
-test('bridge: approval_request carries allowHour, redacted args and expiry; the token member id waits for the protocol', () => {
+test('bridge: approval_request carries allowHour, redacted args and expiry; token member id and token name', () => {
   const host = createTestHost();
   const { bridge } = bridgeFor({ host, devices: [] });
   const a = host.approvalsManager.request({ tokenId: 1, tokenName: 'n8n', memberId: 4, memberName: 'Sara', clientName: 'n8n', tool: 'cookies_export', summary: 'Export cookies', args: { profileId: 3, cookie: 'secret', nested: { apiKey: 'k' } }, allowHour: false });
@@ -169,8 +170,8 @@ test('bridge: approval_request carries allowHour, redacted args and expiry; the 
   assert.ok(!JSON.stringify(msg.body.args).includes('"k"'));
   assert.equal(msg.body.memberName, 'Sara');
   assert.equal(msg.body.expiresAt, a.expiresAt);
-  // @softglaze/protocol 0.1.0 has no tokenMemberId in approval_request yet: the validator drops it.
-  assert.equal('tokenMemberId' in msg.body, false);
+  assert.equal(msg.body.tokenMemberId, '4');
+  assert.equal(msg.body.tokenName, 'n8n');
   host.approvalsManager.cancelAll();
 });
 
@@ -394,4 +395,33 @@ test('phone UI strings: English and Spanish have the same keys, plain words, no 
     assert.doesNotMatch(s, /antidetect|undetectable|bypass|spoof|stealth/i, s);
     assert.doesNotMatch(s, /[‒-―]| - /, `dash in: ${s}`);
   }
+});
+
+test('the SoftGlaze web app pairs as a browser: kind from the web- app version, view and approve_ai ticked by default', async () => {
+  const { deviceKind, defaultScopesFor } = require('../src/main/mobile/devices');
+  assert.equal(deviceKind('web-1.2.0'), 'browser');
+  assert.equal(deviceKind('1.0.0'), 'phone');
+  assert.equal(deviceKind(null), 'phone');
+  assert.deepEqual(defaultScopesFor('browser'), ['view', 'approve_ai']);
+  assert.ok(defaultScopesFor('phone').includes('control_profiles'));
+  const store = createMemoryDeviceStore();
+  const { peer } = fakePeer('SoftGlaze web (Chrome on Windows)');
+  peer.device = { name: 'SoftGlaze web (Chrome on Windows)', platform: 'windows', appVersion: 'web-1.0.0' };
+  const d = await store.create(rowFromPairing({ peer, memberId: null, scopes: defaultScopesFor('browser') }));
+  assert.equal(publicDevice(d).kind, 'browser');
+  assert.deepEqual(d.scopes.sort(), ['approve_ai', 'view']);
+});
+
+test('bridge: state.request answers with the snapshot plus every pending approval this phone may answer', async () => {
+  const host = createTestHost({ members: [{ id: 1, name: 'Boss', role: 'OWNER' }, { id: 2, name: 'Ali', role: 'OPERATOR' }] });
+  const { bridge, sent } = bridgeFor({ host, devices: [] });
+  const mine = host.approvalsManager.request({ tokenId: 1, tokenName: 'n8n', memberId: 2, tool: 't' });
+  host.approvalsManager.request({ tokenId: 2, memberId: 1, tool: 'owner-only' });
+  const r = await bridge.handleMessage(dev(), P.createMessage('command', { name: 'state.request' }));
+  assert.equal(r.body.ok, true);
+  assert.deepEqual(sent.map((s) => s.msg.type), ['state.snapshot', 'approval_request', 'result']);
+  assert.equal(sent[1].msg.body.approvalId, mine.id);
+  assert.equal(sent[1].msg.body.tokenName, 'n8n');
+  bridge.dispose();
+  host.approvalsManager.cancelAll();
 });
