@@ -7,9 +7,9 @@ const crypto = require('node:crypto');
 
 const PROTOCOL = 'softglaze';
 const PROTOCOL_REDIRECT = 'softglaze://auth';
-// Sign-in providers the app knows. Google and Microsoft come next; their buttons appear when the server
-// lists them in GET /auth/providers.
-const PROVIDERS = Object.freeze(['github']);
+// Sign-in providers the app knows, in button order. A button appears only when the server lists the provider in
+// GET /auth/providers (its keys are set there). Microsoft would be added the same way.
+const PROVIDERS = Object.freeze(['google', 'github']);
 // Errors the server may send back with the redirect (licensing-server/src/auth/flow.js).
 const RESULT_ERRORS = Object.freeze(['cancelled', 'email_not_verified', 'disposable_email', 'failed']);
 

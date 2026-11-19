@@ -54,6 +54,12 @@
   --sidebar-border: rgba(255, 255, 255, 0.05);
   --sidebar-ring: #3b82f6;
   --glow: 0 0 24px -6px rgba(59, 130, 246, 0.55);
+  /* "Continue with Google": Google's own light button in both themes (Sign in with Google branding
+     guidelines: white fill, #747775 1px border, #1F1F1F text, the four-colour G). */
+  --google-btn-bg: #ffffff;
+  --google-btn-fg: #1f1f1f;
+  --google-btn-border: #747775;
+  --google-btn-hover: #f2f2f2;
 }
 
 /* LIGHT - a clean, high-contrast complement (Figma ships dark only) */

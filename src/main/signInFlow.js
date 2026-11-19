@@ -18,7 +18,7 @@ const ERRORS = Object.freeze({
 const MESSAGES = Object.freeze({
   SIGNIN_CANCELLED: 'Sign-in was cancelled.',
   SIGNIN_TIMEOUT: 'The sign-in took too long. Try again.',
-  SIGNIN_EMAIL_NOT_VERIFIED: 'Your GitHub account has no verified primary email. Verify it on GitHub, or continue with email.',
+  SIGNIN_EMAIL_NOT_VERIFIED: 'The account you signed in with has no verified email address. Verify it there (on GitHub: Settings > Emails), or continue with email.',
   SIGNIN_DISPOSABLE_EMAIL: 'Please use a permanent email address.',
   SIGNIN_FAILED: "The sign-in didn't finish. Try again in a minute."
 });
