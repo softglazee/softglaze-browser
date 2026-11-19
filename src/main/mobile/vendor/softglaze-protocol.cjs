@@ -1,5 +1,5 @@
 // @softglaze/protocol 0.1.0 (vendored, do not edit: run scripts/vendor-softglaze-protocol.mjs)
-// Source: SoftGlaze-Mobile packages/protocol @ c1fd3936929369c0ef2c3009f524128b0145d5cf
+// Source: SoftGlaze-Mobile packages/protocol @ 0eaecd861b4a6a5824e949d9d0d48eacfa5df637
 // Bundled dependencies (MIT): @noble/ciphers 2.4.0, @noble/curves 2.4.0, @noble/hashes 2.4.0, valibot 1.5.0
 // noble: Copyright (c) Paul Miller (https://paulmillr.com). valibot: Copyright (c) Fabian Hiller.
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
@@ -6269,6 +6269,10 @@ const ApprovalRequestBody = /* @__PURE__ */ object({
 	summary: LongText,
 	clientName: /* @__PURE__ */ optional(ShortText),
 	memberName: /* @__PURE__ */ optional(ShortText),
+	/** Member who owns the AI token on the PC (desktop memberId), when it is a member token. Optional (added 20 Nov 2026, backward compatible). */
+	tokenMemberId: /* @__PURE__ */ optional(ShortText),
+	/** Name of the AI token as shown on the PC (for "Requested by <tokenName>"). Optional. */
+	tokenName: /* @__PURE__ */ optional(ShortText),
 	/** Arguments already redacted by the PC (sanitizeFrame). */
 	args: /* @__PURE__ */ optional(/* @__PURE__ */ record(/* @__PURE__ */ pipe(/* @__PURE__ */ string(), /* @__PURE__ */ maxLength(64)), /* @__PURE__ */ unknown())),
 	allowHour: /* @__PURE__ */ boolean(),

@@ -48,9 +48,11 @@ for (const dep of Object.keys(pkg.dependencies || {})) {
   if (depVersions[dep] !== pkg.dependencies[dep]) throw new Error(`${dep} ${depVersions[dep]} installed, ${pkg.dependencies[dep]} pinned: run with --build`);
 }
 let commit = null;
+let protocolCommit = null; // last commit that changed the protocol folder itself
 let dirty = null;
 try {
   commit = execFileSync('git', ['-c', `safe.directory=*`, '-C', src, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  protocolCommit = execFileSync('git', ['-c', `safe.directory=*`, '-C', src, 'log', '-1', '--format=%H', '--', '.'], { encoding: 'utf8' }).trim() || null;
   dirty = execFileSync('git', ['-c', `safe.directory=*`, '-C', src, 'status', '--porcelain', '--', '.'], { encoding: 'utf8' }).trim() !== '';
 } catch (e) { /* not a git checkout */ }
 
@@ -58,7 +60,7 @@ const { rolldown } = await import('rolldown');
 const bundle = await rolldown({ input: distIndex, platform: 'node', treeshake: true, logLevel: 'warn' });
 const banner = [
   '// @softglaze/protocol ' + pkg.version + ' (vendored, do not edit: run scripts/vendor-softglaze-protocol.mjs)',
-  '// Source: SoftGlaze-Mobile packages/protocol' + (commit ? ` @ ${commit}${dirty ? ' (with local changes)' : ''}` : ''),
+  '// Source: SoftGlaze-Mobile packages/protocol' + (commit ? ` @ ${protocolCommit || commit}${dirty ? ' (with local changes)' : ''}` : ''),
   '// Bundled dependencies (MIT): ' + Object.entries(depVersions).map(([k, v]) => `${k} ${v}`).join(', '),
   '// noble: Copyright (c) Paul Miller (https://paulmillr.com). valibot: Copyright (c) Fabian Hiller.',
 ].join('\n');
@@ -75,7 +77,7 @@ const code = readFileSync(outFile);
 const sha256 = createHash('sha256').update(code).digest('hex');
 writeFileSync(
   join(outDir, 'VENDOR.json'),
-  JSON.stringify({ package: pkg.name, version: pkg.version, sourceCommit: commit, sourceDirty: dirty, dependencies: depVersions, bundle: 'softglaze-protocol.cjs', sha256, bytes: code.length }, null, 2) + '\n',
+  JSON.stringify({ package: pkg.name, version: pkg.version, sourceCommit: commit, protocolCommit, sourceDirty: dirty, dependencies: depVersions, bundle: 'softglaze-protocol.cjs', sha256, bytes: code.length }, null, 2) + '\n',
 );
 
 // Smoke check: loads in plain Node and exposes the API the desktop uses.
