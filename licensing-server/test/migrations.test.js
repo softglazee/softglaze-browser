@@ -149,8 +149,28 @@ test('the one-click sign-in migration only creates its own four tables, last', (
   assert.ok(!/ADD COLUMN/.test(sql), 'no column on an existing table');
   for (const t of EXISTING) assert.ok(!new RegExp('CREATE TABLE `' + t + '`').test(sql), `${t} is not re-created`);
   const dirs = migrationDirs();
-  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261108140000_signup_lead_fields'), 'after the earlier November ones');
   // No secret or token column in clear: hashes only.
   for (const col of ['stateHash', 'nonceHash', 'codeHash', 'tokenHash']) assert.match(sql, new RegExp('`' + col + '` VARCHAR[(]64[)] NOT NULL'));
   assert.ok(!/`(token|code|state|nonce|accessToken|secret)` /.test(sql), 'no raw token column');
+});
+
+test('the accounts migration (Google, phone, web) only adds NULL or defaulted columns, MobileDevice and indexes, last', () => {
+  const name = '20261119120000_accounts_google_mobile_web';
+  const sql = read(name);
+  // Statements only (the header comment explains in words what is NOT done).
+  const stmts = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|^\s*(UPDATE|DELETE|TRUNCATE|INSERT)\b/im.test(stmts), 'additive only');
+  assert.deepEqual([...sql.matchAll(/CREATE TABLE `(\w+)`/g)].map((m) => m[1]), ['MobileDevice']);
+  // Every added column is NULL, or NOT NULL with a DEFAULT (existing AuthSession rows become kind 'desktop').
+  const added = [...sql.matchAll(/ADD COLUMN `(\w+)` ([^,;]+)/g)];
+  assert.equal(added.length, 9);
+  for (const [, col, def] of added) assert.ok(/\bNULL\b/.test(def) && (!/NOT NULL/.test(def) || /DEFAULT/.test(def)), `${col}: ${def}`);
+  assert.match(sql, /ADD COLUMN `kind` VARCHAR\(10\) NOT NULL DEFAULT 'desktop'/);
+  assert.match(sql, /ADD COLUMN `expiresAt` DATETIME\(3\) NULL/, 'legacy sessions keep NULL = no end');
+  assert.match(sql, /UNIQUE INDEX `AuthSession_refreshHash_key`/);
+  assert.match(sql, /UNIQUE INDEX `MobileDevice_authSessionId_key`/);
+  assert.ok(!/`(token|refreshToken|accessToken|code|secret)` /.test(sql), 'hashes only');
+  const dirs = migrationDirs();
+  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
 });

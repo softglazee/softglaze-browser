@@ -54,6 +54,52 @@ function checkAppRedirect(value) {
   return { uri: value, kind: 'loopback', port };
 }
 
+// --- The phone and web clients (public clients, PKCE S256 only) ---
+// softglaze-mobile: exactly softglaze-mobile://auth (the custom scheme the phone app registers; a verified
+// https App Link can be added here later). softglaze-web: <origin>/auth/callback for an origin listed in
+// WEB_APP_ORIGINS (comma list, e.g. "https://app.softglaze.com"; re-read live from config/.env). A client's
+// redirect is never accepted for another client.
+const MOBILE_CLIENT_ID = 'softglaze-mobile';
+const WEB_CLIENT_ID = 'softglaze-web';
+const MOBILE_REDIRECT = 'softglaze-mobile://auth';
+const WEB_CALLBACK_PATH = '/auth/callback';
+
+// The web app origins allowed for redirects and CORS. Only https origins (and http://localhost /
+// http://127.0.0.1 for a developer's machine) without a path are kept.
+function webAppOrigins() {
+  const { liveEnv } = require('../env');
+  const raw = String(liveEnv('WEB_APP_ORIGINS') || '');
+  const out = [];
+  for (const part of raw.split(',')) {
+    const v = part.trim().replace(/\/+$/, '');
+    if (!v) continue;
+    let u;
+    try { u = new URL(v); } catch (_) { continue; }
+    const local = u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1');
+    if ((u.protocol !== 'https:' && !local) || u.origin !== v) continue;
+    out.push(u.origin);
+  }
+  return out;
+}
+
+// The client's state (echoed back, the client checks it): expo-auth-session makes 10 alphanumeric characters,
+// so 8 to 128 URL-safe characters.
+const CLIENT_STATE_RE = /^[A-Za-z0-9._~-]{8,128}$/;
+function isClientState(v) { return typeof v === 'string' && CLIENT_STATE_RE.test(v); }
+
+// -> { uri, kind: 'client' } or null when this client may not use this redirect.
+function checkClientRedirect(clientId, value) {
+  if (typeof value !== 'string' || value.length > 100) return null; // AuthState.appRedirect is VARCHAR(100)
+  if (clientId === MOBILE_CLIENT_ID) return value === MOBILE_REDIRECT ? { uri: value, kind: 'client' } : null;
+  if (clientId === WEB_CLIENT_ID) {
+    let u;
+    try { u = new URL(value); } catch (_) { return null; }
+    if (u.search || u.hash || u.username || u.password || u.pathname !== WEB_CALLBACK_PATH) return null;
+    return webAppOrigins().includes(u.origin) && `${u.origin}${WEB_CALLBACK_PATH}` === value ? { uri: value, kind: 'client' } : null;
+  }
+  return null;
+}
+
 // The app's redirect with the result as query parameters (code + state, or error + state).
 function appRedirectUrl(uri, params) {
   const q = new URLSearchParams();
@@ -63,5 +109,6 @@ function appRedirectUrl(uri, params) {
 
 module.exports = {
   randomToken, sha256Hex, isChallenge, isVerifier, challengeOf, verifierMatches, isAppState, isOpaqueToken,
-  PROTOCOL_REDIRECT, checkAppRedirect, appRedirectUrl
+  PROTOCOL_REDIRECT, checkAppRedirect, appRedirectUrl,
+  MOBILE_CLIENT_ID, WEB_CLIENT_ID, MOBILE_REDIRECT, WEB_CALLBACK_PATH, webAppOrigins, isClientState, checkClientRedirect
 };

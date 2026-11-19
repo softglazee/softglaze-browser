@@ -213,3 +213,12 @@ that already signed in keep opening offline; "Continue with GitHub" and "Continu
 server error until this build is back, and the old sign-up form ("More options") keeps working. To remove
 the tables after a rollback: `DROP TABLE AuthSession, AuthCode, AuthState, Identity;` (after a backup), then
 `DELETE FROM _prisma_migrations WHERE migration_name = '20261110120000_one_click_signin';`.
+
+---
+
+# Deploy note: Google sign-in, phone sign-in and web sessions
+
+Everything (Google Cloud Console steps, which `config/.env` lines to add, the migration
+`20261119120000_accounts_google_mobile_web`, checks and rollback) is in [GOOGLE-SIGNIN.md](GOOGLE-SIGNIN.md).
+Order: server deploy, `bash scripts/migrate-deploy.sh` right after it starts, the Google keys, then the desktop
+app with the Google button. Existing desktop sign-ins keep working (their sessions have no end).

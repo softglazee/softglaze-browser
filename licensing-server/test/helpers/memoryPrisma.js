@@ -17,7 +17,7 @@ const UNIQUE = {
   licenseCode: [['tenantId', 'code']],
   customer: [['tenantId', 'emailKey']],
   customerEvent: [],
-  emailVerification: [],
+  emailVerification: [['challengeHash']],
   trial: [['tenantId', 'machineLock'], ['tenantId', 'emailLock']],
   trialAttempt: [],
   emailTemplate: [['tenantId', 'key', 'lang']],
@@ -33,7 +33,8 @@ const UNIQUE = {
   identity: [['tenantId', 'provider', 'providerUserId']],
   authState: [['stateHash']],
   authCode: [['codeHash']],
-  authSession: [['tokenHash']]
+  authSession: [['tokenHash'], ['refreshHash']],
+  mobileDevice: [['authSessionId']]
 };
 const ID_FIELD = { jobLock: 'name' };
 
@@ -49,7 +50,7 @@ const DEFAULTS = {
     unsubscribedAt: null, notes: null, tags: null, tagIndex: null, deletedAt: null
   }),
   customerEvent: () => ({ data: null, at: new Date() }),
-  emailVerification: () => ({ customerId: null, name: null, lang: null, country: null, consentMarketing: false, phone: null, company: null, useCase: null, useCaseOther: null, attempts: 0, verifiedAt: null, ipHash: null }),
+  emailVerification: () => ({ customerId: null, name: null, lang: null, country: null, consentMarketing: false, phone: null, company: null, useCase: null, useCaseOther: null, attempts: 0, verifiedAt: null, ipHash: null, challengeHash: null }),
   trial: () => ({ customerId: null, installId: null, ipHash: null, machineLock: null, emailLock: null, networkCounted: true, tier: 'enterprise', startedAt: new Date(), convertedAt: null, resetAt: null, resetReason: null, resetBy: null }),
   trialAttempt: () => ({ installId: null, ipHash: null, at: new Date() }),
   emailTemplate: () => ({ lang: 'en', builtIn: false, isDefault: false, updatedBy: null }),
@@ -63,9 +64,13 @@ const DEFAULTS = {
   licenseCode: () => ({ tier: 'pro', months: 1, redeemedAt: null, redeemedBy: null }),
   tenantPaymentConfig: () => ({ enabled: false }),
   identity: () => ({ email: null, emailVerified: false, login: null, lastUsedAt: null }),
-  authState: () => ({ ipHash: null, usedAt: null }),
+  authState: () => ({ ipHash: null, usedAt: null, clientId: null }),
   authCode: () => ({ usedAt: null }),
-  authSession: () => ({ identityId: null, ipHash: null, lastUsedAt: null, revokedAt: null }),
+  authSession: () => ({
+    identityId: null, ipHash: null, lastUsedAt: null, revokedAt: null, kind: 'desktop', clientId: null, expiresAt: null, accessExpiresAt: null,
+    refreshHash: null, prevRefreshHash: null, userAgent: null
+  }),
+  mobileDevice: () => ({ model: null, appVersion: null, installationId: null, lastSeenAt: null, revokedAt: null }),
   storeEntitlement: () => ({
     customerId: null, licenseId: null, account: null, planKey: null, tier: 'pro', status: 'active', verified: false, verifyNote: null,
     expiresAt: null, accessUntil: null, autoRenew: null, recurrenceId: null, recurrenceState: null, storeId: null, skuStoreId: null,
@@ -75,7 +80,7 @@ const DEFAULTS = {
 };
 const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement']);
 const HAS_CREATED_AT = new Set(['tenant', 'plan', 'install', 'license', 'payment', 'licenseCode', 'customer', 'customerEvent', 'emailVerification',
-  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession']);
+  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession', 'mobileDevice']);
 
 const isObj = (v) => v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v);
 const val = (v) => (v instanceof Date ? v.getTime() : v);
