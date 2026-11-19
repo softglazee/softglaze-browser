@@ -47,9 +47,10 @@ function redirectTo(res, url) {
   res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').redirect(302, url);
 }
 
-// CORS for the web app: only origins in WEB_APP_ORIGINS get the headers. No cookies are used (the tokens travel
-// in the Authorization header), so credentials are not allowed.
-function webCors(methods) {
+// CORS for the web app: only origins in WEB_APP_ORIGINS get the headers. The account API uses no cookies (the
+// access token travels in the Authorization header). The web sign-in routes (/v1/web/auth) pass
+// { credentials: true }: the web refresh token lives in an HttpOnly cookie there (WEB_REFRESH_COOKIE below).
+function webCors(methods, { credentials = false } = {}) {
   return function cors(req, res, next) {
     res.vary('Origin');
     const origin = req.get('origin');
@@ -58,10 +59,41 @@ function webCors(methods) {
       res.set('Access-Control-Allow-Methods', methods);
       res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       res.set('Access-Control-Max-Age', '600');
+      if (credentials) res.set('Access-Control-Allow-Credentials', 'true');
     }
     if (req.method === 'OPTIONS') return res.status(204).end();
     next();
   };
 }
 
-module.exports = { PAGE_CSP, sendPage, readCookies, secureCookies, ipHashOf, setNonceCookie, redirectTo, webCors };
+// The web app's refresh token: an HttpOnly cookie, so page script (and an XSS bug) can never read it.
+// SameSite=Strict (app.softglaze.com and api.softglaze.com are the same site), Path = the token route only, so
+// the browser sends it with nothing else. Secure whenever PUBLIC_BASE_URL is https.
+const WEB_REFRESH_COOKIE = 'sg_web_rt';
+const WEB_REFRESH_PATH = '/v1/web/auth/token';
+
+function setWebRefreshCookie(res, token, expiresAtMs) {
+  res.cookie(WEB_REFRESH_COOKIE, token, {
+    httpOnly: true, secure: secureCookies(), sameSite: 'strict', path: WEB_REFRESH_PATH,
+    maxAge: Math.max(0, expiresAtMs - Date.now())
+  });
+}
+
+function clearWebRefreshCookie(res) {
+  res.clearCookie(WEB_REFRESH_COOKIE, { httpOnly: true, secure: secureCookies(), sameSite: 'strict', path: WEB_REFRESH_PATH });
+}
+
+function readWebRefreshCookie(req) {
+  const raw = req.headers && req.headers.cookie;
+  if (typeof raw !== 'string') return null;
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === WEB_REFRESH_COOKIE) return part.slice(i + 1).trim() || null;
+  }
+  return null;
+}
+
+module.exports = {
+  PAGE_CSP, sendPage, readCookies, secureCookies, ipHashOf, setNonceCookie, redirectTo, webCors,
+  WEB_REFRESH_COOKIE, WEB_REFRESH_PATH, setWebRefreshCookie, clearWebRefreshCookie, readWebRefreshCookie
+};
