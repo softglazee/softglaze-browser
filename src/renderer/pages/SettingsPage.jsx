@@ -7,6 +7,7 @@ import MonetizationSettings from '@/components/MonetizationSettings.jsx';
 import DeveloperApiSettings from '@/components/DeveloperApiSettings.jsx';
 import MigrationSettings from '@/components/MigrationSettings.jsx';
 import SyncSettings from '@/components/SyncSettings.jsx';
+import PhonesSettings from '@/components/PhonesSettings.jsx';
 import DbEncryptionSettings from '@/components/DbEncryptionSettings.jsx';
 import WorkspaceBackupSettings from '@/components/WorkspaceBackupSettings.jsx';
 import BrandingSettings from '@/components/BrandingSettings.jsx';
@@ -106,6 +107,7 @@ function buildSections(t, tx) {
   add('dbencryption', 'account', tx('nav.dbEncryption'), '', 'database encryption security');
   add('workspacebackup', 'account', tx('nav.workspaceBackup'), '', 'backup restore export');
   add('developerapi', 'account', tx('nav.developerApi'), '', 'developer api token local');
+  add('phones', 'account', tx('nav.phones'), '', 'phone phones mobile pair qr companion approvals relay sync');
 
   // Sections whose every control is unapplied drop out of the nav, search and page here.
   const order = visibleSectionOrder([
@@ -113,7 +115,7 @@ function buildSections(t, tx) {
     'fingerprint', 'behaviour', 'website', 'ipsetting', 'autofill', 'captcha',
     'localruntime', 'performance', 'reliability', 'sessions', 'scheduler', 'datasync',
     'security', 'multidevice', 'audit', 'email',
-    'billing', 'monetization', 'migration', 'workspacesync', 'branding', 'dbencryption', 'workspacebackup', 'developerapi'
+    'billing', 'monetization', 'migration', 'workspacesync', 'branding', 'dbencryption', 'workspacebackup', 'developerapi', 'phones'
   ]);
   const groupLabels = {
     general: tx('groups.general'),
@@ -357,6 +359,8 @@ export default function SettingsPage() {
               <ReadOnly deny={denyVault}><SearchGate sec={SEC.dbencryption}><DbEncryptionSettings /></SearchGate></ReadOnly>
               <ReadOnly deny={denyEmail}><SearchGate sec={SEC.workspacebackup}><WorkspaceBackupSettings /></SearchGate></ReadOnly>
               <SearchGate sec={SEC.developerapi}><DeveloperApiSettings /></SearchGate>
+              {/* Owner and Admins only (main refuses everyone else; the section renders nothing for them). */}
+              <SearchGate sec={SEC.phones}><PhonesSettings /></SearchGate>
             </GroupBlock>
 
             {q && !anyMatch && (

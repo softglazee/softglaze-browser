@@ -33,6 +33,12 @@ function aiCall(run) {
   }
 }
 
+function mobileCall(run) {
+  const m = window.softglaze && window.softglaze.mobile;
+  if (!m) return Promise.reject(Object.assign(new Error('Phones are not available in this build.'), { code: 'MOBILE_UNAVAILABLE' }));
+  try { return Promise.resolve(run(m)); } catch (e) { return Promise.reject(e); }
+}
+
 function signinCall(run) {
   const api = window.softglaze && window.softglaze.signin;
   if (!api) return Promise.reject(Object.assign(new Error('Sign-in is not available in this build.'), { code: 'SIGNIN_UNAVAILABLE' }));
@@ -462,6 +468,37 @@ export const softglazeApi = {
         if (!ai || !ai.devtools || typeof ai.devtools.onSessionEnded !== 'function') return () => {};
         return ai.devtools.onSessionEnded(cb);
       }
+    }
+  },
+  // Phones (Settings > Phones). An older preload has no `mobile` namespace: calls reject with
+  // MOBILE_UNAVAILABLE and the section says so.
+  mobile: {
+    status: () => mobileCall((m) => m.status()),
+    setEnabled: (on) => mobileCall((m) => m.setEnabled(on)),
+    setSettings: (patch) => mobileCall((m) => m.setSettings(patch)),
+    members: () => mobileCall((m) => m.members()),
+    pairing: {
+      start: () => mobileCall((m) => m.pairing.start()),
+      cancel: () => mobileCall((m) => m.pairing.cancel()),
+      reject: (id) => mobileCall((m) => m.pairing.reject(id)),
+      confirm: (input) => mobileCall((m) => m.pairing.confirm(input))
+    },
+    devices: {
+      rename: (id, name) => mobileCall((m) => m.devices.rename(id, name)),
+      update: (id, patch) => mobileCall((m) => m.devices.update(id, patch)),
+      revoke: (id) => mobileCall((m) => m.devices.revoke(id))
+    },
+    resetKeys: () => mobileCall((m) => m.resetKeys()),
+    sync: {
+      setProfile: (id, on, removeFromCloud) => mobileCall((m) => m.sync.setProfile(id, on, removeFromCloud)),
+      setProxyPassword: (id, on) => mobileCall((m) => m.sync.setProxyPassword(id, on)),
+      now: () => mobileCall((m) => m.sync.now()),
+      removeAll: () => mobileCall((m) => m.sync.removeAll())
+    },
+    onChanged: (cb) => {
+      const m = window.softglaze && window.softglaze.mobile;
+      if (!m || typeof m.onChanged !== 'function') return () => {};
+      return m.onChanged(cb);
     }
   },
   updater: {

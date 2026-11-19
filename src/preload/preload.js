@@ -328,7 +328,30 @@ const AI_CHANNELS = Object.freeze({
   DEVTOOLS_SESSION_ENDED: 'ai:devtools-session-ended'
 });
 
+// SoftGlaze phone companion (Settings > Phones). Like AI_CHANNELS, a separate map: main registers
+// these from src/main/mobile/ipc.js (MOBILE_CHANNELS there must match).
+const MOBILE_CHANNELS = Object.freeze({
+  STATUS: 'mobile:status',
+  SET_ENABLED: 'mobile:set-enabled',
+  SET_SETTINGS: 'mobile:set-settings',
+  PAIR_START: 'mobile:pair-start',
+  PAIR_CANCEL: 'mobile:pair-cancel',
+  PAIR_CONFIRM: 'mobile:pair-confirm',
+  PAIR_REJECT: 'mobile:pair-reject',
+  DEVICE_RENAME: 'mobile:device-rename',
+  DEVICE_UPDATE: 'mobile:device-update',
+  DEVICE_REVOKE: 'mobile:device-revoke',
+  RESET_KEYS: 'mobile:reset-keys',
+  SYNC_SET_PROFILE: 'mobile:sync-set-profile',
+  SYNC_SET_PROXY_PASSWORD: 'mobile:sync-set-proxy-password',
+  SYNC_NOW: 'mobile:sync-now',
+  SYNC_REMOVE_ALL: 'mobile:sync-remove-all',
+  MEMBERS: 'mobile:members',
+  CHANGED: 'mobile:changed'
+});
+
 const ALLOWED_CHANNELS = new Set([...Object.values(CHANNELS), ...Object.values(AI_CHANNELS)]);
+for (const channel of Object.values(MOBILE_CHANNELS)) ALLOWED_CHANNELS.add(channel);
 
 // One-way message, not an invoke(): main re-focuses the window after a native
 // alert()/confirm()/prompt() closes. Must match REFOCUS_CHANNEL in src/main/dialogFocus.js.
@@ -846,6 +869,48 @@ const api = Object.freeze({
         return () => ipcRenderer.removeListener(AI_CHANNELS.DEVTOOLS_SESSION_ENDED, listener);
       }
     })
+  }),
+  // Phones paired with this PC: pairing by QR, permissions, revoke, profile sync.
+  mobile: Object.freeze({
+    status: () => invoke(MOBILE_CHANNELS.STATUS),
+    setEnabled: (on) => invoke(MOBILE_CHANNELS.SET_ENABLED, { enabled: Boolean(on) }),
+    setSettings: (patch) => invoke(MOBILE_CHANNELS.SET_SETTINGS, patch && typeof patch === 'object' ? { pcName: patch.pcName, relayUrl: patch.relayUrl } : {}),
+    members: () => invoke(MOBILE_CHANNELS.MEMBERS),
+    pairing: Object.freeze({
+      // -> { pairingId, stage: 'open', qrText, qrImage, expiresAt }
+      start: () => invoke(MOBILE_CHANNELS.PAIR_START),
+      cancel: () => invoke(MOBILE_CHANNELS.PAIR_CANCEL),
+      reject: (pairingId) => invoke(MOBILE_CHANNELS.PAIR_REJECT, { pairingId: String(pairingId || '') }),
+      // input { pairingId, memberId, scopes[], name? }
+      confirm: (input) => {
+        const src = input && typeof input === 'object' ? input : {};
+        return invoke(MOBILE_CHANNELS.PAIR_CONFIRM, { pairingId: String(src.pairingId || ''), memberId: src.memberId == null ? null : src.memberId, scopes: Array.isArray(src.scopes) ? src.scopes.map(String) : ['view'], name: typeof src.name === 'string' ? src.name : undefined });
+      }
+    }),
+    devices: Object.freeze({
+      rename: (deviceId, name) => invoke(MOBILE_CHANNELS.DEVICE_RENAME, { deviceId: String(deviceId || ''), name: String(name || '') }),
+      // patch { scopes?, memberId? }
+      update: (deviceId, patch) => {
+        const src = patch && typeof patch === 'object' ? patch : {};
+        const out = { deviceId: String(deviceId || '') };
+        if (Array.isArray(src.scopes)) out.scopes = src.scopes.map(String);
+        if (src.memberId !== undefined) out.memberId = src.memberId;
+        return invoke(MOBILE_CHANNELS.DEVICE_UPDATE, out);
+      },
+      revoke: (deviceId) => invoke(MOBILE_CHANNELS.DEVICE_REVOKE, { deviceId: String(deviceId || '') })
+    }),
+    resetKeys: () => invoke(MOBILE_CHANNELS.RESET_KEYS),
+    sync: Object.freeze({
+      setProfile: (profileId, enabled, removeFromCloud = false) => invoke(MOBILE_CHANNELS.SYNC_SET_PROFILE, { profileId: Number(profileId), enabled: Boolean(enabled), removeFromCloud: Boolean(removeFromCloud) }),
+      setProxyPassword: (profileId, enabled) => invoke(MOBILE_CHANNELS.SYNC_SET_PROXY_PASSWORD, { profileId: Number(profileId), enabled: Boolean(enabled) }),
+      now: () => invoke(MOBILE_CHANNELS.SYNC_NOW),
+      removeAll: () => invoke(MOBILE_CHANNELS.SYNC_REMOVE_ALL)
+    }),
+    onChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(MOBILE_CHANNELS.CHANGED, listener);
+      return () => ipcRenderer.removeListener(MOBILE_CHANNELS.CHANGED, listener);
+    }
   }),
   updater: Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),

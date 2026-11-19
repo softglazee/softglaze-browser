@@ -1,0 +1,90 @@
+{
+  "title": "Phones",
+  "description": "Use the SoftGlaze phone app with this computer: see your profiles, start and stop them, and answer AI requests from your phone. Everything between the phone and this computer is end to end encrypted.",
+  "enable": "Turn on the phone companion",
+  "loading": "Loading",
+  "offOwner": "Turn this on to pair a phone. This computer then keeps a secure connection to the SoftGlaze relay, which only passes encrypted messages along.",
+  "offOther": "The Owner has not turned on the phone companion.",
+  "copy": "Copy",
+  "cancel": "Cancel",
+  "relay": {
+    "connected": "Connected to the relay",
+    "connecting": "Connecting to the relay",
+    "authFailed": "The relay refused this computer. Check the relay address in Advanced."
+  },
+  "pair": {
+    "title": "Pair a phone",
+    "help": "Install SoftGlaze on your phone, then scan a code from this screen.",
+    "start": "Pair a phone",
+    "qrAlt": "Pairing code for the SoftGlaze phone app",
+    "scanTitle": "Scan this code with the SoftGlaze phone app",
+    "step1": "Open SoftGlaze on your phone.",
+    "step2": "Go to Settings, Pair with a PC, and scan this code.",
+    "step3": "Check that both screens show the same six digits.",
+    "expiresIn": "The code works once and ends in {{time}}.",
+    "textTitle": "Cannot scan? Copy the code as text",
+    "attemptFailed": "A phone tried a wrong or damaged code. The code is still open."
+  },
+  "confirm": {
+    "title": "{{name}} wants to pair",
+    "help": "Only continue if your phone shows exactly these six digits.",
+    "codeLabel": "Code {{code}}",
+    "name": "Phone name",
+    "member": "Acts as",
+    "scopes": "What this phone may do",
+    "match": "Codes match, pair",
+    "noMatch": "Codes do not match"
+  },
+  "scopes": {
+    "view": { "label": "See profiles and status", "help": "Always on. Only profiles the member can see." },
+    "control_profiles": { "label": "Start and stop profiles", "help": "Same rules as on this computer." },
+    "approve_ai": { "label": "Answer AI requests", "help": "Allow or deny actions of AI apps, for tokens this member may answer." },
+    "approve_team": { "label": "Answer team requests", "help": "Approve access requests from team members." },
+    "totp": { "label": "Show 2FA codes", "help": "Two step codes saved in profiles." },
+    "phone_profiles_linked": { "label": "Sync profiles", "help": "Profiles you choose below also open on this phone." }
+  },
+  "roles": { "OWNER": "Owner", "ADMIN": "Admin", "MANAGER": "Manager", "OPERATOR": "Operator" },
+  "devices": {
+    "title": "Paired phones",
+    "empty": "No phones yet.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Last seen {{when}}",
+    "actsAs": "acts as {{name}}",
+    "edit": "Edit {{name}}",
+    "remove": "Remove {{name}}",
+    "removeConfirm": "Remove {{name}}? It stops working with this computer at once and has to pair again.",
+    "rename": "Rename",
+    "saveScopes": "Save permissions"
+  },
+  "sync": {
+    "title": "Profile sync",
+    "help": "Chosen profiles also open in the phone app. Settings, start pages and cookies follow the profile; a profile opens on one device at a time.",
+    "noPhone": "No phone may sync yet. Give a phone the Sync profiles permission above.",
+    "now": "Sync now",
+    "search": "Find a profile",
+    "toggle": "Sync {{name}} with phones",
+    "proxyPassword": "Proxy password",
+    "offConfirm": "Stop syncing {{name}}? Phones keep their copy.",
+    "removeAll": "Remove all synced data from the relay",
+    "removeAllConfirm": "Remove every synced profile from the relay? Profiles on this computer and on phones stay as they are.",
+    "lastOk": "Last sync {{when}}",
+    "lastError": "Last sync failed ({{code}}). It tries again every minute.",
+    "limits": "Site storage, extensions, saved passwords and downloads do not sync. Proxy passwords sync only where you allow it."
+  },
+  "advanced": {
+    "title": "Advanced",
+    "pcName": "Name of this computer on phones",
+    "relay": "Relay address",
+    "relayFromEnv": "Set by SG_RELAY_URL for testing.",
+    "save": "Save",
+    "reset": "Reset phone keys",
+    "resetConfirm": "Reset the phone keys of this computer? Every paired phone is removed and has to pair again.",
+    "protocol": "Protocol {{version}}"
+  },
+  "errors": {
+    "load": "Could not load the phone settings.",
+    "generic": "That did not work. Try again.",
+    "unavailable": "Phones are not available in this build."
+  }
+}
