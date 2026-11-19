@@ -26,7 +26,8 @@ const ROOT = path.join(__dirname, '..');
 // ---- vendored protocol ----
 test('the vendored protocol bundle is the one VENDOR.json describes', () => {
   const file = path.join(ROOT, 'src', 'main', 'mobile', 'vendor', VENDOR.bundle);
-  const sha = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  // Hash with LF line ends (a Windows checkout with core.autocrlf has CRLF in the working copy).
+  const sha = crypto.createHash('sha256').update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')).digest('hex');
   assert.equal(sha, VENDOR.sha256, 'run scripts/vendor-softglaze-protocol.mjs instead of editing the bundle');
   assert.equal(VENDOR.package, '@softglaze/protocol');
   assert.deepEqual(VENDOR.dependencies, { '@noble/ciphers': '2.4.0', '@noble/curves': '2.4.0', '@noble/hashes': '2.4.0', valibot: '1.5.0' });
