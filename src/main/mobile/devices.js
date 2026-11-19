@@ -9,6 +9,18 @@ function parseScopes(json) {
   try { return P.parseScopes(JSON.parse(json)); } catch (e) { return ['view']; }
 }
 
+// The SoftGlaze web app pairs like a phone. Protocol v1 has no 'web' platform, so a browser sends an
+// app version that starts with "web-" (and a name like "SoftGlaze web (Chrome on Windows)").
+function deviceKind(appVersion) {
+  return typeof appVersion === 'string' && appVersion.startsWith('web-') ? 'browser' : 'phone';
+}
+
+// Scopes ticked by default in the pairing dialog: a browser gets view and AI answers only; starting
+// and stopping profiles stays an opt in.
+function defaultScopesFor(kind) {
+  return kind === 'browser' ? ['view', 'approve_ai'] : ['view', 'control_profiles', 'approve_ai'];
+}
+
 function toDevice(row) {
   if (!row) return null;
   return {
@@ -17,6 +29,7 @@ function toDevice(row) {
     name: row.name,
     platform: row.platform || null,
     appVersion: row.appVersion || null,
+    kind: deviceKind(row.appVersion),
     mailboxId: row.mailboxId,
     x25519Pub: row.x25519Pub,
     ed25519Pub: row.ed25519Pub,
@@ -116,4 +129,4 @@ function createMemoryDeviceStore() {
   };
 }
 
-module.exports = { createPrismaDeviceStore, createMemoryDeviceStore, rowFromPairing, toDevice, publicDevice, newDeviceId };
+module.exports = { createPrismaDeviceStore, createMemoryDeviceStore, rowFromPairing, toDevice, publicDevice, newDeviceId, deviceKind, defaultScopesFor };

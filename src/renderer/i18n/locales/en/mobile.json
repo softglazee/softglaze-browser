@@ -28,6 +28,7 @@
   "confirm": {
     "title": "{{name}} wants to pair",
     "help": "Only continue if your phone shows exactly these six digits.",
+    "helpBrowser": "Only continue if the browser shows exactly these six digits. A browser can see profiles and answer AI requests; tick Start and stop profiles only if you want that too.",
     "codeLabel": "Code {{code}}",
     "name": "Phone name",
     "member": "Acts as",
@@ -45,7 +46,9 @@
   },
   "roles": { "OWNER": "Owner", "ADMIN": "Admin", "MANAGER": "Manager", "OPERATOR": "Operator" },
   "devices": {
-    "title": "Paired phones",
+    "title": "Phones and browsers",
+    "kindPhone": "Phone",
+    "kindBrowser": "Browser",
     "empty": "No phones yet.",
     "online": "Online",
     "offline": "Offline",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Smartphone, Loader2, QrCode, Copy, Check, X, ShieldCheck, Trash2, Pencil, RefreshCw, Wifi, WifiOff, FolderSync, AlertTriangle } from 'lucide-react';
+import { Smartphone, Globe, Loader2, QrCode, Copy, Check, X, ShieldCheck, Trash2, Pencil, RefreshCw, Wifi, WifiOff, FolderSync, AlertTriangle } from 'lucide-react';
 import Switch from '@/components/ui/Switch.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 
@@ -200,14 +200,15 @@ function RelayLine({ t, state, relay, url }) {
 function ConfirmPairing({ t, pairing, members, me, secondsLeft, busy, onConfirm, onReject }) {
   const [name, setName] = useState(pairing.phone ? pairing.phone.name : '');
   const [memberId, setMemberId] = useState(me && me.role !== 'SUPER_ADMIN' ? me.id : (members.find((m) => m.role === 'OWNER') || {}).id ?? null);
-  const [scopes, setScopes] = useState(DEFAULT_SCOPES);
+  const [scopes, setScopes] = useState(pairing.defaultScopes || DEFAULT_SCOPES);
+  const isBrowser = pairing.phone && pairing.phone.kind === 'browser';
   const toggle = (s) => setScopes((cur) => (s === 'view' ? cur : cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
   const sas = String(pairing.sas || '');
   return (
     <div className="space-y-4">
       <div>
         <p className="text-[13px] font-semibold text-foreground">{t('confirm.title', { name: pairing.phone ? pairing.phone.name : '' })}</p>
-        <p className="text-[12px] text-muted-foreground">{t('confirm.help')}</p>
+        <p className="text-[12px] text-muted-foreground">{isBrowser ? t('confirm.helpBrowser') : t('confirm.help')}</p>
       </div>
       <p className="font-mono text-3xl tracking-[0.3em] text-foreground text-center sm:text-left" aria-label={t('confirm.codeLabel', { code: sas.split('').join(' ') })}>
         {sas.slice(0, 3)} {sas.slice(3)}
@@ -272,10 +273,13 @@ function DeviceRow({ t, device, members, busy, run }) {
   return (
     <li className="rounded-lg border border-border bg-card p-3">
       <div className="flex items-center gap-3">
-        <Smartphone className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+        {device.kind === 'browser'
+          ? <Globe className="w-4 h-4 text-muted-foreground shrink-0" aria-label={t('devices.kindBrowser')} />
+          : <Smartphone className="w-4 h-4 text-muted-foreground shrink-0" aria-label={t('devices.kindPhone')} />}
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium text-foreground truncate">{device.name}</p>
           <p className="text-[11.5px] text-muted-foreground">
+            {device.kind === 'browser' ? `${t('devices.kindBrowser')} · ` : ''}
             {device.online ? t('devices.online') : device.lastSeenAt ? t('devices.lastSeen', { when: new Date(device.lastSeenAt).toLocaleString() }) : t('devices.offline')}
             {member ? ` · ${t('devices.actsAs', { name: member.name })}` : ''}
           </p>

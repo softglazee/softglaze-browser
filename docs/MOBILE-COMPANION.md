@@ -29,10 +29,12 @@ Off by default. The Owner turns it on in **Settings > Phones**.
 `src/main/mobile/vendor/softglaze-protocol.cjs` is `@softglaze/protocol` (0.1.0) with its pinned
 dependencies (@noble/ciphers, @noble/curves, @noble/hashes 2.4.0, valibot 1.5.0) bundled into one
 CommonJS file by rolldown, so Electron main uses plain `require()` and no new runtime dependency.
-`VENDOR.json` records the source commit and the sha256 (a unit test checks it). To update:
+`VENDOR.json` records the source commit, the last commit of the protocol folder (`protocolCommit`,
+now 0eaecd8: optional `tokenMemberId` and `tokenName` in `approval_request`) and the sha256 (a unit
+test checks both). To update:
 
 ```
-node scripts/vendor-softglaze-protocol.mjs --src D:/SoftGlaze-Mobile/packages/protocol --build
+node scripts/vendor-softglaze-protocol.mjs --src D:/sgm-live/packages/protocol --build
 ```
 
 (`--build` runs `npm ci && npm run build` there first; without it the script refuses a stale `dist/`.)
@@ -62,6 +64,28 @@ node scripts/vendor-softglaze-protocol.mjs --src D:/SoftGlaze-Mobile/packages/pr
 Who a phone may act as: the Owner picks anyone; an Admin picks themselves or members they manage,
 never the Owner (the AI token rule). In single-user mode the phone acts as the owner; a phone paired
 then acts as the first Owner once members exist.
+
+### Browsers (SoftGlaze web app)
+
+The web app pairs like a phone. Protocol v1 has no `web` platform, so a browser sends an app version
+starting with `web-` and a name like "SoftGlaze web (Chrome on Windows)". The PC shows it as
+**Browser** in "Phones and browsers" and ticks only *See profiles* and *Answer AI requests* by
+default; *Start and stop profiles* is an opt in. Everything else is the same as for a phone.
+
+### What the phone app expects (SoftGlaze-Mobile docs/features/LIVE-COMPANION.md section 3)
+
+| Expectation | Here |
+|---|---|
+| After "Codes match": link, wait for `linked {active}`, then hello in the pairing session | `companion.confirmPairing` + `_onLinked` |
+| `state.request` and every new session: snapshot plus every pending `approval_request` | `bridge._run`, `companion._greet`, `bridge.sendPendingApprovals` |
+| A session send acked `queued`: drop the session, resend sealed with a push | `companion.sendTo` (`PUSH_FOR`) |
+| `state.patch` with `baseRev` = last revision sent | `bridge.sendPatch` |
+| Sealed revoke from the phone: forget it and unlink; a `not_linked` ack means the same | `companion._onPeerRevoked`, `_afterAck` |
+| This phone's member | built by the phone from `hello {deviceId, scopes}` (protocol v1 has no member list), sent on every session |
+| "Codes do not match" | the PC unlinks the phone, which gets `revoked` and stops waiting |
+
+Note: a relay that lost its `state.json` also answers `not_linked`; phones would then have to pair
+again. Keep the relay backups (RELAY.md section 5).
 
 ### Sessions and envelopes
 
@@ -137,6 +161,14 @@ node --test test/mobileService.e2e.test.js      # mobile/index.js as the app wir
 
 The phone used in the tests (`test/helpers/mobilePhone.js`) is built only from the protocol package.
 
+Cross test with the phone app's real relay code (`app/src/features/live`, read only) against this
+desktop module (run as a child process, `test/cross/desktopPeer.cjs`) and the real relay. It uses the
+phone app's own jest and jest-expo, so it is not part of `npm test`:
+
+```
+node test/cross/run.cjs          # SG_MOBILE_REPO=D:/sgm-live by default
+```
+
 By hand with the app:
 
 ```
@@ -151,8 +183,6 @@ pair with the test phone from a Node prompt (`TestPhone` in `test/helpers/mobile
 
 ## Not built yet
 
-- `tokenMemberId` / `tokenName` in `approval_request`: sent by the desktop, but dropped by the
-  @softglaze/protocol 0.1.0 validator until the schema gets these optional fields.
 - AccessGrant model, approval rules (quiet hours etc.), team requests, TOTP from the phone, live log,
   Send to PC, alerts to phones (crash / proxy dead), plan gating of the feature.
 - The relay is not deployed and push keys are not configured, so nothing works outside a local relay.

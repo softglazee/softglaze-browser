@@ -28,6 +28,7 @@
   "confirm": {
     "title": "{{name}} quiere emparejarse",
     "help": "Continúa solo si tu teléfono muestra exactamente estos seis dígitos.",
+    "helpBrowser": "Continúa solo si el navegador muestra exactamente estos seis dígitos. Un navegador puede ver perfiles y responder solicitudes de IA; marca Iniciar y detener perfiles solo si también lo quieres.",
     "codeLabel": "Código {{code}}",
     "name": "Nombre del teléfono",
     "member": "Actúa como",
@@ -45,7 +46,9 @@
   },
   "roles": { "OWNER": "Propietario", "ADMIN": "Administrador", "MANAGER": "Gerente", "OPERATOR": "Operador" },
   "devices": {
-    "title": "Teléfonos emparejados",
+    "title": "Teléfonos y navegadores",
+    "kindPhone": "Teléfono",
+    "kindBrowser": "Navegador",
     "empty": "Aún no hay teléfonos.",
     "online": "En línea",
     "offline": "Sin conexión",
