@@ -186,8 +186,9 @@ test('AppShell draws the one notice once, in the column flow above the scrolling
   const shell = read('components', 'AppShell.jsx');
   assert.equal((shell.match(/<LicenseNoticeBanner /g) || []).length, 1);
   assert.equal((shell.match(/<LicenseTrialChip /g) || []).length, 1);
-  assert.match(shell, /const licenseNotice = pickLicenseNotice\(license, \{ dismissed: bannerDismissed, path: location\.pathname \}\);/);
-  assert.match(shell, /<LicenseNoticeBanner notice=\{licenseNotice\}[^\n]*\/>\s*<div className="flex-1 overflow-y-auto/, 'the banner sits right before the scroll container');
+  // The Black Friday offer banner (lib/promoBanner.mjs) may stand in for the dismissible trial-ending one.
+  assert.match(shell, /const rawLicenseNotice = pickLicenseNotice\(license, \{ dismissed: bannerDismissed, path: location\.pathname \}\);/);
+  assert.match(shell, /<LicenseNoticeBanner notice=\{licenseNotice\}[^\n]*\/>\s*(<PromoBanner [^\n]*\/>\s*)?<div className="flex-1 overflow-y-auto/, 'the banner sits right before the scroll container');
   assert.doesNotMatch(shell, /t\('shell\.trialEndingDays'/, 'the old inline banner is gone');
   const comp = read('components', 'LicenseNotice.jsx');
   assert.doesNotMatch(comp, /className="[^"]*\b(fixed|absolute|sticky)\b/, 'nothing in the notice is positioned over the page');

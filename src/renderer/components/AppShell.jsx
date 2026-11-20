@@ -16,6 +16,8 @@ import UserMenuPopover from '@/components/UserMenuPopover.jsx';
 import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 import { LicenseNoticeBanner, LicenseTrialChip } from '@/components/LicenseNotice.jsx';
 import { pickLicenseNotice } from '@/lib/licenseNotice.mjs';
+import PromoBanner from '@/components/PromoBanner.jsx';
+import { pickPromo, isPromoDismissed, dismissPromo } from '@/lib/promoBanner.mjs';
 import AiApprovalDialog from '@/components/ai/AiApprovalDialog.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import { canManageAi } from '@/lib/aiCore.mjs';
@@ -146,7 +148,7 @@ function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill, r
 export default function AppShell({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Falls back to the English label, then the raw role (SUPER_ADMIN or roles missing from locales).
   const roleLabel = (r) => (r ? t(`roles.${r}`, { defaultValue: ROLE_LABEL[r] || r }) : t('shell.noMember'));
   const [open, setOpen] = useState(false);
@@ -171,7 +173,12 @@ export default function AppShell({ children }) {
   const userBtnRef = useRef(null);
 
   const closeMenu = () => { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); };
-  const licenseNotice = pickLicenseNotice(license, { dismissed: bannerDismissed, path: location.pathname });
+  const rawLicenseNotice = pickLicenseNotice(license, { dismissed: bannerDismissed, path: location.pathname });
+  // Seasonal offer (lib/promoBanner.mjs): unpaid licences only, inside the offer's UTC window. It takes the
+  // place of the dismissible "trial ends soon" banner (the offer already says how to keep going).
+  const [promoHidden, setPromoHidden] = useState(() => new Set());
+  const promo = pickPromo(license, { lang: i18n.language, path: location.pathname, dismissed: (id) => promoHidden.has(id) || isPromoDismissed(id) });
+  const licenseNotice = promo && rawLicenseNotice && rawLicenseNotice.kind === 'trialEnding' ? null : rawLicenseNotice;
 
   useEffect(() => {
     let live = true;
@@ -384,6 +391,7 @@ export default function AppShell({ children }) {
         {/* The one licence notice (lib/licenseNotice.mjs picks it by priority). It sits in the
             column flow above the scrolling page, so it never covers page content. */}
         <LicenseNoticeBanner notice={licenseNotice} onAction={() => navigate('/billing')} onDismiss={() => setBannerDismissed(true)} />
+        <PromoBanner promo={promo} onDismiss={() => { dismissPromo(promo.id); setPromoHidden((s) => new Set([...s, promo.id])); }} />
         <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-6">{children}</div>
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>
