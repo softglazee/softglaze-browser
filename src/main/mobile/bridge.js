@@ -8,11 +8,14 @@
 // ActivityLog row -> one `result`.
 //
 // Outgoing: hello, state.snapshot / state.patch (profiles the member may see, with status), and
-// approval_request for AI approvals the member may answer (sealed, push 'approval').
+// approval_request for AI approvals the member may answer (sealed, push 'approval'), and the same
+// approval_request with `resolution` when it ends (sealed, silent push 'update').
 const { P, wireProfileId, parseWireProfileId } = require('./protocol');
 const { sanitizeFrame } = require('../remoteRelay');
 
 const DECISION_MAP = Object.freeze({ allow_once: 'allow-once', allow_1h: 'allow-hour', deny: 'deny' });
+// ApprovalManager decision -> approval_request.resolution (protocol, optional since 20 Nov 2026).
+const RESOLUTION_OF = Object.freeze({ 'allow-once': 'approved', 'allow-hour': 'approved', deny: 'denied', cancelled: 'denied', timeout: 'expired' });
 // Plaintext limit of one envelope is 32 KiB; stay well under it per message.
 const MAX_STATE_BYTES = 24_000;
 const PUBLISH_DEBOUNCE_MS = 400;
@@ -77,6 +80,9 @@ class MobileBridge {
     this.state = new Map(); // deviceId -> { rev, profiles: Map(wireId -> json), approvals }
     this.publishTimer = null;
     this.publishing = null;
+    // Approvals sent to devices, so their end reaches the same devices: approvalId -> { view, deviceIds }
+    this.approvalTargets = new Map();
+    this.endedApprovals = new Map(); // approvalId -> resolution (recent ones, for a send that raced the end)
   }
 
   // ---- member of a phone ----
@@ -175,15 +181,18 @@ class MobileBridge {
   dispose() { if (this.publishTimer) { clearTimeout(this.publishTimer); this.publishTimer = null; } }
 
   // ---- approvals ----
-  approvalMessage(view) {
+  // end: { resolution: 'approved' | 'denied' | 'expired', at } for an approval that is no longer
+  // pending. expiresAt is then the end time, so a phone without `resolution` shows it as expired.
+  approvalMessage(view, end = null) {
     const body = {
       approvalId: view.id,
       tool: truncate(view.tool, 200),
       summary: truncate(view.summary || view.tool, 2000),
       args: phoneArgs(view.args),
       allowHour: view.allowHour !== false,
-      expiresAt: Date.parse(view.expiresAt) || this.now() + 120_000
+      expiresAt: end ? end.at : Date.parse(view.expiresAt) || this.now() + 120_000
     };
+    if (end) body.resolution = end.resolution;
     if (view.clientName) body.clientName = truncate(view.clientName, 200);
     if (view.memberName) body.memberName = truncate(view.memberName, 200);
     // The member the AI token acts as and the token's name ("Requested by <tokenName>" on the phone).
@@ -200,9 +209,40 @@ class MobileBridge {
     let n = 0;
     for (const view of this.host.approvals.list()) {
       if (!this.host.canAnswerApproval(who.member, view)) continue;
+      this._target(view, device.deviceId);
       try { if (await this.send(device, this.approvalMessage(view), {})) n++; } catch (e) { this.log('approval resend failed', e && e.message); }
     }
     return n;
+  }
+
+  _target(view, deviceId) {
+    let t = this.approvalTargets.get(view.id);
+    if (!t) this.approvalTargets.set(view.id, (t = { view, deviceIds: new Set() }));
+    t.deviceIds.add(deviceId);
+  }
+
+  // The approval ended (ApprovalManager 'ai:approval-resolved': answered on the PC, the web app, a
+  // phone, or timed out / cancelled). Every device that got it gets the end, sealed with the silent
+  // push 'update', so the phone removes the notification even in the background.
+  async onApprovalResolved({ id, decision } = {}) {
+    if (!id) return [];
+    const resolution = RESOLUTION_OF[decision] || 'expired';
+    this.endedApprovals.set(id, resolution);
+    while (this.endedApprovals.size > 200) this.endedApprovals.delete(this.endedApprovals.keys().next().value);
+    return this._sendEnd(id, resolution);
+  }
+
+  async _sendEnd(id, resolution) {
+    const t = this.approvalTargets.get(id);
+    if (!t) return [];
+    this.approvalTargets.delete(id);
+    const msg = this.approvalMessage(t.view, { resolution, at: this.now() });
+    const sent = [];
+    for (const d of await this.devices()) {
+      if (!t.deviceIds.has(d.deviceId)) continue;
+      try { if (await this.send(d, msg, { push: 'update' })) sent.push(d.deviceId); } catch (e) { this.log('approval end send failed', e && e.message); }
+    }
+    return sent;
   }
 
   // A new AI approval: every phone with approve_ai whose member may answer it gets it, sealed, with
@@ -213,10 +253,14 @@ class MobileBridge {
       if (!d.scopes.includes('approve_ai')) continue;
       const who = await this.memberOf(d);
       if (!who.ok || !this.host.canAnswerApproval(who.member, view)) continue;
+      this._target(view, d.deviceId);
       try {
         if (await this.send(d, this.approvalMessage(view), { push: 'approval' })) sent.push(d.deviceId);
       } catch (e) { this.log('approval send failed', e && e.message); }
     }
+    // Answered (or cancelled) while it was still being sent: the late devices get the end too.
+    const ended = this.endedApprovals.get(view.id);
+    if (ended) await this._sendEnd(view.id, ended);
     this.schedulePublish();
     return sent;
   }

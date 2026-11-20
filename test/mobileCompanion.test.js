@@ -30,7 +30,10 @@ test('the vendored protocol bundle is the one VENDOR.json describes', () => {
   const sha = crypto.createHash('sha256').update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')).digest('hex');
   assert.equal(sha, VENDOR.sha256, 'run scripts/vendor-softglaze-protocol.mjs instead of editing the bundle');
   assert.equal(VENDOR.package, '@softglaze/protocol');
-  assert.equal(VENDOR.protocolCommit, '0eaecd861b4a6a5824e949d9d0d48eacfa5df637', 'protocol with tokenMemberId and tokenName in approval_request');
+  assert.equal(VENDOR.protocolCommit, 'f6f1fa1b9bab1317cdb66dac649ef09413524062', 'protocol with approval_request.resolution and the push kind update');
+  const ended = P.createMessage('approval_request', { approvalId: 'appr_000001', tool: 't', summary: 's', allowHour: true, expiresAt: 1, resolution: 'approved' });
+  assert.equal(ended.body.resolution, 'approved', 'the bundle keeps resolution (an older bundle strips it)');
+  assert.ok(P.PUSH_KINDS.includes('update'));
   assert.deepEqual(VENDOR.dependencies, { '@noble/ciphers': '2.4.0', '@noble/curves': '2.4.0', '@noble/hashes': '2.4.0', valibot: '1.5.0' });
   for (const name of ['PairingOffer', 'acceptSession', 'sealTo', 'openSealed', 'buildAuthFrame', 'SyncEngine', 'SyncSpaceOwner']) assert.equal(typeof P[name], 'function', name);
 });
@@ -424,4 +427,89 @@ test('bridge: state.request answers with the snapshot plus every pending approva
   assert.equal(sent[1].msg.body.tokenName, 'n8n');
   bridge.dispose();
   host.approvalsManager.cancelAll();
+});
+
+test('bridge: an approval that ends goes again with resolution and the silent push update, only to the devices that got it', async () => {
+  const host = createTestHost({ members: [{ id: 1, name: 'Boss', role: 'OWNER' }, { id: 2, name: 'Ali', role: 'OPERATOR' }] });
+  const devices = [dev({ deviceId: 'owner', memberId: 1 }), dev({ deviceId: 'ali', memberId: 2 })];
+  const { bridge, sent } = bridgeFor({ host, devices });
+  const resolvedEvent = (id) => host.state.approvalEvents.find((e) => e.ch === 'ai:approval-resolved' && e.data.id === id);
+
+  // Answered on the PC (or the web app): the owner's phone got it, so only the owner's phone gets the end.
+  const a = host.approvalsManager.request({ tokenId: 1, memberId: 1, tool: 'profiles_start', summary: 'Start Shop US' });
+  assert.deepEqual(await bridge.onApprovalRequested(host.approvalsManager.publicView(a)), ['owner']);
+  const before = Date.now();
+  host.approvalsManager.respond(a.id, 'allow-once');
+  assert.deepEqual(resolvedEvent(a.id).data, { id: a.id, decision: 'allow-once' });
+  assert.deepEqual(await bridge.onApprovalResolved(resolvedEvent(a.id).data), ['owner']);
+  const end = sent.at(-1);
+  assert.equal(end.msg.type, 'approval_request');
+  assert.equal(end.msg.body.approvalId, a.id);
+  assert.equal(end.msg.body.resolution, 'approved');
+  assert.ok(end.msg.body.expiresAt >= before && end.msg.body.expiresAt <= Date.now(), 'expiresAt is the end time (older phones show it as expired)');
+  assert.equal(end.opts.push, 'update');
+  assert.deepEqual(await bridge.onApprovalResolved(resolvedEvent(a.id).data), [], 'sent once');
+
+  // Timed out -> expired; Stop all AI (cancelled) -> denied; state.request resends count as targets.
+  const b = host.approvalsManager.request({ tokenId: 1, memberId: 2, tool: 't' });
+  await bridge.handleMessage(devices[1], P.createMessage('command', { name: 'state.request' }));
+  assert.deepEqual(await bridge.onApprovalResolved({ id: b.id, decision: 'timeout' }), ['ali']);
+  assert.equal(sent.at(-1).msg.body.resolution, 'expired');
+  const c = host.approvalsManager.request({ tokenId: 1, memberId: 1, tool: 't' });
+  await bridge.onApprovalRequested(host.approvalsManager.publicView(c));
+  assert.deepEqual(await bridge.onApprovalResolved({ id: c.id, decision: 'cancelled' }), ['owner']);
+  assert.equal(sent.at(-1).msg.body.resolution, 'denied');
+  bridge.dispose();
+  host.approvalsManager.cancelAll();
+});
+
+test('bridge: an approval answered while it was still being sent: the late device gets the end right after it', async () => {
+  const host = createTestHost({ members: [{ id: 1, name: 'Boss', role: 'OWNER' }] });
+  const { bridge, sent } = bridgeFor({ host, devices: [dev({ deviceId: 'owner', memberId: 1 })] });
+  const a = host.approvalsManager.request({ tokenId: 1, memberId: 1, tool: 't' });
+  const view = host.approvalsManager.publicView(a);
+  host.approvalsManager.respond(a.id, 'deny');
+  assert.deepEqual(await bridge.onApprovalResolved({ id: a.id, decision: 'deny' }), [], 'nobody had it yet');
+  await bridge.onApprovalRequested(view);
+  assert.deepEqual(sent.map((s) => [s.msg.body.resolution || 'pending', s.opts.push]), [['pending', 'approval'], ['denied', 'update']]);
+  bridge.dispose();
+});
+
+test('activity log: a web browser device says "via browser", a phone "via phone"', () => {
+  const actor = require('../src/main/ai/actor');
+  actor.run({ memberId: 1, clientName: 'SoftGlaze web (Chrome on Windows)', via: 'mobile', deviceKind: 'browser' }, () => {
+    assert.equal(actor.label(), '[via browser: SoftGlaze web (Chrome on Windows)]');
+  });
+  actor.run({ memberId: 1, clientName: 'Pixel 9', via: 'mobile', deviceKind: 'phone' }, () => assert.equal(actor.label(), '[via phone: Pixel 9]'));
+  actor.run({ memberId: 1, clientName: 'Pixel 9', via: 'mobile' }, () => assert.equal(actor.label(), '[via phone: Pixel 9]'));
+  const ipc = fs.readFileSync(path.join(ROOT, 'src', 'main', 'ipcHandlers.js'), 'utf8');
+  assert.match(ipc, /via: 'mobile', deviceKind: mobileDeviceKind\(device\)/, 'runAs tells the actor which kind of device acts');
+  assert.match(ipc, /via: `\[via \$\{kind\}: /, 'the bridge activity row uses the device kind');
+  assert.doesNotMatch(ipc, /\[via phone: \$\{/, 'no hard coded "via phone" left');
+});
+
+test('ApprovalManager: every end emits ai:approval-resolved (main process only, never sent to windows)', () => {
+  const host = createTestHost();
+  const m = host.approvalsManager;
+  const a = m.request({ tokenId: 1, tool: 't' });
+  m.respond(a.id, 'allow-hour');
+  const b = m.request({ tokenId: 1, tool: 't' });
+  m.cancelAll();
+  assert.deepEqual(host.state.approvalEvents.filter((e) => e.ch === 'ai:approval-resolved').map((e) => e.data), [
+    { id: a.id, decision: 'allow-hour' },
+    { id: b.id, decision: 'cancelled' }
+  ]);
+  const aiIndex = fs.readFileSync(path.join(ROOT, 'src', 'main', 'ai', 'index.js'), 'utf8');
+  assert.match(aiIndex, /MAIN_ONLY_EVENTS = new Set\(\['ai:approval-resolved'\]\)/);
+  const mobileIndex = fs.readFileSync(path.join(ROOT, 'src', 'main', 'mobile', 'index.js'), 'utf8');
+  assert.match(mobileIndex, /channel === 'ai:approval-resolved'\) state\.companion\.onApprovalResolved\(data\)/);
+});
+
+test('dev server: the downloaded browser folders (./chrome, ./firefox) are not watched', async () => {
+  const { pathToFileURL } = require('node:url');
+  const cfg = (await import(pathToFileURL(path.join(ROOT, 'vite.config.mjs')).href)).default;
+  const ignored = cfg.server.watch.ignored;
+  assert.equal(typeof ignored, 'function');
+  for (const p of ['chrome', 'firefox', path.join(process.cwd(), 'firefox', 'xul.dll'), path.join(process.cwd(), 'chrome', 'win64-131', 'chrome.exe'), 'Firefox/x']) assert.equal(ignored(p), true, p);
+  for (const p of [path.join(process.cwd(), 'src', 'renderer', 'chrome', 'x.js'), path.join(process.cwd(), 'src', 'main', 'firefox.js'), 'chromeX', path.join(process.cwd(), 'index.html')]) assert.equal(ignored(p), false, p);
 });

@@ -4,7 +4,8 @@
 // signed in to the app window. Outside run() current() is null and the window's member applies.
 //
 // actor: { memberId: number | null, tokenId, tokenName, clientName, via: 'ai' | 'api' | 'mobile' }
-// (via 'mobile': a paired phone acting as its member, src/main/mobile; tokenId is null)
+// (via 'mobile': a paired phone or web browser acting as its member, src/main/mobile; tokenId is
+// null; deviceKind 'phone' | 'browser' picks the activity log tag)
 // memberId is null only in single-user mode (no members exist), where the app treats everyone as
 // the owner; the auth layer never builds a null-member actor once a team exists.
 const { AsyncLocalStorage } = require('node:async_hooks');
@@ -25,7 +26,8 @@ function label(actor) {
   const a = actor || current();
   if (!a) return null;
   const who = String(a.clientName || a.tokenName || 'token').replace(/[\r\n\]]+/g, ' ').trim().slice(0, 60);
-  if (a.via === 'mobile') return `[via phone: ${who}]`;
+  // The SoftGlaze web app pairs like a phone (deviceKind 'browser', mobile/devices.js).
+  if (a.via === 'mobile') return a.deviceKind === 'browser' ? `[via browser: ${who}]` : `[via phone: ${who}]`;
   return a.via === 'api' ? `[via Local API: ${who}]` : `[via AI: ${who}]`;
 }
 

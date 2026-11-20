@@ -216,8 +216,9 @@ class RelayClient extends EventEmitter {
     });
   }
 
-  // envelope: Uint8Array. push: 'alert' | 'approval' | 'security' (only for sealed envelopes: the
-  // relay hands the envelope to APNs/FCM as an opaque blob when the phone is offline).
+  // envelope: Uint8Array. push: 'alert' | 'approval' | 'security' | 'update' (silent) (only for sealed
+  // envelopes: the relay hands the envelope to APNs/FCM as an opaque blob when the phone is offline
+  // or does not acknowledge it in time).
   sendEnvelope(to, envelope, push = null) {
     const frame = { t: 'send', to, env: P.toBase64Url(envelope) };
     if (push && push !== 'none') frame.push = push;

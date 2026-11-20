@@ -1,8 +1,8 @@
 {
   "package": "@softglaze/protocol",
   "version": "0.1.0",
-  "sourceCommit": "8b4c8f20dde61f7aece77c96d0cdf7845a1aab67",
-  "protocolCommit": "0eaecd861b4a6a5824e949d9d0d48eacfa5df637",
+  "sourceCommit": "1bb210900b81df966f48cf87087bfe0e14fb76c7",
+  "protocolCommit": "f6f1fa1b9bab1317cdb66dac649ef09413524062",
   "sourceDirty": false,
   "dependencies": {
     "@noble/ciphers": "2.4.0",
@@ -11,6 +11,6 @@
     "valibot": "1.5.0"
   },
   "bundle": "softglaze-protocol.cjs",
-  "sha256": "1c6a6e817d14d3187ccadc6612123a912cbc1b87f5a62ea38dc0ef0972dcadcc",
-  "bytes": 306860
+  "sha256": "e3f76ea74c03609138114e51419073e7ec29e715d235c99e9de3f406558b111b",
+  "bytes": 307693
 }

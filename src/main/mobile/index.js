@@ -304,6 +304,7 @@ function onSessionEvent(evt, profileId) {
 function onApprovalEvent(channel, data) {
   if (!state.companion) return;
   if (channel === 'ai:approval-requested') state.companion.onApprovalRequested(data).catch(() => {});
+  else if (channel === 'ai:approval-resolved') state.companion.onApprovalResolved(data).catch(() => {});
   else if (channel === 'ai:approvals-changed') state.companion.onStateChanged();
 }
 

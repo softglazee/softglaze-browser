@@ -13,7 +13,14 @@ function createTestHost({ members = [], profiles = [] } = {}) {
     approvalEvents: []
   };
   let currentMember = undefined;
-  const approvals = new ApprovalManager({ emit: (ch, data) => state.approvalEvents.push({ ch, data }) });
+  // state.onApprovalEvent(ch, data): optional, like ai/index.js onApprovalEvent (the cross test wires
+  // ai:approval-resolved to the companion the way src/main/mobile/index.js does).
+  const approvals = new ApprovalManager({
+    emit: (ch, data) => {
+      state.approvalEvents.push({ ch, data });
+      if (typeof state.onApprovalEvent === 'function') state.onApprovalEvent(ch, data);
+    }
+  });
   const host = {
     state,
     approvalsManager: approvals,

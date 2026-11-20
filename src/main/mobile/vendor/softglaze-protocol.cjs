@@ -1,5 +1,5 @@
 // @softglaze/protocol 0.1.0 (vendored, do not edit: run scripts/vendor-softglaze-protocol.mjs)
-// Source: SoftGlaze-Mobile packages/protocol @ 0eaecd861b4a6a5824e949d9d0d48eacfa5df637
+// Source: SoftGlaze-Mobile packages/protocol @ f6f1fa1b9bab1317cdb66dac649ef09413524062
 // Bundled dependencies (MIT): @noble/ciphers 2.4.0, @noble/curves 2.4.0, @noble/hashes 2.4.0, valibot 1.5.0
 // noble: Copyright (c) Paul Miller (https://paulmillr.com). valibot: Copyright (c) Fabian Hiller.
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
@@ -6118,6 +6118,11 @@ const APPROVAL_DECISIONS = [
 	"allow_1h",
 	"deny"
 ];
+const APPROVAL_RESOLUTIONS = [
+	"approved",
+	"denied",
+	"expired"
+];
 const TEAM_REQUEST_KINDS = [
 	"profile.use",
 	"totp.reveal",
@@ -6276,7 +6281,13 @@ const ApprovalRequestBody = /* @__PURE__ */ object({
 	/** Arguments already redacted by the PC (sanitizeFrame). */
 	args: /* @__PURE__ */ optional(/* @__PURE__ */ record(/* @__PURE__ */ pipe(/* @__PURE__ */ string(), /* @__PURE__ */ maxLength(64)), /* @__PURE__ */ unknown())),
 	allowHour: /* @__PURE__ */ boolean(),
-	expiresAt: Ts
+	expiresAt: Ts,
+	/**
+	* Set when the approval is no longer pending (answered on the PC, the web app or another phone,
+	* or timed out). Optional (added 20 Nov 2026, backward compatible): the PC also sets `expiresAt`
+	* to the time it ended, so an older phone shows it as expired instead of pending.
+	*/
+	resolution: /* @__PURE__ */ optional(/* @__PURE__ */ picklist(APPROVAL_RESOLUTIONS))
 });
 const LeaseBody = /* @__PURE__ */ object({
 	op: /* @__PURE__ */ picklist(LEASE_OPS),
@@ -7341,11 +7352,18 @@ const B64 = (min, max) => /* @__PURE__ */ pipe(/* @__PURE__ */ string(), /* @__P
 const Env = B64(4, 56e3);
 const ClientId = /* @__PURE__ */ pipe(/* @__PURE__ */ string(), /* @__PURE__ */ regex(/^[A-Za-z0-9_-]{1,40}$/));
 const Ticket = /* @__PURE__ */ pipe(/* @__PURE__ */ string(), /* @__PURE__ */ regex(/^[A-Za-z0-9_-]{11}$/));
+/**
+* `update` (added 20 Nov 2026): a silent push (no sound, no text) for changes the phone should
+* apply in the background, e.g. an approval answered on the PC or expired: the phone removes its
+* notification. Relays without it reject the frame (`bad_frame`), so senders that use it need a
+* relay from the same release.
+*/
 const PUSH_KINDS = [
 	"none",
 	"alert",
 	"approval",
-	"security"
+	"security",
+	"update"
 ];
 const ClientFrameSchema = /* @__PURE__ */ variant("t", [
 	/* @__PURE__ */ object({
@@ -9220,6 +9238,7 @@ var SyncSpaceOwner = class {
 //#endregion
 exports.ALERT_KINDS = ALERT_KINDS;
 exports.APPROVAL_DECISIONS = APPROVAL_DECISIONS;
+exports.APPROVAL_RESOLUTIONS = APPROVAL_RESOLUTIONS;
 exports.COMMAND_MAX_AGE_MS = COMMAND_MAX_AGE_MS;
 exports.COMMAND_SCOPES = COMMAND_SCOPES;
 exports.COMMAND_TYPES = COMMAND_TYPES;

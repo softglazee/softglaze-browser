@@ -279,7 +279,7 @@ class MobileCompanion extends EventEmitter {
   }
 
   // ---- outbound ----
-  // { push: 'alert' | 'approval' | 'security' } always goes sealed (the push blob must be openable
+  // { push: 'alert' | 'approval' | 'security' | 'update' } always goes sealed (the push blob must be openable
   // by the phone's notification handler). { liveOnly } sends only over a live session (state).
   async sendTo(device, msg, opts = {}) {
     const session = this.sessions.get(device.mailboxId);
@@ -394,6 +394,7 @@ class MobileCompanion extends EventEmitter {
 
   // ---- events from the app ----
   onApprovalRequested(view) { return this.bridge.onApprovalRequested(view); }
+  onApprovalResolved(data) { return this.bridge.onApprovalResolved(data); }
   onStateChanged() { this.bridge.schedulePublish(); }
 }
 

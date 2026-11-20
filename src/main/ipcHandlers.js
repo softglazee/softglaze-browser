@@ -53,6 +53,7 @@ const ai = require('./ai');
 const { registerAiIpc, createWindowEmitter, canAnswerApproval } = require('./ai/ipc');
 const mobile = require('./mobile');
 const { registerMobileIpc } = require('./mobile/ipc');
+const { deviceKind: mobileDeviceKindOf } = require('./mobile/devices');
 const autofillBridge = require('./autofillBridge');
 const { siteKeyOf } = require('./siteKey');
 const updater = require('./updater');
@@ -16725,6 +16726,8 @@ function buildMobileHost() {
     const p = await getPrisma().profile.findUnique({ where: { id: Number(id) }, select: { browserCore: true } });
     return Boolean(p && normalizeBrowserCore(p.browserCore) === BROWSER_CORE.FIREFOX);
   };
+  // 'browser' for the SoftGlaze web app (app version "web-..."), else 'phone' (activity log tag).
+  const mobileDeviceKind = (device) => (device && device.kind) || mobileDeviceKindOf(device && device.appVersion);
   const ownerActor = async (fn) => {
     const r = await ai.resolveTokenMember(getPrisma(), { memberId: null });
     if (!r.ok) throw new Error(r.message);
@@ -16744,7 +16747,7 @@ function buildMobileHost() {
         if (!r.ok) return { ok: false, message: r.message };
         return { ok: true, memberId: r.memberId, member: await mobileFullMember(r.memberId) };
       },
-      runAs: (device, who, fn) => aiActor.run({ memberId: who.memberId, tokenId: null, tokenName: device.name, clientName: device.name, via: 'mobile' }, fn),
+      runAs: (device, who, fn) => aiActor.run({ memberId: who.memberId, tokenId: null, tokenName: device.name, clientName: device.name, via: 'mobile', deviceKind: mobileDeviceKind(device) }, fn),
       async listProfiles() {
         const db = getPrisma();
         const where = await scopedProfileWhere({ deletedAt: null });
@@ -16786,8 +16789,9 @@ function buildMobileHost() {
       },
       canAnswerApproval,
       async logActivity({ device, memberId, action, profileId, detail }) {
+        const kind = mobileDeviceKind(device);
         await getPrisma().activityLog.create({
-          data: { profileId: Number(profileId) || 0, memberId: memberId == null ? null : Number(memberId), action, detail: JSON.stringify({ ...detail, via: `[via phone: ${String((device && device.name) || 'phone').slice(0, 60)}]` }) }
+          data: { profileId: Number(profileId) || 0, memberId: memberId == null ? null : Number(memberId), action, detail: JSON.stringify({ ...detail, via: `[via ${kind}: ${String((device && device.name) || kind).slice(0, 60)}]` }) }
         });
       }
     },

@@ -48,6 +48,10 @@ function start({ relayUrl, host }) {
       state.pc.confirmPairing({ pairingId: v.pairingId, memberId: null, scopes: state.scopes || P.OWNER_DEFAULT_SCOPES }).catch((e) => log.push(`confirm failed ${e.message}`));
     }
   });
+  // Like src/main/mobile/index.js onApprovalEvent: the end of an approval goes to the devices that got it.
+  state.host.state.onApprovalEvent = (ch, data) => {
+    if (ch === 'ai:approval-resolved') state.pc.onApprovalResolved(data).catch((e) => log.push(`resolved failed ${e.message}`));
+  };
   state.pc.start();
   return { pc: { mailbox: identity.mailboxId, dhPub: P.toBase64Url(identity.dh.publicKey), signPub: P.toBase64Url(identity.sign.publicKey) } };
 }
@@ -77,6 +81,9 @@ async function handle(m) {
       const sentTo = await state.pc.onApprovalRequested(state.host.approvalsManager.publicView(a));
       return { ok: true, approvalId: a.id, sentTo };
     }
+    case 'respond':
+      // Answered on the PC (or the web app): ApprovalManager.respond, as the approval dialog does.
+      return { ok: true, ...state.host.approvalsManager.respond(m.approvalId, m.decision) };
     case 'answers':
       return { ok: true, answers: state.answers, pending: state.host.approvalsManager.pendingCount() };
     case 'profiles':
