@@ -74,6 +74,11 @@ const BANNED_SOFT = [
   { s: ['бан ', 'бана', 'баном', '封鎖', 'แบน', 'حظر', 'محظور', 'ปลอม', '隐形', '隱形'], why: 'ban/fake/stealth (check meaning)' },
 ];
 
+// Placeholders a translation may leave out, by "<file>:<key>" (the UI shows the value elsewhere).
+const OPTIONAL_PLACEHOLDERS = {
+  'profiles.json:opt.allVersions': ['{{os}}'], // shown under the OS tab: "All" is enough
+};
+
 // Placeholders: {{x}} (inner whitespace ignored), $t(...), <0>, </0>, <tag ...>, </tag>, <br/>, %s, %d.
 const PH_RE = /\{\{\s*([^{}]*?)\s*\}\}|\$t\([^()]*\)|<\/?[A-Za-z0-9][A-Za-z0-9-]*\s*\/?>|<[A-Za-z][A-Za-z0-9-]*\s[^<>]*>|%[sdif]/g;
 
@@ -310,7 +315,8 @@ export function checkLocaleFile(code, enData, data, rel, problems) {
     // A placeholder that appears in both, just a different number of times, is a warning.
     const enSet = new Set(placeholders(enValue));
     const trSet = new Set(placeholders(value));
-    const realMissing = missingUnique.filter((x) => !trSet.has(x));
+    const optional = OPTIONAL_PLACEHOLDERS[`${path.basename(rel)}:${key}`] || [];
+    const realMissing = missingUnique.filter((x) => !trSet.has(x) && !optional.includes(x));
     const realExtra = extraUnique.filter((x) => !enSet.has(x));
     if (realMissing.length) problems.error(rel, `${key}: missing placeholder(s) ${realMissing.join(' ')}`);
     if (realExtra.length) problems.error(rel, `${key}: unknown placeholder(s) ${realExtra.join(' ')}`);

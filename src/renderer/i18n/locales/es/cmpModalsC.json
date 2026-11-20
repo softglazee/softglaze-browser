@@ -83,7 +83,6 @@
     "ariaLabel": "Compartir los perfiles seleccionados",
     "title_one": "Compartir {{count}} perfil",
     "title_other": "Compartir {{count}} perfiles",
-    "title_many": "Compartir {{count}} perfiles",
     "description": "Concede acceso a un miembro del equipo a los perfiles seleccionados, o revócalo. La eliminación sigue restringida a los administradores.",
     "noMembers": "Aún no hay otros miembros con quienes compartir. Invita miembros desde la página Miembros.",
     "member": "Miembro",
@@ -100,13 +99,10 @@
     "roleSuperAdmin": "Superadministrador",
     "granted_one": "Se compartió {{count}} perfil{{skipped}}.",
     "granted_other": "Se compartieron {{count}} perfiles{{skipped}}.",
-    "granted_many": "Se compartieron {{count}} perfiles{{skipped}}.",
     "grantedSkipped_one": " · {{count}} omitido (sin acceso de edición)",
     "grantedSkipped_other": " · {{count}} omitidos (sin acceso de edición)",
-    "grantedSkipped_many": " · {{count}} omitidos (sin acceso de edición)",
     "revoked_one": "Se revocó el acceso a {{count}} perfil.",
     "revoked_other": "Se revocó el acceso a {{count}} perfiles.",
-    "revoked_many": "Se revocó el acceso a {{count}} perfiles.",
     "errChooseMember": "Elige un miembro.",
     "errUpdate": "No se pudo actualizar el uso compartido."
   }

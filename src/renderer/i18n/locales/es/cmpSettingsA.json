@@ -7,10 +7,8 @@
       "activeUntil": "Activo · hasta {{date}}",
       "trialDaysLeft_one": "Prueba · queda {{count}} d",
       "trialDaysLeft_other": "Prueba · quedan {{count}} d",
-      "trialDaysLeft_many": "Prueba · quedan {{count}} d",
       "graceDaysLeft_one": "Gracia · queda {{count}} d",
       "graceDaysLeft_other": "Gracia · quedan {{count}} d",
-      "graceDaysLeft_many": "Gracia · quedan {{count}} d",
       "subscriptionEnded": "Suscripción finalizada"
     },
     "subscription": {
@@ -137,7 +135,6 @@
       "imported": "{{created}}/{{total}} importados",
       "errors_one": "{{count}} error",
       "errors_other": "{{count}} error(es)",
-      "errors_many": "{{count}} error(es)",
       "waiting": "Esperando la respuesta de la plataforma…"
     },
     "platforms": {

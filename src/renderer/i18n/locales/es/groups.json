@@ -30,7 +30,6 @@
   "bulk": {
     "selected_one": "{{count}} seleccionado",
     "selected_other": "{{count}} seleccionados",
-    "selected_many": "{{count}} seleccionados",
     "moveTo": "Mover a:",
     "chooseGroup": "Elegir grupo…",
     "clear": "Limpiar"

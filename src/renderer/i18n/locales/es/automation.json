@@ -113,7 +113,6 @@
     "createMacro": "Crear macro",
     "stepsBadge_one": "{{count}} paso",
     "stepsBadge_other": "{{count}} pasos",
-    "stepsBadge_many": "{{count}} pasos",
     "updated": "Actualizado {{date}}",
     "run": "Ejecutar",
     "edit": "Editar",
@@ -229,7 +228,6 @@
     "concurrencyCapUpgrade": "Tu plan ejecuta hasta {{max}} perfiles a la vez. Enterprise ejecuta hasta {{enterpriseMax}}.",
     "dataBound_one": "{{fileName}} · {{count}} fila",
     "dataBound_other": "{{fileName}} · {{count}} filas",
-    "dataBound_many": "{{fileName}} · {{count}} filas",
     "dataHint": "Opcional: vincula una hoja de cálculo (fila → perfil, en orden)",
     "clearDataBinding": "Borrar vinculación de datos",
     "bindData": "Vincular datos",
@@ -244,7 +242,6 @@
     "running": "Ejecutándose…",
     "runOn_one": "Ejecutar en {{count}} perfil",
     "runOn_other": "Ejecutar en {{count}} perfiles",
-    "runOn_many": "Ejecutar en {{count}} perfiles",
     "runStatus": "Estado de la ejecución",
     "summaryPassed": "superados",
     "summaryFailed": "fallidos",
@@ -360,8 +357,7 @@
     "cookieWarmup": "Calentamiento de cookies",
     "minutes": "{{count}} min",
     "sites_one": "{{count}} sitio",
-    "sites_other": "{{count}} sitios",
-    "sites_many": "{{count}} sitios"
+    "sites_other": "{{count}} sitios"
   },
   "stepFieldOptions": {
     "auto": "Automático",

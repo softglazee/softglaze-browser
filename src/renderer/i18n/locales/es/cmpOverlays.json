@@ -59,7 +59,6 @@
       "subtitle": "Una configuración rápida de 3 pasos te lleva a tu primer perfil. Puedes omitir cualquier paso.",
       "subtitleShort_one": "Un paso rápido. Puedes omitirlo.",
       "subtitleShort_other": "Una configuración rápida de {{count}} pasos. Puedes omitir cualquier paso.",
-      "subtitleShort_many": "Una configuración rápida de {{count}} pasos. Puedes omitir cualquier paso.",
       "unavailable": "Los pasos en gris se omiten: tu cuenta no puede hacerlos.",
       "getStarted": "Empezar",
       "stepEmail": "Correo electrónico (SMTP) - opcional, para códigos OTP",

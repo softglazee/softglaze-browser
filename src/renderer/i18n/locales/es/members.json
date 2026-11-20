@@ -4,7 +4,6 @@
     "title": "Miembros",
     "manageCount_one": "{{count}} miembro que gestionas",
     "manageCount_other": "{{count}} miembros que gestionas",
-    "manageCount_many": "{{count}} miembros que gestionas",
     "workspaceStats": "{{profiles}} perfiles · {{proxies}} proxies en el espacio de trabajo"
   },
   "tabs": {
@@ -14,7 +13,6 @@
   },
   "memberCount_one": "{{count}} miembro",
   "memberCount_other": "{{count}} miembros",
-  "memberCount_many": "{{count}} miembros",
   "roles": {
     "SUPER_ADMIN": "Superadministrador",
     "OWNER": "Propietario",
@@ -105,8 +103,7 @@
     "invitePending": "Invitación pendiente",
     "loginSet": "Acceso configurado",
     "subMembers_one": "{{count}} submiembro",
-    "subMembers_other": "{{count}} submiembros",
-    "subMembers_many": "{{count}} submiembros"
+    "subMembers_other": "{{count}} submiembros"
   },
   "time": {
     "neverActive": "Nunca activo",
@@ -156,7 +153,6 @@
   "alloc": {
     "heading_one": "Asignado a {{count}} submiembro",
     "heading_other": "Asignado a {{count}} submiembros",
-    "heading_many": "Asignado a {{count}} submiembros",
     "allocated": "{{allocated}} de {{cap}} asignados",
     "left": "· {{remaining}} disponibles"
   },
@@ -190,10 +186,8 @@
     "warnMiddle": " y traslada los submiembros a tu cargo. Elige qué ocurre con sus datos -",
     "profilesWord_one": "perfil",
     "profilesWord_other": "perfiles",
-    "profilesWord_many": "perfiles",
     "proxiesWord_one": "proxy",
     "proxiesWord_other": "proxies",
-    "proxiesWord_many": "proxies",
     "options": {
       "reassignMe": {
         "label": "Conservar y reasignarme a mí",

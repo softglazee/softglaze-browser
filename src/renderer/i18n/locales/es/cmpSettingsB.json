@@ -13,7 +13,6 @@
     "statNamespace": "Espacio de nombres",
     "pendingProfiles_one": "{{count}} perfil",
     "pendingProfiles_other": "{{count}} perfiles",
-    "pendingProfiles_many": "{{count}} perfiles",
     "never": "Nunca",
     "disabledNotice": "La sincronización está desactivada - no hay endpoint configurado. No se sube nada.",
     "unlockLabel": "Desbloquea con tu frase de sincronización",
@@ -40,7 +39,6 @@
     "msgSynced": "Sincronizado - {{pushed}} enviados, {{pulled}} recibidos, {{created}} creados",
     "msgSyncedConflicts_one": ", {{count}} conflicto resuelto (ganó el más reciente)",
     "msgSyncedConflicts_other": ", {{count}} conflictos resueltos (ganó el más reciente)",
-    "msgSyncedConflicts_many": ", {{count}} conflictos resueltos (ganó el más reciente)",
     "errLoadStatus": "No se pudo cargar el estado de la sincronización.",
     "errSaveSettings": "No se pudo guardar la configuración de sincronización.",
     "errUnlockCheckPassphrase": "No se pudo desbloquear - comprueba tu frase de contraseña.",
@@ -105,11 +103,9 @@
     "errRestoreFailed": "La restauración falló.",
     "msgSaved_one": "Copia de seguridad guardada en {{path}} ({{kb}} KB, {{count}} ajuste).",
     "msgSaved_other": "Copia de seguridad guardada en {{path}} ({{kb}} KB, {{count}} ajustes).",
-    "msgSaved_many": "Copia de seguridad guardada en {{path}} ({{kb}} KB, {{count}} ajustes).",
     "msgRestored": "Espacio de trabajo restaurado. Reinicia la aplicación para asegurarte de que todo se recarga correctamente.",
     "warnSecretsLost_one": "{{count}} secreto guardado no se pudo abrir en este usuario de Windows y debe introducirse de nuevo: {{list}}.",
-    "warnSecretsLost_other": "{{count}} secretos guardados no se pudieron abrir en este usuario de Windows y deben introducirse de nuevo: {{list}}.",
-    "warnSecretsLost_many": "{{count}} secretos guardados no se pudieron abrir en este usuario de Windows y deben introducirse de nuevo: {{list}}."
+    "warnSecretsLost_other": "{{count}} secretos guardados no se pudieron abrir en este usuario de Windows y deben introducirse de nuevo: {{list}}."
   },
   "branding": {
     "loadingCardTitle": "Apariencia y marca",
