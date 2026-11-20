@@ -8,20 +8,25 @@ const { fail, invalid, notFound } = require('../http');
 const { audit } = require('../audit');
 const { validatePlan, upsertPlan, invalidatePublicPlans, publicPlan } = require('../../plans/service');
 const { asJson } = require('../../util/json');
+const { availability, hasSaleRules, isLifetime, invalidateOffers } = require('../../plans/sales');
 
 const router = express.Router();
 const view = (p) => ({ ...p, features: asJson(p.features) || [], limits: asJson(p.limits), effectiveLimits: publicPlan(p).limits });
+// Lifetime and capped plans also show their sales: { cap, sold, held, refunded, remaining, state, ... }.
+const withSales = async (tenantId, p) => ({ ...view(p), lifetime: isLifetime(p), sales: hasSaleRules(p) || isLifetime(p) ? await availability(prisma, tenantId, p) : null });
 
 router.get('/', asyncHandler(async (req, res) => {
   const rows = await prisma.plan.findMany({ where: { tenantId: req.tenant.id } });
   rows.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.amount - b.amount);
-  res.json({ items: rows.map(view) });
+  const items = [];
+  for (const p of rows) items.push(await withSales(req.tenant.id, p));
+  res.json({ items });
 }));
 
 router.get('/:key', asyncHandler(async (req, res) => {
   const p = await prisma.plan.findUnique({ where: { tenantId_key: { tenantId: req.tenant.id, key: req.params.key } } });
   if (!p) return notFound(res, 'Plan');
-  res.json({ plan: view(p) });
+  res.json({ plan: await withSales(req.tenant.id, p) });
 }));
 
 router.get('/:key/history', asyncHandler(async (req, res) => {
@@ -73,6 +78,7 @@ router.delete('/:key', asyncHandler(async (req, res) => {
   if (lic || pay) return fail(res, 409, 'plan_in_use', 'Licences or payments refer to this plan; set active to false instead.', { licenses: lic, payments: pay });
   await prisma.plan.delete({ where: { id: p.id } });
   invalidatePublicPlans(tenantId);
+  invalidateOffers(tenantId);
   await audit(prisma, req, 'plan.delete', { targetType: 'plan', targetId: p.key, detail: { amount: p.amount, currency: p.currency } });
   res.json({ ok: true, deleted: p.key });
 }));

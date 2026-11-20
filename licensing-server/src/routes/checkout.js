@@ -24,6 +24,7 @@ const { parseEmail } = require('../customers/emailAddress');
 const { isDisposableDomain } = require('../customers/disposable');
 const { rateLimit } = require('../middleware/rateLimit');
 const { WEB_METHOD, isWebPayment, kickCodeEmail } = require('../webPurchase');
+const { saleBlock, invalidateOffers } = require('../plans/sales');
 
 const router = express.Router();
 const SUPPORTED = new Set(CHECKOUT_IDS);
@@ -97,6 +98,9 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
 
   const plan = await prisma.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: String(planKey) } } });
   if (!plan || !plan.active) return res.status(404).json({ error: 'Unknown or inactive plan.' });
+  // Sale window and cap (lifetime offers): 409 sale_not_open | sale_ended | sold_out (src/plans/sales.js).
+  const blocked = await saleBlock(prisma, tenant.id, plan);
+  if (blocked) return res.status(409).json({ error: blocked.error, message: blocked.message, remaining: blocked.availability.remaining });
   if (web) {
     // A code is a fixed term; a subscription needs an install to renew.
     if (plan.recurring) return res.status(400).json({ error: 'install_required', message: 'This plan can only be bought in the app.' });
@@ -142,6 +146,7 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
       ...(web ? { method: WEB_METHOD } : {})
     }
   });
+  invalidateOffers(tenant.id); // the pending payment now holds a place in a capped offer
   res.json({ url, ref, provider });
 }));
 

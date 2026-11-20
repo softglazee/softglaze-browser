@@ -11,6 +11,7 @@ const { audit } = require('../audit');
 const { addEvent, recomputeCustomer } = require('../../customers/sync');
 const { termMs } = require('../../util/time');
 const { resendWebCode } = require('../../webPurchase');
+const { LIFETIME_MONTHS, saleBlock, invalidateOffers } = require('../../plans/sales');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -68,7 +69,10 @@ async function grantForPayment(tenantId, customer, { tier, plan, months, install
 }
 
 // POST { customerId, amount (cents), currency, method, reference, paidAt?, plan?, note?,
-//        grant?: true | { months?, tier?, installId? } }
+//        grant?: true | { months?, tier?, installId? }, allowOutsideOffer? }
+// A plan with a sale window or cap (src/plans/sales.js) is refused outside its window or once sold out
+// (409 sale_not_open | sale_ended | sold_out), unless allowOutsideOffer is true: e.g. an invoice issued
+// inside the window and paid after it. The override is written to the audit log.
 router.post('/', asyncHandler(async (req, res) => {
   const b = req.body || {};
   const tenantId = req.tenant.id;
@@ -97,7 +101,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const g = b.grant === true ? {} : (b.grant && typeof b.grant === 'object' ? b.grant : null);
   if (g) {
     const gErr = {};
-    if (g.months !== undefined && (!Number.isInteger(g.months) || g.months < 1 || g.months > 120)) gErr['grant.months'] = 'integer 1-120';
+    if (g.months !== undefined && (!Number.isInteger(g.months) || ((g.months < 1 || g.months > 120) && g.months !== LIFETIME_MONTHS))) gErr['grant.months'] = `integer 1-120, or ${LIFETIME_MONTHS} (lifetime)`;
     if (g.tier !== undefined && !['pro', 'enterprise'].includes(g.tier)) gErr['grant.tier'] = 'pro or enterprise';
     if (g.installId !== undefined) {
       const inst = await own('install', req, g.installId);
@@ -105,6 +109,11 @@ router.post('/', asyncHandler(async (req, res) => {
       else if (inst.customerId && inst.customerId !== customer.id) gErr['grant.installId'] = 'that install belongs to another customer';
     }
     if (Object.keys(gErr).length) return invalid(res, gErr);
+  }
+  const override = b.allowOutsideOffer === true;
+  if (plan && !override) {
+    const blocked = await saleBlock(prisma, tenantId, plan);
+    if (blocked) return fail(res, 409, blocked.error, `${blocked.message} Send allowOutsideOffer: true to record it anyway (for example an invoice issued inside the offer).`, { availability: blocked.availability });
   }
   const dup = await prisma.payment.findFirst({ where: { tenantId, provider: 'manual', method: b.method, providerRef: reference } });
   if (dup) return fail(res, 409, 'duplicate_payment', 'A manual payment with this method and reference is already recorded.', { paymentId: dup.id });
@@ -126,10 +135,11 @@ router.post('/', asyncHandler(async (req, res) => {
       note: `Manual payment ${b.method} ${reference}`
     });
   }
+  invalidateOffers(tenantId);
   await addEvent(prisma, tenantId, customer.id, 'payment_recorded', { paymentId: payment.id, amount: payment.amount, currency, method: b.method, licenseId: license ? license.id : null });
   const s = await settingsFor(req);
   const updated = await recomputeCustomer(prisma, tenantId, customer.id, { graceDays: s.billing.renewalGraceDays });
-  await audit(prisma, req, 'payment.record', { targetType: 'payment', targetId: payment.id, detail: { customerId: customer.id, amount: payment.amount, currency, method: b.method, reference, licenseId: license ? license.id : null } });
+  await audit(prisma, req, 'payment.record', { targetType: 'payment', targetId: payment.id, detail: { customerId: customer.id, amount: payment.amount, currency, method: b.method, reference, plan: plan ? plan.key : null, licenseId: license ? license.id : null, ...(override ? { allowOutsideOffer: true } : {}) } });
   res.status(201).json({ payment, license, customer: updated ? { id: updated.id, status: updated.status, paidUntil: updated.paidUntil, totalPaidCents: updated.totalPaidCents } : null });
 }));
 
@@ -143,6 +153,7 @@ router.post('/:id/refund', asyncHandler(async (req, res) => {
   const reason = typeof (req.body || {}).reason === 'string' ? req.body.reason.trim() : '';
   if (reason.length < 3 || reason.length > 1000) return invalid(res, { reason: 'say why (3-1000 characters)' });
   const updated = await prisma.payment.update({ where: { id: p.id }, data: { status: 'refunded', refundedAt: new Date(), note: [p.note, `Refunded: ${reason}`].filter(Boolean).join('\n').slice(0, 5000) } });
+  invalidateOffers(p.tenantId);
   if (p.customerId) {
     await addEvent(prisma, p.tenantId, p.customerId, 'payment_refunded', { paymentId: p.id, amount: p.amount, currency: p.currency });
     const s = await settingsFor(req);

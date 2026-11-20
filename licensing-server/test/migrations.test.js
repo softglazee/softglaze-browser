@@ -155,7 +155,7 @@ test('the one-click sign-in migration only creates its own four tables, last', (
   assert.ok(!/`(token|code|state|nonce|accessToken|secret)` /.test(sql), 'no raw token column');
 });
 
-test('the accounts migration (Google, phone, web) only adds NULL or defaulted columns, MobileDevice and indexes, last', () => {
+test('the accounts migration (Google, phone, web) only adds NULL or defaulted columns, MobileDevice and indexes', () => {
   const name = '20261119120000_accounts_google_mobile_web';
   const sql = read(name);
   // Statements only (the header comment explains in words what is NOT done).
@@ -172,5 +172,26 @@ test('the accounts migration (Google, phone, web) only adds NULL or defaulted co
   assert.match(sql, /UNIQUE INDEX `MobileDevice_authSessionId_key`/);
   assert.ok(!/`(token|refreshToken|accessToken|code|secret)` /.test(sql), 'hashes only');
   const dirs = migrationDirs();
-  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261110120000_one_click_signin'), 'after the one-click sign-in one');
+});
+
+// Black Friday 2026: Plan.saleCap / saleStartsAt / saleEndsAt and one Payment index (src/plans/sales.js).
+// Named before 20261120120000_free_plan_partner_deals (feat/free-plan-server) so both branches can merge in
+// either order; the two touch different tables and do not depend on each other.
+test('the Black Friday migration only adds three NULL Plan columns and one Payment index', () => {
+  const name = '20261120110000_black_friday_lifetime_sales';
+  const sql = read(name);
+  const stmts = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|^\s*(UPDATE|DELETE|TRUNCATE|INSERT)\b|CREATE TABLE/im.test(stmts), 'additive only');
+  const added = [...stmts.matchAll(/ADD COLUMN `(\w+)` ([^,;]+)/g)];
+  assert.deepEqual(added.map((m) => m[1]), ['saleCap', 'saleStartsAt', 'saleEndsAt']);
+  for (const [, col, def] of added) assert.ok(/\bNULL\b/.test(def) && !/NOT NULL/.test(def), `${col}: ${def}`);
+  assert.match(stmts, /^ALTER TABLE `Plan` ADD COLUMN/m);
+  assert.match(stmts, /CREATE INDEX `Payment_tenantId_plan_status_idx` ON `Payment`\(`tenantId`, `plan`, `status`\);/);
+  const dirs = migrationDirs();
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261119120000_accounts_google_mobile_web'), 'after the accounts one');
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8');
+  assert.match(schema, /saleCap\s+Int\?/);
+  assert.match(schema, /saleStartsAt\s+DateTime\?/);
+  assert.match(schema, /@@index\(\[tenantId, plan, status\]\)/);
 });
